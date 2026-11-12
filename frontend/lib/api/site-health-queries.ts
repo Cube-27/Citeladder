@@ -327,22 +327,14 @@ export const siteHealthMutations = {
         refreshSiteHealthDashboard(client, scope.projectId),
     }),
   /**
-   * A per-URL rerun. Rerun inside the same crawl refreshes the URL's detail
-   * before the caller starts polling it: polling first can observe the stale
-   * terminal entry and stop before the fresh pending snapshot lands. A rerun
-   * that minted a new crawl seeds that crawl's entry with the new identity.
+   * A per-URL re-audit. It always runs as its own one-page crawl (a running
+   * crawl refuses it), so the new crawl's entry is seeded with its identity.
    */
   rerunPage: (workspaceId: string | null) =>
     mutationOptions({
       mutationFn: (vars: { crawlId: string; siteUrlId: string }) =>
         siteHealthApi.rerunPage(vars.crawlId, vars.siteUrlId, { workspaceId }),
-      onSuccess: async (result, vars, _result, { client }) => {
-        if (result.crawl_id === vars.crawlId && result.site_url_id === vars.siteUrlId) {
-          await client.invalidateQueries({
-            queryKey: queryKeys.siteHealth.crawlPage(vars.crawlId, vars.siteUrlId),
-          });
-          return;
-        }
+      onSuccess: (result, _vars, _result, { client }) => {
         client.setQueryData<PageDetail>(
           queryKeys.siteHealth.page(workspaceId, result.crawl_id, result.site_url_id),
           (previous) =>

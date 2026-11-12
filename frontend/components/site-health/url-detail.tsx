@@ -38,7 +38,8 @@ const RERUN_SEARCH_PARAM = 'rerun';
 export function PageDetailScreen() {
   const { crawlId, siteUrlId } = useParams<{ crawlId: string; siteUrlId: string }>();
   if (!crawlId || !siteUrlId) return null;
-  return <UrlDetail crawlId={crawlId} siteUrlId={siteUrlId} />;
+  // Keyed, so a re-audit's navigation to its own crawl starts fresh and polls.
+  return <UrlDetail key={`${crawlId}:${siteUrlId}`} crawlId={crawlId} siteUrlId={siteUrlId} />;
 }
 
 export function UrlDetail({
@@ -48,18 +49,14 @@ export function UrlDetail({
   const { workspaceId } = useProjectScope();
   const router = useNavigate();
   const searchParams = useSearchParams()[0];
-  // A rerun that minted a NEW crawl navigates here with `?rerun=1`; start
-  // polling on mount so the fresh run's queued/running progress is observed
-  // without a manual reload.
-  const [rerunPolling, setRerunPolling] = useState(
-    () => searchParams.get(RERUN_SEARCH_PARAM) === '1',
-  );
+  // A re-audit navigates to its own crawl's page with `?rerun=1`; poll from
+  // mount so its queued/running progress shows without a manual reload.
+  const [rerunPolling] = useState(() => searchParams.get(RERUN_SEARCH_PARAM) === '1');
   // The cache can still hold the prior terminal snapshot immediately after a
   // rerun succeeds. Polling must continue until the fresh queued/running state
   // has been observed, rather than treating that stale terminal status as done.
   const hasObservedActiveRerunRef = useRef(false);
   const preActivePollCountRef = useRef(0);
-  const [rerunQueued, setRerunQueued] = useState(false);
   const [rerunError, setRerunError] = useState<string | null>(null);
   const detailQuery = useQuery({
     ...siteHealthQueries.page(workspaceId, crawlId, siteUrlId),
@@ -71,25 +68,16 @@ export function UrlDetail({
         preActivePollCountRef,
       ),
   });
-  // The descriptor refreshes this URL's detail before these callbacks run, so
-  // polling starts only after the fresh pending snapshot has been asked for.
+  // A re-audit is always its own one-page crawl: follow it to that crawl's page.
   const rerun = useMutation(siteHealthMutations.rerunPage(workspaceId));
   const startRerun = () =>
     rerun.mutate(
       { crawlId, siteUrlId },
       {
-        onSuccess: (result) => {
-          if (result.crawl_id === crawlId && result.site_url_id === siteUrlId) {
-            hasObservedActiveRerunRef.current = false;
-            preActivePollCountRef.current = 0;
-            setRerunQueued(true);
-            setRerunPolling(true);
-            return;
-          }
+        onSuccess: (result) =>
           router(
             `/site/crawls/${result.crawl_id}/pages/${result.site_url_id}?${RERUN_SEARCH_PARAM}=1`,
-          );
-        },
+          ),
         onError: (error) => setRerunError(rerunErrorMessage(error)),
       },
     );
@@ -118,7 +106,6 @@ export function UrlDetail({
     <UrlDetailView
       detail={detailQuery.data}
       rerunPending={rerun.isPending}
-      rerunQueued={rerunQueued}
       onRerun={() => {
         setRerunError(null);
         startRerun();
@@ -159,9 +146,10 @@ function rerunPollInterval(
 }
 
 function rerunErrorMessage(error: unknown): string {
-  if (error instanceof ApiError && error.status === 409) {
-    return 'This page is not in your monitored set — add it before re-auditing.';
-  }
+  if (error instanceof ApiError && error.code === 'crawl_already_active')
+    return 'A crawl is running. Re-audit this page when it finishes.';
+  if (error instanceof ApiError && error.status === 409)
+    return 'This page is not in your monitored set, so it can’t be re-audited.';
   if (error instanceof ApiError && error.status === 403)
     return 'Re-auditing pages requires a Starter plan.';
   return 'Could not re-audit this page. Please try again.';

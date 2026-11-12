@@ -12,47 +12,11 @@ const reasons = policy.site_health.crawl.exclusions;
 const scope = { domain: 'example.test' };
 
 describe('URL admission', () => {
-  it('admits the registrable domain and its subdomains, and only narrows with globs', () => {
+  it('admits the registrable domain and its subdomains only', () => {
     expect(classifyUrlAdmission('https://blog.example.test/post', scope).accepted).toBe(true);
     expect(classifyUrlAdmission('https://example.test.evil/post', scope).reason).toBe(
       reasons.out_of_scope,
     );
-    const narrowed = {
-      ...scope,
-      include: ['https://example.test/docs/*'],
-      exclude: ['*/docs/private*'],
-    };
-    expect(classifyUrlAdmission('https://example.test/docs/a/b', narrowed).accepted).toBe(true);
-    expect(classifyUrlAdmission('https://example.test/blog', narrowed).reason).toBe(
-      reasons.narrowed,
-    );
-    expect(classifyUrlAdmission('https://example.test/docs/private-x', narrowed).reason).toBe(
-      reasons.narrowed,
-    );
-  });
-
-  it('translates fnmatch globs, including hyphens and literal brackets, without throwing', () => {
-    const admitted = (path: string, include: string[]) =>
-      classifyUrlAdmission(`https://example.test${path}`, { ...scope, include }).accepted;
-    expect(admitted('/blog-posts/a', ['*/blog-posts/*'])).toBe(true);
-    // A `]` right after `[` or `[!` is a set member, not the close.
-    expect(admitted('/axb', ['*/a[]x]b'])).toBe(true);
-    expect(admitted('/ayb', ['*/a[!]x]b'])).toBe(true);
-    expect(admitted('/axb', ['*/a[!]x]b'])).toBe(false);
-    // A reversed range cannot compile; the glob then matches only itself.
-    expect(admitted('/x', ['*[z-a]*'])).toBe(false);
-    expect(admitted('/archive-7/x', ['*/archive-[0-9]/?'])).toBe(true);
-    expect(admitted('/archive-x/x', ['*/archive-[0-9]/?'])).toBe(false);
-  });
-
-  it('matches many-star globs in linear time on long near-miss URLs', () => {
-    const glob = `https://example.test/${'*a'.repeat(200)}*b`;
-    const url = `https://example.test/${'a'.repeat(900)}`;
-    const started = performance.now();
-    const decision = classifyUrlAdmission(url, { ...scope, include: [glob] });
-    expect(decision.reason).toBe(reasons.narrowed);
-    expect(classifyUrlAdmission(`${url}b`, { ...scope, include: [glob] }).accepted).toBe(true);
-    expect(performance.now() - started).toBeLessThan(1000);
   });
 
   it('separates hard exclusions and documents from ordinary pages', () => {
@@ -125,8 +89,8 @@ describe('URL admission', () => {
   });
 });
 
-it('keeps content about crawler paths while excluding platform redirectors despite includes', () => {
-  const scope = { domain: 'example.com', include: ['*'] };
+it('keeps content about crawler paths while excluding platform redirectors', () => {
+  const scope = { domain: 'example.com' };
   for (const path of [
     '/cdn-cgi/l/email-protection',
     '/customer_authentication/redirect',
@@ -166,8 +130,8 @@ it('inventories readable documents while refusing binary downloads and oversized
   });
 });
 
-it('keeps a public-suffix sibling outside the root site even with an unrestricted include', () => {
-  const scope = { domain: 'example.co.uk', include: ['*'] };
+it('keeps a public-suffix sibling outside the root site', () => {
+  const scope = { domain: 'example.co.uk' };
   expect(classifyUrlAdmission('https://docs.example.co.uk/page', scope).accepted).toBe(true);
   for (const host of ['other.co.uk', 'example.co.uk.evil.com', 'notexample.co.uk']) {
     expect(classifyUrlAdmission(`https://${host}/page`, scope)).toMatchObject({

@@ -406,49 +406,15 @@ describe('UrlDetail', () => {
     expect(screen.getByText('39.1 KB')).toBeInTheDocument();
   });
 
-  it('same-active-crawl rerun: polls in place through completed → pending → running → completed without navigating', async () => {
-    // The rerun response points at the SAME crawl/URL (created_new_crawl
-    // false), so the component must poll in place — never navigate.
-    //
-    // Sequence of `analysis_status` snapshots the GET handler serves on
-    // each successive request. The first GET (initial render) sees
-    // 'completed'. The rerun POST enqueues a fresh task, after which the
-    // *next* GETs must walk through 'pending' then 'running' before
-    // landing on a new 'completed' — proving polling doesn't stop on the
-    // stale cached terminal status right after the mutation resolves.
-    const statuses: PageDetail['analysis_status'][] = [
-      'completed',
-      'pending',
-      'running',
-      'completed',
-    ];
-    let getCallCount = 0;
-
+  it('tells the person to wait when a crawl is running, and stays on the page', async () => {
     mswServer.use(
-      http.get(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}`, async () => {
-        const status = statuses[Math.min(getCallCount, statuses.length - 1)];
-        getCallCount += 1;
-        // Small artificial network delay so the mutation's own
-        // `invalidateQueries` refetch (triggered inside `onSuccess`) does
-        // not resolve synchronously before the next render — this
-        // reproduces the real race where React re-renders with
-        // `rerunPolling` newly `true` while the query cache still holds
-        // the *previous* terminal snapshot.
-        await new Promise((resolve) => {
-          setTimeout(resolve, 15);
-        });
-        return HttpResponse.json(detail({ analysis_status: status }));
-      }),
+      ...handlers(detail({ analysis_status: 'completed' })),
       http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
         HttpResponse.json(
           {
-            crawl_id: CRAWL,
-            site_url_id: URL_ID,
-            task_id: TASK_ID,
-            created_new_crawl: false,
-            analysis_status: 'pending',
+            error: { code: 'crawl_already_active', message: 'Project already has an active crawl' },
           },
-          { status: 202 },
+          { status: 409 },
         ),
       ),
     );
@@ -456,44 +422,17 @@ describe('UrlDetail', () => {
     const user = userEvent.setup();
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
-    // Initial fetch observes the prior run's terminal 'completed' snapshot.
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    expect(screen.getByRole('button', { name: 'Re-audit this page' })).toBeInTheDocument();
-    // A completed analysis carries no status badge; only an unfinished one does.
-    expect(screen.queryByText('Completed')).not.toBeInTheDocument();
-
     await user.click(screen.getByRole('button', { name: 'Re-audit this page' }));
 
-    // The status badge must actually be observed to reach 'Running' at
-    // some point (not just eventually land back on 'Completed', which the
-    // stale pre-rerun cache would already show without ever polling
-    // further).
-    await waitFor(() => expect(screen.getByText('Running')).toBeInTheDocument(), {
-      timeout: 15_000,
-    });
-
-    // Polling continues past 'running' until the freshly-enqueued task
-    // reaches its own terminal 'completed' snapshot.
-    await waitFor(() => expect(screen.queryByText('Running')).not.toBeInTheDocument(), {
-      timeout: 15_000,
-    });
-
-    await waitFor(() => expect(getCallCount).toBeGreaterThanOrEqual(statuses.length), {
-      timeout: 15_000,
-    });
-
-    await waitFor(
-      () => expect(screen.getByRole('button', { name: 'Re-audit queued' })).toBeInTheDocument(),
-      { timeout: 15_000 },
-    );
-
-    // A same-crawl rerun never navigates.
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('A crawl is running. Re-audit this page when it finishes.');
     expect(screen.getByTestId('location')).toHaveTextContent(
       `/site/crawls/${CRAWL}/pages/${URL_ID}`,
     );
-  }, 20_000);
+  });
 
-  it('created_new_crawl rerun: navigates to the fresh crawl identity detail route with ?rerun=1', async () => {
+  it('a rerun navigates to its own one-page crawl identity detail route with ?rerun=1', async () => {
     mswServer.use(
       ...handlers(detail({ analysis_status: 'completed' })),
       http.post(`/api/v1/site-crawls/${CRAWL}/pages/${URL_ID}/rerun`, () =>
@@ -502,7 +441,6 @@ describe('UrlDetail', () => {
             crawl_id: NEW_CRAWL,
             site_url_id: URL_ID,
             task_id: TASK_ID,
-            created_new_crawl: true,
             analysis_status: 'pending',
           },
           { status: 202 },
@@ -544,7 +482,7 @@ describe('UrlDetail', () => {
     // find the alert and assert on its text.
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(
-      'This page is not in your monitored set — add it before re-auditing.',
+      'This page is not in your monitored set, so it can’t be re-audited.',
     );
   });
 

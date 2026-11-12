@@ -104,7 +104,7 @@ async function monitor(seed: SiteSeed, siteUrlId: string) {
       profile_id: seed.profileId,
       site_url_id: siteUrlId,
       active: true,
-      selection_source: 'user',
+      selection_source: 'bootstrap',
       selected_at: now,
       created_at: now,
       updated_at: now,

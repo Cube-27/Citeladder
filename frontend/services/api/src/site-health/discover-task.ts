@@ -9,7 +9,6 @@
  */
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { record } from '../db/json.ts';
 import type { FetchedPage } from '../safe-fetch.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { factSettings, type PageFacts } from './analysis/facts.ts';
@@ -277,9 +276,8 @@ async function observeFailedUrl(trx: Database, crawl: Crawl, task: SiteTask, out
 function candidatesFor(
   task: SiteTask,
   discovery: Discovery,
-  options: { exact: boolean; referrerId: string | null },
+  referrerId: string | null,
 ): Candidate[] {
-  if (options.exact) return [];
   const links = discovery.links.map((link) =>
     candidate(link.admission, {
       url: link.admission.url,
@@ -290,7 +288,7 @@ function candidatesFor(
       linkOrdinal: link.ordinal,
       rewriteReason: link.rewriteReason,
       rewriteVersion: link.rewriteVersion,
-      referrerId: options.referrerId,
+      referrerId,
     }),
   );
   if (task.depth !== 0) return links;
@@ -352,13 +350,12 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
         robotsExcluded: outcome.robotsExcluded,
       });
       const referrerId = await writeObservation(trx, crawl, task, page, discovery, artifactId);
-      const exact = record(crawl.configuration).input_mode === 'exact_urls';
       const admission = await admitCandidates(
         trx,
         crawl,
-        candidatesFor(task, discovery, { exact, referrerId }),
+        candidatesFor(task, discovery, referrerId),
         runtime,
-        { enqueueChildren: !exact, sourceArtifactId: artifactId },
+        { sourceArtifactId: artifactId },
       );
       admitted = admission.admitted;
       sampleCapped = admission.sampleCapped;
@@ -368,12 +365,11 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
       // Membership before the crawl and task, in the Site Health lock order.
       const runtime = await lockRuntime(trx, crawl.workspace_id);
       // The freed slot goes to the frontier's next best URL, or the crawl ends a
-      // page short. An exact URL list has no frontier to refill from.
-      const exact = record(crawl.configuration).input_mode === 'exact_urls';
+      // page short.
       const released = await releaseNonPage(trx, crawl, task.url_hash, outcome, {
         record: true,
       });
-      if (released && !exact)
+      if (released)
         ({ admitted, sampleCapped } = await admitCandidates(trx, crawl, [], runtime, {
           releasing: 1,
         }));

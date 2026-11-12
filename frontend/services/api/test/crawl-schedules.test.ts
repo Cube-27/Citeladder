@@ -124,7 +124,7 @@ describe('scheduled crawl occurrences', () => {
     // An admitted crawl freezes its settings and a decimal seed, which Recrawl reuses.
     await db
       .updateTable('site_crawls')
-      .set({ random_seed: '7', configuration: JSON.stringify({ input_mode: 'auto' }) })
+      .set({ random_seed: '7', configuration: JSON.stringify({ robots: 'respect' }) })
       .where('id', '=', seed.crawlId)
       .execute();
     await allow(seed, 5);
@@ -155,7 +155,6 @@ describe('scheduled crawl occurrences', () => {
       .set({
         random_seed: '7',
         configuration: JSON.stringify({
-          input_mode: 'auto',
           robots: 'ignore',
           robots_decision: decision,
         }),

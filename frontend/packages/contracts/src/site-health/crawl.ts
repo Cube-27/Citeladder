@@ -263,22 +263,6 @@ export const siteCrawlSchema = responseObject({
   completed_at: z.string().nullable(),
 });
 
-const urlPreviewRowSchema = responseObject({
-  row: z.number().int(),
-  input: z.string(),
-  accepted: z.boolean(),
-  canonical_url: z.string().nullable(),
-  reason_code: z.string().nullable(),
-  value_kind: z.string(),
-  priority: z.number().int(),
-});
-export const urlPreviewResponseSchema = responseObject({
-  items: z.array(urlPreviewRowSchema),
-  truncated: z.boolean(),
-  counts: z.record(z.string(), z.number().int()),
-  policy_version: z.string(),
-});
-
 /** How often a scheduled crawl runs. */
 export const crawlScheduleCadenceSchema = z.enum(['weekly', 'monthly']);
 /**
@@ -312,4 +296,3 @@ export type PageKind = z.infer<typeof pageKindSchema>;
 export type PageKindScoreSummary = z.infer<typeof pageKindScoreSummarySchema>;
 export type SiteScoreSummary = z.infer<typeof siteScoreSummarySchema>;
 export type SiteCrawl = z.infer<typeof siteCrawlSchema>;
-export type UrlPreviewResponse = z.infer<typeof urlPreviewResponseSchema>;

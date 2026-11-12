@@ -12,17 +12,6 @@
     "default": 524288,
     "minimum": 1
   },
-  "advanced_controls_enabled": {
-    "env": ["SITE_HEALTH_ADVANCED_CONTROLS_ENABLED"],
-    "type": "bool",
-    "default": false
-  },
-  "max_advanced_requested_page_limit": {
-    "env": ["SITE_HEALTH_MAX_ADVANCED_REQUESTED_PAGE_LIMIT"],
-    "type": "int",
-    "default": 500,
-    "exclusive_minimum": 0
-  },
   "max_discovery_urls": {
     "env": ["SITE_HEALTH_MAX_DISCOVERY_URLS"],
     "type": "int",
@@ -33,36 +22,6 @@
     "env": ["SITE_HEALTH_MAX_ANALYSIS_URLS"],
     "type": "int",
     "default": 50000,
-    "exclusive_minimum": 0
-  },
-  "max_preview_rows": {
-    "env": ["SITE_HEALTH_MAX_PREVIEW_ROWS"],
-    "type": "int",
-    "default": 500,
-    "exclusive_minimum": 0
-  },
-  "max_preview_input_bytes": {
-    "env": ["SITE_HEALTH_MAX_PREVIEW_INPUT_BYTES"],
-    "type": "int",
-    "default": 262144,
-    "exclusive_minimum": 0
-  },
-  "max_seed_urls": {
-    "env": ["SITE_HEALTH_MAX_SEED_URLS"],
-    "type": "int",
-    "default": 500,
-    "exclusive_minimum": 0
-  },
-  "max_narrowing_globs": {
-    "env": ["SITE_HEALTH_MAX_NARROWING_GLOBS"],
-    "type": "int",
-    "default": 100,
-    "exclusive_minimum": 0
-  },
-  "max_glob_length": {
-    "env": ["SITE_HEALTH_MAX_GLOB_LENGTH"],
-    "type": "int",
-    "default": 512,
     "exclusive_minimum": 0
   },
   "max_frontier_urls": {
@@ -411,12 +370,6 @@
   },
   "automatic_page_limit": {
     "env": ["SITE_HEALTH_AUTOMATIC_PAGE_LIMIT"],
-    "type": "int",
-    "default": 500,
-    "exclusive_minimum": 0
-  },
-  "max_requested_page_limit": {
-    "env": ["SITE_HEALTH_MAX_REQUESTED_PAGE_LIMIT"],
     "type": "int",
     "default": 500,
     "exclusive_minimum": 0

@@ -218,16 +218,13 @@ export const pageDetailSchema = responseObject({
   scoring_version: z.string(),
 });
 
-// Identity/status returned by the per-page rerun (202). "Re-audit this page"
-// is normally invoked from a COMPLETED (terminal) source crawl; the backend
-// mints a fresh single-page rerun crawl in that case (`created_new_crawl`),
-// so the client must poll the returned `crawl_id`/`site_url_id` (the fresh
-// run) rather than the terminal source crawl it was invoked from.
+// Identity/status returned by the per-page rerun (202). A re-audit always runs
+// as a fresh single-page crawl (a running crawl refuses it), so the client
+// polls the returned `crawl_id`/`site_url_id`, not the crawl it was invoked from.
 export const rerunPageResponseSchema = responseObject({
   crawl_id: uuid(),
   site_url_id: uuid(),
   task_id: uuid(),
-  created_new_crawl: z.boolean(),
   analysis_status: pageAnalysisStatusSchema,
 });
 

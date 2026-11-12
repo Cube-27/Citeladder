@@ -90,13 +90,9 @@ export function candidate(
 
 export function crawlScope(crawl: Crawl): Scope {
   const config = record(crawl.configuration);
-  const list = (value: unknown) =>
-    Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : null;
   return {
     domain:
       typeof config.root_registrable_domain === 'string' ? config.root_registrable_domain : '',
-    include: list(config.include_globs),
-    exclude: list(config.exclude_globs),
   };
 }
 
@@ -121,16 +117,8 @@ export function orderedUnique(candidates: Candidate[], seed: string) {
   }
   return [...unique.values()];
 }
-const PAGE_KIND_OF_VALUE: Record<string, string> = crawlPolicy.value_kind_page_kinds;
-function allowed(item: Candidate, crawl: Crawl, settings: Settings) {
-  if (!classifyUrlAdmission(item.url, crawlScope(crawl)).accepted || item.depth > settings.maxDepth)
-    return false;
-  const kinds = record(crawl.configuration).page_kinds;
-  const selected = Array.isArray(kinds) ? kinds : [];
-  // Value tiers are finer than page kinds (about and contact are both `about_contact`).
-  const pageKind = PAGE_KIND_OF_VALUE[item.valueKind] ?? item.valueKind;
-  return !selected.length || ['root', 'other', ...selected].includes(pageKind);
-}
+const allowed = (item: Candidate, crawl: Crawl, settings: Settings) =>
+  classifyUrlAdmission(item.url, crawlScope(crawl)).accepted && item.depth <= settings.maxDepth;
 
 const requestedTarget = (crawl: Crawl, settings: Settings) =>
   crawl.discovery_requested_count ||
@@ -380,7 +368,6 @@ export type AdmissionResult = {
   siteUrlIds: Map<string, string>;
 };
 type AdmissionOptions = {
-  enqueueChildren?: boolean;
   sourceArtifactId?: string;
   settings?: Settings;
   /** URLs released in this transaction whose failed task is not settled yet. */
@@ -481,11 +468,11 @@ function planAdmission(
   crawl: Crawl,
   batch: Entry[],
   known: AdmissionState,
-  options: { ceiling: number; remaining: number | null; enqueueChildren: boolean },
+  options: { ceiling: number; remaining: number | null },
 ) {
   const ledger = new AdmissionLedger(known, options.remaining);
   const sample = crawl.sample_mode;
-  const discover = !sample && options.enqueueChildren;
+  const discover = !sample;
   const planned: Planned[] = [];
   for (const [position, entry] of batch.entries()) {
     if (crawl.admitted_url_count + ledger.admitted >= options.ceiling) break;
@@ -504,7 +491,7 @@ function planAdmission(
       position,
       selected,
       observe,
-      analyze: selected && (sample || !options.enqueueChildren),
+      analyze: selected && sample,
       discover,
       seen,
     });
@@ -517,7 +504,7 @@ async function writeAdmission(
   trx: Database,
   crawl: Crawl,
   planned: Planned[],
-  options: { source: string; artifactId: string | null; enqueueChildren: boolean },
+  options: { source: string; artifactId: string | null },
 ) {
   const ids = await upsertSiteUrls(
     trx,
@@ -570,10 +557,7 @@ async function writeAdmission(
     planned.flatMap((entry) => (entry.frontierId ? [entry.frontierId] : [])),
     crawlPolicy.frontier_statuses.admitted,
   );
-  let admitted = planned.length;
-  if (crawl.sample_mode) admitted = observedNew;
-  else if (options.enqueueChildren) admitted = discoverNew;
-  return { ids, admitted };
+  return { ids, admitted: crawl.sample_mode ? observedNew : discoverNew };
 }
 
 /**
@@ -599,7 +583,6 @@ export async function admitCandidates(
     .where('workspace_id', '=', crawl.workspace_id)
     .executeTakeFirstOrThrow();
   const current = { ...crawl, admitted_url_count: live.admitted_url_count };
-  const enqueueChildren = options.enqueueChildren ?? true;
   const remaining = await automaticRemaining(trx, current, runtime);
   const released = current.sample_mode
     ? 0
@@ -612,13 +595,12 @@ export async function admitCandidates(
     current,
     batch.flatMap((entry) => [entry.item.hash, hostTwinHash(entry.item.url) ?? '']).filter(Boolean),
   );
-  const plan = planAdmission(current, batch, known, { ceiling, remaining, enqueueChildren });
+  const plan = planAdmission(current, batch, known, { ceiling, remaining });
   const automatic =
     Number(record(current.configuration)[crawlPolicy.automatic_monitor_limit_key]) || 0;
   const { ids, admitted } = await writeAdmission(trx, current, plan.planned, {
     source: current.sample_mode && automatic <= 0 ? 'free_sample' : 'bootstrap',
     artifactId: options.sourceArtifactId ?? null,
-    enqueueChildren,
   });
   return {
     admitted,
@@ -748,6 +730,5 @@ export async function deactivateSystemMemberships(
     .where('project_id', '=', crawl.project_id)
     .where('site_url_id', 'in', siteUrlIds)
     .where('active', '=', true)
-    .where('selection_source', '!=', 'user')
     .execute();
 }

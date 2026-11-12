@@ -67,15 +67,14 @@ const monitoredUrlSchema = responseObject({
   display_url: z.string(),
   title: z.string().nullable(),
   active: z.boolean(),
-  selection_source: z.enum(['user', 'free_sample', 'bootstrap']),
+  selection_source: z.enum(['free_sample', 'bootstrap']),
   selected_at: z.string().nullable(),
   deselected_at: z.string().nullable(),
 });
 
-// `GET /projects/{id}/monitored-urls` — persistent set + revision + quota.
+// `GET /projects/{id}/monitored-urls` — the system-picked set + quota; nothing edits it.
 export const monitoredUrlsResponseSchema = responseObject({
   project_id: uuid(),
-  selection_version: z.number().int(),
   monitored_urls: z.array(monitoredUrlSchema),
   quota: monitoredQuotaSchema,
 });

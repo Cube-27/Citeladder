@@ -1,18 +1,12 @@
 /** Atomic crawl-control family: all writes commit before workers can claim. */
-import { z } from 'zod';
 import {
   crawlScheduleSchema,
   monitoredUrlsResponseSchema,
   rerunPageResponseSchema,
   siteCrawlSchema,
   siteCrawlListPageSchema,
-  urlPreviewResponseSchema,
 } from '@citeladder/contracts/site-health';
-import {
-  crawlScheduleUpdateRequestSchema,
-  monitoredUrlsBulkSelectRequestSchema,
-  monitoredUrlsReplaceRequestSchema,
-} from '@citeladder/contracts/site-health-requests';
+import { crawlScheduleUpdateRequestSchema } from '@citeladder/contracts/site-health-requests';
 import { budget, spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import { SiteHealthWorker } from '../workers/site-health-worker.ts';
@@ -28,32 +22,19 @@ import { cancelCrawl, listCrawls } from '../site-health/controls.ts';
 import { createCrawl } from '../site-health/planner.ts';
 import { recrawlRequest } from '../site-health/recrawl.ts';
 import { readSchedule, updateSchedule } from '../site-health/schedules.ts';
-import {
-  createCrawlRequest,
-  previewCrawlUrls,
-  previewRequest,
-} from '../site-health/planner-policy.ts';
+import { createCrawlRequest } from '../site-health/planner-policy.ts';
 import { crawlProjection, loadCrawl, rootFailure } from '../site-health/reads/crawl.ts';
 import { requireAdmitted } from '../site-health/reads/pages.ts';
-import {
-  bulkMonitoredSet,
-  monitoredSet,
-  replaceMonitoredSet,
-  rerunPage,
-} from '../site-health/selection.ts';
+import { monitoredSet, rerunPage } from '../site-health/selection.ts';
 import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
 
 const family = 'site-health-crawls';
-/** Monitored-URL routes act on the path project inside the active workspace (else 404). */
+/** Project routes act on the path project inside the active workspace (else 404). */
 const projectFamily = { family, authorize: 'active-project' } as const;
 const uuid = { scalar: { kind: 'uuid' }, required: true } as const;
 const projectPath = { project_id: uuid };
 const projectRoot = '/api/v1/projects/{project_id}/monitored-urls';
 const scheduleRoot = '/api/v1/projects/{project_id}/crawl-schedule';
-const replaceBody = monitoredUrlsReplaceRequestSchema.extend({
-  site_url_ids: z.array(z.uuid()).max(policy.site_health.crawl.monitored_url_selection_max),
-});
-const bulkBody = monitoredUrlsBulkSelectRequestSchema;
 
 export const siteHealthCrawlRoutes = [
   definePostRoute({
@@ -150,21 +131,6 @@ export const siteHealthCrawlRoutes = [
       return siteCrawlSchema.parse(await crawlProjection(db, crawl));
     },
   }),
-  definePostRoute({
-    family,
-    path: '/api/v1/site-crawls/url-preview',
-    params: { path: {}, query: {} },
-    body: previewRequest,
-    response: urlPreviewResponseSchema,
-    capability: 'read',
-    async handle({ c, db }) {
-      return previewCrawlUrls(
-        db,
-        c.get('workspace').workspaceId,
-        await readBody(c, previewRequest),
-      );
-    },
-  }),
   defineGetRoute({
     family,
     path: '/api/v1/site-crawls',
@@ -213,30 +179,6 @@ export const siteHealthCrawlRoutes = [
     handle: ({ c, db }, { path }) =>
       monitoredSet(db, c.get('workspace').workspaceId, path.project_id),
   }),
-  definePutRoute({
-    ...projectFamily,
-    path: projectRoot,
-    params: { path: projectPath, query: {} },
-    body: replaceBody,
-    response: monitoredUrlsResponseSchema,
-    capability: 'write',
-    async handle({ c, db }, { path }) {
-      const workspaceId = c.get('workspace').workspaceId;
-      const input = await readBody(c, replaceBody);
-      await db
-        .transaction()
-        .execute((trx) =>
-          replaceMonitoredSet(
-            trx,
-            workspaceId,
-            path.project_id,
-            input.site_url_ids,
-            input.expected_selection_version,
-          ),
-        );
-      return monitoredSet(db, workspaceId, path.project_id);
-    },
-  }),
   defineGetRoute({
     ...projectFamily,
     path: scheduleRoot,
@@ -258,22 +200,6 @@ export const siteHealthCrawlRoutes = [
       return db
         .transaction()
         .execute((trx) => updateSchedule(trx, workspaceId, path.project_id, input));
-    },
-  }),
-  definePostRoute({
-    ...projectFamily,
-    path: `${projectRoot}/bulk-select`,
-    params: { path: projectPath, query: {} },
-    body: bulkBody,
-    response: monitoredUrlsResponseSchema,
-    capability: 'write',
-    async handle({ c, db }, { path }) {
-      const workspaceId = c.get('workspace').workspaceId;
-      const input = await readBody(c, bulkBody);
-      await db
-        .transaction()
-        .execute((trx) => bulkMonitoredSet(trx, workspaceId, path.project_id, input));
-      return monitoredSet(db, workspaceId, path.project_id);
     },
   }),
   definePostRoute({

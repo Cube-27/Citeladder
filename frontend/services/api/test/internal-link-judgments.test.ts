@@ -38,7 +38,7 @@ beforeAll(async () => {
       root_host: 'example.test',
       root_url: 'https://example.test/',
       registrable_domain: 'example.test',
-      selection_version: 1,
+      selection_version: 0,
       created_at: now,
       updated_at: now,
     })

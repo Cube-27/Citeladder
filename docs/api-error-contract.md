@@ -42,7 +42,7 @@ The body has the single key `error`; there is no top-level `detail`. Clients rea
 | `message` | A human sentence. **Never** a raw JSON blob, stack trace, or bare token. |
 | `request_id` | The correlation id; also echoed in the `X-Request-ID` response header. |
 | `retryable` | Explicit per-error value when set, else classified from the status code. |
-| `details` | Present only when a code defines extras (e.g. `current_selection_version`). |
+| `details` | Present only when a code defines extras (e.g. `limit`). |
 
 ## 2. Backend production
 
@@ -54,9 +54,9 @@ messages and codes without echoing the input payload.
 Routes throw `ApiError` or the shared `notFound(resource)` helper:
 
 ```typescript
-throw new ApiError(409, 'The selection changed since you loaded it.', {
-  code: 'stale_selection_version',
-  details: { current_selection_version: 7 },
+throw new ApiError(403, 'You already own a workspace', {
+  code: 'workspace_limit_exceeded',
+  details: { limit: 1 },
 });
 ```
 

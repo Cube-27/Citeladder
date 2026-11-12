@@ -322,8 +322,8 @@ except the explicit operator grants `billing_checkout` and `operator_controls`.
 Development bootstrap runs only in local development and demo mode; production
 carries no development login (BL9).
 
-The non-public `operator_controls` grant (BL9) gives its workspace advanced Site
-Health crawl controls and page limit and unmetered crawl fetches. The operator
+The non-public `operator_controls` grant (BL9) gives its workspace unmetered
+Site Health crawl fetches. The operator
 issues it to their own workspace with `billing:admin grant` after deployment
 ([operator guide](operations/billing-operator-guide.md#operator-controls)). It
 does not confer access to other workspaces or replace provider credentials,

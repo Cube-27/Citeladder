@@ -9,7 +9,6 @@ import { failedAs } from './task-outcome.ts';
 
 export type CoverageSignals = {
   sampleMode: boolean;
-  inputMode: string;
   cancelled: boolean;
   discoveryStatus: string;
   requestedPageLimit: number;
@@ -40,7 +39,6 @@ function partialReasons(signals: CoverageSignals) {
   if (signals.pendingFrontierCount > 0) reasons.push('frontier_not_exhausted');
   const bounded =
     signals.sampleMode ||
-    signals.inputMode !== 'auto' ||
     signals.cancelled ||
     BOUNDED_DISCOVERY.has(signals.discoveryStatus) ||
     !signals.discoveryTaskCount;
@@ -195,8 +193,6 @@ async function coverageSignals(db: Database, crawl: Crawl): Promise<CoverageSign
   const config = record(crawl.configuration);
   return {
     sampleMode: crawl.sample_mode,
-    inputMode:
-      typeof config.input_mode === 'string' && config.input_mode ? config.input_mode : 'auto',
     cancelled: crawl.status === 'cancelled',
     discoveryStatus: crawl.discovery_status,
     requestedPageLimit: Number(crawl.discovery_requested_count || config.requested_page_limit || 0),

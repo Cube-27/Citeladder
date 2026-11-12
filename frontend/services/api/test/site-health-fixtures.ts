@@ -66,7 +66,7 @@ export class SiteFixtures extends VisibilityFixtures {
         root_host: 'example.test',
         root_url: root,
         registrable_domain: 'example.test',
-        selection_version: 1,
+        selection_version: 0,
         created_at: now,
         updated_at: now,
       })
@@ -371,6 +371,40 @@ export class SiteFixtures extends VisibilityFixtures {
     return { id, artifactId, taskId, analysisId };
   }
 
+  /** Make exactly these URLs the project's active monitored set, as a crawl's admission would. */
+  async monitor(seed: SiteSeed, siteUrlIds: string[]) {
+    const now = new Date();
+    await this.siteDb
+      .updateTable('monitored_site_urls')
+      .set({ active: false, deselected_at: now })
+      .where('workspace_id', '=', seed.workspaceId)
+      .where('project_id', '=', seed.projectId)
+      .execute();
+    if (!siteUrlIds.length) return;
+    await this.siteDb
+      .insertInto('monitored_site_urls')
+      .values(
+        siteUrlIds.map((siteUrlId) => ({
+          id: randomUUID(),
+          workspace_id: seed.workspaceId,
+          project_id: seed.projectId,
+          profile_id: seed.profileId,
+          site_url_id: siteUrlId,
+          active: true,
+          selection_source: 'bootstrap',
+          selected_at: now,
+          created_at: now,
+          updated_at: now,
+        })),
+      )
+      .onConflict((conflict) =>
+        conflict
+          .columns(['project_id', 'site_url_id'])
+          .doUpdateSet({ active: true, deselected_at: null, selected_at: now }),
+      )
+      .execute();
+  }
+
   /** A monitored page with its queued analyze task, under a runtime entitled to analyze. */
   async analyzable(
     seed: SiteSeed,
@@ -433,7 +467,7 @@ export class SiteFixtures extends VisibilityFixtures {
         profile_id: seed.profileId,
         site_url_id: siteUrlId,
         active: true,
-        selection_source: options.source ?? 'user',
+        selection_source: options.source ?? 'bootstrap',
         selected_at: now,
         created_at: now,
         updated_at: now,

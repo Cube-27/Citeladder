@@ -503,7 +503,7 @@ describe('crawl-wide canonical alias resolution', () => {
     ).toEqual(['a']);
   });
 
-  it('never excludes a user selection or aliases toward an unfetched or inactive target', () => {
+  it('never excludes a protected page or aliases toward an unfetched or inactive target', () => {
     expect(resolveDuplicateAliases(graph([['a', 'b']], ['a', 'b'], ['a']))).toEqual([]);
     expect(resolveDuplicateAliases(graph([['a', 'b']], ['a', 'b'], [], ['a']))).toEqual([]);
     expect(resolveDuplicateAliases(graph([['a', 'b']], ['a']))).toEqual([]);
@@ -512,7 +512,6 @@ describe('crawl-wide canonical alias resolution', () => {
 
 const signals = (changes: Partial<CoverageSignals> = {}): CoverageSignals => ({
   sampleMode: false,
-  inputMode: 'auto',
   cancelled: false,
   discoveryStatus: 'completed',
   requestedPageLimit: 50,
@@ -542,7 +541,6 @@ describe('crawl coverage', () => {
     expect(assessCoverage(signals({ cancelled: true })).evidence.reasons).toEqual([
       'discovery_bounded_or_stopped',
     ]);
-    expect(assessCoverage(signals({ inputMode: 'exact_urls' })).state).toBe('partial');
   });
 
   it('is unknown, not complete, when discovery failed or observed nothing', () => {
