@@ -28,7 +28,7 @@ A **Partial audit** can still show a score. Read the accompanying coverage to un
 
 ## Find the issues to fix first
 
-**Issues** opens with how many issues the latest crawl found, how they split by severity, and the three worst to fix first. The table below lists one tab at a time: **Technical** (how pages are served and indexed), **Content** (titles, descriptions, headings, accessibility and page copy) and **AEO** (what answer engines need to read and cite a page). Search it, filter by severity or page kind, switch to advisories, and sort by severity or by pages affected. Open an issue to see how to fix it, every affected page, **Ask agent** and **Copy fix prompt**.
+**Issues** opens with how many issues the latest crawl found, how they split by severity, and the three worst to fix first. The table below lists one tab at a time: **Technical** (how pages are served and indexed), **Content** (titles, descriptions, headings, accessibility and page copy) and **AEO** (what answer engines need to read and cite a page). Search it, filter by severity or page kind, switch to advisories, and sort by severity or by pages affected. Open an issue to see how to fix it, its affected pages, **Ask agent** and **Copy fix prompt**. A sitewide finding, such as a broken link in the navigation, lists a sample of the pages it was found on with the total.
 
 In **Site Health → Pages**, search finds pages by any part of their URL.
 

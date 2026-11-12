@@ -29,6 +29,7 @@ import { loadCrawl } from '../src/site-health/reads/crawl.ts';
 import { record } from '../src/db/json.ts';
 import { compareText } from '../src/text-order.ts';
 import { encodeKeysetCursor } from '../src/http/keyset-cursor.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
@@ -619,6 +620,40 @@ describe('issue catalog', () => {
     const [header, first] = csv.split('\r\n');
     expect(header!.split(',')[0]).toBe('group_id');
     expect(first).toContain('"homepage, product"');
+  });
+
+  it('serves an issue’s affected pages to an API key, inside the key’s project only', async () => {
+    const seed = await fixtures.crawl();
+    const home = await page(seed, '/');
+    await issue(seed, home, 'technical.indexable');
+    const groupId = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
+    const account = await billingAccount(db, seed.workspaceId);
+    await grant(db, account, { key: 'api_access', value: 1, sourceKind: 'override' });
+    await grant(db, account, { key: 'api_keys', value: 10, sourceKind: 'override' });
+    const created = await app.request('/api/v1/api-keys', {
+      method: 'POST',
+      headers: {
+        cookie: `${config.session.cookieName}=${await sessionToken({ sub: seed.userId, ver: 0 })}`,
+        'x-workspace-id': seed.workspaceId,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ name: 'Issue export' }),
+    });
+    expect(created.status, await created.clone().text()).toBe(201);
+    const { secret } = (await created.json()) as { secret: string };
+    const read = (crawlId: string, group: string) =>
+      app.request(`/v1/projects/${seed.projectId}/site-crawls/${crawlId}/issues/${group}`, {
+        headers: { authorization: `Bearer ${secret}` },
+      });
+
+    const response = await read(seed.crawlId, groupId);
+    expect(response.status, await response.clone().text()).toBe(200);
+    const detail = siteIssueDetailSchema.parse(await response.json());
+    expect(detail.occurrences.map((row) => row.site_url_id)).toEqual([home.id]);
+    // Another workspace's crawl, and a group the crawl does not hold, are not found.
+    const outsider = await fixtures.crawl();
+    expect((await read(outsider.crawlId, groupId)).status).toBe(404);
+    expect((await read(seed.crawlId, randomUUID())).status).toBe(404);
   });
 
   it('serves the newest crawl’s issue page by project, named with that crawl', async () => {

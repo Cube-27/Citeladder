@@ -679,6 +679,15 @@ describe('UrlDetail', () => {
     expect(issue.skillId).toBe('technical_health');
   });
 
+  it('asks the agent why a page’s audit did not finish, rather than how ready the page is', async () => {
+    mswServer.use(...handlers(detail({ analysis_status: 'error', issues: [] })));
+    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
+
+    const page = handoffOf(screen.getByRole('link', { name: 'Ask agent about this page' }));
+    expect(page.prompt).toMatch(/^The Site Health audit of https:\/\/acme\.com\/ did not complete/);
+  });
+
   it('pages the issue cards two at a time and jumps to the one chosen in the list', async () => {
     const [base] = detail().issues;
     const issues = ['First', 'Second', 'Third', 'Fourth', 'Fifth', 'Sixth', 'Seventh'].map(

@@ -304,6 +304,8 @@ export const siteHealthRoutes = [
   }),
   defineGetRoute({
     family,
+    exposure: 'both',
+    publicPath: `${publicCrawlRoot}/issues/{group_id}`,
     path: `${crawlRoot}/issues/{group_id}`,
     params: { path: { ...crawlPath, group_id: uuid }, query: { ...paging, page_kind: text } },
     response: siteIssueDetailSchema,

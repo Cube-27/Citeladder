@@ -140,6 +140,38 @@ export function IssueDetailDialog({
   );
 }
 
+/**
+ * An issue the address names that no listed row describes (another tab, page
+ * or a stale link), before its own read has answered: loading, or why it
+ * could not load, with a retry. Closing it clears the selection.
+ */
+export function PendingIssueDialog({
+  detailQuery,
+  onClose,
+}: Readonly<{ detailQuery: UseQueryResult<SiteIssueDetail>; onClose: () => void }>) {
+  return (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      width="wide"
+      title="Issue"
+    >
+      {detailQuery.isError ? (
+        <ReadError
+          error={detailQuery.error}
+          fallback="Could not load this issue."
+          onRetry={() => void detailQuery.refetch()}
+          pending={detailQuery.isFetching}
+        />
+      ) : (
+        <QueryState kind="loading" label="Loading the issue…" />
+      )}
+    </Dialog>
+  );
+}
+
 /** What to ask the agent about an issue: across its pages, or on one page. */
 export function askAgentPrompt(
   issue: Pick<SiteIssue, 'title' | 'rule_id' | 'affected_url_count'>,

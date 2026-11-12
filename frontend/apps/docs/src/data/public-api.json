@@ -3298,6 +3298,117 @@
         "required": ["failing", "passing", "not_applicable", "unread"],
         "additionalProperties": false
       },
+      "IssueOccurrence": {
+        "type": "object",
+        "properties": {
+          "occurrence_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "evaluation_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "crawl_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "normalized_url": {
+            "type": "string"
+          },
+          "display_url": {
+            "type": "string"
+          },
+          "title": {
+            "type": ["string", "null"]
+          },
+          "page_kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PageKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dimension": {
+            "$ref": "#/components/schemas/IssueDimension"
+          },
+          "category": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/IssueSeverity"
+          },
+          "finding_class": {
+            "$ref": "#/components/schemas/FindingClass"
+          },
+          "issue_title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "remediation": {
+            "type": "string"
+          },
+          "reason_code": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "analyzer_version": {
+            "type": "string"
+          },
+          "rule_version": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "occurrence_id",
+          "evaluation_id",
+          "crawl_id",
+          "rule_id",
+          "site_url_id",
+          "normalized_url",
+          "display_url",
+          "title",
+          "page_kind",
+          "dimension",
+          "category",
+          "severity",
+          "finding_class",
+          "issue_title",
+          "description",
+          "remediation",
+          "reason_code",
+          "evidence",
+          "analyzer_version",
+          "rule_version",
+          "created_at"
+        ],
+        "additionalProperties": false
+      },
       "IssueSection": {
         "type": "string",
         "enum": ["technical", "content", "aeo"]
@@ -6696,6 +6807,96 @@
         ],
         "additionalProperties": false
       },
+      "SiteIssueDetail": {
+        "type": "object",
+        "properties": {
+          "group_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "crawl_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "rule_id": {
+            "type": "string"
+          },
+          "dimension": {
+            "$ref": "#/components/schemas/IssueDimension"
+          },
+          "category": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/IssueSeverity"
+          },
+          "finding_class": {
+            "$ref": "#/components/schemas/FindingClass"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "remediation": {
+            "type": "string"
+          },
+          "remediation_route": {
+            "type": "string"
+          },
+          "occurrences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IssueOccurrence"
+            }
+          },
+          "occurrence_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "affected_url_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "analyzer_version": {
+            "type": "string"
+          },
+          "rule_version": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string"
+          },
+          "next_cursor": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": [
+          "group_id",
+          "crawl_id",
+          "rule_id",
+          "dimension",
+          "category",
+          "severity",
+          "finding_class",
+          "title",
+          "description",
+          "remediation",
+          "remediation_route",
+          "occurrences",
+          "occurrence_count",
+          "affected_url_count",
+          "analyzer_version",
+          "rule_version",
+          "created_at"
+        ],
+        "additionalProperties": false
+      },
       "SiteIssuesPage": {
         "type": "object",
         "properties": {
@@ -8880,6 +9081,83 @@
               "default": "defect",
               "type": "string",
               "enum": ["defect", "advisory"]
+            }
+          }
+        ],
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/site-crawls/{crawl_id}/issues/{group_id}": {
+      "get": {
+        "tags": ["site-crawls"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteIssueDetail"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "crawl_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "page_kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
             }
           }
         ],

@@ -217,6 +217,31 @@ describe('IssuesCatalog', () => {
     expect(await within(dialog).findByRole('link', { name: /Pricing page/ })).toBeInTheDocument();
   });
 
+  it('says when an addressed issue cannot load, retries it, and closes it', async () => {
+    serveIssues();
+    let attempts = 0;
+    mswServer.use(
+      http.get(`${ISSUES}/${OTHER}`, () => {
+        attempts += 1;
+        return attempts === 1
+          ? HttpResponse.json({ error: { message: 'Issue not found' } }, { status: 404 })
+          : HttpResponse.json(issueDetail({ group_id: OTHER, title: 'Canonical tag is missing' }));
+      }),
+    );
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />, `/issues?issue=${OTHER}`);
+
+    const pending = await screen.findByRole('dialog', { name: 'Issue' });
+    await user.click(await within(pending).findByRole('button', { name: 'Retry' }));
+    expect(
+      await screen.findByRole('dialog', { name: 'Canonical tag is missing' }),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Close dialog' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(currentUrl()).not.toContain('issue=');
+  });
+
   /**
    * The detail query keeps the previous issue's occurrences while the next
    * loads. A dialog captioning one issue over another's pages would describe

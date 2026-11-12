@@ -93,17 +93,24 @@ export function UrlDetailView({
 /** The whole page for the agent: its id and URL, never its evidence. */
 function pageHandoff(detail: PageDetail) {
   const count = detail.issues.filter((issue) => issue.finding_class === 'defect').length;
-  const issues = count === 1 ? '1 Site Health issue' : `${count} Site Health issues`;
-  const prompt =
-    count > 0
-      ? `Review the ${issues} on ${detail.display_url}, worst first, and propose exact page edits for each.`
-      : `Review ${detail.display_url} for search and answer-engine readiness and propose improvements.`;
   return {
     siteUrlId: detail.site_url_id,
     targetUrl: detail.display_url,
-    prompt,
+    prompt: pagePrompt(detail, count),
     skillId: 'technical_health',
   };
+}
+
+/** Its issues worst first; with none, readiness only once the audit finished. */
+function pagePrompt(detail: PageDetail, count: number): string {
+  const url = detail.display_url;
+  if (count > 0) {
+    const issues = count === 1 ? '1 Site Health issue' : `${count} Site Health issues`;
+    return `Review the ${issues} on ${url}, worst first, and propose exact page edits for each.`;
+  }
+  if (detail.analysis_status !== 'completed')
+    return `The Site Health audit of ${url} did not complete (${statusLabel(detail.analysis_status)}). Investigate why and say what is needed to audit it.`;
+  return `Review ${url} for search and answer-engine readiness and propose improvements.`;
 }
 
 /** The page's URL, kind and audit date on one line; its status only when it is not done. */

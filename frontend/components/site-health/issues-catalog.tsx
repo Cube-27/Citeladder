@@ -5,7 +5,11 @@ import { useQuery } from '@tanstack/react-query';
 
 import { ListScreen } from '@/components/layout/page-shell';
 import { Inline, Stack } from '@/components/ui/layout';
-import { IssueDetailDialog, type IssueHead } from '@/components/site-health/issue-detail-dialog';
+import {
+  IssueDetailDialog,
+  PendingIssueDialog,
+  type IssueHead,
+} from '@/components/site-health/issue-detail-dialog';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { IssuesSummary } from '@/components/site-health/issues-summary';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
@@ -160,6 +164,9 @@ export function IssuesCatalog({
           ))}
         </DataTable>
       </Stack>
+      {selectedGroupId !== null && open === null ? (
+        <PendingIssueDialog detailQuery={detailQuery} onClose={() => catalog.selectIssue(null)} />
+      ) : null}
       {open ? (
         <IssueDetailDialog
           issue={open}
