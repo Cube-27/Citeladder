@@ -1,13 +1,14 @@
 /** The migrate CLI's admission against real PostgreSQL: numbered forward migrations, each applied once. */
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
+import { readdirSync } from 'node:fs';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
 import pg from 'pg';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { applyMigrations, readMigrations } from '../src/cli/schema-migrations.ts';
+import { applyMigrations, migrationClient, readMigrations } from '../src/cli/schema-migrations.ts';
 
 const base = new URL(process.env.API_TEST_DATABASE_URL!);
 const admin = new pg.Client({
@@ -36,7 +37,7 @@ async function publicTables(client: pg.Client) {
 
 async function columns(client: pg.Client, table: string) {
   const result = await client.query<{ column_name: string }>(
-    "select column_name from information_schema.columns where table_schema = 'public' and table_name = $1",
+    "select column_name from information_schema.columns where table_schema = 'public' and table_name = $1 order by ordinal_position",
     [table],
   );
   return result.rows.map((row) => row.column_name);
@@ -51,7 +52,17 @@ async function columnType(client: pg.Client, table: string, column: string) {
 }
 
 const ledger = async (client: pg.Client) =>
-  (await client.query('select version from public.schema_migrations order by version')).rows;
+  (
+    await client.query<{ version: string }>(
+      'select version from public.schema_migrations order by version',
+    )
+  ).rows.map((row) => row.version);
+
+/** The migration files as the repository holds them, so adding one needs no edit here. */
+const directory = readdirSync(fileURLToPath(new URL('../migrations/', import.meta.url)))
+  .filter((name) => name.endsWith('.sql'))
+  .sort()
+  .map((name) => name.slice(0, -'.sql'.length));
 
 const clients: pg.Client[] = [];
 beforeAll(() => admin.connect());
@@ -66,71 +77,17 @@ describe('a fresh database', () => {
     const { client } = await freshDatabase();
     clients.push(client);
 
-    expect(await applyMigrations(client)).toEqual([
-      '0001_baseline',
-      '0002_agent_single_draft',
-      '0003_agent_cache_replay',
-      '0004_agent_documents_web_search',
-      '0005_agent_call_hold_basis',
-      '0006_capacity_and_queue_indexes',
-      '0007_workspace_tenancy_keys',
-      '0008_commerce_resolver_outcome',
-      '0009_perception_model_omitted',
-      '0010_differentiation_reports_insert_only',
-      '0011_drop_runtime_valid_until',
-      '0012_internal_costs',
-      '0013_audit_error_code_width',
-      '0014_status_check_constraints',
-      '0015_cascade_reference_indexes',
-      '0016_content_angles',
-      '0017_action_surface',
-      '0018_drop_action_surface',
-      '0019_page_documents',
-      '0020_page_suggestions',
-      '0021_commerce_carousel',
-      '0022_suggestion_rule_guidance',
-      '0023_commerce_match_passes',
-      '0024_declaration_ordering',
-      '0025_issue_reference_snippets',
-      '0026_crawl_schedules',
-      '0027_commerce_category_tree',
-      '0028_issue_family_actions',
-      '0029_deployment_record',
-    ]);
+    // Numbered 0001, 0002, … with no gap or duplicate.
+    expect(directory.map((version) => Number(version.slice(0, 4)))).toEqual(
+      directory.map((_, index) => index + 1),
+    );
+    const applied = await applyMigrations(client);
+    expect(applied[0]).toBe('0001_baseline');
+    expect(applied).toEqual(directory);
     expect(await publicTables(client)).toEqual(
       expect.arrayContaining(['schema_migrations', 'workspaces']),
     );
-    expect(await ledger(client)).toEqual([
-      { version: '0001_baseline' },
-      { version: '0002_agent_single_draft' },
-      { version: '0003_agent_cache_replay' },
-      { version: '0004_agent_documents_web_search' },
-      { version: '0005_agent_call_hold_basis' },
-      { version: '0006_capacity_and_queue_indexes' },
-      { version: '0007_workspace_tenancy_keys' },
-      { version: '0008_commerce_resolver_outcome' },
-      { version: '0009_perception_model_omitted' },
-      { version: '0010_differentiation_reports_insert_only' },
-      { version: '0011_drop_runtime_valid_until' },
-      { version: '0012_internal_costs' },
-      { version: '0013_audit_error_code_width' },
-      { version: '0014_status_check_constraints' },
-      { version: '0015_cascade_reference_indexes' },
-      { version: '0016_content_angles' },
-      { version: '0017_action_surface' },
-      { version: '0018_drop_action_surface' },
-      { version: '0019_page_documents' },
-      { version: '0020_page_suggestions' },
-      { version: '0021_commerce_carousel' },
-      { version: '0022_suggestion_rule_guidance' },
-      { version: '0023_commerce_match_passes' },
-      { version: '0024_declaration_ordering' },
-      { version: '0025_issue_reference_snippets' },
-      { version: '0026_crawl_schedules' },
-      { version: '0027_commerce_category_tree' },
-      { version: '0028_issue_family_actions' },
-      { version: '0029_deployment_record' },
-    ]);
+    expect(await ledger(client)).toEqual(directory);
 
     // A CRLF checkout is the same file.
     const crlf = migrations.map((file) => ({ ...file, sql: file.sql.replaceAll('\n', '\r\n') }));
@@ -159,36 +116,9 @@ describe('an existing database', () => {
     expect(await applyMigrations(client, [baseline!])).toEqual(['0001_baseline']);
     expect(await columns(client, 'agent_runs')).toContain('mode');
     expect(await columnType(client, 'agent_run_transcripts', 'messages')).toBe('jsonb');
-    expect(await applyMigrations(client)).toEqual([
-      '0002_agent_single_draft',
-      '0003_agent_cache_replay',
-      '0004_agent_documents_web_search',
-      '0005_agent_call_hold_basis',
-      '0006_capacity_and_queue_indexes',
-      '0007_workspace_tenancy_keys',
-      '0008_commerce_resolver_outcome',
-      '0009_perception_model_omitted',
-      '0010_differentiation_reports_insert_only',
-      '0011_drop_runtime_valid_until',
-      '0012_internal_costs',
-      '0013_audit_error_code_width',
-      '0014_status_check_constraints',
-      '0015_cascade_reference_indexes',
-      '0016_content_angles',
-      '0017_action_surface',
-      '0018_drop_action_surface',
-      '0019_page_documents',
-      '0020_page_suggestions',
-      '0021_commerce_carousel',
-      '0022_suggestion_rule_guidance',
-      '0023_commerce_match_passes',
-      '0024_declaration_ordering',
-      '0025_issue_reference_snippets',
-      '0026_crawl_schedules',
-      '0027_commerce_category_tree',
-      '0028_issue_family_actions',
-      '0029_deployment_record',
-    ]);
+    const pendingAfterBaseline = await applyMigrations(client);
+    expect(pendingAfterBaseline[0]).toBe('0002_agent_single_draft');
+    expect(pendingAfterBaseline).toEqual(directory.slice(1));
     // A URL identity keeps no per-sighting discovery status.
     expect(await columns(client, 'site_urls')).not.toContain('discovery_status');
     expect(await columns(client, 'site_urls')).toContain('latest_title');
@@ -270,38 +200,54 @@ describe('an existing database', () => {
     expect(await columns(client, 'internal_costs')).toEqual(
       expect.arrayContaining(['source', 'workspace_id', 'charge', 'cost_microusd', 'occurred_at']),
     );
-    expect(await ledger(client)).toEqual([
-      { version: '0001_baseline' },
-      { version: '0002_agent_single_draft' },
-      { version: '0003_agent_cache_replay' },
-      { version: '0004_agent_documents_web_search' },
-      { version: '0005_agent_call_hold_basis' },
-      { version: '0006_capacity_and_queue_indexes' },
-      { version: '0007_workspace_tenancy_keys' },
-      { version: '0008_commerce_resolver_outcome' },
-      { version: '0009_perception_model_omitted' },
-      { version: '0010_differentiation_reports_insert_only' },
-      { version: '0011_drop_runtime_valid_until' },
-      { version: '0012_internal_costs' },
-      { version: '0013_audit_error_code_width' },
-      { version: '0014_status_check_constraints' },
-      { version: '0015_cascade_reference_indexes' },
-      { version: '0016_content_angles' },
-      { version: '0017_action_surface' },
-      { version: '0018_drop_action_surface' },
-      { version: '0019_page_documents' },
-      { version: '0020_page_suggestions' },
-      { version: '0021_commerce_carousel' },
-      { version: '0022_suggestion_rule_guidance' },
-      { version: '0023_commerce_match_passes' },
-      { version: '0024_declaration_ordering' },
-      { version: '0025_issue_reference_snippets' },
-      { version: '0026_crawl_schedules' },
-      { version: '0027_commerce_category_tree' },
-      { version: '0028_issue_family_actions' },
-      { version: '0029_deployment_record' },
-    ]);
+    expect(await ledger(client)).toEqual(directory);
   }, 120000);
+});
+
+describe('a migration the serving revision would wait behind', () => {
+  it('fails on a held lock or a long statement instead of waiting, unless the file raises its own bound', async () => {
+    const { client: serving, url } = await freshDatabase();
+    clients.push(serving);
+    const migrate = migrationClient(url, {
+      MIGRATION_LOCK_TIMEOUT_MS: '200',
+      MIGRATION_STATEMENT_TIMEOUT_MS: '1000',
+    });
+    await migrate.connect();
+    clients.push(migrate);
+    expect(await applyMigrations(migrate, [baseline!])).toEqual(['0001_baseline']);
+    const alter = {
+      version: '0002_alter',
+      sql: 'ALTER TABLE public.workspaces ADD COLUMN probe integer;',
+    };
+
+    // The serving revision reads the table inside an open transaction.
+    await serving.query('begin');
+    await serving.query('select * from public.workspaces');
+    await expect(applyMigrations(migrate, [baseline!, alter])).rejects.toThrow(
+      'canceling statement due to lock timeout',
+    );
+    await serving.query('rollback');
+    expect(await columns(serving, 'workspaces')).not.toContain('probe');
+
+    // A file that needs longer raises its own bound; the next file is bounded again.
+    const raised = {
+      version: '0003_raised',
+      sql: "SET LOCAL statement_timeout = '10s';\nSELECT pg_sleep(1.5)",
+    };
+    const slow = { version: '0004_slow', sql: 'SELECT pg_sleep(1.5);' };
+    await expect(applyMigrations(migrate, [baseline!, alter, raised, slow])).rejects.toThrow(
+      'canceling statement due to statement timeout',
+    );
+    expect(await ledger(serving)).toEqual(['0001_baseline']);
+    expect(await columns(serving, 'workspaces')).not.toContain('probe');
+
+    // With the lock free, the same migrations apply.
+    expect(await applyMigrations(migrate, [baseline!, alter, raised])).toEqual([
+      '0002_alter',
+      '0003_raised',
+    ]);
+    expect(await columns(serving, 'workspaces')).toContain('probe');
+  }, 60000);
 });
 
 describe('a chat with a document before multi-document chats', () => {

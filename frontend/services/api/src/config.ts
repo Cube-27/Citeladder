@@ -213,6 +213,17 @@ export function databaseSettings(source: SettingSource) {
   };
 }
 
+/**
+ * Bounds on each migration statement: a lock wait that would queue the serving
+ * revision's queries behind DDL fails fast, and no statement outlasts the job.
+ */
+export function migrationTimeouts(source: SettingSource) {
+  return {
+    lockTimeoutMs: resolveSetting('migration_lock_timeout_ms', source) as number,
+    statementTimeoutMs: resolveSetting('migration_statement_timeout_ms', source) as number,
+  };
+}
+
 function resolveSetting(name: keyof typeof policy.settings, source: SettingSource): unknown {
   return resolveSpec(name, policy.settings[name], source);
 }

@@ -117,7 +117,7 @@ owner as required reviewer.
 | `DEV_LOGIN_COUNTER_ALLOWANCE` | optional | defaults to `200`; demo and local development only |
 | `OAUTH_GOOGLE_ENABLED` | **new**, optional | `false` (default); `true` turns on Google sign-in |
 | `PUBLIC_SIGNUP_ENABLED` | **new**, optional | `false` (default); `true` opens self-serve sign-up |
-| `TICK_SCHEDULE` | **new**, optional | cron in UTC; default `*/10 * * * *` |
+| `TICK_SCHEDULE` | **new**, optional | cron in UTC; default `*/20 * * * *` |
 | `BILLING_CHECKOUT_ENABLED` | optional | `false` (default); `true` admits new checkout for the audience below. Webhooks and reconciliation run either way |
 | `BILLING_CHECKOUT_AUDIENCE` | optional | `allow_list` (default) sells only to workspaces holding the `billing_checkout` grant; `everyone` opens checkout (test-mode keys still serve allow-listed workspaces only) |
 | `BILLING_RAZORPAY_MODE` | optional | `disabled` (default), `test` or `live`; any other mode needs `BILLING_RAZORPAY_KEY_ID` plus the key and webhook secrets, or the deploy fails |
@@ -357,12 +357,42 @@ serving. The migrate job applies the pending
 numbered migrations in `frontend/services/api/migrations/` in order, in place on
 the existing database, and is a no-op when every file is recorded. An edited
 applied file, a missing or skipped version, or unledgered tables fail the job,
-which stops the deploy before the API changes; the log names the cause.
+which stops the deploy before the API changes; the log names the cause. A
+migration statement that waits on a lock longer than
+`MIGRATION_LOCK_TIMEOUT_MS` (3 s), or runs longer than
+`MIGRATION_STATEMENT_TIMEOUT_MS` (5 min), fails the job the same way and rolls
+the whole apply back. A lock timeout means a serving request or runner held the
+table: rerun **GCP - Deploy**. A statement timeout recurs on a rerun: the
+migration has to raise its own bound
+([migrations](../DEVELOPMENT.md#migrations-forward-only)); the job's
+environment is Terraform-managed, so do not edit it in the console.
 
-- **API rollback:** Cloud Run → `citeladder-api` → Revisions, then route
-  100% to the previous revision (or
-  `gcloud run services update-traffic citeladder-api --region us-central1 --to-revisions <REVISION>=100`).
-  The next deploy from `main` takes traffic back.
+The migrate job runs while the previous API revision and any running runner
+execution still serve, so every migration must work with the code already
+deployed. A migration that drops or renames a column or table, or adds
+`NOT NULL`, ships one release after the code stops using that name
+([expand and contract](../DEVELOPMENT.md#migrations-forward-only)).
+
+- **Rollback:** first check whether any release after the target added a
+  migration (`git log <target-sha>..<serving-sha> -- frontend/services/api/migrations/`).
+  The schema never rolls back: an older revision runs on the newer schema.
+  - **No migration in between, or only expanding ones** (new tables, nullable
+    columns, indexes): roll back the API and both jobs to the same image.
+    Route traffic with
+    `gcloud run services update-traffic citeladder-api --region us-central1 --to-revisions <REVISION>=100`,
+    read that revision's image digest
+    (`gcloud run revisions describe <REVISION> --region us-central1 --format='value(spec.containers[0].image)'`),
+    and point the jobs at it with
+    `gcloud run jobs update citeladder-runner --region us-central1 --image <digest>` and the same for
+    `citeladder-billing`. A service-only rollback leaves the runner on the new
+    code.
+  - **A contracting migration in between** (a drop, rename or `NOT NULL`):
+    the older code fails against the schema, so do not roll back. Fix forward:
+    revert the faulty change on `main` (never the migration) and deploy.
+  - Artifact Registry keeps the three most recent images; an older one may be
+    deleted after 7 days, so roll back only to a recent revision.
+
+  The next deploy from `main` moves the API and the jobs back to its image.
 - **Database reset (disposable data only):** rerun **GCP - Deploy** with
   `reset_database` checked and the exact project ID. It replaces the VM, which
   deletes every row with no backup, and then migrates. It refuses demo mode.

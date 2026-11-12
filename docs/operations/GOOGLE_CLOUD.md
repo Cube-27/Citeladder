@@ -32,7 +32,8 @@ Docs Worker (static, no origin)                            │ starts runner aft
 - **Ingress.** Cloud Run accepts all traffic at the network edge but disables
   IAM invocation checks. The API admits a request only with the Workers'
   origin token (current or rotating previous). It also requires an allowlisted
-  public host (`citeladder.com` or `app.citeladder.com`), and that applies to
+  public host (`citeladder.com`, `app.citeladder.com` or `api.citeladder.com`,
+  from `PUBLIC_WEBSITE_URL`, `FRONTEND_URL` and `PUBLIC_API_URL`), and that applies to
   `/health`, `/ready` and MCP too. The admitted host drives MCP origin checks.
   The admitted `X-CiteLadder-Client-IP` (Cloudflare's `CF-Connecting-IP`)
   drives per-visitor rate limits. Workers strip any client-supplied copies of
