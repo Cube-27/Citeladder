@@ -66,8 +66,35 @@ is the project's newest usable crawl (`completed`, `partially_completed` or
 Every read that names no crawl uses it: the project `/pages` and `/issues`
 reads, Overview, AEO readiness and Architecture, Opportunities, the Command
 Center, the Agent's content context, MCP, AI Traffic pages, internal links, a
-backdated declaration's evidence and the declaration's crawl leg. A rerun
-updates only its own page's evidence. The dashboard shows a running site crawl,
+backdated declaration's evidence and the declaration's crawl leg. A rerun is
+never the current crawl; it updates only its own page's evidence.
+
+**Each page's latest audit** ([SH-B9](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)).
+A site crawl's page and issue evidence is each page's latest audit as that
+crawl shows it (`pageAuditsSql` and `viewIssuesSql` in `reads/crawl.ts`): for
+every page the crawl audited and every tracked page, the newest finalized
+current analysis from any audit of the project (the crawl, a page rerun or an
+earlier crawl) that began before the next usable site crawl, ordered by audit
+time (`started_at`, else `created_at`). The crawl's own current analyses count
+before they are finalized, so a running crawl shows its progress. So the
+current crawl reads each tracked page's latest audit: a rerun landing after it
+moves its page, and a tracked page a cancelled crawl never reached keeps its
+earlier audit. Site-level findings (architecture rules, sitewide links) are
+the site crawl's own. A page rerun read by id shows only its own page. Pages,
+page detail, issue history, the Issues catalog and detail, the snapshot and
+score summary, Opportunities' Site Health evidence, the Agent's content
+context, MCP and AI Traffic findings all read through it; the analyze task and
+link metrics stay the crawl's own. When a rerun lands, the site crawl it falls
+in (`foldingSiteCrawl`: the newest usable site crawl created before it) has its
+persisted Issues catalog, snapshot page columns and score summary recomputed in
+the rerun's landing transaction (`issue-currency.ts`,
+`refreshSiteSnapshot` in `snapshot.ts`). Coverage and discovery figures stay
+the crawl's own, and the snapshot keeps its id and time, so until the
+open-issues trend replaces it the score trend's current point moves with the
+latest audits. An active crawl's provisional score summary still scores only
+its own analyzed pages.
+
+The dashboard shows a running site crawl,
 so its progress stays visible; otherwise the current crawl, or, before any
 crawl is usable, the newest site crawl, so a failure still shows.
 
@@ -742,7 +769,9 @@ claimed only for a complete pair: both crawls `completed` with
 `inventory_complete`, which reconcile sets only for coverage `complete` (no
 page or frontier limit, pending frontier, sample or other bound). A page A
 analyzed is removed only when B's observed inventory lacks it; one B observed
-but did not analyze (deselected, failed) is not. Snapshots are immutable, carry their source IDs, supersede the
+but did not analyze (deselected, failed) is not. Snapshots are immutable except
+for one in-place refresh: a page rerun landing in its crawl recomputes its page
+columns ([each page's latest audit](#crawl-lifecycle)). They carry their source IDs, supersede the
 newest snapshot of a crawl no newer than theirs (chosen under a project lock),
 and are reused when inputs are unchanged. Changes shows the newest crawl's
 snapshot, so an older crawl's late comparison never replaces it. Content change and
@@ -760,7 +789,9 @@ persists that, and the Issues catalog, detail and export filter on it
 (`issue-currency.ts`). The terminal publication, an analysis appended over a
 finalized one, and a duplicate alias retiring analyses recompute it in their own
 transaction; architecture findings are written current. Issues and evaluations
-are otherwise never rewritten.
+are otherwise never rewritten. A site crawl's reads show each page's current
+issues from its latest audit, plus its own site-level findings
+([each page's latest audit](#crawl-lifecycle)).
 
 An issue's state across audits is kept per project, page and rule in
 `site_issue_states` (`issue-states.ts`; SH-B2, SH-B8, SH-B9). Every audit that
@@ -786,8 +817,9 @@ count for the UTC day: issues in the configured open states (`open`,
 `regressed`, `marked_fixed`; `config/site-health/reads.json` `issue_states`).
 Reads do not use these tables yet.
 
-The same refresh, and the architecture writer after its findings, persists the
-crawl's unfiltered Issues catalog per finding class (`site_issue_catalogs`,
+The same refresh, the architecture writer after its findings, and a page rerun
+landing in the site crawl that shows it persist the crawl's unfiltered Issues
+catalog per finding class, over the issues the crawl shows (`site_issue_catalogs`,
 `issue-catalog.ts`): the ranked groups as the list shows them and the summary
 tiles, plus each group's exact source issue and evaluation IDs (`sources`,
 kept for provenance and never served). An unfiltered Issues read pages that persisted list. A filtered read

@@ -10,7 +10,9 @@ import { parseUuid } from '../http/uuid.ts';
 import {
   currentSiteCrawl,
   currentSiteSnapshotQuery,
+  pageAuditsSql,
   rootFailure,
+  type ViewCrawl,
 } from '../site-health/reads/crawl.ts';
 import { comparableUrl } from '../site-health/reads/content-fragments.ts';
 import {
@@ -520,8 +522,8 @@ export async function sitePages(
   } satisfies McpSitePages & Evidence;
 }
 
-/** The crawled pages of one crawl with their current analysis and fetched facts. */
-function crawledPages({ db, scope }: ProjectRead, crawlId: string) {
+/** The crawl's pages at their latest audit (`pageAuditsSql`, SH-B9) and its fetched facts. */
+function crawledPages({ db, scope }: ProjectRead, crawl: ViewCrawl) {
   return db
     .selectFrom('site_page_analyses as a')
     .innerJoin('site_fetch_artifacts as f', (join) =>
@@ -538,8 +540,7 @@ function crawledPages({ db, scope }: ProjectRead, crawlId: string) {
     )
     .where('a.workspace_id', '=', scope.workspaceId)
     .where('a.project_id', '=', scope.projectId)
-    .where('a.crawl_id', '=', crawlId)
-    .where('a.is_current', '=', true)
+    .where('a.id', 'in', sql<string>`(select v.analysis_id from (${pageAuditsSql(crawl)}) v)`)
     .select([
       'a.id as analysis_id',
       'a.page_kind',
@@ -613,7 +614,7 @@ export async function pageText(
   const url = args.site_url_id ? null : urlFilter(args.url);
   const crawl = await selectCrawl(read, args.crawl_id);
   if (!crawl) return unavailable('no_site_crawl');
-  let query = crawledPages(read, crawl.id);
+  let query = crawledPages(read, crawl);
   if (args.site_url_id) query = query.where('u.id', '=', args.site_url_id);
   if (url)
     query = query.where((eb) =>

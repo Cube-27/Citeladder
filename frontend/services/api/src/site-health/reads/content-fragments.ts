@@ -7,7 +7,7 @@ import { record, strings } from '../../db/json.ts';
 import { lexicalTokens } from '../../analysis/lexical.ts';
 import { compareText, scalarText, stripTrailing } from '../../text-order.ts';
 import type { Scope } from '../../opportunities/sources.ts';
-import { currentSiteCrawlQuery } from './crawl.ts';
+import { currentSiteCrawlQuery, pageAuditsSql, type ViewCrawl } from './crawl.ts';
 
 const p = policy.agent_context;
 /** A URL as pages are matched: scheme, `www.` and a trailing slash do not tell pages apart. */
@@ -55,9 +55,10 @@ function pagesQuery(db: Database, scope: Scope) {
     );
 }
 type PageRow = Awaited<ReturnType<ReturnType<typeof rowsQuery>['execute']>>[number];
-function rowsQuery(db: Database, scope: Scope, crawlId: string) {
+/** The crawl's pages at their latest audit (`pageAuditsSql`, SH-B9). */
+function rowsQuery(db: Database, scope: Scope, crawl: ViewCrawl) {
   return pagesQuery(db, scope)
-    .where('a.crawl_id', '=', crawlId)
+    .where('a.id', 'in', sql<string>`(select v.analysis_id from (${pageAuditsSql(crawl)}) v)`)
     .select([
       'u.id as site_url_id',
       'u.normalized_url',
@@ -195,14 +196,10 @@ export async function selectContentFragments(
         .where('id', '=', crawlId)
         .where('status', 'in', TERMINAL_CRAWL_STATUSES)
     : currentSiteCrawlQuery(db, scope.workspaceId, scope.projectId);
-  const chosen = await candidate.select(['id', 'completed_at']).executeTakeFirst();
-  const page =
-    chosen &&
-    (await pagesQuery(db, scope)
-      .select('a.id')
-      .where('a.crawl_id', '=', chosen.id)
-      .limit(1)
-      .executeTakeFirst());
+  const chosen = await candidate
+    .select(['id', 'workspace_id', 'project_id', 'created_at', 'configuration', 'completed_at'])
+    .executeTakeFirst();
+  const page = chosen && (await rowsQuery(db, scope, chosen).limit(1).executeTakeFirst());
   const crawl = page ? chosen : undefined;
   if (!crawl)
     return {
@@ -249,7 +246,7 @@ export async function selectContentFragments(
   let after: string | null = null;
   let omitted = 0;
   for (;;) {
-    let query = rowsQuery(db, scope, crawl.id)
+    let query = rowsQuery(db, scope, crawl)
       .orderBy('u.id')
       .limit(p.content_context_read_batch_size);
     if (after) query = query.where('u.id', '>', after);

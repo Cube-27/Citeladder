@@ -120,8 +120,13 @@ export function siteLevelScope(
   return { ...scope, affected: typeof counted === 'number' ? counted : 0 };
 }
 
-/** Rules whose finding is persisted once for the site (`siteLevelScope`), as SQL. */
-export const siteLevelRule = sql`(i.rule_id like 'architecture.%' or i.rule_id = any(${sitewideLinkRules}::text[]))`;
+/** Rules whose finding is persisted once for the site (`siteLevelScope`), as SQL over `alias`. */
+export const siteLevelRuleOf = (alias: string) => {
+  const rule = sql.ref(`${alias}.rule_id`);
+  return sql`(${rule} like 'architecture.%' or ${rule} = any(${sitewideLinkRules}::text[]))`;
+};
+/** `siteLevelRuleOf` over the issue alias `i`. */
+export const siteLevelRule = siteLevelRuleOf('i');
 
 function wholeSiteScope(
   ruleId: string,

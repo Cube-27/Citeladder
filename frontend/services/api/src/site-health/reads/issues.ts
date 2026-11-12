@@ -1,14 +1,16 @@
 /**
  * The grouped issue catalog, one group's occurrences, and a URL's issue history.
  *
- * A crawl's issues are those of its current, finalized page analyses. Groups
+ * A crawl's issues are each page's current issues from its latest audit as
+ * the crawl shows it, plus the crawl's site-level findings (`viewIssuesSql`,
+ * SH-B9): a page rerun landing after the crawl moves its page. Groups
  * are `(rule, finding class)` within the crawl, identified by a stable UUID;
  * the summary counts groups rather than occurrences, so its tiles match the
  * list.
  *
  * The unfiltered list and summary of each finding class are persisted per
- * crawl once its issues are final (`site-health/issue-catalog.ts`) and read
- * from there. A filtered read (search, severity, category, dimension, rule,
+ * crawl once its issues are final, and again when a page rerun lands in it
+ * (`site-health/issue-catalog.ts`), and read from there. A filtered read (search, severity, category, dimension, rule,
  * page, page kind) and a crawl whose catalog is not written yet compute them
  * here. The monitored affected count is always live: the selection is
  * configuration.
@@ -36,7 +38,7 @@ import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { firstOf } from '../../lists.ts';
 import { compareText } from '../../text-order.ts';
-import { loadCrawl, type Crawl } from './crawl.ts';
+import { loadCrawl, pageAuditsSql, viewIssuesSql, type Crawl } from './crawl.ts';
 import { currentIssueFilter } from './page-rows.ts';
 import { requireAdmitted } from './pages.ts';
 import {
@@ -84,22 +86,24 @@ function ofPageKind(crawl: Crawl, pageKind: string) {
     end)`;
 }
 
-/** The issue's own page has a current, finalized analysis of the kind (and `also` holds). */
+/**
+ * The issue's own page has a current, finalized analysis of the kind (and
+ * `also` holds) in the audit the issue came from.
+ */
 function onPageOfKind(crawl: Crawl, pageKind: string, also = sql``) {
   return sql`exists (
     select 1 from site_page_analyses a
-    where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
+    where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = i.crawl_id
       and a.site_url_id = i.site_url_id and a.is_current and a.finalized_at is not null
       and a.page_kind = ${pageKind} ${also})`;
 }
 
 /**
- * Issues of the crawl's current, finalized analyses and its site-level
- * architecture findings, which the snapshot's issue counts include. The
+ * The issues the crawl shows: each page's current issues from its latest
+ * audit and the crawl's site-level findings (`viewIssuesSql`, SH-B9). The
  * writers keep `is_current` (`issue-currency.ts`).
  */
-const currentIssues = (crawl: Crawl) =>
-  sql`i.workspace_id = ${crawl.workspace_id} and i.crawl_id = ${crawl.id} and i.is_current`;
+const currentIssues = (crawl: Crawl) => viewIssuesSql(crawl);
 
 function issueWhere(
   crawl: Crawl,
@@ -582,12 +586,12 @@ export async function issueDetail(
 }
 
 /**
- * A URL's resolved issues: rules found on it in the selected crawl's superseded
- * analyses or the project's earlier crawls that its current, finalized
- * analysis no longer reports. One row per rule, its latest record, newest
- * first. Current open issues never appear (they are the page detail), nor does
- * a later crawl's record on an older crawl; without a finalized current
- * analysis nothing is known to be resolved.
+ * A URL's resolved issues: rules found on it in earlier audits (or the latest
+ * audit's superseded analyses) that its latest audit as the selected crawl
+ * shows it (`pageAuditsSql`) no longer reports. One row per rule, its latest
+ * record, newest first. Current open issues never appear (they are the page
+ * detail), nor does an audit newer than that one; without a finalized latest
+ * audit nothing is known to be resolved.
  */
 export async function issueHistory(
   db: Database,
@@ -598,15 +602,11 @@ export async function issueHistory(
 ) {
   const crawl = await loadCrawl(db, workspaceId, crawlId);
   await requireAdmitted(db, crawl, siteUrlId);
-  const finalized = await db
-    .selectFrom('site_page_analyses')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .where('crawl_id', '=', crawl.id)
-    .where('site_url_id', '=', siteUrlId)
-    .where('is_current', '=', true)
-    .where('finalized_at', 'is not', null)
-    .executeTakeFirst();
+  const { rows: latest } = await sql<{ id: string }>`
+    select a.id from (${pageAuditsSql(crawl, sql`${siteUrlId}::uuid`)}) v
+    join site_page_analyses a on a.id = v.analysis_id and a.workspace_id = ${workspaceId}
+    where a.finalized_at is not null`.execute(db);
+  const finalized = latest[0];
   if (!finalized)
     return issueHistoryPageSchema.parse({
       items: [],
@@ -626,16 +626,17 @@ export async function issueHistory(
     with resolved as (
       select distinct on (i.rule_id) i.*
       from site_issues i
-      join site_crawls c on c.id = i.crawl_id
-      join site_crawls selected on selected.id = ${crawl.id}
-      -- The page's one current, finalized analysis in the selected crawl.
-      join site_page_analyses cur on cur.id = ${finalized.id}
+      join site_crawls c on c.id = i.crawl_id and c.workspace_id = i.workspace_id
+      -- The page's latest audit as the selected crawl shows it, and its crawl.
+      join site_page_analyses cur on cur.id = ${finalized.id} and cur.workspace_id = i.workspace_id
+      join site_crawls audited on audited.id = cur.crawl_id and audited.workspace_id = i.workspace_id
       where i.workspace_id = ${workspaceId} and i.project_id = ${crawl.project_id}
         and i.site_url_id = ${siteUrlId} and c.project_id = ${crawl.project_id}
-        and (c.created_at, c.id) <= (selected.created_at, selected.id)
+        and (coalesce(c.started_at, c.created_at), c.id)
+          <= (coalesce(audited.started_at, audited.created_at), audited.id)
         and not exists (
           select 1 from site_issues still_open
-          where still_open.workspace_id = ${workspaceId} and still_open.crawl_id = ${crawl.id}
+          where still_open.workspace_id = ${workspaceId} and still_open.crawl_id = cur.crawl_id
             and ${currentIssueFilter('still_open', 'cur')}
             and still_open.site_url_id = ${siteUrlId} and still_open.rule_id = i.rule_id)
       order by i.rule_id, i.created_at desc, i.id desc

@@ -35,7 +35,10 @@ const currentCrawl = (db: Database, scope: Scope) =>
 function crawls(db: Database, scope: Scope) {
   return currentCrawl(db, scope).select([
     'id',
+    'workspace_id',
     'project_id',
+    'created_at',
+    'configuration',
     'status',
     'score_summary',
     'analyzed_url_count',

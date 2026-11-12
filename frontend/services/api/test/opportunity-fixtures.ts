@@ -118,6 +118,8 @@ async function issue(
       remediation: 'Fix it.',
       analyzer_version: 'v1',
       rule_version: 'v1',
+      // The finalized analysis names its evaluation, so the issue is current.
+      is_current: true,
       created_at: now,
     })
     .execute();

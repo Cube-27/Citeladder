@@ -9,7 +9,7 @@ import {
   isUsableCrawl,
   USABLE_CRAWL_STATUSES,
 } from '@citeladder/contracts/site-health';
-import { sql } from 'kysely';
+import { sql, type RawBuilder } from 'kysely';
 import type { z } from 'zod';
 
 import { policy } from '../../config.ts';
@@ -19,9 +19,10 @@ import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { notFound } from '../../errors.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { firstOf } from '../../lists.ts';
-import { pageRerunSql } from '../page-rerun.ts';
+import { isPageRerun, pageRerunSql } from '../page-rerun.ts';
 import type { Crawl } from '../site-task.ts';
 import { failedAs } from '../task-outcome.ts';
+import { siteLevelRuleOf } from './rules.ts';
 
 const reads = policy.site_health.reads;
 const NOT_MEASURED = 'not_measured';
@@ -87,6 +88,96 @@ export async function currentSiteCrawl(
 ): Promise<Crawl | null> {
   const crawl = await currentSiteCrawlQuery(db, workspaceId, projectId)
     .selectAll()
+    .executeTakeFirst();
+  return crawl ?? null;
+}
+
+/** The crawl fields a per-page-latest view reads. */
+export type ViewCrawl = Pick<
+  Crawl,
+  'id' | 'workspace_id' | 'project_id' | 'created_at' | 'configuration'
+>;
+
+const auditAt = (alias: string) =>
+  sql`coalesce(${sql.ref(`${alias}.started_at`)}, ${sql.ref(`${alias}.created_at`)})`;
+
+/**
+ * When the site crawl after `crawl` began auditing: its view's upper bound,
+ * or null while `crawl` is the newest usable site crawl.
+ */
+function nextSiteAudit(crawl: ViewCrawl) {
+  return sql`(select min(${auditAt('n')}) from site_crawls n
+    where n.workspace_id = ${crawl.workspace_id} and n.project_id = ${crawl.project_id}
+      and not coalesce(n.configuration->>'page_rerun' = 'true', false)
+      and n.status = any(${USABLE_CRAWL_STATUSES}::text[])
+      and (n.created_at, n.id) > (${crawl.created_at}::timestamptz, ${crawl.id}::uuid))`;
+}
+
+/**
+ * Each page's latest audit as a site crawl shows it (SH-B9): one row per page,
+ * `(site_url_id, crawl_id, analysis_id)`. A site crawl shows, for every page it
+ * audited and every tracked page, the newest finalized current analysis from
+ * any audit of the project (the crawl itself, a page rerun or an earlier
+ * crawl) that began before the next site crawl. So the current crawl reads
+ * each tracked page's latest audit: a rerun landing after it moves its page,
+ * and a page a cancelled crawl never reached keeps its earlier audit. The
+ * crawl's own current analyses count before they are finalized, so a running
+ * crawl shows its progress. A page rerun shows its own page only. `page`
+ * narrows the relation to one page reference for a lateral join.
+ */
+export function pageAuditsSql(crawl: ViewCrawl, page?: RawBuilder<unknown>) {
+  const onePage = page ? sql`and a.site_url_id = ${page}` : sql``;
+  if (isPageRerun(crawl))
+    return sql`select distinct on (a.site_url_id) a.site_url_id, a.crawl_id, a.id as analysis_id
+      from site_page_analyses a
+      where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id} and a.is_current
+        ${onePage}
+      order by a.site_url_id, a.created_at desc, a.id desc`;
+  return sql`select distinct on (a.site_url_id) a.site_url_id, a.crawl_id, a.id as analysis_id
+    from site_page_analyses a
+    join site_crawls c on c.id = a.crawl_id and c.workspace_id = a.workspace_id
+    where a.workspace_id = ${crawl.workspace_id} and a.project_id = ${crawl.project_id}
+      and a.is_current ${onePage}
+      and (a.crawl_id = ${crawl.id} or (
+        a.finalized_at is not null
+        and ${auditAt('c')} < coalesce(${nextSiteAudit(crawl)}, 'infinity'::timestamptz)
+        and exists (
+          select 1 from monitored_site_urls m
+          where m.workspace_id = a.workspace_id and m.project_id = a.project_id
+            and m.site_url_id = a.site_url_id and m.active and m.fill_order is not null)))
+    order by a.site_url_id, ${auditAt('c')} desc, a.created_at desc, a.id desc`;
+}
+
+/**
+ * The issues a site crawl shows (alias `alias`): each page's current issues
+ * from its latest audit (`pageAuditsSql`), and the crawl's own site-level
+ * findings (architecture and sitewide links), which only a site crawl
+ * evaluates. A page rerun shows its own current issues.
+ */
+export function viewIssuesSql(crawl: ViewCrawl, alias = 'i') {
+  const ref = (column: string) => sql.ref(`${alias}.${column}`);
+  const own = sql`${ref('workspace_id')} = ${crawl.workspace_id} and ${ref('crawl_id')} = ${crawl.id}
+    and ${ref('is_current')}`;
+  if (isPageRerun(crawl)) return own;
+  const siteLevel = siteLevelRuleOf(alias);
+  return sql`${ref('workspace_id')} = ${crawl.workspace_id} and ${ref('project_id')} = ${crawl.project_id}
+    and ${ref('is_current')} and (
+      (${siteLevel} and ${ref('crawl_id')} = ${crawl.id})
+      or (not ${siteLevel} and (${ref('crawl_id')}, ${ref('site_url_id')}) in (
+        select v.crawl_id, v.site_url_id from (${pageAuditsSql(crawl)}) v)))`;
+}
+
+/**
+ * The site crawl a page rerun lands in: the newest usable site crawl created
+ * before it, whose view (`pageAuditsSql`) folds the rerun's page. Null for a
+ * site crawl or before any site crawl is usable.
+ */
+export async function foldingSiteCrawl(db: Database, rerun: Crawl): Promise<Crawl | null> {
+  if (!isPageRerun(rerun)) return null;
+  const crawl = await siteCrawls(db, rerun.workspace_id, rerun.project_id)
+    .selectAll()
+    .where('status', 'in', USABLE_CRAWL_STATUSES)
+    .where(sql<boolean>`(created_at, id) < (${rerun.created_at}::timestamptz, ${rerun.id}::uuid)`)
     .executeTakeFirst();
   return crawl ?? null;
 }
