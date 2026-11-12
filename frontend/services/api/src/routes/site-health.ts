@@ -32,7 +32,7 @@ import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
 import { InvalidCursorError } from '../http/keyset-cursor.ts';
 import type { RequestParams } from '../http/params.ts';
-import { slottedEventStream } from '../http/stream-slots.ts';
+import { slottedEventStream, streamOwner } from '../http/stream-slots.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { revalidatable } from '../http/revalidate.ts';
 import {
@@ -342,10 +342,9 @@ export const siteHealthRoutes = [
       const crawl = await loadCrawl(db, workspaceId, path.crawl_id);
       const signal = c.req.raw.signal;
       const body = slottedEventStream({
-        userId: c.get('user').id,
-        limits: config.auth.limits,
+        ...streamOwner(c, db, config.auth.limits),
         signal,
-        open: () => eventStream(db, workspaceId, crawl, after, signal),
+        open: (held) => eventStream(db, workspaceId, crawl, after, held),
       });
       return new Response(body, {
         headers: {

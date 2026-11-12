@@ -206,7 +206,10 @@ evidence links both read it.
 opportunity, prompt, audit, visibility result, site snapshot/crawl/page/issue/link,
 demand, query and traffic snapshots, search run/dataset/row) after reauthorizing
 its workspace. A document is `id`/`title`/`text`/`url`/`metadata`, with the record
-once as JSON text; a large one returns bounded parts with continuation IDs.
+once as JSON text; a large one returns bounded parts with continuation IDs. Every
+URL in a site record (a page's address, fetch artifact, crawl facts and rule
+evidence; an issue's evidence; a link record's neighbours) drops its query
+string and fragment, as the Site tools' do.
 
 ## Changes
 

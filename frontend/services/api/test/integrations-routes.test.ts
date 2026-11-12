@@ -375,6 +375,53 @@ describe('integration connection routes', () => {
     await db.deleteFrom('integration_property_mappings').where('id', '=', mappingId).execute();
   });
 
+  it('records a retired mapping in the integration audit trail once', async () => {
+    const mappingId = randomUUID();
+    await db
+      .insertInto('integration_property_mappings')
+      .values({
+        id: mappingId,
+        workspace_id: workspaceId,
+        connection_id: connectionId,
+        provider: 'ga4',
+        property_ref: '555555555',
+        project_id: projectId,
+        status: 'active',
+        created_at: new Date(),
+        updated_at: new Date(),
+      })
+      .execute();
+    const retire = async () =>
+      app.request(`/api/v1/integrations/mappings/${mappingId}`, {
+        method: 'DELETE',
+        headers: {
+          cookie: `${config.session.cookieName}=${await sessionToken({ sub: ownerId, ver: 0 })}`,
+          'x-workspace-id': workspaceId,
+        },
+      });
+    expect((await retire()).status).toBe(204);
+    expect((await retire()).status).toBe(204);
+    const events = await db
+      .selectFrom('integration_events')
+      .select(['event_type', 'connection_id', 'payload'])
+      .where('workspace_id', '=', workspaceId)
+      .where('event_type', '=', 'integration.mapping_retired')
+      .execute();
+    expect(events).toEqual([
+      {
+        event_type: 'integration.mapping_retired',
+        connection_id: connectionId,
+        payload: {
+          mapping_id: mappingId,
+          project_id: projectId,
+          provider: 'ga4',
+          property_ref: '555555555',
+        },
+      },
+    ]);
+    await db.deleteFrom('integration_property_mappings').where('id', '=', mappingId).execute();
+  });
+
   it('reports a saved mapping whose history enqueue failed and allows retry without duplication', async () => {
     const token = await sessionToken({ sub: ownerId, ver: 0 });
     const save = () =>

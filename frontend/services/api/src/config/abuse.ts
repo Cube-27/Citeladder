@@ -1,6 +1,7 @@
 /**
- * Abuse budgets, PostgreSQL-enforced except `sse_streams_per_user`, which each
- * API instance counts in memory; all environment overrides must be positive integers.
+ * Abuse budgets, PostgreSQL-enforced except the event-stream limits
+ * (`sse_streams_per_user`, which each API instance counts in memory, and
+ * `sse_access_recheck_seconds`); all environment overrides must be positive integers.
  */
 import authRuntime from './auth-runtime.json' with { type: 'json' };
 import publicApi from './public-api.json' with { type: 'json' };
@@ -46,6 +47,8 @@ const defaults = {
   prompt_judge_calls_per_workspace_daily: 500,
   active_job_retry_after_seconds: 60,
   sse_streams_per_user: 3,
+  // An open event stream re-checks its caller's membership this often.
+  sse_access_recheck_seconds: 30,
   usage_window_cleanup_batch: 500,
   security_event_retention_days: 30,
   security_event_prune_batch: 1000,

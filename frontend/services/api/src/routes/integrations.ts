@@ -460,24 +460,45 @@ export const integrationRoutes = [
     path: '/api/v1/integrations/mappings/{mapping_id}',
     capability: 'manage_credentials',
     params: { path: { mapping_id: uuid }, query: {} },
+    /** Retire one mapping; retiring an active one records it in the integration audit trail. */
     async handle({ c, db }, { path }) {
+      const workspaceId = c.get('workspace').workspaceId;
       const mapping = await db
         .selectFrom('integration_property_mappings')
         .select(['id', 'project_id'])
         .where('id', '=', path.mapping_id)
-        .where('workspace_id', '=', c.get('workspace').workspaceId)
+        .where('workspace_id', '=', workspaceId)
         .executeTakeFirst();
       if (mapping === undefined) throw notFound('Integration property mapping');
       await db.transaction().execute(async (trx) => {
-        await trx
+        const now = new Date();
+        const retired = await trx
           .updateTable('integration_property_mappings')
-          .set({ status: 'disabled', updated_at: new Date() })
+          .set({ status: 'disabled', updated_at: now })
           .where('id', '=', path.mapping_id)
-          .where('workspace_id', '=', c.get('workspace').workspaceId)
-          .execute();
+          .where('workspace_id', '=', workspaceId)
+          .where('status', '=', 'active')
+          .returning(['connection_id', 'provider', 'property_ref', 'project_id'])
+          .executeTakeFirst();
+        if (retired)
+          await recordIntegrationEvents(trx, [
+            {
+              workspaceId,
+              connectionId: retired.connection_id,
+              type: 'integration.mapping_retired',
+              message: 'Integration property mapping removed',
+              payload: {
+                mapping_id: path.mapping_id,
+                project_id: retired.project_id,
+                provider: retired.provider,
+                property_ref: retired.property_ref,
+              },
+              at: now,
+            },
+          ]);
         await enqueueCoalesced(trx, {
           ...insightsRefresh,
-          workspaceId: c.get('workspace').workspaceId,
+          workspaceId,
           projectId: mapping.project_id,
         });
       });

@@ -197,6 +197,37 @@ describe('audit HTTP family cutover', () => {
     for (const stream of [...held, otherUser, admitted]) stream.abort.abort();
   });
 
+  it('closes an open stream once its caller is removed from the workspace', async () => {
+    const t = await seed();
+    // A running audit's stream would otherwise stay open for its full duration.
+    const recheckingApp = createApp(
+      testConfig({ AUDIT_SSE_POLL_SECONDS: '0.05', ABUSE_SSE_ACCESS_RECHECK_SECONDS: '1' }),
+      db,
+    );
+    const abort = new AbortController();
+    const response = await recheckingApp.request(`/api/v1/audits/${t.auditId}/events?stream=true`, {
+      headers: {
+        cookie: `${config.session.cookieName}=${await sessionToken({ sub: t.userId, ver: 0 })}`,
+        'x-workspace-id': t.workspaceId,
+      },
+      signal: abort.signal,
+    });
+    expect(response.status).toBe(200);
+    const reader = response.body!.getReader();
+    const first = await reader.read();
+    expect(new TextDecoder().decode(first.value)).toMatch(/^id: [0-9a-f-]{36}\nevent: /u);
+    await db
+      .deleteFrom('workspace_members')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('user_id', '=', t.userId)
+      .execute();
+    const started = Date.now();
+    let next = await reader.read();
+    while (!next.done) next = await reader.read();
+    expect(Date.now() - started).toBeLessThan(3000);
+    abort.abort();
+  });
+
   it('stops a stream on cancellation without polling or retaining a transaction', async () => {
     const t = await seed(),
       signal = new AbortController();
