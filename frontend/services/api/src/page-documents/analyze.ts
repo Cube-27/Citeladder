@@ -16,7 +16,8 @@ import { contentPageAnalyses } from '../content-gaps/load.ts';
 import type { Database } from '../db/database.ts';
 import { containsPattern } from '../db/like.ts';
 import { ApiError } from '../errors.ts';
-import { ActionTargetError, attachOrCreateAction } from '../opportunities/actions.ts';
+import { attachOrCreateAction } from '../opportunities/actions.ts';
+import { ActionTargetError } from '../opportunities/targets/registry.ts';
 import { resolveCrawlId } from '../opportunities/sources.ts';
 import { topicWithPrompts } from '../prompts/topics.ts';
 
@@ -118,13 +119,7 @@ export async function analyzePage(
     },
     async (trx) => {
       try {
-        const action = await attachOrCreateAction(
-          trx,
-          scope,
-          policy.opportunity.actions.TARGET_PAGE,
-          page.url,
-          scope.userId,
-        );
+        const action = await attachOrCreateAction(trx, scope, 'page', page.url, scope.userId);
         return action.id;
       } catch (error) {
         if (error instanceof ActionTargetError)

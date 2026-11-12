@@ -49,6 +49,20 @@ export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
 export const actionGroupSchema = z.enum(['fix_site', 'own_pages', 'earned', 'products']);
 export type ActionGroup = z.infer<typeof actionGroupSchema>;
 
+// What an Action is about (docs/opportunities.md#actions). Several Opportunity
+// targets map to one kind; services/api `opportunities/targets/` owns each.
+export const actionTargetKindSchema = z.enum([
+  'page',
+  'earned_page',
+  'product',
+  'category',
+  'query',
+  'prompt',
+  'planned_page',
+  'issue_family',
+]);
+export type ActionTargetKind = z.infer<typeof actionTargetKindSchema>;
+
 // The band a priority score falls in; the score itself only ranks.
 export const actionPriorityBandSchema = z.enum(['high', 'medium', 'low']);
 export type ActionPriorityBand = z.infer<typeof actionPriorityBandSchema>;

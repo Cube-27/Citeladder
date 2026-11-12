@@ -3,7 +3,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import type { Insertable, RawBuilder } from 'kysely';
-import { plannedPageKey } from '../src/analysis/opportunities/actions.ts';
+import { plannedPageKey } from '../src/opportunities/targets/registry.ts';
 import type { Database } from '../src/db/database.ts';
 import type { Actions, Opportunities, OpportunitySnapshots } from '../src/generated/db-schema.ts';
 import { extractPageFacts, factSettings } from '../src/site-health/analysis/facts.ts';

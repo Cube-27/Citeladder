@@ -4,18 +4,15 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
-import { resolveOwnedPages } from '../demand/page-equivalence.ts';
 import { ApiError } from '../errors.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { epochMicros, isoformat, parseDatetime, toUtc } from '../http/datetimes.ts';
-import { parseUuids } from '../http/uuid.ts';
 import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { declarableMembers, recordStatus, requireAction, type ActionRow } from './actions.ts';
-import { rules } from '../analysis/opportunities/detectors.ts';
 import { declarationChecks } from './declaration-checks.ts';
-import { familyCohort } from './checks/issue-family.ts';
 import { ruleCheckKind } from './checks/registry.ts';
+import { declarationTargets } from './targets/registry.ts';
 import { enqueueImplementationVerification } from './enqueue.ts';
 import { DASHBOARD_AUDIT_STATUSES } from './sources.ts';
 import type { OpportunityRow } from './projection.ts';
@@ -92,63 +89,19 @@ async function checkedRevision(db: Database, action: ActionRow, revisionId: stri
   if (!revision) throw declarationConflict('The output revision does not belong to this Action');
 }
 
+/** The pages the declaration covers, as its Action's target kind resolves them; a 409 when it cannot. */
 async function targets(
   db: Database,
   action: ActionRow,
   members: OpportunityRow[],
   website: string,
 ) {
-  if (
-    action.target_kind === a.TARGET_EARNED_PAGE ||
-    members.some(
-      (member) =>
-        rules[member.rule_id]?.action_path === policy.opportunity.earned_actions.ACTION_PATH_EARNED,
-    )
-  ) {
-    if (!action.target_url) throw declarationConflict('Implementation target is unresolved');
-    return { target_site_url_ids: [], target_external_url: action.target_url };
-  }
-  const family = action.target_kind === a.TARGET_ISSUE_FAMILY;
-  const ids = [
-    ...new Set(
-      members.flatMap((member) =>
-        parseUuids(
-          family
-            ? (familyCohort(member)?.pages.map((page) => page.site_url_id) ?? [])
-            : [record(member.evidence).site_url_id],
-        ),
-      ),
-    ),
-  ];
-  const owned = ids.length
-    ? await db
-        .selectFrom('site_urls')
-        .select('id')
-        .where('workspace_id', '=', action.workspace_id)
-        .where('project_id', '=', action.project_id)
-        .where('id', 'in', ids)
-        .execute()
-    : [];
-  const allowed = new Set(owned.map((row) => row.id));
-  const selected = ids.filter((id) => allowed.has(id));
-  if (action.target_kind === a.TARGET_PAGE && !selected.length && action.target_url) {
-    const pages = await resolveOwnedPages(
-      db,
-      action.workspace_id,
-      action.project_id,
-      [action.target_url],
-      website,
-    );
-    const resolved = pages.get(action.target_url);
-    if (!resolved?.site_url_id || !['exact', 'resolved'].includes(resolved.outcome))
-      throw declarationConflict('Implementation target is ambiguous or unresolved');
-    selected.push(resolved.site_url_id);
-  }
-  // An issue family's cohort is server-derived and bounded by `COHORT_PAGES_MAX`.
-  if (family && !selected.length) throw declarationConflict('Implementation target is unresolved');
-  if (!family && selected.length > o.IMPLEMENTATION_TARGETS_MAX)
-    throw declarationConflict('Too many implementation targets');
-  return { target_site_url_ids: selected, target_external_url: null };
+  const resolved = await declarationTargets(db, action, members, website);
+  if (!resolved.resolved) throw declarationConflict(resolved.reason);
+  return {
+    target_site_url_ids: resolved.target_site_url_ids,
+    target_external_url: resolved.target_external_url,
+  };
 }
 
 /**

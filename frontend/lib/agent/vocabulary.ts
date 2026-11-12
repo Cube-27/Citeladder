@@ -6,6 +6,7 @@
  */
 import type { PriorityValue } from '@/components/ui/badge';
 import type { ActionGroup, ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
+import { actionTargetKindSchema, type ActionTargetKind } from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 
 /** The band the server put an Action's priority score in; the score itself only ranks. */
@@ -50,7 +51,7 @@ export const ACTION_STATUS_TONE: Record<ActionStatus, 'neutral' | 'info' | 'succ
     dismissed: 'neutral',
   };
 
-const TARGET_KIND_LABEL: Record<string, string> = {
+const TARGET_KIND_LABEL: Record<ActionTargetKind, string> = {
   page: 'Page',
   earned_page: 'Earned page',
   product: 'Product',
@@ -61,10 +62,11 @@ const TARGET_KIND_LABEL: Record<string, string> = {
   issue_family: 'Issue across pages',
 };
 
-export const ACTION_TARGET_KINDS = Object.keys(TARGET_KIND_LABEL);
+export const ACTION_TARGET_KINDS = actionTargetKindSchema.options;
 
 export function targetKindLabel(kind: string | null | undefined): string | null {
-  return kind ? (TARGET_KIND_LABEL[kind] ?? null) : null;
+  const known = actionTargetKindSchema.safeParse(kind);
+  return known.success ? TARGET_KIND_LABEL[known.data] : null;
 }
 
 const FAMILY_LABEL: Record<string, string> = {

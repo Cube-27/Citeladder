@@ -29,8 +29,11 @@ gaps, content gaps) is one entry in
 that names its source-identity fields and produces its hits; the refresh
 iterates that list. A hit names its target as a typed `TargetRef`
 ([targets](../frontend/services/api/src/analysis/opportunities/targets.ts)):
-the persisted `target_*` columns and `target_key` derive there, and Action
-grouping switches on the same union, so no reader parses a key prefix. Each
+the persisted `target_*` columns and `target_key` derive there. The
+[Action target registry](../frontend/services/api/src/opportunities/targets/registry.ts)
+maps the same union to the Action each finding groups into, and owns each
+target kind's group key, Agent-named targets, declaration pages and read
+additions, so no reader parses a key prefix or branches on a kind. Each
 rule's evidence shape is a schema in `@citeladder/contracts/opportunity-evidence`.
 Visibility reads a cited page's earned Opportunity and Action through
 [earned page actions](../frontend/services/api/src/opportunities/earned-page-actions.ts).
@@ -161,6 +164,19 @@ render that contract; they never reclassify domains or fabricate task prose.
 There is no separate Opportunities screen.
 
 ## Actions
+
+Two targets are distinct:
+
+- **Opportunity target**: what one finding is about, a typed `TargetRef` (a
+  prompt, an owned page, a site change, an issue family, a product, an earned
+  page, a search gap, a planned page and so on). Its `target_key` is the
+  finding's identity across snapshots.
+- **Action target**: what one Action is about, named by its **target kind**:
+  `page`, `planned_page`, `issue_family`, `earned_page`, `product`, `category`,
+  `prompt` or `query`. Several Opportunity targets map to one Action target
+  kind (a site page, a site change, a link source, and a demand or search-gap
+  finding that names an owned URL all become a `page` Action). Its `group_key`
+  is the Action's identity.
 
 An [Action](../frontend/services/api/src/opportunities/actions.ts) is the unit of work
 over this store: the live Opportunities that share one target (an owned, earned

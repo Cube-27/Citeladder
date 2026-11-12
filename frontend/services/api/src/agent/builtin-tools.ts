@@ -115,7 +115,7 @@ function schemas(catalog: SkillCatalog, bounds: OutputBounds) {
               .enum([firstFormat, ...otherFormats])
               .describe('The content format, when the methodology uses formats.'),
       ),
-      target_kind: optional(z.enum(['page', 'planned_page'])),
+      target_kind: optional(z.enum(policy.opportunity.actions.AGENT_TARGET_KINDS)),
       target: optional(z.string().describe('The page this document is for, when it has one.')),
     }),
     edit: z.strictObject({

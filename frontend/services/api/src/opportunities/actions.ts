@@ -11,10 +11,6 @@ import {
   type ActionGroup,
   type ActionPriorityBand,
 } from '@citeladder/contracts/actions';
-import {
-  issueFamilyCohortSchema,
-  type IssueFamilyCohort,
-} from '@citeladder/contracts/opportunity-evidence';
 import { sql, type Selectable, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -32,73 +28,26 @@ import { refreshActionStatus, validateStatus } from './action-status.ts';
 import { OPPORTUNITY_COLUMNS, projectItem } from './projection.ts';
 import type { Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
-import { familyCohort } from './checks/issue-family.ts';
 import { memberMeasurementLeg } from './checks/registry.ts';
 import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
-import { normalizeDomain } from '../analysis/domains.ts';
-import {
-  actionGroup,
-  pageGroupKey,
-  plannedPageKey,
-  priorityBand,
-  readHandoff,
-  selectApproach,
-} from '../analysis/opportunities/actions.ts';
+import { actionGroup, priorityBand, readHandoff } from '../analysis/opportunities/actions.ts';
 import { record } from '../db/json.ts';
-import { isContentPage } from '../page-documents/target.ts';
+import {
+  ActionTargetError,
+  isAgentTargetKind,
+  namedTarget,
+  storedCohort,
+  targetDetail,
+} from './targets/registry.ts';
 
 const a = policy.opportunity.actions;
-export class ActionTargetError extends Error {}
 
-async function targetIdentity(db: Database, scope: Scope, kind: string, target: string) {
-  const project = await db
-    .selectFrom('projects')
-    .select('website_url')
-    .where('id', '=', scope.projectId)
-    .where('workspace_id', '=', scope.workspaceId)
-    .executeTakeFirst();
-  if (!project) throw notFound('Project');
-  if (kind === a.TARGET_PLANNED_PAGE) {
-    const key = plannedPageKey(target);
-    if (!key) throw new ActionTargetError('A planned page needs a topic');
-    return { key, url: null };
-  }
-  let url: URL;
-  try {
-    url = new URL(target);
-  } catch {
-    throw new ActionTargetError('Page target must be an absolute URL');
-  }
-  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password)
-    throw new ActionTargetError('Invalid page target');
-  const owned = await db
-    .selectFrom('owned_domains as d')
-    .innerJoin('projects as p', 'p.id', 'd.project_id')
-    .select('d.domain')
-    .where('p.workspace_id', '=', scope.workspaceId)
-    .where('p.id', '=', scope.projectId)
-    .execute();
-  const hosts = new Set(
-    [project.website_url, ...owned.map((row) => row.domain)].map(normalizeDomain),
-  );
-  if (!hosts.has(normalizeDomain(url.hostname)))
-    throw new ActionTargetError('Page target is outside the owned domains');
-  return { key: pageGroupKey(target), url: target };
-}
-/** An Agent target's text, trimmed; throws `ActionTargetError` for a kind the Agent cannot target. */
-function agentTarget(kind: string, rawTarget: string) {
-  if (!a.AGENT_TARGET_KINDS.includes(kind)) throw new ActionTargetError('Unsupported Agent target');
-  return rawTarget.trim();
-}
 /**
- * The Action group an Agent target names, without creating it: equal keys are
- * one Action. Throws `ActionTargetError` for a target no Action can carry.
+ * The Action a target the Agent names, created when none exists. Throws
+ * `ActionTargetError` for a target no Action can carry. Caller owns the
+ * transaction. Refresh and attachments share its project lock.
  */
-export async function agentTargetKey(db: Database, scope: Scope, kind: string, rawTarget: string) {
-  return (await targetIdentity(db, scope, kind, agentTarget(kind, rawTarget))).key;
-}
-/** Caller owns the transaction. Refresh and attachments share its project lock. */
 export async function attachOrCreateAction(
   db: Database,
   scope: Scope,
@@ -106,9 +55,9 @@ export async function attachOrCreateAction(
   rawTarget: string,
   userId: string | null,
 ) {
-  const target = agentTarget(kind, rawTarget);
+  if (!isAgentTargetKind(kind)) throw new ActionTargetError('Unsupported Agent target');
   await acquireProjectLock(db, scope.projectId);
-  const identity = await targetIdentity(db, scope, kind, target);
+  const identity = await namedTarget(db, scope, kind, rawTarget);
   const now = new Date();
   await db
     .insertInto('actions')
@@ -117,14 +66,13 @@ export async function attachOrCreateAction(
       workspace_id: scope.workspaceId,
       project_id: scope.projectId,
       group_key: identity.key,
-      target_kind: kind,
-      target_label: target.slice(0, a.ACTION_LABEL_MAX_CHARS),
+      target_kind: identity.kind,
+      target_label: identity.text.slice(0, a.ACTION_LABEL_MAX_CHARS),
       target_url: identity.url,
       origin: a.ACTION_ORIGIN_AGENT,
       families: '[]',
       approach: '',
-      skill_id:
-        kind === a.TARGET_PAGE ? selectApproach([], kind).skill_id : a.AGENT_ORIGIN_DEFAULT_SKILL,
+      skill_id: a.AGENT_ORIGIN_DEFAULT_SKILL,
       diagnosis: '{}',
       member_opportunity_ids: '[]',
       created_by_user_id: userId,
@@ -152,35 +100,6 @@ export type ActionRow = Selectable<Actions>;
 const jsonList = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const stringList = (value: unknown): string[] =>
   jsonList(value).filter((v): v is string => typeof v === 'string');
-
-/** An issue-family Action's stored cohort; null for any other Action. */
-function storedCohort(row: Pick<ActionRow, 'cohort'>): IssueFamilyCohort | null {
-  if (row.cohort === null) return null;
-  return issueFamilyCohortSchema.parse(row.cohort);
-}
-
-/**
- * The cohort an issue-family Action shows: the one its declaration froze (its
- * declared finding's evidence, superseded or not), else the latest refresh's,
- * with when its crawl completed.
- */
-async function actionCohort(db: Database, action: ActionRow, declaredMemberIds: readonly string[]) {
-  if (action.target_kind !== a.TARGET_ISSUE_FAMILY) return null;
-  const declared = declaredMemberIds.length
-    ? await findingsOf(db, action, [...declaredMemberIds], true)
-    : [];
-  const frozen = declared.map((row) => familyCohort(row)).find((found) => found !== null);
-  const cohort = frozen ?? storedCohort(action);
-  if (!cohort) return null;
-  const crawl = await db
-    .selectFrom('site_crawls')
-    .select('completed_at')
-    .where('workspace_id', '=', action.workspace_id)
-    .where('project_id', '=', action.project_id)
-    .where('id', '=', cohort.crawl_id)
-    .executeTakeFirst();
-  return { ...cohort, crawl_completed_at: crawl?.completed_at?.toISOString() ?? null };
-}
 
 function actionItem(row: ActionRow) {
   return {
@@ -453,13 +372,14 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     memberRows(db, workspaceId, actionId),
   ]);
   const members = inMemberOrder(stringList(action.member_opportunity_ids), rows);
+  const { editable_page, cohort } = await targetDetail(
+    db,
+    action,
+    stringList(declaration?.member_opportunity_ids),
+  );
   return {
     ...actionItem(action),
-    // A page Action on one of the latest crawl's content pages opens the page workspace (E3).
-    editable_page:
-      action.target_kind === a.TARGET_PAGE && action.target_url !== null
-        ? await isContentPage(db, { workspaceId, projectId: action.project_id }, action.target_url)
-        : false,
+    editable_page,
     diagnosis: actionDetailSchema.shape.diagnosis.parse(action.diagnosis),
     members: members.map((row) => ({
       ...projectItem(row),
@@ -475,7 +395,7 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
       members.map((row) => [row.id, measuredBy.parse(memberMeasurementLeg(row))]),
     ),
     declaration: declaration ? await declarationView(db, declaration) : null,
-    cohort: await actionCohort(db, action, stringList(declaration?.member_opportunity_ids)),
+    cohort,
   };
 }
 
