@@ -202,15 +202,13 @@ export class AcquisitionState {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
       if (!run || terminal.has(run.status) || !(await this.owned(trx))) return null;
-      if (
-        !run.confirmed_at ||
-        run.pricing_version !== si.price_version ||
-        !(await this.connection(trx, run))
-      ) {
+      // A parked run may already have published datasets: a run with completed
+      // calls ends as partial, never failed.
+      if (!run.confirmed_at || run.pricing_version !== si.price_version) {
         await trx
           .updateTable('search_intelligence_runs')
           .set({
-            status: 'failed',
+            status: run.completed_calls ? 'partial' : 'failed',
             error_code:
               run.pricing_version !== si.price_version ? 'pricing_changed' : 'connection_changed',
             completed_at: at,
@@ -220,6 +218,10 @@ export class AcquisitionState {
           .where('workspace_id', '=', run.workspace_id)
           .execute();
         await this.closeCollecting(trx, at);
+        return null;
+      }
+      if (!(await this.connection(trx, run))) {
+        await this.failChangedConnection(trx, run, at);
         return null;
       }
       await trx

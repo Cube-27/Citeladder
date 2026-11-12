@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises';
 
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import type { IntegrationClient } from '../src/integrations/client.ts';
-import { IntegrationError } from '../src/integrations/client.ts';
+import { IntegrationClient, IntegrationError } from '../src/integrations/client.ts';
+import { freshAccessToken } from '../src/integrations/tokens.ts';
 import { integrationPolicy, integrationSettings } from '../src/integrations/config.ts';
 import { IntegrationWorker } from '../src/workers/integration-worker.ts';
 import { selectedPartition } from '../src/integrations/partitions.ts';
@@ -275,6 +275,63 @@ describe('integration worker paging and resume', () => {
         .deleteFrom('workspaces')
         .where('id', 'in', [refreshed.workspaceId, forbidden.workspaceId])
         .execute();
+    }
+  });
+
+  it('asks the user to reconnect when the provider refuses the refresh token as invalid_grant', async () => {
+    const run = await seedRun();
+    try {
+      const oauth = new IntegrationClient(
+        {
+          [policy.settings.integration_google_client_id.env[0]!]: 'test-client',
+          [policy.settings.integration_google_client_secret.env[0]!]: 'test-secret',
+        },
+        {
+          fetch: async () =>
+            new Response(JSON.stringify({ error: 'invalid_grant' }), {
+              status: 400,
+            }),
+          sleep: async () => {},
+        },
+      );
+      await db
+        .updateTable('integration_oauth_grants')
+        .set({
+          access_token_encrypted: oauth.secrets.cipher.encrypt('stale-access'),
+          refresh_token_encrypted: oauth.secrets.cipher.encrypt('revoked-refresh'),
+        })
+        .where('id', '=', run.grantId)
+        .execute();
+      const unauthorized: Pick<IntegrationClient, 'page'> = {
+        async page() {
+          throw new IntegrationError('grant_auth_failed', 'HTTP 401', false, null, 401);
+        },
+      };
+      await new IntegrationWorker(
+        db,
+        unauthorized,
+        settings,
+        (database, grant, workspace, _client, rejected) =>
+          freshAccessToken(database, grant, workspace, oauth, rejected),
+        { workspaceId: run.workspaceId, runId: run.runId },
+      ).runOnce();
+      const syncRun = await db
+        .selectFrom('integration_sync_runs')
+        .select(['status', 'error_code'])
+        .where('id', '=', run.runId)
+        .executeTakeFirstOrThrow();
+      expect(syncRun).toEqual({
+        status: 'failed',
+        error_code: 'grant_auth_failed',
+      });
+      const grant = await db
+        .selectFrom('integration_oauth_grants')
+        .select('status')
+        .where('id', '=', run.grantId)
+        .executeTakeFirstOrThrow();
+      expect(grant.status).toBe('needs_reauth');
+    } finally {
+      await db.deleteFrom('workspaces').where('id', '=', run.workspaceId).execute();
     }
   });
 

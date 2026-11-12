@@ -66,6 +66,31 @@ export async function partitionAnchor(
   return result.rows[0]?.day ?? null;
 }
 
+/**
+ * Days in `start`..`end` that a complete partition of any of `datasets`
+ * covers: imported days, with or without rows. A gap no sync has completed
+ * is not counted.
+ */
+export async function importedDayCount(
+  db: Database,
+  scope: PartitionScope,
+  datasets: readonly string[],
+) {
+  if (datasets.length === 0) return 0;
+  // Completeness is judged once per partition, before its days are expanded.
+  const result = await sql<{ days: number }>`with covered as materialized (
+      select distinct greatest(r.window_start::date,${scope.start}::date) as first_day,
+        least(r.window_end::date,${scope.end}::date) as last_day
+      from integration_sync_runs r join integration_import_artifacts a on a.workspace_id=r.workspace_id and a.sync_run_id=r.id
+      where r.workspace_id=${scope.workspaceId}::uuid and r.project_id=${scope.projectId}::uuid
+        and a.dataset in (${sql.join(datasets)}) and ${complete})
+    select count(distinct d.day)::integer as days from covered c
+      cross join lateral generate_series(c.first_day,c.last_day,interval '1 day') d(day)`.execute(
+    db,
+  );
+  return firstOf(result.rows, 'the imported day count row').days;
+}
+
 const searchConsoleDay = policy.traffic.DATASET_GSC_DAY_DAILY;
 // Search Console finalizes days late and returns no rows until then, so a
 // complete but empty trailing day is not evidence of zero.
@@ -122,7 +147,7 @@ export type DayQuality = {
 
 /**
  * Whether a day's selected partition can observe a zero: it exists, carries
- * no evidence flag, and is not a trailing Search Console day still unreported.
+ * no evidence flag, and is not a Search Console day still unreported.
  */
 export function observesZero(quality: DayQuality) {
   return (
@@ -140,6 +165,23 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
     provider === 'gsc'
       ? sql<boolean>`coalesce(d.day > (select day from search_console),false)`
       : sql<boolean>`false`;
+  // Search Console finalizes days in order, so a selected revision that
+  // reported a row on or after a day read it final. One that did not read it
+  // before Search Console finalized it: not yet reported, even once a later
+  // revision reports later days.
+  const unfinalized =
+    provider === 'gsc'
+      ? sql<boolean>`coalesce(bool_or(s.revision is not null
+          and (select day from search_console) is not null
+          and coalesce(rp.through < d.day,true)),false)`
+      : sql<boolean>`false`;
+  const reported =
+    provider === 'gsc'
+      ? sql`select property_ref,resync_seq,max(date)::date as through from integration_metric_rows
+          where workspace_id=${scope.workspaceId}::uuid and project_id=${scope.projectId}::uuid
+            and provider='gsc' and dataset=${searchConsoleDay}
+          group by property_ref,resync_seq`
+      : sql`select null::text as property_ref,null::integer as resync_seq,null::date as through where false`;
   const result = await sql<{
     day: string;
     revision: number | null;
@@ -163,8 +205,11 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
     -- before completing the dataset does not supersede the selected partition.
     selected as (select day,property_ref,max(resync_seq) filter(where complete) as revision,
       max(resync_seq) filter(where complete or succeeded) as newest
-      from revisions group by day,property_ref)
-    select to_char(d.day,'YYYY-MM-DD') as day,max(s.revision) as revision,${lagging} as not_yet_reported,
+      from revisions group by day,property_ref),
+    -- Each revision's latest reported Search Console day.
+    reported as (${reported})
+    select to_char(d.day,'YYYY-MM-DD') as day,max(s.revision) as revision,
+      ${lagging} or ${unfinalized} as not_yet_reported,
       coalesce(jsonb_agg(distinct f.flag) filter(where f.flag is not null),'[]')
         || case when count(distinct v.extract_metadata->>'timeZone')>1 then '["timezone_mismatch"]'::jsonb else '[]'::jsonb end
         || case when count(distinct v.extract_metadata->>'currencyCode')>1 then '["currency_mismatch"]'::jsonb else '[]'::jsonb end as flags,
@@ -174,6 +219,7 @@ export async function partitionQuality(db: Database, scope: PartitionScope, data
       (select coalesce(sum((q.extract_metadata->'excluded_host_rows_by_date'->>to_char(q.day,'YYYY-MM-DD'))::integer),0)::integer from revisions q
         join selected qs on qs.day=q.day and qs.property_ref=q.property_ref and qs.revision=q.resync_seq where q.day=d.day) as excluded_hosts
     from days d left join selected s on s.day=d.day
+      left join reported rp on rp.property_ref=s.property_ref and rp.resync_seq=s.revision
       left join revisions v on v.day=s.day and v.property_ref=s.property_ref and v.resync_seq=s.revision
       left join lateral (select jsonb_array_elements_text(coalesce(v.extract_metadata->'analytics_quality','[]')) as flag
         union select 'partition_fallback' where s.newest>s.revision

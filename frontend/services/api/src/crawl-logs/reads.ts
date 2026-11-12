@@ -20,7 +20,8 @@ import {
 import { isoDateText, utcTextOf, wireUtc } from '../db/timestamps.ts';
 import { boundedExport } from '../http/table-export.ts';
 import { sourceList } from './source-reads.ts';
-import { reportingDay, type CrawlScope } from './state.ts';
+import type { CrawlScope } from './state.ts';
+import { reportingDay } from '../calendar-days.ts';
 import { addDays, inclusiveDays } from '../calendar-days.ts';
 
 export type CrawlReadOptions = {

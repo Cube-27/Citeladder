@@ -10,7 +10,7 @@ import { isoDateText } from '../db/timestamps.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { announceEvidence } from '../opportunities/evidence-announcement.ts';
 import { enqueueTask } from '../queue/enqueue.ts';
-import { addDays, inclusiveDays } from '../calendar-days.ts';
+import { addDays } from '../calendar-days.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { payloadWindow, requireProject, taskProject, type Executor } from '../queue/executor.ts';
 import type { MetricRow } from './accumulators.ts';
@@ -20,6 +20,7 @@ import { TrafficProjectionBuilder, type Projection } from './projection.ts';
 import { textSpan } from '../text-order.ts';
 import { isNonEmpty, type NonEmpty } from '../lists.ts';
 import {
+  importedDayCount,
   selectedPartition,
   partitionQuality,
   partitionEpoch,
@@ -390,10 +391,19 @@ function executor(displayOnly: boolean): Executor {
       .where('project_id', '=', projectId)
       .where('dataset', 'in', p.TRAFFIC_CONSUMED_DATASETS)
       .executeTakeFirstOrThrow();
+    // Covered days are the days a sync actually imported between the first and
+    // last row, so a never-imported gap is not reported as coverage.
     const coverage = {
       earliest_date: extent.start,
       latest_date: extent.end,
-      covered_days: extent.start && extent.end ? inclusiveDays(extent.start, extent.end) : 0,
+      covered_days:
+        extent.start && extent.end
+          ? await importedDayCount(
+              db,
+              { ...partitionScope, start: extent.start, end: extent.end },
+              p.TRAFFIC_CONSUMED_DATASETS,
+            )
+          : 0,
     };
     await checkCancelled('snapshot write');
     await db.transaction().execute(async (trx) => {

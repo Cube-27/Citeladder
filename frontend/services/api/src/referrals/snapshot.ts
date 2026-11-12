@@ -21,7 +21,12 @@ import { addDays } from '../calendar-days.ts';
 import { bucketStart, buildAiReferralsProjection, type ReferralFact } from './projection.ts';
 import { compareText, textSpan } from '../text-order.ts';
 import { isNonEmpty } from '../lists.ts';
-import { selectedPartition, partitionAnchor, partitionEpoch } from '../integrations/partitions.ts';
+import {
+  observesZero,
+  selectedPartition,
+  partitionAnchor,
+  partitionEpoch,
+} from '../integrations/partitions.ts';
 import { referralEvidence, referralExtras, replaceReferralLandings } from './landing.ts';
 import { insightsRefresh } from '../config/ai-traffic.ts';
 import { enqueueCoalesced } from '../queue/enqueue.ts';
@@ -195,7 +200,7 @@ export const refreshAiReferralsSnapshot: Executor = async (task, { db, checkCanc
                 const days = evidence.quality[SOURCE_MEDIUM]!.filter((q) =>
                   inBucket(q.day, point.date),
                 );
-                const bad = days.some((q) => q.flags.length > 0 || q.revision === null);
+                const bad = !days.every(observesZero);
                 let value = point.value;
                 if (bad && value === 0) value = null;
                 else if (

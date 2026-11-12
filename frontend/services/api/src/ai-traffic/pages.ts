@@ -20,7 +20,7 @@ import {
 import type { CrawlScope } from '../crawl-logs/state.ts';
 import { citationCoverage, citationRuns, type CitationCoverage } from './citation-runs.ts';
 import { pageDataset, pageSorts, aiBots, type JoinedPage, type PageOptions } from './pages-data.ts';
-import { partitionQuality } from '../integrations/partitions.ts';
+import { observesZero, partitionQuality } from '../integrations/partitions.ts';
 import { strings, record } from '../db/json.ts';
 import { aiTraffic } from '../config/ai-traffic.ts';
 import {
@@ -109,9 +109,7 @@ export async function pageContext(db: Database, scope: CrawlScope, input: CrawlR
     quality,
     ga4Connected: mapping,
     citations: citationCoverage(runs),
-    ga4Complete: quality.every(
-      (q) => q.revision !== null && q.flags.length === 0 && q.reporting_timezone !== null,
-    ),
+    ga4Complete: quality.every((q) => observesZero(q) && q.reporting_timezone !== null),
     crawlComplete: ['complete', 'declared_complete'].includes(crawl.coverage),
   };
 }

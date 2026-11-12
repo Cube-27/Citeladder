@@ -176,6 +176,66 @@ describe('traffic projections and Performance', () => {
     ]);
   });
 
+  it('keeps a Search Console day read before it was final unreported after later days report', async () => {
+    const seed = await importSeed(db, t);
+    // Revision 0 read July 1-28 while Search Console had finalized only July 20.
+    await metric(db, seed, { date: '2026-07-20' });
+    // Revision 1 re-read only July 26-28, after Search Console finalized them.
+    await metric(db, seed, { date: '2026-07-27', revision: 1 });
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ window_start: '2026-07-26', window_end: WINDOW[1] })
+      .where('connection_id', '=', seed.connectionId)
+      .where('resync_seq', '=', 1)
+      .execute();
+    await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
+    const snapshot = await db
+      .selectFrom('traffic_snapshots')
+      .select(['metrics', 'coverage'])
+      .where('project_id', '=', t.projectId)
+      .where('window_start', '=', sql<Date>`${WINDOW[0]}::date`)
+      .where('window_end', '=', sql<Date>`${WINDOW[1]}::date`)
+      .where('granularity', '=', 'day')
+      .executeTakeFirstOrThrow();
+    const series = (
+      snapshot.metrics as {
+        series: { clicks: { date: string; value: number | null }[] };
+      }
+    ).series.clicks;
+    const clicks = new Map(series.map((point) => [point.date, point.value]));
+    const days = ['2026-07-19', '2026-07-20', '2026-07-23', '2026-07-26', '2026-07-27'];
+    expect(days.map((d) => clicks.get(d))).toEqual([0, 1, null, 0, 1]);
+    const quality = (
+      snapshot.coverage as {
+        analytics_quality: {
+          gsc_day_daily: { day: string; not_yet_reported: boolean }[];
+        };
+      }
+    ).analytics_quality.gsc_day_daily;
+    const unreported = new Map(quality.map((q) => [q.day, q.not_yet_reported]));
+    expect(days.map((d) => unreported.get(d))).toEqual([false, false, true, false, false]);
+  });
+
+  it('counts only imported days as covered, not a gap between two imports', async () => {
+    const seed = await importSeed(db, t);
+    await metric(db, seed, {});
+    await metric(db, seed, { date: '2026-06-10', revision: 1 });
+    // The second import covered one June day; nothing imported June 11-30.
+    await db
+      .updateTable('integration_sync_runs')
+      .set({ window_start: '2026-06-10', window_end: '2026-06-10' })
+      .where('connection_id', '=', seed.connectionId)
+      .where('resync_seq', '=', 1)
+      .execute();
+    await refreshTrafficSnapshot(await task(db, t, 'traffic_snapshot_refresh'), context);
+    const { body } = await request(`performance?range=custom&from=${WINDOW[0]}&to=${WINDOW[1]}`);
+    expect(body.coverage).toMatchObject({
+      earliest_date: '2026-06-10',
+      latest_date: WINDOW[1],
+      covered_days: 29,
+    });
+  });
+
   it('observes zeros through a fallback from a newer truncated run', async () => {
     const seed = await importSeed(db, t);
     await metric(db, seed, { metrics: { impressions: 0, clicks: 0 } });

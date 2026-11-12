@@ -97,6 +97,18 @@ function statusError(status: number, retryAfter: string | null): IntegrationErro
   );
 }
 
+const oauthErrorSchema = z.object({ error: z.string() });
+
+/** Whether an OAuth token error body names `invalid_grant`; never surfaces the body. */
+async function isInvalidGrant(response: Response): Promise<boolean> {
+  try {
+    const parsed = oauthErrorSchema.safeParse(await response.json());
+    return parsed.success && parsed.data.error === 'invalid_grant';
+  } catch {
+    return false;
+  }
+}
+
 export function providerNumber(raw: unknown): number | null {
   if (typeof raw !== 'number' && typeof raw !== 'string') return null;
   if (typeof raw === 'string' && !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/iu.test(raw.trim()))
@@ -191,6 +203,19 @@ export class IntegrationClient {
         client_secret: credential.secret,
       }),
     });
+    // RFC 6749 answers a revoked or expired refresh token with 400
+    // `invalid_grant`: the credential is gone, so the user must reconnect.
+    if (form.grant_type === 'refresh_token' && response.status === 400) {
+      if (await isInvalidGrant(response))
+        throw new IntegrationError(
+          codes.ERROR_GRANT_AUTH_FAILED,
+          'Integration refresh token was refused',
+          false,
+          null,
+          400,
+        );
+      throw statusError(response.status, response.headers.get('retry-after'));
+    }
     const parsed = tokenSchema.safeParse(await this.#json(response));
     if (!parsed.success)
       throw new IntegrationError(codes.ERROR_PROVIDER_API, 'Malformed OAuth token response');

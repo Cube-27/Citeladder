@@ -9,6 +9,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import type { Database } from '../db/database.ts';
 import { ApiError, notFound } from '../errors.ts';
+import { chunksOf } from '../lists.ts';
 import { compareText, stripTrailing } from '../text-order.ts';
 import type { Scope } from './reads.ts';
 import { datasetView } from './views.ts';
@@ -17,6 +18,8 @@ const PARENT_KIND = 'referring_domains';
 const DERIVED_KIND = 'citation_matches';
 const ROW_KIND = 'citation_match';
 const PARSER_VERSION = 'citation-match-1';
+// A match row binds 13 parameters; 1,000 rows stay far below the 65,535 limit.
+const MATCH_INSERT_CHUNK = 1000;
 
 const sha256 = (text: string) => createHash('sha256').update(text).digest('hex');
 
@@ -187,11 +190,13 @@ export function deriveCitationMatches(
       })
       .returningAll()
       .executeTakeFirstOrThrow();
-    if (matches.length > 0) {
-      await trx
+    // One statement per chunk keeps each insert under PostgreSQL's 65,535
+    // bind parameters; the chunks commit together in this transaction.
+    for (const chunk of chunksOf(matches, MATCH_INSERT_CHUNK)) {
+      await trx // NOSONAR -- Sequential inserts share one transaction.
         .insertInto('search_intelligence_rows')
         .values(
-          matches.map(({ citation, domain }) => ({
+          chunk.map(({ citation, domain }) => ({
             id: randomUUID(),
             workspace_id: scope.workspace.workspaceId,
             project_id: scope.projectId,

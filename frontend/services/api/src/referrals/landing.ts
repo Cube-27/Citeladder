@@ -5,6 +5,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { isoDateText } from '../db/timestamps.ts';
 import {
+  observesZero,
   selectedPartition,
   partitionQuality,
   type PartitionScope,
@@ -164,8 +165,7 @@ export function referralExtras(evidence: Evidence, start: string, end: string) {
       q.filter((d) => d.day >= start && d.day <= end),
     ]),
   );
-  const usable = (dataset: string) =>
-    quality[dataset]!.every((q) => q.revision !== null && q.flags.length === 0);
+  const usable = (dataset: string) => quality[dataset]!.every(observesZero);
   const measure = (counts: Counts, valid: boolean) => ({
     sessions: counts.sessions >= 0 && (valid || counts.sessions > 0) ? counts.sessions : null,
     key_events:

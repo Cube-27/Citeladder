@@ -96,9 +96,18 @@ Dispatcher fan-out is per mapping, read in one grouped query. Fetch and resume
 use frozen identity, never the mutable connection pointer. A retired mapping fails
 its in-flight work rather than relabeling imported evidence.
 
+Every window ends on the property's last finished day in its own reporting time
+zone: the recorded GA4 property zone, Search Console's Pacific day and Bing's UTC
+day (`reporting_time_zones`). A GA4 property whose zone is not yet recorded uses
+UTC-12, so no sync imports a day the property is still recording. An explicit
+window is cut at that day.
+
 An unwindowed on-demand or scheduled sync re-reads only the configured late-data
 days after the newest succeeded window for its mapping; the default window applies
-only before anything has succeeded. Gaps left by failed history chunks belong to
+only before anything has succeeded. A Search Console sync also re-reads from the
+day after the property's latest reported row, within
+`sync_search_console_finality_days`, so a day Search Console finalizes late is
+fetched again until it reports. Gaps left by failed history chunks belong to
 history retry, never to a routine sync. Only one such sync is in flight per
 mapping: while an on-demand or scheduled run for it is queued, leased, running or
 retry-waiting, another unwindowed one is refused with `409
@@ -142,7 +151,8 @@ chunks run as soon as they are due. The drain deadline aborts a running sync; a
 deadline stop releases the run for the next claim and is not charged as an
 attempt when it committed a page, so long history imports resume instead of
 being written off. A token is resolved for each page. A provider 401 refreshes
-the refused token once before the grant is marked `needs_reauth`; a 403 fails the
+the refused token once before the grant is marked `needs_reauth`, and a refresh
+the provider refuses as `invalid_grant` marks it `needs_reauth`; a 403 fails the
 run as `property_not_accessible` and leaves the shared grant connected.
 Interactive probes and workers share a fenced grant refresh claim: the claim
 commits before OAuth I/O, concurrent callers wait within a bound, and a rotated
@@ -217,7 +227,11 @@ Refresh materializes configured presets anchored to the latest date with
 selected Search Console day rows. Search Console imports final data only and
 finalizes days late, so days after that anchor are not yet reported
 (`not_yet_reported` in the persisted day quality): neither zero nor a quality
-flag. A property that has never reported a row keeps the window-end anchor, so a
+flag. Search Console finalizes days in order, so a day before the anchor is also
+not yet reported when its selected revision reported no row on or after it: that
+revision read the day before it was final. Performance `covered_days` counts the
+days between the earliest and latest rows that a complete partition imported.
+A property that has never reported a row keeps the window-end anchor, so a
 genuinely silent property reads as measured zero. Zero against missing is
 decided per day: a total, series bucket or table row keeps its zeros when any
 of its days has a partition that can observe one, and only a range with no
@@ -238,8 +252,9 @@ ga4_source_medium_daily as the canonical session grain. AI-source sessions are
 the numerator; all sessions of that same report are the denominator. Alternate
 referrer reports retain provenance but are not added again. Public rows show
 AI sources only. Formula changes require explicit derived rebuilds, never reads.
-A run that carries referral datasets refreshes AI Referrals once, at the end of
-its ingest and classification chain; quality and pending classification are
+A run that carries referral datasets refreshes AI Referrals at the end of each
+referral artifact's ingest and classification chain, keyed by run and artifact,
+so the last classified artifact is never left pending; quality and pending classification are
 judged per bucket. Host-like UTM sources match subdomains (`www.perplexity.ai`);
 bare tokens stay exact. Each refresh writes the sync window and the preset family
 (marked with its preset length, anchored on the latest complete day) at every

@@ -375,7 +375,7 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 | `reviewed` → `queued` (hold + task) / `succeeded` (empty plan) | `confirmRun` | `runs.ts:122-147` | project `FOR UPDATE`, unconfirmed, unexpired, price, connection, no other active run |
 | `reviewed`/`queued`/`running` → `cancelled` | `cancelRun` | `runs.ts:149-180` | run `FOR UPDATE`, not finished; task cancelled; collecting datasets `failed`; hold settled when nothing in flight |
 | `queued`/`running` → `running` | `start` | `acquisition-state.ts:201-232` | run `FOR UPDATE`, not terminal, `owned()` |
-| → `failed` (`pricing_changed`/`connection_changed`) | `start`, `prepare`, `dispatch` | `acquisition-state.ts` (`failChangedConnection`) | connection or member check fails |
+| → `failed`, or `partial` once a call completed (`pricing_changed`/`connection_changed`) | `start` (including a parked run's restart), `prepare`, `dispatch` | `acquisition-state.ts` (`failChangedConnection`) | price, connection or member check fails |
 | `running` → `uncertain` | `prepare` finds a dispatched call with no response | `acquisition-state.ts:299-329` | — |
 | `running` → `queued` (park) | `park` | `acquisition-state.ts:469-491` | `running`, `owned()` |
 | `running` → `failed`/`partial`/`uncertain` | `fail` / `stopRun` / ceiling | `acquisition-state.ts:615-668, 292-297` | `running`, `owned()` |
