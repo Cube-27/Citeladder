@@ -86,4 +86,36 @@ describe('BrandFactsPanel', () => {
     await user.click(screen.getByRole('button', { name: 'Add draft fact' }));
     await vi.waitFor(() => expect(fact).toHaveValue(''));
   });
+
+  it('keeps edits made while the fact was saving', async () => {
+    const user = userEvent.setup({ delay: null });
+    let save!: () => void;
+    const saving = new Promise<void>((resolve) => {
+      save = resolve;
+    });
+    const saved: unknown[] = [];
+    mswServer.use(
+      http.post(`/api/v1/projects/${projectId}/brand-facts`, async ({ request }) => {
+        saved.push(await request.json());
+        await saving;
+        return HttpResponse.json({ ...list.facts[0], status: 'draft' }, { status: 201 });
+      }),
+      http.get(`/api/v1/projects/${projectId}/brand-facts`, () => HttpResponse.json(list)),
+    );
+    renderWithProviders(
+      <BrandFactsPanel workspaceId={workspaceId} projectId={projectId} list={list} mayEdit />,
+    );
+    const fact = screen.getByRole('textbox', { name: 'Fact' });
+    await user.type(fact, 'Pro costs $49 per month.');
+    await user.click(screen.getByRole('button', { name: 'Add draft fact' }));
+    await vi.waitFor(() => expect(saved).toHaveLength(1));
+    await user.clear(fact);
+    await user.type(fact, 'Teams costs $99 per month.');
+    save();
+
+    await vi.waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Add draft fact' })).toBeEnabled(),
+    );
+    expect(fact).toHaveValue('Teams costs $99 per month.');
+  });
 });

@@ -205,6 +205,30 @@ describe('AddProductsDialog', () => {
     expect(staged).toEqual([]);
   });
 
+  it('drops a file still being read when the person switches source', async () => {
+    const staged = recordStages();
+    open();
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'CSV' }));
+    let finishRead!: (bytes: ArrayBuffer) => void;
+    const file = new File(['title,brand\nShoe,Acme\n'], 'catalog.csv', { type: 'text/csv' });
+    Object.defineProperty(file, 'arrayBuffer', {
+      value: () =>
+        new Promise<ArrayBuffer>((resolve) => {
+          finishRead = resolve;
+        }),
+    });
+    fireEvent.change(screen.getByLabelText('CSV file'), { target: { files: [file] } });
+    fireEvent.click(screen.getByRole('button', { name: 'Review categories' }));
+    await user.click(screen.getByRole('tab', { name: 'Shopify store' }));
+    finishRead(new TextEncoder().encode('title,brand\nShoe,Acme\n').buffer);
+
+    await user.type(screen.getByLabelText('Store domain'), 'shop.example.com');
+    await user.click(screen.getByRole('button', { name: 'Review categories' }));
+    await screen.findByRole('list', { name: 'Proposed categories' });
+    expect(staged).toEqual([{ source: 'shopify', store: 'shop.example.com' }]);
+  });
+
   it('stages the file once when Review categories is clicked twice', async () => {
     const staged = recordStages();
     open();

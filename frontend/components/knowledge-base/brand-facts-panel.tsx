@@ -109,14 +109,16 @@ function AddFact({
   onAdd,
 }: Readonly<{ pending: boolean; onAdd: (draft: Draft) => Promise<unknown> }>) {
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
-  // A refused fact stays in the form to correct; only a saved one clears it.
+  // A refused fact stays in the form to correct; only a saved one clears it,
+  // and only if it was not edited while the save was in flight.
   const submit = async () => {
+    const sent = draft;
     try {
-      await onAdd(draft);
+      await onAdd(sent);
     } catch {
       return;
     }
-    setDraft(EMPTY_DRAFT);
+    setDraft((current) => (current === sent ? EMPTY_DRAFT : current));
   };
   return (
     <Stack

@@ -264,6 +264,13 @@ export function AddProductsDialog({
   const [reading, setReading] = useState(false);
   // Set before the file read starts, so a second click cannot stage it twice.
   const submitting = useRef(false);
+  // Bumped by every new choice or reset; a read that finishes after one is dropped.
+  const selection = useRef(0);
+  const release = () => {
+    selection.current += 1;
+    submitting.current = false;
+    setReading(false);
+  };
 
   const reset = () => {
     stage.reset();
@@ -272,7 +279,7 @@ export function AddProductsDialog({
     setFile(null);
     setUnticked(new Set());
     setReadError(null);
-    submitting.current = false;
+    release();
   };
   const close = (next: boolean) => {
     if (!next) reset();
@@ -285,6 +292,7 @@ export function AddProductsDialog({
   const chooseFile = (next: File | null) => {
     setFile(next);
     setReadError(null);
+    release();
   };
   // Held from the click until the stage request settles.
   const settled = {
@@ -300,18 +308,20 @@ export function AddProductsDialog({
     }
     if (!file) return;
     submitting.current = true;
+    const attempt = selection.current;
     setReading(true);
     setReadError(null);
     let content: string;
     try {
       content = await readCsvFileText(file);
     } catch (cause) {
-      submitting.current = false;
+      if (attempt !== selection.current) return;
+      release();
       setReadError(cause instanceof Error ? cause.message : READ_FAILED_MESSAGE);
       return;
-    } finally {
-      setReading(false);
     }
+    if (attempt !== selection.current) return;
+    setReading(false);
     stage.mutate({ source, content, filename: file.name }, settled);
   };
   const toggle = (key: string) =>
