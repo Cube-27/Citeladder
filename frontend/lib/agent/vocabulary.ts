@@ -212,7 +212,7 @@ const CHECK_REASON: Record<string, string> = {
   cohort_partly_analyzed:
     'The affected pages that crawl read pass, but it did not read them all. Run a crawl that includes the rest.',
   cohort_sampled:
-    'Every checked page passes, but the issue was on more pages than one check covers, so it cannot be verified on all of them.',
+    'Every checked page passes or no longer applies, but the issue was on more pages than one check covers, so it cannot be verified on all of them.',
 };
 
 export function checkReasonLabel(reason: string | null): string | null {

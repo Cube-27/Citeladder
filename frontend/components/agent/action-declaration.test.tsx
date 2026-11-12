@@ -352,7 +352,7 @@ describe('Declaration status', () => {
       `${check}Still failing${subject}0 pages pass · 1 page still fails · 2 pages not readhttps://acme.test/bNo affected page the crawl read passes yet. · ${read}`,
       `${check}Inconclusive${subject}2 pages pass · 0 pages still fail · 1 page not readThe affected pages that crawl read pass, but it did not read them all. Run a crawl that includes the rest. · ${read}`,
       `${check}Not met${subject}0 pages pass · 0 pages still fail${read}`,
-      `${check}Inconclusive${subject}2 pages pass · 0 pages still fail · 3 pages not checkedEvery checked page passes, but the issue was on more pages than one check covers, so it cannot be verified on all of them. · ${read}`,
+      `${check}Inconclusive${subject}2 pages pass · 0 pages still fail · 3 pages not checkedEvery checked page passes or no longer applies, but the issue was on more pages than one check covers, so it cannot be verified on all of them. · ${read}`,
     ]);
     expect(screen.getAllByRole('list', { name: 'Pages still failing' })).toHaveLength(2);
   });
