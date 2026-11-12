@@ -57,14 +57,14 @@ afterAll(async () => {
 describe('committed API work at PostgreSQL', () => {
   it('starts after commit; an independent connection sees the durable row', async () => {
     const id = randomUUID();
+    let seen: Promise<{ id: string } | undefined> | undefined;
     const wake = vi.fn(async () => {
-      expect(
-        await reader
-          .selectFrom('analytics_tasks')
-          .select('id')
-          .where('id', '=', id)
-          .executeTakeFirst(),
-      ).toEqual({ id });
+      seen = reader
+        .selectFrom('analytics_tasks')
+        .select('id')
+        .where('id', '=', id)
+        .executeTakeFirst();
+      await seen;
     });
     await observeCommittedWork(async () => {
       await db.transaction().execute(async (trx) => {
@@ -79,7 +79,28 @@ describe('committed API work at PostgreSQL', () => {
         expect(wake).not.toHaveBeenCalled();
       });
     }, wake);
-    expect(wake).toHaveBeenCalledTimes(1);
+    expect(await seen).toEqual({ id });
+  });
+
+  it('answers the committing request without waiting for the runner start', async () => {
+    let started = 0;
+    const app = createApp(config, db, {
+      // A stalled metadata or Cloud Run call: the start never settles.
+      startRunner: () => {
+        started++;
+        return new Promise<void>(() => {});
+      },
+    });
+    app.post('/enqueue-fixture', async (c) => {
+      await enqueue(db);
+      return c.json({ status: 'queued' });
+    });
+    const response = await app.request('/enqueue-fixture', { method: 'POST' });
+    expect([response.status, await response.json(), started]).toEqual([
+      200,
+      { status: 'queued' },
+      1,
+    ]);
   });
 
   it('does not wake for rolled-back work, empty updates or conflict no-ops', async () => {

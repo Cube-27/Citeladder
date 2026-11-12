@@ -130,7 +130,7 @@ mid-call record no cost (internal cost only; not planned).
 | leased → released | `planClaim` stale | `workers/audit-scheduler.ts:64-74` | lease owner, unexpired; disabled or occurrence moved |
 | leased → advanced | `planClaim` success | `audit-scheduler.ts:75-109` | savepoint; `next_run_at = nextRunAfter`, `enabled = next ≠ null`, `failure_count = 0` |
 | leased → deferred | `planClaim` retryable refusal | `audit-scheduler.ts` | `ApiError.isRetryable()` (active-launch limit, daily task budget): ownerless lease until `Retry-After`; `next_run_at` (the cadence anchor), `failure_count`, `enabled`, `last_error` untouched |
-| leased → backoff / disabled | `planClaim` other error | `audit-scheduler.ts` | `failure_count + 1`, `enabled = failures < max (5)`, retry in 300 s |
+| leased → backoff / disabled | `planClaim` other error | `audit-scheduler.ts` | `failure_count + 1`, `enabled = failures < max (5)`; `next_run_at` (the cadence anchor) untouched; backoff is an ownerless lease for 300 s, none once disabled |
 | disabled → enabled | Resume / `updateSchedule` | `audits/schedules.ts:98-136` | schedule row lock |
 
 Known invalid: none.

@@ -90,12 +90,16 @@ export type FrozenRoute = {
   connection_id: string | null;
   base_url: string;
 };
-async function loadPrompts(
+/**
+ * The prompts a launch measures, shared with the estimate: `selected` are the
+ * active, enabled prompts in the project; `measured` drops those beyond the
+ * plan's prompt slots. The caller requires a prompt set or prompt IDs.
+ */
+export async function launchPrompts(
   db: Database,
   workspaceId: string,
   projectId: string,
-  input: AuditInput,
-  settings: ReturnType<typeof auditSettings>,
+  input: Pick<AuditInput, 'prompt_ids' | 'prompt_set_id'>,
 ) {
   let query = db
     .selectFrom('prompts as p')
@@ -110,13 +114,24 @@ async function loadPrompts(
     .orderBy('p.id');
   if (input.prompt_ids.length) query = query.where('p.id', 'in', input.prompt_ids);
   else if (input.prompt_set_id) query = query.where('p.prompt_set_id', '=', input.prompt_set_id);
-  else throw invalid('Select a prompt set or prompt IDs');
+  else return { selected: [], measured: [] };
   const selected = await query.execute();
-  if (input.prompt_ids.length && new Set(input.prompt_ids).size !== selected.length)
-    throw invalid('Selected prompts must be active, enabled and in this project');
   // Prompts beyond the plan's slots (after a downgrade) are kept but never measured.
   const overLimit = await overLimitPromptIds(db, new WorkspaceEntitlements(db, workspaceId));
-  const prompts = selected.filter((prompt) => !overLimit.has(prompt.id));
+  return { selected, measured: selected.filter((prompt) => !overLimit.has(prompt.id)) };
+}
+async function loadPrompts(
+  db: Database,
+  workspaceId: string,
+  projectId: string,
+  input: AuditInput,
+  settings: ReturnType<typeof auditSettings>,
+) {
+  if (!input.prompt_ids.length && !input.prompt_set_id)
+    throw invalid('Select a prompt set or prompt IDs');
+  const { selected, measured: prompts } = await launchPrompts(db, workspaceId, projectId, input);
+  if (input.prompt_ids.length && new Set(input.prompt_ids).size !== selected.length)
+    throw invalid('Selected prompts must be active, enabled and in this project');
   if (input.prompt_ids.length && prompts.length !== selected.length)
     throw overLimitSelection(selected.length - prompts.length);
   if (!prompts.length)

@@ -18,7 +18,12 @@ class RunnerStartError extends Error {
   }
 }
 
-/** Start an execution, never wait for its work. A missed start is recovered by tick. */
+/**
+ * Start an execution, never wait for its work. A missed start is recovered by tick.
+ * Single-flight: while one attempt is in flight (its timeout may outlast the
+ * interval), every caller shares it instead of starting a duplicate execution.
+ * The returned promise never rejects.
+ */
 export function runnerStarter(
   config: ServiceConfig,
   db: Database,
@@ -26,12 +31,8 @@ export function runnerStarter(
   now: () => number = () => performance.now(),
 ): () => Promise<void> {
   let lastAttempt = Number.NEGATIVE_INFINITY;
-  return async () => {
-    if (!config.execution.runnerJob) return;
-    const time = now();
-    if (time - lastAttempt < config.execution.wakeMinIntervalMs) return;
-    // Reserve before awaiting: concurrent requests share the same interval.
-    lastAttempt = time;
+  let inFlight: Promise<void> | null = null;
+  const attempt = async (time: number) => {
     const signal = AbortSignal.timeout(config.execution.wakeTimeoutMs);
     try {
       if (await drainActive(db, signal)) {
@@ -72,6 +73,19 @@ export function runnerStarter(
         elapsed_ms: Math.round(now() - time),
       });
     }
+  };
+  return () => {
+    if (!config.execution.runnerJob) return Promise.resolve();
+    if (inFlight) return inFlight;
+    const time = now();
+    if (time - lastAttempt < config.execution.wakeMinIntervalMs) return Promise.resolve();
+    // Reserve before awaiting: concurrent requests share the same interval.
+    lastAttempt = time;
+    const current = attempt(time).finally(() => {
+      inFlight = null;
+    });
+    inFlight = current;
+    return current;
   };
 }
 

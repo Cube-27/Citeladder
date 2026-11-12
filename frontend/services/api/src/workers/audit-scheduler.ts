@@ -129,16 +129,24 @@ export class AuditScheduler {
           return false;
         }
         const failures = schedule.failure_count + 1;
+        const enabled = failures < this.settings.max_consecutive_failures;
+        // `next_run_at` keeps anchoring the cadence: the same occurrence retries
+        // after an ownerless lease, and success advances from the original anchor.
+        // A schedule paused by failures holds no lease, so Resume plans at once.
         await trx
           .updateTable('audit_schedules')
           .set({
             ...release,
+            ...(enabled
+              ? {
+                  lease_expires_at: sql<Date>`clock_timestamp() + ${this.settings.failure_retry_seconds} * interval '1 second'`,
+                }
+              : {}),
             failure_count: failures,
             // The admission reason (trial ended, budget exhausted) is what the owner can act on.
             last_error: error instanceof ApiError ? error.code : 'audit_planning_failed',
             last_failure_at: at,
-            enabled: failures < this.settings.max_consecutive_failures,
-            next_run_at: new Date(at.getTime() + this.settings.failure_retry_seconds * 1000),
+            enabled,
           })
           .where('id', '=', schedule.id)
           .where('workspace_id', '=', claim.workspaceId)

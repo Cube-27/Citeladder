@@ -627,6 +627,36 @@ describe('Cloud Run wake-up', () => {
       },
     ]);
   });
+  it('shares a start still in flight after the interval instead of launching a duplicate', async () => {
+    let releaseToken: (response: Response) => void = () => {};
+    const send = vi
+      .fn<typeof fetch>()
+      .mockImplementationOnce(
+        () =>
+          new Promise<Response>((resolve) => {
+            releaseToken = resolve;
+          }),
+      )
+      .mockResolvedValueOnce(Response.json({ name: 'operations/only' }));
+    let clock = 0;
+    const start = runnerStarter(
+      testConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
+      db,
+      send,
+      () => clock,
+    );
+    const first = start();
+    await vi.waitFor(() => expect(send).toHaveBeenCalledTimes(1));
+    // The interval has passed, but the first attempt's token request is still open.
+    clock = 60_000;
+    const second = start();
+    releaseToken(Response.json({ access_token: 'recorded-access-token' }));
+    await Promise.all([first, second]);
+    expect(send.mock.calls.map(([url]) => String(url))).toEqual([
+      'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
+      `https://run.googleapis.com/v2/${job}:run`,
+    ]);
+  });
   it('is disabled without a job, and failure leaves the committed response usable without secret diagnostics', async () => {
     const send = vi.fn<typeof fetch>().mockRejectedValue(new Error('private bearer token'));
     await runnerStarter(loadConfig({ APP_ENV: 'test' }), db, send)();
