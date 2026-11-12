@@ -271,12 +271,10 @@ async function rereadStart(
   yesterday: string,
 ): Promise<string> {
   let start = addDays(covered, 1 - settings.sync_late_data_revision_days);
-  const unreported =
-    target.provider === 'gsc'
-      ? await firstUnreportedSearchConsoleDay(trx, workspaceId, target)
-      : null;
-  if (unreported !== null) {
+  if (target.provider === 'gsc') {
     const bound = addDays(yesterday, 1 - settings.sync_search_console_finality_days);
+    // A property with no selected row yet may still be pending on every day.
+    const unreported = (await firstUnreportedSearchConsoleDay(trx, workspaceId, target)) ?? bound;
     start = earlierDay(start, laterDay(unreported, bound));
   }
   const earliest = addDays(yesterday, -(settings.sync_backfill_max_days - 1));

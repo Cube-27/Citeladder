@@ -420,7 +420,8 @@ describe('integration sync API and immutable windows', () => {
   });
 
   it('re-reads only the late-data days after coverage, even past a failed history gap', async () => {
-    const target = await seedTarget();
+    // Bing finalizes on its UTC day; Search Console's finality bound is covered below.
+    const target = await seedTarget('bing');
     const yesterday = pinNextUtcHour(12)(-1);
     const daysBefore = (days: number) =>
       new Date(Date.parse(`${yesterday}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
@@ -527,6 +528,19 @@ describe('integration sync API and immutable windows', () => {
       return { artifactId, revision: run.resync_seq };
     };
     const selected = await extracted(covered.sync_run_id, 'succeeded');
+    const nextWindow = async () => {
+      const queued = await enqueueSyncRun(db, {
+        ...target,
+        syncKind: 'scheduled',
+      });
+      const run = await detail(target, queued.sync_run_id);
+      await db
+        .updateTable('integration_sync_runs')
+        .set({ status: 'cancelled' })
+        .where('id', '=', queued.sync_run_id)
+        .execute();
+      return [run.window_start, run.window_end];
+    };
     const reportedThrough = async (date: string, extract = selected) => {
       await db
         .insertInto('integration_metric_rows')
@@ -546,18 +560,10 @@ describe('integration sync API and immutable windows', () => {
           created_at: new Date(),
         })
         .execute();
-      const queued = await enqueueSyncRun(db, {
-        ...target,
-        syncKind: 'scheduled',
-      });
-      const run = await detail(target, queued.sync_run_id);
-      await db
-        .updateTable('integration_sync_runs')
-        .set({ status: 'cancelled' })
-        .where('id', '=', queued.sync_run_id)
-        .execute();
-      return [run.window_start, run.window_end];
+      return nextWindow();
     };
+    // Nothing reported yet: every day within the finality bound may be pending.
+    expect(await nextWindow()).toEqual([day(-10), yesterday]);
     // Pending for 37 days: re-read only within the 10-day finality bound.
     expect(await reportedThrough(day(-38))).toEqual([day(-10), yesterday]);
     // Reported up to 8 days ago: every day since may still be pending.

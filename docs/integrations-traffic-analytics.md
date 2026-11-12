@@ -105,9 +105,9 @@ window is cut at that day.
 An unwindowed on-demand or scheduled sync re-reads only the configured late-data
 days after the newest succeeded window for its mapping; the default window applies
 only before anything has succeeded. A Search Console sync also re-reads from the
-day after the property's latest reported row, within
-`sync_search_console_finality_days`, so a day Search Console finalizes late is
-fetched again until it reports. Gaps left by failed history chunks belong to
+day after the property's latest selected row (every day, before any row),
+within `sync_search_console_finality_days`, so a day Search Console finalizes
+late is fetched again until it reports. Gaps left by failed history chunks belong to
 history retry, never to a routine sync. Only one such sync is in flight per
 mapping: while an on-demand or scheduled run for it is queued, leased, running or
 retry-waiting, another unwindowed one is refused with `409
