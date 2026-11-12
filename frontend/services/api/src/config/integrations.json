@@ -107,6 +107,12 @@
       "default": 3,
       "minimum": 0
     },
+    "sync_search_console_finality_days": {
+      "env": ["INTEGRATION_SYNC_SEARCH_CONSOLE_FINALITY_DAYS"],
+      "type": "int",
+      "default": 10,
+      "minimum": 0
+    },
     "sync_page_size": {
       "env": ["INTEGRATION_SYNC_PAGE_SIZE"],
       "type": "int",
@@ -259,6 +265,11 @@
     "MAPPING_STATUS_ACTIVE": "active",
     "SYNC_KIND_ON_DEMAND": "on_demand",
     "INTEGRATION_IMPORTER_VERSION": "integrations-importer-1"
+  },
+  "reporting_time_zones": {
+    "gsc": "America/Los_Angeles",
+    "ga4": "Etc/GMT+12",
+    "bing": "UTC"
   },
   "datasets": {
     "gsc_page_daily": {

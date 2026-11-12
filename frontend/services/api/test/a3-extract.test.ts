@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { asOwner, Fixtures, testDatabase } from './support.ts';
 import { seedImport, seedProject, type ImportSeed } from './referral-fixtures.ts';
@@ -189,6 +190,23 @@ async function classify(seed: ImportSeed) {
   await ingestReferrals(queueTask, context);
   await classifyReferrals({ ...queueTask, task_kind: 'classify_referrals' }, context);
 }
+it('queues an AI Referrals refresh after each referral artifact of one run is classified', async () => {
+  const sources = await imported('ga4_source_medium_daily');
+  const referrers = await imported('ga4_referrer_daily');
+  expect(referrers.syncRunId).toBe(sources.syncRunId);
+  const refreshes = () =>
+    db
+      .selectFrom('analytics_tasks')
+      .select(sql<string>`payload->>'window_start'`.as('window_start'))
+      .where('project_id', '=', t.projectId)
+      .where('task_kind', '=', 'ai_referrals_snapshot_refresh')
+      .execute();
+  await classify(sources);
+  expect(await refreshes()).toEqual([{ window_start: day }]);
+  await classify(referrers);
+  expect(await refreshes()).toEqual([{ window_start: day }, { window_start: day }]);
+});
+
 describe('A3 integration partition replacement', () => {
   it.each(['traffic', 'referrals'] as const)(
     'retries %s publication when a resync commits between projection scans',
@@ -521,23 +539,23 @@ describe('A3 integration partition replacement', () => {
       ).toEqual([0]);
       expect([status, await quality()]).toEqual([status, { revision: 0, flags: [] }]);
     }
-    await refreshAiReferralsSnapshot(
-      await task(db, t, 'ai_referrals_snapshot_refresh', window),
-      context,
-    );
+    const aiReferralVolume = async () => {
+      await refreshAiReferralsSnapshot(
+        await task(db, t, 'ai_referrals_snapshot_refresh', window),
+        context,
+      );
+      const read = await getAiReferrals(db, {
+        workspaceId: t.workspaceId,
+        projectId: t.projectId,
+        fromDate: day,
+        toDate: day,
+        rangeToken: null,
+        granularity: 'day',
+      });
+      return read.referral_volume[0]?.value;
+    };
     // Revision 0 observed no AI referral, and the cancelled run does not hide that.
-    expect(
-      (
-        await getAiReferrals(db, {
-          workspaceId: t.workspaceId,
-          projectId: t.projectId,
-          fromDate: day,
-          toDate: day,
-          rangeToken: null,
-          granularity: 'day',
-        })
-      ).referral_volume[0]?.value,
-    ).toBe(0);
+    expect(await aiReferralVolume()).toBe(0);
     const truncated = await imported(first.dataset, first, 2);
     await asOwner((owner) =>
       owner
@@ -552,6 +570,8 @@ describe('A3 integration partition replacement', () => {
         .execute(),
     );
     expect(await quality()).toEqual({ revision: 0, flags: ['partition_fallback'] });
+    // The fallback revision is complete evidence: its zero stays observed.
+    expect(await aiReferralVolume()).toBe(0);
   });
   it('classifies session-attributed landings, excludes other hosts and redacted paths, and scopes reads to the workspace', async () => {
     const landing = await imported('ga4_landing_daily');

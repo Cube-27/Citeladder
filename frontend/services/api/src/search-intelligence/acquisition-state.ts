@@ -202,24 +202,11 @@ export class AcquisitionState {
     return this.db.transaction().execute(async (trx) => {
       const run = await this.run(trx).forUpdate().executeTakeFirst();
       if (!run || terminal.has(run.status) || !(await this.owned(trx))) return null;
-      if (
-        !run.confirmed_at ||
-        run.pricing_version !== si.price_version ||
-        !(await this.connection(trx, run))
-      ) {
-        await trx
-          .updateTable('search_intelligence_runs')
-          .set({
-            status: 'failed',
-            error_code:
-              run.pricing_version !== si.price_version ? 'pricing_changed' : 'connection_changed',
-            completed_at: at,
-            updated_at: at,
-          })
-          .where('id', '=', run.id)
-          .where('workspace_id', '=', run.workspace_id)
-          .execute();
-        await this.closeCollecting(trx, at);
+      // A parked run may already have published datasets, so a restart that
+      // finds the price or connection changed ends it like any other stop.
+      const priced = run.pricing_version === si.price_version;
+      if (!priced || !run.confirmed_at || !(await this.connection(trx, run))) {
+        await this.stopRun(trx, run, priced ? 'connection_changed' : 'pricing_changed', at);
         return null;
       }
       await trx
@@ -237,7 +224,7 @@ export class AcquisitionState {
       if (run?.status !== 'running' || !(await this.owned(trx))) return { action: 'stop' };
       const connection = await this.connection(trx, run);
       if (!connection) {
-        await this.failChangedConnection(trx, run, at);
+        await this.stopRun(trx, run, 'connection_changed', at);
         return { action: 'stop' };
       }
       const request = record(plan.request);
@@ -384,7 +371,7 @@ export class AcquisitionState {
       // A connection or member change since `prepare` ends the run, as there:
       // returning without a transition would leave it running with its hold.
       if (!(await this.connection(trx, run))) {
-        await this.failChangedConnection(trx, run, at);
+        await this.stopRun(trx, run, 'connection_changed', at);
         return false;
       }
       const call = await this.calls(trx)
@@ -690,21 +677,6 @@ export class AcquisitionState {
         .where('workspace_id', '=', run.workspace_id)
         .execute();
     });
-  }
-  /** The run's collecting datasets close and the run ends once its connection has changed. */
-  private async failChangedConnection(trx: Database, run: Run, at: Date) {
-    await trx
-      .updateTable('search_intelligence_runs')
-      .set({
-        status: run.completed_calls ? 'partial' : 'failed',
-        error_code: 'connection_changed',
-        completed_at: at,
-        updated_at: at,
-      })
-      .where('id', '=', run.id)
-      .where('workspace_id', '=', run.workspace_id)
-      .execute();
-    await this.closeCollecting(trx, at);
   }
   /** The plan's dataset for this run: the existing locked row, or a new collecting one. */
   private async upsertDataset(
