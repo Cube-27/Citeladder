@@ -148,6 +148,12 @@ describe('terminal analysis publication', () => {
       reason: 'no_comparable_snapshot',
       series: [expect.objectContaining({ label: expect.any(String) })],
     });
+    // A crawl older than all of them, published late, has no earlier crawl to trend against.
+    const late = await publish({ created_at: LONG_AGO });
+    expect(await trendOf(late)).toMatchObject({
+      state: 'unavailable',
+      reason: 'no_comparable_snapshot',
+    });
   });
 
   it('serializes concurrent finalization and preserves initial evaluation ownership', async () => {

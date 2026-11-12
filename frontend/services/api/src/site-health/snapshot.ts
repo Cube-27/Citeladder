@@ -54,7 +54,9 @@ async function history(db: Database, crawl: Crawl, projection: MeasurementProjec
     .select(['c.root_url', 'c.configuration'])
     .where('s.workspace_id', '=', crawl.workspace_id)
     .where('s.project_id', '=', crawl.project_id)
-    .where('s.crawl_id', '!=', crawl.id)
+    // Only crawls created before this one, so a late publication never trends
+    // against a newer crawl (Changes picks its predecessor the same way).
+    .where('c.created_at', '<', crawl.created_at)
     .where('c.status', 'in', USABLE_CRAWL_STATUSES)
     .where('c.analyzed_url_count', '>', 0)
     .where(sql<boolean>`not ${pageRerunSql}`)
@@ -69,8 +71,8 @@ async function history(db: Database, crawl: Crawl, projection: MeasurementProjec
     .where('s.presentation_version', '=', versions.presentation)
     .where('s.coverage_formula_version', '=', reads.coverage_formula_version)
     .where('s.classification_formula_version', '=', reads.classification_formula_version)
-    .orderBy('s.created_at', 'desc')
-    .orderBy('s.id', 'desc')
+    .orderBy('c.created_at', 'desc')
+    .orderBy('c.id', 'desc')
     // Scope is compared in code, so search as many earlier crawls as Changes does.
     .limit(policy.site_health.change_intel.max_crawl_candidates)
     .execute();

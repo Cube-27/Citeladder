@@ -627,7 +627,7 @@ found on the site", and omits `root` and `other`.
 
 **Scored cohort composition.** Trend and Change summary compare against the
 newest earlier comparable snapshot (`snapshot.ts`): one under the same versions
-from a usable crawl (not failed) that analyzed a page, is not a page rerun, and
+from a usable crawl (not failed), created earlier, that analyzed a page, is not a page rerun, and
 has the same origin and scope as Changes requires (`sameScope`). With none, the
 trend reads `no_comparable_snapshot`. `cohort-composition.ts`
 sets `cohort_composition_changed` only when a page kind joined or left the
