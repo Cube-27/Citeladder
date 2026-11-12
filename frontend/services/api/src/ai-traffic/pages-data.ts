@@ -74,9 +74,12 @@ function pageCursor(sortValue: RawBuilder<unknown>, ascending: boolean, after: s
 }
 /** A Pages sort key; an unknown one is refused. */
 export function pageSortKey(sort?: string | null): keyof typeof pageSorts {
-  const key = sort ?? 'requests_desc';
-  if (!Object.hasOwn(pageSorts, key)) throw new ApiError(422, 'Invalid Pages sort');
-  return key as keyof typeof pageSorts;
+  if (sort === null || sort === undefined) return 'requests_desc';
+  if (!isPageSort(sort)) throw new ApiError(422, 'Invalid Pages sort');
+  return sort;
+}
+function isPageSort(sort: string): sort is keyof typeof pageSorts {
+  return Object.hasOwn(pageSorts, sort);
 }
 /**
  * The joined rows for a page, `dataset_limit` (else one past the page size)
@@ -115,6 +118,9 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
   const botFilter = options.bot_id ? sql`bot_id=${options.bot_id}` : sql`true`;
   const ids = (aggregate: RawBuilder<unknown>) =>
     options.provenance ? aggregate : sql`null::jsonb`;
+  const rollupIds = ids(sql`jsonb_agg(id)`),
+    citationIds = ids(sql`jsonb_agg(c.id order by r.audit_id,c.n)`),
+    auditIds = ids(sql`jsonb_agg(distinct r.audit_id)`);
   const path = sql`regexp_replace(canonical_url,'^https?://[^/]+','')`;
   const resources = sql`case ${sql.join(
     crawlers.resource_rules.map(
@@ -138,7 +144,7 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
       sum(requests) filter(where status_code between 400 and 499)::integer as errors_4xx,
       sum(requests) filter(where status_code>=500)::integer as errors_5xx,
       to_char(max(last_seen_at) at time zone 'UTC','YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as last_crawl,
-      jsonb_agg(distinct reporting_timezone) as crawl_timezones,${ids(sql`jsonb_agg(id)`)} as crawl_ids
+      jsonb_agg(distinct reporting_timezone) as crawl_timezones,${rollupIds} as crawl_ids
       from bot_activity_daily where ${owned} and ${days} and identity='exact' and url_hash is not null
         and verification=any(${verification}::text[]) and ${botFilter} group by url_hash),
     errors as (select url_hash,jsonb_object_agg(status_code,n) as verified_errors from
@@ -146,13 +152,13 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
         and identity='exact' and verification='verified' and status_code>=400
         and ${botFilter} group by url_hash,status_code) e group by url_hash),
     landing as (select url_hash,min(canonical_url) as canonical_url,min(display_path) as display_path,min(folder) as folder,min(resource_class) as resource_class,sum(sessions)::integer as sessions,sum(key_events) as key_events,
-      jsonb_agg(distinct reporting_timezone) as referral_timezones,${ids(sql`jsonb_agg(id)`)} as landing_ids,
+      jsonb_agg(distinct reporting_timezone) as referral_timezones,${rollupIds} as landing_ids,
       (select coalesce(jsonb_agg(distinct flag),'[]') from ai_referral_landing_daily q,
         jsonb_array_elements_text(q.analytics_quality) flag where q.workspace_id=${scope.workspaceId}::uuid
         and q.project_id=${scope.projectId}::uuid and q.url_hash=l.url_hash and q.reporting_date between ${w.start}::date and ${w.end}::date) as analytics_quality
       from ai_referral_landing_daily l where ${owned} and ${days} group by url_hash),
     citation_runs as (${citationRuns(db, scope, windowBounds(w, options)).select('m.owned_citation_pages')}),
-    citation as (select p.url_hash,min(p.canonical_url) as canonical_url,count(*)::integer as citations,${ids(sql`jsonb_agg(c.id order by r.audit_id,c.n)`)} as citation_ids,${ids(sql`jsonb_agg(distinct r.audit_id)`)} as audit_ids
+    citation as (select p.url_hash,min(p.canonical_url) as canonical_url,count(*)::integer as citations,${citationIds} as citation_ids,${auditIds} as audit_ids
       from citation_runs r cross join lateral jsonb_to_recordset(r.owned_citation_pages) as p(url_hash text,canonical_url text,citation_ids jsonb)
         cross join lateral jsonb_array_elements_text(p.citation_ids) with ordinality as c(id,n) group by p.url_hash),
     inventory as (select distinct u.url_hash,u.normalized_url as canonical_url from site_urls u

@@ -67,7 +67,7 @@ export function tableCsv(columns: readonly string[], items: Record<string, unkno
  * The same CSV as `tableCsv`, encoded one batch at a time as the client
  * reads: the next batch is not requested until the previous one is taken.
  */
-export function csvStream(
+function csvStream(
   columns: readonly string[],
   batches: AsyncIterable<Record<string, unknown>[]>,
 ): ReadableStream<Uint8Array> {

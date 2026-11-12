@@ -325,13 +325,16 @@ export async function activityExport(
   input: CrawlReadOptions = {},
 ) {
   const options = await withReportingTimezone(db, scope, input);
-  const { count } = await activityRequests(db, scope, options)
+  // The count and every batch share one retention cutoff, so a slow download
+  // does not lose its oldest rows to a cutoff that moved while it streamed.
+  const retainedSince = retentionCutoff();
+  const { count } = await activityRequests(db, scope, options, retainedSince)
     .select(sql<number>`count(*)::integer`.as('count'))
     .executeTakeFirstOrThrow();
   assertExportBound(count, crawlLogs.max_export_rows);
   const batches = keysetBatches({
     read: (after: ActivityRow | undefined, take: number) => {
-      let query = activityQuery(db, scope, options);
+      let query = activityQuery(db, scope, options, retainedSince);
       if (after)
         query = query.where(
           sql<boolean>`(occurred_at,id)<(${storedInstant(after.occurred)},${after.id}::uuid)`,
@@ -351,8 +354,13 @@ function activityItem<T extends { occurred: string }>({ occurred, ...row }: T) {
 }
 type ActivityRow = Awaited<ReturnType<ReturnType<typeof activityQuery>['execute']>>[number];
 /** Retained requests matching the filters, newest first. */
-function activityQuery(db: Database, scope: CrawlScope, options: CrawlReadOptions) {
-  return activityRequests(db, scope, options)
+function activityQuery(
+  db: Database,
+  scope: CrawlScope,
+  options: CrawlReadOptions,
+  retainedSince = retentionCutoff(),
+) {
+  return activityRequests(db, scope, options, retainedSince)
     .select([
       'id',
       'source_id',
@@ -377,13 +385,21 @@ function activityQuery(db: Database, scope: CrawlScope, options: CrawlReadOption
     .orderBy('occurred_at', 'desc')
     .orderBy('id', 'desc');
 }
-/** Retained requests matching the filters, unselected and unordered. */
-function activityRequests(db: Database, scope: CrawlScope, options: CrawlReadOptions) {
+function retentionCutoff() {
+  return new Date(Date.now() - crawlLogs.retention_days * 86400000);
+}
+/** Requests retained since the cutoff matching the filters, unselected and unordered. */
+function activityRequests(
+  db: Database,
+  scope: CrawlScope,
+  options: CrawlReadOptions,
+  retainedSince: Date,
+) {
   let query = db
     .selectFrom('bot_requests')
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where('occurred_at', '>=', new Date(Date.now() - crawlLogs.retention_days * 86400000))
+    .where('occurred_at', '>=', retainedSince)
     .where('verification', 'in', verificationFilter(options.verification));
   const bots = purposeBots(options.purpose);
   if (bots) query = query.where('bot_id', 'in', bots);
