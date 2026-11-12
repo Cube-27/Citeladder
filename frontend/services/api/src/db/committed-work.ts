@@ -6,6 +6,7 @@ import type {
   OperationNode,
 } from 'kysely';
 import { executionTables } from '../config/execution.ts';
+import { failureFacts, getLogger } from '../logging.ts';
 
 type RequestWork = { committed: boolean };
 const requests = new AsyncLocalStorage<RequestWork>();
@@ -17,14 +18,24 @@ export function withoutWorkObservation<T>(run: () => Promise<T>): Promise<T> {
   return requests.exit(run);
 }
 
-/** A request owns observation; workers and offline operators never start more jobs. */
+/**
+ * A request owns observation; workers and offline operators never start more jobs.
+ * The wake starts after commit but never holds the response: a slow metadata
+ * or Cloud Run call must not add latency to the request that committed work.
+ */
 export function observeCommittedWork(run: () => Promise<void>, wake: () => Promise<void>) {
   const state: RequestWork = { committed: false };
   return requests.run(state, async () => {
     try {
       await run();
     } finally {
-      if (state.committed) await wake();
+      // Outside the request's context, so the wake's own queries are never observed.
+      if (state.committed)
+        void requests.exit(() =>
+          wake().catch((error: unknown) =>
+            getLogger('workers.runner').warning('runner_wake_failed', failureFacts(error)),
+          ),
+        );
     }
   });
 }

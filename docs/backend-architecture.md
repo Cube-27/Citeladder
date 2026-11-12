@@ -172,8 +172,10 @@ One PostgreSQL advisory lock admits one drain at a time across executions.
 With `CLOUD_RUN_RUNNER_JOB` configured, the API observes successful queue/billing
 mutations per request at the PostgreSQL connection boundary. Autocommit or
 successful COMMIT marks work; rollback, savepoint rollback, aborted transactions
-and no-op writes do not. After the request settles, it awaits a bounded Cloud Run
-job-start request using service-account metadata credentials. This also covers
+and no-op writes do not. After the request settles, it starts a bounded Cloud Run
+job-start request using service-account metadata credentials without awaiting it,
+so the response never waits on metadata or Cloud Run. Each API instance keeps
+one start in flight: callers during it share that attempt. This also covers
 requests whose later operation fails after earlier work committed. Reads do not
 start jobs; background worker writes never start jobs. Instead, an execution
 that idles keeps its drain while a lane's earliest pending task (Site Health
@@ -185,8 +187,8 @@ takes one to three minutes to start an execution (measured October 2026), so a
 successor is not an immediate pickup. Request-bound
 discovery suppresses wake-up because it has no successors. Other interactive
 workers keep observation active so successors committed after a
-background drain exits still wake the runner. Duplicate starts are
-allowed and existing leases arbitrate claims. A failed start is logged without
+background drain exits still wake the runner. Starts from different instances
+may still overlap; existing leases arbitrate claims. A failed start is logged without
 tokens/provider bodies and leaves the committed response and work intact for tick.
 
 The Cloud Run API (`K_SERVICE`, or configured runner job outside a job

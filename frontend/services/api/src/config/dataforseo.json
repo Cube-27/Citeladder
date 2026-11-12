@@ -369,6 +369,7 @@
     "status_invalid_field": 40501,
     "account_unavailable_status_codes": [40200, 40201, 40204],
     "error_account_unavailable": "provider_account_unavailable",
+    "error_result_unsaved": "result_unsaved",
     "pause_reason_account": "provider_account",
     "terminal_failure_status_codes": [40100, 40103, 40200, 40501],
     "accepted_submission_status_codes": [20000, 20100],

@@ -7,7 +7,8 @@ import { auditRuntime, type AuditRuntime } from './config.ts';
 import { providerPolicy, surfaceKindOf } from '../providers/config.ts';
 import { resolveMarkets } from '../projects/markets.ts';
 import { searchContext } from '../search-surfaces/locations.ts';
-import { marketEngines } from './freeze.ts';
+import { launchPrompts, marketEngines } from './freeze.ts';
+import { overLimitSelection } from '../entitlements/occupancy.ts';
 import { marketIdsInput, repetitionsInput } from './inputs.ts';
 import { costPolicy, estimateTokens, knownTotal, previewCost } from './costs.ts';
 
@@ -39,23 +40,19 @@ export async function estimateAudit(
     .where('id', '=', input.project_id)
     .executeTakeFirst();
   if (!project) throw invalid('Project not found');
-  let query = db
-    .selectFrom('prompts as p')
-    .innerJoin('prompt_sets as s', 's.id', 'p.prompt_set_id')
-    .select(['p.id', 'p.text'])
-    .where('s.project_id', '=', project.id)
-    .where('p.enabled', '=', true)
-    .orderBy('p.created_at')
-    .orderBy('p.id');
-  if (input.prompt_ids.length) query = query.where('p.id', 'in', input.prompt_ids);
-  else if (input.prompt_set_id) query = query.where('s.id', '=', input.prompt_set_id);
-  else throw invalid('Either prompt_set_id or prompt_ids is required');
-  const prompts = await query.execute();
+  if (!input.prompt_ids.length && !input.prompt_set_id)
+    throw invalid('Either prompt_set_id or prompt_ids is required');
+  // The launch's own selection: archived and over-plan prompts are never run.
+  const { selected, measured: prompts } = await launchPrompts(db, workspaceId, project.id, input);
   if (
-    !prompts.length ||
-    (input.prompt_ids.length && prompts.length !== new Set(input.prompt_ids).size)
+    !selected.length ||
+    (input.prompt_ids.length && selected.length !== new Set(input.prompt_ids).size)
   )
     throw invalid('One or more prompts are unavailable');
+  if (input.prompt_ids.length && prompts.length !== selected.length)
+    throw overLimitSelection(selected.length - prompts.length);
+  if (!prompts.length)
+    throw invalid('Every enabled prompt here is beyond your plan’s prompt limit');
   const settings = runtime.audits,
     repetitions = input.repetitions ?? settings.audit_repetitions;
   const markets = await resolveMarkets(

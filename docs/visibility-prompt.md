@@ -493,7 +493,8 @@ Admission freezes prompt text/cohorts, roster, model/retrieval identity, request
 configuration and relevant versions. benchmark_mode is prompt framing, not a
 provider policy. Funding/occupancy is checked by
 [billing and entitlements](billing-entitlements.md). A provider-free estimate
-does not authorize execution or establish measured cost.
+counts the prompts the launch would run (active, enabled and within the plan's
+prompt slots); it does not authorize execution or establish measured cost.
 Manual HTTP launch uses customer credentials; funded admission is reserved for
 trusted billing/trial callers. Cancelled funded runs release unused task credits
 but retain their admission quote against the monthly funded cost ceiling.

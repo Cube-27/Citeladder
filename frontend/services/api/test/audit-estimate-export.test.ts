@@ -2,6 +2,7 @@ import { afterAll, afterEach, describe, expect, it } from 'vitest';
 import { testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { auditTenant } from './audit-fixtures.ts';
+import { billingAccount, grant, prompt } from './prompt-fixtures.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { createAudits } from '../src/audits/creation.ts';
@@ -69,6 +70,32 @@ describe('provider-free audit estimates and persisted exports', () => {
         .where('workspace_id', '=', t.workspaceId)
         .execute(),
     ).toEqual([]);
+  });
+  it('estimates only the prompts a launch runs, never archived or over-plan ones', async () => {
+    const t = await auditTenant(db, fixtures);
+    await prompt(db, t.setId, 'An archived prompt', { status: 'archived' });
+    // Two slots: the fixture's prompt and the archived one fill them, so this one is over plan.
+    await grant(db, await billingAccount(db, t.workspaceId), { key: 'prompt_slots', value: 2 });
+    const overPlan = await prompt(db, t.setId, 'A prompt beyond the plan', {
+      createdAt: new Date(Date.now() + 60_000),
+    });
+    const input = estimateInput.parse({
+      project_id: t.projectId,
+      prompt_set_id: t.setId,
+      engines: ['chatgpt'],
+      repetitions: 1,
+    });
+    const estimate = await estimateAudit(db, t.workspaceId, input, runtime);
+    const [launched] = await createAudits(db, t.workspaceId, auditInput.parse(input), {}, runtime);
+    const tasks = await db
+      .selectFrom('audit_tasks')
+      .select('id')
+      .where('audit_id', '=', launched!)
+      .execute();
+    expect([estimate.prompt_count, estimate.execution_count, tasks.length]).toEqual([1, 1, 1]);
+    await expect(
+      estimateAudit(db, t.workspaceId, { ...input, prompt_ids: [overPlan] }, runtime),
+    ).rejects.toMatchObject({ status: 403, code: 'limit_exceeded' });
   });
   it('exports persisted scores and frozen unknown retrieval while neutralizing spreadsheet formulas', async () => {
     const t = await auditTenant(db, fixtures),
