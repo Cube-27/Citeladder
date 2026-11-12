@@ -522,6 +522,17 @@ async function askModel(
   }
 }
 
+/** Each requested target's context, in request order, once the request may name them. */
+async function requestContexts(db: Database, scope: CommerceScope, input: GenerateInput) {
+  // Per-product prompts are an explicit hero choice; every other product is
+  // covered by its category's matrix.
+  if (!input.hero && input.targets.some((target) => target.kind === 'product'))
+    throw heroRequired();
+  const contexts = [];
+  for (const target of input.targets) contexts.push(await targetContext(db, scope, target)); // NOSONAR -- The first unavailable target, in request order, is the error.
+  return contexts;
+}
+
 type GenerateOptions = {
   gatewayFactory?: () => ModelGateway;
   meter?: Meter;
@@ -544,12 +555,7 @@ export async function generateBuyerPrompts(
     idempotencyKey = null,
   }: GenerateOptions = {},
 ) {
-  // Per-product prompts are an explicit hero choice; every other product is
-  // covered by its category's matrix.
-  if (!input.hero && input.targets.some((target) => target.kind === 'product'))
-    throw heroRequired();
-  const contexts = [];
-  for (const target of input.targets) contexts.push(await targetContext(db, scope, target)); // NOSONAR -- The first unavailable target, in request order, is the error.
+  const contexts = await requestContexts(db, scope, input);
   // Targets are authorized before revealing whether the key was used.
   if (idempotencyKey) {
     const prior = await replayGeneration(db, scope, input, idempotencyKey);

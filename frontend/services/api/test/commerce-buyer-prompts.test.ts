@@ -156,24 +156,17 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
   ]);
 });
 
-it('replays a keyed generation retry from its stored prompts without another model call', async () => {
+type Row = { text: string; context?: string; stage?: string; branded?: boolean };
+/** One scripted answer per model call; `null` or no answer left is a provider failure. */
+function gatewayAnswering(answers: (Row[] | null)[]) {
   const io = {
-    fetch: vi.fn<typeof fetch>(async () =>
-      Response.json({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                prompts: [
-                  { text: 'best running shoes for wet trails' },
-                  { text: 'lightweight shoes with cushioning for long runs' },
-                ],
-              }),
-            },
-          },
-        ],
-      }),
-    ),
+    fetch: vi.fn<typeof fetch>(async () => {
+      const next = answers.shift();
+      if (!next) return new Response('{}', { status: 400 });
+      return Response.json({
+        choices: [{ message: { content: JSON.stringify({ prompts: next }) } }],
+      });
+    }),
     sleep: async () => {},
   };
   const gateway = () =>
@@ -186,6 +179,16 @@ it('replays a keyed generation retry from its stored prompts without another mod
       },
       io,
     );
+  return { io, gateway };
+}
+
+it('replays a keyed generation retry from its stored prompts without another model call', async () => {
+  const { io, gateway } = gatewayAnswering([
+    [
+      { text: 'best running shoes for wet trails' },
+      { text: 'lightweight shoes with cushioning for long runs' },
+    ],
+  ]);
   const input = buyerGenerateInput.parse({ targets: [target], count: 2, hero: true });
   const keyed = { gatewayFactory: gateway, idempotencyKey: 'retry-key' };
   const first = await generateBuyerPrompts(db, scope, input, keyed);
@@ -209,39 +212,17 @@ it('replays a keyed generation retry from its stored prompts without another mod
 });
 
 it('persists one generation when two requests with the same key run at once', async () => {
-  const answers = [
-    ['best running shoes for wet trails', 'lightweight shoes with cushioning for long runs'],
-    ['waterproof trail shoes for muddy hikes', 'grippy running shoes for rocky trails'],
-  ];
-  const io = {
-    fetch: vi.fn<typeof fetch>(async () =>
-      Response.json({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                prompts: (answers.shift() ?? []).map((text) => ({ text })),
-              }),
-            },
-          },
-        ],
-      }),
-    ),
-    sleep: async () => {},
-  };
-  const options = {
-    gatewayFactory: () =>
-      createModelGateway(
-        {
-          ...gatewaySettings({}),
-          apiKey: 'test-only',
-          model: 'claude-haiku-5-5',
-          baseUrl: 'https://model.test',
-        },
-        io,
-      ),
-    idempotencyKey: 'concurrent-key',
-  };
+  const { gateway } = gatewayAnswering([
+    [
+      { text: 'best running shoes for wet trails' },
+      { text: 'lightweight shoes with cushioning for long runs' },
+    ],
+    [
+      { text: 'waterproof trail shoes for muddy hikes' },
+      { text: 'grippy running shoes for rocky trails' },
+    ],
+  ]);
+  const options = { gatewayFactory: gateway, idempotencyKey: 'concurrent-key' };
   const input = buyerGenerateInput.parse({ targets: [target], count: 2, hero: true });
 
   const [one, two] = await Promise.all([
@@ -326,7 +307,6 @@ it("keeps each target's usable prompts and binds category prompts through the ca
 });
 
 describe('category matrix and hero products', () => {
-  type Row = { text: string; context?: string; stage?: string; branded?: boolean };
   const cell = (text: string, context: string, stage: string): Row => ({ text, context, stage });
   async function jacketCategory() {
     await importCatalog(
@@ -341,30 +321,6 @@ describe('category matrix and hero products', () => {
       .where('normalized_name', '=', 'rain jackets')
       .executeTakeFirstOrThrow();
     return { kind: 'category' as const, id: category.id };
-  }
-  /** One scripted answer per model call; `null` is a provider failure. */
-  function gatewayAnswering(answers: (Row[] | null)[]) {
-    const io = {
-      fetch: vi.fn<typeof fetch>(async () => {
-        const next = answers.shift();
-        if (!next) return new Response('{}', { status: 400 });
-        return Response.json({
-          choices: [{ message: { content: JSON.stringify({ prompts: next }) } }],
-        });
-      }),
-      sleep: async () => {},
-    };
-    const gateway = () =>
-      createModelGateway(
-        {
-          ...gatewaySettings({}),
-          apiKey: 'test-only',
-          model: 'claude-haiku-5-5',
-          baseUrl: 'https://model.test',
-        },
-        io,
-      );
-    return { io, gateway };
   }
   const contexts = ['Commuting cyclist', 'Weekend hiker', 'Festival goer'];
   const organicCells = [

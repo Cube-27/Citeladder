@@ -78,6 +78,18 @@ const RESULT = {
   ],
 };
 
+/** Every stage request body the server receives, answered with STAGE. */
+function recordStages() {
+  const staged: unknown[] = [];
+  mswServer.use(
+    http.post(`${base}/catalog/imports`, async ({ request }) => {
+      staged.push(await request.json());
+      return HttpResponse.json(STAGE, { status: 201 });
+    }),
+  );
+  return staged;
+}
+
 function open() {
   renderWithProviders(
     <AddProductsDialog workspaceId="ws" projectId={PROJECT_ID} open onOpenChange={() => {}} />,
@@ -87,13 +99,9 @@ function open() {
 
 describe('AddProductsDialog', () => {
   it('stages a CSV, applies the confirmed category tree, and lists rejected rows first with reasons', async () => {
-    const staged: unknown[] = [];
+    const staged = recordStages();
     const applied: unknown[] = [];
     mswServer.use(
-      http.post(`${base}/catalog/imports`, async ({ request }) => {
-        staged.push(await request.json());
-        return HttpResponse.json(STAGE, { status: 201 });
-      }),
       http.post(`${base}/catalog/imports/${IMPORT_ID}/apply`, async ({ request }) => {
         applied.push(await request.json());
         return HttpResponse.json(RESULT);
@@ -177,13 +185,7 @@ describe('AddProductsDialog', () => {
   });
 
   it('refuses a Windows-1252 feed with guidance and sends nothing to the server', async () => {
-    const staged: unknown[] = [];
-    mswServer.use(
-      http.post(`${base}/catalog/imports`, async ({ request }) => {
-        staged.push(await request.json());
-        return HttpResponse.json(STAGE, { status: 201 });
-      }),
-    );
+    const staged = recordStages();
     open();
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Merchant Center feed' }));
     // "title,brand\nCafé,Acme\n" with é as the Windows-1252 byte 0xE9.
@@ -204,13 +206,7 @@ describe('AddProductsDialog', () => {
   });
 
   it('stages the file once when Review categories is clicked twice', async () => {
-    const staged: unknown[] = [];
-    mswServer.use(
-      http.post(`${base}/catalog/imports`, async ({ request }) => {
-        staged.push(await request.json());
-        return HttpResponse.json(STAGE, { status: 201 });
-      }),
-    );
+    const staged = recordStages();
     open();
     await userEvent.setup().click(screen.getByRole('tab', { name: 'CSV' }));
     const file = new File(['title,brand\nShoe,Acme\n'], 'catalog.csv', { type: 'text/csv' });
@@ -220,7 +216,9 @@ describe('AddProductsDialog', () => {
     fireEvent.click(review);
 
     await screen.findByRole('list', { name: 'Proposed categories' });
-    expect(staged).toHaveLength(1);
+    expect(staged).toEqual([
+      { source: 'csv', content: 'title,brand\nShoe,Acme\n', filename: 'catalog.csv' },
+    ]);
   });
 
   it.each([
