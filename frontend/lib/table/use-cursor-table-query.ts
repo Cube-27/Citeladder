@@ -110,11 +110,7 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
     },
   });
   const page = query.data;
-  // The rows before the shown page, for a running "#" column. Retained rows
-  // keep the offset of the page they came from until the next page lands.
-  const offset = (cursor.page - 1) * pageSize;
-  const [rowOffset, setRowOffset] = useState(offset);
-  if (page && !query.isPlaceholderData && rowOffset !== offset) setRowOffset(offset);
+  const rowOffset = useShownRowOffset((cursor.page - 1) * pageSize, query);
   let state: DataTableState | undefined;
   if (query.isPending) state = { kind: 'loading', label: loading };
   else if (query.isError) state = { kind: 'error', ...readErrorProps(query), fallback: error };
@@ -147,6 +143,20 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
         : undefined,
   };
   return { query, page, cursor, table, rowOffset };
+}
+
+/**
+ * The rows before the shown page, for a running "#" column. Retained rows
+ * keep the offset of the page they came from until the next page lands.
+ */
+function useShownRowOffset(
+  offset: number,
+  query: Readonly<{ data: CursorPage | undefined; isPlaceholderData: boolean }>,
+): number {
+  const [shown, setShown] = useState(offset);
+  const landed = query.data !== undefined && !query.isPlaceholderData;
+  if (landed && shown !== offset) setShown(offset);
+  return shown;
 }
 
 /**

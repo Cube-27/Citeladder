@@ -35,8 +35,10 @@ function crawlRead(dashboard: {
   data: { crawl?: SiteCrawl | null } | undefined;
   isError: boolean;
 }): CrawlRead {
+  // A refetch that failed reports the failure, not its stale answer.
+  if (dashboard.isError) return { kind: 'failed' };
   if (dashboard.data) return { kind: 'answered', crawl: dashboard.data.crawl ?? null };
-  return dashboard.isError ? { kind: 'failed' } : { kind: 'pending' };
+  return { kind: 'pending' };
 }
 
 /**

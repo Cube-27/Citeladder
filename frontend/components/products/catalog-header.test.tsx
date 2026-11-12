@@ -258,4 +258,23 @@ describe('CatalogHeader', () => {
     await waitFor(() => expect(screen.getByText('49/50')).toBeInTheDocument());
     expect(siteHealthApi.createCrawl).not.toHaveBeenCalled();
   });
+
+  it('reports a failed refresh rather than the stale "no crawl" it replaced', async () => {
+    getDashboard.mockResolvedValue({ crawl: null });
+    const { queryClient } = renderWithProviders(
+      <CatalogHeaderHost
+        workspaceId={WORKSPACE_ID}
+        projectId={PROJECT_ID}
+        query={catalogQuery()}
+      />,
+    );
+    expect(await screen.findByText('No crawl yet')).toBeInTheDocument();
+
+    getDashboard.mockRejectedValue(new ApiError('Bad request', 400, ''));
+    await act(() => queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY }));
+
+    await waitFor(() => expect(statValue('Site Health')).toHaveTextContent("Couldn't load"));
+    expect(screen.queryByText('No crawl yet')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh from Site Health' })).toBeInTheDocument();
+  });
 });
