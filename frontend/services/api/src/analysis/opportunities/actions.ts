@@ -146,8 +146,10 @@ export function readHandoff(persisted: unknown, label: string): ActionHandoff {
 type GroupedAction = Readonly<{ approach: string; target_kind: string }>;
 
 function groupAdmits(rule: ActionGroupRule, action: GroupedAction): boolean {
+  // Widened so a stored kind, read as a string, can be looked up.
+  const kinds: readonly string[] | undefined = rule.target_kinds;
   return (
-    (!rule.target_kinds || rule.target_kinds.some((kind) => kind === action.target_kind)) &&
+    (!kinds || kinds.includes(action.target_kind)) &&
     (!rule.approaches || rule.approaches.includes(action.approach))
   );
 }

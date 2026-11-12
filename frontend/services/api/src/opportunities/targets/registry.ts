@@ -50,8 +50,9 @@ const NAMED: { readonly [K in AgentTargetKind]: AgentNamedTargetModule<K> } = {
   planned_page: plannedPageTarget,
 };
 
+const AGENT_KINDS: readonly unknown[] = p.AGENT_TARGET_KINDS;
 export const isAgentTargetKind = (kind: unknown): kind is AgentTargetKind =>
-  p.AGENT_TARGET_KINDS.some((allowed) => allowed === kind);
+  AGENT_KINDS.includes(kind);
 
 /** The module of a stored Action's kind; the column holds only contract kinds. */
 const moduleOf = (action: Pick<TargetAction, 'target_kind'>): ActionTargetModule =>
