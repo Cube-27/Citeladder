@@ -153,6 +153,19 @@ describe('loadConfig', () => {
       policy.settings.db_pool_size.default + policy.settings.db_max_overflow.default,
     );
   });
+
+  it('sizes the API pool from its own settings even when it starts runner jobs', () => {
+    const config = loadConfig({
+      APP_ENV: 'test',
+      CLOUD_RUN_RUNNER_JOB: 'projects/p/locations/us-central1/jobs/runner',
+      CITELADDER_ORIGIN_TOKEN: 'o'.repeat(32),
+      DB_POOL_SIZE: '9',
+      DB_MAX_OVERFLOW: '1',
+      RUNNER_DB_POOL_SIZE: '3',
+    });
+    expect(poolOptions(config).max).toBe(10);
+    expect(poolOptions(config, { execution: true }).max).toBe(3);
+  });
 });
 
 describe('demoAccessExpired', () => {

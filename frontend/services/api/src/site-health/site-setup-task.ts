@@ -17,7 +17,13 @@ import { record } from '../db/json.ts';
 import { failureFacts, getLogger } from '../logging.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
 import { FetchError } from '../safe-fetch.ts';
-import { SitemapCollector, SitemapParseError, sitemapRef } from '../web-evidence/sitemaps.ts';
+import {
+  SitemapCollector,
+  SitemapParseError,
+  sitemapRef,
+  type SitemapDocument,
+} from '../web-evidence/sitemaps.ts';
+import { InterpretationTimeoutError, parseSitemapAsync } from './analysis/off-thread.ts';
 import { robotsPolicy } from '../web-evidence/acquisition.ts';
 import { crawlerRootFacts, crawlerSamplePolicy } from './crawler-policy.ts';
 import { candidateObservation, enqueueCrawlTasks, insertObservations } from './admission-writes.ts';
@@ -194,6 +200,36 @@ async function sitemapDocument(
 }
 
 /**
+ * One sitemap document read and parsed off the event loop. A body that does
+ * not parse is the server's answer that it serves no sitemap there (`absent`);
+ * a parse that overran its time limit settled nothing (`unread`).
+ */
+type SitemapAnswer =
+  | { kind: 'parsed'; document: SitemapDocument }
+  | { kind: 'absent' }
+  | { kind: 'unread' };
+
+async function readSitemap(
+  ctx: SiteTaskContext,
+  url: string,
+  settings: Settings,
+): Promise<SitemapAnswer> {
+  const read = await sitemapDocument(ctx, url, settings);
+  if (read.kind !== 'page') return read;
+  try {
+    const { body, contentType } = read.page;
+    return {
+      kind: 'parsed',
+      document: await parseSitemapAsync(body, contentType, settings.sitemap),
+    };
+  } catch (error) {
+    if (error instanceof SitemapParseError) return { kind: 'absent' };
+    if (error instanceof InterpretationTimeoutError) return { kind: 'unread' };
+    throw error;
+  }
+}
+
+/**
  * Walk the sitemap tree breadth-first in bounded concurrent waves, counting
  * attempts (not successes) against the document budget. Each wave is consumed
  * in queue order, so response timing cannot change which URLs fit the cap.
@@ -229,7 +265,7 @@ async function walkSitemaps(
     );
     attempted += wave.length;
     // Waves are bounded and sequential: a wave's references feed the next one.
-    const pages = await Promise.all(wave.map(({ url }) => sitemapDocument(ctx, url, settings))); // NOSONAR
+    const pages = await Promise.all(wave.map(({ url }) => readSitemap(ctx, url, settings))); // NOSONAR
     ctx.signal.throwIfAborted();
     for (const [index, entry] of wave.entries()) collect(walk, entry, pages[index]);
   }
@@ -256,22 +292,13 @@ type Walk = {
   unread: number;
 };
 
-/**
- * Record one read and queue its unseen child references. A document that does
- * not parse is the server's answer that it serves no sitemap there.
- */
-function collect(walk: Walk, { url, depth }: { url: string; depth: number }, read?: SitemapRead) {
-  if (read?.kind !== 'page') {
+/** Record one answer and queue its unseen child references. */
+function collect(walk: Walk, { url, depth }: { url: string; depth: number }, read?: SitemapAnswer) {
+  if (read?.kind !== 'parsed') {
     if (read?.kind !== 'absent') walk.unread++;
     return;
   }
-  let refs: string[];
-  try {
-    refs = walk.collector.add(url, read.page.body, read.page.contentType, depth);
-  } catch (error) {
-    if (!(error instanceof SitemapParseError)) throw error;
-    return;
-  }
+  const refs = walk.collector.add(url, read.document, depth);
   walk.files.push(url);
   for (const ref of refs.filter((item) => !walk.queued.has(item))) {
     walk.queued.add(ref);

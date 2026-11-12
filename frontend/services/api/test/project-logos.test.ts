@@ -63,6 +63,29 @@ it('keys the shared cache by private-suffix host and fetches only that host home
   expect(await brandLogo(a.projectId)).toEqual({ image_data: pngFor(a.domain) });
   expect(await brandLogo(b.projectId)).toEqual({ image_data: pngFor(b.domain) });
 });
+it('tries the icon the homepage declares before the well-known fallback', async () => {
+  const t = await tenant();
+  const declared = Buffer.concat([png, Buffer.from('declared')]);
+  const fetcher = vi.fn<WebsiteFetcher>(async (url) => {
+    const { pathname } = new URL(url);
+    if (pathname === '/brand.png')
+      return { url, status: 200, contentType: 'image/png', body: declared };
+    if (pathname === '/favicon.ico')
+      return { url, status: 404, contentType: 'text/html', body: png };
+    return {
+      url,
+      status: 200,
+      contentType: 'text/html',
+      body: Buffer.from('<head><link rel="shortcut icon" href="/brand.png"></head>'),
+    };
+  });
+  await refreshLogos(db, t, fetcher);
+  expect(fetcher.mock.calls.map(([url]) => url)).toEqual([
+    `https://${t.domain}/`,
+    `https://${t.domain}/brand.png`,
+  ]);
+  expect(await brandLogo(t.projectId)).toEqual({ image_data: declared });
+});
 it('records no shared failure when the refresh deadline aborts the fetch', async () => {
   const t = await tenant();
   const stalled = vi.fn<WebsiteFetcher>(

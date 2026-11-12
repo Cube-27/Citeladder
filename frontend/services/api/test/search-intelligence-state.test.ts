@@ -147,6 +147,14 @@ describe('durable paid acquisition boundaries', () => {
       completed_calls: 1,
       received_rows: 1000,
     });
+    // The saved count is the unique rows the page added, not the 1000 it carried.
+    expect(
+      await db
+        .selectFrom('search_intelligence_datasets')
+        .select(['raw_rows_received', 'unique_rows_saved'])
+        .where('id', '=', prep.dataset.id)
+        .executeTakeFirstOrThrow(),
+    ).toEqual({ raw_rows_received: 1000, unique_rows_saved: 999 });
   });
   it.each(['connection_changed', 'pricing_changed'])(
     'ends a parked run restarted after %s as partial, keeping the dataset it published',
