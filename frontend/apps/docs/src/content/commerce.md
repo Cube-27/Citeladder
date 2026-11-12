@@ -16,7 +16,9 @@ Site Health crawls fill the catalog for businesses that sell a product catalog. 
 
 - **Shopify store:** enter your store's domain (your own site or its `myshopify.com` address). CiteLadder reads the store's public product list; no app install or sign-in is needed. Variants become a price range, the first image is the product image, and the product type and tags become categories. The public list carries no currency, so set it afterwards if you need it.
 - **Merchant Center feed:** upload a feed file (CSV, TSV, XML or JSON) with Google's field names. Items that share an `item_group_id` become one product with a price range, `product_type` becomes the category path, and prices such as `59.00 EUR` are read with their currency. Ambiguous prices, such as `$59` or `1,299.00`, are rejected rather than guessed.
-- **CSV:** **Download template**, fill it in and upload it. `title` and `brand` are required; `description`, `price`, `currency`, `link`, `image_link`, `category`, `sku` and `gtin` are optional. Write a category as a path, `Shoes > Running`, and separate several with `|`.
+- **CSV:** download the sample, fill it in and upload it. `title` and `brand` are required; `description`, `price`, `currency`, `link`, `image_link`, `category`, `sku` and `gtin` are optional. Write a category as a path, `Shoes > Running`, and separate several with `|`.
+
+The feed and CSV options each offer a **Download sample CSV** in the format they read. Files must be UTF-8: a file saved in another encoding is refused before anything is imported, so save it as CSV UTF-8 and upload it again.
 
 Choose **Review categories** to see the proposed category tree before anything is saved. Clear any category you don't want; everything under it is left out too. Then choose **Import**. The results list added, updated, unchanged and rejected rows, rejected first, each with its reason. Importing the same content again shows the first import's results.
 

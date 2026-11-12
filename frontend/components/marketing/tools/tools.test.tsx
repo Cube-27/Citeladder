@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vite-plus/test';
 import { CrawlerChecker, RobotsGenerator } from './robots-tools';
 import { MetaChecker, StructuredDataBuilder } from './markup-tools';
@@ -43,6 +44,21 @@ describe('free tools user workflows', () => {
     expect(screen.queryByLabelText('Generated output')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Test crawler rules' }));
     expect(screen.getByRole('alert')).toHaveTextContent('complete http:// or https:// URL');
+  });
+  it('refuses a pasted input over the limit instead of truncating it', async () => {
+    const user = userEvent.setup();
+    render(<CrawlerChecker bots={bots} />);
+    fireEvent.change(screen.getByLabelText('Page URL to test'), {
+      target: { value: 'https://example.com/' },
+    });
+    await user.click(screen.getByLabelText('Robots.txt content'));
+    await user.paste(`User-agent: *\n#${'x'.repeat(200_000)}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Test crawler rules' }));
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Input exceeds 200,000 characters. Split it into smaller files.',
+    );
+    expect(screen.queryByLabelText('Generated output')).not.toBeInTheDocument();
   });
   it('keeps the example when an earlier sitemap upload finishes afterward', async () => {
     render(<SitemapComparison />);

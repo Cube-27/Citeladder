@@ -3,10 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { FREE_TOOL_LIMITS } from '@/lib/config/free-tools';
 
 import { ToolPanel } from '../sections/tool-panel';
 
+/**
+ * One tool input. No `maxLength`: a browser would cut a long paste silently, so
+ * the tool refuses over-limit input with its "Input exceeds" error instead.
+ */
 export function ToolInput({
   label,
   value,
@@ -30,7 +33,6 @@ export function ToolInput({
             {...props}
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            maxLength={FREE_TOOL_LIMITS.text}
             rows={9}
             spellCheck={false}
           />
@@ -40,7 +42,6 @@ export function ToolInput({
             type={type}
             value={value}
             onChange={(event) => onChange(event.target.value)}
-            maxLength={FREE_TOOL_LIMITS.field}
           />
         )
       }

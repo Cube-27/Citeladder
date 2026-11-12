@@ -4,14 +4,16 @@ import { useMutation } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
+import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { commerceMutations } from '@/lib/api/commerce';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { pluralCount } from '@/lib/format';
 import { buyerStageLabels } from '@/lib/prompts/forms';
+import { useGenerateBuyerPrompts } from '@/lib/products/use-generate-buyer-prompts';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 import type { BuyerPrompt } from '@citeladder/contracts/commerce-suite';
 
@@ -51,7 +53,7 @@ export function CategoryMatrixSheet({
   onOpenChange: (open: boolean) => void;
 }>) {
   const scope = { workspaceId: useActiveWorkspaceId(), projectId };
-  const generate = useMutation(commerceMutations.generateBuyerPrompts(scope));
+  const { generate: generateMatrix, mutation: generate } = useGenerateBuyerPrompts(scope);
   const decide = useMutation(commerceMutations.decideBuyerPrompt(scope));
   const coverage = matrixCoverage(rows);
   const busy = generate.isPending || decide.isPending;
@@ -105,7 +107,7 @@ export function CategoryMatrixSheet({
           <Button
             variant="primary"
             disabled={busy}
-            onClick={() => generate.mutate({ targets: [{ kind: 'category', id: categoryId }] })}
+            onClick={() => generateMatrix({ targets: [{ kind: 'category', id: categoryId }] })}
           >
             {generate.isPending ? 'Generating…' : 'Generate matrix'}
           </Button>
@@ -113,8 +115,15 @@ export function CategoryMatrixSheet({
       }
     >
       <Stack>
-        {generate.isError || decide.isError ? (
-          <Callout tone="negative">The shopping-prompt update failed. Please try again.</Callout>
+        {generate.isError ? (
+          <MutationNotice
+            notice={mutationNoticeForError(generate.error, { action: 'generate shopping prompts' })}
+          />
+        ) : null}
+        {decide.isError ? (
+          <MutationNotice
+            notice={mutationNoticeForError(decide.error, { action: 'update the shopping prompt' })}
+          />
         ) : null}
         <p aria-label="Matrix coverage" className={textRole('body')}>
           {coverage.contexts.length

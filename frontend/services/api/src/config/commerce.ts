@@ -97,6 +97,8 @@ export const commerce = {
     max: 10,
     /** Prompts per hero product: the only per-product generation. */
     default: 3,
+    /** A retried generation names its first attempt with this key and is replayed. */
+    idempotency_key_max_chars: 128,
     /**
      * A category's matrix: buyer contexts × intent stages, one prompt per cell,
      * plus branded comparisons so branded stay at most `branded_share` of the batch.

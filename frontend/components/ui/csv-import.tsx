@@ -4,7 +4,7 @@ import { useRef, useState, type ComponentProps, type ReactNode, type RefObject }
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { readCsvFileText } from '@/lib/csv/read-file-text';
+import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
 
 /** A button-owned hidden picker that permits selecting the same file twice. */
 export function CsvImportTrigger({
@@ -45,25 +45,50 @@ export function CsvImportTrigger({
   );
 }
 
-/** Shared file-selection lifecycle; parsing remains owned by the importing feature. */
+/**
+ * Shared file-selection lifecycle; parsing remains owned by the importing
+ * feature. A file that cannot be read, or is not UTF-8, leaves nothing parsed
+ * and sets `readError`; only the latest selection lands.
+ */
 export function useCsvImportFile<T>(parse: (text: string) => T) {
   const [parsed, setParsed] = useState<T | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
+  const [readError, setReadError] = useState<string | null>(null);
+  const [reading, setReading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const selection = useRef(0);
 
   const reset = () => {
+    selection.current += 1;
     setParsed(null);
     setFileName(null);
+    setReadError(null);
+    setReading(false);
     if (inputRef.current) inputRef.current.value = '';
   };
 
   const selectFile = async (file: File | undefined) => {
     if (!file) return;
+    const current = ++selection.current;
     setFileName(file.name);
-    setParsed(parse(await readCsvFileText(file)));
+    setParsed(null);
+    setReadError(null);
+    setReading(true);
+    let text: string;
+    try {
+      text = await readCsvFileText(file);
+    } catch (cause) {
+      if (current !== selection.current) return;
+      setReadError(cause instanceof Error ? cause.message : READ_FAILED_MESSAGE);
+      setReading(false);
+      return;
+    }
+    if (current !== selection.current) return;
+    setParsed(parse(text));
+    setReading(false);
   };
 
-  return { fileName, inputRef, parsed, reset, selectFile };
+  return { fileName, inputRef, parsed, readError, reading, reset, selectFile };
 }
 
 /**

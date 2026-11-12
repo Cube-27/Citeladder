@@ -433,9 +433,13 @@ guard rejects response object declarations in API client modules.
 shell, accessible file input, same-file reset/reselection, pending state,
 preview framing, and `useCsvImportFile` lifecycle. File text loading,
 including the browser and test-environment fallback, belongs to
-`lib/csv/read-file-text.ts`. Prompt and product modules retain ownership of
-their own CSV grammar, validation, preview columns, and import mutations. The
-shared layer must not make domain validity decisions or post a domain payload.
+`lib/csv/read-file-text.ts`: it decodes strictly as UTF-8 and refuses any
+other encoding, or a failed read, before anything is parsed or sent, with
+guidance to save as CSV UTF-8. Prompt and product modules retain ownership of
+their own CSV grammar, validation, preview columns, sample CSV download and
+import mutations; every import offers a sample in the format it reads and
+ignores a second submit while one is in flight. The shared layer must not make
+domain validity decisions or post a domain payload.
 
 ### Event-stream mechanics
 

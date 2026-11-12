@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
 import { Badge } from '@/components/ui/badge';
@@ -18,9 +18,15 @@ import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { readCsvFileText } from '@/lib/csv/read-file-text';
+import { downloadCsv } from '@/lib/csv/download';
+import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
 import { pluralCount } from '@/lib/format';
-import { catalogTemplateCsv, leftOutCategories } from '@/lib/products/catalog-import';
+import {
+  CATALOG_SAMPLE,
+  MERCHANT_FEED_SAMPLE,
+  leftOutCategories,
+  type SampleCsv,
+} from '@/lib/products/catalog-import';
 import type { CatalogImportRequest } from '@citeladder/contracts/commerce-requests';
 import type { CatalogImport, CatalogImportStage } from '@citeladder/contracts/commerce-suite';
 
@@ -38,32 +44,32 @@ const STATUS_LABEL: Record<CatalogImport['row_outcomes'][number]['status'], stri
   rejected: 'Rejected',
 };
 
-/** Offer the CSV template as a file download, built in the browser. */
-function downloadTemplate() {
-  const url = URL.createObjectURL(new Blob([catalogTemplateCsv()], { type: 'text/csv' }));
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'catalog-template.csv';
-  link.click();
-  URL.revokeObjectURL(url);
-}
-
-/** A file picker for one feed or CSV file, naming the file chosen. */
+/** A file picker for one feed or CSV file, naming the file chosen, with its sample download. */
 function FilePick({
   label,
   accept,
   file,
   onFile,
+  sample,
 }: Readonly<{
   label: string;
   accept: string;
   file: File | null;
   onFile: (file: File | null) => void;
+  sample: SampleCsv;
 }>) {
   return (
     <Stack gap="compact">
       <CsvImportFileInput label={label} accept={accept} onSelect={(next) => onFile(next ?? null)} />
       {file ? <p className={textRole('body')}>Chosen: {file.name}</p> : null}
+      <div>
+        <Button
+          variant="secondary"
+          onClick={() => downloadCsv(sample.filename, sample.columns, sample.rows)}
+        >
+          Download sample CSV
+        </Button>
+      </div>
     </Stack>
   );
 }
@@ -152,6 +158,85 @@ function ImportResults({
   );
 }
 
+/** The first step: pick a source and name the store or file, with why the last try failed. */
+function SourceStep({
+  source,
+  onSource,
+  store,
+  onStore,
+  file,
+  onFile,
+  readError,
+  stageError,
+}: Readonly<{
+  source: Source;
+  onSource: (source: Source) => void;
+  store: string;
+  onStore: (store: string) => void;
+  file: File | null;
+  onFile: (file: File | null) => void;
+  /** Why the chosen file could not be read, such as a file that is not UTF-8. */
+  readError: string | null;
+  stageError: Error | null;
+}>) {
+  return (
+    <Stack>
+      <Tabs
+        items={SOURCES}
+        ariaLabel="Product source"
+        value={source}
+        onValueChange={onSource}
+        spaced
+      >
+        <TabPanel value="shopify">
+          <Field
+            label="Store domain"
+            hint="Your own domain or your store’s .myshopify.com address. Its public product list is read once."
+          >
+            {(props) => (
+              <Input
+                {...props}
+                value={store}
+                placeholder="shop.example.com"
+                onChange={(event) => onStore(event.target.value)}
+              />
+            )}
+          </Field>
+        </TabPanel>
+        <TabPanel value="merchant_center">
+          <FilePick
+            label="Feed file (CSV, TSV, XML or JSON)"
+            accept=".csv,.tsv,.txt,.xml,.json"
+            file={file}
+            onFile={onFile}
+            sample={MERCHANT_FEED_SAMPLE}
+          />
+        </TabPanel>
+        <TabPanel value="csv">
+          <Stack gap="compact">
+            <FilePick
+              label="CSV file"
+              accept=".csv,text/csv"
+              file={file}
+              onFile={onFile}
+              sample={CATALOG_SAMPLE}
+            />
+            <p className={textRole('body')}>
+              Title and brand are required. A category is a path such as Footwear &gt; Running.
+            </p>
+          </Stack>
+        </TabPanel>
+      </Tabs>
+      {readError ? <Callout tone="negative">{readError}</Callout> : null}
+      {stageError ? (
+        <MutationNotice
+          notice={mutationNoticeForError(stageError, { action: 'read the products' })}
+        />
+      ) : null}
+    </Stack>
+  );
+}
+
 /**
  * Add products from a Shopify store, a Merchant Center feed or the CSV
  * template (CM3): stage the source, confirm its category tree, then read what
@@ -175,6 +260,17 @@ export function AddProductsDialog({
   const [store, setStore] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [unticked, setUnticked] = useState<ReadonlySet<string>>(new Set());
+  const [readError, setReadError] = useState<string | null>(null);
+  const [reading, setReading] = useState(false);
+  // Set before the file read starts, so a second click cannot stage it twice.
+  const submitting = useRef(false);
+  // Bumped by every new choice or reset; a read that finishes after one is dropped.
+  const selection = useRef(0);
+  const release = () => {
+    selection.current += 1;
+    submitting.current = false;
+    setReading(false);
+  };
 
   const reset = () => {
     stage.reset();
@@ -182,6 +278,8 @@ export function AddProductsDialog({
     setStore('');
     setFile(null);
     setUnticked(new Set());
+    setReadError(null);
+    release();
   };
   const close = (next: boolean) => {
     if (!next) reset();
@@ -191,10 +289,40 @@ export function AddProductsDialog({
   const result = apply.data ?? staged?.result ?? null;
   const ready = source === 'shopify' ? store.trim().length > 0 : file !== null;
 
+  const chooseFile = (next: File | null) => {
+    setFile(next);
+    setReadError(null);
+    release();
+  };
+  // Held from the click until the stage request settles.
+  const settled = {
+    onSettled: () => {
+      submitting.current = false;
+    },
+  };
   const submit = async () => {
-    if (source === 'shopify') return stage.mutate({ source, store: store.trim() });
+    if (submitting.current) return;
+    if (source === 'shopify') {
+      submitting.current = true;
+      return stage.mutate({ source, store: store.trim() }, settled);
+    }
     if (!file) return;
-    stage.mutate({ source, content: await readCsvFileText(file), filename: file.name });
+    submitting.current = true;
+    const attempt = selection.current;
+    setReading(true);
+    setReadError(null);
+    let content: string;
+    try {
+      content = await readCsvFileText(file);
+    } catch (cause) {
+      if (attempt !== selection.current) return;
+      release();
+      setReadError(cause instanceof Error ? cause.message : READ_FAILED_MESSAGE);
+      return;
+    }
+    if (attempt !== selection.current) return;
+    setReading(false);
+    stage.mutate({ source, content, filename: file.name }, settled);
   };
   const toggle = (key: string) =>
     setUnticked((current) => {
@@ -246,72 +374,28 @@ export function AddProductsDialog({
     );
   } else {
     body = (
-      <Stack>
-        <Tabs
-          items={SOURCES}
-          ariaLabel="Product source"
-          value={source}
-          onValueChange={(next) => {
-            setSource(next);
-            setFile(null);
-          }}
-          spaced
-        >
-          <TabPanel value="shopify">
-            <Field
-              label="Store domain"
-              hint="Your own domain or your store’s .myshopify.com address. Its public product list is read once."
-            >
-              {(props) => (
-                <Input
-                  {...props}
-                  value={store}
-                  placeholder="shop.example.com"
-                  onChange={(event) => setStore(event.target.value)}
-                />
-              )}
-            </Field>
-          </TabPanel>
-          <TabPanel value="merchant_center">
-            <FilePick
-              label="Feed file (CSV, TSV, XML or JSON)"
-              accept=".csv,.tsv,.txt,.xml,.json"
-              file={file}
-              onFile={setFile}
-            />
-          </TabPanel>
-          <TabPanel value="csv">
-            <Stack gap="compact">
-              <FilePick label="CSV file" accept=".csv,text/csv" file={file} onFile={setFile} />
-              <p className={textRole('body')}>
-                Title and brand are required. A category is a path such as Footwear &gt; Running.
-              </p>
-              <div>
-                <Button variant="secondary" onClick={downloadTemplate}>
-                  Download template
-                </Button>
-              </div>
-            </Stack>
-          </TabPanel>
-        </Tabs>
-        {stage.error ? (
-          <MutationNotice
-            notice={mutationNoticeForError(stage.error, { action: 'read the products' })}
-          />
-        ) : null}
-      </Stack>
+      <SourceStep
+        source={source}
+        onSource={(next) => {
+          setSource(next);
+          chooseFile(null);
+        }}
+        store={store}
+        onStore={setStore}
+        file={file}
+        onFile={chooseFile}
+        readError={readError}
+        stageError={stage.error}
+      />
     );
+    const busy = reading || stage.isPending;
     footer = (
       <>
         <Button variant="secondary" onClick={() => close(false)}>
           Cancel
         </Button>
-        <Button
-          variant="primary"
-          disabled={!ready || stage.isPending}
-          onClick={() => void submit()}
-        >
-          {stage.isPending ? 'Reading…' : 'Review categories'}
+        <Button variant="primary" disabled={!ready || busy} onClick={() => void submit()}>
+          {busy ? 'Reading…' : 'Review categories'}
         </Button>
       </>
     );

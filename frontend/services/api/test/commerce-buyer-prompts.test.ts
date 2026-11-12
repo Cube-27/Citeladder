@@ -86,7 +86,7 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
     db,
     scope,
     buyerGenerateInput.parse({ targets: [target], count: 2, hero: true }),
-    gateway,
+    { gatewayFactory: gateway },
   );
   expect(rows).toHaveLength(2);
   expect(rows.every((row) => !row.enabled)).toBe(true);
@@ -96,7 +96,7 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
       db,
       other,
       buyerGenerateInput.parse({ targets: [target], count: 2, hero: true }),
-      gateway,
+      { gatewayFactory: gateway },
     ),
   ).rejects.toMatchObject({ status: 404 });
   expect(io.fetch).toHaveBeenCalledTimes(1);
@@ -116,7 +116,7 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
       db,
       scope,
       buyerGenerateInput.parse({ targets: [target], count: 2, hero: true }),
-      gateway,
+      { gatewayFactory: gateway },
     ),
   ).rejects.toMatchObject({ status: 503 });
   expect(
@@ -148,12 +148,97 @@ it('generates target-bound prompts and fails atomically on unusable or foreign t
     db,
     scope,
     buyerGenerateInput.parse({ targets: [target], count: 2, hero: true }),
-    gateway,
+    { gatewayFactory: gateway },
   );
   expect(repeat.map((row) => row.text)).toEqual([
     'waterproof trail shoes for muddy hikes',
     'best waterproof shoe for rainy commutes',
   ]);
+});
+
+type Row = { text: string; context?: string; stage?: string; branded?: boolean };
+/** One scripted answer per model call; `null` or no answer left is a provider failure. */
+function gatewayAnswering(answers: (Row[] | null)[]) {
+  const io = {
+    fetch: vi.fn<typeof fetch>(async () => {
+      const next = answers.shift();
+      if (!next) return new Response('{}', { status: 400 });
+      return Response.json({
+        choices: [{ message: { content: JSON.stringify({ prompts: next }) } }],
+      });
+    }),
+    sleep: async () => {},
+  };
+  const gateway = () =>
+    createModelGateway(
+      {
+        ...gatewaySettings({}),
+        apiKey: 'test-only',
+        model: 'claude-haiku-5-5',
+        baseUrl: 'https://model.test',
+      },
+      io,
+    );
+  return { io, gateway };
+}
+
+it('replays a keyed generation retry from its stored prompts without another model call', async () => {
+  const { io, gateway } = gatewayAnswering([
+    [
+      { text: 'best running shoes for wet trails' },
+      { text: 'lightweight shoes with cushioning for long runs' },
+    ],
+  ]);
+  const input = buyerGenerateInput.parse({ targets: [target], count: 2, hero: true });
+  const keyed = { gatewayFactory: gateway, idempotencyKey: 'retry-key' };
+  const first = await generateBuyerPrompts(db, scope, input, keyed);
+  const again = await generateBuyerPrompts(db, scope, input, keyed);
+
+  expect(first.map((row) => row.text)).toEqual([
+    'best running shoes for wet trails',
+    'lightweight shoes with cushioning for long runs',
+  ]);
+  expect(again.map((row) => row.id).sort()).toEqual(first.map((row) => row.id).sort());
+  expect(io.fetch).toHaveBeenCalledTimes(1);
+  await expect(
+    generateBuyerPrompts(
+      db,
+      scope,
+      buyerGenerateInput.parse({ targets: [target], count: 3, hero: true }),
+      keyed,
+    ),
+  ).rejects.toMatchObject({ status: 409 });
+  expect(io.fetch).toHaveBeenCalledTimes(1);
+});
+
+it('persists one generation when two requests with the same key run at once', async () => {
+  const { gateway } = gatewayAnswering([
+    [
+      { text: 'best running shoes for wet trails' },
+      { text: 'lightweight shoes with cushioning for long runs' },
+    ],
+    [
+      { text: 'waterproof trail shoes for muddy hikes' },
+      { text: 'grippy running shoes for rocky trails' },
+    ],
+  ]);
+  const options = { gatewayFactory: gateway, idempotencyKey: 'concurrent-key' };
+  const input = buyerGenerateInput.parse({ targets: [target], count: 2, hero: true });
+
+  const [one, two] = await Promise.all([
+    generateBuyerPrompts(db, scope, input, options),
+    generateBuyerPrompts(db, scope, input, options),
+  ]);
+
+  const stored = await db
+    .selectFrom('commerce_prompt_targets')
+    .select('prompt_id')
+    .where('project_id', '=', scope.projectId)
+    .execute();
+  const ids = (rows: readonly { id: string }[]) => rows.map((row) => row.id).sort();
+  expect(stored).toHaveLength(2);
+  expect(ids(two)).toEqual(ids(one));
+  expect(ids(one)).toEqual(stored.map((row) => row.prompt_id).sort());
 });
 
 it("keeps each target's usable prompts and binds category prompts through the category's own name", async () => {
@@ -214,7 +299,7 @@ it("keeps each target's usable prompts and binds category prompts through the ca
       count: 2,
       hero: true,
     }),
-    gateway,
+    { gatewayFactory: gateway },
   );
   expect(rows.map((row) => [row.target.kind, row.text])).toEqual([
     ['category', 'cheap rain jacket that packs small for cycling'],
@@ -222,7 +307,6 @@ it("keeps each target's usable prompts and binds category prompts through the ca
 });
 
 describe('category matrix and hero products', () => {
-  type Row = { text: string; context?: string; stage?: string; branded?: boolean };
   const cell = (text: string, context: string, stage: string): Row => ({ text, context, stage });
   async function jacketCategory() {
     await importCatalog(
@@ -237,30 +321,6 @@ describe('category matrix and hero products', () => {
       .where('normalized_name', '=', 'rain jackets')
       .executeTakeFirstOrThrow();
     return { kind: 'category' as const, id: category.id };
-  }
-  /** One scripted answer per model call; `null` is a provider failure. */
-  function gatewayAnswering(answers: (Row[] | null)[]) {
-    const io = {
-      fetch: vi.fn<typeof fetch>(async () => {
-        const next = answers.shift();
-        if (!next) return new Response('{}', { status: 400 });
-        return Response.json({
-          choices: [{ message: { content: JSON.stringify({ prompts: next }) } }],
-        });
-      }),
-      sleep: async () => {},
-    };
-    const gateway = () =>
-      createModelGateway(
-        {
-          ...gatewaySettings({}),
-          apiKey: 'test-only',
-          model: 'claude-haiku-5-5',
-          baseUrl: 'https://model.test',
-        },
-        io,
-      );
-    return { io, gateway };
   }
   const contexts = ['Commuting cyclist', 'Weekend hiker', 'Festival goer'];
   const organicCells = [
@@ -298,7 +358,7 @@ describe('category matrix and hero products', () => {
       db,
       scope,
       buyerGenerateInput.parse({ targets: [category] }),
-      gateway,
+      { gatewayFactory: gateway },
     );
     expect(rows).toHaveLength(7);
     expect(rows.filter((row) => row.branded).map((row) => row.text)).toEqual([
@@ -327,7 +387,7 @@ describe('category matrix and hero products', () => {
       db,
       scope,
       buyerGenerateInput.parse({ targets: [category] }),
-      gateway,
+      { gatewayFactory: gateway },
     );
     expect(rows.map((row) => row.text)).toEqual(['rain jacket that packs small for cycling']);
   });
@@ -335,7 +395,9 @@ describe('category matrix and hero products', () => {
   it('generates per-product prompts only when the product is picked as a hero', async () => {
     const { io, gateway } = gatewayAnswering([]);
     await expect(
-      generateBuyerPrompts(db, scope, buyerGenerateInput.parse({ targets: [target] }), gateway),
+      generateBuyerPrompts(db, scope, buyerGenerateInput.parse({ targets: [target] }), {
+        gatewayFactory: gateway,
+      }),
     ).rejects.toMatchObject({ status: 422, code: 'commerce_prompt_hero_required' });
     expect(io.fetch).not.toHaveBeenCalled();
     const hero = gatewayAnswering([
@@ -350,7 +412,7 @@ describe('category matrix and hero products', () => {
       db,
       scope,
       buyerGenerateInput.parse({ targets: [target], hero: true }),
-      hero.gateway,
+      { gatewayFactory: hero.gateway },
     );
     expect(rows).toHaveLength(3);
     expect(rows.every((row) => !row.branded && row.context === '')).toBe(true);
@@ -363,7 +425,7 @@ describe('category matrix and hero products', () => {
       db,
       scope,
       buyerGenerateInput.parse({ targets: [category, target], hero: true }),
-      gateway,
+      { gatewayFactory: gateway },
     );
     expect(rows).toHaveLength(6);
     expect(rows.every((row) => row.target.kind === 'category')).toBe(true);
@@ -375,12 +437,9 @@ describe('category matrix and hero products', () => {
     await spendBudget(db, calls, scope.workspaceId, { amount: calls.limit });
     const blocked = gatewayAnswering([organicCells]);
     await expect(
-      generateBuyerPrompts(
-        db,
-        scope,
-        buyerGenerateInput.parse({ targets: [category] }),
-        blocked.gateway,
-      ),
+      generateBuyerPrompts(db, scope, buyerGenerateInput.parse({ targets: [category] }), {
+        gatewayFactory: blocked.gateway,
+      }),
     ).rejects.toMatchObject({ status: 429 });
     expect(blocked.io.fetch).not.toHaveBeenCalled();
   });

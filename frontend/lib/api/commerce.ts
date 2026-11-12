@@ -436,10 +436,20 @@ export const commerceMutations = {
       onSuccess: (_product, _input, _context, { client }) =>
         refreshCatalogProduct(client, scope.projectId),
     }),
+  /** Metered: a retry of one request sends the same key and is replayed, not run again. */
   generateBuyerPrompts: (scope: ProjectScope) =>
     mutationOptions({
-      mutationFn: (input: BuyerPromptGenerateRequest) =>
-        commerceApi.generateBuyerPrompts(scope.projectId, input, scoped(scope)),
+      mutationFn: ({
+        input,
+        idempotencyKey,
+      }: {
+        input: BuyerPromptGenerateRequest;
+        idempotencyKey: string;
+      }) =>
+        commerceApi.generateBuyerPrompts(scope.projectId, input, {
+          ...scoped(scope),
+          idempotencyKey,
+        }),
       onSuccess: (_created, _input, _context, { client }) =>
         refreshBuyerPrompts(client, scope.projectId),
     }),
