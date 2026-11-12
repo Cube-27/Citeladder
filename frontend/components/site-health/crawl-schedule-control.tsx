@@ -139,7 +139,7 @@ function ScheduleNotes({
 
 /**
  * The project's crawl schedule: the header control and, when saving failed, the
- * notice with its retry. Reads only while `enabled`.
+ * notice with its retry. Reads, and offers the control, only while `enabled`.
  */
 export function useCrawlSchedule(
   scope: ProjectScope,
@@ -153,7 +153,7 @@ export function useCrawlSchedule(
     if (mutation.variables) mutation.mutate(mutation.variables);
   };
   return {
-    control: (
+    control: enabled ? (
       <CrawlScheduleControl
         schedule={query.data}
         unavailable={query.isError}
@@ -161,7 +161,7 @@ export function useCrawlSchedule(
         robotsNote={robotsChoiceNote(robots)}
         onChange={(input) => mutation.mutate(input)}
       />
-    ),
+    ) : null,
     notice: mutation.isError ? (
       <MutationNotice
         notice={mutationNoticeForError(mutation.error, { action: 'save the crawl schedule' })}

@@ -220,34 +220,34 @@ export function PromptLibrary({
       : createMutation.mutateAsync(formValuesToPromptInput(values));
     await mutation.then(closeForm, () => undefined);
   };
+  // Every edit control of the library, for a role that may edit prompts.
+  const edits = canWrite
+    ? {
+        rows: {
+          onEdit: openEdit,
+          onDelete: (prompt: Prompt) => setPendingDelete({ kind: 'prompt', prompt }),
+          onToggleEnabled: (prompt: Prompt) => {
+            setBusyId(prompt.id);
+            rowMutation.mutate(
+              { promptId: prompt.id, input: { enabled: !prompt.enabled } },
+              clearBusy,
+            );
+          },
+          onSetStatus: (prompt: Prompt, status: PromptStatus) => {
+            setBusyId(prompt.id);
+            rowMutation.mutate({ promptId: prompt.id, input: { status } }, clearBusy);
+          },
+          busyId,
+        },
+        add: { onGenerate: () => openBuilder('business'), onAdd: openAdd },
+        topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
+      }
+    : undefined;
 
   // An empty library and a library filtered to nothing read differently: one
   // needs a way to add prompts, the other needs its filter loosened.
   let libraryBody: ReactNode = (
-    <PromptTable
-      prompts={visible}
-      actions={
-        canWrite
-          ? {
-              onEdit: openEdit,
-              onDelete: (prompt) => setPendingDelete({ kind: 'prompt', prompt }),
-              onToggleEnabled: (prompt) => {
-                setBusyId(prompt.id);
-                rowMutation.mutate(
-                  { promptId: prompt.id, input: { enabled: !prompt.enabled } },
-                  clearBusy,
-                );
-              },
-              onSetStatus: (prompt, status) => {
-                setBusyId(prompt.id);
-                rowMutation.mutate({ promptId: prompt.id, input: { status } }, clearBusy);
-              },
-              busyId,
-            }
-          : undefined
-      }
-      measurements={measurements}
-    />
+    <PromptTable prompts={visible} actions={edits?.rows} measurements={measurements} />
   );
   // A failed read with nothing to show takes the empty state's slot; a failed
   // refresh keeps the prompts already shown and says so above them.
@@ -263,11 +263,7 @@ export function PromptLibrary({
       />
     );
   } else if (!hasPrompts) {
-    libraryBody = (
-      <PromptEmptyState
-        add={canWrite ? { onGenerate: () => openBuilder('business'), onAdd: openAdd } : undefined}
-      />
-    );
+    libraryBody = <PromptEmptyState add={edits?.add} />;
   }
 
   // Status, search and filters share one control band once loaded; the first
@@ -302,9 +298,7 @@ export function PromptLibrary({
           topics,
           selectedTopicId,
           onSelect: setSelectedTopicId,
-          manage: canWrite
-            ? { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') }
-            : undefined,
+          manage: edits?.topics,
         }),
       })}
     >

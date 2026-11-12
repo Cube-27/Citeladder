@@ -93,7 +93,7 @@ function SiteHealthContent({
         cancelPending={cancelMutation.isPending}
         startPending={startPending}
         tabActions={linksActions}
-        schedule={canWrite ? schedule.control : null}
+        schedule={schedule.control}
         onCancel={cancelCrawl}
         onStart={(robots) => startCrawl({ project_id: projectId, robots })}
         onRecrawl={recrawl}

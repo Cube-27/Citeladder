@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useState, type ReactNode } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useLocation, Link } from 'react-router-dom';
 import { z } from 'zod';
 import {
@@ -134,18 +134,19 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   }, [allowed, access.data, client, recovery]);
   if (recovery || allowed) return children;
   if (checking) return <ShellFallback />;
+  const retry = () => (activeWorkspaceId ? void access.refetch() : retryWorkspaces());
   // A read that failed says nothing about access: it is a retryable error,
   // never the "access ended" screen, which needs an answer that says so.
-  const readFailed = activeWorkspaceId ? access.isError && !access.data : workspaceFailed;
-  if (readFailed) {
+  const failure = failedRead({ access, activeWorkspaceId, workspaceFailed });
+  if (failure) {
     return (
       <ShellFallback>
         <QueryState
           kind="error"
           title="Couldn't load workspace access"
-          error={activeWorkspaceId ? access.error : null}
+          error={failure.error}
           fallback="The request failed or timed out."
-          onRetry={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}
+          onRetry={retry}
           pending={access.isFetching}
         />
       </ShellFallback>
@@ -157,9 +158,26 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
       restorable={restorable(access.data, deadline)}
       activeWorkspaceId={activeWorkspaceId}
       workspaces={workspaces}
-      onRetry={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}
+      onRetry={retry}
     />
   );
+}
+
+/**
+ * The failed read behind an unanswered gate: the access read of the selected
+ * workspace, or workspace discovery when none is selected. Null when nothing failed.
+ */
+function failedRead({
+  access,
+  activeWorkspaceId,
+  workspaceFailed,
+}: Readonly<{
+  access: Pick<UseQueryResult<unknown>, 'isError' | 'data' | 'error'>;
+  activeWorkspaceId: string | null;
+  workspaceFailed: boolean;
+}>): Readonly<{ error: unknown }> | null {
+  if (!activeWorkspaceId) return workspaceFailed ? { error: null } : null;
+  return access.isError && !access.data ? { error: access.error } : null;
 }
 
 /** Where a workspace without access lands: buy a plan, ask support, switch, or leave. */

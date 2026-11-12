@@ -62,32 +62,8 @@ function WorkspaceSchedules({
   promptSets: PromptSet[];
 }>) {
   const scope = { workspaceId, projectId };
-  const catalog = useEngineCatalog();
-  const [promptSetId, setPromptSetId] = useState(promptSets[0]?.id ?? '');
-  const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
-  const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
-  const [intervalMinutes, setIntervalMinutes] = useState('60');
-  const [engines, setEngines] = useState<LogicalEngine[]>(['chatgpt']);
-  const [marketIds, setMarketIds] = useState<(string | null)[]>([null]);
   const schedulesQuery = useQuery(runsQueries.schedules(scope));
   const markets = useProjectMarkets(projectId, workspaceId);
-  const createMutation = useMutation(runsMutations.createSchedule(scope));
-  const createSchedule = () =>
-    createMutation.mutate({
-      prompt_set_id: promptSetId,
-      audit_scope: auditScope,
-      cadence,
-      interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-      engines,
-      market_ids: marketIds,
-    });
-  // The engine choices come from the catalogue; until it loads none are shown,
-  // so nothing may be scheduled against an engine the user cannot see.
-  const canCreate =
-    !createMutation.isPending &&
-    catalog.order.length > 0 &&
-    scheduleReady(promptSetId, engines, marketIds);
   const resumeMutation = useMutation(runsMutations.resumeSchedule(scope));
   const canWrite = useWorkspaceCapability('write');
 
@@ -122,91 +98,8 @@ function WorkspaceSchedules({
             <QueryState kind="empty" inline message="No scheduled audits yet." />
           ) : null}
           {/* Scheduling is offered only to a role that may write schedules. */}
-          {!canWrite ? null : promptSets.length === 0 ? (
-            <Callout tone="info">Add prompts before scheduling an audit.</Callout>
-          ) : (
-            <Stack className="desktop:grid-cols-3">
-              <Stack gap="item" className={textRole('label')}>
-                <span>Prompt set</span>
-                <Select
-                  ariaLabel="Prompt set"
-                  value={promptSetId}
-                  onValueChange={setPromptSetId}
-                  options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
-                />
-              </Stack>
-              <Stack gap="item" className={textRole('label')}>
-                <span>Measurement scope</span>
-                <Select
-                  ariaLabel="Measurement scope"
-                  value={auditScope}
-                  onValueChange={setAuditScope}
-                  options={[
-                    { value: 'brand', label: 'Brand visibility' },
-                    { value: 'commerce', label: 'Commerce AI Shelf' },
-                  ]}
-                />
-              </Stack>
-              <Stack gap="item" className={textRole('label')}>
-                <span>Cadence</span>
-                <Select
-                  ariaLabel="Cadence"
-                  value={cadence}
-                  onValueChange={setCadence}
-                  options={Object.entries(CADENCE_LABELS).map(([value, label]) => ({
-                    value: value as AuditScheduleCadence,
-                    label,
-                  }))}
-                />
-              </Stack>
-              {cadence === 'every_n_minutes' ? (
-                <label htmlFor="audit-schedule-minutes" className={textRole('label')}>
-                  <Stack as="span" gap="item">
-                    <span>Minutes</span>
-                    <Input
-                      id="audit-schedule-minutes"
-                      min="5"
-                      type="number"
-                      value={intervalMinutes}
-                      onChange={(event) => setIntervalMinutes(event.target.value)}
-                    />
-                  </Stack>
-                </label>
-              ) : null}
-              <Stack as="fieldset" gap="item" className="desktop:col-span-2">
-                <legend className={textRole('label')}>Engines</legend>
-                <Inline className="flex-wrap">
-                  {catalog.order.map((engine) => (
-                    <Checkbox
-                      key={engine}
-                      label={catalog.label(engine)}
-                      checked={engines.includes(engine)}
-                      onCheckedChange={() =>
-                        setEngines((current) =>
-                          current.includes(engine)
-                            ? current.filter((value) => value !== engine)
-                            : [...current, engine],
-                        )
-                      }
-                    />
-                  ))}
-                </Inline>
-              </Stack>
-              <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
-              <div className="flex items-end">
-                <Button variant="primary" onClick={createSchedule} disabled={!canCreate}>
-                  {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
-                </Button>
-              </div>
-            </Stack>
-          )}
-          {createMutation.isError ? (
-            <MutationNotice
-              notice={mutationNoticeForError(createMutation.error, {
-                action: 'schedule the audit',
-              })}
-              onRetry={createSchedule}
-            />
+          {canWrite ? (
+            <ScheduleForm scope={scope} promptSets={promptSets} markets={markets} />
           ) : null}
           <ResumeNotice
             error={resumeMutation.error}
@@ -215,6 +108,133 @@ function WorkspaceSchedules({
         </Stack>
       </CardContent>
     </Card>
+  );
+}
+
+/** The new-schedule form and its outcome, for a role that may write schedules. */
+function ScheduleForm({
+  scope,
+  promptSets,
+  markets,
+}: Readonly<{
+  scope: Readonly<{ workspaceId: string; projectId: string }>;
+  promptSets: PromptSet[];
+  markets: readonly ProjectMarket[];
+}>) {
+  const catalog = useEngineCatalog();
+  const [promptSetId, setPromptSetId] = useState(promptSets[0]?.id ?? '');
+  const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
+  const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
+  const [intervalMinutes, setIntervalMinutes] = useState('60');
+  const [engines, setEngines] = useState<LogicalEngine[]>(['chatgpt']);
+  const [marketIds, setMarketIds] = useState<(string | null)[]>([null]);
+  const createMutation = useMutation(runsMutations.createSchedule(scope));
+  const createSchedule = () =>
+    createMutation.mutate({
+      prompt_set_id: promptSetId,
+      audit_scope: auditScope,
+      cadence,
+      interval_minutes: cadence === 'every_n_minutes' ? Number(intervalMinutes) : undefined,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      engines,
+      market_ids: marketIds,
+    });
+  // The engine choices come from the catalogue; until it loads none are shown,
+  // so nothing may be scheduled against an engine the user cannot see.
+  const canCreate =
+    !createMutation.isPending &&
+    catalog.order.length > 0 &&
+    scheduleReady(promptSetId, engines, marketIds);
+
+  return (
+    <>
+      {promptSets.length === 0 ? (
+        <Callout tone="info">Add prompts before scheduling an audit.</Callout>
+      ) : (
+        <Stack className="desktop:grid-cols-3">
+          <Stack gap="item" className={textRole('label')}>
+            <span>Prompt set</span>
+            <Select
+              ariaLabel="Prompt set"
+              value={promptSetId}
+              onValueChange={setPromptSetId}
+              options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
+            />
+          </Stack>
+          <Stack gap="item" className={textRole('label')}>
+            <span>Measurement scope</span>
+            <Select
+              ariaLabel="Measurement scope"
+              value={auditScope}
+              onValueChange={setAuditScope}
+              options={[
+                { value: 'brand', label: 'Brand visibility' },
+                { value: 'commerce', label: 'Commerce AI Shelf' },
+              ]}
+            />
+          </Stack>
+          <Stack gap="item" className={textRole('label')}>
+            <span>Cadence</span>
+            <Select
+              ariaLabel="Cadence"
+              value={cadence}
+              onValueChange={setCadence}
+              options={Object.entries(CADENCE_LABELS).map(([value, label]) => ({
+                value: value as AuditScheduleCadence,
+                label,
+              }))}
+            />
+          </Stack>
+          {cadence === 'every_n_minutes' ? (
+            <label htmlFor="audit-schedule-minutes" className={textRole('label')}>
+              <Stack as="span" gap="item">
+                <span>Minutes</span>
+                <Input
+                  id="audit-schedule-minutes"
+                  min="5"
+                  type="number"
+                  value={intervalMinutes}
+                  onChange={(event) => setIntervalMinutes(event.target.value)}
+                />
+              </Stack>
+            </label>
+          ) : null}
+          <Stack as="fieldset" gap="item" className="desktop:col-span-2">
+            <legend className={textRole('label')}>Engines</legend>
+            <Inline className="flex-wrap">
+              {catalog.order.map((engine) => (
+                <Checkbox
+                  key={engine}
+                  label={catalog.label(engine)}
+                  checked={engines.includes(engine)}
+                  onCheckedChange={() =>
+                    setEngines((current) =>
+                      current.includes(engine)
+                        ? current.filter((value) => value !== engine)
+                        : [...current, engine],
+                    )
+                  }
+                />
+              ))}
+            </Inline>
+          </Stack>
+          <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
+          <div className="flex items-end">
+            <Button variant="primary" onClick={createSchedule} disabled={!canCreate}>
+              {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
+            </Button>
+          </div>
+        </Stack>
+      )}
+      {createMutation.isError ? (
+        <MutationNotice
+          notice={mutationNoticeForError(createMutation.error, {
+            action: 'schedule the audit',
+          })}
+          onRetry={createSchedule}
+        />
+      ) : null}
+    </>
   );
 }
 

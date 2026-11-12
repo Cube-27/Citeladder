@@ -86,33 +86,17 @@ export function SetupPrompts({
     <Card>
       <CardHeader
         actions={
-          <>
-            {target.kind === 'category' ? (
-              // The sheet reads loaded prompts only; the list below owns loading and error states.
-              <Button
-                variant="secondary"
-                disabled={busy || !query.data}
-                onClick={() => setMatrixOpen(true)}
-              >
-                Shopping prompts matrix
-              </Button>
-            ) : canRun ? (
-              <Button variant="secondary" disabled={busy} onClick={generatePrompts}>
-                {generate.isPending
-                  ? 'Generating…'
-                  : `Generate ${HERO_COUNT} for this hero product`}
-              </Button>
-            ) : null}
-            {canRun ? (
-              <Button
-                variant="primary"
-                disabled={!approvedIds.length || busy}
-                onClick={() => setLaunchOpen(true)}
-              >
-                Review and launch
-              </Button>
-            ) : null}
-          </>
+          <SetupPromptActions
+            kind={target.kind}
+            busy={busy}
+            loaded={Boolean(query.data)}
+            generating={generate.isPending}
+            approved={approvedIds.length}
+            canRun={canRun}
+            onMatrix={() => setMatrixOpen(true)}
+            onGenerate={generatePrompts}
+            onLaunch={() => setLaunchOpen(true)}
+          />
         }
       >
         <CardTitle>Prompts that measure it</CardTitle>
@@ -173,6 +157,57 @@ export function SetupPrompts({
         </Stack>
       </CardContent>
     </Card>
+  );
+}
+
+/**
+ * The card's actions: a category's matrix (open to every role, since it reads),
+ * or a hero product's Generate; then Review and launch. Generating and
+ * launching are runs, offered only to a role that may run.
+ */
+function SetupPromptActions({
+  kind,
+  busy,
+  loaded,
+  generating,
+  approved,
+  canRun,
+  onMatrix,
+  onGenerate,
+  onLaunch,
+}: Readonly<{
+  kind: CommerceTarget['kind'];
+  busy: boolean;
+  /** Whether the prompts have loaded; the matrix reads loaded prompts only. */
+  loaded: boolean;
+  generating: boolean;
+  /** How many prompts are approved; launching needs one. */
+  approved: number;
+  canRun: boolean;
+  onMatrix: () => void;
+  onGenerate: () => void;
+  onLaunch: () => void;
+}>) {
+  // The list below owns the loading and error states.
+  const matrix = (
+    <Button variant="secondary" disabled={busy || !loaded} onClick={onMatrix}>
+      Shopping prompts matrix
+    </Button>
+  );
+  const generate = canRun ? (
+    <Button variant="secondary" disabled={busy} onClick={onGenerate}>
+      {generating ? 'Generating…' : `Generate ${HERO_COUNT} for this hero product`}
+    </Button>
+  ) : null;
+  return (
+    <>
+      {kind === 'category' ? matrix : generate}
+      {canRun ? (
+        <Button variant="primary" disabled={!approved || busy} onClick={onLaunch}>
+          Review and launch
+        </Button>
+      ) : null}
+    </>
   );
 }
 

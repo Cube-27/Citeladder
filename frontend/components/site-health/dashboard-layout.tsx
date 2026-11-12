@@ -58,29 +58,13 @@ export function SiteHealthDashboardLayout({
     // instead of widening this column (and every ancestor) to its max-content.
     <Stack gap="workspace" className="min-w-0" data-testid="site-health-canonical">
       {!crawl ? (
-        <div data-testid="site-health-empty">
-          <QueryState
-            kind="empty"
-            icon={ICONS.siteHealth}
-            heading={canRun ? 'Run your first site crawl' : 'No site crawl yet'}
-            description={
-              canRun
-                ? 'Crawl your site to see page health, issues, and recommendations as results arrive.'
-                : 'Page health, issues, and recommendations appear here once a crawl runs.'
-            }
-            action={
-              canRun ? (
-                <Button
-                  variant="primary"
-                  onClick={() => startCrawl()}
-                  disabled={startPending || !mutationsAllowed}
-                >
-                  {startPending ? 'Starting…' : 'Run new crawl'}
-                </Button>
-              ) : undefined
-            }
-          />
-        </div>
+        <FirstCrawl
+          start={
+            canRun
+              ? { onStart: () => startCrawl(), pending: startPending, allowed: mutationsAllowed }
+              : undefined
+          }
+        />
       ) : (
         <>
           {/* Where the crawl stands, then the headline score cards (owner,
@@ -118,5 +102,41 @@ export function SiteHealthDashboardLayout({
         </>
       )}
     </Stack>
+  );
+}
+
+/** The project before its first crawl; starting one is offered to a role that may run it. */
+function FirstCrawl({
+  start,
+}: Readonly<{
+  start?: Readonly<{ onStart: () => void; pending: boolean; allowed: boolean }>;
+}>) {
+  return (
+    <div data-testid="site-health-empty">
+      {start ? (
+        <QueryState
+          kind="empty"
+          icon={ICONS.siteHealth}
+          heading="Run your first site crawl"
+          description="Crawl your site to see page health, issues, and recommendations as results arrive."
+          action={
+            <Button
+              variant="primary"
+              onClick={start.onStart}
+              disabled={start.pending || !start.allowed}
+            >
+              {start.pending ? 'Starting…' : 'Run new crawl'}
+            </Button>
+          }
+        />
+      ) : (
+        <QueryState
+          kind="empty"
+          icon={ICONS.siteHealth}
+          heading="No site crawl yet"
+          description="Page health, issues, and recommendations appear here once a crawl runs."
+        />
+      )}
+    </div>
   );
 }

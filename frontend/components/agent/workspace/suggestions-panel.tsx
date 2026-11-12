@@ -340,6 +340,32 @@ function useSuggestionChanges(
   };
 }
 
+/** Apply all and Dismiss all, while any suggestion is open for review. */
+function BulkActions({
+  open,
+  ready,
+  disabled,
+  changes,
+}: Readonly<{
+  open: number;
+  /** Whether any open suggestion can be applied as it stands. */
+  ready: boolean;
+  disabled: boolean;
+  changes: Pick<ReturnType<typeof useSuggestionChanges>, 'applyAll' | 'dismissAll'>;
+}>) {
+  if (open === 0) return null;
+  return (
+    <Inline className="flex-wrap">
+      <Button variant="secondary" disabled={disabled || !ready} onClick={changes.applyAll}>
+        Apply all
+      </Button>
+      <Button variant="ghost" disabled={disabled} onClick={changes.dismissAll}>
+        Dismiss all
+      </Button>
+    </Inline>
+  );
+}
+
 const EMPTY: Readonly<Record<Filter, string>> = {
   open: 'Nothing to review. Ask the agent below for suggestions on the page.',
   applied: 'No suggestions applied yet.',
@@ -432,15 +458,8 @@ export function SuggestionsPanel({
           </Stack>
         </Stack>
       ))}
-      {canChange && filter === 'open' && counts.open > 0 ? (
-        <Inline className="flex-wrap">
-          <Button variant="secondary" disabled={disabled || !ready} onClick={changes.applyAll}>
-            Apply all
-          </Button>
-          <Button variant="ghost" disabled={disabled} onClick={changes.dismissAll}>
-            Dismiss all
-          </Button>
-        </Inline>
+      {canChange && filter === 'open' ? (
+        <BulkActions open={counts.open} ready={ready} disabled={disabled} changes={changes} />
       ) : null}
       {counts.stale > 0 ? (
         <p className={textRole('caption')}>

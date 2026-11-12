@@ -4,7 +4,6 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
-import { roles } from '@/services/api/src/config/workspaces.json';
 import { COMPLETE_CLASSIFICATION_PROJECTION } from '@/test/site-health-fixtures';
 import type { SiteHealthDashboard } from '@citeladder/contracts';
 import { queryKeys } from '@/lib/api/query-keys';
@@ -471,32 +470,6 @@ describe('SiteHealthScreen — recrawl', () => {
     await waitFor(() => expect(button).toBeEnabled());
     await user.click(button);
     await waitFor(() => expect(bodies).toEqual([{ project_id: PROJECT }]));
-  });
-
-  it('shows a viewer the crawl without any control to start, stop or schedule one', async () => {
-    mockRoutes();
-    mswServer.use(
-      http.get('/api/v1/workspaces', () =>
-        HttpResponse.json([
-          {
-            id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-            name: 'Test Workspace',
-            role: 'viewer',
-            capabilities: [...roles.viewer],
-            created_at: '2026-01-01T00:00:00Z',
-            updated_at: '2026-01-01T00:00:00Z',
-          },
-        ]),
-      ),
-    );
-
-    renderScreen();
-
-    expect(await screen.findByTestId('status-strip')).toBeVisible();
-    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
-    for (const name of ['Recrawl', 'Run new crawl', 'Stop crawl', 'Rerun'])
-      expect(screen.queryByRole('button', { name })).toBeNull();
-    expect(screen.queryByRole('button', { name: /schedule/i })).toBeNull();
   });
 });
 

@@ -196,8 +196,10 @@ export const authRoutes = [
         .selectAll()
         .where('id', '=', c.get('user').id)
         .executeTakeFirstOrThrow();
+      // A mistyped password inside a live session is a bad request, not a
+      // 401: the app reads any 401 as the session ending and signs out.
       if (!(await verifyBudgetedPassword(db, config, user, payload.password)))
-        throw new ApiError(401, 'Invalid credentials');
+        throw new ApiError(400, 'Current password is incorrect');
       const started = await startSignIn(config, 'google');
       const options = {
         ...cookieOptions(config),

@@ -48,7 +48,7 @@ export type TestRole = keyof typeof roles;
  * capabilities come from the backend's one role policy, so a screen's role
  * test follows the policy rather than a copy of it.
  */
-function testWorkspace(role: TestRole): Workspace {
+export function testWorkspace(role: TestRole): Workspace {
   return {
     id: TEST_WORKSPACE_ID,
     name: 'Test Workspace',

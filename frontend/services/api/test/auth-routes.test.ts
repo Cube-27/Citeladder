@@ -481,8 +481,9 @@ describe('password auth routes', () => {
     const link = async (secret: string) =>
       (await call('/auth/link-google', { password: secret }, await sessionOf(linker, 0), limited))
         .status;
-    expect(await link('incorrect')).toBe(401);
-    expect(await link('incorrect')).toBe(401);
+    // A mistyped password is a 400: a 401 would sign the person out in the app.
+    expect(await link('incorrect')).toBe(400);
+    expect(await link('incorrect')).toBe(400);
     expect(await link(password)).toBe(429);
     expect(
       (
