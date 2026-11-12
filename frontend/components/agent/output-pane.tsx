@@ -21,6 +21,7 @@ import { textRole } from '@/components/ui/typography';
 import { downloadOutputMarkdown, outputMarkdown } from '@/lib/agent/export';
 import { type AgentOutput, type AgentRevision } from '@/lib/api/agent';
 import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 type PaneTab = 'output' | 'sources' | 'history';
 
@@ -84,10 +85,18 @@ export function OutputPane({
           <OutputActions
             revision={revision}
             locked={locked}
-            onEdit={() => {
-              setTab('output');
-              setDraft({ baseRevisionId: revision.id, title: revision.title, body: revision.body });
-            }}
+            onEdit={
+              canEdit
+                ? () => {
+                    setTab('output');
+                    setDraft({
+                      baseRevisionId: revision.id,
+                      title: revision.title,
+                      body: revision.body,
+                    });
+                  }
+                : undefined
+            }
           />
         )}
         {editing ? null : (
@@ -157,7 +166,9 @@ export function OutputPane({
  * topics and starts the run; the Agent writes no prompts itself.
  */
 function PromptBuilderHandoff({ kind }: Readonly<{ kind: AgentOutput['kind'] }>) {
-  if (kind !== 'prompt_plan') return null;
+  // The Prompt Builder writes prompts, so a role that may not is not sent there.
+  const canWrite = useWorkspaceCapability('write');
+  if (kind !== 'prompt_plan' || !canWrite) return null;
   return (
     <Button asChild variant="primary" className="justify-self-start">
       <ProjectLink href={PROMPTS_GENERATE_HREF}>Open Prompt Builder</ProjectLink>
@@ -169,13 +180,20 @@ function OutputActions({
   revision,
   locked,
   onEdit,
-}: Readonly<{ revision: AgentRevision; locked: boolean; onEdit: () => void }>) {
+}: Readonly<{
+  revision: AgentRevision;
+  locked: boolean;
+  /** Opens the editor; omitted for a role that may not edit outputs. */
+  onEdit?: () => void;
+}>) {
   return (
     <Inline className="flex-wrap">
-      <Button variant="secondary" disabled={locked} onClick={onEdit}>
-        <Icon icon={Pencil} />
-        Edit
-      </Button>
+      {onEdit ? (
+        <Button variant="secondary" disabled={locked} onClick={onEdit}>
+          <Icon icon={Pencil} />
+          Edit
+        </Button>
+      ) : null}
       <CopyButton value={outputMarkdown(revision.title, revision.body)} variant="secondary">
         Copy
       </CopyButton>

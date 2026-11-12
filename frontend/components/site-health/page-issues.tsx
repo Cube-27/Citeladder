@@ -25,7 +25,8 @@ const PREVIEW_COUNT = 5;
 /** Issue cards side by side in the details. */
 const CARDS_PER_VIEW = 2;
 
-type RerunControl = Readonly<{ onRerun: () => void; busy: boolean }>;
+/** Re-audits the page; omitted for a role that may not run one. */
+export type RerunControl = Readonly<{ onRerun: () => void; busy: boolean }>;
 
 /**
  * A page's findings, in the order a site owner works through them: every
@@ -43,7 +44,7 @@ export function PageIssues({
   /** No issues before the audit finishes means "not checked yet", not "clean". */
   audited: boolean;
   crawlId: string;
-  rerun: RerunControl;
+  rerun?: RerunControl;
 }>) {
   const defects = issues
     .filter((issue) => issue.finding_class === 'defect')
@@ -136,7 +137,7 @@ function IssueDetails({
   start: number;
   onStart: (start: number) => void;
   crawlId: string;
-  rerun: RerunControl;
+  rerun?: RerunControl;
 }>) {
   const shown = issues.slice(start, start + CARDS_PER_VIEW);
   return (
@@ -196,7 +197,7 @@ function IssueCard({
   position: number;
   total: number;
   crawlId: string;
-  rerun: RerunControl;
+  rerun?: RerunControl;
 }>) {
   const head = { ...issue, title: issue.issue_title, affected_url_count: 1 };
   const scores = scoreRoleLabels(issue.score_roles);
@@ -233,9 +234,11 @@ function IssueCard({
           <CopyButton value={buildFixPrompt(head)} variant="secondary" className="w-fit">
             Copy fix prompt
           </CopyButton>
-          <Button variant="ghost" onClick={rerun.onRerun} disabled={rerun.busy}>
-            Re-audit to verify
-          </Button>
+          {rerun ? (
+            <Button variant="ghost" onClick={rerun.onRerun} disabled={rerun.busy}>
+              Re-audit to verify
+            </Button>
+          ) : null}
         </Inline>
       </Stack>
     </Card>

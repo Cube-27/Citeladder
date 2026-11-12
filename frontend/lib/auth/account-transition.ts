@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { authApi } from '@/lib/api/auth';
+import { httpErrorStatus } from '@/lib/api/errors';
 import { TERMS_CHANGED_CODE } from '@/lib/auth/forms';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { clearActiveProjectSelection } from '@/lib/project/active-project-storage';
@@ -55,9 +56,22 @@ export async function restartAt(queryClient: QueryClient, path: string): Promise
   });
 }
 
+/**
+ * Revoke the session cookie. A 401 means the session had already ended, which
+ * is what signing out asks for, so it counts as done rather than as a failure
+ * that would tell the reader their session is still active.
+ */
+export async function revokeSession(): Promise<void> {
+  try {
+    await authApi.logout();
+  } catch (error) {
+    if (httpErrorStatus(error) !== 401) throw error;
+  }
+}
+
 /** Sign out from a screen outside the account menu: revoke, then restart at sign-in. */
 export async function signOut(queryClient: QueryClient): Promise<never> {
-  await authApi.logout();
+  await revokeSession();
   return restartAt(queryClient, '/login');
 }
 
@@ -67,6 +81,6 @@ export async function signOut(queryClient: QueryClient): Promise<never> {
  * inside the app asks instead.
  */
 export async function signOutForChangedTerms(queryClient: QueryClient): Promise<never> {
-  await authApi.logout();
+  await revokeSession();
   return restartAt(queryClient, `/login?error=${TERMS_CHANGED_CODE}`);
 }

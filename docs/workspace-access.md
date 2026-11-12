@@ -179,7 +179,12 @@ owns the authorization matrix:
 Registration origin is `public` or `operator` in the schema. The schema accepts only these four roles, at most one Owner per workspace and at
 most one owned workspace per person; Admin, Member and Viewer memberships are
 unlimited. A role outside the matrix confers nothing. Role authorization and entitlement availability are
-separate checks; both must permit an action. Workspace Admin is not an operator
+separate checks; both must permit an action. The app does not render a control
+whose capability the caller's role lacks (hidden, not disabled; owner decision
+AR-7 in the [audit remediation plan](plans/audit-remediation.md#owner-decisions-2026-11-12)).
+It reads the capabilities the workspace response publishes through one hook,
+`useWorkspaceCapability`; the server still refuses every denied action itself.
+Workspace Admin is not an operator
 authorized to publish the global billing catalog or administer other workspaces.
 
 ## Membership and ownership continuity

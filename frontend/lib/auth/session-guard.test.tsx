@@ -217,6 +217,26 @@ describe('SessionGuard', () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
   });
 
+  it('leaves for sign-in when a write is refused with 401, not only a read', async () => {
+    mswServer.use(http.get('/api/v1/auth/me', () => HttpResponse.json({ user: sessionUser })));
+    const { queryClient } = renderWithProviders(
+      <SessionGuard fallback={<div>loading</div>}>
+        <Protected />
+      </SessionGuard>,
+    );
+    await screen.findByText(/signed in as guarded@example.com/i);
+
+    await expect(
+      queryClient
+        .getMutationCache()
+        .build(queryClient, {
+          mutationFn: () => Promise.reject(new ApiError('Unauthorized', 401, '')),
+        })
+        .execute(undefined),
+    ).rejects.toThrow('Unauthorized');
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
+  });
+
   it('drops a 401 already queued when the guard unmounts mid-notify', async () => {
     // Isolates the `disposed` latch from `unsubscribe()`. The guard subscribed
     // on mount, so its listener runs BEFORE the one below and has already

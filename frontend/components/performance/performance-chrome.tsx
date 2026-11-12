@@ -17,6 +17,7 @@ import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters
 import { SegmentedAction, SegmentedControl } from '@/components/ui/tabs';
 import type { PerformanceGranularity } from '@/lib/api/performance';
 import { formatWindowDate } from '@/lib/format';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import {
   DIALOG_RANGE_OPTIONS,
   GRANULARITY_OPTIONS,
@@ -144,22 +145,26 @@ export function PerformanceActions({
   noConnections: boolean;
   sync: ReturnType<typeof usePerformanceSync>;
 }>) {
+  // Syncing is a run; a role without it reads the imported history only.
+  const canRun = useWorkspaceCapability('run');
   return (
     <>
       <span className="type-caption">
         {latestDate ? `Data through ${formatWindowDate(latestDate)}` : 'No imported history'}
       </span>
-      <Button
-        variant="secondary"
-        onClick={sync.start}
-        disabled={noConnections}
-        pending={sync.syncing || sync.mutation.isPending}
-        pendingLabel="Syncing…"
-        data-testid="sync-now-button"
-      >
-        <Icon icon={RefreshCw} />
-        Sync now
-      </Button>
+      {canRun ? (
+        <Button
+          variant="secondary"
+          onClick={sync.start}
+          disabled={noConnections}
+          pending={sync.syncing || sync.mutation.isPending}
+          pendingLabel="Syncing…"
+          data-testid="sync-now-button"
+        >
+          <Icon icon={RefreshCw} />
+          Sync now
+        </Button>
+      ) : null}
     </>
   );
 }

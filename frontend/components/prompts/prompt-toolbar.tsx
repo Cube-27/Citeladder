@@ -11,6 +11,7 @@ import { Menu, MenuContent, MenuItem, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/tabs';
 import type { PromptStatus } from '@citeladder/contracts';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import {
   buyerStageLabels,
   buyerStageValues,
@@ -166,29 +167,43 @@ export function PromptActions({
   /** Launch audit measures active prompts, so it waits for at least one. */
   hasActivePrompts: boolean;
 }>) {
+  // Each control is offered only to a role that may use it.
+  const canWrite = useWorkspaceCapability('write');
   return (
     <>
-      <Menu>
-        <MenuTrigger asChild>
-          <Button variant="secondary">
-            <Icon icon={Plus} />
-            Add prompts
-            <Icon icon={ChevronDown} className="opacity-80" />
-          </Button>
-        </MenuTrigger>
-        <MenuContent align="end">
-          <MenuItem icon={<Icon icon={Plus} />} onSelect={onAdd}>
-            Add prompt
-          </MenuItem>
-          <MenuItem icon={<Icon icon={Sparkles} />} onSelect={onGenerate}>
-            Prompt Builder
-          </MenuItem>
-          <MenuItem icon={<Icon icon={Upload} />} onSelect={onImport}>
-            Bulk upload
-          </MenuItem>
-        </MenuContent>
-      </Menu>
+      {canWrite ? (
+        <AddPromptsMenu onImport={onImport} onAdd={onAdd} onGenerate={onGenerate} />
+      ) : null}
       <LaunchAuditButton variant="primary" disabled={!hasActivePrompts} />
     </>
+  );
+}
+
+function AddPromptsMenu({
+  onImport,
+  onAdd,
+  onGenerate,
+}: Readonly<{ onImport: () => void; onAdd: () => void; onGenerate: () => void }>) {
+  return (
+    <Menu>
+      <MenuTrigger asChild>
+        <Button variant="secondary">
+          <Icon icon={Plus} />
+          Add prompts
+          <Icon icon={ChevronDown} className="opacity-80" />
+        </Button>
+      </MenuTrigger>
+      <MenuContent align="end">
+        <MenuItem icon={<Icon icon={Plus} />} onSelect={onAdd}>
+          Add prompt
+        </MenuItem>
+        <MenuItem icon={<Icon icon={Sparkles} />} onSelect={onGenerate}>
+          Prompt Builder
+        </MenuItem>
+        <MenuItem icon={<Icon icon={Upload} />} onSelect={onImport}>
+          Bulk upload
+        </MenuItem>
+      </MenuContent>
+    </Menu>
   );
 }

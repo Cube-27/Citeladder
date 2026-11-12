@@ -2,6 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Drawer } from '@/components/ui/drawer';
@@ -11,7 +12,7 @@ import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { commerceMutations } from '@/lib/api/commerce';
 import { pluralCount } from '@/lib/format';
 import { buyerStageLabels } from '@/lib/prompts/forms';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 import type { BuyerPrompt } from '@citeladder/contracts/commerce-suite';
 
 /** What a category's matrix covers: contexts × stages of non-branded prompts, plus branded ones. */
@@ -54,15 +55,21 @@ export function CategoryMatrixSheet({
   const decide = useMutation(commerceMutations.decideBuyerPrompt(scope));
   const coverage = matrixCoverage(rows);
   const busy = generate.isPending || decide.isPending;
-  const toggle = (row: BuyerPrompt) => (
-    <Button
-      variant={row.enabled ? 'secondary' : 'primary'}
-      disabled={busy}
-      onClick={() => decide.mutate({ id: row.id, approved: !row.enabled })}
-    >
-      {row.enabled ? 'Disable' : 'Approve'}
-    </Button>
-  );
+  // Generating is a run and approving a write; a role without them reads the matrix.
+  const canRun = useWorkspaceCapability('run');
+  const canWrite = useWorkspaceCapability('write');
+  const toggle = (row: BuyerPrompt) =>
+    canWrite ? (
+      <Button
+        variant={row.enabled ? 'secondary' : 'primary'}
+        disabled={busy}
+        onClick={() => decide.mutate({ id: row.id, approved: !row.enabled })}
+      >
+        {row.enabled ? 'Disable' : 'Approve'}
+      </Button>
+    ) : (
+      <Badge>{row.enabled ? 'Approved' : 'Not approved'}</Badge>
+    );
   const list = (title: string, items: readonly BuyerPrompt[]) =>
     items.length ? (
       <Stack>
@@ -94,13 +101,15 @@ export function CategoryMatrixSheet({
       eyebrow={categoryLabel}
       description="One prompt per buyer context and intent stage, plus a few branded comparisons. Generated prompts stay disabled until you approve them."
       footer={
-        <Button
-          variant="primary"
-          disabled={busy}
-          onClick={() => generate.mutate({ targets: [{ kind: 'category', id: categoryId }] })}
-        >
-          {generate.isPending ? 'Generating…' : 'Generate matrix'}
-        </Button>
+        canRun ? (
+          <Button
+            variant="primary"
+            disabled={busy}
+            onClick={() => generate.mutate({ targets: [{ kind: 'category', id: categoryId }] })}
+          >
+            {generate.isPending ? 'Generating…' : 'Generate matrix'}
+          </Button>
+        ) : undefined
       }
     >
       <Stack>

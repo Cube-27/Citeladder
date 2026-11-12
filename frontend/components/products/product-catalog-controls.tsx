@@ -15,6 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import {
   productEditChanges,
@@ -142,7 +143,14 @@ function ProductEditDrawer({
  * (CM6): one click approves the AI-observed competitor, so it is matched as
  * an approved competitor from then on.
  */
-export function AddToTracking({
+export function AddToTracking(
+  props: Readonly<{ scope: ProjectScope; candidateId: string; name: string }>,
+) {
+  // Approving a competitor is a write; a role without it is not offered one.
+  return useWorkspaceCapability('write') ? <AddToTrackingButton {...props} /> : null;
+}
+
+function AddToTrackingButton({
   scope,
   candidateId,
   name,
@@ -166,6 +174,9 @@ export function AddToTracking({
   );
 }
 
+const ARCHIVED_NOTE =
+  'This product is out of your catalog, answer matching and shopping prompts. Its history stays here.';
+
 /**
  * A catalog product's own controls on its page: Edit, and Archive or Restore.
  * An archived product says so first; it keeps its history but leaves the
@@ -185,6 +196,15 @@ export function ProductCatalogControls({
       lifecycle_state: archived ? 'active' : 'archived',
     });
   const lifecycleLabel = archived ? 'Restore' : 'Archive';
+  // Editing and archiving are writes; a role without them reads the state only.
+  const canWrite = useWorkspaceCapability('write');
+  if (!canWrite) {
+    return archived ? (
+      <Callout tone="warning" title="Archived">
+        {ARCHIVED_NOTE}
+      </Callout>
+    ) : null;
+  }
   return (
     <Stack gap="compact">
       {archived ? (
@@ -197,8 +217,7 @@ export function ProductCatalogControls({
             </Button>
           }
         >
-          This product is out of your catalog, answer matching and shopping prompts. Its history
-          stays here.
+          {ARCHIVED_NOTE}
         </Callout>
       ) : null}
       {lifecycle.error ? (

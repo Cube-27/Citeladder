@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { queryKeys } from '@/lib/api/query-keys';
-import { RUN_STREAM_RECONNECT_BASE_MS } from '@/lib/config/runs';
+import { RUN_STREAM_RECONNECT_BASE_MS, RUN_STREAM_RECONNECT_MAX_MS } from '@/lib/config/runs';
 import { useRunEvents } from './use-run-events';
 import { ProjectSelectionProvider } from '@/lib/project/project-scope';
 import { testProjectSelection } from '@/test/render';
@@ -96,5 +96,36 @@ describe('useRunEvents', () => {
     const signal = fetchMock.mock.calls[0]![1].signal as AbortSignal;
     unmount();
     expect(signal.aborted).toBe(true);
+  });
+
+  it.each([401, 403, 404])(
+    'stops asking after a %i refusal, which a reconnect cannot change',
+    async (status) => {
+      vi.useFakeTimers();
+      const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status }));
+      vi.stubGlobal('fetch', fetchMock);
+      const { unmount } = renderHook(() => useRunEvents(AUDIT, PROJECT, true), {
+        wrapper: wrapper(new QueryClient()),
+      });
+
+      await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+      await vi.advanceTimersByTimeAsync(RUN_STREAM_RECONNECT_MAX_MS * 3);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      unmount();
+    },
+  );
+
+  it('keeps reconnecting after a refusal that may pass, such as a 503', async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 503 }));
+    vi.stubGlobal('fetch', fetchMock);
+    const { unmount } = renderHook(() => useRunEvents(AUDIT, PROJECT, true), {
+      wrapper: wrapper(new QueryClient()),
+    });
+
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await vi.advanceTimersByTimeAsync(RUN_STREAM_RECONNECT_BASE_MS * 3 + 50);
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    unmount();
   });
 });

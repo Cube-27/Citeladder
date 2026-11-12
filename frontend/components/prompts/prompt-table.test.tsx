@@ -25,16 +25,13 @@ function makePrompt(n: number, overrides: Partial<Prompt> = {}): Prompt {
 
 const TOPIC_ID = '22222222-2222-4222-8222-222222222222';
 
+const NO_OP_ACTIONS = { onEdit: () => {}, onDelete: () => {}, onToggleEnabled: () => {} };
+
 function renderTable(prompts: Prompt[]) {
   return render(
     <MemoryRouter>
       <TooltipProvider>
-        <PromptTable
-          prompts={prompts}
-          onEdit={() => {}}
-          onDelete={() => {}}
-          onToggleEnabled={() => {}}
-        />
+        <PromptTable prompts={prompts} actions={NO_OP_ACTIONS} />
       </TooltipProvider>
     </MemoryRouter>,
   );
@@ -81,9 +78,7 @@ describe('PromptTable pagination', () => {
         <TooltipProvider>
           <PromptTable
             prompts={[prompt, unnamed]}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            onToggleEnabled={() => {}}
+            actions={NO_OP_ACTIONS}
             measurements={
               new Map([
                 [
@@ -192,12 +187,7 @@ describe('PromptTable pagination', () => {
     const { rerender } = render(
       <MemoryRouter>
         <TooltipProvider>
-          <PromptTable
-            prompts={prompts}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            onToggleEnabled={() => {}}
-          />
+          <PromptTable prompts={prompts} actions={NO_OP_ACTIONS} />
         </TooltipProvider>
       </MemoryRouter>,
     );
@@ -215,12 +205,7 @@ describe('PromptTable pagination', () => {
     rerender(
       <MemoryRouter>
         <TooltipProvider>
-          <PromptTable
-            prompts={prompts.slice(0, 5)}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            onToggleEnabled={() => {}}
-          />
+          <PromptTable prompts={prompts.slice(0, 5)} actions={NO_OP_ACTIONS} />
         </TooltipProvider>
       </MemoryRouter>,
     );
@@ -230,18 +215,33 @@ describe('PromptTable pagination', () => {
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
   });
 
+  it('states the enabled state without offering a control when the reader may not edit', () => {
+    render(
+      <MemoryRouter>
+        <TooltipProvider>
+          <PromptTable prompts={[makePrompt(1), makePrompt(2, { enabled: false })]} />
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+
+    const [, first, second] = screen.getAllByRole('row');
+    expect(
+      within(first!)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    ).toEqual(['Prompt number 1', 'Yes']);
+    expect(within(second!).getAllByRole('cell')[1]!.textContent).toBe('No');
+    expect(screen.queryByRole('switch')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Prompt actions' })).toBeNull();
+  });
+
   it('keeps row actions wired on paginated rows', async () => {
     const user = userEvent.setup();
     const onToggleEnabled = vi.fn();
     render(
       <MemoryRouter>
         <TooltipProvider>
-          <PromptTable
-            prompts={[makePrompt(1)]}
-            onEdit={() => {}}
-            onDelete={() => {}}
-            onToggleEnabled={onToggleEnabled}
-          />
+          <PromptTable prompts={[makePrompt(1)]} actions={{ ...NO_OP_ACTIONS, onToggleEnabled }} />
         </TooltipProvider>
       </MemoryRouter>,
     );

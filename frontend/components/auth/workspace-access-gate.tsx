@@ -1,5 +1,5 @@
 import { useEffect, useReducer, useState, type ReactNode } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLocation, Link } from 'react-router-dom';
 import { z } from 'zod';
 import {
@@ -18,6 +18,7 @@ import { websiteHref } from '@/lib/config/app-link';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
+import { QueryState } from '@/components/ui/query-state';
 import { GateScreen, ShellFallback } from '@/components/layout/shell-fallback';
 import { Dialog } from '@/components/ui/dialog';
 import AccountSecurity from '@/components/settings/account-security';
@@ -82,6 +83,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
     workspaces,
     status,
     isLoading: workspaceLoading,
+    isError: workspaceFailed,
     retry: retryWorkspaces,
   } = useProjectContext();
   const location = useLocation();
@@ -132,6 +134,23 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   }, [allowed, access.data, client, recovery]);
   if (recovery || allowed) return children;
   if (checking) return <ShellFallback />;
+  // A read that failed says nothing about access: it is a retryable error,
+  // never the "access ended" screen, which needs an answer that says so.
+  const readFailed = activeWorkspaceId ? access.isError && !access.data : workspaceFailed;
+  if (readFailed) {
+    return (
+      <ShellFallback>
+        <QueryState
+          kind="error"
+          title="Couldn't load workspace access"
+          error={activeWorkspaceId ? access.error : null}
+          fallback="The request failed or timed out."
+          onRetry={() => (activeWorkspaceId ? void access.refetch() : retryWorkspaces())}
+          pending={access.isFetching}
+        />
+      </ShellFallback>
+    );
+  }
   return (
     <AccessEnded
       title={accessTitle(access.data, deadline)}
@@ -159,6 +178,8 @@ function AccessEnded({
 }>) {
   const client = useQueryClient();
   const [securityOpen, setSecurityOpen] = useState(false);
+  // react-doctor-disable-next-line react-doctor/query-mutation-missing-invalidation
+  const leave = useMutation({ mutationFn: () => signOut(client) });
   return (
     <GateScreen>
       <h1>{title}</h1>
@@ -187,9 +208,20 @@ function AccessEnded({
           <AccountSecurity />
         </SettingsSections>
       </Dialog>
-      <Button className="w-fit" variant="secondary" onClick={() => void signOut(client)}>
+      <Button
+        className="w-fit"
+        variant="secondary"
+        onClick={() => leave.mutate()}
+        pending={leave.isPending}
+        pendingLabel="Signing out…"
+      >
         Sign out
       </Button>
+      {leave.isError ? (
+        <Callout tone="negative">
+          Sign out failed. Your session is still active; please try again.
+        </Callout>
+      ) : null}
     </GateScreen>
   );
 }

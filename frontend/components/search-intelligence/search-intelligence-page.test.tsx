@@ -11,7 +11,12 @@ import type {
 } from '@/lib/api/search-intelligence';
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
-import { renderWithProviders, testProjectSelection } from '@/test/render';
+import {
+  renderWithProviders,
+  selectionAs,
+  testProjectSelection,
+  type TestRole,
+} from '@/test/render';
 import { SearchIntelligencePage } from './search-intelligence-page';
 
 const project = makeProject();
@@ -73,12 +78,24 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-function renderPage(data: SearchIntelligenceReadiness) {
+function renderPage(data: SearchIntelligenceReadiness, role: TestRole = 'owner') {
   mswServer.use(http.get(root, () => HttpResponse.json(data)));
   renderWithProviders(<SearchIntelligencePage />, {
-    projectSelection: testProjectSelection({ activeProject: project, activeProjectId: project.id }),
+    projectSelection: testProjectSelection({
+      ...selectionAs(role),
+      activeProject: project,
+      activeProjectId: project.id,
+    }),
   });
 }
+
+it('lets a viewer read an analysis in progress without offering to start or cancel one', async () => {
+  renderPage({ ...readiness, latest_run: run }, 'viewer');
+  expect(await screen.findByText(/1 of 4 requests complete/)).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Cost details' })).toBeVisible();
+  for (const name of ['Cancel', 'Review first analysis', 'New analysis', 'Refresh'])
+    expect(screen.queryByRole('button', { name })).toBeNull();
+});
 
 it('offers the first analysis from the empty overview', async () => {
   renderPage(readiness);

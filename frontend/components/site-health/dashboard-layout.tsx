@@ -9,6 +9,7 @@ import { Stack } from '@/components/ui/layout';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import type { SiteHealthEntitlement } from '@citeladder/contracts';
 import { ICONS } from '@/lib/icons';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 /**
  * The canonical Site Health dashboard layout.
@@ -49,6 +50,8 @@ export function SiteHealthDashboardLayout({
     runExport,
     exporting,
   } = screen;
+  // Starting a crawl is offered only to a role that may run one.
+  const canRun = useWorkspaceCapability('run');
 
   return (
     // `min-w-0` so a wide table inside a section scrolls in its own wrapper
@@ -59,16 +62,22 @@ export function SiteHealthDashboardLayout({
           <QueryState
             kind="empty"
             icon={ICONS.siteHealth}
-            heading="Run your first site crawl"
-            description="Crawl your site to see page health, issues, and recommendations as results arrive."
+            heading={canRun ? 'Run your first site crawl' : 'No site crawl yet'}
+            description={
+              canRun
+                ? 'Crawl your site to see page health, issues, and recommendations as results arrive.'
+                : 'Page health, issues, and recommendations appear here once a crawl runs.'
+            }
             action={
-              <Button
-                variant="primary"
-                onClick={() => startCrawl()}
-                disabled={startPending || !mutationsAllowed}
-              >
-                {startPending ? 'Starting…' : 'Run new crawl'}
-              </Button>
+              canRun ? (
+                <Button
+                  variant="primary"
+                  onClick={() => startCrawl()}
+                  disabled={startPending || !mutationsAllowed}
+                >
+                  {startPending ? 'Starting…' : 'Run new crawl'}
+                </Button>
+              ) : undefined
             }
           />
         </div>
@@ -86,7 +95,7 @@ export function SiteHealthDashboardLayout({
               pages={pagesQuery.data?.items ?? []}
               selectedTotal={projectSelectedTotal}
               selectedError={projectSelectedError}
-              onRerun={mutationsAllowed ? () => startCrawl() : undefined}
+              onRerun={mutationsAllowed && canRun ? () => startCrawl() : undefined}
             />
 
             <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />

@@ -30,6 +30,7 @@ import { productSearch, useProductFilters } from '@/lib/products/product-filters
 import { isTablePageSize, TABLE_DEFAULT_PAGE_SIZE, type TablePageSize } from '@/lib/config/tables';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { BulkActions } from './bulk-actions';
 import { productScopeFilters } from './product-scope-filters';
@@ -117,9 +118,7 @@ function pageRange({
  */
 export function ProductsScreen() {
   const { workspaceId, projectId } = useProjectScope();
-  // Keyed by project, so the page cursors and checked products of one project
-  // never carry to the next.
-  return <ProductsContent key={projectId} workspaceId={workspaceId} projectId={projectId} />;
+  return <ProductsContent workspaceId={workspaceId} projectId={projectId} />;
 }
 
 function ProductsContent({
@@ -141,6 +140,7 @@ function ProductsContent({
   const discovery = useCompetitorDiscovery(projectId);
   const header = useCatalogHeader({ workspaceId, projectId, query: catalog, projection });
   const columns = useProductColumns();
+  const canRun = useWorkspaceCapability('run');
   const [checked, setChecked] = useState<ReadonlySet<string>>(new Set());
   const rows = page.data?.items ?? [];
   const check = (ids: string[], next: boolean) =>
@@ -232,7 +232,8 @@ function ProductsContent({
               query={page}
               scope={filters}
               trackable={filters.source === 'all'}
-              selectable={filters.source !== 'archived'}
+              // Checked products are for competitor discovery, a run.
+              selectable={canRun && filters.source !== 'archived'}
               columns={columns.shown}
               sort={filters.sort}
               onSort={productFilters.setSort}

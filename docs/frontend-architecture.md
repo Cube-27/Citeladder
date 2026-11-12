@@ -226,7 +226,9 @@ manifest's title, moves focus to the main region when the path changes (not
 when a tab or filter changes), restores scroll per path and closes the compact
 drawer. A project switch keeps the view parameters that mean the same thing in
 every project (tab, range, engine, status and the Site Health catalog filters)
-and drops the rest, because they can name the outgoing project's records.
+and drops the rest, because they can name the outgoing project's records. The
+project route's content remounts on a switch, so no draft, filter or mutation
+outcome held in component state carries into the next project.
 Opening the app makes no external fetch: brand and competitor logos are looked
 up after onboarding creates a project and after a project edit.
 

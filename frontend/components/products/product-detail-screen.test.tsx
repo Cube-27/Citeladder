@@ -7,7 +7,7 @@ import { Route, Routes } from 'react-router-dom';
 import { mswServer } from '@/test/msw-server';
 import { makeProject } from '@/test/fixtures/project';
 import { chooseFilterOption } from '@/test/all-filters';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders, selectionAs, type TestRole } from '@/test/render';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 
 import { ProductDetailScreen } from './product-detail-screen';
@@ -141,13 +141,16 @@ function serve(detail: Record<string, CommerceProductDetail>) {
 }
 
 /** The page at `path`; URL filters read the live address, so it is set there too. */
-function renderAt(path: string) {
+function renderAt(path: string, role: TestRole = 'owner') {
   window.history.replaceState(null, '', path);
   return renderWithProviders(
     <Routes>
       <Route path="/products/:targetId" element={<ProductDetailScreen />} />
     </Routes>,
-    { ...projectRoute, initialEntries: [path] },
+    {
+      projectSelection: { ...selectionAs(role), ...projectRoute.projectSelection },
+      initialEntries: [path],
+    },
   );
 }
 
@@ -195,6 +198,24 @@ describe('ProductDetailScreen', () => {
     expect(agent.map((params) => params.get('action_id'))).toEqual([null, ACTION]);
     expect(agent[0]!.get('target_url')).toBe('https://shop.example/products/road');
     expect(setup.getByRole('button', { name: 'Find competitors' })).toBeInTheDocument();
+  });
+
+  it('shows a viewer the product and its setup without a control to change either', async () => {
+    serve({ [ROAD]: ROAD_DETAIL });
+    renderAt(`/products/${ROAD}`, 'viewer');
+
+    expect(await screen.findByRole('heading', { name: 'Acme Road Runner' })).toBeInTheDocument();
+    const setup = within(screen.getByRole('region', { name: 'Setup' }));
+    expect(setup.getByRole('heading', { name: 'Competitors' })).toBeInTheDocument();
+    for (const name of [
+      'Find competitors',
+      'Edit product',
+      'Archive',
+      'Review and launch',
+      /^Generate/,
+    ])
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    expect(screen.queryByText('Add a prompt manually')).toBeNull();
   });
 
   it('reads the chosen window again when the reader changes it', async () => {

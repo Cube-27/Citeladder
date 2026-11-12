@@ -7,7 +7,7 @@ import { makeProject } from '@/test/fixtures/project';
 import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { mswServer } from '@/test/msw-server';
 import { chooseFilterOption, openFilterRow } from '@/test/all-filters';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders, selectionAs } from '@/test/render';
 
 import { PromptLibrary } from './prompt-library';
 
@@ -128,6 +128,38 @@ describe('PromptLibrary first load', () => {
         .map((head) => head.textContent),
     ).toEqual(['Prompt', 'Enabled', 'Actions']);
   });
+});
+
+describe('PromptLibrary by role', () => {
+  it.each([
+    ['member', ['Add prompts', 'Launch audit'], ['Prompt', 'Enabled', 'Actions']],
+    ['viewer', [], ['Prompt', 'Enabled']],
+  ] as const)(
+    'offers a %s exactly the controls its role may use',
+    async (role, pageActions, headers) => {
+      libraryReads(async () => HttpResponse.json([]));
+      renderWithProviders(<PromptLibrary />, {
+        projectSelection: {
+          ...selectionAs(role),
+          projects: [project],
+          activeProject: project,
+          activeProjectId: project.id,
+          status: 'ready',
+        },
+      });
+
+      const table = await screen.findByRole('table', { name: 'Prompts' });
+      expect(
+        within(table)
+          .getAllByRole('columnheader')
+          .map((head) => head.textContent),
+      ).toEqual(headers);
+      const offered = ['Add prompts', 'Launch audit'].filter((name) =>
+        screen.queryByRole('button', { name: new RegExp(name) }),
+      );
+      expect(offered).toEqual(pageActions);
+    },
+  );
 });
 
 describe('PromptLibrary topic filter', () => {

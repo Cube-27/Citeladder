@@ -29,6 +29,7 @@ import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { PAGE_DETAIL_BACK, UrlDetailView } from './url-detail-view';
 import { DetailScreen } from '@/components/layout/page-shell';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 const HISTORY_LIMIT = 25;
 const RERUN_SEARCH_PARAM = 'rerun';
@@ -70,6 +71,8 @@ export function UrlDetail({
   });
   // A re-audit is always its own one-page crawl: follow it to that crawl's page.
   const rerun = useMutation(siteHealthMutations.rerunPage(workspaceId));
+  // A re-audit is a crawl, offered only to a role that may run one.
+  const canRun = useWorkspaceCapability('run');
   const startRerun = () =>
     rerun.mutate(
       { crawlId, siteUrlId },
@@ -105,11 +108,17 @@ export function UrlDetail({
   return (
     <UrlDetailView
       detail={detailQuery.data}
-      rerunPending={rerun.isPending}
-      onRerun={() => {
-        setRerunError(null);
-        startRerun();
-      }}
+      rerun={
+        canRun
+          ? {
+              busy: rerun.isPending,
+              onRerun: () => {
+                setRerunError(null);
+                startRerun();
+              },
+            }
+          : undefined
+      }
       history={
         <IssueHistoryButton
           // A finished re-audit changes what is resolved: start the history over.

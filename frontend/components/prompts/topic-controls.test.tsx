@@ -41,8 +41,7 @@ function renderFilter(props: Partial<Parameters<typeof topicFilter>[0]> = {}) {
           topics: [child, parent],
           selectedTopicId: null,
           onSelect: () => {},
-          onAdd: () => {},
-          onManage: () => {},
+          manage: { onAdd: () => {}, onManage: () => {} },
           ...props,
         }),
       ]}
@@ -109,12 +108,22 @@ describe('topicFilter', () => {
     const user = userEvent.setup();
     const onAdd = vi.fn();
     const onManage = vi.fn();
-    renderFilter({ onAdd, onManage });
+    renderFilter({ manage: { onAdd, onManage } });
 
     await chooseFilterOption(user, 'Topic', 'Add topic', 'menuitem');
     expect(onAdd).toHaveBeenCalledTimes(1);
     await chooseFilterOption(user, 'Topic', 'Manage topics…', 'menuitem');
     expect(onManage).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers only topic selection to a reader who may not edit topics', async () => {
+    const user = userEvent.setup();
+    renderFilter({ manage: undefined });
+
+    await openFilterOptions(user, 'Topic');
+    expect(await screen.findByRole('menuitemradio', { name: 'All topics' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Add topic' })).toBeNull();
+    expect(screen.queryByRole('menuitem', { name: 'Manage topics…' })).toBeNull();
   });
 });
 

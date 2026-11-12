@@ -49,7 +49,6 @@ export function DashboardScreen({
 
   return (
     <DashboardData
-      key={projectId}
       data={commandCenter.data}
       activeProject={project}
       onEditProject={onEditProject}

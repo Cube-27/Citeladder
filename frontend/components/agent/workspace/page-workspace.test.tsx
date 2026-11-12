@@ -24,7 +24,7 @@ import {
   spanSuggestion,
   suggestionsPage,
 } from '@/test/page-suggestions-fixture';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders, selectionAs, type TestRole } from '@/test/render';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({ hasCapability: () => true }),
@@ -68,7 +68,7 @@ function serve(initial: { chat: Record<string, unknown>; suggestions: Record<str
   return state;
 }
 
-function renderChat() {
+function renderChat(role: TestRole = 'owner') {
   return renderWithProviders(
     <Routes>
       <Route path="/agent/chats/:chatId" element={<ChatScreen />} />
@@ -76,6 +76,7 @@ function renderChat() {
     {
       initialEntries: [`/agent/chats/${CHAT}`],
       projectSelection: {
+        ...selectionAs(role),
         activeProjectId: PROJECT,
         activeProject: makeProject({ id: PROJECT }),
         status: 'ready',
@@ -154,6 +155,21 @@ describe('The page workspace', () => {
     expect(within(required).getByText('Search policy')).toBeVisible();
     expect(required).toHaveTextContent('Required by Google Search Central: spam policies');
     expect(within(required).queryByText('Heuristic')).not.toBeInTheDocument();
+  });
+
+  it('lets a viewer read the suggestions with no control to act on them', async () => {
+    serve({ chat: pageChat(), suggestions: suggestionsPage([ready(), needsInput]) });
+    const user = userEvent.setup();
+    renderChat('viewer');
+
+    await user.click(await screen.findByRole('tab', { name: counted('Suggestions', 2) }));
+    expect(
+      await screen.findByText('Your role can read this page but not change it.'),
+    ).toBeVisible();
+    expect(document.getElementById(`suggestion-${READY}`)).toHaveTextContent('$10');
+    for (const name of ['Apply', 'Dismiss', 'Apply all', 'Dismiss all']) {
+      expect(screen.queryByRole('button', { name })).toBeNull();
+    }
   });
 
   it('keeps every other chat as its thread', async () => {

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { MessageSquare } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { Callout } from '@/components/ui/callout';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { QueryState } from '@/components/ui/query-state';
@@ -22,7 +23,7 @@ import { sameTarget } from '@/lib/products/targets';
 
 import type { CommerceQueries } from './commerce-queries';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 
 // Per hero product; the API defaults the count, and a category generates its matrix.
 const HERO_COUNT = 3;
@@ -75,6 +76,10 @@ export function SetupPrompts({
     if (row.enabled) ids.push(row.id);
     return ids;
   }, []);
+  // Generating and launching are runs; approving and adding are writes. A role
+  // without either reads the prompts and their state only.
+  const canRun = useWorkspaceCapability('run');
+  const canWrite = useWorkspaceCapability('write');
   const busy = [generate.isPending, manual.isPending, decide.isPending].some(Boolean);
   const failed = [generate.isError, manual.isError, decide.isError].some(Boolean);
   return (
@@ -91,20 +96,22 @@ export function SetupPrompts({
               >
                 Shopping prompts matrix
               </Button>
-            ) : (
+            ) : canRun ? (
               <Button variant="secondary" disabled={busy} onClick={generatePrompts}>
                 {generate.isPending
                   ? 'Generating…'
                   : `Generate ${HERO_COUNT} for this hero product`}
               </Button>
-            )}
-            <Button
-              variant="primary"
-              disabled={!approvedIds.length || busy}
-              onClick={() => setLaunchOpen(true)}
-            >
-              Review and launch
-            </Button>
+            ) : null}
+            {canRun ? (
+              <Button
+                variant="primary"
+                disabled={!approvedIds.length || busy}
+                onClick={() => setLaunchOpen(true)}
+              >
+                Review and launch
+              </Button>
+            ) : null}
           </>
         }
       >
@@ -141,39 +148,54 @@ export function SetupPrompts({
               onOpenChange={setMatrixOpen}
             />
           ) : null}
-          <LaunchDialog
-            open={launchOpen}
-            onOpenChange={setLaunchOpen}
-            projectId={projectId}
-            fixedPromptIds={approvedIds}
-            promptSelectionLabel={`${approvedIds.length} approved prompts for ${targetLabel}`}
-            auditScope="commerce"
-            onLaunched={(audit) => setLaunchedAuditId(audit.id)}
-          />
+          {canRun ? (
+            <LaunchDialog
+              open={launchOpen}
+              onOpenChange={setLaunchOpen}
+              projectId={projectId}
+              fixedPromptIds={approvedIds}
+              promptSelectionLabel={`${approvedIds.length} approved prompts for ${targetLabel}`}
+              auditScope="commerce"
+              onLaunched={(audit) => setLaunchedAuditId(audit.id)}
+            />
+          ) : null}
           <PromptRows
             query={query}
             rows={rows}
             pending={busy}
-            onToggle={(id, approved) => decide.mutate({ id, approved })}
+            onToggle={canWrite ? (id, approved) => decide.mutate({ id, approved }) : undefined}
           />
           {/* Manual entry is the fallback for an unconfigured model, so it is
             folded away rather than given equal billing beside Generate. */}
-          <Disclosure title="Add a prompt manually">
-            <Textarea
-              aria-label="Manual buyer prompt"
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder="best instant read thermometer for grilling under $50"
-            />
-            <div>
-              <Button variant="primary" disabled={!text.trim() || busy} onClick={addPrompt}>
-                Add prompt
-              </Button>
-            </div>
-          </Disclosure>
+          {canWrite ? (
+            <ManualPrompt text={text} onText={setText} busy={busy} onAdd={addPrompt} />
+          ) : null}
         </Stack>
       </CardContent>
     </Card>
+  );
+}
+
+function ManualPrompt({
+  text,
+  onText,
+  busy,
+  onAdd,
+}: Readonly<{ text: string; onText: (text: string) => void; busy: boolean; onAdd: () => void }>) {
+  return (
+    <Disclosure title="Add a prompt manually">
+      <Textarea
+        aria-label="Manual buyer prompt"
+        value={text}
+        onChange={(event) => onText(event.target.value)}
+        placeholder="best instant read thermometer for grilling under $50"
+      />
+      <div>
+        <Button variant="primary" disabled={!text.trim() || busy} onClick={onAdd}>
+          Add prompt
+        </Button>
+      </div>
+    </Disclosure>
   );
 }
 
@@ -186,7 +208,8 @@ function PromptRows({
   query: CommerceQueries['buyerPrompts'];
   rows: NonNullable<CommerceQueries['buyerPrompts']['data']>;
   pending: boolean;
-  onToggle: (id: string, approved: boolean) => void;
+  /** Approves or disables a prompt; omitted for a role that may not, which reads the state. */
+  onToggle?: (id: string, approved: boolean) => void;
 }>) {
   if (query.isError)
     return <ReadError {...readErrorProps(query)} fallback="Buyer prompts could not be loaded." />;
@@ -197,7 +220,7 @@ function PromptRows({
         kind="empty"
         icon={MessageSquare}
         heading="No prompts yet"
-        description="Generate a set, or add one manually."
+        description={onToggle ? 'Generate a set, or add one manually.' : undefined}
         headingLevel={3}
       />
     );
@@ -207,13 +230,17 @@ function PromptRows({
       {rows.map((row) => (
         <Inline as="li" key={row.id} gap="compact" className={ledgerItemClasses('flex-wrap')}>
           <span className="text-ink-secondary min-w-0 flex-1">{row.text}</span>
-          <Button
-            variant={row.enabled ? 'secondary' : 'primary'}
-            disabled={pending}
-            onClick={() => onToggle(row.id, !row.enabled)}
-          >
-            {row.enabled ? 'Disable' : 'Approve'}
-          </Button>
+          {onToggle ? (
+            <Button
+              variant={row.enabled ? 'secondary' : 'primary'}
+              disabled={pending}
+              onClick={() => onToggle(row.id, !row.enabled)}
+            >
+              {row.enabled ? 'Disable' : 'Approve'}
+            </Button>
+          ) : (
+            <Badge>{row.enabled ? 'Approved' : 'Not approved'}</Badge>
+          )}
         </Inline>
       ))}
     </ul>

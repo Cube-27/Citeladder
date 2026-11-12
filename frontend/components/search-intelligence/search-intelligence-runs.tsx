@@ -45,9 +45,10 @@ export function RunNotice({
   cancelling,
 }: Readonly<{
   run: SearchIntelligenceRun | null;
-  onCancel: (runId: string) => void;
+  /** Cancel and Review again are offered only to a role that may run analyses. */
+  onCancel?: (runId: string) => void;
   /** Opens the analysis review: the recovery for a stopped run. */
-  onReview: () => void;
+  onReview?: () => void;
   cancelling: boolean;
 }>) {
   if (!run) return null;
@@ -57,9 +58,11 @@ export function RunNotice({
         tone="info"
         icon={RefreshCw}
         action={
-          <Button variant="secondary" disabled={cancelling} onClick={() => onCancel(run.id)}>
-            Cancel
-          </Button>
+          onCancel ? (
+            <Button variant="secondary" disabled={cancelling} onClick={() => onCancel(run.id)}>
+              Cancel
+            </Button>
+          ) : undefined
         }
       >
         Analysis in progress: {run.completed_calls} of {run.planned_calls} requests complete.
@@ -78,9 +81,11 @@ export function RunNotice({
         retryable: false,
       }}
       recovery={
-        <Button type="button" variant="secondary" onClick={onReview}>
-          Review again
-        </Button>
+        onReview ? (
+          <Button type="button" variant="secondary" onClick={onReview}>
+            Review again
+          </Button>
+        ) : undefined
       }
     />
   );

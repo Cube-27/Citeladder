@@ -58,9 +58,10 @@ function renderSessionFallback(fallback: SessionFallback, content?: ReactNode) {
  *   1. loads `GET /auth/me` (React Query; 4xx never retries per F2's policy);
  *   2. redirects to `/login` only on a 401 from `me` (session gone); non-401
  *      errors (network/5xx) do not log the user out;
- *   3. installs a QueryCache listener so a 401 from ANY query (not just `me`)
- *      clears the cached session and redirects to `/login` (invariant: a cookie
- *      that expired mid-session must not strand the user on a broken screen).
+ *   3. listens to the query and mutation caches so a 401 from ANY query or
+ *      mutation (not just `me`) clears the cached session and redirects to
+ *      `/login` (invariant: a cookie that expired mid-session must not strand
+ *      the user on a broken screen).
  *
  * While `me` is loading, it renders `fallback` (a neutral splash) rather than
  * flashing protected content.
@@ -119,24 +120,30 @@ export function SessionGuard({
   });
 
   useEffect(() => {
-    const cache = queryClient.getQueryCache();
     let disposed = false;
-    const unsubscribe = cache.subscribe((event) => {
-      if (event.type !== 'updated') return;
-      const { error: queryError } = event.query.state;
-      if (!queryError) return;
-      // React Query notifies subscribers synchronously, and some of those
-      // notifications land *during* a render (e.g. a query being observed for
-      // the first time). Effect Events may not be called while rendering, so
-      // hop to a microtask — by then the render has committed.
+    // React Query notifies subscribers synchronously, and some of those
+    // notifications land *during* a render (e.g. a query being observed for
+    // the first time). Effect Events may not be called while rendering, so
+    // hop to a microtask — by then the render has committed.
+    const report = (cacheError: unknown) => {
+      if (!cacheError) return;
       void Promise.resolve().then(() => {
         if (disposed) return;
-        onCacheEvent(queryError);
+        onCacheEvent(cacheError);
       });
+    };
+    const queries = queryClient.getQueryCache().subscribe((event) => {
+      if (event.type === 'updated') report(event.query.state.error);
+    });
+    // A write is as much proof the session ended as a read: a form submitted
+    // after expiry must lead to sign-in, not an inline 401 message.
+    const mutations = queryClient.getMutationCache().subscribe((event) => {
+      if (event.type === 'updated') report(event.mutation.state.error);
     });
     return () => {
       disposed = true;
-      unsubscribe();
+      queries();
+      mutations();
     };
   }, [queryClient]);
 

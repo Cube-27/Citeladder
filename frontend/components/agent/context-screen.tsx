@@ -73,8 +73,7 @@ const TAB_SAVE: Readonly<Record<ContextTab, 'profile' | 'instructions' | null>> 
  */
 export function ContextScreen() {
   const { workspaceId, project } = useProjectScope();
-  // Keyed by project so an unsaved draft never carries to another project.
-  return <ContextWorkspace key={project.id} workspaceId={workspaceId} project={project} />;
+  return <ContextWorkspace workspaceId={workspaceId} project={project} />;
 }
 
 function ContextWorkspace({

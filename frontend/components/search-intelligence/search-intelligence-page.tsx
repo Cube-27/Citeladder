@@ -35,6 +35,7 @@ import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { pollSearchRun } from '@/lib/search-intelligence/status';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 const PROVIDER_SETTINGS = '/settings?tab=providers';
 const TABS = [
@@ -112,6 +113,11 @@ export function SearchIntelligencePage() {
   const cancelMutation = useMutation(searchIntelligenceMutations.cancel(requestScope));
   const reviewMutation = useMutation(searchIntelligenceMutations.review(requestScope));
   const confirmMutation = useMutation(searchIntelligenceMutations.confirm(requestScope));
+  // Reviews and cancels spend or stop credits (run); saving matches is a write;
+  // the provider login is a credential.
+  const canRun = useWorkspaceCapability('run');
+  const canWrite = useWorkspaceCapability('write');
+  const canManageCredentials = useWorkspaceCapability('manage_credentials');
   const openReview = (nextAction: SearchReviewAction) => {
     setAction(nextAction);
     setDrawerOpen(true);
@@ -173,11 +179,17 @@ export function SearchIntelligencePage() {
               kind="empty"
               icon={Unplug}
               heading="Connect DataForSEO"
-              description="Add your DataForSEO login once to run analyses."
+              description={
+                canManageCredentials
+                  ? 'Add your DataForSEO login once to run analyses.'
+                  : 'Ask a workspace Owner or Admin to add a DataForSEO login.'
+              }
               action={
-                <Button asChild variant="secondary">
-                  <ProjectLink href={PROVIDER_SETTINGS}>Open provider settings</ProjectLink>
-                </Button>
+                canManageCredentials ? (
+                  <Button asChild variant="secondary">
+                    <ProjectLink href={PROVIDER_SETTINGS}>Open provider settings</ProjectLink>
+                  </Button>
+                ) : undefined
               }
             />
           )}
@@ -198,11 +210,11 @@ export function SearchIntelligencePage() {
         </ListScreen>
       </TabsRoot>
     );
-  const firstRun = (
+  const firstRun = canRun ? (
     <Button variant="primary" onClick={() => openReview('analysis')}>
       Review first analysis
     </Button>
-  );
+  ) : undefined;
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
       <ListScreen
@@ -210,7 +222,7 @@ export function SearchIntelligencePage() {
         actions={
           <PageActions
             hasDatasets={Boolean(data.datasets.length)}
-            onReview={openReview}
+            onReview={canRun ? openReview : undefined}
             onCost={() => setCostOpen(true)}
           />
         }
@@ -219,12 +231,14 @@ export function SearchIntelligencePage() {
           tab,
           datasets,
           collection,
-          onSeed: () => openReview('seed'),
-          onMatch: (origin) => {
-            setCitationOrigin(origin);
-            setCitationOpen(true);
-          },
-          onExpand: () => openReview('increase_depth'),
+          onSeed: canRun ? () => openReview('seed') : undefined,
+          onMatch: canWrite
+            ? (origin) => {
+                setCitationOrigin(origin);
+                setCitationOpen(true);
+              }
+            : undefined,
+          onExpand: canRun ? () => openReview('increase_depth') : undefined,
           savedView: savedViewFilters({
             scopes,
             scope: activeScope,
@@ -246,8 +260,8 @@ export function SearchIntelligencePage() {
           <UnavailableNotice data={data} />
           <RunNotice
             run={data.latest_run}
-            onCancel={(runId) => cancelMutation.mutate(runId)}
-            onReview={() => openReview('analysis')}
+            onCancel={canRun ? (runId) => cancelMutation.mutate(runId) : undefined}
+            onReview={canRun ? () => openReview('analysis') : undefined}
             cancelling={cancelMutation.isPending}
           />
           <TabPanel value="overview" className="min-w-0">
@@ -319,7 +333,8 @@ function PageActions({
   onCost,
 }: Readonly<{
   hasDatasets: boolean;
-  onReview: (action: SearchReviewAction) => void;
+  /** Opens a credit-spending review; omitted for a role that may not run one. */
+  onReview?: (action: SearchReviewAction) => void;
   onCost: () => void;
 }>) {
   return (
@@ -327,7 +342,7 @@ function PageActions({
       <Button variant="ghost" onClick={onCost}>
         Cost details
       </Button>
-      {hasDatasets ? (
+      {!onReview ? null : hasDatasets ? (
         <>
           <Button variant="secondary" onClick={() => onReview('refresh')}>
             Refresh
@@ -356,16 +371,15 @@ function pageControls({
   collection,
   savedView,
   ...actions
-}: Readonly<{
-  data: SearchIntelligenceReadiness;
-  tab: Tab;
-  datasets: SearchIntelligenceDataset[];
-  collection: SearchCollection | null;
-  savedView: FilterDefinition[];
-  onSeed: () => void;
-  onMatch: (targetOrigin: string | undefined) => void;
-  onExpand: () => void;
-}>) {
+}: Readonly<
+  {
+    data: SearchIntelligenceReadiness;
+    tab: Tab;
+    datasets: SearchIntelligenceDataset[];
+    collection: SearchCollection | null;
+    savedView: FilterDefinition[];
+  } & CollectionActions
+>) {
   const newest = datasets.find((item) =>
     tab === 'backlinks' ? item.location_code === null : item.location_code !== null,
   );
@@ -381,6 +395,16 @@ function pageControls({
   });
 }
 
+/** A tab's next steps; each is omitted for a role that may not take it. */
+type CollectionActions = {
+  /** Reviews a keyword to research, a run. */
+  onSeed?: () => void;
+  /** Saves citation matches, a write. */
+  onMatch?: (targetOrigin: string | undefined) => void;
+  /** Reviews a deeper collection, a run. */
+  onExpand?: () => void;
+};
+
 /**
  * The tab's own next step, at the end of the control strip: its research
  * action, then a deeper review of the saved result on screen.
@@ -391,13 +415,12 @@ function CollectionAction({
   onSeed,
   onMatch,
   onExpand,
-}: Readonly<{
-  collection: SearchCollection;
-  datasets: SearchIntelligenceDataset[];
-  onSeed: () => void;
-  onMatch: (targetOrigin: string | undefined) => void;
-  onExpand: () => void;
-}>) {
+}: Readonly<
+  {
+    collection: SearchCollection;
+    datasets: SearchIntelligenceDataset[];
+  } & CollectionActions
+>) {
   // Only the website on screen: matching another website's list would save
   // matches for a site the reader is not looking at.
   const matchable =
@@ -406,17 +429,17 @@ function CollectionAction({
   const expandable = !collection.listingCompetitors && Boolean(collection.dataset);
   return (
     <>
-      {collection.tab === 'keywords' ? (
+      {collection.tab === 'keywords' && onSeed ? (
         <Button variant="secondary" onClick={onSeed}>
           Research a keyword
         </Button>
       ) : null}
-      {matchable ? (
+      {matchable && onMatch ? (
         <Button variant="secondary" onClick={() => onMatch(collection.target)}>
           Match with Visibility citations
         </Button>
       ) : null}
-      {expandable ? (
+      {expandable && onExpand ? (
         <Button variant="ghost" onClick={onExpand}>
           Review depth
         </Button>

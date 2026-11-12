@@ -30,6 +30,9 @@ vi.mock('@/components/integrations/data-source-setup', () => ({
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => WORKSPACE,
   useProjectContext: () => ({ activeProject, isLoading: false }),
+  // A Member, who may sync.
+  useWorkspaceCapability: (capability: string) =>
+    (['read', 'run', 'write'] as const).some((granted) => granted === capability),
 }));
 vi.mock('./use-performance-sync', () => ({
   usePerformanceSync: () => ({

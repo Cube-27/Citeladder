@@ -28,6 +28,7 @@ import { textRole } from '@/components/ui/typography';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { schedulePauseReason } from '@/lib/runs/status';
@@ -47,12 +48,7 @@ export function AuditSchedules({
 }: Readonly<{ projectId: string; promptSets: PromptSet[] }>) {
   const { workspaceId } = useProjectScope();
   return (
-    <WorkspaceSchedules
-      key={`${workspaceId}:${projectId}`}
-      workspaceId={workspaceId}
-      projectId={projectId}
-      promptSets={promptSets}
-    />
+    <WorkspaceSchedules workspaceId={workspaceId} projectId={projectId} promptSets={promptSets} />
   );
 }
 
@@ -93,6 +89,7 @@ function WorkspaceSchedules({
     catalog.order.length > 0 &&
     scheduleReady(promptSetId, engines, marketIds);
   const resumeMutation = useMutation(runsMutations.resumeSchedule(scope));
+  const canWrite = useWorkspaceCapability('write');
 
   return (
     <Card>
@@ -116,7 +113,7 @@ function WorkspaceSchedules({
                   schedule={schedule}
                   markets={markets}
                   resuming={resumeMutation.isPending}
-                  onResume={() => resumeMutation.mutate(schedule.id)}
+                  onResume={canWrite ? () => resumeMutation.mutate(schedule.id) : undefined}
                 />
               ))}
             </ul>
@@ -124,7 +121,8 @@ function WorkspaceSchedules({
           {schedulesQuery.isSuccess && schedulesQuery.data.length === 0 ? (
             <QueryState kind="empty" inline message="No scheduled audits yet." />
           ) : null}
-          {promptSets.length === 0 ? (
+          {/* Scheduling is offered only to a role that may write schedules. */}
+          {!canWrite ? null : promptSets.length === 0 ? (
             <Callout tone="info">Add prompts before scheduling an audit.</Callout>
           ) : (
             <Stack className="desktop:grid-cols-3">
@@ -282,7 +280,8 @@ function ScheduleRow({
   schedule: AuditSchedule;
   markets: readonly ProjectMarket[];
   resuming: boolean;
-  onResume: () => void;
+  /** Resumes a paused schedule; omitted for a role that may not. */
+  onResume?: () => void;
 }>) {
   return (
     <Inline as="li" className={ledgerItemClasses('type-body flex-wrap justify-between')}>
@@ -303,7 +302,7 @@ function ScheduleRow({
         <Inline as="span" className="text-ink-secondary flex-wrap">
           {pauseLabel(schedule)}
           {/* A one-time schedule that ran is finished, not paused; resuming would run it again. */}
-          {finishedOnce(schedule) ? null : (
+          {finishedOnce(schedule) || !onResume ? null : (
             <Button variant="secondary" disabled={resuming} onClick={onResume}>
               Resume
             </Button>
