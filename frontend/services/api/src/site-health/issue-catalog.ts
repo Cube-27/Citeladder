@@ -5,9 +5,11 @@
  * It is written wherever the crawl's current issue set changes, in that
  * writer's transaction: every issue-currency refresh (the terminal
  * publication, an analysis appended over a finalized one, a duplicate alias
- * retiring analyses) and the site-level architecture findings. Each write
+ * retiring analyses), the site-level architecture findings, and a page rerun
+ * landing in the site crawl that shows it (`issue-currency.ts`). Each write
  * replaces the crawl's rows with the groups and summary computed from the
- * current issues, so the read never recomputes them. The issues stay as
+ * issues the crawl shows (each page's latest audit, `viewIssuesSql`), so the
+ * read never recomputes them. The issues stay as
  * written; each row names the crawl and versions it was computed from, and
  * `sources` keeps every group's exact issue and evaluation IDs (never served).
  *
@@ -27,6 +29,7 @@ import {
   issueSummary,
   unfilteredIssues,
 } from './reads/issues.ts';
+import { viewIssuesSql } from './reads/crawl.ts';
 import { issueGroupId } from './reads/rules.ts';
 import type { Crawl } from './site-task.ts';
 
@@ -68,7 +71,7 @@ async function firstSnippetRow(
     from site_issues i
     join site_urls u on u.workspace_id = i.workspace_id and u.id = i.site_url_id
     join site_fetch_artifacts f on f.workspace_id = i.workspace_id and f.id = i.source_artifact_id
-    where i.workspace_id = ${crawl.workspace_id} and i.crawl_id = ${crawl.id} and i.is_current
+    where ${viewIssuesSql(crawl)}
       and i.finding_class = ${family.findingClass} and i.rule_id = ${family.ruleId}
       and jsonb_typeof(f.normalized_facts #> ${family.path}::text[]) = 'object'
     order by u.normalized_url, i.id limit 1`.execute(db);

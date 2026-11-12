@@ -3,10 +3,12 @@
  * in a single query.
  *
  * A crawl shows the URLs it observed plus, for a full recrawl, the frozen
- * inventory of the crawls it inherits. Measurements, the analyze task and the
- * link metrics always come from the crawl itself, so an inherited URL reads
- * as not selected rather than borrowing older evidence. The presentation
- * status is derived in SQL, so status filters page like any other filter.
+ * inventory of the crawls it inherits. A page's measurements and issues come
+ * from its latest audit as the crawl shows it (`pageAuditsSql`, SH-B9): a
+ * later page rerun, or an earlier audit of a page this crawl never reached.
+ * The analyze task and the link metrics come from the crawl itself. The
+ * presentation status is derived in SQL, so status filters page like any
+ * other filter; the cursor cuts the window before the per-row projection.
  */
 import { pageAnalysisStatusSchema } from '@citeladder/contracts/site-health';
 import { sql, type RawBuilder } from 'kysely';
@@ -21,7 +23,14 @@ import {
 import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { failedAs } from '../task-outcome.ts';
-import { inventoryCrawlIds, isTerminal, ROW_TASK, ROW_TASK_ORDER, type Crawl } from './crawl.ts';
+import {
+  inventoryCrawlIds,
+  isTerminal,
+  pageAuditsSql,
+  ROW_TASK,
+  ROW_TASK_ORDER,
+  type Crawl,
+} from './crawl.ts';
 
 const PERSISTED = ['completed', 'partially_completed'];
 // The largest integer depth; an unmeasured page sorts after every measured one.
@@ -169,24 +178,12 @@ export async function pageRows(
       : sql`and (sort_value, site_url_id) > (${value}, ${after.id}::uuid)`;
   }
   const direction = sql.raw(spec.descending ? 'desc' : 'asc');
+  // The cursor and the order cut the window first (PERF-007): only its rows
+  // pay for the projection's per-row subqueries.
   const result = await sql<PageRow>`
-    with projected as (
+    with keyed as (
       select
         u.id as site_url_id,
-        coalesce((
-          select o.crawl_id from site_url_observations o
-          where o.workspace_id = u.workspace_id and o.site_url_id = u.id
-            and o.crawl_id = any(${lineage}::uuid[])
-          order by array_position(${lineage}::uuid[], o.crawl_id) limit 1
-        ), ${crawl.id}::uuid) as crawl_id,
-        u.normalized_url,
-        coalesce(nullif(u.display_url, ''), u.normalized_url) as display_url,
-        nullif(u.latest_title, '') as title,
-        nullif(u.latest_content_type, '') as content_type,
-        nullif(u.latest_source_kind, '') as source,
-        u.depth,
-        u.first_seen_at,
-        u.last_seen_at,
         m.site_url_id is not null as monitored,
         a.id as analysis_id,
         case
@@ -205,26 +202,6 @@ export async function pageRows(
           when t.status in ('cancelled', 'failed') then coalesce(t.error_code, '')
           else ''
         end as error_code,
-        a.page_kind,
-        a.web_fundamentals_score,
-        a.web_fundamentals_coverage,
-        coalesce(a.web_fundamentals_state, 'not_measured') as web_fundamentals_state,
-        a.aeo_readiness_score,
-        a.aeo_measurement_coverage,
-        coalesce(a.aeo_measurement_state, 'not_measured') as aeo_measurement_state,
-        coalesce(a.aeo_measurement_reason, '') as aeo_measurement_reason,
-        a.main_content_indexable,
-        coalesce((
-          select (f.acquisition_options ->> 'robots_excluded')::boolean
-          from site_fetch_artifacts f
-          where f.workspace_id = u.workspace_id and f.id = a.artifact_id
-        ), false) as robots_excluded,
-        a.finalized_at,
-        case when a.id is null then null else (
-          select count(*)::int from site_issues i
-          where i.workspace_id = u.workspace_id and i.crawl_id = ${crawl.id}
-            and i.site_url_id = u.id and ${currentIssueFilter('i', 'a')}
-        ) end as issue_count,
         l.inbound_count,
         l.main_content_inbound_count,
         l.depth_from_home,
@@ -233,12 +210,10 @@ export async function pageRows(
       left join monitored_site_urls m
         on m.workspace_id = u.workspace_id and m.project_id = u.project_id
         and m.site_url_id = u.id and m.active
-      left join lateral (
-        select * from site_page_analyses a
-        where a.workspace_id = u.workspace_id and a.crawl_id = ${crawl.id}
-          and a.site_url_id = u.id and a.is_current
-        order by a.created_at desc, a.id desc limit 1
-      ) a on true
+      -- The page's latest audit as the crawl shows it (SH-B9).
+      left join lateral (${pageAuditsSql(crawl, sql.ref('u.id'))}) latest on true
+      left join site_page_analyses a
+        on a.workspace_id = u.workspace_id and a.id = latest.analysis_id
       left join lateral (
         select t.status, t.error_code from site_crawl_tasks t
         where t.workspace_id = u.workspace_id and t.crawl_id = ${crawl.id}
@@ -265,18 +240,67 @@ export async function pageRows(
           filters.rule
             ? sql`and exists (
           select 1 from site_issues i
-          where i.workspace_id = u.workspace_id and i.crawl_id = ${crawl.id}
+          where i.workspace_id = u.workspace_id and i.crawl_id = a.crawl_id
             and i.site_url_id = u.id and i.rule_id = ${filters.rule}
             and ${currentIssueFilter('i', 'a')})`
             : sql``
         }
         ${filters.monitored === true ? sql`and m.site_url_id is not null` : sql``}
         ${filters.monitored === false ? sql`and m.site_url_id is null` : sql``}
+    ), windowed as (
+      select * from keyed
+      where true ${statusFilter(filters.status)} ${keyset}
+      order by sort_value ${direction}, site_url_id ${direction}
+      limit ${limit + 1}
     )
-    select * from projected
-    where true ${statusFilter(filters.status)} ${keyset}
-    order by sort_value ${direction}, site_url_id ${direction}
-    limit ${limit + 1}`.execute(db);
+    select
+      k.site_url_id,
+      coalesce((
+        select o.crawl_id from site_url_observations o
+        where o.workspace_id = u.workspace_id and o.site_url_id = u.id
+          and o.crawl_id = any(${lineage}::uuid[])
+        order by array_position(${lineage}::uuid[], o.crawl_id) limit 1
+      ), ${crawl.id}::uuid) as crawl_id,
+      u.normalized_url,
+      coalesce(nullif(u.display_url, ''), u.normalized_url) as display_url,
+      nullif(u.latest_title, '') as title,
+      nullif(u.latest_content_type, '') as content_type,
+      nullif(u.latest_source_kind, '') as source,
+      u.depth,
+      u.first_seen_at,
+      u.last_seen_at,
+      k.monitored,
+      k.analysis_id,
+      k.analysis_status,
+      k.error_code,
+      a.page_kind,
+      a.web_fundamentals_score,
+      a.web_fundamentals_coverage,
+      coalesce(a.web_fundamentals_state, 'not_measured') as web_fundamentals_state,
+      a.aeo_readiness_score,
+      a.aeo_measurement_coverage,
+      coalesce(a.aeo_measurement_state, 'not_measured') as aeo_measurement_state,
+      coalesce(a.aeo_measurement_reason, '') as aeo_measurement_reason,
+      a.main_content_indexable,
+      coalesce((
+        select (f.acquisition_options ->> 'robots_excluded')::boolean
+        from site_fetch_artifacts f
+        where f.workspace_id = u.workspace_id and f.id = a.artifact_id
+      ), false) as robots_excluded,
+      a.finalized_at,
+      case when a.id is null then null else (
+        select count(*)::int from site_issues i
+        where i.workspace_id = u.workspace_id and i.crawl_id = a.crawl_id
+          and i.site_url_id = u.id and ${currentIssueFilter('i', 'a')}
+      ) end as issue_count,
+      k.inbound_count,
+      k.main_content_inbound_count,
+      k.depth_from_home,
+      k.sort_value
+    from windowed k
+    join site_urls u on u.workspace_id = ${crawl.workspace_id} and u.id = k.site_url_id
+    left join site_page_analyses a on a.workspace_id = u.workspace_id and a.id = k.analysis_id
+    order by k.sort_value ${direction}, k.site_url_id ${direction}`.execute(db);
   return result.rows;
 }
 
@@ -290,9 +314,9 @@ export async function currentIssueRules(db: Database, crawl: Crawl, analysisIds:
   const { rows } = await sql<{ analysis_id: string; finding_class: string; rule_id: string }>`
     select distinct a.id as analysis_id, i.finding_class, i.rule_id
     from site_page_analyses a
-    join site_issues i on i.workspace_id = a.workspace_id and i.crawl_id = ${crawl.id}
+    join site_issues i on i.workspace_id = a.workspace_id and i.crawl_id = a.crawl_id
       and i.site_url_id = a.site_url_id and ${currentIssueFilter('i', 'a')}
-    where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
+    where a.workspace_id = ${crawl.workspace_id} and a.project_id = ${crawl.project_id}
       and a.id = any(${analysisIds}::uuid[])
     order by a.id, i.finding_class, i.rule_id`.execute(db);
   for (const row of rows) {
@@ -315,9 +339,9 @@ export async function currentRuleEvidence(
   const { rows } = await sql<{ analysis_id: string; evidence: unknown }>`
     select distinct on (a.id) a.id as analysis_id, i.evidence
     from site_page_analyses a
-    join site_issues i on i.workspace_id = a.workspace_id and i.crawl_id = ${crawl.id}
+    join site_issues i on i.workspace_id = a.workspace_id and i.crawl_id = a.crawl_id
       and i.site_url_id = a.site_url_id and ${currentIssueFilter('i', 'a')}
-    where a.workspace_id = ${crawl.workspace_id} and a.crawl_id = ${crawl.id}
+    where a.workspace_id = ${crawl.workspace_id} and a.project_id = ${crawl.project_id}
       and a.id = any(${analysisIds}::uuid[]) and i.rule_id = ${ruleId}
     order by a.id, i.created_at, i.id`.execute(db);
   for (const row of rows) result.set(row.analysis_id, row.evidence);

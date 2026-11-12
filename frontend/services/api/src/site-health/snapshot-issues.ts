@@ -33,7 +33,7 @@ export async function snapshotIssues(db: Database, crawl: Crawl, evaluationIds: 
     ])
     .where('i.workspace_id', '=', crawl.workspace_id)
     .where('i.project_id', '=', crawl.project_id)
-    .where('i.crawl_id', '=', crawl.id)
+    // The manifest names exact evaluations, a page rerun's among them (SH-B9).
     .where('i.evaluation_id', '=', sql<string>`any(${evaluationIds}::uuid[])`)
     .execute();
   const severities: Record<string, number> = {};

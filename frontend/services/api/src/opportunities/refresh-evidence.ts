@@ -16,6 +16,7 @@ import type {
 import type { Database } from '../db/database.ts';
 import { WorkspaceScope } from '../db/workspace-scope.ts';
 import { record } from '../db/json.ts';
+import { viewIssuesSql, type ViewCrawl } from '../site-health/reads/crawl.ts';
 import { siteCoverage, type CoverageCrawl } from './refresh-compute.ts';
 import { compareText } from '../text-order.ts';
 import { isNonEmpty, lastOf } from '../lists.ts';
@@ -33,8 +34,7 @@ const family = o.SITE_ISSUE_FAMILY;
  */
 async function loadIssueFamilies(
   db: Database,
-  workspaceId: string,
-  crawl: { id: string; project_id: string },
+  crawl: ViewCrawl,
 ): Promise<SiteEvidence['families']> {
   const { rows } = await sql<{
     rule_id: string;
@@ -52,7 +52,7 @@ async function loadIssueFamilies(
       from site_issues i
       join site_urls u on u.workspace_id = i.workspace_id and u.id = i.site_url_id
         and u.project_id = ${crawl.project_id}
-      where i.workspace_id = ${workspaceId} and i.crawl_id = ${crawl.id}
+      where ${viewIssuesSql(crawl)}
         and i.finding_class = ${r.finding_class_defect}
         and starts_with(i.rule_id, ${family.ISSUE_RULE_PREFIX})
       group by i.rule_id, i.site_url_id, u.normalized_url
@@ -86,13 +86,14 @@ async function loadIssueFamilies(
 export async function loadSiteEvidence(
   db: Database,
   workspaceId: string,
-  crawl: CoverageCrawl & { id: string; project_id: string },
+  crawl: CoverageCrawl & ViewCrawl,
 ): Promise<SiteEvidence> {
   const scope = new WorkspaceScope(workspaceId);
   const loaded = await scope
     .selectFrom(db, 'site_issues')
     .select(['id', 'rule_id', 'severity', 'category', 'finding_class', 'site_url_id', 'evidence'])
-    .where('crawl_id', '=', crawl.id)
+    // Each tracked page's latest audit and the crawl's site-level findings (SH-B9).
+    .where(viewIssuesSql(crawl, 'site_issues').$castTo<boolean>())
     .where('finding_class', '=', r.finding_class_defect)
     // Issue-family rules load whole, by `loadIssueFamilies`, outside this cap.
     .where(sql<boolean>`not starts_with(rule_id, ${family.ISSUE_RULE_PREFIX})`)
@@ -125,7 +126,7 @@ export async function loadSiteEvidence(
       evidence: record(issue.evidence),
     })),
     urls: urls.map((url) => ({ site_url_id: url.id, normalized_url: url.normalized_url })),
-    families: await loadIssueFamilies(db, workspaceId, crawl),
+    families: await loadIssueFamilies(db, crawl),
     coverage,
     limitations,
   };

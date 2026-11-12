@@ -10,7 +10,9 @@ import { parseUuid } from '../http/uuid.ts';
 import {
   currentSiteCrawl,
   currentSiteSnapshotQuery,
+  latestPagesQuery,
   rootFailure,
+  type ViewCrawl,
 } from '../site-health/reads/crawl.ts';
 import { comparableUrl } from '../site-health/reads/content-fragments.ts';
 import {
@@ -520,38 +522,20 @@ export async function sitePages(
   } satisfies McpSitePages & Evidence;
 }
 
-/** The crawled pages of one crawl with their current analysis and fetched facts. */
-function crawledPages({ db, scope }: ProjectRead, crawlId: string) {
-  return db
-    .selectFrom('site_page_analyses as a')
-    .innerJoin('site_fetch_artifacts as f', (join) =>
-      join
-        .onRef('f.id', '=', 'a.artifact_id')
-        .onRef('f.workspace_id', '=', 'a.workspace_id')
-        .onRef('f.crawl_id', '=', 'a.crawl_id'),
-    )
-    .innerJoin('site_urls as u', (join) =>
-      join
-        .onRef('u.id', '=', 'a.site_url_id')
-        .onRef('u.workspace_id', '=', 'a.workspace_id')
-        .onRef('u.project_id', '=', 'a.project_id'),
-    )
-    .where('a.workspace_id', '=', scope.workspaceId)
-    .where('a.project_id', '=', scope.projectId)
-    .where('a.crawl_id', '=', crawlId)
-    .where('a.is_current', '=', true)
-    .select([
-      'a.id as analysis_id',
-      'a.page_kind',
-      'u.id as site_url_id',
-      'u.normalized_url',
-      sql<string>`coalesce(nullif(u.display_url, ''), u.normalized_url)`.as('url'),
-      'f.id as artifact_id',
-      'f.final_url',
-      'f.fetched_at',
-      'f.extractor_version',
-      'f.normalized_facts',
-    ]);
+/** The crawl's pages at their latest audit (`latestPagesQuery`, SH-B9) and their fetched facts. */
+function crawledPages({ db }: ProjectRead, crawl: ViewCrawl) {
+  return latestPagesQuery(db, crawl).select([
+    'a.id as analysis_id',
+    'a.page_kind',
+    'u.id as site_url_id',
+    'u.normalized_url',
+    sql<string>`coalesce(nullif(u.display_url, ''), u.normalized_url)`.as('url'),
+    'f.id as artifact_id',
+    'f.final_url',
+    'f.fetched_at',
+    'f.extractor_version',
+    'f.normalized_facts',
+  ]);
 }
 type CrawledPage = Awaited<ReturnType<ReturnType<typeof crawledPages>['execute']>>[number];
 
@@ -613,7 +597,7 @@ export async function pageText(
   const url = args.site_url_id ? null : urlFilter(args.url);
   const crawl = await selectCrawl(read, args.crawl_id);
   if (!crawl) return unavailable('no_site_crawl');
-  let query = crawledPages(read, crawl.id);
+  let query = crawledPages(read, crawl);
   if (args.site_url_id) query = query.where('u.id', '=', args.site_url_id);
   if (url)
     query = query.where((eb) =>

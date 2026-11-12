@@ -22,7 +22,7 @@ import { ruleTitle } from '../../site-health/reads/rules.ts';
 import { compareText } from '../../text-order.ts';
 import { outcome, type CheckOutcome } from '../verification-decisions.ts';
 import type { CheckModule, MemberFacts } from './kind.ts';
-import { once, type ReadContext } from './read-context.ts';
+import { latestAudits, once, type ReadContext } from './read-context.ts';
 
 /**
  * A page whose rule now passes, or no longer applies, has the defect cleared;
@@ -71,8 +71,10 @@ const comparable = (left: CrawlVersions, right: CrawlVersions) =>
   left.rule_catalog_version === right.rule_catalog_version;
 
 /**
- * Each cohort page's reading of the rule in this crawl: its current finalized
- * analysis, fetched after go-live, and that analysis's evaluation of the rule.
+ * Each cohort page's reading of the rule as this crawl shows it: its latest
+ * finalized audit (`latestAudits`, SH-B9), fetched after go-live, and that
+ * analysis's evaluation of the rule. A page rerun reads through the site crawl
+ * it lands in, so re-auditing the last failing page can verify the family.
  */
 async function cohortReadings(
   ctx: ReadContext,
@@ -96,8 +98,8 @@ async function cohortReadings(
     left join site_rule_evaluations e on e.workspace_id = a.workspace_id
       and e.id = any(a.source_evaluation_ids) and e.rule_id = ${ruleId}
     where a.workspace_id = ${d.workspace_id} and a.project_id = ${d.project_id}
-      and a.crawl_id = ${crawlId} and a.site_url_id = any(${[...siteUrlIds]}::uuid[])
-      and a.is_current and a.finalized_at is not null
+      and a.id in ${await latestAudits(ctx, crawlId, { fold: true })}
+      and a.site_url_id = any(${[...siteUrlIds]}::uuid[]) and a.finalized_at is not null
       and f.fetched_at > ${d.declared_implemented_at}::timestamptz
     order by a.site_url_id, a.created_at desc, a.id desc, e.id`.execute(ctx.db);
   return rows;

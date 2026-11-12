@@ -213,7 +213,17 @@ export async function pageDetail(
       : workspace
           .selectFrom(db, 'site_page_analyses')
           .leftJoin('site_fetch_artifacts as f', 'f.id', 'site_page_analyses.artifact_id')
+          // The audit the page's latest analysis came from, perhaps a later rerun.
+          .innerJoin('site_crawls as audited', (join) =>
+            join
+              .onRef('audited.id', '=', 'site_page_analyses.crawl_id')
+              .onRef('audited.workspace_id', '=', 'site_page_analyses.workspace_id'),
+          )
           .select([
+            'audited.extractor_version',
+            'audited.analyzer_version',
+            'audited.rule_catalog_version',
+            'audited.scoring_version',
             'site_page_analyses.id',
             'site_page_analyses.source_evaluation_ids',
             'site_page_analyses.page_kind_evidence',
@@ -245,7 +255,7 @@ export async function pageDetail(
           select i.*, e.reason_code from site_issues i
           join site_rule_evaluations e on e.id = i.evaluation_id
           join site_page_analyses a on a.id = ${analysis.id}
-          where i.workspace_id = ${workspaceId} and i.crawl_id = ${crawl.id}
+          where i.workspace_id = ${workspaceId} and i.crawl_id = a.crawl_id
             and i.site_url_id = ${siteUrlId} and ${currentIssueFilter('i', 'a')}
           order by i.created_at, i.id`
           .execute(db)
@@ -336,9 +346,10 @@ export async function pageDetail(
       created_at: evaluation.created_at.toISOString(),
     })),
     artifact_id: analysis?.artifact_id ?? null,
-    extractor_version: crawl.extractor_version,
-    analyzer_version: crawl.analyzer_version,
-    rule_version: crawl.rule_catalog_version,
-    scoring_version: crawl.scoring_version,
+    // The versions of the audit that measured the page, else the crawl's own.
+    extractor_version: (analysis ?? crawl).extractor_version,
+    analyzer_version: (analysis ?? crawl).analyzer_version,
+    rule_version: (analysis ?? crawl).rule_catalog_version,
+    scoring_version: (analysis ?? crawl).scoring_version,
   });
 }

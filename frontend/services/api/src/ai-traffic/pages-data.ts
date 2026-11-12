@@ -14,7 +14,7 @@ import { crawlers } from '../config/crawlers.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { ApiError } from '../errors.ts';
 import { currentIssueFilter } from '../site-health/reads/page-rows.ts';
-import { currentSiteCrawl, inventoryCrawlIds } from '../site-health/reads/crawl.ts';
+import { currentSiteCrawl, inventoryCrawlIds, pageAuditsSql } from '../site-health/reads/crawl.ts';
 
 export type PageOptions = CrawlReadOptions & {
   sort?: string | null;
@@ -131,8 +131,9 @@ export async function pageDataset(db: Database, scope: CrawlScope, input: PageOp
       on u.id=a.site_url_id and u.workspace_id=a.workspace_id and u.project_id=a.project_id
       left join site_issues i on i.workspace_id=a.workspace_id and i.project_id=a.project_id and i.crawl_id=a.crawl_id
         and i.site_url_id=a.site_url_id and ${currentIssueFilter('i', 'a')}
-      where a.workspace_id=${scope.workspaceId}::uuid and a.project_id=${scope.projectId}::uuid and a.crawl_id=${crawl?.id ?? null}::uuid
-        and a.is_current group by u.url_hash),
+      where a.workspace_id=${scope.workspaceId}::uuid and a.project_id=${scope.projectId}::uuid
+        and ${crawl ? sql`a.id in (select v.analysis_id from (${pageAuditsSql(crawl)}) v)` : sql`false`}
+      group by u.url_hash),
     keys as (select url_hash from bot union select url_hash from landing union select url_hash from citation union select url_hash from inventory)
     ,joined as (select k.url_hash,coalesce(l.canonical_url,i.canonical_url,c.canonical_url,b.canonical_url) as canonical_url,
       coalesce(b.display_path,l.display_path) as stored_display_path,coalesce(b.folder,l.folder) as stored_folder,coalesce(b.resource_class,l.resource_class) as stored_resource_class,
