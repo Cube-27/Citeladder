@@ -206,7 +206,7 @@ export class AcquisitionState {
       // finds the price or connection changed ends it like any other stop.
       const priced = run.pricing_version === si.price_version;
       if (!priced || !run.confirmed_at || !(await this.connection(trx, run))) {
-        await this.endChanged(trx, run, at, priced ? 'connection_changed' : 'pricing_changed');
+        await this.stopRun(trx, run, priced ? 'connection_changed' : 'pricing_changed', at);
         return null;
       }
       await trx
@@ -224,7 +224,7 @@ export class AcquisitionState {
       if (run?.status !== 'running' || !(await this.owned(trx))) return { action: 'stop' };
       const connection = await this.connection(trx, run);
       if (!connection) {
-        await this.endChanged(trx, run, at);
+        await this.stopRun(trx, run, 'connection_changed', at);
         return { action: 'stop' };
       }
       const request = record(plan.request);
@@ -371,7 +371,7 @@ export class AcquisitionState {
       // A connection or member change since `prepare` ends the run, as there:
       // returning without a transition would leave it running with its hold.
       if (!(await this.connection(trx, run))) {
-        await this.endChanged(trx, run, at);
+        await this.stopRun(trx, run, 'connection_changed', at);
         return false;
       }
       const call = await this.calls(trx)
@@ -677,29 +677,6 @@ export class AcquisitionState {
         .where('workspace_id', '=', run.workspace_id)
         .execute();
     });
-  }
-  /**
-   * The run's collecting datasets close and the run ends once its price or
-   * connection has changed: `partial` once a call completed, else `failed`.
-   */
-  private async endChanged(
-    trx: Database,
-    run: Run,
-    at: Date,
-    code: 'connection_changed' | 'pricing_changed' = 'connection_changed',
-  ) {
-    await trx
-      .updateTable('search_intelligence_runs')
-      .set({
-        status: run.completed_calls ? 'partial' : 'failed',
-        error_code: code,
-        completed_at: at,
-        updated_at: at,
-      })
-      .where('id', '=', run.id)
-      .where('workspace_id', '=', run.workspace_id)
-      .execute();
-    await this.closeCollecting(trx, at);
   }
   /** The plan's dataset for this run: the existing locked row, or a new collecting one. */
   private async upsertDataset(
