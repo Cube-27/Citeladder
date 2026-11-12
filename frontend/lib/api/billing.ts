@@ -31,12 +31,13 @@ import {
   billingInvoiceSchema,
   billingInvoicesSchema,
   billingUsageSchema,
-  credentialModeSchema,
   planChangeSchema,
   resolvedQuoteSchema,
   subscriptionChangeSchema,
   subscriptionCheckoutSchema,
   workspaceEntitlementSchema,
+  type CredentialMode,
+  type SelfServePlanKey,
 } from '@citeladder/contracts/billing';
 import type {
   CheckoutVerifyRequest,
@@ -57,8 +58,7 @@ export type BillingQuote = z.infer<typeof resolvedQuoteSchema>;
 export type BillingInvoice = z.infer<typeof billingInvoiceSchema>;
 export type WorkspaceEntitlement = z.infer<typeof workspaceEntitlementSchema>;
 export type UsageItem = BillingUsage['items'][number];
-export type CredentialMode = z.infer<typeof credentialModeSchema>;
-export type SelfServePlanKey = 'tier_1' | 'tier_2' | 'tier_3';
+export type { CredentialMode, SelfServePlanKey };
 
 /** Customer evidence required to let the server determine GST/export status. */
 export type BillingCustomerDetails = {

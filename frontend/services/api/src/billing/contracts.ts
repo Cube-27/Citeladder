@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Selectable } from 'kysely';
+import { taxTreatmentSchema } from '@citeladder/contracts/billing';
 import type {
   BillingAccounts,
   BillingSubscriptions,
@@ -36,7 +37,7 @@ export const taxSchema = z
     igst_minor: amount,
     tax_minor: amount,
     total_minor: amount,
-    treatment: z.enum(['CGST_SGST', 'IGST', 'EXPORT_ZERO_RATED']),
+    treatment: taxTreatmentSchema,
     tax_rate: z.string(),
     policy_version: z.literal(1),
   })

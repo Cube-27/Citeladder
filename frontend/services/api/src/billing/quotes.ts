@@ -5,6 +5,7 @@ import {
   type BillingRegion,
   type CredentialMode,
   type Currency,
+  type TaxTreatment,
 } from '@citeladder/contracts/billing';
 import { amount, taxSchema, type Identity } from './contracts.ts';
 import { refuse } from './refusals.ts';
@@ -83,7 +84,7 @@ export function quoteIntent(
   let cgst = 0,
     sgst = 0,
     igst = 0;
-  let treatment: 'CGST_SGST' | 'IGST' | 'EXPORT_ZERO_RATED' = 'EXPORT_ZERO_RATED';
+  let treatment: TaxTreatment = 'EXPORT_ZERO_RATED';
   let rate = '0';
   if (country === 'IN') {
     if (

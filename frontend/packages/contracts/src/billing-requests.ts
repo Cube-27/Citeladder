@@ -7,14 +7,13 @@
  */
 import { z } from 'zod';
 
-import { credentialModeSchema } from './billing.ts';
+import { credentialModeSchema, selfServePlanKeySchema } from './billing.ts';
 
-const selfServePlanKey = () => z.enum(['tier_1', 'tier_2', 'tier_3']);
 const nullableText = () => z.string().trim().nullable().default(null);
 
 /** Start a base-plan checkout, with the customer evidence that decides GST or export. */
 export const subscriptionCheckoutRequestSchema = z.strictObject({
-  catalog_key: selfServePlanKey(),
+  catalog_key: selfServePlanKeySchema,
   credential_mode: credentialModeSchema,
   country_code: z
     .string()
@@ -40,7 +39,7 @@ export const packPurchaseRequestSchema = z.strictObject({
 export type PackPurchaseRequest = z.input<typeof packPurchaseRequestSchema>;
 
 /** A base-plan change; the server decides the direction and prices an upgrade. */
-export const planChangeRequestSchema = z.strictObject({ catalog_key: selfServePlanKey() });
+export const planChangeRequestSchema = z.strictObject({ catalog_key: selfServePlanKeySchema });
 export type PlanChangeRequest = z.input<typeof planChangeRequestSchema>;
 
 /** Claiming the no-card early-access offer, with both explicit consents. */

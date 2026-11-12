@@ -5,6 +5,9 @@ import {
   credentialModeSchema,
   currencySchema,
   providerModeSchema,
+  selfServePlanKeySchema,
+  taxBehaviorSchema,
+  type ProviderMode,
 } from '@citeladder/contracts/billing';
 import { policy } from '../config.ts';
 import { catalogAuthoring as cfg } from '../config/billing-authoring.ts';
@@ -59,7 +62,7 @@ const basePrice = z.strictObject({
 const regionalPrice = z.strictObject({
   currency: currencySchema,
   amount_minor: units.min(100),
-  tax_behavior: z.enum(['inclusive', 'exclusive']),
+  tax_behavior: taxBehaviorSchema,
   tax_minor: units,
   provider_price_ref: z.string().default(''),
   provider_mode: providerModeSchema,
@@ -87,7 +90,7 @@ const plan = z.strictObject({
 const itemPrice = z.strictObject({
   currency: currencySchema,
   amount_minor: units.min(100),
-  tax_behavior: z.enum(['inclusive', 'exclusive']),
+  tax_behavior: taxBehaviorSchema,
   fx_inr_per_usd: z.string().default(''),
   tax_rate: z.string().default(''),
 });
@@ -101,7 +104,7 @@ const item = z.strictObject({
   name: z.string().min(1).max(80),
   description: z.string().max(255),
   available: z.boolean(),
-  eligible_plan_keys: z.array(z.enum(['tier_1', 'tier_2', 'tier_3'])).min(1),
+  eligible_plan_keys: z.array(selfServePlanKeySchema).min(1),
   quantity_min: units.min(1),
   quantity_max: units.min(1).max(100),
   expiry_days: units.min(1).max(366),
@@ -201,7 +204,7 @@ function validateRegionalPrice(region: string, price: RegionalPrice, usdMinor: n
 
 function validatePlanPrices(row: AuthoredPlan): string[] {
   const refs: string[] = [];
-  for (const mode of ['byok', 'funded'] as const) {
+  for (const mode of credentialModeSchema.options) {
     const base = mode === 'byok' ? row.byok_price : row.funded_price;
     for (const [region, price] of Object.entries(row.regional_prices[mode])) {
       if (!price) continue;
@@ -302,7 +305,7 @@ function level(key: string, label: string) {
   return value;
 }
 export function launchCatalog(options: {
-  mode: 'test' | 'live' | null;
+  mode: ProviderMode | null;
   rate?: string;
   settings?: BillingSettings;
 }) {
@@ -425,7 +428,7 @@ export function launchCatalog(options: {
       name: i.name,
       description: i.description,
       available: i.available,
-      eligible_plan_keys: ['tier_1', 'tier_2', 'tier_3'],
+      eligible_plan_keys: [...selfServePlanKeySchema.options],
       quantity_min: 1,
       quantity_max: cfg.quantityMax,
       expiry_days: cfg.expiryDays,

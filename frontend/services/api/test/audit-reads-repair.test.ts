@@ -98,6 +98,18 @@ describe('persisted audit reads and immutable repair', () => {
       coverage: 0,
     });
   });
+  it('offers a cancel while the run executes and withdraws it once reporting starts', async () => {
+    const t = await seed();
+    const cancelableAt = async (status: 'running' | 'reporting' | 'completed') => {
+      await db.updateTable('audits').set({ status }).where('id', '=', t.auditId).execute();
+      return (await readAudit(db, t.workspaceId, t.auditId)).cancelable;
+    };
+    expect([
+      await cancelableAt('running'),
+      await cancelableAt('reporting'),
+      await cancelableAt('completed'),
+    ]).toEqual([true, false, false]);
+  });
   it('resumes events at exact microsecond and UUID order and rejects foreign cursors', async () => {
     const t = await seed(),
       foreign = await seed();

@@ -3,7 +3,9 @@ import {
   billingRegionSchema,
   credentialModeSchema,
   currencySchema,
+  planCatalogKeySchema,
   providerModeSchema,
+  taxBehaviorSchema,
 } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
@@ -27,7 +29,7 @@ const grants = z
 const price = z.object({
   currency: currencySchema,
   amount_minor: amount,
-  tax_behavior: z.enum(['inclusive', 'exclusive']),
+  tax_behavior: taxBehaviorSchema,
   provider_price_ref: z.string().default(''),
 });
 const regional = price.extend({
@@ -42,7 +44,7 @@ const regional = price.extend({
   tax_verified: z.boolean().default(false),
 });
 const plan = z.object({
-  key: z.enum(['tier_1', 'tier_2', 'tier_3', 'enterprise']),
+  key: planCatalogKeySchema,
   name: z.string(),
   description: z.string(),
   cadence: z.enum(['monthly', 'custom']),

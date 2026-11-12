@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
-import { currencySchema, type Currency } from '@citeladder/contracts/billing';
+import { currencySchema, type Currency, type ProviderMode } from '@citeladder/contracts/billing';
 import { policy } from '../config.ts';
 import { amount, type Pending } from './contracts.ts';
 import { refuse } from './refusals.ts';
@@ -85,7 +85,7 @@ export type Evidence =
       notes: Record<string, string>;
     };
 export interface BillingProvider {
-  mode: 'test' | 'live';
+  mode: ProviderMode;
   create(pending: Pending): Promise<string>;
   recover(pending: Pending): Promise<string | null>;
   evidence(reference: string, base: boolean): Promise<Evidence>;
@@ -116,7 +116,7 @@ export class ProviderError extends Error {
 
 export function configured(
   settings: RazorpaySettings,
-): settings is RazorpaySettings & { mode: 'test' | 'live' } {
+): settings is RazorpaySettings & { mode: ProviderMode } {
   return (
     settings.mode !== 'disabled' &&
     !settings.conflicting &&
@@ -210,7 +210,7 @@ function payment(data: unknown): PaymentEvidence | null {
 }
 
 export class RazorpayProvider implements BillingProvider {
-  readonly mode: 'test' | 'live';
+  readonly mode: ProviderMode;
   private readonly shared: BillingSettings;
   private readonly adapter: RazorpaySettings;
   private readonly transport: typeof fetch;
