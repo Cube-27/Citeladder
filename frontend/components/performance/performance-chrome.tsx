@@ -134,11 +134,12 @@ export function PerformanceToolbar({
  */
 export function PerformanceActions({
   latestDate,
-  hasConnections,
+  noConnections,
   sync,
 }: Readonly<{
   latestDate: string | null;
-  hasConnections: boolean;
+  /** The connections read answered with none; unknown is not none. */
+  noConnections: boolean;
   sync: ReturnType<typeof usePerformanceSync>;
 }>) {
   return (
@@ -149,7 +150,7 @@ export function PerformanceActions({
       <Button
         variant="secondary"
         onClick={sync.start}
-        disabled={!hasConnections}
+        disabled={noConnections}
         pending={sync.syncing || sync.mutation.isPending}
         pendingLabel="Syncing…"
         data-testid="sync-now-button"

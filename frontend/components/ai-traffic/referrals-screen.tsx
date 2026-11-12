@@ -56,7 +56,9 @@ export function AiReferralsScreen({
         onChangeRange: setRange,
         granularity,
         onChangeGranularity: setGranularity,
-        fetching: dashboardQuery.isFetching,
+        // Only a read that has an answer on screen is "previous data shown";
+        // the first load has none, and the content already says it is loading.
+        refreshing: dashboardQuery.isFetching && dashboardQuery.data !== undefined,
       })}
     />
   );
@@ -67,16 +69,16 @@ function referralsControls({
   onChangeRange,
   granularity,
   onChangeGranularity,
-  fetching,
+  refreshing,
 }: Readonly<{
   range: AiReferralsRange;
   onChangeRange: (range: AiReferralsRange) => void;
   granularity: AiReferralsGranularity;
   onChangeGranularity: (granularity: AiReferralsGranularity) => void;
-  fetching: boolean;
+  refreshing: boolean;
 }>): FilterBarProps {
   return {
-    status: fetching ? (
+    status: refreshing ? (
       <>
         <Spinner />
         Updating data… Previous data shown.

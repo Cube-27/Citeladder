@@ -170,7 +170,9 @@ export function FanoutEvidence({
   const selectionWide = isSelectionWide(summary, scopeNarrowed);
   const matched = summaryMatchesInput ? selectionMatchedQueries(summary, scopeNarrowed) : null;
 
-  if (query.isLoading) return <EvidenceSkeleton />;
+  // Pending, not merely loading: a read still waiting on its scope fetches
+  // nothing and has no items, which is not "no searches recorded".
+  if (query.isPending) return <EvidenceSkeleton />;
   if (query.isError) return <EvidenceError onRetry={() => query.refetch()} />;
   if (items.length === 0) {
     return <FanoutEmpty isFiltered={isFiltered} onClearFilters={onClearFilters} />;

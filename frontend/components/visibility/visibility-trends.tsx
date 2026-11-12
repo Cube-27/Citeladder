@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
-import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
 import { TrendChart } from '@/components/ui/trend-chart';
@@ -19,7 +18,6 @@ import { RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
 import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
 import type { SurfaceRates, Visibility, VisibilityTrendPoint } from '@citeladder/contracts';
-import { isMetricsPending } from '@/lib/api/visibility-queries';
 import {
   formatPosition,
   formatPositionExact,
@@ -49,15 +47,18 @@ const metricCodec = stringUrlCodec(
 
 export function VisibilityTrends({
   query,
-  visibilityQuery,
+  selected,
+  selectionBusy,
   engineFilter,
   surfaceRatesQuery,
   surfaceEngine,
   onEvidence,
 }: Readonly<{
   query: UseQueryResult<VisibilityTrendPoint[], unknown>;
-  /** `null` data: nothing measured for the selection (see `visibilityQueries.project`). */
-  visibilityQuery: UseQueryResult<Visibility | null, unknown>;
+  /** The measured selection, once `SelectionGate` has settled it. */
+  selected: Visibility;
+  /** The selection is refetching under a newer filter. */
+  selectionBusy: boolean;
   engineFilter: VisibilityFilters['engine'];
   surfaceRatesQuery: UseQueryResult<SurfaceRates, unknown>;
   /** Non-null only while the surface filter names an observed surface. */
@@ -70,31 +71,6 @@ export function VisibilityTrends({
   // Which single brand the chart is plotting, or null for the default roster.
   // URL-held so a focused comparison survives a reload and can be linked to.
   const [focused, setFocused] = useUrlState('brand', optionalStringUrlCodec);
-  const selected = visibilityQuery.data;
-  // Nothing measured, results still being written and a failed read are three
-  // different answers. Metrics not written yet is the normal state for the
-  // seconds after a run ends; reporting it as an error told readers their
-  // results were lost.
-  if (selected === null)
-    return <QueryState kind="empty" inline message="No measured run for this selection yet." />;
-  if (isMetricsPending(visibilityQuery.error))
-    return (
-      <Callout tone="info">
-        Results for this run are still being prepared. They appear here as soon as they are ready.
-      </Callout>
-    );
-  if (visibilityQuery.isError) {
-    return (
-      <QueryState
-        kind="error"
-        error={visibilityQuery.error}
-        fallback="Could not load the selected measurement."
-        onRetry={() => void visibilityQuery.refetch()}
-        pending={visibilityQuery.isFetching}
-      />
-    );
-  }
-  if (!selected) return <QueryState kind="loading" label="Loading selected measurement…" />;
   // A `brand` carried in from another run's URL may name nobody in THIS
   // selection. Plotting it anyway drew an empty chart captioned with a brand
   // the run never measured, which reads as "measured, scored zero". An
@@ -105,7 +81,7 @@ export function VisibilityTrends({
     <RankingRowsTable rows={selected.rankings} onSelect={setFocused} selectedName={focusedBrand} />
   );
   return (
-    <Stack gap="workspace" aria-busy={visibilityQuery.isFetching}>
+    <Stack gap="workspace" aria-busy={selectionBusy}>
       <PooledSelectionNote selected={selected} />
       <HeadlineMetrics selected={selected} />
       <CoverageStrip selected={selected} />

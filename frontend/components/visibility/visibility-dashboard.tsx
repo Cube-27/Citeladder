@@ -10,6 +10,8 @@ import { VisibilityPerception } from '@/components/visibility/visibility-percept
 import { VisibilityAccuracy } from '@/components/visibility/visibility-accuracy';
 import { VisibilityAds } from '@/components/visibility/visibility-ads';
 import { VisibilityByMarket } from '@/components/visibility/visibility-by-market';
+import { SelectionGate } from '@/components/visibility/selection-gate';
+import type { Visibility } from '@citeladder/contracts';
 import {
   VisibilityActions,
   useVisibilityFilterMenu,
@@ -169,6 +171,11 @@ function DashboardPanel({
   filters: ReturnType<typeof useVisibilityFilters>;
   queries: ReturnType<typeof useVisibilityQueries>;
 }>) {
+  // Every panel below reads the selection's run, so each waits behind the
+  // selection's own state; the market table reads the project and does not.
+  const gated = (panel: (selected: Visibility) => ReactNode) => (
+    <SelectionGate query={queries.visibilityQuery}>{panel}</SelectionGate>
+  );
   const panels: Partial<Record<VisibilityTab, ReactNode>> = {
     trends: (
       <Stack gap="workspace">
@@ -178,23 +185,26 @@ function DashboardPanel({
           market={filters.market}
           onSelectMarket={filters.setMarket}
         />
-        <VisibilityTrends
-          query={queries.trendQuery}
-          visibilityQuery={queries.visibilityQuery}
-          engineFilter={filters.engine}
-          surfaceRatesQuery={queries.surfaceRatesQuery}
-          surfaceEngine={queries.surfaceEngine}
-          hasRuns={queries.hasRuns}
-          isFiltered={filters.isTrendFiltered}
-          onEvidence={filters.openEvidence}
-        />
+        {gated((selected) => (
+          <VisibilityTrends
+            query={queries.trendQuery}
+            selected={selected}
+            selectionBusy={queries.visibilityQuery.isFetching}
+            engineFilter={filters.engine}
+            surfaceRatesQuery={queries.surfaceRatesQuery}
+            surfaceEngine={queries.surfaceEngine}
+            hasRuns={queries.hasRuns}
+            isFiltered={filters.isTrendFiltered}
+            onEvidence={filters.openEvidence}
+          />
+        ))}
       </Stack>
     ),
-    sources: <VisibilitySources filters={filters} queries={queries} />,
-    perception: <VisibilityPerception filters={filters} queries={queries} />,
-    accuracy: <VisibilityAccuracy filters={filters} queries={queries} />,
-    ads: <VisibilityAds filters={filters} queries={queries} />,
-    'query-fanout': (
+    sources: gated(() => <VisibilitySources filters={filters} queries={queries} />),
+    perception: gated(() => <VisibilityPerception filters={filters} queries={queries} />),
+    accuracy: gated(() => <VisibilityAccuracy filters={filters} queries={queries} />),
+    ads: gated(() => <VisibilityAds filters={filters} queries={queries} />),
+    'query-fanout': gated(() => (
       <FanoutEvidence
         query={queries.evidenceQuery}
         isFiltered={filters.isFiltered}
@@ -205,7 +215,7 @@ function DashboardPanel({
         scopeReady={queries.hasEvidenceScope}
         scopeNarrowed={queries.evidenceScopeNarrowed}
       />
-    ),
+    )),
   };
   return panels[filters.activeTab] ?? null;
 }

@@ -242,7 +242,7 @@ export function LaunchDialog({
       onOpenChange={onOpenChange}
       promptSets={promptSetsQuery.data?.prompt_sets ?? []}
       repetitionLimits={limits}
-      promptSetsLoading={promptSetsQuery.isLoading}
+      promptSetsRead={promptSetsQuery}
       configuredEngines={configuredEngines}
       unverifiedEngines={unverifiedEngines}
       promptSetId={promptSelection.effectivePromptSetId}

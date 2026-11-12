@@ -74,7 +74,9 @@ function UsagePlot({
       />
     );
   }
-  if (query.isLoading) return <Skeleton variant="chart" />;
+  // Pending, not merely loading: a read still waiting on its run fetches
+  // nothing and has no data, which is not "no sources were used".
+  if (query.isPending) return <Skeleton variant="chart" />;
   const series = toChartSeries(query.data);
   const [first, ...rest] = series;
   if (!first) {
@@ -155,7 +157,7 @@ function typeSegments(slices: readonly TypeSlice[]): DonutSlice[] {
 
 type ReadState = Pick<
   UseQueryResult<unknown>,
-  'error' | 'isError' | 'isFetching' | 'isLoading' | 'refetch'
+  'error' | 'isError' | 'isFetching' | 'isPending' | 'refetch'
 >;
 
 /** The citation mix, counted server-side over the whole selection. */
@@ -206,7 +208,7 @@ function TypesMix({
       />
     );
   }
-  if (query.isLoading) return <Skeleton variant="chart" />;
+  if (query.isPending) return <Skeleton variant="chart" />;
   if (!slices.length && total <= 0) {
     return (
       <div className="grid place-items-center">

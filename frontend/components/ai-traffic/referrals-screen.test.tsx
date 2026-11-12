@@ -140,6 +140,26 @@ describe('AiReferralsScreen', () => {
     ).toBeInTheDocument();
   });
 
+  it('never says previous data is shown on a first load that has none', async () => {
+    let release: ((response: Response) => void) | undefined;
+    mswServer.use(
+      http.get(
+        endpoint,
+        () =>
+          new Promise<Response>((resolve) => {
+            release = resolve;
+          }),
+      ),
+    );
+    renderWithProviders(<AiReferralsScreen />, { projectSelection: { activeProject } });
+
+    await waitFor(() => expect(release).toBeTypeOf('function'));
+    expect(screen.queryByText('Updating data… Previous data shown.')).not.toBeInTheDocument();
+
+    release?.(HttpResponse.json(dashboard));
+    expect(await screen.findAllByText('3 days')).toHaveLength(2);
+  });
+
   it('keeps the chart while the interval refetches', async () => {
     let releaseMonth: ((response: Response) => void) | undefined;
     mswServer.use(

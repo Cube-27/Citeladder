@@ -35,5 +35,5 @@ export function usePerception(
     refetchInterval: (current) =>
       current.state.data?.state === 'pending' ? PERCEPTION_PENDING_POLL_MS : false,
   });
-  return { query, enabled };
+  return query;
 }

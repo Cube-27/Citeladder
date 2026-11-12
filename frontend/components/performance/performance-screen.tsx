@@ -361,7 +361,10 @@ export function PerformanceScreen() {
       actions={
         <PerformanceActions
           latestDate={data.coverage.latest_date}
-          hasConnections={Boolean(connections.data?.length)}
+          // Only an answered, empty list is "no connections". While the read
+          // is pending or after it failed the server decides: the sync itself
+          // says "nothing to sync" when there is nothing.
+          noConnections={connections.isSuccess && connections.data.length === 0}
           sync={sync}
         />
       }

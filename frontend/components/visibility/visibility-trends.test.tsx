@@ -1,21 +1,11 @@
 import { screen } from '@testing-library/react';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { describe, expect, it } from 'vite-plus/test';
 
-import { ApiError } from '@/lib/api/errors';
 import type { SurfaceRates, Visibility, VisibilityTrendPoint } from '@citeladder/contracts';
 import { renderWithProviders as render } from '@/test/render';
 
 import { VisibilityTrends } from './visibility-trends';
-
-const failed = (error: Error) =>
-  ({
-    data: undefined,
-    error,
-    isError: true,
-    isFetching: false,
-    refetch: vi.fn(),
-  }) as unknown as UseQueryResult<Visibility | null>;
 
 const ranking = (name: string, mention: number | null, isBrand = false) => ({
   name,
@@ -65,11 +55,12 @@ const loaded = (points: VisibilityTrendPoint[]) =>
     VisibilityTrendPoint[]
   >;
 
-function renderTrends(visibilityQuery: UseQueryResult<Visibility | null>, query = loaded([])) {
+function renderTrends(query = loaded([])) {
   render(
     <VisibilityTrends
       query={query}
-      visibilityQuery={visibilityQuery}
+      selected={selected}
+      selectionBusy={false}
       engineFilter="all"
       surfaceRatesQuery={{ data: undefined } as unknown as UseQueryResult<SurfaceRates>}
       surfaceEngine={null}
@@ -80,41 +71,8 @@ function renderTrends(visibilityQuery: UseQueryResult<Visibility | null>, query 
 }
 
 describe('Visibility trends', () => {
-  it('says nothing is measured for a selection with no measured run', () => {
-    renderTrends({ data: null, isError: false } as UseQueryResult<Visibility | null>);
-    expect(screen.getByText('No measured run for this selection yet.')).toBeVisible();
-    expect(screen.queryByText(/still being prepared/u)).toBeNull();
-  });
-
-  it('says results are still being prepared while the run is written', () => {
-    renderTrends(
-      failed(
-        new ApiError('Metrics not available for audit', 404, '', undefined, {
-          code: 'visibility_metrics_pending',
-        }),
-      ),
-    );
-    expect(
-      screen.getByText(
-        'Results for this run are still being prepared. They appear here as soon as they are ready.',
-      ),
-    ).toBeVisible();
-    expect(screen.queryByRole('button', { name: /retry/i })).toBeNull();
-  });
-
-  it('shows a run that does not exist as a failed read, with a retry', () => {
-    renderTrends(
-      failed(new ApiError('Audit not found', 404, '', undefined, { code: 'not_found' })),
-    );
-    expect(screen.getByRole('button', { name: /retry/i })).toBeVisible();
-    expect(screen.queryByText('No measured run for this selection yet.')).toBeNull();
-  });
-
   it('shows no Over time card for a single period, only the table', () => {
-    renderTrends(
-      { data: selected, isError: false } as UseQueryResult<Visibility | null>,
-      loaded([point('2026-11-03T00:00:00Z', 0.31)]),
-    );
+    renderTrends(loaded([point('2026-11-03T00:00:00Z', 0.31)]));
     expect(screen.getByRole('region', { name: 'Brand and competitors' })).toBeVisible();
     expect(screen.queryByText('Over time')).toBeNull();
     expect(screen.queryByRole('group', { name: /over time/u })).toBeNull();
@@ -124,7 +82,8 @@ describe('Visibility trends', () => {
     const { container } = render(
       <VisibilityTrends
         query={loaded([point('2026-11-01T00:00:00Z', 0.25), point('2026-11-03T00:00:00Z', 0.31)])}
-        visibilityQuery={{ data: selected, isError: false } as UseQueryResult<Visibility | null>}
+        selected={selected}
+        selectionBusy={false}
         engineFilter="all"
         surfaceRatesQuery={{ data: undefined } as unknown as UseQueryResult<SurfaceRates>}
         surfaceEngine={null}
@@ -147,7 +106,7 @@ describe('Visibility trends', () => {
   });
 
   it('names the headline mean position apart from the table Rank', () => {
-    renderTrends({ data: selected, isError: false } as UseQueryResult<Visibility | null>);
+    renderTrends();
     expect(screen.getByText('Average position in answers')).toBeVisible();
     expect(screen.queryByText('Average position')).toBeNull();
     expect(screen.getByRole('columnheader', { name: 'Rank' })).toBeVisible();

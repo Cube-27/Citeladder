@@ -310,6 +310,20 @@ describe('NewChatScreen', () => {
     expect(bodies).toEqual([{ message: 'Plan this', context: {} }]);
   });
 
+  it('reports a failed catalog read instead of showing no workflows', async () => {
+    // The first matching handler answers, so the failure goes ahead of the base set.
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () =>
+        HttpResponse.json({ detail: 'Bad request' }, { status: 400 }),
+      ),
+      ...baseHandlers(),
+    );
+    renderNewChat('');
+
+    expect(await screen.findByText("Couldn't load skills and workflows")).toBeVisible();
+    expect(screen.queryByText('Or start from a workflow')).not.toBeInTheDocument();
+  });
+
   it('explains a plan without the agent instead of offering to send', async () => {
     entitlement.agent = false;
     mswServer.use(...baseHandlers());
