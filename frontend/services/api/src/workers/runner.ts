@@ -5,7 +5,7 @@ import pg from 'pg';
 import { policy, type ServiceConfig } from '../config.ts';
 import { resolveSettingSpec } from '../config/settings.ts';
 import { loadWorkerSettings } from '../config/analytics.ts';
-import { poolOptions, type Database } from '../db/database.ts';
+import { observeDatabaseSize, poolOptions, type Database } from '../db/database.ts';
 import { createAgentBindings } from '../agent/bindings.ts';
 import { auditRuntime } from '../audits/config.ts';
 import { auditProjections } from '../audits/projections.ts';
@@ -468,6 +468,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'integration-dispatcher', run: (canAdmit) => dispatcher.runOnce(canAdmit) },
       { name: 'crawl-log-maintenance', run: (canAdmit) => crawlLogTick(db, new Date(), canAdmit) },
       { name: 'billing-recovery', run: billing },
+      { name: 'database-size', run: () => observeDatabaseSize(db) },
     ] satisfies RunnerLane[],
   };
 }

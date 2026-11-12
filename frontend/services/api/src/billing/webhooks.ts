@@ -6,7 +6,23 @@ import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { policy } from '../config.ts';
+import { getLogger } from '../logging.ts';
 import { authenticateSignature, configured } from './razorpay.ts';
+
+const logger = getLogger('api.billing');
+
+/**
+ * One ERROR record per webhook event that just entered quarantine: a
+ * quarantined event needs an operator, and the monitoring alert matches this
+ * event name (`infra/gcp/monitoring.tf`).
+ */
+export function reportQuarantined(rows: readonly { id: string; error_code: string }[]): void {
+  for (const row of rows)
+    logger.error('billing.webhook_quarantined', {
+      webhook_event_id: row.id,
+      error_code: row.error_code,
+    });
+}
 
 const envelope = z.object({
   event: z.string().max(100),
@@ -139,13 +155,15 @@ export async function receiveWebhook(
       .where('external_event_id', '=', eventId)
       .executeTakeFirstOrThrow();
     if (prior.payload_sha256 !== digest) {
-      await db
+      const quarantined = await db
         .updateTable('billing_webhook_events')
         .set({ processing_state: 'quarantined', error_code: 'event_id_digest_conflict' })
         .where('id', '=', prior.id)
         // A completed (applied or ignored) event keeps its state; only unapplied rows quarantine.
         .where('processing_state', '=', 'pending')
+        .returning(['id', 'error_code'])
         .execute();
+      reportQuarantined(quarantined);
       throw new ApiError(400, 'event_id_digest_conflict');
     }
   }

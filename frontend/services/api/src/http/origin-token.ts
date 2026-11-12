@@ -58,8 +58,9 @@ async function signedByOrigin(keys: readonly string[], facts: OriginSignedFacts,
  * path and visitor address; a request without a fresh, valid signature from
  * the current or previous key is refused before any route runs. The signed
  * public host must be allowlisted, and the signed visitor address is the only
- * client address the API trusts. The one route registered ahead of it is the
- * scheduled tick (`workers/scheduled-tick.ts`), admitted by Google ID token.
+ * client address the API trusts. Two routes are registered ahead of it: the
+ * scheduled tick (`workers/scheduled-tick.ts`), admitted by Google ID token,
+ * and the constant `GET /health` liveness answer (`app.ts`).
  */
 export function originToken(config: ServiceConfig): MiddlewareHandler<AppEnv> {
   const keys = config.execution.protectOrigin

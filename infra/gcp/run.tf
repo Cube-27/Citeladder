@@ -75,13 +75,25 @@ resource "google_cloud_run_v2_service" "api" {
         }
       }
 
-      # Every HTTP path requires the origin token, so readiness is a TCP probe.
       startup_probe {
         tcp_socket {
           port = 8100
         }
         period_seconds    = 3
         failure_threshold = 20
+      }
+
+      # GET /health alone skips the origin token (AR-10). It never touches the
+      # database, so an outage there does not restart healthy instances; a
+      # wedged event loop (90 s without an answer) does.
+      liveness_probe {
+        http_get {
+          path = "/health"
+          port = 8100
+        }
+        period_seconds    = 30
+        timeout_seconds   = 5
+        failure_threshold = 3
       }
     }
   }

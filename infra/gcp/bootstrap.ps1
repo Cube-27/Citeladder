@@ -85,6 +85,8 @@ $apis = @(
     'iamcredentials.googleapis.com',
     # The owner's break-glass database shell and tunnel; the deployer never uses it.
     'iap.googleapis.com',
+    # The uptime check, alert policies and their email channel (monitoring.tf).
+    'monitoring.googleapis.com',
     # The crawl-log reader pulls customers' subscriptions with this project's identity.
     'pubsub.googleapis.com',
     'run.googleapis.com',
@@ -143,8 +145,14 @@ $projectRoles = @(
     'roles/compute.securityAdmin',
     'roles/iam.serviceAccountAdmin',
     'roles/iam.serviceAccountUser',
-    # Terraform manages the API request-log exclusion.
+    # Terraform manages the API request-log exclusion and the log-based metrics.
     'roles/logging.configWriter',
+    # The uptime check, alert policies and email channel (monitoring.tf).
+    'roles/monitoring.alertPolicyEditor',
+    'roles/monitoring.notificationChannelEditor',
+    'roles/monitoring.uptimeCheckConfigEditor',
+    # Reads the metric descriptors those policies name.
+    'roles/monitoring.viewer',
     # Deploys services/jobs and executes migration and smoke executions.
     'roles/run.admin',
     "projects/$ProjectId/roles/$secretRole"

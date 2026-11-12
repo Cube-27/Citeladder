@@ -38,6 +38,26 @@ variable "budget_units" {
   }
 }
 
+variable "alert_email" {
+  type        = string
+  description = "Address that receives the monitoring alerts (monitoring.tf); set from the GCP_ALERT_EMAIL deploy variable, never committed."
+  sensitive   = true
+  validation {
+    condition     = can(regex("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$", var.alert_email))
+    error_message = "alert_email must be an email address."
+  }
+}
+
+variable "database_size_alert_gb" {
+  type        = number
+  default     = 20
+  description = "Database size, in GB, that raises the disk usage alert; the database shares the 30 GB boot disk with the OS."
+  validation {
+    condition     = var.database_size_alert_gb > 0 && var.database_size_alert_gb < 30
+    error_message = "database_size_alert_gb must be between 0 and the 30 GB boot disk."
+  }
+}
+
 variable "region" {
   type    = string
   default = "us-central1"

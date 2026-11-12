@@ -217,6 +217,8 @@ This replaces the backlog's "Alerts on failed job executions and errors" line.
 - **OPS-008:** `logging.ts` emits Cloud Logging `severity` (ERROR, WARNING,
   INFO).
 - **OPS-017:** add an HTTP liveness probe on the API service (`run.tf`).
+- The probe and the uptime check cannot sign requests, so `GET /health` skips
+  the origin token (**AR-10**).
 - **Done when:** a synthetic error fires an alert in a staging-like check, and
   the plan is no-op apart from the new resources.
 
@@ -711,6 +713,7 @@ Recorded from the owner's answers in the audit follow-up conversation of
 | AR-7 | Controls a role lacks are hidden, not disabled | FE-102 |
 | AR-8 | The browser matrix rises to Chrome/Edge 120, Safari/iOS 17.4 and Samsung 25, with an update notice | FE-001 |
 | AR-9 | Non-UTF-8 imports are refused with guidance, and every import offers a sample CSV download | FE-008 |
+| AR-10 | `GET /health` returns a constant body without the origin token, for the HTTP liveness probe and the uptime check; every other path, `/ready` included, still requires it (owner, 2026-11-12, PR 9 conversation) | OPS-005, OPS-017 |
 
 The owner also decided, and recorded where the work lives:
 - **Site Health crawling and issue tracking (Spec 5):** SH-B1 to SH-B13, in the

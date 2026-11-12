@@ -50,9 +50,11 @@ describe('scheduled tick', () => {
 
   it('runs every periodic owner for the scheduler identity without an origin signature', async () => {
     const phases: string[] = [];
+    const sizes: unknown[] = [];
     const restore = setLogSink((line) => {
-      const record = JSON.parse(line) as { event?: string; phase?: string };
+      const record = JSON.parse(line) as { event?: string; phase?: string; size_bytes?: unknown };
       if (record.event === 'tick_phase_completed' && record.phase) phases.push(record.phase);
+      if (record.event === 'database_size_observed') sizes.push(record.size_bytes);
     });
     try {
       const result = await tick(`Bearer ${await idToken({ email: invoker, aud: audience })}`);
@@ -75,7 +77,11 @@ describe('scheduled tick', () => {
       'integration-dispatcher',
       'crawl-log-maintenance',
       'billing-recovery',
+      'database-size',
     ]);
+    // The disk usage alert reads this byte count; any real PostgreSQL database exceeds 1 MB.
+    expect(sizes).toHaveLength(1);
+    expect(Number.isSafeInteger(sizes[0]) && Number(sizes[0]) > 1_000_000).toBe(true);
   });
 
   it('refuses a missing token, another identity, another audience and another issuer', async () => {

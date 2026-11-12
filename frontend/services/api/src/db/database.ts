@@ -6,7 +6,7 @@
  * SQL migrations (`migrations/`) are the only schema author; this module
  * holds generated types, never DDL.
  */
-import { Kysely, PostgresDialect } from 'kysely';
+import { Kysely, PostgresDialect, sql } from 'kysely';
 import pg from 'pg';
 
 import type { ServiceConfig } from '../config.ts';
@@ -31,6 +31,21 @@ export const APP_DATABASE_ROLE = 'citeladder_app';
 export function inTransaction<T>(db: Database, work: (trx: Database) => Promise<T>): Promise<T> {
   return db.isTransaction ? work(db) : db.transaction().execute(work);
 }
+
+/**
+ * Logs the current database's on-disk size. The database lives on the VM's
+ * boot disk, which has no guest disk metric, so this record is what the disk
+ * usage alert reads (`infra/gcp/monitoring.tf`). Returns the size in bytes.
+ */
+export async function observeDatabaseSize(db: Database): Promise<number> {
+  const { rows } = await sql<{
+    size_bytes: string;
+  }>`select pg_database_size(current_database())::text as size_bytes`.execute(db);
+  const sizeBytes = Number(rows[0]?.size_bytes);
+  getLogger('db').info('database_size_observed', { size_bytes: sizeBytes });
+  return sizeBytes;
+}
+
 export type DatabaseConfig = Pick<ServiceConfig, 'database' | 'databaseUrl' | 'appName'> & {
   execution?: Pick<ServiceConfig['execution'], 'runnerJob' | 'poolSize'>;
 };

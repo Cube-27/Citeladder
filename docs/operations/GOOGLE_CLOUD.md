@@ -34,13 +34,22 @@ Docs Worker (static, no origin)                            │ starts runner aft
   origin token (current or rotating previous). It also requires an allowlisted
   public host (`citeladder.com`, `app.citeladder.com` or `api.citeladder.com`,
   from `PUBLIC_WEBSITE_URL`, `FRONTEND_URL` and `PUBLIC_API_URL`), and that applies to
-  `/health`, `/ready` and MCP too. The admitted host drives MCP origin checks.
+  `/ready` and MCP too. The admitted host drives MCP origin checks.
   The admitted `X-CiteLadder-Client-IP` (Cloudflare's `CF-Connecting-IP`)
   drives per-visitor rate limits. Workers strip any client-supplied copies of
-  these headers. The startup probe is TCP. The single exception is
-  `POST /internal/tick`: it skips the origin token and admits only a
+  these headers. There are two exceptions. `GET /health` answers the constant
+  `{"status":"ok"}` without the origin token, because the HTTP liveness probe
+  and the uptime check cannot sign (owner, AR-10); it reads nothing. The startup
+  probe stays TCP. `POST /internal/tick` skips the origin token and admits only a
   Google-signed ID token for the scheduler account with the configured
   audience, and it is served only when both are configured.
+- **Monitoring.** An uptime check calls `GET /health` every five minutes from
+  three regions. Email alerts, to the address in the `GCP_ALERT_EMAIL`
+  repository variable, fire on: a failing uptime check; any API 5xx response in
+  five minutes; any failed job execution; a billing webhook entering quarantine;
+  and a database larger than `database_size_alert_gb` (20 GB of the 30 GB disk).
+  The webhook and database alerts read log-based metrics from the API's
+  structured logs, which carry Cloud Logging `severity`.
 - **Database.** The VM has no external address. PostgreSQL accepts
   `hostssl` SCRAM connections to the `citeladder` database only from the
   private subnet, plus loopback for break-glass shells, for two roles: the
@@ -63,7 +72,8 @@ Docs Worker (static, no origin)                            │ starts runner aft
   keys exist. The deployer is still powerful: it administers Cloud Run, Cloud
   Scheduler, Artifact Registry and the project's service accounts, may act as
   any of them, manages the database VM, VPC and firewall rules, and edits the
-  logging exclusion and the billing budget. It cannot edit project IAM. On
+  logging exclusion, log-based metrics, uptime checks, alert policies,
+  notification channels and the billing budget. It cannot edit project IAM. On
   Secret Manager it manages containers and their IAM project-wide, and reads
   and writes versions only of the CiteLadder runtime secrets. On Cloud
   Storage it holds only the Terraform state bucket. The API account
@@ -114,8 +124,9 @@ Docs Worker (static, no origin)                            │ starts runner aft
 
 - The deploy creates each API revision with no traffic and smokes it at its
   tagged URL: authenticated `/ready`, the OAuth provider catalog and MCP
-  metadata must return `200`. An anonymous or foreign-host request must return
-  `403`, and so must an unauthenticated `POST /internal/tick`. A failed smoke
+  metadata must return `200`, and so must an anonymous `GET /health`. An
+  anonymous or foreign-host `/ready` must return `403`, and so must an
+  unauthenticated `POST /internal/tick`. A failed smoke
   leaves the previous revision serving all traffic. After the shift, a forced
   run of the tick scheduler must succeed.
 - Owner acceptance after the Worker deploys: sign-in, project creation, a
