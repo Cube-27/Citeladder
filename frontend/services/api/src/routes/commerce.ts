@@ -148,9 +148,7 @@ export const commerceRoutes = [
         db,
         await writeScopeOf(db, c, path.project_id),
         await readBody(c, buyerGenerateInput),
-        undefined,
-        undefined,
-        key,
+        { idempotencyKey: key },
       );
     },
   }),

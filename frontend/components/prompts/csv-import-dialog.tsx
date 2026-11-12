@@ -70,7 +70,6 @@ export function CsvImportDialog({
 
   const importable = useMemo(() => (parsed ? validRows(parsed) : []), [parsed]);
   const importNoun = importable.length === 1 ? 'prompt' : 'prompts';
-  const errorCount = parsed ? parsed.rows.filter((row) => row.errors.length > 0).length : 0;
 
   const handleOpenChange = (next: boolean) => {
     if (!next) reset();
@@ -134,32 +133,38 @@ export function CsvImportDialog({
           <Callout tone="negative">{parsed.errors.join(' ')}</Callout>
         ) : null}
 
-        {parsed && parsed.rows.length > 0 ? (
-          <CsvImportPreview
-            errorCount={errorCount}
-            fileName={fileName}
-            rowCount={parsed.rows.length}
-          >
-            <DataTable nested label="Parsed rows" columns={PREVIEW_COLUMNS}>
-              {parsed.rows.map((row) => {
-                const invalid = row.errors.length > 0;
-                return (
-                  <TableRow key={row.line} className={invalid ? 'opacity-60' : undefined}>
-                    <TableCell numeric className="text-ink-muted">
-                      {row.line}
-                    </TableCell>
-                    <TableCell>{row.input.topic || <UnavailableValue state="not_set" />}</TableCell>
-                    <TableCell>{row.input.text || <UnavailableValue state="not_set" />}</TableCell>
-                    <TableCell>
-                      <RowStatus errors={row.errors} />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </DataTable>
-          </CsvImportPreview>
-        ) : null}
+        {parsed ? <ParsedRows parsed={parsed} fileName={fileName} /> : null}
       </Stack>
     </Dialog>
+  );
+}
+
+/** The parsed rows with each row's problems, before anything is imported. */
+function ParsedRows({
+  parsed,
+  fileName,
+}: Readonly<{ parsed: ParsedCsv; fileName: string | null }>) {
+  if (parsed.rows.length === 0) return null;
+  const errorCount = parsed.rows.filter((row) => row.errors.length > 0).length;
+  return (
+    <CsvImportPreview errorCount={errorCount} fileName={fileName} rowCount={parsed.rows.length}>
+      <DataTable nested label="Parsed rows" columns={PREVIEW_COLUMNS}>
+        {parsed.rows.map((row) => {
+          const invalid = row.errors.length > 0;
+          return (
+            <TableRow key={row.line} className={invalid ? 'opacity-60' : undefined}>
+              <TableCell numeric className="text-ink-muted">
+                {row.line}
+              </TableCell>
+              <TableCell>{row.input.topic || <UnavailableValue state="not_set" />}</TableCell>
+              <TableCell>{row.input.text || <UnavailableValue state="not_set" />}</TableCell>
+              <TableCell>
+                <RowStatus errors={row.errors} />
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </DataTable>
+    </CsvImportPreview>
   );
 }

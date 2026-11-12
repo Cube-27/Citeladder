@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { useRef } from 'react';
 
+import { useRequestKey } from '@/lib/agent/idempotency';
 import { commerceMutations } from '@/lib/api/commerce';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import type { BuyerPromptGenerateRequest } from '@citeladder/contracts/commerce-requests';
@@ -14,23 +14,19 @@ import type { BuyerPrompt } from '@citeladder/contracts/commerce-suite';
  */
 export function useGenerateBuyerPrompts(scope: ProjectScope) {
   const mutation = useMutation(commerceMutations.generateBuyerPrompts(scope));
-  const pending = useRef<{ request: string; key: string } | null>(null);
+  const requestKey = useRequestKey();
   const generate = (
     input: BuyerPromptGenerateRequest,
     onSuccess?: (created: readonly BuyerPrompt[]) => void,
-  ) => {
-    const request = JSON.stringify(input);
-    if (pending.current?.request !== request)
-      pending.current = { request, key: crypto.randomUUID() };
+  ) =>
     mutation.mutate(
-      { input, idempotencyKey: pending.current.key },
+      { input, idempotencyKey: requestKey.keyFor(input) },
       {
         onSuccess: (created) => {
-          if (pending.current?.request === request) pending.current = null;
+          requestKey.accepted();
           onSuccess?.(created);
         },
       },
     );
-  };
   return { generate, mutation };
 }

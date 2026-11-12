@@ -319,8 +319,10 @@ per request and reuses it when retrying the same request after a failure. A
 key whose generation already persisted prompts returns those prompts (from the
 key and request hash kept in their `generation_evidence`) with no model call
 or budget spend; the same key with a different request is a 409
-`generation_idempotency_conflict`. A refusal shows the server's reason, not a
-generic retry message.
+`generation_idempotency_conflict`. Two requests with one key that run at once
+each call the model, but only the first to commit stores prompts; the other
+replays them under the project lock. A refusal shows the server's reason, not
+a generic retry message.
 
 The category's prompts section opens the standalone matrix sheet
 (`category-matrix-sheet.tsx`), which generates the matrix, shows coverage

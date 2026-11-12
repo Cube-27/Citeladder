@@ -382,12 +382,20 @@ async function insertBatch(
   return ids;
 }
 
-function persist(db: Database, scope: CommerceScope, batches: Batch[]) {
+function persist(
+  db: Database,
+  scope: CommerceScope,
+  batches: Batch[],
+  keyed: { key: string; input: GenerateInput } | null = null,
+) {
   return db.transaction().execute(async (trx) => {
     const contexts = [];
     for (const batch of batches) contexts.push(await targetContext(trx, scope, batch.target)); // NOSONAR -- One transaction: statements run in order.
     // The project lock first, as every prompt writer: the set and topics below are created under it.
     await acquireProjectLock(trx, scope.projectId);
+    // A concurrent repeat of the same key persists once; the later one replays it.
+    const prior = keyed ? await replayGeneration(trx, scope, keyed.input, keyed.key) : null;
+    if (prior) return prior;
     const now = new Date();
     const set = await commerceSet(trx, scope, now);
     const ids: string[] = [];
@@ -485,6 +493,43 @@ async function replayGeneration(
 }
 
 /**
+ * One target's model answer, or null after a provider failure, which is logged
+ * with where the generation stopped.
+ */
+async function askModel(
+  gateway: ModelGateway,
+  context: TargetContext,
+  count: number,
+  progress: { target_index: number; admitted_batches: number },
+) {
+  const startedAt = performance.now();
+  try {
+    return await gateway.structured(
+      commerceBuyerPromptSystem(context.business_model, context.target_kind === 'category'),
+      JSON.stringify(generationRequest(context, count)),
+      // Unusable items are dropped one by one during admission, never the batch.
+      z.object({ prompts: z.array(matrixRowSchema) }),
+    );
+  } catch (error) {
+    if (!(error instanceof ModelError)) throw error;
+    getLogger('commerce.buyer_prompts').warning('commerce_buyer_prompts_model_failed', {
+      ...progress,
+      ...failureFacts(error),
+      status: error.status,
+      elapsed_ms: Math.round(performance.now() - startedAt),
+    });
+    return null;
+  }
+}
+
+type GenerateOptions = {
+  gatewayFactory?: () => ModelGateway;
+  meter?: Meter;
+  /** Names the first attempt; a retry with the same key replays its stored prompts. */
+  idempotencyKey?: string | null;
+};
+
+/**
  * Generate disabled buyer prompts for the targets. With `idempotencyKey`, a
  * retry of a generation that already persisted prompts returns those prompts
  * without another model call or budget spend.
@@ -493,9 +538,11 @@ export async function generateBuyerPrompts(
   db: Database,
   scope: CommerceScope,
   input: GenerateInput,
-  gatewayFactory: () => ModelGateway = createModelGateway,
-  meter: Meter = meterFor(db, scope.workspaceId),
-  idempotencyKey: string | null = null,
+  {
+    gatewayFactory = createModelGateway,
+    meter = meterFor(db, scope.workspaceId),
+    idempotencyKey = null,
+  }: GenerateOptions = {},
 ) {
   // Per-product prompts are an explicit hero choice; every other product is
   // covered by its category's matrix.
@@ -518,36 +565,21 @@ export async function generateBuyerPrompts(
   // Each target keeps what it admitted, so one weak batch or a later model
   // failure does not discard the prompts already paid for. Only a request that
   // admitted nothing at all is unavailable.
+  const keyed = idempotencyKey
+    ? { idempotency_key: idempotencyKey, request_hash: requestHash(input) }
+    : {};
   const batches = [];
   for (const [index, context] of contexts.entries()) {
-    let response;
-    const startedAt = performance.now();
-    try {
-      response = await gateway.structured(
-        commerceBuyerPromptSystem(context.business_model, context.target_kind === 'category'),
-        JSON.stringify(generationRequest(context, input.count)),
-        // Unusable items are dropped one by one during admission, never the batch.
-        z.object({ prompts: z.array(matrixRowSchema) }),
-      );
-    } catch (error) {
-      if (!(error instanceof ModelError)) throw error;
-      getLogger('commerce.buyer_prompts').warning('commerce_buyer_prompts_model_failed', {
-        target_index: index,
-        admitted_batches: batches.length,
-        ...failureFacts(error),
-        status: error.status,
-        elapsed_ms: Math.round(performance.now() - startedAt),
-      });
-      break;
-    }
+    const response = await askModel(gateway, context, input.count, {
+      target_index: index,
+      admitted_batches: batches.length,
+    });
+    if (!response) break;
     const drafts = targetDrafts(response.value.prompts, context, tracked, input.count);
     if (!drafts.length) continue;
     for (const kept of drafts) tracked.add(promptTextHash(kept.text));
     const target = input.targets[index]!;
     const { content: _content, ...model } = response.result;
-    const keyed = idempotencyKey
-      ? { idempotency_key: idempotencyKey, request_hash: requestHash(input) }
-      : {};
     batches.push({
       target,
       drafts,
@@ -555,5 +587,5 @@ export async function generateBuyerPrompts(
     });
   }
   if (!batches.length) throw unavailable();
-  return persist(db, scope, batches);
+  return persist(db, scope, batches, idempotencyKey ? { key: idempotencyKey, input } : null);
 }

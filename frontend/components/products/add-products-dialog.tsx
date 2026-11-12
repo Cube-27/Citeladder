@@ -158,6 +158,85 @@ function ImportResults({
   );
 }
 
+/** The first step: pick a source and name the store or file, with why the last try failed. */
+function SourceStep({
+  source,
+  onSource,
+  store,
+  onStore,
+  file,
+  onFile,
+  readError,
+  stageError,
+}: Readonly<{
+  source: Source;
+  onSource: (source: Source) => void;
+  store: string;
+  onStore: (store: string) => void;
+  file: File | null;
+  onFile: (file: File | null) => void;
+  /** Why the chosen file could not be read, such as a file that is not UTF-8. */
+  readError: string | null;
+  stageError: Error | null;
+}>) {
+  return (
+    <Stack>
+      <Tabs
+        items={SOURCES}
+        ariaLabel="Product source"
+        value={source}
+        onValueChange={onSource}
+        spaced
+      >
+        <TabPanel value="shopify">
+          <Field
+            label="Store domain"
+            hint="Your own domain or your store’s .myshopify.com address. Its public product list is read once."
+          >
+            {(props) => (
+              <Input
+                {...props}
+                value={store}
+                placeholder="shop.example.com"
+                onChange={(event) => onStore(event.target.value)}
+              />
+            )}
+          </Field>
+        </TabPanel>
+        <TabPanel value="merchant_center">
+          <FilePick
+            label="Feed file (CSV, TSV, XML or JSON)"
+            accept=".csv,.tsv,.txt,.xml,.json"
+            file={file}
+            onFile={onFile}
+            sample={MERCHANT_FEED_SAMPLE}
+          />
+        </TabPanel>
+        <TabPanel value="csv">
+          <Stack gap="compact">
+            <FilePick
+              label="CSV file"
+              accept=".csv,text/csv"
+              file={file}
+              onFile={onFile}
+              sample={CATALOG_SAMPLE}
+            />
+            <p className={textRole('body')}>
+              Title and brand are required. A category is a path such as Footwear &gt; Running.
+            </p>
+          </Stack>
+        </TabPanel>
+      </Tabs>
+      {readError ? <Callout tone="negative">{readError}</Callout> : null}
+      {stageError ? (
+        <MutationNotice
+          notice={mutationNoticeForError(stageError, { action: 'read the products' })}
+        />
+      ) : null}
+    </Stack>
+  );
+}
+
 /**
  * Add products from a Shopify store, a Merchant Center feed or the CSV
  * template (CM3): stage the source, confirm its category tree, then read what
@@ -285,75 +364,28 @@ export function AddProductsDialog({
     );
   } else {
     body = (
-      <Stack>
-        <Tabs
-          items={SOURCES}
-          ariaLabel="Product source"
-          value={source}
-          onValueChange={(next) => {
-            setSource(next);
-            chooseFile(null);
-          }}
-          spaced
-        >
-          <TabPanel value="shopify">
-            <Field
-              label="Store domain"
-              hint="Your own domain or your store’s .myshopify.com address. Its public product list is read once."
-            >
-              {(props) => (
-                <Input
-                  {...props}
-                  value={store}
-                  placeholder="shop.example.com"
-                  onChange={(event) => setStore(event.target.value)}
-                />
-              )}
-            </Field>
-          </TabPanel>
-          <TabPanel value="merchant_center">
-            <FilePick
-              label="Feed file (CSV, TSV, XML or JSON)"
-              accept=".csv,.tsv,.txt,.xml,.json"
-              file={file}
-              onFile={chooseFile}
-              sample={MERCHANT_FEED_SAMPLE}
-            />
-          </TabPanel>
-          <TabPanel value="csv">
-            <Stack gap="compact">
-              <FilePick
-                label="CSV file"
-                accept=".csv,text/csv"
-                file={file}
-                onFile={chooseFile}
-                sample={CATALOG_SAMPLE}
-              />
-              <p className={textRole('body')}>
-                Title and brand are required. A category is a path such as Footwear &gt; Running.
-              </p>
-            </Stack>
-          </TabPanel>
-        </Tabs>
-        {readError ? <Callout tone="negative">{readError}</Callout> : null}
-        {stage.error ? (
-          <MutationNotice
-            notice={mutationNoticeForError(stage.error, { action: 'read the products' })}
-          />
-        ) : null}
-      </Stack>
+      <SourceStep
+        source={source}
+        onSource={(next) => {
+          setSource(next);
+          chooseFile(null);
+        }}
+        store={store}
+        onStore={setStore}
+        file={file}
+        onFile={chooseFile}
+        readError={readError}
+        stageError={stage.error}
+      />
     );
+    const busy = reading || stage.isPending;
     footer = (
       <>
         <Button variant="secondary" onClick={() => close(false)}>
           Cancel
         </Button>
-        <Button
-          variant="primary"
-          disabled={!ready || reading || stage.isPending}
-          onClick={() => void submit()}
-        >
-          {reading || stage.isPending ? 'Reading…' : 'Review categories'}
+        <Button variant="primary" disabled={!ready || busy} onClick={() => void submit()}>
+          {busy ? 'Reading…' : 'Review categories'}
         </Button>
       </>
     );
