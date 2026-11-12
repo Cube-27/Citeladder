@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
+import { SearchField } from '@/components/ui/search-field';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
@@ -167,17 +168,47 @@ const PAGE_KIND_CODEC: UrlCodec<string> = {
   serialize: (value) => value || null,
 };
 
+/** A search: absent in the address is '', and a blank one never serializes. */
+const SEARCH_CODEC: UrlCodec<string> = {
+  parse: (raw) => raw ?? '',
+  serialize: (value) => value.trim() || null,
+};
+
 /**
- * The address keys the page browser's view and page-kind filter live in. The
- * screen clears them when the reader leaves the Pages tab, so each visit
- * opens on Monitored and all page kinds.
+ * The address keys the page browser's view, page-kind filter and search live
+ * in. The screen clears them when the reader leaves the Pages tab, so each
+ * visit opens on Monitored, all page kinds and no search.
  */
-export const PAGES_INVENTORY_URL_KEYS = ['pages_view', 'page_kind'] as const;
+export const PAGES_INVENTORY_URL_KEYS = ['pages_view', 'page_kind', 'pages_query'] as const;
 
 function usePagesInventoryState() {
   const [view, setView] = useUrlState(PAGES_INVENTORY_URL_KEYS[0], VIEW_CODEC);
   const [pageKind, setPageKind] = useUrlState(PAGES_INVENTORY_URL_KEYS[1], PAGE_KIND_CODEC);
-  return { view, setView, pageKind, setPageKind };
+  const [query, setQuery] = useUrlState(PAGES_INVENTORY_URL_KEYS[2], SEARCH_CODEC);
+  return { view, setView, pageKind, setPageKind, query, setQuery };
+}
+
+/** The search box: it applies on Enter, so each keystroke is not a request. */
+function PageSearch({
+  query,
+  onApply,
+}: Readonly<{ query: string; onApply: (query: string) => void }>) {
+  const [draft, setDraft] = useState(query);
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onApply(draft.trim());
+      }}
+    >
+      <SearchField
+        value={draft}
+        onValueChange={setDraft}
+        placeholder="Search page URLs…"
+        aria-label="Search pages"
+      />
+    </form>
+  );
 }
 
 type ExportPages = Readonly<{ onExport: () => void; exporting: boolean }>;
@@ -189,7 +220,7 @@ type ExportPages = Readonly<{ onExport: () => void; exporting: boolean }>;
  * server-backed and live in the address.
  */
 function usePagesToolbar(active: boolean, exportPages: ExportPages | undefined): FilterBarProps {
-  const { view, setView, pageKind, setPageKind } = usePagesInventoryState();
+  const { view, setView, pageKind, setPageKind, query, setQuery } = usePagesInventoryState();
   return {
     view: (
       <SegmentedControl
@@ -204,6 +235,7 @@ function usePagesToolbar(active: boolean, exportPages: ExportPages | undefined):
         ariaLabel="Page inventory views"
       />
     ),
+    search: <PageSearch key={query} query={query} onApply={setQuery} />,
     filters: [pageKindFilter({ value: pageKind, onChange: (next) => setPageKind(next) })],
     actions: exportPages ? (
       <Button variant="secondary" onClick={exportPages.onExport} disabled={exportPages.exporting}>
@@ -259,7 +291,7 @@ function ScoredInventoryState({
   // The view and the shared page-kind filter (v2 P1) live in the address,
   // drawn in the table's toolbar: server-backed values that compose with
   // each other — never a client filter over the page window.
-  const { view, pageKind } = usePagesInventoryState();
+  const { view, pageKind, query } = usePagesInventoryState();
   const toolbar = usePagesToolbar(active, exportPages);
   // Shared server-side ordering. Like the filter, it is part of the cursor
   // fingerprint, so changing it restarts paging.
@@ -291,11 +323,12 @@ function ScoredInventoryState({
   const { page, table } = useCursorTableQuery({
     workspaceId: crawl.workspace_id,
     scopeId: crawl.id,
-    scope: [view, activeViewParams, pageKind, sort],
+    scope: [view, activeViewParams, pageKind, query, sort],
     query: (request) =>
       siteHealthQueries.pages(crawl.workspace_id, crawl.id, {
         ...activeViewParams,
         page_kind: pageKind || undefined,
+        query: query || undefined,
         sort,
         ...request,
       }),
@@ -305,7 +338,7 @@ function ScoredInventoryState({
     empty: () => ({
       kind: 'empty',
       icon: FileText,
-      heading: active ? 'Pages appear here as the audit reaches them' : 'No pages in this view',
+      heading: emptyPagesHeading(query, active),
       headingLevel: 3,
     }),
   });
@@ -331,6 +364,12 @@ function ScoredInventoryState({
       />
     </Stack>
   );
+}
+
+/** An empty view: no page matched the search, none reached yet, or none in it. */
+function emptyPagesHeading(query: string, active: boolean): string {
+  if (query) return `No pages match “${query}”`;
+  return active ? 'Pages appear here as the audit reaches them' : 'No pages in this view';
 }
 
 /** The orders the table offers a header for: URL, else the default (status). */

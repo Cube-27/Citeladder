@@ -29,6 +29,7 @@ import { loadCrawl } from '../src/site-health/reads/crawl.ts';
 import { record } from '../src/db/json.ts';
 import { compareText } from '../src/text-order.ts';
 import { encodeKeysetCursor } from '../src/http/keyset-cursor.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
@@ -328,6 +329,62 @@ describe('page projections', () => {
     expect(terminal['/waiting']!.analysis_status).toBe('not_measured');
   });
 
+  it('search a crawl’s pages by URL, case-insensitively, binding the cursor to the search', async () => {
+    const seed = await fixtures.crawl();
+    await page(seed, '/');
+    await page(seed, '/bags/tote');
+    await page(seed, '/bags/clutch');
+    const search = async (query: string) =>
+      json(seed, `/site-crawls/${seed.crawlId}/pages?${query}`, pagesPageSchema);
+
+    const bags = await search('query=%2FBAGS%2F&sort=url');
+    expect(bags.items.map((item) => new URL(item.normalized_url).pathname)).toEqual([
+      '/bags/clutch',
+      '/bags/tote',
+    ]);
+    expect((await search('query=no-such-page')).items).toEqual([]);
+    const first = await search('query=bags&sort=url&limit=1');
+    const replayed = await get(
+      seed,
+      `/site-crawls/${seed.crawlId}/pages?query=tote&sort=url&limit=1&cursor=${first.next_cursor}`,
+    );
+    expect(replayed.status).toBe(400);
+    const outsider = await fixtures.crawl();
+    expect((await get(outsider, `/site-crawls/${seed.crawlId}/pages?query=bags`)).status).toBe(404);
+  });
+
+  it('name each of a page’s issues by its catalog group and the scores it counts toward', async () => {
+    const seed = await fixtures.crawl();
+    const home = await page(seed, '/');
+    await issue(seed, home, 'technical.indexable');
+    await issue(seed, home, 'web.accessibility_form_names');
+
+    const detail = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/pages/${home.id}`,
+      pageDetailSchema,
+    );
+    expect(
+      Object.fromEntries(
+        detail.issues.map((row) => [row.rule_id, [row.group_id, row.score_roles]]),
+      ),
+    ).toEqual({
+      'technical.indexable': [
+        issueGroupId(seed.crawlId, 'technical.indexable', 'defect'),
+        ['aeo_readiness', 'web_fundamentals'],
+      ],
+      'web.accessibility_form_names': [
+        issueGroupId(seed.crawlId, 'web.accessibility_form_names', 'defect'),
+        [],
+      ],
+    });
+    // The page's group is the one the catalog serves.
+    const catalog = await json(seed, `/site-crawls/${seed.crawlId}/issues`, siteIssuesPageSchema);
+    expect(catalog.items.map((row) => row.group_id).toSorted()).toEqual(
+      detail.issues.map((row) => row.group_id).toSorted(),
+    );
+  });
+
   it('bind a cursor to the filters and order it was issued for', async () => {
     const seed = await fixtures.crawl();
     await page(seed, '/');
@@ -565,59 +622,55 @@ describe('issue catalog', () => {
     expect(first).toContain('"homepage, product"');
   });
 
+  it('serves an issue’s affected pages to an API key, inside the key’s project only', async () => {
+    const seed = await fixtures.crawl();
+    const home = await page(seed, '/');
+    await issue(seed, home, 'technical.indexable');
+    const groupId = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
+    const account = await billingAccount(db, seed.workspaceId);
+    await grant(db, account, { key: 'api_access', value: 1, sourceKind: 'override' });
+    await grant(db, account, { key: 'api_keys', value: 10, sourceKind: 'override' });
+    const created = await app.request('/api/v1/api-keys', {
+      method: 'POST',
+      headers: {
+        cookie: `${config.session.cookieName}=${await sessionToken({ sub: seed.userId, ver: 0 })}`,
+        'x-workspace-id': seed.workspaceId,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ name: 'Issue export' }),
+    });
+    expect(created.status, await created.clone().text()).toBe(201);
+    const { secret } = (await created.json()) as { secret: string };
+    const read = (crawlId: string, group: string) =>
+      app.request(`/v1/projects/${seed.projectId}/site-crawls/${crawlId}/issues/${group}`, {
+        headers: { authorization: `Bearer ${secret}` },
+      });
+
+    const response = await read(seed.crawlId, groupId);
+    expect(response.status, await response.clone().text()).toBe(200);
+    const detail = siteIssueDetailSchema.parse(await response.json());
+    expect(detail.occurrences.map((row) => row.site_url_id)).toEqual([home.id]);
+    // Another workspace's crawl, and a group the crawl does not hold, are not found.
+    const outsider = await fixtures.crawl();
+    expect((await read(outsider.crawlId, groupId)).status).toBe(404);
+    expect((await read(seed.crawlId, randomUUID())).status).toBe(404);
+  });
+
   it('serves the newest crawl’s issue page by project, named with that crawl', async () => {
     const seed = await fixtures.crawl();
     const home = await page(seed, '/');
     await issue(seed, home, 'technical.indexable');
 
-    const body = await json(
-      seed,
-      `/projects/${seed.projectId}/site-health/issues?detail_limit=1`,
-      latestCrawlIssuesPageSchema,
-    );
+    const latest = async (section: string) =>
+      json(
+        seed,
+        `/projects/${seed.projectId}/site-health/issues?section=${section}`,
+        latestCrawlIssuesPageSchema,
+      );
+    const body = await latest('technical');
     expect(body.crawl_id).toBe(seed.crawlId);
     expect(body.items.map((group) => group.rule_id)).toEqual(['technical.indexable']);
-    expect(body.first_issue?.occurrences.map((row) => row.site_url_id)).toEqual([home.id]);
-  });
-
-  it('embeds the first row’s detail only when asked, as the detail route serves it', async () => {
-    const seed = await fixtures.crawl();
-    const home = await page(seed, '/');
-    const product = await page(seed, '/product');
-    for (const target of [home, product]) await issue(seed, target, 'technical.indexable');
-    await issue(seed, home, 'technical.title_present');
-    const groupId = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
-
-    const plain = await json(seed, `/site-crawls/${seed.crawlId}/issues`, siteIssuesPageSchema);
-    const embedded = await json(
-      seed,
-      `/site-crawls/${seed.crawlId}/issues?detail_limit=1`,
-      siteIssuesPageSchema,
-    );
-
-    expect(plain.first_issue).toBeUndefined();
-    expect(embedded.first_issue).toMatchObject({
-      group_id: groupId,
-      rule_id: 'technical.indexable',
-      occurrence_count: 2,
-      affected_url_count: 2,
-    });
-    expect(embedded.first_issue?.occurrences).toHaveLength(1);
-    expect(embedded.first_issue).toEqual(
-      await json(
-        seed,
-        `/site-crawls/${seed.crawlId}/issues/${groupId}?limit=1`,
-        siteIssueDetailSchema,
-      ),
-    );
-    // A page with no rows has no first issue to carry.
-    const none = await json(
-      seed,
-      `/site-crawls/${seed.crawlId}/issues?detail_limit=1&query=no-such-issue`,
-      siteIssuesPageSchema,
-    );
-    expect(none.items).toEqual([]);
-    expect(none.first_issue).toBeUndefined();
+    expect((await latest('aeo')).items).toEqual([]);
   });
 
   it('ranks a severity tier by pages affected, pages it on that order, and searches titles', async () => {
@@ -654,6 +707,64 @@ describe('issue catalog', () => {
     expect(searched.items.map((group: { rule_id: string }) => group.rule_id)).toEqual([
       'web.mobile_viewport',
     ]);
+  });
+
+  it('lists each tab’s issues in the order asked for, counting every tab, and binds cursors to both', async () => {
+    const seed = await fixtures.crawl();
+    const home = await page(seed, '/');
+    const product = await page(seed, '/product');
+    // Technical: a high on one page, a medium on two.
+    await issue(seed, home, 'technical.https');
+    for (const target of [home, product])
+      await issue(seed, target, 'technical.canonical_integrity');
+    // Content: a technical metadata rule and a technical content rule.
+    await issue(seed, home, 'technical.title_present');
+    await issue(seed, product, 'web.mobile_viewport');
+    // AEO.
+    await issue(seed, home, 'aeo.schema_required_valid');
+    const tab = async (query: string) => {
+      const body = await json(
+        seed,
+        `/site-crawls/${seed.crawlId}/issues?${query}`,
+        siteIssuesPageSchema,
+      );
+      return { rules: body.items.map((row) => row.rule_id), body };
+    };
+
+    const technical = await tab('section=technical');
+    expect(technical.rules).toEqual(['technical.https', 'technical.canonical_integrity']);
+    expect(technical.body.summary.section_counts).toEqual({ technical: 2, content: 2, aeo: 1 });
+    expect((await tab('section=technical&sort=pages')).rules).toEqual([
+      'technical.canonical_integrity',
+      'technical.https',
+    ]);
+    expect((await tab('section=content')).rules.toSorted()).toEqual([
+      'technical.title_present',
+      'web.mobile_viewport',
+    ]);
+    expect((await tab('section=aeo')).rules).toEqual(['aeo.schema_required_valid']);
+    // A search counts its matches in every tab, so the reader sees which tab holds them.
+    const searched = await tab('section=aeo&query=viewport');
+    expect(searched.rules).toEqual([]);
+    expect(searched.body.summary.section_counts).toEqual({ technical: 0, content: 1, aeo: 0 });
+
+    const first = await tab('section=technical&sort=pages&limit=1');
+    const cursor = encodeURIComponent(first.body.next_cursor!);
+    expect((await tab(`section=technical&sort=pages&limit=1&cursor=${cursor}`)).rules).toEqual([
+      'technical.https',
+    ]);
+    for (const changed of ['section=technical&sort=severity', 'section=content&sort=pages']) {
+      const replayed = await get(
+        seed,
+        `/site-crawls/${seed.crawlId}/issues?${changed}&limit=1&cursor=${cursor}`,
+      );
+      expect(replayed.status, changed).toBe(400);
+    }
+    expect((await get(seed, `/site-crawls/${seed.crawlId}/issues?section=seo`)).status).toBe(422);
+    const outsider = await fixtures.crawl();
+    expect(
+      (await get(outsider, `/site-crawls/${seed.crawlId}/issues?section=technical`)).status,
+    ).toBe(404);
   });
 
   it('serves the unfiltered list and summary its writers persisted; filters still read the issues', async () => {
@@ -1019,6 +1130,26 @@ describe('snapshot projections', () => {
             affected_pages: 1,
             eligibility_blocker: true,
           },
+          {
+            rule_id: 'technical.title_present',
+            finding_class: 'defect',
+            severity: 'high',
+            category: 'metadata',
+            description: '',
+            remediation: '',
+            affected_pages: 1,
+            eligibility_blocker: false,
+          },
+          {
+            rule_id: 'fixture.retired_rule',
+            finding_class: 'defect',
+            severity: 'low',
+            category: 'technical',
+            description: '',
+            remediation: '',
+            affected_pages: 1,
+            eligibility_blocker: false,
+          },
         ]),
         aeo_readiness_diagnostic: JSON.stringify({
           state: 'limited_evidence',
@@ -1054,6 +1185,14 @@ describe('snapshot projections', () => {
       title: 'Page blocked from indexing',
       impact_band: 4,
       impact_label: 'Critical',
+    });
+    // The Issues tab each rule is listed under, from today's catalog; none for a retired rule.
+    expect(
+      Object.fromEntries(overview.top_issues.map((row) => [row.rule_id, row.section])),
+    ).toEqual({
+      'technical.indexable': 'technical',
+      'technical.title_present': 'content',
+      'fixture.retired_rule': null,
     });
     expect(overview.trend.reason).toBe('no_comparable_snapshot');
 
@@ -1284,7 +1423,7 @@ describe('workspace authorization', () => {
       `/site-crawls/${seed.crawlId}`,
       `/site-crawls/${seed.crawlId}/pages`,
       `/site-crawls/${seed.crawlId}/issues`,
-      `/site-crawls/${seed.crawlId}/issues?detail_limit=5`,
+      `/site-crawls/${seed.crawlId}/issues?section=aeo&sort=pages`,
       `/site-crawls/${seed.crawlId}/events`,
       `/site-crawls/${seed.crawlId}/export.csv`,
     ])

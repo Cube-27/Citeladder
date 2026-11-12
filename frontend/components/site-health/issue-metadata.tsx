@@ -17,7 +17,10 @@ import { dimensionLabel, severityBadgeValue, severityLabel } from '@/lib/site-he
 export function IssueMetadata({
   issue,
   children,
-}: Readonly<{ issue: SiteIssue; children?: ReactNode }>) {
+}: Readonly<{
+  issue: Pick<SiteIssue, 'finding_class' | 'severity' | 'dimension'>;
+  children?: ReactNode;
+}>) {
   return (
     <Inline as="span" className={textRole('label', 'flex-wrap')}>
       {issue.finding_class === 'defect' ? (

@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 
 import { DetailScreen, type PageBack } from '@/components/layout/page-shell';
+import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { Inline, Stack } from '@/components/ui/layout';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
-import { IssueEvidence } from '@/components/site-health/issue-evidence';
+import { PageIssues } from '@/components/site-health/page-issues';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
@@ -14,12 +15,10 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { FactList } from '@/components/ui/facts';
 import { QueryState } from '@/components/ui/query-state';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { ledgerClasses, ledgerItemClasses, SubsectionHeader } from '@/components/ui/workspace';
-import type { DeliveryFacts, IssueOccurrence, PageDetail } from '@citeladder/contracts';
-import { severityBadgeValue, severityLabel, severityRank } from '@/lib/site-health/issues';
+import type { DeliveryFacts, PageDetail } from '@citeladder/contracts';
 import {
   formatAudited,
   pageDisplayTitle,
@@ -40,10 +39,10 @@ function rerunLabel(pending: boolean, queued: boolean): string {
 }
 
 /**
- * One page of a crawl, in the order a site owner reads it: what to fix here,
- * then how the page scores, then — collapsed at the foot — the HTTP and
- * link-graph measurements only a developer reaches for. The measurements used
- * to lead the page at hero size and bury the fixes under them.
+ * One page of a crawl, in the order a site owner reads it: how the page
+ * scores, every issue on it worst first, each issue with its fix and the ways
+ * to act on it, then — collapsed at the foot — the HTTP and link-graph
+ * measurements only a developer reaches for.
  */
 export function UrlDetailView({
   detail,
@@ -70,6 +69,7 @@ export function UrlDetailView({
         <>
           {history}
           {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
+          <AskAgentLink handoff={pageHandoff(detail)}>Ask agent about this page</AskAgentLink>
           <Button variant="primary" onClick={onRerun} disabled={rerunPending}>
             {rerunLabel(rerunPending, rerunQueued)}
           </Button>
@@ -78,11 +78,39 @@ export function UrlDetailView({
     >
       {children}
       <LinkedFrom detail={detail} />
-      <PageIssues issues={detail.issues} audited={detail.analysis_status === 'completed'} />
       <UrlScoreSummary detail={detail} />
+      <PageIssues
+        issues={detail.issues}
+        audited={detail.analysis_status === 'completed'}
+        crawlId={detail.crawl_id}
+        rerun={{ onRerun, busy: rerunPending }}
+      />
       <TechnicalDetails detail={detail} />
     </DetailScreen>
   );
+}
+
+/** The whole page for the agent: its id and URL, never its evidence. */
+function pageHandoff(detail: PageDetail) {
+  const count = detail.issues.filter((issue) => issue.finding_class === 'defect').length;
+  return {
+    siteUrlId: detail.site_url_id,
+    targetUrl: detail.display_url,
+    prompt: pagePrompt(detail, count),
+    skillId: 'technical_health',
+  };
+}
+
+/** Its issues worst first; with none, readiness only once the audit finished. */
+function pagePrompt(detail: PageDetail, count: number): string {
+  const url = detail.display_url;
+  if (count > 0) {
+    const issues = count === 1 ? '1 Site Health issue' : `${count} Site Health issues`;
+    return `Review the ${issues} on ${url}, worst first, and propose exact page edits for each.`;
+  }
+  if (detail.analysis_status !== 'completed')
+    return `The Site Health audit of ${url} did not complete (${statusLabel(detail.analysis_status)}). Investigate why and say what is needed to audit it.`;
+  return `Review ${url} for search and answer-engine readiness and propose improvements.`;
 }
 
 /** The page's URL, kind and audit date on one line; its status only when it is not done. */
@@ -137,84 +165,6 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
         </ul>
       </CardContent>
     </Card>
-  );
-}
-
-/**
- * The page's findings: defects first, worst first, and the count in the
- * heading counts only those. Advisories follow in their own group, labelled
- * as the catalog labels them, so a recommendation never reads as a rated
- * defect.
- */
-function PageIssues({
-  issues,
-  audited,
-}: Readonly<{
-  issues: IssueOccurrence[];
-  /** No issues before the audit finishes means "not checked yet", not "clean". */
-  audited: boolean;
-}>) {
-  const defects = issues
-    .filter((issue) => issue.finding_class === 'defect')
-    .sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
-  const advisories = issues.filter((issue) => issue.finding_class !== 'defect');
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Issues on this page ({defects.length})</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <Stack gap="workspace">
-          {defects.length === 0 ? (
-            <QueryState
-              kind="empty"
-              inline
-              message={
-                audited
-                  ? 'No issues found on this page.'
-                  : 'Issues appear here once this page’s audit finishes.'
-              }
-            />
-          ) : (
-            <IssueRows issues={defects} />
-          )}
-          {advisories.length > 0 ? (
-            <Stack as="section" gap="item">
-              <SubsectionHeader
-                title={`Advisories (${advisories.length})`}
-                description="Recommendations to consider."
-              />
-              <IssueRows issues={advisories} />
-            </Stack>
-          ) : null}
-        </Stack>
-      </CardContent>
-    </Card>
-  );
-}
-
-function IssueRows({ issues }: Readonly<{ issues: IssueOccurrence[] }>) {
-  return (
-    <ol className={ledgerClasses()}>
-      {issues.map((issue) => (
-        <Stack as="li" gap="tight" key={issue.occurrence_id} className={ledgerItemClasses()}>
-          <Inline className="flex-wrap items-start justify-between">
-            <span className={textRole('itemTitle', 'min-w-0')}>{issue.issue_title}</span>
-            {issue.finding_class === 'defect' ? (
-              <Badge variant="status" value={severityBadgeValue(issue.severity)}>
-                {severityLabel(issue.severity)}
-              </Badge>
-            ) : (
-              <Badge>Advisory</Badge>
-            )}
-          </Inline>
-          <IssueEvidence occurrence={issue} />
-          {issue.remediation ? (
-            <p className="type-body whitespace-pre-line">{issue.remediation}</p>
-          ) : null}
-        </Stack>
-      ))}
-    </ol>
   );
 }
 

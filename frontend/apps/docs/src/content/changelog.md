@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-11'
+updated: '2026-11-12'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 12, 2026: Clearer Site Health issues
+
+**Issues** now leads with how many issues the latest crawl found, their severity split and the three to fix first, then lists them in **Technical**, **Content** and **AEO** tabs you can sort by severity or by pages affected. Opening an issue shows how to fix it, its affected pages, **Ask agent** and **Copy fix prompt**. A page's own screen lists its issues worst first with a card per issue, its fix, the scores it counts toward, **Ask agent** and **Re-audit to verify**, and **Ask agent about this page** covers all of them. **Site Health → Pages** can be searched by URL. In the API, the issues read takes `section` and `sort` and counts each tab in `section_counts`, an issue's affected pages are their own paged read (`/site-crawls/{crawl_id}/issues/{group_id}`) in place of the first issue embedded in the list, and the pages read takes `query`.
+
+**For your team:** open **Issues**, start with the three listed first, and hand each to the agent or copy its fix prompt for your developer.
+
+[Site Health](/site-health/#find-the-issues-to-fix-first)
 
 ## November 11, 2026: Product tracking in every answer, and site fixes you can hand off
 

@@ -8,6 +8,11 @@ import { cursorPageSchema } from './pagination.ts';
 export const issueSeveritySchema = z.enum(['critical', 'high', 'medium', 'low', 'info']);
 export const issueDimensionSchema = z.enum(['technical', 'aeo']);
 export const findingClassSchema = z.enum(['defect', 'advisory', 'diagnostic']);
+// The Issues tabs. A rule belongs to exactly one, by the API's category map
+// (`reads.issue_section_by_category`), else to its dimension.
+export const issueSectionSchema = z.enum(['technical', 'content', 'aeo']);
+// Catalog orderings: worst first, or most pages first.
+export const issueSortSchema = z.enum(['severity', 'pages']);
 
 export const issueOccurrenceSchema = responseObject({
   occurrence_id: uuid(),
@@ -67,6 +72,9 @@ export const issuesSummarySchema = responseObject({
   dimension_counts: z.record(z.string(), z.number().int()),
   affected_url_count: z.number().int(),
   monitored_affected_url_count: z.number().int(),
+  // Issue groups per tab under the list's other filters, before the tab
+  // narrows it, so every tab label carries its own count.
+  section_counts: z.record(issueSectionSchema, z.number().int()),
 });
 
 // Full grouped-issue detail with keyset-paginated persisted occurrences.
@@ -95,11 +103,6 @@ export const siteIssueDetailSchema = responseObject({
 // Grouped-issue catalog page — cursor page + API-owned summary (mockup 710).
 export const siteIssuesPageSchema = cursorPageSchema(siteIssueSchema).extend({
   summary: issuesSummarySchema,
-  // The first listed issue's detail (first occurrence page, under the list's
-  // page-kind filter), present only when the request named `detail_limit` and
-  // the page has a row. It is the exact read `/issues/{group_id}` returns, so
-  // a list-detail view can show its default selection without a second trip.
-  first_issue: siteIssueDetailSchema.optional(),
 });
 
 // The same page for the project's newest crawl, named so a reader that did not
@@ -108,6 +111,8 @@ export const latestCrawlIssuesPageSchema = siteIssuesPageSchema.extend({ crawl_i
 
 export type IssueSeverity = z.infer<typeof issueSeveritySchema>;
 export type IssueDimension = z.infer<typeof issueDimensionSchema>;
+export type IssueSection = z.infer<typeof issueSectionSchema>;
+export type IssueSort = z.infer<typeof issueSortSchema>;
 export type IssueOccurrence = z.infer<typeof issueOccurrenceSchema>;
 export type SiteIssue = z.infer<typeof siteIssueSchema>;
 export type SiteIssueDetail = z.infer<typeof siteIssueDetailSchema>;

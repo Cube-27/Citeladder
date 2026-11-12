@@ -24,7 +24,14 @@ import {
   type PageSort,
   type Referrer,
 } from './page-rows.ts';
-import { issueOccurrence, ruleTitle, severityOrder, type IssueRow } from './rules.ts';
+import {
+  issueGroupId,
+  issueOccurrence,
+  ruleScoreRoles,
+  ruleTitle,
+  severityOrder,
+  type IssueRow,
+} from './rules.ts';
 import { hash } from '../../crypto-text.ts';
 
 type Paging = { limit: number; cursor: string | null };
@@ -300,7 +307,12 @@ export async function pageDetail(
     issue_count: analysis ? issues.length : null,
     facts: pageFacts(facts),
     delivery: deliveryFacts(facts, analysis?.decoded_bytes ?? null),
-    issues: issues.map((issue) => issueOccurrence(issue, page)),
+    issues: issues.map((issue) => ({
+      ...issueOccurrence(issue, page),
+      // The crawl's Issues group for this rule, as the catalog names it.
+      group_id: issueGroupId(crawl.id, issue.rule_id, issue.finding_class),
+      score_roles: ruleScoreRoles(issue.rule_id),
+    })),
     evaluations: evaluations.map((evaluation) => ({
       id: evaluation.id,
       rule_id: evaluation.rule_id,

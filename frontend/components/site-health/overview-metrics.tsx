@@ -105,7 +105,7 @@ function technicalMetric(context: MetricContext): AuditMetric {
   return {
     title: 'Web Fundamentals',
     value: source?.web_fundamentals_score ?? null,
-    href: '/issues?dimension=technical',
+    href: '/issues?section=technical',
     icon: ICONS.siteHealth,
   };
 }
@@ -115,7 +115,7 @@ function aeoMetric(context: MetricContext): AuditMetric {
   return {
     title: 'AEO Readiness',
     value: source?.aeo_readiness_score ?? null,
-    href: '/issues?dimension=aeo',
+    href: '/issues?section=aeo',
     icon: ICONS.visibility,
   };
 }

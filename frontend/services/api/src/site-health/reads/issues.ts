@@ -17,6 +17,8 @@ import {
   issueHistoryPageSchema,
   siteIssueDetailSchema,
   siteIssuesPageSchema,
+  type IssueSection,
+  type IssueSort,
 } from '@citeladder/contracts/site-health';
 import { sql, type RawBuilder } from 'kysely';
 import { z } from 'zod';
@@ -39,6 +41,7 @@ import { requireAdmitted } from './pages.ts';
 import {
   issueGroupId,
   issueOccurrence,
+  issueSection,
   remediationRoute,
   rulesTitled,
   ruleTitle,
@@ -123,9 +126,10 @@ function issueWhere(
 
 type Group = IssueRow & { affected_url_count: number; group_id: string };
 type IssueItem = z.infer<typeof siteIssuesPageSchema>['items'][number];
+/** The summary a catalog persists: the live monitored count and the tab counts ride each read. */
 export type IssueSummary = Omit<
   z.input<typeof siteIssuesPageSchema>['summary'],
-  'monitored_affected_url_count'
+  'monitored_affected_url_count' | 'section_counts'
 >;
 
 /** The finding classes the catalog lists, each with its own groups and summary. */
@@ -174,16 +178,34 @@ async function issueGroups(db: Database, crawl: Crawl, filters: IssueFilters): P
     .sort(compareGroups);
 }
 
-/** Worst first; within a severity, the issue on the most pages first. */
 type GroupKey = readonly [rank: number, affected: number, rule: string, group: string];
 type Ranked = Pick<Group, 'severity' | 'affected_url_count' | 'rule_id' | 'group_id'>;
 const groupKey = (group: Ranked): GroupKey =>
   [severityRank(group.severity), group.affected_url_count, group.rule_id, group.group_id] as const;
 
-function compareKeys(a: GroupKey, b: GroupKey) {
-  return a[0] - b[0] || b[1] - a[1] || compareText(a[2], b[2]) || compareText(a[3], b[3]);
+const byIdentity = (a: GroupKey, b: GroupKey) => compareText(a[2], b[2]) || compareText(a[3], b[3]);
+
+/**
+ * The catalog's orderings over one key: worst first (then the issue on the
+ * most pages), or the issue on the most pages first (then the worst). Both
+ * end on the group's identity, so the order is total and a cursor resumes it.
+ */
+const KEY_ORDER: Readonly<Record<IssueSort, (a: GroupKey, b: GroupKey) => number>> = {
+  severity: (a, b) => a[0] - b[0] || b[1] - a[1] || byIdentity(a, b),
+  pages: (a, b) => b[1] - a[1] || a[0] - b[0] || byIdentity(a, b),
+};
+const compareGroups = (a: Group, b: Group) => KEY_ORDER.severity(groupKey(a), groupKey(b));
+
+/** How the catalog page is cut and ordered: one tab, one ordering. Neither narrows the summary. */
+export type IssueView = { section: IssueSection | null; sort: IssueSort };
+const ALL_SECTIONS_BY_SEVERITY: IssueView = { section: null, sort: 'severity' };
+
+/** Issue groups per tab. */
+function sectionCounts(groups: readonly Pick<IssueItem, 'dimension' | 'category'>[]) {
+  const counts: Record<IssueSection, number> = { technical: 0, content: 0, aeo: 0 };
+  for (const group of groups) counts[issueSection(group)] += 1;
+  return counts;
 }
-const compareGroups = (a: Group, b: Group) => compareKeys(groupKey(a), groupKey(b));
 
 /** The summary's issue scope: severity and dimension chips never narrow it. */
 function summaryScope(crawl: Crawl, filters: IssueFilters) {
@@ -323,8 +345,7 @@ export async function issues(
   crawlId: string,
   filters: IssueFilters,
   paging: Paging,
-  /** When set, also return the first row's detail with this many occurrences. */
-  detailLimit: number | null = null,
+  view: IssueView = ALL_SECTIONS_BY_SEVERITY,
 ) {
   const crawl = await loadCrawl(db, workspaceId, crawlId);
   const fingerprint = {
@@ -337,45 +358,41 @@ export async function issues(
     site_url_id: filters.siteUrlId,
     page_kind: filters.pageKind,
     finding_class: filters.findingClass,
+    section: view.section,
+    sort: view.sort,
   };
   const after = groupCursor(paging.cursor, fingerprint);
   // The unfiltered catalog is persisted once its crawl's issues are final;
-  // any other filter, and a crawl not yet published, is computed here.
+  // any other filter, and a crawl not yet published, is computed here. The
+  // tab and the ordering cut the listed groups, so the persisted catalog
+  // serves every tab.
   const catalog = isUnfiltered(filters)
     ? await persistedCatalog(db, crawl, filters.findingClass)
     : null;
-  const [ranked, summary, monitored] = await Promise.all([
+  const [listed, summary, monitored] = await Promise.all([
     catalog?.items ?? catalogItems(db, crawl, filters),
     catalog?.summary ?? issueSummary(db, crawl, filters),
     monitoredAffected(db, crawl, filters),
   ]);
-  const start = after ? ranked.findIndex((group) => compareKeys(groupKey(group), after) > 0) : 0;
+  const order = KEY_ORDER[view.sort];
+  const ranked = listed
+    .filter((group) => view.section === null || issueSection(group) === view.section)
+    .sort((a, b) => order(groupKey(a), groupKey(b)));
+  const start = after ? ranked.findIndex((group) => order(groupKey(group), after) > 0) : 0;
   const window = start < 0 ? [] : ranked.slice(start, start + paging.limit + 1);
   const items = window.slice(0, paging.limit);
   const last = items.at(-1);
-  const first = items[0];
-  const firstIssue =
-    // The same read the detail route serves for this row: first occurrence
-    // page, narrowed by the list's page-kind filter exactly as the rail asks.
-    detailLimit !== null && first !== undefined
-      ? await issueDetail(
-          db,
-          workspaceId,
-          crawl.id,
-          first.group_id,
-          { limit: detailLimit, cursor: null },
-          undefined,
-          filters.pageKind,
-        )
-      : undefined;
   return siteIssuesPageSchema.parse({
     items,
     next_cursor:
       window.length > paging.limit && last
         ? encodeKeysetCursor('issues', fingerprint, groupKey(last).map(String))
         : null,
-    summary: { ...summary, monitored_affected_url_count: monitored },
-    ...(firstIssue ? { first_issue: firstIssue } : {}),
+    summary: {
+      ...summary,
+      monitored_affected_url_count: monitored,
+      section_counts: sectionCounts(listed),
+    },
   });
 }
 
@@ -453,7 +470,10 @@ export async function catalogSources(
 
 const catalogSchema = z.object({
   items: siteIssuesPageSchema.shape.items,
-  summary: siteIssuesPageSchema.shape.summary.omit({ monitored_affected_url_count: true }),
+  summary: siteIssuesPageSchema.shape.summary.omit({
+    monitored_affected_url_count: true,
+    section_counts: true,
+  }),
 });
 
 /** The crawl's persisted unfiltered catalog for the class, or null before its issues are final. */

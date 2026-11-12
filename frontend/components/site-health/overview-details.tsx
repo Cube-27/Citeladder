@@ -157,11 +157,7 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
           </TableCell>
           <TableCell>
             <Inline>
-              <TextLink
-                text="body"
-                href={issueHref(issue.rule_id, issue.finding_class)}
-                className="min-w-0"
-              >
+              <TextLink text="body" href={issueHref(issue)} className="min-w-0">
                 {/* One line, cut with its full title in a tooltip: beside an
                     Advisory badge in a half-width card, two clamped lines
                     broke a title mid-word ("Recommend / ed schema"). */}
@@ -307,9 +303,11 @@ function measurementTone(state: string): 'success' | 'warning' | 'info' {
   return 'info';
 }
 
-function issueHref(ruleId: string, findingClass: string): string {
-  const params = new URLSearchParams({ rule: ruleId });
-  if (findingClass === 'advisory') params.set('finding_class', findingClass);
+function issueHref(issue: SiteHealthOverview['top_issues'][number]): string {
+  const params = new URLSearchParams({ rule: issue.rule_id });
+  // The tab the rule is listed under, so the filtered list is the one on screen.
+  if (issue.section && issue.section !== 'technical') params.set('section', issue.section);
+  if (issue.finding_class === 'advisory') params.set('finding_class', issue.finding_class);
   return `/issues?${params.toString()}`;
 }
 

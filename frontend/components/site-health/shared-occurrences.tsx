@@ -1,11 +1,11 @@
 'use client';
 
+import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { EvidenceLine } from '@/components/site-health/issue-evidence';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { insetClasses, ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { SiteIssue } from '@citeladder/contracts';
 import { issueTitle } from '@/lib/site-health/issues';
 import {
@@ -22,7 +22,9 @@ import { pageDisplayTitle } from '@/lib/site-health/status';
  * the counts, not from the label the reader sees, and claims no more than the
  * loaded rows prove.
  */
-function sharedAskAgentPrompt(issue: SiteIssue, evidence: string, scope: SharedScope): string {
+type SharedIssue = Pick<SiteIssue, 'group_id' | 'title' | 'rule_id'>;
+
+function sharedAskAgentPrompt(issue: SharedIssue, evidence: string, scope: SharedScope): string {
   const reach = scope.complete
     ? `${scope.pageCount} of the issue's ${scope.totalPageCount} affected pages`
     : `${scope.pageCount} of the ${scope.loadedPageCount} affected pages loaded so far; the issue affects ${scope.totalPageCount} pages`;
@@ -43,7 +45,7 @@ export function SharedOccurrences({
   crawlId,
   scope,
 }: Readonly<{
-  issue: SiteIssue;
+  issue: SharedIssue;
   entry: Extract<OccurrenceEntry, { kind: 'shared' }>;
   crawlId: string;
   scope: SharedScope;
@@ -57,17 +59,16 @@ export function SharedOccurrences({
           text="itemTitle"
         />
         <span className="type-caption tabular-nums">{sharedPagesLabel(scope)}</span>
-        <TextLink
-          text="caption"
-          className="w-fit"
-          href={agentHandoffHref({
+        <AskAgentLink
+          appearance="text"
+          handoff={{
             issueGroup: { crawlId, groupId: issue.group_id },
             prompt: sharedAskAgentPrompt(issue, entry.facts.join(', '), scope),
             skillId: 'technical_health',
-          })}
+          }}
         >
           Ask agent about these pages
-        </TextLink>
+        </AskAgentLink>
       </div>
       <ul className={ledgerClasses()}>
         {entry.occurrences.map((occurrence) => (

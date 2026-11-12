@@ -163,6 +163,13 @@ const internalLinksSchema = responseObject({
   formula_version: z.string(),
 });
 
+// One issue on the page, named by the crawl's Issues group it belongs to (so
+// the page can hand that group to the agent) and by the scores it counts in.
+export const pageIssueSchema = issueOccurrenceSchema.extend({
+  group_id: uuid(),
+  score_roles: z.array(z.string()),
+});
+
 // Full analyzed-page detail (persisted facts/delivery/scores/issues/provenance).
 export const pageDetailSchema = responseObject({
   url_hash: z.string().optional(),
@@ -200,7 +207,7 @@ export const pageDetailSchema = responseObject({
   delivery: deliveryFactsSchema,
   // Null when this crawl persisted no link metric for the URL.
   internal_links: internalLinksSchema.nullable(),
-  issues: z.array(issueOccurrenceSchema),
+  issues: z.array(pageIssueSchema),
   evaluations: z.array(ruleEvaluationSchema),
   artifact_id: uuid().nullable(),
   extractor_version: z.string(),
@@ -227,4 +234,5 @@ export type DeliveryFacts = z.infer<typeof deliveryFactsSchema>;
 export type PageSummary = z.infer<typeof pageSummarySchema>;
 export type PagesPage = z.infer<typeof pagesPageSchema>;
 export type PageDetail = z.infer<typeof pageDetailSchema>;
+export type PageIssue = z.infer<typeof pageIssueSchema>;
 export type RerunPageResponse = z.infer<typeof rerunPageResponseSchema>;

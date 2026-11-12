@@ -337,7 +337,7 @@ interaction recipes live only in [`design.md`](design.md).
 | Checkbox and radio group | `frontend/components/ui/checkbox.tsx`, `frontend/components/ui/radio-group.tsx` |
 | Toast, Pressable, Clipboard action | `toast.tsx`, `pressable.tsx`, `copy-button.tsx` |
 | Text roles (`textRole`) | `frontend/components/ui/typography.tsx` |
-| List beside its detail | `frontend/components/ui/list-detail.tsx` (`ListDetailCard`, `ListDetailRow`, `ListDetailPane`) |
+| Selectable, tree and opening list rows | `frontend/components/ui/list-row.tsx` (`OptionRow`, `TreeOption`, `OpenRow`) |
 | Stack, Inline | `frontend/components/ui/layout.tsx` |
 | Icon, Dot, IconTile | `frontend/components/ui/icon.tsx` |
 | Offer and connection rows; identity rows | `frontend/components/ui/control-row.tsx` (`ControlRow`); `frontend/components/ui/workspace.tsx` (`IdentityRow`) |

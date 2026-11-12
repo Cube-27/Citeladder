@@ -108,6 +108,39 @@ describe('InventorySection', () => {
     expect(window.location.search).toBe('?page_kind=faq');
   });
 
+  it('searches the pages by URL on the server, and says when none match', async () => {
+    window.history.replaceState(null, '', '/site');
+    const requested: Array<string | null> = [];
+    mswServer.use(
+      http.get(PAGES, ({ request }) => {
+        const query = new URL(request.url).searchParams.get('query');
+        requested.push(query);
+        return HttpResponse.json({
+          items:
+            query === 'nothing' ? [] : [makePageSummary({ title: query ? 'Bags' : 'Homepage' })],
+          next_cursor: null,
+          root_errors: [],
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<PagesBrowser />);
+    expect(await screen.findByText('Homepage')).toBeInTheDocument();
+    expect(requested.at(-1)).toBeNull();
+
+    const search = () => screen.getByRole('searchbox', { name: 'Search pages' });
+    await user.type(search(), '/bags{Enter}');
+    expect(await screen.findByText('Bags')).toBeInTheDocument();
+    expect(requested.at(-1)).toBe('/bags');
+    expect(new URLSearchParams(window.location.search).get('pages_query')).toBe('/bags');
+
+    await user.clear(search());
+    await user.type(search(), 'nothing{Enter}');
+    expect(
+      await screen.findByRole('heading', { name: 'No pages match “nothing”' }),
+    ).toBeInTheDocument();
+  });
+
   it('draws the discovered pages’ first load inside their table', async () => {
     mswServer.use(
       http.get(INVENTORY, async () => {

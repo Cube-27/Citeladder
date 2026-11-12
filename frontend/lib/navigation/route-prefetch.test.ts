@@ -241,21 +241,21 @@ describe('prefetchRoute', () => {
     expect(warmed).toEqual(keys.map((key) => JSON.stringify(key)).sort());
   });
 
-  it('files a cold issue catalog under the crawl the project read names, before the dashboard lands', async () => {
-    const page = {
-      items: [],
-      next_cursor: null,
-      summary: {
-        issue_count: 0,
-        defect_issue_type_count: 0,
-        advisory_issue_type_count: 0,
-        occurrence_count: 0,
-        severity_counts: {},
-        dimension_counts: {},
-        affected_url_count: 0,
-        monitored_affected_url_count: 0,
-      },
+  it('files a cold issue catalog under the crawl the project read names, then asks that crawl for its summary, before the dashboard lands', async () => {
+    const summary = {
+      issue_count: 0,
+      defect_issue_type_count: 0,
+      advisory_issue_type_count: 0,
+      occurrence_count: 0,
+      severity_counts: {},
+      dimension_counts: {},
+      affected_url_count: 0,
+      monitored_affected_url_count: 0,
+      section_counts: { technical: 0, content: 0, aeo: 0 },
     };
+    const page = { items: [], next_cursor: null, summary };
+    const worst = { items: [], next_cursor: null, summary: { ...summary, issue_count: 3 } };
+    const asked: string[] = [];
     // Held until the catalog is filed: the catalog must not wait for it.
     const dashboard = heldAnswer();
     mswServer.use(
@@ -266,17 +266,24 @@ describe('prefetchRoute', () => {
       http.get(`/api/v1/projects/${PROJECT_ID}/site-health/issues`, () =>
         HttpResponse.json({ ...page, crawl_id: CRAWL_ID }),
       ),
+      http.get(`/api/v1/site-crawls/${CRAWL_ID}/issues`, ({ request }) => {
+        asked.push(new URL(request.url).search);
+        return HttpResponse.json(worst);
+      }),
     );
     prefetchRoute(client, '/issues', PROJECT);
 
-    await vi.waitFor(() =>
-      expect(
-        client
-          .getQueryCache()
-          .findAll({ queryKey: queryKeys.siteHealth.crawlIssues(CRAWL_ID) })
-          .map((query) => query.state.data),
-      ).toEqual([page]),
-    );
+    await vi.waitFor(() => {
+      const filed = client
+        .getQueryCache()
+        .findAll({ queryKey: queryKeys.siteHealth.crawlIssues(CRAWL_ID) })
+        .map((query) => query.state.data);
+      // Exactly the two, in either order.
+      expect(filed).toHaveLength(2);
+      expect(filed).toEqual(expect.arrayContaining([page, worst]));
+    });
+    // The summary's worst defects, across every tab.
+    expect(asked).toEqual(['?limit=3&finding_class=defect']);
     dashboard.release();
   });
 

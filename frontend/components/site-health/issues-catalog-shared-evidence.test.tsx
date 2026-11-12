@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 
 import { mswServer } from '@/test/msw-server';
 import { parseAgentHandoff } from '@/lib/agent/handoff';
@@ -14,6 +14,9 @@ import {
   renderIssues,
   summary,
 } from './issues-catalog.test-support';
+
+/** The Issues screen with the form issue open, as a link to it opens it. */
+const OPEN = `/issues?issue=${ISSUE_A}`;
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => window.history.replaceState(null, '', '/issues'));
@@ -66,7 +69,7 @@ describe('IssuesCatalog', () => {
         ],
       });
 
-      renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+      renderIssues(<IssuesCatalog crawlId={CRAWL} />, OPEN);
 
       // The two pages differ only in the control's ordinal, which is not
       // shown, so they are one fix.
@@ -98,10 +101,11 @@ describe('IssuesCatalog', () => {
         next_cursor: 'cursor-page-2',
       });
 
-      renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+      renderIssues(<IssuesCatalog crawlId={CRAWL} />, OPEN);
 
       expect(await screen.findByText('On all 2 pages shown, of 179 affected')).toBeInTheDocument();
-      expect(screen.getAllByRole('button', { name: 'Next page' })[0]).not.toBeDisabled();
+      const dialog = screen.getByRole('dialog', { name: 'Form controls missing accessible names' });
+      expect(within(dialog).getByRole('button', { name: 'Next page' })).not.toBeDisabled();
     });
 
     it('says when the whole list shares it', async () => {
@@ -110,7 +114,7 @@ describe('IssuesCatalog', () => {
         occurrences: [formOccurrence(1, email), formOccurrence(2, email)],
       });
 
-      renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+      renderIssues(<IssuesCatalog crawlId={CRAWL} />, OPEN);
 
       expect(await screen.findByText('On all 2 affected pages')).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: 'Ask agent about this page' })).toBeNull();

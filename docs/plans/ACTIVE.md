@@ -20,6 +20,13 @@ move and remove other backlog work); the feature owners in
 - [Content rules engine](content-rules-engine.md): the rule catalog and the L4
   model pass shipped; the L1–L3 linters and L5 are not assigned.
 
+## Draft
+
+- [Site Health baseline crawls](site-health-baseline-crawls.md): discovery
+  apart from analysis, baselines that track issue resolution over time, Mark
+  fixed, Re-run all and Ask agent in the drawer. Open for review with the
+  owner; not authorized for execution.
+
 ## Queued
 
 - [Backlog](backlog.md): tier 2 (before launch: compliance, hardening, billing

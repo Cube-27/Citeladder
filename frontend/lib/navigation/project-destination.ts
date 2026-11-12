@@ -130,10 +130,11 @@ const PROJECT_NEUTRAL_PARAMS = new Set([
   'compare',
   'engine',
   'status',
+  'sort',
   // Site Health catalog filters name catalog values, not records.
+  'section',
   'severity',
   'category',
-  'dimension',
   'rule',
   'finding_class',
   'page_kind',

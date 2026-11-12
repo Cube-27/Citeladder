@@ -3409,6 +3409,10 @@
         ],
         "additionalProperties": false
       },
+      "IssueSection": {
+        "type": "string",
+        "enum": ["technical", "content", "aeo"]
+      },
       "IssueSeverity": {
         "type": "string",
         "enum": ["critical", "high", "medium", "low", "info"]
@@ -3467,6 +3471,18 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "section_counts": {
+            "type": "object",
+            "propertyNames": {
+              "$ref": "#/components/schemas/IssueSection"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "required": ["technical", "content", "aeo"]
           }
         },
         "required": [
@@ -3477,7 +3493,8 @@
           "severity_counts",
           "dimension_counts",
           "affected_url_count",
-          "monitored_affected_url_count"
+          "monitored_affected_url_count",
+          "section_counts"
         ],
         "additionalProperties": false
       },
@@ -6894,9 +6911,6 @@
           },
           "summary": {
             "$ref": "#/components/schemas/IssuesSummary"
-          },
-          "first_issue": {
-            "$ref": "#/components/schemas/SiteIssueDetail"
           }
         },
         "required": ["items", "next_cursor", "summary"],
@@ -8892,6 +8906,14 @@
             }
           },
           {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
             "name": "sort",
             "in": "query",
             "required": false,
@@ -8993,6 +9015,32 @@
             }
           },
           {
+            "name": "section",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["technical", "content", "aeo"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "severity",
+              "type": "string",
+              "enum": ["severity", "pages"]
+            }
+          },
+          {
             "name": "rule",
             "in": "query",
             "required": false,
@@ -9034,22 +9082,82 @@
               "type": "string",
               "enum": ["defect", "advisory"]
             }
+          }
+        ],
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/site-crawls/{crawl_id}/issues/{group_id}": {
+      "get": {
+        "tags": ["site-crawls"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SiteIssueDetail"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
           },
           {
-            "name": "detail_limit",
+            "name": "crawl_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "group_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "limit",
             "in": "query",
             "required": false,
             "schema": {
-              "anyOf": [
-                {
-                  "type": "integer",
-                  "minimum": 1,
-                  "maximum": 200
-                },
-                {
-                  "type": "null"
-                }
-              ]
+              "default": 50,
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "page_kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
             }
           }
         ],

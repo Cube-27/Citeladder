@@ -112,4 +112,13 @@ export const summary = {
   dimension_counts: { technical: 30, aeo: 17 },
   affected_url_count: 50,
   monitored_affected_url_count: 38,
+  section_counts: { technical: 24, content: 9, aeo: 14 },
 };
+
+/**
+ * Whether an issues request is the summary's (its worst defects, across every
+ * tab) rather than the list's, which always names its tab.
+ */
+export function isSummaryRequest(request: Request): boolean {
+  return !new URL(request.url).searchParams.has('section');
+}

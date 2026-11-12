@@ -28,7 +28,7 @@ import { scalarText } from '../../text-order.ts';
 import type { SiteChangeSnapshots } from '../../generated/db-schema.ts';
 import { loadCrawl, resolveUsableCrawl, type Crawl } from './crawl.ts';
 import { pageRerunSql } from '../page-rerun.ts';
-import { issueImpact, remediationRoute, ruleScoreRoles, ruleTitle } from './rules.ts';
+import { issueImpact, remediationRoute, ruleScoreRoles, ruleSection, ruleTitle } from './rules.ts';
 
 const reads = policy.site_health.reads;
 const labels: Record<string, string> = reads.aeo_dimension_labels;
@@ -209,6 +209,8 @@ export async function overview(
           // The failing title from the current catalog, as the Issues catalog
           // reads it; the persisted description states the passing expectation.
           title: ruleTitle(ruleId),
+          // The Issues tab the rule is listed under, so a link opens on it.
+          section: ruleSection(ruleId),
         };
       }),
     web_fundamentals: snapshot.web_fundamentals ?? {
