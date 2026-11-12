@@ -68,15 +68,17 @@ test('built marketing hydrates with one enforced header and blocks injected scri
   });
   // Exactly one policy per page (docs/frontend-architecture.md): Astro puts a
   // prerendered page's policy in a <meta> element, served as a static asset,
-  // and an on-demand page's in the response header.
+  // and an on-demand page's in the response header. On-demand pricing reads
+  // the plan catalog from ORIGIN_UPSTREAM, which nothing serves here, so it
+  // renders its catalog-outage page (503) under the same policy.
   const pages = [
-    { path: '/', carrier: 'meta' },
-    { path: '/pricing', carrier: 'header' },
-    { path: '/privacy', carrier: 'meta' },
+    { path: '/', carrier: 'meta', status: 200 },
+    { path: '/pricing', carrier: 'header', status: 503 },
+    { path: '/privacy', carrier: 'meta', status: 200 },
   ] as const;
-  for (const { path, carrier } of pages) {
+  for (const { path, carrier, status } of pages) {
     const response = await page.goto(`https://127.0.0.1:8794${path}`);
-    expect(response?.status()).toBe(200);
+    expect(response?.status()).toBe(status);
     const header = response?.headers()['content-security-policy'];
     const meta = page.locator('meta[http-equiv="content-security-policy"]');
     if (carrier === 'header') {
