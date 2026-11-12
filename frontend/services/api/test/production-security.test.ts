@@ -17,11 +17,18 @@ function exampleSecrets(): Record<string, string> {
   const text = readFileSync(new URL('../../../../.env.example', import.meta.url), 'utf8');
   const secrets: Record<string, string> = {};
   for (const line of text.split(/\r?\n/u)) {
-    const match = /^#?\s*([A-Z][A-Z0-9_]*)=(.+)$/u.exec(line.trim());
-    if (match && secretName.test(match[1]) && !/^(?:NEXT_)?PUBLIC_/u.test(match[1]))
-      secrets[match[1]] = match[2].trim();
+    const [, name, value] = /^#?\s*([A-Z][A-Z0-9_]*)=(.+)$/u.exec(line.trim()) ?? [];
+    if (name && value && secretName.test(name) && !/^(?:NEXT_)?PUBLIC_/u.test(name))
+      secrets[name] = value.trim();
   }
   return secrets;
+}
+
+/** One value `.env.example` ships; a renamed or removed entry fails loudly. */
+function shippedSecret(secrets: Record<string, string>, name: string): string {
+  const value = secrets[name];
+  if (value === undefined) throw new Error(`.env.example no longer ships ${name}`);
+  return value;
 }
 
 function startupRefusal(env: Record<string, string>): string {
@@ -65,18 +72,24 @@ describe('deployment environment admission (AR-1)', () => {
 describe('.env.example secrets', () => {
   const secrets = exampleSecrets();
 
-  it('refuses the shipped application, database and demo login secrets at production startup', () => {
+  it('refuses the shipped application, origin, database and demo login secrets at production startup', () => {
     const refusal = startupRefusal({
       ...demoEnv,
-      JWT_SECRET_KEY: secrets.JWT_SECRET_KEY,
-      ENCRYPTION_KEY: secrets.ENCRYPTION_KEY,
-      API_KEY_PEPPER: secrets.API_KEY_PEPPER,
-      DEV_LOGIN_PASSWORD: secrets.DEV_LOGIN_PASSWORD,
-      DATABASE_URL: `postgresql://fixture:${encodeURIComponent(secrets.POSTGRES_PASSWORD)}@database.test/app`,
+      CITELADDER_ORIGIN_TOKEN: shippedSecret(secrets, 'CITELADDER_ORIGIN_TOKEN'),
+      CITELADDER_ORIGIN_TOKEN_PREVIOUS: shippedSecret(secrets, 'CITELADDER_ORIGIN_TOKEN_PREVIOUS'),
+      JWT_SECRET_KEY: shippedSecret(secrets, 'JWT_SECRET_KEY'),
+      ENCRYPTION_KEY: shippedSecret(secrets, 'ENCRYPTION_KEY'),
+      API_KEY_PEPPER: shippedSecret(secrets, 'API_KEY_PEPPER'),
+      DEV_LOGIN_PASSWORD: shippedSecret(secrets, 'DEV_LOGIN_PASSWORD'),
+      DATABASE_URL: `postgresql://fixture:${encodeURIComponent(shippedSecret(secrets, 'POSTGRES_PASSWORD'))}@database.test/app`,
     });
     expect(refusal).toContain('JWT_SECRET_KEY does not meet the production strength policy');
     expect(refusal).toContain('ENCRYPTION_KEY does not meet the production strength policy');
     expect(refusal).toContain('API_KEY_PEPPER does not meet the production strength policy');
+    expect(refusal).toContain('CITELADDER_ORIGIN_TOKEN must not be a template placeholder');
+    expect(refusal).toContain(
+      'CITELADDER_ORIGIN_TOKEN_PREVIOUS must not be a template placeholder',
+    );
     expect(refusal).toContain('database password does not meet the production strength policy');
     expect(refusal).toContain('dev_login_password does not meet the login password policy');
   });

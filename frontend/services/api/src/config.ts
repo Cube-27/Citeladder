@@ -218,7 +218,7 @@ function resolveSetting(name: keyof typeof policy.settings, source: SettingSourc
 }
 
 /** The deployment environment (AR-1): only these names start the service. */
-export type AppEnv = 'development' | 'test' | 'production';
+type AppEnv = 'development' | 'test' | 'production';
 
 export type ServiceConfig = {
   /** Every owner's settings, resolved once from the startup environment. */
@@ -387,6 +387,13 @@ function productionSecretProblems(config: ServiceConfig): string[] {
     .map(([name]) => `${name} does not meet the production strength policy`);
   if (new Set(values).size !== values.length)
     issues.push('application secrets must be independent');
+  // The execution settings own the origin tokens' length; a copied template is refused here.
+  const originTokens = {
+    CITELADDER_ORIGIN_TOKEN: config.execution.originToken,
+    CITELADDER_ORIGIN_TOKEN_PREVIOUS: config.execution.previousOriginToken,
+  };
+  for (const [name, value] of Object.entries(originTokens))
+    if (secretIsPlaceholder(value)) issues.push(`${name} must not be a template placeholder`);
   let password = '';
   try {
     password = decodeURIComponent(new URL(config.databaseUrl).password);
