@@ -269,6 +269,19 @@ describe('GET /visibility', () => {
     expect((engine.body.per_engine as Row[]).map((row) => row.logical_engine)).toEqual(['chatgpt']);
   });
 
+  it('reports failed answers as unknown when the run recorded no coverage', async () => {
+    const unrecorded = await fixtures.tenant();
+    const { coverage: _coverage, ...withoutCoverage } = aggregate({ completed: 2, brand: 1 });
+    await measuredRun(unrecorded, '2026-03-02T09:00:00Z', withoutCoverage);
+    const unknown = await get(unrecorded, route(unrecorded));
+    expect(unknown.body).toMatchObject({ total_completed: 2, total_failed: null });
+
+    const recorded = await fixtures.tenant();
+    await measuredRun(recorded, '2026-03-02T09:00:00Z', aggregate({ completed: 2, brand: 1 }));
+    const measured = await get(recorded, route(recorded));
+    expect(measured.body).toMatchObject({ total_completed: 2, total_failed: 0 });
+  });
+
   it('compares share of voice at the mention level, as the tile shows it', async () => {
     const tenant = await fixtures.tenant();
     const withMentions = (brand: number, globex: number) => ({
@@ -1174,6 +1187,18 @@ describe('GET /visibility/fanout and /visibility/evidence', () => {
       prompt_options: [{ label: 'Precise prompt' }],
     });
   });
+
+  it("offers only brand runs' prompts in the prompt filter", async () => {
+    const shop = await fixtures.tenant();
+    const brand = await fixtures.audit(shop);
+    const commerce = await fixtures.audit(shop, { scope: 'commerce' });
+    await fixtures.execution(shop, { auditId: brand, promptText: 'Best index fund?' });
+    await fixtures.execution(shop, { auditId: commerce, promptText: 'Cheapest running shoes?' });
+
+    const { body } = await get(shop, route(shop, '/evidence'), {});
+    expect(body).toMatchObject({ total: 1, prompt_options: [{ label: 'Best index fund?' }] });
+    expect(body.prompt_options).toHaveLength(1);
+  });
 });
 
 describe('GET /visibility/sources', () => {
@@ -1529,5 +1554,49 @@ describe('GET /visibility/sources', () => {
 
     const unpaired = await get(tenant, route(tenant, '/sources/movers'), { audit_ids: [current] });
     expect(unpaired.body).toMatchObject({ comparison_status: 'no_baseline', risers: [] });
+  });
+
+  it("ranks movers against a baseline in the runs' own, non-default market", async () => {
+    const tenant = await fixtures.tenant();
+    const marketId = randomUUID();
+    await db
+      .insertInto('project_markets')
+      .values({
+        id: marketId,
+        workspace_id: tenant.workspaceId,
+        project_id: tenant.projectId,
+        label: 'United Kingdom',
+        country_code: 'GB',
+        language_code: 'en',
+        created_at: new Date(),
+      })
+      .execute();
+    const complete = aggregate({ completed: 1, brand: 0 });
+    const baseline = await measuredRun(tenant, '2026-02-01T00:00:00Z', complete);
+    await fixtures.execution(tenant, {
+      auditId: baseline,
+      analysis: { citations: [{ url: 'https://falling.example/a' }] },
+    });
+    const current = await measuredRun(tenant, '2026-03-01T00:00:00Z', complete);
+    await fixtures.execution(tenant, {
+      auditId: current,
+      analysis: { citations: [{ url: 'https://rising.example/a' }] },
+    });
+    await db
+      .updateTable('audits')
+      .set({ market_id: marketId })
+      .where('id', 'in', [baseline, current])
+      .execute();
+
+    const { body } = await get(tenant, route(tenant, '/sources/movers'), {
+      audit_id: current,
+      baseline_audit_ids: [baseline],
+    });
+    expect(body).toEqual({
+      dimension: 'domain',
+      comparison_status: 'comparable',
+      risers: [{ key: 'rising.example', current_share: 1, previous_share: 0, delta: 100 }],
+      fallers: [{ key: 'falling.example', current_share: 0, previous_share: 1, delta: -100 }],
+    });
   });
 });

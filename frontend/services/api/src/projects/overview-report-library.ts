@@ -13,7 +13,7 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { crawlSummary } from '../crawl-logs/reads.ts';
 import { getPerformance } from '../traffic/performance.ts';
-import { getVisibility } from '../visibility/dashboard.ts';
+import { getVisibility, scopedSelection } from '../visibility/dashboard.ts';
 import { getPerception } from '../visibility/perception.ts';
 import type { PromptMetricItem } from '../visibility/prompts.ts';
 import { getSourceMovers } from '../visibility/source-movers.ts';
@@ -58,11 +58,12 @@ export function truncated(report: PdfReport, total: number, noun: string) {
   if (total > ROWS) quiet(report, `Showing ${ROWS} of ${plural(total, noun)}.`);
 }
 
-function latest({ scope }: ReportContext): RunSelection {
+/** The page defaults on one run; a null run would read every run of the default market. */
+function selection({ scope }: ReportContext, auditId: string | null): RunSelection {
   return {
     ...scope,
     marketId: null,
-    auditId: null,
+    auditId,
     auditIds: null,
     logicalEngine: null,
     cohort: COHORT,
@@ -70,6 +71,9 @@ function latest({ scope }: ReportContext): RunSelection {
     toAt: null,
   };
 }
+
+/** The latest run's selection, or AnalysisNotFoundError before the first completed run. */
+const latest = (context: ReportContext) => scopedSelection(context.db, selection(context, null));
 
 const visibilityRead = ({ db, scope }: ReportContext) =>
   getVisibility(
@@ -172,12 +176,12 @@ const shareOfVoice: Section = async (context) => {
 const topMovers: Section = async (context) => {
   const { db, report } = context;
   heading(report, 'top_movers');
-  const comparison = (await visibilityRead(context)).comparison;
+  const { audit_id: auditId, comparison } = await visibilityRead(context);
   if (comparison?.status !== 'comparable') {
     quiet(report, 'No comparable earlier period to compare this one with yet.');
     return;
   }
-  const movers = await getSourceMovers(db, latest(context), {
+  const movers = await getSourceMovers(db, selection(context, auditId), {
     dimension: 'domain',
     baselineAuditIds: comparison.baseline_audit_ids,
     limit: ROWS,
@@ -204,7 +208,7 @@ const topMovers: Section = async (context) => {
 const retrieval: Section = async (context) => {
   const { db, report } = context;
   heading(report, 'retrieval');
-  const misses = await getSourceNearMisses(db, latest(context), {
+  const misses = await getSourceNearMisses(db, await latest(context), {
     asOf: new Date().toISOString(),
     limit: ROWS,
   });
@@ -228,7 +232,7 @@ const retrieval: Section = async (context) => {
 
 const perception: Section = async (context) => {
   heading(context.report, 'perception');
-  const read = await getPerception(context.db, latest(context));
+  const read = await getPerception(context.db, await latest(context));
   const score = read.brand?.score;
   if (read.state !== 'value' || !score) {
     quiet(context.report, 'Perception is not available for the latest run.');

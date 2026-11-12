@@ -9,6 +9,7 @@ import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contra
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Delta } from '@/components/ui/delta';
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
@@ -204,7 +205,7 @@ export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
               rows={rows.map((mover) => ({
                 key: mover.key,
                 label: mover.key,
-                value: `${mover.delta > 0 ? '+' : ''}${mover.delta} pp`,
+                value: <Delta value={mover.delta} policy="neutral" unit=" pp" />,
               }))}
             />
           ) : (

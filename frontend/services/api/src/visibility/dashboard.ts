@@ -268,7 +268,7 @@ async function runView(
         ]),
       ),
       total_completed: counts.responses,
-      total_failed: counts.failed ?? 0,
+      total_failed: counts.failed ?? null,
       visibility_score: selectedScore(run.visibilityScore, metrics, query.cohort, engine),
       visibility_rate: observedRate(metrics, 'brand_mention_rate'),
       owned_citation_rate: observedRate(metrics, 'owned_citation_rate'),
@@ -495,7 +495,7 @@ async function rangeVisibility(
     to_at: wireUtcOf(toAt),
     counts,
     total_completed: counts.responses,
-    total_failed: counts.failed ?? 0,
+    total_failed: counts.failed ?? null,
     coverage: {
       requested: counts.expected,
       completed: counts.responses,
