@@ -10,6 +10,7 @@ import type { SiteRuleEvaluations } from '../generated/db-schema.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
 import { appliedSiteChecks, crawlSiteChecks, scoreAnalysis } from './analysis/scoring.ts';
 import { refreshIssueCurrency } from './issue-currency.ts';
+import { landIssueStates } from './issue-states.ts';
 import type { Crawl } from './site-task.ts';
 
 export function persistedEvaluation(row: Selectable<SiteRuleEvaluations>): RuleEvaluation {
@@ -35,7 +36,8 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
     .orderBy('site_url_id')
     .orderBy('id')
     .execute();
-  if (!initials.length) return;
+  // Pages that answered 404/410 still land: they have no analysis to finalize.
+  if (!initials.length) return landIssueStates(db, crawl);
   const ids = initials.map((row) => row.id);
   const evaluations = await db
     .selectFrom('site_rule_evaluations')
