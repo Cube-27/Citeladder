@@ -1,10 +1,11 @@
 /** The terminal snapshot and matching crawl summary publish in one transaction. */
 import { randomUUID } from 'node:crypto';
-import { isTerminalCrawl } from '@citeladder/contracts/site-health';
+import { isTerminalCrawl, USABLE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { numberRecord } from '../db/json.ts';
+import { sameScope } from './change-snapshot.ts';
 import { cohortComposition } from './cohort-composition.ts';
 import { crawlCoverage } from './coverage.ts';
 import {
@@ -12,6 +13,7 @@ import {
   scoreSummary,
   type MeasurementProjection,
 } from './score-summary.ts';
+import { isPageRerun, pageRerunSql } from './page-rerun.ts';
 import { readinessDiagnostic, webDiagnostic } from './snapshot-diagnostics.ts';
 import { snapshotEligibility } from './snapshot-eligibility.ts';
 import { snapshotIssues } from './snapshot-issues.ts';
@@ -37,25 +39,47 @@ function direction(delta: number | null) {
   return delta < 0 ? 'decreased' : 'unchanged';
 }
 
+/**
+ * Earlier snapshots of usable, non-empty site crawls under the same versions
+ * and scope, oldest first. A failed or empty crawl, or a page rerun, is never a
+ * trend point; with none left the trend reports no comparable snapshot.
+ */
 async function history(db: Database, crawl: Crawl, projection: MeasurementProjection, now: Date) {
-  const rows = await db
-    .selectFrom('site_health_snapshots')
-    .selectAll()
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('project_id', '=', crawl.project_id)
-    .where('crawl_id', '!=', crawl.id)
-    .where('analyzer_version', '=', crawl.analyzer_version || policy.site_health.versions.analyzer)
-    .where('scoring_version', '=', crawl.scoring_version || reads.scoring_version)
-    .where('profile_version', '=', versions.profile)
-    .where('schema_contract_version', '=', versions.schema_contract)
-    .where('presentation_version', '=', versions.presentation)
-    .where('coverage_formula_version', '=', reads.coverage_formula_version)
-    .where('classification_formula_version', '=', reads.classification_formula_version)
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
-    .limit(reads.overview_trend_point_limit - 1)
+  const candidates = await db
+    .selectFrom('site_health_snapshots as s')
+    .innerJoin('site_crawls as c', (join) =>
+      join.onRef('c.id', '=', 's.crawl_id').onRef('c.workspace_id', '=', 's.workspace_id'),
+    )
+    .selectAll('s')
+    .select(['c.root_url', 'c.configuration'])
+    .where('s.workspace_id', '=', crawl.workspace_id)
+    .where('s.project_id', '=', crawl.project_id)
+    // Only crawls created before this one, so a late publication never trends
+    // against a newer crawl (Changes picks its predecessor the same way).
+    .where('c.created_at', '<', crawl.created_at)
+    .where('c.status', 'in', USABLE_CRAWL_STATUSES)
+    .where('c.analyzed_url_count', '>', 0)
+    .where(sql<boolean>`not ${pageRerunSql}`)
+    .where(
+      's.analyzer_version',
+      '=',
+      crawl.analyzer_version || policy.site_health.versions.analyzer,
+    )
+    .where('s.scoring_version', '=', crawl.scoring_version || reads.scoring_version)
+    .where('s.profile_version', '=', versions.profile)
+    .where('s.schema_contract_version', '=', versions.schema_contract)
+    .where('s.presentation_version', '=', versions.presentation)
+    .where('s.coverage_formula_version', '=', reads.coverage_formula_version)
+    .where('s.classification_formula_version', '=', reads.classification_formula_version)
+    .orderBy('c.created_at', 'desc')
+    .orderBy('c.id', 'desc')
+    // Scope is compared in code, so search as many earlier crawls as Changes does.
+    .limit(policy.site_health.change_intel.max_crawl_candidates)
     .execute();
-  rows.reverse();
+  const rows = candidates
+    .filter((row) => sameScope(row, crawl))
+    .slice(0, reads.overview_trend_point_limit - 1)
+    .reverse();
   const previous = rows.at(-1);
   const { changed, composition } = cohortComposition({
     previous: numberRecord(previous?.scored_page_count_by_kind),
@@ -101,7 +125,12 @@ async function history(db: Database, crawl: Crawl, projection: MeasurementProjec
   };
 }
 
+/**
+ * A page rerun re-reads one page: it writes no project snapshot and keeps no
+ * site score summary, so it never becomes a trend point or a one-page score.
+ */
 export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEmpty = false) {
+  if (isPageRerun(crawl)) return false;
   const projection = await loadMeasurementProjection(db, crawl);
   if (
     !persistEmpty &&
@@ -250,6 +279,7 @@ export async function addArchitectureIssues(db: Database, crawl: Crawl) {
 }
 
 export async function refreshLiveScoreSummary(db: Database, crawl: Crawl) {
+  if (isPageRerun(crawl)) return;
   const projection = await loadMeasurementProjection(db, crawl);
   if (!projection.rows.length) return;
   const issues = await snapshotIssues(

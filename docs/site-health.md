@@ -48,7 +48,8 @@ controls (`advanced_controls_enabled`, or a workspace holding the
 terminal crawl, or the next task generation of an active one (cancelling the
 page's older generation if it is still open, and counted by its latest). Its
 configuration carries `page_rerun`; it hands its page to verification and
-Opportunities but is never compared as a site crawl, and a read that names no
+Opportunities but is never compared as a site crawl. It writes no project
+snapshot and no score summary, so it is never a trend point, and a read that names no
 crawl (Overview, AEO readiness, Architecture) never defaults to it.
 
 **Scheduled crawls.** A project may turn on one crawl schedule
@@ -139,7 +140,7 @@ analysis drain, one locked transaction:
 1. resolves canonical-alias chains;
 2. evaluates crawl-finalize checks;
 3. appends a final analysis per page (`supersedes_analysis_id`);
-4. persists the snapshot and score summary;
+4. persists the snapshot and score summary (none for a page rerun);
 5. sets `completed`, `partially_completed` (with `partial_reason`) or `failed`
    (nothing analyzed, and either discovery found nothing or every applicable
    analysis failed), persists the terminal dashboard counters (`site_crawls.terminal_counters`,
@@ -154,7 +155,8 @@ analysis drain, one locked transaction:
 - **Overdue:** an active crawl older than `overdue_crawl_seconds` has its open
   tasks failed with `crawl_overdue`, then is reconciled.
 - **Cancelled:** a cancelled crawl with measurement evidence but no snapshot is
-  published.
+  published. A cancelled page rerun is published once, its `change_intel` task
+  standing in for the snapshot it never writes.
 
 Stop (`controls.ts`) commits only the cancellation and fetch settlement.
 
@@ -624,7 +626,10 @@ is absence from the crawl, not proof of absence from the site.
 found on the site", and omits `root` and `other`.
 
 **Scored cohort composition.** Trend and Change summary compare against the
-newest earlier comparable snapshot (`snapshot.ts`). `cohort-composition.ts`
+newest earlier comparable snapshot (`snapshot.ts`): one under the same versions
+from a usable crawl (not failed), created earlier, that analyzed a page, is not a page rerun, and
+has the same origin and scope as Changes requires (`sameScope`). With none, the
+trend reads `no_comparable_snapshot`. `cohort-composition.ts`
 sets `cohort_composition_changed` only when a page kind joined or left the
 scored cohort, or a kind's share moved by at least
 `overview_cohort_share_shift_points` (`reads.json`); smaller count drift is
@@ -683,7 +688,8 @@ the header's Recrawl button) rebuilds the create request from a crawl's frozen
 globs, input mode, page limit, seeds, page kinds and random seed and goes
 through ordinary admission, so the next crawl is comparable by construction.
 Recrawling a one-page re-read reruns the newest site crawl before it instead.
-Scheduled crawls are not built yet. Scope excludes the
+[Scheduled crawls](#crawl-lifecycle) rebuild the same request from the newest
+site crawl, so they are comparable the same way. Scope excludes the
 page limit, which is the fetch budget left at admission; the comparison reads
 only pages both crawls analyzed. Page reruns write no snapshot and are never a
 predecessor, and Changes never shows a snapshot an older rerun wrote. With no
