@@ -156,25 +156,31 @@ resource "google_logging_metric" "webhook_quarantined" {
   }
 }
 
+# A condition on a log-based metric must name one resource type. Webhook
+# delivery and the scheduled tick log from the API service; the runner job's
+# billing lane logs from the job.
 resource "google_monitoring_alert_policy" "webhook_quarantined" {
   display_name          = "${local.name} billing webhook quarantined"
   combiner              = "OR"
   notification_channels = [google_monitoring_notification_channel.email.id]
 
-  conditions {
-    display_name = "A billing webhook event entered quarantine"
-    condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.webhook_quarantined.name}\""
-      comparison      = "COMPARISON_GT"
-      threshold_value = 0
-      duration        = "0s"
-      aggregations {
-        alignment_period     = "300s"
-        per_series_aligner   = "ALIGN_SUM"
-        cross_series_reducer = "REDUCE_SUM"
-      }
-      trigger {
-        count = 1
+  dynamic "conditions" {
+    for_each = { api = "cloud_run_revision", runner = "cloud_run_job" }
+    content {
+      display_name = "A billing webhook event entered quarantine (${conditions.key})"
+      condition_threshold {
+        filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.webhook_quarantined.name}\" AND resource.type=\"${conditions.value}\""
+        comparison      = "COMPARISON_GT"
+        threshold_value = 0
+        duration        = "0s"
+        aggregations {
+          alignment_period     = "300s"
+          per_series_aligner   = "ALIGN_SUM"
+          cross_series_reducer = "REDUCE_SUM"
+        }
+        trigger {
+          count = 1
+        }
       }
     }
   }
@@ -214,7 +220,8 @@ resource "google_monitoring_alert_policy" "database_size" {
   conditions {
     display_name = "Database larger than ${var.database_size_alert_gb} GB of the 30 GB disk"
     condition_threshold {
-      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.database_size.name}\""
+      # Only the API's scheduled tick runs the periodic phases in Cloud Run.
+      filter          = "metric.type=\"logging.googleapis.com/user/${google_logging_metric.database_size.name}\" AND resource.type=\"cloud_run_revision\""
       comparison      = "COMPARISON_GT"
       threshold_value = var.database_size_alert_gb * 1073741824
       duration        = "0s"

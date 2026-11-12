@@ -80,8 +80,8 @@ describe('scheduled tick', () => {
       'database-size',
     ]);
     // The disk usage alert reads this byte count; any real PostgreSQL database exceeds 1 MB.
-    expect(sizes).toHaveLength(1);
-    expect(Number.isSafeInteger(sizes[0]) && Number(sizes[0]) > 1_000_000).toBe(true);
+    expect(sizes).toEqual([expect.any(Number)]);
+    expect(sizes[0]).toBeGreaterThan(1_000_000);
   });
 
   it('refuses a missing token, another identity, another audience and another issuer', async () => {

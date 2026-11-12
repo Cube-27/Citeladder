@@ -156,8 +156,18 @@ describe('health and readiness', () => {
     expect(live.status).toBe(200);
     expect(await live.json()).toEqual({ status: 'ok' });
     expect((await protectedApp.request('/health', { method: 'POST' })).status).toBe(403);
-    expect((await protectedApp.request('/health/')).status).toBe(403);
-    expect((await protectedApp.request('/ready')).status).toBe(403);
+    // Only the exact path is exempt: no suffix, prefix, case or traversal variant.
+    for (const path of [
+      '/health/',
+      '/healthz',
+      '/health/x',
+      '/HEALTH',
+      '//health',
+      '/health/../ready',
+      '/health/%2e%2e/ready',
+      '/ready',
+    ])
+      expect((await protectedApp.request(path)).status, path).toBe(403);
   });
   it('takes the visitor address only from a signed Worker request', async () => {
     const key = 'current-origin-token-0123456789abcdef';
