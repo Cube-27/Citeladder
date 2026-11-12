@@ -52,11 +52,12 @@ const TAB_CODEC = stringUrlCodec(
  * answers only the newest dataset of each acquisition identity.
  */
 function selectDatasets(
-  latestDatasets: readonly SearchIntelligenceDataset[],
-  offered: SearchIntelligenceReadiness['markets'],
+  readiness: SearchIntelligenceReadiness | undefined,
   scope: string,
   market: string,
 ) {
+  const latestDatasets = readiness?.datasets ?? [];
+  const offered = readiness?.markets ?? [];
   const scopes = [...new Set(latestDatasets.map((item) => item.research_scope ?? 'exact_host'))];
   const activeScope = scopes.includes(scope as 'exact_host' | 'domain_subdomains')
     ? scope
@@ -123,8 +124,7 @@ export function SearchIntelligencePage() {
     },
   });
   const { scopes, activeScope, markets, activeMarket, datasets } = selectDatasets(
-    readiness.data?.datasets ?? [],
-    readiness.data?.markets ?? [],
+    readiness.data,
     scope,
     market,
   );
