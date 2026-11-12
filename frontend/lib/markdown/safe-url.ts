@@ -1,5 +1,5 @@
 /**
- * URL sanitiser for untrusted (model-generated) Markdown links.
+ * URL sanitiser and off-site check for untrusted (model-generated) Markdown links.
  *
  * Split out of `markdown.tsx` so that file exports only its component — a
  * component module that also exports plain functions cannot keep state across a
@@ -27,4 +27,47 @@ export function safeUrlTransform(url: string): string {
     return '';
   }
   return trimmed;
+}
+
+/**
+ * The comparable host of a URL or bare domain (`https://www.Acme.com/x` and
+ * `acme.com` both give `acme.com`); null when it names no host.
+ */
+export function linkHost(value: string): string | null {
+  const trimmed = value.trim();
+  if (trimmed === '') return null;
+  try {
+    const url = new URL(/^[a-z][a-z\d+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`);
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+    const host = url.hostname
+      .toLowerCase()
+      .replace(/\.$/, '')
+      .replace(/^www\./, '');
+    return host === '' ? null : host;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Whether opening a sanitised link should first confirm that the person is
+ * leaving CiteLadder: a link to a host outside `knownHosts` (or a subdomain of
+ * one) could carry project data a prompt-injected page asked the model to put
+ * in its address. Links that stay in the app (relative paths, fragments) and
+ * inert links do not; `mailto:` always does, since its address can carry data
+ * to anyone.
+ */
+export function leavesForUnknownHost(href: string, knownHosts: readonly string[]): boolean {
+  if (href === '') return false;
+  let url: URL;
+  try {
+    url = new URL(href);
+  } catch {
+    // Not absolute: resolves against the app's own origin.
+    return false;
+  }
+  if (url.protocol === 'mailto:') return true;
+  const host = linkHost(href);
+  if (host === null) return true;
+  return !knownHosts.some((known) => host === known || host.endsWith(`.${known}`));
 }

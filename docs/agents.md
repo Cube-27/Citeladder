@@ -497,6 +497,11 @@ The full chat and the Dashboard panel share one thread and composer
 - a saved reply's run summary counts its model calls, data reads and web
   searches, and its web sources are listed under the reply as links apart
   from its cited CiteLadder records;
+- a link in a reply or document opens directly only to the project's site or
+  owned domains, the turn's or revision's web sources, or CiteLadder itself
+  (subdomains included); any other link, and every `mailto:`, first opens a
+  "You're leaving CiteLadder" confirm showing its full address, because a
+  prompt-injected page can make the model put project data in a link (AR-4);
 - **Context used** lists the included context in plain words, without record
   identities, budgets or omission codes.
 

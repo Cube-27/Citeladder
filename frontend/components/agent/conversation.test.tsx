@@ -1,5 +1,5 @@
 import { agentChatDetailSchema } from '@citeladder/contracts/agent';
-import { screen, within } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import {
   afterAll,
@@ -14,6 +14,7 @@ import {
 
 import { DISPLAY_TIME_ZONE_COOKIE } from '@/lib/display-timezone';
 import { detail, revision, REV2, skills } from '@/test/agent-chat-fixture';
+import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
@@ -126,6 +127,46 @@ describe('A finished reply’s run summary', () => {
     expect(within(sources).getByRole('link', { name: /Acme pricing/u })).toHaveAttribute(
       'href',
       'https://acme.example/pricing',
+    );
+  });
+});
+
+describe('Links in a reply', () => {
+  it('open directly to the project’s site and the turn’s sources, and confirm anywhere else', async () => {
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
+    const current = detail(revision(REV2, 2, 'agent', 'Saved result.'));
+    const [request, reply] = current.messages;
+    const chat = agentChatDetailSchema.parse({
+      ...current,
+      messages: [
+        request,
+        {
+          ...reply,
+          content:
+            '[Our pricing](https://www.acme.com/pricing), [the review](https://reviews.example/acme) and [more](https://evil.example/?notes=private)',
+          web_sources: [{ url: 'https://reviews.example/acme', title: 'Acme review' }],
+        },
+      ],
+    });
+    renderWithProviders(
+      <Conversation
+        detail={chat}
+        onRefine={vi.fn()}
+        onRecover={vi.fn()}
+        onRetry={vi.fn()}
+        canSend
+      />,
+      { projectSelection: { activeProject: makeProject({ website_url: 'https://acme.com' }) } },
+    );
+
+    // `fireEvent` returns false when a handler cancelled the browser's navigation.
+    expect(fireEvent.click(await screen.findByRole('link', { name: 'Our pricing' }))).toBe(true);
+    expect(fireEvent.click(screen.getByRole('link', { name: 'the review' }))).toBe(true);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    expect(fireEvent.click(screen.getByRole('link', { name: 'more' }))).toBe(false);
+    expect(screen.getByRole('dialog', { name: 'You’re leaving CiteLadder' })).toHaveTextContent(
+      'https://evil.example/?notes=private',
     );
   });
 });
