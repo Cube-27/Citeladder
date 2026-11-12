@@ -2014,7 +2014,7 @@
                 "cohort": {
                   "type": "string",
                   "enum": ["core", "brand_diagnostic", "comparison", "commerce"],
-                  "description": "core prompts are scored (the default); comparison prompts name competitors and are reported separately."
+                  "description": "core prompts are scored; comparison prompts name competitors and are reported separately. Omit it to file the prompt as CiteLadder does: one naming the brand files under comparison when it also names a competitor, otherwise brand_diagnostic, and any other prompt under core."
                 }
               },
               "required": ["text"],
