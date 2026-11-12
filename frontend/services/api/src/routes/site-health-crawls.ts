@@ -1,6 +1,9 @@
 /** Atomic crawl-control family: all writes commit before workers can claim. */
 import {
   crawlScheduleSchema,
+  issueFixesSchema,
+  issueFixProgressSchema,
+  issueRerunResponseSchema,
   monitoredUrlsResponseSchema,
   rerunPageResponseSchema,
   siteCrawlSchema,
@@ -26,6 +29,7 @@ import { createCrawlRequest } from '../site-health/planner-policy.ts';
 import { crawlProjection, loadCrawl, rootFailure } from '../site-health/reads/crawl.ts';
 import { requireAdmitted } from '../site-health/reads/pages.ts';
 import { monitoredSet, rerunPage } from '../site-health/selection.ts';
+import { issueFixes, markIssueGroupFixed, rerunIssueGroup } from '../site-health/issue-fixes.ts';
 import { defineGetRoute, definePostRoute, definePutRoute } from './define.ts';
 
 const family = 'site-health-crawls';
@@ -213,5 +217,39 @@ export const siteHealthCrawlRoutes = [
           .execute((trx) => rerunPage(trx, workspaceId, crawl.project_id, path.site_url_id)),
       );
     },
+  }),
+  defineGetRoute({
+    family,
+    path: '/api/v1/site-crawls/{crawl_id}/issue-fixes',
+    params: { path: { crawl_id: uuid }, query: {} },
+    response: issueFixesSchema,
+    handle: ({ c, db }, { path }) => issueFixes(db, c.get('workspace').workspaceId, path.crawl_id),
+  }),
+  definePostRoute({
+    family,
+    path: '/api/v1/site-crawls/{crawl_id}/issues/{group_id}/mark-fixed',
+    params: { path: { crawl_id: uuid, group_id: uuid }, query: {} },
+    response: issueFixProgressSchema,
+    capability: 'write',
+    handle: ({ c, db }, { path }) =>
+      db
+        .transaction()
+        .execute((trx) =>
+          markIssueGroupFixed(trx, c.get('workspace').workspaceId, path.crawl_id, path.group_id),
+        ),
+  }),
+  definePostRoute({
+    family,
+    path: '/api/v1/site-crawls/{crawl_id}/issues/{group_id}/rerun',
+    params: { path: { crawl_id: uuid, group_id: uuid }, query: {} },
+    response: issueRerunResponseSchema,
+    status: 202,
+    capability: 'run',
+    handle: ({ c, db }, { path }) =>
+      db
+        .transaction()
+        .execute((trx) =>
+          rerunIssueGroup(trx, c.get('workspace').workspaceId, path.crawl_id, path.group_id),
+        ),
   }),
 ];

@@ -2,6 +2,7 @@
 
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
+import { IssueFixActions, type IssueFixScope } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
 import { ReadError } from '@/components/ui/read-error';
@@ -47,11 +48,13 @@ export type IssueHead = Pick<
   Partial<Pick<SiteIssue, 'page_kinds'>>;
 
 /**
- * One issue in full, over the Issues list: what it is, how to fix it, the two
- * ways to act on it, and the pages it was found on, each linking to its page.
+ * One issue in full, over the Issues list: what it is, how to fix it, the ways
+ * to act on it, how many of its pages are fixed (Mark fixed, Re-run all), and
+ * the pages it was found on, each linking to its page.
  */
 export function IssueDetailDialog({
   issue,
+  scope,
   crawlId,
   detailQuery,
   canPrevious,
@@ -60,6 +63,8 @@ export function IssueDetailDialog({
   onClose,
 }: Readonly<{
   issue: IssueHead;
+  /** The project the crawl belongs to: Re-run all refreshes its dashboard. */
+  scope: IssueFixScope;
   crawlId: string;
   detailQuery: UseQueryResult<SiteIssueDetail>;
   canPrevious: boolean;
@@ -128,6 +133,7 @@ export function IssueDetailDialog({
           Copy fix prompt
         </CopyButton>
       </Inline>
+      <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
       <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
         <h3 className={textRole('sectionTitle')}>Affected pages</h3>
         <OccurrenceList

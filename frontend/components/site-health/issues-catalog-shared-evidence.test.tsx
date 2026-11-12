@@ -19,7 +19,14 @@ import {
 const OPEN = `/issues?issue=${ISSUE_A}`;
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
-beforeEach(() => window.history.replaceState(null, '', '/issues'));
+beforeEach(() => {
+  window.history.replaceState(null, '', '/issues');
+  mswServer.use(
+    http.get(`/api/v1/site-crawls/${CRAWL}/issue-fixes`, () =>
+      HttpResponse.json({ crawl_id: CRAWL, items: [] }),
+    ),
+  );
+});
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 

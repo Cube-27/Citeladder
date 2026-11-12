@@ -2,6 +2,7 @@
 
 import type { UseQueryResult } from '@tanstack/react-query';
 
+import { fixedLabel } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { Card } from '@/components/ui/card';
 import { OpenRow } from '@/components/ui/list-row';
@@ -11,7 +12,7 @@ import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { InlineFigure, textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import type { SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
+import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
 import { formatCount } from '@/lib/format';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
 
@@ -22,10 +23,13 @@ import { issueTitle, severityCount } from '@/lib/site-health/issues';
  */
 export function IssuesSummary({
   query,
+  fixes = [],
   onOpen,
 }: Readonly<{
   /** The crawl's worst defects, unfiltered; its summary counts the whole crawl. */
   query: UseQueryResult<SiteIssuesPage>;
+  /** How far each issue's fix has come; an issue with none fixed shows no line. */
+  fixes?: readonly IssueFixProgress[];
   onOpen: (groupId: string) => void;
 }>) {
   if (query.isError && !query.data)
@@ -64,7 +68,7 @@ export function IssuesSummary({
             />
           ) : null}
         </Inline>
-        {items.length > 0 ? <FixFirst issues={items} onOpen={onOpen} /> : null}
+        {items.length > 0 ? <FixFirst issues={items} fixes={fixes} onOpen={onOpen} /> : null}
       </Stack>
     </Card>
   );
@@ -94,31 +98,43 @@ function firstSentence(text: string): string {
 /** The worst issues, worst first, each opening its own detail. */
 function FixFirst({
   issues,
+  fixes,
   onOpen,
-}: Readonly<{ issues: readonly SiteIssue[]; onOpen: (groupId: string) => void }>) {
+}: Readonly<{
+  issues: readonly SiteIssue[];
+  fixes: readonly IssueFixProgress[];
+  onOpen: (groupId: string) => void;
+}>) {
+  const fixOf = new Map(fixes.map((fix) => [fix.group_id, fix]));
   return (
     <Stack as="section" gap="item" aria-labelledby="issues-fix-first">
       <h3 id="issues-fix-first" className={textRole('sectionTitle')}>
         Fix these first
       </h3>
       <ol className={ledgerClasses()}>
-        {issues.map((issue) => (
-          <li key={issue.group_id} className={ledgerItemClasses()}>
-            <OpenRow
-              onOpen={() => onOpen(issue.group_id)}
-              title={issueTitle(issue)}
-              meta={
-                <IssueMetadata issue={issue}>
-                  <span className="tabular-nums">
-                    <InlineFigure>{formatCount(issue.affected_url_count)}</InlineFigure>{' '}
-                    {issue.affected_url_count === 1 ? 'page' : 'pages'}
-                  </span>
-                </IssueMetadata>
-              }
-              caption={issue.remediation ? firstSentence(issue.remediation) : null}
-            />
-          </li>
-        ))}
+        {issues.map((issue) => {
+          const fix = fixOf.get(issue.group_id);
+          return (
+            <li key={issue.group_id} className={ledgerItemClasses()}>
+              <OpenRow
+                onOpen={() => onOpen(issue.group_id)}
+                title={issueTitle(issue)}
+                meta={
+                  <IssueMetadata issue={issue}>
+                    <span className="tabular-nums">
+                      <InlineFigure>{formatCount(issue.affected_url_count)}</InlineFigure>{' '}
+                      {issue.affected_url_count === 1 ? 'page' : 'pages'}
+                    </span>
+                    {fix && fix.fixed_url_count > 0 ? (
+                      <span className="tabular-nums">{fixedLabel(fix)}</span>
+                    ) : null}
+                  </IssueMetadata>
+                }
+                caption={issue.remediation ? firstSentence(issue.remediation) : null}
+              />
+            </li>
+          );
+        })}
       </ol>
     </Stack>
   );

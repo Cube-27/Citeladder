@@ -89,6 +89,9 @@ export const siteHealthKeys = {
     groupId: string,
     filters: ListFilters = {},
   ) => crawlRead('issue', workspaceId, crawlId, groupId, filters),
+  /** How far each of the crawl's issues is fixed: what Mark fixed and every audit move. */
+  issueFixes: (workspaceId: string | null, crawlId: string) =>
+    crawlRead('issue-fixes', workspaceId, crawlId),
   /** One URL's detail, in every workspace: what a rerun refreshes. */
   crawlPage: (crawlId: string, siteUrlId: string) =>
     [...crawlResource(crawlId, 'page'), siteUrlId] as const,

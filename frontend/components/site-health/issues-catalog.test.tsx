@@ -22,6 +22,16 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
 const ISSUES = `/api/v1/site-crawls/${CRAWL}/issues`;
+const FIXES = `/api/v1/site-crawls/${CRAWL}/issue-fixes`;
+
+/** Issue A's fix progress: `fixed` of its 32 pages fixed, `rerun` tracked pages still open. */
+const progress = (fixed: number, rerun: number) => ({
+  group_id: ISSUE_A,
+  affected_url_count: 32,
+  fixed_url_count: fixed,
+  verified_url_count: 0,
+  rerun_url_count: rerun,
+});
 
 /** Opens All filters; returns one filter's row, named with its value ("Page kind: All page kinds"). */
 async function openFilter(user: User, label: string, value?: string) {
@@ -73,7 +83,10 @@ function serveIssues(items = [issue()], seen: URLSearchParams[] = [], nextCursor
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => {
   window.history.replaceState(null, '', '/issues');
-  mswServer.use(http.get(`${ISSUES}/${ISSUE_A}`, () => HttpResponse.json(issueDetail())));
+  mswServer.use(
+    http.get(`${ISSUES}/${ISSUE_A}`, () => HttpResponse.json(issueDetail())),
+    http.get(FIXES, () => HttpResponse.json({ crawl_id: CRAWL, items: [] })),
+  );
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
@@ -183,6 +196,76 @@ describe('IssuesCatalog', () => {
     await user.click(within(dialog).getByRole('button', { name: 'Close dialog' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(currentUrl()).not.toContain('issue=');
+  });
+
+  it('marks an issue fixed and shows how many of its pages are fixed, in the dialog and the summary', async () => {
+    serveIssues();
+    let marked = false;
+    mswServer.use(
+      http.get(FIXES, () =>
+        HttpResponse.json({ crawl_id: CRAWL, items: [progress(marked ? 32 : 0, 3)] }),
+      ),
+      http.post(`${ISSUES}/${ISSUE_A}/mark-fixed`, () => {
+        marked = true;
+        return HttpResponse.json(progress(32, 3));
+      }),
+    );
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    expect(await within(dialog).findByText('0 of 32 pages fixed')).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Mark fixed' }));
+
+    expect(await within(dialog).findByText('32 of 32 pages fixed')).toBeInTheDocument();
+    expect(within(dialog).getByText('32 awaiting a re-audit')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Mark fixed' })).toBeDisabled();
+    await user.click(within(dialog).getByRole('button', { name: 'Close dialog' }));
+    const fixFirst = await screen.findByRole('region', { name: 'Fix these first' });
+    expect(within(fixFirst).getByText('32 of 32 pages fixed')).toBeInTheDocument();
+  });
+
+  it('re-runs an issue’s open tracked pages, and says why when a crawl is running', async () => {
+    serveIssues();
+    let running = false;
+    mswServer.use(
+      http.get(FIXES, () => HttpResponse.json({ crawl_id: CRAWL, items: [progress(0, 3)] })),
+      http.post(`${ISSUES}/${ISSUE_A}/rerun`, () => {
+        if (running)
+          return HttpResponse.json(
+            {
+              error: {
+                code: 'crawl_already_active',
+                message: 'Project already has an active crawl',
+              },
+            },
+            { status: 409 },
+          );
+        running = true;
+        return HttpResponse.json(
+          { crawl_id: 'ffffffff-1111-4111-8111-111111111111', page_count: 3 },
+          { status: 202 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    expect(
+      await within(dialog).findByText('Re-run all re-audits 3 pages, one page fetch each.'),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Re-run all' }));
+    expect(
+      await within(dialog).findByText(
+        'Re-auditing 3 pages. The progress updates when the audit finishes.',
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Re-run all' }));
+    expect(
+      await within(dialog).findByText('A crawl is running. Re-run this issue when it finishes.'),
+    ).toBeInTheDocument();
   });
 
   it('opens an issue from the summary’s fix-first list', async () => {

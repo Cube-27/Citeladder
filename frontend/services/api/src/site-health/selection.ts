@@ -1,5 +1,6 @@
 /**
- * The project's monitored set and single-page re-audits. Crawls pick the set;
+ * The project's monitored set and re-audits of its pages (one page, or an
+ * issue's Re-run all). Crawls pick the set;
  * nothing edits it, and no new work enters a running crawl (SH-B4, SH-B13).
  */
 import { ACTIVE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
@@ -102,40 +103,14 @@ export async function rerunPage(
   projectId: string,
   siteUrlId: string,
 ) {
-  const scope = await lockControlScope(db, workspaceId, projectId);
-  if (scope.crawl) crawlError('Project already has an active crawl', 'crawl_already_active', 409);
-  const member = await db
-    .selectFrom('monitored_site_urls')
-    .select('id')
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', '=', projectId)
-    .where('site_url_id', '=', siteUrlId)
-    .where('active', '=', true)
-    .executeTakeFirst();
-  if (!member)
-    crawlError('The URL is not part of the active monitored selection', 'rerun_not_allowed', 409);
-  // Every membership is system-picked, so any analysis allowance covers it.
-  if (scope.runtime.monitored_url_limit <= 0 && scope.runtime.sample_url_limit <= 0)
-    crawlError(
-      'The current monitored-URL allowance does not allow analysis of this URL',
-      'monitoring_not_allowed',
-      403,
-    );
-  const url = await db
-    .selectFrom('site_urls')
-    .selectAll()
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', '=', projectId)
-    .where('id', '=', siteUrlId)
-    .executeTakeFirst();
-  if (!url) crawlError('Site URL not found in this project', 'invalid_selection');
-  const crawl = await createPageRerunCrawl(
-    db,
-    workspaceId,
-    projectId,
-    scope.profile,
-    url,
-    scope.runtime,
+  const crawl = await rerunTrackedPages(db, workspaceId, projectId, (tracked) =>
+    tracked.includes(siteUrlId)
+      ? [siteUrlId]
+      : crawlError(
+          'The URL is not part of the active monitored selection',
+          'rerun_not_allowed',
+          409,
+        ),
   );
   const task = await db
     .selectFrom('site_crawl_tasks')
@@ -151,4 +126,56 @@ export async function rerunPage(
     task_id: task.id,
     analysis_status: crawl.analysis_status,
   };
+}
+
+/**
+ * Re-audit the tracked pages `pick` chooses as one crawl, under the control
+ * locks. A running crawl refuses it (SH-B4); `pick` sees the active tracked
+ * pages only after that check, so it never decides against a set in flux.
+ */
+export async function rerunTrackedPages(
+  db: Database,
+  workspaceId: string,
+  projectId: string,
+  pick: (tracked: readonly string[]) => readonly string[],
+) {
+  const scope = await lockControlScope(db, workspaceId, projectId);
+  if (scope.crawl) crawlError('Project already has an active crawl', 'crawl_already_active', 409);
+  const members = await db
+    .selectFrom('monitored_site_urls')
+    .select('site_url_id')
+    .where('workspace_id', '=', workspaceId)
+    .where('project_id', '=', projectId)
+    .where('active', '=', true)
+    .execute();
+  const chosen = new Set(pick(members.map((row) => row.site_url_id)));
+  // Every membership is system-picked, so any analysis allowance covers it.
+  if (scope.runtime.monitored_url_limit <= 0 && scope.runtime.sample_url_limit <= 0)
+    crawlError(
+      'The current monitored-URL allowance does not allow analysis of this URL',
+      'monitoring_not_allowed',
+      403,
+    );
+  const urls = chosen.size
+    ? await db
+        .selectFrom('site_urls')
+        .selectAll()
+        .where('workspace_id', '=', workspaceId)
+        .where('project_id', '=', projectId)
+        .where('id', 'in', [...chosen])
+        .orderBy('normalized_url')
+        .orderBy('id')
+        .execute()
+    : [];
+  const [first, ...rest] = urls;
+  if (!first || urls.length !== chosen.size)
+    crawlError('Site URL not found in this project', 'invalid_selection');
+  return createPageRerunCrawl(
+    db,
+    workspaceId,
+    projectId,
+    scope.profile,
+    [first, ...rest],
+    scope.runtime,
+  );
 }

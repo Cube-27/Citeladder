@@ -109,6 +109,35 @@ export const siteIssuesPageSchema = cursorPageSchema(siteIssueSchema).extend({
 // yet know the crawl can file the answer under it.
 export const latestCrawlIssuesPageSchema = siteIssuesPageSchema.extend({ crawl_id: uuid() });
 
+// How far an issue's fix has come on the pages the crawl found it on (SH-B12),
+// from each page's issue state: "N of M pages fixed". `fixed_url_count`
+// counts pages marked fixed or resolved; `verified_url_count` only those an
+// audit resolved. `rerun_url_count` is how many tracked, unresolved pages Re-run
+// all would re-audit (one page fetch each); zero for a site-level finding,
+// which only a full crawl judges.
+export const issueFixProgressSchema = responseObject({
+  group_id: uuid(),
+  affected_url_count: z.number().int(),
+  fixed_url_count: z.number().int(),
+  verified_url_count: z.number().int(),
+  rerun_url_count: z.number().int(),
+});
+
+// Every issue's fix progress in one crawl, one row per issue group.
+export const issueFixesSchema = responseObject({
+  crawl_id: uuid(),
+  items: z.array(issueFixProgressSchema),
+});
+
+// Re-run all (202): the re-audit crawl and how many pages it holds fetches for.
+export const issueRerunResponseSchema = responseObject({
+  crawl_id: uuid(),
+  page_count: z.number().int(),
+});
+
+export type IssueFixProgress = z.infer<typeof issueFixProgressSchema>;
+export type IssueFixes = z.infer<typeof issueFixesSchema>;
+export type IssueRerunResponse = z.infer<typeof issueRerunResponseSchema>;
 export type IssueSeverity = z.infer<typeof issueSeveritySchema>;
 export type IssueDimension = z.infer<typeof issueDimensionSchema>;
 export type IssueSection = z.infer<typeof issueSectionSchema>;
