@@ -15,7 +15,8 @@
  * - a page whose fetch failed otherwise was not audited, and keeps every state.
  *
  * A page's newest audit decides: an audit older than one the page already
- * landed changes nothing. The day's trend point is the project's open count
+ * landed changes nothing. Mark fixed (`markIssueFixed`) moves an open issue to
+ * `marked_fixed`; only a later audit resolves or reopens it. The day's trend point is the project's open count
  * after the landing. States are a derived projection with the exact issue,
  * evaluation, analysis or fetch attempt that decided them; issues, evaluations
  * and attempts stay as written.
@@ -145,10 +146,20 @@ function pageStates(
       updated_at: landing.now,
     });
   };
-  /** The state a rule takes when this audit finds it: a resolved issue found again regressed. */
+  /**
+   * The state a rule takes when this audit finds it: a resolved issue found
+   * again regressed. A page fetched before the person marked it fixed cannot
+   * judge that fix, so the mark stands until a later audit decides.
+   */
   const found = (ruleId: string): IssueState => {
-    const prior = byRule.get(ruleId)?.state;
-    return prior === 'resolved' || prior === 'regressed' ? 'regressed' : 'open';
+    const prior = byRule.get(ruleId);
+    if (
+      prior?.state === 'marked_fixed' &&
+      prior.marked_fixed_at &&
+      prior.marked_fixed_at > landing.auditAt
+    )
+      return 'marked_fixed';
+    return prior?.state === 'resolved' || prior?.state === 'regressed' ? 'regressed' : 'open';
   };
   const resolve = (ruleId: string, source: Source, ruleVersion?: string) => {
     const prior = byRule.get(ruleId);
@@ -433,7 +444,7 @@ async function newerAudited(db: Database, crawl: Crawl, pageIds: string[], audit
 export async function landIssueStates(db: Database, crawl: Crawl): Promise<void> {
   const audits = await pageAudits(db, crawl);
   if (!audits.length) return;
-  await subjectXactLock(db, `site-issue-states:${crawl.workspace_id}:${crawl.project_id}`);
+  await lockIssueStates(db, { workspaceId: crawl.workspace_id, projectId: crawl.project_id });
   const scope = {
     workspaceId: crawl.workspace_id,
     projectId: crawl.project_id,
@@ -494,6 +505,38 @@ export async function landIssueStates(db: Database, crawl: Crawl): Promise<void>
       )
       .execute();
   await writeTrendPoint(db, crawl, now);
+}
+
+/** Orders a project's landings and marks: each reads the states the one before it wrote. */
+const lockIssueStates = (db: Database, scope: Scope) =>
+  subjectXactLock(db, `site-issue-states:${scope.workspaceId}:${scope.projectId}`);
+
+/**
+ * Mark fixed (SH-B12): the person says they fixed `ruleId` on these pages. An
+ * open or regressed issue reads `marked_fixed` until an audit fetched after the
+ * mark decides it; nothing else moves, and only an audit resolves it. A page
+ * already marked keeps its first mark. Returns the pages it marked. The caller
+ * owns the transaction. The open count is unchanged (`marked_fixed` is open), so
+ * no trend point moves.
+ */
+export async function markIssueFixed(
+  db: Database,
+  scope: Scope & { ruleId: string; siteUrlIds: readonly string[] },
+): Promise<string[]> {
+  if (!scope.siteUrlIds.length) return [];
+  await lockIssueStates(db, scope);
+  const now = new Date();
+  const rows = await db
+    .updateTable('site_issue_states')
+    .set({ state: 'marked_fixed', marked_fixed_at: now, updated_at: now })
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('rule_id', '=', scope.ruleId)
+    .where('site_url_id', '=', sql<string>`any(${scope.siteUrlIds}::uuid[])`)
+    .where('state', 'in', ['open', 'regressed'])
+    .returning('site_url_id')
+    .execute();
+  return rows.map((row) => row.site_url_id);
 }
 
 /** The project's open issue count after this landing, as today's trend point. */

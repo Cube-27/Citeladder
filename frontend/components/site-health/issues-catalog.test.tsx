@@ -73,7 +73,12 @@ function serveIssues(items = [issue()], seen: URLSearchParams[] = [], nextCursor
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => {
   window.history.replaceState(null, '', '/issues');
-  mswServer.use(http.get(`${ISSUES}/${ISSUE_A}`, () => HttpResponse.json(issueDetail())));
+  mswServer.use(
+    http.get(`${ISSUES}/${ISSUE_A}`, () => HttpResponse.json(issueDetail())),
+    http.get(`/api/v1/site-crawls/${CRAWL}/issue-fixes`, () =>
+      HttpResponse.json({ crawl_id: CRAWL, items: [] }),
+    ),
+  );
 });
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());

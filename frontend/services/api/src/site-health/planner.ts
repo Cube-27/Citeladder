@@ -190,14 +190,16 @@ function insertCrawl(
     runtime: Runtime;
     /** How many URLs discovery may admit: a sample's cap or a full crawl's HTML-walk bound. */
     discoveryLimit: number;
-    rerun: boolean;
+    /** How many pages a re-audit names; 0 for a crawl of the site. */
+    rerunPages: number;
   },
 ) {
   const now = new Date();
   const sample = input.runtime.discovery_mode === 'sample';
+  const rerun = input.rerunPages > 0;
   // A full crawl's discovery waits for site setup: its sitemap, or an HTML walk without one.
   let discovery = sample ? 'running' : 'pending';
-  if (input.rerun) discovery = 'completed';
+  if (rerun) discovery = 'completed';
   return db
     .insertInto('site_crawls')
     .values({
@@ -215,10 +217,10 @@ function insertCrawl(
       analysis_status: 'pending',
       discovery_status: discovery,
       inventory_complete: false,
-      discovery_requested_count: input.rerun ? 0 : input.discoveryLimit,
+      discovery_requested_count: rerun ? 0 : input.discoveryLimit,
       analysis_requested_count: 0,
-      discovered_url_count: input.rerun ? 1 : 0,
-      admitted_url_count: input.rerun ? 1 : 0,
+      discovered_url_count: input.rerunPages,
+      admitted_url_count: input.rerunPages,
       analyzed_url_count: 0,
       failed_url_count: 0,
       partial_reason: '',
@@ -234,17 +236,17 @@ function insertCrawl(
     .executeTakeFirstOrThrow();
 }
 
-async function creationEvents(db: Database, crawl: Crawl, rerunSiteUrlId?: string) {
+async function creationEvents(db: Database, crawl: Crawl, rerunSiteUrlIds?: readonly string[]) {
   await recordCrawlEvent(
     db,
     crawl,
     'crawl.created',
-    rerunSiteUrlId ? 'page rerun crawl created' : 'crawl created',
+    rerunSiteUrlIds ? 'page rerun crawl created' : 'crawl created',
     {
       root_url: crawl.root_url,
       sample_mode: crawl.sample_mode,
       source_kind: 'root',
-      ...(rerunSiteUrlId ? { rerun_site_url_id: rerunSiteUrlId } : {}),
+      ...(rerunSiteUrlIds ? { rerun_site_url_ids: rerunSiteUrlIds } : {}),
     },
   );
   await recordCrawlEvent(db, crawl, 'crawl.queued', 'crawl queued', {});
@@ -372,7 +374,7 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     runtime,
     // The HTML walk may discover past the tracked set, so it reaches pages to fill it with.
     discoveryLimit: sample ? budget.limit : Math.max(discoveryCap, budget.limit),
-    rerun: false,
+    rerunPages: 0,
   });
   if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
   if (sample && budget.limit > 0)
@@ -390,21 +392,34 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
   return crawl;
 }
 
-/** Project/runtime/profile are already locked by rerun admission; reuse that frozen scope. */
+/**
+ * A re-audit of named pages as its own crawl: one page, or every tracked page
+ * an issue affects (Re-run all). It holds one page fetch per page, and refuses
+ * when fewer remain, so it never audits part of what it names.
+ * Project/runtime/profile are already locked by rerun admission; reuse that frozen scope.
+ */
 export async function createPageRerunCrawl(
   db: Database,
   workspaceId: string,
   projectId: string,
   profile: Profile,
-  url: Selectable<SiteUrls>,
+  urls: readonly [Selectable<SiteUrls>, ...Selectable<SiteUrls>[]],
   runtime: Runtime,
 ) {
   const scope = { domain: profile.registrable_domain || undefined };
-  const decision = classifyUrlAdmission(url.normalized_url, scope);
-  if (!decision.accepted)
-    crawlError('page is not admissible for rerun', decision.reason ?? 'invalid_crawl_request');
+  for (const url of urls) {
+    const decision = classifyUrlAdmission(url.normalized_url, scope);
+    if (!decision.accepted)
+      crawlError('page is not admissible for rerun', decision.reason ?? 'invalid_crawl_request');
+  }
   const now = new Date();
-  const budget = await budgetedPageLimit(db, workspaceId, 1, now);
+  const budget = await budgetedPageLimit(db, workspaceId, urls.length, now);
+  if (budget.limit < urls.length)
+    crawlError(
+      `Re-auditing ${urls.length} pages needs ${urls.length} page fetches; ${budget.limit} remain this period`,
+      'site_health_fetches_exhausted',
+      409,
+    );
   const configuration = {
     ...frozenConfiguration(scope, runtime, {
       limit: budget.limit,
@@ -418,19 +433,28 @@ export async function createPageRerunCrawl(
     workspaceId,
     projectId,
     profileId: profile.id,
-    root: profile.root_url || url.normalized_url,
+    root: profile.root_url || urls[0].normalized_url,
     configuration,
     runtime,
     discoveryLimit: 0,
-    rerun: true,
+    rerunPages: urls.length,
   });
   if (budget.metered) await reserveCrawlFetches(db, crawl, budget.limit, now);
-  await seedObservation(db, crawl, url, true);
-  await enqueueCrawlTask(db, crawl, {
-    kind: 'analyze',
-    url: url.normalized_url,
-    siteUrlId: url.id,
-  });
-  await creationEvents(db, crawl, url.id);
+  await Promise.all(urls.map((url) => seedObservation(db, crawl, url, true)));
+  await Promise.all(
+    urls.map((url, position) =>
+      enqueueCrawlTask(db, crawl, {
+        kind: 'analyze',
+        url: url.normalized_url,
+        siteUrlId: url.id,
+        position,
+      }),
+    ),
+  );
+  await creationEvents(
+    db,
+    crawl,
+    urls.map((url) => url.id),
+  );
   return crawl;
 }

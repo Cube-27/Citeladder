@@ -10,9 +10,14 @@ export const ISSUE_A = 'aaaaaaaa-1111-4111-8111-111111111111';
 export const URL_A = 'cccccccc-1111-4111-8111-111111111111';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const PROJECT = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 
 export function IssuesCatalog(props: Readonly<{ crawlId: string }>) {
-  return createElement(ScopedIssuesCatalog, { workspaceId: WORKSPACE, ...props });
+  return createElement(ScopedIssuesCatalog, {
+    workspaceId: WORKSPACE,
+    projectId: PROJECT,
+    ...props,
+  });
 }
 
 /**

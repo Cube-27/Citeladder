@@ -52,10 +52,11 @@ and who confirmed it (`respect` before any crawl). A full crawl's page limit is
 the plan's monitored-URL limit, capped by the fetch budget left; a sample's is
 `automatic_page_limit` within its discovery cap. A workspace holding the
 `operator_controls` grant crawls unmetered. Nothing edits the monitored set:
-crawls pick it (SH-B13). A page rerun (`selection.ts`) creates a one-page crawl
-from a terminal crawl; while a crawl is running it is refused with
+crawls pick it (SH-B13). A page rerun (`selection.ts`) creates a crawl of the
+tracked pages it names, one page or an issue's
+[Re-run all](#consumers-and-actions), holding one page fetch per page; while a crawl is running it is refused with
 `crawl_already_active`, so no work joins a crawl outside its fetch hold
-(SH-B4). Its configuration carries `page_rerun`; it hands its page to
+(SH-B4). Its configuration carries `page_rerun`; it hands its pages to
 verification and Opportunities but is never compared as a site crawl. It writes
 no project snapshot and no score summary, so it is never a trend point.
 
@@ -818,13 +819,41 @@ read `page_unavailable`, never `resolved`. When the page answers at its own URL
 again, the availability issue resolves and the rest are judged as usual; one the
 audit did not judge returns to `open`. Any other failed fetch is no audit and
 changes nothing. An audit older than one the page already landed changes
-nothing, so a late cancelled crawl never overwrites a rerun. `marked_fixed` and
-`no_longer_tracked` are reserved for Mark fixed and the tracked set. Each row
+nothing, so a late cancelled crawl never overwrites a rerun. `no_longer_tracked`
+is reserved for the tracked set. Each row
 names the crawl and the exact issue, evaluation, analysis or fetch attempt that
 decided it. After each landing, `site_issue_trend` stores the project's open
 count for the UTC day: issues in the configured open states (`open`,
 `regressed`, `marked_fixed`; `config/site-health/reads.json` `issue_states`).
-Reads do not use these tables yet.
+The Issues reads do not use these tables yet; Mark fixed and Re-run all below
+do.
+
+**Mark fixed and Re-run all** ([SH-B12](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12);
+`issue-fixes.ts`, routes in the `site-health-crawls` family) act on one issue
+group of a crawl, across the pages the issues the crawl shows name: each
+page's latest audit (`viewIssuesSql`), as the Issues list reads them.
+`POST /site-crawls/{crawl_id}/issues/{group_id}/mark-fixed` moves the group's
+rule to `marked_fixed` on every page where it is `open` or `regressed`
+(`markIssueFixed`, under the same project lock as a landing), stamping
+`marked_fixed_at`. Only an audit decides it afterwards: one that passes the rule
+resolves it, one that finds it reopens it, except an audit fetched before the
+mark, which cannot judge the fix and leaves the mark standing. A mark keeps the
+issue open, so the trend does not move.
+`GET /site-crawls/{crawl_id}/issue-fixes` reports, per group, "N of M pages
+fixed": M pages whose latest audit found it plus those an audit since the crawl
+began verified fixed (a verified page leaves the Issues list but stays among
+M), N of them `marked_fixed` or `resolved`, how many of those an audit verified, and how many pages Re-run all
+would re-audit (null, not zero, for a site-level finding). The issue dialog
+shows it with both actions, and the Issues summary's fix-first rows show it
+once a page is fixed.
+`POST /site-crawls/{crawl_id}/issues/{group_id}/rerun` re-audits every tracked
+page the group is still unresolved on as one page-rerun crawl
+(`createPageRerunCrawl`, which also runs the single-page re-audit). It holds one
+page fetch per page and is refused with `site_health_fetches_exhausted` when
+fewer remain, with `crawl_already_active` while a crawl runs (SH-B4), and with
+`rerun_not_allowed` when no such page exists. A site-level finding
+(architecture, sitewide links) is judged only by a full crawl, so Re-run all
+never names its page.
 
 The same refresh, the architecture writer after its findings, and a page rerun
 landing in the site crawl that shows it persist the crawl's unfiltered Issues

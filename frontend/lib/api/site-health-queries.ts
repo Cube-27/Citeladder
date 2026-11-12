@@ -4,7 +4,7 @@
  * changes.
  */
 import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
-import type { PageDetail } from '@citeladder/contracts';
+import type { IssueFixes, PageDetail } from '@citeladder/contracts';
 import type { CrawlScheduleUpdateRequest } from '@citeladder/contracts/site-health-requests';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
@@ -204,6 +204,11 @@ export const siteHealthQueries = {
       placeholderData: (previousData, previousQuery) =>
         retainPreviousDataForScope(crawlId, previousData, previousQuery),
     }),
+  issueFixes: (workspaceId: string | null, crawlId: string) =>
+    queryOptions({
+      queryKey: queryKeys.siteHealth.issueFixes(workspaceId, crawlId),
+      queryFn: ({ signal }) => siteHealthApi.getIssueFixes(crawlId, { signal, workspaceId }),
+    }),
   issueHistory: (
     workspaceId: string | null,
     crawlId: string,
@@ -324,6 +329,33 @@ export const siteHealthMutations = {
     mutationOptions({
       mutationFn: (crawlId: string) => siteHealthApi.cancelCrawl(crawlId, scoped(scope)),
       onSuccess: (_crawl, _crawlId, _result, { client }) =>
+        refreshSiteHealthDashboard(client, scope.projectId),
+    }),
+  /** Mark fixed: the answer is the issue's new progress, so it replaces its cached row. */
+  markIssueFixed: (workspaceId: string | null, crawlId: string) =>
+    mutationOptions({
+      mutationFn: (groupId: string) =>
+        siteHealthApi.markIssueFixed(crawlId, groupId, { workspaceId }),
+      onSuccess: (progress, _groupId, _result, { client }) =>
+        client.setQueryData<IssueFixes>(
+          queryKeys.siteHealth.issueFixes(workspaceId, crawlId),
+          (previous) =>
+            previous && {
+              ...previous,
+              items: previous.items.map((item) =>
+                item.group_id === progress.group_id ? progress : item,
+              ),
+            },
+        ),
+    }),
+  /**
+   * Re-run all: one re-audit crawl of the issue's open tracked pages. Its
+   * results land later; the dashboard refreshes so the running audit shows.
+   */
+  rerunIssue: (scope: ProjectScope, crawlId: string) =>
+    mutationOptions({
+      mutationFn: (groupId: string) => siteHealthApi.rerunIssue(crawlId, groupId, scoped(scope)),
+      onSuccess: (_rerun, _groupId, _result, { client }) =>
         refreshSiteHealthDashboard(client, scope.projectId),
     }),
   /**

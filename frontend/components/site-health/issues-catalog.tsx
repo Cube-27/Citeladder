@@ -99,10 +99,12 @@ function useIssuesCatalogQueries({
 
 export function IssuesCatalog({
   workspaceId,
+  projectId,
   crawlId,
   notice,
 }: Readonly<{
   workspaceId: string;
+  projectId: string;
   crawlId: string;
   /** A refresh failure to report above the catalog it could not refresh. */
   notice?: ReactNode;
@@ -117,6 +119,8 @@ export function IssuesCatalog({
     selectedGroupId,
     occurrenceCursor: catalog.occurrenceCursor,
   });
+  // Fix progress is a side read: while it loads or fails, the summary shows no fix lines.
+  const fixesQuery = useQuery(siteHealthQueries.issueFixes(workspaceId, crawlId));
   const summary = issuesQuery.data?.summary ?? null;
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
@@ -124,7 +128,11 @@ export function IssuesCatalog({
     <ListScreen>
       <Stack gap="workspace" className="min-w-0">
         {notice}
-        <IssuesSummary query={priorityQuery} onOpen={catalog.selectIssue} />
+        <IssuesSummary
+          query={priorityQuery}
+          fixes={fixesQuery.data?.items}
+          onOpen={catalog.selectIssue}
+        />
         <DataTable
           label="Issues"
           // Keeps the Issue column readable beside the fixed severity and pages
@@ -173,6 +181,7 @@ export function IssuesCatalog({
       {open ? (
         <IssueDetailDialog
           issue={open}
+          scope={{ workspaceId, projectId }}
           crawlId={crawlId}
           detailQuery={detailQuery}
           canPrevious={catalog.canPageOccurrencesBack}

@@ -23,7 +23,10 @@ import {
   changesPageSchema,
   crawlScheduleSchema,
   inventoryPageSchema,
+  issueFixesSchema,
+  issueFixProgressSchema,
   issueHistoryPageSchema,
+  issueRerunResponseSchema,
   monitoredUrlsResponseSchema,
   pageDetailSchema,
   pagesPageSchema,
@@ -48,7 +51,10 @@ import type {
   ChangesPage,
   CrawlSchedule,
   InventoryPage,
+  IssueFixes,
+  IssueFixProgress,
   IssueHistoryPage,
+  IssueRerunResponse,
   IssueSection,
   IssueSort,
   MonitoredUrlsResponse,
@@ -218,6 +224,27 @@ export const siteHealthApi = {
     const path = withQuery(`/site-crawls/${crawlId}/issues/${groupId}`, definedQuery(params));
     const res = await apiClient.get<SiteIssueDetail>(path, options);
     return strictValidate(siteIssueDetailSchema, res, 'siteHealth.getIssue');
+  },
+  getIssueFixes: async (crawlId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.get<IssueFixes>(`/site-crawls/${crawlId}/issue-fixes`, options);
+    return strictValidate(issueFixesSchema, res, 'siteHealth.getIssueFixes');
+  },
+  markIssueFixed: async (crawlId: string, groupId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.post<IssueFixProgress>(
+      `/site-crawls/${crawlId}/issues/${groupId}/mark-fixed`,
+      undefined,
+      options,
+    );
+    return strictValidate(issueFixProgressSchema, res, 'siteHealth.markIssueFixed');
+  },
+  /** Re-run all: one re-audit crawl of every tracked page the issue is still open on (202). */
+  rerunIssue: async (crawlId: string, groupId: string, options?: ApiRequestOptions) => {
+    const res = await apiClient.post<IssueRerunResponse>(
+      `/site-crawls/${crawlId}/issues/${groupId}/rerun`,
+      undefined,
+      options,
+    );
+    return strictValidate(issueRerunResponseSchema, res, 'siteHealth.rerunIssue');
   },
   getIssueHistory: async (
     crawlId: string,
