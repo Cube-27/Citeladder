@@ -98,7 +98,7 @@ export function visibleText(root: HtmlNode, prune = true): string {
     const node = pending.pop()!;
     if (isElement(node) && prune && excluded.has(node.tagName)) continue;
     if (isText(node)) fragments.push(node.value);
-    if ('childNodes' in node) pending.push(...node.childNodes.toReversed());
+    if ('childNodes' in node) pushReversed(pending, node.childNodes, same);
   }
   return fragments.join(' ').replaceAll(/\s+/gu, ' ').trim();
 }

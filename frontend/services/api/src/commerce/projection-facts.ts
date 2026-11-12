@@ -47,18 +47,26 @@ function finitePrice(value: unknown): number | null {
 }
 
 /**
- * Characters inside a written amount: digits, `.` and `,`, and the thousands
- * marks locales group with (no-break, narrow no-break and thin spaces, as
- * `Intl.NumberFormat` writes them, and apostrophes, as Swiss prices do).
+ * The thousands marks locales group with: no-break, thin and narrow no-break
+ * spaces (as `Intl.NumberFormat` writes them) and apostrophes (Swiss prices).
  */
-export const AMOUNT_CHARACTERS = String.raw`\d,.   '’`;
-const GROUPING_MARK = /[   '’]/u;
-const TRAILING_PUNCTUATION = /[,.   '’]+$/u;
+const GROUPING_MARKS = String.fromCodePoint(0xa0, 0x2009, 0x202f, 0x27, 0x2019);
+/** Characters inside a written amount, as a regular expression class body. */
+export const AMOUNT_CHARACTERS = String.raw`\d,.` + GROUPING_MARKS;
+const GROUPING_MARK = new RegExp(`[${GROUPING_MARKS}]`, 'u');
+const isAmountPunctuation = (char: string) =>
+  char === ',' || char === '.' || GROUPING_MARKS.includes(char);
+
+/** Punctuation after the amount (`$59.`, `$129.99,`) ends the sentence, not the number. */
+function withoutTrailingPunctuation(raw: string): string {
+  let end = raw.length;
+  while (end > 0 && isAmountPunctuation(raw.charAt(end - 1))) end -= 1;
+  return raw.slice(0, end);
+}
 
 /** Currency-qualified visible amounts; grouping must be unambiguous. */
 export function localizedPrice(raw: string): number | null {
-  // Punctuation after the amount (`$59.`, `$129.99,`) ends the sentence, not the number.
-  const amount = raw.replace(TRAILING_PUNCTUATION, '');
+  const amount = withoutTrailingPunctuation(raw);
   if (GROUPING_MARK.test(amount)) return markGroupedPrice(amount);
   const lastDot = amount.lastIndexOf('.');
   const lastComma = amount.lastIndexOf(',');
@@ -84,7 +92,8 @@ function markGroupedPrice(amount: string): number | null {
   if (integer === undefined) return null;
   const groups = integer.split(GROUPING_MARK);
   if (!validGroups(groups)) return null;
-  return finitePrice(`${groups.join('')}${fraction === undefined ? '' : `.${fraction}`}`);
+  const digits = groups.join('');
+  return finitePrice(fraction === undefined ? digits : `${digits}.${fraction}`);
 }
 /** Thousands groups (`1,299,000`), or Indian lakh groups (`12,34,567`). */
 function validGroups(groups: string[]): boolean {
