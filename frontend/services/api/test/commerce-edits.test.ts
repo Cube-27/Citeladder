@@ -144,6 +144,38 @@ describe('product edits', () => {
     expect(revisions.map((row) => row.source_kind)).toEqual(['import', 'edit', 'import', 'import']);
   });
 
+  it('asks for an Opportunity refresh after an import and after an edit that keeps the matching identity', async () => {
+    const refreshes = () =>
+      db
+        .selectFrom('analytics_tasks')
+        .select('payload')
+        .where('workspace_id', '=', t.workspaceId)
+        .where('task_kind', '=', 'opportunity_refresh')
+        .where('status', '=', 'queued')
+        .execute();
+    const imported = await importCsv(ONE);
+    const id = imported.body.row_outcomes[0]!.product_id!;
+    expect((await refreshes()).map((row) => row.payload)).toEqual([
+      { trigger_kind: 'commerce_catalog_import', trigger_id: imported.body.import_id },
+    ]);
+    // Once that refresh has been claimed, the edit's request queues its own.
+    await db
+      .deleteFrom('analytics_tasks')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('task_kind', '=', 'opportunity_refresh')
+      .execute();
+    expect((await edit(id, { description: 'Waterproof trail shoe' })).status).toBe(200);
+    const [edited] = await db
+      .selectFrom('commerce_product_observations')
+      .select('id')
+      .where('product_id', '=', id)
+      .where('source_kind', '=', 'edit')
+      .execute();
+    expect((await refreshes()).map((row) => row.payload)).toEqual([
+      { trigger_kind: 'commerce_catalog_edit', trigger_id: edited!.id },
+    ]);
+  });
+
   it('matches a re-import of the URL an edit replaced to the edited product', async () => {
     const first = await importCsv('link,title,brand\nhttps://shop.example/old,Old,Acme\n');
     const id = first.body.row_outcomes[0]!.product_id!;

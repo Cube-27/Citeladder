@@ -10,6 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
+import { editProduct } from '../src/commerce/edits.ts';
 import { updateActionStatus, attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { policy } from '../src/config.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
@@ -19,6 +20,7 @@ import { enqueueOpportunityRefresh } from '../src/opportunities/enqueue.ts';
 import { drainWorkspace } from './analytics-drain.ts';
 import { angleRun, seedOpportunityScenario, type OpportunitySeed } from './opportunity-fixtures.ts';
 import { sourcePage } from './action-support.ts';
+import { importCatalog } from './commerce-support.ts';
 import { prompt, promptSet } from './prompt-fixtures.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -242,6 +244,26 @@ describe('opportunity_refresh', () => {
     const refreshed = await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
     expect(await snapshotCount(s)).toBe(before + 1);
     expect(record(refreshed.coverage.source_identity).content_angle_run_id).toBe(runId);
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    expect(await snapshotCount(s)).toBe(before + 1);
+  });
+
+  it('refreshes once a catalog edit changes a product field, although no match pass is new', async () => {
+    const s = await seed();
+    const imported = await importCatalog(
+      db,
+      scope(s),
+      'link,title,brand\nhttps://acme.test/products/one,One,Acme\n',
+    );
+    const productId = imported.row_outcomes[0]!.product_id!;
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    const before = await snapshotCount(s);
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    expect(await snapshotCount(s)).toBe(before);
+    // A description is not matching identity: no catalog revision or match pass follows it.
+    await editProduct(db, scope(s), productId, { description: 'Waterproof trail shoe' });
+    await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
+    expect(await snapshotCount(s)).toBe(before + 1);
     await recomputeOpportunities(db, scope(s), { skipIfCurrent: true });
     expect(await snapshotCount(s)).toBe(before + 1);
   });

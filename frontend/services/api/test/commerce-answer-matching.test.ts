@@ -145,10 +145,32 @@ describe('catalog matching in every answer', () => {
     expect(await passes(t.workspaceId)).toEqual([]);
 
     await importCatalog(db, scopeOf(t), csv([ROAD]));
+    // The import's own Opportunity refresh has been claimed before the backfill ends.
+    await db
+      .deleteFrom('analytics_tasks')
+      .where('workspace_id', '=', t.workspaceId)
+      .where('task_kind', '=', 'opportunity_refresh')
+      .execute();
     const [first] = await matchingTasks(t.workspaceId);
     await runMatching(t.workspaceId, [first!.id]);
     expect(await passes(t.workspaceId)).toEqual([
       { mode: 'backfill', target: null, revision: 1, observed: ['1:owned:Acme Road Runner'] },
+    ]);
+    // The backfill's passes are new Commerce evidence, so they ask for a refresh.
+    const refreshes = await db
+      .selectFrom('analytics_tasks')
+      .select(['payload', 'status'])
+      .where('workspace_id', '=', t.workspaceId)
+      .where('task_kind', '=', 'opportunity_refresh')
+      .execute();
+    expect(refreshes).toEqual([
+      {
+        payload: {
+          trigger_kind: 'commerce_catalog_revision',
+          trigger_id: (first!.payload as Record<string, unknown>).catalog_revision_id,
+        },
+        status: 'queued',
+      },
     ]);
 
     // Running the same revision again records nothing new.

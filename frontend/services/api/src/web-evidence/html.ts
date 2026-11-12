@@ -1,5 +1,5 @@
 /** One parsed HTML tree shared by discovery, source inspection and page analysis. */
-import { parse, type DefaultTreeAdapterTypes } from 'parse5';
+import { parse, parseFragment, type DefaultTreeAdapterTypes } from 'parse5';
 
 export type HtmlNode = DefaultTreeAdapterTypes.Node;
 export type HtmlElement = DefaultTreeAdapterTypes.Element;
@@ -102,3 +102,5 @@ export function visibleText(root: HtmlNode, prune = true): string {
   }
   return fragments.join(' ').replaceAll(/\s+/gu, ' ').trim();
 }
+/** The visible text of an HTML fragment (a stored description body): entities decoded, scripts dropped. */
+export const fragmentText = (html: string) => visibleText(parseFragment(html));

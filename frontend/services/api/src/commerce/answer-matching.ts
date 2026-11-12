@@ -9,7 +9,8 @@
  * pass is unique on answer, revision and versions, so a retried or repeated
  * task records nothing twice; a revision a newer one superseded stops before
  * its next batch, since the newer revision's own task re-matches the same
- * answers. Leases,
+ * answers. A matched window asks for an Opportunity refresh, since the new
+ * passes move the per-product findings. Leases,
  * retries and cancellation stay with the shared analytics worker.
  */
 import { z } from 'zod';
@@ -17,6 +18,7 @@ import { z } from 'zod';
 import { policy } from '../config.ts';
 import { auditPolicy } from '../audits/config.ts';
 import type { Database } from '../db/database.ts';
+import { enqueueDerivedOpportunityRefresh } from '../opportunities/enqueue.ts';
 import { payloadString, taskProject, type Executor } from '../queue/executor.ts';
 import { loadRevision, recordCatalogRevision, revisionShelf } from './catalog-revisions.ts';
 import { ownedHosts } from './discovery-validation.ts';
@@ -161,6 +163,13 @@ export const matchAnswers: Executor = async (task, { db, checkCancelled }) => {
     // A revision recorded mid-run queues its own task; this one stops at the next batch.
     if (await superseded()) return; // NOSONAR -- Checked before each batch, in order.
     const matched = await matchBatch(db, scope, revision, since); // NOSONAR -- Batches run in order until the window is matched.
-    if (matched < policy.commerce.answer_matching.batch_size) return;
+    if (matched < policy.commerce.answer_matching.batch_size) break;
   }
+  // The backfill's passes are new Commerce evidence (the newest match pass);
+  // a retry finds no pending answer and asks again, so the request survives a crash.
+  await enqueueDerivedOpportunityRefresh(db, {
+    ...scope,
+    triggerKind: 'commerce_catalog_revision',
+    triggerId: revision.id,
+  });
 };

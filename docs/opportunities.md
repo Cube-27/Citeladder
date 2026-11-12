@@ -92,7 +92,9 @@ latest dashboard-ready brand run, the one Visibility and Overview call latest),
 the latest dashboard-ready Commerce run (read for Commerce findings only, so
 neither kind of run replaces the other's Actions), the newest catalog match
 pass (the per-product metric findings read every matched answer in their
-window), crawl and the newest page rerun it folds in (its pages read their
+window), a digest of the catalog products' fields (catalog-field and
+per-product findings read them, and an edit such as a description or price
+need not record a catalog revision), crawl and the newest page rerun it folds in (its pages read their
 latest audit, SH-B9), demand snapshot and
 revision, internal-link run, newest inspected source-page reading, keyword-gap
 datasets and content-angle run. When the latest snapshot already records that identity under the

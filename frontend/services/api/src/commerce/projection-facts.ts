@@ -46,12 +46,24 @@ function finitePrice(value: unknown): number | null {
   return Number.isFinite(number) && number >= 0 && number <= 999999999999.99 ? number : null;
 }
 
+/**
+ * Characters inside a written amount: digits, `.` and `,`, and the thousands
+ * marks locales group with (no-break, narrow no-break and thin spaces, as
+ * `Intl.NumberFormat` writes them, and apostrophes, as Swiss prices do).
+ */
+export const AMOUNT_CHARACTERS = String.raw`\d,.   '’`;
+const GROUPING_MARK = /[   '’]/u;
+const TRAILING_PUNCTUATION = /[,.   '’]+$/u;
+
 /** Currency-qualified visible amounts; grouping must be unambiguous. */
 export function localizedPrice(raw: string): number | null {
-  const lastDot = raw.lastIndexOf('.');
-  const lastComma = raw.lastIndexOf(',');
+  // Punctuation after the amount (`$59.`, `$129.99,`) ends the sentence, not the number.
+  const amount = raw.replace(TRAILING_PUNCTUATION, '');
+  if (GROUPING_MARK.test(amount)) return markGroupedPrice(amount);
+  const lastDot = amount.lastIndexOf('.');
+  const lastComma = amount.lastIndexOf(',');
   const separator = lastDot > lastComma ? '.' : ',';
-  const parts = raw.split(separator);
+  const parts = amount.split(separator);
   const [integer, fraction] = parts;
   if (
     parts.length === 2 &&
@@ -64,12 +76,25 @@ export function localizedPrice(raw: string): number | null {
     return finitePrice(`${groups.join('')}.${fraction}`);
   }
   if (parts.length > 1) return validGroups(parts) ? finitePrice(parts.join('')) : null;
-  return /^\d+$/u.test(raw) ? finitePrice(raw) : null;
+  return /^\d+$/u.test(amount) ? finitePrice(amount) : null;
 }
+/** `1 299,50` or `1'299.50`: the mark groups thousands, so `.` or `,` can only be the decimal. */
+function markGroupedPrice(amount: string): number | null {
+  const [, integer, fraction] = /^([^,.]+)(?:[,.](\d{1,2}))?$/u.exec(amount) ?? [];
+  if (integer === undefined) return null;
+  const groups = integer.split(GROUPING_MARK);
+  if (!validGroups(groups)) return null;
+  return finitePrice(`${groups.join('')}${fraction === undefined ? '' : `.${fraction}`}`);
+}
+/** Thousands groups (`1,299,000`), or Indian lakh groups (`12,34,567`). */
 function validGroups(groups: string[]): boolean {
   const [head, ...rest] = groups;
+  if (head === undefined || !rest.length) return false;
+  if (/^\d{1,3}$/u.test(head) && rest.every((group) => /^\d{3}$/u.test(group))) return true;
   return (
-    head !== undefined && /^\d{1,3}$/u.test(head) && rest.every((group) => /^\d{3}$/u.test(group))
+    /^\d{1,2}$/u.test(head) &&
+    rest.every((group, index) => /^\d{2}$/u.test(group) || index === rest.length - 1) &&
+    /^\d{3}$/u.test(rest.at(-1) ?? '')
   );
 }
 const markerSource = policy.commerce.price_markers
@@ -77,11 +102,14 @@ const markerSource = policy.commerce.price_markers
   .join('|');
 const visiblePattern = new RegExp(markerSource, 'giu');
 
+const amountCharacter = new RegExp(`[${AMOUNT_CHARACTERS}]`, 'u');
+
 function adjacentAmount(text: string, start: number, direction: 1 | -1): string {
   let index = start;
   while (index >= 0 && index < text.length && /\s/u.test(text[index]!)) index += direction;
   const boundary = index;
-  while (index >= 0 && index < text.length && /[\d,.]/u.test(text[index]!)) index += direction;
+  while (index >= 0 && index < text.length && amountCharacter.test(text[index]!))
+    index += direction;
   return direction === 1 ? text.slice(boundary, index) : text.slice(index + 1, boundary + 1);
 }
 
@@ -92,12 +120,15 @@ function visiblePrice(facts: CatalogFacts) {
     return { price: null, currency: '' };
   const amounts = [...text.matchAll(visiblePattern)].flatMap((match) => {
     const marker = match[0].toUpperCase();
-    return [
-      adjacentAmount(text, match.index + match[0].length, 1),
-      adjacentAmount(text, match.index - 1, -1),
-    ]
-      .filter(Boolean)
-      .map((amount) => ({ marker, amount }));
+    return (
+      [
+        adjacentAmount(text, match.index + match[0].length, 1),
+        adjacentAmount(text, match.index - 1, -1),
+      ]
+        // A quote or full stop beside the marker with no digit is not an amount.
+        .filter((amount) => /\d/u.test(amount))
+        .map((amount) => ({ marker, amount }))
+    );
   });
   const only = onlyOf(amounts);
   if (!only) return { price: null, currency: '' };

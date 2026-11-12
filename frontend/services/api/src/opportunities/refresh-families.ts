@@ -35,6 +35,7 @@ import {
   currentDemandSnapshot,
   resolveAudit,
   resolveCommerceAuditId,
+  resolveCommerceCatalogRevision,
   resolveCommerceMatchPassId,
   resolveCrawl,
   type AuditSource,
@@ -53,6 +54,8 @@ export type Sources = {
   commerceAuditId: string | null;
   /** The project's newest match pass: product metrics move with every pass. */
   commerceMatchPassId: string | null;
+  /** The catalog products' fields: catalog edits move catalog and product findings. */
+  commerceCatalogRevision: string | null;
   crawl: CrawlSource | null;
   demand: DemandSource | null;
   gaps: SearchGapSource | null;
@@ -88,6 +91,7 @@ export async function resolveSources(db: Database, scope: Scope, at: Date): Prom
     audit: await resolveAudit(db, scope),
     commerceAuditId: await resolveCommerceAuditId(db, scope),
     commerceMatchPassId: await resolveCommerceMatchPassId(db, scope),
+    commerceCatalogRevision: await resolveCommerceCatalogRevision(db, scope),
     crawl: await resolveCrawl(db, scope),
     demand: await currentDemandSnapshot(db, scope),
     gaps: await searchGapSource(db, scope, at),
@@ -168,13 +172,18 @@ const visibility: Family = {
 
 /**
  * Commerce reads the per-product metrics over every matched answer (brand and
- * Commerce runs alike) and its own latest run's shelf, so brand and Commerce
- * Actions never replace each other.
+ * Commerce runs alike), the catalog's own fields and its latest run's shelf,
+ * so brand and Commerce Actions never replace each other.
  */
 const commerce: Family = {
-  identity: async (_db, _scope, { commerceAuditId, commerceMatchPassId }) => ({
+  identity: async (
+    _db,
+    _scope,
+    { commerceAuditId, commerceMatchPassId, commerceCatalogRevision },
+  ) => ({
     commerce_audit_id: commerceAuditId,
     commerce_match_pass_id: commerceMatchPassId,
+    commerce_catalog_revision: commerceCatalogRevision,
   }),
   hits: async (db, scope, { at, commerceAuditId, commerceMatchPassId }) =>
     commerceAuditId === null && commerceMatchPassId === null
@@ -236,6 +245,7 @@ const EMPTY_IDENTITY: SourceIdentity = {
   audit_id: null,
   commerce_audit_id: null,
   commerce_match_pass_id: null,
+  commerce_catalog_revision: null,
   site_crawl_id: null,
   site_rerun_id: null,
   demand_snapshot_id: null,
