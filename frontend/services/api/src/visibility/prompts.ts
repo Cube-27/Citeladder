@@ -516,28 +516,25 @@ async function enrichOutcomes(
       ? round2(ranked.reduce((total, value) => total + value, 0) / ranked.length)
       : null;
     // A cell is one (engine, model) pair, counted against that pair's tasks.
-    const cellsByRoute = groupBy(answered, (row) =>
-      JSON.stringify([row.logical_engine, row.transport_model]),
+    // A pair whose every task failed keeps its cell, so it reads as failed
+    // rather than vanishing.
+    const routeKey = (row: { logical_engine: string; transport_model: string }) =>
+      JSON.stringify([row.logical_engine, row.transport_model]);
+    const cellsByRoute = groupBy(answered, routeKey);
+    const tasksByRoute = groupBy(promptTasks, routeKey);
+    const routes = new Map(
+      [...promptTasks, ...answered].map((row) => [
+        routeKey(row),
+        { engine: row.logical_engine, model: row.transport_model },
+      ]),
     );
-    item.outcomes = [...cellsByRoute.values()]
-      .map((values) => ({
-        engine: values[0].logical_engine,
-        model: values[0].transport_model,
-        values,
-      }))
+    item.outcomes = [...routes]
       .sort(
-        (left, right) =>
+        ([, left], [, right]) =>
           compareText(left.engine, right.engine) || compareText(left.model, right.model),
       )
-      .map(({ engine: cellEngine, model, values }) =>
-        outcome(
-          cellEngine,
-          model,
-          values,
-          promptTasks.filter(
-            (task) => task.logical_engine === cellEngine && task.transport_model === model,
-          ),
-        ),
+      .map(([key, { engine: cellEngine, model }]) =>
+        outcome(cellEngine, model, cellsByRoute.get(key) ?? [], tasksByRoute.get(key) ?? []),
       );
     if (runs && cells) {
       const identity = JSON.stringify([prompt.prompt_id ?? prompt.text, prompt.text]);

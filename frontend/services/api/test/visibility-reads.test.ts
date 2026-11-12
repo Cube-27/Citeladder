@@ -596,6 +596,19 @@ describe('GET /visibility/prompts', () => {
         logical_engine: 'claude',
         gap_counts: { Globex: 1 },
       }),
+      // An engine whose every task failed reads as failed, not as missing.
+      expect.objectContaining({
+        logical_engine: 'gemini',
+        transport_model: 'model-a',
+        counts: expect.objectContaining({
+          state: 'no_observations',
+          responses: 0,
+          expected: 1,
+          failed: 1,
+        }),
+        visibility_rate: null,
+        answer_states: null,
+      }),
     ]);
 
     const foreignRun = await get(tenant, route(tenant, '/prompts'), { audit_id: randomUUID() });

@@ -455,7 +455,7 @@ export async function prepareAudit(
     retrieval_enabled: true,
     max_output_tokens: settings.audit_max_output_tokens,
     timeout_seconds: settings.audit_timeout_seconds,
-    repetitions: settings.audit_repetitions,
+    repetitions,
     answer_instruction: auditPolicy.constants.audit_answer_instruction,
     max_attempts: settings.max_attempts,
   };

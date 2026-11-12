@@ -121,6 +121,15 @@ function history(latestStates: PromptHistory['points'][number]['answer_states'])
               answer_states: latestStates,
               gap_counts: { Globex: 1 },
             },
+            {
+              logical_engine: 'gemini',
+              transport_model: 'model',
+              counts: counts(0, 1),
+              visibility_rate: null,
+              owned_citation_rate: null,
+              answer_states: null,
+              gap_counts: {},
+            },
           ]
         : [],
     },
@@ -180,6 +189,16 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   );
   const gaps = within(screen.getByRole('region', { name: 'Competitors named without you' }));
   expect(gaps.getByRole('row', { name: /Globex/ })).toHaveTextContent('Globex1ChatGPT API');
+  // An engine whose every answer failed keeps its row and reads as failed.
+  const coverage = within(screen.getByRole('region', { name: 'Engine coverage' }));
+  const cells = (engine: RegExp) =>
+    within(coverage.getByRole('row', { name: engine }))
+      .getAllByRole('cell')
+      .slice(1)
+      .map((cell) => cell.textContent);
+  expect(cells(/ChatGPT API/)).toEqual(['2', '0', '1', '0', '0', '1']);
+  const unmeasured = '–Not measured';
+  expect(cells(/Gemini API/)).toEqual(['0', '1', unmeasured, unmeasured, unmeasured, unmeasured]);
   expect(screen.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
     'href',
     `/agent/actions/${ACTION}?project=${PROJECT}`,

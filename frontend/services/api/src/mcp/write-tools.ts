@@ -508,7 +508,7 @@ const writeDefinitions = {
               .nullish(),
             cohort: promptCohortSchema
               .describe(
-                'core prompts are scored (the default); comparison prompts name competitors and are reported separately.',
+                'core prompts are scored; comparison prompts name competitors and are reported separately. Omit it to file the prompt as CiteLadder does: one naming the brand files under comparison when it also names a competitor, otherwise brand_diagnostic, and any other prompt under core.',
               )
               .nullish(),
           }),
@@ -530,7 +530,8 @@ const writeDefinitions = {
           text: item.text,
           topic_id: item.topic_id ?? null,
           intent: item.intent ?? '',
-          cohort: item.cohort ?? 'core',
+          // An omitted cohort stays omitted: creation files it by brand naming.
+          ...(item.cohort ? { cohort: item.cohort } : {}),
         }),
       );
       const screened = await screenPrompts(
