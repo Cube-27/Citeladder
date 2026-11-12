@@ -56,7 +56,8 @@ export function IssuesSummary({
           </Stack>
           {total > 0 ? (
             <DonutChart
-              className="flex-[0_1_22rem]"
+              // Wide enough for the donut's container to keep the legend beside it.
+              className="flex-[0_1_28rem]"
               slices={slices}
               totalLabel={total === 1 ? 'Issue' : 'Issues'}
               label="Issues by severity"

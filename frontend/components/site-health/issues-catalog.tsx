@@ -127,6 +127,9 @@ export function IssuesCatalog({
         <IssuesSummary query={priorityQuery} onOpen={catalog.selectIssue} />
         <DataTable
           label="Issues"
+          // Keeps the Issue column readable beside the fixed severity and pages
+          // columns; narrower screens scroll the table instead.
+          minWidth="sm"
           columns={issueColumns(filters.sort, (sort) => updateFilters({ sort }))}
           toolbar={{
             view: (
@@ -213,7 +216,7 @@ function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataT
     {
       key: 'severity',
       label: 'Severity',
-      width: 'status',
+      width: 'statusLabel',
       sort: { active: sort === 'severity', descending: true, onSort: () => onSort('severity') },
     },
     {
