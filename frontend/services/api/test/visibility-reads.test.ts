@@ -115,6 +115,43 @@ async function measuredRun(
   return auditId;
 }
 
+/** A new non-default market for the tenant's project. */
+async function newMarket(tenant: Tenant): Promise<string> {
+  const marketId = randomUUID();
+  await db
+    .insertInto('project_markets')
+    .values({
+      id: marketId,
+      workspace_id: tenant.workspaceId,
+      project_id: tenant.projectId,
+      label: 'United Kingdom',
+      country_code: 'GB',
+      language_code: 'en',
+      created_at: new Date(),
+    })
+    .execute();
+  return marketId;
+}
+
+/** A complete baseline run and a later one, each citing one URL, in a new non-default market. */
+async function runsInOwnMarket(tenant: Tenant, cited: { baseline: string; current: string }) {
+  const marketId = await newMarket(tenant);
+  const complete = aggregate({ completed: 1, brand: 0 });
+  const run = async (completedAt: string, url: string) => {
+    const auditId = await measuredRun(tenant, completedAt, complete);
+    await fixtures.execution(tenant, { auditId, analysis: { citations: [{ url }] } });
+    return auditId;
+  };
+  const baseline = await run('2026-02-01T00:00:00Z', cited.baseline);
+  const current = await run('2026-03-01T00:00:00Z', cited.current);
+  await db
+    .updateTable('audits')
+    .set({ market_id: marketId })
+    .where('id', 'in', [baseline, current])
+    .execute();
+  return { baseline, current };
+}
+
 afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
@@ -812,19 +849,7 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
   it('stays inside the requested market', async () => {
     const tenant = await fixtures.tenant();
     const promptId = await trackedPrompt(db, await promptSet(db, tenant.projectId), 'best crm');
-    const marketId = randomUUID();
-    await db
-      .insertInto('project_markets')
-      .values({
-        id: marketId,
-        workspace_id: tenant.workspaceId,
-        project_id: tenant.projectId,
-        label: 'United Kingdom',
-        country_code: 'GB',
-        language_code: 'en',
-        created_at: new Date(),
-      })
-      .execute();
+    const marketId = await newMarket(tenant);
     const home = await measuredRun(tenant, promptId, {
       day: '2026-03-02',
       answers: [{ mentioned: true, cited: false }],
@@ -1362,35 +1387,10 @@ describe('GET /visibility/sources', () => {
 
   it("compares a named run with its baseline in the runs' own market", async () => {
     const tenant = await fixtures.tenant();
-    const marketId = randomUUID();
-    await db
-      .insertInto('project_markets')
-      .values({
-        id: marketId,
-        workspace_id: tenant.workspaceId,
-        project_id: tenant.projectId,
-        label: 'United Kingdom',
-        country_code: 'GB',
-        language_code: 'en',
-        created_at: new Date(),
-      })
-      .execute();
-    const complete = aggregate({ completed: 1, brand: 0 });
-    const baseline = await measuredRun(tenant, '2026-02-01T00:00:00Z', complete);
-    await fixtures.execution(tenant, {
-      auditId: baseline,
-      analysis: { citations: [{ url: 'https://other.com/y' }] },
+    const { baseline, current } = await runsInOwnMarket(tenant, {
+      baseline: 'https://other.com/y',
+      current: 'https://other.com/x',
     });
-    const current = await measuredRun(tenant, '2026-03-01T00:00:00Z', complete);
-    await fixtures.execution(tenant, {
-      auditId: current,
-      analysis: { citations: [{ url: 'https://other.com/x' }] },
-    });
-    await db
-      .updateTable('audits')
-      .set({ market_id: marketId })
-      .where('id', 'in', [baseline, current])
-      .execute();
     await fixtures.sourceAggregates(tenant, baseline);
     await fixtures.sourceAggregates(tenant, current);
 
@@ -1558,35 +1558,10 @@ describe('GET /visibility/sources', () => {
 
   it("ranks movers against a baseline in the runs' own, non-default market", async () => {
     const tenant = await fixtures.tenant();
-    const marketId = randomUUID();
-    await db
-      .insertInto('project_markets')
-      .values({
-        id: marketId,
-        workspace_id: tenant.workspaceId,
-        project_id: tenant.projectId,
-        label: 'United Kingdom',
-        country_code: 'GB',
-        language_code: 'en',
-        created_at: new Date(),
-      })
-      .execute();
-    const complete = aggregate({ completed: 1, brand: 0 });
-    const baseline = await measuredRun(tenant, '2026-02-01T00:00:00Z', complete);
-    await fixtures.execution(tenant, {
-      auditId: baseline,
-      analysis: { citations: [{ url: 'https://falling.example/a' }] },
+    const { baseline, current } = await runsInOwnMarket(tenant, {
+      baseline: 'https://falling.example/a',
+      current: 'https://rising.example/a',
     });
-    const current = await measuredRun(tenant, '2026-03-01T00:00:00Z', complete);
-    await fixtures.execution(tenant, {
-      auditId: current,
-      analysis: { citations: [{ url: 'https://rising.example/a' }] },
-    });
-    await db
-      .updateTable('audits')
-      .set({ market_id: marketId })
-      .where('id', 'in', [baseline, current])
-      .execute();
 
     const { body } = await get(tenant, route(tenant, '/sources/movers'), {
       audit_id: current,
