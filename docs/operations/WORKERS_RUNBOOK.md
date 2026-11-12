@@ -297,7 +297,8 @@ account acceptance.
 
 After the separately authorized release, verify the compatible backend
 origin. Confirm the per-visitor client identity reaches the API (sign-in rate
-limits apply per visitor, not per Worker). Test login, workspace isolation, callbacks, consent and pricing with
+limits apply per visitor network, an IPv6 /64 or one IPv4 address, not per
+Worker). Test login, workspace isolation, callbacks, consent and pricing with
 safe production test accounts. Do not enable a payment provider merely to test
 this migration.
 

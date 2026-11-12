@@ -44,8 +44,8 @@ redirect with `oauth_signin_email_disposable`. Existing accounts on such
 domains keep signing in. Invitations create no account (the invitee signs up),
 so they pass through the same gate.
 
-Cloudflare Turnstile guards account creation and the public email-link
-requests, never sign-in
+Cloudflare Turnstile guards account creation, the public email-link requests,
+and sign-in after repeated failures
 ([human verification](../frontend/services/api/src/auth/human-verification.ts)).
 `POST /auth/register`, `POST /auth/resend-verification`,
 `POST /auth/forgot-password` (body `turnstile_token`) and a Google sign-up start
@@ -64,6 +64,25 @@ asks for their own password link with the session-authorized
 forms hold submit (and a sign-up's Continue with Google) until the widget has
 handed over a token; the widget sits in a fixed-height slot between the fields
 and submit.
+
+Sign-in (`POST /auth/login`) is challenged (action `login`, body
+`turnstile_token`) once, in the current sign-in window
+(`ABUSE_LOGIN_WINDOW_SECONDS`), the address has failed
+`ABUSE_LOGIN_CHALLENGE_FAILURES` (5) times, the visitor's network has failed
+that many times across any accounts, or failures everywhere have reached
+`ABUSE_LOGIN_FAILURE_GLOBAL_LIMIT` (200). Past a threshold, a sign-in without a
+solved token answers 403 `human_verification_failed` before any password is
+hashed. Reaching a threshold never refuses a solved sign-in, so the global
+ceiling cannot lock everyone out. A successful sign-in forgets the address's
+failures, not the network's. The sign-in form shows the widget after that
+refusal and holds submit until it is solved.
+Every per-visitor (`client`) budget, sign-in, sign-up, email-link requests,
+client error reports and MCP registration and authorization, counts the
+visitor's network rather than the exact address
+([client identity](../frontend/services/api/src/auth/client-identity.ts)): an
+IPv4 address as it is, and an IPv6 address by its /64, or by its /56 for
+sign-up and MCP registration. Turnstile's `remoteip` still names the exact
+address.
 Once a public identity's mailbox is verified (mailed link, reset or Google), the
 runner tick's `signup-notices` phase
 ([signup notifications](../frontend/services/api/src/auth/signup-notifications.ts))

@@ -10,12 +10,11 @@ import {
 import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 import { safeAuthReturnPath } from '@citeladder/contracts/auth-continuation';
 import {
+  accountEntryRequestSchema,
   mailboxChallengeRequestSchema,
   mailboxLinkRequestSchema,
   passwordChangeRequestSchema,
   passwordConfirmationRequestSchema,
-  signInRequestSchema,
-  signUpRequestSchema,
 } from '@citeladder/contracts/auth-requests';
 import { sealContinuation, openContinuation, continuationCookie } from '../auth/continuation.ts';
 import { z } from 'zod';
@@ -45,10 +44,11 @@ import {
   SignInError,
   withoutTrailingSlashes,
 } from '../auth/oauth.ts';
-import { trustedClientIdentity } from '../auth/client-identity.ts';
+import { trustedClientNetwork } from '../auth/client-identity.ts';
 import { assertSignupDomainAllowed } from '../auth/reserved-domains.ts';
 import { requireHumanVerification, turnstileTokenSchema } from '../auth/human-verification.ts';
-import { budget, releaseBudget, spendBudget } from '../abuse/usage.ts';
+import { budget, budgetReached, countUse, releaseBudget, spendBudget } from '../abuse/usage.ts';
+import { LOGIN_FAILURE_GLOBAL_SUBJECT } from '../config/abuse.ts';
 import type { Context } from 'hono';
 import type { Database } from '../db/database.ts';
 import { passwordSchema } from '../auth/password.ts';
@@ -65,10 +65,9 @@ import {
   requireCurrentRevision,
 } from '../workspaces/policies.ts';
 
-// Signing up and signing in are both Terms decisions: the request must carry it.
-const signInSchema = signInRequestSchema.extend({ password: passwordSchema });
-// Sign-up, unlike sign-in, also carries the Turnstile token solved on the form.
-const signUpSchema = signUpRequestSchema.extend({
+// Signing up and signing in share one request: a Terms decision and the
+// Turnstile token solved on the form (sign-in carries one only once challenged).
+const accountEntrySchema = accountEntryRequestSchema.extend({
   password: passwordSchema,
   turnstile_token: turnstileTokenSchema,
 });
@@ -100,7 +99,7 @@ async function mailboxMeter(
   subject?: string,
   verification?: Parameters<typeof requireHumanVerification>[2],
 ) {
-  await spendBudget(db, budget('mailbox_request_client'), trustedClientIdentity(c, config));
+  await spendBudget(db, budget('mailbox_request_client'), trustedClientNetwork(c, config));
   if (verification) await requireHumanVerification(c, config, verification);
   if (subject) await spendBudget(db, budget('mailbox_request_email'), subject);
 }
@@ -109,8 +108,50 @@ async function meter(db: Database, c: Context, config: ServiceConfig, register =
   await spendBudget(
     db,
     budget(register ? 'register_client' : 'login_client', config.settings),
-    trustedClientIdentity(c, config),
+    trustedClientNetwork(c, config, register ? 'registration' : 'client'),
   );
+}
+
+/**
+ * Sign-in is challenged once the address or the visitor's network has failed
+ * `login_challenge_failures` times in the window, or every address together
+ * has failed `login_failure_global_limit` times: past those, a sign-in without
+ * a solved Turnstile token is refused before any password is hashed. Reaching
+ * a threshold never refuses a solved sign-in by itself.
+ */
+async function challengeAfterFailures(
+  db: Database,
+  c: Context,
+  config: ServiceConfig,
+  { email, token }: { email: string; token: string },
+) {
+  const thresholds = await Promise.all([
+    budgetReached(db, budget('login_email_challenge', config.settings), email),
+    budgetReached(
+      db,
+      budget('login_network_challenge', config.settings),
+      trustedClientNetwork(c, config),
+    ),
+    budgetReached(
+      db,
+      budget('login_global_challenge', config.settings),
+      LOGIN_FAILURE_GLOBAL_SUBJECT,
+    ),
+  ]);
+  if (thresholds.some(Boolean))
+    await requireHumanVerification(c, config, { token, action: 'login' });
+}
+
+/** A refused password counts against the visitor's network and the global ceiling. */
+async function countLoginFailure(db: Database, c: Context, config: ServiceConfig) {
+  await Promise.all([
+    countUse(
+      db,
+      budget('login_network_challenge', config.settings),
+      trustedClientNetwork(c, config),
+    ),
+    countUse(db, budget('login_global_challenge', config.settings), LOGIN_FAILURE_GLOBAL_SUBJECT),
+  ]);
 }
 
 /**
@@ -308,11 +349,11 @@ export const authRoutes = [
     path: '/api/v1/auth/register',
     response: registrationResponseSchema,
     status: 202,
-    body: signUpSchema,
+    body: accountEntrySchema,
     async handle({ c, db, config }) {
       if (config.demo.enabled || !config.auth.publicSignup)
         throw new ApiError(403, 'Registration is disabled');
-      const payload = await readBody(c, signUpSchema);
+      const payload = await readBody(c, accountEntrySchema);
       // Refusals that need no verification come first, so they spend no token.
       assertSignupDomainAllowed(config, payload.email);
       requireCurrentRevision(payload.terms_revision);
@@ -330,20 +371,27 @@ export const authRoutes = [
     ...base,
     path: '/api/v1/auth/login',
     response: authResponseSchema,
-    body: signInSchema,
+    body: accountEntrySchema,
     async handle({ c, db, config }) {
       if (demoAccessExpired(config)) throw new ApiError(401, 'Demo access has expired');
-      const payload = await readBody(c, signInSchema);
+      const payload = await readBody(c, accountEntrySchema);
       // A form opened before the Terms changed must be reloaded, not accepted.
       requireCurrentRevision(payload.terms_revision);
       await meter(db, c, config);
+      await challengeAfterFailures(db, c, config, {
+        email: payload.email,
+        token: payload.turnstile_token,
+      });
       // Every attempt spends a unit before hashing, so concurrent guesses cannot
       // outrun the budget; success hands its unit and earlier failures back. An
       // exhausted address refuses even a correct password until its window
       // passes or a password reset proves mailbox ownership.
       await spendBudget(db, budget('login_email_failure', config.settings), payload.email);
       const user = await authenticateUser(db, payload.email, payload.password);
-      if (!user) throw new ApiError(401, 'Invalid credentials');
+      if (!user) {
+        await countLoginFailure(db, c, config);
+        throw new ApiError(401, 'Invalid credentials');
+      }
       // Two independent writes, both done before the session is issued: sent
       // together they cost one database round trip instead of two.
       await Promise.all([

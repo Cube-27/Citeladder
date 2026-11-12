@@ -1,7 +1,15 @@
-import { createHash, randomUUID } from 'node:crypto';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
+import { afterAll, beforeAll, describe, expect, it, onTestFinished } from 'vitest';
 import { jwtVerify } from 'jose';
+import {
+  ORIGIN_CLIENT_IP_HEADER,
+  ORIGIN_PUBLIC_HOST_HEADER,
+  ORIGIN_SIGNATURE_HEADER,
+  ORIGIN_TIMESTAMP_HEADER,
+  signOriginRequest,
+} from '@citeladder/contracts/origin-signature';
 import { createApp } from '../src/app.ts';
+import { clientNetwork } from '../src/auth/client-identity.ts';
 import { policy } from '../src/config.ts';
 import { hashPassword } from '../src/auth/password.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
@@ -537,6 +545,131 @@ describe('password auth routes', () => {
     );
     expect(Number(response.headers.get('retry-after'))).toBeGreaterThan(0);
     await clearClientBudget();
+  });
+
+  describe('per-network limits and the sign-in challenge', () => {
+    const key = 'current-origin-token-0123456789abcdef';
+    const behindWorker = (overrides: Record<string, string> = {}) =>
+      createApp(
+        testConfig({
+          K_SERVICE: 'api',
+          CITELADDER_ORIGIN_TOKEN: key,
+          FRONTEND_URL: 'https://app.example.test',
+          ...overrides,
+        }),
+        db,
+      );
+    const subjects: string[] = [];
+    afterAll(async () => {
+      await db
+        .deleteFrom('usage_windows')
+        .where(
+          'subject_hash',
+          'in',
+          subjects.map((value) => createHash('sha256').update(value).digest('hex')),
+        )
+        .execute();
+    });
+    /** A documentation-range IPv6 /48 no earlier run has used; each test spends its own. */
+    function freshSite() {
+      return `2001:db8:${(0x1000 + randomInt(0xefff)).toString(16)}`;
+    }
+    /** A sign-in the app Worker forwards for the visitor at `clientIp`. */
+    async function signIn(
+      service: ReturnType<typeof createApp>,
+      clientIp: string,
+      body: { email: string; password: string; turnstile_token?: string },
+    ) {
+      subjects.push(body.email, clientNetwork(clientIp, 'client'));
+      const timestamp = Math.floor(Date.now() / 1000);
+      const target = '/api/v1/auth/login';
+      const signature = await signOriginRequest(key, {
+        timestamp,
+        method: 'POST',
+        publicHost: 'app.example.test',
+        target,
+        clientIp,
+      });
+      const response = await service.request(target, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          [ORIGIN_TIMESTAMP_HEADER]: String(timestamp),
+          [ORIGIN_SIGNATURE_HEADER]: signature,
+          [ORIGIN_PUBLIC_HOST_HEADER]: 'app.example.test',
+          [ORIGIN_CLIENT_IP_HEADER]: clientIp,
+        },
+        body: JSON.stringify({ ...body, ...decision }),
+      });
+      const code = response.ok
+        ? null
+        : ((await response.json()) as { error: { code: string } }).error.code;
+      return [response.status, code] as const;
+    }
+    const stranger = () => ({ email: `${randomUUID()}@example.test`, password: 'incorrect' });
+    const solved = { email, password, turnstile_token: 'XXXX.DUMMY.TOKEN.XXXX' };
+    const challenged = [403, 'human_verification_failed'] as const;
+
+    it('counts every address in one IPv6 /64 against one sign-in budget', async () => {
+      const site = freshSite();
+      const limited = behindWorker({ ABUSE_LOGIN_CLIENT_LIMIT: '1' });
+      expect(await signIn(limited, `${site}:1::1`, stranger())).toEqual([401, 'unauthorized']);
+      expect(await signIn(limited, `${site}:1:ffff:ffff:ffff:ffff`, stranger())).toEqual([
+        429,
+        'rate_limited',
+      ]);
+      expect(await signIn(limited, `${site}:2::1`, stranger())).toEqual([401, 'unauthorized']);
+    });
+
+    it('challenges a network after its 5th failed sign-in, across addresses and accounts', async () => {
+      const site = freshSite();
+      const service = behindWorker();
+      for (let attempt = 1; attempt <= 5; attempt += 1)
+        expect(await signIn(service, `${site}:7::${attempt}`, stranger())).toEqual([
+          401,
+          'unauthorized',
+        ]);
+      // The right password alone no longer signs in from that network; solved, it does.
+      expect(await signIn(service, `${site}:7::9`, { email, password })).toEqual(challenged);
+      expect(await signIn(service, `${site}:7::9`, solved)).toEqual([200, null]);
+      // Another network has failed nothing and is not challenged.
+      expect(await signIn(service, `${site}:8::1`, { email, password })).toEqual([200, null]);
+    });
+
+    it('challenges an address after its 5th failed sign-in, from any network', async () => {
+      await db
+        .deleteFrom('usage_windows')
+        .where('operation', '=', 'auth.login.email_failure')
+        .execute();
+      const site = freshSite();
+      const service = behindWorker();
+      for (let attempt = 1; attempt <= 5; attempt += 1)
+        expect(
+          await signIn(service, `${site}:${attempt}::1`, { email, password: 'incorrect' }),
+        ).toEqual([401, 'unauthorized']);
+      expect(await signIn(service, `${site}:9::1`, { email, password })).toEqual(challenged);
+      expect(await signIn(service, `${site}:9::1`, solved)).toEqual([200, null]);
+      // The success forgot the address's failures: no challenge next time.
+      expect(await signIn(service, `${site}:9::1`, { email, password })).toEqual([200, null]);
+    });
+
+    it('challenges every sign-in once failures everywhere reach the global ceiling', async () => {
+      const clearGlobal = async () => {
+        await db
+          .deleteFrom('usage_windows')
+          .where('operation', '=', 'auth.login.global_failure')
+          .execute();
+      };
+      await clearGlobal();
+      onTestFinished(clearGlobal);
+      const site = freshSite();
+      const service = behindWorker({ ABUSE_LOGIN_FAILURE_GLOBAL_LIMIT: '2' });
+      expect(await signIn(service, `${site}:1::1`, stranger())).toEqual([401, 'unauthorized']);
+      expect(await signIn(service, `${site}:2::1`, stranger())).toEqual([401, 'unauthorized']);
+      // A third network and an address that never failed are still challenged, never refused.
+      expect(await signIn(service, `${site}:3::1`, { email, password })).toEqual(challenged);
+      expect(await signIn(service, `${site}:3::1`, solved)).toEqual([200, null]);
+    });
   });
 
   it('refuses passwordless and inactive users, and logout invalidates all existing sessions', async () => {

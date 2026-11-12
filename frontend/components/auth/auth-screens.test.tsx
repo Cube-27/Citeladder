@@ -127,13 +127,50 @@ describe('account entry', () => {
     await user.type(screen.getByLabelText(/^Password/), 'correct horse');
     await user.click(email);
 
-    // Sign-in is never challenged: no widget, and the request carries no token.
+    // An unchallenged sign-in shows no widget, and the request carries no token.
     expect(screen.queryByRole('group', { name: 'Verification' })).not.toBeInTheDocument();
     await waitFor(() =>
       expect(login).toHaveBeenCalledWith({
         email: 'reader@example.com',
         password: 'correct horse',
         termsRevision: '2026-09-24',
+      }),
+    );
+  });
+
+  it('shows the check once the API challenges a sign-in, holds submit until solved, then sends the token', async () => {
+    const login = vi
+      .spyOn(authApi, 'login')
+      .mockRejectedValueOnce(
+        new ApiError('Complete the verification check, then try again.', 403, '', undefined, {
+          code: 'human_verification_failed',
+        }),
+      )
+      .mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
+
+    await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'correct horse');
+    const signIn = screen.getByRole('button', { name: 'Continue' });
+    await waitFor(() => expect(signIn).toBeEnabled());
+    await user.click(signIn);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Complete the verification check, then try again.',
+    );
+    expect(screen.getByRole('group', { name: 'Verification' })).toBeInTheDocument();
+    await waitFor(() => expect(widgetHost).not.toBeNull());
+    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+
+    solveChallenge('solved-token');
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    await waitFor(() =>
+      expect(login).toHaveBeenLastCalledWith({
+        email: 'reader@example.com',
+        password: 'correct horse',
+        termsRevision: '2026-09-24',
+        turnstileToken: 'solved-token',
       }),
     );
   });

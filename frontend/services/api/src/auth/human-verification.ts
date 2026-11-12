@@ -1,6 +1,7 @@
 /**
- * Cloudflare Turnstile verification for sign-up and the public email-link
- * requests, decided here so the SPA and any other caller meet one rule.
+ * Cloudflare Turnstile verification for sign-up, the public email-link
+ * requests and a challenged sign-in, decided here so the SPA and any other
+ * caller meet one rule.
  *
  * Verification runs before any account row or mail exists. A missing,
  * invalid, replayed or mismatched token is refused with
