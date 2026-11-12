@@ -13,6 +13,7 @@ import { conflict } from '../errors.ts';
 import { policy } from '../config.ts';
 import { uuidV5 } from '../uuid-v5.ts';
 import { firstOf } from '../lists.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 
 export const claimRequest = noCardClaimRequestSchema;
 
@@ -108,14 +109,14 @@ async function assertNoPriorAccess(db: Database, accountId: string) {
     .executeTakeFirst();
   if (history || subscription) conflict('introductory_access_cannot_stack');
 }
-export function claimOffer(
+export async function claimOffer(
   db: Database,
   workspaceId: string,
   userId: string,
   request: z.infer<typeof claimRequest>,
   key: string,
 ) {
-  return db.transaction().execute(async (trx) => {
+  const claimed = await db.transaction().execute(async (trx) => {
     if (!request.terms_consent || !request.data_sharing_consent)
       conflict('explicit_consent_required');
     const account = await workspaceAccount(trx, workspaceId);
@@ -232,10 +233,13 @@ export function claimOffer(
       renews: false,
     });
   });
+  // The grant committed under the capacity lock; the runtime follows in its own order.
+  await refreshRuntime(db, workspaceId);
+  return claimed;
 }
 
-export function endOffer(db: Database, workspaceId: string, userId: string, key: string) {
-  return db.transaction().execute(async (trx) => {
+export async function endOffer(db: Database, workspaceId: string, userId: string, key: string) {
+  const ended = await db.transaction().execute(async (trx) => {
     const account = await workspaceAccount(trx, workspaceId);
     await lockAccount(trx, workspaceId, account.id);
     const claim = await trx
@@ -270,4 +274,6 @@ export function endOffer(db: Database, workspaceId: string, userId: string, key:
       .execute();
     return { status: 'ended' as const, ended_at: now.toISOString() };
   });
+  await refreshRuntime(db, workspaceId);
+  return ended;
 }

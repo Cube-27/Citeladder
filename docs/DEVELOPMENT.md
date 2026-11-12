@@ -575,7 +575,7 @@ pnpm --filter @citeladder/api entitlement:site-health --actor <admin-email> --wo
 
 The command issues an audited operator `override` grant through the append-only write
 service (`services/api/src/entitlements/grants.ts`), re-projects the
-workspace runtime row, and emits a single audit-safe log line (no secrets). Allowances
+workspace runtime row once the grant commits, and emits a single audit-safe log line (no secrets). Allowances
 SUM across grants — a second grant adds to the first; revoking earlier grants is a
 separate audited operation.
 

@@ -11,7 +11,6 @@ import {
   grantSource,
   sourceRef,
 } from '../entitlements/grants.ts';
-import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { catalog } from './catalog.ts';
 import { conflict } from '../errors.ts';
 import { amount, taxSnapshotSchema, type Pending, type Subscription } from './contracts.ts';
@@ -612,7 +611,6 @@ export async function settleSubscription(
       at: now,
       expectedVersion: account.entitlement_lifecycle_version,
     });
-  else await refreshRuntime(db, workspaceId, sub.billing_account_id, now);
 }
 
 async function settleUpgrade(

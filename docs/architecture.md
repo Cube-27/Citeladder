@@ -133,8 +133,12 @@ then converge on one acyclic order:
 
 `project -> prompt-set -> domain row (runtime/audit/task) -> account-capacity advisory lock -> billing account -> grants (UUID lock order) -> receipt/intent -> ledger`.
 
-Site Health's existing prefixes remain `project -> runtime -> profile` and
-`runtime -> membership -> crawl -> task`. Cancellation remains `audit -> task
+Site Health's prefix is `project -> runtime -> membership -> crawl -> task`,
+with the profile after the crawl (`project -> runtime -> profile` when no crawl
+is locked). The runtime row is a domain lock: admission and monitored-set
+controls hold it first and resolve it from grants under the capacity lock last.
+A grant change never writes it inside the billing transaction; the
+transaction's owner refreshes the runtime after the commit. Cancellation remains `audit -> task
 mutation -> reservation release`. A transaction that has acquired the account
 capacity or any billing row must not acquire project, prompt, runtime, audit, or
 task locks afterward. Candidate grants are locked in UUID order; commercial

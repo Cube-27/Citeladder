@@ -15,6 +15,7 @@ import { catalogAuthoring } from '../config/billing-authoring.ts';
 import { catalog } from './catalog.ts';
 import { validateCatalog, launchCatalog, catalogDigest as digest } from './catalog-authoring.ts';
 import { issueBundle, revokeBundle, lockAccount } from '../entitlements/grants.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 
 const contextSchema = z.strictObject({
   actor: z.string().trim().min(1),
@@ -214,7 +215,7 @@ export function catalogMutation(
 }
 const uuid = z.string().transform(parseUuid).pipe(z.string());
 const targetSchema = z.strictObject({ workspaceId: uuid, accountId: uuid });
-export function grantMutation(
+export async function grantMutation(
   db: Database,
   context: OperatorContext,
   target: z.input<typeof targetSchema>,
@@ -224,7 +225,7 @@ export function grantMutation(
 ) {
   const ctx = contextSchema.parse(context);
   const scope = targetSchema.parse(target);
-  return operatorTransaction(db, ctx.apply, async (trx) => {
+  const result = await operatorTransaction(db, ctx.apply, async (trx) => {
     const actor = await requirePlatformAdmin(trx, ctx.actor);
     await lockAccount(trx, scope.workspaceId, scope.accountId);
     if (operation.kind === 'grant') {
@@ -275,6 +276,9 @@ export function grantMutation(
       .execute();
     return { revocation_ids: rows.map((row) => row.id) };
   });
+  // A committed grant change re-resolves the runtime in its own transaction; a preview rolled back.
+  if (ctx.apply) await refreshRuntime(db, scope.workspaceId);
+  return result;
 }
 export function inspectAccount(
   db: Database,

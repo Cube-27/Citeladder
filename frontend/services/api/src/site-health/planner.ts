@@ -7,16 +7,14 @@ import { measuredTargetPages } from '../opportunities/enqueue.ts';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { record, strings } from '../db/json.ts';
-import { lockAccount } from '../entitlements/grants.ts';
-import { billingAccountId } from '../entitlements/ledger.ts';
-import { refreshRuntime } from './plan-runtime.ts';
+import { holdRuntime, resolveRuntime } from './plan-runtime.ts';
 import type {
   SiteHealthProfiles,
   SiteUrls,
   WorkspaceSiteHealthRuntime,
 } from '../generated/db-schema.ts';
 import { enqueueCrawlTasks, insertObservations } from './admission-writes.ts';
-import { addAutomaticRoot, crawlScope, lockRuntime } from './frontier.ts';
+import { addAutomaticRoot, crawlScope } from './frontier.ts';
 import { budgetedPageLimit, reserveCrawlFetches, unresolvedEntitlement } from './fetch-budget.ts';
 import {
   controls,
@@ -35,14 +33,14 @@ import { classifyUrlAdmission, type Scope } from './url-admission.ts';
 import { canonicalIdentity } from './url-identity.ts';
 import { hasOperatorControls } from '../entitlements/access.ts';
 
-export async function admissionRuntime(db: Database, workspaceId: string) {
-  const accountId = (await billingAccountId(db, workspaceId)) ?? null;
-  // Billing takes capacity/account before runtime; match it before refreshing.
-  if (accountId) await lockAccount(db, workspaceId, accountId);
-  const state = await refreshRuntime(db, workspaceId, accountId, new Date());
+/**
+ * Resolve the runtime admission holds against the account's grants now. It
+ * takes the capacity and account locks, so the caller already holds the
+ * runtime row and every other Site Health lock it needs.
+ */
+export async function admissionRuntime(db: Database, held: Runtime) {
+  const { state, runtime } = await resolveRuntime(db, held, new Date());
   if (state?.error) throw unresolvedEntitlement();
-  const runtime = await lockRuntime(db, workspaceId);
-  if (!runtime) throw new Error('Site Health runtime missing');
   return runtime;
 }
 
@@ -280,7 +278,7 @@ function refreshProfile(
     .executeTakeFirstOrThrow();
 }
 
-/** Caller owns the transaction: project -> capacity/account -> runtime -> profile. */
+/** Caller owns the transaction: project -> runtime -> profile -> capacity/account. */
 export async function createCrawl(db: Database, workspaceId: string, request: CrawlAdmission) {
   const project = await db
     .selectFrom('projects')
@@ -306,7 +304,9 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
   };
   if (!classifyUrlAdmission(root, scope).accepted)
     crawlError('crawl root is not admissible', 'invalid_root');
-  const runtime = await admissionRuntime(db, workspaceId);
+  const held = await holdRuntime(db, workspaceId);
+  const profile = await refreshProfile(db, workspaceId, request.project_id, root, scope);
+  const runtime = await admissionRuntime(db, held);
   // Read under the account lock, so a concurrent grant or revocation serializes with admission.
   const selected = controls(request, await hasOperatorControls(db, workspaceId));
   const seeds = [
@@ -325,7 +325,6 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
       ? selected.limit
       : Math.min(selected.limit, runtime.discovery_url_cap);
   const budget = await budgetedPageLimit(db, workspaceId, requested, now);
-  const profile = await refreshProfile(db, workspaceId, request.project_id, root, scope);
   const configuration = frozenConfiguration(scope, runtime, {
     ...selected,
     limit: budget.limit,

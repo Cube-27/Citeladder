@@ -23,6 +23,7 @@ import {
 import { pushChange } from './plan-changes.ts';
 import { webhookSummary } from './webhooks.ts';
 import { getLogger } from '../logging.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 
 const logger = getLogger('api.billing');
 
@@ -193,8 +194,8 @@ async function pendingProbe(
       evidence = await provider.evidence(reference, true);
       abandoned = unpaid(evidence);
     }
-    await db.transaction().execute(async (trx) => {
-      await lockOwner(trx, pending.billing_account_id);
+    const settled = await db.transaction().execute(async (trx) => {
+      const owner = await lockOwner(trx, pending.billing_account_id);
       const owned = await trx
         .selectFrom('pending_activations')
         .selectAll()
@@ -239,7 +240,10 @@ async function pendingProbe(
         .set({ reconciliation_lease_token: null, reconciliation_lease_expires_at: null })
         .where('id', '=', pending.id)
         .execute();
+      return owner;
     });
+    // Grants changed under the capacity lock; the runtime follows in its own order.
+    if (settled) await refreshRuntime(db, settled);
   } catch (error) {
     // Uncertain reads never prove nonpayment; the row stays pending for review.
     logger.warning('billing.pending_recovery_failed', {
@@ -320,7 +324,7 @@ async function webhookProbe(
     const evidence = refund
       ? null
       : await provider.evidence(summary.reference, summary.reference.startsWith('sub_'));
-    await db.transaction().execute(async (trx) => {
+    const settled = await db.transaction().execute(async (trx) => {
       const payment = refund
         ? await trx
             .selectFrom('billing_payments')
@@ -377,7 +381,9 @@ async function webhookProbe(
         })
         .where('id', '=', receipt.id)
         .execute();
+      return workspace;
     });
+    if (settled) await refreshRuntime(db, settled);
   } catch (error) {
     await db
       .updateTable('billing_webhook_events')
@@ -499,8 +505,8 @@ async function subscriptionProbe(
       await cancelAtProvider(provider, sub.external_subscription_id, !immediate);
       evidence = await provider.evidence(sub.external_subscription_id, true);
     }
-    await db.transaction().execute(async (trx) => {
-      await lockOwner(trx, sub.billing_account_id);
+    const settled = await db.transaction().execute(async (trx) => {
+      const owner = await lockOwner(trx, sub.billing_account_id);
       const owned = await trx
         .selectFrom('billing_subscriptions')
         .select('id')
@@ -509,7 +515,7 @@ async function subscriptionProbe(
         .where('reconciliation_lease_expires_at', '>', new Date())
         .forUpdate()
         .executeTakeFirst();
-      if (!owned) return;
+      if (!owned) return null;
       await applyReference(
         trx,
         provider.mode,
@@ -522,7 +528,9 @@ async function subscriptionProbe(
         .set({ reconciliation_lease_token: null, reconciliation_lease_expires_at: null })
         .where('id', '=', sub.id)
         .execute();
+      return owner;
     });
+    if (settled) await refreshRuntime(db, settled);
   } catch (error) {
     logger.warning('billing.subscription_recovery_failed', {
       subscription_id: sub.id,

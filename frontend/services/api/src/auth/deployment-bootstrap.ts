@@ -8,6 +8,7 @@ import { subjectXactLock } from '../db/advisory-lock.ts';
 import { provisionAccount } from '../workspaces/service.ts';
 import { issueDevelopmentAccess } from '../entitlements/bootstrap.ts';
 import { issueBundle, lockAccount } from '../entitlements/grants.ts';
+import { refreshRuntime } from '../site-health/plan-runtime.ts';
 import { ownedWorkspaceAccount } from '../workspaces/owned.ts';
 import { createIdentity } from './service.ts';
 import { hashPassword, passwordSchema, verifyPassword } from './password.ts';
@@ -36,7 +37,7 @@ export async function bootstrapDeployment(
   passwordSchema.parse(password);
   if (config.demo.enabled && !config.demo.expiresAt) throw new Error('demo_expiry_required');
   const encoded = await hashPassword(password);
-  await db.transaction().execute(async (trx) => {
+  const workspaceId = await db.transaction().execute(async (trx) => {
     await subjectXactLock(
       trx,
       config.demo.enabled ? 'identity.bootstrap:demo' : `identity.bootstrap:${email}`,
@@ -120,7 +121,10 @@ export async function bootstrapDeployment(
         initialKey: `development-bootstrap:${updated.id}:${allowance}`,
       });
     }
+    return scope.workspaceId;
   });
+  // Grants committed under the capacity lock; the runtime follows in its own order.
+  await refreshRuntime(db, workspaceId);
   // Commit identity first. A catalog failure fails rollout and remains safely retryable.
   if (!config.demo.enabled) await initialize(db, env, email, catalog);
   return { skipped: false, catalog: !config.demo.enabled };

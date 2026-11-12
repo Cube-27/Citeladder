@@ -27,10 +27,12 @@ does not restate them.
 ## Crawl lifecycle
 
 **Admission.** `POST /api/v1/site-crawls` (`planner.ts` `createCrawl`) runs as
-one transaction. It locks workspace, project, capacity/account, runtime, then
-profile, and allows one active crawl per project. In order, it:
+one transaction. It locks workspace, project, runtime, profile, then
+capacity/account, and allows one active crawl per project. Monitored-set saves
+and page reruns (`selection.ts`) lock project, runtime, membership, the active
+crawl, profile, then capacity/account. In order, admission:
 
-1. refreshes the runtime from grants;
+1. refreshes the held runtime from grants under the capacity lock;
 2. admits the root and seeds;
 3. freezes scope, input mode, page limit, page-kind filter, grant projection,
    acquisition bounds and versions into `site_crawls.configuration`;
