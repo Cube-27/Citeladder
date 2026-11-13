@@ -173,9 +173,10 @@ calls none. Its final text is the reply.
   reads then run concurrently, each recorded as its own attempt keyed by the
   provider's call ID. Every call gets a result in call order. A refused,
   unknown, invalid or over-budget call returns an error result saying how to
-  correct it, so the model fixes the call instead of the turn ending. Only the
-  first `save_document` of each document in one response is kept; edits apply
-  in call order.
+  correct it, so the model fixes the call instead of the turn ending. A
+  document is saved whole once per turn: a later `save_document` of it, by
+  number or by the same title, is refused and the first save kept, so later
+  changes go through `edit_document`. Edits apply in call order.
 - **Limits.** [Agent runtime configuration](../frontend/services/api/src/config/agent-runtime.json)
   bounds model calls per turn, tool calls per turn, parallel reads per response,
   web searches per turn, result size and the turn's time. Near the cap, a note appended after the tool

@@ -542,12 +542,12 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(results[3]).toEqual([
       {
         error: false,
-        content:
-          'Document 1: staged as a new document; it is saved with your reply, and the app tells the person so. Now reply briefly; do not repeat the document or announce the save.',
+        content: "Document 1 saved ('Document'). Reply now.",
       },
       {
         error: true,
-        content: 'Save Document 1 once per step. The first save in this step was kept.',
+        content:
+          'Document 1 was already saved in this turn and that save was kept. Change it with edit_document, or reply now.',
       },
     ]);
     // Another kind's methodology loads too: its work would be a new document.

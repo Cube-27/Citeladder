@@ -3,6 +3,7 @@ import { afterAll, describe, expect, it, vi } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import type { z } from 'zod';
 import * as sharedTools from '../src/mcp/tools.ts';
+import { writeTools } from '../src/mcp/write-tools.ts';
 import { AgentFixtures, reply, save, scripted, toolUse, type Response } from './agent-support.ts';
 import { testDatabase } from './support.ts';
 import { agentTools, sharedReads, smallerLimit } from '../src/agent/tool-adapters.ts';
@@ -117,6 +118,15 @@ describe('Agent bindings to the evidence and Action owners', () => {
     expect([...named].filter((name) => !offered.has(name))).toEqual([]);
     const chatOnly = ['list_projects', 'render_visibility', 'render_site_health', 'open_analytics'];
     expect(chatOnly.filter((name) => offered.has(name))).toEqual([]);
+    // Descriptions never point the model at a tool it lacks; the MCP plugin keeps the full text.
+    const lacking = [...chatOnly, ...writeTools.map((tool) => tool.name)];
+    const described = offered.catalog().map((tool) => tool.description);
+    expect(lacking.filter((name) => described.some((text) => text.includes(name)))).toEqual([]);
+    const actions = described.find((text) =>
+      text.startsWith('List the work CiteLadder recommends'),
+    );
+    expect(actions).toMatch(/Pass action_id for one Action in full: [^.]+\.$/u);
+    expect(sharedTools.definitions.read_actions.description).toContain('update_action_status');
     // The public plugin's twins call the same catalogue.
     const plugin = new URL('../../../../plugins/citeladder/skills/', import.meta.url);
     const pluginNamed = new Set(

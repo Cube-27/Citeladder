@@ -363,7 +363,6 @@ export class AgentRuntime {
     signal?: AbortSignal,
     events?: TurnEvents,
   ) {
-    const saved = new Set<number>();
     let parallel = 0;
     const pending = calls.map((call, index) => {
       const callId = (call.id || `call_${index}`).slice(0, 64);
@@ -377,9 +376,7 @@ export class AgentRuntime {
         );
       }
       if (isBuiltin(call.name)) {
-        const outcome = this.builtin(turn, state, call, saved);
-        if (call.name === SAVE_DOCUMENT && outcome.ok && outcome.document)
-          saved.add(outcome.document);
+        const outcome = this.builtin(turn, state, call);
         // An edit's input is not the document, so the edited text is shown once applied.
         const edited = outcome.document ? state.staged.get(outcome.document) : undefined;
         if (call.name === EDIT_DOCUMENT && outcome.ok && edited)
@@ -401,7 +398,7 @@ export class AgentRuntime {
     });
     return Promise.all(pending);
   }
-  private builtin(turn: Turn, state: TurnState, call: ToolCall, saved: ReadonlySet<number>) {
+  private builtin(turn: Turn, state: TurnState, call: ToolCall) {
     const { catalog } = this.deps;
     if (call.name === LOAD_SKILL) {
       const before = state.skill;
@@ -415,11 +412,10 @@ export class AgentRuntime {
       if (outcome.ok) state.steps.push({ kind: 'suggestion' });
       return outcome;
     }
-    // A document is saved whole once per response, so a later save never silently wins.
     const outcome =
       call.name === EDIT_DOCUMENT
         ? editDocument(catalog, state, call.input, turn.budget)
-        : saveDocument(catalog, state, call.input, turn.budget, saved);
+        : saveDocument(catalog, state, call.input, turn.budget);
     if (outcome.ok) state.steps.push({ kind: 'document' });
     return outcome;
   }

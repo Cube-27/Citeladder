@@ -1023,7 +1023,7 @@
     {
       "name": "read_site_health",
       "title": "Read Site Health",
-      "description": "Read the Site Health summary of the latest crawl, or a chosen snapshot: the web fundamentals and AI-readiness scores with their measurement state, how many pages were selected and analyzed, and the top 10 issues, each with its rule_id, severity, description, remediation and how many pages it affects. unavailable no_site_snapshot means no crawl was analyzed yet; this tool never starts one. Use read_site_pages with a rule_id to list the affected pages, read_ai_crawlability for robots access, and render_site_health to show the user the interactive view.",
+      "description": "Read the Site Health summary of the latest crawl, or a chosen snapshot: the web fundamentals and AI-readiness scores with their measurement state, how many pages were selected and analyzed, and the top 10 issues, each with its rule_id, severity, description, remediation and how many pages it affects. unavailable no_site_snapshot means no crawl was analyzed yet; this tool never starts one. Use read_site_pages with a rule_id to list the affected pages and read_ai_crawlability for robots access. Use render_site_health to show the user the interactive view.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1278,7 +1278,7 @@
     {
       "name": "read_visibility_results",
       "title": "Read AI answers",
-      "description": "Read the answers engines gave in one run, to see exactly what an engine said for a prompt. Each answer has the prompt text, engine, model, repetition, whether web search was used, the brands mentioned (with first position) and every citation (URL, domain, whether it is your site or a competitor's), plus a citeladder:// id for fetch. audit_id is required: take it from read_visibility_overview. Answers come in pages; pass next_cursor for more. Only core prompts are included unless cohort is comparison or all. Filters (prompt_id, domain, url, engine) combine. Use read_visibility_overview for rates and read_visibility_sources for citation totals.",
+      "description": "Read the answers engines gave in one run, to see exactly what an engine said for a prompt. Each answer has the prompt text, engine, model, repetition, whether web search was used, the brands mentioned (with first position) and every citation (URL, domain, whether it is your site or a competitor's), plus a citeladder:// id for fetch. It defaults to the latest completed run in the default market; unavailable no_completed_run means none has finished. Answers come in pages; pass next_cursor for more. Only core prompts are included unless cohort is comparison or all. Filters (prompt_id, domain, url, engine) combine. Use read_visibility_overview for rates and read_visibility_sources for citation totals.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -1287,10 +1287,15 @@
             "format": "uuid",
             "description": "A project id that list_projects returned."
           },
+          "market_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "A market id from get_project_business_context; omit for the default market. Markets are never pooled."
+          },
           "audit_id": {
             "type": "string",
             "format": "uuid",
-            "description": "A run id (audit_id) that read_visibility_overview returned."
+            "description": "A run id (audit_id); omit for the latest run."
           },
           "engine": {
             "type": "string",
@@ -1337,7 +1342,7 @@
             "description": "How many rows to return; omit for the default page size."
           }
         },
-        "required": ["project_id", "audit_id"],
+        "required": ["project_id"],
         "additionalProperties": false
       },
       "access": "read"

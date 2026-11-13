@@ -90,7 +90,7 @@ describe('A finished reply’s run summary', () => {
     ).toEqual(['Model call 1', 'Loaded the method', 'Read integration status', 'Model call 2']);
   });
 
-  it('counts web searches and lists their pages apart from CiteLadder records', async () => {
+  it('counts web searches, leaves refused reads out of the data reads and lists pages apart from CiteLadder records', async () => {
     mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
     const current = detail(revision(REV2, 2, 'agent', 'Saved result.'));
     const [request, reply] = current.messages;
@@ -103,6 +103,8 @@ describe('A finished reply’s run summary', () => {
           steps: [
             { kind: 'model', ordinal: 1 },
             { kind: 'search', ordinal: 1, query: 'acme pricing', status: 'completed' },
+            { kind: 'tool', ordinal: 1, tool: 'fetch', status: 'refused' },
+            { kind: 'tool', ordinal: 1, tool: 'read_actions', status: 'completed' },
             { kind: 'model', ordinal: 2 },
           ],
           web_sources: [{ url: 'https://acme.example/pricing', title: 'Acme pricing' }],
@@ -119,10 +121,16 @@ describe('A finished reply’s run summary', () => {
       />,
     );
     const summary = await screen.findByText(/^Run complete/u);
-    expect(summary).toHaveTextContent('Run complete · 2 model calls · 1 web search');
+    expect(summary).toHaveTextContent('Run complete · 2 model calls · 1 data read · 1 web search');
     expect(
       Array.from(summary.parentElement?.querySelectorAll('li') ?? [], (item) => item.textContent),
-    ).toEqual(['Model call 1', 'Searched the web: acme pricing', 'Model call 2']);
+    ).toEqual([
+      'Model call 1',
+      'Searched the web: acme pricing',
+      'Fetch · not allowed',
+      'Read actions',
+      'Model call 2',
+    ]);
     const sources = screen.getByRole('region', { name: 'Web sources' });
     expect(within(sources).getByRole('link', { name: /Acme pricing/u })).toHaveAttribute(
       'href',

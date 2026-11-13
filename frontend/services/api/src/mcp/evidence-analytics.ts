@@ -271,7 +271,13 @@ export async function visibilityResults(
   args: Selection &
     Page & { prompt_id?: string | null; domain?: string | null; url?: string | null },
 ): Promise<Evidence> {
-  const page = await getVisibilityEvidence(db, runs(scope, args), {
+  let selection: RunSelection;
+  try {
+    selection = await scopedSelection(db, runs(scope, args));
+  } catch (error) {
+    return notYetMeasured(error, Boolean(args.audit_id));
+  }
+  const page = await getVisibilityEvidence(db, selection, {
     promptId: args.prompt_id ?? null,
     outcome: null,
     competitor: null,
@@ -294,6 +300,7 @@ export async function visibilityResults(
   );
   return {
     state: 'available',
+    audit_id: selection.auditId,
     observed_at: page.as_of,
     items,
     pagination: pagination(items, page.next_cursor ?? null, page.total ?? 0),

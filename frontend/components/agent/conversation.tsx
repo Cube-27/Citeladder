@@ -373,7 +373,7 @@ function runSummary(steps: readonly MessageStep[]): string {
   const count = (kind: string) => steps.filter((step) => step.kind === kind).length;
   const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
   const calls = count('model'),
-    reads = count('tool'),
+    reads = steps.filter((step) => step.kind === 'tool' && step.status !== 'refused').length,
     searches = count('search');
   return [
     'Run complete',
