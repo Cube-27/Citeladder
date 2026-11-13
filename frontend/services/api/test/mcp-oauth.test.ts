@@ -1002,17 +1002,13 @@ it('caps tool calls per connection and refuses the next until the window ends', 
   onTestFinished(() => {
     vi.useRealTimers();
   });
-  // All but the last unit in one spend: 120 sequential admissions (240 commits) hit the CI test timeout.
-  await spendBudget(db, budget('mcp_tool_call_grant'), principal.grantId, {
-    amount: mcpPolicy.tool_call_grant_limit - 1,
-  });
+  const grantBudget = budget('mcp_tool_call_grant');
+  await spendBudget(db, grantBudget, principal.grantId, { amount: grantBudget.limit - 1 });
   await admitToolCall(db, principal.grantId, principal.userId);
-  const refused = await admitToolCall(db, principal.grantId, principal.userId).catch(
-    (error: unknown) => error,
-  );
-  expect(refused).toBeInstanceOf(ApiError);
-  expect((refused as ApiError).status).toBe(429);
-  expect((refused as ApiError).headers?.['retry-after']).toBe('45');
+  await expect(admitToolCall(db, principal.grantId, principal.userId)).rejects.toMatchObject({
+    status: 429,
+    headers: { 'retry-after': '45' },
+  });
 });
 
 /** What a person sees on a consent page: its form inputs and its visible text. */

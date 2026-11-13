@@ -220,7 +220,7 @@
       "services/api/test/crawl-logs.test.ts": 1394,
       "services/api/test/integration-worker.test.ts": 1170,
       "services/api/test/mcp-evidence.test.ts": 1509,
-      "services/api/test/mcp-oauth.test.ts": 1312,
+      "services/api/test/mcp-oauth.test.ts": 1311,
       "services/api/test/models.test.ts": 919,
       "services/api/test/projects.test.ts": 1267,
       "services/api/test/public-api.test.ts": 803,
