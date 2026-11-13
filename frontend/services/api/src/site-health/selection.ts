@@ -171,7 +171,7 @@ export async function rerunTrackedPages(
   const [first, ...rest] = urls;
   if (!first || urls.length !== chosen.size)
     crawlError('Site URL not found in this project', 'invalid_selection');
-  // A re-audit names no robots choice, so it keeps the newest site crawl's.
+  // A re-audit names no robots choice, so it keeps the project's (`crawlRequest`).
   const { robots, robotsDecision } = controls(await crawlRequest(db, workspaceId, projectId));
   return createPageRerunCrawl(
     db,
