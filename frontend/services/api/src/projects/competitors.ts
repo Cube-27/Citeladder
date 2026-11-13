@@ -235,6 +235,7 @@ export async function removeCompetitor(
     const deleted = await trx
       .deleteFrom('competitors')
       .where('id', '=', competitorId)
+      .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
       .executeTakeFirst();
     if (Number(deleted.numDeletedRows) === 0) throw notFound('Competitor');

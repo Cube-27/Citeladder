@@ -70,7 +70,12 @@ export const abuse = Object.fromEntries(
   { env: string[]; type: string; default: number; minimum: number }
 >;
 
-/** Who a budget counts against; the kind is part of the persisted window key. */
+/**
+ * Who a budget counts against; the kind is part of the persisted window key.
+ * `client` is always the visitor's network (`trustedClientNetwork`), `global`
+ * one fixed subject shared by everyone, and `mcp_client` a registered MCP
+ * OAuth client.
+ */
 export type BudgetSubject =
   | 'api_key'
   | 'workspace'
@@ -79,6 +84,7 @@ export type BudgetSubject =
   | 'crawl_source'
   | 'crawl_project'
   | 'global'
+  | 'mcp_client'
   | 'mcp_grant'
   | 'user'
   | 'integration_connection';
@@ -254,16 +260,15 @@ export const budgets = {
     limit: mailbox.recipient_daily_limit,
     windowSeconds: mailbox.daily_window_seconds,
   },
-  // The shared mail and trial budgets count one fixed client subject.
   mail_global_daily: {
     operation: 'auth.mail.global',
-    subject: 'client',
+    subject: 'global',
     limit: mailbox.global_daily_limit,
     windowSeconds: mailbox.daily_window_seconds,
   },
   trial_global_daily: {
     operation: 'auth.trial.global',
-    subject: 'client',
+    subject: 'global',
     limit: mailbox.trial_daily_limit,
     windowSeconds: mailbox.daily_window_seconds,
   },
@@ -316,7 +321,7 @@ export const budgets = {
   },
   mcp_authorize_client: {
     operation: 'mcp.authorize.client',
-    subject: 'client',
+    subject: 'mcp_client',
     limit: mcpLimits.authorization_client_limit,
     windowSeconds: mcpLimits.authorization_window_seconds,
   },

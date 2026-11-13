@@ -142,11 +142,16 @@ export async function scopedPrompts(
 }
 
 /** The topic's persisted name and description, or 404 outside the project. */
-async function topicText(db: Kysely<DB>, projectId: string, topicId: string): Promise<string> {
+async function topicText(
+  db: Kysely<DB>,
+  { workspaceId, projectId }: ProjectScope,
+  topicId: string,
+): Promise<string> {
   const topic = await db
     .selectFrom('topics')
     .select(['name', 'description'])
     .where('id', '=', topicId)
+    .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .executeTakeFirst();
   if (topic === undefined) throw new ApiError(404, "Topic not found in this prompt's project");
@@ -164,7 +169,7 @@ async function requireBinding(
   value: string,
   topicId: string | null,
 ): Promise<void> {
-  const context = topicId === null ? '' : await topicText(db, scope.projectId, topicId);
+  const context = topicId === null ? '' : await topicText(db, scope, topicId);
   const failure = bindingFailure(value, await loadVocabulary(db, scope), context);
   if (failure !== null) throw bindingError(failure);
 }
@@ -210,7 +215,7 @@ async function screen<T extends { text: string; topic_id?: string | null }>(
   const topics = new Map(
     await Promise.all(
       topicIds.map(
-        async (topicId) => [topicId, await topicText(db, set.project_id, topicId)] as const,
+        async (topicId) => [topicId, await topicText(db, setScope(set), topicId)] as const,
       ),
     ),
   );
@@ -359,7 +364,7 @@ async function applyPromptUpdate(
   // An explicit null detaches the prompt; an absent key leaves its topic.
   const topicGiven = 'topic_id' in input;
   const topicId = topicGiven ? (input.topic_id ?? null) : prompt.topic_id;
-  if (topicGiven && topicId !== null) await topicText(db, projectId, topicId);
+  if (topicGiven && topicId !== null) await topicText(db, projectScope, topicId);
   const activates = input.status === P.status_active && prompt.status !== P.status_active;
   // Re-filing an active prompt under another topic changes what it must bind to.
   const refiled =

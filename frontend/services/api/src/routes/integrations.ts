@@ -60,6 +60,40 @@ const providerPath = { provider: { scalar: { kind: 'str' }, required: true } } a
 const oauthCookie = integrationPolicy.transport.INTEGRATION_OAUTH_TRANSACTION_COOKIE;
 const logger = getLogger('api.integrations');
 
+/**
+ * Record each mapping a write retired in the integration audit trail, in the
+ * transaction that retired it: a removal and a replacement by another property.
+ */
+async function recordRetiredMappings(
+  trx: Database,
+  workspaceId: string,
+  retired: readonly {
+    id: string;
+    connection_id: string;
+    project_id: string;
+    provider: string;
+    property_ref: string;
+  }[],
+  at: Date,
+): Promise<void> {
+  await recordIntegrationEvents(
+    trx,
+    retired.map((mapping) => ({
+      workspaceId,
+      connectionId: mapping.connection_id,
+      type: 'integration.mapping_retired',
+      message: 'Integration property mapping removed',
+      payload: {
+        mapping_id: mapping.id,
+        project_id: mapping.project_id,
+        provider: mapping.provider,
+        property_ref: mapping.property_ref,
+      },
+      at,
+    })),
+  );
+}
+
 /** Land on the screen that started the flow (a validated app path), else Settings. */
 function oauthLanding(
   params: Record<string, string>,
@@ -478,24 +512,9 @@ export const integrationRoutes = [
           .where('id', '=', path.mapping_id)
           .where('workspace_id', '=', workspaceId)
           .where('status', '=', 'active')
-          .returning(['connection_id', 'provider', 'property_ref', 'project_id'])
-          .executeTakeFirst();
-        if (retired)
-          await recordIntegrationEvents(trx, [
-            {
-              workspaceId,
-              connectionId: retired.connection_id,
-              type: 'integration.mapping_retired',
-              message: 'Integration property mapping removed',
-              payload: {
-                mapping_id: path.mapping_id,
-                project_id: retired.project_id,
-                provider: retired.provider,
-                property_ref: retired.property_ref,
-              },
-              at: now,
-            },
-          ]);
+          .returning(['id', 'connection_id', 'provider', 'property_ref', 'project_id'])
+          .execute();
+        await recordRetiredMappings(trx, workspaceId, retired, now);
         await enqueueCoalesced(trx, {
           ...insightsRefresh,
           workspaceId,
@@ -548,15 +567,19 @@ export const integrationRoutes = [
             code: 'mapping_property_not_owned',
           });
         }
-        await trx
+        // Choosing another property for the project retires the one it replaces.
+        const replacedAt = new Date();
+        const replaced = await trx
           .updateTable('integration_property_mappings')
-          .set({ status: 'disabled', updated_at: new Date() })
+          .set({ status: 'disabled', updated_at: replacedAt })
           .where('workspace_id', '=', workspaceId)
           .where('connection_id', '=', connection.id)
           .where('project_id', '=', project.id)
           .where('status', '=', 'active')
           .where('property_ref', '!=', ref)
+          .returning(['id', 'connection_id', 'provider', 'property_ref', 'project_id'])
           .execute();
+        await recordRetiredMappings(trx, workspaceId, replaced, replacedAt);
         const existing = await trx
           .selectFrom('integration_property_mappings')
           .selectAll()

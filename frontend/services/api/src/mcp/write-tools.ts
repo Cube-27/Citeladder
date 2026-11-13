@@ -136,16 +136,20 @@ function direct<S extends z.ZodObject<{ project_id: typeof uuid }>, P extends Pe
   };
 }
 
+/** The authorized project a lookup is confined to, by its workspace and ID. */
+type ProjectRef = { workspaceId: string; projectId: string };
+
 /** A project's topic or competitor by its name, which is unique ignoring case. */
 async function requireNamed(
   db: Database,
   kind: 'topic' | 'competitor',
   name: string,
-  projectId: string,
+  { workspaceId, projectId }: ProjectRef,
 ) {
   const row = await db
     .selectFrom(kind === 'topic' ? 'topics' : 'competitors')
     .select(['id', 'name'])
+    .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .where(sql`lower(${sql.ref('name')})`, '=', name.toLowerCase())
     .executeTakeFirst();
@@ -154,10 +158,15 @@ async function requireNamed(
 }
 
 /** The named prompt set, or the project's only one. */
-async function promptSetOf(db: Database, projectId: string, requested: string | null | undefined) {
+async function promptSetOf(
+  db: Database,
+  { workspaceId, projectId }: ProjectRef,
+  requested: string | null | undefined,
+) {
   const sets = await db
     .selectFrom('prompt_sets')
     .select(['id', 'name'])
+    .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .orderBy('created_at')
     .execute();
@@ -321,7 +330,10 @@ const writeDefinitions = {
     }),
     annotations: hints(true, false),
     run: async (trx, actor, args) => {
-      const competitor = await requireNamed(trx, 'competitor', args.name, args.project_id);
+      const competitor = await requireNamed(trx, 'competitor', args.name, {
+        workspaceId: actor.workspaceId,
+        projectId: args.project_id,
+      });
       await removeCompetitor(trx, actor, args.project_id, competitor.id);
       return { summary: `Stopped tracking ${competitor.name}.` };
     },
@@ -369,7 +381,10 @@ const writeDefinitions = {
     }),
     annotations: hints(true, false),
     run: async (trx, actor, args) => {
-      const topic = await requireNamed(trx, 'topic', args.name, args.project_id);
+      const topic = await requireNamed(trx, 'topic', args.name, {
+        workspaceId: actor.workspaceId,
+        projectId: args.project_id,
+      });
       await deleteTopic(trx, actor, args.project_id, topic.id);
       return {
         summary: `Deleted the topic "${topic.name}"; its prompts are kept without a topic.`,
@@ -467,7 +482,11 @@ const writeDefinitions = {
         await writeActor(context.db, context.principal, projectId),
         PROMPTS_RUN,
       );
-      const set = await promptSetOf(context.db, projectId, setId);
+      const set = await promptSetOf(
+        context.db,
+        { workspaceId: actor.workspaceId, projectId },
+        setId,
+      );
       const result = await startGeneration(
         context.db,
         actor,
@@ -527,7 +546,11 @@ const writeDefinitions = {
         await writeActor(context.db, context.principal, args.project_id),
         preparedChanges.add_prompts.permission,
       );
-      const set = await promptSetOf(context.db, args.project_id, args.prompt_set_id);
+      const set = await promptSetOf(
+        context.db,
+        { workspaceId: actor.workspaceId, projectId: args.project_id },
+        args.prompt_set_id,
+      );
       const inputs = args.prompts.map((item) =>
         promptInput.parse({
           text: item.text,
@@ -655,7 +678,13 @@ const writeDefinitions = {
       const promptIds = args.prompt_ids ?? [];
       const setId = promptIds.length
         ? null
-        : (await promptSetOf(context.db, args.project_id, args.prompt_set_id)).id;
+        : (
+            await promptSetOf(
+              context.db,
+              { workspaceId: actor.workspaceId, projectId: args.project_id },
+              args.prompt_set_id,
+            )
+          ).id;
       const request = {
         prompt_set_id: setId,
         prompt_ids: promptIds,
@@ -728,7 +757,11 @@ const writeDefinitions = {
         await writeActor(context.db, context.principal, args.project_id),
         preparedChanges.schedule.permission,
       );
-      const set = await promptSetOf(context.db, args.project_id, args.prompt_set_id);
+      const set = await promptSetOf(
+        context.db,
+        { workspaceId: actor.workspaceId, projectId: args.project_id },
+        args.prompt_set_id,
+      );
       const change = newChange(args.project_id);
       const { payload } = await preparedChanges.schedule.rehearse(
         context.db,
