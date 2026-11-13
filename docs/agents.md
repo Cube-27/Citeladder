@@ -78,6 +78,9 @@ away, and an outline is given in the reply only when asked for. The completion
 line states the saved format. Generating an output is not an implementation
 declaration: **Mark implemented** declares the attached Action implemented with
 the revision on screen; see [declaration](opportunities.md#explicit-implementation-declaration).
+The Agent may propose a declaration (`propose_declaration`, for an Action the
+turn saw), shown as a card under its reply that opens that dialog prefilled;
+only the person's click declares.
 
 A targeted output (a page or a planned page) attaches the chat to the existing
 [Action](opportunities.md#actions) for that target or creates one, so work on
@@ -143,7 +146,7 @@ calls none. Its final text is the reply.
   compacted again.
   Chat completions return no compaction, so the oldest whole turns are dropped at
   turn start beyond `replay_max_chars`.
-- **Tools.** The model has the [read tools](#read-tools) and four built-ins
+- **Tools.** The model has the [read tools](#read-tools) and five built-ins
   ([`builtin-tools.ts`](../frontend/services/api/src/agent/builtin-tools.ts)).
   `load_skill` returns a methodology and its saving rules; a turn may switch
   methodology at any time. `save_document` stages a whole deliverable after a
@@ -164,6 +167,9 @@ calls none. Its final text is the reply.
   committed as a new revision only with the reply, with the same sources and
   Action attachment, and staged suggestions after it, against that revision. A
   turn that staged only suggestions can still end on them (B60, B69).
+  `propose_declaration` stages a declaration proposal, committed on the reply
+  (`agent_messages.proposals`), only for an Action that is attached, mentioned
+  or returned by a read this turn and that the declaration API would accept now.
   Questions need no methodology. The skill is
   taken, in order, from the user's pick or workflow, the chat's pin, the
   attached Action's diagnosis, and otherwise the model's `load_skill`; a pinned

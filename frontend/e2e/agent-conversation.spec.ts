@@ -64,6 +64,7 @@ function chatDetail(): AgentChatDetail {
       steps: index % 2 ? [{ kind: 'model', ordinal: 1 }] : [],
       mentions: [],
       attachments: [],
+      proposals: [],
       created_at: NOW,
     })),
     latest_run: {

@@ -152,6 +152,7 @@ export const agentStepSchema = z.discriminatedUnion('kind', [
     title: z.string(),
   }),
   responseObject({ kind: z.literal('suggestion') }),
+  responseObject({ kind: z.literal('proposal'), label: z.string() }),
   responseObject({
     kind: z.literal('tool'),
     ordinal: z.number().int(),
@@ -177,6 +178,22 @@ function attachmentSchema(text: z.ZodString) {
 export const agentAttachmentSchema = attachmentSchema(z.string());
 export type AgentAttachment = z.infer<typeof agentAttachmentSchema>;
 
+/**
+ * What a reply proposed for the person to do; only their own click does it.
+ * A declaration names the Action, the revision that shipped (null: done
+ * outside CiteLadder) and what the person said about going live.
+ */
+export const agentProposalSchema = z.discriminatedUnion('kind', [
+  responseObject({
+    kind: z.literal('declaration'),
+    action_id: uuid(),
+    revision: responseObject({ id: uuid(), number: z.number().int() }).nullable(),
+    go_live_day: z.iso.date().nullable(),
+    deployment_reference: z.string().nullable(),
+  }),
+]);
+export type AgentProposal = z.infer<typeof agentProposalSchema>;
+
 export const agentMessageSchema = responseObject({
   id: uuid(),
   sequence: z.number().int(),
@@ -192,6 +209,7 @@ export const agentMessageSchema = responseObject({
     .array(responseObject({ kind: z.string(), id: uuid(), label: z.string() }))
     .default([]),
   attachments: z.array(agentAttachmentSchema).default([]),
+  proposals: z.array(agentProposalSchema).default([]),
   created_at: z.string(),
 });
 

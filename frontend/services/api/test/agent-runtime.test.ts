@@ -416,6 +416,7 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(prefix.tools.map((tool) => tool.name)).toEqual([
       'edit_document',
       'load_skill',
+      'propose_declaration',
       'read_evidence',
       'save_document',
       'suggest_edits',

@@ -1,5 +1,5 @@
 import type { z } from 'zod';
-import type { agentStepSchema } from '@citeladder/contracts/agent';
+import type { AgentProposal, agentStepSchema } from '@citeladder/contracts/agent';
 import type { ConversationBlock, ConversationMessage } from '../models/conversation.ts';
 import type { DocumentState } from './builtin-tools.ts';
 import { AgentError, type Budget } from './contracts.ts';
@@ -19,6 +19,8 @@ export type TurnState = DocumentState & {
   /** Web searches the provider ran this turn, discarded responses included. */
   searches: number;
   steps: StepRecord[];
+  /** This turn’s proposals for the person to confirm; committed only with the reply. */
+  proposals: AgentProposal[];
   toolsUsed: number;
   /** This turn's messages, appended in order and persisted as its transcript. */
   messages: ConversationMessage[];

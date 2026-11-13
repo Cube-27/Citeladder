@@ -159,13 +159,17 @@ const ACTION_REF =
   /^citeladder:\/\/action\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/u;
 
 /**
- * The Actions a chat's messages mention or cite, as they read now, in one
- * read scoped to the chat's project: a reply's chips show the current status.
+ * The Actions a chat's messages mention, cite or propose, as they read now, in
+ * one read scoped to the chat's project: a reply's chips and cards show the
+ * current status.
  */
 async function referencedActions(
   db: Database,
   scope: Pick<Scope, 'workspaceId' | 'projectId'>,
-  thread: readonly Pick<z.infer<typeof agentMessageSchema>, 'evidence_refs' | 'mentions'>[],
+  thread: readonly Pick<
+    z.infer<typeof agentMessageSchema>,
+    'evidence_refs' | 'mentions' | 'proposals'
+  >[],
 ) {
   const ids = new Set<string>();
   for (const message of thread) {
@@ -174,6 +178,7 @@ async function referencedActions(
       if (id) ids.add(id);
     }
     for (const mention of message.mentions) if (mention.kind === 'action') ids.add(mention.id);
+    for (const proposal of message.proposals) ids.add(proposal.action_id);
   }
   if (!ids.size) return [];
   const rows = await db

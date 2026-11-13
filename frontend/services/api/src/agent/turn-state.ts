@@ -63,6 +63,7 @@ export function initialState(catalog: SkillCatalog, turn: Turn): TurnState {
     waiting: false,
     searches: 0,
     steps: [],
+    proposals: [],
     toolsUsed: 0,
     messages: [],
     contextHash: '',

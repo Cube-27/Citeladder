@@ -48,6 +48,7 @@ describe('Conversation order', () => {
       mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
       renderWithProviders(
         <Conversation
+          workspaceId="workspace"
           detail={chat}
           renderOutput={(output) => (
             <section aria-label={output.latest_revision.title}>
@@ -76,6 +77,7 @@ describe('A finished reply’s activity', () => {
     mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
     renderWithProviders(
       <Conversation
+        workspaceId="workspace"
         detail={agentChatDetailSchema.parse(detail(revision(REV2, 2, 'agent', 'Saved result.')))}
         onRefine={vi.fn()}
         onRecover={vi.fn()}
@@ -127,6 +129,7 @@ describe('A finished reply’s activity', () => {
     });
     renderWithProviders(
       <Conversation
+        workspaceId="workspace"
         detail={chat}
         onRefine={vi.fn()}
         onRecover={vi.fn()}
@@ -178,6 +181,7 @@ describe('Actions in a chat', () => {
     });
     renderWithProviders(
       <Conversation
+        workspaceId="workspace"
         detail={chat}
         onRefine={vi.fn()}
         onRecover={vi.fn()}
@@ -217,6 +221,7 @@ describe('Links in a reply', () => {
     });
     renderWithProviders(
       <Conversation
+        workspaceId="workspace"
         detail={chat}
         onRefine={vi.fn()}
         onRecover={vi.fn()}
@@ -273,7 +278,14 @@ function chatWith(
 function renderChat(chat: ReturnType<typeof chatWith>) {
   mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
   return renderWithProviders(
-    <Conversation detail={chat} onRefine={vi.fn()} onRecover={vi.fn()} onRetry={vi.fn()} canSend />,
+    <Conversation
+      workspaceId="workspace"
+      detail={chat}
+      onRefine={vi.fn()}
+      onRecover={vi.fn()}
+      onRetry={vi.fn()}
+      canSend
+    />,
   );
 }
 
@@ -446,6 +458,7 @@ describe('A chat with several documents', () => {
     });
     renderWithProviders(
       <Conversation
+        workspaceId="workspace"
         detail={chat}
         renderOutput={(output) => <p>{output.latest_revision.body}</p>}
         onRefine={vi.fn()}

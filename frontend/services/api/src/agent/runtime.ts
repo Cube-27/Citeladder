@@ -7,18 +7,13 @@ import {
   type ToolCall,
 } from '../models/conversation.ts';
 import { authorize } from './access.ts';
+import { runBuiltin } from './builtin-calls.ts';
 import {
   isBuiltin,
   agentToolList,
-  editDocument,
-  loadSkill,
   methodology,
-  saveDocument,
-  suggestEdits,
   EDIT_DOCUMENT,
-  LOAD_SKILL,
   SAVE_DOCUMENT,
-  SUGGEST_EDITS,
 } from './builtin-tools.ts';
 import { offeredRuleIds } from '../page-documents/content-rules.ts';
 import { pageStates, saveSuggestions } from './suggest-edits.ts';
@@ -86,13 +81,7 @@ import {
   type PromptSummary,
   type StoppedTurn,
 } from './turn-ending.ts';
-import {
-  accepted,
-  documentStep,
-  initialState,
-  pageDocuments,
-  reportedSearches,
-} from './turn-state.ts';
+import { accepted, initialState, pageDocuments, reportedSearches } from './turn-state.ts';
 
 export type RuntimeDependencies = {
   catalog: SkillCatalog;
@@ -375,15 +364,15 @@ export class AgentRuntime {
           result(call, 'The turn has reached its last step. Answer without this call.', true),
         );
       }
-      if (isBuiltin(call.name)) {
-        const outcome = this.builtin(turn, state, call);
-        // An edit's input is not the document, so the edited text is shown once applied.
-        const edited = outcome.document ? state.staged.get(outcome.document) : undefined;
-        if (call.name === EDIT_DOCUMENT && outcome.ok && edited)
-          events?.document?.({ ordinal, title: edited.payload.title, body: edited.payload.body });
-        tool(outcome.ok ? 'completed' : 'refused');
-        return Promise.resolve(result(call, outcome.text, !outcome.ok));
-      }
+      if (isBuiltin(call.name))
+        return runBuiltin(this.db, this.deps.catalog, { turn, state, call }).then((outcome) => {
+          // An edit's input is not the document, so the edited text is shown once applied.
+          const edited = outcome.document ? state.staged.get(outcome.document) : undefined;
+          if (call.name === EDIT_DOCUMENT && outcome.ok && edited)
+            events?.document?.({ ordinal, title: edited.payload.title, body: edited.payload.body });
+          tool(outcome.ok ? 'completed' : 'refused');
+          return result(call, outcome.text, !outcome.ok);
+        });
       const limit = readLimit(turn.budget, state.toolsUsed, parallel);
       if (!limit && this.deps.tools.has(call.name)) {
         state.toolsUsed++;
@@ -397,28 +386,6 @@ export class AgentRuntime {
       );
     });
     return Promise.all(pending);
-  }
-  private builtin(turn: Turn, state: TurnState, call: ToolCall) {
-    const { catalog } = this.deps;
-    if (call.name === LOAD_SKILL) {
-      const before = state.skill;
-      const outcome = loadSkill(catalog, state, call.input, turn.budget);
-      if (outcome.ok && state.skill && before?.id !== state.skill.id)
-        state.steps.push({ kind: 'skill', skill_id: state.skill.id });
-      return outcome;
-    }
-    if (call.name === SUGGEST_EDITS) {
-      const outcome = suggestEdits(catalog, state, call.input, turn.budget);
-      if (outcome.ok) state.steps.push({ kind: 'suggestion' });
-      return outcome;
-    }
-    const edit = call.name === EDIT_DOCUMENT;
-    const outcome = edit
-      ? editDocument(catalog, state, call.input, turn.budget)
-      : saveDocument(catalog, state, call.input, turn.budget);
-    if (outcome.ok && outcome.document)
-      state.steps.push(documentStep(turn, state, { number: outcome.document, edit }));
-    return outcome;
   }
   private async read(
     lease: Lease,
@@ -545,6 +512,7 @@ export class AgentRuntime {
         evidence: sources,
         webSources: web,
         steps,
+        proposals: state.proposals,
         skillId: skill?.id,
         skillSource: source,
       });
