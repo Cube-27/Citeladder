@@ -455,13 +455,14 @@ jobs:
             gcloud run services describe "$API_SERVICE" "${run[@]}" --format=json
           }
           revision="$(describe | jq -r '.status.latestCreatedRevisionName')"
-          ready="$(describe | jq -r '.status.latestReadyRevisionName')"
-          if [ "$revision" != "$ready" ]; then
+          # Cloud Run retires a revision with no traffic and no tag before starting
+          # it, so readiness is only known once the tag routes to it.
+          if ! gcloud run services update-traffic "$API_SERVICE" "${run[@]}" \
+            --set-tags="candidate=$revision" --quiet >/dev/null ||
+            [ "$(describe | jq -r '.status.latestReadyRevisionName')" != "$revision" ]; then
             echo "::error::Revision $revision did not become ready; traffic stays on the serving revision."
             exit 1
           fi
-          gcloud run services update-traffic "$API_SERVICE" "${run[@]}" \
-            --set-tags="candidate=$revision" --quiet >/dev/null
           url="$(describe | jq -r '[.status.traffic[]? | select(.tag == "candidate") | .url] | first // empty')"
           test -n "$url"
           echo "revision=$revision" >> "$GITHUB_OUTPUT"
