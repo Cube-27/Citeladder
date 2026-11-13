@@ -275,6 +275,8 @@ function MessageBubble({
       time={<MessageTime value={message.created_at} />}
       meta={skill ? `Skill: ${skill}` : undefined}
     >
+      {/* Where the live status line sat: the text stays put when this replaces it. */}
+      <ActivityChain rows={activityRows(message.steps)} />
       <ContentMarkdown
         markdown={message.content}
         density="compact"
@@ -288,7 +290,6 @@ function MessageBubble({
         </CopyButton>
       </Inline>
       <WebSources sources={message.web_sources} />
-      <ActivityChain rows={activityRows(message.steps)} />
     </AgentTurn>
   );
 }
