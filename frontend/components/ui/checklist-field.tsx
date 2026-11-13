@@ -160,7 +160,12 @@ function CheckRow({
   onEdit?: { label: string; start: () => void };
 }>) {
   return (
-    <li className={cn('desktop:pl-4 flex items-center gap-3 pr-2 pl-3', tall ? 'h-17' : 'h-13')}>
+    <li
+      className={cn(
+        'desktop:pl-4 flex items-center gap-3 pr-2 pl-3',
+        tall ? 'min-h-17' : 'min-h-13',
+      )}
+    >
       <Checkbox
         checked={item.checked}
         onCheckedChange={onToggle}

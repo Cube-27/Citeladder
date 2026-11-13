@@ -32,7 +32,7 @@ function Chip({
   onConfirm: () => void;
 }>) {
   return (
-    <li className="bg-surface-sunken text-ink text-body-sm inline-flex h-6 max-w-full items-center gap-1 rounded-xs ps-2 pe-0.5 whitespace-nowrap">
+    <li className="bg-surface-sunken text-ink text-body-sm inline-flex min-h-6 max-w-full items-center gap-1 rounded-xs ps-2 pe-0.5 whitespace-nowrap">
       <span className="min-w-0 truncate" title={item.value}>
         {item.value}
       </span>
@@ -154,7 +154,7 @@ export function ChipInput({
               onChange(items.slice(0, -1));
             }
           }}
-          className="text-ink placeholder:text-ink-muted text-body-sm h-6 min-w-36 flex-1 bg-transparent px-2 disabled:cursor-not-allowed"
+          className="text-ink placeholder:text-ink-muted text-body-sm min-h-6 min-w-36 flex-1 bg-transparent px-2 disabled:cursor-not-allowed"
         />
       </div>
       <ChipInputNote hintId={`${id}-hint`} hint={hint} count={items.length} max={max} />

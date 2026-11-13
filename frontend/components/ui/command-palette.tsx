@@ -332,7 +332,7 @@ export function CommandPalette({
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
           {/* The search row is the dialog's header: the open dialog is the
               focus context, so its divider stays the soft `line` rule. */}
-          <div className="palette-field border-line text-ink-muted flex h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+          <div className="palette-field border-line text-ink-muted flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-4 shrink-0" aria-hidden />
             <input
               ref={inputRef}
@@ -348,7 +348,7 @@ export function CommandPalette({
               aria-activedescendant={
                 results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
               }
-              className="text-body-sm text-ink placeholder:text-ink-muted h-full min-w-0 flex-1 bg-transparent"
+              className="text-body-sm text-ink placeholder:text-ink-muted min-w-0 flex-1 self-stretch bg-transparent"
             />
             <Kbd>Esc</Kbd>
           </div>

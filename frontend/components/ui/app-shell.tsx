@@ -129,7 +129,7 @@ export function SidebarFrame({
     <div className="flex h-full flex-col px-3 pb-2">
       <div
         data-top-bar=""
-        className="border-line -mx-3 flex h-[var(--page-header-band)] shrink-0 items-center border-b px-3 in-data-[nav-drawer]:pe-12"
+        className="border-line -mx-3 flex min-h-[var(--page-header-band)] shrink-0 items-center border-b px-3 in-data-[nav-drawer]:pe-12"
       >
         {ident}
       </div>
@@ -172,7 +172,7 @@ export function SidebarIdentButton({
       type="button"
       data-sidebar-ident=""
       className={cn(
-        'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-muted labelled:justify-start labelled:px-3 flex h-[var(--row-app)] w-full min-w-0 items-center justify-center gap-3 rounded-md text-left transition-colors disabled:pointer-events-none',
+        'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-muted labelled:justify-start labelled:px-3 flex min-h-[var(--row-app)] w-full min-w-0 items-center justify-center gap-3 rounded-md text-left transition-colors disabled:pointer-events-none',
         className,
       )}
       {...props}

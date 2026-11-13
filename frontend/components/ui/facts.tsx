@@ -56,7 +56,7 @@ const DETAIL = {
   spread: textRole('body', 'text-ink font-mono'),
   columns: textRole(
     'caption',
-    'flex h-[var(--badge-height-sm)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
+    'flex min-h-[var(--badge-height-sm)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
   ),
 } as const;
 

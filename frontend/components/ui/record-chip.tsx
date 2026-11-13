@@ -16,7 +16,7 @@ export function RecordChip({
   return (
     <ProjectLink
       href={href}
-      className="text-ink border-line bg-surface focus-ring hover:overlay-hover text-body-sm inline-flex h-[var(--control-sm)] max-w-full items-center gap-1 rounded-sm border ps-2 pe-1 align-middle no-underline"
+      className="text-ink border-line bg-surface focus-ring hover:overlay-hover text-body-sm inline-flex min-h-[var(--control-sm)] max-w-full items-center gap-1 rounded-sm border ps-2 pe-1 align-middle no-underline"
     >
       <span className="min-w-0 truncate">{label}</span>
       {/* Read as two words; flex layout drops the space visually. */} {mark}

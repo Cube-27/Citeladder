@@ -49,7 +49,7 @@ export function OnboardingShell({
   return (
     <div className="bg-paper text-ink flex min-h-dvh flex-col antialiased">
       <header className="border-line bg-paper sticky top-0 z-10 border-b">
-        <div className="desktop:grid-cols-[1fr_auto_1fr] desktop:px-[var(--card-padding)] grid h-[var(--nav-height)] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-4">
+        <div className="desktop:grid-cols-[1fr_auto_1fr] desktop:px-[var(--card-padding)] grid min-h-[var(--nav-height)] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-4">
           {/* Optically flush with the gutter: the link's 4px focus inset hangs out. */}
           <span className="-ms-1 inline-flex justify-self-start">
             <AuthLogo />
