@@ -10,7 +10,7 @@ import { orderedUnique } from '../src/site-health/tracked-set.ts';
 import { reconcileDuplicateAliases } from '../src/site-health/canonical-alias.ts';
 import { valueKindCoverage } from '../src/site-health/coverage.ts';
 import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
-import { crawlCounters } from '../src/site-health/reads/crawl.ts';
+import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
 import { pages } from '../src/site-health/reads/pages.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';

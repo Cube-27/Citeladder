@@ -11,7 +11,7 @@ import {
   SitePageFetcher,
   siteFetchSettings,
 } from '../src/site-health/page-fetch.ts';
-import { crawlCounters } from '../src/site-health/reads/crawl.ts';
+import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
 import * as interpretation from '../src/site-health/analysis/off-thread.ts';
 import { hardExcluded } from '../src/site-health/url-admission.ts';

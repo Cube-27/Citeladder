@@ -39,9 +39,9 @@ import {
   currentSiteCrawl,
   isTerminal,
   loadCrawl,
-  crawlProjection,
   rootFailure,
 } from '../site-health/reads/crawl.ts';
+import { crawlProjection } from '../site-health/reads/crawl-projection.ts';
 import { dashboard } from '../site-health/reads/dashboard.ts';
 import { crawlEventTail, eventReplay } from '../site-health/reads/events.ts';
 import {

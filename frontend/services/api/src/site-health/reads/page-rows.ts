@@ -23,14 +23,8 @@ import {
 import { containsPattern } from '../../db/like.ts';
 import { parseUuid } from '../../http/uuid.ts';
 import { failedAs } from '../task-outcome.ts';
-import {
-  inventoryCrawlIds,
-  isTerminal,
-  pageAuditsSql,
-  ROW_TASK,
-  ROW_TASK_ORDER,
-  type Crawl,
-} from './crawl.ts';
+import { inventoryCrawlIds, isTerminal, pageAuditsSql, type Crawl } from './crawl.ts';
+import { ROW_TASK, ROW_TASK_ORDER } from './crawl-counters.ts';
 import { siteLevelRuleOf } from './rules.ts';
 
 const PERSISTED = ['completed', 'partially_completed'];
