@@ -1,33 +1,28 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseMutationResult,
-  type UseQueryResult,
-} from '@tanstack/react-query';
-import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { Calendar, Search } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { ListScreen } from '@/components/layout/page-shell';
 import { QueryState } from '@/components/ui/query-state';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
+import {
+  RecomputeAction,
+  RecomputeFailure,
+  RecomputeStatus,
+} from '@/components/demand/demand-recompute';
 import { DemandDataCaveats, DemandSignalFilters } from '@/components/demand/demand-signal-filters';
-import { DemandSignalTable, SignalLegend } from '@/components/demand/demand-signal-table';
+import { SignalLegend } from '@/components/demand/demand-signal-table';
+import { DemandSignalsFeed } from '@/components/demand/demand-signals-feed';
 import {
   demandMutations,
   demandQueries,
   refreshDemandSnapshot,
-  type demandApi,
   type DemandSignal,
   type DemandSnapshot,
 } from '@/lib/api/demand';
-import type { DemandRecomputeRequest } from '@citeladder/contracts/demand';
-import { isTransientMutationError, mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   countByTab,
   FILTER_TABS,
@@ -49,68 +44,6 @@ const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
   'all' as FilterTab,
 );
-
-type RecomputeMutation = UseMutationResult<
-  Awaited<ReturnType<typeof demandApi.recompute>>,
-  Error,
-  DemandRecomputeRequest
->;
-
-/**
- * The header's one recompute button, which becomes the next step in place:
- * once queued it checks for the new snapshot; after a transient failure it
- * retries. The button keeps its slot, so the page never moves.
- */
-function RecomputeAction({
-  mutation,
-  onRecompute,
-  onCheck,
-}: Readonly<{ mutation: RecomputeMutation; onRecompute: () => void; onCheck: () => void }>) {
-  if (mutation.isSuccess)
-    return (
-      <Button variant="secondary" onClick={onCheck}>
-        <Icon icon={RefreshCw} />
-        Check for new snapshot
-      </Button>
-    );
-  const retry = mutation.isError && isTransientMutationError(mutation.error);
-  return (
-    <Button
-      variant="secondary"
-      onClick={onRecompute}
-      pending={mutation.isPending}
-      pendingLabel="Queueing…"
-    >
-      <Icon icon={RefreshCw} />
-      {retry ? 'Try again' : 'Recompute signals'}
-    </Button>
-  );
-}
-
-/** Recompute's outcome as one more fact on the summary line. */
-function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
-  if (mutation.isSuccess)
-    return (
-      <span className="type-caption text-info">
-        {mutation.data.status === 'already_queued'
-          ? 'A recompute for this window is already queued.'
-          : 'Recompute queued. Signals refresh once the job finishes.'}
-      </span>
-    );
-  return null;
-}
-
-/** A failed recompute as the shared notice; the header button is its retry. */
-function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
-  if (!mutation.isError) return null;
-  return (
-    <MutationNotice
-      notice={mutationNoticeForError(mutation.error, {
-        action: 'queue the search demand recompute',
-      })}
-    />
-  );
-}
 
 function SearchDemandView({
   snapshot,
@@ -176,46 +109,6 @@ function SearchDemandView({
       return matches;
     }, []);
   }, [snapshot.signals, activeTab, searchQuery]);
-
-  // An empty feed has two different causes, and they need different words:
-  // nothing was detected at all, or the filter hid everything that was.
-  let signalsFeed: ReactNode = (
-    <QueryState
-      kind="empty"
-      icon={Search}
-      heading="No signals match your filter"
-      description="Try choosing a different filter tab or clearing your search term."
-      action={
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setActiveTab('all');
-            setSearchQuery('');
-          }}
-        >
-          Clear filters
-        </Button>
-      }
-    />
-  );
-  if (filteredSignals.length > 0) {
-    signalsFeed = (
-      <DemandSignalTable
-        rows={filteredSignals}
-        filterKey={`${activeTab}\u0000${searchQuery.trim().toLowerCase()}`}
-        onInspect={handleInspect}
-      />
-    );
-  } else if (snapshot.signals.length === 0) {
-    signalsFeed = (
-      <QueryState
-        kind="empty"
-        icon={Sparkles}
-        heading="No qualifying search gaps observed"
-        description="Search Console data was observed, but no configured detector emitted a signal in this window."
-      />
-    );
-  }
 
   return (
     <ListScreen
@@ -289,7 +182,17 @@ function SearchDemandView({
             <DemandDataCaveats snapshot={snapshot} />
             <RecomputeStatus mutation={recomputeMutation} />
           </Inline>
-          {signalsFeed}
+          <DemandSignalsFeed
+            filteredSignals={filteredSignals}
+            signalCount={snapshot.signals.length}
+            activeTab={activeTab}
+            searchQuery={searchQuery}
+            onClearFilters={() => {
+              setActiveTab('all');
+              setSearchQuery('');
+            }}
+            onInspect={handleInspect}
+          />
         </Stack>
 
         <DemandEvidenceDrawer

@@ -8,8 +8,13 @@ import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { useSearchCollection, type SearchCollection } from './search-intelligence-collection-state';
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
-import { referringLists } from './search-intelligence-format';
 import { NotConnected, UnavailableNotice } from './search-intelligence-availability';
+import {
+  CollectionAction,
+  PageActions,
+  useRoleActions,
+  type CollectionActions,
+} from './search-intelligence-page-actions';
 import { CostDetails, RunNotice } from './search-intelligence-runs';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
@@ -32,7 +37,6 @@ import { searchMarketLabel } from '@/lib/config/search-intelligence';
 import { pollSearchRun } from '@/lib/search-intelligence/status';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 const TABS = [
   { value: 'overview', label: 'Overview' },
@@ -86,6 +90,23 @@ function selectDatasets(
         `${item.location_code}:${item.language_code}` === activeMarket),
   );
   return { scopes, activeScope, markets, activeMarket, datasets };
+}
+
+/** What the page shows instead of research: no connection and no data, or no website. */
+function blockedState(data: SearchIntelligenceReadiness) {
+  if (!data.connected && !data.datasets.length)
+    return <NotConnected funded={data.credential_mode === 'funded'} />;
+  if (!data.owned_targets.length)
+    return (
+      <QueryState
+        kind="empty"
+        icon={Settings2}
+        heading="Add your website address"
+        description="Keyword Research needs the project’s homepage address."
+        action={<TextLink href="/projects">Edit the project</TextLink>}
+      />
+    );
+  return null;
 }
 
 export function SearchIntelligencePage() {
@@ -164,26 +185,11 @@ export function SearchIntelligencePage() {
     );
   const data = readiness.data;
   const tabs = SEARCH_INTELLIGENCE_TABS;
-  if (!data.connected && !data.datasets.length)
+  const blocked = blockedState(data);
+  if (blocked)
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
-        <ListScreen tabs={tabs}>
-          <NotConnected funded={data.credential_mode === 'funded'} />
-        </ListScreen>
-      </TabsRoot>
-    );
-  if (!data.owned_targets.length)
-    return (
-      <TabsRoot value={tab} onValueChange={setTab}>
-        <ListScreen tabs={tabs}>
-          <QueryState
-            kind="empty"
-            icon={Settings2}
-            heading="Add your website address"
-            description="Keyword Research needs the project’s homepage address."
-            action={<TextLink href="/projects">Edit the project</TextLink>}
-          />
-        </ListScreen>
+        <ListScreen tabs={tabs}>{blocked}</ListScreen>
       </TabsRoot>
     );
   const firstRun = actions.analysis ? (
@@ -299,77 +305,6 @@ export function SearchIntelligencePage() {
 }
 
 /**
- * The page's actions, each only for a role that may take it: reviews and
- * cancels spend or stop credits (run); saving citation matches is a write.
- */
-function useRoleActions({
-  openReview,
-  cancel,
-  openMatch,
-}: Readonly<{
-  openReview: (action: SearchReviewAction) => void;
-  cancel: (runId: string) => void;
-  openMatch: (targetOrigin: string | undefined) => void;
-}>): Readonly<
-  CollectionActions & {
-    review?: (action: SearchReviewAction) => void;
-    /** Opens the analysis review: the first run, or the recovery for a stopped one. */
-    analysis?: () => void;
-    cancel?: (runId: string) => void;
-  }
-> {
-  const canRun = useWorkspaceCapability('run');
-  const canWrite = useWorkspaceCapability('write');
-  const onMatch = canWrite ? openMatch : undefined;
-  if (!canRun) return { onMatch };
-  return {
-    review: openReview,
-    analysis: () => openReview('analysis'),
-    cancel,
-    onSeed: () => openReview('seed'),
-    onExpand: () => openReview('increase_depth'),
-    onMatch,
-  };
-}
-
-function PageActions({
-  hasDatasets,
-  onReview,
-  onCost,
-}: Readonly<{
-  hasDatasets: boolean;
-  /** Opens a credit-spending review; omitted for a role that may not run one. */
-  onReview?: (action: SearchReviewAction) => void;
-  onCost: () => void;
-}>) {
-  const costDetails = (
-    <Button variant="ghost" onClick={onCost}>
-      Cost details
-    </Button>
-  );
-  if (!onReview) return costDetails;
-  return (
-    <>
-      {costDetails}
-      {hasDatasets ? (
-        <>
-          <Button variant="secondary" onClick={() => onReview('refresh')}>
-            Refresh
-          </Button>
-          <Button variant="primary" onClick={() => onReview('analysis')}>
-            New analysis
-          </Button>
-        </>
-      ) : (
-        <Button variant="primary" onClick={() => onReview('analysis')}>
-          Review first analysis
-        </Button>
-      )}
-    </>
-  );
-}
-
-/**
  * The page's one control strip for the open tab. The caption names the saved
  * result on screen, else the newest one the tab can show.
  */
@@ -402,57 +337,4 @@ function pageControls({
       <CollectionAction collection={collection} datasets={datasets} {...actions} />
     ) : undefined,
   });
-}
-
-/** A tab's next steps; each is omitted for a role that may not take it. */
-type CollectionActions = {
-  /** Reviews a keyword to research, a run. */
-  onSeed?: () => void;
-  /** Saves citation matches, a write. */
-  onMatch?: (targetOrigin: string | undefined) => void;
-  /** Reviews a deeper collection, a run. */
-  onExpand?: () => void;
-};
-
-/**
- * The tab's own next step, at the end of the control strip: its research
- * action, then a deeper review of the saved result on screen.
- */
-function CollectionAction({
-  collection,
-  datasets,
-  onSeed,
-  onMatch,
-  onExpand,
-}: Readonly<
-  {
-    collection: SearchCollection;
-    datasets: SearchIntelligenceDataset[];
-  } & CollectionActions
->) {
-  // Only the website on screen: matching another website's list would save
-  // matches for a site the reader is not looking at.
-  const matchable =
-    collection.tab === 'backlinks' &&
-    referringLists(datasets).some((dataset) => dataset.target_origin === collection.target);
-  const expandable = !collection.listingCompetitors && Boolean(collection.dataset);
-  return (
-    <>
-      {collection.tab === 'keywords' && onSeed ? (
-        <Button variant="secondary" onClick={onSeed}>
-          Research a keyword
-        </Button>
-      ) : null}
-      {matchable && onMatch ? (
-        <Button variant="secondary" onClick={() => onMatch(collection.target)}>
-          Match with Visibility citations
-        </Button>
-      ) : null}
-      {expandable && onExpand ? (
-        <Button variant="ghost" onClick={onExpand}>
-          Review depth
-        </Button>
-      ) : null}
-    </>
-  );
 }
