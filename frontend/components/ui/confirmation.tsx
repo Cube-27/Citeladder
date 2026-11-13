@@ -21,7 +21,7 @@ export function Confirmation({
 }: Readonly<{
   title: string;
   state: ConfirmationState;
-  /** The request's controls; an accepted confirmation has none. */
+  /** The controls, kept in both states so the card keeps its size once accepted. */
   actions?: ReactNode;
   children?: ReactNode;
 }>) {
@@ -33,7 +33,7 @@ export function Confirmation({
           <h3 className={textRole('itemTitle', 'min-w-0 break-words')}>{title}</h3>
         </Inline>
         {children}
-        {state === 'requested' && actions ? <Inline className="flex-wrap">{actions}</Inline> : null}
+        {actions ? <Inline className="flex-wrap">{actions}</Inline> : null}
       </Stack>
     </section>
   );

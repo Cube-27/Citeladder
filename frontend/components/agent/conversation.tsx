@@ -91,7 +91,11 @@ export function Conversation({
                 skill={skillLabel(skills, item.message.skill_id)}
                 actions={detail.actions}
               />
-              <ProposalCards workspaceId={workspaceId} proposals={item.message.proposals} />
+              <ProposalCards
+                workspaceId={workspaceId}
+                proposals={item.message.proposals}
+                actions={detail.actions}
+              />
               {documents(byMessage.get(item.message.id))}
             </Stack>
           ) : (

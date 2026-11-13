@@ -47,8 +47,11 @@ afterAll(() => mswServer.close());
 
 const ACTION = '88888888-8888-4888-8888-888888888888';
 
-/** The Action's detail and declaration API; its stored state turns declared once a declaration posts. */
-function actionApi() {
+/**
+ * The Action's detail and declaration API; its stored state turns declared once
+ * a declaration posts. The detail is answered once `loaded` settles.
+ */
+function actionApi(loaded: Promise<void> = Promise.resolve()) {
   const posted: unknown[] = [];
   const declaration = {
     id: '99999999-9999-4999-8999-999999999999',
@@ -107,7 +110,10 @@ function actionApi() {
   return {
     posted,
     handlers: [
-      http.get(`/api/v1/actions/${ACTION}`, () => HttpResponse.json(action())),
+      http.get(`/api/v1/actions/${ACTION}`, async () => {
+        await loaded;
+        return HttpResponse.json(action());
+      }),
       http.post(`/api/v1/actions/${ACTION}/declaration`, async ({ request }) => {
         posted.push(await request.json());
         return HttpResponse.json(declaration, { status: 201 });
@@ -161,19 +167,30 @@ describe('ChatScreen implementation declaration', () => {
         deployment_reference: 'PR 12',
       },
     ];
-    const { posted, handlers } = actionApi();
+    const projected = {
+      ...proposed,
+      actions: [{ id: ACTION, target_label: 'https://acme.test/pricing', status: 'in_progress' }],
+    };
+    const { promise: loaded, resolve: load } = Promise.withResolvers<void>();
+    const { posted, handlers } = actionApi(loaded);
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(proposed)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(projected)),
       ...handlers,
     );
     const user = userEvent.setup();
     renderChat();
 
+    // The card renders whole from the chat before the Action loads, so the thread never grows.
     const card = await screen.findByRole('region', {
       name: 'Mark https://acme.test/pricing implemented?',
     });
-    await user.click(within(card).getByRole('button', { name: 'Mark implemented' }));
+    expect(card).toHaveTextContent(
+      'Work done outside CiteLadder, live since 2026-09-24. You confirm the details before anything is declared.',
+    );
+    expect(within(card).queryByRole('button', { name: 'Mark implemented' })).toBeNull();
+    load();
+    await user.click(await within(card).findByRole('button', { name: 'Mark implemented' }));
     const dialog = await screen.findByRole('dialog', { name: 'Mark implemented' });
     // The dialog opens with what the person told the Agent; they still confirm it.
     expect(within(dialog).getByRole('textbox', { name: 'What shipped it?' })).toHaveValue('PR 12');

@@ -47,7 +47,7 @@ export const proposeDeclarationArguments = z.strictObject({
 });
 
 export const PROPOSE_DESCRIPTION =
-  'When the person says a change is live or asks whether to mark an Action implemented, propose the declaration instead of describing the steps: the app shows a card under your reply, and only the person’s click declares it. The Action must be the chat’s Action, one they mentioned or one a read returned this turn.';
+  'When the person says a change is live or asks whether to mark an Action implemented, propose the declaration instead of describing the steps: the app shows a card under your reply, and only the person’s click declares it. Never propose one otherwise. The Action must be the chat’s Action, one they mentioned or one a read returned this turn.';
 
 /** What the check reads from the turn: the Actions it saw and the chat's saved documents. */
 export type ProposalTurn = {
@@ -108,7 +108,8 @@ async function eligibility(db: Database, scope: Scope, actionId: string): Promis
 }
 
 /** The bounds a go-live day must fall in, with a day of slack for the person's time zone. */
-function dayProblem(day: string, now: Date) {
+function dayProblem(day: string | null | undefined, now: Date) {
+  if (!day) return null;
   const min = new Date(
     now.getTime() - policy.opportunity.opportunities.VERIFICATION_WINDOW_DAYS * DAY_MS,
   )
@@ -118,13 +119,17 @@ function dayProblem(day: string, now: Date) {
   return day < min || day > max ? `Give a go_live_day from ${min} to today, or omit it.` : null;
 }
 
-/** The revision a proposal names: a saved document of this Action that the turn has not changed. */
+/**
+ * The revision a proposal names: a saved document of this Action that the turn
+ * has not changed, or none for work done outside CiteLadder.
+ */
 function shippedRevision(
   turn: ProposalTurn,
   state: Pick<TurnState, 'staged'>,
-  number: number,
+  number: number | null | undefined,
   actionId: string,
 ) {
+  if (!number) return { ok: true as const, revision: null };
   const document = turn.documents.find(({ output }) => output.number === number);
   if (!document)
     return {
@@ -168,11 +173,6 @@ export async function proposeDeclaration(
     text: 'Propose a declaration only for the chat’s Action, one the person mentioned, or one a read returned this turn. Read the Action first.',
   };
   if (!turn.known.has(actionId)) return unseen;
-  if (state.proposals.some((proposal) => proposal.action_id === actionId))
-    return {
-      ok: false,
-      text: 'This Action’s declaration is already proposed in this turn. Reply now.',
-    };
   const checked = await eligibility(db, turn.scope, actionId);
   if (checked.kind === 'unknown') return unseen;
   if (checked.kind === 'refused')
@@ -180,12 +180,16 @@ export async function proposeDeclaration(
       ok: false,
       text: `This Action cannot be declared now. ${checked.reason} Tell the person instead of proposing it.`,
     };
-  const problem = day ? dayProblem(day, now) : null;
+  const problem = dayProblem(day, now);
   if (problem) return { ok: false, text: problem };
-  const shipped = document
-    ? shippedRevision(turn, state, document, actionId)
-    : { ok: true as const, revision: null };
+  const shipped = shippedRevision(turn, state, document, actionId);
   if (!shipped.ok) return shipped;
+  // Checked after the last await: calls in one response run concurrently.
+  if (state.proposals.some((proposal) => proposal.action_id === actionId))
+    return {
+      ok: false,
+      text: 'This Action’s declaration is already proposed in this turn. Reply now.',
+    };
   const proposal: AgentProposal = agentProposalSchema.parse({
     kind: 'declaration',
     action_id: actionId,

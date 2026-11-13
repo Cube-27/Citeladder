@@ -664,8 +664,11 @@ describe('propose_declaration on PostgreSQL', () => {
       .runtime(
         scope,
         scripted([
-          [toolUse('propose_declaration', proposal)],
-          [toolUse('propose_declaration', proposal)],
+          // Two calls in one response run concurrently; only one proposal survives.
+          [
+            toolUse('propose_declaration', proposal, 'call_a'),
+            toolUse('propose_declaration', proposal, 'call_b'),
+          ],
           [text('Confirm it below.')],
         ]),
       )
@@ -685,6 +688,8 @@ describe('propose_declaration on PostgreSQL', () => {
       { kind: 'proposal', label: target.label },
     ]);
     expect(chat.messages[0]!.proposals).toEqual([]);
+    // The card renders from the chat's projection of the Action, not a later read.
+    expect(chat.actions).toEqual([{ id: target.id, target_label: target.label, status: 'open' }]);
     expect(
       await db
         .selectFrom('opportunity_implementation_events')

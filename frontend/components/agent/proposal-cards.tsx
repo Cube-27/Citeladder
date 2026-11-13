@@ -1,35 +1,50 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { isDeclarable, MarkImplementedButton } from '@/components/agent/action-declaration';
+import {
+  ContextualLinkDeclarationRoute,
+  isDeclarable,
+  MarkImplementedButton,
+} from '@/components/agent/action-declaration';
+import { Button } from '@/components/ui/button';
 import { Confirmation } from '@/components/ui/confirmation';
-import { DisplayTime } from '@/components/ui/display-time';
-import { Stack } from '@/components/ui/layout';
+import { ProjectLink } from '@/components/ui/project-link';
 import { ReadError } from '@/components/ui/read-error';
+import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
-import type { AgentMessage } from '@/lib/api/agent';
-import { actionsQueries } from '@/lib/api/actions';
+import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
+import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 type Proposal = AgentMessage['proposals'][number];
+type ChatAction = AgentChatDetail['actions'][number];
 
 /** What a reply proposed, each as a card the person confirms; the Agent itself did nothing. */
 export function ProposalCards({
   workspaceId,
   proposals,
-}: Readonly<{ workspaceId: string; proposals: readonly Proposal[] }>) {
+  actions,
+}: Readonly<{
+  workspaceId: string;
+  proposals: readonly Proposal[];
+  /** The chat's Actions as they read now; a card renders from these without waiting. */
+  actions: readonly ChatAction[];
+}>) {
   if (proposals.length === 0) return null;
   return (
     <Stack gap="compact">
       {proposals.map((proposal) => {
         switch (proposal.kind) {
-          case 'declaration':
-            return (
+          case 'declaration': {
+            const action = actions.find(({ id }) => id === proposal.action_id);
+            return action ? (
               <DeclarationProposal
                 key={proposal.action_id}
                 workspaceId={workspaceId}
                 proposal={proposal}
+                action={action}
               />
-            );
+            ) : null;
+          }
           default: {
             const _exhaustive: never = proposal.kind;
             return _exhaustive;
@@ -40,58 +55,81 @@ export function ProposalCards({
   );
 }
 
+const PENDING: ReadonlySet<ChatAction['status']> = new Set(['open', 'in_progress']);
+const DECLARED: ReadonlySet<ChatAction['status']> = new Set(['implemented', 'measuring', 'done']);
+
 /**
  * "Mark … implemented?": the existing declaration dialog, opened with what the
- * person told the Agent. Its state is the Action's as stored, so a declaration
- * made anywhere shows here as done.
+ * person told the Agent. The card's shape comes from the chat's projection, so
+ * it never grows once the Action loads; the loaded Action supplies the button
+ * and, once declared anywhere, the done state.
  */
 function DeclarationProposal({
   workspaceId,
   proposal,
-}: Readonly<{ workspaceId: string; proposal: Proposal }>) {
+  action,
+}: Readonly<{ workspaceId: string; proposal: Proposal; action: ChatAction }>) {
   const mayWrite = useWorkspaceCapability('write');
-  const action = useQuery(actionsQueries.detail(workspaceId, proposal.action_id));
-  if (action.isError)
+  const detail = useQuery(actionsQueries.detail(workspaceId, action.id));
+  const label = action.target_label;
+  const open = (
+    <Button asChild variant="secondary">
+      <ProjectLink href={`/agent/actions/${action.id}`}>Open Action</ProjectLink>
+    </Button>
+  );
+  const declared = detail.data ? detail.data.declaration !== null : DECLARED.has(action.status);
+  if (declared)
     return (
-      <ReadError
-        error={action.error}
-        fallback="The proposed Action could not be loaded."
-        onRetry={() => void action.refetch()}
-        pending={action.isFetching}
-      />
-    );
-  if (!action.data) return null;
-  const label = action.data.target_label;
-  const declaration = action.data.declaration;
-  if (declaration)
-    return (
-      <Confirmation title={`${label} is marked implemented`} state="accepted">
-        <p className={textRole('caption')}>
-          Went live <DisplayTime value={declaration.declared_implemented_at} dateOnly />. CiteLadder
-          measures it from there.
-        </p>
+      <Confirmation title={`${label} is marked implemented`} state="accepted" actions={open}>
+        <p className={textRole('caption')}>CiteLadder measures it from the day it went live.</p>
       </Confirmation>
     );
-  const declarable = isDeclarable(action.data) && mayWrite;
+  const declarable =
+    mayWrite && (detail.data ? isDeclarable(detail.data) : PENDING.has(action.status));
   return (
     <Confirmation
       title={`Mark ${label} implemented?`}
       state="requested"
       actions={
-        declarable ? (
-          <MarkImplementedButton
-            workspaceId={workspaceId}
-            action={action.data}
-            revision={proposal.revision}
-            proposed={{ day: proposal.go_live_day, reference: proposal.deployment_reference }}
-          />
-        ) : null
+        <>
+          {open}
+          {declarable && detail.data ? (
+            <DeclareButton workspaceId={workspaceId} proposal={proposal} action={detail.data} />
+          ) : null}
+        </>
       }
     >
-      <p className={textRole('caption')}>
-        {declarable ? proposalDetail(proposal) : unavailable(mayWrite)}
-      </p>
+      {detail.isError ? (
+        <ReadError
+          error={detail.error}
+          fallback="The proposed Action could not be loaded."
+          onRetry={() => void detail.refetch()}
+          pending={detail.isFetching}
+        />
+      ) : (
+        <p className={textRole('caption')}>
+          {declarable ? proposalDetail(proposal) : unavailable(mayWrite)}
+        </p>
+      )}
     </Confirmation>
+  );
+}
+
+/** The declaration dialog, opened with the proposal; contextual links are declared in Site Health. */
+function DeclareButton({
+  workspaceId,
+  proposal,
+  action,
+}: Readonly<{ workspaceId: string; proposal: Proposal; action: ActionDetail }>) {
+  if (action.members.some(({ rule_id }) => rule_id === 'site_contextual_links'))
+    return <ContextualLinkDeclarationRoute />;
+  return (
+    <MarkImplementedButton
+      workspaceId={workspaceId}
+      action={action}
+      revision={proposal.revision}
+      proposed={{ day: proposal.go_live_day, reference: proposal.deployment_reference }}
+    />
   );
 }
 
