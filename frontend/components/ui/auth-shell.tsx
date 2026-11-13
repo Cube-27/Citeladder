@@ -48,7 +48,7 @@ export function AuthSplitShell({
   return (
     <div className="bg-paper text-ink desktop:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] grid min-h-dvh antialiased">
       <div className="desktop:px-[var(--card-padding)] grid min-h-dvh grid-rows-[auto_minmax(0,1fr)_auto] px-4">
-        <div className="flex h-[var(--nav-height)] items-center justify-end">
+        <div className="flex min-h-[var(--nav-height)] items-center justify-end">
           <ThemeSwitch />
         </div>
         <main
@@ -86,7 +86,7 @@ export function AuthShell({
 }>) {
   return (
     <div className="bg-paper text-ink flex min-h-dvh flex-col antialiased">
-      <header className="desktop:px-[var(--card-padding)] flex h-[var(--nav-height)] shrink-0 items-center justify-between gap-4 px-4">
+      <header className="desktop:px-[var(--card-padding)] flex min-h-[var(--nav-height)] shrink-0 items-center justify-between gap-4 px-4">
         {/* Optically flush with the gutter: the link's 4px focus inset hangs out. */}
         <span className="-ms-1 inline-flex">
           <AuthLogo />
@@ -315,7 +315,7 @@ export function AuthRowList({ label, children }: Readonly<{ label: string; child
 }
 
 const AUTH_ROW =
-  'focus-ring-inset text-ink hover:overlay-hover flex h-18 w-full cursor-pointer items-center gap-3 px-4 text-left no-underline transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
+  'focus-ring-inset text-ink hover:overlay-hover flex min-h-18 w-full cursor-pointer items-center gap-3 px-4 text-left no-underline transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none';
 
 type RowLink = ReactElement<{ className?: string; children?: ReactNode }>;
 

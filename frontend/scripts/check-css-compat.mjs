@@ -23,8 +23,6 @@ import { unsupported } from './browser-support-data.mjs';
  * a matrix raise or a removal takes it out of this list.
  */
 const ACKNOWLEDGED_ENHANCEMENTS = {
-  '@starting-style': 'Menus, tooltips, toasts and drawers appear without their entry transition.',
-  'text-wrap: balance': 'Headings wrap greedily.',
   'text-wrap: pretty': 'Paragraphs wrap greedily.',
   'scrollbar-color': 'Scrollbars keep the platform colours.',
   'scrollbar-width': 'Scrollbars keep the platform width.',

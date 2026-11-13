@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
  * never wider than its container.
  */
 export const TAG_FACE =
-  'bg-surface text-ink border-line border inline-flex h-6 max-w-full min-w-0 shrink-0 items-center gap-1 rounded-xs px-2 font-sans text-caption tracking-normal normal-nums whitespace-nowrap';
+  'bg-surface text-ink border-line border inline-flex min-h-6 max-w-full min-w-0 shrink-0 items-center gap-1 rounded-xs px-2 font-sans text-caption tracking-normal normal-nums whitespace-nowrap';
 
 /**
  * Tag — a neutral chip for a topic, engine or active filter, optionally

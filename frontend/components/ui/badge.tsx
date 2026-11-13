@@ -90,7 +90,7 @@ export type RunStatusValue = keyof typeof runStatusTone;
  * value) never inherits the figure's tight tracking.
  */
 const BADGE_FACE =
-  'inline-flex h-[var(--badge-height-sm)] max-w-full shrink-0 items-center gap-1 rounded-xs px-2 align-middle font-sans text-caption tracking-normal whitespace-nowrap';
+  'inline-flex min-h-[var(--badge-height-sm)] max-w-full shrink-0 items-center gap-1 rounded-xs px-2 align-middle font-sans text-caption tracking-normal whitespace-nowrap';
 
 export type BadgeProps = {
   children: ReactNode;

@@ -150,7 +150,7 @@ export function Select<T extends string>({
                 disabled={option.disabled}
                 aria-describedby={option.detail ? `${detailId}-${index}` : undefined}
                 className={menuItemClasses({
-                  className: cn('pe-8', option.description && 'h-12'),
+                  className: cn('pe-8', option.description && 'min-h-12'),
                 })}
               >
                 <span className="flex min-w-0 flex-1 flex-col">

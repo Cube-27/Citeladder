@@ -88,14 +88,17 @@ function colourFindings(contract, scopes) {
   return findings;
 }
 
+/** The system's px size as the rem globals.css declares, so type follows the reader's text size. */
+const asRem = (px) => `${Number.parseFloat(px) / 16}rem`;
+
 function typeFindings(contract, scopes) {
   const findings = [];
   const expected = new Map();
   for (const group of contract.type.groups) {
     for (const style of group.styles) {
       const base = `--text-${style.name}`;
-      expected.set(base, style.fontSize);
-      expected.set(`${base}--line-height`, style.lineHeight);
+      expected.set(base, asRem(style.fontSize));
+      expected.set(`${base}--line-height`, asRem(style.lineHeight));
       expected.set(`${base}--font-weight`, String(style.fontWeight));
       if (style.letterSpacing) expected.set(`${base}--letter-spacing`, style.letterSpacing);
     }

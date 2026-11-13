@@ -8,8 +8,16 @@ import {
   supportMatrix,
 } from '../../frontend/scripts/check-browser-compat.mjs';
 
-// The raised matrix (AR-8) and the one it replaced.
+// The raised matrix (owner, 2026-11-13) and the one it replaced.
 const RAISED = supportMatrix([
+  'chrome >= 123',
+  'edge >= 123',
+  'firefox >= 132',
+  'safari >= 17.5',
+  'ios_saf >= 17.5',
+  'samsung >= 27',
+]);
+const PREVIOUS = supportMatrix([
   'chrome >= 120',
   'edge >= 120',
   'firefox >= 128',
@@ -17,34 +25,26 @@ const RAISED = supportMatrix([
   'ios_saf >= 17.4',
   'samsung >= 25',
 ]);
-const PREVIOUS = supportMatrix([
-  'chrome >= 111',
-  'edge >= 111',
-  'firefox >= 128',
-  'safari >= 16.4',
-  'ios_saf >= 16.4',
-  'samsung >= 23',
-]);
 
 const apis = (source, matrix) =>
   compatViolations(source, 'lib/example.ts', matrix).map(({ api, line }) => `${api}@${line}`);
 
 test('reads the oldest version of each matrix browser', () => {
   assert.deepEqual(RAISED, {
-    chrome: '120',
-    edge: '120',
-    firefox: '128',
-    safari: '17.4',
-    safari_ios: '17.4',
-    samsunginternet_android: '25',
+    chrome: '123',
+    edge: '123',
+    firefox: '132',
+    safari: '17.5',
+    safari_ios: '17.5',
+    samsunginternet_android: '27',
   });
 });
 
 test('passes the APIs the raised matrix admits and fails them on the previous one', () => {
   const source =
-    'const signal = AbortSignal.any([a, b]);\nconst valid = URL.canParse(value);\nconst copy = structuredClone(value);';
+    'const rows = await Array.fromAsync(chunks);\nconst valid = URL.canParse(value);\nconst copy = structuredClone(value);';
   assert.deepEqual(apis(source, RAISED), []);
-  assert.deepEqual(apis(source, PREVIOUS), ['AbortSignal.any@1', 'URL.canParse@2']);
+  assert.deepEqual(apis(source, PREVIOUS), ['Array.fromAsync@1']);
 });
 
 test('fails a deliberately newer static, global instance and global API, not an older one', () => {
@@ -100,13 +100,13 @@ const css = (source, matrix) =>
 
 test('fails a CSS feature below the matrix and passes it once the matrix reaches it', () => {
   const source = '@starting-style {\n  .menu { opacity: 0; }\n}';
-  assert.deepEqual(css(source, RAISED), ['@starting-style@1']);
-  assert.deepEqual(cssCompatViolations(source, 'lib/example.css', RAISED)[0].missing, [
+  assert.deepEqual(css(source, PREVIOUS), ['@starting-style@1']);
+  assert.deepEqual(cssCompatViolations(source, 'lib/example.css', PREVIOUS)[0].missing, [
     'firefox 129',
     'safari_ios 17.5',
     'safari 17.5',
   ]);
-  assert.deepEqual(css(source, NEXT), []);
+  assert.deepEqual(css(source, RAISED), []);
 });
 
 test('reads properties, keyword values, functions and pseudo-elements, and passes guarded uses', () => {

@@ -89,7 +89,9 @@ export function SearchField({
       containerClassName={className}
       className="[appearance:textfield] [&::-webkit-search-cancel-button]:hidden [&::-webkit-search-decoration]:hidden"
       startContent={pending ? <Spinner /> : <Icon icon={Search} className="text-ink-muted" />}
-      endContent={<span className="inline-flex h-5 min-w-7 items-center justify-end">{end}</span>}
+      endContent={
+        <span className="inline-flex min-h-5 min-w-7 items-center justify-end">{end}</span>
+      }
     />
   );
 }

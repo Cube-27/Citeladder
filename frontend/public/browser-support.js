@@ -3,13 +3,17 @@
 // "Update your browser" notice in #root instead of an app that breaks part way.
 // `apps/app/src/main.tsx` does not mount over it.
 //
-// The probes are the newest APIs the matrix admits: AbortSignal.any (Chrome
-// and Edge 116, Safari 17.4, Samsung 24) and URL.canParse (Chrome and Edge 120,
-// Samsung 25). Written in old syntax so the browsers it warns can run it.
+// The probes are the newest features the matrix admits: AbortSignal.any and
+// URL.canParse, and CSS light-dark() (Chrome and Edge 123, Safari 17.5,
+// Samsung 27; Firefox has had it since 120, so Firefox 128-131 pass unwarned).
+// Written in old syntax so the browsers it warns can run it.
 (function () {
   var supported;
   try {
-    supported = 'any' in AbortSignal && 'canParse' in URL;
+    supported =
+      'any' in AbortSignal &&
+      'canParse' in URL &&
+      CSS.supports('color', 'light-dark(canvas, canvastext)');
   } catch (_error) {
     supported = false;
   }

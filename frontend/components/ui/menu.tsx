@@ -28,7 +28,7 @@ export function menuItemClasses({
   className,
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
-    'focus-ring relative flex h-8 w-full shrink-0 cursor-pointer items-center gap-2 rounded-sm px-2 text-left text-body-sm transition-colors select-none',
+    'focus-ring relative flex min-h-8 w-full shrink-0 cursor-pointer items-center gap-2 rounded-sm px-2 text-left text-body-sm transition-colors select-none',
     'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45',
     danger
       ? 'text-negative data-[highlighted]:bg-negative-soft hover:bg-negative-soft data-[disabled]:hover:bg-transparent [&_svg]:text-negative'

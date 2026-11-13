@@ -68,7 +68,7 @@ export function DateField({
         disabled={disabled}
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="text-ink placeholder:text-ink-muted text-body-sm h-full min-w-0 flex-1 bg-transparent font-mono tabular-nums disabled:cursor-not-allowed"
+        className="text-ink placeholder:text-ink-muted text-body-sm min-w-0 flex-1 self-stretch bg-transparent font-mono tabular-nums disabled:cursor-not-allowed"
       />
       <DropdownPrimitive.Root open={open} onOpenChange={setOpen}>
         <DropdownPrimitive.Trigger asChild>

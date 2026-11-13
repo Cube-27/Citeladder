@@ -796,3 +796,15 @@ control's required state instead.
 Source: owner, 13 November 2026, answering the modern-web review: "don't change
 sign in or password toggle" (withdrawing the same day's "Sign in" button and
 show-password toggle), and "None" for the form-error change.
+
+## Browser support matrix: Chrome 123, Firefox 132, Safari 17.5
+
+The supported minimum is Chrome and Edge 123, Firefox 132, Safari and iOS
+Safari 17.5 and Samsung Internet 27 (its first Chromium ≥ 123). The
+browserslist, the app's build target, `pnpm check:compat` and the update
+notice (`public/browser-support.js`) follow it. Native popover needs iOS
+Safari 18.3, so no UI may depend on it alone.
+[Frontend architecture](frontend-architecture.md) owns the matrix.
+
+Source: owner, 13 November 2026, answering the modern-web audit: "Raise the
+minimum to Chrome 123, Firefox 132, Safari 17.5".

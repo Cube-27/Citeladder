@@ -29,10 +29,14 @@ const fieldClasses = cn(
  * boundary (its `focus-frame`): the field drops its edge, fill, resize
  * handle, resting height and focus treatment. It starts one line tall and
  * grows with its text to `maxRows` lines (its 4px padding and 1px edge on
- * top), then scrolls inside.
+ * top), then scrolls inside. `field-sizing` does the growing where the
+ * browser has it; elsewhere the layout effect below measures.
  */
 const composerClasses =
-  'min-h-0 resize-none border-transparent bg-transparent px-2 py-1 max-h-[calc(var(--field-max-rows)*1lh+0.5rem+2px)]';
+  'field-sizing-content min-h-0 resize-none border-transparent bg-transparent px-2 py-1 max-h-[calc(var(--field-max-rows)*1lh+0.5rem+2px)]';
+
+/** Chrome 123, Safari 26.2 and Firefox 152 size the field to its text themselves. */
+const sizesItself = () => globalThis.CSS?.supports('field-sizing', 'content') ?? false;
 
 export function Textarea({
   className,
@@ -69,7 +73,7 @@ export function Textarea({
   // Fits the field to its text after each change, before paint, so it never flickers.
   useLayoutEffect(() => {
     const field = own.current;
-    if (!grows || !field) return;
+    if (!grows || !field || sizesItself()) return;
     field.style.height = 'auto';
     field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`;
   }, [grows, value]);

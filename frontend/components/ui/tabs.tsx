@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
  * nothing shows while they fit.
  */
 export const TAB_TRACK =
-  'scroll-shade-x inline-flex h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'scroll-shade-x inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
  * One segment: full track height, 12px padding, `radius-sm`, 14/20 regular
@@ -26,7 +26,7 @@ export const TAB_TRACK =
  */
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
-    'focus-ring inline-flex h-full shrink-0 items-center justify-center gap-1.5 rounded-sm border px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
+    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
     selected
       ? 'bg-surface border-line text-ink font-medium'
       : 'text-ink-secondary not-disabled:hover:text-ink border-transparent font-normal',
@@ -40,12 +40,12 @@ export function tabClasses(selected: boolean, className?: string) {
  * icon segments one control wide.
  */
 export const MODE_TRACK =
-  'overlay-pressed shell:h-[var(--control-md)] shell:w-full shell:flex-row shell:items-center flex w-[var(--control-md)] flex-col gap-0.5 rounded-md p-0.5';
+  'overlay-pressed shell:min-h-[var(--control-md)] shell:w-full shell:flex-row shell:items-center flex w-[var(--control-md)] flex-col gap-0.5 rounded-md p-0.5';
 
 export function modeSegmentClasses(selected: boolean) {
   return tabClasses(
     selected,
-    'shell:h-full shell:flex-1 shell:basis-0 shell:px-3 h-[calc(var(--control-md)-6px)] w-full px-0',
+    'shell:h-auto shell:flex-1 shell:basis-0 shell:px-3 h-[calc(var(--control-md)-6px)] w-full px-0',
   );
 }
 

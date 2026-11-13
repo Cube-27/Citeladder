@@ -24,7 +24,7 @@ const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed';
 
 const BUTTON_BASE =
-  'focus-ring relative inline-flex h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md px-3 text-body-sm font-medium whitespace-nowrap no-underline transition-[background-color,color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed disabled:opacity-45 aria-disabled:cursor-not-allowed aria-disabled:opacity-45';
+  'focus-ring relative inline-flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md px-3 text-body-sm font-medium whitespace-nowrap no-underline transition-[background-color,color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed disabled:opacity-45 aria-disabled:cursor-not-allowed aria-disabled:opacity-45';
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
@@ -121,7 +121,10 @@ function NativeButton({
   );
 }
 
-/** One form: 36px (`control-md`), 12px padding, the 16px icon before the label. */
+/**
+ * One form: at least `control-md` tall (taller only when the reader's text
+ * size grows its label), 12px padding, the 16px icon before the label.
+ */
 export function Button(props: Readonly<ButtonProps>) {
   return props.asChild ? <SlottedButton {...props} /> : <NativeButton {...props} />;
 }

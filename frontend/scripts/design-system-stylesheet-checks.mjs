@@ -73,11 +73,11 @@ export function productContractViolations(root) {
     '--text-display-2xl',
   ];
   const scale = TYPE_SCALE.map((token) => {
-    const match = new RegExp(escapeRegExp(token) + String.raw`\s*:\s*([\d.]+)px`).exec(css);
+    const match = new RegExp(escapeRegExp(token) + String.raw`\s*:\s*([\d.]+)rem\s*;`).exec(css);
     return { token, size: match ? Number(match[1]) : null };
   });
   for (const { token, size } of scale) {
-    if (size === null) violations.push(`${TOKEN_CSS}: ${token} must be a px size`);
+    if (size === null) violations.push(`${TOKEN_CSS}: ${token} must be a rem size`);
   }
   const sized = scale.filter((step) => step.size !== null);
   for (let index = 1; index < sized.length; index += 1) {

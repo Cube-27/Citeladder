@@ -48,7 +48,7 @@ export function ChainOfThoughtLive({
         <summary
           className={textRole(
             'caption',
-            'focus-ring flex h-6 min-w-0 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden gap-2 rounded-md whitespace-nowrap',
+            'focus-ring flex min-h-6 min-w-0 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden gap-2 rounded-md whitespace-nowrap',
           )}
         >
           <Spinner className="text-ink-muted" />
