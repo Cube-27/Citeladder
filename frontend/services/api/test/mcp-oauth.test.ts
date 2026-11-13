@@ -227,7 +227,7 @@ it('bounds query bytes and decoded state before writing usage or requests', asyn
 
 // A client no person has approved spends its network's pool; an approved one the global budget.
 it.each([
-  ['mcp.authorize.client', 'client', null, mcpPolicy.authorization_client_limit, false],
+  ['mcp.authorize.client', 'mcp_client', null, mcpPolicy.authorization_client_limit, false],
   ['mcp.authorize.source', 'client', 'unavailable', mcpPolicy.authorization_source_limit, false],
   // The limit `beforeEach` sets for every request's one shared visitor.
   ['mcp.authorize.unapproved_network', 'client', 'unavailable', 1000, false],

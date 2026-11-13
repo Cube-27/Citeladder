@@ -21,7 +21,7 @@ import { readBody, readOptionalBody } from '../http/body.ts';
 import { executeInteractiveSyncs } from '../integrations/interactive.ts';
 import { IntegrationClient, IntegrationError } from '../integrations/client.ts';
 import { integrationPolicy } from '../integrations/config.ts';
-import { recordIntegrationEvents } from '../integrations/events.ts';
+import { recordIntegrationEvents, recordRetiredMappings } from '../integrations/events.ts';
 import { disconnectConnection } from '../integrations/grants.ts';
 import {
   completeOAuth,
@@ -478,24 +478,9 @@ export const integrationRoutes = [
           .where('id', '=', path.mapping_id)
           .where('workspace_id', '=', workspaceId)
           .where('status', '=', 'active')
-          .returning(['connection_id', 'provider', 'property_ref', 'project_id'])
-          .executeTakeFirst();
-        if (retired)
-          await recordIntegrationEvents(trx, [
-            {
-              workspaceId,
-              connectionId: retired.connection_id,
-              type: 'integration.mapping_retired',
-              message: 'Integration property mapping removed',
-              payload: {
-                mapping_id: path.mapping_id,
-                project_id: retired.project_id,
-                provider: retired.provider,
-                property_ref: retired.property_ref,
-              },
-              at: now,
-            },
-          ]);
+          .returning(['id', 'connection_id', 'provider', 'property_ref', 'project_id'])
+          .execute();
+        await recordRetiredMappings(trx, workspaceId, retired, now);
         await enqueueCoalesced(trx, {
           ...insightsRefresh,
           workspaceId,
@@ -548,15 +533,19 @@ export const integrationRoutes = [
             code: 'mapping_property_not_owned',
           });
         }
-        await trx
+        // Choosing another property for the project retires the one it replaces.
+        const replacedAt = new Date();
+        const replaced = await trx
           .updateTable('integration_property_mappings')
-          .set({ status: 'disabled', updated_at: new Date() })
+          .set({ status: 'disabled', updated_at: replacedAt })
           .where('workspace_id', '=', workspaceId)
           .where('connection_id', '=', connection.id)
           .where('project_id', '=', project.id)
           .where('status', '=', 'active')
           .where('property_ref', '!=', ref)
+          .returning(['id', 'connection_id', 'provider', 'property_ref', 'project_id'])
           .execute();
+        await recordRetiredMappings(trx, workspaceId, replaced, replacedAt);
         const existing = await trx
           .selectFrom('integration_property_mappings')
           .selectAll()

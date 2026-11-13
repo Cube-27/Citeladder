@@ -122,7 +122,7 @@ async function view(db: Kysely<DB>, topic: TopicRow): Promise<TopicView> {
  */
 async function validateParent(
   db: Kysely<DB>,
-  projectId: string,
+  { workspaceId, projectId }: ProjectScope,
   parentId: string,
   topicId: string | null,
 ): Promise<void> {
@@ -130,6 +130,7 @@ async function validateParent(
     .selectFrom('topics')
     .select(['id', 'parent_id'])
     .where('id', '=', parentId)
+    .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .executeTakeFirst();
   if (parent === undefined) throw notFound('Parent topic');
@@ -139,6 +140,7 @@ async function validateParent(
   const child = await db
     .selectFrom('topics')
     .select('id')
+    .where('workspace_id', '=', workspaceId)
     .where('parent_id', '=', topicId)
     .executeTakeFirst();
   if (child !== undefined) {
@@ -182,7 +184,7 @@ export async function createTopic(
       await requireProject(trx, { workspaceId, projectId });
       await acquireProjectLock(trx, projectId);
       const parentId = input.parent_id ?? null;
-      if (parentId !== null) await validateParent(trx, projectId, parentId, null);
+      if (parentId !== null) await validateParent(trx, { workspaceId, projectId }, parentId, null);
       const now = new Date();
       const row = await trx
         .insertInto('topics')
@@ -219,7 +221,12 @@ export async function updateTopic(
       const reparent = 'parent_id' in input;
       const parentId = input.parent_id ?? null;
       if (reparent && parentId !== null) {
-        await validateParent(trx, topic.project_id, parentId, topic.id);
+        await validateParent(
+          trx,
+          { workspaceId: topic.workspace_id, projectId: topic.project_id },
+          parentId,
+          topic.id,
+        );
       }
       const row = await trx
         .updateTable('topics')
