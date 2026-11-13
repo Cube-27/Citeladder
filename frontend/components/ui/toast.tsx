@@ -20,7 +20,10 @@ type ToastApi = { notify: (title: string, description?: string, options?: ToastO
 
 const ToastContext = createContext<ToastApi>({ notify: () => undefined });
 
-/** Neutral and positive toasts close after 6s unless hovered or focused; negative ones stay. */
+/**
+ * Neutral and positive toasts close after 6s unless hovered or focused;
+ * negative ones, and any with an action, stay until dismissed.
+ */
 const TOAST_DURATION_MS = 6000;
 /** Never more than three at once: the oldest leaves first. */
 const MAX_TOASTS = 3;
@@ -36,7 +39,7 @@ const TONE_ICON = {
  * newest at the bottom: the floating face (`surface`, 1px `line` border,
  * `shadow-float`), `radius-lg`, 400px. The tone
  * shows only in the 16px icon plus a screen-reader word; negative toasts are
- * announced assertively and stay until dismissed.
+ * announced assertively and stay until dismissed, as does a toast with an action.
  */
 export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [messages, setMessages] = useState<ToastMessage[]>([]);
@@ -63,7 +66,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             <ToastPrimitive.Root
               key={message.id}
               type={tone === 'negative' ? 'foreground' : 'background'}
-              duration={tone === 'negative' ? Infinity : TOAST_DURATION_MS}
+              duration={tone === 'negative' || message.action ? Infinity : TOAST_DURATION_MS}
               onOpenChange={(open) => {
                 if (!open)
                   setMessages((current) => current.filter((item) => item.id !== message.id));

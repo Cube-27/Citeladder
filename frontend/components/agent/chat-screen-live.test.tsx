@@ -113,16 +113,30 @@ describe('ChatScreen running turn', () => {
     const user = userEvent.setup();
     renderChat();
 
-    await user.type(await screen.findByLabelText('Reply to the agent'), 'Why this order?');
+    const field = await screen.findByLabelText('Reply to the agent');
+    // One polite region, there from the start, reads each reply saved while the
+    // chat is open, never the replies it opened with.
+    const announced = document.querySelector('[aria-live="polite"][aria-busy]')!;
+    expect(screen.getByText('Here are the edits.')).toBeVisible();
+    expect(announced).toBeEmptyDOMElement();
+    await user.type(field, 'Why this order?');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     const live = await screen.findByRole('article', { name: 'Agent reply in progress' });
     // The accepted send stays in the thread until the chat read holds it.
     expect(screen.getByText('Why this order?')).toBeVisible();
     save();
     await vi.waitFor(() => expect(live).toHaveTextContent('Partly written'));
+    // Streamed text is never read: the region waits, busy and empty.
+    expect(announced).toHaveAttribute('aria-busy', 'true');
+    expect(announced).toBeEmptyDOMElement();
     expect(within(live).getByText('Thinking')).toBeVisible();
     // One status line heads the turn; the reads one response asked for fold into it.
-    const status = (await within(live).findByText('Running 2 reads at once…')).closest('summary')!;
+    const status = (
+      await within(live).findByText('Running 2 reads at once…', { selector: 'summary *' })
+    ).closest('summary')!;
+    // The status is read from a live region outside the summary, which is a button.
+    expect(within(live).getByRole('status')).toHaveTextContent('Running 2 reads at once…');
+    expect(status.querySelector('output')).toBeNull();
     expect(live.textContent!.indexOf('Running 2 reads')).toBeLessThan(
       live.textContent!.indexOf('Partly written'),
     );
@@ -141,11 +155,14 @@ describe('ChatScreen running turn', () => {
     release();
     // The saved reply replaces the live one; the two may land in separate renders.
     await vi.waitFor(() => {
-      expect(screen.getByText('The saved answer.')).toBeVisible();
+      expect(screen.getByText('The saved answer.', { selector: 'article p' })).toBeVisible();
       expect(
         screen.queryByRole('article', { name: 'Agent reply in progress' }),
       ).not.toBeInTheDocument();
     });
+    expect(announced).toHaveTextContent('The saved answer.');
+    expect(announced).toHaveAttribute('aria-busy', 'false');
+    expect(announced).toBeInTheDocument();
   });
 
   it('waits while the page is read, then runs the turn the fetch queued', async () => {
@@ -214,7 +231,9 @@ describe('ChatScreen running turn', () => {
     const user = userEvent.setup();
     renderChat();
 
-    const status = (await screen.findByText('Deciding the next step…')).closest('summary')!;
+    const status = (
+      await screen.findByText('Deciding the next step…', { selector: 'summary *' })
+    ).closest('summary')!;
     await user.click(status);
     const steps = within(status.parentElement!).getByRole('list', { name: 'Agent activity' });
     expect(

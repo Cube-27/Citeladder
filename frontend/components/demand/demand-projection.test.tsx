@@ -466,7 +466,7 @@ describe('DemandProjection', () => {
     const user = userEvent.setup();
     renderProjection();
 
-    await user.hover(await screen.findByRole('button', { name: 'How the Trends detector works' }));
+    await user.click(await screen.findByRole('button', { name: 'How the Trends detector works' }));
 
     // The rule, in the server's thresholds, then the snapshot's own reason the
     // detector is held back.
@@ -492,7 +492,7 @@ describe('DemandProjection', () => {
     expect((await screen.findByRole('radio', { name: /^CTR gaps/ })).textContent).toBe(
       'CTR gaps (1)',
     );
-    await user.hover(
+    await user.click(
       screen.getByRole('button', { name: 'How the CTR gap and Low CTR detectors work' }),
     );
     expect((await screen.findByRole('tooltip')).textContent).toMatch(

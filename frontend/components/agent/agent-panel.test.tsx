@@ -245,7 +245,7 @@ describe('AgentPanel', () => {
           ],
         };
         await act(() => refreshAgentChat(queryClient, CHAT));
-        await within(panel).findByText('More detail.');
+        await within(panel).findByText('More detail.', { selector: 'article p' });
       },
     });
   });

@@ -43,7 +43,12 @@ export function Field({
     <div className={cn('flex min-w-0 flex-col gap-2', className)}>
       <label htmlFor={id} className="text-body-sm text-ink">
         {label}
-        {required ? <span className="text-ink-muted ms-0.5">*</span> : null}
+        {/* Seen only: the control itself tells assistive tech it is required. */}
+        {required ? (
+          <span aria-hidden="true" className="text-ink-muted ms-0.5">
+            *
+          </span>
+        ) : null}
       </label>
       {children({
         id,

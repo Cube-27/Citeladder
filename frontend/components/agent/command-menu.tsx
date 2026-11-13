@@ -10,6 +10,7 @@ import {
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { SuggestionList } from '@/components/ui/chat-dock';
 import { Textarea } from '@/components/ui/textarea';
+import { isImeComposing } from '@/lib/accessibility/ime';
 import {
   applyOption,
   tokenAt,
@@ -204,7 +205,7 @@ export function CommandField({
             event.preventDefault();
             return;
           }
-          if (event.nativeEvent.isComposing || menuKey(event)) return;
+          if (isImeComposing(event) || menuKey(event)) return;
           if (event.key !== 'Enter' || event.shiftKey) return;
           event.preventDefault();
           onEnter();

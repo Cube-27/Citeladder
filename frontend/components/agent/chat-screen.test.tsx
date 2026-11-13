@@ -479,7 +479,7 @@ describe('ChatScreen', () => {
       ],
     };
     await act(() => refreshAgentChat(queryClient, CHAT));
-    await screen.findByText('Here is why.');
+    await screen.findByText('Here is why.', { selector: 'article p' });
     expect(screen.queryByRole('group', { name: 'Suggested follow-ups' })).not.toBeInTheDocument();
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Make it shorter');
   });

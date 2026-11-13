@@ -478,6 +478,11 @@
 }
 @utility overlay-selected {
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
+  /* Forced colours drop background images; selection stays visible as an inner edge. */
+  @media (forced-colors: active) {
+    outline: 2px solid SelectedItem;
+    outline-offset: -2px;
+  }
 }
 
 /* Below the shell breakpoint the sidebar is the rail and the main gutter
@@ -1308,14 +1313,19 @@ a.focus-ring:active .type-caption {
   color: var(--color-ink);
 }
 
-/* Chrome paints autofilled inputs with its own blue; keep the field surface. */
-input:-webkit-autofill,
-input:-webkit-autofill:hover,
-input:-webkit-autofill:focus {
+/* Browsers tint autofilled inputs with their own fill; keep the field surface.
+   The surface is an inset shadow over the UA's !important background, so a
+   focused field repeats its focus ring in the same declaration. */
+input:is(:autofill, :-webkit-autofill) {
   -webkit-text-fill-color: var(--color-ink);
-  -webkit-box-shadow: 0 0 0 1000px var(--color-surface) inset;
+  box-shadow: inset 0 0 0 100vmax var(--color-surface);
   caret-color: var(--color-ink);
-  transition: background-color 9999s ease-out;
+}
+input.focus-input:is(:autofill, :-webkit-autofill):focus-visible {
+  box-shadow:
+    0 0 0 1px var(--field-focus-edge, var(--color-focus)),
+    0 0 0 4px var(--color-line),
+    inset 0 0 0 100vmax var(--color-surface);
 }
 
 .focus-input[aria-invalid='true'],

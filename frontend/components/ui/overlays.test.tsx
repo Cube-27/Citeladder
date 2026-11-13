@@ -17,6 +17,8 @@ import {
 } from './menu';
 import { focusByKeyboard } from '@/test/keyboard-focus';
 
+import { InfoHint } from './info-hint';
+
 import { Tooltip, TooltipProvider } from './tooltip';
 import { ToastProvider, useToast } from './toast';
 
@@ -210,7 +212,63 @@ describe('Tooltip', () => {
   });
 });
 
+describe('InfoHint', () => {
+  it('opens on a press or keyboard focus, never on hover, and closes on a second press or Esc', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <InfoHint label="About reach">Share of answers that cite you.</InfoHint>
+        <button type="button">Elsewhere</button>
+      </>,
+    );
+    const button = screen.getByRole('button', { name: 'About reach' });
+    await user.hover(button);
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    await user.click(button);
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Share of answers that cite you.');
+    expect(button).toHaveAttribute('aria-expanded', 'true');
+    await user.click(button);
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    expect(button).toHaveAttribute('aria-expanded', 'false');
+    await user.click(button);
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
+    expect(button).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: 'Elsewhere' }));
+    focusByKeyboard(button);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Share of answers that cite you.');
+  });
+});
+
 describe('ToastProvider', () => {
+  it('closes a plain notification after its time but keeps one with an action until dismissed', () => {
+    vi.useFakeTimers();
+    function Harness() {
+      const { notify } = useToast();
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            notify('Prompt saved');
+            notify('Prompt archived', undefined, { action: { label: 'Undo', onClick: vi.fn() } });
+          }}
+        >
+          Notify
+        </button>
+      );
+    }
+    render(
+      <ToastProvider>
+        <Harness />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Notify' }));
+    act(() => vi.advanceTimersByTime(60_000));
+    expect(screen.queryByText('Prompt saved')).not.toBeInTheDocument();
+    expect(screen.getByText('Prompt archived')).toBeInTheDocument();
+    vi.useRealTimers();
+  });
+
   it('dismisses one of two notifications created in the same clock tick', async () => {
     const user = userEvent.setup();
     const clock = vi.spyOn(Date, 'now').mockReturnValue(1);

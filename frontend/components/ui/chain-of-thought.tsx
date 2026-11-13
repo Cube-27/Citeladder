@@ -43,24 +43,28 @@ export function ChainOfThoughtLive({
   children,
 }: Readonly<{ status: string; seconds: number; label: string; children: ReactNode }>) {
   return (
-    <details className="group grid min-w-0">
-      <summary
-        className={textRole(
-          'caption',
-          'focus-ring flex h-6 min-w-0 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden gap-2 rounded-md whitespace-nowrap',
-        )}
-      >
-        <Spinner className="text-ink-muted" />
-        <output aria-live="polite" className="min-w-0 truncate">
-          <Shimmer>{status}</Shimmer>
-        </output>
-        <span className="text-ink-muted shrink-0 tabular-nums">{seconds}s</span>
-        <Icon icon={ChevronRight} className="text-ink-muted shrink-0 group-open:rotate-90" />
-      </summary>
-      <Stack as="ol" gap="tight" aria-label={label} className={treeBranchClasses('mt-3')}>
-        {children}
-      </Stack>
-    </details>
+    <>
+      <details className="group grid min-w-0">
+        <summary
+          className={textRole(
+            'caption',
+            'focus-ring flex h-6 min-w-0 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden gap-2 rounded-md whitespace-nowrap',
+          )}
+        >
+          <Spinner className="text-ink-muted" />
+          <Shimmer className="min-w-0 truncate">{status}</Shimmer>
+          <span className="text-ink-muted shrink-0 tabular-nums">{seconds}s</span>
+          <Icon icon={ChevronRight} className="text-ink-muted shrink-0 group-open:rotate-90" />
+        </summary>
+        <Stack as="ol" gap="tight" aria-label={label} className={treeBranchClasses('mt-3')}>
+          {children}
+        </Stack>
+      </details>
+      {/* Outside the summary: a live region inside a button is not reliably announced. */}
+      <output aria-live="polite" className="sr-only">
+        {status}
+      </output>
+    </>
   );
 }
 

@@ -60,7 +60,8 @@ export function AuthEmailField({
           {...props}
           {...inputProps}
           type="email"
-          autoComplete="email"
+          // `username`, not `email`: password managers pair it with the password.
+          autoComplete="username"
           spellCheck={false}
           placeholder="Your email address"
         />
