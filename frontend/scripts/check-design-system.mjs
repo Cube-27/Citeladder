@@ -108,9 +108,8 @@ for (const path of files(root)) {
     (label.startsWith('apps/app/src/') ||
       label.startsWith('components/') ||
       label.startsWith('lib/'));
-  // Applies to every source file, not just product UI: the ESLint rule this
-  // replaced was repository-wide, and a text-ink background is wrong on a
-  // marketing surface too.
+  // Applies to every source file, not just product UI: a text-ink background
+  // is wrong on a marketing surface too.
   violations.push(
     ...textRoleBackgroundViolations(source, label),
     ...rawRadiusViolations(source, label),

@@ -891,12 +891,10 @@ export function directRadixImportViolations(source, label) {
  * painted the page-kind score expansion as a dark slate panel with unreadable
  * controls on it, and neither review nor the type system could catch it.
  *
- * This lived as an ESLint `no-restricted-syntax` selector pair until the linter
- * moved to Oxlint, which does not implement that rule. The check belongs here
- * regardless: it is a design-token contract, and this file already owns the
- * others. The AST walk (rather than a source regex) is what the ESLint
- * selectors gave us -- it matches string and template text only, so the rule
- * cannot be tripped by a prose mention in a comment.
+ * The check lives here because it is a design-token contract, and this file
+ * already owns the others. It walks the AST rather than matching source text:
+ * it reads string and template text only, so the rule cannot be tripped by a
+ * prose mention in a comment.
  *
  * NOT banned: `bg-ink` + `text-on-ink` is the primary button and the
  * inverse-chip pattern.
