@@ -4,6 +4,7 @@ import {
   internalLinkAnalysisSchema,
   internalLinkAnalysisStateSchema,
   type InternalLinkAnalysis,
+  USABLE_CRAWL_STATUSES,
 } from '@citeladder/contracts/site-health';
 
 import { budget, spendBudget } from '../abuse/usage.ts';
@@ -17,6 +18,7 @@ import { payloadString } from '../queue/executor.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
 import { linkCandidates, linkRequests } from './internal-link-candidates.ts';
 import { loadLinkPages, type LinkScope } from './internal-link-pages.ts';
+import { pageRerunSql } from './page-rerun.ts';
 import { currentSiteCrawlQuery } from './reads/crawl.ts';
 
 const { succeeded, failed, cancelled } = policy.task_queue.statuses;
@@ -160,7 +162,9 @@ export async function admitLinkRun(
       .where('id', '=', input.crawl_id)
       .where('workspace_id', '=', scope.workspaceId)
       .where('project_id', '=', scope.projectId)
-      .where('completed_at', 'is not', null)
+      // A usable site crawl, as `latestLinkCrawl` offers: never a failed crawl or a page rerun.
+      .where('status', 'in', USABLE_CRAWL_STATUSES)
+      .where(pageRerunSql, '=', false)
       .executeTakeFirst();
     if (!crawl) throw new ApiError(404, 'Completed crawl not found');
     const { pages, omittedPages } = await loadLinkPages(trx, scope, crawl.id);

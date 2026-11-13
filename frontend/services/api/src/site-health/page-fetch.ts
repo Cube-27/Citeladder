@@ -142,7 +142,8 @@ export class SitePageFetcher {
         'robots.txt is access-blocked (401/403); the crawler does not bypass access controls';
     }
     // An unreachable robots.txt (429, 5xx, network) may answer later; the task retries.
-    const retryable = robots.unavailable;
+    // A refused one (too large, redirect limit, SSRF, suppression) will not.
+    const retryable = robots.transient;
     return { ok: false, code, detail, retryable, calls: [], latencyMs: null };
   }
 

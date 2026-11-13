@@ -49,7 +49,7 @@ function crawlScopeHash(crawl: Pick<Crawl, 'configuration'>) {
   );
 }
 type CrawlScope = Pick<Crawl, 'root_url' | 'configuration'>;
-/** Same origin and frozen scope: Changes and the Overview trend compare only such crawls. */
+/** Same origin and frozen scope: Changes and the snapshot's change summary compare only such crawls. */
 export const sameScope = (a: CrawlScope, b: CrawlScope) =>
   rootOrigin(a) === rootOrigin(b) && crawlScopeHash(a) === crawlScopeHash(b);
 const sameVersions = (a: Crawl, b: Crawl) =>

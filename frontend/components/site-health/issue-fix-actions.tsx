@@ -12,7 +12,7 @@ import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-qu
 import { formatCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
 
-/** The project whose crawl the issue is in: Re-run all refreshes its dashboard. */
+/** The project whose crawl the issue is in: Re-run all refreshes its reads once it lands. */
 export type IssueFixScope = Readonly<{ workspaceId: string; projectId: string }>;
 
 /**

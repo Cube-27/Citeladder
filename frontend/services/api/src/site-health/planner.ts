@@ -25,6 +25,7 @@ import {
   type CrawlAdmission,
 } from './planner-policy.ts';
 import { fillTrackedSet, lockTrackedSet } from './tracked-set.ts';
+import { pageRerunSql } from './page-rerun.ts';
 import { inventoryCrawlIds } from './reads/crawl.ts';
 import { recordCrawlEvent } from './site-task.ts';
 import type { Crawl } from './site-task.ts';
@@ -351,12 +352,14 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
   );
   const configuration = frozenConfiguration(scope, runtime, { ...selected, limit: budget.limit });
   if (!sample) {
+    // The newest full site crawl's inventory: a page rerun holds no site inventory (SH-B1).
     const previous = await db
       .selectFrom('site_crawls')
       .selectAll()
       .where('workspace_id', '=', workspaceId)
       .where('project_id', '=', request.project_id)
       .where('sample_mode', '=', false)
+      .where(pageRerunSql, '=', false)
       .orderBy('created_at', 'desc')
       .orderBy('id', 'desc')
       .executeTakeFirst();
@@ -395,7 +398,8 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
 /**
  * A re-audit of named pages as its own crawl: one page, or every tracked page
  * an issue affects (Re-run all). It holds one page fetch per page, and refuses
- * when fewer remain, so it never audits part of what it names.
+ * when fewer remain, so it never audits part of what it names. It keeps the
+ * project's robots choice (`crawlRequest`), as every crawl that names none does.
  * Project/runtime/profile are already locked by rerun admission; reuse that frozen scope.
  */
 export async function createPageRerunCrawl(
@@ -405,6 +409,7 @@ export async function createPageRerunCrawl(
   profile: Profile,
   urls: readonly [Selectable<SiteUrls>, ...Selectable<SiteUrls>[]],
   runtime: Runtime,
+  robots: Pick<ReturnType<typeof controls>, 'robots' | 'robotsDecision'>,
 ) {
   const scope = { domain: profile.registrable_domain || undefined };
   for (const url of urls) {
@@ -421,11 +426,7 @@ export async function createPageRerunCrawl(
       409,
     );
   const configuration = {
-    ...frozenConfiguration(scope, runtime, {
-      limit: budget.limit,
-      robots: 'respect',
-      robotsDecision: null,
-    }),
+    ...frozenConfiguration(scope, runtime, { ...robots, limit: budget.limit }),
     // Marks a page re-read, which Changes never compares as a site crawl.
     page_rerun: true,
   };

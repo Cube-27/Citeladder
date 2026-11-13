@@ -13,7 +13,7 @@ import { citationRuns } from './citation-runs.ts';
 import { crawlers } from '../config/crawlers.ts';
 import { crawlLogs } from '../config/crawl-logs.ts';
 import { ApiError } from '../errors.ts';
-import { currentIssueFilter } from '../site-health/reads/page-rows.ts';
+import { shownIssueFilter } from '../site-health/reads/page-rows.ts';
 import { currentSiteCrawl, inventoryCrawlIds, pageAuditsSql } from '../site-health/reads/crawl.ts';
 
 export type PageOptions = CrawlReadOptions & {
@@ -172,8 +172,8 @@ async function pageSelection(db: Database, scope: CrawlScope, input: PageOptions
       where u.workspace_id=${scope.workspaceId}::uuid and u.project_id=${scope.projectId}::uuid and o.crawl_id=any(${crawl ? inventoryCrawlIds(crawl) : []}::uuid[])),
     finding as (select u.url_hash,count(i.id)::integer as findings from site_page_analyses a join site_urls u
       on u.id=a.site_url_id and u.workspace_id=a.workspace_id and u.project_id=a.project_id
-      left join site_issues i on i.workspace_id=a.workspace_id and i.project_id=a.project_id and i.crawl_id=a.crawl_id
-        and i.site_url_id=a.site_url_id and ${currentIssueFilter('i', 'a')}
+      left join site_issues i on i.workspace_id=a.workspace_id and i.project_id=a.project_id
+        and ${crawl ? shownIssueFilter(crawl, 'i', 'a') : sql`false`}
       where a.workspace_id=${scope.workspaceId}::uuid and a.project_id=${scope.projectId}::uuid
         and ${crawl ? sql`a.id in (select v.analysis_id from (${pageAuditsSql(crawl)}) v)` : sql`false`}
       group by u.url_hash),

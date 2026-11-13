@@ -8,7 +8,8 @@ import { notFound } from '../errors.ts';
 import type { Database } from '../db/database.ts';
 import { admissionRuntime, createPageRerunCrawl } from './planner.ts';
 import { holdRuntime } from './plan-runtime.ts';
-import { crawlError } from './planner-policy.ts';
+import { crawlRequest } from './crawl-request.ts';
+import { controls, crawlError } from './planner-policy.ts';
 import { monitoredQuota } from './reads/runtime.ts';
 import { lockTrackedSet } from './tracked-set.ts';
 
@@ -170,6 +171,8 @@ export async function rerunTrackedPages(
   const [first, ...rest] = urls;
   if (!first || urls.length !== chosen.size)
     crawlError('Site URL not found in this project', 'invalid_selection');
+  // A re-audit names no robots choice, so it keeps the project's (`crawlRequest`).
+  const { robots, robotsDecision } = controls(await crawlRequest(db, workspaceId, projectId));
   return createPageRerunCrawl(
     db,
     workspaceId,
@@ -177,5 +180,6 @@ export async function rerunTrackedPages(
     scope.profile,
     [first, ...rest],
     scope.runtime,
+    { robots, robotsDecision },
   );
 }

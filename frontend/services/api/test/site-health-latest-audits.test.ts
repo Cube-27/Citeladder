@@ -16,6 +16,7 @@ afterAll(async () => {
 
 const SITEMAP = 'technical.sitemap_redirect';
 const CLIENT = 'technical.client_side_redirect';
+const SITEWIDE = 'technical.sitewide_broken_link';
 const minutes = (count: number) => new Date(Date.UTC(2026, 10, 1, 9, count));
 const paging = { limit: 50, cursor: null };
 
@@ -166,6 +167,28 @@ describe("Site Health reads show each tracked page's latest audit", () => {
     expect(groups(await issues(db, seed.workspaceId, rerun.crawlId, all, paging))).toEqual([
       [CLIENT, 1],
     ]);
+  });
+
+  it("keeps the site crawl's site-level findings on the root after a rerun of the root", async () => {
+    const seed = await fixtures.crawl('completed');
+    const full = await crawlAt(seed, minutes(0));
+    const root = await audit(full, '/', SITEWIDE, 'missing');
+    await fixtures.monitor(seed, [root.id]);
+    await land(full);
+    // Only a site crawl judges sitewide links, so a re-audit of the root cannot clear them.
+    const rerun = await crawlAt(seed, minutes(10), { rerun: true });
+    await audit(rerun, '/', SITEMAP, 'satisfied', root.id);
+    await land(rerun);
+
+    const all = unfilteredIssues('defect');
+    expect(groups(await issues(db, seed.workspaceId, full.crawlId, all, paging))).toEqual([
+      [SITEWIDE, 1],
+    ]);
+    expect(await pageCounts(full)).toEqual([['/', 1]]);
+    const detail = await pageDetail(db, seed.workspaceId, full.crawlId, root.id);
+    expect(detail.issues.map((issue) => issue.rule_id)).toEqual([SITEWIDE]);
+    const history = await issueHistory(db, seed.workspaceId, full.crawlId, root.id, paging);
+    expect(history.items.map((item) => item.rule_id)).toEqual([]);
   });
 
   it('refreshes Opportunities once a rerun lands in the current crawl, and not before', async () => {

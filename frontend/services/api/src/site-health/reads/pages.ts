@@ -13,12 +13,12 @@ import { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { notFound } from '../../errors.ts';
 import { loadCrawl, rootFailure, type Crawl } from './crawl.ts';
 import {
-  currentIssueFilter,
   linkedFrom,
   measurementFields,
   pageCursor,
   pageRows,
   pageWindow,
+  shownIssueFilter,
   type PageRow,
   type PageRowFilters,
   type PageSort,
@@ -255,8 +255,7 @@ export async function pageDetail(
           select i.*, e.reason_code from site_issues i
           join site_rule_evaluations e on e.id = i.evaluation_id
           join site_page_analyses a on a.id = ${analysis.id}
-          where i.workspace_id = ${workspaceId} and i.crawl_id = a.crawl_id
-            and i.site_url_id = ${siteUrlId} and ${currentIssueFilter('i', 'a')}
+          where i.workspace_id = ${workspaceId} and ${shownIssueFilter(crawl, 'i', 'a')}
           order by i.created_at, i.id`
           .execute(db)
           .then((result) => result.rows)

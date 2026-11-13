@@ -159,6 +159,21 @@ it('retries a transient robots.txt failure and never caches one', async () => {
   expect((await acquirer.robots(other)).unavailable).toBe(false);
   expect(sent).toHaveLength(4 + 3 + 1);
 });
+it('asks once for a robots.txt the fetcher refuses, and keeps the refusal final', async () => {
+  const sent: string[] = [];
+  const fetcher = createWebsiteFetcher(
+    async () => [{ address: '93.184.216.34', family: 4 }],
+    async (url) => {
+      sent.push(url.pathname);
+      throw new FetchError('response_too_large');
+    },
+  );
+  const acquirer = new PageAcquirer(async () => {}, fetcher, settings, 0);
+  const first = await acquirer.robots('https://shop.test');
+  const again = await acquirer.robots('https://shop.test');
+  expect([first.unavailable, first.transient, again.transient]).toEqual([true, false, false]);
+  expect(sent).toEqual(['/robots.txt']);
+});
 it('names the robots group that applies to a crawler without reading parser internals', () => {
   const body = [
     'User-agent: GPTBot/1.1',

@@ -61,7 +61,7 @@ export function IssueDetailDialog({
   onClose,
 }: Readonly<{
   issue: IssueHead;
-  /** The project the crawl belongs to: Re-run all refreshes its dashboard. */
+  /** The project the crawl belongs to: Re-run all refreshes its reads once it lands. */
   scope: IssueFixScope;
   crawlId: string;
   detailQuery: UseQueryResult<SiteIssueDetail>;

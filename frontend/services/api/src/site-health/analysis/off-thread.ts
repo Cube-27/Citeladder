@@ -89,19 +89,29 @@ function settle(slot: Slot) {
     running === undefined ? undefined : setTimeout(() => expire(slot, running), jobTimeoutMs());
 }
 
-/** The running job overran: fail it, retire its thread and move the queued jobs to another. */
-function expire(slot: Slot, id: number) {
-  const job = slot.pending.get(id);
-  if (!job) return;
+/**
+ * Retire a thread: fail the job it was running (the head of its queue) with
+ * `error` and move the jobs queued behind it to another thread. A thread is
+ * retired once; its later `error` or `exit` changes nothing.
+ */
+function retire(slot: Slot, error: Error) {
   const index = slots.indexOf(slot);
-  if (index >= 0) slots.splice(index, 1);
-  const queued = [...slot.pending].filter(([key]) => key !== id);
+  if (index < 0) return;
+  slots.splice(index, 1);
+  const [running, ...queued] = slot.pending.values();
   slot.pending.clear();
+  clearTimeout(slot.timer);
   slot.running = undefined;
   slot.timer = undefined;
+  running?.reject(error);
+  for (const waiting of queued) post(waiting);
+}
+
+/** The running job overran: fail it, retire its thread and move the queued jobs to another. */
+function expire(slot: Slot, id: number) {
+  if (slot.running !== id || !slot.pending.has(id)) return;
+  retire(slot, new InterpretationTimeoutError());
   void slot.worker.terminate();
-  job.reject(new InterpretationTimeoutError());
-  for (const [, waiting] of queued) post(waiting);
 }
 
 function start(): Slot {
@@ -118,18 +128,11 @@ function start(): Slot {
     if (error === undefined) job.resolve(result);
     else job.reject(new Error(error));
   });
-  // A crashed thread fails only its own jobs; the next request starts a replacement.
-  const fail = (error: Error) => {
-    const index = slots.indexOf(slot);
-    if (index >= 0) slots.splice(index, 1);
-    for (const job of slot.pending.values()) job.reject(error);
-    slot.pending.clear();
-    clearTimeout(slot.timer);
-    slot.running = undefined;
-    slot.timer = undefined;
-  };
-  worker.on('error', fail);
-  worker.on('exit', (code) => fail(new Error(`Page interpretation exited (${code})`)));
+  // A crashed thread fails only the job it was running; its queue moves to a replacement.
+  worker.on('error', (error: unknown) =>
+    retire(slot, error instanceof Error ? error : new Error(String(error))),
+  );
+  worker.on('exit', (code) => retire(slot, new Error(`Page interpretation exited (${code})`)));
   slots.push(slot);
   return slot;
 }

@@ -1,5 +1,5 @@
 /** Bounded lexical selection over persisted crawl evidence; no acquisition. */
-import { TERMINAL_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
+import { USABLE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import { policy } from '../../config.ts';
 import type { Database } from '../../db/database.ts';
@@ -165,16 +165,16 @@ export async function selectContentFragments(
   targetUrl = '',
   crawlId?: string,
 ) {
-  // The named terminal crawl or, without one, the current crawl (SH-B1); either
-  // must hold content pages. A current crawl without them never falls back to
-  // an older crawl: it reports no usable crawl.
+  // The named usable crawl (a failed one has no audit of its own) or, without
+  // one, the current crawl (SH-B1); either must hold content pages. A current
+  // crawl without them never falls back to an older crawl: it reports no usable crawl.
   const candidate = crawlId
     ? db
         .selectFrom('site_crawls')
         .where('workspace_id', '=', scope.workspaceId)
         .where('project_id', '=', scope.projectId)
         .where('id', '=', crawlId)
-        .where('status', 'in', TERMINAL_CRAWL_STATUSES)
+        .where('status', 'in', USABLE_CRAWL_STATUSES)
     : currentSiteCrawlQuery(db, scope.workspaceId, scope.projectId);
   const chosen = await candidate
     .select(['id', 'workspace_id', 'project_id', 'created_at', 'configuration', 'completed_at'])

@@ -245,8 +245,8 @@ async function architectureEvaluationIds(db: Database, crawl: Crawl) {
  * A page rerun landed in this site crawl (SH-B9): its snapshot's page columns
  * and its score summary are recomputed in place, in the rerun's landing
  * transaction, from each tracked page's latest audit. Coverage and discovery
- * stay the crawl's own; the snapshot keeps its id and time, so the score
- * trend's current point moves with the latest audits. A crawl without a
+ * stay the crawl's own; the snapshot keeps its id and time, so the change
+ * summary's current values move with the latest audits. A crawl without a
  * snapshot has nothing to refresh.
  */
 export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {

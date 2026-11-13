@@ -310,15 +310,30 @@ const URL_VALUE_ATTRIBUTES: Record<string, string> = {
 };
 
 /**
- * A property's value as the microdata model reads it, after an explicit
- * `content`, which schema.org consumers accept on any element.
+ * A microdata URL value (a URL property or `itemid`) as the absolute URL the
+ * microdata model defines, resolved against the document base; an empty or
+ * unresolvable one is kept as written.
  */
-function microdataValue(node: HtmlElement) {
+function absoluteUrl(value: string, baseUrl: string) {
+  if (!value) return value;
+  try {
+    return new URL(value, baseUrl).href;
+  } catch {
+    return value;
+  }
+}
+
+/**
+ * A property's value as the microdata model reads it, after an explicit
+ * `content`, which schema.org consumers accept on any element. A URL
+ * property's value is absolute, so the page binds by its own URL.
+ */
+function microdataValue(node: HtmlElement, baseUrl: string) {
   const content = attribute(node, 'content').trim();
   if (content) return content;
   if (node.tagName === 'meta') return '';
   const urlAttribute = URL_VALUE_ATTRIBUTES[node.tagName];
-  if (urlAttribute) return attribute(node, urlAttribute).trim();
+  if (urlAttribute) return absoluteUrl(attribute(node, urlAttribute).trim(), baseUrl);
   if (node.tagName === 'data' || node.tagName === 'meter') return attribute(node, 'value').trim();
   if (node.tagName === 'time' && hasAttribute(node, 'datetime'))
     return attribute(node, 'datetime').trim();
@@ -340,23 +355,23 @@ const propertyNames = (node: HtmlElement) =>
   attribute(node, 'itemprop').split(/\s+/u).map(cleanType).filter(Boolean);
 
 /** A nested item is its own object, within the JSON-LD depth bound; any other property is text. */
-function propertyValue(property: HtmlElement, depth: number): unknown {
-  if (!hasAttribute(property, 'itemscope')) return microdataValue(property);
-  return depth < limits.jsonld_depth ? microdataObject(property, depth + 1) : undefined;
+function propertyValue(property: HtmlElement, depth: number, baseUrl: string): unknown {
+  if (!hasAttribute(property, 'itemscope')) return microdataValue(property, baseUrl);
+  return depth < limits.jsonld_depth ? microdataObject(property, baseUrl, depth + 1) : undefined;
 }
 
 /**
  * One microdata item as the JSON-LD object it is equivalent to, so both
  * syntaxes meet one property contract. A repeated property becomes a list.
  */
-function microdataObject(item: HtmlElement, depth = 0): JsonObject {
+function microdataObject(item: HtmlElement, baseUrl: string, depth = 0): JsonObject {
   const properties = new Map<string, unknown[]>([
     ['@type', attribute(item, 'itemtype').split(/\s+/u).filter(Boolean)],
   ]);
-  const id = attribute(item, 'itemid').trim();
+  const id = absoluteUrl(attribute(item, 'itemid').trim(), baseUrl);
   if (id) properties.set('@id', [id]);
   for (const property of itemProperties(item)) {
-    const value = propertyValue(property, depth);
+    const value = propertyValue(property, depth, baseUrl);
     if (isEmpty(value)) continue;
     // A property name never overwrites the item's own `@type` or `@id`.
     for (const name of propertyNames(property).filter((name) => !name.startsWith('@'))) {
@@ -375,11 +390,14 @@ function microdataObject(item: HtmlElement, depth = 0): JsonObject {
  * read as the equivalent JSON-LD object. A nested item is a block under the
  * property that holds it.
  */
-export function microdataBlocks(root: HtmlNode, maxBlocks: number): SchemaBlock[] {
+export function microdataBlocks(root: HtmlNode, maxBlocks: number, baseUrl: string): SchemaBlock[] {
   const blocks: SchemaBlock[] = [];
   for (const node of elements(root)) {
     if (!hasAttribute(node, 'itemscope') || !attribute(node, 'itemtype').trim()) continue;
-    const nested = { object: microdataObject(node), parentProperty: propertyNames(node)[0] ?? '' };
+    const nested = {
+      object: microdataObject(node, baseUrl),
+      parentProperty: propertyNames(node)[0] ?? '',
+    };
     blocks.push(...objectBlocks(nested, { syntax: 'microdata' }));
     if (blocks.length >= maxBlocks) return blocks.slice(0, maxBlocks);
   }
