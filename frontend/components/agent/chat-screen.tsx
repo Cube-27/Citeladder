@@ -1,12 +1,7 @@
 import { lazy } from 'react';
 import { useParams } from 'react-router-dom';
 
-import {
-  ChatConversation,
-  JumpToLatest,
-  ReplyComposer,
-  useChatThread,
-} from '@/components/agent/chat-thread';
+import { ChatConversation, ReplyComposer, useChatThread } from '@/components/agent/chat-thread';
 import { OutputPane } from '@/components/agent/output-pane';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail } from '@/components/agent/use-chat-turns';
@@ -108,7 +103,7 @@ function ChatView({
       scrollRef={scrollRef}
       scrollLabel="Agent conversation"
       dock={
-        <ComposerDock floating={showJump ? <JumpToLatest onJump={jumpToLatest} /> : null}>
+        <ComposerDock onJumpToLatest={showJump ? jumpToLatest : null}>
           <ReplyComposer
             id="chat-message"
             thread={thread}

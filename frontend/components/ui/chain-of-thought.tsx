@@ -1,9 +1,10 @@
-import { Check, CircleAlert, CircleDashed, CircleHelp } from 'lucide-react';
+import { Check, ChevronRight, CircleAlert, CircleDashed, CircleHelp } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Disclosure } from './disclosure';
 import { Icon } from './icon';
 import { Stack } from './layout';
+import { Shimmer } from './shimmer';
 import { Spinner } from './spinner';
 import { textRole } from './typography';
 import { treeBranchClasses } from './workspace';
@@ -26,6 +27,40 @@ export function ChainOfThought({
         {children}
       </Stack>
     </Disclosure>
+  );
+}
+
+/**
+ * The running form of ChainOfThought: one status line that keeps its height
+ * from the turn's start to its end. The status cuts to one line and the
+ * seconds keep their width, so nothing under it moves; it opens to the steps.
+ * Only the status is announced; the seconds tick outside the live region.
+ */
+export function ChainOfThoughtLive({
+  status,
+  seconds,
+  label,
+  children,
+}: Readonly<{ status: string; seconds: number; label: string; children: ReactNode }>) {
+  return (
+    <details className="group grid min-w-0">
+      <summary
+        className={textRole(
+          'caption',
+          'focus-ring flex h-6 min-w-0 cursor-pointer list-none items-center [&::-webkit-details-marker]:hidden gap-2 rounded-md whitespace-nowrap',
+        )}
+      >
+        <Spinner className="text-ink-muted" />
+        <output aria-live="polite" className="min-w-0 truncate">
+          <Shimmer>{status}</Shimmer>
+        </output>
+        <span className="text-ink-muted shrink-0 tabular-nums">{seconds}s</span>
+        <Icon icon={ChevronRight} className="text-ink-muted shrink-0 group-open:rotate-90" />
+      </summary>
+      <Stack as="ol" gap="tight" aria-label={label} className={treeBranchClasses('mt-3')}>
+        {children}
+      </Stack>
+    </details>
   );
 }
 

@@ -1,12 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
-import {
-  ChatConversation,
-  JumpToLatest,
-  ReplyComposer,
-  useChatThread,
-} from '@/components/agent/chat-thread';
+import { ChatConversation, ReplyComposer, useChatThread } from '@/components/agent/chat-thread';
 import { Composer } from '@/components/agent/composer';
 import { ComposerMenu } from '@/components/agent/composer-menu';
 import { useSkillChoice } from '@/components/agent/skill-picker';
@@ -245,7 +240,7 @@ function PanelConversation({
     <DockedThread
       label="Agent conversation"
       scrollRef={scrollRef}
-      floating={showJump ? <JumpToLatest onJump={jumpToLatest} /> : null}
+      onJumpToLatest={showJump ? jumpToLatest : null}
       dock={
         <ReplyComposer
           id="agent-panel-reply"

@@ -1,6 +1,7 @@
-import { FileText, X } from 'lucide-react';
+import { ArrowDown, FileText, X } from 'lucide-react';
 import { useEffect, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 
+import { IconButton } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { FIELD_EDGE } from '@/components/ui/input';
@@ -22,14 +23,15 @@ import { cn } from '@/lib/utils';
 export function DockedThread({
   children,
   dock,
-  floating,
+  onJumpToLatest,
   label,
   scrollRef,
 }: Readonly<{
   children: ReactNode;
   /** The composer; omitted while the chat loads or cannot be shown. */
   dock?: ReactNode;
-  floating?: ReactNode;
+  /** Set while the reader is away from the newest message (`ComposerDock`). */
+  onJumpToLatest?: (() => void) | null;
   label?: string;
   scrollRef?: RefObject<HTMLElement | null>;
 }>) {
@@ -44,7 +46,7 @@ export function DockedThread({
       </section>
       {dock ? (
         <div className="px-[var(--modal-padding)]">
-          <ComposerDock floating={floating}>{dock}</ComposerDock>
+          <ComposerDock onJumpToLatest={onJumpToLatest}>{dock}</ComposerDock>
         </div>
       ) : null}
     </div>
@@ -53,19 +55,26 @@ export function DockedThread({
 
 /**
  * The composer's dock: under the thread's scrolling region, 8 above the
- * composer and 16 under it. `floating` (a "Jump to latest" control) floats
- * centred just above the dock, over the end of the thread and out of flow,
- * so showing it never moves the composer or resizes the thread.
+ * composer and 16 under it. With `onJumpToLatest` a round down arrow ("Jump
+ * to latest", the AI Elements Conversation scroll button) floats centred just
+ * above the dock, over the end of the thread and out of flow, so showing it
+ * never moves the composer or resizes the thread.
  */
 export function ComposerDock({
   children,
-  floating,
-}: Readonly<{ children: ReactNode; floating?: ReactNode }>) {
+  onJumpToLatest,
+}: Readonly<{ children: ReactNode; onJumpToLatest?: (() => void) | null }>) {
   return (
     <div className="z-sticky relative shrink-0 pt-2 pb-4">
-      {floating ? (
+      {onJumpToLatest ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
-          <div className="pointer-events-auto">{floating}</div>
+          <IconButton
+            icon={ArrowDown}
+            label="Jump to latest"
+            variant="secondary"
+            onClick={onJumpToLatest}
+            className="shadow-float pointer-events-auto rounded-full"
+          />
         </div>
       ) : null}
       {children}

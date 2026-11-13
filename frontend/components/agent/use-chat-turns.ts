@@ -118,11 +118,17 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     composer.current = { draft, mentions: commands.mentions, pastes: commands.pastes.items };
   });
   type Turn = Parameters<typeof mutation.mutate>[0];
+  const userMessages = detail.messages.filter((message) => message.role === 'user').length;
+  // How many requests the chat held when the last send went out: an accepted
+  // send stays in the thread until the read that holds its saved message.
+  const [sentAt, setSentAt] = useState(userMessages);
+  const awaitingSaved = mutation.isSuccess && userMessages <= sentAt;
   /**
    * Every send goes through here: an accepted turn retires its request key,
    * and clears the composer only if it still holds what was sent.
    */
-  const submit = (turn: Turn) =>
+  const submit = (turn: Turn) => {
+    setSentAt(userMessages);
     mutation.mutate(turn, {
       onSuccess: (_accepted, variables) => {
         requestKey.accepted();
@@ -141,6 +147,7 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
         }
       },
     });
+  };
   /** The skill choice a recorded request was sent with, as the picker's tri-state. */
   const skillFor = (message: AgentMessage) => {
     if (message.skill_source === 'user') return message.skill_id;
@@ -193,8 +200,9 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
         }),
         idempotencyKey: newIdempotencyKey(),
       }),
-    /** The message being sent, shown in the thread before the server accepts it. */
-    pendingMessage: mutation.isPending ? (mutation.variables?.message ?? null) : null,
+    /** The message being sent, shown in the thread until the chat read holds it. */
+    pendingMessage:
+      mutation.isPending || awaitingSaved ? (mutation.variables?.message ?? null) : null,
     skillId,
     setSkillId,
     lastMessage,

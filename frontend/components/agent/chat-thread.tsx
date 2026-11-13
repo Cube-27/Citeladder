@@ -114,18 +114,6 @@ export function ReplyComposer({
   );
 }
 
-/**
- * Back to the newest message: a `ComposerDock`'s `floating` control, shown
- * only while the reader has scrolled away from the end of the thread.
- */
-export function JumpToLatest({ onJump }: Readonly<{ onJump: () => void }>) {
-  return (
-    <Button variant="secondary" onClick={onJump}>
-      Jump to latest
-    </Button>
-  );
-}
-
 function FollowUpFailure({
   turn,
   actionId,

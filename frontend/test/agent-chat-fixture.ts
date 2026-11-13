@@ -25,7 +25,13 @@ export function revision(id: string, number: number, author: 'agent' | 'user', b
 type DetailRun = {
   status: string;
   error_code?: string;
-  progress?: { ordinal: number; status: string; tool: string | null; target?: string | null }[];
+  progress?: {
+    ordinal: number;
+    status: string;
+    tool: string | null;
+    target?: string | null;
+    run_attempt?: number;
+  }[];
 };
 
 const DEFAULT_RUN: DetailRun = { status: 'succeeded' };

@@ -48,7 +48,7 @@ it('re-posts the run after a 429 once Retry-After passes and shows the streamed 
   await vi.advanceTimersByTimeAsync(999);
   expect(posts).toHaveLength(1);
   await vi.advanceTimersByTimeAsync(1);
-  await vi.waitFor(() => expect(result.current?.reply).toEqual({ ordinal: 1, text: 'Hello' }));
+  await vi.waitFor(() => expect(result.current?.reply).toEqual([{ ordinal: 1, text: 'Hello' }]));
   expect(posts.map((at) => at - start)).toEqual([0, 1000]);
   expect(result.current?.connected).toBe(true);
 });
@@ -114,28 +114,28 @@ it('ends the live turn on a refusal other than 429 without re-posting', async ()
 
 const fold = (events: TurnEvent[]) => events.reduce(applyTurnEvent, liveTurn(0));
 
-it('appends one call’s reply and thinking, and lets a later call’s text replace them', () => {
+it('appends each call’s reply and thinking to its own segment, so earlier text never changes', () => {
   const turn = fold([
     { type: 'step', ordinal: 1 },
     { type: 'thinking', ordinal: 1, text: 'Checking ' },
     { type: 'thinking', ordinal: 1, text: 'the data' },
     { type: 'reply_delta', ordinal: 1, text: 'Reading ' },
     { type: 'reply_delta', ordinal: 1, text: 'first.' },
+    { type: 'step', ordinal: 2 },
+    { type: 'thinking', ordinal: 2, text: 'Now answer' },
+    { type: 'reply_delta', ordinal: 2, text: 'Ans' },
+    { type: 'reply_delta', ordinal: 2, text: 'wer' },
   ]);
   expect(turn).toMatchObject({
-    step: 1,
-    thinking: { ordinal: 1, text: 'Checking the data' },
-    reply: { ordinal: 1, text: 'Reading first.' },
-  });
-  // A new call keeps the earlier text until it writes its own.
-  const next = fold([
-    { type: 'reply_delta', ordinal: 1, text: 'Reading first.' },
-    { type: 'step', ordinal: 2 },
-  ]);
-  expect(next.reply).toEqual({ ordinal: 1, text: 'Reading first.' });
-  expect(applyTurnEvent(next, { type: 'reply_delta', ordinal: 2, text: 'Answer' }).reply).toEqual({
-    ordinal: 2,
-    text: 'Answer',
+    step: 2,
+    thinking: [
+      { ordinal: 1, text: 'Checking the data' },
+      { ordinal: 2, text: 'Now answer' },
+    ],
+    reply: [
+      { ordinal: 1, text: 'Reading first.' },
+      { ordinal: 2, text: 'Answer' },
+    ],
   });
 });
 
