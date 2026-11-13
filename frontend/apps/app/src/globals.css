@@ -40,12 +40,13 @@
    `column-wide:` is `shell:` (1280 less the 248px sidebar, two 24px gutters
    and a thin scrollbar). Outside that column (drawers, dialogs, setup) they
    keep the viewport breakpoints. */
+@custom-variant outside-main-column (&:where(:not([data-main-column] *)));
 @custom-variant column-split {
   @container main (min-width: 880px) {
     @slot;
   }
   @media (min-width: 981px) {
-    &:where(:not([data-main-column] *)) {
+    @variant outside-main-column {
       @slot;
     }
   }
@@ -55,7 +56,7 @@
     @slot;
   }
   @media (min-width: 1280px) {
-    &:where(:not([data-main-column] *)) {
+    @variant outside-main-column {
       @slot;
     }
   }
@@ -510,10 +511,14 @@
 }
 
 /* An older Agent turn skips layout and paint while off screen; the browser
-   keeps its last rendered height (`auto`), and 320 stands in until then. */
+   keeps its last rendered height (`auto`), and 320 stands in until then.
+   Only with scroll anchoring (not Safari): without it the estimate's error
+   would jump the thread as a reader scrolls up into older turns. */
 @utility render-when-visible {
-  content-visibility: auto;
-  contain-intrinsic-block-size: auto 320px;
+  @supports (overflow-anchor: auto) {
+    content-visibility: auto;
+    contain-intrinsic-block-size: auto 320px;
+  }
 }
 
 /* Below the shell breakpoint the sidebar is the rail and the main gutter

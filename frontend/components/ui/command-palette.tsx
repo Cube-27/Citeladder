@@ -401,7 +401,7 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'text-ink flex h-[var(--control-md)] w-full items-center gap-3 rounded-sm px-2 text-left text-body-sm',
+                            'text-ink flex min-h-[var(--control-md)] w-full items-center gap-3 rounded-sm px-2 text-left text-body-sm',
                             isActive && 'overlay-hover',
                           )}
                         >

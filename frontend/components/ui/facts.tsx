@@ -119,7 +119,7 @@ export function ValueLedger({
       {items.map((item) => (
         <li
           key={item.key}
-          className="flex h-[var(--control-md)] items-center justify-between gap-2"
+          className="flex min-h-[var(--control-md)] items-center justify-between gap-2"
         >
           {/* The row's name is read first (primary ink); its value supports it. */}
           <span className={textRole('itemTitle', 'min-w-0 truncate')}>{item.label}</span>

@@ -60,7 +60,7 @@ export function StatusLine({
       data-testid={testId}
       data-status-tone={tone}
       className={cn(
-        'type-caption flex h-[var(--control-md)] min-w-0 items-center gap-2',
+        'type-caption flex min-h-[var(--control-md)] min-w-0 items-center gap-2',
         TONE_TEXT[tone],
       )}
     >
