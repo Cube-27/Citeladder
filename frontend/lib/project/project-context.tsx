@@ -98,6 +98,11 @@ function useActiveProjectView({
   };
 }
 
+/** The resolved workspace becomes the selection; until one resolves, the selection stands. */
+function adoptWorkspace(resolved: string | null, selected: string | null) {
+  return resolved ?? selected;
+}
+
 /**
  * Resolve workspace membership independently of projects. An explicit project
  * is authorized by its detail read, so a stale list cannot hide a new project.
@@ -248,9 +253,8 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   // request against a workspace the reader is not in and flashing the loader
   // before the detail pulled it back. Adopted during render, so the selection
   // never lags the workspace the screen already resolved.
-  if (activeWorkspaceId && selectedWorkspaceId !== activeWorkspaceId) {
-    setSelectedWorkspaceId(activeWorkspaceId);
-  }
+  const adoptedWorkspaceId = adoptWorkspace(activeWorkspaceId, selectedWorkspaceId);
+  if (adoptedWorkspaceId !== selectedWorkspaceId) setSelectedWorkspaceId(adoptedWorkspaceId);
 
   const value = useMemo<ProjectContextValue>(
     () => ({

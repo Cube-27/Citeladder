@@ -76,6 +76,15 @@ function rangeTask(status: string, from = '2026-08-01') {
   });
 }
 
+/** A response held until the test opens it. */
+function gate() {
+  let open: () => void = () => undefined;
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { open, opened };
+}
+
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
@@ -83,15 +92,12 @@ afterAll(() => mswServer.close());
 describe('useRangeProjection', () => {
   it('reports a refused enqueue and clears it while Retry enqueues the window again', async () => {
     const requests: string[] = [];
-    let release!: () => void;
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
+    const retry = gate();
     mswServer.use(
       http.post(RANGE, async () => {
         requests.push('enqueue');
         if (requests.length === 1) return HttpResponse.json({ detail: 'refused' }, { status: 503 });
-        await held;
+        await retry.opened;
         return rangeTask('queued');
       }),
       http.get(`${RANGE}/${TASK}`, () => rangeTask('running')),
@@ -103,7 +109,7 @@ describe('useRangeProjection', () => {
 
     await waitFor(() => expect(requests).toHaveLength(2));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    release();
+    retry.open();
     expect(await screen.findByText('Projecting')).toBeVisible();
   });
 
@@ -122,16 +128,13 @@ describe('useRangeProjection', () => {
 
   it('does not show an earlier failure when the reader returns to that window', async () => {
     const enqueued: string[] = [];
-    let release!: () => void;
-    const held = new Promise<void>((resolve) => {
-      release = resolve;
-    });
+    const third = gate();
     mswServer.use(
       http.post(RANGE, async ({ request }) => {
         const from = new URL(request.url).searchParams.get('from') ?? '';
         enqueued.push(from);
         if (enqueued.length === 2) return HttpResponse.json({ detail: 'refused' }, { status: 503 });
-        if (enqueued.length === 3) await held;
+        if (enqueued.length === 3) await third.opened;
         return rangeTask('queued', from);
       }),
       http.get(`${RANGE}/${TASK}`, () => rangeTask('failed')),
@@ -147,6 +150,32 @@ describe('useRangeProjection', () => {
 
     await waitFor(() => expect(enqueued).toEqual(['2026-08-01', '2026-08-02', '2026-08-01']));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    release();
+    third.open();
+  });
+
+  it("reports the new window's refused enqueue after the previous window's build fails", async () => {
+    const earlierBuild = gate();
+    const laterEnqueue = gate();
+    mswServer.use(
+      http.post(RANGE, async ({ request }) => {
+        const from = new URL(request.url).searchParams.get('from') ?? '';
+        if (from === '2026-08-01') return rangeTask('queued', from);
+        await laterEnqueue.opened;
+        return HttpResponse.json({ detail: 'refused' }, { status: 503 });
+      }),
+      http.get(`${RANGE}/${TASK}`, async () => {
+        await earlierBuild.opened;
+        return rangeTask('failed');
+      }),
+    );
+    const { rerender } = renderWithProviders(<Harness from="2026-08-01" />);
+    expect(await screen.findByText('Projecting')).toBeVisible();
+
+    rerender(<Harness from="2026-08-02" />);
+    earlierBuild.open();
+    expect(await screen.findByText('Idle')).toBeVisible();
+    laterEnqueue.open();
+
+    expect(await screen.findByRole('alert')).not.toHaveTextContent('failed');
   });
 });

@@ -34,7 +34,7 @@ export function words(token: string): string {
 }
 
 export function label(table: Readonly<Record<string, string>>, token: string): string {
-  return (token in table ? table[token] : undefined) ?? words(token);
+  return table[token] ?? words(token);
 }
 
 export const connectionLabel = (token: string) => label(CONNECTION, token);

@@ -45,7 +45,8 @@ export function useRangeProjection(
     scopeKeyRef.current = scopeKey;
     dataRef.current = data;
   }, [scopeKey, data]);
-  const pending = queued?.scopeKey === scopeKey ? queued.taskId : null;
+  const current = queued?.scopeKey === scopeKey ? queued : null;
+  const pending = current?.taskId ?? null;
   const mutation = useMutation(performanceMutations.enqueueRange(scope));
 
   const task = useQuery({
@@ -104,25 +105,22 @@ export function useRangeProjection(
     void refreshPerformance(queryClient, projectId);
   }, [status, pending, queryClient, projectId]);
 
-  // EVERY terminal status releases the pending task, not only a success.
-  const taskError = useMemo(
-    () =>
-      terminal && status !== 'succeeded'
-        ? new Error(
-            status === 'cancelled'
-              ? 'Building this range was cancelled.'
-              : 'Building this range from imported data failed.',
-          )
-        : null,
-    [terminal, status],
-  );
-  const failed =
-    queued && pending !== null && taskError
-      ? { window: queued.window, error: taskError, fromTask: true }
-      : refused?.scopeKey === scopeKey
-        ? { window: refused.window, error: refused.error, fromTask: false }
-        : null;
-  const failure = failed && missing && sameWindow(failed.window, missing) ? failed : null;
+  // EVERY terminal status ends `projecting`, not only a success; a failed or
+  // cancelled task is reported for its window.
+  const taskError = useMemo(() => {
+    if (!terminal || status === 'succeeded') return null;
+    return new Error(
+      status === 'cancelled'
+        ? 'Building this range was cancelled.'
+        : 'Building this range from imported data failed.',
+    );
+  }, [terminal, status]);
+  const failure = failureOnScreen(missing, [
+    current && taskError ? { window: current.window, error: taskError, fromTask: true } : null,
+    refused?.scopeKey === scopeKey
+      ? { window: refused.window, error: refused.error, fromTask: false }
+      : null,
+  ]);
   return {
     projecting: Boolean(pending) && !terminal,
     /** The current window's projection failed: what happened, and Retry for exactly it. */
@@ -142,8 +140,24 @@ export function useRangeProjection(
 
 type RangeWindow = Readonly<{ from: string; to: string }>;
 
+type RangeFailure = Readonly<{ window: RangeWindow; error: unknown; fromTask: boolean }>;
+
 function sameWindow(a: RangeWindow, b: RangeWindow) {
   return a.from === b.from && a.to === b.to;
+}
+
+/**
+ * The failure that belongs to the window on screen. A task can end after the
+ * reader moved on, so each candidate is matched to that window on its own: an
+ * older window's ended task must not hide the refusal of the window that
+ * replaced it.
+ */
+function failureOnScreen(
+  missing: RangeWindow | null,
+  candidates: readonly (RangeFailure | null)[],
+): RangeFailure | null {
+  if (!missing) return null;
+  return candidates.find((failed) => failed !== null && sameWindow(failed.window, missing)) ?? null;
 }
 
 /** The first window the response reported as unprojected, if any. */
