@@ -480,8 +480,10 @@
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
   /* Forced colours drop background images; selection stays visible as an inner edge. */
   @media (forced-colors: active) {
-    outline: 2px solid SelectedItem;
-    outline-offset: -2px;
+    & {
+      outline: 2px solid SelectedItem;
+      outline-offset: -2px;
+    }
   }
 }
 
