@@ -27,7 +27,6 @@
     { "glob": "frontend/services/api/src/mcp/write-tools.ts", "reason": "MCP write-tool registry" }
   ],
   "baseline": {
-    "frontend/services/api/src/agent/runtime.ts": 7749,
     "frontend/services/api/src/billing/settlement.ts": 7566,
     "frontend/services/api/src/commerce/shelf.ts": 6609,
     "frontend/services/api/src/content-gaps/refresh.ts": 6436,
