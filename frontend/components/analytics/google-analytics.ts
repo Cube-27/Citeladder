@@ -15,7 +15,7 @@ function clearAnalyticsCookies() {
   const hostParts = window.location.hostname.split('.');
   const domains = ['', ...hostParts.map((_, index) => `.${hostParts.slice(index).join('.')}`)];
   for (const cookie of document.cookie.split(';')) {
-    const name = cookie.trim().split('=')[0]!;
+    const [name = ''] = cookie.trim().split('=');
     if (!/^(_ga(?:_|$)|_gid$|_gat(?:_|$))/.test(name)) continue;
     for (const domain of domains) {
       const domainAttribute = domain ? `; domain=${domain}` : '';

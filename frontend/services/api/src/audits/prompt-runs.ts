@@ -70,5 +70,5 @@ export async function settlePromptRun(db: Database, task: AuditTask, success: bo
       attempt: 1,
       dispatch: 'answer',
       at,
-    }); // NOSONAR
+    }); // NOSONAR -- Settlements share the transaction and its capacity lock, so they run in order.
 }

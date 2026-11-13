@@ -418,9 +418,8 @@ function executor(displayOnly: boolean): Executor {
       const datasets = p.TRAFFIC_PROJECTED_DATASETS.filter((dataset) =>
         mapped.has(datasetProvider(dataset)),
       );
-      // Reads and writes share the snapshot transaction, so they run in order.
       for (const dataset of datasets)
-        allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset); // NOSONAR
+        allQuality[dataset] = await partitionQuality(trx, qualityScope, dataset); // NOSONAR -- Reads share the snapshot transaction, so they run in order.
       if ((await partitionEpoch(trx, partitionScope)) !== epoch)
         throw new Error('Integration partitions changed during Traffic projection; retry');
       for (const target of targets) {
@@ -432,7 +431,7 @@ function executor(displayOnly: boolean): Executor {
           target.builder.partitionQuality(dataset, quality[dataset]!);
         }
         const evidence = { ...coverage, analytics_quality: quality };
-        const snapshotId = await persist(trx, task, target, evidence, displayOnly); // NOSONAR
+        const snapshotId = await persist(trx, task, target, evidence, displayOnly); // NOSONAR -- Writes share the snapshot transaction, so they run in order.
         if (snapshotId && target.verifies) verifying.push(snapshotId);
       }
       await Promise.all(

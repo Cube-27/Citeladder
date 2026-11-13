@@ -6,16 +6,20 @@ import {
   type ContactSubmission,
 } from '@/lib/config/contact';
 
+const HTML_ENTITIES: Readonly<Record<string, string>> = {
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+};
+
 function escapeHtml(value: string): string {
-  return value.replaceAll(
-    /[&<>"']/g,
-    (character) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!,
-  );
+  return value.replaceAll(/[&<>"']/g, (character) => HTML_ENTITIES[character] ?? character);
 }
 
 export function contactEmail(submission: ContactSubmission) {
-  const fields = [
+  const fields: readonly (readonly [string, string])[] = [
     ['Name', submission.name],
     ['Email', submission.email],
     ['Company', submission.company || 'Not provided'],
@@ -26,7 +30,7 @@ export function contactEmail(submission: ContactSubmission) {
   const htmlFields = fields
     .map(
       ([label, value]) =>
-        `<p><strong>${label}:</strong><br>${escapeHtml(value!).replaceAll('\n', '<br>')}</p>`,
+        `<p><strong>${label}:</strong><br>${escapeHtml(value).replaceAll('\n', '<br>')}</p>`,
     )
     .join('');
   return {

@@ -277,7 +277,8 @@ const MAX_PLAIN_TEXT_MESSAGE_CHARS = 200;
  * exact thing `readErrorBody` promises never to do.
  */
 function isJsonContentType(contentType: string): boolean {
-  const type = contentType.split(';')[0]!.trim().toLowerCase();
+  const [mediaType = ''] = contentType.split(';');
+  const type = mediaType.trim().toLowerCase();
   return type === 'application/json' || type.endsWith('+json');
 }
 

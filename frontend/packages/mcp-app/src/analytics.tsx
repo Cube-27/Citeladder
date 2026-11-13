@@ -290,7 +290,7 @@ function viewContent(view: AnalyticsSelection['view'], state: AppState, controll
         />
       );
     case 'sources':
-      return <SourcesView state={state} controller={controller} />;
+      return <SourcesView state={state} selection={selection} controller={controller} />;
     case 'site_health':
       return (
         <SiteHealthView

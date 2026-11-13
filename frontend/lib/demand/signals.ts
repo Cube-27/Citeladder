@@ -163,7 +163,7 @@ export function signalTargetKind(signal: DemandSignal): 'Page' | 'Query' {
  * put in an `href` unvalidated.
  */
 export function safePageUrl(pageUrl: string | null | undefined): string | null {
-  return parseAbsoluteHttpUrl(pageUrl) ? pageUrl!.trim() : null;
+  return pageUrl && parseAbsoluteHttpUrl(pageUrl) ? pageUrl.trim() : null;
 }
 
 export type CompetingPage = { url: string; impressions: number; share: number };

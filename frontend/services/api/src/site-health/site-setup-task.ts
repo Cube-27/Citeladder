@@ -264,8 +264,7 @@ async function walkSitemaps(
       Math.min(settings.concurrency, settings.maxDocuments - attempted),
     );
     attempted += wave.length;
-    // Waves are bounded and sequential: a wave's references feed the next one.
-    const pages = await Promise.all(wave.map(({ url }) => readSitemap(ctx, url, settings))); // NOSONAR
+    const pages = await Promise.all(wave.map(({ url }) => readSitemap(ctx, url, settings))); // NOSONAR -- Waves are bounded and sequential: a wave's references feed the next one.
     ctx.signal.throwIfAborted();
     for (const [index, entry] of wave.entries()) collect(walk, entry, pages[index]);
   }

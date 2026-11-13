@@ -185,8 +185,10 @@ export function moreGuides(article: ResearchArticle): ResearchArticle[] {
   const collection = STUDY_PAGES.includes(article) ? STUDY_PAGES : RESEARCH_ARTICLES;
   const position = collection.indexOf(article);
   return [1, 2]
-    .map((step) => collection[(position + step) % collection.length]!)
-    .filter((guide) => guide.frontmatter.slug !== slug);
+    .map((step) => collection[(position + step) % collection.length])
+    .filter(
+      (guide): guide is ResearchArticle => guide !== undefined && guide.frontmatter.slug !== slug,
+    );
 }
 
 const parseArticles = (modules: Record<string, string>): readonly ResearchArticle[] =>

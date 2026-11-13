@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -30,10 +30,10 @@ export function useRangeProjection(
     taskId: string;
     window: RangeWindow;
   } | null>(null);
-  // The window whose projection could not be built: its enqueue was refused,
-  // or its task ended failed or cancelled. Kept apart from "never imported",
-  // so the screen reports the failure and offers Retry (invariant 7).
-  const [failed, setFailed] = useState<{
+  // The window whose enqueue was refused. A task that ended failed or
+  // cancelled is read from the task itself. Both stay apart from "never
+  // imported", so the screen reports the failure and offers Retry (invariant 7).
+  const [refused, setRefused] = useState<{
     scopeKey: string;
     window: RangeWindow;
     error: unknown;
@@ -45,11 +45,29 @@ export function useRangeProjection(
     scopeKeyRef.current = scopeKey;
     dataRef.current = data;
   }, [scopeKey, data]);
-  const pending = queued?.scopeKey === scopeKey ? queued.taskId : null;
+  const current = queued?.scopeKey === scopeKey ? queued : null;
+  const pending = current?.taskId ?? null;
   const mutation = useMutation(performanceMutations.enqueueRange(scope));
 
+  const task = useQuery({
+    ...performanceQueries.rangeTask(scope, pending),
+    refetchInterval: (query) => pollRangeTask(query.state.data?.status),
+  });
+  const status = task.data?.status;
+  const terminal = status !== undefined && !RANGE_TASK_STATES[status].active;
+
   const missing = missingWindow(data);
-  const enqueue = (window: RangeWindow) => {
+  // A newly missing window starts clean: an earlier refusal and a task that
+  // already ended belong to the window that was on screen before.
+  const missingKey = missing && `${scopeKey}|${missing.from}|${missing.to}`;
+  const [shownKey, setShownKey] = useState(missingKey);
+  if (shownKey !== missingKey) {
+    setShownKey(missingKey);
+    setRefused(null);
+    if (terminal) setQueued(null);
+  }
+
+  const request = (window: RangeWindow) => {
     const requested = scopeKey;
     // Two enqueues can be in flight when the selection moves while the first
     // is still open, and they can land in either order. A response only
@@ -60,57 +78,60 @@ export function useRangeProjection(
       const wanted = missingWindow(dataRef.current);
       return requested !== scopeKeyRef.current || (wanted !== null && !sameWindow(wanted, window));
     };
-    setFailed(null);
     mutation.mutate(window, {
-      onSuccess: (task) => {
-        if (!superseded()) setQueued({ scopeKey: requested, taskId: task.task_id, window });
+      onSuccess: (enqueued) => {
+        if (!superseded()) setQueued({ scopeKey: requested, taskId: enqueued.task_id, window });
       },
       onError: (error) => {
-        if (!superseded()) setFailed({ scopeKey: requested, window, error });
+        if (!superseded()) setRefused({ scopeKey: requested, window, error });
       },
     });
   };
+  const requestMissing = useEffectEvent(request);
+  const missingFrom = missing?.from;
+  const missingTo = missing?.to;
   useEffect(() => {
-    if (missing) enqueue(missing);
-    // `missing` is a stable string pair derived from the response; re-running
-    // on the mutation object or `enqueue` itself would loop.
-    // oxlint-disable-next-line react/exhaustive-deps
-  }, [workspaceId, projectId, missing?.from, missing?.to]);
+    if (missingFrom !== undefined && missingTo !== undefined) {
+      requestMissing({ from: missingFrom, to: missingTo });
+    }
+  }, [workspaceId, projectId, missingFrom, missingTo]);
 
-  const task = useQuery({
-    ...performanceQueries.rangeTask(scope, pending),
-    refetchInterval: (query) => pollRangeTask(query.state.data?.status),
-  });
-
-  const status = task.data?.status;
-  const terminal = status !== undefined && !RANGE_TASK_STATES[status].active;
+  // Only a success changed a projection, so only a success invalidates, and
+  // only once per task.
+  const refreshedTask = useRef<string | null>(null);
   useEffect(() => {
-    // EVERY terminal status releases the pending task, not only a success.
-    // Only a success changed a projection, so only a success invalidates.
-    if (!terminal || !queued) return;
-    setQueued(null);
-    if (status === 'succeeded') void refreshPerformance(queryClient, projectId);
-    else
-      setFailed({
-        scopeKey: queued.scopeKey,
-        window: queued.window,
-        error: new Error(
-          status === 'cancelled'
-            ? 'Building this range was cancelled.'
-            : 'Building this range from imported data failed.',
-        ),
-      });
-  }, [terminal, status, queued, queryClient, projectId]);
+    if (status !== 'succeeded' || pending === null || refreshedTask.current === pending) return;
+    refreshedTask.current = pending;
+    void refreshPerformance(queryClient, projectId);
+  }, [status, pending, queryClient, projectId]);
 
-  const failure =
-    failed?.scopeKey === scopeKey && missing && sameWindow(failed.window, missing) ? failed : null;
+  // EVERY terminal status ends `projecting`, not only a success; a failed or
+  // cancelled task is reported for its window.
+  const taskError = useMemo(() => {
+    if (!terminal || status === 'succeeded') return null;
+    return new Error(
+      status === 'cancelled'
+        ? 'Building this range was cancelled.'
+        : 'Building this range from imported data failed.',
+    );
+  }, [terminal, status]);
+  const failure = failureOnScreen(missing, [
+    current && taskError ? { window: current.window, error: taskError, fromTask: true } : null,
+    refused?.scopeKey === scopeKey
+      ? { window: refused.window, error: refused.error, fromTask: false }
+      : null,
+  ]);
   return {
     projecting: Boolean(pending) && !terminal,
     /** The current window's projection failed: what happened, and Retry for exactly it. */
     failure: failure
       ? {
           error: failure.error,
-          retry: () => enqueue(failure.window),
+          retry: () => {
+            setRefused(null);
+            if (failure.fromTask) setQueued(null);
+            request(failure.window);
+          },
           pending: mutation.isPending,
         }
       : null,
@@ -119,8 +140,24 @@ export function useRangeProjection(
 
 type RangeWindow = Readonly<{ from: string; to: string }>;
 
+type RangeFailure = Readonly<{ window: RangeWindow; error: unknown; fromTask: boolean }>;
+
 function sameWindow(a: RangeWindow, b: RangeWindow) {
   return a.from === b.from && a.to === b.to;
+}
+
+/**
+ * The failure that belongs to the window on screen. A task can end after the
+ * reader moved on, so each candidate is matched to that window on its own: an
+ * older window's ended task must not hide the refusal of the window that
+ * replaced it.
+ */
+function failureOnScreen(
+  missing: RangeWindow | null,
+  candidates: readonly (RangeFailure | null)[],
+): RangeFailure | null {
+  if (!missing) return null;
+  return candidates.find((failed) => failed !== null && sameWindow(failed.window, missing)) ?? null;
 }
 
 /** The first window the response reported as unprojected, if any. */

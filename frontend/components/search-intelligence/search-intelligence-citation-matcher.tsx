@@ -50,9 +50,10 @@ export function SearchIntelligenceCitationMatcher({
     enabled: Boolean(referring),
   });
   const derive = useMutation(searchIntelligenceMutations.deriveCitationMatches(scope));
-  const deriveMatches = () =>
+  const deriveMatches = () => {
+    if (!referring) return;
     derive.mutate(
-      { backlink_dataset_id: referring!.id, audit_ids: selectedAudits },
+      { backlink_dataset_id: referring.id, audit_ids: selectedAudits },
       {
         onSuccess: (dataset) => {
           setSelectedAudits([]);
@@ -65,6 +66,7 @@ export function SearchIntelligenceCitationMatcher({
         },
       },
     );
+  };
   if (!referring) return null;
   if (audits.isError)
     return (

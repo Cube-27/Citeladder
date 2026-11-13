@@ -317,8 +317,7 @@ export class ModelCalls {
         usage_complete: false,
         settled_at: new Date(),
       };
-      // Ledger settlement and its attempt write share one ordered transaction.
-      const settled = await this.funding.settle(db, updated, null); // NOSONAR
+      const settled = await this.funding.settle(db, updated, null); // NOSONAR -- Settlement and its attempt write share one ordered transaction.
       if (
         !Number.isSafeInteger(settled.credits) ||
         settled.credits < 0 ||
@@ -326,7 +325,7 @@ export class ModelCalls {
         (attempt.funding_source !== 'platform' && settled.credits !== 0)
       )
         throw new AgentError('funding_unavailable');
-      await db // NOSONAR
+      await db // NOSONAR -- The attempt write follows its settlement in the same transaction.
         .updateTable('agent_model_attempts')
         .set({
           outcome: updated.outcome,
@@ -370,8 +369,7 @@ export class ModelCalls {
         .forUpdate()
         .skipLocked()
         .execute();
-      // One transaction connection: settlements run in order.
-      for (const run of runs) await this.reconcile(trx, run); // NOSONAR
+      for (const run of runs) await this.reconcile(trx, run); // NOSONAR -- One transaction connection: settlements run in order.
       return runs.length;
     });
   }
