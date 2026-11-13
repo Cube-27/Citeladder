@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { escapeRegExp, TOKEN_CSS } from './design-system-source-checks.mjs';
+import { escapeRegExp } from './design-system-class-data.mjs';
+import { TOKEN_CSS } from './design-system-source-checks.mjs';
 import { marketingCssFiles, readMarketingCss } from './marketing-css.mjs';
 
 /** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */

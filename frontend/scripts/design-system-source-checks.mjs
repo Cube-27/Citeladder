@@ -2,12 +2,17 @@ import { visitorKeys } from 'oxc-parser';
 export { textContrastViolations } from './design-system-contrast.mjs';
 
 import {
+  classFragments,
+  jsxClassData,
+  oneOf,
+  staticBindings,
+} from './design-system-class-data.mjs';
+import {
   lineIndex,
   nameText,
   parseSource,
   stringFragments,
   stringValue,
-  unwrap,
   walk,
 } from './source-ast.mjs';
 
@@ -190,8 +195,6 @@ export function densityRoleViolations(source, label, ownsProductUi) {
   }
   return [];
 }
-/** Alternation over literal values, escaped for use inside a RegExp. */
-const oneOf = (values) => `(?:${values.map(escapeRegExp).join('|')})`;
 
 /** A class token (with any variant prefixes) whose utility part matches `utility`. */
 const classToken = (utility, end) => new RegExp(String.raw`(?<![\w-])(?:[\w-]+:)*` + utility + end);
@@ -260,119 +263,6 @@ const OFF_GRID_SPACING = classToken(
   `-?${oneOf(SPACING_UTILITIES)}-(?:${oneOf(OFF_GRID_STEPS)}|${ARBITRARY_PX})`,
   String.raw`(?![\w.-])`,
 );
-
-function staticBindings(program) {
-  const bindings = new Map();
-  walk(program, (node) => {
-    if (node.type === 'VariableDeclarator' && node.id?.type === 'Identifier' && node.init) {
-      bindings.set(node.id.name, node.init);
-    }
-  });
-  return bindings;
-}
-
-function identifierClassFragments(node, bindings, seen) {
-  if (seen.has(node.name)) return [];
-  const initializer = bindings.get(node.name);
-  if (!initializer) return [];
-  return classFragments(initializer, bindings, new Set([...seen, node.name]));
-}
-
-function memberClassFragments(node, bindings, seen) {
-  const target = unwrap(
-    node.object?.type === 'Identifier' ? bindings.get(node.object.name) : node.object,
-  );
-  if (target?.type === 'ObjectExpression') {
-    return target.properties.flatMap((property) =>
-      property.type === 'Property' ? classFragments(property.value, bindings, seen) : [],
-    );
-  }
-  return classFragments(target, bindings, seen);
-}
-
-const childFragments = (children, bindings, seen) =>
-  children.flatMap((child) => classFragments(child, bindings, seen));
-
-/** Class fragments per expression type, once literals and wrappers are peeled off. */
-const CLASS_FRAGMENT_READERS = {
-  Identifier: identifierClassFragments,
-  MemberExpression: memberClassFragments,
-  CallExpression: (node, bindings, seen) => childFragments(node.arguments, bindings, seen),
-  ConditionalExpression: (node, bindings, seen) =>
-    childFragments([node.consequent, node.alternate], bindings, seen),
-  BinaryExpression: (node, bindings, seen) =>
-    childFragments([node.left, node.right], bindings, seen),
-  LogicalExpression: (node, bindings, seen) =>
-    childFragments([node.left, node.right], bindings, seen),
-  ArrayExpression: (node, bindings, seen) => childFragments(node.elements, bindings, seen),
-  // Conditional class maps key the class off a flag, so the key is the class.
-  ObjectExpression: (node, bindings, seen) =>
-    childFragments(
-      node.properties.filter((property) => property.type === 'Property').map(({ key }) => key),
-      bindings,
-      seen,
-    ),
-  JSXExpressionContainer: (node, bindings, seen) => classFragments(node.expression, bindings, seen),
-};
-
-function classFragments(node, bindings, seen = new Set()) {
-  if (!node) return [];
-  const literal = stringValue(node);
-  if (literal !== null) return [literal];
-  if (node.type === 'TemplateLiteral') {
-    // Both halves matter: the static chunks carry classes directly, and the
-    // interpolations can resolve to more through the binding table.
-    return [
-      ...node.quasis.map((quasi) => quasi.value.cooked ?? quasi.value.raw ?? ''),
-      ...childFragments(node.expressions, bindings, seen),
-    ];
-  }
-  const unwrapped = unwrap(node);
-  if (unwrapped !== node) return classFragments(unwrapped, bindings, seen);
-  const reader = Object.hasOwn(CLASS_FRAGMENT_READERS, node.type)
-    ? CLASS_FRAGMENT_READERS[node.type]
-    : null;
-  return reader ? reader(node, bindings, seen) : [];
-}
-
-/** Every prop through which a call site can hand Tailwind classes to a component. */
-const CLASS_ATTRIBUTES = new Set([
-  'className',
-  'rootClassName',
-  'contentClassName',
-  'bodyClassName',
-  'panelClassName',
-  'itemClassName',
-  'triggerClassName',
-]);
-
-/** Every JSX element's class attributes as `{ tag, classes, line }`. */
-function jsxClassData(source, label) {
-  const program = parseSource(source, label);
-  const lineOf = lineIndex(source);
-  const bindings = staticBindings(program);
-  const entries = [];
-  walk(program, (node) => {
-    if (node.type !== 'JSXOpeningElement') return;
-    // `className` is not the only way a call site hands classes to a
-    // component. `rootClassName="grid gap-6"` slipped past every spacing and
-    // type rule for exactly as long as this only looked at one attribute.
-    const classAttributes = node.attributes.filter(
-      (property) =>
-        property.type === 'JSXAttribute' && CLASS_ATTRIBUTES.has(nameText(property.name)),
-    );
-    for (const classAttribute of classAttributes) {
-      entries.push({
-        tag: nameText(node.name),
-        classes: classAttribute.value
-          ? classFragments(classAttribute.value, bindings).join(' ')
-          : '',
-        line: lineOf(node.start),
-      });
-    }
-  });
-  return entries;
-}
 
 export function editorialTypographyViolations(source, label, ownsWebsiteEditorialCopy) {
   if (!ownsWebsiteEditorialCopy || !label.endsWith('.tsx')) return [];
@@ -683,267 +573,6 @@ const TEXT_ROLE_BACKGROUND_MESSAGE =
 
 /** Surfaces must never be painted with a text-ink token. */
 
-/**
- * Radius is the system's scale and nothing else: `rounded-2xs` (2, chart bars,
- * rungs), `-xs` (6, badges, checkboxes), `-sm` (8, tabs in a track, menu
- * items), `-md` (12, buttons, inputs, code), `-lg` (14, app cards, menus,
- * dialogs), `-xl` (20, website cards, frames, the navbar) and `-full`. No
- * arbitrary value, not even a `var()`.
- *
- * This applies to every surface, not just product UI: the app, login and
- * marketing each used to carry their own idea of a rounded corner, so the same
- * button rendered at three different radii depending on which page it sat on.
- */
-export function rawRadiusViolations(source, label) {
-  if (label.includes('.test.') || !/\.(?:tsx|ts)$/.test(label)) return [];
-  const violations = [];
-  for (const entry of jsxClassData(source, label)) {
-    const raw = entry.classes.split(/\s+/).filter(isRawRadiusToken);
-    if (raw.length) {
-      violations.push(
-        `${label}:${entry.line}: ${raw.join(', ')} — radius must be rounded-2xs, -xs, -sm, -md, -lg, -xl or -full`,
-      );
-    }
-  }
-  return violations;
-}
-
-const RADIUS_SIDES = ['t', 'b', 'l', 'r', 's', 'e', 'tl', 'tr', 'bl', 'br', 'ss', 'se', 'es', 'ee'];
-/** The system's radius scale: the only sizes a `rounded-*` utility may name. */
-const SYSTEM_RADII = new Set(['2xs', 'xs', 'sm', 'md', 'lg', 'xl', 'full']);
-const LOWERCASE_VARIANTS = /^(?:[a-z-]+:)*$/;
-
-/**
- * `variant:rounded`, optionally `-side`, then a size outside the system's
- * scale, no size at all, or an arbitrary `[value]` (even a `var()`): a corner
- * the system does not name.
- */
-function isRawRadiusToken(token) {
-  const utilityStart = token.lastIndexOf(':') + 1;
-  if (!LOWERCASE_VARIANTS.test(token.slice(0, utilityStart))) return false;
-  const utility = token.slice(utilityStart).replace(/^!/, '');
-  if (!/^rounded(?:-|$)/.test(utility)) return false;
-  // `inherit` lets an overlay follow its frame's corner, so it names no value.
-  if (/^rounded(?:-[a-z]+)?-\[/.test(utility)) return !utility.endsWith('-[inherit]');
-  const suffixes = utility.split('-').slice(1);
-  if (suffixes.length === 2) {
-    return !(RADIUS_SIDES.includes(suffixes[0]) && SYSTEM_RADII.has(suffixes[1]));
-  }
-  if (suffixes.length === 1) return !SYSTEM_RADII.has(suffixes[0]);
-  return true;
-}
-const SIZE_UTILITIES = ['w', 'h', 'min-w', 'min-h', 'max-w', 'max-h', 'size'];
-/** A whole class token: variant prefixes, an optional `!`, then `utility-[value]`. */
-const arbitraryToken = (utility) =>
-  new RegExp(String.raw`^(?:[\w-]+:)*!?` + utility + String.raw`-\[([^\]]+)\]$`);
-const ARBITRARY_RADIUS = arbitraryToken(`rounded(?:-${oneOf(RADIUS_SIDES)})?`);
-const ARBITRARY_SIZE = arbitraryToken(`-?${oneOf(SIZE_UTILITIES)}`);
-const ARBITRARY_STROKE = arbitraryToken('stroke');
-const LITERAL_LENGTH = /(?<![\w-])(?:\d+(?:\.\d+)?|\.\d+)(?:px|rem)(?![\w-])/;
-const STYLE_LENGTH_KEYS = new Set([
-  'width',
-  'height',
-  'minWidth',
-  'minHeight',
-  'maxWidth',
-  'maxHeight',
-  'top',
-  'right',
-  'bottom',
-  'left',
-  'gap',
-  'rowGap',
-  'columnGap',
-  'fontSize',
-  'lineHeight',
-  'borderRadius',
-  'borderWidth',
-  'outlineWidth',
-  'outlineOffset',
-]);
-const STYLE_LENGTH_FAMILIES = [/^(?:inset|margin|padding)\w*$/, /^border\w*Radius$/];
-const isStyleLengthKey = (key) =>
-  STYLE_LENGTH_KEYS.has(key) || STYLE_LENGTH_FAMILIES.some((family) => family.test(key));
-const STYLE_COLOUR = /#[\da-f]{3,8}\b|\b(?:rgba?|hsla?|oklch|lab)\(/i;
-
-/** Every class-like token in a module's string and template text. */
-function classTokens(program, lineOf) {
-  return stringFragments(program).flatMap(({ text, start }) => {
-    const line = lineOf(start);
-    return text
-      .split(/\s+/)
-      .filter(Boolean)
-      .map((token) => ({ token, line }));
-  });
-}
-
-function styleObjectFindings(node, label, lineOf) {
-  const value =
-    node.value?.type === 'JSXExpressionContainer' ? unwrap(node.value.expression) : null;
-  if (value?.type !== 'ObjectExpression') return [];
-  return value.properties.flatMap((property) => {
-    if (property.type !== 'Property') return [];
-    const key = nameText(property.key) || stringValue(property.key) || '';
-    const literal = unwrap(property.value);
-    const text = stringValue(literal);
-    const raw =
-      (key === 'boxShadow' && !(text !== null && /^(?:none|var\(--[\w-]+\))$/.test(text))) ||
-      (text !== null && (STYLE_COLOUR.test(text) || LITERAL_LENGTH.test(text))) ||
-      (literal?.type === 'Literal' &&
-        typeof literal.value === 'number' &&
-        literal.value !== 0 &&
-        isStyleLengthKey(key));
-    if (!raw) return [];
-    return [
-      {
-        rule: 'tsx-style',
-        file: label,
-        line: lineOf(property.start),
-        message: `style ${key} is a literal; use a token or a class role`,
-      },
-    ];
-  });
-}
-
-/**
- * Geometry and inline-style escapes the className rules never saw.
- *
- * jsxClassData only follows className props, so `cva()` recipes and exported
- * class constants slipped through. This reads every string and template
- * fragment in the module instead: the arbitrary-value shapes it looks for
- * (`rounded-[6px]`, `w-[240px]`, `stroke-[1.5]`) do not occur in prose.
- * Findings are ratcheted by check-design-system.mjs.
- */
-export function tsxGeometryFindings(source, label) {
-  if (label.includes('.test.') || !/\.(?:tsx|ts)$/.test(label)) return [];
-  const program = parseSource(source, label);
-  const lineOf = lineIndex(source);
-  const findings = [];
-  const push = (rule, line, message) => findings.push({ rule, file: label, line, message });
-  for (const { token, line } of classTokens(program, lineOf)) {
-    const radius = ARBITRARY_RADIUS.exec(token);
-    // `inherit` lets an overlay follow its frame's corner, so it is not a literal.
-    if (radius && !/^(?:inherit|0)$/.test(radius[1])) {
-      push('tsx-radius', line, `${token} — radius must be one of the system's rounded-* sizes`);
-    }
-    const size = ARBITRARY_SIZE.exec(token);
-    if (size && LITERAL_LENGTH.test(size[1]) && !label.startsWith('components/ui/')) {
-      push(
-        'tsx-size',
-        line,
-        `${token} — literal dimensions belong to a components/ui owner or a layout token`,
-      );
-    }
-    if (ARBITRARY_STROKE.test(token)) {
-      push('tsx-stroke', line, `${token} — icon stroke weight belongs to the shared .lucide rule`);
-    }
-  }
-  const lucide = new Set();
-  walk(program, (node) => {
-    if (node.type === 'ImportDeclaration' && node.source?.value === 'lucide-react') {
-      for (const specifier of node.specifiers ?? []) lucide.add(specifier.local?.name);
-    }
-  });
-  walk(program, (node) => {
-    if (node.type !== 'JSXOpeningElement') return;
-    for (const attribute of node.attributes) {
-      if (attribute.type !== 'JSXAttribute') continue;
-      const name = nameText(attribute.name);
-      if (name === 'style') findings.push(...styleObjectFindings(attribute, label, lineOf));
-      if (name === 'strokeWidth' && lucide.has(nameText(node.name))) {
-        push('tsx-stroke', lineOf(attribute.start), `${nameText(node.name)} strokeWidth override`);
-      }
-    }
-  });
-  return findings;
-}
-
-/*
- * Atomic layering (app geometry decision 8).
- * Geometry lives in `components/ui` (atoms, organisms, templates) and the
- * shell in `components/layout`; a feature folder composes them and chooses
- * none of its own. The website (`components/marketing`) keeps its own ladder,
- * and so do the auth and onboarding flows for breakpoints.
- */
-const LAYERING_OWNERS = new Set(['ui', 'layout', 'marketing']);
-const FLOW_FOLDERS = new Set(['auth', 'onboarding']);
-const LAYER_SPACING = /^-?(?:p[xytrblse]?|m[xytrblse]?|gap(?:-[xy])?|space-[xy])-(?:\d|px\b|\[|\()/;
-const LAYER_SIZE = /^-?(?:h|w|size)-(?:\d|px\b|\[|\()/;
-const LAYER_RADIUS = /^rounded(?:-|$)/;
-const LAYER_BREAKPOINT = /^(?:max-)?(?:sm|md|lg|xl|2xl)$|^(?:min|max)-\[/;
-const LAYER_GEOMETRY_PROPS = new Set(['size', 'padding']);
-
-/** `variant:variant:utility` split on the colons outside arbitrary brackets. */
-function splitVariants(token) {
-  const parts = [];
-  let depth = 0;
-  let start = 0;
-  for (let index = 0; index < token.length; index += 1) {
-    const character = token[index];
-    if (character === '[' || character === '(') depth += 1;
-    else if (character === ']' || character === ')') depth -= 1;
-    else if (character === ':' && depth === 0) {
-      parts.push(token.slice(start, index));
-      start = index + 1;
-    }
-  }
-  return { variants: parts, utility: token.slice(start).replace(/^!/, '') };
-}
-
-/** The components/ folder a non-test component file belongs to, or null. */
-function componentFolder(label) {
-  const match = /^components\/([^/]+)\//.exec(label);
-  if (!match || /\.(?:test|spec)\.tsx?$/.test(label) || !/\.tsx?$/.test(label)) return null;
-  return match[1];
-}
-
-/**
- * Geometry a feature folder chose for itself: spacing, sized boxes and radii
- * as utilities (`layer-geometry`), and `size=`/`padding=` props
- * (`layer-size-prop`); and, in every product folder including `ui/` and
- * `layout/`, a breakpoint other than `desktop:` and the shell's `shell:`
- * (`layer-breakpoint`).
- * Every one is a violation: the layering debt was burned to zero (app
- * geometry PR 7), so none is ratcheted or baselined and none can regrow.
- */
-export function featureLayeringViolations(source, label) {
-  const folder = componentFolder(label);
-  if (!folder || folder === 'marketing') return [];
-  const feature = !LAYERING_OWNERS.has(folder);
-  const product = !FLOW_FOLDERS.has(folder);
-  if (!feature && !product) return [];
-  const program = parseSource(source, label);
-  const lineOf = lineIndex(source);
-  const findings = [];
-  const push = (rule, line, message) => findings.push(`${label}:${line}: ${message} [${rule}]`);
-  for (const { token, line } of classTokens(program, lineOf)) {
-    const { variants, utility } = splitVariants(token);
-    if (
-      feature &&
-      (LAYER_SPACING.test(utility) || LAYER_SIZE.test(utility) || LAYER_RADIUS.test(utility))
-    ) {
-      push('layer-geometry', line, `${token} — geometry belongs to a components/ui organism`);
-    }
-    if (product && variants.some((variant) => LAYER_BREAKPOINT.test(variant))) {
-      push(
-        'layer-breakpoint',
-        line,
-        `${token} — the product's breakpoints are desktop: and shell:`,
-      );
-    }
-  }
-  if (!feature) return findings;
-  walk(program, (node) => {
-    if (node.type !== 'JSXAttribute' || !LAYER_GEOMETRY_PROPS.has(nameText(node.name))) return;
-    push(
-      'layer-size-prop',
-      lineOf(node.start),
-      `${nameText(node.name)}= — atoms have one form; a feature never picks a size`,
-    );
-  });
-  return findings;
-}
-
 export function textRoleBackgroundViolations(source, label) {
   if (!/\.(?:tsx|ts|mjs|js)$/.test(label)) return [];
   const program = parseSource(source, label);
@@ -959,10 +588,6 @@ export function textRoleBackgroundViolations(source, label) {
     }
   });
   return violations;
-}
-
-export function escapeRegExp(value) {
-  return value.replace(/[.*+?^$(){}|[\]\\]/g, String.raw`\$&`);
 }
 
 /**

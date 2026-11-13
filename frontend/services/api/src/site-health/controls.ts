@@ -14,7 +14,8 @@ import { parseUuid } from '../http/uuid.ts';
 import { settleCrawlFetches } from './fetch-budget.ts';
 import { crawlSetting } from './planner-policy.ts';
 import { requireProject } from '../projects/access.ts';
-import { crawlProjection, isTerminal } from './reads/crawl.ts';
+import { isTerminal } from './reads/crawl.ts';
+import { crawlProjection } from './reads/crawl-projection.ts';
 import { recordCrawlEvent } from './site-task.ts';
 import { persistTerminalCounters } from './terminal-counters.ts';
 

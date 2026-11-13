@@ -29,7 +29,7 @@ import { readChat, listChats, listRevisions, progress } from '../src/agent/reads
 import { appendMessage, getChat, recoveryReply } from '../src/agent/messages.ts';
 import { ToolRegistry } from '../src/agent/tools.ts';
 import { manifestSchema, suppliedManifest } from '../src/agent/context.ts';
-import { bounded } from '../src/agent/runtime.ts';
+import { bounded } from '../src/agent/turn-ending.ts';
 import { scrubRecordRefs } from '../src/agent/sources.ts';
 import { parseWorkflows } from '../src/agent/workflows.ts';
 import { fingerprint } from '../src/crypto-text.ts';

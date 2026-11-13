@@ -16,7 +16,7 @@ import { catalog, capabilityValue } from './catalog.ts';
 import { credentialModeOf } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
 import { cancellationHeldUntil } from './cancellation.ts';
-import { scheduledSchema } from './settlement.ts';
+import { scheduledSchema } from './settlement-terms.ts';
 import { occupancyCounts } from '../entitlements/occupancy.ts';
 import { manualRunUsage } from '../audits/admission.ts';
 

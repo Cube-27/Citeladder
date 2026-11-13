@@ -108,7 +108,6 @@
       "services/api/src/routes/define.ts::scalarSchema": 13,
       "services/api/src/routes/search-intelligence-contracts.ts::<anonymous>#3": 14,
       "services/api/src/search-intelligence/acquisition-state.ts::prepare::<anonymous>": 14,
-      "services/api/src/search-intelligence/acquisition-state.ts::publish::<anonymous>": 18,
       "services/api/src/search-intelligence/normalization.ts::normalizeResponse": 14,
       "services/api/src/search-intelligence/requests.ts::datasetPayload": 17,
       "services/api/src/search-surfaces/parsing.ts::parseScraper": 19,
