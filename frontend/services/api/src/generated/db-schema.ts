@@ -1714,6 +1714,7 @@ export interface ExecutionCostProjections {
   cached_input_tokens: number | null;
   created_at: Timestamp;
   formula_version: string;
+  funded_budget_period_start: Timestamp | null;
   id: string;
   logical_engine: string;
   output_cost_microusd: Int8 | null;

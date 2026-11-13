@@ -139,17 +139,18 @@ export async function admitAudit(
   const month = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth(), 1));
   const end = new Date(Date.UTC(at.getUTCFullYear(), at.getUTCMonth() + 1, 1));
   // Repricing appends a projection per pricing version: each execution counts its latest once.
+  // The cost rows alone decide, as internal_costs does, so a deleted project's spend still counts;
+  // the workspace's one account funds every platform-funded audit in it.
   const latest = db
     .selectFrom('execution_cost_projections as p')
-    .innerJoin('audits as a', 'a.id', 'p.audit_id')
     .select(
       sql<string>`coalesce(p.provider_reported_cost_microusd, p.projected_total_cost_microusd)`.as(
         'cost',
       ),
     )
-    .where('a.funding_account_id', '=', account.id)
-    .where('a.funded_budget_period_start', '>=', month)
-    .where('a.funded_budget_period_start', '<', end)
+    .where('p.workspace_id', '=', workspaceId)
+    .where('p.funded_budget_period_start', '>=', month)
+    .where('p.funded_budget_period_start', '<', end)
     .distinctOn('p.raw_response_artifact_id')
     .orderBy('p.raw_response_artifact_id')
     .orderBy('p.created_at', 'desc')

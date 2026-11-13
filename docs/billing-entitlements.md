@@ -287,7 +287,9 @@ are not affected (B66).
 DataForSEO surfaces included, on the platform's keys; the request never chooses
 the mode. Its monthly platform budget admits a launch while the month's recorded
 spend is below the ceiling (`BILLING_FUNDED_MONTHLY_BUDGET_MINOR`); recorded
-spend counts each execution's latest cost projection once, as `internal_costs` does.
+spend counts each execution's latest cost projection once, as `internal_costs` does,
+from the cost rows alone: each carries its funded audit's budget month, so a deleted
+project's spend still counts.
 Keyword Research on a managed plan researches on the platform's DataForSEO
 account and spends AI credits: the review prices the estimate in credits (the
 DataForSEO cost converted exactly as token cost is), confirmation holds it in the

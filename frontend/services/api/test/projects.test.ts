@@ -509,6 +509,13 @@ describe('project owner', () => {
     const account = await billingAccount(db, t.workspaceId);
     await grant(db, account, { key: 'project_deletion', value: 1 });
     const audit = await retained.audit(t);
+    // Platform-funded, so its cost still counts toward that budget month (B20).
+    const month = new Date('2030-04-01T00:00:00Z');
+    await db
+      .updateTable('audits')
+      .set({ funding_account_id: account, funded_budget_period_start: month })
+      .where('id', '=', audit)
+      .execute();
     const { taskId } = await retained.execution(t, { auditId: audit });
     const artifact = await db
       .selectFrom('raw_response_artifacts')
@@ -522,10 +529,17 @@ describe('project owner', () => {
     expect(
       await db
         .selectFrom('execution_cost_projections')
-        .select(['audit_id', 'task_id', 'raw_response_artifact_id'])
+        .select(['audit_id', 'task_id', 'raw_response_artifact_id', 'funded_budget_period_start'])
         .where('id', '=', projection!.id)
         .execute(),
-    ).toEqual([{ audit_id: audit, task_id: taskId, raw_response_artifact_id: artifact.id }]);
+    ).toEqual([
+      {
+        audit_id: audit,
+        task_id: taskId,
+        raw_response_artifact_id: artifact.id,
+        funded_budget_period_start: month,
+      },
+    ]);
     expect(
       await db
         .selectFrom('internal_costs')
