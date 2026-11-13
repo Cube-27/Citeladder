@@ -12,16 +12,18 @@ import {
   productUiSourceViolations,
   standalonePlaceholderViolations,
   textContrastViolations,
-  rawRadiusViolations,
   motionRoleViolations,
   focusRoleViolations,
   shadowRoleViolations,
   radiusRoleAdvisories,
   densityRoleViolations,
   textRoleBackgroundViolations,
-  tsxGeometryFindings,
-  featureLayeringViolations,
 } from './design-system-source-checks.mjs';
+import {
+  featureLayeringViolations,
+  rawRadiusViolations,
+  tsxGeometryFindings,
+} from './design-system-geometry-checks.mjs';
 import {
   landingThemeViolations,
   productContractViolations,
