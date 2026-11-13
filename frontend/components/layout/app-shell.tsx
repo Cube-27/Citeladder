@@ -42,6 +42,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const shell = useMemo(
     () => ({
       navDrawer: { open: drawerOpen, onOpen: () => setDrawerLocation(location.key) },
+      searchTrigger: <CommandPaletteTrigger />,
       agentTrigger: <AgentPanelTrigger />,
     }),
     [drawerOpen, location.key],
@@ -75,8 +76,8 @@ function AppSidebar() {
       controls={
         <>
           <ModeSwitch />
-          {/* ⌘K opens the palette at every width; the field shows beside labels only. */}
-          <CommandPaletteTrigger className="labelled:flex hidden" />
+          {/* The search is in the top bar from 900px (D62); below it, in the drawer. */}
+          <CommandPaletteTrigger className="hidden [[data-nav-drawer]_&]:flex" />
         </>
       }
       nav={<SidebarNav />}

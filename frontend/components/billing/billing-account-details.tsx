@@ -36,7 +36,8 @@ export function SubscriptionDetail({
   subscription: BillingEntitlement['subscription'] | null;
   periodEnd: string | null | undefined;
 }>) {
-  if (!subscription) return <p className={textRole('caption')}>No active subscription</p>;
+  // The plan's name already reads "No active plan".
+  if (!subscription) return null;
   return (
     <p className={textRole('caption')}>
       Subscription: {subscription.status.replaceAll('_', ' ')}
