@@ -119,7 +119,7 @@ export async function admitLinkRun(
       .select('id')
       .where('id', '=', scope.projectId)
       .where('workspace_id', '=', scope.workspaceId)
-      .forUpdate()
+      .forNoKeyUpdate()
       .executeTakeFirstOrThrow();
     const previous = await trx
       .selectFrom('site_internal_link_runs')

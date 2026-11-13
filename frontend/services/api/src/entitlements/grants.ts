@@ -2,12 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
-import { advisoryXactLock } from '../db/advisory-lock.ts';
 import { conflict } from '../errors.ts';
 import { getLogger } from '../logging.ts';
+import { capacityLock } from './ledger.ts';
 
 export async function lockAccount(db: Database, workspaceId: string, accountId: string) {
-  await advisoryXactLock(db, policy.entitlements.capacity_lock, accountId);
+  await capacityLock(db, accountId);
   return db
     .selectFrom('billing_accounts')
     .selectAll()

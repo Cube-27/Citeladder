@@ -66,7 +66,7 @@ async function lockControlScope(db: Database, workspaceId: string, projectId: st
     .select('id')
     .where('workspace_id', '=', workspaceId)
     .where('id', '=', projectId)
-    .forUpdate()
+    .forNoKeyUpdate()
     .executeTakeFirst();
   if (!project) throw notFound('Project');
   const held = await holdRuntime(db, workspaceId);

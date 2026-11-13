@@ -369,7 +369,7 @@ export class AgentOutputs {
         .select('id')
         .where('workspace_id', '=', scope.workspaceId)
         .where('id', '=', scope.projectId)
-        .forUpdate()
+        .forNoKeyUpdate()
         .executeTakeFirstOrThrow();
       const last = await trx
         .selectFrom('agent_instruction_revisions')

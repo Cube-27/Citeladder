@@ -282,13 +282,12 @@ export function exclusiveDrain(
   const now = options.now ?? (() => performance.now());
   return async (drain) => {
     const lock = new pg.Client(poolOptions(config));
-    // A lost session releases the lock; leases still arbitrate claims, so log
-    // instead of letting an unhandled 'error' event crash claimed work.
-    lock.on('error', (error) =>
-      getLogger('workers.runner').exception('runner_drain_lock_lost', error),
-    );
-    await lock.connect();
+    const logger = getLogger('workers.runner');
+    // A lost session frees the lock and leases arbitrate claims: log, never fail the drain.
+    const lost = (event: string) => (error: unknown) => logger.exception(event, error);
+    lock.on('error', lost('runner_drain_lock_lost'));
     try {
+      await lock.connect();
       const until = Math.min(now() + waitMs, options.deadline);
       for (;;) {
         const { rows } = await lock.query<{ locked: boolean }>( // NOSONAR -- Each attempt waits for the previous one.
@@ -297,21 +296,21 @@ export function exclusiveDrain(
         );
         if (rows[0]?.locked) break;
         if (options.signal.aborted || now() >= until) {
-          getLogger('workers.runner').info('runner_drain_active_elsewhere');
+          logger.info('runner_drain_active_elsewhere');
           return 0;
         }
-        const pause = sleep(config.execution.drainLockPollMs, undefined, {
-          signal: options.signal,
-        });
+        const pause = sleep(config.execution.drainLockPollMs, undefined, options);
         await pause.catch(() => undefined); // NOSONAR -- Polling interval between attempts.
       }
       try {
         return await drain();
       } finally {
-        await lock.query('select pg_advisory_unlock(hashtextextended($1, 0))', [DRAIN_LOCK]);
+        await lock
+          .query('select pg_advisory_unlock(hashtextextended($1, 0))', [DRAIN_LOCK])
+          .catch(lost('runner_drain_unlock_failed'));
       }
     } finally {
-      await lock.end();
+      await lock.end().catch(() => undefined);
     }
   };
 }

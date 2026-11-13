@@ -56,6 +56,17 @@ export async function createAuditsInTransaction(
   at: Date,
 ): Promise<[string, ...string[]]> {
   const input = auditInput.parse(request);
+  // The project comes before the account capacity lock (the lock DAG). Each
+  // audit insert takes this key-share lock through its foreign key; taken
+  // there, after the capacity lock, it would wait on a project deletion that
+  // waits on the capacity lock this launch holds.
+  await trx
+    .selectFrom('projects')
+    .select('id')
+    .where('workspace_id', '=', workspaceId)
+    .where('id', '=', input.project_id)
+    .forKeyShare()
+    .execute();
   const [first, ...rest] = await resolveMarkets(
     trx,
     { workspaceId, projectId: input.project_id },

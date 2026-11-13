@@ -156,8 +156,13 @@ export async function prepareTask(ctx: SiteTaskContext, claimed: SiteTask) {
   return scope;
 }
 
-export function markRunning(ctx: SiteTaskContext, task: SiteTask) {
-  return ctx.queue.markRunning(task.id, ctx.owner);
+/**
+ * Start the claimed attempt. A worker's owner is fixed for its lifetime, so the
+ * attempt tells a stale slot from the same worker's re-claim of the task after
+ * recovery charged the expired lease.
+ */
+export function markRunning(ctx: SiteTaskContext, claimed: SiteTask) {
+  return ctx.queue.markRunning(claimed.id, ctx.owner, claimed.attempt_count);
 }
 
 /** Classify a returned HTTP status: a 4xx is terminal except 429; every 5xx is retryable. */

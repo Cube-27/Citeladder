@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
-import { advisoryXactLock, subjectXactLock } from '../db/advisory-lock.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
+import { capacityLock } from '../entitlements/ledger.ts';
 import { spendBudget } from '../abuse/usage.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
@@ -126,7 +127,7 @@ export async function admitAudit(
     return null;
   }
   // The account lock follows the workspace lock and serializes rate and budget admission.
-  await advisoryXactLock(db, policy.entitlements.capacity_lock, account.id);
+  await capacityLock(db, account.id);
   const state = await accountState(db, workspaceId, account.id, at);
   if (state.error) throw unresolved(workspaceId, account.id);
   if (trigger === 'manual' && state.values.has('manual_runs_per_day'))

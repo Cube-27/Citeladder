@@ -58,11 +58,7 @@ export const siteHealthCrawlRoutes = [
         taskScope: { workspaceId, crawlId: path.crawl_id },
         settings: {
           ...settings,
-          concurrency: Math.min(
-            settings.concurrency,
-            config.execution.poolSize,
-            interactive.concurrency,
-          ),
+          concurrency: Math.min(settings.concurrency, interactive.concurrency),
         },
         // Include robots.txt and redirect probes in the request's acquisition deadline.
         fetcher: new SitePageFetcher(
