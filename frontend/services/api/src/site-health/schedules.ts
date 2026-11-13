@@ -12,13 +12,12 @@ import {
   type CrawlScheduleCadence,
 } from '@citeladder/contracts/site-health';
 import type { CrawlScheduleUpdateRequest } from '@citeladder/contracts/site-health-requests';
+import { DAY_MS } from '../calendar-days.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import type { CrawlSchedules } from '../generated/db-schema.ts';
 
 export type CrawlScheduleRow = Selectable<CrawlSchedules>;
-
-const DAY_MS = 86_400_000;
 
 /** `anchor` plus `count` cadence steps; a month step keeps the day, clamped to the month's end. */
 function stepFrom(cadence: CrawlScheduleCadence, anchor: Date, count: number) {

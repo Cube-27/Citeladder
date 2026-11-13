@@ -25,6 +25,7 @@ import type {
 import { sql, type RawBuilder } from 'kysely';
 import { z } from 'zod';
 
+import { DAY_MS } from '../calendar-days.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
@@ -60,7 +61,6 @@ const CURSOR_SCOPE = 'commerce.products';
 const NOTHING = sql``;
 const OWNED_PRODUCT = sql<string>`p.id`;
 const COMPETITOR_TARGET = sql<string>`c.target_id`;
-const DAY_MS = 86_400_000;
 
 /**
  * Every sort is ascending on one float key, then the lowercased name, then the

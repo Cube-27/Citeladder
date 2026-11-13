@@ -1,5 +1,6 @@
 /** Calendar-day arithmetic over `YYYY-MM-DD` text, in UTC unless a time zone is named. */
-const DAY_MS = 86_400_000;
+/** Milliseconds in a UTC day. */
+export const DAY_MS = 86_400_000;
 
 /** Midnight UTC on `day`. */
 export const dayStart = (day: string) => new Date(`${day}T00:00:00Z`);
