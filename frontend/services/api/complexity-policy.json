@@ -160,7 +160,7 @@
     "modules": {
       "services/api/scripts/eval-agent.ts": 562,
       "services/api/src/agent/builtin-tools.ts": 513,
-      "services/api/src/agent/runtime.ts": 907,
+      "services/api/src/agent/runtime.ts": 805,
       "services/api/src/agent/store.ts": 603,
       "services/api/src/audits/freeze.ts": 584,
       "services/api/src/billing/recovery.ts": 623,

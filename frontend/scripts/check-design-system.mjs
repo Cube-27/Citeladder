@@ -8,8 +8,6 @@ import {
   cardHeaderLayoutViolations,
   nestedCardViolations,
   directRadixImportViolations,
-  productContractViolations,
-  landingThemeViolations,
   productControlViolations,
   productUiSourceViolations,
   standalonePlaceholderViolations,
@@ -20,12 +18,16 @@ import {
   shadowRoleViolations,
   radiusRoleAdvisories,
   densityRoleViolations,
-  styleAssertionViolations,
   textRoleBackgroundViolations,
-  websiteContractViolations,
   tsxGeometryFindings,
   featureLayeringViolations,
 } from './design-system-source-checks.mjs';
+import {
+  landingThemeViolations,
+  productContractViolations,
+  websiteContractViolations,
+} from './design-system-stylesheet-checks.mjs';
+import { styleAssertionViolations } from './design-system-test-checks.mjs';
 import { tokenAuditViolations } from './audit-design-tokens.mjs';
 import { tokenContractViolations } from './design-system-contract.mjs';
 import { brandTokenViolations, svgColorScan } from './design-system-asset-checks.mjs';
