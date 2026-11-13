@@ -1,7 +1,7 @@
 ---
 name: playwright-cli
-description: Automate browser interactions, test web pages and work with Playwright tests.
-allowed-tools: Bash(pnpm:*) Bash(playwright-cli:*) Bash(npx:*) Bash(npm:*)
+description: Drive a real browser through the repository-pinned Playwright CLI (open pages, snapshot, click and fill, inspect console, network and storage, record traces and video) and debug Playwright tests. Use when the owner asks for a design task, browser interaction or browser testing, or when debugging a Playwright test. Not for routine visual verification of a change; tests and lint cover that.
+allowed-tools: Bash(pnpm:*)
 ---
 
 # Browser Automation with playwright-cli
@@ -45,9 +45,9 @@ pnpm run playwright:cli -- click e15
 pnpm run playwright:cli -- type "page.click"
 pnpm run playwright:cli -- press Enter
 # take a screenshot (rarely used, as snapshot is more common)
-playwright-cli screenshot
+pnpm run playwright:cli -- screenshot
 # close the browser
-playwright-cli close
+pnpm run playwright:cli -- close
 ```
 
 ## Commands
@@ -219,7 +219,7 @@ playwright-cli highlight --hide
 The global `--raw` option strips page status, generated code, and snapshot sections from the output, returning only the result value. Use it to pipe command output into other tools. Commands that don't produce output return nothing.
 
 ```bash
-playwright-cli --raw eval "JSON.stringify(performance.timing)" | jq '.loadEventEnd - .navigationStart'
+playwright-cli --raw eval "performance.timing.loadEventEnd - performance.timing.navigationStart"
 playwright-cli --raw eval "JSON.stringify([...document.querySelectorAll('a')].map(a => a.href))" > links.json
 playwright-cli --raw snapshot > before.yml
 playwright-cli click e5
