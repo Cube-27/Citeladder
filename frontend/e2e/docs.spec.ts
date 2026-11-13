@@ -40,38 +40,45 @@ test('guides and local anchors resolve, and missing pages return 404', async ({ 
     .getByRole('navigation', { name: 'Documentation', exact: true })
     .getByRole('link')
     .evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).pathname));
+  // One visit per route records its rendered ids, so anchors are checked
+  // against them instead of re-navigating to every hash link.
+  const ids = new Map<string, Set<string>>();
+  const links = new Set<string>();
   for (const route of routes) {
     const response = await page.goto(route);
     expect(response?.status(), route).toBe(200);
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
-    const links = await page
+    ids.set(
+      route,
+      new Set(await page.locator('[id]').evaluateAll((nodes) => nodes.map((node) => node.id))),
+    );
+    const hrefs = await page
       .locator('main a, aside a')
       .evaluateAll((anchors) =>
         anchors
           .map((anchor) => (anchor as HTMLAnchorElement).href)
           .filter((href) => new URL(href).origin === location.origin),
       );
-    for (const link of links) {
-      const url = new URL(link);
-      if (url.pathname.startsWith('/templates/')) {
-        const asset = await page.request.get(link);
-        expect(asset.status(), link).toBe(200);
-        expect((await asset.body()).byteLength, link).toBeGreaterThan(0);
-        continue;
-      }
-      expect(routes, `Unregistered docs link ${link}`).toContain(url.pathname);
-      if (url.hash) {
-        await page.goto(link);
-        expect(
-          await page.evaluate(
-            (id) => document.getElementById(id) !== null,
-            decodeURIComponent(url.hash.slice(1)),
-          ),
-          link,
-        ).toBe(true);
-      }
-    }
+    for (const href of hrefs) links.add(href);
   }
+  const assets: string[] = [];
+  for (const link of links) {
+    const url = new URL(link);
+    if (url.pathname.startsWith('/templates/')) {
+      assets.push(link);
+      continue;
+    }
+    expect(routes, `Unregistered docs link ${link}`).toContain(url.pathname);
+    if (url.hash)
+      expect(ids.get(url.pathname)?.has(decodeURIComponent(url.hash.slice(1))), link).toBe(true);
+  }
+  await Promise.all(
+    assets.map(async (link) => {
+      const asset = await page.request.get(link);
+      expect(asset.status(), link).toBe(200);
+      expect((await asset.body()).byteLength, link).toBeGreaterThan(0);
+    }),
+  );
   const missing = await page.goto('/this-guide-does-not-exist/');
   expect(missing?.status()).toBe(404);
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
