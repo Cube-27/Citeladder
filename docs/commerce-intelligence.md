@@ -213,15 +213,8 @@ returns, from the same scoped slots and bounded by `products.detail` in
 - for an owned product, the Actions not done or dismissed whose live commerce
   Opportunities target it.
 
-The page shows the header (brand, holder, image, description, link), the KPIs
-(visibility, win rate, position, appearances, mentioned and catalog price,
-with the table's missing states), the sections above (an answer opens the
-shared execution evidence drawer), and the window, engine and prompt-set
-filters. An owned product adds Setup: its Actions (each with Work with the
-agent, and Work with the agent on the product's page), competitor discovery
-and review, and hero-product prompts. Commerce Actions come from measured
-answers, so the page has no Generate action of its own. A category's page
-holds its competitor discovery and shopping-prompt matrix.
+Commerce Actions come from measured answers, so the page has no Generate
+action of its own.
 
 ## Shopping overview
 
@@ -323,10 +316,6 @@ or budget spend; the same key with a different request is a 409
 each call the model, but only the first to commit stores prompts; the other
 replays them under the project lock. A refusal shows the server's reason, not
 a generic retry message.
-
-The category's prompts section opens the standalone matrix sheet
-(`category-matrix-sheet.tsx`), which generates the matrix, shows coverage
-(contexts × stages filled, branded count) and approves prompts one at a time.
 
 For one target, the prompts section opens the shared audit launcher over only
 its approved prompt IDs and explains why launch is disabled until one is
@@ -475,9 +464,8 @@ declared Action freezes each finding's rule as a `product_metric` check that
 reads the same metric over the answers completed after go-live
 ([Opportunities](opportunities.md)).
 
-No route reads one target's snapshot any more (`GET ai-shelf` and the
-target detail were retired with the product detail page). The MCP and Agent
-tool `read_ai_shelf` returns the Products read's per-product metrics (with
+No route reads one target's snapshot. The MCP and Agent tool `read_ai_shelf`
+returns the Products read's per-product metrics (with
 the categories and their counts), or, given a `holder_id`, the product detail
 read.
 
@@ -498,18 +486,10 @@ persisted Site Health analyses through analytics tasks the Site Health
 enqueues for catalog page kinds. Project and target IDs are re-authorized; an
 object ID alone is never a catalog boundary.
 
-[Audit context](../frontend/services/api/src/commerce/audit-context.ts) freezes
-target identity and the catalog revision before shared audit execution;
-[catalog revisions](../frontend/services/api/src/commerce/catalog-revisions.ts)
-own revision recording and [answer matching](../frontend/services/api/src/commerce/answer-matching.ts)
-the backfill;
-[shelf parsing](../frontend/services/api/src/commerce/shelf-parsing.ts) owns
-matching and resolution, and [shelf metrics](../frontend/services/api/src/commerce/shelf-metrics.ts)
-the formulas. No browser aggregate or current-catalog lookup may reinterpret an
-old answer. Queue leases, bounded retries and cancellation remain with the
-shared analytics and audit workers. Native tests cover projection, routes,
-shelf parsing and persistence, discovery and buyer prompts against PostgreSQL
-with deterministic provider doubles.
+Audit context freezes target identity and the catalog revision before shared
+audit execution. No browser aggregate or current-catalog lookup may
+reinterpret an old answer. Queue leases, bounded retries and cancellation
+remain with the shared analytics and audit workers.
 
 Manual migration/crawl/CSV, reference-evaluation, Tavily and audit/schedule
 gates remain unverified; applicable acceptance remains in

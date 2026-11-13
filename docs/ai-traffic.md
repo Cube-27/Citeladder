@@ -10,12 +10,10 @@ observations, projections, tasks and `analytics/ai-referrals.ts`. The existing
 [Site Health](site-health.md) owns robots acquisition and crawlability; a request observation does not
 establish that a crawler is allowed by robots policy.
 
-The screen has Overview, Crawlers, Referrals, Pages and Activity tabs. Overview shows
-recognized automated **requests**, GA4 **sessions**, and citations of the
-business's own pages **observed in CiteLadder's tracked answers** as separate
-signals. Activity is a sanitized, paged view within raw retention. One `range`
-URL parameter carries the selected preset across tabs; Referrals adds its
-"latest synced window" and keeps granularity in the URL. Contract tokens (page
+Overview shows recognized automated **requests**, GA4 **sessions**, and
+citations of the business's own pages **observed in CiteLadder's tracked
+answers** as separate signals. Activity is a sanitized, paged view within raw
+retention. Contract tokens (page
 leg states, coverage, reasons, bots, AI sources, GA4 quality flags) reach the
 reader only as labels from `lib/ai-traffic/vocabulary.ts`; record IDs are never
 shown.
@@ -51,20 +49,10 @@ requests; a cursor whose window does not span the request's preset (or equal
 its explicit dates) is refused.
 
 Crawl collection is **available** when ingestion is enabled for the workspace or
-the project already has a source. When it is not, the screen opens on Referrals,
-the Crawlers and Activity tabs, connect buttons and the verification control are
-absent, and the Overview crawl card says collection is not available yet. A link
-to a crawl-only tab lands on Referrals. Referrals has Overview, Sources and Landing pages sub-tabs,
-including property-wide session/engagement/key-event comparisons and purchase
-revenue in the captured property currency. Key events use the customer's GA4
-definition; no key-events/session rate is calculated.
-
-Crawl setup checks ingestion availability inside the dialog before showing
-collection controls. Revoking a source asks for confirmation naming its host. Disabled ingestion explains why source creation and uploads
-are unavailable. Empty Crawlers and Activity views also expose crawl connections.
-File backfill keeps its upload-source workflow: create a source first, then select
-the file in the same dialog. Overview omits an empty Observed patterns card when
-there is no coverage notice to disclose.
+the project already has a source. When it is not, the screen hides the
+crawl-only views and controls and says collection is not available yet.
+Referral revenue is in the captured property currency. Key events use the
+customer's GA4 definition; no key-events/session rate is calculated.
 
 Pages separately aggregates requests, AI-referral sessions/key events, tracked
 citations and current Site Health findings to `url_hash` before joining. Counts
@@ -129,7 +117,7 @@ The receipt and upload acknowledgement become visible only after commit.
 
 Sources, uploads, receipts, requests, rollups, coverage and state have
 workspace/project scope and composite parent FKs. IP-range snapshots are
-append-only platform reference data. Schema authority is the SQL baseline; Kysely types are generated from a disposable database.
+append-only platform reference data.
 
 Owner/Admin can create, rotate or revoke through
 `/api/v1/projects/{project_id}/crawl-logs/sources`. Writes lock current workspace
@@ -296,9 +284,7 @@ IP-range provider refresh is gated by ingestion enablement.
 
 ## Read APIs, MCP and configuration
 
-The `ai-traffic` family replaces the old browser API family: overview, crawlers,
-referrals, pages, page detail, insights, activity, coverage, and crawler/activity/Pages
-CSV exports. Shared
+The `ai-traffic` route family serves the screen's reads and CSV exports. Shared
 [`ai-traffic.ts` contracts](../frontend/packages/contracts/src/ai-traffic.ts)
 own the wire shapes. All reads render persisted data without crawling,
 refreshing or calling providers. Cursors bind workspace, project, view, filters

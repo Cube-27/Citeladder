@@ -20,11 +20,9 @@ created it. `role` is always the live membership role read for the request.
 key, the key holds the scope; a command with no public scope is closed to keys.
 
 The commands in [`commands/`](../frontend/services/api/src/commands/) cover the
-publicly exposed writes: prompts, topics, generation and candidate review,
-competitors, audits, schedules and actions. Each authorizes its Actor and calls
-the owner; request rules that used to live in routes (the import budget and
-byte cap, the generation and declaration Idempotency-Key bounds, the audit
-create/run sequence) moved into them. Browser routes build the Actor from the
+publicly exposed writes. Each authorizes its Actor, owns the write's request
+rules (budgets, byte caps, Idempotency-Key bounds, the audit create/run
+sequence) and calls the owner. Browser routes build the Actor from the
 session with `actorOf(c)`; session, CSRF and workspace middleware are unchanged.
 The other browser writes stay on the middleware path.
 
@@ -106,22 +104,9 @@ before recording an outcome) answers the same. Records are kept
 
 ## Operations
 
-Reads: projects, their measurement markets, the business map, topics, prompt sets, prompts with their
-latest measurement (`measured` with mention and citation rates that may be
-`null`, `not_measured`, or `unavailable` for brand diagnostics), generation runs and candidates, competitors and
-suggestions, audits (paged), an audit, an estimate, schedules, visibility
-overview, trends, prompts, sources, fanout, perception, ads and the By market
-comparison (each visibility read takes `market`, a market id; omitted is the
-default market), actions,
-Site Health's latest snapshot, crawl pages and issues, AI Traffic overview,
-pages and crawl-log coverage, Performance totals and dimension tables, and
-Keyword Research runs and dataset rows.
-
-Writes: topics and prompts (create 1–50 atomically, edit, status and enabled,
-delete, import), prompt generation and candidate review (`prompts:write`);
-competitor add, edit, remove and suggestion accept (`competitors:write`);
-audit launch and cancel (`audits:run`); schedules (`schedules:write`); action
-status and implementation declaration (`actions:write`).
+The [OpenAPI document](#openapi-document) lists the operations and the scope
+each write needs. Each visibility read takes `market`, a market id; omitted is
+the default market.
 
 An audit launch creates and queues one audit per `market_ids` entry (default
 the project's default market) in one call and returns them as a list sharing a

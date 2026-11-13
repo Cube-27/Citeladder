@@ -106,20 +106,6 @@ Docs Worker (static, no origin)                            │ starts runner aft
   database on a timer, and never publishes the Workers. The Workers deploy
   through their own protected workflows.
 
-## Implemented owners
-
-- `infra/gcp/*.tf`, `infra/gcp/postgres-vm.sh`, `infra/gcp/postgres/Dockerfile`:
-  the environment ([README](../../infra/gcp/README.md)).
-- `infra/gcp/bootstrap.ps1`: APIs, state bucket, deployer and WIF trust.
-- `.github/workflows/gcp-deploy.yml`: green `ci.yml` and `compose-smoke.yml`
-  runs for the exact commit, images, secrets, migration, Terraform, a smoke of
-  the new API revision at its tagged URL before it takes traffic, then the
-  traffic shift and the tick smoke.
-- `frontend/services/api/src/http/origin-token.ts`: origin admission, public
-  host and client address.
-- `frontend/services/api/src/workers/runner.ts`, `start-runner.ts`,
-  `scheduled-tick.ts`: runner, periodic owners, wake-up and the scheduled tick.
-
 ## Acceptance
 
 - The deploy creates each API revision with no traffic and smokes it at its

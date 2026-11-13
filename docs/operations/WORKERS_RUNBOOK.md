@@ -1,4 +1,4 @@
-# Workers migration operations
+# Workers operations
 
 Self-serve authentication requires the coordinated release gate in the
 [GCP runbook](GCP_RUNBOOK.md#self-serve-authentication-release-gate). Keep
@@ -9,10 +9,9 @@ navigation uses no-store and no-referrer protections and carries mailbox tokens
 in fragments. Resend credentials are API secrets and must never enter either
 public bundle. Closing signup on rollback retains existing login/recovery.
 
-This is the operator procedure for the four-PR Workers migration.
-PRs 1–3 prepared protected ingress and two Workers. PR 4 removes the superseded
-production frontend serving layer before the owner authorizes a fresh release.
-There is no staging environment or staging Worker target. Repository availability
+This is the operator procedure for the Cloudflare Workers in front of the
+protected Cloud Run origin. There is no staging environment or staging Worker
+target. Repository availability
 does not establish DNS, provider registration, deployment or production acceptance.
 
 ## Baseline and release record
@@ -247,7 +246,7 @@ Roll back the API by routing traffic to a previous Cloud Run revision (see the
 alone does not restore DNS, provider registrations, GCP secrets or backend
 configuration.
 
-## Product Worker preparation (PR 2)
+## Product Worker
 
 The product Worker is configured by `frontend/apps/app/wrangler.jsonc` for the
 `app.citeladder.com` Custom Domain. It disables `workers.dev` and public preview
@@ -309,10 +308,10 @@ in Cloudflare Workers & Pages and deploy that version to the same Custom
 Domain. Confirm its `/health`, navigation and asset response, then record the
 version transition. Keep the prior immutable artifact and fingerprint in the
 GitHub release record. This does not roll back DNS, OAuth registrations,
-backend browser origins, ingress secrets or the prior apex routing; use the
-coordinated PR 3 procedure for those. PR 2 leaves the apex deployment untouched.
+backend browser origins, ingress secrets or the apex routing; use the
+[release order](#release-order) for those.
 
-## Marketing Worker and cutover preparation (PR 3)
+## Marketing Worker and release
 
 The marketing Worker uses `frontend/apps/marketing/wrangler.jsonc` and the
 generated `dist/server/wrangler.json` from its Astro build. Its Custom Domain

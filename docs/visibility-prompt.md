@@ -297,8 +297,8 @@ beside the threshold metrics.
 
 The [quality judge](../frontend/services/api/src/prompts/generation-quality.ts) runs
 through the [JEV connector](../frontend/services/api/src/models/jev.ts) when
-`JEV_API_KEY` is set (blank is off; the TypeSafe subprocessor and privacy
-revision was published on 28 September 2026 and production carries the key).
+`JEV_API_KEY` is set (blank is off;
+[decision](decisions.md#typesafe-is-a-published-subprocessor-production-runs-jev)).
 It judges the admitted draft pool within the configured call cap, one call per
 draft: yes/no fit, buyer relevance, decision value, naturalness, standalone,
 sensibility and one need (`single_need`: no two settings, audiences or
@@ -896,9 +896,7 @@ Browser history restores the analytical context. Competitor suggestions remain
 in Overview Facts rather than becoming measurement evidence automatically.
 
 Evidence-backed Opportunity sorting and a Trends summary are not planned
-([decision BL10](decisions.md#backlog-closure)). Existing observed-query
-context does not mean that selection/provenance UX is complete. Historical evaluation numbers do not establish current acceptance
-or a model recommendation.
+([decision BL10](decisions.md#backlog-closure)).
 
 ### One prompt over time
 

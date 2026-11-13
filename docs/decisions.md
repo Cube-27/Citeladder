@@ -709,3 +709,14 @@ behavior.
 
 Source: owner, in chat, 11 November 2026, in the session that planned the
 release; recorded in its plan, which was deleted once the release shipped.
+
+## Code taste, testing and documentation rules live in CLAUDE.md
+
+The global `typescript-best-practices` and
+`principle-test-behavior-not-implementation` skills are deleted. Their rules,
+with new documentation rules, are the Code taste, Testing and Documentation
+sections of [CLAUDE.md](../CLAUDE.md), so every agent reads them on every task
+and no skill restates them.
+
+Source: owner, 13 November 2026, approving the drafted CLAUDE.md wording
+directly.

@@ -24,11 +24,7 @@ positioning; [the index](README.md) routes to substantive feature documents.
 | Public API               | API keys and replay-safe request records                                                               | Scoped REST access through the same commands and reads as the browser                |
 | Billing / Entitlements   | Commercial evidence, grants and ledger                                                                 | Admission, availability and settlement                                               |
 
-TypeScript owns billing checkout, subscription changes, webhook receipt,
-leased recovery, invoice issuance, consumable-ledger writes and, under the
-`billing-documents` family, receipt list/PDF reads, and commercial operator
-administration, identity bootstrap and seed tools. Native owners
-use the durable rows and follow the lock order below; see
+Billing owners follow the lock order below; see
 [Billing and entitlements](billing-entitlements.md) for the owner boundaries.
 
 Site Health, [Content optimization](content-optimization.md), Search Demand
@@ -86,27 +82,17 @@ Every route family, task kind and table has one writing owner. Every native
 OpenAPI operation declares one family from the manifest in
 `frontend/packages/contracts/src/route-ownership.ts`.
 
-The schema is `frontend/services/api/migrations/0001_baseline.sql` plus numbered
-forward migrations, applied by the TypeScript migrate CLI (`src/cli/migrate.ts`) from the API
-image. Product operators, login/seeding and
-acquisition controls run under their native owners and use the same PostgreSQL
-authorization, provenance and lock contracts. TypeScript tests against real
-PostgreSQL cover native owners, schema constraints and the migrate CLI.
+The SQL migrations are the only schema author
+([migrations](DEVELOPMENT.md#migrations-forward-only)); the service holds Kysely
+types generated from a migrated database. A successful migration and bootstrap
+job admits API/worker rollout. Operator tools use the same PostgreSQL
+authorization, provenance and lock contracts as the API.
 
 `@citeladder/contracts` (`frontend/packages/contracts`) holds the zod response
 contracts the browser app validates with (TypeScript routes publish the same
 schemas, and each handler's return type is checked against its schema), the route-ownership manifest, and the
 hand-owned API error-code vocabulary. Native config owns HTTP status defaults
-and retry classification.
-
-Application policy lives in native config, including security, roles,
-capabilities, provider catalogs and queue bounds. The migration job applies the
-pending SQL migrations in order under an advisory lock (recording each SHA-256 in
-`schema_migrations`; an edited applied file or unledgered tables fail the job), then runs native identity/grant/catalog bootstrap; successful job
-completion admits API/worker rollout. Auth, workspace, commercial and product writes are native.
-
-The SQL migrations are the only schema author, so the service holds Kysely types
-generated from a migrated database.
+and retry classification. Application policy lives in native config.
 
 ## Delivery topology
 

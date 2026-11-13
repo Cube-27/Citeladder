@@ -160,19 +160,10 @@ workspace never widens a connection, system workspaces stay excluded, and
 project or record IDs never authorize themselves. A pinned caller (the Agent) is
 told a sibling project was "not found", the same as a missing one.
 
-Settings → MCP connections leads with the shared
-[connect strip](../frontend/components/mcp/connect-strip.tsx): one Connect
-button, which opens Claude's prefilled add-connector page, then the endpoint
-with a copy control. Hovering Connect (or ArrowDown/Space from it) offers
-ChatGPT, Gemini and Grok, copying the URL for the person to paste there. Client links are owned by
-[`mcp-clients.ts`](../frontend/lib/config/mcp-clients.ts); the public MCP page
-uses the same strip. The tab lists a user's connections by client name (labelled
-unverified), access (**Read** or **Read and change**), workspace names,
-connected date and last use; workspace Owner/Admin
-also see the connecting account and can remove only their workspace's
-authorization. Revoking asks for confirmation. The account menu's Connect AI
-assistants opens this tab. Revocation is also available through the OAuth
-endpoint.
+Settings → MCP connections lists a user's connections, with the client name
+labelled unverified. Workspace Owner/Admin also see the connecting account and
+can remove only their workspace's authorization. Revocation is also available
+through the OAuth endpoint.
 
 ## The catalogue
 
@@ -182,17 +173,13 @@ Project tools authorize the project on every call and must report a `state`
 (`available`, `unavailable` with a `reason`, or the owner's `observed_zero`);
 missing evidence is never zero and is never repaired by reading it. No read
 crawls, calls a provider, enqueues work or writes; changes are a separate
-catalogue (below).
+catalogue (below). The generated public tool reference lists the tools.
 
-| Area | Tools |
-| --- | --- |
-| Start | `list_projects`, `get_project_business_context` (profile, competitors, active prompts, latest visibility, top Actions, Site Health, connected data; sections run in parallel), `search` and `fetch` |
-| AI visibility | Each market is measured apart: the project context lists `markets`, and `read_visibility_overview`, `read_visibility_trends`, `read_perception`, `read_fact_checks`, `read_ai_ads` and `read_source_url` take `market_id` (omitted is the default market). `read_visibility_overview` (mention rate, citation rate, rankings and the run's status), `read_visibility_trends`, `read_visibility_results` (answers), `read_visibility_sources`, `read_source_url` (one cited page: prompts, engines, brands listed, your presence), `read_perception` (net sentiment with coverage, themes, verified quotes, sources cited alongside criticism, recommended rate; `view: quotes` pages the quotes), `read_fact_checks` (fact-checking pilot: accuracy with coverage, contradicted claims with the fact they contradict, sources cited alongside; `view: claims` pages the claims; `not_enabled` outside the pilot), `read_ai_ads` (ChatGPT Search ad presence, advertisers, creatives and prompts; other engines are not applicable; ads never count as citations), `read_prompt_portfolio`, `read_seed_queries` (the non-branded, question-like searches each persisted source would ground a generation run on, by topic; never volume) |
-| Work | `read_actions` (active Actions in priority order, or one Action with findings, remediation, go-live and measured outcome; each carries a link to its Action page, content-gap Actions included), `read_content_differentiation`, `read_ai_shelf` (Commerce: the Products read's per-product metrics over a window with the categories and their counts, or with `holder_id` one product's page; see [Commerce](commerce-intelligence.md#ai-shelf)) |
-| Site | `read_site_health`, `read_site_pages` (metadata; `url` finds a page by its address, ignoring scheme, `www` and a trailing slash), `read_page_text` (one crawled page's title, meta description, h1–h3 headings, then body text, bounded to fit one Agent tool result; never the live page), `read_site_links`, `read_ai_crawlability`. Page URLs these return drop their query string and fragment (they can carry tokens or emails); pages that differ only by query stay apart by `site_url_id`, and their cursors carry no URL |
-| Traffic | `read_performance` (totals with comparison, or a `dimension` breakdown), `read_query_evidence`, `read_demand`, `read_ai_referrals`, `read_crawl_logs` (summary, crawlers, coverage or individual requests), `read_ai_traffic_pages`, `read_ai_traffic_url`, `read_ai_traffic_insights`, `read_integration_status` |
-| Research | `read_search_intelligence`, `read_search_dataset` (aggregate rows are not individual links) |
-| App | `render_visibility`, `render_site_health`, `open_analytics` |
+Each market is measured apart: market-scoped reads take `market_id` (omitted
+is the default market). Ads never count as citations. `read_page_text` reads
+the crawled page, never the live one. Page URLs the Site tools return drop
+their query string and fragment (they can carry tokens or emails); pages that
+differ only by query stay apart by `site_url_id`, and their cursors carry no URL.
 
 Each tool is a thin adapter over its owner (Visibility, Actions, Site Health,
 AI Traffic, Commerce, Keyword Research, brand memory), so a correction in the
@@ -200,8 +187,8 @@ owner reaches the app, the Agent and MCP together. Enumerated arguments are enum
 (the engine set comes from the visibility configuration); paged tools take
 `cursor` and `limit`, and a cursor continues only the selection that produced it.
 Published input schemas omit `$schema`, patterns a `uuid`, `date` or
-`date-time` format already names, safe-integer bounds and null branches, which
-halved `tools/list` to about 25 KB.
+`date-time` format already names, safe-integer bounds and null branches, to
+keep `tools/list` small.
 
 Results carry IDs because the model needs them for its next call. The server
 instructions tell clients never to show IDs or `citeladder://` references to
@@ -232,12 +219,9 @@ member's live role, which
 the command checks (a Viewer is refused; a demotion applies to the next call).
 A record named by ID must belong to that project.
 
-| Kind | Tools |
-| --- | --- |
-| Direct (one call, one transaction with its security event) | `create_topic`, `rename_topic`, `delete_topic` (by name; its prompts stay, without a topic), `confirm_topics` (the Prompt Builder's topic plan: create with offering links, rename and delete in one change), `update_prompt_text`, `add_competitor`, `remove_competitor` (by name), `update_action_status`, `cancel_audit` |
-| Prompt Builder runs (metered; no dry run) | `preview_topics` (one model call, writes nothing; existing and proposed topics), `generate_prompts` (the builder's distribution-aware generate; candidates stay staged for review, the result links to `/prompts?review=1`, and the run records `mcp.write.generate_prompts`) |
-| Prepared | `prepare_add_prompts` (1–50; drops duplicates and binding failures with reasons; shows prompt slots after; an omitted cohort is filed by brand naming, as in the browser), `prepare_archive_prompts`, `prepare_launch_audit` (estimate shown; `max_attempts` frozen into the payload), `prepare_schedule`, `prepare_declare_implemented` |
-| Confirm | `confirm_change` |
+Write tools come in three kinds: direct (one call, one transaction with its
+security event), Prompt Builder runs (metered, with no dry run) and prepared
+changes that only `confirm_change` executes.
 
 The Prompt Builder tools call the same command owners as the builder's routes
 (`commands/prompts.ts`), with the same `run` capability, metering, AI-credit
@@ -325,13 +309,9 @@ MCP Apps bridge. Build it with `pnpm --filter @citeladder/mcp-app build`.
 Change Review and Technical SEO Triage over public read tools. Each mirrors its
 in-app methodology (`ai_visibility`, `measure`, `technical_health`), and the
 Agent owner-adapter test fails if a plugin skill names a tool the catalogue does
-not have. The repository marketplace is `.agents/plugins/marketplace.json`;
-portable clients use the package's `mcp.json`. `plugin.json` also carries the
-OpenAI directory listing: category `Data & Analytics` (the category OpenAI's
-own analytics plugins use; `Productivity` failed the listing check), website,
-privacy, terms and support URLs, `assets/icon.svg` (the logo's ladder mark on a
-square), the review test cases and the demo recording. The submitted ZIP is
-this folder without its README.
+not have. `plugin.json` also carries the OpenAI directory listing; its category
+is `Data & Analytics` because `Productivity` failed the listing check. The
+submitted ZIP is this folder without its README.
 
 This repository proves the wire contract, not acceptance in a particular client
 build or the deployed origin. Before public directory submission the release
@@ -340,17 +320,6 @@ account, a recorded walkthrough and portal scans; the plugin's review cases
 (five positive, three negative: publish, acquire, mutate) describe the expected
 behaviour.
 
-## Coverage
-
-[Transport](../frontend/services/api/test/mcp-transport.test.ts) runs the real
-catalogue: lifecycles, app metadata, argument and owner errors as tool errors,
-unknown tools, guards and disabled MCP.
-[OAuth](../frontend/services/api/test/mcp-oauth.test.ts) covers registration
-bounds and native schemes, loopback ports, error redirects, CSRF, PKCE, code and
-refresh replay, rotation, revocation, membership changes, the call budget and
-cleanup. [Evidence](../frontend/services/api/test/mcp-evidence.test.ts) covers
-pinned snapshots and runs, foreign selections, active Actions, prompt paging,
-unavailable states and record fetches; [retrieval](../frontend/services/api/test/mcp-retrieval.test.ts)
-covers links and document parts. The public tool reference is generated from the
-catalogue with `pnpm --filter @citeladder/api mcp:reference`; the repository
-check detects drift.
+The public tool reference is generated from the catalogue with
+`pnpm --filter @citeladder/api mcp:reference`; the repository check detects
+drift.

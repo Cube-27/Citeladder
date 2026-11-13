@@ -8,31 +8,13 @@ PostgreSQL owns durable
 state and queues. Domain behavior is documented in the feature owners listed in
 [the documentation index](README.md); this file owns shared backend mechanics.
 
-Projects, onboarding research/completion, logo refresh and command-center reads
-are TypeScript-owned under frontend/services/api/src/projects/. Discovery runs
-in its TypeScript worker, whose runner lane recovers expired leases and retries.
-Interactive onboarding invokes that same worker through an
-awaited, bounded API mutation scoped to one authorized discovery; background
-execution remains its recovery path. The Overview PDF prints the saved Overview
-layout from the command-center projection and the widgets' persisted reads with
-the shared PDF renderer; receipt list/download reads are also
-TypeScript-owned. Every operation's family is
-checked against the shared route-ownership manifest.
-
-Audit admission, providers and answer-engine transports, immutable execution
-persistence, scoring, funded settlement, scheduling and maintenance are native
-TypeScript owners. Keyword Research review and acquisition use the same
-native provider custody and PostgreSQL capacity boundary. Site Health acquisition,
-check catalogs, allowance projections and worker settings are native.
-Native audit config owns lifecycle, scoring, read limits and runtime settings;
-native provider/DataForSEO config owns endpoints, capacity, request policy and
-pricing, frozen route identities and the public provider catalog. The SQL
-baseline carries only structural column defaults and constraints.
-Commerce competitor discovery uses the native
-analytics worker and Site Health acquisition, parsing and classification owners.
-Analytics lease recovery and evidence/outcome settlement belong to that worker.
-Discovery charges attempts on completion/recovery;
-integrations charge at claim and recovery does not charge a second time.
+Interactive onboarding invokes the discovery worker through an awaited, bounded
+API mutation scoped to one authorized discovery; background execution remains
+its recovery path. Every operation's family is checked against the shared
+route-ownership manifest. Policy lives in native config; the SQL baseline
+carries only structural column defaults and constraints. Discovery charges
+attempts on completion/recovery; integrations charge at claim and recovery does
+not charge a second time.
 
 ## Layers and extension
 
@@ -134,8 +116,7 @@ lease owner (`src/queue/audit-queue.ts`: each claim leases to
 attempt to fence on; it also leases due audit schedules), the Agent
 turn start and Site Health's crawl lock. The owner also holds the lane logs
 (`src/queue/lane-log.ts`): every lane's failed attempt writes one
-`lane_task_failed` record (lane, task, attempt, phase, outcome, elapsed time,
-error class and code, never the message), and a refused heartbeat or a fence
+`lane_task_failed` record, never the error message, and a refused heartbeat or a fence
 that finds the lease gone writes `lane_lease_lost` unless the row was cancelled
 or settled. An unpinned claim compares
 `available_at` with the later of the application clock (producers) and the
@@ -227,20 +208,9 @@ Reads project existing state without provider I/O, acquisition or repair.
 Raw evidence and provider attempts are append-only; derived rows retain direct
 source IDs and relevant versions. Native policy lives under
 `frontend/services/api/src/config/` and the owning service config modules.
-Opportunity/Action catalogs and source-page inspection policy are native.
-Commerce acquisition/admission policy and buyer-prompt templates, plus scheduler
-runtime settings and the pinned timezone catalog, are native. Commerce persisted
-versions and scheduler policy belong to native config.
-Auth HTTP settings, approved policy revisions, workspace denial responses and
-brand validation bounds are native. Native workspace config owns the role matrix.
-The native Agent catalog parses packaged Markdown. Opportunity reads preserve
-frozen format identifiers, including identifiers retired from the current
-catalog. Queue execution bounds are native; schema status vocabulary remains shared.
-Billing checkout, reconciliation, webhook policy and provider-display composition
-are native. Native configuration owns seller/tax settings, catalog authoring and read-only
-Razorpay credentials. Native entitlement resolution, operator grants and
-account-capacity locks are the sole business authority. Native config owns the
-capability registry; native PostgreSQL tests cover the schema's constraints.
+Opportunity reads preserve frozen format identifiers, including identifiers
+retired from the current catalog. Native entitlement resolution, operator
+grants and account-capacity locks are the sole business authority.
 Do not introduce Redis without measured need.
 
 The audit and Site Health event streams (Server-Sent Events) share one tail,

@@ -136,19 +136,8 @@ React Markdown/GFM stack renders the complete bodies on the server without
 hydration. `research-markdown.tsx` owns source-number anchors and focusable
 table overflow; the public shell and type roles remain shared.
 
-Canonical article paths use the site's no-trailing-slash convention:
-
-| Reader need | Canonical destination |
-| --- | --- |
-| GEO introduction | `/generative-engine-optimization` |
-| Check AI visibility | `/blog/verify-improve-ai-search-visibility` |
-| Citation tracking | `/ai-citation-tracking` |
-| Improve visibility | `/blog/how-to-improve-ai-visibility` |
-| Platform shortlist | `/best-ai-visibility-platforms` |
-| GEO versus SEO | `/blog/geo-vs-seo` |
-| Citation reliability | `/blog/how-accurate-are-ai-citations` |
-| AI and SEO outlook | `/blog/will-ai-replace-seo` |
-| Reference discovery | `/blog/can-chatgpt-find-citations` |
+Canonical article paths, set in each article's frontmatter, use the site's
+no-trailing-slash convention.
 
 The citation destination retains its research body and a compact contextual link
 to `/platform/cited-sources`; it no longer appends a full commercial page.
@@ -195,17 +184,7 @@ Site Health evidence or claims of live access, indexability or citation eligibil
 Social previews read local raster images; published image URLs only enter exported
 markup. Sitemap indexes compare declared child sitemap addresses without recursion.
 
-| Surface | Browser location | Feature owner |
-|---|---|---|
-| Overview and company facts | /projects | [Onboarding](onboarding.md) |
-| Website and issues | /site, /issues | [Site Health](site-health.md) |
-| Search Demand, Keyword Research, Performance | /demand, /search-intelligence, /performance | [Connected data](integrations-traffic-analytics.md) |
-| AI Traffic: Overview, Crawlers, Referrals, Activity | /ai-traffic | [AI Traffic](ai-traffic.md) |
-| Agent: chats, Actions, Skills and Context | /agent, /agent/chats/:chatId, /agent/actions, /agent/actions/:actionId, /agent/skills, /agent/context | [Agent](agents.md), [Actions](opportunities.md#actions) |
-| Prompts, Visibility and runs | /prompts, /visibility, /runs | [Visibility](visibility-prompt.md) |
-| Commerce: Shopping overview, Products and product pages | /products/overview, /products, /products/:id | [Commerce](commerce-intelligence.md) |
-| Settings and account management | /settings and account routes | [Workspace access](workspace-access.md), [Billing](billing-entitlements.md) |
-| Public guides, Agent documentation, MCP setup and changelog | docs.citeladder.com | Static Astro app in `frontend/apps/docs` |
+### App routes and the documentation site
 
 Documentation content lives in `frontend/apps/docs/src/content` as Markdown.
 Its validated metadata drives navigation, static routes, search and the sitemap.
@@ -329,46 +308,11 @@ carries identifiers and an optional prompt, never evidence content.
 
 Shared UI capabilities have one owner under `frontend/components/ui/`. Their
 technical contracts and state responsibilities live here; visual values and
-interaction recipes live only in [`design.md`](design.md).
-
-| Capability | Owner |
-|---|---|
-| Button, Card, Input, Textarea, Field | `frontend/components/ui/` |
-| Menu, Dialog, Drawer, Tooltip | `frontend/components/ui/` Radix wrappers (`menu.tsx`, `dialog.tsx`, `drawer.tsx`, `tooltip.tsx`) |
-| Table, Badge, Tag, Callout, EmptyState, Skeleton, ProgressBar, pagination | `frontend/components/ui/` |
-| Segmented control | `frontend/components/ui/tabs.tsx` (`SegmentedControl`) |
-| Kbd, ChipInput, ThemeSwitch, BrandMark, EngineMark, Citation, Rungs | `frontend/components/ui/` (`kbd.tsx`, `chip-input.tsx`, `theme-switch.tsx`, `brand-mark.tsx`, `engine-mark.tsx`, `citation.tsx`, `rungs.tsx`) |
-| Read states: loading, read error, not measured, empty (block and inline); one query mapped to them so a pending, failed or unmeasured read never renders as zero or "no data" | `frontend/components/ui/query-state.tsx` (`QueryState`, `screenState`) |
-| KPI and fact rows | `frontend/components/ui/stat-row.tsx` (`StatRow`) |
-| Record tables: header, toolbar, rows, pager, states | `frontend/components/ui/data-table.tsx` (`DataTable`) |
-| Screen templates (bands, band gaps, detail split) | `frontend/components/layout/page-shell.tsx` (`ListScreen`, `DetailScreen`) |
-| Router-level not-found and render-failure screens | `frontend/apps/app/src/route-error.tsx` |
-| Lazy piece in held space: chunk-failure fallback; other errors surfaced to the screen or contained, as the caller chooses | `frontend/components/ui/lazy-island.tsx` (`LazyIsland`) |
-| Browser error reports to the API's sink | `frontend/lib/client-errors.ts` ([contract](api-error-contract.md#6-browser-error-reports)) |
-| Recoverable persisted-read failure | `frontend/components/ui/read-error.tsx`; domain owners supply the exact read and decide whether cached content remains usable |
-| Select, Search field, Tabs | `frontend/components/ui/select.tsx`, `frontend/components/ui/search-field.tsx`, `frontend/components/ui/tabs.tsx` |
-| Checkbox and radio group | `frontend/components/ui/checkbox.tsx`, `frontend/components/ui/radio-group.tsx` |
-| Toast, Pressable, Clipboard action | `toast.tsx`, `pressable.tsx`, `copy-button.tsx` |
-| Text roles (`textRole`) | `frontend/components/ui/typography.tsx` |
-| Selectable, tree and opening list rows | `frontend/components/ui/list-row.tsx` (`OptionRow`, `TreeOption`, `OpenRow`) |
-| Stack, Inline | `frontend/components/ui/layout.tsx` |
-| Icon, Dot, IconTile | `frontend/components/ui/icon.tsx` |
-| Offer and connection rows; identity rows | `frontend/components/ui/control-row.tsx` (`ControlRow`); `frontend/components/ui/workspace.tsx` (`IdentityRow`) |
-| Fact lists and fixed-height ledgers | `frontend/components/ui/facts.tsx` (`FactList`, `ValueLedger`) |
-| Settings sections | `frontend/components/ui/settings-section.tsx` (`SettingsSections`, `SettingsSection`) |
-| List rows: option and tree-list rows | `frontend/components/ui/list-row.tsx` (`OptionRow`, `TreeList`, `TreeItem`, `TreeItemForm`) |
-| Reorderable list | `frontend/components/ui/reorder-list.tsx` (`ReorderList`; it replaced the Ranked actions list's own drag-and-move mechanics) |
-| Widget editing toolbar | `frontend/components/ui/workspace.tsx` (`FloatingToolbar`) |
-| Gate pages before the shell opens | `frontend/components/layout/shell-fallback.tsx` (`GateScreen`); project setup's blocked states use `frontend/components/ui/auth-shell.tsx` (`AuthShell`, `AuthCard`) |
-| Chat thread and composer dock | `frontend/components/ui/chat-dock.tsx` (`DockedThread`, `ComposerDock`, `ComposerFrame`, `RemovableChip`, `SuggestionList`) |
-| Panel (`panelClasses`) and card content (one box recipe) | `frontend/components/ui/panel.tsx`, `frontend/components/ui/card.tsx` |
-| Menu separator and link rows | `frontend/components/ui/menu.tsx` (`MenuSeparator`, `MenuLinkItem`) |
-| Pagination (`Pager`) | `frontend/components/ui/pager.tsx` |
-| Date field and calendar | `frontend/components/ui/date-field.tsx`, `frontend/components/ui/calendar.tsx` |
-| Avatar, Disclosure | `avatar.tsx`, `disclosure.tsx` |
-| Command palette, Market Select, CSV import | Existing shared and feature owners |
-| Resizable workspaces | Existing feature owners |
-| Color controls, OTP, sliders | No current product use |
+interaction recipes live only in [`design.md`](design.md). Read states map one
+query to loading, read error, not measured or empty through `QueryState`, so a
+pending, failed or unmeasured read never renders as zero or "no data".
+Browser error reports follow the
+[API error contract](api-error-contract.md#6-browser-error-reports).
 
 Shared primitives own geometry, accessibility, interaction states, and motion.
 Domain wrappers own business logic, factual copy, data translation, and
@@ -395,16 +339,6 @@ transient UI state. It delegates cohesive visual regions, domain-specific
 formatting, and interaction mechanics to focused sibling owners. A split must
 preserve one public entry point for callers; consumers must not compose a
 screen from its internal presentation files.
-
-| Surface | Coordinator boundary | Focused owners |
-|---|---|---|
-| AI Traffic | `components/ai-traffic/ai-traffic-screen.tsx` owns URL tabs, scoped queries, verification filters and cursor tables | `crawl-log-connections.tsx` owns source setup and local streaming uploads; `referrals-screen.tsx` preserves referral controls and measurements |
-| Onboarding | `components/onboarding/onboarding-screen.tsx` selects the active stage and actions | `onboarding-flow.ts` owns transaction state, stage owners render domain UI, and `components/ui/auth-shell.tsx` and `components/ui/onboarding-shell.tsx` own the shared auth/onboarding chrome |
-| Projects dashboard | `components/projects/dashboard-screen.tsx` owns query gates and project context | dashboard controls, primitives, sections, and command-center action hook own reusable UI and mutations |
-| Performance | `components/performance/performance-screen.tsx` owns project/range/compare selection and the range-projection hand-off | date-range dialog, metric cards, chart, dimension table, and synchronization hook own their scoped behavior |
-| Site Health URL detail | `components/site-health/url-detail.tsx` owns query/rerun control and polling | `url-detail-view.tsx` owns the persisted-detail presentation; `internal-links-card.tsx` owns the link-metric section |
-| Site Health architecture | `components/site-health/architecture-panel.tsx` owns the projection query, page-kind rows, and persisted link/depth summaries | — |
-| Commerce, prompts, providers, and marketing previews | Existing public panels and dialogs remain their caller-facing owners | small view, cell, topic, preview, and message-bus modules own discrete presentation or local interaction regions |
 
 ### API response schemas
 
@@ -447,26 +381,12 @@ domain validity decisions or post a domain payload.
 `lib/sse/use-event-stream.ts` owns the credentialed browser transport:
 workspace and resumption headers, chunk decoding, cancellation, reconnect
 backoff, and debounced invalidation delivery. Domain hooks retain event
-classification and query invalidation ownership:
-
-- `lib/runs/use-run-events.ts` validates audit frames and chooses run and
-  visibility query families.
-- `lib/site-health/use-crawl-events.ts` distinguishes lifecycle changes from
-  per-page progress and refreshes the applicable crawl views.
-- `lib/api/run-events.ts` retains the audit-event contract and compatibility
-  exports for framing helpers; it does not own a second stream transport.
+classification and query invalidation ownership and never own a second stream
+transport.
 
 Streams accelerate polling-backed projections only. They never become a
 client-side source of truth or construct rows from partial, replayed, or
 unknown event payloads.
-
-### Complexity boundary
-
-The frontend complexity guard covers `apps/app`, `components`, and `lib` with a
-maximum cyclomatic complexity of 12 per function, 500 LOC per production
-module, and 800 LOC per test module. The guard rejects relaxed defaults and
-new or increased policy exceptions. New and refactored owners must meet those
-defaults by decomposition; an exception is not an intended delivery outcome.
 
 ## Verification
 

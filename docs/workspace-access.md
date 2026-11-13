@@ -386,16 +386,12 @@ selected workspace without requiring a project, and only Owner/Admin billing
 capability can start a purchase. Its selection URL is captured before the
 sign-in redirect; the server still authorizes every billing mutation.
 
-## Dependencies and evidence
+## Dependencies
 
 [Billing](billing-entitlements.md) resolves exactly one account per workspace.
 [MCP](mcp.md) rechecks current memberships for account-bound grants.
 [Onboarding](onboarding.md) creates projects subject to role and occupancy.
-The [workspace tests](../frontend/services/api/test/workspaces.test.ts),
-[auth tests](../frontend/services/api/test/auth-routes.test.ts) and
-[workspace authorization tests](../frontend/services/api/test/workspace-scope.test.ts)
-cover the central boundaries. Accepted rationale is in
-[decisions](decisions.md); the retained shell plan tracks only remaining work.
+Accepted rationale is in [decisions](decisions.md).
 
 ## Operator account management
 
@@ -481,7 +477,3 @@ locks. This preserves agreement recording's actor → workspace → member order
 and account management's workspace → membership → user order without lock
 inversion, including password resets across workspaces. Terminal prompts never
 hold this lock.
-
-The native workspace config owns the role matrix. Native PostgreSQL tests cover
-authorization, replay, revocation, rollback and workspace isolation, including
-the schema's composite workspace keys. The SQL schema baseline owns the schema.

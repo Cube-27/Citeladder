@@ -647,48 +647,9 @@ development login (`DEV_LOGIN_EMAIL`, an active admin) runs as `development` fun
 no hold or debit but the same dispatch evidence. Capability and credit rate are
 keyed `agent`; [Billing](billing-entitlements.md) owns the ledger.
 
-## Coverage
+## Live evaluation
 
-Native suites in [`services/api/test`](../frontend/services/api/test/) use
-scripted models and real PostgreSQL, never live providers:
-
-- `agent-runtime.test.ts`: admission, idempotency, isolation, parallel reads
-  recorded per call, error results the model corrects, `save_document` refused
-  before a methodology and committed only with the reply, the cap's final
-  answer, the low-effort retry after a cut-off response, `output_too_long`,
-  `context_too_long` and `model_refused`, transcripts replayed unchanged
-  (thinking and compaction included) byte for byte through PostgreSQL, a
-  byte-identical prefix across calls and chats, the previous response named on
-  every call with each call's cache diagnosis recorded, an `edit_document` revision and its supply in the next turn, carried
-  sources, workflow pinning, recovery replies and fencing, several documents
-  in one chat with per-document edits and restores, and web searches within
-  the turn's budget (allowance per call and its per-call cap, no search tool
-  once the turn's are spent, `pause_turn`, web sources, recorded search
-  counts).
-- `agent-builtin-tools.test.ts`: the built-ins' refusals, exact-match edits,
-  document numbering and staging rules.
-- `agent-owner-adapters.test.ts`: tool binding and project pinning, excluded
-  tools, replayed reads versus sources, Action attachment and next-step
-  revisions.
-- `agent-prompt.test.ts` and `agent-context.test.ts`: context and tool results
-  under size pressure, replay bounds, and context resolution.
-- `agent-skills.test.ts`: catalog loading, vocabularies, format headings,
-  fingerprints and workflow validation.
-- `models.test.ts`: `converse` for both providers (streamed tool calls, empty
-  content, usage with compaction steps and one-hour writes, one-hour
-  breakpoints and the cache diagnosis, hosted web search on Anthropic only).
-- `agent-cutover.test.ts`: HTTP admission, the SSE route (thinking, tool, document
-  and reply events, the saved reply, no re-execution, a closed stream ending the
-  turn as interrupted), catalog projection, recovery and cancellation.
-- `agent-funding.test.ts`: holds before I/O, settlement with cache writes and
-  thinking, unknown usage, development funding, a failed turn refunded once
-  (B58) with its attempts kept, web searches held per call and charged as
-  reported (B59), a later call's input hold from the previous call's reported
-  tokens and never below its worst-case charge, a short balance shrinking the
-  call's output cap, the minimum-reply floor and a staged document kept when a
-  later call is refused (B60) or the browser closes the turn, and Stop on a
-  lapsed turn refunded while Stop on a live one is charged (B69).
-
+Agent tests use scripted models and real PostgreSQL, never live providers.
 Live quality and speed are measured outside CI by the operator-only eval,
 `pnpm --filter @citeladder/api agent:eval --live --label <name>`:
 
@@ -701,13 +662,3 @@ Live quality and speed are measured outside CI by the operator-only eval,
   reply and document.
 - `--report <a>,<b>` compares two runs and writes a side-by-side review to the
   Git directory.
-
-In the browser, `chat-screen.test.tsx` covers the streamed-then-saved reply,
-thinking and parallel reads, Regenerate, Stop, section edits, sources and next
-steps; `live-turns.test.ts` the stream reducer; `conversation.test.tsx` the run
-summary, web sources and several documents' placement and list;
-`new-chat-screen.test.tsx`
-the workflow form, pinned next steps, handoffs and commands;
-`output-pane.test.tsx` the prompt plan's Prompt Builder handoff and a
-document's separate sources; and
-`agent-panel.test.tsx` the panel.

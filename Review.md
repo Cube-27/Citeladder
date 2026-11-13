@@ -1,7 +1,7 @@
 # CiteLadder review checklist
 
 This is the review checklist for humans and for an author's check of their own
-diff; pull requests get no separate review. It points at the rule owners
+diff. It points at the rule owners
 rather than restating them: [CLAUDE.md](CLAUDE.md#non-negotiable-guardrails)
 summarizes the guardrails, [invariants](docs/invariants.md) own the binding
 constraints and [design](docs/design.md) owns visual and interaction rules.
@@ -43,7 +43,7 @@ constraints and [design](docs/design.md) owns visual and interaction rules.
 ## Validation and tests
 
 Judge evidence against the [`validate-change` skill](.claude/skills/validate-change/SKILL.md) and
-the `principle-test-behavior-not-implementation` skill. Review the evidence already
+[CLAUDE.md testing](CLAUDE.md#testing). Review the evidence already
 produced rather than launching another completion gate. Confirm it covers the
 final executable diff and credible regressions, and that removed tests carry a
 rationale. Keep local checks, CI results and external/provider acceptance

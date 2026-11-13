@@ -3,9 +3,8 @@
 > The canonical, end-to-end contract for **how a CiteLadder API call fails**: the wire
 > envelope every 4xx and 5xx response carries, how the backend produces it, and how the
 > frontend consumes it. Companion docs: [`CLAUDE.md`](../CLAUDE.md),
-> [`invariants.md`](invariants.md), [`backend-architecture.md`](backend-architecture.md)
-> (§6 subsystem ownership), [`frontend-architecture.md`](frontend-architecture.md) (§6
-> drift policy).
+> [`invariants.md`](invariants.md), [`backend-architecture.md`](backend-architecture.md),
+> [`frontend-architecture.md`](frontend-architecture.md#api-response-schemas).
 
 The envelope is produced by `frontend/services/api/src/errors.ts`. On the
 frontend, `frontend/lib/api/client.ts` parses it and
@@ -108,8 +107,7 @@ the reason codes its reads carry (`unavailable_reason`).
 
 ## 4. Response validation policy (tolerant-on-unknown)
 
-Full rationale in [`frontend-architecture.md`](frontend-architecture.md) §6. In short:
-response objects use `responseObject` (zod `.strip()`), so an **additive** backend field
+Response objects use `responseObject` (zod `.strip()`), so an **additive** backend field
 can never break a screen, while a **declared** field that goes missing still fails loud.
 The API and browser import the same response schemas from
 `@citeladder/contracts`; route handlers are typed against those schemas. Under
@@ -153,10 +151,8 @@ The other direction: the browser reports its own failures to
 `frontend/services/api/src/routes/client-errors.ts`), same-origin like every
 browser call, so the content security policy's `connect-src 'self'` already
 covers it. The body is the strict `clientErrorReportSchema` from
-`@citeladder/contracts/client-errors`: `kind` (`chunk_load`, `render`, `route`
-or `unhandled`), `message`, a truncated `stack`, `route` (a path with no query
-string or fragment), `release` (the build's commit, or `development`) and an
-optional `component` label. Any other field is refused with 422, and a body over
+`@citeladder/contracts/client-errors`; its `route` carries no query string or
+fragment. Any other field is refused with 422, and a body over
 `config/client-errors.ts` `max_body_bytes` with 413 before it is parsed. Each
 client has `client_error_client_limit` reports per
 `client_error_window_seconds` (`config/abuse.ts`), then 429 with `Retry-After`.

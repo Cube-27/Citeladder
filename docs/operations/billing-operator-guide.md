@@ -316,8 +316,6 @@ provider dashboard—the accepted activation and resulting grants are authority.
 
 ### One-time orders, plan changes and refunds
 
-- Enable automatic capture for Standard Checkout payments in the Dashboard: an
-  order settles only on a captured payment.
 Behaviour is owned by
 [billing-entitlements.md](../billing-entitlements.md#explicit-purchase-to-settlement);
 the operator actions that remain are:
