@@ -1,0 +1,202 @@
+/**
+ * The `propose_declaration` built-in: the Agent proposes marking an Action
+ * implemented, and the reply carries a card for the person to confirm. It
+ * declares nothing; only the person's click in the card's dialog does, through
+ * the declaration API. A proposal is checked here and committed with the reply.
+ */
+import { agentProposalSchema, type AgentProposal } from '@citeladder/contracts/agent';
+import { z } from 'zod';
+import { policy } from '../config.ts';
+import type { Database } from '../db/database.ts';
+import { argumentProblem } from '../mcp/tools.ts';
+import { declarableMembers } from '../opportunities/actions.ts';
+import { ruleCheckKind } from '../opportunities/checks/registry.ts';
+import type { BuiltinOutcome } from './builtin-tools.ts';
+import type { Scope } from './contracts.ts';
+import type { ChatDocument } from './outputs.ts';
+import { stepText } from './sources.ts';
+import type { TurnState } from './turn-budget.ts';
+
+export const PROPOSE_DECLARATION = 'propose_declaration';
+const ACTION_REF = 'citeladder://action/';
+const DAY_MS = 86_400_000;
+
+export const proposeDeclarationArguments = z.strictObject({
+  action_id: z
+    .string()
+    .describe(
+      'The Action’s citeladder://action/ reference or id: the chat’s Action, one the person mentioned, or one a read this turn returned.',
+    ),
+  document: z
+    .number()
+    .int()
+    .positive()
+    .nullish()
+    .describe(
+      'The number of the saved document whose current revision shipped; omit it for work done outside CiteLadder.',
+    ),
+  go_live_day: z.iso
+    .date()
+    .nullish()
+    .describe('The day it went live (YYYY-MM-DD), only when the person said.'),
+  deployment_reference: z
+    .string()
+    .max(500)
+    .nullish()
+    .describe('What shipped it (a release, pull request or commit), only when the person said.'),
+});
+
+export const PROPOSE_DESCRIPTION =
+  'When the person says a change is live or asks whether to mark an Action implemented, propose the declaration instead of describing the steps: the app shows a card under your reply, and only the person’s click declares it. The Action must be the chat’s Action, one they mentioned or one a read returned this turn.';
+
+/** What the check reads from the turn: the Actions it saw and the chat's saved documents. */
+export type ProposalTurn = {
+  scope: Scope;
+  /** Ids of the chat's Action, this turn's mentions and Actions this turn's reads returned. */
+  known: ReadonlySet<string>;
+  documents: readonly ChatDocument[];
+};
+
+/** The Action ids a turn has seen: attached, mentioned or returned by a read. */
+export function knownActions(
+  manifest: { action: { id: string } | null; mentions: readonly { id: string }[] },
+  read: readonly string[],
+): Set<string> {
+  const refs = read.flatMap((ref) =>
+    ref.startsWith(ACTION_REF) ? [ref.slice(ACTION_REF.length)] : [],
+  );
+  return new Set([
+    ...(manifest.action ? [manifest.action.id] : []),
+    ...manifest.mentions.map((action) => action.id),
+    ...refs,
+  ]);
+}
+
+type Eligibility =
+  | { kind: 'unknown' }
+  | { kind: 'refused'; reason: string }
+  | { kind: 'declarable'; label: string };
+
+/** Whether this project's Action can be declared now, as the declaration API would decide. */
+async function eligibility(db: Database, scope: Scope, actionId: string): Promise<Eligibility> {
+  const action = await db
+    .selectFrom('actions')
+    .selectAll()
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', actionId)
+    .executeTakeFirst();
+  if (!action) return { kind: 'unknown' };
+  const declared = await db
+    .selectFrom('opportunity_implementation_events')
+    .select('id')
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('action_id', '=', actionId)
+    .executeTakeFirst();
+  if (declared) return { kind: 'refused', reason: 'It is already declared implemented.' };
+  if (action.status !== policy.opportunity.actions.ACTION_STATUS_OPEN)
+    return { kind: 'refused', reason: 'Only an open Action can be declared.' };
+  const { members } = await declarableMembers(db, action);
+  if (!members.length) return { kind: 'refused', reason: 'No finding targets it.' };
+  if (members.some((member) => ruleCheckKind(member.rule_id) === 'contextual_link'))
+    return {
+      kind: 'refused',
+      reason:
+        'Its links are declared by selecting the implemented ones in Site Health, Internal links; point the person there.',
+    };
+  return { kind: 'declarable', label: action.target_label };
+}
+
+/** The bounds a go-live day must fall in, with a day of slack for the person's time zone. */
+function dayProblem(day: string, now: Date) {
+  const min = new Date(
+    now.getTime() - policy.opportunity.opportunities.VERIFICATION_WINDOW_DAYS * DAY_MS,
+  )
+    .toISOString()
+    .slice(0, 10);
+  const max = new Date(now.getTime() + DAY_MS).toISOString().slice(0, 10);
+  return day < min || day > max ? `Give a go_live_day from ${min} to today, or omit it.` : null;
+}
+
+/** The revision a proposal names: a saved document of this Action that the turn has not changed. */
+function shippedRevision(
+  turn: ProposalTurn,
+  state: Pick<TurnState, 'staged'>,
+  number: number,
+  actionId: string,
+) {
+  const document = turn.documents.find(({ output }) => output.number === number);
+  if (!document)
+    return {
+      ok: false as const,
+      text: `This chat has no saved Document ${number}. Omit document for work done outside CiteLadder.`,
+    };
+  if (state.staged.has(number))
+    return {
+      ok: false as const,
+      text: `Document ${number} changes in this turn, so it cannot have shipped yet. Propose the declaration once the person has shipped it.`,
+    };
+  if (document.output.action_id !== actionId)
+    return {
+      ok: false as const,
+      text: `Document ${number} is not this Action’s document. Omit document, or name this Action’s document.`,
+    };
+  return {
+    ok: true as const,
+    revision: { id: document.revision.id, number: document.revision.number },
+  };
+}
+
+/**
+ * Stages a declaration proposal after checking that the turn saw the Action
+ * and that it can be declared now; every refusal says what to do instead.
+ */
+export async function proposeDeclaration(
+  db: Database,
+  turn: ProposalTurn,
+  state: Pick<TurnState, 'staged' | 'proposals' | 'steps'>,
+  input: unknown,
+  now = new Date(),
+): Promise<BuiltinOutcome> {
+  const parsed = proposeDeclarationArguments.safeParse(input);
+  if (!parsed.success) return { ok: false, text: argumentProblem(parsed.error) };
+  const { document, go_live_day: day, deployment_reference: reference } = parsed.data;
+  const given = parsed.data.action_id.trim().toLowerCase();
+  const actionId = given.startsWith(ACTION_REF) ? given.slice(ACTION_REF.length) : given;
+  const unseen = {
+    ok: false,
+    text: 'Propose a declaration only for the chat’s Action, one the person mentioned, or one a read returned this turn. Read the Action first.',
+  };
+  if (!turn.known.has(actionId)) return unseen;
+  if (state.proposals.some((proposal) => proposal.action_id === actionId))
+    return {
+      ok: false,
+      text: 'This Action’s declaration is already proposed in this turn. Reply now.',
+    };
+  const checked = await eligibility(db, turn.scope, actionId);
+  if (checked.kind === 'unknown') return unseen;
+  if (checked.kind === 'refused')
+    return {
+      ok: false,
+      text: `This Action cannot be declared now. ${checked.reason} Tell the person instead of proposing it.`,
+    };
+  const problem = day ? dayProblem(day, now) : null;
+  if (problem) return { ok: false, text: problem };
+  const shipped = document
+    ? shippedRevision(turn, state, document, actionId)
+    : { ok: true as const, revision: null };
+  if (!shipped.ok) return shipped;
+  const proposal: AgentProposal = agentProposalSchema.parse({
+    kind: 'declaration',
+    action_id: actionId,
+    revision: shipped.revision,
+    go_live_day: day ?? null,
+    deployment_reference: reference?.trim() || null,
+  });
+  state.proposals.push(proposal);
+  state.steps.push({ kind: 'proposal', label: stepText(checked.label) });
+  return {
+    ok: true,
+    text: 'Proposed: a card under your reply lets the person mark this Action implemented. It is not declared until they confirm. Reply briefly; do not say it is declared.',
+  };
+}

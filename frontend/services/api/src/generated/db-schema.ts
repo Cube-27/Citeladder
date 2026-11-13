@@ -131,6 +131,7 @@ export interface AgentMessages {
   id: string;
   mentions: Json;
   project_id: string;
+  proposals: Generated<Json>;
   reply_to_message_id: string | null;
   role: string;
   sequence: number;

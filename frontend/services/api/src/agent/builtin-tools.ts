@@ -1,8 +1,9 @@
 /**
- * The Agent's four built-in tools. They are not reads: `load_skill` supplies a
+ * The Agent's built-in tools. They are not reads: `load_skill` supplies a
  * methodology, `save_document` stages a whole document, `edit_document`
  * stages exact replacements in one and `suggest_edits` stages suggestions on
- * a page document for the person to apply. A chat holds several documents,
+ * a page document for the person to apply (`propose_declaration`, in
+ * `proposals.ts`, stages a declaration for them to confirm). A chat holds several documents,
  * each named by its number ("Document 2"); the runtime commits every staged
  * document and suggestion with the reply in one transaction (F14). Each
  * refusal says how to correct the call, so the model fixes it instead of the
@@ -20,6 +21,11 @@ import {
   type Skill,
   type SkillCatalog,
 } from './contracts.ts';
+import {
+  PROPOSE_DECLARATION,
+  PROPOSE_DESCRIPTION,
+  proposeDeclarationArguments,
+} from './proposals.ts';
 import { fetchesPage, usesFormats } from './skills.ts';
 import { scrubRecordRefs } from './sources.ts';
 import {
@@ -174,6 +180,11 @@ export function agentToolList(
     { name: SAVE_DOCUMENT, description: SAVE_DESCRIPTION, arguments: save },
     { name: EDIT_DOCUMENT, description: EDIT_DESCRIPTION, arguments: edit },
     { name: SUGGEST_EDITS, description: SUGGEST_DESCRIPTION, arguments: suggest },
+    {
+      name: PROPOSE_DECLARATION,
+      description: PROPOSE_DESCRIPTION,
+      arguments: proposeDeclarationArguments,
+    },
   ]).map((tool) => (tool.name === SAVE_DOCUMENT ? { ...tool, stream_input: true } : tool));
   return [...registry.catalog(), ...builtins].toSorted((a, b) => compareText(a.name, b.name));
 }
@@ -183,6 +194,7 @@ const BUILTINS: ReadonlySet<string> = new Set([
   SAVE_DOCUMENT,
   EDIT_DOCUMENT,
   SUGGEST_EDITS,
+  PROPOSE_DECLARATION,
 ]);
 export function isBuiltin(name: string) {
   return BUILTINS.has(name);

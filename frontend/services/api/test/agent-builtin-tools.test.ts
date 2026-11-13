@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { randomUUID } from 'node:crypto';
+import { afterAll, describe, expect, it } from 'vitest';
 import {
   agentToolList,
   editDocument,
@@ -12,7 +13,13 @@ import type { SkillCatalog } from '../src/agent/contracts.ts';
 import { ToolRegistry } from '../src/agent/tools.ts';
 import { offeredRuleIds } from '../src/page-documents/content-rules.ts';
 import { z } from 'zod';
-import { catalog as baseCatalog } from './agent-support.ts';
+import { AgentFixtures, catalog as baseCatalog, scripted, text, toolUse } from './agent-support.ts';
+import { readChat } from '../src/agent/reads.ts';
+import { proposeDeclaration, type ProposalTurn } from '../src/agent/proposals.ts';
+import type { Scope } from '../src/agent/contracts.ts';
+import type { TurnState } from '../src/agent/turn-budget.ts';
+import { actionRow, opportunityRow } from './opportunity-fixtures.ts';
+import { testDatabase } from './support.ts';
 
 const bounds = { output_title_max_chars: 20, output_body_max_chars: 200 };
 const catalog: SkillCatalog = {
@@ -562,15 +569,128 @@ describe('Agent built-in tools', () => {
       ['edit_document', false],
       ['fetch', false],
       ['load_skill', false],
+      ['propose_declaration', false],
       ['read_zeta', false],
       ['save_document', true],
       ['suggest_edits', false],
     ]);
     // The provider checks the same input schema the tool parses, without null branches.
-    expect(tools[3]!.input_schema).toEqual({
+    expect(tools[4]!.input_schema).toEqual({
       type: 'object',
       properties: { limit: { type: 'integer' } },
       additionalProperties: false,
     });
+  });
+});
+
+describe('propose_declaration on PostgreSQL', () => {
+  const db = testDatabase();
+  const fixtures = new AgentFixtures(db);
+  afterAll(async () => {
+    await fixtures.cleanup();
+    await db.destroy();
+  });
+  /** An open page Action with one finding of `ruleId`, or none when `ruleId` is null. */
+  async function action(scope: Scope, ruleId: string | null = 'brand_absent_high_value_prompt') {
+    const where = { workspace_id: scope.workspaceId, project_id: scope.projectId };
+    const target = `https://acme.example/page-${randomUUID().slice(0, 8)}`;
+    const member = ruleId
+      ? opportunityRow(where, {
+          rule_id: ruleId,
+          opportunity_type: 'site_health',
+          severity: 'high',
+          target_key: `page:${target}`,
+        })
+      : null;
+    if (member) await db.insertInto('opportunities').values(member).execute();
+    const row = actionRow(where, {
+      group_key: `page:${target}`,
+      target_kind: 'page',
+      target_label: target,
+      target_url: target,
+      member_opportunity_ids: JSON.stringify(member ? [member.id] : []),
+    });
+    await db.insertInto('actions').values(row).execute();
+    return { id: row.id, label: target };
+  }
+  const seen = (scope: Scope, ...ids: string[]): ProposalTurn => ({
+    scope,
+    known: new Set(ids),
+    documents: [],
+  });
+
+  it('refuses an Action the turn did not see, one in another workspace and one it cannot declare', async () => {
+    const scope = await fixtures.scope();
+    const stranger = await fixtures.scope();
+    const [unseen, foreign, empty, links] = await Promise.all([
+      action(scope),
+      action(stranger),
+      action(scope, null),
+      action(scope, 'site_contextual_links'),
+    ]);
+    const state: Pick<TurnState, 'staged' | 'proposals' | 'steps'> = {
+      staged: new Map(),
+      proposals: [],
+      steps: [],
+    };
+    const propose = (turn: ProposalTurn, id: string) =>
+      proposeDeclaration(db, turn, state, { action_id: `citeladder://action/${id}` });
+    const notSeen = {
+      ok: false,
+      text: 'Propose a declaration only for the chat’s Action, one the person mentioned, or one a read returned this turn. Read the Action first.',
+    };
+    expect(await propose(seen(scope, empty.id), unseen.id)).toEqual(notSeen);
+    // Another workspace's Action reads as unseen even when its id is known.
+    expect(await propose(seen(scope, foreign.id), foreign.id)).toEqual(notSeen);
+    expect((await propose(seen(scope, empty.id), empty.id)).text).toBe(
+      'This Action cannot be declared now. No finding targets it. Tell the person instead of proposing it.',
+    );
+    expect((await propose(seen(scope, links.id), links.id)).text).toMatch(/Internal links/u);
+    expect(state.proposals).toEqual([]);
+    expect(await propose(seen(stranger, foreign.id), foreign.id)).toMatchObject({ ok: true });
+    expect(state.proposals.map((proposal) => proposal.action_id)).toEqual([foreign.id]);
+  });
+
+  it('commits a mentioned Action’s proposal on the reply, once, and declares nothing', async () => {
+    const scope = await fixtures.scope();
+    const target = await action(scope);
+    const { run, lease } = await fixtures.claimed(scope, {
+      message: 'I shipped it. Should I mark it implemented?',
+      mentionIds: [target.id],
+    });
+    const today = new Date().toISOString().slice(0, 10);
+    const proposal = { action_id: target.id, go_live_day: today, deployment_reference: ' PR 12 ' };
+    await fixtures
+      .runtime(
+        scope,
+        scripted([
+          [toolUse('propose_declaration', proposal)],
+          [toolUse('propose_declaration', proposal)],
+          [text('Confirm it below.')],
+        ]),
+      )
+      .execute(lease);
+    const chat = await readChat(db, scope, run.chat_id);
+    const answer = chat.messages.at(-1)!;
+    expect(answer.proposals).toEqual([
+      {
+        kind: 'declaration',
+        action_id: target.id,
+        revision: null,
+        go_live_day: today,
+        deployment_reference: 'PR 12',
+      },
+    ]);
+    expect(answer.steps.filter((step) => step.kind === 'proposal')).toEqual([
+      { kind: 'proposal', label: target.label },
+    ]);
+    expect(chat.messages[0]!.proposals).toEqual([]);
+    expect(
+      await db
+        .selectFrom('opportunity_implementation_events')
+        .select('id')
+        .where('action_id', '=', target.id)
+        .execute(),
+    ).toEqual([]);
   });
 });

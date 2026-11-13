@@ -52,6 +52,8 @@ export async function appendMessage(
     mentions?: Json[];
     /** Long pastes the person attached, kept apart from what they typed. */
     attachments?: Json[];
+    /** What the reply proposed for the person to confirm. */
+    proposals?: Json[];
   },
 ) {
   const previous = await db
@@ -79,6 +81,7 @@ export async function appendMessage(
       steps: JSON.stringify(input.steps ?? []),
       mentions: JSON.stringify(input.mentions ?? []),
       attachments: JSON.stringify(input.attachments ?? []),
+      proposals: JSON.stringify(input.proposals ?? []),
       created_at: new Date(),
     })
     .returningAll()

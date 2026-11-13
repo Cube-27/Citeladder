@@ -6,6 +6,7 @@ import { ActivityChain } from '@/components/agent/activity-chain';
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { LiveActivity } from '@/components/agent/live-activity';
 import { MessageTime } from '@/components/agent/message-time';
+import { ProposalCards } from '@/components/agent/proposal-cards';
 import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
 import { threadItems } from '@/components/agent/thread-items';
 import { TurnFailure } from '@/components/agent/turn-failure';
@@ -38,6 +39,7 @@ import { cn } from '@/lib/utils';
  * recovery. Follow-ups never jump ahead of earlier work.
  */
 export function Conversation({
+  workspaceId,
   detail,
   renderOutput,
   onRefine,
@@ -47,6 +49,7 @@ export function Conversation({
   canSend,
   pendingMessage = null,
 }: Readonly<{
+  workspaceId: string;
   detail: AgentChatDetail;
   /** How one document is shown in the thread; omitted, documents are not shown. */
   renderOutput?: (output: AgentOutput) => ReactNode;
@@ -88,6 +91,7 @@ export function Conversation({
                 skill={skillLabel(skills, item.message.skill_id)}
                 actions={detail.actions}
               />
+              <ProposalCards workspaceId={workspaceId} proposals={item.message.proposals} />
               {documents(byMessage.get(item.message.id))}
             </Stack>
           ) : (

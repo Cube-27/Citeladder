@@ -32,7 +32,7 @@ export function useChatThread(workspaceId: string, detail: AgentChatDetail) {
   // Capture the run: a closure does not keep the narrowing of `detail.latest_run`.
   const activeRun = isRunActive(detail.latest_run) ? detail.latest_run : null;
   const stop = activeRun ? () => cancel.mutate({ chatId, runId: activeRun.id }) : undefined;
-  return { access, runActive, turn, stop, stopping: cancel.isPending };
+  return { workspaceId, access, runActive, turn, stop, stopping: cancel.isPending };
 }
 export type ChatThread = ReturnType<typeof useChatThread>;
 
@@ -50,6 +50,7 @@ export function ChatConversation({
   return (
     <>
       <Conversation
+        workspaceId={thread.workspaceId}
         detail={detail}
         renderOutput={renderOutput}
         onRefine={turn.suggest}

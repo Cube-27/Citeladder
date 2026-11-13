@@ -32,6 +32,7 @@ const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
   save_document: { verb: VERB.save, noun: 'a document' },
   edit_document: { verb: VERB.edit, noun: 'a document' },
   suggest_edits: { verb: VERB.suggest, noun: 'changes' },
+  propose_declaration: { verb: VERB.suggest, noun: 'marking an Action implemented' },
   // Provider-hosted; its results are outside pages, not CiteLadder data.
   web_search: { verb: VERB.search, noun: 'the web' },
   search: { verb: VERB.search, noun: 'CiteLadder' },
@@ -154,6 +155,12 @@ export function activityRows(steps: readonly AgentStep[]): ActivityRow[] {
         return callRow(key, { tool: 'load_skill', status: 'completed', target: null });
       case 'suggestion':
         return callRow(key, { tool: 'suggest_edits', status: 'completed', target: null });
+      case 'proposal':
+        return callRow(key, {
+          tool: 'propose_declaration',
+          status: 'completed',
+          target: step.label,
+        });
       case 'document':
         return [
           {

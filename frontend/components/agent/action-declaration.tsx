@@ -46,6 +46,7 @@ export function MarkImplementedButton({
   selectionDescription,
   onDeclared,
   variant = 'primary',
+  proposed,
 }: Readonly<{
   workspaceId: string;
   action: Declarable;
@@ -57,12 +58,14 @@ export function MarkImplementedButton({
   recommendationIds?: string[];
   selectionDescription?: string;
   onDeclared?: () => void;
+  /** What the Agent proposed from what the person said; the dialog opens with it, still editable. */
+  proposed?: Proposed;
 }>) {
   const [open, setOpen] = useState(false);
   // One key per dialog opening and chosen day, so a retry after an ambiguous
   // failure replays the identical declaration instead of sending a request the
   // server would refuse as a reused key with changed input.
-  const [attempt, setAttempt] = useState(newAttempt);
+  const [attempt, setAttempt] = useState(() => newAttempt(proposed));
   const declare = useMutation(actionsMutations.declare(workspaceId));
   const range = declarationDays(action.declarable_since, attempt.openedAt);
   const valid = isDeclarableDay(attempt.day, range);
@@ -93,7 +96,7 @@ export function MarkImplementedButton({
         disabled={disabled}
         onClick={() => {
           declare.reset();
-          setAttempt(newAttempt());
+          setAttempt(newAttempt(proposed));
           setOpen(true);
         }}
       >
@@ -264,9 +267,16 @@ export function isDeclarable(action: { status: string; declarable_member_count: 
 /** The declaration request's bound on what shipped it. */
 const DEPLOYMENT_REFERENCE_MAX = 500;
 
-function newAttempt() {
+type Proposed = { day: string | null; reference: string | null };
+
+function newAttempt(proposed?: Proposed) {
   const openedAt = new Date();
-  return { idempotencyKey: newIdempotencyKey(), openedAt, day: localDay(openedAt), reference: '' };
+  return {
+    idempotencyKey: newIdempotencyKey(),
+    openedAt,
+    day: proposed?.day ?? localDay(openedAt),
+    reference: proposed?.reference ?? '',
+  };
 }
 
 /**

@@ -207,7 +207,7 @@ export class AgentFixtures extends VisibilityFixtures {
   }
   async claimed(
     scope: Scope,
-    options: { skillId?: string; message?: string; chatId?: string } = {},
+    options: { skillId?: string; message?: string; chatId?: string; mentionIds?: string[] } = {},
   ) {
     const run = await this.store().enqueue(scope, {
       message: options.message ?? 'Please help.',
