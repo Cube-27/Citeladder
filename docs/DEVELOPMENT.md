@@ -190,8 +190,8 @@ The one-shot `migrate` service must have completed successfully. See
 
 ## Testing
 
-Select tests for the behavior at risk, following the
-`principle-test-behavior-not-implementation` skill. Replace the quoted placeholder paths
+Select tests for the behavior at risk, following
+[CLAUDE.md testing](../CLAUDE.md#testing). Replace the quoted placeholder paths
 in the examples with real affected files or test identifiers. Full selected
 owner suites belong to CI; ordinary documentation edits do not launch them.
 

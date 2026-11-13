@@ -11,8 +11,8 @@
 sections affected by the change. Current code and tests establish shipped
 behavior, not permission to violate an accepted constraint: surface
 disagreements and repair them within the authorized scope; do not rewrite a
-safeguard merely to match a defect. Test design follows the
-`principle-test-behavior-not-implementation` skill.
+safeguard merely to match a defect. Test design follows [Testing](#testing)
+below.
 
 Read a plan only for work assigned to it. An entry in
 [plan status](docs/plans/ACTIVE.md) is not execution authorization; never resume
@@ -57,17 +57,69 @@ These are reminders, not a replacement for the affected invariants.
 4. Add or select coverage for credible regressions at the lowest meaningful
    boundary. Relevant persistence coverage includes workspace isolation and
    provenance; concurrency changes require the real PostgreSQL boundary.
-5. Update only documentation whose authority changed, following the
-   [maintenance rules](docs/README.md#maintaining-documentation). Routine evidence
-   belongs in the PR/CI record, not new progress or summary sidecars.
+5. Update documentation only as [Documentation](#documentation) says.
 
-## Validation
+## Code taste
+
+- Complexity lives at the boundary. Routes, MCP tools and workers decode input,
+  call one owner function and map errors; owners hold the logic; screens render
+  persisted projections and stay dumb.
+- External data is `unknown`. Parse it once where it enters, with the existing
+  zod schema, and infer the type from the schema (`z.infer`). Trust types inside.
+  Never hand-write a property-by-property guard where a schema exists.
+- Model variants as discriminated unions on a literal `kind` and end each
+  `switch` with an exhaustive `never` check. No bags of optional fields.
+- No `any`, no `as` except straight after validation; use `satisfies` to check
+  a value without widening it. Prefer inferred types, and derive with
+  `Pick`/`Omit`/`ReturnType`/`typeof` before declaring a new interface.
+- More than two parameters take one object argument, except on hot paths.
+- React effects only sync with outside systems. Derive values in render and act
+  in event handlers.
+- Default to no comment. Write one only for a constraint, quirk or invariant the
+  code cannot show: one line where possible, four at most.
+- Shipped code logs through the structured logger, never `console.log`.
+- If one of these rules conflicts with the task, say so and get the owner's
+  sign-off before breaking it.
+
+## Testing
+
+- Test behaviour that can break: workspace isolation and auth, persistence,
+  queues, leases and concurrency, billing, parsing, provider translation and
+  bug-fix logic. Do not test type-guaranteed behaviour, trivial logic, copy,
+  static markup, callback wiring or restated constants.
+- Call the subject the way its users do and assert a literal expected value or
+  an observable effect. Before keeping a test, ask: would it still pass if every
+  function it imports returned `undefined`? If yes, rewrite the assertion or
+  delete the test. That rules out weak assertions (`toBeDefined`, `toBeTruthy`,
+  `not.toThrow`), mock-call-only checks, expected values computed by the code
+  under test, pins of a constant/config/prompt, and fixtures asserting fixtures.
+  For an absence, assert the presence on another input in the same test.
+- Extend an existing test or table before adding a new case. Test at the lowest
+  layer that fails on `main`; don't repeat it in wrappers or callers.
+- Logic, data and state bug fixes start with a failing test. Purely visual fixes
+  need no test.
+- Don't mock what you can run: persistence and concurrency use the real local
+  PostgreSQL. No sleeps, polling loops, wall-clock assertions or per-test
+  timeouts; await the event or state. A `.skip` needs a reason and an issue link
+  on the line above.
 
 Run only the smallest relevant native tests for the behavior at risk; CI runs
 the full selected owner suites, every build, E2E and release validation — never
 reproduce it locally. Never overlap test/check processes or repeat a successful
 run. Before running anything beyond focused tests (including `pnpm gate`), use
 the `validate-change` skill.
+
+## Documentation
+
+- Most code changes need no doc change; agents read code.
+- Owner docs hold contracts, cross-component constraints, decisions and traps.
+  They are not feature catalogues, field lists, file maps or PR summaries.
+- A reason the code cannot show goes in a short nearby comment, or in the owner
+  doc when it crosses boundaries. Link to the source; don't copy it.
+- When a documented decision changes, rewrite or delete the old text; never
+  append a correction. A new document needs a durable reason.
+- Routine implementation and validation evidence belongs in the PR or CI
+  record, never in progress, summary or evidence sidecars.
 
 ## Repository safety
 
@@ -97,5 +149,3 @@ Check your own final diff against [Review.md](Review.md). Report changed behavio
 removals for replacements, exact verification commands/results, checks not run,
 and unresolved risks. Do not attribute unrelated dirty-tree failures to this work.
 For review-only requests, do not edit; report actionable findings with file evidence.
-Pull requests get no separate review: no CI review, reviewer agents or
-re-review; your check against Review.md is the review.

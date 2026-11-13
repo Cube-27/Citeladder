@@ -79,17 +79,15 @@ instructions to resume historical delivery checkpoints.
 
 ## Maintaining documentation
 
-Update the existing owner when its shipped contract, setup command, procedure
-or approved decision changes. Update this index only when document ownership or
-routing changes. Keep detailed rules with their owner rather than copying them
-into agent skills, contributor guides or review checklists.
+[CLAUDE.md](../CLAUDE.md#documentation) owns what belongs in a document and
+when to change it. Index-specific rules:
 
-Update `plans/ACTIVE.md` only when plan selection, queue, blocker or completion
-state changes, and `decisions.md` only for a qualifying cross-feature decision.
-Routine implementation/validation evidence belongs in the PR or CI record, not
-new summary, progress or evidence sidecars. There is no blanket multi-document
-checklist per edit. When retiring a document, repair inbound links. Git and PRs
-retain superseded history; deleting a document does not resolve an open finding.
+- Update this index only when document ownership or routing changes.
+- Update `plans/ACTIVE.md` only when plan selection, queue, blocker or
+  completion state changes, and `decisions.md` only for a qualifying
+  cross-feature decision.
+- When retiring a document, repair inbound links. Git and PRs retain
+  superseded history; deleting a document does not resolve an open finding.
 
 ## Operations and retained evidence
 
