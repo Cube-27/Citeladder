@@ -1,22 +1,11 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { Route, Routes } from 'react-router-dom';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { openComposerSubmenu } from '@/test/composer-menu';
 import { mswServer } from '@/test/msw-server';
 import { actionsPage } from '@/test/fixtures/actions';
-import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 const mocks = vi.hoisted(() => ({ saveBlob: vi.fn(), agentEnabled: true }));
@@ -25,7 +14,6 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({ hasCapability: () => mocks.agentEnabled }),
 }));
 
-import { ChatScreen } from './chat-screen';
 import { OutputHistory } from './output-history';
 import { refreshAgentChat } from '@/lib/api/agent';
 import {
@@ -39,35 +27,12 @@ import {
   revision,
   skills,
 } from '@/test/agent-chat-fixture';
+import { renderChat, serveChatScreen } from '@/test/chat-screen';
 
-function renderChat() {
-  return renderWithProviders(
-    <Routes>
-      <Route path="/agent/chats/:chatId" element={<ChatScreen />} />
-    </Routes>,
-    {
-      initialEntries: [`/agent/chats/${CHAT}`],
-      projectSelection: {
-        activeProjectId: PROJECT,
-        activeProject: makeProject({ id: PROJECT }),
-        status: 'ready',
-      },
-    },
-  );
-}
-
-beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
-beforeEach(() =>
-  mswServer.use(
-    http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage())),
-  ),
-);
-afterEach(() => {
-  mswServer.resetHandlers();
+serveChatScreen(() => {
   mocks.saveBlob.mockReset();
   mocks.agentEnabled = true;
 });
-afterAll(() => mswServer.close());
 
 describe('ChatScreen', () => {
   it('selects Automatic when a follow-up has no inherited workflow', async () => {

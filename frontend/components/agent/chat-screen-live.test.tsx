@@ -1,35 +1,18 @@
 import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { Route, Routes } from 'react-router-dom';
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  beforeEach,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { mswServer } from '@/test/msw-server';
-import { actionsPage } from '@/test/fixtures/actions';
-import { makeProject } from '@/test/fixtures/project';
-import { renderWithProviders } from '@/test/render';
 import { expectThreadFollowsLatest } from '@/test/chat-follow';
 
-const mocks = vi.hoisted(() => ({ saveBlob: vi.fn(), agentEnabled: true }));
-vi.mock('@/lib/download', () => ({ saveBlob: mocks.saveBlob }));
 vi.mock('@/lib/billing/entitlement-context', () => ({
-  useEntitlement: () => ({ hasCapability: () => mocks.agentEnabled }),
+  useEntitlement: () => ({ hasCapability: () => true }),
 }));
 
-import { ChatScreen } from './chat-screen';
 import { refreshAgentChat } from '@/lib/api/agent';
 import {
   CHAT,
-  PROJECT,
   REV1,
   REV2,
   RUN,
@@ -38,35 +21,9 @@ import {
   revision,
   skills,
 } from '@/test/agent-chat-fixture';
+import { renderChat, serveChatScreen } from '@/test/chat-screen';
 
-function renderChat() {
-  return renderWithProviders(
-    <Routes>
-      <Route path="/agent/chats/:chatId" element={<ChatScreen />} />
-    </Routes>,
-    {
-      initialEntries: [`/agent/chats/${CHAT}`],
-      projectSelection: {
-        activeProjectId: PROJECT,
-        activeProject: makeProject({ id: PROJECT }),
-        status: 'ready',
-      },
-    },
-  );
-}
-
-beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
-beforeEach(() =>
-  mswServer.use(
-    http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage())),
-  ),
-);
-afterEach(() => {
-  mswServer.resetHandlers();
-  mocks.saveBlob.mockReset();
-  mocks.agentEnabled = true;
-});
-afterAll(() => mswServer.close());
+serveChatScreen();
 
 describe('ChatScreen running turn', () => {
   it('shows the reply as it streams, then the saved reply in its place', async () => {
