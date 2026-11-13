@@ -47,6 +47,9 @@ const { variant = 'article', as: Tag = 'div', label } = Astro.props;
   .cl-prose > * {
     margin: 0;
   }
+  .cl-prose :is(p, li) {
+    text-wrap: pretty;
+  }
   .cl-prose > * + * {
     margin-top: 20px;
   }

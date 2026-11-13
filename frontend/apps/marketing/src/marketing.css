@@ -30,6 +30,23 @@
 
 /* ── Motion ─────────────────────────────────────────────────────────────── */
 
+/* Page to page, the site cross-fades (the browser's default root fade) while
+   the sticky navbar holds still; reduced motion swaps pages instantly. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  .cl-navbar {
+    view-transition-name: site-bar;
+  }
+
+  ::view-transition-old(site-bar),
+  ::view-transition-new(site-bar) {
+    animation: none;
+  }
+}
+
 /* Arrow glyphs in calls to action lean toward where they go, only for
    readers who have not asked for reduced motion. */
 @media (prefers-reduced-motion: no-preference) {

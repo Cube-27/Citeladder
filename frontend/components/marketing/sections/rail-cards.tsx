@@ -121,13 +121,20 @@ export function CardRail({
           </button>
         </div>
       </div>
-      <ul className="cl-rail-track" aria-label={label} data-card-rail-track>
+      <ul
+        className="cl-rail-track focus-ring"
+        aria-label={label}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- WCAG 2.1.1: the keyboard scrolls this sideways-scrolling row.
+        tabIndex={0} // NOSONAR -- WCAG 2.1.1: a row that scrolls sideways must take focus so the keyboard can scroll it
+        data-card-rail-track
+      >
         {items.map((item) => (
           <li key={item.key} className="cl-rail-item">
             {item.content}
           </li>
         ))}
       </ul>
+      <output className="sr-only" data-card-rail-status />
     </div>
   );
 }

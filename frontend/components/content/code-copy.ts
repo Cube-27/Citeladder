@@ -1,8 +1,9 @@
 /**
  * The Copy behaviour of `CodeBlock.astro`: one delegated listener copies a
- * block's code and reports the outcome for 1.6s. "Copied" shows only after the
+ * block's code and reports the outcome in the status region beside the
+ * button, whose own name stays "Copy". "Copied" shows for 1.6s, only after the
  * clipboard accepted the write; a refused write or a missing clipboard API
- * (permissions policy, insecure origin) reads "Copy failed".
+ * (permissions policy, insecure origin) reads "Couldn't copy" until the next press.
  */
 const RESET_MS = 1600;
 const timers = new WeakMap<HTMLElement, number>();
@@ -10,19 +11,19 @@ const timers = new WeakMap<HTMLElement, number>();
 type ClipboardWriter = Pick<Clipboard, 'writeText'>;
 
 function report(button: HTMLButtonElement, copied: boolean) {
-  const label = button.querySelector('span');
-  const text = copied ? 'Copied' : 'Copy failed';
-  if (copied) button.dataset.copied = '';
-  else delete button.dataset.copied;
-  button.setAttribute('aria-label', text);
-  if (label) label.textContent = text;
+  const status = button.parentElement?.querySelector<HTMLElement>('[data-code-copy-status]');
+  button.toggleAttribute('data-copied', copied);
+  if (status) {
+    status.textContent = copied ? 'Copied' : 'Couldn’t copy';
+    status.toggleAttribute('data-failed', !copied);
+  }
   window.clearTimeout(timers.get(button));
+  if (!copied) return;
   timers.set(
     button,
     window.setTimeout(() => {
-      delete button.dataset.copied;
-      button.setAttribute('aria-label', 'Copy code');
-      if (label) label.textContent = 'Copy';
+      button.removeAttribute('data-copied');
+      if (status) status.textContent = '';
     }, RESET_MS),
   );
 }

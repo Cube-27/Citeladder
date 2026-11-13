@@ -5,6 +5,7 @@ import '@/apps/marketing/src/marketing.css';
 import '@/apps/marketing/src/site-base.css';
 import GoogleAnalytics from '@/components/analytics/GoogleAnalytics.astro';
 import CookieBanner from '@/components/marketing/chrome/CookieBanner.astro';
+import SpeculationRules from '@/components/content/SpeculationRules.astro';
 import PublicFonts from '@/components/marketing/chrome/PublicFonts.astro';
 import SiteNav from '@/components/marketing/chrome/SiteNav.astro';
 import { SiteFooter } from '@/components/marketing/chrome/site-footer';
@@ -90,6 +91,7 @@ const sharedJsonLd = [organizationJsonLd(), websiteJsonLd(), softwareApplication
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <PublicFonts />
+    <SpeculationRules />
     <title>{title}</title>
     <meta property="og:title" content={socialTitle} />
     <meta property="og:description" content={description} />

@@ -15,7 +15,8 @@
 import config from '../config/brand-fonts.json' with { type: 'json' };
 
 type FontRole = keyof typeof config.faces;
-type FontSurface = 'app' | 'public';
+// The docs are the website's faces plus mono, which their code samples set.
+type FontSurface = 'app' | 'public' | 'docs';
 type Face = (typeof config.faces)[FontRole];
 
 const ROLES: readonly FontRole[] = ['display', 'sans', 'mono'];

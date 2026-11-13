@@ -396,7 +396,7 @@ describe('ToolPanel', () => {
     expect(screen.getByRole('button', { name: 'Copy' })).toBeDisabled();
   });
 
-  it('copies the result and confirms, then reads Copy again', async () => {
+  it('copies the result and confirms in the status, then clears it', async () => {
     vi.useFakeTimers();
     const writeText = vi.fn(() => Promise.resolve());
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
@@ -413,11 +413,35 @@ describe('ToolPanel', () => {
       fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
     });
     expect(writeText).toHaveBeenCalledWith('User-agent: *');
-    expect(screen.getByRole('button', { name: 'Copied' })).toBeInTheDocument();
+    expect(screen.getByRole('status').textContent).toBe('Copied');
+    expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
 
     act(() => {
       vi.advanceTimersByTime(1600);
     });
-    expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
+    expect(screen.getByRole('status').textContent).toBe('');
+  });
+
+  it('shows a refused copy until the next press', async () => {
+    vi.useFakeTimers();
+    const writeText = vi.fn(() => Promise.reject(new DOMException('Denied', 'NotAllowedError')));
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    render(
+      <ToolPanel title="Robots.txt generator" form={null} result={<pre>x</pre>} copyText="x" />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    });
+    act(() => {
+      vi.advanceTimersByTime(1600);
+    });
+    expect(screen.getByRole('status').textContent).toBe('Couldn’t copy');
+
+    writeText.mockImplementation(() => Promise.resolve());
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+    });
+    expect(screen.getByRole('status').textContent).toBe('Copied');
   });
 });

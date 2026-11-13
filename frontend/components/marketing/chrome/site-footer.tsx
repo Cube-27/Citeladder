@@ -83,6 +83,7 @@ function DirectoryBadges() {
           height={40}
           loading="lazy"
           decoding="async"
+          referrerPolicy="no-referrer"
           className="block h-auto w-28"
         />
       </a>
@@ -99,6 +100,7 @@ function DirectoryBadges() {
             height={29}
             loading="lazy"
             decoding="async"
+            referrerPolicy="no-referrer"
             className="block h-auto w-28"
           />
         </a>

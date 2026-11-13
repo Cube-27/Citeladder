@@ -129,6 +129,7 @@ function applyConsent(measurementId: string, allowed: boolean) {
   const script = document.createElement('script');
   script.id = SCRIPT_ID;
   script.async = true;
+  script.fetchPriority = 'low';
   script.src = `https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(measurementId)}`;
   script.dataset.testid = 'external-script';
   script.addEventListener(

@@ -7,3 +7,20 @@
 @source './..';
 @source '../../../../components/ui';
 @source '../../../../components/content';
+
+/* Page to page, the docs cross-fade (the browser's default root fade) while
+   the sticky top bar holds still; reduced motion swaps pages instantly. */
+@media (prefers-reduced-motion: no-preference) {
+  @view-transition {
+    navigation: auto;
+  }
+
+  .cl-docs-bar {
+    view-transition-name: site-bar;
+  }
+
+  ::view-transition-old(site-bar),
+  ::view-transition-new(site-bar) {
+    animation: none;
+  }
+}

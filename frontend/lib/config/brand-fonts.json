@@ -5,7 +5,7 @@
     "display": {
       "family": "Cal Sans",
       "file": "CalSans.woff2",
-      "preload": ["public"],
+      "preload": ["public", "docs"],
       "weights": "400",
       "fallback": {
         "sizeAdjust": "100.19%",
@@ -17,7 +17,7 @@
     "sans": {
       "family": "Spline Sans",
       "file": "SplineSans-Variable.woff2",
-      "preload": ["app", "public"],
+      "preload": ["app", "public", "docs"],
       "weights": "400 600",
       "fallback": {
         "sizeAdjust": "105.11%",
@@ -29,7 +29,7 @@
     "mono": {
       "family": "Geist Mono",
       "file": "GeistMono-Variable.woff2",
-      "preload": ["app"],
+      "preload": ["app", "docs"],
       "weights": "400 600",
       "fallback": {
         "sizeAdjust": "100%",

@@ -6,14 +6,15 @@ import { Icon } from '@/components/ui/icon';
 
 import './tool-panel.css';
 
-/** How long "Copied" shows before the button reads "Copy" again. */
+/** How long the "Copied" status shows. */
 const COPIED_MS = 1600;
 
 /**
  * ToolPanel: a free tool's shell, the form on 5/12 beside a paper result
  * well on 7/12 (stacked under 1024px). The well holds a 420px floor whether
- * it shows the empty line or a result, and Copy keeps one width as it reads
- * "Copied", so running the tool moves nothing around it.
+ * it shows the empty line or a result, and Copy keeps its label while a
+ * status beside it reads "Copied" briefly (or "Couldn’t copy"), so running
+ * the tool moves nothing around it.
  */
 export function ToolPanel({
   title,
@@ -39,20 +40,22 @@ export function ToolPanel({
   onDownload?: () => void;
   downloadLabel?: string;
 }>) {
-  const [copied, setCopied] = useState(false);
+  const [copy, setCopy] = useState<'idle' | 'copied' | 'failed'>('idle');
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
 
-  const copy = async () => {
+  const copyResult = async () => {
     if (!copyText) return;
+    clearTimeout(timer.current);
     try {
       await navigator.clipboard.writeText(copyText);
     } catch {
+      // A refused write or a missing clipboard API stays visible until the next press.
+      setCopy('failed');
       return;
     }
-    setCopied(true);
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => setCopied(false), COPIED_MS);
+    setCopy('copied');
+    timer.current = setTimeout(() => setCopy('idle'), COPIED_MS);
   };
 
   return (
@@ -67,14 +70,18 @@ export function ToolPanel({
           <p className="cl-tool-rtitle">{resultTitle}</p>
           {status && <span className="cl-tool-status">{status}</span>}
           <div className="cl-tool-actions">
+            <output className="cl-tool-copy-status" data-failed={copy === 'failed' || undefined}>
+              {copy === 'copied' && 'Copied'}
+              {copy === 'failed' && 'Couldn’t copy'}
+            </output>
             <Button
               variant="ghost"
               className="cl-tool-copy"
               disabled={!copyText}
-              onClick={() => void copy()}
+              onClick={() => void copyResult()}
             >
-              <Icon icon={copied ? Check : Copy} />
-              {copied ? 'Copied' : 'Copy'}
+              <Icon icon={copy === 'copied' ? Check : Copy} />
+              Copy
             </Button>
             {onDownload && (
               <Button variant="ghost" disabled={result === undefined} onClick={onDownload}>

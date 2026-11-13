@@ -5,13 +5,15 @@ function block() {
   document.body.innerHTML = `
     <figure class="cl-code">
       <figcaption class="cl-code-bar">
-        <button type="button" class="cl-code-copy" aria-label="Copy code" data-code-copy>
-          <span aria-hidden="true">Copy</span>
-        </button>
+        <output class="cl-code-status" data-code-copy-status></output>
+        <button type="button" class="cl-code-copy" data-code-copy>Copy</button>
       </figcaption>
       <pre class="cl-code-pre"><code>npx citeladder connect</code></pre>
     </figure>`;
-  return document.querySelector<HTMLButtonElement>('[data-code-copy]')!;
+  return {
+    button: document.querySelector<HTMLButtonElement>('[data-code-copy]')!,
+    status: document.querySelector<HTMLElement>('output')!,
+  };
 }
 
 afterEach(() => {
@@ -20,31 +22,39 @@ afterEach(() => {
 });
 
 describe('code block Copy', () => {
-  it('confirms only after the clipboard accepted the code, then resets', async () => {
+  it('confirms in the status only after the clipboard accepted the code, then clears it', async () => {
     vi.useFakeTimers();
     const writes: string[] = [];
-    const button = block();
+    const { button, status } = block();
     await copyCodeBlock(button, { writeText: async (value) => void writes.push(value) });
     expect(writes).toEqual(['npx citeladder connect']);
-    expect(button.getAttribute('aria-label')).toBe('Copied');
-    expect(button.textContent?.trim()).toBe('Copied');
+    expect(status.textContent).toBe('Copied');
+    expect(button.textContent).toBe('Copy');
     expect(button.hasAttribute('data-copied')).toBe(true);
     vi.advanceTimersByTime(1600);
-    expect(button.getAttribute('aria-label')).toBe('Copy code');
-    expect(button.textContent?.trim()).toBe('Copy');
+    expect(status.textContent).toBe('');
+    expect(button.hasAttribute('data-copied')).toBe(false);
   });
 
-  it('reports a refused write and a missing clipboard as a failure', async () => {
-    const button = block();
+  it('keeps a refused write or a missing clipboard visible as a failure', async () => {
+    vi.useFakeTimers();
+    const { button, status } = block();
     await copyCodeBlock(button, {
       writeText: () => Promise.reject(new DOMException('Denied', 'NotAllowedError')),
     });
-    expect(button.getAttribute('aria-label')).toBe('Copy failed');
-    expect(button.textContent?.trim()).toBe('Copy failed');
+    expect(status.textContent).toBe('Couldn’t copy');
+    expect(status.hasAttribute('data-failed')).toBe(true);
     expect(button.hasAttribute('data-copied')).toBe(false);
+    vi.advanceTimersByTime(1600);
+    expect(status.textContent).toBe('Couldn’t copy');
 
     const other = block();
-    await copyCodeBlock(other, undefined);
-    expect(other.getAttribute('aria-label')).toBe('Copy failed');
+    await copyCodeBlock(other.button, undefined);
+    expect(other.status.textContent).toBe('Couldn’t copy');
+
+    // The next successful press replaces the failure.
+    await copyCodeBlock(other.button, { writeText: async () => undefined });
+    expect(other.status.textContent).toBe('Copied');
+    expect(other.status.hasAttribute('data-failed')).toBe(false);
   });
 });

@@ -21,7 +21,9 @@ describe('docs Markdown blocks', () => {
     expect(html).toContain(
       '<figcaption class="cl-code-bar"><span class="cl-code-lang">bash</span>',
     );
-    expect(html).toContain('aria-label="Copy code"');
+    expect(html).toMatch(
+      /<output class="cl-code-status"[^>]*><\/output><button[^>]*>.*Copy<\/button>/,
+    );
     expect(html).toContain(
       '<code><span class="cl-code-muted"># Start a run</span>\n<span class="cl-code-muted">$ </span>curl https://api.citeladder.com</code>',
     );
@@ -29,7 +31,7 @@ describe('docs Markdown blocks', () => {
 
   it('leaves the language out of the bar when the fence names none', async () => {
     const html = await render('```\n{ "ok": true }\n```\n');
-    expect(html).toContain('<figcaption class="cl-code-bar"><button');
+    expect(html).toContain('<figcaption class="cl-code-bar"><output class="cl-code-status"');
     expect(html).toContain('<code>{ "ok": true }</code>');
   });
 
@@ -54,7 +56,9 @@ describe('website Markdown blocks', () => {
     expect(html).toContain(
       '<figcaption class="cl-code-bar"><span class="cl-code-lang">yaml</span>',
     );
-    expect(html).toContain('aria-label="Copy code"');
+    expect(html).toMatch(
+      /<output class="cl-code-status"[^>]*><\/output><button[^>]*>.*Copy<\/button>/,
+    );
     expect(html).toContain(
       '<code><span class="cl-code-muted"># Compose</span>\nservices: {}</code>',
     );

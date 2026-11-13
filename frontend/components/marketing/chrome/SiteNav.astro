@@ -43,7 +43,7 @@ const register = appHref('/register');
         <a href="/" aria-label="CiteLadder home" class="cl-navbar-logo focus-ring">
           <LogoMark />
         </a>
-        <DesktopNav path={path} client:load />
+        <DesktopNav path={path} client:media="(min-width: 1280px)" />
         <div class="cl-navbar-end">
           <div class="cl-navbar-actions cl-navbar-hide-sm">
             <ThemeSwitch client:load />

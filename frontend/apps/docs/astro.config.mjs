@@ -3,7 +3,9 @@ import { satteri } from '@astrojs/markdown-satteri';
 import react from '@astrojs/react';
 import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
-import { DOCS_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy.ts';
+import { docsContentSecurityPolicy } from '../../lib/config/content-security-policy.ts';
+import { cspScriptHash } from '../../lib/config/csp-hash.ts';
+import { SPECULATION_RULES_JSON } from '../../lib/config/speculation-rules.ts';
 import { DOCS_ORIGIN } from '../../lib/config/docs.ts';
 import { proseMarkdownBlocks } from '../../components/content/prose-blocks.ts';
 
@@ -20,7 +22,7 @@ const origin = (name, production) =>
 export default defineConfig({
   site: DOCS_ORIGIN,
   output: 'static',
-  security: { csp: DOCS_CONTENT_SECURITY_POLICY },
+  security: { csp: docsContentSecurityPolicy([cspScriptHash(SPECULATION_RULES_JSON)]) },
   integrations: [react()],
   // Fences render as the system's CodeBlock and tables get Prose's scroll frame.
   markdown: { syntaxHighlight: false, processor: satteri({ hastPlugins: [proseMarkdownBlocks] }) },

@@ -11,6 +11,7 @@ export function mountCardRail(rail: HTMLElement): void {
   const track = rail.querySelector<HTMLElement>('[data-card-rail-track]');
   const prev = rail.querySelector<HTMLButtonElement>('[data-card-rail-prev]');
   const next = rail.querySelector<HTMLButtonElement>('[data-card-rail-next]');
+  const status = rail.querySelector<HTMLElement>('[data-card-rail-status]');
   if (!nav || !track || !prev || !next) return;
 
   const reduceMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -19,7 +20,18 @@ export function mountCardRail(rail: HTMLElement): void {
     const gap = Number.parseFloat(getComputedStyle(track).columnGap) || 0;
     return first instanceof HTMLElement ? first.offsetWidth + gap : track.clientWidth;
   };
+  // Tells a screen reader which card the buttons brought to the start.
+  const announce = (direction: -1 | 1) => {
+    const items = [...track.children];
+    const step = cardStep();
+    const from = step > 0 ? Math.round(track.scrollLeft / step) : 0;
+    const index = Math.min(items.length - 1, Math.max(0, from + direction));
+    const name = items[index]?.querySelector<HTMLElement>('[data-rail-toggle]')?.dataset.label;
+    const position = `${index + 1} of ${items.length}`;
+    if (status) status.textContent = name ? `${name}, ${position}` : position;
+  };
   const move = (direction: -1 | 1) => {
+    announce(direction);
     track.scrollBy({ left: direction * cardStep(), behavior: reduceMotion() ? 'auto' : 'smooth' });
   };
   const sync = () => {

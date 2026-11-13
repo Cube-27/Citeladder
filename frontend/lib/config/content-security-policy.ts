@@ -51,15 +51,25 @@ type AstroDirective = NonNullable<
 // The marketing footer hotlinks the launch-directory badges from their hosts.
 const LAUNCH_BADGE_IMAGE_ORIGINS = ['https://www.codehype.ai', 'https://tools.launchllama.co'];
 
-// Astro hashes only its compiled framework/inline scripts. No runtime blanket
-// hashing/noncing of HTML.
-function astroContentSecurityPolicy(
-  scriptSources: string[],
-  directives: AstroDirective[],
-  imageSources: string[] = [],
-): AstroContentSecurityPolicy {
+type AstroScriptHash = `sha256-${string}`;
+
+// Astro hashes only its compiled framework/inline scripts; `scriptHashes` adds
+// the build-time hashes of our own inline scripts (the speculation rules). No
+// runtime blanket hashing/noncing of HTML.
+function astroContentSecurityPolicy({
+  scriptSources,
+  scriptHashes,
+  directives,
+  imageSources = [],
+}: {
+  scriptSources: string[];
+  scriptHashes: readonly AstroScriptHash[];
+  directives: AstroDirective[];
+  imageSources?: string[];
+}): AstroContentSecurityPolicy {
   return {
     scriptDirective: {
+      hashes: [...scriptHashes],
       resources: [
         "'self'",
         ...CLOUDFLARE_BEACON_SOURCES,
@@ -81,27 +91,43 @@ function astroContentSecurityPolicy(
 }
 
 // Server-rendered marketing emits the policy as a response header.
-export function marketingContentSecurityPolicy(
-  analyticsEnabled: boolean,
-): AstroContentSecurityPolicy {
-  return astroContentSecurityPolicy(
+export function marketingContentSecurityPolicy({
+  analyticsEnabled,
+  scriptHashes,
+}: {
+  analyticsEnabled: boolean;
+  scriptHashes: readonly AstroScriptHash[];
+}): AstroContentSecurityPolicy {
+  return astroContentSecurityPolicy({
     // The contact form's Turnstile widget loads from this origin and renders
     // its challenge in a frame from it; no other page requests either.
-    [TURNSTILE_ORIGIN, ...(analyticsEnabled ? ['https://www.googletagmanager.com/gtag/js'] : [])],
-    [
+    scriptSources: [
+      TURNSTILE_ORIGIN,
+      ...(analyticsEnabled ? ['https://www.googletagmanager.com/gtag/js'] : []),
+    ],
+    scriptHashes,
+    directives: [
       "frame-ancestors 'none'",
       `frame-src ${TURNSTILE_ORIGIN}`,
       analyticsEnabled
         ? "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum https://www.google-analytics.com https://region1.google-analytics.com"
         : "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum",
     ],
-    LAUNCH_BADGE_IMAGE_ORIGINS,
-  );
+    imageSources: LAUNCH_BADGE_IMAGE_ORIGINS,
+  });
 }
 
 // Static docs receive the policy as a <meta> element, where browsers ignore
 // frame-ancestors; X-Frame-Options in the docs _headers file denies framing.
-export const DOCS_CONTENT_SECURITY_POLICY = astroContentSecurityPolicy(
-  [],
-  ["frame-src 'none'", "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum"],
-);
+export function docsContentSecurityPolicy(
+  scriptHashes: readonly AstroScriptHash[],
+): AstroContentSecurityPolicy {
+  return astroContentSecurityPolicy({
+    scriptSources: [],
+    scriptHashes,
+    directives: [
+      "frame-src 'none'",
+      "connect-src 'self' https://cloudflareinsights.com/cdn-cgi/rum",
+    ],
+  });
+}
