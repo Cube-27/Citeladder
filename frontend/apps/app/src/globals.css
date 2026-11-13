@@ -54,6 +54,10 @@
   --color-paper: #f4f4f4;
   --color-surface: #ffffff;
   --color-surface-sunken: #ececec;
+  /* The app's sidebar column (D59): its own step beside the page. The
+     website has no sidebar, so the system's value is the ground; the app
+     rebinds it below. */
+  --color-sidebar: var(--color-paper);
   /* States (D51): an ink overlay over whatever fill is beneath, so hover,
      pressed and selected read the same on paper, surface and sunken and
      never share one fill. Applied with the `overlay-*` utilities below. */
@@ -423,19 +427,25 @@
     0 1px 2px rgb(0 0 0 / 60%), 0 8px 24px -6px rgb(0 0 0 / 60%);
 }
 
-/* The app's dark (owner, 2026-11-11, D58): softer greys in the manner of a
-   code editor's dark theme rather than near-black, and the primary ink 10%
-   lower in contrast; the secondary ink and the hues are unchanged. The
-   website and docs keep the system's dark above. */
+/* The app's dark (D58, D59): a clear ladder of fills, the sidebar darkest,
+   then the page, the card one step lighter and the inset a well inside it;
+   edges and hover are translucent white over whatever fill is beneath; the
+   primary ink 10% lower in contrast. It rebinds every colour the app's light
+   block below sets: that block follows the system's dark at the same
+   specificity, so it would otherwise win in the app's dark. The website and
+   docs keep the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-paper: #161616;
-  --color-surface: #1e1e1e;
-  --color-surface-sunken: #262626;
+  --color-paper: #111111;
+  --color-sidebar: #0a0a0a;
+  --color-surface: #1c1c1c;
+  --color-surface-sunken: #141414;
+  --color-state-hover: rgb(244 244 244 / 4%);
   --color-nav-glass: rgb(32 32 32 / 78%);
-  --color-line: #2e2e2e;
-  --color-line-strong: #3e3e3e;
+  --color-line: rgb(255 255 255 / 8%);
+  --color-line-strong: rgb(255 255 255 / 14%);
   --color-chart-grid: #2b2b2b;
   --color-ink: #e8e8e8;
+  --color-ink-secondary: #9a9a9a;
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -487,6 +497,14 @@
 :root:not([data-public-surface]) {
   /* The app's primary ink, 10% lower in contrast than the system's (D58). */
   --color-ink: #1c1c1c;
+  /* The app's light fills and secondary ink (D59): a near-white page, the
+     sidebar one step off it, white cards and selected sidebar rows, and one
+     inset. The secondary ink is the lightest grey that still holds 4.5:1
+     under every state overlay on every one of those fills. */
+  --color-paper: #fcfcfc;
+  --color-sidebar: #fafafa;
+  --color-surface-sunken: #f4f4f5;
+  --color-ink-secondary: #61616b;
   --content-gutter: 24px;
   --page-section-gap: 16px;
   --workspace-gap: 12px;

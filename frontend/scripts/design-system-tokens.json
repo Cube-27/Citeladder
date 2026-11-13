@@ -19,7 +19,15 @@
           "light": "#f4f4f4",
           "dark": "#0a0a0a"
         },
-        "usage": "The ground (D51): the page of the app and the website, the app's sidebar and top bar (white cards sit on it in light, lighter cards in dark). Never an inset."
+        "usage": "The ground (D51): the page of the app and the website and the app's top bar (white cards sit on it in light, lighter cards in dark). Never an inset."
+      },
+      {
+        "name": "sidebar",
+        "value": {
+          "light": "{paper}",
+          "dark": "{paper}"
+        },
+        "usage": "The app's sidebar column and navigation drawer (D59): one step off the page, darker in both themes; its selected row lifts to `surface`. The website has no sidebar, so the system's value is the ground and the app rebinds it."
       },
       {
         "name": "surface",

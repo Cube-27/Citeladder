@@ -46,8 +46,9 @@ const FRAME =
   'bg-paper text-ink shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] grid min-h-dvh grid-cols-[minmax(0,1fr)]';
 // A `line` rule always separates the sidebar from the page, in both themes
 // (owner, 2026-11-10); the resize handle's line strengthens it on hover,
-// focus and drag.
-const SIDEBAR_COLUMN = 'border-line rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
+// focus and drag. The sidebar sits on its own fill, one step off the page (D59).
+const SIDEBAR_COLUMN =
+  'bg-sidebar border-line rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
 const PAGE = 'mx-auto flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
 const MAIN_INSET = '@container min-w-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]';
 
@@ -216,8 +217,8 @@ export function SidebarNavGroup({
 /**
  * A destination row's face, for the link that carries it: `control-md` (32) tall,
  * the label in `ink-secondary` at weight 400; the current row's label is 500
- * (owner, 2026-11-10). Hover is the hover overlay; the current row takes the
- * selected overlay (D51) and a 2px Flare bar on its leading edge, and its
+ * (owner, 2026-11-10). Hover is the hover overlay; the current row lifts to
+ * the card's `surface` fill (D59) with a 2px Flare bar on its leading edge, and its
  * icon turns Flare, the app's one selected-nav marker; the bar is painted
  * over the row, so selecting a row moves nothing. In the rail the row is one control square. A label that
  * cannot fit (larger text spacing, WCAG 1.4.12) wraps and the row grows, so
@@ -227,7 +228,7 @@ export function sidebarNavRowClasses(active: boolean, plain = false) {
   return cn(
     'focus-ring group type-control labelled:justify-start labelled:px-3 relative flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md transition-colors',
     active
-      ? 'overlay-selected text-ink font-medium before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
+      ? 'bg-surface text-ink font-medium before:bg-accent before:absolute before:inset-y-1.5 before:start-0 before:w-0.5 before:rounded-full'
       : 'text-ink-secondary hover:overlay-hover hover:text-ink font-normal',
     plain && 'labelled:flex hidden',
   );
@@ -320,7 +321,7 @@ export function NavDrawer({
       body="dock"
       closeLabel="Close navigation"
     >
-      <div data-nav-drawer="" className="flex min-h-0 flex-1 flex-col">
+      <div data-nav-drawer="" className="bg-sidebar flex min-h-0 flex-1 flex-col">
         {children}
       </div>
     </Drawer>

@@ -41,7 +41,7 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
         {handoff.ask ? (
           <Stack gap="tight">
             <p className={textRole('label')}>What to ask for</p>
-            <p className={textRole('body')}>{handoff.ask}</p>
+            <p className={textRole('body', 'text-ink')}>{handoff.ask}</p>
           </Stack>
         ) : null}
         <OnPageEntities
