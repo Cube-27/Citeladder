@@ -121,7 +121,7 @@ export function PricingTable({
   return (
     <section
       className="cl-wtable focus-ring"
-      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- WCAG 2.1.1: the keyboard scrolls this sideways-scrolling region.
       tabIndex={0} // NOSONAR -- WCAG 2.1.1: a region that scrolls sideways must take focus so the keyboard can scroll it
       aria-label={caption}
     >

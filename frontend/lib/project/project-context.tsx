@@ -246,13 +246,11 @@ export function ProjectProvider({ children }: Readonly<{ children: ReactNode }>)
   // and with the selection living nowhere but the URL, the render in between
   // fell all the way back to the FIRST membership, sending one project-list
   // request against a workspace the reader is not in and flashing the loader
-  // before the detail pulled it back.
-  useEffect(() => {
-    // oxlint-disable-next-line react-hooks/set-state-in-effect -- mirror the resolved workspace.
-    setSelectedWorkspaceId((current) =>
-      activeWorkspaceId && current !== activeWorkspaceId ? activeWorkspaceId : current,
-    );
-  }, [activeWorkspaceId]);
+  // before the detail pulled it back. Adopted during render, so the selection
+  // never lags the workspace the screen already resolved.
+  if (activeWorkspaceId && selectedWorkspaceId !== activeWorkspaceId) {
+    setSelectedWorkspaceId(activeWorkspaceId);
+  }
 
   const value = useMemo<ProjectContextValue>(
     () => ({
