@@ -1,8 +1,8 @@
 /**
- * Composer commands: `/` picks a skill and `@` mentions an Action, both typed
- * inline. A command token starts at the beginning of the message or after
- * whitespace and runs to the caret; picking an option replaces the token. A
- * pasted link to an Action's page becomes a mention too.
+ * Composer commands, typed inline: `/` opens the + menu on the skills and `@`
+ * mentions an Action. A command token starts at the beginning of the message
+ * or after whitespace and runs to the caret; picking an option replaces the
+ * token. A pasted link to an Action's page becomes a mention too.
  */
 import type { ActionStatus } from '@/lib/api/actions';
 

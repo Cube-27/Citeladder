@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { ChatConversation, ReplyComposer, useChatThread } from '@/components/agent/chat-thread';
 import { Composer } from '@/components/agent/composer';
-import { ComposerMenu } from '@/components/agent/composer-menu';
 import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
@@ -124,17 +123,9 @@ function PanelStart({
           value={message}
           onChange={setMessage}
           onSubmit={() =>
-            commands.prepare(message, (prepared) => {
-              // Typing while the links resolved is kept.
-              setMessage((current) => (current === message ? prepared.message : current));
-              create.start({
-                ...prepared,
-                skillId,
-                actionId: seed.actionId,
-                context,
-                attachments: commands.pastes.attachments,
-              });
-            })
+            commands.prepare({ message, edit: setMessage }, (prepared) =>
+              create.start({ ...prepared, skillId, actionId: seed.actionId, context }),
+            )
           }
           pending={create.pending || commands.resolving}
           disabled={!access.canSend}
@@ -142,15 +133,7 @@ function PanelStart({
           chips={contextChips(context)}
           commands={commands}
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
-          skill={skill.chip}
-          tools={
-            <ComposerMenu
-              menu={commands.menu}
-              scope={commands.scope}
-              skill={skill}
-              disabled={!access.canSend}
-            />
-          }
+          skill={skill}
         />
       }
     >

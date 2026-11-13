@@ -1,18 +1,21 @@
 import { ArrowUp, Square } from 'lucide-react';
-import type { ReactNode } from 'react';
 
 import { IconButton } from '@/components/ui/button';
 import { ComposerFrame, PastedTextChip, RemovableChip } from '@/components/ui/chat-dock';
 import type { ContextChip } from '@/lib/agent/handoff';
 import { AGENT_COMPOSER_MAX_ROWS } from '@/lib/config/agent';
 
-import { CommandField, type ComposerCommands } from './command-menu';
+import { CommandField } from './command-menu';
+import { ComposerMenu } from './composer-menu';
+import type { SkillChoice } from './skill-picker';
+import type { ComposerState } from './use-composer-commands';
 
 /**
  * The message box every Agent surface shares. Enter sends, Shift+Enter adds a
  * line. Context chips show the typed references the turn will carry; optional
- * ones can be removed before sending. With `commands`, typing `/` or `@` at a
- * word start opens a menu (arrows move, Enter or Tab picks, Escape closes).
+ * ones can be removed before sending. The + menu sets the skill or opens an
+ * Action; typing `/` at a word start opens it on the skills and `@` lists
+ * Actions to mention (arrows move, Enter or Tab picks, Escape closes).
  */
 export function Composer({
   id,
@@ -28,7 +31,6 @@ export function Composer({
   onRemoveChip,
   attachment,
   skill,
-  tools,
   commands,
   onStop,
   stopping = false,
@@ -47,22 +49,22 @@ export function Composer({
   onRemoveChip?: (chip: ContextChip) => void;
   /** The Action the chat is about, first among the chips: one removable line. */
   attachment?: Readonly<{ label: string; onRemove: () => void }>;
-  /** The skill the turn will run, picked or continued, after the Action. */
-  skill?: Readonly<{ label: string; onRemove: () => void }>;
-  tools?: ReactNode;
-  commands?: ComposerCommands;
+  /** The skill the turn will run, picked or continued: a chip after the Action, and the menu's Skills. */
+  skill: SkillChoice;
+  commands: ComposerState;
   /** While a turn runs, the send button stops it instead. */
   onStop?: () => void;
   stopping?: boolean;
 }>) {
   const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
+  const menuDisabled = disabled || submissionDisabled;
   return (
     <ComposerFrame
       onSubmit={() => {
         if (canSend) onSubmit();
       }}
       chipsLabel="Context for this request"
-      chips={composerChips({ lead: [attachment, skill], chips, onRemoveChip, commands })}
+      chips={composerChips({ lead: [attachment, skill.chip], chips, onRemoveChip, commands })}
       field={
         <>
           <label htmlFor={id} className="sr-only">
@@ -75,14 +77,22 @@ export function Composer({
             onEnter={() => {
               if (canSend) onSubmit();
             }}
-            commands={commands}
+            // While the menu cannot open, a typed `/` stays text instead of waiting to open it.
+            commands={menuDisabled ? { ...commands, openSkillPicker: undefined } : commands}
             disabled={disabled}
             placeholder={placeholder}
             maxRows={AGENT_COMPOSER_MAX_ROWS}
           />
         </>
       }
-      tools={tools}
+      tools={
+        <ComposerMenu
+          menu={commands.menu}
+          scope={commands.scope}
+          skill={skill}
+          disabled={menuDisabled}
+        />
+      }
       submit={
         onStop ? (
           // Pending keeps each button's box, so the control row never reflows.
@@ -123,13 +133,11 @@ function composerChips({
   lead: readonly LeadChip[];
   chips: ContextChip[];
   onRemoveChip?: (chip: ContextChip) => void;
-  commands?: ComposerCommands;
+  commands: ComposerState;
 }>) {
   const leading = lead.filter((chip) => chip !== undefined);
-  const mentions = commands?.mentions ?? [];
-  const pastes = commands?.pastes;
-  const pasted = pastes?.items ?? [];
-  if (leading.length + chips.length + mentions.length + pasted.length === 0) return null;
+  const { mentions, pastes } = commands;
+  if (leading.length + chips.length + mentions.length + pastes.items.length === 0) return null;
   return (
     <>
       {leading.map((chip) => (
@@ -146,14 +154,14 @@ function composerChips({
         <RemovableChip
           key={mention.id}
           label={`@${mention.label}`}
-          onRemove={() => commands?.onRemoveMention(mention.id)}
+          onRemove={() => commands.onRemoveMention(mention.id)}
         />
       ))}
-      {pasted.map((paste) => (
+      {pastes.items.map((paste) => (
         <PastedTextChip
           key={paste.key}
           text={paste.text}
-          onRemove={() => pastes?.remove(paste.key)}
+          onRemove={() => pastes.remove(paste.key)}
         />
       ))}
     </>

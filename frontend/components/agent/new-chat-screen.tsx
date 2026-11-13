@@ -4,7 +4,6 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { BriefingCard } from '@/components/agent/briefing-card';
 import { Composer } from '@/components/agent/composer';
-import { ComposerMenu } from '@/components/agent/composer-menu';
 import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
@@ -90,15 +89,17 @@ function NewChat({
   });
   // A workflow is sent by id; the server validates it and pins its skill.
   const start = () =>
-    commands.prepare(message, (prepared) =>
-      create.start({
-        ...prepared,
-        skillId: pinnedId ? undefined : skillId,
-        workflowId: pinnedId,
-        actionId,
-        context,
-        attachments: commands.pastes.attachments,
-      }),
+    commands.prepare(
+      // Until typed into, the draft is the Action's message.
+      { message, edit: (change) => setTyped((current) => change(current ?? message)) },
+      (prepared) =>
+        create.start({
+          ...prepared,
+          skillId: pinnedId ? undefined : skillId,
+          workflowId: pinnedId,
+          actionId,
+          context,
+        }),
     );
   const pending = create.pending || commands.resolving;
 
@@ -139,18 +140,10 @@ function NewChat({
             disabled={!access.canSend}
             placeholder="Ask a question or describe the work"
             attachment={attachment}
-            skill={skill.chip}
+            skill={skill}
             chips={contextChips(context)}
             commands={commands}
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
-            tools={
-              <ComposerMenu
-                menu={commands.menu}
-                scope={commands.scope}
-                skill={skill}
-                disabled={!access.canSend}
-              />
-            }
           />
           {/* Instructions live in a caption, not the placeholder, so they stay
               readable once the user starts typing. A chat about one Action

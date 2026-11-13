@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
+import { AGENT_PASTE_ATTACHMENT_MIN_CHARS } from '@/lib/config/agent';
 import { mswServer } from '@/test/msw-server';
 import { actionDetail, actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
@@ -63,14 +64,17 @@ describe('A follow-up with an Action link', () => {
     const reply = await screen.findByLabelText('Reply to the agent');
     // The catalog's refinements show once it has loaded, with the mention bound links need.
     await screen.findByRole('button', { name: 'Make it shorter' });
+    await user.click(reply);
+    await user.paste('x'.repeat(AGENT_PASTE_ATTACHMENT_MIN_CHARS));
     await user.type(reply, `See ${link}`);
     await user.click(screen.getByRole('button', { name: 'Send' }));
-    // Typed while the link resolves: the send replaces only the text it sent.
+    // Typed and removed while the link resolves: the send keeps the typing and drops the paste.
     await user.type(reply, ' Also');
+    await user.click(screen.getByRole('button', { name: 'Remove Pasted text, 1 line' }));
     release();
 
     await vi.waitFor(() => expect(bodies).toHaveLength(1));
-    expect(bodies[0]).toMatchObject({ message: 'See @Pricing page', mentions: [ACTION] });
+    expect(bodies[0]).toEqual({ message: 'See @Pricing page', mentions: [ACTION] });
     expect(reply).toHaveValue(`See ${link} Also`);
   });
 });

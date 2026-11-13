@@ -505,7 +505,9 @@ The full chat and the Dashboard panel share one thread and composer
 - a live turn opens with one status line of fixed height that names the current
   call in plain words (or how many reads run together) with elapsed time, so
   nothing below the streaming text moves;
-- a turn's activity, live or saved, is one collapsed line grouped by verb
+- a turn's activity, live or saved, is one collapsed line above its reply
+  text, so the text stays put when the saved reply replaces the live one,
+  grouped by verb
   ("Read Actions and AI visibility · searched the web · saved Document 1")
   that opens to a row per call: verb, the reader's noun and a muted detail.
   Both views build rows with one function

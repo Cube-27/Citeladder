@@ -468,10 +468,19 @@ describe('NewChatScreen', () => {
     const held = new Promise<void>((resolve) => {
       release = resolve;
     });
+    let create!: () => void;
+    const creating = new Promise<void>((resolve) => {
+      create = resolve;
+    });
     mswServer.use(
       http.get(`/api/v1/actions/${BLOG}`, async () => {
         await held;
         return HttpResponse.json(actionDetail(BLOG, 'Blog hub', SIGNAL));
+      }),
+      http.post(`/api/v1/projects/${PROJECT}/agent/chats`, async ({ request }) => {
+        bodies.push(await request.json());
+        await creating;
+        return HttpResponse.json(ACCEPTED, { status: 202 });
       }),
     );
     const own = `${window.location.origin}/agent/actions/${PRICING}`;
@@ -484,6 +493,10 @@ describe('NewChatScreen', () => {
     // A second press while the links resolve starts no second chat.
     await user.type(message, '{Enter}');
     release();
+    // While the chat starts, the field shows what was sent, beside its mention chip.
+    await waitFor(() => expect(message).toHaveValue(`Compare @Pricing page with ${foreign}`));
+    expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
+    create();
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([

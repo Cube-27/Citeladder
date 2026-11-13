@@ -7,7 +7,7 @@ import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { LiveActivity } from '@/components/agent/live-activity';
 import { MessageTime } from '@/components/agent/message-time';
 import { ProposalCards } from '@/components/agent/proposal-cards';
-import { skillLabel, useSkillCatalog } from '@/components/agent/skill-picker';
+import { skillLabel } from '@/components/agent/skill-picker';
 import { threadItems } from '@/components/agent/thread-items';
 import { TurnFailure } from '@/components/agent/turn-failure';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
@@ -63,7 +63,7 @@ export function Conversation({
   /** A message whose send is in flight, shown before the server accepts it. */
   pendingMessage?: string | null;
 }>) {
-  const skills = useSkillCatalog();
+  const { skills } = useAgentCatalog();
   const output = latestOutput(detail);
   const { byMessage, unplaced } = outputPlacements(detail);
   const documents = (outputs: readonly AgentOutput[] | undefined) =>
@@ -275,6 +275,8 @@ function MessageBubble({
       time={<MessageTime value={message.created_at} />}
       meta={skill ? `Skill: ${skill}` : undefined}
     >
+      {/* Where the live status line sat: the text stays put when this replaces it. */}
+      <ActivityChain rows={activityRows(message.steps)} />
       <ContentMarkdown
         markdown={message.content}
         density="compact"
@@ -288,7 +290,6 @@ function MessageBubble({
         </CopyButton>
       </Inline>
       <WebSources sources={message.web_sources} />
-      <ActivityChain rows={activityRows(message.steps)} />
     </AgentTurn>
   );
 }

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 
+import { ActivitySteps } from '@/components/agent/activity-chain';
 import { LiveReply } from '@/components/agent/live-reply';
 import { Callout } from '@/components/ui/callout';
 import { AgentTurn } from '@/components/ui/chat-dock';
-import { ChainOfThoughtLive, ChainOfThoughtStep } from '@/components/ui/chain-of-thought';
+import { ChainOfThoughtLive } from '@/components/ui/chain-of-thought';
 import { Inline } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
@@ -68,14 +69,7 @@ function RunningTurn({
     <AgentTurn inProgress>
       <ChainOfThoughtLive status={status} seconds={seconds} label="Agent activity">
         {rows.length > 0 ? (
-          rows.map((row) => (
-            <ChainOfThoughtStep
-              key={row.key}
-              label={activityLabel(row)}
-              detail={row.detail}
-              status={row.state}
-            />
-          ))
+          <ActivitySteps rows={rows} />
         ) : (
           <li className={textRole('caption')}>Nothing read yet.</li>
         )}

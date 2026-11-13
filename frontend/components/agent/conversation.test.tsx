@@ -89,6 +89,11 @@ describe('A finished reply’s activity', () => {
     expect(
       Array.from(summary.parentElement?.querySelectorAll('li') ?? [], (item) => item.textContent),
     ).toEqual(['Loaded the method', 'Read connected data']);
+    // Above the reply, where the running turn's status line was, so the text does not move.
+    expect(
+      summary.compareDocumentPosition(screen.getByText('Here are the edits.')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   it('shows each step’s detail, hides refused reads and lists pages apart from CiteLadder records', async () => {

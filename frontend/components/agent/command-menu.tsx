@@ -44,8 +44,6 @@ export type ComposerCommands = {
 
 export type ComposerPastes = {
   items: readonly { key: string; text: string }[];
-  /** The pastes as the request sends them. */
-  attachments: PastedText[];
   /** Takes a paste as an attachment; false leaves it to the field as typed text. */
   add: (text: string) => boolean;
   remove: (key: string) => void;
