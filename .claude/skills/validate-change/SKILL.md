@@ -27,7 +27,8 @@ command details.
 
 - Ordinary copy/documentation edits need only cheap whitespace/reference checks.
 - Small styling and layout-only edits need `git diff --check` and the staged
-  format/lint hook; inspect the affected view when layout is uncertain.
+  format/lint hook; check the rendered view only when the owner asks for a
+  design task or browser testing.
 - Do not run behavior tests, production builds or the repository quality harness
   merely because a file changed. A commit, push, PR or previously changed branch
   file is not a reason to repeat validation.
