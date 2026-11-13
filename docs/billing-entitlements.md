@@ -308,8 +308,10 @@ data rather than rewriting immutable history. No reset is implicit.
 Runtime metering, grants, resolution and admission use their owners.
 Each subject has one ledger-writing stack. Operator
 catalog publication, grant correction and read-only plan verification are native.
-Catalog commands serialize publication and persist creation/publication request
-keys on immutable revisions; grants/revocations use their existing evidence keys.
+Catalog commands serialize publication; each import keeps its request key and
+result in `billing_catalog_imports`, and publication its key on the revision.
+Grants/revocations use their existing evidence keys, and every override an
+operator issues stores its reason.
 Preview executes the real mutation and rolls back its transaction.
 
 Native [execution config](../frontend/services/api/src/config/billing.ts) owns

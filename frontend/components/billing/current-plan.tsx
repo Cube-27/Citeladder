@@ -11,6 +11,14 @@ import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import type { SubscriptionStatus } from '@citeladder/contracts/billing';
+
+/** Subscriptions a customer can still cancel; any other state has nothing left to cancel. */
+const CANCELLABLE_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
+  'active',
+  'trialing',
+  'past_due',
+]);
 
 export type BillingCancellation = {
   open: boolean;
@@ -32,7 +40,7 @@ type Subscription = NonNullable<BillingEntitlement['subscription']>;
  * means the plan summary above says enough.
  */
 const STATUS_NOTICE: Readonly<
-  Record<string, { tone: 'info' | 'warning' | 'negative'; text: string }>
+  Partial<Record<SubscriptionStatus, { tone: 'info' | 'warning' | 'negative'; text: string }>>
 > = {
   pending: {
     tone: 'info',
@@ -137,10 +145,7 @@ function CancellationControl({
         {cancellation.resuming ? 'Resuming…' : 'Resume plan'}
       </Button>
     );
-  if (
-    subscription.cancel_at_period_end ||
-    !['active', 'trialing', 'past_due'].includes(subscription.status)
-  )
+  if (subscription.cancel_at_period_end || !CANCELLABLE_STATUSES.has(subscription.status))
     return null;
   return (
     <Button

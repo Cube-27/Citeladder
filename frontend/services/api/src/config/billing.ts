@@ -1,25 +1,29 @@
 /** Commercial execution policy and persisted vocabulary. */
+import { subscriptionStatusSchema } from '@citeladder/contracts/billing';
 import { providers } from './providers.ts';
 import runtime from './billing.json' with { type: 'json' };
 import aiCredits from './ai-credits.json' with { type: 'json' };
 import { compareText } from '../text-order.ts';
 
 const c = runtime.contracts;
+/** The subscription status vocabulary, declared once in the shared contracts. */
+const s = subscriptionStatusSchema.enum;
+// Stored statuses are read as text, so these lists compare against any string.
+const liveSubscriptionStatuses: readonly string[] = [
+  s.pending,
+  s.trialing,
+  s.active,
+  s.past_due,
+  s.cancel_scheduled,
+].sort(compareText);
+const terminalSubscriptionStatuses: readonly string[] = [s.cancelled, s.expired].sort(compareText);
 export const billing = {
   ...runtime,
   ai_credits: aiCredits,
   contracts: {
     ...c,
-    live_subscription_statuses: [
-      c.subscription_pending,
-      c.subscription_trialing,
-      c.subscription_active,
-      c.subscription_past_due,
-      c.subscription_cancel_scheduled,
-    ].sort(compareText),
-    terminal_subscription_statuses: [c.subscription_cancelled, c.subscription_expired].sort(
-      compareText,
-    ),
+    live_subscription_statuses: liveSubscriptionStatuses,
+    terminal_subscription_statuses: terminalSubscriptionStatuses,
     razorpay_payment_status_map: {
       created: c.payment_pending,
       authorized: c.payment_pending,
@@ -34,16 +38,16 @@ export const billing = {
       refunded: c.payment_paid,
     },
     razorpay_status_map: {
-      created: c.subscription_pending,
-      authenticated: c.subscription_pending,
-      active: c.subscription_active,
-      pending: c.subscription_past_due,
+      created: s.pending,
+      authenticated: s.pending,
+      active: s.active,
+      pending: s.past_due,
       // Retries exhausted: the subscription sweep cancels it at the provider.
-      halted: c.subscription_unpaid,
-      cancelled: c.subscription_cancelled,
-      completed: c.subscription_expired,
-      expired: c.subscription_expired,
-      paused: c.subscription_past_due,
+      halted: s.unpaid,
+      cancelled: s.cancelled,
+      completed: s.expired,
+      expired: s.expired,
+      paused: s.past_due,
     },
   },
   providers: providers.catalog.map((entry) => {

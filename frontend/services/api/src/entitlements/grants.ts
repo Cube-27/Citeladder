@@ -110,7 +110,10 @@ export async function issueBundle(
     priority: number;
     periodStart?: Date;
     periodEnd?: Date;
-    /** Why an operator issued this bundle, stored as its evidence; a replay must repeat it. */
+    /**
+     * Why this bundle was issued, stored as its evidence; a replay must repeat
+     * it. Every override an actor issues carries one (invariant 16).
+     */
     reason?: string;
   },
 ) {
@@ -171,6 +174,9 @@ export async function issueBundle(
     !(policy.entitlements.grant_source_kinds as readonly string[]).includes(input.sourceKind)
   )
     invalidBundle();
+  // An override an actor issued records why (invariant 16); a system baseline has no actor.
+  if (input.source.kind === 'override' && !reason)
+    conflict('grant_bundle_invalid', 'An operator override needs a reason.');
   for (const spec of specs) {
     const definition =
       policy.entitlements.capabilities[spec.key as keyof typeof policy.entitlements.capabilities];

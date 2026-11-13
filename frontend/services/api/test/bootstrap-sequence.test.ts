@@ -109,10 +109,15 @@ it('demo startup grants only expiring monitored URLs, rotates sessions and refus
   expect(user.session_version).toBe(1);
   const grants = await db
     .selectFrom('account_grants')
-    .select(['key', 'value', 'valid_until'])
+    .select(['key', 'value', 'valid_until', 'reason'])
     .execute();
   expect(grants).toEqual([
-    { key: 'monitored_urls', value: 50, valid_until: new Date(demo.DEMO_EXPIRES_AT) },
+    {
+      key: 'monitored_urls',
+      value: 50,
+      valid_until: new Date(demo.DEMO_EXPIRES_AT),
+      reason: 'explicit configured demo bootstrap',
+    },
   ]);
   expect(await db.selectFrom('billing_catalog_revisions').select('id').execute()).toEqual([]);
   await db
@@ -122,6 +127,9 @@ it('demo startup grants only expiring monitored URLs, rotates sessions and refus
     .execute();
   await expect(bootstrapDeployment(db, demo)).rejects.toThrow('unexpected_demo_identity');
   expect(
-    await db.selectFrom('account_grants').select(['key', 'value', 'valid_until']).execute(),
+    await db
+      .selectFrom('account_grants')
+      .select(['key', 'value', 'valid_until', 'reason'])
+      .execute(),
   ).toEqual(grants);
 }, 60000);

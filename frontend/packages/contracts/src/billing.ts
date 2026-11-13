@@ -26,6 +26,21 @@ export type ProviderMode = z.infer<typeof providerModeSchema>;
 export const taxTreatmentSchema = z.enum(['CGST_SGST', 'IGST', 'EXPORT_ZERO_RATED']);
 export type TaxTreatment = z.infer<typeof taxTreatmentSchema>;
 export const taxBehaviorSchema = z.enum(['inclusive', 'exclusive']);
+/**
+ * A base subscription's state, as stored (`ck_billing_subscription_status`)
+ * and served. `cancelled` stays current until the provider confirms (B52).
+ */
+export const subscriptionStatusSchema = z.enum([
+  'pending',
+  'trialing',
+  'active',
+  'past_due',
+  'cancel_scheduled',
+  'cancelled',
+  'unpaid',
+  'expired',
+]);
+export type SubscriptionStatus = z.infer<typeof subscriptionStatusSchema>;
 const catalogAvailabilitySchema = z.enum(['available', 'unavailable']);
 const grantSourceKindSchema = z.enum(['plan', 'addon', 'topup', 'trial', 'override']);
 const entitlementStatusSchema = z.enum(['resolved', 'entitlement_unresolved']);
@@ -266,7 +281,7 @@ const scheduledPlanChangeSchema = responseObject({
 
 const subscriptionSummarySchema = responseObject({
   catalog_key: z.string(),
-  status: z.string(),
+  status: subscriptionStatusSchema,
   current_period_end: z.string().nullable(),
   cancel_at_period_end: z.boolean(),
   /** Until when a scheduled cancellation can be undone; null when it cannot (B46). */

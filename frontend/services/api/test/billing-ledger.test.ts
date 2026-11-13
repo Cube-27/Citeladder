@@ -42,6 +42,7 @@ describe('consumable hold module', () => {
         key: randomUUID(),
         sourceKind: 'override',
         source: { kind: 'override', actorId: t.userId },
+        reason: 'test override',
         specs: [{ key: capability, value: units }],
         revision: 'fixture',
         from: at,

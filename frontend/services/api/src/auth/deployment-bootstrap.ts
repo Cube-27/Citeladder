@@ -102,6 +102,7 @@ export async function bootstrapDeployment(
         key,
         sourceKind: 'override',
         source: { kind: 'override', actorId: updated.id },
+        reason: 'explicit configured demo bootstrap',
         specs: [{ key: 'monitored_urls', value: allowance }],
         revision: policy.entitlements.registry_revision,
         from: prior?.valid_from ?? new Date(),

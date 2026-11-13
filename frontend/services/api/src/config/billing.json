@@ -281,13 +281,6 @@
     }
   },
   "contracts": {
-    "subscription_trialing": "trialing",
-    "subscription_active": "active",
-    "subscription_past_due": "past_due",
-    "subscription_cancel_scheduled": "cancel_scheduled",
-    "subscription_cancelled": "cancelled",
-    "subscription_unpaid": "unpaid",
-    "subscription_expired": "expired",
     "razorpay_event_types": [
       "subscription.activated",
       "subscription.authenticated",
@@ -308,8 +301,7 @@
     "idempotency_key_min_length": 8,
     "idempotency_key_max_length": 255,
     "telemetry_entitlement_unresolved": "billing.entitlement_unresolved",
-    "telemetry_funded_budget_exhausted": "billing.funded_budget_exhausted",
-    "subscription_pending": "pending"
+    "telemetry_funded_budget_exhausted": "billing.funded_budget_exhausted"
   },
   "razorpay_origin": "https://api.razorpay.com/v1"
 }

@@ -14,6 +14,7 @@ import {
   ensureWorkspaceBilling,
   provisionWorkspaceBilling,
 } from '../src/entitlements/bootstrap.ts';
+import { issueBundle } from '../src/entitlements/grants.ts';
 import { resolveAccountEntitlement } from '../src/entitlements/state.ts';
 
 const db = testDatabase(),
@@ -177,6 +178,38 @@ it('replays immutable imports, rejects changed requests and serializes competing
         .executeTakeFirstOrThrow()
     ).published_at,
   ).toEqual(published.published_at);
+});
+it('refuses an operator override without a reason and writes nothing', async () => {
+  const key = randomUUID();
+  const override = (reason: string) =>
+    db.transaction().execute((trx) =>
+      issueBundle(trx, {
+        workspaceId,
+        accountId,
+        key,
+        sourceKind: 'override',
+        source: { kind: 'override', actorId },
+        reason,
+        specs: [{ key: 'monitored_urls', value: 3 }],
+        revision: 'fixture',
+        // Already expired, so it never adds to the allowances later tests resolve.
+        from: new Date(Date.now() - 120_000),
+        until: new Date(Date.now() - 60_000),
+        primary: false,
+        profile: '',
+        priority: 0,
+      }),
+    );
+  await expect(override('  ')).rejects.toMatchObject({ status: 409, code: 'grant_bundle_invalid' });
+  const stored = () =>
+    db
+      .selectFrom('account_grants')
+      .select(['key', 'value', 'reason'])
+      .where('idempotency_key', '=', key)
+      .execute();
+  expect(await stored()).toEqual([]);
+  await override('pilot allowance');
+  expect(await stored()).toEqual([{ key: 'monitored_urls', value: 3, reason: 'pilot allowance' }]);
 });
 it('issues and revokes once, exposes same-transaction projection, and enforces expiry and workspace scope', async () => {
   const from = new Date(Date.now() - 10000),
