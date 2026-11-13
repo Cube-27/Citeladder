@@ -1,5 +1,6 @@
-import { Archive, Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Archive, Check, FileSearch, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
+import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
 import { ProjectLink } from '@/components/ui/project-link';
 import { IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -26,6 +27,8 @@ export type PromptMeasurement = {
   /** Distinct brands named in the answers; `brands` is the leading few. */
   mentions: number;
   brands: readonly NamedBrand[];
+  /** Where that run asked the prompt, for the row's Evidence. */
+  answer: PromptAnswerRef;
 };
 
 /** What a prompt row's controls do. */
@@ -34,6 +37,8 @@ export type PromptRowActions = Readonly<{
   onDelete: (prompt: Prompt) => void;
   onToggleEnabled: (prompt: Prompt) => void;
   onSetStatus?: (prompt: Prompt, status: PromptStatus) => void;
+  /** Opens the answers the latest run got for a measured prompt. */
+  onEvidence?: (prompt: Prompt, answer: PromptAnswerRef) => void;
   busyId?: string | null;
 }>;
 
@@ -122,7 +127,11 @@ export function PromptTable({
           </TableCell>
           {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
           {actions ? (
-            <PromptRowControls prompt={prompt} actions={actions} />
+            <PromptRowControls
+              prompt={prompt}
+              actions={actions}
+              onEvidence={evidenceOpener(prompt, measurements?.get(prompt.id), actions)}
+            />
           ) : (
             <TableCell>{prompt.enabled ? 'Yes' : 'No'}</TableCell>
           )}
@@ -132,11 +141,27 @@ export function PromptTable({
   );
 }
 
+/** Opens the latest run's answers to a measured prompt; nothing for an unmeasured one. */
+function evidenceOpener(
+  prompt: Prompt,
+  measurement: PromptMeasurement | undefined,
+  { onEvidence }: PromptRowActions,
+) {
+  if (!measurement || !onEvidence) return undefined;
+  return () => onEvidence(prompt, measurement.answer);
+}
+
 /** The enabled switch and the actions menu of one editable row. */
 function PromptRowControls({
   prompt,
   actions: { onEdit, onDelete, onToggleEnabled, onSetStatus, busyId },
-}: Readonly<{ prompt: Prompt; actions: PromptRowActions }>) {
+  onEvidence,
+}: Readonly<{
+  prompt: Prompt;
+  actions: PromptRowActions;
+  /** Opens the latest run's answers; absent for a prompt no run has measured. */
+  onEvidence?: () => void;
+}>) {
   return (
     <>
       <TableCell>
@@ -167,6 +192,11 @@ function PromptRowControls({
                 onSelect={() => onSetStatus(prompt, 'archived')}
               >
                 Archive
+              </MenuItem>
+            ) : null}
+            {onEvidence ? (
+              <MenuItem icon={<Icon icon={FileSearch} />} onSelect={onEvidence}>
+                Evidence
               </MenuItem>
             ) : null}
             <MenuSeparator />

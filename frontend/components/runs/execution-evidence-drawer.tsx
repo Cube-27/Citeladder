@@ -7,6 +7,7 @@ import { Drawer } from '@/components/ui/drawer';
 import { FilterControls } from '@/components/ui/filter-bar';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { Stack } from '@/components/ui/layout';
+import { QueryState } from '@/components/ui/query-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { runsQueries } from '@/lib/api/runs';
 import { usePromptEngineAnswers } from '@/lib/runs/use-prompt-engine-answers';
@@ -57,10 +58,13 @@ export function ExecutionEvidenceDrawer({
   execution,
   open,
   onOpenChange,
+  unavailable,
 }: Readonly<{
   execution: EvidenceSubject | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Said in place of the evidence when the opener found no answer to show. */
+  unavailable?: string;
 }>) {
   const { workspaceId } = useProjectScope();
   const engines = usePromptEngineAnswers({
@@ -78,7 +82,9 @@ export function ExecutionEvidenceDrawer({
   }, [open]);
 
   let evidenceBody: ReactNode;
-  if (evidenceQuery.isError) {
+  if (unavailable) {
+    evidenceBody = <QueryState kind="empty" heading={unavailable} />;
+  } else if (evidenceQuery.isError) {
     evidenceBody = (
       <ReadError
         {...readErrorProps(evidenceQuery)}

@@ -26,6 +26,7 @@ import { PendingReviewNotice } from './candidate-review';
 import { PromptEmptyState } from './prompt-empty-state';
 import type { PendingDelete } from './confirm-delete-dialog';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
+import { usePromptEvidence, type PromptAnswerRef } from './prompt-evidence';
 import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
@@ -100,6 +101,7 @@ export function PromptLibrary({
   const topicsQuery = useQuery(topicsQueries.list(scope));
   const topics: Topic[] = useMemo(() => topicsQuery.data ?? [], [topicsQuery.data]);
   const measurements = useLatestPromptMeasurements(scope);
+  const evidence = usePromptEvidence();
 
   const review = usePromptCandidates({
     projectId,
@@ -235,6 +237,8 @@ export function PromptLibrary({
             setBusyId(prompt.id);
             rowMutation.mutate({ promptId: prompt.id, input: { status } }, clearBusy);
           },
+          onEvidence: (prompt: Prompt, answer: PromptAnswerRef) =>
+            evidence.open({ ...answer, promptText: prompt.text }),
           busyId,
         },
         add: { onGenerate: () => openBuilder('business'), onAdd: openAdd },
@@ -325,6 +329,7 @@ export function PromptLibrary({
           onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
         />
         {libraryBody}
+        {evidence.drawer}
 
         <PromptLibraryDialogs
           pendingDelete={pendingDelete}

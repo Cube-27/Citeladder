@@ -47,6 +47,7 @@ export function useLatestPromptMeasurements(
         position: row.avg_position ?? null,
         mentions: row.mentions,
         brands: row.brands,
+        answer: { auditId: row.audit_id, promptIndex: row.prompt_index },
       });
     }
     return map;
