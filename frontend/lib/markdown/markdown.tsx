@@ -19,6 +19,7 @@ import {
   useState,
   type ComponentPropsWithoutRef,
   type MouseEvent,
+  type ReactNode,
 } from 'react';
 import ReactMarkdown, { type Components, type ExtraProps } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -29,7 +30,10 @@ import { InlineFigure } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 import { highlightPlugin, type Highlight } from './highlight';
+import { phraseChipsPlugin } from './phrase-chips';
 import { leavesForUnknownHost, safeUrlTransform } from './safe-url';
+
+const NO_CHIPS: readonly PhraseChip[] = [];
 
 type LeaveGuard = Readonly<{
   knownHosts: readonly string[];
@@ -68,6 +72,23 @@ function MarkdownLink({
   );
 }
 
+/** A phrase in the text and what replaces it where it appears whole, such as a record's chip. */
+export type PhraseChip = Readonly<{ text: string; node: ReactNode }>;
+
+/** Set only by a `ContentMarkdown` given `chips`; chip slots read it by index. */
+const ChipsContext = createContext<readonly PhraseChip[]>([]);
+
+function MarkdownSpan({
+  node: _node,
+  children,
+  ...props
+}: Readonly<ComponentPropsWithoutRef<'span'> & ExtraProps & { 'data-chip'?: string }>) {
+  const chips = useContext(ChipsContext);
+  const chip = props['data-chip'] === undefined ? undefined : chips[Number(props['data-chip'])];
+  if (chip) return <>{chip.node}</>;
+  return <span {...props}>{children}</span>;
+}
+
 /** Restricted component map (no props closed over, so it is stable across renders). */
 const MARKDOWN_COMPONENTS: Components = {
   // Generated headings begin below the route-owned page title. The raw
@@ -89,6 +110,8 @@ const MARKDOWN_COMPONENTS: Components = {
   // data-footnote-*) so GFM footnote back-links keep working; `node`
   // is react-markdown's AST handle, not a DOM attribute.
   a: MarkdownLink,
+  // Markdown never makes a span (raw HTML is escaped); only chip slots do.
+  span: MarkdownSpan,
 };
 
 /** Render untrusted Markdown safely (GFM tables/lists, no raw HTML). */
@@ -96,12 +119,15 @@ export function ContentMarkdown({
   markdown,
   density = 'default',
   highlights = [],
+  chips = NO_CHIPS,
   knownHosts,
 }: Readonly<{
   markdown: string;
   density?: 'default' | 'compact';
   /** Exact phrases to mark where they appear whole inside one text run. */
   highlights?: readonly Highlight[];
+  /** Exact phrases to replace with a node where they stand alone outside links and code. */
+  chips?: readonly PhraseChip[];
   /**
    * Hosts a link may open directly (each also covers its subdomains); a link
    * anywhere else opens only after a "You're leaving CiteLadder" confirm that
@@ -127,7 +153,10 @@ export function ContentMarkdown({
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        rehypePlugins={highlights.length ? [highlightPlugin(highlights)] : []}
+        rehypePlugins={[
+          ...(chips.length ? [phraseChipsPlugin(chips.map((chip) => chip.text))] : []),
+          ...(highlights.length ? [highlightPlugin(highlights)] : []),
+        ]}
         urlTransform={safeUrlTransform}
         components={MARKDOWN_COMPONENTS}
       >
@@ -135,10 +164,15 @@ export function ContentMarkdown({
       </ReactMarkdown>
     </div>
   );
-  if (!guard) return body;
+  const chipped = chips.length ? (
+    <ChipsContext.Provider value={chips}>{body}</ChipsContext.Provider>
+  ) : (
+    body
+  );
+  if (!guard) return chipped;
   return (
     <LeaveGuardContext.Provider value={guard}>
-      {body}
+      {chipped}
       <ConfirmDialog
         request={
           leaving === null

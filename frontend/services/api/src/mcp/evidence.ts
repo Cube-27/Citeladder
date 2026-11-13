@@ -53,7 +53,7 @@ export async function demandSnapshot({ db, scope }: ProjectRead): Promise<Eviden
 /** Active Actions in the owner's priority order, or one Action with its outcome. */
 export async function actionsRead(
   { db, scope, origin }: ProjectRead,
-  args: Page & { action_id?: string | null; status?: string | null },
+  args: Page & { action_id?: string | null; status?: string | null; query?: string | null },
 ): Promise<Evidence> {
   if (args.action_id) {
     const action = await getAction(db, scope.workspaceId, args.action_id);
@@ -67,6 +67,7 @@ export async function actionsRead(
   }
   const page = await listActions(db, scope, {
     status: args.status ?? null,
+    q: args.query ?? null,
     target_kind: null,
     cursor: args.cursor ?? null,
     limit: args.limit ?? policy.opportunity.actions.ACTION_LIST_DEFAULT_LIMIT,

@@ -153,6 +153,51 @@ describe('A finished reply’s activity', () => {
   });
 });
 
+describe('Actions in a chat', () => {
+  it('turn a cited Action’s exact title into a link with its current status, and show it on the mention', async () => {
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
+    const cited = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const uncited = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+    const current = detail(revision(REV2, 2, 'agent', 'Saved result.'));
+    const [request, reply] = current.messages;
+    const chat = agentChatDetailSchema.parse({
+      ...current,
+      messages: [
+        { ...request, mentions: [{ kind: 'action', id: cited, label: 'Label when sent' }] },
+        {
+          ...reply,
+          content:
+            'Start with School uniforms, not School uniforms2 or `School uniforms`. Returns policy can wait.',
+          evidence_refs: [`citeladder://action/${cited}`],
+        },
+      ],
+      actions: [
+        { id: cited, target_label: 'School uniforms', status: 'measuring' },
+        { id: uncited, target_label: 'Returns policy', status: 'open' },
+      ],
+    });
+    renderWithProviders(
+      <Conversation
+        detail={chat}
+        onRefine={vi.fn()}
+        onRecover={vi.fn()}
+        onRetry={vi.fn()}
+        canSend
+      />,
+    );
+
+    const chips = await screen.findAllByRole('link', { name: 'School uniforms Measuring' });
+    // Once in the reply: not inside a longer word or code.
+    expect(chips).toHaveLength(1);
+    expect(chips[0]?.getAttribute('href')).toMatch(new RegExp(`^/agent/actions/${cited}`, 'u'));
+    expect(screen.getByText('School uniforms', { selector: 'code' })).toBeInTheDocument();
+    // An Action this reply did not cite stays text.
+    expect(screen.queryByRole('link', { name: /Returns policy/u })).not.toBeInTheDocument();
+    const mentions = screen.getByRole('list', { name: 'Mentioned Actions' });
+    expect(within(mentions).getByRole('link')).toHaveAccessibleName('@School uniforms Measuring');
+  });
+});
+
 describe('Links in a reply', () => {
   it('open directly to the project’s site and the turn’s sources, and confirm anywhere else', async () => {
     mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));

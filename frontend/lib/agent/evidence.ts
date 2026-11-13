@@ -83,6 +83,23 @@ export function actionEvidence(action: ActionEvidenceSource): DatedEvidence[] {
 }
 
 /**
+ * The Actions `refs` cite, in first-cited order, as the chat read projects them
+ * now. A cited Action the projection lacks (another project's, or deleted) is
+ * left out rather than shown without its status.
+ */
+export function citedActions<T extends { id: string }>(
+  refs: readonly string[],
+  actions: readonly T[],
+): T[] {
+  const byId = new Map(actions.map((action) => [action.id, action]));
+  return [...new Set(refs)].flatMap((ref) => {
+    const { kind, id } = parse(ref);
+    const action = kind === 'action' ? byId.get(id) : undefined;
+    return action ? [action] : [];
+  });
+}
+
+/**
  * References grouped by kind, in first-cited order. A group links to its
  * screen; a single record links to its own page when its id alone builds one.
  */

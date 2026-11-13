@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { NavLink } from '@/components/layout/nav-link';
@@ -23,6 +23,7 @@ import { ICONS } from '@/lib/icons';
 import { MODE_HOMES } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
+import { useDebounced } from '@/lib/use-debounced';
 import { useProjectContext } from '@/lib/project/project-context';
 
 const AGENT_HOME = MODE_HOMES.agent;
@@ -67,15 +68,6 @@ export function AgentNav() {
   );
 }
 
-function useDebounced(value: string): string {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), AGENT_CHAT_SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [value]);
-  return debounced;
-}
-
 function ChatHistory({
   workspaceId,
   projectId,
@@ -88,7 +80,7 @@ function ChatHistory({
   scoped: (href: string) => string;
 }>) {
   const [search, setSearch] = useState('');
-  const needle = useDebounced(search.trim());
+  const needle = useDebounced(search.trim(), AGENT_CHAT_SEARCH_DEBOUNCE_MS);
   const chats = useInfiniteQuery({
     ...agentQueries.chats({ workspaceId, projectId }, { q: needle }),
     // Several chats can run at once; their markers clear as each turn ends.

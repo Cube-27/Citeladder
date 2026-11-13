@@ -1,6 +1,7 @@
 /** Persisted Action reads, target attachment and explicit workflow decisions. */
 import { randomUUID } from 'node:crypto';
 import {
+  ACTION_STATUS_ANY,
   actionDetailSchema,
   actionGroupSchema,
   actionItemSchema,
@@ -15,6 +16,7 @@ import { sql, type Selectable, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
+import { containsPattern } from '../db/like.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
 import type { Actions } from '../generated/db-schema.ts';
 import { ApiError, notFound } from '../errors.ts';
@@ -169,9 +171,14 @@ const KNOWN_APPROACHES = [
   ...new Set([...a.APPROACH_TREE.map((branch) => branch.approach), a.DEFAULT_APPROACH.approach]),
 ];
 
-/** The list's filters; null (or absent) leaves a filter off. */
+/**
+ * The list's filters; null (or absent) leaves a filter off. A null status is
+ * the work queue (open and in progress); `any` keeps every status.
+ */
 type ActionListFilters = {
   status: string | null;
+  /** Text the Action's label contains, case-insensitively. */
+  q?: string | null;
   target_kind: string | null;
   group?: string | null;
   approach?: string | null;
@@ -194,9 +201,11 @@ function known<T extends string>(
 }
 
 function parseFilters(filters: ActionListFilters) {
-  if (filters.status !== null) validateStatus(filters.status);
+  if (filters.status !== null && filters.status !== ACTION_STATUS_ANY)
+    validateStatus(filters.status);
   return {
     status: filters.status,
+    q: filters.q?.trim() || null,
     target_kind: known('target kind', filters.target_kind, a.ACTION_TARGET_KINDS),
     group: known('group', filters.group, actionGroupSchema.options),
     approach: known('approach', filters.approach, KNOWN_APPROACHES),
@@ -213,16 +222,16 @@ function bandRange(band: ActionPriorityBand): { from: number | null; below: numb
   return { from: null, below: floors.medium };
 }
 
-export async function listActions(db: Database, scope: Scope, raw: ActionListFilters) {
-  const filters = parseFilters(raw);
-  const priority = sql<number>`coalesce(actions.priority_score, -1)`;
-  const fingerprint = { project_id: scope.projectId, ...filters };
-  // Every filter but the group: the group counts read under it too.
-  let filtered = listed(db, scope).where(
-    'effective_status',
-    'in',
-    filters.status ? [filters.status] : a.ACTION_ACTIVE_STATUSES,
-  );
+/** The listed Actions under every filter but the group: the group counts read under it too. */
+function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof parseFilters>) {
+  let filtered = listed(db, scope);
+  if (filters.status !== ACTION_STATUS_ANY)
+    filtered = filtered.where(
+      'effective_status',
+      'in',
+      filters.status ? [filters.status] : a.ACTION_ACTIVE_STATUSES,
+    );
+  if (filters.q) filtered = filtered.where('target_label', 'ilike', containsPattern(filters.q));
   if (filters.target_kind) filtered = filtered.where('target_kind', '=', filters.target_kind);
   if (filters.approach) filtered = filtered.where('approach', '=', filters.approach);
   if (filters.family)
@@ -234,6 +243,14 @@ export async function listActions(db: Database, scope: Scope, raw: ActionListFil
     if (from !== null) filtered = filtered.where('priority_score', '>=', from);
     if (below !== null) filtered = filtered.where('priority_score', '<', below);
   }
+  return filtered;
+}
+
+export async function listActions(db: Database, scope: Scope, raw: ActionListFilters) {
+  const filters = parseFilters(raw);
+  const priority = sql<number>`coalesce(actions.priority_score, -1)`;
+  const fingerprint = { project_id: scope.projectId, ...filters };
+  const filtered = filteredActions(db, scope, filters);
   let query = filtered.selectAll();
   if (filters.group) query = query.where(groupSql, '=', filters.group);
   if (raw.cursor) {

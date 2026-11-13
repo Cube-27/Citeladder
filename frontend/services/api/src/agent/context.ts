@@ -81,6 +81,8 @@ export async function buildManifest(
         ...extras.get(row.id),
         id: row.id,
         target_label: row.target_label,
+        // The status the Actions list shows, so the model never calls a measuring Action open.
+        status: row.effective_status,
         skill_id: row.skill_id,
         target_kind: row.target_kind,
         target_url: row.target_url,
@@ -287,13 +289,17 @@ function contextCitations(manifest: Pick<Manifest, 'action' | 'mentions'>): Set<
   // Other context blocks are working context, not a record citation grant.
   return new Set(
     [manifest.action, ...manifest.mentions].flatMap((action) => {
-      const happened = action?.diagnosis.what_happened;
-      if (!Array.isArray(happened)) return [];
-      return happened.flatMap((item) => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
-        const id = z.uuid().safeParse(item.opportunity_id);
-        return id.success ? [`citeladder://opportunity/${id.data}`] : [];
-      });
+      if (!action) return [];
+      const happened = action.diagnosis.what_happened;
+      const findings = Array.isArray(happened)
+        ? happened.flatMap((item) => {
+            if (!item || typeof item !== 'object' || Array.isArray(item)) return [];
+            const id = z.uuid().safeParse(item.opportunity_id);
+            return id.success ? [`citeladder://opportunity/${id.data}`] : [];
+          })
+        : [];
+      // The Action itself first: a reply naming it shows it as a link with its status.
+      return [`citeladder://action/${action.id}`, ...findings];
     }),
   );
 }

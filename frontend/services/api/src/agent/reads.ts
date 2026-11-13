@@ -154,6 +154,39 @@ async function chatIn(db: Database, workspace: Pick<Scope, 'workspaceId'>, chatI
   const chat = await workspaceChat(db, workspace.workspaceId, chatId);
   return { chat, scope: { workspaceId: chat.workspace_id, projectId: chat.project_id } };
 }
+
+const ACTION_REF =
+  /^citeladder:\/\/action\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/u;
+
+/**
+ * The Actions a chat's messages mention or cite, as they read now, in one
+ * read scoped to the chat's project: a reply's chips show the current status.
+ */
+async function referencedActions(
+  db: Database,
+  scope: Pick<Scope, 'workspaceId' | 'projectId'>,
+  thread: readonly Pick<z.infer<typeof agentMessageSchema>, 'evidence_refs' | 'mentions'>[],
+) {
+  const ids = new Set<string>();
+  for (const message of thread) {
+    for (const ref of message.evidence_refs) {
+      const id = ACTION_REF.exec(ref)?.[1];
+      if (id) ids.add(id);
+    }
+    for (const mention of message.mentions) if (mention.kind === 'action') ids.add(mention.id);
+  }
+  if (!ids.size) return [];
+  const rows = await db
+    .selectFrom('actions')
+    .select(['id', 'target_label', 'effective_status as status'])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', 'in', [...ids])
+    .orderBy('id')
+    .execute();
+  return rows;
+}
+
 export async function readChat(
   db: Database,
   workspace: Pick<Scope, 'workspaceId'>,
@@ -222,6 +255,15 @@ export async function readChat(
         .where('id', '=', chat.action_id)
         .executeTakeFirst()
     : undefined;
+  const thread = messages.map((message) =>
+    agentMessageSchema.parse({
+      ...message,
+      created_at: iso(message.created_at),
+      evidence_refs: revisionRefs(message.evidence_refs),
+      web_sources: revisionWebSources(message.web_sources),
+      steps: messageSteps(message.steps),
+    }),
+  );
   return agentChatDetailSchema.parse({
     chat: summary(
       chat,
@@ -251,15 +293,8 @@ export async function readChat(
           : {}),
       },
     },
-    messages: messages.map((message) =>
-      agentMessageSchema.parse({
-        ...message,
-        created_at: iso(message.created_at),
-        evidence_refs: revisionRefs(message.evidence_refs),
-        web_sources: revisionWebSources(message.web_sources),
-        steps: messageSteps(message.steps),
-      }),
-    ),
+    messages: thread,
+    actions: await referencedActions(db, scope, thread),
     latest_run: run ? runView(run, await progress(db, run)) : null,
     page_fetch: await pageFetchView(db, chat),
     outputs: documents.map(({ output, revision }) =>

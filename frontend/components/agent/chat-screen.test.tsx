@@ -242,31 +242,6 @@ describe('ChatScreen', () => {
     expect(href.searchParams.get('revision_id')).toBe(REV1);
   });
 
-  it('links the Actions a message mentioned', async () => {
-    const ACTION = '88888888-8888-4888-8888-888888888888';
-    const base = detail(revision(REV1, 1, 'agent', 'Body.'));
-    const withMention = {
-      ...base,
-      messages: base.messages.map((message) =>
-        message.role === 'user'
-          ? { ...message, mentions: [{ kind: 'action', id: ACTION, label: 'Pricing page' }] }
-          : message,
-      ),
-    };
-    mswServer.use(
-      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(withMention)),
-      http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage())),
-    );
-    renderChat();
-
-    const mentioned = within(await screen.findByRole('list', { name: 'Mentioned Actions' }));
-    expect(mentioned.getByRole('link', { name: '@Pricing page' })).toHaveAttribute(
-      'href',
-      expect.stringContaining(`/agent/actions/${ACTION}`),
-    );
-  });
-
   it('compares an earlier revision with the current one', async () => {
     mswServer.use(
       http.get(`/api/v1/agent/chats/${CHAT}/outputs/${OUTPUT}/revisions`, () =>

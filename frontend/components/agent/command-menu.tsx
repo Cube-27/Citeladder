@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 
+import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { SuggestionList } from '@/components/ui/chat-dock';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -14,6 +15,7 @@ import {
   tokenAt,
   type CommandOption,
   type CommandToken,
+  type Mention,
 } from '@/lib/agent/composer-commands';
 import type { AgentAttachment } from '@citeladder/contracts/agent';
 
@@ -21,12 +23,16 @@ import type { AgentAttachment } from '@citeladder/contracts/agent';
 export type ComposerCommands = {
   options: (token: CommandToken) => CommandOption[];
   /**
-   * A trigger's token became active under the caret. Options are asked for
-   * during render, so a pool loaded only once someone reaches for it starts
-   * here instead.
+   * The token under the caret became active or its text changed. Options are
+   * asked for during render, so a search the server answers starts here.
    */
-  onTrigger?: (trigger: CommandToken['trigger']) => void;
+  onTrigger?: (trigger: CommandToken['trigger'], query: string) => void;
   onPick: (option: CommandOption, token: CommandToken) => void;
+  /**
+   * Text was pasted into the field; `edit` rewrites the message as it is when
+   * the paste's links resolve.
+   */
+  onPaste?: (pasted: string, edit: (change: (current: string) => string) => void) => void;
   /** Actions this message mentions, shown as removable chips. */
   mentions: readonly Mention[];
   onRemoveMention: (id: string) => void;
@@ -45,8 +51,6 @@ export type ComposerPastes = {
   remove: (key: string) => void;
 };
 export type PastedText = Extract<AgentAttachment, { kind: 'pasted_text' }>;
-
-export type Mention = { id: string; label: string };
 
 const MENU_LABEL = { '/': 'Skills', '@': 'Actions to mention' } as const;
 const MOVES: Record<string, number> = { ArrowDown: 1, ArrowUp: -1 };
@@ -91,11 +95,18 @@ export function CommandField({
   const state = menuState(commands, disabled ? null : tokenAt(value, caret), dismissed, active);
   const open = state.options.length > 0;
   const trigger = state.token?.trigger ?? null;
+  const query = state.token?.query ?? '';
   const onTrigger = commands?.onTrigger;
+  // The message as it is now, for a paste whose links resolve after later typing.
+  const latest = useRef(value);
 
   useEffect(() => {
-    if (trigger) onTrigger?.(trigger);
-  }, [trigger, onTrigger]);
+    latest.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    if (trigger) onTrigger?.(trigger, query);
+  }, [trigger, query, onTrigger]);
 
   useLayoutEffect(() => {
     if (pendingCaret.current === null) return;
@@ -185,8 +196,10 @@ export function CommandField({
         }}
         onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
         onPaste={(event) => {
-          if (commands?.pastes?.add(event.clipboardData.getData('text/plain')))
-            event.preventDefault();
+          const pasted = event.clipboardData.getData('text/plain');
+          // A long paste becomes an attachment; shorter text keeps its Action links resolving.
+          if (commands?.pastes?.add(pasted)) event.preventDefault();
+          else commands?.onPaste?.(pasted, (change) => onChange(change(latest.current)));
         }}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && commands?.closeSkillPicker?.()) {
@@ -236,7 +249,10 @@ function CommandList({
       id={listId}
       label={state.token ? MENU_LABEL[state.token.trigger] : 'Commands'}
       open={open}
-      options={state.options}
+      options={state.options.map((option) => ({
+        ...option,
+        aside: option.status ? <ActionStatusBadge status={option.status} /> : undefined,
+      }))}
       selected={state.selected}
       onPick={(index) => {
         const option = state.options[index];

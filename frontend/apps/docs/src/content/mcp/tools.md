@@ -57,7 +57,7 @@ To generate prompts, the assistant follows the Prompt Builder's steps: it checks
 
 ## Read records and windows precisely
 
-The `search` tool finds projects, active Actions and prompts by text and returns `citeladder://` record references. Pass a returned reference to `fetch` to read that record. Arbitrary URLs, SQL and filesystem paths are not valid substitutes.
+The `search` tool finds projects, Actions in every status (open and in-progress ones first) and prompts by text and returns `citeladder://` record references. Pass a returned reference to `fetch` to read that record. Arbitrary URLs, SQL and filesystem paths are not valid substitutes.
 
 Keep the exact audit, dataset or date-window identity in your analysis. A query table and a page table do not automatically establish query-page evidence.
 

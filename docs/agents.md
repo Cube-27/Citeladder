@@ -207,8 +207,8 @@ read result is bounded to `tool_result_max_chars`, and the frozen context to
 
 Sources are derived by the server, not reported by the model. The model has no
 `evidence` field. A reply's sources are the records its turn's reads supplied
-to the model plus the findings of the attached and mentioned Actions its context
-supplied ([`sources.ts`](../frontend/services/api/src/agent/sources.ts), bounded
+to the model plus the attached and mentioned Actions its context supplied and
+their findings ([`sources.ts`](../frontend/services/api/src/agent/sources.ts), bounded
 and deduplicated). A record the result-size bound dropped from a read, or a
 mention or diagnosis the context trimming dropped, is not a source; the tool
 attempt still records every record the read returned. A new revision keeps its
@@ -224,7 +224,10 @@ or typed into a document, is theirs (a form id in pasted HTML) and stays, so
 code they supplied is never corrupted. The UI
 groups sources in plain
 words (for example "Search Console query · 3") with links to the screen that
-shows them.
+shows them. The model names an Action by its exact title, never a link; the chat
+read projects each Action a message mentions or cites (title and current
+status, one query scoped to the chat's project) and the reply shows an exact
+title match of a cited Action as a chip that links to it with its status.
 
 ### Web search
 
@@ -542,7 +545,9 @@ under collapsible headers (fix the site, own pages, mentions elsewhere,
 products; AS2) with every filter in one All filters menu (AS6; the groups and
 filters are in [Opportunities](opportunities.md)); a row opens the Action's
 page, `/agent/actions/{id}`. The composer takes `/` to pick a skill and `@` to
-mention up to five of the project's Actions. A long paste becomes a "Pasted
+mention up to five of the project's Actions; `@` searches their titles in every
+status, and a pasted link to an Action's page in the same project becomes a
+mention (another project's link stays text). A long paste becomes a "Pasted
 text" attachment on the message (bounds in `agent-runtime.json`, listed in the
 skill catalog's `limits`); the model receives each one as its own block
 labelled as data, not instructions. New chat's **Work on an Action**

@@ -15,17 +15,9 @@ import {
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
-// open → in progress → implemented (declared) → measuring → done | dismissed.
-// A user stores `open` or `dismissed` and a declaration stores `implemented`;
-// `in_progress`, `measuring` and `done` are derived by the server.
-export const actionStatusSchema = z.enum([
-  'open',
-  'in_progress',
-  'implemented',
-  'measuring',
-  'done',
-  'dismissed',
-]);
+import { actionStatusSchema } from './action-status.ts';
+
+export { ACTION_STATUS_ANY, actionStatusSchema } from './action-status.ts';
 
 // How the Action hands off into the Agent (AS3): the message a new chat opens
 // with, filled from the Action's own evidence, and a workflow (`workflows.json`
