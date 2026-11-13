@@ -365,7 +365,7 @@ export async function commandCenter(
         db,
         scope,
         { type: null, severity: null, status: null, rule_id: null, min_priority: null },
-        { limit: 8, cursor: null },
+        { limit: policy.projects.overview_opportunity_rows, cursor: null },
         { order: persisted },
       ),
     ),
