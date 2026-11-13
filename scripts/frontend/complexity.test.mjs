@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { measure, policyDiffFailures } from '../../frontend/scripts/check-complexity.mjs';
 
@@ -35,6 +36,22 @@ test('function identities hold no position, so an edit above them keeps every ex
   ];
   assert.deepEqual(namesOf(body), expected);
   assert.deepEqual(namesOf(`const a = 1;\n\nconst b = 2;\n${body}`), expected);
+});
+
+test('only a test directory below frontend/ raises a module to the test ceiling', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'citeladder-complexity-'));
+  try {
+    const file = join(directory, 'test', 'module.ts');
+    mkdirSync(join(directory, 'test'));
+    writeFileSync(file, 'export const a = 1;\n');
+    assert.equal(measure(file).test, false);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+  const fixture = fileURLToPath(
+    new URL('../../frontend/services/api/test/action-support.ts', import.meta.url),
+  );
+  assert.equal(measure(fixture).test, true);
 });
 
 const apiPolicy = (functions) => ({

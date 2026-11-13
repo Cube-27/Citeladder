@@ -56,6 +56,20 @@ test('Kysely writes, raw SQL writes and dynamic tables are read; reads and comme
   });
 });
 
+test('a table computed in raw SQL or a Kysely template literal is a dynamic write', () => {
+  const insert = 'await sql`insert into ${sql.table(name)} (id) values (${id})`.execute(db);';
+  const update = 'await db.updateTable(`${prefix}_runs`).set(row).execute();';
+  const read = 'await sql`select 1 from ${sql.table(name)}`.execute(db);';
+  assert.deepEqual(
+    [insert, update, read].map((source) => moduleWrites(source, known)),
+    [
+      { tables: [], dynamic: true },
+      { tables: [], dynamic: true },
+      { tables: [], dynamic: false },
+    ],
+  );
+});
+
 test('a regular expression with a quote does not hide the writes after it', () => {
   const source = `const quote = /'/u;\nawait db.deleteFrom('audit_runs').execute();`;
   assert.deepEqual(moduleWrites(source, known), { tables: ['audit_runs'], dynamic: false });

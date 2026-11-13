@@ -150,8 +150,7 @@
     "competitors": [
       "src/projects/competitor-suggestions.ts",
       "src/projects/competitors.ts",
-      "src/projects/logo-refresh.ts",
-      "src/projects/service.ts"
+      "src/projects/logo-refresh.ts"
     ],
     "consumable_ledger": ["src/entitlements/ledger.ts"],
     "content_angle_lineages": ["src/content-gaps/refresh.ts"],

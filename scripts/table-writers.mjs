@@ -9,16 +9,18 @@
  * Writes are read from source text: Kysely's `insertInto`, `updateTable`,
  * `deleteFrom` and `mergeInto` with a literal table, and `INSERT INTO`,
  * `UPDATE … SET`, `DELETE FROM` and `MERGE INTO` inside string and template
- * literals. A Kysely write whose table is a variable is a dynamic writer; the
- * allowlist names those modules separately. Only tables of the generated
- * database schema count. Dependency-free, so the classifier job tests it.
+ * literals. A write whose table is computed (a Kysely variable or template
+ * literal, or a `${…}` table in SQL) is a dynamic writer; the allowlist names
+ * those modules separately. Only tables of the generated database schema
+ * count. Dependency-free, so the classifier job tests it.
  */
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 
 const KYSELY_WRITE =
-  /\b(?:insertInto|updateTable|deleteFrom|mergeInto)\s*\(\s*(?:(['"`])([^'"`]*)\1)?/gu;
-const IDENTIFIER = String.raw`(?:public\.)?"?([a-z_][a-z0-9_]*)"?`;
+  /\b(?:insertInto|updateTable|deleteFrom|mergeInto)\s*\(\s*(?:(['"])([^'"]*)\1)?/gu;
+// A table name, or (group 2) the placeholder `lexSource` puts where a template interpolates one.
+const IDENTIFIER = String.raw`(?:(?:public\.)?"?([a-z_][a-z0-9_]*)"?|(\?))`;
 const SQL_WRITES = [
   new RegExp(String.raw`\binsert\s+into\s+${IDENTIFIER}`, 'giu'),
   new RegExp(String.raw`\bmerge\s+into\s+${IDENTIFIER}`, 'giu'),
@@ -29,7 +31,8 @@ const SQL_WRITES = [
   ),
 ];
 // After these characters a `/` starts a regular expression, not a division.
-const REGEX_PRECEDERS = new Set([...'(,=:[!&|?{};+-*%<>~^']);
+const REGEX_PRECEDERS = new Set('(,=:[!&|?{};+-*%<>~^');
+const compare = (left, right) => (left < right ? -1 : Number(left > right));
 const REGEX_KEYWORDS = /\b(?:return|typeof|case|do|else|in|of|void|yield|await)$/u;
 
 function skipRegex(source, start) {
@@ -59,78 +62,87 @@ function startsRegex(code) {
  * with a placeholder, so a statement split by `${…}` still reads as one.
  */
 export function lexSource(source) {
-  let code = '';
-  const strings = [];
-  // Each open template: its text so far and the `${` brace depth it resumes at.
-  const templates = [];
-  let depth = 0;
-  let index = 0;
-  const readTemplate = () => {
-    const template = templates.at(-1);
-    while (index < source.length) {
-      const char = source[index];
-      if (char === '\\') {
-        template.text += source.slice(index, index + 2);
-        index += 2;
-      } else if (char === '`') {
-        code += '`';
-        index += 1;
-        strings.push(templates.pop().text);
-        return;
-      } else if (source.startsWith('${', index)) {
-        template.text += ' ? ';
-        template.resumeDepth = depth;
-        depth += 1;
-        index += 2;
-        return;
-      } else {
-        template.text += char;
-        index += 1;
-      }
-    }
-  };
-  while (index < source.length) {
-    const char = source[index];
-    if (source.startsWith('//', index)) {
-      const end = source.indexOf('\n', index);
-      index = end < 0 ? source.length : end;
-    } else if (source.startsWith('/*', index)) {
-      const end = source.indexOf('*/', index + 2);
-      index = end < 0 ? source.length : end + 2;
-    } else if (char === "'" || char === '"') {
-      let end = index + 1;
-      while (end < source.length && source[end] !== char && source[end] !== '\n')
-        end += source[end] === '\\' ? 2 : 1;
-      strings.push(source.slice(index + 1, end));
-      code += source.slice(index, end + 1);
-      index = end + 1;
-    } else if (char === '`') {
-      code += '`';
-      index += 1;
-      templates.push({ text: '', resumeDepth: -1 });
-      readTemplate();
-    } else if (char === '/' && startsRegex(code)) {
-      const end = skipRegex(source, index);
-      code += source.slice(index, end);
-      index = end;
-    } else if (char === '{') {
-      depth += 1;
-      code += char;
-      index += 1;
-    } else if (char === '}') {
-      depth -= 1;
-      index += 1;
-      if (templates.length && templates.at(-1).resumeDepth === depth) readTemplate();
-      else code += char;
-    } else {
-      code += char;
-      index += 1;
-    }
-  }
-  return { code, strings };
+  const state = { source, index: 0, depth: 0, code: '', strings: [], templates: [] };
+  while (state.index < source.length) lexToken(state);
+  return { code: state.code, strings: state.strings };
 }
 
-/** The tables a module writes, and whether it writes a table it names by variable. */
+/** The end of the comment starting at `index`, or -1 when none starts there. */
+function commentEnd(source, index) {
+  if (source.startsWith('//', index)) {
+    const end = source.indexOf('\n', index);
+    return end < 0 ? source.length : end;
+  }
+  if (source.startsWith('/*', index)) {
+    const end = source.indexOf('*/', index + 2);
+    return end < 0 ? source.length : end + 2;
+  }
+  return -1;
+}
+
+function lexToken(state) {
+  const { source, index } = state;
+  const char = source[index];
+  const comment = commentEnd(source, index);
+  if (comment >= 0) state.index = comment;
+  else if (char === "'" || char === '"') lexQuoted(state, char);
+  else if (char === '`') {
+    state.code += '`';
+    state.index += 1;
+    // Each open template: its text so far and the `${` brace depth it resumes at.
+    state.templates.push({ text: '', resumeDepth: -1 });
+    lexTemplate(state);
+  } else if (char === '/' && startsRegex(state.code)) {
+    state.index = skipRegex(source, index);
+    state.code += source.slice(index, state.index);
+  } else if (char === '}') {
+    state.depth -= 1;
+    state.index += 1;
+    if (state.templates.at(-1)?.resumeDepth === state.depth) lexTemplate(state);
+    else state.code += char;
+  } else {
+    if (char === '{') state.depth += 1;
+    state.code += char;
+    state.index += 1;
+  }
+}
+
+function lexQuoted(state, quote) {
+  const { source, index } = state;
+  let end = index + 1;
+  while (end < source.length && source[end] !== quote && source[end] !== '\n')
+    end += source[end] === '\\' ? 2 : 1;
+  state.strings.push(source.slice(index + 1, end));
+  state.code += source.slice(index, end + 1);
+  state.index = end + 1;
+}
+
+/** Read the open template's text up to its end or its next `${`. */
+function lexTemplate(state) {
+  const { source } = state;
+  const template = state.templates.at(-1);
+  while (state.index < source.length) {
+    const char = source[state.index];
+    if (char === '`') {
+      state.code += '`';
+      state.index += 1;
+      state.strings.push(state.templates.pop().text);
+      return;
+    }
+    if (source.startsWith('${', state.index)) {
+      template.text += ' ? ';
+      template.resumeDepth = state.depth;
+      state.depth += 1;
+      state.index += 2;
+      return;
+    }
+    const length = char === '\\' ? 2 : 1;
+    template.text += source.slice(state.index, state.index + length);
+    state.index += length;
+  }
+}
+
+/** The tables a module writes, and whether it writes a table it computes. */
 export function moduleWrites(source, knownTables) {
   const { code, strings } = lexSource(source);
   const tables = new Set();
@@ -140,29 +152,29 @@ export function moduleWrites(source, knownTables) {
       dynamic = true;
       continue;
     }
+    // `'projects as p'` names `projects`.
     const table = match[2]
       .trim()
-      .split(/\s+as\s+/iu)[0]
+      .split(/\s/u)[0]
       .replace(/^public\./u, '');
     if (knownTables.has(table)) tables.add(table);
   }
   for (const text of strings)
     for (const pattern of SQL_WRITES)
       for (const match of text.matchAll(pattern)) {
-        const table = match[1].toLowerCase();
-        if (knownTables.has(table)) tables.add(table);
+        if (match[2]) dynamic = true;
+        else if (knownTables.has(match[1].toLowerCase())) tables.add(match[1].toLowerCase());
       }
-  return { tables: [...tables].sort(), dynamic };
+  return { tables: [...tables].sort(compare), dynamic };
 }
 
 /** The table names of the generated schema's `DB` interface. */
 export function schemaTables(schemaSource) {
   const body = /export interface DB \{([^}]*)\}/u.exec(schemaSource)?.[1];
   if (!body) throw new Error('the generated schema declares no DB interface');
-  return new Set([...body.matchAll(/^\s*([a-z_][a-z0-9_]*)\s*:/gmu)].map((match) => match[1]));
+  const names = body.split('\n').map((line) => /^([a-z_][a-z0-9_]*):/u.exec(line.trim())?.[1]);
+  return new Set(names.filter(Boolean));
 }
-
-const compare = (left, right) => (left < right ? -1 : Number(left > right));
 
 /** Every table's writer modules and the dynamic writers, as the allowlist records them. */
 export function collectWriters(modules, knownTables) {
@@ -170,7 +182,10 @@ export function collectWriters(modules, knownTables) {
   const dynamic = [];
   for (const [path, source] of [...modules].sort(([left], [right]) => compare(left, right))) {
     const writes = moduleWrites(source, knownTables);
-    for (const table of writes.tables) (tables[table] ??= []).push(path);
+    for (const table of writes.tables) {
+      tables[table] ??= [];
+      tables[table].push(path);
+    }
     if (writes.dynamic) dynamic.push(path);
   }
   const sortedTables = Object.fromEntries(

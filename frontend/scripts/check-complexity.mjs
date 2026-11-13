@@ -133,13 +133,19 @@ function filesUnder(root) {
   visit(root);
   return result.sort((left, right) => left.localeCompare(right));
 }
-/** A test, or a helper in a test directory (the API service keeps its fixtures in `test/`). */
+/**
+ * A test, or a helper in a test directory (the API service keeps its fixtures
+ * in `test/`). Only the path below `frontend/` counts, so a checkout under a
+ * directory named `test` does not raise every module to the test ceiling.
+ */
 function isTestFile(file) {
-  const segments = file.split(path.sep);
+  const below = path.relative(FRONTEND, file);
+  const outside = below.startsWith('..') || path.isAbsolute(below);
+  const segments = new Set(outside ? [] : below.split(path.sep));
   return (
     /(?:\.test|\.spec)\.(?:ts|tsx|js|jsx)$/.test(file) ||
-    segments.includes('__tests__') ||
-    segments.includes('test')
+    segments.has('__tests__') ||
+    segments.has('test')
   );
 }
 
