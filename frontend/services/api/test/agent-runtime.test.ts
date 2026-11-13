@@ -1830,7 +1830,7 @@ describe('Agent runtime on PostgreSQL', () => {
     expect(
       scrubRecordRefs('Read CITELADDER://Audit/x and [the run]( citeladder://audit/y ).'),
     ).toBe('Read and the run.');
-    const id = randomUUID();
+    const [id, mentioned] = [randomUUID(), randomUUID()];
     const manifest = {
       version: 'agent-context-1',
       refs: {},
@@ -1839,7 +1839,7 @@ describe('Agent runtime on PostgreSQL', () => {
       action: null,
       mentions: [
         {
-          id: randomUUID(),
+          id: mentioned,
           target_label: 'A',
           skill_id: 'plan',
           diagnosis: { what_happened: [{ opportunity_id: id }] },
@@ -1847,7 +1847,7 @@ describe('Agent runtime on PostgreSQL', () => {
       ],
     };
     expect(suppliedManifest(manifest).citations).toEqual(
-      new Set([`citeladder://opportunity/${id}`]),
+      new Set([`citeladder://action/${mentioned}`, `citeladder://opportunity/${id}`]),
     );
     expect(
       suppliedManifest({

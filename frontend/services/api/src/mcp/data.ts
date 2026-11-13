@@ -304,20 +304,31 @@ async function searchActions({
   like,
   append,
 }: SearchContext) {
-  // Active Actions only: dismissed and finished work is not a current lead.
+  const a = policy.opportunity.actions;
+  // Every status the Actions list shows, the work queue first: an Action is
+  // often looked up by name once it is being measured or done.
   let actions = db
     .selectFrom('actions')
-    .select(['id', 'project_id', 'target_label', 'approach'])
+    .select(['id', 'project_id', 'target_label', 'approach', 'effective_status'])
     .where('workspace_id', 'in', workspaces)
-    .where('effective_status', 'in', policy.opportunity.actions.ACTION_ACTIVE_STATUSES)
+    .where((eb) =>
+      eb.or([eb('evidence_cleared_at', 'is', null), eb('origin', '=', a.ACTION_ORIGIN_AGENT)]),
+    )
     .where((eb) => eb.or([like('target_label'), like('approach'), like('target_url')]));
   if (projectId) actions = actions.where('project_id', '=', projectId);
   for (const row of await actions
+    .orderBy(sql`effective_status in (${sql.join(a.ACTION_ACTIVE_STATUSES)}) desc`)
     .orderBy(sql`priority_score desc nulls last`)
     .orderBy('id')
     .limit(limit - results.length)
     .execute())
-    append('action', row.id, row.project_id, row.target_label || 'Action', row.approach ?? '');
+    append(
+      'action',
+      row.id,
+      row.project_id,
+      row.target_label || 'Action',
+      `Status: ${row.effective_status}. ${row.approach ?? ''}`.trim(),
+    );
 }
 async function searchPrompts({
   db,

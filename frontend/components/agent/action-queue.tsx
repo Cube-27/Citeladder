@@ -43,8 +43,10 @@ const ALL = 'all';
 type StatusFilter = typeof QUEUE | ActionStatus;
 const STATUS_FILTERS: readonly StatusFilter[] = [QUEUE, ...actionStatusSchema.options];
 
-/** The list's read, less its group: the grouped view asks once per group. */
-export type ActionListQuery = Omit<ActionsParams, 'cursor' | 'limit' | 'group'>;
+/** The list's read, less its group: the grouped view asks once per group. Its status is one status, never any. */
+export type ActionListQuery = Omit<ActionsParams, 'cursor' | 'limit' | 'group' | 'status'> & {
+  status?: ActionStatus;
+};
 
 type Choice<T extends string> = Readonly<{ value: T; label: string }>;
 

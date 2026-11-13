@@ -13,6 +13,7 @@ import { apiClient, type ApiRequestOptions } from './client';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import {
+  ACTION_STATUS_ANY,
   actionAnalyzeResultSchema,
   actionDeclarationSchema,
   actionDetailSchema,
@@ -29,7 +30,7 @@ import {
 } from '@citeladder/contracts/actions';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
-import { ACTIONS_GROUP_PREVIEW_ROWS, AGENT_MENTION_POOL_SIZE } from '@/lib/config/agent';
+import { ACTIONS_GROUP_PREVIEW_ROWS, AGENT_MENTION_SEARCH_LIMIT } from '@/lib/config/agent';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 
 export type Action = z.infer<typeof actionItemSchema>;
@@ -44,8 +45,10 @@ export type AnalyzablePage = z.infer<typeof analyzablePagesSchema>['items'][numb
 export type ActionsParams = {
   cursor?: string;
   limit?: number;
-  /** Omitted: the work queue (open and in progress). */
-  status?: ActionStatus;
+  /** Omitted: the work queue (open and in progress); `any` keeps every status. */
+  status?: ActionStatus | typeof ACTION_STATUS_ANY;
+  /** Text the Action's label contains. */
+  q?: string;
   target_kind?: string;
   group?: ActionGroup;
   approach?: string;
@@ -130,6 +133,7 @@ function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
   return queryOptions({
     queryKey: queryKeys.actions.list(scope, {
       status: request.status ?? null,
+      q: request.q ?? null,
       targetKind: request.target_kind ?? null,
       group: request.group ?? null,
       approach: request.approach ?? null,
@@ -155,10 +159,15 @@ export const actionsQueries = {
       actionListQuery(scope, { ...params, group, limit: ACTIONS_GROUP_PREVIEW_ROWS }),
     ),
   /**
-   * The Actions the Agent composer's `@` menu can mention: a wider page than
-   * the table's, so an Action past the first ten can still be found by name.
+   * The Actions the Agent composer's `@` menu offers for typed text: any
+   * status, so an Action being measured or done is still found by name.
    */
-  mentionPool: (scope: ProjectScope) => actionListQuery(scope, { limit: AGENT_MENTION_POOL_SIZE }),
+  mentionSearch: (scope: ProjectScope, search: string) =>
+    actionListQuery(scope, {
+      status: ACTION_STATUS_ANY,
+      q: search.trim() || undefined,
+      limit: AGENT_MENTION_SEARCH_LIMIT,
+    }),
   detail: (workspaceId: string | null, actionId: string) =>
     queryOptions({
       queryKey: queryKeys.actions.detail(workspaceId, actionId),

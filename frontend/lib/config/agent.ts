@@ -42,10 +42,12 @@ export const AGENT_CHAT_SEARCH_DEBOUNCE_MS = 250;
 /** Debounce for Analyze a page's page search, which the server answers. */
 export const ANALYZE_PAGE_SEARCH_DEBOUNCE_MS = 250;
 /**
- * Actions the composer's `@` menu matches against, loaded when the menu first
- * opens. The table's first page is too few to find an Action by name.
+ * Actions one `@` search asks the server for, across every status. The menu
+ * shows fewer; the rest narrow instantly while the next search loads.
  */
-export const AGENT_MENTION_POOL_SIZE = 50;
+export const AGENT_MENTION_SEARCH_LIMIT = 20;
+/** Debounce for the `@` menu's Action search, which the server answers. */
+export const AGENT_MENTION_SEARCH_DEBOUNCE_MS = 200;
 /** The composer starts one line tall and grows upward to this many lines, then scrolls. */
 export const AGENT_COMPOSER_MAX_ROWS = 8;
 /**

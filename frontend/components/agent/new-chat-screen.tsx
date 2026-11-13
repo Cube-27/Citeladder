@@ -99,15 +99,16 @@ function NewChat({
   );
   // A workflow is sent by id; the server validates it and pins its skill.
   const start = (text: string, workflowId: string | undefined) =>
-    create.start({
-      message: text,
-      skillId: workflowId ? undefined : skillId,
-      workflowId,
-      actionId,
-      context,
-      mentions: commands.mentions.map((mention) => mention.id),
-      attachments: commands.pastes.attachments,
-    });
+    commands.prepare(text, (prepared) =>
+      create.start({
+        ...prepared,
+        skillId: workflowId ? undefined : skillId,
+        workflowId,
+        actionId,
+        context,
+        attachments: commands.pastes.attachments,
+      }),
+    );
 
   return (
     <ListScreen
@@ -141,7 +142,7 @@ function NewChat({
             value={message}
             onChange={setTyped}
             onSubmit={() => start(message, pinnedId)}
-            pending={create.pending}
+            pending={create.pending || commands.resolving}
             disabled={!access.canSend}
             placeholder="Ask a question or describe the work"
             attachment={attachment}
@@ -179,7 +180,7 @@ function NewChat({
             onPick={setPicked}
             onStart={start}
             onBriefing={create.start}
-            pending={create.pending}
+            pending={create.pending || commands.resolving}
             disabled={!access.canSend}
           />
         )}

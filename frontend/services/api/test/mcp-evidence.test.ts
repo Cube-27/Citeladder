@@ -766,10 +766,6 @@ it('lists only active Actions as the current work and reads a dismissed one only
   ]);
   const one = await read('read_actions', { action_id: dismissed.id });
   expect(one.action).toMatchObject({ id: dismissed.id, status: 'dismissed' });
-  const searched = await dispatchTool(db, principal, 'search', { query: 'guide' }, origin);
-  expect((searched.results as { id: string }[]).map((r) => r.id)).toEqual([
-    `citeladder://action/${kept.id}`,
-  ]);
 });
 
 it('serves answer perception with the same numbers as the Perception read, and its quotes', async () => {

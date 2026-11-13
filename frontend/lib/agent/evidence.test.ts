@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { actionEvidence, groupEvidence } from './evidence';
+import { actionEvidence, citedActions, groupEvidence } from './evidence';
 
 const A = '11111111-1111-4111-8111-111111111111';
 const B = '22222222-2222-4222-8222-222222222222';
@@ -35,6 +35,26 @@ describe('groupEvidence', () => {
       { label: 'Site page', count: 1, href: '/site' },
       { label: 'CiteLadder record', count: 1, href: null },
     ]);
+  });
+});
+
+describe('citedActions', () => {
+  it('keeps the cited Actions the chat projects, once each in citation order', () => {
+    const a = { id: A, target_label: 'Buyer guide' };
+    const b = { id: B, target_label: 'Returns policy' };
+    const foreign = '33333333-3333-4333-8333-333333333333';
+    expect(
+      citedActions(
+        [
+          `citeladder://action/${B}`,
+          `citeladder://opportunity/${A}`,
+          `citeladder://action/${A}`,
+          `citeladder://action/${B}`,
+          `citeladder://action/${foreign}`,
+        ],
+        [a, b],
+      ),
+    ).toEqual([b, a]);
   });
 });
 

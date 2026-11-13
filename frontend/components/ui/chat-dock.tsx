@@ -251,12 +251,19 @@ export function PastedTextChip({
   );
 }
 
-export type Suggestion = Readonly<{ key: string; label: string; detail?: string }>;
+export type Suggestion = Readonly<{
+  key: string;
+  label: string;
+  detail?: string;
+  /** A mark after the label, such as a status badge. */
+  aside?: ReactNode;
+}>;
 
 /**
  * The suggestions an editable field offers while focus stays in the field (a
  * `/` skill or an `@` mention): a listbox that opens just above the field at
- * its full width, each option a label and an optional caption. The field owns
+ * its full width, each option a label with an optional mark after it and an
+ * optional caption. The field owns
  * the keyboard (`aria-activedescendant` names `${id}-${index}`); a press picks
  * without taking focus.
  */
@@ -305,7 +312,14 @@ export function SuggestionList({
             onPick(index);
           }}
         >
-          <span className="truncate">{option.label}</span>
+          {option.aside ? (
+            <span className="flex min-w-0 items-center justify-between gap-2">
+              <span className="truncate">{option.label}</span>
+              {option.aside}
+            </span>
+          ) : (
+            <span className="truncate">{option.label}</span>
+          )}
           {option.detail ? (
             <span className={textRole('caption', 'truncate')}>{option.detail}</span>
           ) : null}

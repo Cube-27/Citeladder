@@ -1,6 +1,7 @@
 import { Pencil, RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { ActionChip } from '@/components/agent/action-chip';
 import { ActivityChain } from '@/components/agent/activity-chain';
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { LiveActivity } from '@/components/agent/live-activity';
@@ -19,10 +20,10 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
-import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
+import { citedActions } from '@/lib/agent/evidence';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { activityRows } from '@/lib/agent/activity';
 import { runOutcome } from '@/lib/agent/run-state';
@@ -85,12 +86,15 @@ export function Conversation({
               <MessageBubble
                 message={item.message}
                 skill={skillLabel(skills, item.message.skill_id)}
+                actions={detail.actions}
               />
               {documents(byMessage.get(item.message.id))}
             </Stack>
           ) : (
             <Stack as="li" gap="workspace" key={item.request?.id ?? item.failures[0].id}>
-              {item.request ? <MessageBubble message={item.request} skill={null} /> : null}
+              {item.request ? (
+                <MessageBubble message={item.request} skill={null} actions={detail.actions} />
+              ) : null}
               <TurnFailure failures={item.failures} outcome={item.outcome} />
             </Stack>
           ),
@@ -213,7 +217,8 @@ function PendingMessage({ text }: Readonly<{ text: string }>) {
 function MessageBubble({
   message,
   skill,
-}: Readonly<{ message: AgentMessage; skill: string | null }>) {
+  actions,
+}: Readonly<{ message: AgentMessage; skill: string | null; actions: AgentChatDetail['actions'] }>) {
   const knownHosts = useAgentLinkHosts(message.web_sources);
   if (message.role === 'user')
     return (
@@ -233,25 +238,41 @@ function MessageBubble({
             ) : null}
             {message.mentions.length > 0 ? (
               <Inline as="ul" aria-label="Mentioned Actions" className="flex-wrap">
-                {message.mentions.map((mention) => (
-                  <li key={mention.id}>
-                    <TextLink href={`/agent/actions/${mention.id}`} text="caption">
-                      @{mention.label}
-                    </TextLink>
-                  </li>
-                ))}
+                {message.mentions.map((mention) => {
+                  const action = actions.find((item) => item.id === mention.id);
+                  return (
+                    <li key={mention.id} className="min-w-0">
+                      {action ? (
+                        <ActionChip action={action} prefix="@" />
+                      ) : (
+                        // No longer readable here: the label it was sent with, without a link.
+                        <span className={textRole('caption')}>@{mention.label}</span>
+                      )}
+                    </li>
+                  );
+                })}
               </Inline>
             ) : null}
           </>
         }
       />
     );
+  // A reply names an Action by its exact title; each cited one becomes its chip.
+  const chips = citedActions(message.evidence_refs, actions).map((action) => ({
+    text: action.target_label,
+    node: <ActionChip action={action} />,
+  }));
   return (
     <AgentTurn
       time={<MessageTime value={message.created_at} />}
       meta={skill ? `Skill: ${skill}` : undefined}
     >
-      <ContentMarkdown markdown={message.content} density="compact" knownHosts={knownHosts} />
+      <ContentMarkdown
+        markdown={message.content}
+        density="compact"
+        knownHosts={knownHosts}
+        chips={chips}
+      />
       <Inline className="flex-wrap">
         <EvidenceChips refs={message.evidence_refs} />
         <CopyButton value={message.content} variant="ghost">

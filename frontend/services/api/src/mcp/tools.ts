@@ -1,5 +1,6 @@
 /** The one read catalogue shared by hosted MCP and the in-app Agent. */
 import { z } from 'zod';
+import { ACTION_STATUS_ANY } from '@citeladder/contracts/action-status';
 import { verificationSchema } from '@citeladder/contracts/ai-traffic';
 import { analyticsSelectionSchema } from '@citeladder/contracts/mcp-app';
 import { performanceDimensionSchema } from '@citeladder/contracts/performance';
@@ -205,7 +206,7 @@ export const definitions = {
   search: tool({
     title: 'Search',
     description:
-      'Find projects, active Actions and prompts by text when you do not know where a record is. Returns matching records with ids; pass one to fetch for the full record.',
+      'Find projects, Actions (every status, open and in-progress first; each result states its status) and prompts by text when you do not know where a record is. Returns matching records with ids; pass one to fetch for the full record.',
     schema: z.strictObject({
       query: z.string().trim().min(1).describe('Words to look for, such as a prompt or brand.'),
       project_id: optional(uuid.describe('Search one project only; omit to search every project.')),
@@ -461,7 +462,7 @@ export const definitions = {
   read_actions: projectTool({
     title: 'Read Actions',
     description:
-      'List the work CiteLadder recommends to improve visibility, highest priority first. Without a status filter it lists open and in-progress Actions; each item has its id, target (page, prompt or source), status, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to dismiss or reopen one, and prepare_declare_implemented when its work is done.',
+      'List the work CiteLadder recommends to improve visibility, highest priority first. By default it lists only open and in-progress Actions; pass status any to list every status (implemented, measuring, done and dismissed too), and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to dismiss or reopen one, and prepare_declare_implemented when its work is done.',
     schema: z.strictObject({
       ...project,
       action_id: optional(
@@ -469,8 +470,20 @@ export const definitions = {
       ),
       status: optional(
         z
-          .enum(policy.opportunity.actions.ACTION_STATUSES)
-          .describe('Keep only Actions with this status.'),
+          .enum([...policy.opportunity.actions.ACTION_STATUSES, ACTION_STATUS_ANY])
+          .describe(
+            'Keep only Actions with this status; any keeps every status. Omitted: open and in progress only.',
+          ),
+      ),
+      query: optional(
+        z
+          .string()
+          .trim()
+          .min(1)
+          .max(policy.opportunity.actions.ACTION_SEARCH_MAX_CHARS)
+          .describe(
+            'Keep only Actions whose title contains this text (case-insensitive). Combine with status any to search every status.',
+          ),
       ),
       ...page,
     }),

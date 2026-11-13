@@ -123,16 +123,19 @@ function PanelStart({
           value={message}
           onChange={setMessage}
           onSubmit={() =>
-            create.start({
-              message,
-              skillId,
-              actionId: seed.actionId,
-              context,
-              mentions: commands.mentions.map((mention) => mention.id),
-              attachments: commands.pastes.attachments,
+            commands.prepare(message, (prepared) => {
+              // Typing while the links resolved is kept.
+              setMessage((current) => (current === message ? prepared.message : current));
+              create.start({
+                ...prepared,
+                skillId,
+                actionId: seed.actionId,
+                context,
+                attachments: commands.pastes.attachments,
+              });
             })
           }
-          pending={create.pending}
+          pending={create.pending || commands.resolving}
           disabled={!access.canSend}
           placeholder="Ask about this screen"
           chips={contextChips(context)}

@@ -12,6 +12,7 @@ export const actionKeys = {
     scope: ProjectScope,
     filters: {
       status: string | null;
+      q: string | null;
       targetKind: string | null;
       group: string | null;
       approach: string | null;

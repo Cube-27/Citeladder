@@ -6,7 +6,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-p
 
 import { AGENT_PASTE_ATTACHMENT_MIN_CHARS } from '@/lib/config/agent';
 import { mswServer } from '@/test/msw-server';
-import { actionsPage } from '@/test/fixtures/actions';
+import { actionDetail, actionItem, actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
@@ -69,31 +69,6 @@ const ACCEPTED = {
 
 const PRICING = '77777777-7777-4777-8777-777777777771';
 const BLOG = '77777777-7777-4777-8777-777777777772';
-
-function actionItem(id: string, label: string) {
-  return {
-    id,
-    project_id: PROJECT,
-    target_kind: 'page',
-    target_label: label,
-    target_url: null,
-    target_prompt_id: null,
-    origin: 'evidence',
-    status: 'open',
-    priority_score: 1,
-    priority_band: 'low',
-    families: [],
-    approach: 'improve_page',
-    group: 'own_pages',
-    skill_id: 'gsc_optimize',
-    member_count: 1,
-    declarable_member_count: 1,
-    handoff: { context: 'action', message: `Work on ${label}.` },
-    evidence_cleared_at: null,
-    created_at: '2026-09-25T10:00:00Z',
-    updated_at: '2026-09-25T10:00:00Z',
-  };
-}
 
 const GROWTH_SKILL = {
   id: 'growth_plan',
@@ -429,18 +404,18 @@ describe('NewChatScreen', () => {
     expect(screen.queryByRole('option', { name: /Blog hub/ })).not.toBeInTheDocument();
   });
 
-  it('loads the wider mention pool only once @ is typed', async () => {
-    // Twelve Actions: the last two are past the table's first page of ten.
-    const queue = Array.from({ length: 12 }, (_, index) =>
-      actionItem(`77777777-7777-4777-8777-${String(index).padStart(12, '0')}`, `Guide${index + 1}`),
-    );
-    const limits: string[] = [];
+  it('searches every status by the typed text once @ is typed, and shows each status', async () => {
+    // Out of the work queue, so only a search across every status finds it.
+    const measuring = { ...actionItem(PRICING, 'School uniforms'), status: 'measuring' };
+    const reads: string[] = [];
     mswServer.use(
       // Ahead of the base handlers, so it answers the Actions reads.
       http.get(`/api/v1/projects/${PROJECT}/actions`, ({ request }) => {
-        const limit = new URL(request.url).searchParams.get('limit') ?? 'none';
-        limits.push(limit);
-        return HttpResponse.json(actionsPage(queue.slice(0, Number(limit))));
+        const params = new URL(request.url).searchParams;
+        reads.push(params.toString());
+        const q = params.get('q')?.toLowerCase() ?? '';
+        const found = params.get('status') === 'any' && measuring.target_label.toLowerCase();
+        return HttpResponse.json(actionsPage(found && found.includes(q) ? [measuring] : []));
       }),
       ...baseHandlers(),
     );
@@ -449,12 +424,66 @@ describe('NewChatScreen', () => {
 
     const message = await screen.findByLabelText('Message the agent');
     await user.type(message, 'Compare ');
-    // The page's own Top Actions read the shared first page; nothing wider yet.
-    await vi.waitFor(() => expect(limits).toEqual(['10']));
+    // The page's own Top Actions read the work queue; nothing is searched yet.
+    await vi.waitFor(() => expect(reads).toEqual(['limit=10']));
 
-    await user.type(message, '@Guide12');
-    expect(await screen.findByRole('option', { name: /Guide12/ })).toBeVisible();
-    expect(limits).toEqual(['10', '50']);
+    await user.type(message, '@uniform');
+    expect(
+      await screen.findByRole('option', { name: /School uniforms\s*Measuring/u }),
+    ).toBeVisible();
+    expect(reads.at(-1)).toBe('status=any&q=uniform&limit=20');
+  });
+
+  it('turns a pasted link to an Action of this project into a mention', async () => {
+    const bodies = captureChats();
+    serveAction();
+    const user = userEvent.setup();
+    renderNewChat('');
+
+    const message = await screen.findByLabelText('Message the agent');
+    await user.click(message);
+    await user.paste(`Find ${window.location.origin}/agent/actions/${PRICING}?project=${PROJECT}`);
+    await waitFor(() => expect(message).toHaveValue('Find @Pricing page'));
+    expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
+    await user.type(message, '{Enter}');
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      expect.objectContaining({ message: 'Find @Pricing page', mentions: [PRICING] }),
+    ]);
+  });
+
+  it('resolves Action links at send once, and leaves one from another project as written', async () => {
+    const bodies = captureChats();
+    serveAction();
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mswServer.use(
+      http.get(`/api/v1/actions/${BLOG}`, async () => {
+        await held;
+        return HttpResponse.json(actionDetail(BLOG, 'Blog hub', SIGNAL));
+      }),
+    );
+    const own = `${window.location.origin}/agent/actions/${PRICING}`;
+    const foreign = `${window.location.origin}/agent/actions/${BLOG}`;
+    const user = userEvent.setup();
+    renderNewChat(`?prompt=${encodeURIComponent(`Compare ${own} with ${foreign}`)}`);
+
+    const message = await screen.findByDisplayValue(`Compare ${own} with ${foreign}`);
+    await user.type(message, '{Enter}');
+    // A second press while the links resolve starts no second chat.
+    await user.type(message, '{Enter}');
+    release();
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      expect.objectContaining({
+        message: `Compare @Pricing page with ${foreign}`,
+        mentions: [PRICING],
+      }),
+    ]);
   });
 
   it('restores the insertion point after a slash skill pick', async () => {
@@ -530,15 +559,7 @@ describe('NewChatScreen', () => {
   function serveAction() {
     mswServer.use(
       http.get(`/api/v1/actions/${PRICING}`, () =>
-        HttpResponse.json({
-          ...actionItem(PRICING, 'Pricing page'),
-          approach: 'create_new',
-          diagnosis: {},
-          members: [],
-          member_measurement: {},
-          declarable_since: '2026-01-01T00:00:00Z',
-          declaration: null,
-        }),
+        HttpResponse.json({ ...actionDetail(PRICING, 'Pricing page'), approach: 'create_new' }),
       ),
     );
   }

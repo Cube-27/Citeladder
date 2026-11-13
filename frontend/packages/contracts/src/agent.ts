@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { actionStatusSchema } from './action-status.ts';
+
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
@@ -282,6 +284,10 @@ export const agentChatDetailSchema = responseObject({
   outputs: z.array(agentOutputSchema),
   // A page chat's fetch; null for every other chat.
   page_fetch: agentPageFetchSchema.nullable().default(null),
+  // The Actions the messages mention or cite, as they are now: replies name them by label.
+  actions: z
+    .array(responseObject({ id: uuid(), target_label: z.string(), status: actionStatusSchema }))
+    .default([]),
 });
 
 /** An accepted follow-up: its chat and the queued turn. */

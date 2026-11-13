@@ -160,12 +160,19 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const send = (message: string) => {
     const text = message.trim();
     if (!text) return;
-    setLastMessage(text);
-    const typed = request(text, skillId, {
-      mentions: commands.mentions.map((mention) => mention.id),
-      attachments: commands.pastes.attachments,
+    const attachments = commands.pastes.attachments;
+    commands.prepare(text, (prepared) => {
+      // A resolved Action link is now `@label` in the draft too, so acceptance still
+      // clears it; typing while the links resolved is kept.
+      if (prepared.message !== text)
+        setDraft((current) => (current.trim() === text ? prepared.message : current));
+      setLastMessage(prepared.message);
+      const typed = request(prepared.message, skillId, {
+        mentions: prepared.mentions,
+        attachments,
+      });
+      submit({ ...typed, idempotencyKey: requestKey.keyFor(typed) });
     });
-    submit({ ...typed, idempotencyKey: requestKey.keyFor(typed) });
   };
   return {
     draft,
@@ -193,7 +200,7 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     lastMessage,
     send,
     commands,
-    pending: mutation.isPending,
+    pending: mutation.isPending || commands.resolving,
     failure: mutation.isError ? agentWriteFailure(mutation.error, 'send the message') : null,
     retrySubmission: () => {
       if (mutation.variables) submit(mutation.variables);

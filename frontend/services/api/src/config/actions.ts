@@ -47,6 +47,8 @@ export const actions = {
   ACTION_STATUSES: ['open', 'in_progress', 'implemented', 'measuring', 'done', 'dismissed'],
   ACTION_USER_STATUSES: ['dismissed', 'open'],
   ACTION_ACTIVE_STATUSES: ['in_progress', 'open'],
+  /** The longest text the Actions list searches labels for. */
+  ACTION_SEARCH_MAX_CHARS: 200,
   EVIDENCE_FAMILIES: [
     'ai_visibility',
     'sources',

@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Prompt, Topic } from '@citeladder/contracts';
 
@@ -23,6 +23,7 @@ import { ANALYZE_PAGE_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
 import { readableUrl } from '@/lib/format';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useDebounced } from '@/lib/use-debounced';
 
 /**
  * Analyze a page (CO6): the Actions header's button and its dialog. Pick one
@@ -158,15 +159,6 @@ function useTopicChoices(scope: ProjectScope) {
   return { choices, state };
 }
 
-function useDebounced(value: string) {
-  const [debounced, setDebounced] = useState(value);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(value), ANALYZE_PAGE_SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [value]);
-  return debounced;
-}
-
 /** A page's path as a reader reads it; the whole address when it cannot be parsed. */
 function pagePath(url: string) {
   try {
@@ -192,7 +184,7 @@ function PageField({
   onPick: (page: AnalyzablePage) => void;
 }>) {
   const [search, setSearch] = useState('');
-  const searched = useDebounced(search);
+  const searched = useDebounced(search, ANALYZE_PAGE_SEARCH_DEBOUNCE_MS);
   const query = useQuery({
     ...actionsQueries.analyzablePages(scope, searched),
     // A new search keeps the last matches on screen until its own land.
