@@ -5,7 +5,11 @@ import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { measure, policyDiffFailures } from '../../frontend/scripts/check-complexity.mjs';
+import {
+  failuresFor,
+  measure,
+  policyDiffFailures,
+} from '../../frontend/scripts/check-complexity.mjs';
 
 function namesOf(source) {
   const directory = mkdtempSync(join(tmpdir(), 'citeladder-complexity-'));
@@ -57,12 +61,14 @@ test('only a test directory below frontend/ raises a module to the test ceiling'
 const apiPolicy = (functions) => ({
   format_version: 1,
   roots: ['services/api/src', 'services/api/scripts', 'services/api/test'],
-  defaults: { max_function_cc: 12, max_production_loc: 500, max_test_loc: 800 },
+  defaults: { max_function_cc: 12, max_test_loc: 800 },
   exceptions: { functions, modules: {} },
 });
 
 test('the API complexity ratchet only tightens against its base', () => {
+  // A base from before the production LOC rule was retired still compares.
   const base = apiPolicy({ 'services/api/src/a.ts::run': 20 });
+  base.defaults.max_production_loc = 500;
   assert.deepEqual(
     policyDiffFailures(
       base,
@@ -75,4 +81,15 @@ test('the API complexity ratchet only tightens against its base', () => {
     ],
   );
   assert.deepEqual(policyDiffFailures(base, apiPolicy({}), 'api'), []);
+});
+
+test('only tests have a LOC ceiling; production size is the token hook rule', () => {
+  const long = (test) => ({ loc: 900, test, functions: [] });
+  assert.deepEqual(
+    failuresFor(
+      { 'services/api/src/a.ts': long(false), 'services/api/test/a.test.ts': long(true) },
+      apiPolicy({}),
+    ),
+    ['services/api/test/a.test.ts: LOC 900 exceeds ceiling 800'],
+  );
 });

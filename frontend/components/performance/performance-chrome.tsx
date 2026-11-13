@@ -29,9 +29,8 @@ type QuickRange = (typeof QUICK_RANGE_OPTIONS)[number]['value'];
  * The Performance surface's chrome: the control bar above the cards, the
  * chart's bucket-size select, and the notice stack.
  *
- * Split from `performance-screen.tsx` to keep that module inside the 500-LOC
- * budget. These are presentation only — every piece of state they render is
- * owned by the screen and passed in.
+ * Split from `performance-screen.tsx`. These are presentation only — every
+ * piece of state they render is owned by the screen and passed in.
  */
 
 function getMoreLabel(selection: RangeSelection, comparing: boolean): string {

@@ -344,7 +344,30 @@ default validator for a small follow-up on that branch.
 The pre-commit hook (`vp staged`, configured in the root `vite.config.ts`) runs
 `vp check --fix` on staged JS/TS/CSS/JSON files, the design-system policy
 (`frontend/scripts/check-design-system.mjs`) when frontend CSS, TS/TSX, Astro or
-SVG files are staged.
+SVG files are staged, and the source token-size limit below.
+
+#### Source file size
+
+An authored source file (`.ts .tsx .js .jsx .mjs .cjs .css`) stays within
+6,000 tokens, counted as bytes / 4. This is the only size rule for production
+source; there is no line limit. `frontend/scripts/check-token-size.mjs` judges
+the staged blobs at pre-commit, and CI's classifier job reruns it on the PR's
+changed files, so `--no-verify` does not bypass it.
+`frontend/scripts/token-size-policy.json` holds the limit, the ignore list
+(tests, codegen, migrations, marketing content, config owners, design tokens
+and the MCP tool registries, each with its reason) and the baseline of files
+already over the limit on 13 November 2026. A baseline file is exempt; the
+baseline may only shrink, and an entry is deleted once a split brings its file
+under the limit.
+
+To bring a file under the limit, split it along its seams (functions and types
+that change together, a class and its collaborators, a route group, a
+component's subcomponents and hooks) into sibling modules in the same owner
+folder ([frontend](frontend-architecture.md), [backend](backend-architecture.md)).
+Update every importer; add no barrel files, re-export shims or aliases. Move the
+code unchanged, with no renames of exported symbols or behaviour changes, in its
+own commit when possible. Never shrink a file by deleting comments or
+compressing code, and never extend the ignore list or baseline to pass.
 
 The design-system policy ratchets its stylesheet, TSX geometry and SVG colour
 rules against `frontend/scripts/design-system-baseline.json`: a file's count per
@@ -448,7 +471,9 @@ pnpm check:dead-code
 pnpm report:duplicates:tests
 ```
 
-The frontend complexity policy has its own ceilings. The exception lists are empty and should stay that way, and there
+The complexity policies cap function cyclomatic complexity at 12 and test files
+at 800 lines; production file size is the [token-size limit](#source-file-size).
+The frontend complexity policy's exception lists are empty and should stay that way, and there
 is no rebaseline command: CI compares the policy with the PR base and rejects
 higher ceilings, higher exceptions, and newly added exceptions. Roots may be
 _added_ (widening the gate is a tightening) but never removed.
@@ -456,7 +481,7 @@ _added_ (widening the gate is a tightening) but never removed.
 The API service has the same ratchets, with the same ceilings, in
 `frontend/services/api/complexity-policy.json` and
 `frontend/services/api/jscpd-baseline.json`. The complexity policy lists the
-functions and modules over the ceiling when it was introduced; an entry may
+functions and test files over the ceiling when it was introduced; an entry may
 only fall or be deleted once its code is within the default. A function's
 exception key is its file and name, an anonymous function named by its
 enclosing function and a repeated name by its occurrence (`#2`), so editing

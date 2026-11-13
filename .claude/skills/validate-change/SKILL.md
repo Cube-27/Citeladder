@@ -10,7 +10,8 @@ Validation has three tiers; each one owns what the one before it skips.
 command details.
 
 1. **While iterating**, run only the smallest relevant native tests for the
-   behavior at risk. The pre-commit hook formats and lints staged files.
+   behavior at risk. The pre-commit hook formats and lints staged files and
+   enforces the [source token-size limit](../../../docs/DEVELOPMENT.md#source-file-size).
    Authorization, persistence, concurrency and shared runtime changes need
    stronger affected-owner coverage.
 2. **For changes to contracts, persistence, authorization, concurrency, shared

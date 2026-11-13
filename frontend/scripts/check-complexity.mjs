@@ -1,6 +1,7 @@
 /**
- * Enforce the CC/LOC ratchets of the frontend and the API service, and reject
- * policy relaxation. `--policy frontend|api` selects the policy.
+ * Enforce the function CC and test-file LOC ratchets of the frontend and the
+ * API service, and reject policy relaxation. `--policy frontend|api` selects
+ * the policy. Production source size is check-token-size.mjs's rule.
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -200,12 +201,11 @@ function hasExactKeys(value, keys) {
 
 function validateDefaults(defaults) {
   if (
-    !hasExactKeys(defaults, 'max_function_cc,max_production_loc,max_test_loc') ||
+    !hasExactKeys(defaults, 'max_function_cc,max_test_loc') ||
     defaults.max_function_cc !== 12 ||
-    defaults.max_production_loc !== 500 ||
     defaults.max_test_loc !== 800
   )
-    throw new Error('complexity defaults must remain CC 12, production 500, test 800 LOC');
+    throw new Error('complexity defaults must remain CC 12 and test 800 LOC');
 }
 
 function validateExceptions(exceptions, defaults) {
@@ -221,10 +221,7 @@ function validateExceptions(exceptions, defaults) {
     for (const [name, ceiling] of Object.entries(entries)) {
       if (!name || typeof ceiling !== 'number' || !Number.isInteger(ceiling) || ceiling <= 0)
         throw new Error(`invalid ${kind} exception: ${name}`);
-      const minimum =
-        kind === 'functions'
-          ? defaults.max_function_cc
-          : Math.min(defaults.max_production_loc, defaults.max_test_loc);
+      const minimum = kind === 'functions' ? defaults.max_function_cc : defaults.max_test_loc;
       if (ceiling <= minimum) throw new Error(`${kind} exception ${name} must exceed its default`);
     }
 }
@@ -261,10 +258,8 @@ export function collect(policy) {
 export function failuresFor(measurements, policy) {
   const failures = [];
   for (const [file, measurement] of Object.entries(measurements)) {
-    const ceiling =
-      policy.exceptions.modules[file] ??
-      (measurement.test ? policy.defaults.max_test_loc : policy.defaults.max_production_loc);
-    if (measurement.loc > ceiling)
+    const ceiling = policy.exceptions.modules[file] ?? policy.defaults.max_test_loc;
+    if (measurement.test && measurement.loc > ceiling)
       failures.push(`${file}: LOC ${measurement.loc} exceeds ceiling ${ceiling}`);
     for (const fn of measurement.functions) {
       const functionCeiling =
@@ -280,10 +275,9 @@ export function staleExceptionFailures(measurements, policy) {
   for (const file of Object.keys(policy.exceptions.modules)) {
     const measurement = measurements[file];
     if (!measurement) failures.push(`stale module exception: ${file} does not exist`);
-    else if (
-      measurement.loc <=
-      (measurement.test ? policy.defaults.max_test_loc : policy.defaults.max_production_loc)
-    )
+    else if (!measurement.test)
+      failures.push(`module exception ${file} is not a test; only tests have a LOC ceiling`);
+    else if (measurement.loc <= policy.defaults.max_test_loc)
       failures.push(`stale module exception: ${file} is now within the default`);
   }
   for (const key of Object.keys(policy.exceptions.functions)) {
@@ -300,13 +294,13 @@ export function staleExceptionFailures(measurements, policy) {
 }
 export function policyDiffFailures(base, current, name) {
   const { roots, renames } = POLICIES[name];
-  validatePolicy(base, base.roots);
+  // The base may predate the current shape, so only shared keys are compared.
   validatePolicy(current, roots);
   const failures = [];
   const normalizedBaseRoots = base.roots.map((root) => renames.get(root) ?? root);
   if (JSON.stringify(normalizedBaseRoots) !== JSON.stringify(current.roots))
     failures.push('application roots changed');
-  for (const key of ['max_function_cc', 'max_production_loc', 'max_test_loc'])
+  for (const key of ['max_function_cc', 'max_test_loc'])
     if (current.defaults[key] > base.defaults[key])
       failures.push(`default ${key} increased ${base.defaults[key]} -> ${current.defaults[key]}`);
   for (const kind of ['functions', 'modules'])
