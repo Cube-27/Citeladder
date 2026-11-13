@@ -100,13 +100,13 @@ const css = (source, matrix) =>
 
 test('fails a CSS feature below the matrix and passes it once the matrix reaches it', () => {
   const source = '@starting-style {\n  .menu { opacity: 0; }\n}';
-  assert.deepEqual(css(source, RAISED), ['@starting-style@1']);
-  assert.deepEqual(cssCompatViolations(source, 'lib/example.css', RAISED)[0].missing, [
+  assert.deepEqual(css(source, PREVIOUS), ['@starting-style@1']);
+  assert.deepEqual(cssCompatViolations(source, 'lib/example.css', PREVIOUS)[0].missing, [
     'firefox 129',
     'safari_ios 17.5',
     'safari 17.5',
   ]);
-  assert.deepEqual(css(source, NEXT), []);
+  assert.deepEqual(css(source, RAISED), []);
 });
 
 test('reads properties, keyword values, functions and pseudo-elements, and passes guarded uses', () => {
