@@ -57,11 +57,11 @@ function RunningTurn({
   const status =
     queued && !live?.step
       ? 'Waiting to start…'
-      : (liveStepLabel(live) ?? activeStepLabel(run.progress, run.attempt_count));
+      : (liveStepLabel(live) ?? activeStepLabel(currentAttempt(run)));
   // The stream is the freshest record while it lasts; after it drops the run is
   // polled. The longer record wins, so rows never vanish at the switch.
   const streamed = activityRows((live?.tools ?? []).map(callStep));
-  const polled = activityRows(run.progress.map(callStep));
+  const polled = activityRows(currentAttempt(run).map(callStep));
   const rows = streamed.length >= polled.length ? streamed : polled;
   const seconds = useElapsedSeconds(live?.startedAt ?? Date.parse(run.created_at));
   return (
@@ -102,9 +102,13 @@ function useElapsedSeconds(since: number) {
   }, []);
   return Math.max(0, Math.round((now - since) / 1000));
 }
-function activeStepLabel(progress: AgentRun['progress'], attemptCount: number | undefined) {
-  const currentAttempt = attemptCount ?? progress.at(-1)?.run_attempt;
-  const current = [...progress].reverse().find((step) => step.run_attempt === currentAttempt);
+/** The progress of the run's current attempt; an earlier attempt's reads are not this turn's. */
+function currentAttempt({ progress, attempt_count }: AgentRun) {
+  const attempt = attempt_count ?? progress.at(-1)?.run_attempt;
+  return progress.filter((step) => step.run_attempt === attempt);
+}
+function activeStepLabel(progress: AgentRun['progress']) {
+  const current = progress.at(-1);
   if (!current) return 'The agent is working…';
   if (current.tool === null) return modelStepLabel(current.status);
   const [row] = activityRows([callStep(current)]);
