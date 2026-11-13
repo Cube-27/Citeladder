@@ -208,15 +208,19 @@ jobs:
       DATABASE_URL: postgresql://citeladder_app:postgres@localhost:5432/citeladder
       TYPES_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/citeladder
     steps:
+      # Full history: the ratchets compare their policy with the PR base.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-frontend
       - name: Apply the SQL schema baseline
         working-directory: frontend/services/api
         run: pnpm migrate
-      - name: API service quality (types, schema authority, route ownership)
+      - name: API service quality (types, schema authority, route ownership, table writers, ratchets)
         working-directory: frontend
+        env:
+          COMPLEXITY_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: node ../scripts/quality.mjs --mode check --scope api
       - name: Generated database types match the migrated schema
         working-directory: frontend/services/api
@@ -458,7 +462,8 @@ jobs:
   # owner passed; an owner skipped because it was not selected is fine.
   result:
     name: CI result
-    needs: [changes, frontend, frontend-tests, contract, api, api-tests, e2e, workers, security, infra]
+    needs:
+      [changes, frontend, frontend-tests, contract, api, api-tests, e2e, workers, security, infra]
     if: always()
     permissions: {}
     runs-on: ubuntu-slim

@@ -8,6 +8,14 @@ import { execFileSync, spawnSync } from 'node:child_process';
 
 import { classifyPaths } from './ci-changes.mjs';
 import { claimMachineSlot, claimWorktree } from './check-slots.mjs';
+import {
+  allowlistDiffFailures,
+  apiModules,
+  collectWriters,
+  schemaTables,
+  validateAllowlist,
+  writerFailures,
+} from './table-writers.mjs';
 import { gitPaths as listGitPaths, workingDiffPaths as branchDiffPaths } from './working-diff.mjs';
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -206,9 +214,15 @@ const QUALITY_BUILD_ENV = {
   PUBLIC_API_ORIGIN: process.env.PUBLIC_API_ORIGIN || 'https://api.citeladder.com',
 };
 
-function policyDiffArgs() {
+// The PR base (or the push's previous head) the ratchets compare their policy with.
+function policyBase() {
   const base = process.env.COMPLEXITY_BASE_SHA;
-  return base && !/^0+$/.test(base) ? ['--', '--check-policy-diff', base] : [];
+  return base && !/^0+$/.test(base) ? base : null;
+}
+
+function policyDiffArgs() {
+  const base = policyBase();
+  return base ? ['--', '--check-policy-diff', base] : [];
 }
 
 function frontendChecks() {
@@ -281,6 +295,35 @@ function schemaAuthorityViolations(root) {
     });
 }
 
+// A table has one TypeScript application writer (docs/invariants.md 1); the
+// allowlist records today's writers and may only tighten (scripts/table-writers.mjs).
+const API_ROOT = join(frontendRoot, 'services', 'api');
+const TABLE_WRITERS = 'frontend/services/api/table-writers.json';
+
+function baseTableWriters(base) {
+  try {
+    return validateAllowlist(
+      JSON.parse(git(['show', `${base}:${TABLE_WRITERS}`], { encoding: 'utf8', stdio: 'pipe' })),
+    );
+  } catch (error) {
+    // The allowlist's first PR has no base allowlist to compare with.
+    if (/does not exist in|exists on disk, but not in/u.test(`${error.stderr ?? ''}`)) return null;
+    throw error;
+  }
+}
+
+function tableWriterViolations() {
+  const allowlist = validateAllowlist(
+    JSON.parse(readFileSync(join(repositoryRoot, TABLE_WRITERS), 'utf8')),
+  );
+  const tables = schemaTables(readFileSync(join(API_ROOT, 'src/generated/db-schema.ts'), 'utf8'));
+  const violations = writerFailures(collectWriters(apiModules(API_ROOT), tables), allowlist);
+  const base = policyBase();
+  const baseAllowlist = base ? baseTableWriters(base) : null;
+  if (baseAllowlist) violations.push(...allowlistDiffFailures(baseAllowlist, allowlist));
+  return violations;
+}
+
 function apiServiceChecks() {
   pnpm('API service TypeScript', ['--filter', '@citeladder/api', 'typecheck']);
   pnpm('MCP tool reference', ['--filter', '@citeladder/api', 'mcp:reference', '--check']);
@@ -307,6 +350,16 @@ function apiServiceChecks() {
     );
   }
   pnpm('API route ownership', ['--filter', '@citeladder/api', 'check:routes']);
+  process.stdout.write('API table-writer allowlist…\n');
+  const writerViolations = tableWriterViolations();
+  if (writerViolations.length) {
+    failedSteps.push('API table-writer allowlist');
+    process.stderr.write(
+      `A table has one writer module; ${TABLE_WRITERS} records them and may only tighten:\n${writerViolations.join('\n')}\n`,
+    );
+  }
+  pnpm('API complexity policy', ['check:complexity:api', ...policyDiffArgs()]);
+  pnpm('API duplication policy', ['check:duplicates:api', ...policyDiffArgs()]);
 }
 
 if (scopes.has('frontend')) frontendChecks();
