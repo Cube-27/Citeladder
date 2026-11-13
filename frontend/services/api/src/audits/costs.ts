@@ -151,6 +151,7 @@ export async function appendCostProjection(
     .selectFrom('raw_response_artifacts as r')
     .innerJoin('audits as a', 'a.id', 'r.audit_id')
     .selectAll('r')
+    .select('a.funded_budget_period_start')
     .where('a.workspace_id', '=', workspaceId)
     .where('r.id', '=', artifactId)
     .forUpdate('r')
@@ -183,6 +184,8 @@ export async function appendCostProjection(
       logical_engine: artifact.logical_engine,
       transport_provider: artifact.transport_provider,
       transport_model: artifact.transport_model,
+      // A platform-funded answer counts toward its budget month after its audit is gone.
+      funded_budget_period_start: artifact.funded_budget_period_start,
       ...projectCost(artifact.usage, pricing),
       attempt_count: Number(count.attempts),
       pricing_version: pricingVersion,

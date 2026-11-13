@@ -3,11 +3,12 @@ import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { setLogSink } from '../src/logging.ts';
 import { createAudits } from '../src/audits/creation.ts';
+import { appendCostProjection } from '../src/audits/costs.ts';
 import { capacityLock } from '../src/entitlements/ledger.ts';
-import { lockProjectRow } from '../src/projects/service.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { record } from '../src/db/json.ts';
+import { lockProjectRow, removeProject } from '../src/projects/service.ts';
 import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
@@ -61,26 +62,28 @@ async function managedTenant() {
   // The plan, not the request, makes the workspace managed (B32).
   return { t, accountId: await managedPlan(db, t.workspaceId) };
 }
-/** One funded execution this month, with a cost projection per pricing version, oldest first. */
+/**
+ * One funded execution this month, with a cost projection per pricing version,
+ * oldest first, recorded as the cost writer does; returns its audit.
+ */
 async function recordSpend(
   t: Awaited<ReturnType<typeof auditTenant>>,
   accountId: string,
   costs: number[],
+  projectId = t.projectId,
 ) {
-  const spentAudit = await fixtures.audit(t);
-  const { taskId } = await fixtures.execution(t, { auditId: spentAudit });
+  const spentAudit = await fixtures.audit({ ...t, projectId });
+  const { taskId } = await fixtures.execution({ ...t, projectId }, { auditId: spentAudit });
   const artifact = await db
     .selectFrom('raw_response_artifacts')
     .select(['id', 'logical_engine', 'transport_provider', 'transport_model'])
     .where('task_id', '=', taskId)
     .executeTakeFirstOrThrow();
   const now = new Date();
+  const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
   await db
     .updateTable('audits')
-    .set({
-      funding_account_id: accountId,
-      funded_budget_period_start: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)),
-    })
+    .set({ funding_account_id: accountId, funded_budget_period_start: month })
     .where('id', '=', spentAudit)
     .execute();
   for (const [version, cost] of costs.entries())
@@ -95,6 +98,7 @@ async function recordSpend(
         logical_engine: artifact.logical_engine,
         transport_provider: artifact.transport_provider,
         transport_model: artifact.transport_model,
+        funded_budget_period_start: month,
         pricing_version: `fixture-${version}`,
         formula_version: 'fixture',
         projection_status: 'complete',
@@ -218,6 +222,47 @@ describe('atomic audit admission', () => {
         owner.deleteFrom('consumable_ledger').where('workspace_id', '=', t.workspaceId).execute(),
       );
     }
+  });
+  it("keeps a deleted project's recorded spend in the funded month", async () => {
+    const { t, accountId } = await managedTenant();
+    const deleted = await fixtures.project(t.workspaceId);
+    await recordSpend(t, accountId, [10_000], deleted);
+    await removeProject(db, { workspaceId: t.workspaceId, projectId: deleted });
+    const fundedRuntime = {
+      ...runtime,
+      fundedBudgetMinor: 1,
+      audits: { ...runtime.audits, audit_prompt_count: 10 },
+    };
+    await expect(
+      createAudits(db, t.workspaceId, input(t), {}, fundedRuntime),
+    ).rejects.toMatchObject({ code: 'funded_budget_exhausted' });
+    expect(await queued(t.workspaceId)).toEqual([]);
+  });
+  it("prices a funded answer into its audit's budget month, and a self-funded one into none", async () => {
+    const t = await auditTenant(db, fixtures);
+    const account = await billingAccount(db, t.workspaceId);
+    const month = new Date('2030-04-01T00:00:00Z');
+    const priced = async (funded: boolean) => {
+      const auditId = await fixtures.audit(t);
+      if (funded)
+        await db
+          .updateTable('audits')
+          .set({ funding_account_id: account, funded_budget_period_start: month })
+          .where('workspace_id', '=', t.workspaceId)
+          .where('id', '=', auditId)
+          .execute();
+      const { taskId } = await fixtures.execution(t, { auditId });
+      const artifact = await db
+        .selectFrom('raw_response_artifacts')
+        .select('id')
+        .where('task_id', '=', taskId)
+        .executeTakeFirstOrThrow();
+      const projection = await db
+        .transaction()
+        .execute((trx) => appendCostProjection(trx, t.workspaceId, artifact.id));
+      return projection?.funded_budget_period_start;
+    };
+    expect([await priced(true), await priced(false)]).toEqual([month, null]);
   });
   it('persists replayable slots, immutable snapshots, credential identity and queue events together', async () => {
     const t = await auditTenant(db, fixtures);

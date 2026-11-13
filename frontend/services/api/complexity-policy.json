@@ -181,7 +181,6 @@
       "services/api/src/crawl-logs/reads.ts": 588,
       "services/api/src/documents/pdf.ts": 628,
       "services/api/src/entitlements/ledger.ts": 784,
-      "services/api/src/generated/db-schema.ts": 3810,
       "services/api/src/integrations/sync.ts": 635,
       "services/api/src/mcp/evidence-site.ts": 650,
       "services/api/src/mcp/oauth.ts": 566,

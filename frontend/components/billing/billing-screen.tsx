@@ -22,6 +22,7 @@ import {
 } from '@/lib/api/billing';
 import { catalogItemName, catalogPlanByKey } from '@/lib/billing/catalog';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
+import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -31,7 +32,12 @@ import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/proj
  * extend. Anything else — no subscription, ended, unpaid — is offered a new
  * subscription instead; `pending` is offered neither while it verifies.
  */
-const SUBSCRIBED_STATUSES = new Set(['active', 'trialing', 'past_due', 'cancel_scheduled']);
+const SUBSCRIBED_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'cancel_scheduled',
+]);
 
 type Checkout = ReturnType<typeof useSubscriptionCheckout>;
 

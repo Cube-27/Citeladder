@@ -287,7 +287,9 @@ are not affected (B66).
 DataForSEO surfaces included, on the platform's keys; the request never chooses
 the mode. Its monthly platform budget admits a launch while the month's recorded
 spend is below the ceiling (`BILLING_FUNDED_MONTHLY_BUDGET_MINOR`); recorded
-spend counts each execution's latest cost projection once, as `internal_costs` does.
+spend counts each execution's latest cost projection once, as `internal_costs` does,
+from the cost rows alone: each carries its funded audit's budget month, so a deleted
+project's spend still counts.
 Keyword Research on a managed plan researches on the platform's DataForSEO
 account and spends AI credits: the review prices the estimate in credits (the
 DataForSEO cost converted exactly as token cost is), confirmation holds it in the
@@ -308,8 +310,10 @@ data rather than rewriting immutable history. No reset is implicit.
 Runtime metering, grants, resolution and admission use their owners.
 Each subject has one ledger-writing stack. Operator
 catalog publication, grant correction and read-only plan verification are native.
-Catalog commands serialize publication and persist creation/publication request
-keys on immutable revisions; grants/revocations use their existing evidence keys.
+Catalog commands serialize publication; each import keeps its request key and
+result in `billing_catalog_imports`, and publication its key on the revision.
+Grants/revocations use their existing evidence keys, and every override an
+operator issues stores its reason.
 Preview executes the real mutation and rolls back its transaction.
 
 Native [execution config](../frontend/services/api/src/config/billing.ts) owns
