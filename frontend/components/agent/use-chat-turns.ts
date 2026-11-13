@@ -13,7 +13,7 @@ import {
   type AgentChatDetail,
   type AgentMessage,
 } from '@/lib/api/agent';
-import type { AgentContextRefs } from '@citeladder/contracts/agent';
+import type { AgentAttachment, AgentContextRefs } from '@citeladder/contracts/agent';
 
 /**
  * The persisted chat. Reads never run the agent. While a turn is active its
@@ -53,6 +53,7 @@ export type NewChatInput = {
   actionId?: string;
   context: AgentContextRefs;
   mentions?: string[];
+  attachments?: AgentAttachment[];
 };
 
 /** Starts a chat once per accepted request; `onCreated` receives its id. */
@@ -72,6 +73,7 @@ export function useCreateChat(
     actionId,
     context,
     mentions = [],
+    attachments = [],
   }: NewChatInput) => {
     const input = {
       message: message.trim(),
@@ -80,6 +82,7 @@ export function useCreateChat(
       action_id: actionId,
       context,
       ...(mentions.length > 0 ? { mentions } : {}),
+      ...(attachments.length > 0 ? { attachments } : {}),
     };
     mutation.mutate(
       { projectId, idempotencyKey: requestKey.keyFor({ projectId, input }), input },
@@ -110,9 +113,9 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
   const mutation = useMutation(agentMutations.sendMessage({ workspaceId, projectId }));
   // The composer as it is when a send is accepted, not as it was when sent:
   // typing during the round trip must survive the acceptance.
-  const composer = useRef({ draft, mentions: commands.mentions });
+  const composer = useRef({ draft, mentions: commands.mentions, pastes: commands.pastes.items });
   useEffect(() => {
-    composer.current = { draft, mentions: commands.mentions };
+    composer.current = { draft, mentions: commands.mentions, pastes: commands.pastes.items };
   });
   type Turn = Parameters<typeof mutation.mutate>[0];
   /**
@@ -123,12 +126,16 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     mutation.mutate(turn, {
       onSuccess: (_accepted, variables) => {
         requestKey.accepted();
-        const { draft: current, mentions } = composer.current;
+        const { draft: current, mentions, pastes } = composer.current;
         const submittedMentions = variables.mentions ?? [];
         const unchangedMentions =
           mentions.length === submittedMentions.length &&
           mentions.every((mention, index) => mention.id === submittedMentions[index]);
-        if (current.trim() === variables.message && unchangedMentions) {
+        const submittedPastes = variables.attachments ?? [];
+        const unchangedPastes =
+          pastes.length === submittedPastes.length &&
+          pastes.every((paste, index) => paste.text === submittedPastes[index]?.text);
+        if (current.trim() === variables.message && unchangedMentions && unchangedPastes) {
           setDraft('');
           commands.clear();
         }
@@ -139,21 +146,25 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     if (message.skill_source === 'user') return message.skill_id;
     return message.skill_source === 'automatic' ? null : undefined;
   };
-  const request = (message: string, skill: string | null | undefined, mentions: string[]) => ({
+  const request = (
+    message: string,
+    skill: string | null | undefined,
+    sent: { mentions: string[]; attachments: AgentAttachment[] },
+  ) => ({
     chatId,
     message,
     skillId: skill,
-    ...(mentions.length > 0 ? { mentions } : {}),
+    ...(sent.mentions.length > 0 ? { mentions: sent.mentions } : {}),
+    ...(sent.attachments.length > 0 ? { attachments: sent.attachments } : {}),
   });
   const send = (message: string) => {
     const text = message.trim();
     if (!text) return;
     setLastMessage(text);
-    const typed = request(
-      text,
-      skillId,
-      commands.mentions.map((mention) => mention.id),
-    );
+    const typed = request(text, skillId, {
+      mentions: commands.mentions.map((mention) => mention.id),
+      attachments: commands.pastes.attachments,
+    });
     submit({ ...typed, idempotencyKey: requestKey.keyFor(typed) });
   };
   return {
@@ -164,16 +175,15 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     recover: (message: AgentMessage) => {
       setDraft(message.content);
       setSkillId(skillFor(message));
-      commands.restore(message.mentions);
+      commands.restore({ mentions: message.mentions, pastes: message.attachments });
     },
     /** Sends a recorded request again as a new turn, leaving the draft alone. */
     resend: (message: AgentMessage) =>
       submit({
-        ...request(
-          message.content,
-          skillFor(message),
-          message.mentions.map((mention) => mention.id),
-        ),
+        ...request(message.content, skillFor(message), {
+          mentions: message.mentions.map((mention) => mention.id),
+          attachments: message.attachments,
+        }),
         idempotencyKey: newIdempotencyKey(),
       }),
     /** The message being sent, shown in the thread before the server accepts it. */

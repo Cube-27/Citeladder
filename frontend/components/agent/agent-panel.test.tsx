@@ -140,7 +140,10 @@ beforeEach(() =>
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-const EMPTY_CATALOG = { skills: [], limits: { mentions_max: 5 } };
+const EMPTY_CATALOG = {
+  skills: [],
+  limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
+};
 
 describe('AgentPanel', () => {
   it('starts a chat from the screen context and continues it in the Agent workspace', async () => {

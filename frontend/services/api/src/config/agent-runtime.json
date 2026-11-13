@@ -23,6 +23,8 @@
   "history_search_max_chars": 120,
   "message_max_chars": 50000,
   "mentions_max": 5,
+  "attachments_max": 3,
+  "attachment_max_chars": 40000,
   "instructions_max_chars": 4000,
   "output_title_max_chars": 255,
   "output_body_max_chars": 40000,

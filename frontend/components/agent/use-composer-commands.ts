@@ -1,18 +1,24 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useRef, useState } from 'react';
 
-import type { ComposerCommands, Mention } from '@/components/agent/command-menu';
+import type {
+  ComposerCommands,
+  ComposerPastes,
+  Mention,
+  PastedText,
+} from '@/components/agent/command-menu';
 import { matchOptions, type CommandOption, type CommandToken } from '@/lib/agent/composer-commands';
 import { approachLabel } from '@/lib/agent/vocabulary';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { actionsQueries } from '@/lib/api/actions';
+import { AGENT_PASTE_ATTACHMENT_MIN_CHARS } from '@/lib/config/agent';
 
 const ACTION = 'action:';
 
 /**
- * The composer's `/` skill command and `@` Action mentions. Mentions are
- * typed Action IDs the server resolves and authorizes when the turn is
- * queued; their labels here are only for display.
+ * The composer's `/` skill command, `@` Action mentions and pasted-text
+ * attachments. Mentions are typed Action IDs the server resolves and
+ * authorizes when the turn is queued; their labels here are only for display.
  */
 export function useComposerCommands({
   workspaceId,
@@ -21,8 +27,9 @@ export function useComposerCommands({
   workspaceId: string;
   projectId: string;
 }>): ComposerCommands & {
+  pastes: ComposerPastes;
   clear: () => void;
-  restore: (mentions: readonly Mention[]) => void;
+  restore: (saved: { mentions: readonly Mention[]; pastes: readonly PastedText[] }) => void;
   skillPicker: {
     open: boolean;
     onOpenChange: (open: boolean) => void;
@@ -31,6 +38,10 @@ export function useComposerCommands({
   };
 } {
   const [mentions, setMentions] = useState<Mention[]>([]);
+  const [pastes, setPastes] = useState<ComposerPastes['items'][number][]>([]);
+  // A paste has no id of its own; a key per paste lets one be removed.
+  const pasteCount = useRef(0);
+  const keyed = (text: string) => ({ key: `paste-${++pasteCount.current}`, text });
   const [skillPickerOpen, setSkillPickerOpen] = useState(false);
   const removeCommand = useRef<(() => void) | null>(null);
   const restoreFocus = useRef<(() => void) | null>(null);
@@ -40,7 +51,8 @@ export function useComposerCommands({
     if (trigger === '@') setPoolWanted(true);
   }, []);
   // The mention bound the server enforces travels on the catalog the composer screens load.
-  const mentionsMax = useAgentCatalog().limits?.mentions_max ?? null;
+  const limits = useAgentCatalog().limits;
+  const mentionsMax = limits?.mentions_max ?? null;
   const actions = useQuery({
     ...actionsQueries.mentionPool({ workspaceId, projectId }),
     enabled: poolWanted && Boolean(workspaceId && projectId),
@@ -100,7 +112,28 @@ export function useComposerCommands({
       },
     },
     onRemoveMention: (id) => setMentions((current) => current.filter((item) => item.id !== id)),
-    clear: () => setMentions([]),
-    restore: (saved) => setMentions([...saved]),
+    pastes: {
+      items: pastes,
+      attachments: pastes.map(({ text }): PastedText => ({ kind: 'pasted_text', text })),
+      add: (text) => {
+        // Short, past a bound the server enforces, or before the catalog lists them: plain text.
+        const fits =
+          limits != null &&
+          text.length >= AGENT_PASTE_ATTACHMENT_MIN_CHARS &&
+          text.length <= limits.attachment_max_chars &&
+          pastes.length < limits.attachments_max;
+        if (fits) setPastes((current) => [...current, keyed(text)]);
+        return fits;
+      },
+      remove: (key) => setPastes((current) => current.filter((paste) => paste.key !== key)),
+    },
+    clear: () => {
+      setMentions([]);
+      setPastes([]);
+    },
+    restore: (saved) => {
+      setMentions([...saved.mentions]);
+      setPastes(saved.pastes.map(({ text }) => keyed(text)));
+    },
   };
 }

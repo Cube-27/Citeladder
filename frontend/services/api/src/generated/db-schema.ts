@@ -122,6 +122,7 @@ export interface AgentInstructionRevisions {
 }
 
 export interface AgentMessages {
+  attachments: Generated<Json>;
   author_user_id: string | null;
   chat_id: string;
   content: string;

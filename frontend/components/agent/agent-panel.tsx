@@ -129,11 +129,12 @@ function PanelStart({
               actionId: seed.actionId,
               context,
               mentions: commands.mentions.map((mention) => mention.id),
+              attachments: commands.pastes.attachments,
             })
           }
           pending={create.pending}
           disabled={!access.canSend}
-          placeholder="Ask about what you are looking at."
+          placeholder="Ask about this screen"
           chips={contextChips(context)}
           commands={commands}
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
@@ -241,7 +242,7 @@ function PanelConversation({
           id="agent-panel-reply"
           thread={thread}
           detail={detail}
-          placeholder="Ask a follow-up. / picks a skill, @ mentions an Action."
+          placeholder="Ask a follow-up"
         />
       }
     >

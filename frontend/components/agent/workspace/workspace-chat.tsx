@@ -32,7 +32,7 @@ export function WorkspaceChat({
           id={WORKSPACE_COMPOSER_ID}
           thread={thread}
           detail={detail}
-          placeholder="Ask about the page or request a change. / picks a skill, @ mentions an Action."
+          placeholder="Ask about the page or request a change"
         />
       }
     >

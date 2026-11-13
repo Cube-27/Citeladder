@@ -1,10 +1,10 @@
-import { SendHorizontal, Square } from 'lucide-react';
+import { ArrowUp, Square } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { ComposerFrame, RemovableChip } from '@/components/ui/chat-dock';
-import { Icon } from '@/components/ui/icon';
+import { IconButton } from '@/components/ui/button';
+import { ComposerFrame, PastedTextChip, RemovableChip } from '@/components/ui/chat-dock';
 import type { ContextChip } from '@/lib/agent/handoff';
+import { AGENT_COMPOSER_MAX_ROWS } from '@/lib/config/agent';
 
 import { CommandField, type ComposerCommands } from './command-menu';
 
@@ -53,8 +53,12 @@ export function Composer({
   stopping?: boolean;
 }>) {
   const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
+  const pastes = commands?.pastes;
   const hasChips =
-    attachment !== undefined || chips.length > 0 || (commands?.mentions.length ?? 0) > 0;
+    attachment !== undefined ||
+    chips.length > 0 ||
+    (commands?.mentions.length ?? 0) > 0 ||
+    (pastes?.items.length ?? 0) > 0;
   return (
     <ComposerFrame
       onSubmit={() => {
@@ -81,6 +85,13 @@ export function Composer({
                 onRemove={() => commands.onRemoveMention(mention.id)}
               />
             ))}
+            {pastes?.items.map((paste) => (
+              <PastedTextChip
+                key={paste.key}
+                text={paste.text}
+                onRemove={() => pastes.remove(paste.key)}
+              />
+            ))}
           </>
         ) : null
       }
@@ -99,7 +110,7 @@ export function Composer({
             commands={commands}
             disabled={disabled}
             placeholder={placeholder}
-            rows={3}
+            maxRows={AGENT_COMPOSER_MAX_ROWS}
           />
         </>
       }
@@ -107,27 +118,25 @@ export function Composer({
       submit={
         onStop ? (
           // Pending keeps each button's box, so the control row never reflows.
-          <Button
+          <IconButton
             type="button"
             variant="secondary"
+            icon={Square}
+            label="Stop"
             pending={stopping}
             pendingLabel="Stopping…"
             onClick={onStop}
-          >
-            <Icon icon={Square} />
-            Stop
-          </Button>
+          />
         ) : (
-          <Button
+          <IconButton
             type="submit"
             variant="primary"
+            icon={ArrowUp}
+            label="Send"
             disabled={!canSend}
             pending={pending}
             pendingLabel="Sending…"
-          >
-            <Icon icon={SendHorizontal} />
-            Send
-          </Button>
+          />
         )
       }
     />

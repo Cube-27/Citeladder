@@ -411,3 +411,17 @@ describe('A chat with several documents', () => {
     ).toBeTruthy();
   });
 });
+
+describe('A message with a paste', () => {
+  it('shows each paste as a chip that opens its text as pasted', async () => {
+    const chat = detail(revision(REV2, 2, 'agent', 'Saved result.'));
+    const text = 'Line one\nLine two';
+    chat.messages[0] = { ...chat.messages[0]!, attachments: [{ kind: 'pasted_text', text }] };
+    renderChat(agentChatDetailSchema.parse(chat));
+
+    const attachments = within(await screen.findByRole('list', { name: 'Attachments' }));
+    fireEvent.click(attachments.getByRole('button', { name: 'View Pasted text, 2 lines' }));
+    const viewer = await screen.findByRole('dialog', { name: 'Pasted text' });
+    expect(within(viewer).getByText(/^Line one/).textContent).toBe(text);
+  });
+});

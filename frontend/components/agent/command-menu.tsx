@@ -15,6 +15,7 @@ import {
   type CommandOption,
   type CommandToken,
 } from '@/lib/agent/composer-commands';
+import type { AgentAttachment } from '@citeladder/contracts/agent';
 
 /** Inline `/` and `@` commands: the options for a token, and what a pick does. */
 export type ComposerCommands = {
@@ -31,7 +32,19 @@ export type ComposerCommands = {
   onRemoveMention: (id: string) => void;
   openSkillPicker?: (removeCommand: () => void, restoreFocus: () => void) => void;
   closeSkillPicker?: () => boolean;
+  /** Long pastes the message carries as attachments instead of text. */
+  pastes?: ComposerPastes;
 };
+
+export type ComposerPastes = {
+  items: readonly { key: string; text: string }[];
+  /** The pastes as the request sends them. */
+  attachments: PastedText[];
+  /** Takes a paste as an attachment; false leaves it to the field as typed text. */
+  add: (text: string) => boolean;
+  remove: (key: string) => void;
+};
+export type PastedText = Extract<AgentAttachment, { kind: 'pasted_text' }>;
 
 export type Mention = { id: string; label: string };
 
@@ -58,7 +71,7 @@ export function CommandField({
   commands,
   disabled,
   placeholder,
-  rows,
+  maxRows,
 }: Readonly<{
   id: string;
   value: string;
@@ -67,7 +80,7 @@ export function CommandField({
   commands?: ComposerCommands;
   disabled: boolean;
   placeholder: string;
-  rows: number;
+  maxRows: number;
 }>) {
   const field = useRef<HTMLTextAreaElement>(null);
   const pendingCaret = useRef<number | null>(null);
@@ -131,7 +144,7 @@ export function CommandField({
       <Textarea
         ref={field}
         id={id}
-        rows={rows}
+        maxRows={maxRows}
         // The text field owns focus; the surrounding form keeps its resting edge.
         placement="composer"
         value={value}
@@ -171,6 +184,10 @@ export function CommandField({
           setDismissed(null);
         }}
         onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
+        onPaste={(event) => {
+          if (commands?.pastes?.add(event.clipboardData.getData('text/plain')))
+            event.preventDefault();
+        }}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && commands?.closeSkillPicker?.()) {
             event.preventDefault();

@@ -12,7 +12,7 @@ import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { cardClasses } from '@/components/ui/card';
-import { AgentThread, AgentTurn, UserTurn } from '@/components/ui/chat-dock';
+import { AgentThread, AgentTurn, PastedTextChip, UserTurn } from '@/components/ui/chat-dock';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';
@@ -219,17 +219,29 @@ function MessageBubble({
       <UserTurn
         text={message.content}
         footer={
-          message.mentions.length > 0 ? (
-            <Inline as="ul" aria-label="Mentioned Actions" className="flex-wrap">
-              {message.mentions.map((mention) => (
-                <li key={mention.id}>
-                  <TextLink href={`/agent/actions/${mention.id}`} text="caption">
-                    @{mention.label}
-                  </TextLink>
-                </li>
-              ))}
-            </Inline>
-          ) : null
+          <>
+            {message.attachments.length > 0 ? (
+              <Inline as="ul" aria-label="Attachments" className="flex-wrap">
+                {message.attachments.map((attachment, index) => (
+                  <PastedTextChip
+                    key={index} // NOSONAR -- a saved message's attachments never reorder and may repeat; position is the identity
+                    text={attachment.text}
+                  />
+                ))}
+              </Inline>
+            ) : null}
+            {message.mentions.length > 0 ? (
+              <Inline as="ul" aria-label="Mentioned Actions" className="flex-wrap">
+                {message.mentions.map((mention) => (
+                  <li key={mention.id}>
+                    <TextLink href={`/agent/actions/${mention.id}`} text="caption">
+                      @{mention.label}
+                    </TextLink>
+                  </li>
+                ))}
+              </Inline>
+            ) : null}
+          </>
         }
       />
     );

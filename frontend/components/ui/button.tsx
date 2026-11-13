@@ -130,8 +130,11 @@ type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'a
   icon: LucideIcon;
   /** The accessible name and the tooltip: what pressing it does. */
   label: string;
-  /** `ghost` (default) in toolbars and rows; `secondary` alone on paper. */
-  variant?: Extract<ButtonVariant, 'ghost' | 'secondary'>;
+  /**
+   * `ghost` (default) in toolbars and rows; `secondary` alone on paper;
+   * `primary` only for a form's one submit (the composer's Send).
+   */
+  variant?: Extract<ButtonVariant, 'ghost' | 'secondary' | 'primary'>;
   /** A shortcut shown in the tooltip. */
   shortcut?: string;
   tooltipSide?: 'top' | 'right' | 'bottom' | 'left';

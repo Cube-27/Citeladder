@@ -41,6 +41,7 @@ import {
   agentSuggestionsPageSchema,
   agentTurnAcceptedSchema,
   agentWorkflowSchema,
+  type AgentAttachment,
   type AgentChatCreateRequest,
   type AgentMessageRequest,
   type AgentOutputEditRequest,
@@ -394,11 +395,17 @@ export const agentMutations = {
         message: string;
         skillId?: string | null;
         mentions?: string[];
+        attachments?: AgentAttachment[];
         idempotencyKey: string;
       }) =>
         agentApi.sendMessage(
           vars.chatId,
-          { message: vars.message, skill_id: vars.skillId, mentions: vars.mentions },
+          {
+            message: vars.message,
+            skill_id: vars.skillId,
+            mentions: vars.mentions,
+            attachments: vars.attachments,
+          },
           vars.idempotencyKey,
           { workspaceId: scope.workspaceId },
         ),

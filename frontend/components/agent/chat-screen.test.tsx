@@ -452,13 +452,14 @@ describe('ChatScreen', () => {
     expect(screen.queryByText('Reading your page…')).not.toBeInTheDocument();
   });
 
-  it('regenerates the last reply by sending its request again as a new turn', async () => {
+  it('regenerates the last reply by sending its request and its paste again as a new turn', async () => {
     const bodies: unknown[] = [];
+    const paste = { kind: 'pasted_text' as const, text: 'Current snippet' };
+    const chat = detail(revision(REV1, 1, 'agent', 'Body.'));
+    chat.messages[0] = { ...chat.messages[0]!, attachments: [paste] };
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
-        HttpResponse.json(detail(revision(REV1, 1, 'agent', 'Body.'))),
-      ),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () => HttpResponse.json(chat)),
       http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
         bodies.push(await request.json());
         return HttpResponse.json(
@@ -475,9 +476,8 @@ describe('ChatScreen', () => {
 
     await user.click(await screen.findByRole('button', { name: 'Regenerate' }));
     await vi.waitFor(() =>
-      expect(bodies).toEqual([{ message: 'Improve our pricing page snippet.' }]),
+      expect(bodies).toEqual([{ message: chat.messages[0]!.content, attachments: [paste] }]),
     );
-    // The reader's draft is untouched.
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('');
   });
 

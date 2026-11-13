@@ -1,6 +1,8 @@
 /** Chat and message writes shared by admission, the runtime and the queue. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
+import { z } from 'zod';
+import { agentAttachmentSchema } from '@citeladder/contracts/agent';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { Chat, Json, Run, Scope } from './contracts.ts';
@@ -48,6 +50,8 @@ export async function appendMessage(
     webSources?: { url: string; title: string }[];
     steps?: Json[];
     mentions?: Json[];
+    /** Long pastes the person attached, kept apart from what they typed. */
+    attachments?: Json[];
   },
 ) {
   const previous = await db
@@ -74,10 +78,39 @@ export async function appendMessage(
       web_sources: JSON.stringify(input.webSources ?? []),
       steps: JSON.stringify(input.steps ?? []),
       mentions: JSON.stringify(input.mentions ?? []),
+      attachments: JSON.stringify(input.attachments ?? []),
       created_at: new Date(),
     })
     .returningAll()
     .executeTakeFirstOrThrow();
+}
+/**
+ * A turn's request (its text and attachments) and the text of every message
+ * the person wrote in the chat, pastes included: a UUID in pasted code is
+ * theirs, so a saved document keeps it. The chat's turn limit bounds these.
+ */
+export async function turnRequest(db: Database, chat: Chat, messageId: string) {
+  const messages = await db
+    .selectFrom('agent_messages')
+    .select(['id', 'content', 'attachments'])
+    .where('workspace_id', '=', chat.workspace_id)
+    .where('chat_id', '=', chat.id)
+    .where('role', '=', 'user')
+    .execute();
+  const parsed = messages.map((message) => ({
+    id: message.id,
+    text: message.content,
+    attachments: z.array(agentAttachmentSchema).parse(message.attachments),
+  }));
+  const request = parsed.find((message) => message.id === messageId);
+  if (!request) throw new Error('The turn has no request message');
+  return {
+    request: { text: request.text, attachments: request.attachments },
+    written: parsed.flatMap((message) => [
+      message.text,
+      ...message.attachments.map((attachment) => attachment.text),
+    ]),
+  };
 }
 const RECOVERY: Record<string, string> = {
   stopped_at_limit:

@@ -110,7 +110,10 @@ function serve(current: Action, detail: Record<string, unknown> = {}) {
       HttpResponse.json({ items: [], next_cursor: null }),
     ),
     http.get('/api/v1/agent/skills', () =>
-      HttpResponse.json({ skills: [], limits: { mentions_max: 5 } }),
+      HttpResponse.json({
+        skills: [],
+        limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
+      }),
     ),
   );
   return patches;

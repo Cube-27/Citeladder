@@ -191,7 +191,16 @@ test('declaring an Action implemented shows comparable verification', async ({ p
     route.fulfill({ json: {} }),
   );
   await page.route('**/api/v1/agent/skills', (route) =>
-    route.fulfill({ json: { skills: [], limits: { mentions_max: 5 } } }),
+    route.fulfill({
+      json: {
+        skills: [],
+        limits: {
+          mentions_max: 5,
+          attachments_max: 3,
+          attachment_max_chars: 40000,
+        },
+      },
+    }),
   );
   await page.route(`**/api/v1/projects/${PROJECT}/actions*`, (route) =>
     route.fulfill({
@@ -265,7 +274,16 @@ test('Action filters restore through URL history and reload', async ({ page }) =
     route.fulfill({ json: { items: [], next_cursor: null } }),
   );
   await page.route('**/api/v1/agent/skills', (route) =>
-    route.fulfill({ json: { skills: [], limits: { mentions_max: 5 } } }),
+    route.fulfill({
+      json: {
+        skills: [],
+        limits: {
+          mentions_max: 5,
+          attachments_max: 3,
+          attachment_max_chars: 40000,
+        },
+      },
+    }),
   );
 
   await page.goto(`/agent/actions?project=${PROJECT}&status=dismissed`);

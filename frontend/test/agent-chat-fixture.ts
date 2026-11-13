@@ -54,6 +54,7 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
         role: 'user',
         content: 'Improve our pricing page snippet.',
         mentions: [] as AgentMessage['mentions'],
+        attachments: [] as AgentMessage['attachments'],
         skill_id: null,
         skill_source: null,
         evidence_refs: [],
@@ -66,6 +67,7 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
         role: 'agent',
         content: 'Here are the edits.',
         mentions: [] as AgentMessage['mentions'],
+        attachments: [] as AgentMessage['attachments'],
         skill_id: 'gsc_optimize',
         skill_source: 'model',
         evidence_refs: [],
@@ -192,5 +194,5 @@ export const skills = {
       next: [{ workflow_id: 'internal_links', prompt: 'Plan internal links that support' }],
     },
   ],
-  limits: { mentions_max: 5 },
+  limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
 };
