@@ -30,9 +30,15 @@ export function PageHeader({
   title,
   lead,
   filters,
+  center,
   actions,
 }: Readonly<{
   title: string;
+  /**
+   * The bar's middle from 900px: the shell's search (D62). The title and the
+   * actions then share the rest equally, so it sits on the bar's centre.
+   */
+  center?: ReactNode;
   /** Before the title: a detail page's back button. */
   lead?: ReactNode;
   /**
@@ -67,8 +73,14 @@ export function PageHeader({
         </Tooltip>
         {filters ? <div className="flex shrink-0 items-center">{filters}</div> : null}
       </div>
+      {center ? <div className="rail:flex hidden w-80 min-w-0 shrink">{center}</div> : null}
       {actions ? (
-        <div className="ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2">
+        <div
+          className={cn(
+            'ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2',
+            center && 'rail:flex-1 rail:basis-0',
+          )}
+        >
           {actions}
         </div>
       ) : null}

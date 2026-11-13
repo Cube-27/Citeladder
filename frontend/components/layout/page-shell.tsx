@@ -206,6 +206,7 @@ function PageShell<T extends string>({
             ) : null}
           </>
         }
+        center={shell?.searchTrigger}
         actions={
           <>
             {actions}
