@@ -17,6 +17,7 @@ import {
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AgentPanelProvider, useAgentPanelSeed } from '@/lib/agent/panel-context';
 import { refreshAgentChat } from '@/lib/api/agent';
+import { AGENT_PASTE_ATTACHMENT_MIN_CHARS } from '@/lib/config/agent';
 import { mswServer } from '@/test/msw-server';
 import { actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
@@ -176,6 +177,13 @@ describe('AgentPanel', () => {
         context: { target_site_url_id: PAGE },
       },
     ]);
+    expect(within(panel).getByRole('button', { name: 'Edit last request' })).toBeVisible();
+    await user.click(within(panel).getByLabelText('Reply to the agent'));
+    await user.paste('y'.repeat(AGENT_PASTE_ATTACHMENT_MIN_CHARS));
+    // A paste alone is a draft that editing the last request would replace.
+    expect(
+      within(panel).getByRole('button', { name: 'Replace draft with last request' }),
+    ).toBeVisible();
 
     await user.click(within(panel).getByRole('link', { name: 'Open in Agent' }));
     expect(await screen.findByText(`Workspace chat ${CHAT}`)).toBeInTheDocument();

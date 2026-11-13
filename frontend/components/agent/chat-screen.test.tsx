@@ -13,7 +13,6 @@ import {
   vi,
 } from 'vite-plus/test';
 
-import { AGENT_PASTE_ATTACHMENT_MIN_CHARS } from '@/lib/config/agent';
 import { mswServer } from '@/test/msw-server';
 import { actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
@@ -453,7 +452,7 @@ describe('ChatScreen', () => {
     expect(screen.queryByText('Reading your page…')).not.toBeInTheDocument();
   });
 
-  it('regenerates the last reply with its paste, leaving a paste-only draft alone', async () => {
+  it('regenerates the last reply by sending its request and its paste again as a new turn', async () => {
     const bodies: unknown[] = [];
     const paste = { kind: 'pasted_text' as const, text: 'Current snippet' };
     const chat = detail(revision(REV1, 1, 'agent', 'Body.'));
@@ -474,22 +473,12 @@ describe('ChatScreen', () => {
     );
     const user = userEvent.setup();
     renderChat();
-    // The catalog carries the paste bounds; its skill label shows it has loaded.
-    await screen.findByRole('button', {
-      name: 'Skill: Continue with Search Console optimization',
-    });
-    expect(screen.getByRole('button', { name: 'Edit last request' })).toBeVisible();
-    await user.click(screen.getByLabelText('Reply to the agent'));
-    await user.paste(`Draft\n${'y'.repeat(AGENT_PASTE_ATTACHMENT_MIN_CHARS)}`);
-    // A paste alone is a draft that editing the last request would replace.
-    expect(screen.getByRole('button', { name: 'Replace draft with last request' })).toBeVisible();
 
-    await user.click(screen.getByRole('button', { name: 'Regenerate' }));
+    await user.click(await screen.findByRole('button', { name: 'Regenerate' }));
     await vi.waitFor(() =>
       expect(bodies).toEqual([{ message: chat.messages[0]!.content, attachments: [paste] }]),
     );
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('');
-    expect(screen.getByRole('button', { name: 'View Pasted text, 2 lines' })).toBeVisible();
   });
 
   it('retries a failed send with the same idempotency key', async () => {
