@@ -150,9 +150,9 @@ The other direction: the browser reports its own failures to
 `POST /api/v1/client-errors` (family `client-errors`,
 `frontend/services/api/src/routes/client-errors.ts`), same-origin like every
 browser call, so the content security policy's `connect-src 'self'` already
-covers it. The body is the strict `clientErrorReportSchema` from
-`@citeladder/contracts/client-errors`; its `route` carries no query string or
-fragment. Any other field is refused with 422, and a body over
+covers it. The body is the strict `clientReportSchema` from
+`@citeladder/contracts/client-errors`, an error or a `slow_interaction`; its
+`route` carries no query string or fragment. Any other field is refused with 422, and a body over
 `config/client-errors.ts` `max_body_bytes` with 413 before it is parsed. Each
 client has `client_error_client_limit` reports per
 `client_error_window_seconds` (`config/abuse.ts`), then 429 with `Retry-After`.
@@ -172,8 +172,26 @@ scheme, or what follows is a `key=value` query. A stack frame keeps its
 `:line:column`. Cloud Logging collects the record; nothing is stored in
 PostgreSQL and nothing is sent to a third party.
 
+A `slow_interaction` report is the page load's slowest interaction (Interaction
+to Next Paint) at or over `SLOW_INTERACTION_MS`, from the
+`INTERACTION_REPORT_SAMPLE_RATE` share of page loads that watch for one
+(`lib/interaction-timing.ts`): the event, the element's tag name, the phase
+timings and, where the browser has long animation frame timing, the longest
+scripts in the frames it spanned, without query strings. It is logged as an
+`info` `client.slow_interaction` record.
+
+`POST /api/v1/client-errors/csp-reports` takes the Reporting API's
+`application/reports+json` deliveries for the product's content security
+policies (any other type is 415), at most `CSP_REPORT_BATCH_LIMIT` reports and
+`max_csp_body_bytes`, and `csp_report_client_limit` per
+`csp_report_window_seconds` per client. The browser sends them without the
+session, so no reporter is recorded. Each `csp-violation` becomes a `warning`
+`client.csp_violation` record with the directive, disposition, document,
+blocked and source URLs without query strings, and, of the sample, only a
+Trusted Types sink name; other report types are dropped.
+
 `frontend/lib/client-errors.ts` sends the reports: fire-and-forget with
-`keepalive`, one report per error per page load, and at most
+`keepalive` and `priority: 'low'`, one report per error per page load, and at most
 `CLIENT_ERROR_REPORTS_PER_SESSION` (`lib/config/operational.ts`) per tab. It
 reads the release at report time from the `<meta name="citeladder-release">`
 the app build writes into `index.html`, so no hashed script chunk changes with

@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile } from 'node:fs/promises';
-import { headersRule, SECURITY_HEADERS } from '../lib/config/security-headers.ts';
+import { APP_SECURITY_HEADERS, headersRule } from '../lib/config/security-headers.ts';
 
 const root = new URL('../apps/app/dist/', import.meta.url);
 const files = await readdir(root, { recursive: true });
@@ -29,7 +29,7 @@ await writeFile(
 await writeFile(
   new URL('_headers', root),
   [
-    headersRule('/*', { ...SECURITY_HEADERS, 'X-Robots-Tag': 'noindex, nofollow' }),
+    headersRule('/*', APP_SECURITY_HEADERS),
     headersRule('/app-assets/*', { 'Cache-Control': 'public, max-age=31536000, immutable' }),
   ].join('\n'),
 );

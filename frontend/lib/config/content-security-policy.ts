@@ -1,4 +1,6 @@
 import type { AstroUserConfig } from 'astro';
+import { CSP_REPORTS_PATH } from '@citeladder/contracts/client-errors';
+import { RAZORPAY_CHECKOUT_SCRIPT } from './billing';
 import { TURNSTILE_ORIGIN } from './turnstile';
 
 // Browser requests use same-origin APIs. Logo.dev supplies app brand images;
@@ -21,15 +23,30 @@ const CLOUDFLARE_BEACON_SOURCES = [
   'https://static.cloudflareinsights.com/beacon.min.js/',
 ];
 
+// The product's policies report violations to the API's same-origin sink
+// through the Reporting API endpoint this names.
+const REPORT_ENDPOINT = 'csp';
+export const APP_REPORTING_ENDPOINTS = `${REPORT_ENDPOINT}="${CSP_REPORTS_PATH}"`;
+
 // Sign-up and the email-link forms load the Turnstile widget from its origin
 // and render its challenge in a frame from it.
 export const APP_CONTENT_SECURITY_POLICY = [
   ...DOCUMENT_DIRECTIVES,
-  `script-src 'self' https://checkout.razorpay.com/v1/checkout.js ${TURNSTILE_ORIGIN} ${CLOUDFLARE_BEACON_SOURCES.join(' ')}`,
+  `script-src 'self' ${RAZORPAY_CHECKOUT_SCRIPT} ${TURNSTILE_ORIGIN} ${CLOUDFLARE_BEACON_SOURCES.join(' ')}`,
   "img-src 'self' data: blob: https://img.logo.dev",
   "connect-src 'self' https://api.razorpay.com https://cloudflareinsights.com/cdn-cgi/rum",
   `frame-src https://api.razorpay.com ${TURNSTILE_ORIGIN}`,
   "form-action 'self'",
+  `report-to ${REPORT_ENDPOINT}`,
+].join('; ');
+
+// Trusted Types, reported and not enforced: the default policy
+// (lib/trusted-types.ts) passes the known script URLs, and every other
+// string reaching a DOM injection sink is reported until the sinks are known.
+export const APP_CONTENT_SECURITY_POLICY_REPORT_ONLY = [
+  "require-trusted-types-for 'script'",
+  'trusted-types default',
+  `report-to ${REPORT_ENDPOINT}`,
 ].join('; ');
 
 // Script-free proxy/error HTML receives a policy too. Never replace a stricter

@@ -64,8 +64,20 @@ remain in the public chrome and policies. Successful submission analytics
 require existing cookie consent and contain only the source page.
 
 The product Worker runs before asset matching, so root, deep-link and direct
-HTML responses all carry the same enforced Content Security Policy and no-store
-policy. That policy allows the Turnstile origin for scripts and frames, which
+HTML responses all carry the same enforced Content Security Policy and
+`no-cache` (revalidated, so the back-forward cache may keep the shell; bearer
+links stay `no-store`, and API responses are always `private, no-store`).
+Signing out sends `Clear-Site-Data: "cache"`, and a shell restored from the
+back-forward cache re-checks its session. The policy reports to the API's
+same-origin sink (`Reporting-Endpoints`, `report-to`), and a report-only policy
+requires Trusted Types against the default policy in `lib/trusted-types.ts`;
+neither is enforced yet. Every Worker response also carries the
+`frontend/lib/config/security-headers.ts` Permissions-Policy and
+`Cross-Origin-Opener-Policy: same-origin-allow-popups` (Razorpay's payment
+popups keep their opener), and the product host adds
+`Cross-Origin-Resource-Policy: same-origin`. Sign-in, registration and MCP
+consent send no opener policy, because an MCP client's OAuth window passes
+through them and must stay connected to its opener. The policy allows the Turnstile origin for scripts and frames, which
 the sign-up and email-link forms load; the API, not the Worker, verifies their
 tokens ([workspace access](workspace-access.md)), and the product build bakes
 the public site key `PUBLIC_TURNSTILE_SITE_KEY` (Cloudflare's always-pass test
@@ -97,7 +109,12 @@ or newer. The product build targets the same versions
 (`apps/app/vite.config.ts`). `pnpm check:compat`
 (`scripts/check-browser-compat.mjs`) fails when browser source calls a global,
 static or well-known instance API that a matrix browser lacks, by MDN's
-browser-compat-data; TypeScript's `lib` covers JavaScript instance methods. On
+browser-compat-data, unless only optional chaining reads it; TypeScript's `lib`
+covers JavaScript instance methods. Its stylesheet half
+(`scripts/check-css-compat.mjs`) does the same for CSS at-rules, properties,
+keyword values, functions and pseudo-classes, passing uses inside `@supports`
+or after a fallback declaration, and enhancements it lists with what older
+browsers show instead. On
 an older browser the app's external `public/browser-support.js` fills the root
 with an "Update your browser" notice before the shell runs, and `main.tsx` does
 not mount.
@@ -273,7 +290,7 @@ Browser APIs use relative `/api/v1`. After cutover, the product Worker sends
 these requests through the shared authenticated origin transport. Marketing
 navigation uses direct app-origin links; the public pricing HTML is rendered
 from a validated catalog response and selection links carry only bounded public
-fields. Application documents use `no-store` and missing fingerprinted
+fields. Application documents use `no-cache` and missing fingerprinted
 assets return 404.
 Each domain has one API module and query-key owner. Workspace/project identity
 belongs in both requests and cache keys. Retained placeholder data may survive

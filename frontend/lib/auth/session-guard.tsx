@@ -106,6 +106,16 @@ export function SessionGuard({
     if (isError && httpErrorStatus(error) === 401) void clearSession();
   }, [isError, error, clearSession]);
 
+  // The shell may be restored from the back-forward cache, frozen as it was.
+  // It asks `me` again, so a session ended meanwhile leads to sign-in at once.
+  useEffect(() => {
+    const recheck = (event: PageTransitionEvent) => {
+      if (event.persisted) void refetch();
+    };
+    window.addEventListener('pageshow', recheck);
+    return () => window.removeEventListener('pageshow', recheck);
+  }, [refetch]);
+
   // Global 401 watchdog: a 401 from any in-flight/finished query means the
   // session is gone — clear + redirect once, regardless of which query failed.
   //

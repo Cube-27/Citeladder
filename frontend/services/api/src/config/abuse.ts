@@ -42,6 +42,8 @@ const defaults = {
   brand_logo_refresh_window_seconds: 3600,
   client_error_client_limit: 20,
   client_error_window_seconds: 600,
+  csp_report_client_limit: 20,
+  csp_report_window_seconds: 600,
   active_audits_per_workspace: 3,
   audit_tasks_per_workspace_daily: 1500,
   active_agent_runs_per_workspace: 5,
@@ -235,6 +237,12 @@ export const budgets = {
     subject: 'client',
     limit: abuse.client_error_client_limit,
     windowSeconds: abuse.client_error_window_seconds,
+  },
+  csp_report: {
+    operation: 'client_errors.csp_report',
+    subject: 'client',
+    limit: abuse.csp_report_client_limit,
+    windowSeconds: abuse.csp_report_window_seconds,
   },
   mailbox_request_client: {
     operation: 'auth.mailbox.request',

@@ -61,6 +61,32 @@ describe('SessionGuard', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it('asks again on a back-forward cache restore and leaves for sign-in when the session ended', async () => {
+    let signedIn = true;
+    let requestCount = 0;
+    mswServer.use(
+      http.get('/api/v1/auth/me', () => {
+        requestCount += 1;
+        return signedIn
+          ? HttpResponse.json({ user: sessionUser })
+          : HttpResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 });
+      }),
+    );
+    renderWithProviders(
+      <SessionGuard fallback={<div>loading</div>}>
+        <Protected />
+      </SessionGuard>,
+    );
+    expect(await screen.findByText(/signed in as guarded@example.com/i)).toBeInTheDocument();
+
+    signedIn = false;
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false }));
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith('/login'));
+    expect(requestCount).toBe(2);
+  });
+
   it('leaves the protected document when an unauthenticated visitor is sent to /login', async () => {
     let requestCount = 0;
     mswServer.use(

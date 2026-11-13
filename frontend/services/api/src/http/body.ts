@@ -45,17 +45,23 @@ function issueType(issue: z.core.$ZodIssue, at: unknown, dateField: boolean): st
   }
 }
 
-export async function readBody<T extends z.ZodType>(c: Context, schema: T): Promise<z.output<T>> {
-  const value = await readOptionalBody(c, schema);
+/** The media type a JSON body declares; a Reporting API delivery declares its own. */
+type JsonMedia = 'application/json' | 'application/reports+json';
+
+export async function readBody<T extends z.ZodType>(
+  c: Context,
+  schema: T,
+  media: JsonMedia = 'application/json',
+): Promise<z.output<T>> {
+  const value = await readOptionalBody(c, schema, media);
   if (value === null)
     throw new RequestValidationError([{ loc: [], message: 'Field required', type: 'missing' }]);
   return value;
 }
 
-/** Whether the request declares a JSON body (`application/json`, any parameters such as charset). */
-function declaresJson(c: Context): boolean {
-  const media = c.req.header('content-type')?.split(';')[0]?.trim().toLowerCase();
-  return media === 'application/json';
+/** Whether the request declares `media` as its body's type (any parameters such as charset). */
+function declares(c: Context, media: JsonMedia): boolean {
+  return c.req.header('content-type')?.split(';')[0]?.trim().toLowerCase() === media;
 }
 
 /**
@@ -66,11 +72,12 @@ function declaresJson(c: Context): boolean {
 export async function readOptionalBody<T extends z.ZodType>(
   c: Context,
   schema: T,
+  media: JsonMedia = 'application/json',
 ): Promise<z.output<T> | null> {
   let value: unknown;
   const raw = await c.req.text();
   if (!raw) return null;
-  if (!declaresJson(c)) throw new ApiError(415, 'Content-Type must be application/json');
+  if (!declares(c, media)) throw new ApiError(415, `Content-Type must be ${media}`);
   try {
     value = JSON.parse(raw);
   } catch (error) {

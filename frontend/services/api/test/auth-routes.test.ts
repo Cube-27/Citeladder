@@ -791,11 +791,14 @@ describe('sign out everywhere and disconnect integrations', () => {
   it('plain sign-out ends every session but leaves the MCP grant and API key working', async () => {
     const connected = await connectedPerson();
     const cookie = await sessionCookie(connected.person, 0);
+    const me = await call('/auth/me', undefined, cookie);
     const logout = await app.request('/api/v1/auth/logout', {
       method: 'POST',
       headers: { Cookie: cookie },
     });
-    expect(logout.status).toBe(204);
+    // Only signing out clears the browser's cached pages; storage keeps device preferences.
+    expect([me.status, me.headers.get('clear-site-data')]).toEqual([200, null]);
+    expect([logout.status, logout.headers.get('clear-site-data')]).toEqual([204, '"cache"']);
     expect((await call('/auth/me', undefined, cookie)).status).toBe(401);
     expect(await integrations(connected)).toEqual({ apiKeyStatus: 200, mcpGrantRevoked: false });
     expect(await events(connected.person)).toEqual(['auth.logout']);
@@ -809,7 +812,10 @@ describe('sign out everywhere and disconnect integrations', () => {
       method: 'POST',
       headers: { Cookie: cookie },
     });
-    expect(disconnect.status).toBe(204);
+    expect([disconnect.status, disconnect.headers.get('clear-site-data')]).toEqual([
+      204,
+      '"cache"',
+    ]);
     expect((await call('/auth/me', undefined, cookie)).status).toBe(401);
     expect(await integrations(connected)).toEqual({ apiKeyStatus: 401, mcpGrantRevoked: true });
     expect(await integrations(bystander)).toEqual({ apiKeyStatus: 200, mcpGrantRevoked: false });

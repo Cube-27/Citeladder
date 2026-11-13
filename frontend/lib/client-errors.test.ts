@@ -11,6 +11,7 @@ function sent() {
   return sink.mock.calls.map(([, init]) => ({
     workspace: new Headers(init.headers).get('X-Workspace-Id'),
     release: (JSON.parse(String(init.body)) as { release: string }).release,
+    priority: init.priority,
   }));
 }
 
@@ -32,8 +33,8 @@ describe('Client error reports', () => {
     reportClientError({ kind: 'unhandled', error: new Error('after selection') });
 
     expect(sent()).toEqual([
-      { workspace: null, release: 'development' },
-      { workspace: '6f1d3a52-0000-4000-8000-000000000001', release: '3f9a1c2' },
+      { workspace: null, release: 'development', priority: 'low' },
+      { workspace: '6f1d3a52-0000-4000-8000-000000000001', release: '3f9a1c2', priority: 'low' },
     ]);
   });
 });
