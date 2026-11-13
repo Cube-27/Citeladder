@@ -282,7 +282,8 @@ export function DataSourceSetup({
     );
 
   return (
-    <Card data-testid="data-source-setup">
+    // At the thread width, so a row's Connect button never sits at a wide page's far edge (D61).
+    <Card data-testid="data-source-setup" className="max-w-thread mx-auto w-full">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
       </CardHeader>

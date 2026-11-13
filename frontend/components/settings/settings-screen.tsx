@@ -221,6 +221,7 @@ export function SettingsScreen() {
   return (
     <TabsRoot value={activeTab} onValueChange={setActiveTab}>
       <ListScreen
+        narrow
         tabs={{
           items: tabs.map((tab) => ({ value: tab.id, label: tab.label })),
           ariaLabel: 'Settings sections',

@@ -223,6 +223,11 @@ A control sits in the row of the thing it acts on: the page's control row when
 it scopes the whole page, a table's toolbar when it scopes one table, a card's
 header when it changes how that card draws.
 
+**Page width.** A page is full width. Settings, Issues, Skills, Context and New
+chat, and the data-source setup card, sit in one centred column at
+`container-thread` under the full-width header, so a row's action is never at
+a wide page's far edge (D61).
+
 **Breakpoints.** Components change at one breakpoint, 981px. The shell has
 two more: below 900px the navigation is a drawer behind the header's menu
 button, from 900px an icon rail, from 1280px the labelled sidebar. Metric

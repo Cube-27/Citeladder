@@ -102,6 +102,7 @@ function ContextWorkspace({
   return (
     <TabsRoot value={activeTab} onValueChange={setTab}>
       <ListScreen
+        narrow
         tabs={{
           items: tabs.map((tab) => ({ value: tab.id, label: tab.label })),
           ariaLabel: 'Context sections',

@@ -113,6 +113,7 @@ function NewChat({
       // Fill the viewport below the shell chrome: only the content scrolls and
       // the window never moves. Kept identical in chat- and new-chat-screen.
       fill
+      narrow
     >
       <Stack gap="section" className="my-auto">
         <h2 className={textRole('sectionTitle', 'text-center')}>What can I help with?</h2>
