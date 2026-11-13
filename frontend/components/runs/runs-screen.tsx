@@ -98,14 +98,14 @@ export function RunsScreen() {
 
   if (runsQuery.isLoading) {
     return (
-      <ListScreen actions={actions} controls={controls}>
+      <ListScreen narrow actions={actions} controls={controls}>
         <QueryState kind="loading" label="Loading runs…" />
       </ListScreen>
     );
   }
 
   return (
-    <ListScreen actions={actions} controls={controls}>
+    <ListScreen narrow actions={actions} controls={controls}>
       <RunsContent
         read={runsQuery}
         audits={audits}
