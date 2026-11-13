@@ -39,6 +39,13 @@ const ACKNOWLEDGED_ENHANCEMENTS = {
   'cursor: pointer': 'Touch screens have no pointer.',
   'cursor: not-allowed': 'Touch screens have no pointer.',
   'cursor: default': 'Touch screens have no pointer.',
+  '@view-transition': 'Website and docs pages change without the cross-fade.',
+  'view-transition-name':
+    'Without view transitions the top bar has no cross-fade to hold still in.',
+  '::view-transition-old':
+    'Without view transitions the top bar has no cross-fade to hold still in.',
+  '::view-transition-new':
+    'Without view transitions the top bar has no cross-fade to hold still in.',
 };
 
 const STYLE_ROOTS = ['apps', 'components', 'lib', 'packages'];
