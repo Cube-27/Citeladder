@@ -188,8 +188,8 @@ jobs:
     timeout-minutes: 10
     services:
       postgres:
-        # The production image family (infra/gcp/postgres/Dockerfile).
-        image: postgres:16-bookworm
+        # The production image (infra/gcp/postgres/Dockerfile), same tag and digest.
+        image: postgres:16-bookworm@sha256:efedf3595f1d6f415c08568ba171029bf54052e754cc9f030e3f2412b21f3d67
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
@@ -240,8 +240,8 @@ jobs:
         shard: [1, 2, 3, 4, 5, 6]
     services:
       postgres:
-        # The production image family (infra/gcp/postgres/Dockerfile).
-        image: postgres:16-bookworm
+        # The production image (infra/gcp/postgres/Dockerfile), same tag and digest.
+        image: postgres:16-bookworm@sha256:efedf3595f1d6f415c08568ba171029bf54052e754cc9f030e3f2412b21f3d67
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres

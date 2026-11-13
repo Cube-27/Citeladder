@@ -51,8 +51,10 @@ pnpm --filter @citeladder/api start
 
 `docs/operations/dependency-licenses.json` records resolved production packages,
 not deployed artifact or legal acceptance. Its `sources` record the package-manager
-commands used to refresh it; no repository-specific generator exists. Frontend
-license metadata comes from `pnpm licenses list --prod --json` after frozen install.
+commands used to refresh it; no repository-specific generator exists. After a
+frozen install in `frontend/`, `frontend` comes from `pnpm licenses list --prod --json`
+and `api` (the `services/api` runtime tree) from
+`pnpm --filter @citeladder/api licenses list --prod --json`.
 Local optional packages depend on the installation platform; confirm the actual
 Linux image and Worker artifacts separately for release notices.
 
