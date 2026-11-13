@@ -152,6 +152,13 @@ const agentStepSchema = responseObject({
   query: z.string().optional(),
 });
 
+/** What a person attached to a message besides its text: a long paste, kept apart as data. */
+function attachmentSchema(text: z.ZodString) {
+  return z.discriminatedUnion('kind', [z.strictObject({ kind: z.literal('pasted_text'), text })]);
+}
+export const agentAttachmentSchema = attachmentSchema(z.string());
+export type AgentAttachment = z.infer<typeof agentAttachmentSchema>;
+
 export const agentMessageSchema = responseObject({
   id: uuid(),
   sequence: z.number().int(),
@@ -166,6 +173,7 @@ export const agentMessageSchema = responseObject({
   mentions: z
     .array(responseObject({ kind: z.string(), id: uuid(), label: z.string() }))
     .default([]),
+  attachments: z.array(agentAttachmentSchema).default([]),
   created_at: z.string(),
 });
 
@@ -457,7 +465,11 @@ export const agentSkillCatalogSchema = responseObject({
   workflows: z.array(agentWorkflowSchema).default([]),
   output_kinds: z.array(agentOutputKindSchema).default([]),
   /** Bounds the API enforces on a composed message, for the composer that reads this catalog. */
-  limits: responseObject({ mentions_max: z.number().int() }),
+  limits: responseObject({
+    mentions_max: z.number().int(),
+    attachments_max: z.number().int(),
+    attachment_max_chars: z.number().int(),
+  }),
 });
 
 export const agentInstructionsSchema = responseObject({
@@ -520,6 +532,8 @@ export type AgentContextRefs = z.input<typeof agentContextRefsSchema>;
 export function agentRequestSchemas(bounds: {
   message_max_chars: number;
   mentions_max: number;
+  attachments_max: number;
+  attachment_max_chars: number;
   output_title_max_chars: number;
   output_body_max_chars: number;
   instructions_max_chars: number;
@@ -532,6 +546,10 @@ export function agentRequestSchemas(bounds: {
     .max(bounds.mentions_max)
     .refine((ids) => new Set(ids).size === ids.length, 'Mentioned Actions must be unique')
     .default([]);
+  const attachments = z
+    .array(attachmentSchema(z.string().min(1).max(bounds.attachment_max_chars)))
+    .max(bounds.attachments_max)
+    .default([]);
   return {
     create: z.strictObject({
       message,
@@ -540,8 +558,14 @@ export function agentRequestSchemas(bounds: {
       action_id: uuid().nullish(),
       context: agentContextRefsSchema.default({}),
       mentions,
+      attachments,
     }),
-    message: z.strictObject({ message, skill_id: skill, mentions }),
+    message: z.strictObject({
+      message,
+      skill_id: skill,
+      mentions,
+      attachments,
+    }),
     edit: z.strictObject({
       base_revision_id: uuid(),
       title: z.string().max(bounds.output_title_max_chars).trim().min(1),

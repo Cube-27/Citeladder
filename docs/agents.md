@@ -219,9 +219,9 @@ The model never writes record references for the user. Before saving, the
 runtime removes `citeladder://` references and UUIDs from the reply and the
 document's title and body, fenced blocks included: no deliverable carries a
 machine-readable submission, so Copy and Export never carry a CiteLadder ID.
-A UUID the person wrote, in a message of the chat or typed into a document,
-is theirs (a form id in pasted HTML) and stays, so code they supplied is never
-corrupted. The UI
+A UUID the person wrote, in a message of the chat, a paste attached to one,
+or typed into a document, is theirs (a form id in pasted HTML) and stays, so
+code they supplied is never corrupted. The UI
 groups sources in plain
 words (for example "Search Console query · 3") with links to the screen that
 shows them.
@@ -533,7 +533,10 @@ under collapsible headers (fix the site, own pages, mentions elsewhere,
 products; AS2) with every filter in one All filters menu (AS6; the groups and
 filters are in [Opportunities](opportunities.md)); a row opens the Action's
 page, `/agent/actions/{id}`. The composer takes `/` to pick a skill and `@` to
-mention up to five of the project's Actions. New chat's **Work on an Action**
+mention up to five of the project's Actions. A long paste becomes a "Pasted
+text" attachment on the message (bounds in `agent-runtime.json`, listed in the
+skill catalog's `limits`); the model receives each one as its own block
+labelled as data, not instructions. New chat's **Work on an Action**
 offers **Brief me**, a `growth_plan` chat mentioning the top open Actions.
 
 An Action's page also hands work to a developer outside CiteLadder (BL4).

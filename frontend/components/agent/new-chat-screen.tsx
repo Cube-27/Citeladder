@@ -106,6 +106,7 @@ function NewChat({
       actionId,
       context,
       mentions: commands.mentions.map((mention) => mention.id),
+      attachments: commands.pastes.attachments,
     });
 
   return (

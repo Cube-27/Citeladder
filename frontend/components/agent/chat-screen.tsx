@@ -115,8 +115,8 @@ function ChatView({
             detail={detail}
             placeholder={
               detail.outputs.length > 0
-                ? 'Ask about the work or request a change. / picks a skill, @ mentions an Action.'
-                : 'Ask a follow-up. / picks a skill, @ mentions an Action.'
+                ? 'Ask about the work or request a change'
+                : 'Ask a follow-up'
             }
           />
         </ComposerDock>

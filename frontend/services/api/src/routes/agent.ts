@@ -289,7 +289,11 @@ export const agentRoutes = [
           })),
         })),
         // The same bound the turn request schemas enforce.
-        limits: { mentions_max: agentPolicy.mentions_max },
+        limits: {
+          mentions_max: agentPolicy.mentions_max,
+          attachments_max: agentPolicy.attachments_max,
+          attachment_max_chars: agentPolicy.attachment_max_chars,
+        },
       };
     },
   }),
@@ -353,6 +357,7 @@ export const agentRoutes = [
               ),
             ),
           mentionIds: input.mentions,
+          attachments: input.attachments,
           key: key(c),
         }),
       );
@@ -387,6 +392,7 @@ export const agentRoutes = [
           message: input.message,
           skillId: input.skill_id,
           mentionIds: input.mentions,
+          attachments: input.attachments,
           key: key(c),
         }),
       );

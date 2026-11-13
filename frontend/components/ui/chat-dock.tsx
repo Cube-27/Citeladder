@@ -1,6 +1,7 @@
-import { X } from 'lucide-react';
-import type { FormEvent, ReactNode, RefObject } from 'react';
+import { FileText, X } from 'lucide-react';
+import { useEffect, useState, type FormEvent, type ReactNode, type RefObject } from 'react';
 
+import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { FIELD_EDGE } from '@/components/ui/input';
 import { LogoMark } from '@/components/ui/logo-mark';
@@ -73,9 +74,10 @@ export function ComposerDock({
 }
 
 /**
- * AgentComposer's frame: one framed field (three lines) with its context
- * chips above it and one 36px control row under it, the tools on the left
- * and Send or Stop always at the right end. The frame is the box (`surface`,
+ * AgentComposer's frame: one framed field (one line that grows upward) with
+ * its context and attachment chips above it and one 36px control row under
+ * it, the tools on the left and the Send or Stop icon always at the right end.
+ * The frame is the box (`surface`,
  * `radius-lg`, the soft xs ring a field wears, an 8 inset), as wide as the
  * thread above it (`max-w-thread`, 1040); while the field has focus
  * the frame takes the field focus (a `focus` edge and a 3px `line` halo).
@@ -195,17 +197,56 @@ export function RemovableChip({
   onRemove,
 }: Readonly<{ label: string; onRemove?: () => void }>) {
   return (
-    <li className="border-line text-ink-secondary inline-flex max-w-full items-center gap-1 rounded-sm border px-3 py-0.5">
+    <li className={CHIP}>
       <span className={textRole('caption', 'truncate text-ink-secondary')}>{label}</span>
-      {onRemove ? (
-        <Pressable
-          className="focus-ring hover:text-ink flex w-auto rounded-xs"
-          aria-label={`Remove ${label}`}
-          onClick={onRemove}
-        >
-          <Icon icon={X} />
-        </Pressable>
-      ) : null}
+      {onRemove ? <RemoveControl label={label} onRemove={onRemove} /> : null}
+    </li>
+  );
+}
+
+const CHIP =
+  'border-line text-ink-secondary inline-flex max-w-full items-center gap-1 rounded-sm border px-3 py-0.5';
+
+function RemoveControl({ label, onRemove }: Readonly<{ label: string; onRemove: () => void }>) {
+  return (
+    <Pressable
+      className="focus-ring hover:text-ink flex w-auto rounded-xs"
+      aria-label={`Remove ${label}`}
+      onClick={onRemove}
+    >
+      <Icon icon={X} />
+    </Pressable>
+  );
+}
+
+/**
+ * A long paste a message carries, as a chip like `RemovableChip`: "Pasted
+ * text" and its line count. Pressing it opens the text, as pasted, in a
+ * dialog; while composing, a control removes it.
+ */
+export function PastedTextChip({
+  text,
+  onRemove,
+}: Readonly<{ text: string; onRemove?: () => void }>) {
+  const [open, setOpen] = useState(false);
+  const lines = text.split('\n').length;
+  const label = `Pasted text, ${lines} ${lines === 1 ? 'line' : 'lines'}`;
+  return (
+    <li className={CHIP}>
+      <Pressable
+        className="focus-ring hover:text-ink inline-flex w-auto min-w-0 items-center gap-1 rounded-xs"
+        aria-label={`View ${label}`}
+        onClick={() => setOpen(true)}
+      >
+        <Icon icon={FileText} />
+        <span className={textRole('caption', 'truncate text-ink-secondary')}>{label}</span>
+      </Pressable>
+      {onRemove ? <RemoveControl label={label} onRemove={onRemove} /> : null}
+      <Dialog open={open} onOpenChange={setOpen} title="Pasted text" width="wide">
+        <pre className={textRole('body', 'text-ink font-mono break-words whitespace-pre-wrap')}>
+          {text}
+        </pre>
+      </Dialog>
     </li>
   );
 }
@@ -234,6 +275,10 @@ export function SuggestionList({
   selected: number;
   onPick: (index: number) => void;
 }>) {
+  // The list scrolls past its cap, and focus never enters it, so the active option is kept in view.
+  useEffect(() => {
+    if (open) document.getElementById(`${id}-${selected}`)?.scrollIntoView?.({ block: 'nearest' });
+  }, [id, open, selected]);
   return (
     <ul
       id={id}
@@ -241,7 +286,10 @@ export function SuggestionList({
       role="listbox"
       aria-label={label}
       hidden={!open}
-      className={cn(MENU_PANEL, 'absolute inset-x-0 bottom-full mb-0.5 grid')}
+      className={cn(
+        MENU_PANEL,
+        'absolute inset-x-0 bottom-full mb-0.5 grid max-h-[min(20rem,40dvh)] overflow-auto overscroll-contain',
+      )}
     >
       {options.map((option, index) => (
         <li

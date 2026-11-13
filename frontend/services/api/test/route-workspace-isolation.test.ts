@@ -363,7 +363,11 @@ const FACTORIES: Record<string, (owner: SiteSeed) => Promise<string>> = {
 const revision = { base_revision_id: randomUUID() };
 const promptBody = { text: 'Which tool suits isolation?', cohort: 'core' };
 const BODIES: Record<string, unknown> = {
-  'POST /api/v1/agent/chats/{chat_id}/messages': { message: 'Hello', mentions: [] },
+  'POST /api/v1/agent/chats/{chat_id}/messages': {
+    message: 'Hello',
+    mentions: [],
+    attachments: [{ kind: 'pasted_text', text: 'Pasted' }],
+  },
   'POST /api/v1/agent/chats/{chat_id}/outputs/{output_id}/revisions': {
     ...revision,
     title: 'Draft',

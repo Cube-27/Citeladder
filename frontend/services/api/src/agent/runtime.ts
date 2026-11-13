@@ -41,7 +41,7 @@ import {
   type AttachTarget,
 } from './outputs.ts';
 import { lockRun, terminalize } from './queue.ts';
-import { appendMessage, appendRecoveryReply, getChat, touchChat } from './messages.ts';
+import { appendMessage, appendRecoveryReply, getChat, touchChat, turnRequest } from './messages.ts';
 import { readSources, scrubRecordRefs, uniqueSources, uniqueWeb, writtenIds } from './sources.ts';
 import { documentEmitter, type TurnEvents } from './stream.ts';
 import {
@@ -134,21 +134,7 @@ export class AgentRuntime {
         throw new AgentError('skills_changed');
       const chat = await getChat(trx, scope, run.chat_id, true);
       const documents = await chatDocuments(trx, chat);
-      const request = await trx
-        .selectFrom('agent_messages')
-        .select('content')
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('chat_id', '=', chat.id)
-        .where('id', '=', run.user_message_id)
-        .executeTakeFirstOrThrow();
-      // The chat's turn limit bounds its messages.
-      const written = await trx
-        .selectFrom('agent_messages')
-        .select('content')
-        .where('workspace_id', '=', scope.workspaceId)
-        .where('chat_id', '=', chat.id)
-        .where('role', '=', 'user')
-        .execute();
+      const { request, written } = await turnRequest(trx, chat, run.user_message_id);
       const manifest = manifestSchema.parse(run.context_manifest);
       return {
         run,
@@ -156,9 +142,9 @@ export class AgentRuntime {
         chat,
         documents,
         latest: latestDocument(documents),
-        request: request.content,
+        request,
         personIds: writtenIds(
-          ...written.map((message) => message.content),
+          ...written,
           ...documents.flatMap(({ revision }) => [revision.title, revision.body]),
         ),
         manifest,

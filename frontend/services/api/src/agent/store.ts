@@ -32,6 +32,7 @@ import { appendMessage, appendRecoveryReply, getChat } from './messages.ts';
 import { requestedPageUrl } from './page-url.ts';
 import { fetchesPage } from './skills.ts';
 import type { WorkflowCatalog } from './workflows.ts';
+import type { AgentAttachment } from '@citeladder/contracts/agent';
 
 export type FundingIdentity = Pick<Run, 'funding_source' | 'requested_model'>;
 /** Admission owns capability, funding selection and abuse capacity, in this transaction.
@@ -53,6 +54,7 @@ export type TurnInput = {
   actionId?: string;
   refs?: Record<string, Json>;
   mentionIds?: string[];
+  attachments?: AgentAttachment[];
 };
 
 async function requireNoActiveRun(db: Database, chat: Chat) {
@@ -81,6 +83,7 @@ function requestIdentity(scope: Scope, input: TurnInput) {
       skill: input.skillId === undefined ? { mode: 'inherit' } : input.skillId,
       workflow: input.workflowId ?? null,
       mentions: input.mentionIds ?? [],
+      attachments: input.attachments ?? [],
     };
   return {
     op: 'create_chat',
@@ -91,6 +94,7 @@ function requestIdentity(scope: Scope, input: TurnInput) {
     action: input.actionId ?? null,
     context: input.refs ?? {},
     mentions: input.mentionIds ?? [],
+    attachments: input.attachments ?? [],
   };
 }
 async function replayedRun(db: Database, scope: Scope, key: string, hash: string) {
@@ -241,6 +245,7 @@ export class AgentStore {
         skillId: input.skillId,
         skillSource: userSkillSource(input.skillId),
         mentions: mentionsOf(manifest),
+        attachments: input.attachments ?? [],
       });
       return this.queueTurn(trx, scope, {
         chat,
@@ -419,6 +424,7 @@ export class AgentStore {
         skillId: chosen.skill_id,
         skillSource: userSkillSource(chosen.skill_id),
         mentions: mentionsOf(manifest),
+        attachments: input.attachments ?? [],
       });
       await enqueuePageFetch(trx, scope, {
         chat_id: chat.id,

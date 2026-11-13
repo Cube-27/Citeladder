@@ -46,5 +46,12 @@ export const ANALYZE_PAGE_SEARCH_DEBOUNCE_MS = 250;
  * opens. The table's first page is too few to find an Action by name.
  */
 export const AGENT_MENTION_POOL_SIZE = 50;
+/** The composer starts one line tall and grows upward to this many lines, then scrolls. */
+export const AGENT_COMPOSER_MAX_ROWS = 8;
+/**
+ * A paste at least this long becomes a "Pasted text" attachment instead of
+ * filling the field (within the server's attachment limits).
+ */
+export const AGENT_PASTE_ATTACHMENT_MIN_CHARS = 2_000;
 /** Top open Actions a briefing mentions (within the server's `mentions_max`). */
 export const AGENT_BRIEFING_ACTIONS = 5;

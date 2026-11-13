@@ -62,6 +62,7 @@ function chatDetail(): AgentChatDetail {
       // A written reply records its model call; only an unanswered turn's reply has none.
       steps: index % 2 ? [{ kind: 'model', ordinal: 1 }] : [],
       mentions: [],
+      attachments: [],
       created_at: NOW,
     })),
     latest_run: {
@@ -93,7 +94,17 @@ for (const width of [1280, 390]) {
     });
     let reading = false;
     await stubAuthedShell(page, [
-      ['**/api/v1/agent/skills', { skills: SKILLS, limits: { mentions_max: 5 } }],
+      [
+        '**/api/v1/agent/skills',
+        {
+          skills: SKILLS,
+          limits: {
+            mentions_max: 5,
+            attachments_max: 3,
+            attachment_max_chars: 40000,
+          },
+        },
+      ],
       [`**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`, actionsPage()],
       [`**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`, { items: [], next_cursor: null }],
     ]);
@@ -159,7 +170,17 @@ for (const width of [1280, 390]) {
       const sends: { key: string | undefined; body: unknown }[] = [];
       let reads = 0;
       await stubAuthedShell(page, [
-        ['**/api/v1/agent/skills', { skills: SKILLS, limits: { mentions_max: 5 } }],
+        [
+          '**/api/v1/agent/skills',
+          {
+            skills: SKILLS,
+            limits: {
+              mentions_max: 5,
+              attachments_max: 3,
+              attachment_max_chars: 40000,
+            },
+          },
+        ],
         [`**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`, actionsPage()],
         [
           `**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`,

@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes, useParams } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
+import { AGENT_PASTE_ATTACHMENT_MIN_CHARS } from '@/lib/config/agent';
 import { mswServer } from '@/test/msw-server';
 import { actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
@@ -121,7 +122,7 @@ const WORKFLOW_CATALOG = {
     },
   ],
   output_kinds: [],
-  limits: { mentions_max: 5 },
+  limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
 };
 
 function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
@@ -130,7 +131,14 @@ function baseHandlers(actions: ReturnType<typeof actionItem>[] = []) {
       HttpResponse.json({ ...detail(revision(REV1, 1, 'agent', '')), outputs: [] }),
     ),
     http.get('/api/v1/agent/skills', () =>
-      HttpResponse.json({ skills: [GROWTH_SKILL], limits: { mentions_max: 5 } }),
+      HttpResponse.json({
+        skills: [GROWTH_SKILL],
+        limits: {
+          mentions_max: 5,
+          attachments_max: 3,
+          attachment_max_chars: 40000,
+        },
+      }),
     ),
     http.get(`/api/v1/projects/${PROJECT}/actions`, () => HttpResponse.json(actionsPage(actions))),
   ];
@@ -365,11 +373,49 @@ describe('NewChatScreen', () => {
     ]);
   });
 
+  it('takes a long paste as a viewable, removable attachment and sends it apart from the text', async () => {
+    const bodies = captureChats();
+    const user = userEvent.setup();
+    renderNewChat('');
+    const brief = `Brief line\n${'x'.repeat(AGENT_PASTE_ATTACHMENT_MIN_CHARS)}`;
+    const message = await screen.findByLabelText('Message the agent');
+    await user.click(message);
+    await user.paste('Short ');
+    await user.paste(brief);
+    await user.paste(`Other\n${brief}`);
+    // A short paste is typed text; each long one is a chip instead.
+    expect(message).toHaveValue('Short ');
+    expect(screen.getAllByRole('button', { name: 'View Pasted text, 2 lines' })).toHaveLength(1);
+    await user.click(screen.getByRole('button', { name: 'Remove Pasted text, 3 lines' }));
+    await user.click(screen.getByRole('button', { name: 'View Pasted text, 2 lines' }));
+    const viewer = await screen.findByRole('dialog', { name: 'Pasted text' });
+    // Shown as pasted, line breaks kept.
+    expect(within(viewer).getByText(/^Brief line/).textContent).toBe(brief);
+    await user.click(within(viewer).getByRole('button', { name: 'Close dialog' }));
+    await user.type(message, 'summarize this{Enter}');
+
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      {
+        message: 'Short summarize this',
+        context: {},
+        attachments: [{ kind: 'pasted_text', text: brief }],
+      },
+    ]);
+  });
+
   it('offers no further mention once the catalog-listed bound is reached', async () => {
     captureChats([actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog hub')]);
     mswServer.use(
       http.get('/api/v1/agent/skills', () =>
-        HttpResponse.json({ skills: [GROWTH_SKILL], limits: { mentions_max: 1 } }),
+        HttpResponse.json({
+          skills: [GROWTH_SKILL],
+          limits: {
+            mentions_max: 1,
+            attachments_max: 3,
+            attachment_max_chars: 40000,
+          },
+        }),
       ),
     );
     const user = userEvent.setup();

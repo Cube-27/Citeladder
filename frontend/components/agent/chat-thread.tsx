@@ -54,7 +54,9 @@ export function ChatConversation({
         onRefine={turn.suggest}
         onRecover={turn.recover}
         onRetry={turn.resend}
-        hasDraft={Boolean(turn.draft.trim() || turn.commands.mentions.length)}
+        hasDraft={Boolean(
+          turn.draft.trim() || turn.commands.mentions.length || turn.commands.pastes.items.length,
+        )}
         pendingMessage={turn.pendingMessage}
         canSend={access.canSend && !turn.pending && !runActive}
       />

@@ -21,7 +21,7 @@ function MessageField({ replacement }: { replacement: string }) {
         onEnter={vi.fn()}
         disabled={false}
         placeholder="Ask a question"
-        rows={3}
+        maxRows={8}
         commands={{
           options: () => [{ key: 'pricing', label: 'Pricing page', replacement }],
           onPick: vi.fn(),
