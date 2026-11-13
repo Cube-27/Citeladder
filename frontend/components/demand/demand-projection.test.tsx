@@ -256,8 +256,10 @@ describe('DemandProjection', () => {
       screen.getByRole('button', { name: 'How the CTR gap and Low CTR detectors work' }),
     ).toBeVisible();
     // Caveats shared by the signals sit behind one hint, not a row.
-    expect(screen.getByRole('button', { name: 'Data caveats' })).toBeVisible();
-    expect(screen.queryByText('Privacy-filtered queries may be omitted.')).not.toBeInTheDocument();
+    const caveats = screen.getByRole('button', { name: 'Data caveats' });
+    expect(caveats).toBeVisible();
+    expect(caveats).toHaveAccessibleDescription('Privacy-filtered queries may be omitted.');
+    expect(screen.getByText('Privacy-filtered queries may be omitted.')).not.toBeVisible();
     // No separate summary cards, detector line or Act on this list repeat them.
     expect(screen.queryByText('Latent demand')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Detectors' })).not.toBeInTheDocument();

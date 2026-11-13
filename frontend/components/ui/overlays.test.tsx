@@ -222,14 +222,13 @@ describe('InfoHint', () => {
       </>,
     );
     const button = screen.getByRole('button', { name: 'About reach' });
+    expect(button).toHaveAccessibleDescription('Share of answers that cite you.');
     await user.hover(button);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     await user.click(button);
     expect(screen.getByRole('tooltip')).toHaveTextContent('Share of answers that cite you.');
-    expect(button).toHaveAttribute('aria-expanded', 'true');
     await user.click(button);
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
-    expect(button).toHaveAttribute('aria-expanded', 'false');
     await user.click(button);
     await user.keyboard('{Escape}');
     await waitFor(() => expect(screen.queryByRole('tooltip')).not.toBeInTheDocument());
