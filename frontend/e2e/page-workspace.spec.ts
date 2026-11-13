@@ -48,19 +48,7 @@ const action = {
 
 const catalog = {
   ...skills,
-  workflows: [
-    ...skills.workflows,
-    {
-      id: 'optimize_page',
-      group: 'improve',
-      label: 'Optimize a page',
-      description: 'Work on one of your pages.',
-      skill_id: 'content_refresh',
-      format_id: null,
-      prompt: 'Optimize this page.',
-      inputs: [],
-    },
-  ],
+  workflows: [...skills.workflows, { id: 'optimize_page', label: 'Optimize a page' }],
 };
 
 const ready = (body: string, overrides = {}) =>

@@ -173,19 +173,7 @@ export const skills = {
       description: 'Title and snippet edits.',
     },
   ],
-  workflow_groups: [{ id: 'improve', label: 'Improve your site' }],
-  workflows: [
-    {
-      id: 'internal_links',
-      group: 'improve',
-      label: 'Internal links',
-      description: 'Where to link from.',
-      skill_id: 'internal_links',
-      format_id: null,
-      prompt: 'Plan internal links.',
-      inputs: [],
-    },
-  ],
+  workflows: [{ id: 'internal_links', label: 'Internal links' }],
   output_kinds: [
     {
       kind: 'page_edits',

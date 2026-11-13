@@ -274,11 +274,8 @@ export const agentRoutes = [
           output_kind: skill.outputKind,
           description: skill.description,
         })),
-        workflow_groups: workflows.groups,
-        workflows: workflows.workflows.map((workflow) => ({
-          ...workflow,
-          format_id: workflow.format_id ?? null,
-        })),
+        // The browser only names a pinned workflow; admission resolves its skill and format.
+        workflows: workflows.workflows.map(({ id, label }) => ({ id, label })),
         output_kinds: Object.entries(workflows.kinds).map(([kind, presentation]) => ({
           kind,
           label: presentation.label,

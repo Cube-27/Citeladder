@@ -112,7 +112,7 @@ describe('Action routes', () => {
       .updateTable('actions')
       .set({
         diagnosis: JSON.stringify({
-          handoff: { context: 'page_url', workflow_id: 'refresh_page', message: 'Fix page a.' },
+          handoff: { context: 'page_url', workflow_id: 'optimize_page', message: 'Fix page a.' },
         }),
       })
       .where('id', '=', actionId(s))
@@ -128,7 +128,7 @@ describe('Action routes', () => {
     });
     expect((await detailBody(await request(s, actionPath(s)))).handoff).toEqual({
       context: 'page_url',
-      workflow_id: 'refresh_page',
+      workflow_id: 'optimize_page',
       message: 'Fix page a.',
     });
   });

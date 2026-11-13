@@ -40,7 +40,6 @@ import {
   agentSuggestionsDismissedSchema,
   agentSuggestionsPageSchema,
   agentTurnAcceptedSchema,
-  agentWorkflowSchema,
   type AgentAttachment,
   type AgentChatCreateRequest,
   type AgentMessageRequest,
@@ -61,7 +60,6 @@ export type AgentWebSource = AgentMessage['web_sources'][number];
 export type AgentChatSummary = z.infer<typeof agentChatSummarySchema>;
 export type AgentChatDetail = z.infer<typeof agentChatDetailSchema>;
 export type AgentSkill = z.infer<typeof agentSkillSchema>;
-export type AgentWorkflow = z.infer<typeof agentWorkflowSchema>;
 export type AgentCatalog = z.infer<typeof agentSkillCatalogSchema>;
 export type AgentSuggestion = z.infer<typeof agentSuggestionSchema>;
 export type AgentSuggestionsPage = z.infer<typeof agentSuggestionsPageSchema>;

@@ -5,6 +5,7 @@ import { Route, Routes, useParams } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import { AGENT_PASTE_ATTACHMENT_MIN_CHARS } from '@/lib/config/agent';
+import { openComposerSubmenu, pickFromComposerMenu } from '@/test/composer-menu';
 import { mswServer } from '@/test/msw-server';
 import { actionDetail, actionItem, actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
@@ -80,22 +81,7 @@ const GROWTH_SKILL = {
 
 const WORKFLOW_CATALOG = {
   skills: [GROWTH_SKILL],
-  workflow_groups: [{ id: 'social', label: 'Social and video' }],
-  workflows: [
-    {
-      id: 'linkedin_post',
-      group: 'social',
-      label: 'LinkedIn post',
-      description: 'A short professional post.',
-      skill_id: 'content_create',
-      format_id: 'linkedin',
-      prompt: 'Write a LinkedIn post.',
-      inputs: [
-        { key: 'topic', label: 'Topic', required: true },
-        { key: 'tone', label: 'Tone', required: false },
-      ],
-    },
-  ],
+  workflows: [{ id: 'linkedin_post', label: 'LinkedIn post' }],
   output_kinds: [],
   limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },
 };
@@ -207,37 +193,47 @@ describe('NewChatScreen', () => {
     ]);
   });
 
-  it('starts a workflow from its form only once its required inputs are filled', async () => {
+  it('sets the skill from the + menu as a removable chip', async () => {
     const bodies = captureChats();
-    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)));
     const user = userEvent.setup();
     renderNewChat('');
-    await user.click(await screen.findByRole('button', { name: /LinkedIn post/ }));
-    await user.click(screen.getByRole('button', { name: 'Start' }));
-    expect(screen.getByRole('textbox', { name: /Topic/ })).toHaveAttribute('aria-invalid', 'true');
-    expect(bodies).toEqual([]);
+    const message = await screen.findByLabelText('Message the agent');
+    await pickFromComposerMenu(user, /^Skills: Automatic$/, {
+      role: 'menuitemradio',
+      name: 'Growth plan',
+    });
+    const context = within(screen.getByRole('list', { name: 'Context for this request' }));
+    expect(context.getByText('Skill: Growth plan')).toBeVisible();
+    await user.type(message, 'Plan the quarter{Enter}');
 
-    await user.type(screen.getByRole('textbox', { name: /Topic/ }), 'Pricing changes');
-    await user.click(screen.getByRole('button', { name: 'Start' }));
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
-    expect(bodies).toEqual([
-      expect.objectContaining({
-        message: 'Write a LinkedIn post.\n\nTopic: Pricing changes',
-        workflow_id: 'linkedin_post',
-      }),
-    ]);
+    expect(bodies).toEqual([{ message: 'Plan the quarter', skill_id: 'growth_plan', context: {} }]);
   });
 
-  it('sends a next step with its workflow pinned until the reader removes it', async () => {
+  it('sends a next step with its workflow pinned until a skill is picked instead', async () => {
     const bodies = captureChats();
     mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)));
     const user = userEvent.setup();
     renderNewChat('?workflow=linkedin_post&prompt=Promote+the+guide');
-    await screen.findByRole('button', { name: 'Remove workflow LinkedIn post' });
+    await screen.findByRole('button', { name: 'Remove Skill: LinkedIn post' });
     await user.click(screen.getByRole('button', { name: 'Send' }));
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([
       expect.objectContaining({ message: 'Promote the guide', workflow_id: 'linkedin_post' }),
+    ]);
+  });
+
+  it('replaces a pinned workflow with a skill picked from the + menu', async () => {
+    const bodies = captureChats();
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)));
+    const user = userEvent.setup();
+    renderNewChat('?workflow=linkedin_post&prompt=Promote+the+guide');
+    await screen.findByRole('button', { name: 'Remove Skill: LinkedIn post' });
+    await pickFromComposerMenu(user, /^Skills/, { role: 'menuitemradio', name: 'Growth plan' });
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
+    expect(bodies).toEqual([
+      { message: 'Promote the guide', skill_id: 'growth_plan', context: {} },
     ]);
   });
 
@@ -293,7 +289,7 @@ describe('NewChatScreen', () => {
     expect(bodies).toEqual([{ message: 'Plan this', context: {} }]);
   });
 
-  it('reports a failed catalog read instead of showing no workflows', async () => {
+  it('reports a failed catalog read instead of showing no skills', async () => {
     // The first matching handler answers, so the failure goes ahead of the base set.
     mswServer.use(
       http.get('/api/v1/agent/skills', () =>
@@ -303,8 +299,7 @@ describe('NewChatScreen', () => {
     );
     renderNewChat('');
 
-    expect(await screen.findByText("Couldn't load skills and workflows")).toBeVisible();
-    expect(screen.queryByText('Or start from a workflow')).not.toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load skills")).toBeVisible();
   });
 
   it('explains a plan without the agent instead of offering to send', async () => {
@@ -327,7 +322,7 @@ describe('NewChatScreen', () => {
     const message = await screen.findByLabelText('Message the agent');
     await user.type(message, '/');
     await user.click(await screen.findByRole('menuitemradio', { name: 'Growth plan' }));
-    expect(screen.getByRole('button', { name: 'Skill: Growth plan' })).toBeVisible();
+    expect(screen.getByText('Skill: Growth plan')).toBeVisible();
     // The pick hands focus and the caret back to the field on the next frame;
     // typing before then lands ahead of the restored caret.
     await waitFor(() => expect(message).toHaveFocus());
@@ -506,8 +501,10 @@ describe('NewChatScreen', () => {
     const message = await screen.findByLabelText('Message the agent');
     await user.type(message, '/');
     await user.click(await screen.findByRole('menuitemradio', { name: 'Growth plan' }));
-    await user.click(screen.getByRole('button', { name: 'Skill: Growth plan' }));
-    await user.click(screen.getByRole('menuitemradio', { name: 'Automatic' }));
+    await pickFromComposerMenu(user, /^Skills: Growth plan$/, {
+      role: 'menuitemradio',
+      name: 'Automatic',
+    });
     await user.type(message, 'Explain this{Enter}');
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeVisible();
     expect(bodies).toEqual([{ message: 'Explain this', skill_id: null, context: {} }]);
@@ -529,9 +526,8 @@ describe('NewChatScreen', () => {
     expect(bodies).toEqual([{ message: 'Use /grow', context: {} }]);
   });
 
-  it('offers the top Actions open above the workflows, each title starting a chat on it', async () => {
+  it('offers the top Actions in the + menu, each starting a chat on it', async () => {
     mswServer.use(
-      http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)),
       ...baseHandlers([
         actionItem(PRICING, 'Pricing page'),
         actionItem(BLOG, 'Blog hub'),
@@ -539,19 +535,20 @@ describe('NewChatScreen', () => {
         actionItem('77777777-7777-4777-8777-777777777774', 'Careers'),
       ]),
     );
+    const user = userEvent.setup();
     renderNewChat('');
 
-    const recommended = await screen.findByRole('region', { name: 'Recommended Actions' });
-    // Capped at three, and nothing to expand first.
-    expect(await within(recommended).findAllByRole('listitem')).toHaveLength(3);
-    expect(within(recommended).queryByText('Careers')).not.toBeInTheDocument();
-    const start = within(recommended).getByRole('link', { name: 'Work on Pricing page' });
+    await openComposerSubmenu(user, /^Actions$/);
+    const start = await screen.findByRole('menuitem', { name: 'Work on Pricing page' });
+    // Capped at three, then the whole list.
+    expect(screen.getByRole('menuitem', { name: 'Work on Docs' })).toBeVisible();
+    expect(screen.queryByRole('menuitem', { name: 'Work on Careers' })).toBeNull();
+    expect(screen.getByRole('menuitem', { name: 'All Actions' })).toHaveAttribute(
+      'href',
+      `/agent/actions?project=${PROJECT}`,
+    );
     // Ids only: the Action's message is read on New chat, never put in the URL.
     expect(start).toHaveAttribute('href', `/agent?action_id=${PRICING}&project=${PROJECT}`);
-    expect(within(recommended).queryByText('Work on this')).not.toBeInTheDocument();
-    // The Actions come before the workflows.
-    const workflows = await screen.findByRole('region', { name: 'Or start from a workflow' });
-    expect(recommended.compareDocumentPosition(workflows)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     // The command hint is a caption that stays once typing starts.
     expect(screen.getByText('Type / to pick a skill or @ to mention an Action.')).toBeVisible();
   });
@@ -581,35 +578,35 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat(`?action_id=${PRICING}`);
 
-    // One line in the composer, above the written message; no other starting points.
+    // One line in the composer, above the written message; no briefing.
     await screen.findByDisplayValue('Work on Pricing page.');
     expect(screen.getByText('Action: Pricing page · Create a new page')).toBeVisible();
-    expect(screen.queryByRole('region', { name: 'Or start from a workflow' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'Recommended Actions' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'What should I work on?' })).toBeNull();
     expect(screen.queryByText('Type / to pick a skill or @ to mention an Action.')).toBeNull();
 
     await user.click(
       screen.getByRole('button', { name: 'Remove Action: Pricing page · Create a new page' }),
     );
-    // The message stays as written; the workflows come back.
+    // The message stays as written; the briefing comes back.
     expect(screen.getByLabelText('Message the agent')).toHaveValue('Work on Pricing page.');
-    expect(await screen.findByRole('region', { name: 'Or start from a workflow' })).toBeVisible();
+    expect(await screen.findByRole('region', { name: 'What should I work on?' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Send' }));
 
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([{ message: 'Work on Pricing page.', context: {} }]);
   });
 
-  it('opens a recommended Action with its message written, to edit or send as it is', async () => {
+  it('attaches an Action picked from the + menu, its message written to edit or send', async () => {
     const bodies = captureChats([actionItem(PRICING, 'Pricing page')]);
     serveAction();
     const user = userEvent.setup();
     renderNewChat('');
 
-    const recommended = await screen.findByRole('region', { name: 'Recommended Actions' });
-    await user.click(
-      await within(recommended).findByRole('link', { name: 'Work on Pricing page' }),
-    );
+    await screen.findByLabelText('Message the agent');
+    await pickFromComposerMenu(user, /^Actions$/, {
+      role: 'menuitem',
+      name: 'Work on Pricing page',
+    });
 
     // Written from the Action once it is read.
     const message = await screen.findByDisplayValue('Work on Pricing page.');
@@ -636,7 +633,7 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat('');
 
-    await user.click(await screen.findByText('Get a briefing on what to work on'));
+    // Open beneath the composer, with nothing to expand first.
     const briefing = await screen.findByRole('region', { name: 'What should I work on?' });
     expect(await within(briefing).findByText(/top 2 open Actions/)).toBeVisible();
     await user.click(within(briefing).getByRole('button', { name: 'Brief me' }));

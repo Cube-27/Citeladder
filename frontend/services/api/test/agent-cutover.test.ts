@@ -231,9 +231,19 @@ describe('served Agent cutover on PostgreSQL', () => {
     const { headers } = await setup();
     const response = await app.request('/api/v1/agent/skills', { headers });
     expect(response.status).toBe(200);
+    const body = z.record(z.string(), z.unknown()).parse(await response.json());
+    expect(Object.keys(body).sort()).toEqual(['limits', 'output_kinds', 'skills', 'workflows']);
     const raw = z
-      .object({ skills: z.array(z.record(z.string(), z.unknown())) })
-      .parse(await response.json());
+      .object({
+        skills: z.array(z.record(z.string(), z.unknown())),
+        workflows: z.array(z.record(z.string(), z.unknown())),
+      })
+      .parse(body);
+    // A workflow is only named in the browser; admission resolves its skill and format.
+    expect(raw.workflows.find((workflow) => workflow.id === 'optimize_page')).toEqual({
+      id: 'optimize_page',
+      label: 'Optimize a content page',
+    });
     expect(raw.skills.length).toBeGreaterThan(0);
     for (const skill of raw.skills)
       expect(Object.keys(skill).sort()).toEqual([

@@ -233,18 +233,18 @@ for (const width of [1280, 390]) {
       // Context is described in plain words; record identities never reach the reader.
       await expect(page.getByText(RUN)).toHaveCount(0);
       await expect(
-        page.getByRole('button', { name: 'Skill: Continue with Growth plan' }),
+        page.getByText('Skill: Continue with Growth plan', { exact: true }),
       ).toBeVisible();
       await reply.fill('Draft kept while working');
       // While the turn runs, Stop takes Send's place and drafting continues.
       await expect(page.getByRole('button', { name: 'Send', exact: true })).toHaveCount(0);
-      // A long skill label truncates beside Stop rather than wrapping the control row.
-      const skillBox = await page
-        .getByRole('button', { name: 'Skill: Continue with Growth plan' })
+      // The + menu opens the control row and Stop ends it, on one line.
+      const menuBox = await page
+        .getByRole('button', { name: 'Add a skill or Action' })
         .boundingBox();
       const stopBox = await page.getByRole('button', { name: 'Stop', exact: true }).boundingBox();
-      expect(Math.abs(skillBox!.y - stopBox!.y)).toBeLessThanOrEqual(1);
-      expect(skillBox!.x + skillBox!.width).toBeLessThanOrEqual(stopBox!.x);
+      expect(Math.abs(menuBox!.y - stopBox!.y)).toBeLessThanOrEqual(1);
+      expect(menuBox!.x + menuBox!.width).toBeLessThanOrEqual(stopBox!.x);
       // Only the thread scrolls, in its own region on both surfaces.
       const thread = page.getByRole('region', { name: 'Agent conversation' });
       await thread.evaluate((element) => element.scrollTo(0, 0));
@@ -297,7 +297,9 @@ for (const width of [1280, 390]) {
       await expect(reply).toHaveValue('/');
       await page.getByRole('menuitemradio', { name: 'Growth plan', exact: true }).click();
       await expect(reply).toBeFocused();
-      await page.getByRole('button', { name: 'Skill: Growth plan', exact: true }).click();
+      await expect(page.getByText('Skill: Growth plan', { exact: true })).toBeVisible();
+      await page.getByRole('button', { name: 'Add a skill or Action' }).click();
+      await page.getByRole('menuitem', { name: 'Skills: Growth plan' }).click();
       await page.getByRole('menuitemradio', { name: 'Automatic', exact: true }).click();
       await reply.fill('Explain this');
       await reply.press('Shift+Enter');

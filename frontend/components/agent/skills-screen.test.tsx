@@ -27,7 +27,6 @@ const CATALOG = {
       description: 'Produces something the catalog does not name.',
     },
   ],
-  workflow_groups: [],
   workflows: [],
   output_kinds: [{ kind: 'linkedin_post', label: 'LinkedIn post', refinements: [], next: [] }],
   limits: { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 },

@@ -8,7 +8,8 @@ import {
   useChatThread,
 } from '@/components/agent/chat-thread';
 import { Composer } from '@/components/agent/composer';
-import { SkillPicker } from '@/components/agent/skill-picker';
+import { ComposerMenu } from '@/components/agent/composer-menu';
+import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail, useCreateChat } from '@/components/agent/use-chat-turns';
@@ -114,6 +115,11 @@ function PanelStart({
   const access = useAgentAccess();
   const create = useCreateChat(workspaceId, projectId, onStarted);
   const hasContext = contextChips(context).length > 0;
+  const skill = useSkillChoice({
+    value: skillId,
+    onChange: setSkillId,
+    hasAction: Boolean(seed.actionId),
+  });
   return (
     <DockedThread
       dock={
@@ -141,12 +147,12 @@ function PanelStart({
           chips={contextChips(context)}
           commands={commands}
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
+          skill={skill.chip}
           tools={
-            <SkillPicker
-              {...commands.skillPicker}
-              value={skillId}
-              onChange={setSkillId}
-              hasAction={Boolean(seed.actionId)}
+            <ComposerMenu
+              menu={commands.menu}
+              scope={commands.scope}
+              skill={skill}
               disabled={!access.canSend}
             />
           }

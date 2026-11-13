@@ -27,6 +27,7 @@ export function Composer({
   chips = [],
   onRemoveChip,
   attachment,
+  skill,
   tools,
   commands,
   onStop,
@@ -46,6 +47,8 @@ export function Composer({
   onRemoveChip?: (chip: ContextChip) => void;
   /** The Action the chat is about, first among the chips: one removable line. */
   attachment?: Readonly<{ label: string; onRemove: () => void }>;
+  /** The skill the turn will run, picked or continued, after the Action. */
+  skill?: Readonly<{ label: string; onRemove: () => void }>;
   tools?: ReactNode;
   commands?: ComposerCommands;
   /** While a turn runs, the send button stops it instead. */
@@ -56,6 +59,7 @@ export function Composer({
   const pastes = commands?.pastes;
   const hasChips =
     attachment !== undefined ||
+    skill !== undefined ||
     chips.length > 0 ||
     (commands?.mentions.length ?? 0) > 0 ||
     (pastes?.items.length ?? 0) > 0;
@@ -71,6 +75,7 @@ export function Composer({
             {attachment ? (
               <RemovableChip label={attachment.label} onRemove={attachment.onRemove} />
             ) : null}
+            {skill ? <RemovableChip label={skill.label} onRemove={skill.onRemove} /> : null}
             {chips.map((chip) => (
               <RemovableChip
                 key={chip.key}
