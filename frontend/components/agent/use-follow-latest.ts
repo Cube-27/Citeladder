@@ -8,9 +8,9 @@ import { AGENT_FOLLOW_LATEST_GAP_PX } from '@/lib/config/agent';
  *
  * Only the region scrolls: it is pinned by setting its own `scrollTop`, never
  * by `scrollIntoView`, which would also scroll the window and the shell. It
- * follows every size change of the thread (streamed thinking and reply, a
- * step's reads appearing and clearing) and of the region itself (the composer
- * growing), before the browser paints. Once the reader scrolls up nothing
+ * follows every size change of the thread (streamed thinking and reply) and
+ * of the region itself (the composer growing), before the browser paints;
+ * since it pins the bottom, nothing under the streaming text may change height. Once the reader scrolls up nothing
  * moves them, and `showJump` offers the way back.
  */
 export function useFollowLatest() {

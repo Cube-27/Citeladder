@@ -59,8 +59,8 @@ export const agentToolStatusSchema = z.enum([
  * stays the record and the saved reply replaces the streamed text.
  *
  * - `step`: a model call started (the heartbeat of a turn).
- * - `reply_delta`: the next piece of that call's answer text; a later call's
- *   text replaces an earlier call's.
+ * - `reply_delta`: the next piece of that call's answer text; each call's text
+ *   is its own segment, kept under the earlier calls' text.
  * - `document_delta`: the document being saved, so far (a snapshot).
  * - `thinking`: the next piece of that call's thinking summary.
  * - `tool`: one call's state, keyed by `call_id`; calls in one step run together.

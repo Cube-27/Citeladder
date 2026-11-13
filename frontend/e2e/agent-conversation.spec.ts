@@ -250,6 +250,14 @@ for (const width of [1280, 390]) {
       const thread = page.getByRole('region', { name: 'Agent conversation' });
       await thread.evaluate((element) => element.scrollTo(0, 0));
       await expect(page.getByRole('button', { name: 'Jump to latest' })).toBeAttached();
+      // A round arrow centred just above the composer, over the end of the thread.
+      const jumpBox = await page.getByRole('button', { name: 'Jump to latest' }).boundingBox();
+      const replyBox = await reply.boundingBox();
+      expect(jumpBox!.width).toBe(jumpBox!.height);
+      expect(
+        Math.abs(jumpBox!.x + jumpBox!.width / 2 - (replyBox!.x + replyBox!.width / 2)),
+      ).toBeLessThanOrEqual(2);
+      expect(jumpBox!.y + jumpBox!.height).toBeLessThanOrEqual(replyBox!.y);
       const priorReads = reads;
       current.messages.push({
         ...current.messages.at(-1)!,

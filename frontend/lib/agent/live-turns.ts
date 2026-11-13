@@ -19,7 +19,7 @@ export type TurnEvent = z.infer<typeof agentTurnEventSchema>;
 type ToolEvent = Extract<TurnEvent, { type: 'tool' }>;
 /** One call's latest state; calls from one model response run together. */
 type LiveTool = Omit<ToolEvent, 'type'>;
-/** Text built from one model call's deltas; a later call's text replaces it. */
+/** Text built from one model call's deltas; each call writes its own segment. */
 type Written = { ordinal: number; text: string };
 
 export type LiveTurn = {
@@ -28,14 +28,14 @@ export type LiveTurn = {
   connected: boolean;
   /** The ordinal of the newest model call. */
   step: number | null;
-  /** The reply so far, kept through later calls until a newer call writes or the saved reply arrives. */
-  reply: Written | null;
+  /** The reply so far, one segment per model call that wrote, until the saved reply arrives. */
+  reply: Written[];
   /** The document being saved, so far. */
   document: { title: string | null; body: string | null } | null;
   /** Every call this turn, in the order they started. */
   tools: LiveTool[];
-  /** The newest call's thinking summary. */
-  thinking: Written | null;
+  /** Each call's thinking summary, in order. */
+  thinking: Written[];
 };
 
 export function liveTurn(startedAt: number): LiveTurn {
@@ -43,15 +43,19 @@ export function liveTurn(startedAt: number): LiveTurn {
     startedAt,
     connected: true,
     step: null,
-    reply: null,
+    reply: [],
     document: null,
     tools: [],
-    thinking: null,
+    thinking: [],
   };
 }
 
-function appended(current: Written | null, { ordinal, text }: Written): Written {
-  return current?.ordinal === ordinal ? { ordinal, text: current.text + text } : { ordinal, text };
+/** Appends a delta to its call's segment; a later call starts a new one, so earlier text never moves. */
+function appended(segments: readonly Written[], { ordinal, text }: Written): Written[] {
+  const last = segments.at(-1);
+  return last?.ordinal === ordinal
+    ? [...segments.slice(0, -1), { ordinal, text: last.text + text }]
+    : [...segments, { ordinal, text }];
 }
 
 // Turns this tab is showing; only the most recent few are kept.
@@ -69,7 +73,6 @@ function update(runId: string, change: (turn: LiveTurn) => LiveTurn) {
 /** Folds one stream event into the turn's live view. */
 export function applyTurnEvent(turn: LiveTurn, event: TurnEvent): LiveTurn {
   switch (event.type) {
-    // Text stays through later steps, so a reply never blanks while the agent continues.
     case 'step':
       return { ...turn, step: event.ordinal };
     case 'reply_delta':

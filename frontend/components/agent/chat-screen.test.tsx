@@ -332,13 +332,20 @@ describe('ChatScreen', () => {
     const reading = new Promise<void>((resolve) => {
       read = resolve;
     });
+    // The first read holding the saved question waits, so the accepted send is
+    // on screen before it lands.
+    let save!: () => void;
+    const saved = new Promise<void>((resolve) => {
+      save = resolve;
+    });
     const frame = (event: unknown) =>
       new TextEncoder().encode(`data: ${JSON.stringify(event)}\n\n`);
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
-      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
-        HttpResponse.json({ before: base, running, done: finished }[phase]),
-      ),
+      http.get(`/api/v1/agent/chats/${CHAT}`, async () => {
+        if (phase !== 'before') await saved;
+        return HttpResponse.json({ before: base, running, done: finished }[phase]);
+      }),
       http.post(`/api/v1/agent/chats/${CHAT}/messages`, () => {
         phase = 'running';
         return HttpResponse.json(
@@ -361,8 +368,9 @@ describe('ChatScreen', () => {
                 frame({ type: 'tool', ordinal: 1, call_id, tool, status: 'started' }),
               );
             await reading;
-            // A later step never blanks what was already written.
+            // A later step writes under what was already written.
             controller.enqueue(frame({ type: 'step', ordinal: 2 }));
+            controller.enqueue(frame({ type: 'reply_delta', ordinal: 2, text: 'Then more.' }));
             await held;
             phase = 'done';
             controller.enqueue(frame({ type: 'done', run: finished.latest_run }));
@@ -378,18 +386,28 @@ describe('ChatScreen', () => {
     await user.type(await screen.findByLabelText('Reply to the agent'), 'Why this order?');
     await user.click(screen.getByRole('button', { name: 'Send' }));
     const live = await screen.findByRole('article', { name: 'Agent reply in progress' });
+    // The accepted send stays in the thread until the chat read holds it.
+    expect(screen.getByText('Why this order?')).toBeVisible();
+    save();
     await vi.waitFor(() => expect(live).toHaveTextContent('Partly written'));
     expect(within(live).getByText('Thinking')).toBeVisible();
-    // Reads one response asked for run together and are shown together.
-    expect(await screen.findByText('Running 2 reads at once…')).toBeVisible();
+    // One status line heads the turn; the reads one response asked for fold into it.
+    const status = (await within(live).findByText('Running 2 reads at once…')).closest('summary')!;
+    expect(live.textContent!.indexOf('Running 2 reads')).toBeLessThan(
+      live.textContent!.indexOf('Partly written'),
+    );
+    await user.click(status);
     expect(
-      within(screen.getByRole('list', { name: 'Current reads' }))
+      within(within(live).getByRole('list', { name: 'Agent activity' }))
         .getAllByRole('listitem')
         .map((item) => item.textContent),
     ).toEqual(['Reading Site Health', 'Reading search performance']);
     read();
-    expect(await screen.findByText('Deciding the next step…')).toBeVisible();
-    expect(live).toHaveTextContent('Partly written');
+    // The same line says what comes next, and the next text is added under the first.
+    await vi.waitFor(() => expect(status).toHaveTextContent('Deciding the next step…'));
+    expect(live).toContainElement(status);
+    await vi.waitFor(() => expect(live).toHaveTextContent('Partly writtenThen more.'));
+    expect(screen.getAllByText('Why this order?')).toHaveLength(1);
     release();
     // The saved reply replaces the live one; the two may land in separate renders.
     await vi.waitFor(() => {
@@ -654,10 +672,9 @@ describe('ChatScreen', () => {
     const user = userEvent.setup();
     renderChat();
 
-    expect(await screen.findByText('Deciding the next step…')).toBeInTheDocument();
-    const summary = screen.getByText('Read Site Health', { selector: 'summary' });
-    await user.click(summary);
-    const steps = within(summary.parentElement!).getByRole('list', { name: 'Agent activity' });
+    const status = (await screen.findByText('Deciding the next step…')).closest('summary')!;
+    await user.click(status);
+    const steps = within(status.parentElement!).getByRole('list', { name: 'Agent activity' });
     expect(steps).toHaveTextContent('Read Site Health no data yet');
   });
 

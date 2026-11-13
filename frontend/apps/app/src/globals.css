@@ -1532,6 +1532,27 @@ samp {
   }
 }
 
+/* Shimmer: a working line's words with a lighter band passing over them. The
+   words stay legible in every frame; reduced motion holds the band still. */
+.text-shimmer {
+  background: linear-gradient(
+      90deg,
+      var(--color-ink-secondary) 40%,
+      var(--color-ink) 50%,
+      var(--color-ink-secondary) 60%
+    )
+    100% 0 / 250% 100%;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer calc(var(--motion-slow) * 10) linear infinite;
+}
+
+@keyframes text-shimmer {
+  to {
+    background-position: 0 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   /* Everything but the two "still working" marks below, which slow down
      instead of stopping. */
