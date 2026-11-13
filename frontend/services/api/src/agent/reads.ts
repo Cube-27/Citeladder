@@ -10,6 +10,7 @@ import {
   agentRevisionsPageSchema,
   agentRunSchema,
   agentRunStepSchema,
+  type AgentChatOrigin,
 } from '@citeladder/contracts/agent';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
@@ -23,9 +24,25 @@ import { pageFetchView } from '../page-documents/reads.ts';
 import { openTargetChoice } from './target-adapter.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
+// First present reference wins; `action_id` can be attached after the chat started, so it ranks last.
+const ORIGIN_REFS: readonly [AgentChatOrigin, readonly string[]][] = [
+  ['site_health', ['issue_group_reference', 'site_facts_reference', 'site_health_reference']],
+  ['page', ['target_url', 'target_site_url_id', 'page_snapshot_reference']],
+  ['recommendation', ['opportunity_id']],
+  ['demand', ['demand_signal_id']],
+  ['keyword_research', ['search_intelligence_reference']],
+  ['prompts', ['prompt_reference']],
+];
+export function chatOrigin(chat: Pick<Chat, 'context_refs' | 'action_id'>): AgentChatOrigin {
+  const refs = jsonObject(chat.context_refs, 'agent_chats.context_refs');
+  const found = ORIGIN_REFS.find(([, keys]) => keys.some((key) => refs[key] != null));
+  if (found) return found[0];
+  return chat.action_id ? 'action' : 'chat';
+}
 function summary(chat: Chat, outputKind: string | null, label: string | null, running: boolean) {
   return agentChatSummarySchema.parse({
     ...chat,
+    origin: chatOrigin(chat),
     running,
     target_label: label,
     output_kind: outputKind,
