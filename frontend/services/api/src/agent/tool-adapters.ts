@@ -75,10 +75,14 @@ function agentPage(schema: z.ZodType | undefined) {
       .describe(`How many rows to return, at most ${max}; omit for ${fallback}.`),
   };
 }
-const searchResults = z.object({ results: z.array(z.object({ id: z.string() })) });
+const fetchedRecord = z.object({ id: z.string() });
+const searchResults = z.object({ results: z.array(fetchedRecord) });
 /** `fetch` and `search` name their records by `id`, not as artifact references; they are still what the read supplied. */
-function namedRecords(name: string, data: Record<string, Json>): string[] {
-  if (name === 'fetch') return typeof data.id === 'string' ? [data.id] : [];
+function namedRecords(name: string, data: unknown): string[] {
+  if (name === 'fetch') {
+    const fetched = fetchedRecord.safeParse(data);
+    return fetched.success ? [fetched.data.id] : [];
+  }
   if (name === 'search') return searchResults.parse(data).results.map((result) => result.id);
   return [];
 }
