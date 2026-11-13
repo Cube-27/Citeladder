@@ -360,54 +360,32 @@ export function SidebarRecordRows({ children }: Readonly<{ children: ReactNode }
 }
 
 /**
- * One record row: its title over a caption line, current when it is the page.
- * When the sidebar cuts either line, hovering or focusing the row shows both
- * in full.
+ * One record row: its title on one line, a spinner after it while the record
+ * works, current when it is the page. When the sidebar cuts the title,
+ * hovering or focusing the row shows it in full.
  */
 export function SidebarRecordRow({
   href,
   active,
   title,
-  meta,
-}: Readonly<{ href: string; active: boolean; title: string; meta: ReactNode }>) {
+  working = false,
+}: Readonly<{ href: string; active: boolean; title: string; working?: boolean }>) {
   return (
     <li>
       <SidebarTextTooltip>
         <Link
           to={href}
           aria-current={active ? 'page' : undefined}
-          className={cn(
-            sidebarNavRowClasses(active, true),
-            'h-auto flex-col items-stretch gap-0.5 py-2',
-          )}
+          className={sidebarNavRowClasses(active, true)}
         >
-          <span data-sidebar-text="title" className="truncate">
+          <span data-sidebar-text="title" className="min-w-0 flex-1 truncate">
             {title}
           </span>
-          {meta}
+          {working ? <Spinner label="Working" className="text-ink-muted" /> : null}
         </Link>
       </SidebarTextTooltip>
     </li>
   );
-}
-
-/** A record row's caption line, or a working marker while the record runs. */
-export function SidebarRecordMeta({
-  working,
-  children,
-}: Readonly<{ working?: boolean; children?: ReactNode }>) {
-  if (working)
-    return (
-      <span className={textRole('caption', 'flex items-center gap-2')}>
-        <Spinner className="text-ink-muted" />
-        Working…
-      </span>
-    );
-  return children ? (
-    <span data-sidebar-text="meta" className={textRole('caption', 'truncate')}>
-      {children}
-    </span>
-  ) : null;
 }
 
 /** A row's line (`data-sidebar-text="title"` or `"meta"`) and its full text. */

@@ -222,9 +222,9 @@ describe('PerformanceScreen evidence states', () => {
     await waitFor(() => expect(dashboardRead && readinessRead).toBe(true));
     // The `status` announcement is held back until the spinner becomes visible.
     expect(await screen.findByRole('status', { name: 'Loading performance…' })).toBeInTheDocument();
-    expect(screen.queryByText('No search performance evidence yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No imported history')).not.toBeInTheDocument();
     act(() => release());
-    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(await screen.findByText('No imported history')).toBeVisible();
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });
 
@@ -233,7 +233,7 @@ describe('PerformanceScreen evidence states', () => {
       http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(dashboard())),
     );
     const { unmount } = renderPerformance();
-    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(await screen.findByText('No imported history')).toBeVisible();
     await waitFor(() => expect(screen.getByTestId('sync-now-button')).toBeDisabled());
     unmount();
 
@@ -245,7 +245,7 @@ describe('PerformanceScreen evidence states', () => {
       ),
     );
     renderPerformance();
-    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(await screen.findByText('No imported history')).toBeVisible();
     expect(screen.getByTestId('sync-now-button')).toBeEnabled();
   });
 
@@ -267,7 +267,7 @@ describe('PerformanceScreen evidence states', () => {
 
     // The dashboard alone controls first paint: the advisory readiness ladder
     // must not hold the whole surface on the slowest of two independent reads.
-    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(await screen.findByText('No imported history')).toBeVisible();
     expect(screen.queryByTestId('readiness-ladder')).not.toBeInTheDocument();
 
     act(() => release());
@@ -317,7 +317,7 @@ describe('PerformanceScreen evidence states', () => {
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });
 
-  it('shows first-use guidance without metric or table scaffolding', async () => {
+  it('shows no metric or table scaffolding before the first import', async () => {
     let tableReads = 0;
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(dashboard())),
@@ -329,7 +329,7 @@ describe('PerformanceScreen evidence states', () => {
 
     renderPerformance();
 
-    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(await screen.findByText('No imported history')).toBeVisible();
     expect(screen.queryByTestId('metric-card-strip')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('tablist', { name: 'Performance breakdowns' }),
@@ -360,7 +360,6 @@ describe('PerformanceScreen evidence states', () => {
 
     expect(await screen.findByTestId('metric-card-strip')).toBeVisible();
     await waitFor(() => expect(tableSnapshot).toBe(SNAPSHOT));
-    expect(screen.queryByText('No search performance evidence yet')).not.toBeInTheDocument();
   });
 
   it('keeps GA4-only evidence visible without empty GSC tables', async () => {
@@ -440,7 +439,7 @@ describe('PerformanceScreen evidence states', () => {
 
     renderPerformance();
 
-    expect(await screen.findByText('No search performance evidence yet')).toBeVisible();
+    expect(await screen.findByText('No imported history')).toBeVisible();
     expect(screen.queryByTestId('bing-panel')).not.toBeInTheDocument();
   });
 
@@ -583,7 +582,6 @@ describe('PerformanceScreen evidence states', () => {
     renderPerformance();
 
     expect(await screen.findByTestId('bing-panel')).toBeVisible();
-    expect(screen.queryByText('No search performance evidence yet')).not.toBeInTheDocument();
   });
 });
 

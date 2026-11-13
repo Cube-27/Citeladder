@@ -150,23 +150,6 @@ export function formatDisplayShortDate(timestamp: string, timeZone: string): str
   }
 }
 
-/** A persisted instant in a narrow list line ("Sep 25, 10:00 AM"), zone left out. */
-export function formatDisplayShortDateTime(timestamp: string, timeZone: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) return timestamp;
-  try {
-    return new Intl.DateTimeFormat('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      timeZone,
-    }).format(date);
-  } catch {
-    return timeZone === 'UTC' ? timestamp : formatDisplayShortDateTime(timestamp, 'UTC');
-  }
-}
-
 export function formatScore(score: number | null): string {
   return score === null || Number.isNaN(score)
     ? availabilityLabel('not_measured')

@@ -176,9 +176,9 @@ export function windowLength(window: PerformanceWindow): number {
   return Math.round((end - start) / 86_400_000) + 1;
 }
 
-/** "1 Jan – 28 Jan 2026", or an explicit note when the range is unresolved. */
+/** "1 Jan – 28 Jan 2026", or empty when the range is unresolved. */
 export function describeWindow(window: PerformanceWindow): string {
-  if (!window.window_start || !window.window_end) return 'No dates resolved';
+  if (!window.window_start || !window.window_end) return '';
   return `${formatWindowDate(window.window_start)} – ${formatWindowDate(window.window_end)}`;
 }
 

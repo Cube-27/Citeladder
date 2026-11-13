@@ -101,6 +101,7 @@ function ChatView({
 
   return (
     <ListScreen
+      title={detail.chat.title}
       // Fill the viewport below the shell chrome: only the thread scrolls and
       // the composer stays under it. Kept identical in chat- and new-chat-screen.
       fill

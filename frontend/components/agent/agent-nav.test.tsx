@@ -24,12 +24,7 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-function chat(
-  id: string,
-  title: string,
-  running: boolean,
-  extra: Partial<{ target_label: string; last_activity_at: string }> = {},
-) {
+function chat(id: string, title: string, running: boolean) {
   return {
     id,
     project_id: PROJECT,
@@ -41,7 +36,6 @@ function chat(
     last_activity_at: NOW,
     created_at: NOW,
     running,
-    ...extra,
   };
 }
 
@@ -63,26 +57,6 @@ afterEach(() => {
   document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Max-Age=0; Path=/`;
 });
 
-it('tells chats with one title apart by their second line', async () => {
-  serveChats([
-    chat('33333333-3333-4333-8333-333333333331', 'Analyze the Site Health issues', false, {
-      last_activity_at: '2026-09-25T14:05:00Z',
-    }),
-    chat('33333333-3333-4333-8333-333333333332', 'Analyze the Site Health issues', false, {
-      target_label: 'example.com/pricing',
-      last_activity_at: '2026-09-24T09:30:00Z',
-    }),
-  ]);
-  renderWithProviders(<AgentNav />, { projectSelection: { activeProjectId: PROJECT } });
-
-  const rows = await screen.findAllByRole('link', { name: /Analyze the Site Health issues/ });
-  // Intl may join the time and its AM/PM with a narrow no-break space.
-  expect(rows.map((row) => row.textContent?.replace(/\s/g, ' '))).toEqual([
-    'Analyze the Site Health issuesSep 25, 2:05 PM',
-    'Analyze the Site Health issuesexample.com/pricing · Sep 24, 9:30 AM',
-  ]);
-});
-
 it('shows a cut chat title in full on keyboard focus', async () => {
   // jsdom lays nothing out; report every line as wider than the sidebar.
   vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
@@ -100,8 +74,8 @@ it('shows a cut chat title in full on keyboard focus', async () => {
 
   const row = await screen.findByRole('link', { name: /Analyze the Site Health issues/ });
   focusByKeyboard(row);
-  expect(await screen.findByRole('tooltip')).toHaveTextContent(
-    'Analyze the Site Health issues on pricingSep 25, 10:00 AM',
+  expect((await screen.findByRole('tooltip')).textContent).toBe(
+    'Analyze the Site Health issues on pricing',
   );
 });
 
@@ -114,11 +88,13 @@ it('marks every chat whose turn is still running', async () => {
   renderWithProviders(<AgentNav />, { projectSelection: { activeProjectId: PROJECT } });
 
   const running = await screen.findByRole('link', { name: /Fix mixed content/ });
-  expect(within(running).getByText('Working…')).toBeVisible();
+  expect(within(running).getByRole('status', { name: 'Working' })).toBeVisible();
   expect(
-    within(screen.getByRole('link', { name: /Plan the quarter/ })).getByText('Working…'),
+    within(screen.getByRole('link', { name: /Plan the quarter/ })).getByRole('status', {
+      name: 'Working',
+    }),
   ).toBeVisible();
   expect(
-    within(screen.getByRole('link', { name: /Earlier question/ })).queryByText('Working…'),
+    within(screen.getByRole('link', { name: /Earlier question/ })).queryByRole('status'),
   ).not.toBeInTheDocument();
 });
