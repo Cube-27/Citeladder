@@ -26,7 +26,7 @@ import type {
   CoverageState,
   SiteArchitecture,
 } from '@citeladder/contracts';
-import { PLACEHOLDER } from '@/lib/site-health/status';
+import { formatPercent } from '@/lib/format';
 
 const COVERAGE_LABELS: Record<CoverageState, string> = {
   complete: 'Complete coverage',
@@ -57,10 +57,6 @@ const DEPTH_LABELS = {
   depth_2: 'Depth 2',
   depth_3_plus: 'Depth 3+',
 } as const;
-
-function formatPercentage(value: number | null): string {
-  return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
-}
 
 export function ArchitecturePanel({
   workspaceId,
@@ -301,7 +297,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
                 {
                   key: 'incoming',
                   label: 'Have incoming links',
-                  value: linkedShare === null ? null : formatPercentage(linkedShare),
+                  value: linkedShare === null ? null : formatPercent(linkedShare),
                   sub: `${linking.pages_with_incoming_count} pages`,
                 },
                 orphanSegment({
@@ -335,7 +331,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
                 <MeterRow
                   key={bucket.key}
                   name={DEPTH_LABELS[bucket.key]}
-                  figure={`${bucket.page_count} (${formatPercentage(bucket.percentage)})`}
+                  figure={`${bucket.page_count} (${formatPercent(bucket.percentage)})`}
                   value={bucket.percentage === null ? null : Math.round(bucket.percentage * 100)}
                   label={`${DEPTH_LABELS[bucket.key]} share of pages`}
                   tone={{ series: 1 }}

@@ -74,7 +74,7 @@ export function useRangeProjection(
     if (missing) enqueue(missing);
     // `missing` is a stable string pair derived from the response; re-running
     // on the mutation object or `enqueue` itself would loop.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react/exhaustive-deps
   }, [workspaceId, projectId, missing?.from, missing?.to]);
 
   const task = useQuery({

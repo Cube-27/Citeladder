@@ -9,6 +9,7 @@ import { aiReferralSourceRowSchema, aiReferralsSchema } from '@citeladder/contra
 import { sql } from 'kysely';
 import { z } from 'zod';
 
+import { DAY_MS } from '../calendar-days.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { isoDateText } from '../db/timestamps.ts';
@@ -18,7 +19,6 @@ import { firstOf } from '../lists.ts';
 
 const analytics = policy.analytics;
 const PRESET_DAYS: Readonly<Record<string, number>> = analytics.preset_range_days;
-const DAY_MS = 86_400_000;
 
 /** An invalid granularity, range or window: the route answers 422. */
 export class AiReferralsQueryError extends Error {}

@@ -1,5 +1,6 @@
 /** Content, identity, question and product readiness checks over persisted facts. */
 import { normalizeDomain } from '../../analysis/domains.ts';
+import { DAY_MS } from '../../calendar-days.ts';
 import { compareText } from '../../text-order.ts';
 import { analysisPolicy } from './policy.ts';
 import { passFail } from './delivery-checks.ts';
@@ -111,7 +112,6 @@ function contentDatePresent(facts: Facts): CheckResult {
   return [passFail(published || modified), evidence];
 }
 
-const DAY_MS = 86_400_000;
 /**
  * The newest declared date against the audit time. An undated page is the date
  * check's finding, not this one's; a date that cannot be read stays unknown.

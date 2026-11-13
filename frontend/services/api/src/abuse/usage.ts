@@ -12,6 +12,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { sql } from 'kysely';
 
+import { DAY_MS } from '../calendar-days.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
 import { abuse, budgets, type BudgetName, type BudgetSubject } from '../config/abuse.ts';
@@ -214,8 +215,6 @@ async function addToWindow(
     .executeTakeFirst();
   return added !== undefined;
 }
-
-const DAY_MS = 86_400_000;
 
 /** Delete a bounded batch of security events older than the retention cutoff. */
 export async function pruneSecurityEvents(

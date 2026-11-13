@@ -73,7 +73,7 @@ function comparison(saved: Awaited<ReturnType<typeof savedProject>>, id: string)
     throw error('unsupported_target', 'Competitor must have one canonical saved website');
   return target;
 }
-export async function resolveCompetitor(target: CanonicalTarget) {
+async function resolveCompetitor(target: CanonicalTarget) {
   let status = 0;
   try {
     const site = await resolveSite(target.origin, async (url, options) => {
