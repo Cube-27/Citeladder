@@ -1,6 +1,7 @@
 import { Fragment } from 'react';
 
 import {
+  MenuItem,
   MenuLabel,
   MenuRadioGroup,
   MenuRadioItem,
@@ -37,6 +38,7 @@ export function useSkillChoice({
   hasDocument = false,
   inheritedSkillId,
   hasAction = false,
+  pinned,
 }: Readonly<{
   value: string | null | undefined;
   onChange: (skillId: string | null | undefined) => void;
@@ -44,27 +46,36 @@ export function useSkillChoice({
   hasDocument?: boolean;
   inheritedSkillId?: string | null;
   hasAction?: boolean;
+  /** A workflow a handoff pinned: the default until a skill is picked or it is removed. */
+  pinned?: Readonly<{ label: string; onRemove: () => void }>;
 }>) {
-  const skills = useSkillCatalog();
-  const defaultLabel = inheritedLabel(
-    skillLabel(skills, inheritedSkillId ?? null),
+  const catalog = useAgentCatalog();
+  const { skills } = catalog;
+  const defaultLabel = defaultLabelFor(skills, {
+    pinned,
+    inheritedSkillId,
     hasDocument,
     hasAction,
-  );
-  const picked = skillLabel(skills, value ?? null);
-  const hasDefault = defaultLabel !== null;
+  });
+  // An id the catalog has not named (yet) is still a pick, never Automatic.
+  const picked = value ? (skillLabel(skills, value) ?? '…') : null;
+  const isDefault = value === undefined && defaultLabel !== null;
   // A picked skill or a default the turn continues with reads as a chip;
   // removing a pick returns to the default, removing the default is Automatic.
   let chip: Readonly<{ label: string; onRemove: () => void }> | undefined;
   if (picked) chip = { label: `Skill: ${picked}`, onRemove: () => onChange(undefined) };
-  else if (value === undefined && hasDefault)
-    chip = { label: `Skill: ${defaultLabel}`, onRemove: () => onChange(null) };
+  else if (isDefault)
+    chip = {
+      label: `Skill: ${defaultLabel}`,
+      onRemove: pinned?.onRemove ?? (() => onChange(null)),
+    };
   return {
     skills,
+    status: catalog.read.status,
     chip,
-    current: picked ?? (value === undefined ? defaultLabel : null) ?? 'Automatic',
+    current: picked ?? (isDefault ? defaultLabel : 'Automatic'),
     defaultLabel,
-    radioValue: value === undefined && hasDefault ? INHERIT : (value ?? AUTOMATIC),
+    radioValue: isDefault ? INHERIT : (value ?? AUTOMATIC),
     choose: (next: string) => onChange(selectedValue(next)),
   };
 }
@@ -107,6 +118,9 @@ export function SkillOptions({
         <MenuRadioItem value={INHERIT}>{choice.defaultLabel}</MenuRadioItem>
       ) : null}
       <MenuRadioItem value={AUTOMATIC}>Automatic</MenuRadioItem>
+      {/* Until the catalog is read, an empty list is not a plan without skills. */}
+      {choice.status === 'pending' ? <MenuItem disabled>Loading skills…</MenuItem> : null}
+      {choice.status === 'error' ? <MenuItem disabled>{"Couldn't load skills"}</MenuItem> : null}
       {[...groups].map(([group, rows]) => (
         <Fragment key={group}>
           <MenuSeparator />
@@ -122,7 +136,23 @@ export function SkillOptions({
   );
 }
 
-function inheritedLabel(skill: string | null, hasDocument: boolean, hasAction: boolean) {
+/** What an unpicked turn runs: the pinned workflow, else what the chat or its Action continues with. */
+function defaultLabelFor(
+  skills: AgentSkill[],
+  {
+    pinned,
+    inheritedSkillId,
+    hasDocument,
+    hasAction,
+  }: Readonly<{
+    pinned?: Readonly<{ label: string }>;
+    inheritedSkillId?: string | null;
+    hasDocument: boolean;
+    hasAction: boolean;
+  }>,
+) {
+  if (pinned) return pinned.label;
+  const skill = skillLabel(skills, inheritedSkillId ?? null);
   if (skill) return `Continue with ${skill}`;
   if (hasDocument) return "Continue this chat's skill";
   return hasAction ? 'From attached Action' : null;

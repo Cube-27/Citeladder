@@ -3,7 +3,7 @@ title: 'Content optimization'
 description: 'See the content angles AI answers cite competitor and publisher pages for, then improve the page that covers each one or plan a new page.'
 group: 'Improve with Agent'
 order: 215
-updated: '2026-11-10'
+updated: '2026-11-13'
 ---
 
 Content optimization finds content you could improve or create. It starts from the pages AI answers cite: when answers to your tracked prompts cite competitor and publisher content pages on an angle, and no page of yours is cited for it, CiteLadder opens an Action.
@@ -49,8 +49,8 @@ The **Diagnosis**, **Implementation** and linked chats follow, as on every Actio
 
 ## Hand the work to the Agent
 
-- **Write this page**, on a planned page, opens **New chat** with the Action and its content gap attached and the **Article or guide** workflow selected.
-- **Work on this**, on an existing page, opens **New chat** with the Action and the page's URL attached and the **Refresh an existing page** workflow selected.
+- **Write this page**, on a planned page, opens **New chat** with the Action and its content gap attached and **Skill: Article or guide** selected.
+- **Work on this**, on an existing page, opens **New chat** with the Action and the page's URL attached and **Skill: Optimize a content page** selected.
 
 Describe what you want and send. Work in the Agent uses AI credits like any chat, and the result is a draft for your review; see [Outputs and revisions](/agent/outputs/).
 

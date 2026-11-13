@@ -56,50 +56,13 @@ export function Composer({
   stopping?: boolean;
 }>) {
   const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
-  const pastes = commands?.pastes;
-  const hasChips =
-    attachment !== undefined ||
-    skill !== undefined ||
-    chips.length > 0 ||
-    (commands?.mentions.length ?? 0) > 0 ||
-    (pastes?.items.length ?? 0) > 0;
   return (
     <ComposerFrame
       onSubmit={() => {
         if (canSend) onSubmit();
       }}
       chipsLabel="Context for this request"
-      chips={
-        hasChips ? (
-          <>
-            {attachment ? (
-              <RemovableChip label={attachment.label} onRemove={attachment.onRemove} />
-            ) : null}
-            {skill ? <RemovableChip label={skill.label} onRemove={skill.onRemove} /> : null}
-            {chips.map((chip) => (
-              <RemovableChip
-                key={chip.key}
-                label={chip.label}
-                onRemove={onRemoveChip ? () => onRemoveChip(chip) : undefined}
-              />
-            ))}
-            {commands?.mentions.map((mention) => (
-              <RemovableChip
-                key={mention.id}
-                label={`@${mention.label}`}
-                onRemove={() => commands.onRemoveMention(mention.id)}
-              />
-            ))}
-            {pastes?.items.map((paste) => (
-              <PastedTextChip
-                key={paste.key}
-                text={paste.text}
-                onRemove={() => pastes.remove(paste.key)}
-              />
-            ))}
-          </>
-        ) : null
-      }
+      chips={composerChips({ lead: [attachment, skill], chips, onRemoveChip, commands })}
       field={
         <>
           <label htmlFor={id} className="sr-only">
@@ -145,5 +108,54 @@ export function Composer({
         )
       }
     />
+  );
+}
+
+type LeadChip = Readonly<{ label: string; onRemove: () => void }> | undefined;
+
+/** The chip row: the Action and skill first, then context, mentions and pastes; null when empty. */
+function composerChips({
+  lead,
+  chips,
+  onRemoveChip,
+  commands,
+}: Readonly<{
+  lead: readonly LeadChip[];
+  chips: ContextChip[];
+  onRemoveChip?: (chip: ContextChip) => void;
+  commands?: ComposerCommands;
+}>) {
+  const leading = lead.filter((chip) => chip !== undefined);
+  const mentions = commands?.mentions ?? [];
+  const pastes = commands?.pastes;
+  const pasted = pastes?.items ?? [];
+  if (leading.length + chips.length + mentions.length + pasted.length === 0) return null;
+  return (
+    <>
+      {leading.map((chip) => (
+        <RemovableChip key={chip.label} label={chip.label} onRemove={chip.onRemove} />
+      ))}
+      {chips.map((chip) => (
+        <RemovableChip
+          key={chip.key}
+          label={chip.label}
+          onRemove={onRemoveChip ? () => onRemoveChip(chip) : undefined}
+        />
+      ))}
+      {mentions.map((mention) => (
+        <RemovableChip
+          key={mention.id}
+          label={`@${mention.label}`}
+          onRemove={() => commands?.onRemoveMention(mention.id)}
+        />
+      ))}
+      {pasted.map((paste) => (
+        <PastedTextChip
+          key={paste.key}
+          text={paste.text}
+          onRemove={() => pastes?.remove(paste.key)}
+        />
+      ))}
+    </>
   );
 }

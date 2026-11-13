@@ -210,7 +210,7 @@ describe('NewChatScreen', () => {
     expect(bodies).toEqual([{ message: 'Plan the quarter', skill_id: 'growth_plan', context: {} }]);
   });
 
-  it('sends a next step with its workflow pinned until a skill is picked instead', async () => {
+  it('sends a next step with its workflow pinned', async () => {
     const bodies = captureChats();
     mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(WORKFLOW_CATALOG)));
     const user = userEvent.setup();
@@ -229,7 +229,13 @@ describe('NewChatScreen', () => {
     const user = userEvent.setup();
     renderNewChat('?workflow=linkedin_post&prompt=Promote+the+guide');
     await screen.findByRole('button', { name: 'Remove Skill: LinkedIn post' });
-    await pickFromComposerMenu(user, /^Skills/, { role: 'menuitemradio', name: 'Growth plan' });
+    // The menu names the pin as the chip does, until a skill replaces it.
+    await openComposerSubmenu(user, /^Skills: LinkedIn post$/);
+    expect(await screen.findByRole('menuitemradio', { name: 'LinkedIn post' })).toBeChecked();
+    screen.getByRole('menuitemradio', { name: 'Growth plan' }).focus();
+    await user.keyboard('{Enter}');
+    expect(screen.queryByRole('button', { name: 'Remove Skill: LinkedIn post' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Remove Skill: Growth plan' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Send' }));
     expect(await screen.findByText(`Opened chat ${CHAT}`)).toBeInTheDocument();
     expect(bodies).toEqual([
@@ -297,9 +303,16 @@ describe('NewChatScreen', () => {
       ),
       ...baseHandlers(),
     );
+    const user = userEvent.setup();
     renderNewChat('');
 
     expect(await screen.findByText("Couldn't load skills")).toBeVisible();
+    // The + menu says so too, rather than offering only Automatic.
+    await openComposerSubmenu(user, /^Skills: Automatic$/);
+    expect(await screen.findByRole('menuitem', { name: "Couldn't load skills" })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
   });
 
   it('explains a plan without the agent instead of offering to send', async () => {

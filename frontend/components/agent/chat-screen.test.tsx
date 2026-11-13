@@ -721,7 +721,7 @@ describe('ChatScreen', () => {
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Make it shorter');
   });
 
-  it('shows the workflow inherited from the chat without promising automatic routing', async () => {
+  it('shows the skill inherited from the chat until it is removed for Automatic', async () => {
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
       http.get(`/api/v1/agent/chats/${CHAT}`, () =>
@@ -733,21 +733,21 @@ describe('ChatScreen', () => {
     );
     const user = userEvent.setup();
     renderChat();
-    const inherited = 'Skill: Continue with Search Console optimization';
+    const continued = 'Continue with Search Console optimization';
+    const inherited = `Skill: ${continued}`;
     expect(await screen.findByText(inherited)).toBeVisible();
     await openComposerSubmenu(user, /^Skills: Continue with Search Console optimization$/);
-    expect(await screen.findByRole('menuitemradio', { name: 'Automatic' })).toBeVisible();
-    const picked = screen.getByRole('menuitemradio', { name: 'Search Console optimization' });
-    expect(
-      screen.getByRole('menuitemradio', { name: 'Continue with Search Console optimization' }),
-    ).toBeChecked();
-    picked.focus();
+    expect(await screen.findByRole('menuitemradio', { name: continued })).toBeChecked();
+    screen.getByRole('menuitemradio', { name: 'Search Console optimization' }).focus();
     await user.keyboard('{Enter}');
-    // Removing a pick returns to what the chat continues with.
+    // Removing a pick returns to what the chat continues with; removing that is Automatic.
     await user.click(
       await screen.findByRole('button', { name: 'Remove Skill: Search Console optimization' }),
     );
     expect(screen.getByText(inherited)).toBeVisible();
+    await user.click(screen.getByRole('button', { name: `Remove ${inherited}` }));
+    await openComposerSubmenu(user, /^Skills: Automatic$/);
+    expect(await screen.findByRole('menuitemradio', { name: 'Automatic' })).toBeChecked();
   });
 
   it('follows the thread in its own region until the reader scrolls up', async () => {

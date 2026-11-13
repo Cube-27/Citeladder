@@ -232,8 +232,9 @@ for (const width of [1280, 390]) {
       await expect(page.getByText('Selected crawl robots policy', { exact: true })).toBeVisible();
       // Context is described in plain words; record identities never reach the reader.
       await expect(page.getByText(RUN)).toHaveCount(0);
+      // The thread's replies carry the same words as captions; the chip has a remove control.
       await expect(
-        page.getByText('Skill: Continue with Growth plan', { exact: true }),
+        page.getByRole('button', { name: 'Remove Skill: Continue with Growth plan', exact: true }),
       ).toBeVisible();
       await reply.fill('Draft kept while working');
       // While the turn runs, Stop takes Send's place and drafting continues.
@@ -297,7 +298,9 @@ for (const width of [1280, 390]) {
       await expect(reply).toHaveValue('/');
       await page.getByRole('menuitemradio', { name: 'Growth plan', exact: true }).click();
       await expect(reply).toBeFocused();
-      await expect(page.getByText('Skill: Growth plan', { exact: true })).toBeVisible();
+      await expect(
+        page.getByRole('button', { name: 'Remove Skill: Growth plan', exact: true }),
+      ).toBeVisible();
       await page.getByRole('button', { name: 'Add a skill or Action' }).click();
       await page.getByRole('menuitem', { name: 'Skills: Growth plan' }).click();
       await page.getByRole('menuitemradio', { name: 'Automatic', exact: true }).click();

@@ -77,13 +77,16 @@ function NewChat({
     setTyped,
   );
   const skill = useSkillChoice({
-    value: skillId,
-    // A skill picked from the menu replaces a pinned workflow.
+    value: pinnedId ? undefined : skillId,
+    // A skill or Automatic picked from the menu replaces a pinned workflow.
     onChange: (next) => {
-      setPinnedId(undefined);
+      if (next !== undefined) setPinnedId(undefined);
       setSkillId(next);
     },
     hasAction: Boolean(actionId),
+    pinned: pinnedId
+      ? { label: pinned?.label ?? '…', onRemove: () => setPinnedId(undefined) }
+      : undefined,
   });
   // A workflow is sent by id; the server validates it and pins its skill.
   const start = () =>
@@ -136,14 +139,7 @@ function NewChat({
             disabled={!access.canSend}
             placeholder="Ask a question or describe the work"
             attachment={attachment}
-            skill={
-              pinnedId
-                ? {
-                    label: `Skill: ${pinned?.label ?? '…'}`,
-                    onRemove: () => setPinnedId(undefined),
-                  }
-                : skill.chip
-            }
+            skill={skill.chip}
             chips={contextChips(context)}
             commands={commands}
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
