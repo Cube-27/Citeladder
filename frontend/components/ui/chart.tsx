@@ -203,19 +203,23 @@ export function ChartLegend({
   entries,
   line = false,
   markerLabel,
+  compact = false,
 }: Readonly<{
   entries: readonly ChartLegendEntry[];
   line?: boolean;
   /** The key for event markers drawn across the plot (a dashed `line-control` rule). */
   markerLabel?: string;
+  /** Caption-size names and values instead of `body-sm`. */
+  compact?: boolean;
 }>) {
+  const item = cn(
+    compact ? 'text-caption' : 'text-body-sm',
+    'inline-flex items-center gap-2 whitespace-nowrap',
+  );
   return (
     <ul aria-hidden className="flex flex-wrap gap-x-6 gap-y-2">
       {entries.map((entry) => (
-        <li
-          key={entry.name}
-          className="text-body-sm inline-flex items-center gap-2 whitespace-nowrap"
-        >
+        <li key={entry.name} className={item}>
           <ChartSwatch tone={entry.tone} line={line} />
           <span className="text-ink-secondary">{entry.name}</span>
           {entry.value === undefined ? null : (
@@ -224,7 +228,7 @@ export function ChartLegend({
         </li>
       ))}
       {markerLabel ? (
-        <li className="text-body-sm inline-flex items-center gap-2 whitespace-nowrap">
+        <li className={item}>
           <svg width={12} height={3} viewBox="0 0 12 3" className="shrink-0">
             <line
               x1={0}
@@ -273,9 +277,10 @@ export function ChartTipRow({
   tone,
   name,
   value,
-}: Readonly<{ tone: ChartTone; name: string; value: string }>) {
+  compact = false,
+}: Readonly<{ tone: ChartTone; name: string; value: string; compact?: boolean }>) {
   return (
-    <div className="text-body-sm flex items-center gap-2">
+    <div className={cn(compact ? 'text-caption' : 'text-body-sm', 'flex items-center gap-2')}>
       <ChartSwatch tone={tone} line />
       <span className="text-ink-secondary min-w-0 flex-1 truncate">{name}</span>
       <span className="text-ink tabular-nums">{value}</span>

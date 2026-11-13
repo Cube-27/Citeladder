@@ -4,7 +4,9 @@ import { useSearchParams } from 'react-router-dom';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
+import { Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { DisplayTime } from '@/components/ui/display-time';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
@@ -185,7 +187,8 @@ function linksControls({
         disabled={!links.length}
         onClick={() => downloadInternalLinksCsv(links)}
       >
-        Export
+        <Icon icon={Download} />
+        Export CSV
       </Button>
     ),
   };

@@ -63,9 +63,9 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     expect(await screen.findByText('Architecture is not available yet.')).toBeVisible();
     // The pages export belongs to the Pages table's toolbar: another tab has none.
     expect(screen.getByRole('button', { name: 'Run new crawl' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('tab', { name: 'Pages' }));
-    expect(await screen.findByRole('button', { name: 'Export' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Export CSV' })).toBeInTheDocument();
   });
 
   it('opens on Pages for a finished crawl, from the loading frame onward', async () => {
@@ -426,7 +426,7 @@ describe('SiteHealthScreen — before the first crawl', () => {
     expect(screen.queryByTestId('status-strip')).not.toBeInTheDocument();
     const runButtons = screen.getAllByRole('button', { name: 'Run new crawl' });
     expect(runButtons).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: 'Export' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
 
     await waitFor(() => expect(monitoredRequests).toBe(1));
     await user.click(runButtons[0]!);

@@ -53,7 +53,7 @@ type ScreenBands<T extends string> = Readonly<{
   /**
    * The selected tab's control row, drawn as the `FilterBar`: view, search,
    * All filters, then the count and the action at its end (D57). A row of
-   * filters alone (a detail page's scope) follows the header's title instead.
+   * filters alone follows the tabs, or with no tabs the header's title (D60).
    */
   controls?: FilterBarProps;
   children?: ReactNode;
@@ -181,13 +181,20 @@ function PageShell<T extends string>({
   // A control row holding only filters is one button: it follows the title
   // rather than taking a band of its own, its menus opening toward the content.
   const headerFilters = !tabs && controls && filtersOnly(controls) ? controls.filters : undefined;
+  // On a tabbed page, a row of filters (and its live note) follows the tabs (D60).
+  const tabControls = tabs && controls && joinsTabRow(controls) ? controls : undefined;
   const tabBand = tabs ? (
-    <div data-page-band="control">
+    <div data-page-band="control" className="flex min-w-0 flex-wrap items-center gap-2">
       <TabRow {...tabs} />
+      {tabControls ? (
+        <div className="flex min-w-0 flex-1">
+          <FilterBar {...tabControls} />
+        </div>
+      ) : null}
     </div>
   ) : null;
   const filterBand =
-    controls && !headerFilters ? (
+    controls && !headerFilters && !tabControls ? (
       <div data-page-band="control">
         <FilterBar {...controls} />
       </div>
@@ -239,6 +246,13 @@ function filtersOnly(controls: FilterBarProps): controls is FilterBarProps & {
     !controls.search &&
     controls.status === undefined &&
     !controls.actions
+  );
+}
+
+/** Whether a control row is filters, with at most a live note: no view, search or action. */
+function joinsTabRow(controls: FilterBarProps) {
+  return (
+    Boolean(controls.filters?.length) && !controls.view && !controls.search && !controls.actions
   );
 }
 

@@ -89,6 +89,7 @@ export function TrendChart({
   yFormat = defaultFormat,
   format = yFormat,
   legend = true,
+  compact = false,
   eventsLabel,
   directLabels = false,
 }: Readonly<{
@@ -110,6 +111,8 @@ export function TrendChart({
   /** A value in the legend, tooltip and table; defaults to `yFormat`. */
   format?: (value: number) => string;
   legend?: boolean;
+  /** Caption-size legend and hover card, where a long roster crowds the card. */
+  compact?: boolean;
   /** The legend's name for the event markers, e.g. "Marked implemented". */
   eventsLabel?: string;
   /**
@@ -164,6 +167,7 @@ export function TrendChart({
       {legend ? (
         <ChartLegend
           line
+          compact={compact}
           markerLabel={events.length ? eventsLabel : undefined}
           entries={lines.map((line) => ({
             name: line.name,
@@ -215,6 +219,7 @@ export function TrendChart({
                 tone={line.tone}
                 name={line.name}
                 value={shown(line.values[active])}
+                compact={compact}
               />
             ))}
             {data[active]?.versionChange ? (

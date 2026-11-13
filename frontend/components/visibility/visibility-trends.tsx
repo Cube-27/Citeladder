@@ -339,6 +339,7 @@ function HistoryLineChart({
         series={competitors}
         yMax={100}
         yFormat={(value) => `${Math.round(value)}%`}
+        compact
         directLabels
       />
     </Stack>
