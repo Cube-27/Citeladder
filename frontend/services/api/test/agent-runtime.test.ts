@@ -729,26 +729,19 @@ describe('Agent runtime on PostgreSQL', () => {
     ]);
     expect(events).toHaveLength(6);
     expect(events).toEqual(
-      expect.arrayContaining([
-        {
+      expect.arrayContaining(
+        [
+          ['call_a', 'completed'],
+          ['call_b', 'completed'],
+          ['call_c', 'refused'],
+        ].map(([call_id, status]) => ({
           ordinal: 1,
-          call_id: 'call_a',
+          call_id,
           tool: 'read_evidence',
-          status: 'completed',
-        },
-        {
-          ordinal: 1,
-          call_id: 'call_b',
-          tool: 'read_evidence',
-          status: 'completed',
-        },
-        {
-          ordinal: 1,
-          call_id: 'call_c',
-          tool: 'read_evidence',
-          status: 'refused',
-        },
-      ]),
+          status,
+          target: null,
+        })),
+      ),
     );
     // Each model call is followed by its reads, which are listed as they finished.
     const rows = (await progress(db, await fixtures.run(run.id))).map(

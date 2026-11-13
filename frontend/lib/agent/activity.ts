@@ -69,7 +69,7 @@ const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
 };
 const OTHER_READ = { verb: VERB.read, noun: 'CiteLadder data' };
 
-type ActivityState = 'running' | 'done' | 'failed' | 'unknown';
+type ActivityState = 'running' | 'done' | 'unavailable' | 'failed' | 'unknown';
 /** One visible line of a turn's activity: "Read page", muted "…/returns". */
 export type ActivityRow = {
   key: string;
@@ -85,8 +85,10 @@ function callState(status: string): ActivityState | null {
     case 'started':
       return 'running';
     case 'completed':
-    case 'unavailable':
       return 'done';
+    // The read ran and found nothing yet: not a completed read with data.
+    case 'unavailable':
+      return 'unavailable';
     case 'failed':
       return 'failed';
     case 'refused':
@@ -104,12 +106,12 @@ function callRow(
   if (!state) return [];
   const { verb, noun } = TOOL_ACTIVITY[tool] ?? OTHER_READ;
   let outcome = '';
-  if (status === 'unavailable') outcome = 'no data yet';
+  if (state === 'unavailable') outcome = 'no data yet';
   else if (state === 'unknown') outcome = 'outcome unknown';
   return [
     {
       key,
-      verb: state === 'unknown' ? verb.done : verb[state],
+      verb: state === 'running' || state === 'failed' ? verb[state] : verb.done,
       noun,
       detail: [target, outcome].filter(Boolean).join(' · ') || null,
       state,

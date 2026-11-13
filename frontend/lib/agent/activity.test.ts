@@ -45,7 +45,7 @@ it('names each kind of step as a verb and the reader’s noun, never a tool name
     ['Searched CiteLadder', 'school uniform', 'done'],
     ['Read page', 'https://acme.example/returns', 'done'],
     ['Searched the web', 'uniform prices', 'done'],
-    ['Read search performance', 'no data yet', 'done'],
+    ['Read search performance', 'no data yet', 'unavailable'],
     ['Read CiteLadder data', null, 'done'],
     ['Saved Document 1', 'Returns page plan', 'done'],
     ['Edited Document 1', 'Returns page plan', 'done'],

@@ -1,4 +1,4 @@
-import { Check, CircleAlert, CircleHelp } from 'lucide-react';
+import { Check, CircleAlert, CircleDashed, CircleHelp } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Disclosure } from './disclosure';
@@ -8,7 +8,7 @@ import { Spinner } from './spinner';
 import { textRole } from './typography';
 import { treeBranchClasses } from './workspace';
 
-export type ChainStepStatus = 'running' | 'done' | 'failed' | 'unknown';
+export type ChainStepStatus = 'running' | 'done' | 'unavailable' | 'failed' | 'unknown';
 
 /**
  * ChainOfThought — what an assistant did for one answer (the AI Elements Chain
@@ -35,6 +35,8 @@ function StepGlyph({ status }: Readonly<{ status: ChainStepStatus }>) {
       return <Spinner className="text-ink-muted shrink-0" />;
     case 'done':
       return <Icon icon={Check} className="text-ink-muted shrink-0" />;
+    case 'unavailable':
+      return <Icon icon={CircleDashed} className="text-ink-muted shrink-0" />;
     case 'failed':
       return <Icon icon={CircleAlert} className="text-negative shrink-0" />;
     case 'unknown':
