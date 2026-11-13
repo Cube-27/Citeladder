@@ -88,3 +88,6 @@ export const CREDENTIAL_LINK_PATHS: ReadonlySet<string> = new Set([
   '/reset-password',
   '/invitations/accept',
 ]);
+
+/** Where the product's policies send Reporting API violation reports; the app Worker names it. */
+export const CSP_REPORTS_PATH = '/api/v1/client-errors/csp-reports';

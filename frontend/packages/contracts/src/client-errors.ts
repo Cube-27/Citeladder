@@ -3,7 +3,8 @@
  * error or a slow interaction: what failed or lagged and on which screen,
  * never what the reader typed or viewed. The body is strict, so an extra field
  * is refused rather than logged; who reported it comes from the session, never
- * from here. `CSP_REPORTS_PATH` takes the Reporting API's policy violations.
+ * from here. `cspReportBatchSchema` is the Reporting API's policy violations
+ * (`CSP_REPORTS_PATH` in route-ownership).
  */
 import { z } from 'zod';
 
@@ -94,9 +95,6 @@ export const clientReportSchema = z.discriminatedUnion('kind', [
   slowInteractionReportSchema,
 ]);
 export type ClientReport = z.infer<typeof clientReportSchema>;
-
-/** Where the product's policies send Reporting API violation reports. */
-export const CSP_REPORTS_PATH = '/api/v1/client-errors/csp-reports';
 
 /** The most reports one Reporting API delivery may carry. */
 const CSP_REPORT_BATCH_LIMIT = 20;

@@ -3,8 +3,8 @@
  * Logging collects. Nothing is stored and nothing leaves the service. Who
  * reported comes from the session when there is one, never from the body.
  */
+import { CSP_REPORTS_PATH } from '@citeladder/contracts/route-ownership';
 import {
-  CSP_REPORTS_PATH,
   clientReportSchema,
   cspReportBatchSchema,
   withoutQueryStrings,

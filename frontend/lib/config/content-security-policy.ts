@@ -1,5 +1,5 @@
 import type { AstroUserConfig } from 'astro';
-import { CSP_REPORTS_PATH } from '@citeladder/contracts/client-errors';
+import { CSP_REPORTS_PATH } from '@citeladder/contracts/route-ownership';
 import { RAZORPAY_CHECKOUT_SCRIPT } from './billing';
 import { TURNSTILE_ORIGIN } from './turnstile';
 
