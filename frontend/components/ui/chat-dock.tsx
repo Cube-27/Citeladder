@@ -269,8 +269,8 @@ export type Suggestion = Readonly<{
 }>;
 
 /**
- * The suggestions an editable field offers while focus stays in the field (a
- * `/` skill or an `@` mention): a listbox that opens just above the field at
+ * The suggestions an editable field offers while focus stays in the field (an
+ * `@` mention): a listbox that opens just above the field at
  * its full width, each option a label with an optional mark after it and an
  * optional caption. The field owns
  * the keyboard (`aria-activedescendant` names `${id}-${index}`); a press picks

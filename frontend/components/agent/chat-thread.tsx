@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 
 import { Composer } from '@/components/agent/composer';
 import { Conversation } from '@/components/agent/conversation';
-import { ComposerMenu } from '@/components/agent/composer-menu';
 import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useCancelRun, useFollowUp, type FollowUp } from '@/components/agent/use-chat-turns';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -102,15 +101,7 @@ export function ReplyComposer({
       stopping={thread.stopping}
       placeholder={placeholder}
       commands={turn.commands}
-      skill={skill.chip}
-      tools={
-        <ComposerMenu
-          menu={turn.commands.menu}
-          scope={turn.commands.scope}
-          skill={skill}
-          disabled={!access.canSend || runActive}
-        />
-      }
+      skill={skill}
     />
   );
 }

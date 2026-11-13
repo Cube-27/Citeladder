@@ -17,11 +17,6 @@ import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 const AUTOMATIC = '';
 const INHERIT = '__inherit';
 
-/** The skills, shared by the picker and the message skill labels. */
-export function useSkillCatalog(): AgentSkill[] {
-  return useAgentCatalog().skills;
-}
-
 export function skillLabel(skills: AgentSkill[], skillId: string | null): string | null {
   if (!skillId) return null;
   return skills.find((skill) => skill.id === skillId)?.label ?? null;

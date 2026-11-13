@@ -21,8 +21,11 @@ import { useDebounced } from '@/lib/use-debounced';
 
 const ACTION = 'action:';
 
-/** A message ready to send: its text with resolved Action links replaced, and every mention's id. */
-type Prepared = { message: string; mentions: string[] };
+/** A message ready to send: its text with resolved Action links replaced, every mention's id and its pastes. */
+type Prepared = { message: string; mentions: string[]; attachments: PastedText[] };
+
+/** The message to send, and how to rewrite the draft it came from. */
+type Draft = Readonly<{ message: string; edit: (change: (current: string) => string) => void }>;
 
 export type ComposerMenuState = {
   open: boolean;
@@ -50,8 +53,11 @@ export function useComposerCommands({
   pastes: ComposerPastes;
   clear: () => void;
   restore: (saved: { mentions: readonly Mention[]; pastes: readonly PastedText[] }) => void;
-  /** Resolves the message's Action links, then sends; at once when it has none. */
-  prepare: (message: string, send: (prepared: Prepared) => void) => void;
+  /**
+   * Resolves the message's Action links, then sends; at once when it has none.
+   * Resolved links become `@label` in the draft too, unless it changed meanwhile.
+   */
+  prepare: (draft: Draft, send: (prepared: Prepared) => void) => void;
   /** A send is waiting for its Action links: the composer is pending. */
   resolving: boolean;
   /** The composer's + menu; `/` opens it on its Skills submenu. */
@@ -152,12 +158,18 @@ export function useComposerCommands({
         if (resolved.length) edit((current) => applyLinks(current, resolved));
       });
     },
-    prepare: (message, send) => {
+    prepare: ({ message, edit }, send) => {
       // One send at a time: a second press while links resolve would start a second turn.
       if (resolvingRef.current) return;
-      const ids = () => latestMentions.current.map((mention) => mention.id);
+      const attachments = pasteAttachments(pastes);
+      const finish = (text: string) =>
+        send({
+          message: text,
+          mentions: latestMentions.current.map((mention) => mention.id),
+          attachments,
+        });
       if (!actionLinks(message, { origin: window.location.origin, projectId }).length) {
-        send({ message, mentions: ids() });
+        finish(message);
         return;
       }
       resolvingRef.current = true;
@@ -165,7 +177,10 @@ export function useComposerCommands({
       void resolveLinks(message)
         .then((resolved) => {
           const text = applyLinks(message, resolved);
-          send({ message: text, mentions: ids() });
+          // Typing while the links resolved is kept.
+          if (text !== message)
+            edit((current) => (current.trim() === message.trim() ? text : current));
+          finish(text);
         })
         .finally(() => {
           resolvingRef.current = false;
@@ -210,7 +225,6 @@ export function useComposerCommands({
     onRemoveMention: (id) => setMentions((current) => current.filter((item) => item.id !== id)),
     pastes: {
       items: pastes,
-      attachments: pastes.map(({ text }): PastedText => ({ kind: 'pasted_text', text })),
       add: (text) => {
         // Short, past a bound the server enforces, or before the catalog lists them: plain text.
         const fits =
@@ -235,4 +249,10 @@ export function useComposerCommands({
       setPastes(saved.pastes.map(({ text }) => keyed(text)));
     },
   };
+}
+export type ComposerState = ReturnType<typeof useComposerCommands>;
+
+/** The pastes as the request sends them. */
+function pasteAttachments(pastes: ComposerPastes['items']): PastedText[] {
+  return pastes.map(({ text }) => ({ kind: 'pasted_text', text }));
 }

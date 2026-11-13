@@ -35,7 +35,7 @@ export const AGENT_FOLLOW_LATEST_GAP_PX = 96;
  * priority, before its "Show all" row (AS2).
  */
 export const ACTIONS_GROUP_PREVIEW_ROWS = 5;
-/** New chat shows this many top Actions under "Work on this". */
+/** The composer's + menu lists this many top open Actions under Actions. */
 export const AGENT_TOP_ACTIONS = 3;
 /** Debounce for the sidebar chat search. */
 export const AGENT_CHAT_SEARCH_DEBOUNCE_MS = 250;
