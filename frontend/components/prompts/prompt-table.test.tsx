@@ -25,6 +25,8 @@ function makePrompt(n: number, overrides: Partial<Prompt> = {}): Prompt {
 
 const TOPIC_ID = '22222222-2222-4222-8222-222222222222';
 
+const ANSWER = { auditId: '33333333-3333-4333-8333-333333333333', promptIndex: 0 };
+
 const NO_OP_ACTIONS = { onEdit: () => {}, onDelete: () => {}, onToggleEnabled: () => {} };
 
 function renderTable(prompts: Prompt[]) {
@@ -88,6 +90,7 @@ describe('PromptTable pagination', () => {
                     ownedCitationRate: 0.25,
                     change: null,
                     position: 2,
+                    answer: ANSWER,
                     mentions: 4,
                     brands: [
                       brand('Acme', 'brand'),
@@ -103,6 +106,7 @@ describe('PromptTable pagination', () => {
                     ownedCitationRate: 0,
                     change: null,
                     position: null,
+                    answer: ANSWER,
                     mentions: 0,
                     brands: [],
                   },

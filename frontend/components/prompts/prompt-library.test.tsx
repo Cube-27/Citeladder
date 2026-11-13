@@ -113,6 +113,45 @@ describe('PromptLibrary first load', () => {
     expect(within(row).getByText('50%')).toBeVisible();
   });
 
+  it("opens a measured prompt's evidence on the latest run's succeeded answer", async () => {
+    const run = metric(0.5).audit_id;
+    const execution = (id: string, promptIndex: number, status: string) => ({
+      id,
+      prompt_index: promptIndex,
+      logical_engine: 'chatgpt',
+      transport_provider: 'openai',
+      status,
+      prompt_text: prompt.text,
+      error_code: '',
+      latency_ms: 1,
+    });
+    const ANSWER = '66666666-6666-4666-8666-666666666663';
+    const read: string[] = [];
+    libraryReads(async () => HttpResponse.json([metric(0.5)]));
+    mswServer.use(
+      http.get(`/api/v1/audits/${run}/executions`, () =>
+        HttpResponse.json([
+          execution('66666666-6666-4666-8666-666666666661', 1, 'succeeded'),
+          execution('66666666-6666-4666-8666-666666666662', 0, 'failed'),
+          execution(ANSWER, 0, 'succeeded'),
+        ]),
+      ),
+      http.get('/api/v1/executions/:id', ({ params }) => {
+        read.push(String(params.id));
+        return HttpResponse.json({ detail: 'Gone.', code: 'not_found' }, { status: 404 });
+      }),
+    );
+    const user = userEvent.setup();
+    renderLibrary();
+
+    await user.click(await screen.findByRole('button', { name: 'Prompt actions' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Evidence' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Execution evidence' })).toBeVisible();
+    await waitFor(() => expect(read).toContain(ANSWER));
+    expect(new Set(read)).toEqual(new Set([ANSWER]));
+  });
+
   it('draws the prompt rows without measured columns when the figures cannot be read', async () => {
     libraryReads(async () =>
       HttpResponse.json({ detail: 'Not allowed.', code: 'forbidden' }, { status: 403 }),
