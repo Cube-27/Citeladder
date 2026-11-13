@@ -44,7 +44,7 @@ export function ActionsScreen() {
   const filters = useActionFilters();
   const scope = { workspaceId, projectId };
   return (
-    <ListScreen actions={<AnalyzePageButton />} controls={{ filters: filters.definitions }}>
+    <ListScreen narrow actions={<AnalyzePageButton />} controls={{ filters: filters.definitions }}>
       {filters.group ? (
         <GroupList {...scope} query={filters.query} group={filters.group} />
       ) : (
