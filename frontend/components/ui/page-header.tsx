@@ -73,12 +73,17 @@ export function PageHeader({
         </Tooltip>
         {filters ? <div className="flex shrink-0 items-center">{filters}</div> : null}
       </div>
-      {center ? <div className="rail:flex hidden w-80 min-w-0 shrink">{center}</div> : null}
+      {/* The search takes the free width first, up to 320; the sides then share
+          the rest equally. The actions never go under their own width, so a
+          crowded bar narrows the search rather than wrapping. */}
+      {center ? (
+        <div className="rail:flex hidden max-w-80 min-w-0 grow-[999] basis-32">{center}</div>
+      ) : null}
       {actions ? (
         <div
           className={cn(
             'ms-auto flex min-w-0 flex-wrap items-center justify-end gap-2',
-            center && 'rail:flex-1 rail:basis-0',
+            center && 'rail:min-w-max rail:flex-1 rail:basis-0 rail:flex-nowrap',
           )}
         >
           {actions}
