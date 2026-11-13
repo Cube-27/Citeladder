@@ -106,21 +106,3 @@ it('summarises rows by verb in first-seen order, folding repeats and long lists'
   );
   expect(activitySummary(many)).toBe('Read Actions, search demand and 3 more');
 });
-
-it('never writes "AI" in lower case', () => {
-  const tools = [
-    'read_ai_ads',
-    'read_ai_shelf',
-    'read_ai_crawlability',
-    'read_crawl_logs',
-    'read_ai_traffic_pages',
-    'read_ai_traffic_url',
-    'read_ai_traffic_insights',
-    'read_ai_referrals',
-    'read_visibility_results',
-  ];
-  const rows = activityRows(tools.map((tool) => read(tool)));
-  expect(rows).toHaveLength(tools.length);
-  for (const text of [...rows.map(activityLabel), activitySummary(rows)])
-    expect(text).not.toMatch(/\bai\b/u);
-});

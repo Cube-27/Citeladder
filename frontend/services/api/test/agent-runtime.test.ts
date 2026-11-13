@@ -931,7 +931,10 @@ describe('Agent runtime on PostgreSQL', () => {
     const uri = `citeladder://project/${scope.projectId}`;
     const fake = scripted(
       [
-        [toolUse('load_skill', { skill_id: 'plan' }), toolUse('read_evidence', {}, 'call_read')],
+        [
+          toolUse('load_skill', { skill_id: 'plan' }),
+          toolUse('read_evidence', { query: `school\n uniform ${uri}` }, 'call_read'),
+        ],
         save('Use the supplied evidence.'),
         reply(`Read ${uri}; invented citeladder://project/${randomUUID()}.`),
       ],
@@ -971,12 +974,17 @@ describe('Agent runtime on PostgreSQL', () => {
           tool: 'read_evidence',
           status: 'completed',
           call_id: 'call_read',
+          target: 'school uniform',
         },
         { kind: 'model', ordinal: 2 },
         { kind: 'document', action: 'created', number: 1, title: 'Document' },
         { kind: 'model', ordinal: 3 },
       ],
     });
+    // The run's progress names the same target from the stored call.
+    expect(
+      detail.latest_run?.progress.flatMap((step) => (step.tool ? [[step.tool, step.target]] : [])),
+    ).toEqual([['read_evidence', 'school uniform']]);
     expect(detail.outputs).toMatchObject([
       {
         number: 1,

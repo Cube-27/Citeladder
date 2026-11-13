@@ -151,9 +151,9 @@ export function activityRows(steps: readonly AgentStep[]): ActivityRow[] {
       case 'model':
         return [];
       case 'skill':
-        return [{ key, verb: VERB.load.done, noun: 'the method', detail: null, state: 'done' }];
+        return callRow(key, { tool: 'load_skill', status: 'completed', target: null });
       case 'suggestion':
-        return [{ key, verb: VERB.suggest.done, noun: 'changes', detail: null, state: 'done' }];
+        return callRow(key, { tool: 'suggest_edits', status: 'completed', target: null });
       case 'document':
         return [
           {

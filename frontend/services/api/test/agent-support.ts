@@ -171,7 +171,7 @@ export class AgentFixtures extends VisibilityFixtures {
       {
         name: 'read_evidence',
         description: 'Read persisted fixture evidence.',
-        arguments: z.strictObject({}),
+        arguments: z.strictObject({ query: z.string().optional() }),
         read: (received) => {
           if (received.projectId !== scope.projectId)
             return Promise.reject(new Error('Wrong server-pinned project'));
