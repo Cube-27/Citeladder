@@ -9,7 +9,8 @@ import { refreshLogos } from '../src/projects/logo-refresh.ts';
 import { createProject, updateProject } from '../src/projects/service.ts';
 import type { WebsiteFetcher } from '../src/safe-fetch.ts';
 import { billingAccount } from './prompt-fixtures.ts';
-import { Fixtures, testDatabase } from './support.ts';
+import { Fixtures, ownerActor, testDatabase } from './support.ts';
+import { COMPETITORS_WRITE } from '../src/commands/competitors.ts';
 
 const db = testDatabase();
 const fixtures = new Fixtures(db);
@@ -31,7 +32,7 @@ async function tenant(domain = `logo-${randomUUID()}.com`, website: string = dom
     userId,
     projectCreate.parse({ name: 'Logo', brand_name: 'Logo', website_url: website }),
   );
-  return { workspaceId, projectId: project.id, domain };
+  return { workspaceId, projectId: project.id, userId, domain };
 }
 const png = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const brandLogo = (projectId: string) =>
@@ -171,7 +172,9 @@ it('negative caches failures and refuses to attach a result after identity chang
   expect(failed).toHaveBeenCalledTimes(count);
   await db.deleteFrom('brand_logo_assets').where('domain', '=', t.domain).execute();
   const changed: WebsiteFetcher = async (url) => {
-    await updateProject(db, t, { website_url: 'different.example.com' });
+    await updateProject(db, ownerActor(t.workspaceId, t.userId, COMPETITORS_WRITE), t.projectId, {
+      website_url: 'different.example.com',
+    });
     return { url, status: 200, contentType: 'image/png', body: png };
   };
   expect((await refreshLogos(db, t, changed)).brand.logo_url).toBeNull();

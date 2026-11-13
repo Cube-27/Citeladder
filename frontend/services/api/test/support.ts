@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { SignJWT } from 'jose';
 
+import { authorize, type Authorized, type Permission } from '../src/commands/permission.ts';
 import { loadConfig, type ServiceConfig } from '../src/config.ts';
 import { createDatabase, type Database } from '../src/db/database.ts';
 import { fixtureWorkspaceName } from './fixture-workspace.ts';
@@ -61,6 +62,15 @@ export async function asOwner<T>(work: (owner: Database) => Promise<T>): Promise
   } finally {
     await owner.destroy();
   }
+}
+
+/** A workspace owner's member actor, checked against `required` as a route's gate would. */
+export function ownerActor<P extends Permission>(
+  workspaceId: string,
+  userId: string,
+  required: P,
+): Authorized<P> {
+  return authorize({ kind: 'member', workspaceId, userId, role: 'owner', scopes: 'all' }, required);
 }
 
 export function sessionToken(claims: Record<string, unknown>, key = TEST_SESSION_KEY) {
