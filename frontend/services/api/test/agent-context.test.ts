@@ -238,6 +238,18 @@ describe('Agent persisted context binding', () => {
     expect(current.summary.omissions).toEqual([{ reason: 'no_usable_crawl' }]);
     const named = await selectContentFragments(db, seed, 'pricing guide', '', seed.crawlId);
     expect(named.pages.map((page) => page.site_url_id)).toEqual([pricing.id]);
+
+    // A failed crawl audited nothing: naming it never passes off a tracked page's older audit.
+    await fixtures.monitor(seed, [pricing.id]);
+    const failed = await fixtures.sibling(seed, {
+      status: 'failed',
+      created_at: new Date(Date.now() + 500),
+    });
+    const unusable = await selectContentFragments(db, seed, 'pricing guide', '', failed);
+    expect(unusable.summary).toMatchObject({
+      crawl_id: failed,
+      omissions: [{ reason: 'no_usable_crawl' }],
+    });
   });
   it("treats an address on the project's site in the message as the target page, with a longer excerpt", async () => {
     const seed = await fixtures.crawl();

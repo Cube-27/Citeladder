@@ -37,8 +37,8 @@ export type RobotsDecision = z.infer<typeof robotsDecisionSchema>;
 
 /**
  * A crawl to admit: the request plus the robots decision behind an `ignore`.
- * The decision comes from the signed-in person on Start crawl, or from the
- * crawl a recrawl or schedule reruns; never from the request body.
+ * The decision comes from the signed-in person on Start crawl, or is kept from
+ * the shown crawl (`crawlRequest`); never from the request body.
  */
 export type CrawlAdmission = CreateCrawlRequest & { robots_decision?: RobotsDecision | null };
 

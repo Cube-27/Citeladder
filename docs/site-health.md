@@ -47,8 +47,10 @@ then capacity/account. In order, admission:
 
 The request takes only the project and the robots choice
 ([`crawl-request.ts`](../frontend/services/api/src/site-health/crawl-request.ts)).
-A request that names no choice keeps the project's newest site crawl's choice
-and who confirmed it (`respect` before any crawl). A full crawl's page limit is
+A request that names no choice keeps the choice of the crawl the dashboard
+shows (`dashboardCrawl`: the current crawl, else the newest site crawl) and who
+confirmed it (`respect` before any crawl), so a failed crawl's choice is not
+kept over a usable one and the crawl button's robots note is what runs. A full crawl's page limit is
 the plan's monitored-URL limit, capped by the fetch budget left; a sample's is
 `automatic_page_limit` within its discovery cap. A workspace holding the
 `operator_controls` grant crawls unmetered. Nothing edits the monitored set:
@@ -56,7 +58,8 @@ crawls pick it (SH-B13). A page rerun (`selection.ts`) creates a crawl of the
 tracked pages it names, one page or an issue's
 [Re-run all](#consumers-and-actions), holding one page fetch per page; while a crawl is running it is refused with
 `crawl_already_active`, so no work joins a crawl outside its fetch hold
-(SH-B4). Its configuration carries `page_rerun`; it hands its pages to
+(SH-B4). It keeps the robots choice as a request naming none does. Its
+configuration carries `page_rerun`; it hands its pages to
 verification and Opportunities but is never compared as a site crawl. It writes
 no project snapshot and no score summary, so it is never a compared snapshot.
 
@@ -81,7 +84,10 @@ before they are finalized, so a running crawl shows its progress. So the
 current crawl reads each tracked page's latest audit: a rerun landing after it
 moves its page, and a tracked page a cancelled crawl never reached keeps its
 earlier audit. Site-level findings (architecture rules, sitewide links) are
-the site crawl's own. A page rerun read by id shows only its own page. Pages,
+the site crawl's own, so a rerun of the root never drops them from the Issues
+list, Pages counts, page detail, issue history, MCP or AI Traffic
+(`shownIssueFilter` in `reads/page-rows.ts`). A page rerun read by id shows
+only its own page. Pages,
 page detail, issue history, the Issues catalog and detail, the snapshot and
 score summary, Opportunities' Site Health evidence, the Agent's content
 context, MCP, AI Traffic findings, internal-link suggestion pages and
@@ -112,7 +118,7 @@ crawl is usable, the newest site crawl, so a failure still shows.
 off by default, weekly or monthly, on every plan. The `crawl-scheduler`
 periodic owner (`workers/crawl-scheduler.ts`) leases each due schedule and
 admits the crawl through `createCrawl` with no robots choice, so it keeps the
-newest site crawl's as every crawl action does, and the fetch budget, grants
+shown crawl's as every crawl action does, and the fetch budget, grants
 and the one-active-crawl rule apply unchanged. An
 occurrence refused with `crawl_already_active` or
 `site_health_fetches_exhausted` is skipped: `next_run_at` advances to the next
@@ -343,18 +349,20 @@ redirect hop.
 | 401 / 403 | Host blocked (`access_blocked`) |
 | other 4xx | No rules (`not_found`) |
 | 429, 5xx, network failure | Retried up to `robots_transient_attempts` times with exponential backoff from `robots_transient_backoff_seconds`; still failing, the page fails retryable (`robots_unavailable`) and the result is never cached |
+| Refused by the fetcher (too large, redirect limit, blocked address, suppression) | Unreadable, asked once and cached like a readable answer; the page fails `robots_unavailable`, not retryable |
 
 Readable policies are cached for `robots_cache_ttl_seconds`. A crawl delay
 above `max_crawl_delay_seconds` blocks the host. A missing file never permits
 bypassing access controls, and a challenge page is terminal `bot_blocked`.
 
 **Ignoring robots.txt.** Run new crawl sends no robots choice, so it keeps the
-newest crawl's. Its menu offers ignoring robots.txt after the person confirms
+shown crawl's. Its menu offers ignoring robots.txt after the person confirms
 they are authorized to crawl the site, or, after a crawl that ignored it,
 respecting it again. The crawl freezes
 `robots: 'ignore'` and `robots_decision` (user id, email, time) in its
-configuration; a crawl request naming no robots choice, as Run new crawl and a
-scheduled crawl do, copies both from the project's newest site crawl.
+configuration; a crawl request naming no robots choice, as Run new crawl, a
+scheduled crawl and a page re-audit do, copies both from the crawl the
+dashboard shows.
 Only the crawl's own `discover` and `analyze` fetches pass the choice to
 `SitePageFetcher` and `PageAcquirer`, per request: it covers only the crawl's
 registrable domain and its subdomains, so a redirect to another host respects
@@ -435,15 +443,16 @@ current observations and pager on screen while the next page loads. MCP
 
 Interpretation runs on a persistent pool of `interpretation_worker_threads`
 Node threads (`analysis/off-thread.ts`). Idle threads don't hold the process
-open, and a crashed thread fails only its own jobs. A job running longer than
+open, and a crashed thread fails only the job it was running; the jobs queued
+behind it move to another thread. A job running longer than
 `interpretation_job_timeout_seconds` fails; its thread is replaced and the jobs
 queued behind it move to another thread. The same pool parses sitemap XML for
 the sitemap walk (a sitemap parse that overruns the limit counts as an unread
 document) and the logo refresh's homepage HTML, so neither blocks the event
 loop.
 
-Relative links, assets, hreflang alternates and meta-refresh targets resolve
-against the document base (the first `<base href>`, else the final URL), as a
+Relative links, assets, canonical declarations, hreflang alternates and
+meta-refresh targets resolve against the document base (the first `<base href>`, else the final URL), as a
 browser resolves them; stored link facts hold the resolved URL. Microdata items
 are read as their equivalent JSON-LD objects, so both syntaxes meet one
 required-property contract. Separate `X-Robots-Tag` header lines are scoped
@@ -834,8 +843,11 @@ read `page_unavailable`, never `resolved`. When the page answers at its own URL
 again, the availability issue resolves and the rest are judged as usual; one the
 audit did not judge returns to `open`. Any other failed fetch is no audit and
 changes nothing. An audit older than one the page already landed changes
-nothing, so a late cancelled crawl never overwrites a rerun. `no_longer_tracked`
-is reserved for the tracked set. Each row
+nothing, so a late cancelled crawl never overwrites a rerun. A page that left
+the tracked set (a downgrade) is never audited again: each landing moves its
+unresolved issues to `no_longer_tracked`, never `resolved`, so they leave the
+open count; when it is tracked again, the first audit landing on it judges
+them, and one it does not judge returns to `open`. Each row
 names the crawl and the exact issue, evaluation, analysis or fetch attempt that
 decided it. After each landing, `site_issue_trend` stores the project's open
 count for the UTC day: issues in the configured open states (`open`,
@@ -868,7 +880,10 @@ page the group is still unresolved on as one page-rerun crawl
 (`createPageRerunCrawl`, which also runs the single-page re-audit). It holds one
 page fetch per page and is refused with `site_health_fetches_exhausted` when
 fewer remain, with `crawl_already_active` while a crawl runs (SH-B4), and with
-`rerun_not_allowed` when no such page exists. A site-level finding
+`rerun_not_allowed` when no such page exists. The screen watches the re-audit
+crawl until it ends (`ISSUE_RERUN_MAX_POLLS`, `lib/config/site-health.ts`), then
+refreshes the crawl's issues, fix progress, pages and the Overview trend; the
+dashboard never shows a page rerun. A site-level finding
 (architecture, sitewide links) is judged only by a full crawl, so Re-run all
 never names its page.
 

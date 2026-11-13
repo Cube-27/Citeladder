@@ -5,14 +5,16 @@
  *
  * An audit lands when a crawl publishes its pages' final analyses (a full
  * crawl, a cancelled one, or a single-page rerun). In that transaction every
- * page the crawl audited moves its issues' states:
+ * page the crawl audited (`issue-audits.ts`) moves its issues' states:
  *
  * - a page analyzed at its own URL opens or keeps what it found, resolves what
  *   a determinate evaluation now passes, and reopens a resolved issue as
  *   regressed; a rule the audit did not evaluate keeps its state;
  * - a page that answered 404/410, or redirected, gets that issue instead, and
  *   its other unresolved issues read `page_unavailable`, never resolved;
- * - a page whose fetch failed otherwise was not audited, and keeps every state.
+ * - a page whose fetch failed otherwise was not audited, and keeps every state;
+ * - a page that left the tracked set reads `no_longer_tracked` until an audit
+ *   lands on it again.
  *
  * A page's newest audit decides: an audit older than one the page already
  * landed changes nothing. Mark fixed (`markIssueFixed`) moves an open issue to
@@ -28,15 +30,12 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { SiteIssueStates } from '../generated/db-schema.ts';
-import { failedAs } from './task-outcome.ts';
+import { pageAudits, type PageAudit } from './issue-audits.ts';
 import type { Crawl } from './site-task.ts';
-import { canonicalIdentity } from './url-identity.ts';
 
 const config = policy.site_health.reads.issue_states;
 const UNAVAILABLE_RULES = config.unavailable_rules;
 const AVAILABILITY_RULES = new Set<string>(Object.values(UNAVAILABLE_RULES));
-const RESOLVING = new Set<string>(config.resolving_outcomes);
-const GONE_STATUSES = policy.site_health.reads.task_outcomes.gone_status_codes;
 const RULE_VERSIONS = new Map(
   policy.site_health.rule_catalog.map((rule) => [rule.rule_id, rule.rule_version]),
 );
@@ -57,28 +56,6 @@ type Source = {
   evaluationId: string | null;
   issueId: string | null;
 };
-type Finding = { issueId: string; evaluationId: string; ruleVersion: string };
-
-/** One page's outcome in one audit. */
-type PageAudit =
-  | {
-      kind: 'analyzed';
-      siteUrlId: string;
-      analysisId: string;
-      /** Rules with a current issue on the page. */
-      found: ReadonlyMap<string, Finding>;
-      /** Rules a determinate evaluation passed: the evaluation that verified each. */
-      passed: ReadonlyMap<string, { evaluationId: string; ruleVersion: string }>;
-    }
-  | {
-      kind: 'unavailable';
-      siteUrlId: string;
-      reason: keyof typeof UNAVAILABLE_RULES;
-      analysisId: string | null;
-      attemptId: string | null;
-      evidence: Record<string, unknown>;
-    };
-
 type Landing = {
   crawlId: string;
   auditAt: Date;
@@ -88,6 +65,8 @@ type Landing = {
 type Scope = { workspaceId: string; projectId: string };
 
 const isResolved = (state: string) => state === 'resolved';
+/** States no audit can judge until the page answers, or is tracked, again. */
+const SUSPENDED = new Set<string>(['page_unavailable', 'no_longer_tracked']);
 
 const NO_SOURCE: Source = {
   analysisId: null,
@@ -207,10 +186,11 @@ function analyzedStates(
       resolve(ruleId, { ...page, evaluationId: passed.evaluationId }, passed.ruleVersion);
   // Answering at its own URL is the verification for the availability issues.
   for (const ruleId of AVAILABILITY_RULES) resolve(ruleId, page);
-  // The page answers again: an issue this audit did not judge is open, not verified.
+  // The page answers again, or is tracked again: an issue this audit did not
+  // judge is open, not verified.
   const judged = (ruleId: string) => audit.found.has(ruleId) || audit.passed.has(ruleId);
   for (const prior of existing)
-    if (prior.state === 'page_unavailable' && !judged(prior.rule_id))
+    if (SUSPENDED.has(prior.state) && !judged(prior.rule_id))
       write(prior.rule_id, 'open', page, {});
 }
 
@@ -235,186 +215,6 @@ function unavailableStates(
 
 /** When a crawl audited its pages: the crawl's audit time, as its analyses record. */
 const auditTime = (crawl: Crawl) => new Date(crawl.started_at ?? crawl.created_at);
-
-/** Whether the artifact's final URL is another page than the one tracked. */
-function redirected(finalUrl: string, trackedHash: string) {
-  try {
-    return canonicalIdentity(finalUrl).hash !== trackedHash;
-  } catch {
-    // An unparseable final URL is no evidence of a redirect.
-    return false;
-  }
-}
-
-/** Every page the crawl audited, with what the audit found. */
-async function pageAudits(db: Database, crawl: Crawl): Promise<PageAudit[]> {
-  const analyses = await db
-    .selectFrom('site_page_analyses as a')
-    .innerJoin('site_fetch_artifacts as f', (join) =>
-      join.onRef('f.id', '=', 'a.artifact_id').onRef('f.workspace_id', '=', 'a.workspace_id'),
-    )
-    .innerJoin('site_urls as u', (join) =>
-      join.onRef('u.id', '=', 'a.site_url_id').onRef('u.workspace_id', '=', 'a.workspace_id'),
-    )
-    .select(['a.id', 'a.site_url_id', 'a.source_evaluation_ids', 'f.final_url', 'u.url_hash'])
-    .where('a.workspace_id', '=', crawl.workspace_id)
-    .where('a.crawl_id', '=', crawl.id)
-    .where('a.is_current', '=', true)
-    .where('a.finalized_at', 'is not', null)
-    .where('a.status', '=', 'completed')
-    .execute();
-  const audits: PageAudit[] = [];
-  const analyzed = analyses.filter((row) => {
-    if (!redirected(row.final_url, row.url_hash)) return true;
-    audits.push({
-      kind: 'unavailable',
-      siteUrlId: row.site_url_id,
-      reason: 'redirect',
-      analysisId: row.id,
-      attemptId: null,
-      evidence: { final_url: row.final_url },
-    });
-    return false;
-  });
-  audits.push(...(await analyzedAudits(db, crawl, analyzed)), ...(await goneAudits(db, crawl)));
-  return audits;
-}
-
-type AnalysisRow = {
-  id: string;
-  site_url_id: string;
-  source_evaluation_ids: string[] | null;
-};
-
-async function analyzedAudits(
-  db: Database,
-  crawl: Crawl,
-  analyses: readonly AnalysisRow[],
-): Promise<PageAudit[]> {
-  if (!analyses.length) return [];
-  const current = new Map(analyses.map((row) => [row.site_url_id, row]));
-  const pageIds = [...current.keys()];
-  // The page's own evaluations: those its current analysis names, plus the
-  // site-level findings later written against it. Site checks every analysis
-  // names belong to the root page and are judged there.
-  const evaluations = await db
-    .selectFrom('site_rule_evaluations as e')
-    .innerJoin('site_page_analyses as p', (join) =>
-      join.onRef('p.id', '=', 'e.analysis_id').onRef('p.workspace_id', '=', 'e.workspace_id'),
-    )
-    .select([
-      'e.id',
-      'e.analysis_id',
-      'e.rule_id',
-      'e.outcome',
-      'e.rule_version',
-      'e.source_architecture_id',
-      'p.site_url_id',
-    ])
-    .where('e.workspace_id', '=', crawl.workspace_id)
-    .where('p.crawl_id', '=', crawl.id)
-    .where('p.site_url_id', '=', sql<string>`any(${pageIds}::uuid[])`)
-    .orderBy('e.id')
-    .execute();
-  const issues = await db
-    .selectFrom('site_issues')
-    .select(['id', 'site_url_id', 'rule_id', 'evaluation_id', 'rule_version'])
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('crawl_id', '=', crawl.id)
-    .where('is_current', '=', true)
-    .where('site_url_id', '=', sql<string>`any(${pageIds}::uuid[])`)
-    .orderBy('id')
-    .execute();
-  const audits = new Map(
-    analyses.map((row) => [
-      row.site_url_id,
-      {
-        kind: 'analyzed' as const,
-        siteUrlId: row.site_url_id,
-        analysisId: row.id,
-        found: new Map<string, Finding>(),
-        passed: new Map<string, { evaluationId: string; ruleVersion: string }>(),
-      },
-    ]),
-  );
-  for (const issue of issues) {
-    const audit = audits.get(issue.site_url_id);
-    if (audit && !audit.found.has(issue.rule_id))
-      audit.found.set(issue.rule_id, {
-        issueId: issue.id,
-        evaluationId: issue.evaluation_id,
-        ruleVersion: issue.rule_version,
-      });
-  }
-  const namedIds = new Set(analyses.flatMap((row) => row.source_evaluation_ids ?? []));
-  for (const row of evaluations) {
-    const analysis = current.get(row.site_url_id);
-    const audit = audits.get(row.site_url_id);
-    // Evaluations are already the page's own, so a named id is its current analysis's.
-    const named =
-      namedIds.has(row.id) ||
-      (row.source_architecture_id !== null && row.analysis_id === analysis?.id);
-    if (audit && named && RESOLVING.has(row.outcome))
-      audit.passed.set(row.rule_id, {
-        evaluationId: row.id,
-        ruleVersion: row.rule_version,
-      });
-  }
-  return [...audits.values()];
-}
-
-/** Pages whose newest analyze generation in the crawl failed with 404/410. */
-async function goneAudits(db: Database, crawl: Crawl): Promise<PageAudit[]> {
-  const rows = await db
-    .selectFrom((query) =>
-      query
-        .selectFrom('site_crawl_tasks')
-        .select(['id', 'workspace_id', 'site_url_id', 'status', 'error_code'])
-        .distinctOn('site_url_id')
-        .where('workspace_id', '=', crawl.workspace_id)
-        .where('crawl_id', '=', crawl.id)
-        .where('task_kind', '=', 'analyze')
-        .where('site_url_id', 'is not', null)
-        .orderBy('site_url_id')
-        .orderBy('generation', 'desc')
-        .orderBy('id', 'desc')
-        .as('t'),
-    )
-    .select([
-      't.site_url_id',
-      sql<string | null>`(select a.id from site_fetch_attempts a
-        where a.task_id = t.id and a.workspace_id = t.workspace_id
-          and a.status_code = any(${GONE_STATUSES}::int[])
-        order by a.attempt_number desc, a.request_ordinal desc limit 1)`.as('attempt_id'),
-      sql<number | null>`(select a.status_code from site_fetch_attempts a
-        where a.task_id = t.id and a.workspace_id = t.workspace_id
-          and a.status_code = any(${GONE_STATUSES}::int[])
-        order by a.attempt_number desc, a.request_ordinal desc limit 1)`.as('status_code'),
-    ])
-    .where('t.status', '=', 'failed')
-    .where(failedAs('t', ['gone']))
-    .where(
-      sql<boolean>`not exists (
-      select 1 from site_page_analyses p
-      where p.workspace_id = t.workspace_id and p.crawl_id = ${crawl.id}
-        and p.site_url_id = t.site_url_id and p.is_current and p.finalized_at is not null)`,
-    )
-    .execute();
-  return rows.flatMap((row) =>
-    row.site_url_id
-      ? [
-          {
-            kind: 'unavailable' as const,
-            siteUrlId: row.site_url_id,
-            reason: 'gone' as const,
-            analysisId: null,
-            attemptId: row.attempt_id,
-            evidence: { status_code: row.status_code },
-          },
-        ]
-      : [],
-  );
-}
 
 /** Pages a newer audit of another crawl already decided. */
 async function newerAudited(db: Database, crawl: Crawl, pageIds: string[], auditAt: Date) {
@@ -504,7 +304,31 @@ export async function landIssueStates(db: Database, crawl: Crawl): Promise<void>
           ),
       )
       .execute();
+  await releaseUntrackedStates(db, scope, now);
   await writeTrendPoint(db, crawl, now);
+}
+
+/**
+ * A page whose membership left the set (a plan downgrade, `fitTrackedSet`) is
+ * never audited again, so its unresolved issues read `no_longer_tracked`, never
+ * resolved, and leave the open count. A page tracked again returns to `open`
+ * when an audit lands on it (`analyzedStates`). Not an audit: the deciding
+ * sources and audit time stay the page's last audit's.
+ */
+async function releaseUntrackedStates(db: Database, scope: Scope, now: Date) {
+  await db
+    .updateTable('site_issue_states as s')
+    .set({ state: 'no_longer_tracked', updated_at: now })
+    .where('s.workspace_id', '=', scope.workspaceId)
+    .where('s.project_id', '=', scope.projectId)
+    .where('s.state', 'not in', ['resolved', 'no_longer_tracked'])
+    .where(
+      sql<boolean>`exists (
+        select 1 from monitored_site_urls m
+        where m.workspace_id = s.workspace_id and m.project_id = s.project_id
+          and m.site_url_id = s.site_url_id and not m.active)`,
+    )
+    .execute();
 }
 
 /** Orders a project's landings and marks: each reads the states the one before it wrote. */

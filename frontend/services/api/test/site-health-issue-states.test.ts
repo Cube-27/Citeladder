@@ -237,6 +237,32 @@ describe('issue state and trend', () => {
     });
   });
 
+  it('reads a page that left the tracked set as no longer tracked until an audit lands on it', async () => {
+    const seed = await fixtures.crawl('completed');
+    const full = await crawlAt(seed, minutes(0));
+    const kept = await audit(full, '/kept', { [CLIENT]: 'missing' });
+    const dropped = await audit(full, '/dropped', { [SITEMAP]: 'missing' });
+    await fixtures.monitor(seed, [kept.id, dropped.id]);
+    await land(full);
+    expect((await trend(seed))[0]!.open_count).toBe(2);
+
+    // A downgrade keeps the first page; the next crawl audits only it.
+    await fixtures.monitor(seed, [kept.id]);
+    const next = await crawlAt(seed, minutes(10));
+    await audit(next, '/kept', { [CLIENT]: 'missing' }, kept.id);
+    await land(next);
+    expect(await states(seed)).toEqual({ [CLIENT]: 'open', [SITEMAP]: 'no_longer_tracked' });
+    expect(await trend(seed)).toEqual([{ open_count: 1, source_crawl_id: next.crawlId }]);
+
+    // An upgrade tracks it again: an audit that cannot judge the rule reopens it.
+    await fixtures.monitor(seed, [kept.id, dropped.id]);
+    const back = await crawlAt(seed, minutes(20), true);
+    await audit(back, '/dropped', { [SITEMAP]: 'unknown' }, dropped.id);
+    await land(back);
+    expect(await states(seed)).toEqual({ [CLIENT]: 'open', [SITEMAP]: 'open' });
+    expect((await trend(seed))[0]!.open_count).toBe(2);
+  });
+
   it("keeps each project's states and trend to its own workspace", async () => {
     const first = await fixtures.crawl('completed');
     const second = await fixtures.crawl('completed');

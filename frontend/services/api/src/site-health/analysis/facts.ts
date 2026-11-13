@@ -112,11 +112,11 @@ function metaPropertyMap(root: HtmlNode, prefix: string) {
   return found;
 }
 
-function canonicalDeclarations(root: HtmlNode) {
+function canonicalDeclarations(root: HtmlNode, baseUrl: string) {
   const declarations: string[] = [];
   for (const link of elements(root, 'link')) {
     if (attribute(link, 'rel').toLowerCase() !== 'canonical') continue;
-    const href = attribute(link, 'href').trim().slice(0, limits.url_chars);
+    const href = resolvedHref(attribute(link, 'href').trim(), baseUrl).slice(0, limits.url_chars);
     if (href && !declarations.includes(href)) declarations.push(href);
   }
   return declarations;
@@ -174,10 +174,10 @@ const isInternal = (href: string, baseHost: string) => {
   return host === null || (Boolean(baseHost) && sameSite(host, baseHost.toLowerCase()));
 };
 
-/** An href resolved as a browser resolves it; an unresolvable one is kept as written. */
+/** An href resolved as a browser resolves it; an empty one names nothing, an unresolvable one stays. */
 function resolvedHref(href: string, baseUrl: string) {
   try {
-    return new URL(href, baseUrl).href;
+    return href && new URL(href, baseUrl).href;
   } catch {
     return href;
   }
@@ -478,7 +478,7 @@ function emptyFacts() {
     form_fields: [] as string[],
     link_context: [] as string[],
     entity: emptyEntityFacts(),
-    structured_data: structuredData(document(Buffer.alloc(0)), 0),
+    structured_data: structuredData(document(Buffer.alloc(0)), 0, ''),
     links: linksAndAssets(document(Buffer.alloc(0)), '', '', 0),
     blocking_resources: { scripts: 0, stylesheets: 0, total: 0 },
     author: '',
@@ -524,13 +524,13 @@ function clearPageOwned<T extends DocumentFacts>(facts: T, reason: string): T {
   };
 }
 
-function structuredData(root: HtmlNode, maxBlocks: number) {
+function structuredData(root: HtmlNode, maxBlocks: number, baseUrl: string) {
   const raw = [...elements(root, 'script')]
     .filter((node) => attribute(node, 'type').toLowerCase() === 'application/ld+json')
     .map(textContent);
   const objects = jsonLdObjects(raw);
   const jsonLd = jsonLdBlocks(objects, maxBlocks);
-  const microdata = microdataBlocks(root, maxBlocks);
+  const microdata = microdataBlocks(root, maxBlocks, baseUrl);
   const blocks = [...jsonLd, ...microdata].slice(0, maxBlocks);
   return {
     blocks,
@@ -557,8 +557,8 @@ function extractDocument(
   }
   const title = elements(root, 'title').next().value;
   const headings = headingFacts(root);
-  const declarations = canonicalDeclarations(root);
-  const sd = structuredData(root, settings.maxBlocks);
+  const declarations = canonicalDeclarations(root, page.baseUrl);
+  const sd = structuredData(root, settings.maxBlocks, page.baseUrl);
   const links = linksAndAssets(root, page.baseUrl, baseHost, settings.maxLinks);
   const viewport = metaContent(root, 'viewport');
   const articleMeta = metaPropertyMap(root, 'article:');

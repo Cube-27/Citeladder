@@ -4,6 +4,8 @@ import { compareText } from '../../text-order.ts';
 import { analysisPolicy } from './policy.ts';
 
 const HEADER_AGENTS = new Set(analysisPolicy.facts.search_robots_header_agents);
+/** The robots meta names that bind the search crawler: the generic one and its own. */
+const META_AGENTS = new Set(['robots', ...HEADER_AGENTS]);
 const COLON_DIRECTIVES = new Set([
   'max-snippet',
   'max-image-preview',
@@ -76,7 +78,7 @@ function projection(found: Set<string>) {
 export function robotsMeta(root: HtmlNode) {
   const found = new Set<string>();
   for (const meta of elements(root, 'meta'))
-    if (['robots', 'googlebot'].includes(attribute(meta, 'name').toLowerCase()))
+    if (META_AGENTS.has(attribute(meta, 'name').toLowerCase()))
       for (const token of tokens(attribute(meta, 'content'))) found.add(token);
   return projection(found);
 }

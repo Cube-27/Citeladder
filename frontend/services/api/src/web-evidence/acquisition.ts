@@ -210,6 +210,11 @@ export function robotsPolicy(
     /** The policy text when robots.txt answered 2xx, else null. */
     body: fetched ? body : null,
     unavailable,
+    /**
+     * Whether asking again may answer: a 429, 5xx or network failure. A refusal
+     * (SSRF, suppression, size, redirects) repeats, so it is cached and final.
+     */
+    transient: unavailable,
     restricted,
     readable,
     delay: seconds,
@@ -274,7 +279,7 @@ export class PageAcquirer {
     }
     const result = await value;
     // A transient failure is never cached: the next request asks the host again.
-    if (result.unavailable && this.#cache.get(origin)?.value === value) this.#cache.delete(origin);
+    if (result.transient && this.#cache.get(origin)?.value === value) this.#cache.delete(origin);
     return result;
   }
   /**
@@ -282,12 +287,12 @@ export class PageAcquirer {
    * exponential backoff up to `robotsAttempts` requests in all.
    */
   async #robots(origin: string, tried = 1): Promise<RobotsPolicy> {
-    const attempt = await this.#robotsAttempt(origin);
-    if (!attempt.transient || tried >= this.settings.robotsAttempts) return attempt.robots;
+    const robots = await this.#robotsAttempt(origin);
+    if (!robots.transient || tried >= this.settings.robotsAttempts) return robots;
     await delay(this.settings.robotsBackoff * 1000 * 2 ** (tried - 1));
     return this.#robots(origin, tried + 1);
   }
-  async #robotsAttempt(origin: string): Promise<{ robots: RobotsPolicy; transient: boolean }> {
+  async #robotsAttempt(origin: string): Promise<RobotsPolicy> {
     const startedAt = performance.now();
     try {
       const result = await this.fetcher(`${origin}/robots.txt`, {
@@ -298,13 +303,7 @@ export class PageAcquirer {
         authorize: this.authorize,
         gate: (url, send, signal) => this.#pacer.slot(url.origin, this.floor, send, signal),
       });
-      const robots = robotsPolicy(
-        origin,
-        result.status,
-        result.body.toString('utf8'),
-        this.settings,
-      );
-      return { robots, transient: robots.unavailable };
+      return robotsPolicy(origin, result.status, result.body.toString('utf8'), this.settings);
     } catch (error) {
       // Status 0 reads as unreachable robots.
       logger.info('robots_fetch_failed', {
@@ -313,7 +312,7 @@ export class PageAcquirer {
       });
       // A refusal (SSRF, suppression, size, redirects) repeats on retry; a network failure may not.
       const transient = !(error instanceof FetchError) || error.code === 'dns_resolution_failed';
-      return { robots: robotsPolicy(origin, 0, '', this.settings), transient };
+      return { ...robotsPolicy(origin, 0, '', this.settings), transient };
     }
   }
   /** Pause new requests to an origin, e.g. after it answered 429. */

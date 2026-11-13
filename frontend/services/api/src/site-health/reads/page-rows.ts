@@ -31,6 +31,7 @@ import {
   ROW_TASK_ORDER,
   type Crawl,
 } from './crawl.ts';
+import { siteLevelRuleOf } from './rules.ts';
 
 const PERSISTED = ['completed', 'partially_completed'];
 // The largest integer depth; an unmeasured page sorts after every measured one.
@@ -146,6 +147,23 @@ export function currentIssueFilter(issue: string, analysis: string) {
       where e.id = ${evaluation} and e.source_architecture_id is not null)))`;
 }
 
+/**
+ * The issues `crawl` shows on the page whose latest audit is `analysis` (both
+ * aliases): that audit's current issues, plus the crawl's own site-level
+ * findings (architecture, sitewide links) on the page. Only a site crawl
+ * evaluates those, so a later rerun of the root never drops them (SH-B9; the
+ * same split as `viewIssuesSql`). The caller scopes the workspace.
+ */
+export function shownIssueFilter(crawl: Pick<Crawl, 'id'>, issue: string, analysis: string) {
+  const ref = (alias: string, column: string) => sql.ref(`${alias}.${column}`);
+  const siteLevel = siteLevelRuleOf(issue);
+  return sql`(${ref(issue, 'site_url_id')} = ${ref(analysis, 'site_url_id')} and (
+    (not ${siteLevel} and ${ref(issue, 'crawl_id')} = ${ref(analysis, 'crawl_id')}
+      and ${currentIssueFilter(issue, analysis)})
+    or (${siteLevel} and ${ref(issue, 'crawl_id')} = ${crawl.id}::uuid
+      and ${ref(issue, 'is_current')})))`;
+}
+
 function statusFilter(status: string | null | undefined) {
   if (!status) return sql``;
   if (status === 'error_or_blocked') return sql`and analysis_status in ('error', 'blocked')`;
@@ -240,9 +258,8 @@ export async function pageRows(
           filters.rule
             ? sql`and exists (
           select 1 from site_issues i
-          where i.workspace_id = u.workspace_id and i.crawl_id = a.crawl_id
-            and i.site_url_id = u.id and i.rule_id = ${filters.rule}
-            and ${currentIssueFilter('i', 'a')})`
+          where i.workspace_id = u.workspace_id and i.rule_id = ${filters.rule}
+            and ${shownIssueFilter(crawl, 'i', 'a')})`
             : sql``
         }
         ${filters.monitored === true ? sql`and m.site_url_id is not null` : sql``}
@@ -290,8 +307,7 @@ export async function pageRows(
       a.finalized_at,
       case when a.id is null then null else (
         select count(*)::int from site_issues i
-        where i.workspace_id = u.workspace_id and i.crawl_id = a.crawl_id
-          and i.site_url_id = u.id and ${currentIssueFilter('i', 'a')}
+        where i.workspace_id = u.workspace_id and ${shownIssueFilter(crawl, 'i', 'a')}
       ) end as issue_count,
       k.inbound_count,
       k.main_content_inbound_count,
@@ -314,8 +330,7 @@ export async function currentIssueRules(db: Database, crawl: Crawl, analysisIds:
   const { rows } = await sql<{ analysis_id: string; finding_class: string; rule_id: string }>`
     select distinct a.id as analysis_id, i.finding_class, i.rule_id
     from site_page_analyses a
-    join site_issues i on i.workspace_id = a.workspace_id and i.crawl_id = a.crawl_id
-      and i.site_url_id = a.site_url_id and ${currentIssueFilter('i', 'a')}
+    join site_issues i on i.workspace_id = a.workspace_id and ${shownIssueFilter(crawl, 'i', 'a')}
     where a.workspace_id = ${crawl.workspace_id} and a.project_id = ${crawl.project_id}
       and a.id = any(${analysisIds}::uuid[])
     order by a.id, i.finding_class, i.rule_id`.execute(db);
@@ -339,8 +354,7 @@ export async function currentRuleEvidence(
   const { rows } = await sql<{ analysis_id: string; evidence: unknown }>`
     select distinct on (a.id) a.id as analysis_id, i.evidence
     from site_page_analyses a
-    join site_issues i on i.workspace_id = a.workspace_id and i.crawl_id = a.crawl_id
-      and i.site_url_id = a.site_url_id and ${currentIssueFilter('i', 'a')}
+    join site_issues i on i.workspace_id = a.workspace_id and ${shownIssueFilter(crawl, 'i', 'a')}
     where a.workspace_id = ${crawl.workspace_id} and a.project_id = ${crawl.project_id}
       and a.id = any(${analysisIds}::uuid[]) and i.rule_id = ${ruleId}
     order by a.id, i.created_at, i.id`.execute(db);

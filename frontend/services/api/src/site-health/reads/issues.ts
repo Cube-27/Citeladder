@@ -40,7 +40,7 @@ import { parseUuid } from '../../http/uuid.ts';
 import { firstOf } from '../../lists.ts';
 import { compareText } from '../../text-order.ts';
 import { loadCrawl, pageAuditsSql, viewIssuesSql, type Crawl } from './crawl.ts';
-import { currentIssueFilter } from './page-rows.ts';
+import { shownIssueFilter } from './page-rows.ts';
 import { requireAdmitted } from './pages.ts';
 import {
   issueGroupId,
@@ -637,9 +637,9 @@ export async function issueHistory(
           <= (coalesce(audited.started_at, audited.created_at), audited.id)
         and not exists (
           select 1 from site_issues still_open
-          where still_open.workspace_id = ${workspaceId} and still_open.crawl_id = cur.crawl_id
-            and ${currentIssueFilter('still_open', 'cur')}
-            and still_open.site_url_id = ${siteUrlId} and still_open.rule_id = i.rule_id)
+          where still_open.workspace_id = ${workspaceId}
+            and ${shownIssueFilter(crawl, 'still_open', 'cur')}
+            and still_open.rule_id = i.rule_id)
       order by i.rule_id, i.created_at desc, i.id desc
     )
     select r.*, ${utcTextOf(sql.ref('r.created_at'))} as created_text

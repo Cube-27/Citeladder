@@ -4,8 +4,9 @@
  * changes.
  */
 import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
-import type { IssueFixes, PageDetail } from '@citeladder/contracts';
+import { isTerminalCrawl, type IssueFixes, type PageDetail } from '@citeladder/contracts';
 import type { CrawlScheduleUpdateRequest } from '@citeladder/contracts/site-health-requests';
+import { ISSUE_RERUN_MAX_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import { retainPreviousDataForScope } from './query-client';
@@ -286,6 +287,39 @@ export const refreshMonitoredUrls = (client: QueryClient, projectId: string) =>
  * first, so a pre-create answer cannot commit after creation and read as the
  * acknowledgement.
  */
+/**
+ * Watch an issue's re-audit (`rerunCrawlId`) until it ends, within
+ * `ISSUE_RERUN_MAX_POLLS`, then refresh what its landing moved in the crawl
+ * that shows it: the issue list, each issue's pages and fix progress, its
+ * pages, and the Overview's open-issue trend. A read that fails is asked again
+ * on the next poll; a re-audit still running at the bound refreshes nothing.
+ */
+async function refreshWhenRerunLands(
+  client: QueryClient,
+  scope: ProjectScope,
+  crawlId: string,
+  rerunCrawlId: string,
+) {
+  const rerun = siteHealthQueries.crawl(scope.workspaceId, rerunCrawlId);
+  for (let poll = 0; poll < ISSUE_RERUN_MAX_POLLS; poll += 1) {
+    const crawl = await client.fetchQuery({ ...rerun, staleTime: 0 }).catch(() => null);
+    if (crawl && isTerminalCrawl(crawl.status)) {
+      await Promise.all([
+        refreshCrawlViews(client, crawlId),
+        client.invalidateQueries({ queryKey: queryKeys.siteHealth.crawlIssueDetails(crawlId) }),
+        client.invalidateQueries({ queryKey: queryKeys.siteHealth.crawlIssueFixes(crawlId) }),
+        client.invalidateQueries({
+          queryKey: queryKeys.siteHealth.resource(scope.projectId, 'overview'),
+        }),
+      ]);
+      return;
+    }
+    await new Promise<void>((resolve) => {
+      setTimeout(resolve, RERUN_POLL_INTERVAL_MS);
+    });
+  }
+}
+
 async function refreshCrawlStart(client: QueryClient, projectId: string) {
   await client.cancelQueries({ queryKey: queryKeys.siteHealth.resource(projectId, 'dashboard') });
   await Promise.all([
@@ -349,14 +383,16 @@ export const siteHealthMutations = {
         ),
     }),
   /**
-   * Re-run all: one re-audit crawl of the issue's open tracked pages. Its
-   * results land later; the dashboard refreshes so the running audit shows.
+   * Re-run all: one re-audit crawl of the issue's open tracked pages. It lands
+   * later, and the dashboard never shows a page rerun, so the re-audit is
+   * watched until it ends and then what it moved refreshes.
    */
   rerunIssue: (scope: ProjectScope, crawlId: string) =>
     mutationOptions({
       mutationFn: (groupId: string) => siteHealthApi.rerunIssue(crawlId, groupId, scoped(scope)),
-      onSuccess: (_rerun, _groupId, _result, { client }) =>
-        refreshSiteHealthDashboard(client, scope.projectId),
+      onSuccess: (rerun, _groupId, _result, { client }) => {
+        void refreshWhenRerunLands(client, scope, crawlId, rerun.crawl_id);
+      },
     }),
   /**
    * A per-URL re-audit. It always runs as its own one-page crawl (a running

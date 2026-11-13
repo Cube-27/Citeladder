@@ -4,6 +4,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import { mswServer } from '@/test/msw-server';
+import { SITE_HEALTH_CRAWL } from '@/test/site-health-api-fixtures';
 import { renderWithProviders, selectionAs } from '@/test/render';
 import {
   CRAWL,
@@ -20,6 +21,7 @@ const FIXES = `/api/v1/site-crawls/${CRAWL}/issue-fixes`;
 /** The Issues screen with issue A open, as a link to it opens it. */
 const OPEN = `/issues?issue=${ISSUE_A}`;
 const TITLE = 'WebSite schema is missing';
+const RERUN = 'ffffffff-1111-4111-8111-111111111111';
 
 /** Issue A's fix progress: `fixed` of its 32 pages fixed, `rerun` tracked pages still open. */
 const progress = (fixed: number, rerun: number | null) => ({
@@ -77,10 +79,18 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     expect(within(fixFirst).getByText('32 of 32 pages fixed')).toBeInTheDocument();
   });
 
-  it('re-runs an issue’s open tracked pages, and says why when a crawl is running', async () => {
+  it('re-runs an issue’s open tracked pages, refreshes its progress once the re-audit lands, and says why when a crawl is running', async () => {
     let running = false;
-    serveFixes(3);
+    let landed = false;
     mswServer.use(
+      http.get(FIXES, () =>
+        HttpResponse.json({ crawl_id: CRAWL, items: [progress(landed ? 3 : 0, 3)] }),
+      ),
+      // The re-audit has already ended when it is first read: its pages verified fixed.
+      http.get(`/api/v1/site-crawls/${RERUN}`, () => {
+        landed = true;
+        return HttpResponse.json({ ...SITE_HEALTH_CRAWL, id: RERUN, status: 'completed' });
+      }),
       http.post(`${ISSUES}/${ISSUE_A}/rerun`, () => {
         if (running)
           return HttpResponse.json(
@@ -93,10 +103,7 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
             { status: 409 },
           );
         running = true;
-        return HttpResponse.json(
-          { crawl_id: 'ffffffff-1111-4111-8111-111111111111', page_count: 3 },
-          { status: 202 },
-        );
+        return HttpResponse.json({ crawl_id: RERUN, page_count: 3 }, { status: 202 });
       }),
     );
     const user = userEvent.setup();
@@ -111,6 +118,7 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
         'Re-auditing 3 pages. The progress updates when the audit finishes.',
       ),
     ).toBeInTheDocument();
+    expect(await within(dialog).findByText('3 of 32 pages fixed')).toBeInTheDocument();
 
     await user.click(within(dialog).getByRole('button', { name: 'Re-run all' }));
     expect(
