@@ -11,6 +11,7 @@ import type { AuditRuntime } from '../audits/config.ts';
 import { nextRunAfter } from '../audits/schedule-cadence.ts';
 import { getLogger } from '../logging.ts';
 import { ApiError } from '../errors.ts';
+import { retryAfterSeconds } from '../http/retry-after.ts';
 import { claimDueSchedules } from '../queue/audit-queue.ts';
 
 export function schedulerSettings(env: SettingSource = process.env) {
@@ -158,8 +159,7 @@ export class AuditScheduler {
   }
   /** How long a retryable refusal asks to wait: its `Retry-After`, else the failure delay. */
   private retrySeconds(error: ApiError) {
-    const seconds = Number(error.headers?.['retry-after']);
-    return Number.isFinite(seconds) && seconds > 0 ? seconds : this.settings.failure_retry_seconds;
+    return retryAfterSeconds(error.headers?.['retry-after']) ?? this.settings.failure_retry_seconds;
   }
   async runOnce(at = this.now(), canAdmit?: () => boolean) {
     if (canAdmit) return this.planUntilBudget(at, canAdmit);

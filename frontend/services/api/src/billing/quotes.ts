@@ -2,7 +2,7 @@ import { createHmac } from 'node:crypto';
 import { z } from 'zod';
 import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
 import { amount, taxSchema, type Identity } from './contracts.ts';
-import { conflict } from '../errors.ts';
+import { refuse } from './refusals.ts';
 import type { BillingSettings } from './config.ts';
 import type { CredentialMode } from './credential-mode.ts';
 import type { CatalogPlan, CatalogItem } from './catalog.ts';
@@ -33,7 +33,7 @@ export function roundedRatio(numerator: bigint, denominator: bigint): number {
 }
 
 function gstMinor(subtotal: number, raw: string): number {
-  if (!/^0(?:\.\d+)?$|^1(?:\.0+)?$/u.test(raw)) conflict('checkout_unavailable');
+  if (!/^0(?:\.\d+)?$|^1(?:\.0+)?$/u.test(raw)) refuse('checkout_unavailable');
   const [whole, fraction = ''] = raw.split('.');
   return roundedRatio(
     BigInt(subtotal) * BigInt(`${whole}${fraction}`),
@@ -74,7 +74,7 @@ export function quoteIntent(
     !/^[A-Z0-9]{1,3}$/u.test(seller.invoice_prefix) ||
     !settings.quoteSecret
   )
-    conflict('checkout_unavailable');
+    refuse('checkout_unavailable');
   const subtotal = amount.parse(unitAmount * quantity);
   let cgst = 0,
     sgst = 0,
@@ -88,9 +88,9 @@ export function quoteIntent(
       !input.taxRate ||
       !seller.gst_approval_reference
     )
-      conflict('checkout_unavailable');
+      refuse('checkout_unavailable');
     if (identity.customer_gstin && identity.customer_gstin.slice(0, 2) !== identity.state_code)
-      conflict('billing_gstin_state_mismatch');
+      refuse('billing_gstin_state_mismatch');
     rate = input.taxRate;
     const tax = gstMinor(subtotal, rate);
     if (identity.state_code === seller.state_code) {
@@ -102,7 +102,7 @@ export function quoteIntent(
       igst = tax;
     }
   } else if (currency !== 'USD' || !seller.lut_reference || !identity.export_eligibility_attested)
-    conflict('checkout_unavailable');
+    refuse('checkout_unavailable');
   const tax = taxSchema.parse({
     subtotal_minor: subtotal,
     discount_minor: 0,
@@ -170,8 +170,8 @@ export function baseIntent(
   now: Date,
 ): Intent {
   const regional = plan.regional_prices[mode][country === 'IN' ? 'india' : 'international'];
-  if (!plan.self_serve || plan.contact_only) conflict('contact_only');
-  if (!regional?.provider_price_ref || !regional.tax_verified) conflict('checkout_unavailable');
+  if (!plan.self_serve || plan.contact_only) refuse('contact_only');
+  if (!regional?.provider_price_ref || !regional.tax_verified) refuse('checkout_unavailable');
   const intent = quoteIntent(settings, {
     kind: 'base',
     mode,
@@ -187,7 +187,7 @@ export function baseIntent(
     now,
   });
   if (intent.quote.total_price.amount_minor !== regional.amount_minor + regional.tax_minor)
-    conflict('checkout_unavailable');
+    refuse('checkout_unavailable');
   return intent;
 }
 
@@ -214,12 +214,12 @@ export function packIntent(
     now: Date;
   },
 ) {
-  if (!item.eligible_plan_keys.includes(planKey)) conflict('item_plan_ineligible');
-  if (!item.available) conflict('provider_unavailable');
+  if (!item.eligible_plan_keys.includes(planKey)) refuse('item_plan_ineligible');
+  if (!item.available) refuse('provider_unavailable');
   if (quantity < item.quantity_min || quantity > item.quantity_max)
-    conflict('quantity_out_of_bounds');
+    refuse('quantity_out_of_bounds');
   const price = item.modes[mode]?.regional_prices[country === 'IN' ? 'india' : 'international'];
-  if (!price) conflict('checkout_unavailable');
+  if (!price) refuse('checkout_unavailable');
   return quoteIntent(settings, {
     kind,
     mode,

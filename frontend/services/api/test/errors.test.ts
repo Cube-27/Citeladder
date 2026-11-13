@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { describe, expect, it } from 'vitest';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
+import { refuse } from '../src/billing/refusals.ts';
 import { ApiError, onError } from '../src/errors.ts';
 
 describe('HTTP error decisions', () => {
@@ -38,6 +39,21 @@ describe('HTTP error decisions', () => {
     expect(await response.json()).toMatchObject({
       error: { code: 'review_expired', retryable: false, details: { expired: true } },
     });
+  });
+
+  it('sends a billing refusal reason as the code and a sentence as the message', async () => {
+    const app = new Hono();
+    app.onError(onError);
+    app.get('/', () => refuse('billing_gstin_state_mismatch'));
+    const response = await app.request('/');
+    expect(response.status).toBe(409);
+    const body = (await response.json()) as { error: Record<string, unknown> };
+    expect(body.error).toMatchObject({
+      code: 'billing_gstin_state_mismatch',
+      message: 'The GSTIN does not match the selected state. Check both and try again.',
+      retryable: false,
+    });
+    expect(body.error).not.toHaveProperty('details');
   });
 
   it('rejects unknown machine codes from untyped persisted or provider values', () => {

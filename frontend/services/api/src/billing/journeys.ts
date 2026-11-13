@@ -9,7 +9,7 @@ import { lockAccount, issueBundle, revokeBundle } from '../entitlements/grants.t
 import { workspaceAccount } from './purchases.ts';
 import { catalog } from './catalog.ts';
 import { digest } from '../crypto-text.ts';
-import { conflict } from '../errors.ts';
+import { refuse, type BillingRefusal } from './refusals.ts';
 import { policy } from '../config.ts';
 import { uuidV5 } from '../uuid-v5.ts';
 import { firstOf } from '../lists.ts';
@@ -22,12 +22,13 @@ function campaignId(key: string) {
   return uuidV5('5f0ae2be-21f3-4c0b-a312-b1d946f32921', key);
 }
 
-export async function offerRead(db: Database, workspaceId: string, now: Date) {
+/** The offer as read, with the refusal a claim of it meets now (null when available). */
+async function offerDecision(db: Database, workspaceId: string, now: Date) {
   const account = await workspaceAccount(db, workspaceId);
   const published = await catalog(db);
   const campaign = published.payload.campaign;
   let status: 'available' | 'unavailable' | 'already_claimed' | 'ineligible' = 'available';
-  let reason: string | null = null;
+  let reason: BillingRefusal | null = null;
   if (
     account.registration_origin === 'public' ||
     (await db
@@ -51,7 +52,7 @@ export async function offerRead(db: Database, workspaceId: string, now: Date) {
     status = 'ineligible';
     reason = 'account_outside_campaign_cohort';
   }
-  return noCardOfferSchema.parse({
+  const offer = noCardOfferSchema.parse({
     campaign_id: campaignId(campaign.key),
     status,
     tier_key: campaign.plan_key,
@@ -60,6 +61,11 @@ export async function offerRead(db: Database, workspaceId: string, now: Date) {
     operator_code_allowed: campaign.operator_code_allowed,
     unavailable_reason: reason,
   });
+  return { offer, refusal: reason };
+}
+
+export async function offerRead(db: Database, workspaceId: string, now: Date) {
+  return (await offerDecision(db, workspaceId, now)).offer;
 }
 
 const codeHash = (code: string) => createHash('sha256').update(code).digest('hex');
@@ -82,7 +88,7 @@ async function replayClaim(
     ? waiver?.code_sha256 === codeHash(request.operator_code)
     : !prior.operator_code_id;
   if (prior.idempotency_key !== key || prior.campaign_id !== request.campaign_id || !codeMatches)
-    conflict('lifetime_introduction_consumed');
+    refuse('lifetime_introduction_consumed');
   return noCardClaimSchema.parse({
     campaign_id: prior.campaign_id,
     grant_id: prior.primary_grant_id,
@@ -107,7 +113,7 @@ async function assertNoPriorAccess(db: Database, accountId: string) {
     .select('id')
     .where('billing_account_id', '=', accountId)
     .executeTakeFirst();
-  if (history || subscription) conflict('introductory_access_cannot_stack');
+  if (history || subscription) refuse('introductory_access_cannot_stack');
 }
 export async function claimOffer(
   db: Database,
@@ -118,9 +124,9 @@ export async function claimOffer(
 ) {
   const claimed = await db.transaction().execute(async (trx) => {
     if (!request.terms_consent || !request.data_sharing_consent)
-      conflict('explicit_consent_required');
+      refuse('explicit_consent_required');
     const account = await workspaceAccount(trx, workspaceId);
-    if (account.registration_origin === 'public') conflict('lifetime_introduction_consumed');
+    if (account.registration_origin === 'public') refuse('lifetime_introduction_consumed');
     await lockAccount(trx, workspaceId, account.id);
     const fingerprint = digest({
       campaignId: request.campaign_id,
@@ -135,9 +141,9 @@ export async function claimOffer(
       .executeTakeFirst();
     if (prior) return replayClaim(trx, prior, request, key);
     const now = new Date();
-    const offer = await offerRead(trx, workspaceId, now);
-    if (offer.campaign_id !== request.campaign_id) conflict('campaign_identity_changed');
-    if (offer.status !== 'available') conflict(offer.unavailable_reason ?? offer.status);
+    const { offer, refusal } = await offerDecision(trx, workspaceId, now);
+    if (offer.campaign_id !== request.campaign_id) refuse('campaign_identity_changed');
+    if (refusal) refuse(refusal);
     await assertNoPriorAccess(trx, account.id);
     const user = await trx
       .selectFrom('users')
@@ -146,7 +152,7 @@ export async function claimOffer(
       .executeTakeFirstOrThrow();
     let waiverId: string | null = null;
     if (request.operator_code) {
-      if (!offer.operator_code_allowed) conflict('operator_code_invalid');
+      if (!offer.operator_code_allowed) refuse('operator_code_invalid');
       const digest = codeHash(request.operator_code);
       const waiver = await trx
         .selectFrom('introductory_operator_codes')
@@ -162,7 +168,7 @@ export async function claimOffer(
         (waiver.billing_account_id && waiver.billing_account_id !== account.id) ||
         (waiver.email_normalized && waiver.email_normalized !== user.email.toLowerCase())
       )
-        conflict('operator_code_invalid');
+        refuse('operator_code_invalid');
       waiverId = waiver.id;
       await trx
         .updateTable('introductory_operator_codes')
@@ -181,7 +187,7 @@ export async function claimOffer(
         .where('email', '=', user.email)
         .executeTakeFirst())
     )
-      conflict('oauth_verified_work_email_required');
+      refuse('oauth_verified_work_email_required');
     const published = await catalog(trx);
     const plan = published.payload.plans.find((row) => row.key === 'tier_1')!;
     const id = randomUUID();
@@ -248,7 +254,7 @@ export async function endOffer(db: Database, workspaceId: string, userId: string
       .where('billing_account_id', '=', account.id)
       .forUpdate()
       .executeTakeFirst();
-    if (!claim) conflict('introductory_access_not_found');
+    if (!claim) refuse('introductory_access_not_found');
     if (claim.ended_at) return { status: 'ended' as const, ended_at: claim.ended_at.toISOString() };
     const grants = await trx
       .selectFrom('account_grants')

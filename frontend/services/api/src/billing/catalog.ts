@@ -115,7 +115,10 @@ export async function catalogRevision(db: Database, revision?: string) {
     ? query.where('revision', '=', revision)
     : query.where('publication_state', '=', 'published');
   const row = await query.executeTakeFirst();
-  if (!row) throw new ApiError(503, 'catalog_unavailable');
+  if (!row)
+    throw new ApiError(503, 'The billing catalog is not available.', {
+      code: 'catalog_unavailable',
+    });
   return {
     revision: row.revision,
     payload: jsonObject(row.payload, 'billing_catalog_revisions.payload'),

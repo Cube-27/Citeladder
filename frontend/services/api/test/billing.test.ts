@@ -1622,9 +1622,11 @@ describe('billing money and access owner', () => {
     expect(cancel).toHaveBeenCalledTimes(1);
     expect(cancel).toHaveBeenCalledWith(t.sub.external_subscription_id, true);
     expect((await subscription()).cancellation_sent_at).not.toBeNull();
-    await expect(resumeSubscription(db, config, t.workspaceId)).rejects.toThrow(
-      'cancellation_already_sent',
-    );
+    await expect(resumeSubscription(db, config, t.workspaceId)).rejects.toMatchObject({
+      status: 409,
+      code: 'cancellation_already_sent',
+      message: 'The cancellation has already been sent to the payment provider.',
+    });
     expect(
       (await entitlementRead(db, config, t.workspaceId, new Date())).subscription,
     ).toMatchObject({ cancel_at_period_end: true, resumable_until: null });
@@ -2169,7 +2171,7 @@ describe('billing money and access owner', () => {
     } as const;
     await expect(
       purchase(db, hidden, other.workspaceId, request, randomUUID(), fakeProvider()),
-    ).rejects.toThrow('checkout_unavailable');
+    ).rejects.toMatchObject({ status: 409, code: 'checkout_unavailable' });
     expect(
       await purchase(db, hidden, listed.workspaceId, request, randomUUID(), fakeProvider()),
     ).toMatchObject({ status: 'pending' });

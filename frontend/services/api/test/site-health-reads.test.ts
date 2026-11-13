@@ -1113,13 +1113,20 @@ describe('crawl events', () => {
     expect(
       await json(seed, `/site-crawls/${seed.crawlId}/events?last_event_id=${randomUUID()}`, events),
     ).toEqual([]);
+    // A resume id that is not a UUID is refused, never read as "replay everything".
+    const replayRefused = await get(seed, `/site-crawls/${seed.crawlId}/events?last_event_id=bad`);
+    expect(replayRefused.status).toBe(422);
+    const streamRefused = await get(seed, `/site-crawls/${seed.crawlId}/events?stream=true`, {
+      'last-event-id': 'bad',
+    });
+    expect(streamRefused.status).toBe(422);
     // The fixture crawl was frozen without count disclosure.
     const replay = await json(seed, `/site-crawls/${seed.crawlId}/events`, events);
     expect(replay[1]!.payload).toEqual({ analyzed: 1 });
 
     process.env.SITE_HEALTH_SSE_POLL_INTERVAL_SECONDS = '0.01';
     const stream = await get(seed, `/site-crawls/${seed.crawlId}/events?stream=true`);
-    expect(stream.headers.get('content-type')).toBe('text/event-stream');
+    expect(stream.headers.get('content-type')).toBe('text/event-stream; charset=utf-8');
     // A terminal crawl's stream ends after its grace polls.
     const text = await stream.text();
     expect(text.match(/^event: /gmu)).toHaveLength(3);

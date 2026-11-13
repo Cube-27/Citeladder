@@ -5,6 +5,7 @@
  */
 import { z } from 'zod';
 import { policy } from '../config.ts';
+import { retryAfterSeconds } from '../http/retry-after.ts';
 import { providerErrorCode } from '../models/http.ts';
 import { round } from '../numbers.ts';
 import { approvedEndpoint, basicAuthorization } from './connections.ts';
@@ -56,14 +57,6 @@ export function costMicrousd(value: unknown): number | null {
   if (cost === null) return null;
   const result = round(cost * policy.dataforseo.microusd_per_usd, 0);
   return Number.isSafeInteger(result) ? result : null;
-}
-
-function retryAfterSeconds(header: string | null): number | undefined {
-  if (!header) return undefined;
-  const seconds = Number(header);
-  if (Number.isFinite(seconds)) return Math.max(0, seconds);
-  const until = Date.parse(header);
-  return Number.isFinite(until) ? Math.max(0, (until - Date.now()) / 1000) : undefined;
 }
 
 /**

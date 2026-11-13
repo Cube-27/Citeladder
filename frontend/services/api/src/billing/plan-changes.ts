@@ -6,7 +6,8 @@ import { planChangeSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
-import { ApiError, conflict } from '../errors.ts';
+import { ApiError } from '../errors.ts';
+import { refuse } from './refusals.ts';
 import { identitySchema } from './contracts.ts';
 import { digest } from '../crypto-text.ts';
 import { catalog } from './catalog.ts';
@@ -107,7 +108,7 @@ async function replayedPlanChange(db: Database, accountId: string, key: string, 
     .executeTakeFirst();
   if (prior) {
     if (prior.activation_kind !== 'upgrade' || prior.catalog_key !== targetKey)
-      conflict('idempotency_key_reused');
+      refuse('idempotency_key_reused');
     const frozen = z.object({ effective_at: z.string() }).parse(prior.change_terms);
     return {
       pending: prior,
@@ -133,7 +134,7 @@ async function replayedPlanChange(db: Database, accountId: string, key: string, 
       replay.operation !== 'subscription.change' ||
       replay.request_fingerprint !== digest({ targetKey })
     )
-      conflict('idempotency_key_reused');
+      refuse('idempotency_key_reused');
     if (await refusedFromKey(db, accountId, key)) {
       // The process died between the refusal and the record's delete; finish that
       // delete so this retry re-requests the change, as a post-refusal retry does.
@@ -174,7 +175,7 @@ function replayedScheduledDowngrade(scheduledChange: unknown, subId: string, tar
         activation: null,
       }),
     };
-  if (scheduled.state !== 'provider_rejected') conflict('plan_change_pending');
+  if (scheduled.state !== 'provider_rejected') refuse('plan_change_pending');
   return null;
 }
 
@@ -207,7 +208,7 @@ export async function changePlan(
       sub.provider !== 'razorpay' ||
       sub.provider_mode !== config.razorpay.mode
     )
-      conflict('plan_change_unavailable');
+      refuse('plan_change_unavailable');
     const scheduledReplay = replayedScheduledDowngrade(sub.scheduled_change, sub.id, targetKey);
     if (scheduledReplay) return scheduledReplay;
     if (
@@ -219,11 +220,11 @@ export async function changePlan(
         .where('status', '=', 'pending')
         .executeTakeFirst()
     )
-      conflict('plan_change_pending');
-    if (targetKey === sub.catalog_key) conflict('plan_change_same_plan');
+      refuse('plan_change_pending');
+    if (targetKey === sub.catalog_key) refuse('plan_change_same_plan');
     const published = await catalog(trx);
     const plan = published.payload.plans.find((row) => row.key === targetKey);
-    if (!plan) conflict('catalog_key_unknown');
+    if (!plan) refuse('catalog_key_unknown');
     const now = new Date();
     const identity = identitySchema.parse(account.billing_profile);
     // A plan change keeps the subscription's mode; switching mode is a new plan.
@@ -249,7 +250,7 @@ export async function changePlan(
       grant_specs: plan.grants.map((row) => [row.key, row.value]),
     });
     const current = frozenTermsSchema.parse(sub.frozen_terms);
-    if (current.currency !== terms.currency) conflict('plan_change_unavailable');
+    if (current.currency !== terms.currency) refuse('plan_change_unavailable');
     const difference = target.quote.base_price.amount_minor - current.quote.base_price.amount_minor;
     // The checkout switch stops new charges; a downgrade charges nothing and
     // needs only the provider that already bills this subscription.
@@ -264,7 +265,7 @@ export async function changePlan(
         : configured(config.razorpay)) ||
       plan.regional_prices[mode][target.region]?.provider_mode !== sub.provider_mode
     )
-      conflict('checkout_unavailable');
+      refuse('checkout_unavailable');
     const effective = sub.current_period_end.toISOString();
     if (difference <= 0) {
       const response = await scheduleDowngrade(trx, {
@@ -286,7 +287,7 @@ export async function changePlan(
       Math.max(0, Math.floor((sub.current_period_end.getTime() - now.getTime()) / 1000)),
     );
     const prorated = roundedRatio(BigInt(difference) * BigInt(leftSeconds), BigInt(totalSeconds));
-    if (prorated < config.billing.minimumUpgrade) conflict('plan_change_unavailable');
+    if (prorated < config.billing.minimumUpgrade) refuse('plan_change_unavailable');
     const intent = quoteIntent(config.billing, {
       kind: 'upgrade',
       mode,
@@ -336,7 +337,9 @@ export async function changePlan(
         db.selectFrom('billing_accounts').select('id').where('workspace_id', '=', workspaceId),
       )
       .execute();
-    throw new ApiError(502, 'provider_rejected');
+    throw new ApiError(502, 'The payment provider declined this plan change.', {
+      code: 'provider_rejected',
+    });
   }
   return state === 'scheduled' ? { ...prepared.response, status: state } : prepared.response;
 }

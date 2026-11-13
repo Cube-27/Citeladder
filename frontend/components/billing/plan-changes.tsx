@@ -15,7 +15,7 @@ import type {
   CatalogPlan,
   SelfServePlanKey,
 } from '@/lib/api/billing';
-import { billingFailureNotice } from '@/lib/billing/reason-copy';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
   formatMoney,
   isSelfServeKey,
@@ -118,7 +118,9 @@ export function PlanChanges({
       ) : null}
       {controls.downgradeError ? (
         <MutationNotice
-          notice={billingFailureNotice(controls.downgradeError, 'schedule the downgrade')}
+          notice={mutationNoticeForError(controls.downgradeError, {
+            action: 'schedule the downgrade',
+          })}
         />
       ) : null}
       <Dialog

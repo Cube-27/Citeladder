@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { z } from 'zod';
 
+import { PlatformAdminRequired } from '../auth/operators.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
@@ -142,7 +143,7 @@ export async function loadCalibration(db: Database, actor: string, since?: Date)
     .where('is_active', '=', true)
     .where('role', '=', 'admin')
     .executeTakeFirst();
-  if (!admin) throw new Error('active_admin_required');
+  if (!admin) throw new PlatformAdminRequired();
   let query = db
     .selectFrom('prompt_candidates as candidate')
     .innerJoin('prompt_generation_runs as run', 'run.id', 'candidate.run_id')

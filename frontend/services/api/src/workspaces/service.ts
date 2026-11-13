@@ -148,6 +148,9 @@ function ownerRequired(message: string): never {
   throw new ApiError(409, message, { code: 'workspace_owner_required' });
 }
 
+const memberNotFound = () =>
+  new ApiError(404, 'Member not found', { code: 'workspace_member_not_found' });
+
 export async function listMembers(
   db: Database,
   workspaceId: string,
@@ -246,7 +249,7 @@ export async function applyMemberMutation(
   )
     .forUpdate()
     .executeTakeFirst();
-  if (!member) throw new ApiError(404, 'member_not_found', { code: 'workspace_member_not_found' });
+  if (!member) throw memberNotFound();
   if (member.role === 'owner') ownerRequired('Transfer ownership first');
   if ('role' in target) {
     if (member.role !== target.role) {
@@ -298,8 +301,7 @@ export function transferOwnership(
       .execute();
     const previous = members.find((row) => row.role === 'owner');
     const incoming = members.find((row) => row.id === memberId);
-    if (!incoming)
-      throw new ApiError(404, 'member_not_found', { code: 'workspace_member_not_found' });
+    if (!incoming) throw memberNotFound();
     if (!previous) ownerRequired('The workspace has no owner');
     if (incoming.id === previous.id) ownerRequired('This member already owns the workspace');
     await subjectXactLock(trx, `workspace.create:${incoming.user_id}`);

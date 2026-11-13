@@ -12,7 +12,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
-import { billingFailureNotice } from '@/lib/billing/reason-copy';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 
 export type BillingCancellation = {
   open: boolean;
@@ -169,7 +169,7 @@ function ResumeNotice({
       ) : null}
       {cancellation.resumeError ? (
         <MutationNotice
-          notice={billingFailureNotice(cancellation.resumeError, 'resume the plan')}
+          notice={mutationNoticeForError(cancellation.resumeError, { action: 'resume the plan' })}
           onRetry={cancellation.resume}
         />
       ) : null}
@@ -243,7 +243,9 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
       </p>
       {cancellation.error ? (
         <MutationNotice
-          notice={billingFailureNotice(cancellation.error, 'schedule the cancellation')}
+          notice={mutationNoticeForError(cancellation.error, {
+            action: 'schedule the cancellation',
+          })}
         />
       ) : null}
     </Dialog>

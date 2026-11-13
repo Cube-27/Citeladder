@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { SettingSource } from '../config/settings.ts';
+import { retryAfterSeconds } from '../http/retry-after.ts';
 import {
   codes,
   endpoints,
@@ -81,7 +82,6 @@ function approvedIntegrationUrl(value: string): URL {
 }
 
 function statusError(status: number, retryAfter: string | null): IntegrationError {
-  const seconds = !retryAfter?.trim() ? Number.NaN : Number(retryAfter);
   let code = codes.ERROR_PROVIDER_API;
   if (status === 429) code = codes.ERROR_RATE_LIMITED;
   // A 401 is the credential; a 403 is this property's permission, which must
@@ -92,7 +92,7 @@ function statusError(status: number, retryAfter: string | null): IntegrationErro
     code,
     `Integration provider returned HTTP ${status}`,
     status === 429 || [500, 502, 503, 504].includes(status),
-    Number.isFinite(seconds) && seconds >= 0 ? seconds : null,
+    retryAfterSeconds(retryAfter) ?? null,
     status,
   );
 }

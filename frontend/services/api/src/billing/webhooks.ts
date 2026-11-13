@@ -46,7 +46,8 @@ async function boundedBody(c: Context<AppEnv>, limit: number) {
   // Leaving the loop early cancels the stream.
   for await (const chunk of c.req.raw.body ?? []) {
     length += chunk.length;
-    if (length > limit) throw new ApiError(413, 'webhook_body_too_large');
+    if (length > limit)
+      throw new ApiError(413, 'The webhook body is too large.', { code: 'webhook_body_too_large' });
     chunks.push(chunk);
   }
   return Buffer.concat(chunks);
@@ -68,6 +69,9 @@ function authentic(settings: ServiceConfig['razorpay'], bytes: Buffer, signature
   );
 }
 
+const invalidPayload = () =>
+  new ApiError(400, 'The webhook payload is not valid.', { code: 'webhook_payload_invalid' });
+
 const PAYLOAD_KEYS: Record<string, string> = {
   'refund.processed': 'refund',
   'order.paid': 'order',
@@ -88,9 +92,12 @@ function eventEntity(parsed: z.infer<typeof envelope>) {
   if (!payloadKey) return { entity: null, reference: '' };
   const entity = parsed.payload[payloadKey]?.entity;
   // A supported event without its entity is malformed, not ignorable.
-  if (!entity) throw new ApiError(400, 'webhook_payload_invalid');
+  if (!entity) throw invalidPayload();
   const reference = payloadKey === 'payment' ? entity.order_id : entity.id;
-  if (!ref.safeParse(reference).success) throw new ApiError(400, 'webhook_reference_invalid');
+  if (!ref.safeParse(reference).success)
+    throw new ApiError(400, 'The webhook does not carry a valid provider reference.', {
+      code: 'webhook_reference_invalid',
+    });
   return { entity, reference: String(reference) };
 }
 
@@ -102,19 +109,26 @@ export async function receiveWebhook(
   provider: string,
 ) {
   if (provider !== 'razorpay' || !configured(config.razorpay))
-    throw new ApiError(400, 'webhook_unavailable');
+    throw new ApiError(400, 'Webhooks are not available for this provider.', {
+      code: 'webhook_unavailable',
+    });
   const bytes = await boundedBody(c, config.billing.webhookBytes);
   const settings = config.razorpay;
   const now = new Date();
   if (!authentic(settings, bytes, c.req.header('x-razorpay-signature') ?? ''))
-    throw new ApiError(400, 'webhook_authentication_failed');
+    throw new ApiError(400, 'The webhook signature is not valid.', {
+      code: 'webhook_authentication_failed',
+    });
   const eventId = c.req.header('x-razorpay-event-id')?.trim();
-  if (!eventId || eventId.length > 255) throw new ApiError(400, 'webhook_event_id_required');
+  if (!eventId || eventId.length > 255)
+    throw new ApiError(400, 'The webhook needs an event id of at most 255 characters.', {
+      code: 'webhook_event_id_required',
+    });
   let parsed: z.infer<typeof envelope>;
   try {
     parsed = envelope.parse(JSON.parse(bytes.toString('utf8')));
   } catch {
-    throw new ApiError(400, 'webhook_payload_invalid');
+    throw invalidPayload();
   }
   const { entity, reference } = eventEntity(parsed);
   const summary = {
@@ -164,7 +178,9 @@ export async function receiveWebhook(
         .returning(['id', 'error_code'])
         .execute();
       reportQuarantined(quarantined);
-      throw new ApiError(400, 'event_id_digest_conflict');
+      throw new ApiError(400, 'This webhook event id was already received with another body.', {
+        code: 'event_id_digest_conflict',
+      });
     }
   }
 }

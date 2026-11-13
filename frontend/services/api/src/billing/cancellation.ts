@@ -3,7 +3,7 @@ import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
 import { workspaceAccount } from './purchases.ts';
-import { conflict } from '../errors.ts';
+import { refuse } from './refusals.ts';
 import { configured } from './razorpay.ts';
 
 /**
@@ -45,7 +45,7 @@ async function currentBase(trx: Database, workspaceId: string) {
     .forUpdate()
     .executeTakeFirst();
   if (!row?.current_period_end || row.current_period_end <= new Date())
-    conflict('no_current_subscription');
+    refuse('no_current_subscription');
   return { ...row, current_period_end: row.current_period_end };
 }
 
@@ -63,7 +63,7 @@ export async function cancelSubscription(db: Database, config: ServiceConfig, wo
       row.provider_mode !== config.razorpay.mode ||
       !configured(config.razorpay)
     )
-      conflict('checkout_unavailable');
+      refuse('checkout_unavailable');
     const now = new Date();
     const sendAt = cancellationSendAt(row.current_period_end, config);
     await trx
@@ -90,7 +90,7 @@ export async function resumeSubscription(db: Database, config: ServiceConfig, wo
   const sub = await db.transaction().execute(async (trx) => {
     const row = await currentBase(trx, workspaceId);
     if (!row.cancel_at_period_end) return { row, resumed: false };
-    if (!cancellationHeldUntil(row, config)) conflict('cancellation_already_sent');
+    if (!cancellationHeldUntil(row, config)) refuse('cancellation_already_sent');
     await trx
       .updateTable('billing_subscriptions')
       .set({ cancel_at_period_end: false, reconciliation_next_at: null, updated_at: new Date() })
