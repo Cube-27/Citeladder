@@ -1,0 +1,196 @@
+/**
+ * A turn's activity in the reader's words: what the Agent read, searched and
+ * wrote. Saved replies and live turns build their rows here, so both say the
+ * same thing; tool names, ids and budgets never reach the text.
+ */
+import type { AgentStep } from '@citeladder/contracts/agent';
+
+/** What an active run's model call is doing, while no read is running. */
+export function modelStepLabel(status: string): string {
+  if (status === 'working') return 'Deciding the next step…';
+  if (status === 'processing') return 'Processing the next step…';
+  if (status === 'reasoned') return 'Planned the next step';
+  if (status === 'failed') return 'Step failed';
+  if (status === 'interrupted') return 'Earlier attempt interrupted';
+  return 'Step status unknown';
+}
+
+type Verb = { running: string; done: string; failed: string };
+const VERB = {
+  read: { running: 'Reading', done: 'Read', failed: 'Couldn’t read' },
+  search: { running: 'Searching', done: 'Searched', failed: 'Couldn’t search' },
+  load: { running: 'Loading', done: 'Loaded', failed: 'Couldn’t load' },
+  save: { running: 'Saving', done: 'Saved', failed: 'Couldn’t save' },
+  replace: { running: 'Replacing', done: 'Replaced', failed: 'Couldn’t replace' },
+  edit: { running: 'Editing', done: 'Edited', failed: 'Couldn’t edit' },
+  suggest: { running: 'Suggesting', done: 'Suggested', failed: 'Couldn’t suggest' },
+} as const satisfies Record<string, Verb>;
+
+/** Each tool the Agent calls as a verb and the reader's noun; never its name. */
+const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
+  load_skill: { verb: VERB.load, noun: 'the method' },
+  save_document: { verb: VERB.save, noun: 'a document' },
+  edit_document: { verb: VERB.edit, noun: 'a document' },
+  suggest_edits: { verb: VERB.suggest, noun: 'changes' },
+  // Provider-hosted; its results are outside pages, not CiteLadder data.
+  web_search: { verb: VERB.search, noun: 'the web' },
+  search: { verb: VERB.search, noun: 'CiteLadder' },
+  fetch: { verb: VERB.read, noun: 'a record' },
+  get_project_business_context: { verb: VERB.read, noun: 'the project overview' },
+  read_visibility_overview: { verb: VERB.read, noun: 'AI visibility' },
+  read_visibility_trends: { verb: VERB.read, noun: 'visibility trends' },
+  read_perception: { verb: VERB.read, noun: 'answer perception' },
+  read_fact_checks: { verb: VERB.read, noun: 'fact checks' },
+  read_ai_ads: { verb: VERB.read, noun: 'ads in AI answers' },
+  read_visibility_results: { verb: VERB.read, noun: 'AI answers' },
+  read_visibility_sources: { verb: VERB.read, noun: 'cited sources' },
+  read_source_url: { verb: VERB.read, noun: 'a cited page' },
+  read_prompt_portfolio: { verb: VERB.read, noun: 'prompts' },
+  read_seed_queries: { verb: VERB.read, noun: 'seed queries' },
+  read_actions: { verb: VERB.read, noun: 'Actions' },
+  read_content_differentiation: { verb: VERB.read, noun: 'content comparisons' },
+  read_ai_shelf: { verb: VERB.read, noun: 'the AI Shelf' },
+  read_site_health: { verb: VERB.read, noun: 'Site Health' },
+  read_site_pages: { verb: VERB.read, noun: 'site pages' },
+  read_page_text: { verb: VERB.read, noun: 'page' },
+  read_site_links: { verb: VERB.read, noun: 'internal links' },
+  read_ai_crawlability: { verb: VERB.read, noun: 'AI crawler access' },
+  read_crawl_logs: { verb: VERB.read, noun: 'AI crawler visits' },
+  read_ai_traffic_pages: { verb: VERB.read, noun: 'AI traffic by page' },
+  read_ai_traffic_url: { verb: VERB.read, noun: 'AI traffic for a page' },
+  read_ai_traffic_insights: { verb: VERB.read, noun: 'AI traffic insights' },
+  read_ai_referrals: { verb: VERB.read, noun: 'AI referral traffic' },
+  read_performance: { verb: VERB.read, noun: 'search performance' },
+  read_query_evidence: { verb: VERB.read, noun: 'queries by page' },
+  read_demand: { verb: VERB.read, noun: 'search demand' },
+  read_integration_status: { verb: VERB.read, noun: 'connected data' },
+  read_search_intelligence: { verb: VERB.read, noun: 'keyword research' },
+  read_search_dataset: { verb: VERB.read, noun: 'a research dataset' },
+};
+const OTHER_READ = { verb: VERB.read, noun: 'CiteLadder data' };
+
+type ActivityState = 'running' | 'done' | 'failed' | 'unknown';
+/** One visible line of a turn's activity: "Read page", muted "…/returns". */
+export type ActivityRow = {
+  key: string;
+  verb: string;
+  noun: string;
+  detail: string | null;
+  state: ActivityState;
+};
+
+/** A call's state as the reader sees it; a refused call is hidden. */
+function callState(status: string): ActivityState | null {
+  switch (status) {
+    case 'started':
+      return 'running';
+    case 'completed':
+    case 'unavailable':
+      return 'done';
+    case 'failed':
+      return 'failed';
+    case 'refused':
+      return null;
+    default:
+      return 'unknown';
+  }
+}
+
+function callRow(
+  key: string,
+  { tool, status, target }: { tool: string; status: string; target: string | null },
+): ActivityRow[] {
+  const state = callState(status);
+  if (!state) return [];
+  const { verb, noun } = TOOL_ACTIVITY[tool] ?? OTHER_READ;
+  let outcome = '';
+  if (status === 'unavailable') outcome = 'no data yet';
+  else if (state === 'unknown') outcome = 'outcome unknown';
+  return [
+    {
+      key,
+      verb: state === 'unknown' ? verb.done : verb[state],
+      noun,
+      detail: [target, outcome].filter(Boolean).join(' · ') || null,
+      state,
+    },
+  ];
+}
+
+/** A live tool event or a run's progress row as a step; a row without a tool is a model call. */
+export function callStep(call: {
+  ordinal: number;
+  tool: string | null;
+  status: string;
+  call_id: string | null;
+  target: string | null;
+}): AgentStep {
+  const { ordinal, tool, status, target } = call;
+  if (tool === null) return { kind: 'model', ordinal };
+  return { kind: 'tool', ordinal, tool, status, call_id: call.call_id ?? '', target };
+}
+
+/** A row as one phrase: "Read page". */
+export function activityLabel(row: Pick<ActivityRow, 'verb' | 'noun'>) {
+  return `${row.verb} ${row.noun}`;
+}
+
+const DOCUMENT_VERB = { created: VERB.save, replaced: VERB.replace, edited: VERB.edit } as const;
+
+/**
+ * The visible activity of a turn, saved or live, in order. Model calls are not
+ * activity; refused calls are hidden. Live calls arrive as `tool` steps,
+ * built-ins and web searches included, until the saved reply replaces them.
+ */
+export function activityRows(steps: readonly AgentStep[]): ActivityRow[] {
+  return steps.flatMap((step, index): ActivityRow[] => {
+    const key = `${step.kind}:${index}`;
+    switch (step.kind) {
+      case 'model':
+        return [];
+      case 'skill':
+        return [{ key, verb: VERB.load.done, noun: 'the method', detail: null, state: 'done' }];
+      case 'suggestion':
+        return [{ key, verb: VERB.suggest.done, noun: 'changes', detail: null, state: 'done' }];
+      case 'document':
+        return [
+          {
+            key,
+            verb: DOCUMENT_VERB[step.action].done,
+            noun: `Document ${step.number}`,
+            detail: step.title || null,
+            state: 'done',
+          },
+        ];
+      case 'search':
+        return callRow(key, { tool: 'web_search', status: step.status, target: step.query });
+      case 'tool':
+        return callRow(key, step);
+      default: {
+        const _exhaustive: never = step;
+        return _exhaustive;
+      }
+    }
+  });
+}
+
+function joined(nouns: readonly string[]) {
+  const shown = nouns.length > 3 ? [...nouns.slice(0, 2), `${nouns.length - 2} more`] : nouns;
+  return shown.length > 1 ? `${shown.slice(0, -1).join(', ')} and ${shown.at(-1)}` : shown[0];
+}
+
+/** The rows grouped by verb, in first-seen order: "Read Actions and AI visibility · searched the web". */
+export function activitySummary(rows: readonly ActivityRow[]): string {
+  const groups = new Map<string, string[]>();
+  for (const { verb, noun } of rows) {
+    const nouns = groups.get(verb) ?? [];
+    if (!nouns.includes(noun)) nouns.push(noun);
+    groups.set(verb, nouns);
+  }
+  return [...groups]
+    .map(([verb, nouns], index) => {
+      const lead = index === 0 ? verb : `${verb.charAt(0).toLowerCase()}${verb.slice(1)}`;
+      return `${lead} ${joined(nouns)}`;
+    })
+    .join(' · ');
+}

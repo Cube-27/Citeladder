@@ -410,7 +410,7 @@ describe('ChatScreen', () => {
       within(screen.getByRole('list', { name: 'Current reads' }))
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['Reading site health…', 'Reading performance…']);
+    ).toEqual(['Reading Site Health', 'Reading search performance']);
     read();
     expect(await screen.findByText('Deciding the next step…')).toBeVisible();
     expect(live).toHaveTextContent('Partly written');
@@ -678,12 +678,11 @@ describe('ChatScreen', () => {
     const user = userEvent.setup();
     renderChat();
 
-    await user.click(await screen.findByText('View activity'));
-    const steps = within(screen.getByRole('list', { name: 'Agent progress' }));
-    expect(steps.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Read site health · no data yet',
-      'Deciding the next step…',
-    ]);
+    expect(await screen.findByText('Deciding the next step…')).toBeInTheDocument();
+    const summary = screen.getByText('Read Site Health', { selector: 'summary' });
+    await user.click(summary);
+    const steps = within(summary.parentElement!).getByRole('list', { name: 'Agent activity' });
+    expect(steps).toHaveTextContent('Read Site Health no data yet');
   });
 
   it('refuses edits while a turn is running and offers Stop', async () => {

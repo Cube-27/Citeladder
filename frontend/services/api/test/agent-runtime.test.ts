@@ -980,7 +980,7 @@ describe('Agent runtime on PostgreSQL', () => {
           call_id: 'call_read',
         },
         { kind: 'model', ordinal: 2 },
-        { kind: 'document' },
+        { kind: 'document', action: 'created', number: 1, title: 'Document' },
         { kind: 'model', ordinal: 3 },
       ],
     });

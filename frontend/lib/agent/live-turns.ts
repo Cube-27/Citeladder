@@ -84,6 +84,7 @@ export function applyTurnEvent(turn: LiveTurn, event: TurnEvent): LiveTurn {
         call_id: event.call_id,
         tool: event.tool,
         status: event.status,
+        target: event.target,
       };
       const known = turn.tools.some((item) => item.call_id === tool.call_id);
       return {

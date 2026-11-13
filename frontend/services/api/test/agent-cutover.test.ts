@@ -102,24 +102,24 @@ describe('served Agent cutover on PostgreSQL', () => {
     expect(events.slice(0, -1)).toEqual([
       { type: 'step', ordinal: 1 },
       { type: 'thinking', ordinal: 1, text: 'Choosing a method' },
-      { type: 'tool', ordinal: 1, call_id: 'call_skill', tool: 'load_skill', status: 'started' },
-      { type: 'tool', ordinal: 1, call_id: 'call_skill', tool: 'load_skill', status: 'completed' },
+      ...(['started', 'completed'] as const).map((status) => ({
+        type: 'tool',
+        ordinal: 1,
+        call_id: 'call_skill',
+        tool: 'load_skill',
+        status,
+        target: null,
+      })),
       { type: 'step', ordinal: 2 },
       { type: 'document_delta', ordinal: 2, title: 'Document', body: 'Outline body' },
-      {
+      ...(['started', 'completed'] as const).map((status) => ({
         type: 'tool',
         ordinal: 2,
         call_id: expect.any(String),
         tool: 'save_document',
-        status: 'started',
-      },
-      {
-        type: 'tool',
-        ordinal: 2,
-        call_id: expect.any(String),
-        tool: 'save_document',
-        status: 'completed',
-      },
+        status,
+        target: null,
+      })),
       { type: 'step', ordinal: 3 },
       { type: 'reply_delta', ordinal: 3, text: long.slice(0, Math.ceil(long.length / 2)) },
       { type: 'reply_delta', ordinal: 3, text: long.slice(Math.ceil(long.length / 2)) },
@@ -132,6 +132,16 @@ describe('served Agent cutover on PostgreSQL', () => {
       `${long}\n\nDocument 1 saved in Website page format.`,
     );
     expect(detail.outputs.map((output) => output.latest_revision.body)).toEqual(['Outline body']);
+    // A step stored before its kind's current shape is left out; the chat still reads.
+    await db
+      .updateTable('agent_messages')
+      .set({ steps: JSON.stringify([{ kind: 'model', ordinal: 1 }, { kind: 'document' }]) })
+      .where('id', '=', detail.messages.at(-1)!.id)
+      .execute();
+    const reread = agentChatDetailSchema.parse(
+      await (await app.request(`/api/v1/agent/chats/${accepted.chat_id}`, { headers })).json(),
+    );
+    expect(reread.messages.at(-1)?.steps).toEqual([{ kind: 'model', ordinal: 1 }]);
     // A second request for the finished turn never executes it again.
     const again = await app.request(
       `/api/v1/agent/chats/${accepted.chat_id}/runs/${accepted.run.id}/run`,
