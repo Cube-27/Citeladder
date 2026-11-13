@@ -77,8 +77,6 @@
       "services/api/src/mcp/evidence-traffic.ts::performanceRead": 16,
       "services/api/src/mcp/evidence.ts::promptPortfolio": 14,
       "services/api/src/mcp/oauth-routes.ts::authenticatedClient": 16,
-      "services/api/src/mcp/oauth-routes.ts::registerOAuthRoutes::<anonymous>#5::<anonymous>": 17,
-      "services/api/src/mcp/oauth-routes.ts::registerOAuthRoutes::<anonymous>#9": 15,
       "services/api/src/mcp/oauth.ts::authorizationCodeGrant": 18,
       "services/api/src/mcp/oauth.ts::refreshTokenGrant": 15,
       "services/api/src/mcp/retrieval.ts::parseRecordId": 15,
