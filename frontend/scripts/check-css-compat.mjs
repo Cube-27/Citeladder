@@ -22,7 +22,7 @@ import { unsupported } from './browser-support-data.mjs';
  * without it shows. An entry no stylesheet needs any more fails the gate, so
  * a matrix raise or a removal takes it out of this list.
  */
-export const ACKNOWLEDGED_ENHANCEMENTS = {
+const ACKNOWLEDGED_ENHANCEMENTS = {
   '@starting-style': 'Menus, tooltips, toasts and drawers appear without their entry transition.',
   'text-wrap: balance': 'Headings wrap greedily.',
   'text-wrap: pretty': 'Paragraphs wrap greedily.',
@@ -86,8 +86,22 @@ function declarationFeatures(declaration) {
   return features;
 }
 
+// The selector without attribute selectors and strings, whose colons are not pseudo-classes.
+function bareSelector(selector) {
+  let bare = '';
+  let closing = null;
+  for (const char of selector) {
+    if (closing) {
+      if (char === closing) closing = null;
+    } else if (char === '[') closing = ']';
+    else if (char === '"' || char === "'") closing = char;
+    else bare += char;
+  }
+  return bare;
+}
+
 function selectorFeatures(selector) {
-  const bare = selector.replaceAll(/\[[^\]]*\]|"[^"]*"|'[^']*'/g, '');
+  const bare = bareSelector(selector);
   return [...bare.matchAll(/(::?)([a-zA-Z-]+)/g)].map(([, colons, name]) => [
     `${colons}${name}`,
     bcd.css.selectors[name],

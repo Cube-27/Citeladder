@@ -243,7 +243,7 @@ describe('content security policy report sink', () => {
           ...violation.body,
           effectiveDirective: 'script-src-elem',
           disposition: 'enforce',
-          sample: 'alert(document.cookie)',
+          sample: 'send(name || document.cookie)',
         },
       },
     ]);

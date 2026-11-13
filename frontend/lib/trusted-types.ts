@@ -23,7 +23,7 @@ const TRUSTED_SCRIPT_URLS: ReadonlySet<string> = new Set([
 ]);
 
 /** Whether a script URL is one the app loads on purpose; null asks the browser to report it. */
-export function trustedScriptUrl(input: string): string | null {
+function trustedScriptUrl(input: string): string | null {
   return TRUSTED_SCRIPT_URLS.has(input) ? input : null;
 }
 

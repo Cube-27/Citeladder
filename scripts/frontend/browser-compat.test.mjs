@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { compatViolations, supportMatrix } from '../../frontend/scripts/check-browser-compat.mjs';
 import {
+  compatViolations,
   cssCompatViolations,
   stylesheetFailures,
-} from '../../frontend/scripts/check-css-compat.mjs';
+  supportMatrix,
+} from '../../frontend/scripts/check-browser-compat.mjs';
 
 // The raised matrix (AR-8) and the one it replaced.
 const RAISED = supportMatrix([
@@ -117,6 +118,7 @@ test('reads properties, keyword values, functions and pseudo-elements, and passe
     '.nav { backdrop-filter: blur(4px); }',
     ':root { color: light-dark(black, white); }',
     'input::-webkit-scrollbar { width: 8px; }',
+    'a[title="::-webkit-scrollbar"], a[data-x=\'::-webkit-scrollbar\'] { color: red; }',
   ].join('\n');
   assert.deepEqual(css(source, NEXT), [
     'text-wrap: pretty@1',

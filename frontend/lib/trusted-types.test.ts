@@ -10,22 +10,18 @@ afterEach(() => {
 
 describe('Trusted Types default policy', () => {
   it('passes only the script URLs the app loads on purpose', () => {
-    const policies: Record<string, Rules> = {};
+    const policies = new Map<string, Rules>();
     window.trustedTypes = {
-      createPolicy: (name: string, rules: Rules) => {
-        policies[name] = rules;
-        return rules;
-      },
+      createPolicy: (name: string, rules: Rules) => policies.set(name, rules),
     };
     installTrustedTypesPolicy();
-    const decide = policies.default.createScriptURL;
     expect(
       [
         'https://checkout.razorpay.com/v1/checkout.js',
         'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',
         'https://challenges.cloudflare.com/turnstile/v0/api.js',
         'https://evil.example/checkout.js',
-      ].map(decide),
+      ].map((url) => policies.get('default')?.createScriptURL(url)),
     ).toEqual([
       'https://checkout.razorpay.com/v1/checkout.js',
       'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit',

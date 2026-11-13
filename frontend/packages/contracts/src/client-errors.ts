@@ -99,14 +99,14 @@ export type ClientReport = z.infer<typeof clientReportSchema>;
 export const CSP_REPORTS_PATH = '/api/v1/client-errors/csp-reports';
 
 /** The most reports one Reporting API delivery may carry. */
-export const CSP_REPORT_BATCH_LIMIT = 20;
+const CSP_REPORT_BATCH_LIMIT = 20;
 
 const reportUrl = z.string().max(2048);
 
 /**
  * One `csp-violation` report as the Reporting API sends it. Fields a browser
  * adds beyond these are dropped. Of `sample`, which can hold page text or
- * code, only a Trusted Types sink name (the part before `|`) is kept.
+ * code, only a Trusted Types sink name (`Element innerHTML` before the `|`) is kept.
  */
 const cspViolationSchema = z.object({
   type: z.literal('csp-violation'),
@@ -122,9 +122,7 @@ const cspViolationSchema = z.object({
       .string()
       .max(256)
       .optional()
-      .transform((value) =>
-        value?.includes('|') ? value.slice(0, value.indexOf('|')).slice(0, 64) : undefined,
-      ),
+      .transform((value) => /^([A-Za-z]{1,40}(?: [A-Za-z]{1,40})?)\|/u.exec(value ?? '')?.[1]),
   }),
 });
 

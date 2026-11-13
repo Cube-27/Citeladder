@@ -7,6 +7,7 @@ import { checkStylesheets } from './check-css-compat.mjs';
 import { lineIndex, parseSource, walk } from './source-ast.mjs';
 
 export { supportMatrix };
+export { cssCompatViolations, stylesheetFailures } from './check-css-compat.mjs';
 
 /**
  * Browser-compatibility gate: fails when browser source uses a web or
