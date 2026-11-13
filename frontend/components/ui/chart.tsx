@@ -214,16 +214,20 @@ export function ChartLegend({
 }>) {
   const item = cn(
     compact ? 'text-caption' : 'text-body-sm',
-    'inline-flex items-center gap-2 whitespace-nowrap',
+    // Capped, so three long names still share a row instead of taking one each.
+    'inline-flex max-w-[min(100%,20rem)] min-w-0 items-center gap-2 whitespace-nowrap',
   );
   return (
-    <ul aria-hidden className="flex flex-wrap gap-x-6 gap-y-2">
+    <ul aria-hidden className="flex min-w-0 flex-wrap gap-x-6 gap-y-2">
       {entries.map((entry) => (
         <li key={entry.name} className={item}>
           <ChartSwatch tone={entry.tone} line={line} />
-          <span className="text-ink-secondary">{entry.name}</span>
+          {/* A name wider than the card (a page's URL) is cut, whole in its title. */}
+          <span className="text-ink-secondary min-w-0 truncate" title={entry.name}>
+            {entry.name}
+          </span>
           {entry.value === undefined ? null : (
-            <span className="text-ink tabular-nums">{entry.value}</span>
+            <span className="text-ink shrink-0 tabular-nums">{entry.value}</span>
           )}
         </li>
       ))}

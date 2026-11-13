@@ -10,6 +10,7 @@ import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { runsQueries } from '@/lib/api/runs';
+import { ICONS } from '@/lib/icons';
 import { usePromptEngineAnswers } from '@/lib/runs/use-prompt-engine-answers';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
@@ -83,7 +84,7 @@ export function ExecutionEvidenceDrawer({
 
   let evidenceBody: ReactNode;
   if (unavailable) {
-    evidenceBody = <QueryState kind="empty" heading={unavailable} />;
+    evidenceBody = <QueryState kind="empty" icon={ICONS.runs} heading={unavailable} />;
   } else if (evidenceQuery.isError) {
     evidenceBody = (
       <ReadError

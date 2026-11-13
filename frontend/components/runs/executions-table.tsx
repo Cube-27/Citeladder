@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/table';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { formatCount } from '@/lib/format';
+import { ICONS } from '@/lib/icons';
 import { productTransportLabel } from '@/lib/providers/catalog';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { Execution } from '@citeladder/contracts';
@@ -63,7 +64,12 @@ export function ExecutionsTable({
   const pageRows = filters.rows.slice(from - 1, to);
   const unmatched: DataTableState | undefined =
     executions.length > 0 && filters.rows.length === 0
-      ? { kind: 'empty', headingLevel: 3, heading: 'No executions match your filters' }
+      ? {
+          kind: 'empty',
+          headingLevel: 3,
+          icon: ICONS.runs,
+          heading: 'No executions match your filters',
+        }
       : undefined;
   return (
     <DataTable
