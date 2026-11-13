@@ -23,6 +23,7 @@
  *     only — never for ordinary mutations.
  *   - JSON enforcement: a 2xx response that is not JSON is a contract violation.
  */
+import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
 import {
   API_BASE_URL,
   API_RETRY_BACKOFF_MS,
@@ -143,7 +144,7 @@ async function apiErrorFrom(response: Response, requestId: string): Promise<ApiE
     {
       code: parsed.code,
       retryable: parsed.retryable,
-      retryAfterSeconds: retryAfterSeconds(response.headers.get('retry-after')),
+      retryAfterSeconds: retryAfterWholeSeconds(response.headers.get('retry-after')),
     },
   );
 }
@@ -200,11 +201,10 @@ function timeoutApiError(requestId: string) {
   );
 }
 
-/** Parse the delta-seconds form emitted by CiteLadder's durable usage guards. */
-function retryAfterSeconds(value: string | null): number | undefined {
-  if (!value?.trim()) return undefined;
-  const seconds = Number(value);
-  return Number.isFinite(seconds) && seconds >= 0 ? Math.ceil(seconds) : undefined;
+/** The server's `Retry-After` advice in whole seconds, when it gave a positive wait. */
+function retryAfterWholeSeconds(header: string | null): number | undefined {
+  const seconds = retryAfterSeconds(header);
+  return seconds === undefined ? undefined : Math.ceil(seconds);
 }
 
 async function parseResponse<T>(response: Response, kind: ResponseKind): Promise<T> {

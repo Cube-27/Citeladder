@@ -446,14 +446,22 @@ test('previous CI evidence requires every owner to be successful or intentionall
       'Worker CSP and consent (playwright)',
       'Security (secrets scan)',
       'Infra (Terraform and workflows)',
-      'CI result',
       'Frontend tests (1/3)',
       'Frontend tests (2/3)',
       'Frontend tests (3/3)',
       'API service tests (${{ matrix.shard }}/6)',
     ].map((name) => ({ name, status: 'completed', conclusion: 'skipped' })),
+    { name: 'CI result', status: 'completed', conclusion: 'success' },
   ];
   assert.equal(hasTrustworthyJobEvidence(complete, 'ci.yml'), true);
+  // The aggregate always runs: a skipped one vouches for nothing.
+  assert.equal(
+    hasTrustworthyJobEvidence(
+      complete.map((job) => (job.name === 'CI result' ? { ...job, conclusion: 'skipped' } : job)),
+      'ci.yml',
+    ),
+    false,
+  );
   assert.equal(
     hasTrustworthyJobEvidence(
       complete.map((job) =>
@@ -499,6 +507,26 @@ test('previous CI evidence requires every owner to be successful or intentionall
     ),
     false,
   );
+});
+
+test('previous Compose evidence needs its classifier, the smoke and the aggregate result', () => {
+  const job = (name, conclusion = 'success') => ({ name, status: 'completed', conclusion });
+  const complete = [
+    job('Classify affected owners'),
+    job('Clean-clone Compose smoke', 'skipped'),
+    job('Compose smoke result'),
+  ];
+  assert.equal(hasTrustworthyJobEvidence(complete, 'compose-smoke.yml'), true);
+  assert.equal(hasTrustworthyJobEvidence(complete.slice(0, 2), 'compose-smoke.yml'), false);
+  for (const conclusion of ['failure', 'skipped'])
+    assert.equal(
+      hasTrustworthyJobEvidence(
+        [complete[0], complete[1], job('Compose smoke result', conclusion)],
+        'compose-smoke.yml',
+      ),
+      false,
+      conclusion,
+    );
 });
 
 test('pull-request synchronization uses latest-push diff and main is full', () => {

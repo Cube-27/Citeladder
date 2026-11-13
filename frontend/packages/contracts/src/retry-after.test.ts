@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vite-plus/test';
 
-import { retryAfterSeconds } from '../src/http/retry-after.ts';
+import { retryAfterSeconds } from './retry-after';
 
 const now = Date.parse('2026-11-13T12:00:00Z');
 

@@ -2,7 +2,8 @@
  * The TypeScript API service application.
  *
  * Serves liveness, readiness, MCP and every product route family (`routes/`).
- * On Cloud Run only token-admitted Worker requests reach it.
+ * On Cloud Run only token-admitted Worker requests reach it, apart from the
+ * unsigned liveness check (`GET /health`) and Cloud Scheduler's ID-token tick.
  */
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';

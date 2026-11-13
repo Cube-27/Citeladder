@@ -410,6 +410,7 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'billing', run: billing },
     ] satisfies RunnerLane[],
     periodic: [
+      { name: 'database-size', run: () => observeDatabaseSize(db) },
       {
         name: 'mcp-protocol-cleanup',
         run: (canAdmit) => cleanupMcpProtocol(db, new Date(), canAdmit),
@@ -468,7 +469,6 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       { name: 'integration-dispatcher', run: (canAdmit) => dispatcher.runOnce(canAdmit) },
       { name: 'crawl-log-maintenance', run: (canAdmit) => crawlLogTick(db, new Date(), canAdmit) },
       { name: 'billing-recovery', run: billing },
-      { name: 'database-size', run: () => observeDatabaseSize(db) },
     ] satisfies RunnerLane[],
   };
 }

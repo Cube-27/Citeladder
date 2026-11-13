@@ -430,8 +430,9 @@ runs for the exact deployed commit to have passed.
 The `CI` workflow's required status is its `CI result` job. GitHub reports an
 owner skipped by its job-level condition as successful, so requiring owner jobs
 by name would also pass a run whose classifier failed; `CI result` passes only
-when the classifier passed and every selected owner passed. Require the
-`Compose smoke` workflow's job statuses alongside it. Do not add
+when the classifier passed and every selected owner passed. The `Compose smoke`
+workflow's `Compose smoke result` job aggregates its classifier and smoke the
+same way; require it alongside. Do not add
 workflow-level `paths` filters to required workflows; a skipped workflow can
 leave its required statuses pending.
 

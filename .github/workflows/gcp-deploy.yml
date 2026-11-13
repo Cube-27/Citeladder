@@ -114,7 +114,7 @@ jobs:
           test -n "$PROJECT_ID" && test -n "$STATE_BUCKET" && test -n "$BILLING_ACCOUNT"
           test -n "$DEPLOY_SERVICE_ACCOUNT"
           if [ -z "$ALERT_EMAIL" ]; then
-            echo "::error::Set the GCP_ALERT_EMAIL repository variable; monitoring alerts go to it."
+            echo "::error::Set the gcp-demo environment's GCP_ALERT_EMAIL variable; monitoring alerts go to it."
             exit 1
           fi
           test -n "$DEFAULT_AGENT_BASE_URL" && test -n "$DEFAULT_AGENT_MODEL"

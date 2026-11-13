@@ -1,6 +1,7 @@
 /**
  * The one reader of a `Retry-After` header (RFC 9110 section 10.2.3): a
- * delay in seconds or an HTTP date.
+ * delay in seconds or an HTTP date. The API service reads provider headers
+ * with it and the browser reads the API's.
  *
  * Only a positive wait is advice. An absent, empty, zero, negative or
  * unparseable value, or a date already past, is `undefined`, so every caller

@@ -417,7 +417,7 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
   if (!Array.isArray(jobs)) return false;
   const compose = workflowFile === 'compose-smoke.yml';
   const expectedNames = compose
-    ? ['Classify affected owners', 'Clean-clone Compose smoke']
+    ? ['Classify affected owners', 'Clean-clone Compose smoke', 'Compose smoke result']
     : [
         'Classify affected owners',
         'Frontend (quality, docs)',
@@ -438,10 +438,12 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
   const singlesByName = new Map(singles.map((job) => [job.name, job]));
   const settled = (job) =>
     job?.status === 'completed' && ['success', 'skipped'].includes(job.conclusion);
+  // The classifier and the aggregate always run, so only success vouches for them.
+  const mustSucceed = ['Classify affected owners', compose ? 'Compose smoke result' : 'CI result'];
   return (
     singles.length === expectedNames.length &&
     singlesByName.size === expectedNames.length &&
-    singlesByName.get('Classify affected owners')?.conclusion === 'success' &&
+    mustSucceed.every((name) => singlesByName.get(name)?.conclusion === 'success') &&
     expectedNames.every((name) => settled(singlesByName.get(name))) &&
     matrixFamilies.every((family) => jobs.some((job) => familyOf(job.name) === family)) &&
     jobs.every(settled)

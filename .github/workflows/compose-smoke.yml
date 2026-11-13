@@ -155,3 +155,24 @@ jobs:
 
           "${compose[@]}" down --volumes --remove-orphans
           trap - EXIT
+
+  # The workflow's required status, like ci.yml's `CI result`: GitHub reports
+  # the smoke skipped by its condition as successful, so requiring it by name
+  # would also pass a run whose classifier failed.
+  result:
+    name: Compose smoke result
+    needs: [changes, compose-smoke]
+    if: always()
+    permissions: {}
+    runs-on: ubuntu-slim
+    timeout-minutes: 2
+    steps:
+      - name: The classifier and any selected smoke passed
+        env:
+          CLASSIFIER: ${{ needs.changes.result }}
+          SMOKE: ${{ needs.compose-smoke.result }}
+        run: |
+          echo "changes: $CLASSIFIER"
+          echo "compose-smoke: $SMOKE"
+          test "$CLASSIFIER" = success
+          test "$SMOKE" = success || test "$SMOKE" = skipped
