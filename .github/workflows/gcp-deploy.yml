@@ -455,12 +455,12 @@ jobs:
             gcloud run services describe "$API_SERVICE" "${run[@]}" --format=json
           }
           revision="$(describe | jq -r '.status.latestCreatedRevisionName')"
-          # Cloud Run retires a revision with no traffic and no tag before starting
-          # it, so readiness is only known once the tag routes to it.
+          # Cloud Run retires a revision with no traffic and no tag without starting
+          # it, so latestReadyRevisionName never reaches it; the tagged-URL smoke
+          # below starts it and is the readiness gate.
           if ! gcloud run services update-traffic "$API_SERVICE" "${run[@]}" \
-            --set-tags="candidate=$revision" --quiet >/dev/null ||
-            [ "$(describe | jq -r '.status.latestReadyRevisionName')" != "$revision" ]; then
-            echo "::error::Revision $revision did not become ready; traffic stays on the serving revision."
+            --set-tags="candidate=$revision" --quiet >/dev/null; then
+            echo "::error::Could not tag revision $revision; traffic stays on the serving revision."
             exit 1
           fi
           url="$(describe | jq -r '[.status.traffic[]? | select(.tag == "candidate") | .url] | first // empty')"
