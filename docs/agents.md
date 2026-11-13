@@ -3,7 +3,7 @@
 ## Responsibility
 
 The Agent is CiteLadder's one in-app assistant runtime. A user asks a question,
-starts a workflow or picks up an Action; the Agent reads persisted CiteLadder
+picks a skill or picks up an Action; the Agent reads persisted CiteLadder
 data and either answers or writes a deliverable the user refines.
 
 It owns chats, runs, model and tool attempts, outputs and their revisions. It
@@ -357,7 +357,8 @@ mirrors an in-app methodology (`ai-visibility-review` ↔ `ai_visibility`,
 change lands in both, adapted to the tools each surface has.
 
 The catalog endpoint projects only each skill's ID, label, group, output kind
-and description, plus the workflow catalog; skill bodies and format guidance
+and description, each workflow's ID and label, and the output kinds' presentation;
+skill bodies, workflow skills and formats, and format guidance
 are never returned to users or exposed through MCP. Follow-up skill selection
 is tri-state: omitted inherits the chat's pin, null clears it (Automatic) and an
 ID pins it.
@@ -366,15 +367,14 @@ ID pins it.
 
 [`workflows.json`](../frontend/services/api/assets/agent-skills/workflows.json),
 parsed by [`workflows.ts`](../frontend/services/api/src/agent/workflows.ts), defines
-the Agent's jobs:
+the jobs a chat can start with pinned. Users never pick a workflow directly:
+Action handoffs, the page workflow and next steps name one.
 
-- `groups`: how New chat groups the gallery;
-- `workflows`: each with a label, description, `skill_id`, optional `format_id`,
-  a starter `prompt` and up to four labelled `inputs`;
+- `workflows`: each with a label, `skill_id` and optional `format_id`;
 - `kinds`: per output kind, the label, the refinements offered after a fresh
   deliverable and the `next` workflows that take the work forward.
 
-The loader rejects unknown skills, groups, output kinds and next-step
+The loader rejects unknown skills, output kinds and next-step
 workflows, duplicates, and a format that does not exist or whose skill's kind
 takes no formats. Admission accepts `workflow_id`: the workflow's skill becomes
 the explicit choice and its format is frozen in the run manifest, so the
@@ -391,11 +391,9 @@ when the person asks; `save_document` refuses it, and edits and restores carry
 its fields forward. Its suggestions, and how the person applies them, are in
 [content optimization](content-optimization.md#suggestions).
 
-New chat shows the workflows as a grouped gallery; picking one opens a short
-form whose required inputs must be filled, and the composed message names each
-input. After a fresh deliverable, refinements prefill the composer for review,
-and next steps open a new chat with their workflow pinned and the exact output
-revision as the brief.
+After a fresh deliverable, refinements prefill the composer for review, and
+next steps open a new chat with their workflow pinned (a removable skill chip)
+and the exact output revision as the brief.
 
 To add a deliverable type, add a format section in `content_formats.md` and/or
 a `SKILL.md`, then
@@ -544,14 +542,18 @@ Agent mode holds New chat, Actions, Skills, Context and the chat history under
 under collapsible headers (fix the site, own pages, mentions elsewhere,
 products; AS2) with every filter in one All filters menu (AS6; the groups and
 filters are in [Opportunities](opportunities.md)); a row opens the Action's
-page, `/agent/actions/{id}`. The composer takes `/` to pick a skill and `@` to
-mention up to five of the project's Actions; `@` searches their titles in every
-status, and a pasted link to an Action's page in the same project becomes a
-mention (another project's link stays text). A long paste becomes a "Pasted
+page, `/agent/actions/{id}`. Every composer has a + menu: **Skills** sets the
+next turn's skill, shown as a removable chip, and **Actions** lists the
+project's top open Actions, each starting a chat on it, and the whole list.
+Typing `/` opens the menu on the skills and `@` mentions up to five of the
+project's Actions; `@` searches their titles in every status, and a pasted link
+to an Action's page in the same project becomes a mention (another project's
+link stays text). A long paste becomes a "Pasted
 text" attachment on the message (bounds in `agent-runtime.json`, listed in the
 skill catalog's `limits`); the model receives each one as its own block
-labelled as data, not instructions. New chat's **Work on an Action**
-offers **Brief me**, a `growth_plan` chat mentioning the top open Actions.
+labelled as data, not instructions. New chat centres the composer with
+**What should I work on?** open beneath it: **Brief me** starts a
+`growth_plan` chat mentioning the top open Actions.
 
 An Action's page also hands work to a developer outside CiteLadder (BL4).
 **Prepare developer ticket** (in the
@@ -572,7 +574,7 @@ carry references only.
 
 Evidence screens hand work to New chat through the
 [handoff codec](../frontend/lib/agent/handoff.ts). Every Action entry point
-(**Work with the agent** on its page, New chat's Recommended Actions, a cited
+(**Work with the agent** on its page, the composer's + menu Actions, a cited
 URL's **Draft the request**, a prompt's **Work on this**) attaches the Action
 by id; New chat reads it and writes its `handoff.message` into the composer,
 editable, so Send works without typing (AS3). The message never travels in the

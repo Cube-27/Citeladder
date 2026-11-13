@@ -2227,19 +2227,7 @@ describe('Agent runtime on PostgreSQL', () => {
     ]);
     const workflows = parseWorkflows(
       JSON.stringify({
-        groups: [{ id: 'social', label: 'Social' }],
-        workflows: [
-          {
-            id: 'post',
-            group: 'social',
-            label: 'Post',
-            description: 'A short post.',
-            skill_id: 'content',
-            format_id: 'post',
-            prompt: 'Write a post.',
-            inputs: [],
-          },
-        ],
+        workflows: [{ id: 'post', label: 'Post', skill_id: 'content', format_id: 'post' }],
         kinds: {},
       }),
       catalog.skills,

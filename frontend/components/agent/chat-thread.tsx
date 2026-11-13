@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 
 import { Composer } from '@/components/agent/composer';
 import { Conversation } from '@/components/agent/conversation';
-import { SkillPicker } from '@/components/agent/skill-picker';
+import { ComposerMenu } from '@/components/agent/composer-menu';
+import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useCancelRun, useFollowUp, type FollowUp } from '@/components/agent/use-chat-turns';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,14 @@ export function ReplyComposer({
   placeholder,
 }: Readonly<{ id: string; thread: ChatThread; detail: AgentChatDetail; placeholder: string }>) {
   const { turn, access, runActive } = thread;
+  const skill = useSkillChoice({
+    value: turn.skillId,
+    onChange: turn.setSkillId,
+    hasDocument: detail.outputs.length > 0,
+    inheritedSkillId:
+      detail.pinned_skill_id ?? (detail.chat.action_id ? null : latestOutput(detail)?.skill_id),
+    hasAction: Boolean(detail.chat.action_id),
+  });
   return (
     <Composer
       id={id}
@@ -92,17 +101,12 @@ export function ReplyComposer({
       stopping={thread.stopping}
       placeholder={placeholder}
       commands={turn.commands}
+      skill={skill.chip}
       tools={
-        <SkillPicker
-          {...turn.commands.skillPicker}
-          value={turn.skillId}
-          onChange={turn.setSkillId}
-          hasDocument={detail.outputs.length > 0}
-          inheritedSkillId={
-            detail.pinned_skill_id ??
-            (!detail.chat.action_id ? latestOutput(detail)?.skill_id : null)
-          }
-          hasAction={Boolean(detail.chat.action_id)}
+        <ComposerMenu
+          menu={turn.commands.menu}
+          scope={turn.commands.scope}
+          skill={skill}
           disabled={!access.canSend || runActive}
         />
       }

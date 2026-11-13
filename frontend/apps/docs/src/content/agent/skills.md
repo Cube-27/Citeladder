@@ -3,18 +3,18 @@ title: 'Choose a skill'
 description: 'Select the kind of help you need while keeping one conversation and one deliverable.'
 group: 'Improve with Agent'
 order: 220
-updated: '2026-11-04'
+updated: '2026-11-13'
 ---
 
 Skills give the Agent a method for a particular job. They run inside the same Agent workspace and use the same access and evidence boundaries.
 
-Open **Skills** to see the available labels, descriptions and output types. You can also select a skill when starting a chat.
+Open **Skills** to see the available labels, descriptions and output types.
 
-## Start from a workflow
+## Pick a skill for a message
 
-**New chat** lists workflows grouped by job, such as creating content, social and video, improving your site, AI visibility, and planning and measurement. Each workflow runs one skill, and content workflows also fix the format, such as a blog post or a LinkedIn post. Pick one, fill in its short form and choose **Start**.
+Choose **+** in the message box, then **Skills**, or type **/**. The skill you pick shows above your message; remove it to go back to automatic selection.
 
-After a deliverable is ready, the chat suggests refinements and next steps. A next step opens a new chat with its workflow selected and the current revision as the brief.
+After a deliverable is ready, the chat suggests refinements and next steps. A next step opens a new chat with its skill selected and the current revision as the brief.
 
 ## Choose by the outcome
 
@@ -36,7 +36,7 @@ Use the descriptions in the current catalog to choose the exact skill. Availabil
 
 An attached Action can recommend a skill based on its diagnosis. Review the recommendation alongside the evidence and the work you intend to do.
 
-If you choose a skill or a workflow explicitly, that choice takes precedence for the turn. Without an explicit choice, the Agent can use the Action's recommendation, the previous chat skill or select a skill for the request.
+If you choose a skill explicitly, that choice takes precedence for the turn. Without an explicit choice, the Agent can use the Action's recommendation, the previous chat skill or select a skill for the request.
 
 ## Keep one output kind per chat
 

@@ -464,13 +464,7 @@ export const agentSkillSchema = responseObject({
 
 export const agentWorkflowSchema = responseObject({
   id: z.string(),
-  group: z.string(),
   label: z.string(),
-  description: z.string(),
-  skill_id: z.string(),
-  format_id: z.string().nullable(),
-  prompt: z.string(),
-  inputs: z.array(responseObject({ key: z.string(), label: z.string(), required: z.boolean() })),
 });
 
 // What a finished deliverable of one kind is called and offers next.
@@ -483,7 +477,6 @@ const agentOutputKindSchema = responseObject({
 
 export const agentSkillCatalogSchema = responseObject({
   skills: z.array(agentSkillSchema),
-  workflow_groups: z.array(responseObject({ id: z.string(), label: z.string() })).default([]),
   workflows: z.array(agentWorkflowSchema).default([]),
   output_kinds: z.array(agentOutputKindSchema).default([]),
   /** Bounds the API enforces on a composed message, for the composer that reads this catalog. */

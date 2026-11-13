@@ -24,6 +24,15 @@ const ACTION = 'action:';
 /** A message ready to send: its text with resolved Action links replaced, and every mention's id. */
 type Prepared = { message: string; mentions: string[] };
 
+export type ComposerMenuState = {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  /** Opened by `/`: the menu is the skills list alone. */
+  skillsOnly: boolean;
+  onSelect: () => void;
+  onCloseAutoFocus: (event: Event) => void;
+};
+
 /**
  * The composer's `/` skill command, `@` Action mentions and pasted-text
  * attachments. Mentions are typed Action IDs the server resolves and
@@ -45,12 +54,9 @@ export function useComposerCommands({
   prepare: (message: string, send: (prepared: Prepared) => void) => void;
   /** A send is waiting for its Action links: the composer is pending. */
   resolving: boolean;
-  skillPicker: {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    onSelect: () => void;
-    onCloseAutoFocus: (event: Event) => void;
-  };
+  /** The composer's + menu; `/` opens it on its Skills submenu. */
+  menu: ComposerMenuState;
+  scope: { workspaceId: string; projectId: string };
 } {
   const client = useQueryClient();
   const [mentions, setMentions] = useState<Mention[]>([]);
@@ -64,7 +70,8 @@ export function useComposerCommands({
   }, [mentions]);
   const [resolving, setResolving] = useState(false);
   const resolvingRef = useRef(false);
-  const [skillPickerOpen, setSkillPickerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [skillsOnly, setSkillsOnly] = useState(false);
   const removeCommand = useRef<(() => void) | null>(null);
   const restoreFocus = useRef<(() => void) | null>(null);
   // Most messages mention nothing, so nothing is searched until `@` is typed.
@@ -170,20 +177,24 @@ export function useComposerCommands({
     openSkillPicker: (remove, focus) => {
       removeCommand.current = remove;
       restoreFocus.current = focus;
-      setSkillPickerOpen(true);
+      setMenuOpen(true);
+      setSkillsOnly(true);
     },
     closeSkillPicker: () => {
-      if (!skillPickerOpen) return false;
-      setSkillPickerOpen(false);
+      if (!menuOpen) return false;
+      setMenuOpen(false);
       removeCommand.current = null;
       return true;
     },
-    skillPicker: {
-      open: skillPickerOpen,
+    menu: {
+      open: menuOpen,
       onOpenChange: (open) => {
-        setSkillPickerOpen(open);
-        if (!open) removeCommand.current = null;
+        setMenuOpen(open);
+        // Only the + button opens it here; the closing menu keeps its face.
+        if (open) setSkillsOnly(false);
+        else removeCommand.current = null;
       },
+      skillsOnly,
       onSelect: () => {
         removeCommand.current?.();
         removeCommand.current = null;
@@ -195,6 +206,7 @@ export function useComposerCommands({
         restoreFocus.current = null;
       },
     },
+    scope: { workspaceId, projectId },
     onRemoveMention: (id) => setMentions((current) => current.filter((item) => item.id !== id)),
     pastes: {
       items: pastes,

@@ -123,3 +123,18 @@ the pending user bubble blinks before the refetch; `useDeferredValue` can show l
 One cross-PR reviewer over the whole Agent feature (front end, API runtime, contracts, docs): seams between
 PRs 1–7, dead paths (old `RunActivity`, unused progress fields, the replaced Jump button), duplicate helpers,
 stale docs, tests coupled to implementation. One PR of fixes.
+
+## PR 9 — New chat start screen
+
+Owner, 13 November, with a Claude.ai reference: the new-chat cards become nested lists behind a plus icon; the
+input stays in the middle of the page with "What should I work on?" open just below it; workflows ask for a URL
+and another field, which is not great UI, and skills already cover them, so workflows leave the UI.
+
+- A "+" icon button starts every composer's control row (AI Elements PromptInput action menu). **Skills ›** lists
+  the skill picker's options; a pick is a removable chip and replaces the separate skill button. **Actions ›** lists
+  the recommended Actions New chat showed, each starting a chat on it, then **All Actions**. Typing `/` opens the
+  menu on the skills; `@` is unchanged.
+- New chat: heading and composer centred in the page, the **Brief me** briefing open beneath it. The Recommended
+  Actions list and the workflow gallery go.
+- The workflow gallery, its form and their helpers are deleted, with the catalog fields only they read and the
+  workflows nothing else reaches. Action handoffs, the page workflow and next steps still pin workflows.

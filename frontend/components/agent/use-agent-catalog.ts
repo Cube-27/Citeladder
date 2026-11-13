@@ -6,14 +6,13 @@ import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 const EMPTY: Omit<AgentCatalog, 'limits'> = {
   skills: [],
-  workflow_groups: [],
   workflows: [],
   output_kinds: [],
 };
 
 /**
- * The server-owned skill and workflow catalog. Workflows, deliverable labels,
- * refinements and next steps all come from here, so a new deliverable type
+ * The server-owned skill and workflow catalog. Pinned workflow labels,
+ * deliverable labels, refinements and next steps all come from here, so a new deliverable type
  * needs no browser change.
  */
 export function useAgentCatalog() {
