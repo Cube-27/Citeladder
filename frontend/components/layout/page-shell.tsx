@@ -81,10 +81,17 @@ type FillLayout =
  * with `back`, as a detail page does.
  */
 export function ListScreen<T extends string = string>(
-  props: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack }>,
+  props: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack }> & NarrowLayout,
 ) {
   return <PageShell {...props} />;
 }
+
+/**
+ * `narrow` centres the tabs, controls and content in one column at the thread
+ * width (`max-w-thread`, the Agent's): settings, a short list or a setup page
+ * whose rows would leave their actions stranded at a wide page's far edge (D61).
+ */
+type NarrowLayout = Readonly<{ narrow?: boolean }>;
 
 /**
  * The control band, held while the route's filters wait on their first read.
@@ -171,9 +178,10 @@ function PageShell<T extends string>({
   actions,
   tabs,
   controls,
+  narrow = false,
   children,
   ...layout
-}: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack }>) {
+}: ScreenBands<T> & FillLayout & Readonly<{ back?: PageBack }> & NarrowLayout) {
   const resolved = useRouteTitle(title);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
@@ -205,9 +213,20 @@ function PageShell<T extends string>({
           </>
         }
       />
-      <ControlBands tabs={tabs} controls={headerFilters ? undefined : controls}>
-        {content}
-      </ControlBands>
+      <NarrowColumn narrow={narrow}>
+        <ControlBands tabs={tabs} controls={headerFilters ? undefined : controls}>
+          {content}
+        </ControlBands>
+      </NarrowColumn>
+    </div>
+  );
+}
+
+function NarrowColumn({ narrow, children }: Readonly<{ narrow: boolean; children: ReactNode }>) {
+  if (!narrow) return children;
+  return (
+    <div data-page-column="narrow" className="max-w-thread mx-auto w-full min-w-0">
+      {children}
     </div>
   );
 }

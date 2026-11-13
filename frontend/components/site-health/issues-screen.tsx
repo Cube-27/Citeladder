@@ -39,7 +39,7 @@ function IssuesDataRegion({
 }>) {
   if (dashboard.isLoading)
     return (
-      <ListScreen>
+      <ListScreen narrow>
         <QueryState kind="loading" label="Loading issues…" />
       </ListScreen>
     );
@@ -48,7 +48,7 @@ function IssuesDataRegion({
   const accessDenied = status === 401 || status === 403;
   if (dashboard.isError && (accessDenied || !dashboard.data)) {
     return (
-      <ListScreen>
+      <ListScreen narrow>
         <QueryState
           kind="error"
           error={dashboard.error}
@@ -95,7 +95,7 @@ function IssuesLoadedRegion({
         }
       />
     ) : (
-      <ListScreen>
+      <ListScreen narrow>
         <QueryState
           kind="error"
           error={dashboard.error}
@@ -108,7 +108,7 @@ function IssuesLoadedRegion({
   }
   if (!crawl) {
     return (
-      <ListScreen>
+      <ListScreen narrow>
         <QueryState
           kind="empty"
           icon={ICONS.issues}

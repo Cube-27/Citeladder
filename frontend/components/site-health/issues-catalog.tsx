@@ -123,7 +123,7 @@ export function IssuesCatalog({
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
   return (
-    <ListScreen>
+    <ListScreen narrow>
       <Stack gap="workspace" className="min-w-0">
         {notice}
         <IssuesSummary
