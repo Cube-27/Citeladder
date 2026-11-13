@@ -26,6 +26,11 @@ export const POLICIES = {
     renames: new Map(),
   },
 };
+/**
+ * Directories below a root that no ratchet measures: kysely-codegen writes them
+ * and `db:types:check` verifies them, so no one maintains them by hand.
+ */
+const GENERATED_DIRECTORIES = ['services/api/src/generated/'];
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
 // ESTree names for the kinds the TypeScript walk counted. Accessors and
 // constructors are `MethodDefinition` wrappers around a FunctionExpression
@@ -246,8 +251,11 @@ export function loadPolicy(name) {
 export function collect(policy) {
   const measurements = {};
   for (const root of policy.roots)
-    for (const file of filesUnder(path.join(FRONTEND, root)))
-      measurements[path.relative(FRONTEND, file).split(path.sep).join('/')] = measure(file);
+    for (const file of filesUnder(path.join(FRONTEND, root))) {
+      const relative = path.relative(FRONTEND, file).split(path.sep).join('/');
+      if (!GENERATED_DIRECTORIES.some((directory) => relative.startsWith(directory)))
+        measurements[relative] = measure(file);
+    }
   return measurements;
 }
 export function failuresFor(measurements, policy) {

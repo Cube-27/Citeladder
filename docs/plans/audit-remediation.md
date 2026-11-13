@@ -714,6 +714,7 @@ Recorded from the owner's answers in the audit follow-up conversation of
 | AR-8 | The browser matrix rises to Chrome/Edge 120, Safari/iOS 17.4 and Samsung 25, with an update notice | FE-001 |
 | AR-9 | Non-UTF-8 imports are refused with guidance, and every import offers a sample CSV download | FE-008 |
 | AR-10 | `GET /health` returns a constant body without the origin token, for the HTTP liveness probe and the uptime check; every other path, `/ready` included, still requires it (owner, 2026-11-12, PR 9 conversation) | OPS-005, OPS-017 |
+| AR-11 | The API complexity and duplication ratchets do not measure `services/api/src/generated/`: kysely-codegen writes it and `db:types:check` verifies it, so no one maintains it by hand. Nothing else is exempt (owner, 2026-11-13, billing system-review conversation) | — |
 
 The owner also decided, and recorded where the work lives:
 - **Site Health crawling and issue tracking (Spec 5):** SH-B1 to SH-B13, in the
