@@ -93,6 +93,17 @@ export function grantSource(ref: string): GrantSource | null {
   }
 }
 
+/**
+ * The reason a bundle stores: at most 255 characters, and required on an
+ * override an actor issued (invariant 16); a system baseline has no actor.
+ */
+function bundleReason(source: GrantSource, raw: string | undefined) {
+  const reason = raw?.trim() ?? '';
+  if (reason.length > 255 || (source.kind === 'override' && !reason))
+    conflict('grant_bundle_invalid', 'An override needs a reason, of at most 255 characters.');
+  return reason;
+}
+
 export async function issueBundle(
   db: Database,
   input: {
@@ -119,7 +130,7 @@ export async function issueBundle(
 ) {
   const { accountId, workspaceId, key, specs } = input;
   const ref = sourceRef(input.source);
-  const reason = input.reason?.trim() ?? '';
+  const reason = bundleReason(input.source, input.reason);
   await lockAccount(db, workspaceId, accountId);
   // Existing period bundles retain their original writer's key and UUIDs.
   let priorQuery = db
@@ -169,14 +180,10 @@ export async function issueBundle(
   // The resolver fails closed on an unknown source kind, so never write one.
   if (
     !specs.length ||
-    reason.length > 255 ||
     new Set(specs.map((spec) => spec.key)).size !== specs.length ||
     !(policy.entitlements.grant_source_kinds as readonly string[]).includes(input.sourceKind)
   )
     invalidBundle();
-  // An override an actor issued records why (invariant 16); a system baseline has no actor.
-  if (input.source.kind === 'override' && !reason)
-    conflict('grant_bundle_invalid', 'An operator override needs a reason.');
   for (const spec of specs) {
     const definition =
       policy.entitlements.capabilities[spec.key as keyof typeof policy.entitlements.capabilities];

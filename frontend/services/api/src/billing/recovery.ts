@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import { subscriptionStatusSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
 import { ApiError } from '../errors.ts';
@@ -487,7 +486,7 @@ async function subscriptionProbe(
     let evidence = await provider.evidence(sub.external_subscription_id, true);
     const state = evidence.kind === 'base' ? evidence.subscription : null;
     // Halted (retries exhausted) ends now, so it can never charge again unseen.
-    const halted = state?.status === subscriptionStatusSchema.enum.unpaid;
+    const halted = state?.status === policy.billing.subscription_status.unpaid;
     // A fully refunded current period ends now: its cancellation was committed
     // with the refund and is sent here, retried until the provider ends it (B52),
     // also after a renewal the provider charged meanwhile moved the period (B71).
@@ -503,7 +502,7 @@ async function subscriptionProbe(
       sub.current_period_end !== null &&
       cancellationSendAt(sub.current_period_end, config) <= new Date();
     const unwanted =
-      due && state?.status === subscriptionStatusSchema.enum.active && !state.cancelAtEnd;
+      due && state?.status === policy.billing.subscription_status.active && !state.cancelAtEnd;
     // Marked sent before the request, so a resume can never race it.
     const immediate = halted || refunded;
     const send = immediate || (unwanted && (await markCancellationSent(db, sub.id)));

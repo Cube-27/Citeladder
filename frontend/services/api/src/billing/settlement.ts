@@ -5,7 +5,6 @@ import {
   credentialModeSchema,
   currencySchema,
   resolvedQuoteSchema,
-  subscriptionStatusSchema,
 } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import {
@@ -45,13 +44,11 @@ export const scheduledSchema = z.object({
   source: z.string(),
   terms: frozenTermsSchema,
 });
-const STATUS = subscriptionStatusSchema.enum;
+// `unpaid` (halted at the provider) stays current, so it blocks a second base
+// subscription, until the sweep's cancellation is confirmed.
+const STATUS = policy.billing.subscription_status;
 const grantedStates = new Set<string>([STATUS.active, STATUS.cancel_scheduled]);
 const terminalStates = new Set(policy.billing.contracts.terminal_subscription_statuses);
-// Halted at the provider: the row stays current, so it blocks a second base
-// subscription, until the sweep's cancellation is confirmed.
-const UNPAID = STATUS.unpaid;
-const CANCELLED = STATUS.cancelled;
 /** A payment whose refunds total its amount no longer pays for its period (B52). */
 const refundedInFull = sql<boolean>`coalesce((
   select sum(r.amount_minor) from billing_payments r
@@ -357,7 +354,7 @@ export async function settlePending(
 
 /** Whether a full refund cancelled this subscription, pending the provider's confirmation (B52). */
 export function refundCancelled(sub: Pick<Subscription, 'is_current' | 'status'>) {
-  return sub.is_current && sub.status === CANCELLED;
+  return sub.is_current && sub.status === STATUS.cancelled;
 }
 
 /**
@@ -530,7 +527,7 @@ async function periodOutcome(
     // confirms (B52), even if a renewal was charged meanwhile (B71).
     return refundCancelled(sub) ||
       (sub.is_current && (await periodRefunded(db, sub, event.start, event.end)))
-      ? { ...settled, status: CANCELLED }
+      ? { ...settled, status: STATUS.cancelled }
       : settled;
   const paidEnd = await endTerminal(db, sub, event.version, workspaceId, now);
   return paidEnd
@@ -545,7 +542,7 @@ function followUps(sub: Subscription, event: SubscriptionEvidence, status: strin
     ...(event.cancelAtEnd && !sub.cancellation_sent_at ? { cancellation_sent_at: now } : {}),
     // The next subscription sweep cancels a halted or refunded subscription
     // promptly; one the provider already ends at its cycle waits its cadence.
-    ...(status === UNPAID || (status === CANCELLED && !event.cancelAtEnd)
+    ...(status === STATUS.unpaid || (status === STATUS.cancelled && !event.cancelAtEnd)
       ? { reconciliation_next_at: now }
       : {}),
   };
@@ -809,7 +806,7 @@ async function endRefundedPayment(
   await db
     .updateTable('billing_subscriptions')
     .set({
-      status: CANCELLED,
+      status: STATUS.cancelled,
       // Nothing left to resume: the cancellation is decided, not held (B46).
       cancel_at_period_end: true,
       cancellation_sent_at: now,

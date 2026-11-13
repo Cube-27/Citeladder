@@ -20,6 +20,7 @@ const terminalSubscriptionStatuses: readonly string[] = [s.cancelled, s.expired]
 export const billing = {
   ...runtime,
   ai_credits: aiCredits,
+  subscription_status: s,
   contracts: {
     ...c,
     live_subscription_statuses: liveSubscriptionStatuses,

@@ -3,12 +3,12 @@ import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { setLogSink } from '../src/logging.ts';
 import { createAudits } from '../src/audits/creation.ts';
+import { appendCostProjection } from '../src/audits/costs.ts';
 import { capacityLock } from '../src/entitlements/ledger.ts';
-import { lockProjectRow } from '../src/projects/service.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { record } from '../src/db/json.ts';
-import { removeProject } from '../src/projects/service.ts';
+import { lockProjectRow, removeProject } from '../src/projects/service.ts';
 import { asOwner, testDatabase } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
@@ -237,6 +237,31 @@ describe('atomic audit admission', () => {
       createAudits(db, t.workspaceId, input(t), {}, fundedRuntime),
     ).rejects.toMatchObject({ code: 'funded_budget_exhausted' });
     expect(await queued(t.workspaceId)).toEqual([]);
+  });
+  it("prices a funded answer into its audit's budget month, and a self-funded one into none", async () => {
+    const t = await auditTenant(db, fixtures);
+    const account = await billingAccount(db, t.workspaceId);
+    const month = new Date('2030-04-01T00:00:00Z');
+    const priced = async (funded: boolean) => {
+      const auditId = await fixtures.audit(t);
+      if (funded)
+        await db
+          .updateTable('audits')
+          .set({ funding_account_id: account, funded_budget_period_start: month })
+          .where('id', '=', auditId)
+          .execute();
+      const { taskId } = await fixtures.execution(t, { auditId });
+      const artifact = await db
+        .selectFrom('raw_response_artifacts')
+        .select('id')
+        .where('task_id', '=', taskId)
+        .executeTakeFirstOrThrow();
+      const projection = await db
+        .transaction()
+        .execute((trx) => appendCostProjection(trx, t.workspaceId, artifact.id));
+      return projection?.funded_budget_period_start;
+    };
+    expect([await priced(true), await priced(false)]).toEqual([month, null]);
   });
   it('persists replayable slots, immutable snapshots, credential identity and queue events together', async () => {
     const t = await auditTenant(db, fixtures);

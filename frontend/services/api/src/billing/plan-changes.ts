@@ -2,9 +2,9 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
-import { planChangeSchema, subscriptionStatusSchema } from '@citeladder/contracts/billing';
+import { planChangeSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
-import type { ServiceConfig } from '../config.ts';
+import { policy, type ServiceConfig } from '../config.ts';
 import { lockAccount } from '../entitlements/grants.ts';
 import { ApiError } from '../errors.ts';
 import { refuse } from './refusals.ts';
@@ -202,7 +202,7 @@ export async function changePlan(
     if (
       !sub?.current_period_start ||
       !sub.current_period_end ||
-      sub.status !== subscriptionStatusSchema.enum.active ||
+      sub.status !== policy.billing.subscription_status.active ||
       sub.cancel_at_period_end ||
       sub.current_period_end <= new Date() ||
       sub.provider !== 'razorpay' ||
