@@ -171,7 +171,10 @@ describe('ChatScreen implementation declaration', () => {
       ...proposed,
       actions: [{ id: ACTION, target_label: 'https://acme.test/pricing', status: 'in_progress' }],
     };
-    const { promise: loaded, resolve: load } = Promise.withResolvers<void>();
+    let load = () => {};
+    const loaded = new Promise<void>((resolve) => {
+      load = resolve;
+    });
     const { posted, handlers } = actionApi(loaded);
     mswServer.use(
       http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
