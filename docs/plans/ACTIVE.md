@@ -15,16 +15,14 @@ Remaining work is consolidated in the backlog; historical plans are not active a
     decisions SH-B1 to SH-B13 and the audit's 16 crawl findings. Ask agent in
     the drawer is still pending an owner decision.
 
-Commerce product tracking and backlog tier 1 shipped on 11 November 2026 and
-their plans were deleted. The owner decisions behind them are in
-[decisions](../decisions.md#commerce-product-tracking) (CM1–CM9) and
+Commerce product tracking and backlog tier 1 shipped on 11 November 2026, and
+the Agent chat UX round on 13 November 2026; their plans were deleted. The
+owner decisions behind them are in
+[decisions](../decisions.md#commerce-product-tracking) (CM1–CM9),
 [backlog closure](../decisions.md#backlog-closure) (BL1–BL12, which also defer,
-move and remove other backlog work); the feature owners in
+move and remove other backlog work) and
+[Agent chat UX](../decisions.md#agent-chat-ux) (AC1–AC7); the feature owners in
 [the documentation index](../README.md) describe what shipped.
-
-- [Agent chat UX](agent-chat-ux.md) (owner, 2026-11-13): tool reliability,
-  readable activity, a stable live turn, the composer, Actions everywhere, the
-  confirm card and the sidebar subtitle, in eight PRs ending with a review pass.
 
 ## Partly delivered
 

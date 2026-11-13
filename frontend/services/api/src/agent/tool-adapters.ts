@@ -75,6 +75,13 @@ function agentPage(schema: z.ZodType | undefined) {
       .describe(`How many rows to return, at most ${max}; omit for ${fallback}.`),
   };
 }
+const searchResults = z.object({ results: z.array(z.object({ id: z.string() })) });
+/** `fetch` and `search` name their records by `id`, not as artifact references; they are still what the read supplied. */
+function namedRecords(name: string, data: Record<string, Json>): string[] {
+  if (name === 'fetch') return typeof data.id === 'string' ? [data.id] : [];
+  if (name === 'search') return searchResults.parse(data).results.map((result) => result.id);
+  return [];
+}
 // The chat's project is fixed, and MCP App views render nothing in a chat.
 const NOT_FOR_AGENT = new Set(['list_projects', ...presentationTools]);
 const MISSING_TOOLS: ReadonlySet<string> = new Set([
@@ -144,9 +151,8 @@ export function sharedReads(db: Database): ReadTool[] {
             }
           }
           const result = outcome(data);
-          if (name === 'fetch' && typeof data.id === 'string') {
-            result.artifactRefs.push({ id: parseRecordId(data.id).id, record_uri: data.id });
-          }
+          for (const uri of namedRecords(name, data))
+            result.artifactRefs.push({ id: parseRecordId(uri).id, record_uri: uri });
           return result;
         },
       };

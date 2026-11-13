@@ -19,6 +19,7 @@ import { requiresEmailVerification } from '../auth/eligibility.ts';
 import { findWorkspaceMember, memberCan, rolesWith } from '../auth/workspace.ts';
 import { appLink, recordPath } from './links.ts';
 import { containsPattern } from '../db/like.ts';
+import { LISTED_ACTION } from '../opportunities/actions.ts';
 
 // A tool call that authorizes several reads checks grant and membership once.
 // Only a principal minted for one call shares its check; any other is live.
@@ -311,9 +312,7 @@ async function searchActions({
     .selectFrom('actions')
     .select(['id', 'project_id', 'target_label', 'approach', 'effective_status'])
     .where('workspace_id', 'in', workspaces)
-    .where((eb) =>
-      eb.or([eb('evidence_cleared_at', 'is', null), eb('origin', '=', a.ACTION_ORIGIN_AGENT)]),
-    )
+    .where(LISTED_ACTION)
     .where((eb) => eb.or([like('target_label'), like('approach'), like('target_url')]));
   if (projectId) actions = actions.where('project_id', '=', projectId);
   for (const row of await actions

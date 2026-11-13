@@ -710,6 +710,27 @@ behavior.
 Source: owner, in chat, 11 November 2026, in the session that planned the
 release; recorded in its plan, which was deleted once the release shipped.
 
+## Agent chat UX
+
+The owner set the Agent chat round after reviewing production chats from 10 to
+13 November and an HTML mockup; it shipped on 13 November 2026 and
+[Agent](agents.md) owns the resulting behavior.
+
+| ID | Decision |
+|---|---|
+| AC1 | [AI Elements](https://ui.shadcn.com/docs/ai-elements) are a pattern source, not a dependency: their structure is ported into `frontend/components/ui/` on the existing primitives and tokens, with no shadcn CLI, `components.json` or `ai` package. |
+| AC2 | Tool calls read as plain activity or are hidden ("model call 1, reading or saved document doesn't make any sense"): people never see tool names, record IDs, UUIDs, `citeladder://` references or budget numbers. |
+| AC3 | Nothing shifts while a turn streams or when a control is clicked ("fix the text jumping on every tool call"). |
+| AC4 | A long paste becomes a removable "Pasted text" attachment (mockup D); a pasted Action link becomes a mention, and an Action named in a reply becomes a chip with its status (mockup B). |
+| AC5 | The Agent may propose marking an Action implemented as a card under its reply; only the person's confirmation declares it (mockup C). |
+| AC6 | Each sidebar chat shows where it started and when it last moved; the no-credits reply gives the contact email. Credits top-up comes later. |
+| AC7 | New chat centres the composer with **What should I work on?** open beneath it, and a + menu holds skills and Actions. Workflows leave the UI, since skills cover them; Action handoffs, the page workflow and next steps still pin one. |
+
+Source: owner, in chat, 13 November 2026: implement mockups B, C and D and the
+sidebar subtitle, a Claude-like composer, and a new chat start screen after a
+Claude.ai reference; recorded in its plan, which was deleted once the round shipped.
+The rest of mockup A (a context card, titles from the subject) was left out.
+
 ## Code taste, testing and documentation rules live in CLAUDE.md
 
 The global `typescript-best-practices` and
