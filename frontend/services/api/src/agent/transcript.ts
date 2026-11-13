@@ -201,8 +201,8 @@ function suggestionLists(documents: readonly OpeningDocument[]): ConversationBlo
 /** Each attachment is its own block, labelled as data so a paste never reads as the request. */
 function attachmentBlock(attachment: AgentAttachment, index: number): ConversationBlock {
   if (attachment.kind !== 'pasted_text') {
-    const unknown: never = attachment;
-    throw new Error(`Unknown attachment ${JSON.stringify(unknown)}`);
+    const unknown: never = attachment.kind;
+    throw new Error(`Unknown attachment kind ${String(unknown)}`);
   }
   return {
     type: 'text',
