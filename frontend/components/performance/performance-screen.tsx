@@ -135,11 +135,9 @@ function hasQualityFlags(quality: PerformanceDashboard['coverage']['analytics_qu
   return Object.values(quality).some((days) => days.some((day) => day.flags.length > 0));
 }
 
-/** The status line at rest: the history the dashboard can draw from. */
-function coverageSummary(coverage: PerformanceDashboard['coverage']): string {
-  // The extent spans the imported metric rows, so no dates means no rows —
-  // which is not the same as no import having run.
-  if (!coverage.earliest_date || !coverage.latest_date) return 'No imported search rows yet.';
+/** The status line at rest: the history the dashboard can draw from, or nothing before any rows. */
+function coverageSummary(coverage: PerformanceDashboard['coverage']): string | null {
+  if (!coverage.earliest_date || !coverage.latest_date) return null;
   return `Imported history ${formatWindowDate(coverage.earliest_date)} – ${formatWindowDate(
     coverage.latest_date,
   )} · ${formatCount(coverage.covered_days)} days`;
@@ -162,17 +160,14 @@ function PerformanceEmptyState({
       />
     );
   }
-  const firstUse = data.coverage.covered_days === 0 && data.selected.snapshot_id === null;
+  // Before any import the setup card above says what to do.
+  if (data.coverage.covered_days === 0 && data.selected.snapshot_id === null) return null;
   return (
     <QueryState
       kind="empty"
       icon={ChartNoAxesColumn}
-      heading={firstUse ? 'No search performance evidence yet' : 'No performance evidence here'}
-      description={
-        firstUse
-          ? undefined
-          : 'Choose a range inside the imported history, or sync the missing dates.'
-      }
+      heading="No performance evidence here"
+      description="Choose a range inside the imported history, or sync the missing dates."
     />
   );
 }

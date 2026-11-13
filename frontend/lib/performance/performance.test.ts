@@ -92,9 +92,9 @@ describe('window description', () => {
     expect(windowLength(window())).toBe(7);
   });
 
-  it('says so when no dates resolved', () => {
+  it('says nothing when no dates resolved', () => {
     const unresolved = window({ snapshot_id: null, window_start: '', window_end: '' });
-    expect(describeWindow(unresolved)).toBe('No dates resolved');
+    expect(describeWindow(unresolved)).toBe('');
     expect(windowLength(unresolved)).toBe(0);
   });
 });

@@ -2,13 +2,11 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { NavLink } from '@/components/layout/nav-link';
 import { AGENT_NAV_ITEMS } from '@/components/layout/nav-items';
 import { StationLinks } from '@/components/layout/sidebar-nav';
 import {
   SidebarNavGroup,
-  SidebarRecordMeta,
   SidebarRecordNotice,
   SidebarRecordRow,
   SidebarRecordRows,
@@ -18,8 +16,6 @@ import { Button } from '@/components/ui/button';
 import { SearchField } from '@/components/ui/search-field';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayShortDateTime } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { MODE_HOMES } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
@@ -165,30 +161,10 @@ function ChatRows({
             href={scoped(href)}
             active={pathname === href}
             title={chat.title}
-            meta={<ChatMeta chat={chat} />}
+            working={chat.running}
           />
         );
       })}
     </SidebarRecordRows>
-  );
-}
-
-/**
- * Every chat's second line ends with its last activity, so chats that share a
- * title (three "Analyze the Site Health issues") still read apart; what the
- * chat targets and produced lead it when the chat has them.
- */
-function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
-  const { kindLabel } = useAgentCatalog();
-  const timeZone = useDisplayTimeZone();
-  const marker = chat.output_kind ? kindLabel(chat.output_kind) : null;
-  const lead = [chat.target_label, marker].filter(Boolean).join(' · ');
-  return (
-    <SidebarRecordMeta working={chat.running}>
-      {lead ? `${lead} · ` : null}
-      <time dateTime={chat.last_activity_at}>
-        {formatDisplayShortDateTime(chat.last_activity_at, timeZone)}
-      </time>
-    </SidebarRecordMeta>
   );
 }
