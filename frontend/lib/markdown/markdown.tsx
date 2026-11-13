@@ -202,3 +202,54 @@ export function ContentMarkdown({
     </LeaveGuardContext.Provider>
   );
 }
+
+const asParagraph: Components['p'] = ({ children }) => <p>{children}</p>;
+const asCell: Components['td'] = ({ children }) => <>{children} </>;
+/** Kept blocks only; everything else (links, emphasis, images, task boxes) is unwrapped to its words. */
+const TEXT_ELEMENTS = [
+  'p',
+  'ul',
+  'ol',
+  'li',
+  'blockquote',
+  'pre',
+  'code',
+  'br',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'tr',
+  'th',
+  'td',
+];
+const TEXT_COMPONENTS: Components = {
+  h1: asParagraph,
+  h2: asParagraph,
+  h3: asParagraph,
+  h4: asParagraph,
+  h5: asParagraph,
+  h6: asParagraph,
+  tr: asParagraph,
+  th: asCell,
+  td: asCell,
+};
+
+/**
+ * Markdown as its words in paragraphs and lists, for a live region: no link,
+ * heading, table or image, so it adds nothing to focus or navigate.
+ */
+export function MarkdownText({ markdown }: Readonly<{ markdown: string }>) {
+  return (
+    <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
+      allowedElements={TEXT_ELEMENTS}
+      unwrapDisallowed
+      components={TEXT_COMPONENTS}
+    >
+      {markdown}
+    </ReactMarkdown>
+  );
+}

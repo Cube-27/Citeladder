@@ -284,7 +284,7 @@ for (const width of [1280, 390]) {
         sequence: 26,
         content: 'Next persisted answer.\n\n' + 'Additional buyer evidence. '.repeat(40),
       });
-      await expect(page.getByText(/Next persisted answer/)).toBeVisible();
+      await expect(page.getByRole('article').getByText(/Next persisted answer/)).toBeVisible();
       await expect(page.getByRole('button', { name: 'Jump to latest' })).not.toBeAttached();
       const remaining = await thread.evaluate(
         (element) => element.scrollHeight - element.scrollTop - element.clientHeight,
@@ -296,7 +296,12 @@ for (const width of [1280, 390]) {
       const stop = page.getByRole('button', { name: 'Stop', exact: true });
       await stop.focus();
       await stop.press('Enter');
-      await expect(page.getByText('Stopped. Nothing from this turn was saved.')).toBeVisible();
+      // Scoped to the thread: the saved reply is also in the screen-reader announcement.
+      await expect(
+        page
+          .getByRole('list', { name: 'Messages' })
+          .getByText('Stopped. Nothing from this turn was saved.'),
+      ).toBeVisible();
 
       await reply.fill('');
       await reply.press('/');

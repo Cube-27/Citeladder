@@ -10,6 +10,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { Tag } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
+import { isImeComposing } from '@/lib/accessibility/ime';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { TopicRow } from '@/lib/prompts/builder-topics';
 
@@ -157,7 +158,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
           disabled={busy}
           onChange={(event) => setName(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key !== 'Enter') return;
+            if (event.key !== 'Enter' || isImeComposing(event)) return;
             event.preventDefault();
             add();
           }}

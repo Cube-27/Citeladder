@@ -766,3 +766,18 @@ popover on iOS Safari before 18.3.
 
 Source: owner, 13 November 2026, answering the modern-web audit: "Load only on
 wide screens" (`client:media`), keep Radix, no popover rebuild.
+
+## Auth fields and form errors stay as they look
+
+The modern-web accessibility round changes nothing visible on the sign-in,
+sign-up and password screens: the auth email field takes
+`autocomplete="username"` (password fields already say `current-password` or
+`new-password`), and the button label, Confirm password and the absence of a
+show-password toggle and `enterkeyhint` stay. Form errors also stay as
+they are (each field's own `role="alert"` message, no error summary); only a
+required field's asterisk is hidden from assistive technology, which hears the
+control's required state instead.
+
+Source: owner, 13 November 2026, answering the modern-web review: "don't change
+sign in or password toggle" (withdrawing the same day's "Sign in" button and
+show-password toggle), and "None" for the form-error change.

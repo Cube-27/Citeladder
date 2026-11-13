@@ -1,5 +1,5 @@
 import { Pencil, RotateCcw } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 import { ActionChip } from '@/components/agent/action-chip';
 import { ActivityChain } from '@/components/agent/activity-chain';
@@ -27,10 +27,10 @@ import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/docu
 import { citedActions } from '@/lib/agent/evidence';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { activityRows } from '@/lib/agent/activity';
-import { runOutcome } from '@/lib/agent/run-state';
+import { isPageReading, isRunActive, runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentOutput } from '@/lib/api/agent';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
-import { ContentMarkdown } from '@/lib/markdown/markdown';
+import { ContentMarkdown, MarkdownText } from '@/lib/markdown/markdown';
 import { cn } from '@/lib/utils';
 
 /**
@@ -80,6 +80,7 @@ export function Conversation({
       : null;
   return (
     <AgentThread>
+      <ReplyAnnouncement key={detail.chat.id} detail={detail} />
       <ContextUsed context={detail.context} />
       {renderOutput ? <DocumentList outputs={detail.outputs} /> : null}
       <Stack as="ol" gap="workspace" aria-label="Messages">
@@ -131,6 +132,33 @@ export function Conversation({
     </AgentThread>
   );
 }
+
+/**
+ * Each reply saved while the chat is open, read once by screen readers: one
+ * polite region, busy and empty while a turn runs, so streamed text is never
+ * read. Focus stays put, and replies already there on opening are not read.
+ * Once read it empties, so the reply is not met twice when reading the page.
+ */
+function ReplyAnnouncement({ detail }: Readonly<{ detail: AgentChatDetail }>) {
+  const reply = [...detail.messages].reverse().find((message) => message.role === 'agent');
+  const [openedWith] = useState(reply?.id);
+  const [announced, setAnnounced] = useState<string | undefined>();
+  const busy = isRunActive(detail.latest_run) || isPageReading(detail.page_fetch);
+  const fresh = reply && !busy && reply.id !== openedWith && reply.id !== announced ? reply : null;
+  const freshId = fresh?.id;
+  // A screen reader queues the text when it lands; emptying the region later is silent.
+  useEffect(() => {
+    if (!freshId) return;
+    const timer = setTimeout(() => setAnnounced(freshId), REPLY_ANNOUNCEMENT_MS);
+    return () => clearTimeout(timer);
+  }, [freshId]);
+  return (
+    <div aria-live="polite" aria-busy={busy} className="sr-only">
+      {fresh ? <MarkdownText markdown={fresh.content} /> : null}
+    </div>
+  );
+}
+const REPLY_ANNOUNCEMENT_MS = 5000;
 
 /** The latest reply wrote this document and the turn finished. */
 function hasFreshDeliverable(detail: AgentChatDetail, output: AgentOutput): boolean {

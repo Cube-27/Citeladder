@@ -1,5 +1,5 @@
 import { agentChatDetailSchema } from '@citeladder/contracts/agent';
-import { fireEvent, screen, within } from '@testing-library/react';
+import { act, fireEvent, screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import {
   afterAll,
@@ -500,5 +500,49 @@ describe('A message with a paste', () => {
     fireEvent.click(attachments.getByRole('button', { name: 'View Pasted text, 2 lines' }));
     const viewer = await screen.findByRole('dialog', { name: 'Pasted text' });
     expect(within(viewer).getByText(/^Line one/).textContent).toBe(text);
+  });
+});
+
+describe('The reply announcement', () => {
+  it('reads a reply saved while the chat is open, then empties so it is not met twice', async () => {
+    mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
+    const opened = detail(revision(REV2, 2, 'agent', 'Body.'));
+    const answered = {
+      ...opened,
+      messages: [
+        ...opened.messages,
+        {
+          ...opened.messages[1]!,
+          id: '77777777-7777-4777-8777-777777777774',
+          sequence: 3,
+          content: 'The **saved** answer.',
+        },
+      ],
+    };
+    const view = (chat: unknown) => (
+      <Conversation
+        workspaceId="workspace"
+        detail={agentChatDetailSchema.parse(chat)}
+        onRefine={vi.fn()}
+        onRecover={vi.fn()}
+        onRetry={vi.fn()}
+        canSend
+      />
+    );
+    const { rerender, queryClient } = renderWithProviders(view(opened));
+    await vi.waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      const region = document.querySelector('[aria-live="polite"][aria-busy]')!;
+      expect(screen.getByText('Here are the edits.')).toBeInTheDocument();
+      expect(region).toBeEmptyDOMElement();
+      rerender(view(answered));
+      expect(region).toHaveTextContent('The saved answer.');
+      act(() => vi.advanceTimersByTime(5000));
+      expect(region).toBeEmptyDOMElement();
+      expect(screen.getAllByText('saved')).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

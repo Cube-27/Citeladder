@@ -84,6 +84,15 @@ describe('Input + Field', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('Required');
   });
 
+  it('says a field is required through the control, not the asterisk', () => {
+    render(
+      <Field label="Email" required>
+        {(fieldProps) => <Input {...fieldProps} />}
+      </Field>,
+    );
+    expect(screen.getByRole('textbox', { name: 'Email' })).toBeRequired();
+  });
+
   it('forwards the ref to the native input inside an adorned frame', () => {
     const ref = createRef<HTMLInputElement>();
     render(<Input ref={ref} aria-label="Search" startContent={<span>S</span>} />);
