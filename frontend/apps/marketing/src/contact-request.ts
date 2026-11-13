@@ -68,9 +68,8 @@ export async function handleContactRequest(
   if (request.method !== 'POST') return result(405, 'validation_error');
   if (request.headers.get('origin') !== new URL(request.url).origin)
     return result(403, 'spam_rejected');
-  if (
-    request.headers.get('content-type')?.split(';')[0]!.trim().toLowerCase() !== 'application/json'
-  )
+  const [mediaType] = (request.headers.get('content-type') ?? '').split(';');
+  if (mediaType?.trim().toLowerCase() !== 'application/json')
     return result(400, 'validation_error');
   let payload: unknown;
   try {

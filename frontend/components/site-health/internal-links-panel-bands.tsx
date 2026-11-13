@@ -59,9 +59,12 @@ function useInternalLinks(scope: Scope, enabled: boolean) {
   const [requestKey, setRequestKey] = useState(() => crypto.randomUUID());
   const analyze = useMutation(internalLinksMutations.analyze(scope));
   const cancel = useMutation(internalLinksMutations.cancel(scope, analysisId));
-  const startAnalysis = () =>
+  // Both actions are offered only once the read names their crawl or analysis.
+  const startAnalysis = () => {
+    const crawlId = data?.crawl_id;
+    if (!crawlId) return;
     analyze.mutate(
-      { crawl_id: data!.crawl_id!, idempotency_key: requestKey },
+      { crawl_id: crawlId, idempotency_key: requestKey },
       {
         onSuccess: (result) => {
           setRequestKey(crypto.randomUUID());
@@ -69,7 +72,11 @@ function useInternalLinks(scope: Scope, enabled: boolean) {
         },
       },
     );
-  const cancelAnalysis = () => cancel.mutate(data!.analysis!.id);
+  };
+  const cancelAnalysis = () => {
+    const analysis = data?.analysis;
+    if (analysis) cancel.mutate(analysis.id);
+  };
   return { data, query, analyze, cancel, startAnalysis, cancelAnalysis };
 }
 export type LinksRead = ReturnType<typeof useInternalLinks>;

@@ -45,8 +45,9 @@ export function CrawlLogSetup({
   model,
 }: Readonly<{ model: ReturnType<typeof useCrawlConnections> }>) {
   const { setup, setSetup, origin, setOrigin, setSampling, setFilter, setPoint, mutation } = model;
-  const chosen = CRAWL_LOG_SETUPS.find((s) => s.value === setup)!;
-  const steps = SETUP_STEPS[chosen.value];
+  // `setup` is typed to the options' values; the first option is the default.
+  const chosen = CRAWL_LOG_SETUPS.find((s) => s.value === setup) ?? CRAWL_LOG_SETUPS[0];
+  const steps = SETUP_STEPS[setup];
   const firehose = setup === 'aws_firehose';
   const gcp = setup === 'gcp_pubsub_pull';
   // Without a reader service account (local development) the pull connector cannot run.
@@ -60,7 +61,8 @@ export function CrawlLogSetup({
         ariaLabel="Collection method"
         value={setup}
         onValueChange={(value) => {
-          const next = CRAWL_LOG_SETUPS.find((s) => s.value === value)!;
+          const next = CRAWL_LOG_SETUPS.find((s) => s.value === value);
+          if (!next) return;
           setSetup(next.value);
           setPoint(next.collectionPoint);
           setSampling(next.value === 'cloudflare_worker' ? 'filtered' : 'none');

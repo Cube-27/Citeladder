@@ -101,7 +101,9 @@ function WorkspaceSchedules({
           ) : null}
           <ResumeNotice
             error={resumeMutation.error}
-            onRetry={() => resumeMutation.mutate(resumeMutation.variables!)}
+            onRetry={() => {
+              if (resumeMutation.variables) resumeMutation.mutate(resumeMutation.variables);
+            }}
           />
         </Stack>
       </CardContent>
