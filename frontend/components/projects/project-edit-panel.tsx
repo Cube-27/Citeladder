@@ -1,12 +1,15 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 
 import { MutationNotice } from '@/components/ui/mutation-notice';
-import { Button } from '@/components/ui/button';
+import { QueryState } from '@/components/ui/query-state';
+import { Button, IconButton } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
 import { ProjectMarkets } from './project-markets';
 import { textRole } from '@/components/ui/typography';
@@ -17,11 +20,6 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 
 import { MentionRuleFields, mentionRuleDraft, type MentionRuleDraft } from './mention-rule-fields';
-import {
-  nextCompetitorKey,
-  ProjectCompetitorFields,
-  type CompetitorDraft,
-} from './project-competitor-fields';
 
 /**
  * Edit an existing project's configuration.
@@ -46,6 +44,31 @@ const splitList = (value: string): string[] =>
     .map((entry) => entry.trim())
     .filter(Boolean);
 
+/**
+ * Draft rows carry a stable `key` because the list is editable AND removable.
+ * Keyed by array index, removing the first of three rows shifted every row's
+ * identity: React reused the same DOM inputs for different competitors, so
+ * focus, selection, and any in-flight IME composition landed on the wrong row.
+ * The counter is module-scoped and monotonic — it only has to be unique within
+ * one mounted list, never persisted or sent to the backend.
+ */
+let competitorKeySeq = 0;
+const nextCompetitorKey = () => {
+  competitorKeySeq += 1;
+  return `competitor-${competitorKeySeq}`;
+};
+
+// Aliases are not edited here; each row carries its own so a rename keeps them.
+// A tracked row carries its `id`, so a rename keeps the competitor and its logo.
+type CompetitorDraft = {
+  key: string;
+  id?: string;
+  name: string;
+  aliases: string[];
+  domains: string;
+  rule: MentionRuleDraft;
+};
+
 /** Only rules a person changed are saved; the rest keep following their defaults. */
 function touchedRules(entities: readonly { name: string; rule: MentionRuleDraft }[]) {
   return entities.flatMap(({ name, rule }) =>
@@ -60,6 +83,11 @@ function touchedRules(entities: readonly { name: string; rule: MentionRuleDraft 
         ]
       : [],
   );
+}
+
+/** An unnamed competitor row still needs something for a screen reader to say. */
+function competitorName(name: string, index: number): string {
+  return name || `competitor ${index + 1}`;
 }
 
 export function ProjectEditPanel({
@@ -97,6 +125,8 @@ export function ProjectEditPanel({
     })),
   );
   const maximumCompetitors = discoveryCatalog.data?.maximum_competitors;
+  const competitorLimitReached =
+    maximumCompetitors === undefined || competitors.length >= maximumCompetitors;
 
   const save = useMutation(
     projectMutations.update({ workspaceId: project.workspace_id, projectId: project.id }),
@@ -129,6 +159,11 @@ export function ProjectEditPanel({
         entity_matching: touchedRules([{ name: brandName, rule: brandRule }, ...competitors]),
       },
       { onSuccess: () => onOpenChange(false) },
+    );
+
+  const updateCompetitor = (index: number, patch: Partial<CompetitorDraft>) =>
+    setCompetitors((prev) =>
+      prev.map((competitor, i) => (i === index ? { ...competitor, ...patch } : competitor)),
     );
 
   return (
@@ -250,11 +285,74 @@ export function ProjectEditPanel({
           </Field>
         </Stack>
 
-        <ProjectCompetitorFields
-          competitors={competitors}
-          setCompetitors={setCompetitors}
-          maximumCompetitors={maximumCompetitors}
-        />
+        <Stack gap="compact">
+          <Inline>
+            <p className={textRole('label')}>Competitors</p>
+            <span className="type-caption">
+              {competitors.length} of {maximumCompetitors ?? '…'}
+            </span>
+            <Button
+              variant="ghost"
+              className="ms-auto"
+              aria-label="Add competitor"
+              disabled={competitorLimitReached}
+              onClick={() =>
+                setCompetitors((prev) => [
+                  ...prev,
+                  {
+                    key: nextCompetitorKey(),
+                    name: '',
+                    aliases: [],
+                    domains: '',
+                    rule: mentionRuleDraft(undefined),
+                  },
+                ])
+              }
+            >
+              <Icon icon={Plus} />
+              Add
+            </Button>
+          </Inline>
+          {competitors.length === 0 ? (
+            <QueryState kind="empty" inline message="None tracked." />
+          ) : (
+            <Stack as="ul" gap="compact" className="list-none">
+              {competitors.map((competitor, index) => (
+                <Stack as="li" key={competitor.key} gap="compact">
+                  <Inline>
+                    <Input
+                      value={competitor.name}
+                      onChange={(event) =>
+                        updateCompetitor(index, {
+                          name: event.target.value,
+                          rule: { ...competitor.rule, touched: true },
+                        })
+                      }
+                      aria-label={`Competitor ${index + 1} name`}
+                      placeholder="Name"
+                    />
+                    <Input
+                      value={competitor.domains}
+                      onChange={(event) => updateCompetitor(index, { domains: event.target.value })}
+                      aria-label={`Competitor ${index + 1} domains`}
+                      placeholder="Domains"
+                    />
+                    <IconButton
+                      icon={X}
+                      label={`Remove ${competitorName(competitor.name, index)}`}
+                      onClick={() => setCompetitors((prev) => prev.filter((_, i) => i !== index))}
+                    />
+                  </Inline>
+                  <MentionRuleFields
+                    name={competitor.name}
+                    rule={competitor.rule}
+                    onChange={(rule) => updateCompetitor(index, { rule })}
+                  />
+                </Stack>
+              ))}
+            </Stack>
+          )}
+        </Stack>
       </Stack>
     </Dialog>
   );

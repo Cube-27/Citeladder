@@ -10,7 +10,9 @@ import {
   performanceNotices,
   ProjectionFailure,
 } from './performance-chrome';
-import { chartSeries, PerformanceEvidence } from './performance-evidence';
+import { Ga4SummaryRow, MetricCards } from './metric-cards';
+import { PerformanceBreakdowns } from './performance-breakdowns';
+import { PerformanceChart, type ChartSeries } from './performance-chart';
 import { ReadinessLadder, useProjectReadiness } from './readiness-ladder';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { usePerformanceSelection } from './use-performance-selection';
@@ -18,11 +20,14 @@ import { usePerformanceSync } from './use-performance-sync';
 import { useRangeProjection } from './use-range-projection';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { Stack } from '@/components/ui/layout';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import type { ChartTone } from '@/components/ui/chart';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
 import { StatusLine } from '@/components/ui/status-line';
 import { formatCount, formatWindowDate } from '@/lib/format';
+import { ChartNoAxesColumn } from 'lucide-react';
 import { integrationsQueries } from '@/lib/api/integrations';
 import {
   performanceQueries,
@@ -34,10 +39,13 @@ import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import {
   COMPARE_OPTIONS,
+  METRIC_CARDS,
   canCompareYearOverYear,
   dashboardParams,
   describeWindow,
+  toChartPoints,
   windowLength,
+  type PerformanceMetricKey,
   type RangeSelection,
 } from '@/lib/performance/performance';
 
@@ -51,6 +59,30 @@ import {
  * projection is materialized by the range task rather than derived in the
  * browser. What the screen displays is always the window actually covered.
  */
+
+// Each metric's chart position (its colour and texture), shared by the card
+// keys and the chart lines: `data-1` to `data-3`, then Position in `data-other`.
+const METRIC_TONES: Record<PerformanceMetricKey, ChartTone> = {
+  clicks: 1,
+  impressions: 2,
+  ctr: 3,
+  position: 4,
+};
+
+/** The drawn lines: one per selected metric, each with its comparison peer. */
+function chartSeries(
+  selected: PerformanceDashboard['selected'],
+  comparison: PerformanceDashboard['comparison'],
+  active: ReadonlySet<PerformanceMetricKey>,
+): ChartSeries[] {
+  return METRIC_CARDS.filter((card) => active.has(card.key)).map((card) => ({
+    key: card.key,
+    label: card.label,
+    tone: METRIC_TONES[card.key],
+    selected: toChartPoints(selected.series[card.key]),
+    comparison: comparison ? toChartPoints(comparison.series[card.key]) : null,
+  }));
+}
 
 function compareLabel(selection: RangeSelection): string {
   return (
@@ -111,6 +143,107 @@ function coverageSummary(coverage: PerformanceDashboard['coverage']): string {
   return `Imported history ${formatWindowDate(coverage.earliest_date)} – ${formatWindowDate(
     coverage.latest_date,
   )} · ${formatCount(coverage.covered_days)} days`;
+}
+
+function PerformanceEmptyState({
+  data,
+  projecting,
+  failed,
+}: Readonly<{ data: PerformanceDashboard; projecting: boolean; failed: boolean }>) {
+  // A failed build is reported by `ProjectionFailure`, never as "no evidence".
+  if (failed) return null;
+  if (projecting) {
+    return (
+      <QueryState
+        kind="empty"
+        icon={ChartNoAxesColumn}
+        heading="Building this performance range"
+        description="CiteLadder is preparing this view from the traffic evidence already imported."
+      />
+    );
+  }
+  const firstUse = data.coverage.covered_days === 0 && data.selected.snapshot_id === null;
+  return (
+    <QueryState
+      kind="empty"
+      icon={ChartNoAxesColumn}
+      heading={firstUse ? 'No search performance evidence yet' : 'No performance evidence here'}
+      description={
+        firstUse
+          ? undefined
+          : 'Choose a range inside the imported history, or sync the missing dates.'
+      }
+    />
+  );
+}
+
+function SearchConsoleWorkspace({
+  available,
+  selected,
+  comparison,
+  selectedLabel,
+  compareLabel,
+  activeMetrics,
+  onToggleMetric,
+  series,
+  refreshing,
+}: Readonly<{
+  available: boolean;
+  selected: PerformanceDashboard['selected'];
+  comparison: PerformanceDashboard['comparison'];
+  selectedLabel: string;
+  compareLabel: string;
+  activeMetrics: ReadonlySet<PerformanceMetricKey>;
+  onToggleMetric: (metric: PerformanceMetricKey) => void;
+  series: ChartSeries[];
+  refreshing: boolean;
+}>) {
+  if (!available) return null;
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader>
+        <MetricCards
+          data-testid="metric-card-strip"
+          className="min-w-0"
+          selected={selected}
+          comparison={comparison}
+          compareLabel={compareLabel}
+          selectedLabel={selectedLabel}
+          active={activeMetrics}
+          onToggle={onToggleMetric}
+          tones={METRIC_TONES}
+          loading={refreshing}
+        />
+      </CardHeader>
+      <CardContent>
+        <PerformanceChart series={series} />
+      </CardContent>
+    </Card>
+  );
+}
+
+function Ga4Workspace({
+  available,
+  selected,
+  comparison,
+  compareLabel,
+  refreshing,
+}: Readonly<{
+  available: boolean;
+  selected: PerformanceDashboard['selected'];
+  comparison: PerformanceDashboard['comparison'];
+  compareLabel: string;
+  refreshing: boolean;
+}>) {
+  if (!available) return null;
+  return (
+    <Ga4SummaryRow
+      selected={selected}
+      comparison={comparison}
+      compareLabel={compareLabel}
+      loading={refreshing}
+    />
+  );
 }
 
 /**
@@ -294,21 +427,55 @@ export function PerformanceScreen() {
         />
 
         <ProjectionFailure failure={projection.failure} />
-        <PerformanceEvidence
-          data={data}
-          hasEvidence={hasEvidence}
-          evidence={evidence}
-          projection={projection}
-          selectedLabel={selectedLabel}
-          comparisonLabel={comparisonLabel}
-          activeMetrics={activeMetrics}
-          toggleMetric={toggleMetric}
-          series={series}
-          refreshing={refreshing}
-          projectId={projectId}
-          dimension={dimension}
-          setDimension={setDimension}
-        />
+        {!hasEvidence ? (
+          <PerformanceEmptyState
+            data={data}
+            projecting={projection.projecting}
+            failed={projection.failure !== null}
+          />
+        ) : (
+          <>
+            {/* One card holds the strip and the plot it drives: selecting a card
+          changes the lines directly beneath it, so a gap between them would
+          split a control from its own result. The strip sits flush with the
+          granularity control aligned on the right of the header row. */}
+            <SearchConsoleWorkspace
+              available={evidence.hasSearchConsoleTotals}
+              selected={selectedWindow}
+              comparison={comparisonWindow}
+              selectedLabel={selectedLabel}
+              compareLabel={comparisonLabel}
+              activeMetrics={activeMetrics}
+              onToggleMetric={toggleMetric}
+              series={series}
+              refreshing={refreshing}
+            />
+            <Ga4Workspace
+              available={evidence.hasGa4}
+              selected={selectedWindow}
+              comparison={comparisonWindow}
+              compareLabel={comparisonLabel}
+              refreshing={refreshing}
+            />
+
+            <PerformanceBreakdowns
+              projectId={projectId}
+              dimension={dimension}
+              onDimensionChange={setDimension}
+              snapshotId={selectedWindow.snapshot_id}
+              compareSnapshotId={comparisonWindow?.snapshot_id ?? null}
+              dimensionCounts={data.dimension_counts}
+              unavailableDimensions={data.unavailable_dimensions}
+              activeMetrics={activeMetrics}
+              selectedLabel={selectedLabel}
+              compareLabel={comparisonLabel}
+              hasSearchConsole={evidence.hasSearchConsoleBreakdowns}
+              // Only when Bing is connected or has rows: Bing's panel states
+              // "measured nothing", which is not what an absent connection means.
+              hasBing={evidence.hasBing}
+            />
+          </>
+        )}
         <DateRangeDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}

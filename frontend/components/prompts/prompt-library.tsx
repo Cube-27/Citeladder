@@ -1,33 +1,52 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useEffectEvent, useMemo, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { QueryState } from '@/components/ui/query-state';
 import { ReadError } from '@/components/ui/read-error';
 import { promptsMutations } from '@/lib/api/prompts';
+import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
+import { mutationNoticeForError, type MutationNotice } from '@/lib/api/mutation-notice';
 import { topicsQueries } from '@/lib/api/topics';
 import type { Prompt, PromptStatus, Topic } from '@citeladder/contracts';
-import { emptyFilters, type PromptFilters } from '@/lib/prompts/filter';
+import {
+  emptyFilters,
+  filterPrompts,
+  personaOptions,
+  type PromptFilters,
+} from '@/lib/prompts/filter';
+import {
+  formValuesToPromptInput,
+  formValuesToPromptUpdate,
+  type PromptFormValues,
+} from '@/lib/prompts/forms';
 import { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 import { usePromptSet } from '@/lib/prompts/use-prompt-set';
 
 import { PendingReviewNotice } from './candidate-review';
+import { PromptEmptyState } from './prompt-empty-state';
 import type { PendingDelete } from './confirm-delete-dialog';
-import { PromptLibraryBody } from './prompt-library-body';
 import { PromptLibraryDialogs } from './prompt-library-dialogs';
+import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
 
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
 import { type TopicDialog, TopicDialogs, topicFilter } from './topic-controls';
-import { usePromptForm } from './use-prompt-form';
-import { usePromptGeneration } from './use-prompt-generation';
-import { usePromptImport } from './use-prompt-import';
-import { usePromptLibraryView } from './use-prompt-library-view';
 import { useTopicMutations } from './use-topic-mutations';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import type { BuilderStep } from './prompt-builder';
+
+function mutationFailure(
+  create: { isError: boolean; error: unknown },
+  update: { isError: boolean; error: unknown },
+): MutationNotice | undefined {
+  if (create.isError) return mutationNoticeForError(create.error, { action: 'add the prompt' });
+  return update.isError
+    ? mutationNoticeForError(update.error, { action: 'save the prompt' })
+    : undefined;
+}
 
 /**
  * Whether the library still shows its first-load frame. Prompts often arrive
@@ -69,6 +88,9 @@ export function PromptLibrary({
   const [filters, setFilters] = useState<PromptFilters>(emptyFilters);
   const [statusFilter, setStatusFilter] = useState<PromptStatus>('active');
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<Prompt | undefined>(undefined);
+  const [importOpen, setImportOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderStep, setBuilderStep] = useState<BuilderStep>('business');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -91,17 +113,34 @@ export function PromptLibrary({
   });
 
   // Every descriptor refreshes the library's reads; these add the screen's own reaction.
-  const form = usePromptForm(scope, ensurePromptSet);
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditing(undefined);
+  };
   const clearBusy = { onSettled: () => setBusyId(null) };
+  const createMutation = useMutation(promptsMutations.create(scope, ensurePromptSet));
+  const updateMutation = useMutation(promptsMutations.update(scope));
   const deleteMutation = useMutation(promptsMutations.remove(scope));
   const rowMutation = useMutation(promptsMutations.update(scope));
-  const imports = usePromptImport(scope, ensurePromptSet);
+  const importMutation = useMutation(promptsMutations.import(scope, ensurePromptSet));
 
-  const { generateMutation, generatePrompts } = usePromptGeneration({
-    scope,
-    ensurePromptSet,
-    onGenerated: () => review.clearNotice(),
-  });
+  // A retry of the same request after a failure reuses its key, so a run the
+  // server already staged is replayed instead of drafted (and paid for) again.
+  const generateKey = useRef<{ request: string; key: string } | null>(null);
+  const generateMutation = useMutation(promptsMutations.generate(scope, ensurePromptSet));
+  const generatePrompts = async (input: PromptGenerateRequest) => {
+    const request = JSON.stringify(input);
+    if (generateKey.current?.request !== request)
+      generateKey.current = { request, key: crypto.randomUUID() };
+    const result = await generateMutation
+      .mutateAsync({ input, idempotencyKey: generateKey.current.key })
+      .catch(() => null);
+    if (result === null) return null;
+    // Only this request's key retires; a different pending request keeps its own.
+    if (generateKey.current?.request === request) generateKey.current = null;
+    review.clearNotice();
+    return result;
+  };
   // A fresh open clears the last run's outcome, but never a run still in
   // flight: resetting it would drop `isPending` and allow a second paid run.
   const openBuilder = (step: BuilderStep) => {
@@ -136,20 +175,54 @@ export function PromptLibrary({
     deleteMutation.mutate(pending.prompt.id, clearBusy);
   };
 
-  const { visible, personas, statusCounts } = usePromptLibraryView(prompts, {
-    statusFilter,
-    selectedTopicId,
-    search,
-    filters,
-  });
+  // Status -> topic -> search/filters, preserving order.
+  const byStatus = useMemo(
+    () => prompts.filter((prompt) => prompt.status === statusFilter),
+    [prompts, statusFilter],
+  );
+  const byTopic = useMemo(
+    () =>
+      selectedTopicId === null
+        ? byStatus
+        : byStatus.filter((prompt) => prompt.topic_id === selectedTopicId),
+    [byStatus, selectedTopicId],
+  );
+  const visible = useMemo(
+    () => filterPrompts(byTopic, search, filters),
+    [byTopic, search, filters],
+  );
+  const personas = useMemo(() => personaOptions(prompts), [prompts]);
+
+  const statusCounts = useMemo(() => {
+    const counts: Record<PromptStatus, number> = { active: 0, archived: 0 };
+    for (const prompt of prompts) counts[prompt.status] += 1;
+    return counts;
+  }, [prompts]);
 
   const hasPrompts = prompts.length > 0;
 
+  const openAdd = () => {
+    setEditing(undefined);
+    setFormOpen(true);
+  };
+  const openEdit = (prompt: Prompt) => {
+    setEditing(prompt);
+    setFormOpen(true);
+  };
+  const submitForm = async (values: PromptFormValues) => {
+    const mutation = editing
+      ? updateMutation.mutateAsync({
+          promptId: editing.id,
+          input: formValuesToPromptUpdate(values),
+        })
+      : createMutation.mutateAsync(formValuesToPromptInput(values));
+    await mutation.then(closeForm, () => undefined);
+  };
   // Every edit control of the library, for a role that may edit prompts.
   const edits = canWrite
     ? {
         rows: {
-          onEdit: form.openEdit,
+          onEdit: openEdit,
           onDelete: (prompt: Prompt) => setPendingDelete({ kind: 'prompt', prompt }),
           onToggleEnabled: (prompt: Prompt) => {
             setBusyId(prompt.id);
@@ -164,12 +237,32 @@ export function PromptLibrary({
           },
           busyId,
         },
-        add: { onGenerate: () => openBuilder('business'), onAdd: form.openAdd },
+        add: { onGenerate: () => openBuilder('business'), onAdd: openAdd },
         topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
       }
     : undefined;
 
+  // An empty library and a library filtered to nothing read differently: one
+  // needs a way to add prompts, the other needs its filter loosened.
+  let libraryBody: ReactNode = (
+    <PromptTable prompts={visible} actions={edits?.rows} measurements={measurements} />
+  );
+  // A failed read with nothing to show takes the empty state's slot; a failed
+  // refresh keeps the prompts already shown and says so above them.
   const failedEmpty = Boolean(error) && !hasPrompts;
+  if (failedEmpty) {
+    libraryBody = (
+      <QueryState
+        kind="error"
+        error={error}
+        fallback="Could not load prompts. Check your connection and try again."
+        onRetry={retry}
+        pending={retrying}
+      />
+    );
+  } else if (!hasPrompts) {
+    libraryBody = <PromptEmptyState add={edits?.add} />;
+  }
 
   // Status, search and filters share one control band once loaded; the first
   // load holds it so the table starts where the box stood.
@@ -186,8 +279,8 @@ export function PromptLibrary({
     <ListScreen
       actions={
         <PromptActions
-          onImport={() => imports.setImportOpen(true)}
-          onAdd={form.openAdd}
+          onImport={() => setImportOpen(true)}
+          onAdd={openAdd}
           onGenerate={() => openBuilder('business')}
           hasActivePrompts={statusCounts.active > 0}
         />
@@ -231,34 +324,33 @@ export function PromptLibrary({
           onAdd={openAddTopic}
           onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
         />
-        <PromptLibraryBody
-          visible={visible}
-          rows={edits?.rows}
-          add={edits?.add}
-          measurements={measurements}
-          failedEmpty={failedEmpty}
-          hasPrompts={hasPrompts}
-          error={error}
-          retry={retry}
-          retrying={retrying}
-        />
+        {libraryBody}
 
         <PromptLibraryDialogs
           pendingDelete={pendingDelete}
           setPendingDelete={setPendingDelete}
           confirmDelete={confirmDelete}
-          formOpen={form.formOpen}
-          setFormOpen={form.setFormOpen}
-          editing={form.editing}
-          setEditing={form.setEditing}
-          submitForm={form.submitForm}
-          isSaving={form.isSaving}
-          formError={form.formError}
-          importOpen={imports.importOpen}
-          setImportOpen={imports.setImportOpen}
-          importPrompts={imports.importPrompts}
-          isImporting={imports.isImporting}
-          importError={imports.importError}
+          formOpen={formOpen}
+          setFormOpen={setFormOpen}
+          editing={editing}
+          setEditing={setEditing}
+          submitForm={submitForm}
+          isSaving={createMutation.isPending || updateMutation.isPending}
+          formError={mutationFailure(createMutation, updateMutation)}
+          importOpen={importOpen}
+          setImportOpen={setImportOpen}
+          importPrompts={async (rows) => {
+            await importMutation.mutateAsync(rows).then(
+              () => setImportOpen(false),
+              () => undefined,
+            );
+          }}
+          isImporting={importMutation.isPending}
+          importError={
+            importMutation.isError
+              ? mutationNoticeForError(importMutation.error, { action: 'import the prompts' })
+              : undefined
+          }
           projectId={projectId}
           workspaceId={workspaceId}
           builderOpen={builderOpen}
