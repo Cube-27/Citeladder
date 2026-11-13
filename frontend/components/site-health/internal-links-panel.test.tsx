@@ -124,7 +124,7 @@ describe('Internal links', () => {
     allowed.unmount();
 
     renderWithProviders(<LinksTab canAnalyze={false} />, { projectSelection: selection });
-    expect(await screen.findByRole('button', { name: 'Export' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Export CSV' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Analyze again' })).not.toBeInTheDocument();
   });
 
@@ -300,7 +300,7 @@ describe('Internal links', () => {
     const header = screen.getByRole('banner');
     expect(within(header).getByRole('button', { name: 'Analyze again' })).toBeInTheDocument();
     const controls = screen.getByRole('group', { name: 'Search and filters' });
-    await userEvent.click(within(controls).getByRole('button', { name: 'Export' }));
+    await userEvent.click(within(controls).getByRole('button', { name: 'Export CSV' }));
     expect(downloadCsv).toHaveBeenCalledWith(
       'internal-links',
       expect.arrayContaining([

@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText } from 'lucide-react';
+import { Download, FileText } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
@@ -236,8 +237,9 @@ function usePagesToolbar(active: boolean, exportPages: ExportPages | undefined):
     search: <PageSearch key={query} query={query} onApply={setQuery} />,
     filters: [pageKindFilter({ value: pageKind, onChange: (next) => setPageKind(next) })],
     actions: exportPages ? (
-      <Button variant="secondary" onClick={exportPages.onExport} disabled={exportPages.exporting}>
-        {exportPages.exporting ? 'Exporting…' : 'Export'}
+      <Button variant="secondary" onClick={exportPages.onExport} pending={exportPages.exporting}>
+        <Icon icon={Download} />
+        Export CSV
       </Button>
     ) : undefined,
   };

@@ -140,11 +140,15 @@ export function SearchIntelligencePage() {
     onSelect: setComparison,
   });
   // The first load draws the tab row and the control band the loaded page
-  // has, so the work starts on the same line before and after.
+  // has, so the work starts on the same line before and after. The overview's
+  // filters join the tab row; a collection tab's view and action take a band.
   if (readiness.isPending)
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
-        <ListScreen tabs={SEARCH_INTELLIGENCE_TABS} controls={RESERVED_CONTROLS}>
+        <ListScreen
+          tabs={SEARCH_INTELLIGENCE_TABS}
+          controls={tab === 'overview' ? undefined : RESERVED_CONTROLS}
+        >
           <QueryState kind="loading" label="Loading Keyword Research…" />
         </ListScreen>
       </TabsRoot>

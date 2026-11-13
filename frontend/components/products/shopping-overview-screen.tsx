@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { ListScreen } from '@/components/layout/page-shell';
+import type { FilterDefinition } from '@/components/ui/all-filters';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -95,7 +96,12 @@ function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | Commerce
 function RankingTable({
   overview,
   scope,
-}: Readonly<{ overview: Overview; scope: ProductScopeFilters }>) {
+  filters,
+}: Readonly<{
+  overview: Overview;
+  scope: ProductScopeFilters;
+  filters: readonly FilterDefinition[];
+}>) {
   const [ranking, setRanking] = useState<Ranking>('brands');
   const brands = ranking === 'brands';
   const count = brands ? overview.brands.length : overview.products.length;
@@ -113,6 +119,8 @@ function RankingTable({
             onChange={setRanking}
           />
         ),
+        // The page's window and category, beside the ranking switch (D60).
+        filters,
       }}
       columns={[
         { key: 'name', label: brands ? 'Brand' : 'Product' },
@@ -323,13 +331,19 @@ function CategoryShelf({ shelf }: Readonly<{ shelf: Overview['category_shelf'] }
 }
 
 /**
- * What the screen draws below its filters for one read of the overview; each
- * product links to its page in `windowDays`, the window the overview was read in.
+ * What the screen draws for one read of the overview; each product links to
+ * its page in `windowDays`, the window the overview was read in. The page's
+ * `filters` sit in the Ranking table's toolbar.
  */
 export function OverviewSections({
   query,
   windowDays,
-}: Readonly<{ query: UseQueryResult<Overview>; windowDays: ProductWindowDays }>) {
+  filters,
+}: Readonly<{
+  query: UseQueryResult<Overview>;
+  windowDays: ProductWindowDays;
+  filters: readonly FilterDefinition[];
+}>) {
   if (query.isPending) return <QueryState kind="loading" label="Loading the Shopping overview" />;
   if (query.isError)
     return (
@@ -355,7 +369,7 @@ export function OverviewSections({
         </span>
       </Inline>
       {overview.category ? <CategoryShelf shelf={overview.category_shelf} /> : null}
-      <RankingTable overview={overview} scope={scope} />
+      <RankingTable overview={overview} scope={scope} filters={filters} />
       <AppGrid layout="halves">
         <ProductList
           title="Most visible"
@@ -401,15 +415,15 @@ export function ShoppingOverviewScreen() {
     enabled: !filters.category || !catalog.isPending,
   });
   return (
-    <ListScreen
-      controls={{
-        filters: [
+    <ListScreen>
+      <OverviewSections
+        query={query}
+        windowDays={filters.window}
+        filters={[
           windowFilter(filters.window, overviewFilters.setWindow),
           categoryFilter(category, known, overviewFilters.setCategory),
-        ],
-      }}
-    >
-      <OverviewSections query={query} windowDays={filters.window} />
+        ]}
+      />
     </ListScreen>
   );
 }

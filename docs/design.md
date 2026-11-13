@@ -209,12 +209,14 @@ relationships, so a page passes a role and never a number:
 first, left to right and top to bottom.
 
 1. **Header:** the title, its actions on the same row.
-2. **Tabs:** tabs only; nothing sits at the row's far end.
+2. **Tabs.**
 3. **Control row:** the view (one segmented control), search, **All filters**,
    then at the row's end the count or a live note, then one action (Export,
    Columns). Two or more filters share All filters; a lone filter is its own
    trigger ("Page kind: All page kinds"). A row of filters alone, with no
-   view, search, count or action, follows the header's title instead (D58).
+   view, search or action, joins the tab row right after the tabs, its live
+   note at the far end (D60); with no tabs it follows the header's title
+   (D58).
 4. **Content.**
 
 A control sits in the row of the thing it acts on: the page's control row when

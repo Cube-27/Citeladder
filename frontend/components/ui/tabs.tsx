@@ -121,9 +121,9 @@ export type TabRowProps<T extends string = string> = Readonly<
 >;
 
 /**
- * TabRow — the route's navigation band, inside a `TabsRoot`: the tabs only.
- * A tab's search and filters are the control row under it (D57), never on
- * this row, so every page's All filters sits in the same place.
+ * TabRow — the route's navigation strip, inside a `TabsRoot`. The page shell
+ * sets a control row of filters alone right after it (D60); a row with a
+ * view, search or action stays the band under it (D57).
  */
 export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
   return <TabStrip items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;

@@ -95,9 +95,9 @@ function VisibilityWorkspace({
       </ListScreen>
     );
   }
-  // The root spans the whole page: the strip is the navigation band, the
-  // control row holds the filters every tab shares (D57), and the panels are
-  // one band below. A table's own filters lead its toolbar.
+  // The root spans the whole page: the filters every tab shares follow the
+  // strip (D60), and the panels are one band below. A table's own filters
+  // lead its toolbar.
   return (
     <TabsRoot value={filters.activeTab} onValueChange={filters.selectTab}>
       <ListScreen
