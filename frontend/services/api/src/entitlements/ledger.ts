@@ -159,7 +159,7 @@ async function missingSubject(db: Database, subjects: readonly Subject[]) {
       return true;
   }
   for (const subject of subjects)
-    if (subject.kind !== 'audit' && !(await verifySubject(db, subject))) return true; // NOSONAR
+    if (subject.kind !== 'audit' && !(await verifySubject(db, subject))) return true; // NOSONAR -- Stops at the first unverifiable subject.
   return false;
 }
 

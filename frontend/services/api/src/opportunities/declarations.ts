@@ -177,8 +177,7 @@ async function verifyExistingEvidence(
         ]
       : [],
   );
-  // The declaration transaction runs one statement at a time.
-  for (const trigger of triggers) await enqueueImplementationVerification(trx, trigger); // NOSONAR
+  for (const trigger of triggers) await enqueueImplementationVerification(trx, trigger); // NOSONAR -- The declaration transaction runs one statement at a time.
 }
 
 /**

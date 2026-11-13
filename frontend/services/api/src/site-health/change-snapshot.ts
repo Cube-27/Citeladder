@@ -332,8 +332,7 @@ async function insertObservations(
   const chunk = first ? Math.floor(65_535 / Object.keys(first).length) : 1;
   for (let start = 0; start < rows.length; start += chunk) {
     const batch = rows.slice(start, start + chunk);
-    // One transaction connection runs one statement at a time.
-    await db.insertInto('site_change_observations').values(batch).execute(); // NOSONAR
+    await db.insertInto('site_change_observations').values(batch).execute(); // NOSONAR -- One transaction connection runs one statement at a time.
   }
 }
 

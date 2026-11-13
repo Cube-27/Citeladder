@@ -339,8 +339,7 @@ export async function finalizeCrawlAnalyses(db: Database, crawl: Crawl) {
     const fresh = evaluations
       .filter((evaluation) => !recorded.has(`${row.id}:${evaluation.rule_id}`))
       .map((evaluation) => ({ ...evaluation, id: randomUUID() }));
-    // Sequential: one transaction's connection, under the crawl lock.
-    await insertEvaluations(db, crawl, row.id, row.site_url_id, row.artifact_id, fresh); // NOSONAR
+    await insertEvaluations(db, crawl, row.id, row.site_url_id, row.artifact_id, fresh); // NOSONAR -- One transaction's connection, under the crawl lock.
   }
   await publishFinalPageAnalyses(db, crawl);
 }

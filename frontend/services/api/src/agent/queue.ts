@@ -151,8 +151,7 @@ export class AgentQueue {
         .forUpdate()
         .skipLocked()
         .execute();
-      // One transaction connection: the runs end in order.
-      for (const run of rows) await endInterrupted(trx, run, settleFailed); // NOSONAR
+      for (const run of rows) await endInterrupted(trx, run, settleFailed); // NOSONAR -- One transaction connection: the runs end in order.
       return rows.length;
     });
   }

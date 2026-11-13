@@ -73,8 +73,11 @@ const isEmpty = (value: unknown) =>
   value === '' ||
   (Array.isArray(value) && !value.length) ||
   (isObject(value) && !Object.keys(value).length);
-const emptyProductValues = (): ProductValues =>
-  Object.fromEntries(PRODUCT_KEYS.map((key) => [key, []])) as unknown as ProductValues;
+const emptyProductValues = (): ProductValues => {
+  const values: Partial<ProductValues> = {};
+  for (const key of PRODUCT_KEYS) values[key] = [];
+  return values as ProductValues;
+};
 
 /** `"https://schema.org/Article"` and `"Article"` name the same type. */
 function cleanType(value: unknown): string {

@@ -94,7 +94,7 @@ export async function settleResearchCharges(db: Database, at = new Date(), canAd
     // One run per transaction, each under its own lock; a failing run never stops the batch.
     const key = { workspaceId: run.workspace_id, runId: run.id };
     try {
-      if (await settleResearchCharge(db, key, at)) settled++; // NOSONAR
+      if (await settleResearchCharge(db, key, at)) settled++; // NOSONAR -- One run per transaction, each under its own lock.
     } catch (error) {
       logger.exception('research_charge_settlement_failed', error, { run_id: run.id });
     }

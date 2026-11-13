@@ -450,8 +450,7 @@ async function eachCrawl<T extends { id: string }>(
   let acted = 0;
   for (const crawl of crawls)
     try {
-      // One crawl lock at a time: a bounded batch never holds several crawl rows.
-      if ((await work(crawl)) !== false) acted++; // NOSONAR
+      if ((await work(crawl)) !== false) acted++; // NOSONAR -- One crawl lock at a time: a batch never holds several crawl rows.
     } catch (error) {
       logger.exception(failure, error, { crawl_id: crawl.id });
     }

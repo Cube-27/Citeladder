@@ -45,9 +45,8 @@ export async function evidenceFor(
     if (age > checkWindowDays(kind) * DAY_MS) continue;
     // A frozen check that no longer parses cannot be read; say so rather than wait.
     const parsed = expectedCheckSchema.safeParse(raw);
-    // One source reads its checks in order on the caller's connection.
     const found = parsed.success
-      ? await readCheck(ctx, source, parsed.data) // NOSONAR
+      ? await readCheck(ctx, source, parsed.data) // NOSONAR -- One source reads its checks in order on the caller's connection.
       : outcome(ctx.reading, 'unavailable', 'malformed_check');
     if (found) ctx.result.outcomes.set(index, found);
   }
