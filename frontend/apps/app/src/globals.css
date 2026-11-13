@@ -478,13 +478,6 @@
 }
 @utility overlay-selected {
   background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
-  /* Forced colours drop background images; selection stays visible as an inner edge. */
-  @media (forced-colors: active) {
-    & {
-      outline: 2px solid SelectedItem;
-      outline-offset: -2px;
-    }
-  }
 }
 
 /* Below the shell breakpoint the sidebar is the rail and the main gutter
@@ -1301,6 +1294,14 @@ a.focus-ring:active .type-caption {
   .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
     outline-color: Highlight;
     border-color: Highlight;
+  }
+
+  /* The selected overlay is a background image, which forced colours drop;
+     a selected row or option keeps an inner edge instead. */
+  [class~='overlay-selected'],
+  [class~='aria-selected:overlay-selected'][aria-selected='true'] {
+    outline: 2px solid SelectedItem;
+    outline-offset: -2px;
   }
 
   /* The radio dot is a filled span, which otherwise collapses to Canvas. */

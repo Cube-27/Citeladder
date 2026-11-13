@@ -298,7 +298,9 @@ for (const width of [1280, 390]) {
       await stop.press('Enter');
       // Scoped to the thread: the saved reply is also in the screen-reader announcement.
       await expect(
-        page.getByRole('article').getByText('Stopped. Nothing from this turn was saved.'),
+        page
+          .getByRole('list', { name: 'Messages' })
+          .getByText('Stopped. Nothing from this turn was saved.'),
       ).toBeVisible();
 
       await reply.fill('');
