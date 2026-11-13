@@ -720,3 +720,18 @@ and no skill restates them.
 
 Source: owner, 13 November 2026, approving the drafted CLAUDE.md wording
 directly.
+
+## Source file size is a token limit, not a line limit
+
+Authored source files are limited to 6,000 tokens (bytes / 4) by a pre-commit
+hook that CI reruns on the PR's changed files. Tests, codegen, migrations, docs
+and data, marketing content, config owners, the design tokens and the MCP tool
+registries are ignored. Files already over the limit on 13 November 2026 are
+grandfathered in a baseline that may only shrink. The 500-line production
+module rule and its per-module allowances are deleted everywhere, so the token
+limit is the only size rule for production source; function cyclomatic
+complexity 12 and the 800-line test-file ceiling stay.
+[Development](DEVELOPMENT.md#source-file-size) owns the rule.
+
+Source: owner, 13 November 2026, approving the token-size hook directly, and
+adding the same day that the 500-line rule be removed completely.
