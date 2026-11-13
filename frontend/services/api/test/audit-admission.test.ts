@@ -248,6 +248,7 @@ describe('atomic audit admission', () => {
         await db
           .updateTable('audits')
           .set({ funding_account_id: account, funded_budget_period_start: month })
+          .where('workspace_id', '=', t.workspaceId)
           .where('id', '=', auditId)
           .execute();
       const { taskId } = await fixtures.execution(t, { auditId });
