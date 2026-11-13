@@ -85,7 +85,7 @@ describe('Agent built-in tools', () => {
     expect(saveDocument(catalog, turn, draft, bounds)).toEqual({
       ok: true,
       document: 2,
-      text: 'Document 2: staged as a new document in Article format; it is saved with your reply, and the app tells the person so. Now reply briefly; do not repeat the document or announce the save.',
+      text: "Document 2 saved ('Guide'). Reply now.",
     });
     expect(turn.staged.get(2)).toEqual({
       kind: 'content',
@@ -94,6 +94,19 @@ describe('Agent built-in tools', () => {
     });
     // A second new document in the same turn takes the next number.
     expect(saveDocument(catalog, turn, { ...draft, title: 'FAQ' }, bounds).document).toBe(3);
+    // A later response saving the same document again, by title or by number, keeps the first save.
+    const repeat = {
+      ok: false,
+      text: 'Document 2 was already saved in this turn and that save was kept. Change it with edit_document, or reply now.',
+    };
+    expect(
+      saveDocument(catalog, turn, { ...draft, title: ' guide ', body: 'Other' }, bounds),
+    ).toEqual(repeat);
+    expect(saveDocument(catalog, turn, { ...draft, document: 2, body: 'Other' }, bounds)).toEqual(
+      repeat,
+    );
+    expect(turn.staged.get(2)?.payload.body).toBe('Body');
+    expect([...turn.staged.keys()]).toEqual([2, 3]);
   });
 
   it('keeps the person’s own UUIDs in a staged document and scrubs every other one', () => {
@@ -120,18 +133,23 @@ describe('Agent built-in tools', () => {
     expect(turn.staged.get(2)?.payload.body).toBe(`<label for="${own}">`);
   });
 
-  it('replaces a document of the loaded kind, once per step, and refuses another kind', () => {
+  it('replaces a document of the loaded kind, once per turn, and refuses another kind', () => {
     const turn = state({ skill: content(), documents: [saved()] });
     const replaced = saveDocument(catalog, turn, { document: 1, title: 'New', body: 'B' }, bounds);
-    expect(replaced).toMatchObject({ ok: true, document: 1 });
+    expect(replaced).toEqual({
+      ok: true,
+      document: 1,
+      text: "Document 1 saved ('New'). Reply now.",
+    });
     // The document's format applies when the save names none.
     expect(turn.staged.get(1)?.payload).toMatchObject({ title: 'New', format_id: 'faq' });
-    expect(
-      saveDocument(catalog, turn, { document: 1, title: 'Again', body: 'B' }, bounds, new Set([1])),
-    ).toEqual({
-      ok: false,
-      text: 'Save Document 1 once per step. The first save in this step was kept.',
-    });
+    expect(saveDocument(catalog, turn, { document: 1, title: 'Again', body: 'C' }, bounds)).toEqual(
+      {
+        ok: false,
+        text: 'Document 1 was already saved in this turn and that save was kept. Change it with edit_document, or reply now.',
+      },
+    );
+    expect(turn.staged.get(1)?.payload.title).toBe('New');
     const planning = state({ skill: plan(), documents: [saved()] });
     expect(saveDocument(catalog, planning, { document: 1, title: 'P', body: 'B' }, bounds)).toEqual(
       {
@@ -183,7 +201,7 @@ describe('Agent built-in tools', () => {
     ).toEqual({
       ok: true,
       document: 1,
-      text: 'Document 1: applied 2 edits in FAQ format; it is saved with your reply, and the app tells the person so. Now reply briefly; do not repeat the document or announce the save.',
+      text: 'Document 1: applied 2 edits; it is saved with your reply, and the app tells the person so. Now reply briefly; do not repeat the document or announce the save.',
     });
     expect(turn.staged.get(1)).toEqual({
       kind: 'content',

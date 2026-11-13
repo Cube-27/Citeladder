@@ -703,6 +703,29 @@ it('exposes published dataset aggregates without treating them as backlink edges
   ).rejects.toThrow('not found');
 });
 
+it('reads answers from the latest completed run of this project when no audit_id is named', async () => {
+  expect(await read('read_visibility_results')).toMatchObject({
+    state: 'unavailable',
+    reason: 'no_completed_run',
+  });
+  const older = await fixtures.audit(tenant, { completedAt: new Date('2026-10-01T00:00:00Z') });
+  await fixtures.execution(tenant, { auditId: older });
+  const latest = await fixtures.audit(tenant, { completedAt: new Date('2026-10-02T00:00:00Z') });
+  const { taskId } = await fixtures.execution(tenant, { auditId: latest });
+  await fixtures.audit(tenant, { completedAt: null, status: 'running' });
+  // Another workspace's newer run is never the default.
+  const foreign = await fixtures.tenant();
+  await fixtures.execution(foreign, {
+    auditId: await fixtures.audit(foreign, { completedAt: new Date('2026-10-03T00:00:00Z') }),
+  });
+  const page = await read('read_visibility_results');
+  expect(page).toMatchObject({ state: 'available', audit_id: latest });
+  expect((page.items as { task_id: string }[]).map((item) => item.task_id)).toEqual([taskId]);
+  expect(await read('read_visibility_results', { audit_id: older })).toMatchObject({
+    audit_id: older,
+  });
+});
+
 it('keeps answer identity through the visibility owner and refuses another project', async () => {
   const auditId = await fixtures.audit(tenant);
   const { taskId } = await fixtures.execution(tenant, {

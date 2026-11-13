@@ -282,7 +282,8 @@ type OwnedKind = 'project' | 'prompt' | 'action';
 /** Every allowlisted kind is a contracts record kind. */
 type Kind = RecordKindName;
 
-const NOT_A_RECORD = 'id must be an allowlisted citeladder:// record URI';
+const NOT_A_RECORD =
+  "id must be a citeladder:// record id exactly as a read or search returned it. Read a page on the project's site with read_page_text and a page AI answers cited with read_source_url; fetch reads no other web pages.";
 export function parseRecordId(value: string): { kind: Kind; id: string; part: number } {
   const uri = URL.parse(value);
   if (!uri) throw new McpInputError(NOT_A_RECORD);

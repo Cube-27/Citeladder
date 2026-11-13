@@ -259,12 +259,11 @@ function unknownDocument(state: DocumentState, number: number) {
 }
 
 function staged(
-  catalog: SkillCatalog,
   state: DocumentState,
   number: number,
   document: Omit<StagedDocument, 'payload'> & { payload: unknown },
   bounds: OutputBounds,
-  done: string,
+  done: (title: string) => string,
 ): BuiltinOutcome {
   const checked = outputSchema(bounds).safeParse(document.payload);
   if (!checked.success)
@@ -277,26 +276,36 @@ function staged(
     skillId: document.skillId,
     payload: checked.data,
   });
-  const format = checked.data.format_id;
-  const label = format ? ` in ${catalog.formats?.get(format)?.label ?? format} format` : '';
   return {
     ok: true,
     document: number,
-    text: `${documentLabel(number)}: ${done}${label}; it is saved with your reply, and the app tells the person so. Now reply briefly; do not repeat the document or announce the save.`,
+    text: `${documentLabel(number)}${done(checked.data.title)}`,
   };
+}
+
+const saved = (title: string) => ` saved ('${title}'). Reply now.`;
+const sameTitle = (left: string, right: string) =>
+  left.trim().toLocaleLowerCase() === right.trim().toLocaleLowerCase();
+
+/** A whole save of a document this turn already staged: the first is kept and the rest go through edit_document. */
+function repeatedSave(state: DocumentState, requested: number | null | undefined, title: string) {
+  let repeat = requested ?? undefined;
+  if (!repeat)
+    repeat = [...state.staged].find(([, { payload }]) => sameTitle(payload.title, title))?.[0];
+  if (repeat === undefined || !state.staged.has(repeat)) return null;
+  return `${documentLabel(repeat)} was already saved in this turn and that save was kept. Change it with edit_document, or reply now.`;
 }
 
 /**
  * Stages a whole document. A number replaces that document and must match the
- * loaded methodology's kind; without one the document is new. `step` holds the
- * documents already saved whole in this response: the first save of each is kept.
+ * loaded methodology's kind; without one the document is new. A document is
+ * saved whole once per turn, so a later save never silently wins or duplicates it.
  */
 export function saveDocument(
   catalog: SkillCatalog,
   state: DocumentState,
   input: unknown,
   bounds: OutputBounds,
-  step: ReadonlySet<number> = new Set(),
 ): BuiltinOutcome {
   const { skill } = state;
   if (!skill)
@@ -319,11 +328,8 @@ export function saveDocument(
       ok: false,
       text: `${documentLabel(requested!)} is a “${existing.kind}” document and this methodology writes “${skill.outputKind}”. Omit document to save this as a new document, or load a “${existing.kind}” methodology to replace it.`,
     };
-  if (requested && step.has(requested))
-    return {
-      ok: false,
-      text: `Save ${documentLabel(requested)} once per step. The first save in this step was kept.`,
-    };
+  const repeat = repeatedSave(state, requested, fields.title);
+  if (repeat) return { ok: false, text: repeat };
   const number = requested ?? Math.max(0, ...numbers(state)) + 1;
   const formats = catalog.formats;
   const format = usesFormats(skill)
@@ -332,7 +338,6 @@ export function saveDocument(
   if (formats && usesFormats(skill) && !formats.has(format ?? ''))
     return { ok: false, text: `Set format_id to one of: ${[...formats.keys()].join(', ')}.` };
   return staged(
-    catalog,
     state,
     number,
     {
@@ -346,7 +351,7 @@ export function saveDocument(
       },
     },
     bounds,
-    requested ? 'staged the new version' : 'staged as a new document',
+    saved,
   );
 }
 
@@ -403,7 +408,6 @@ export function editDocument(
   if (!result.ok) return result;
   const count = parsed.data.edits.length;
   const outcome = staged(
-    catalog,
     state,
     number,
     {
@@ -418,7 +422,8 @@ export function editDocument(
       },
     },
     bounds,
-    `applied ${editLabel(count)}`,
+    () =>
+      `: applied ${editLabel(count)}; it is saved with your reply, and the app tells the person so. Now reply briefly; do not repeat the document or announce the save.`,
   );
   return outcome.ok ? followedBy(state, number, base.body, outcome) : outcome;
 }

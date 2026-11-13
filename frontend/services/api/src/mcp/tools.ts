@@ -363,10 +363,11 @@ export const definitions = {
   read_visibility_results: projectTool({
     title: 'Read AI answers',
     description:
-      "Read the answers engines gave in one run, to see exactly what an engine said for a prompt. Each answer has the prompt text, engine, model, repetition, whether web search was used, the brands mentioned (with first position) and every citation (URL, domain, whether it is your site or a competitor's), plus a citeladder:// id for fetch. audit_id is required: take it from read_visibility_overview. Answers come in pages; pass next_cursor for more. Only core prompts are included unless cohort is comparison or all. Filters (prompt_id, domain, url, engine) combine. Use read_visibility_overview for rates and read_visibility_sources for citation totals.",
+      "Read the answers engines gave in one run, to see exactly what an engine said for a prompt. Each answer has the prompt text, engine, model, repetition, whether web search was used, the brands mentioned (with first position) and every citation (URL, domain, whether it is your site or a competitor's), plus a citeladder:// id for fetch. It defaults to the latest completed run in the default market; unavailable no_completed_run means none has finished. Answers come in pages; pass next_cursor for more. Only core prompts are included unless cohort is comparison or all. Filters (prompt_id, domain, url, engine) combine. Use read_visibility_overview for rates and read_visibility_sources for citation totals.",
     schema: z.strictObject({
       ...project,
-      audit_id: run,
+      market_id,
+      audit_id: latestRun,
       engine,
       cohort,
       prompt_id: optional(
@@ -514,7 +515,7 @@ export const definitions = {
   }),
   read_site_health: projectTool({
     title: 'Read Site Health',
-    description: `Read the Site Health summary of the latest crawl, or a chosen snapshot: the web fundamentals and AI-readiness scores with their measurement state, how many pages were selected and analyzed, and the top ${policy.site_health.reads.snapshot_top_issues} issues, each with its rule_id, severity, description, remediation and how many pages it affects. unavailable no_site_snapshot means no crawl was analyzed yet; this tool never starts one. Use read_site_pages with a rule_id to list the affected pages, read_ai_crawlability for robots access, and render_site_health to show the user the interactive view.`,
+    description: `Read the Site Health summary of the latest crawl, or a chosen snapshot: the web fundamentals and AI-readiness scores with their measurement state, how many pages were selected and analyzed, and the top ${policy.site_health.reads.snapshot_top_issues} issues, each with its rule_id, severity, description, remediation and how many pages it affects. unavailable no_site_snapshot means no crawl was analyzed yet; this tool never starts one. Use read_site_pages with a rule_id to list the affected pages and read_ai_crawlability for robots access. Use render_site_health to show the user the interactive view.`,
     schema: z.strictObject({ ...project, snapshot_id }),
     read: siteSnapshot,
   }),

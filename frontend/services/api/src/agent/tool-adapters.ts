@@ -5,6 +5,7 @@ import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
 import { definitions, dispatchTool, presentationTools } from '../mcp/tools.ts';
 import { parseRecordId } from '../mcp/retrieval.ts';
+import { writeTools } from '../mcp/write-tools.ts';
 import { stoppableReads } from './async.ts';
 import { ToolRegistry, toolDefinitions, type ReadTool } from './tools.ts';
 import { agentPolicy, type Json, type Scope } from './contracts.ts';
@@ -76,6 +77,22 @@ function agentPage(schema: z.ZodType | undefined) {
 }
 // The chat's project is fixed, and MCP App views render nothing in a chat.
 const NOT_FOR_AGENT = new Set(['list_projects', ...presentationTools]);
+const MISSING_TOOLS: ReadonlySet<string> = new Set([
+  ...NOT_FOR_AGENT,
+  ...writeTools.map((tool) => tool.name),
+]);
+/** A shared description without its sentences naming an MCP tool the Agent lacks, so the model never reaches for one. */
+function agentDescription(description: string) {
+  return description
+    .split(/(?<=\.)\s+/u)
+    .filter(
+      (sentence) =>
+        ![...sentence.matchAll(/\b[a-z]+(?:_[a-z]+)+\b/gu)].some(([word]) =>
+          MISSING_TOOLS.has(word),
+        ),
+    )
+    .join(' ');
+}
 /** The shared reads, each stopped by its signal: the read timeout and Stop end the work, not only the wait. */
 export function sharedReads(db: Database): ReadTool[] {
   return Object.entries(definitions)
@@ -88,7 +105,7 @@ export function sharedReads(db: Database): ReadTool[] {
       const page = agentPage(fields.limit);
       return {
         name,
-        description: definition.description,
+        description: agentDescription(definition.description),
         arguments: z.strictObject(page ? { ...fields, limit: page.schema } : fields) as z.ZodType<
           Record<string, Json>
         >,

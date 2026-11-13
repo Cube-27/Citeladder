@@ -22,6 +22,10 @@ their plans were deleted. The owner decisions behind them are in
 move and remove other backlog work); the feature owners in
 [the documentation index](../README.md) describe what shipped.
 
+- [Agent chat UX](agent-chat-ux.md) (owner, 2026-11-13): tool reliability,
+  readable activity, a stable live turn, the composer, Actions everywhere, the
+  confirm card and the sidebar subtitle, in eight PRs ending with a review pass.
+
 ## Partly delivered
 
 - [Billing improvement](billing-improvement.md): PRs 1–3 merged; operator
