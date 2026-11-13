@@ -41,7 +41,7 @@ An observed result [\\[1\\]](#source-1) is not a guarantee.
 it('renders a fence as a CodeBlock with its language and copy button', () => {
   const { container } = render(<ProseMarkdown markdown={'```bash\ndocker compose up\n```\n'} />);
   expect(container.querySelector('.cl-code-lang')).toHaveTextContent('bash');
-  expect(screen.getByRole('button', { name: 'Copy code' })).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Copy' })).toBeInTheDocument();
   expect(container.querySelector('code')).toHaveTextContent('docker compose up');
 });
 

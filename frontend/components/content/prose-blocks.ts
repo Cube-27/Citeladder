@@ -69,18 +69,15 @@ function codeBlock(source: string, language: string | null): Element {
   return element('figure', { className: ['cl-code'] }, [
     element('figcaption', { className: ['cl-code-bar'] }, [
       ...(language ? [element('span', { className: ['cl-code-lang'] }, [text(language)])] : []),
-      element(
-        'button',
-        { type: 'button', className: ['cl-code-copy'], ariaLabel: 'Copy code', dataCodeCopy: '' },
-        [
-          glyph('copy', [
-            element('rect', { width: 14, height: 14, x: '8', y: '8', rx: '2', ry: '2' }),
-            element('path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }),
-          ]),
-          glyph('check', [element('path', { d: 'M20 6 9 17l-5-5' })]),
-          element('span', { ariaHidden: 'true' }, [text('Copy')]),
-        ],
-      ),
+      element('output', { className: ['cl-code-status'], dataCodeCopyStatus: '' }, []),
+      element('button', { type: 'button', className: ['cl-code-copy'], dataCodeCopy: '' }, [
+        glyph('copy', [
+          element('rect', { width: 14, height: 14, x: '8', y: '8', rx: '2', ry: '2' }),
+          element('path', { d: 'M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2' }),
+        ]),
+        glyph('check', [element('path', { d: 'M20 6 9 17l-5-5' })]),
+        text('Copy'),
+      ]),
     ]),
     element('pre', { className: ['cl-code-pre'], tabIndex: 0 }, [
       element('code', {}, codeLines(source)),

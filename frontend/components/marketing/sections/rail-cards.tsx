@@ -128,6 +128,7 @@ export function CardRail({
           </li>
         ))}
       </ul>
+      <output className="sr-only" data-card-rail-status />
     </div>
   );
 }

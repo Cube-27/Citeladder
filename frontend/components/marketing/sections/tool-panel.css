@@ -75,8 +75,20 @@
 
 .cl-tool-actions {
   display: flex;
+  align-items: center;
   gap: 4px;
   margin-left: auto;
+}
+
+.cl-tool-copy-status {
+  padding-right: 4px;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+}
+
+.cl-tool-copy-status[data-failed] {
+  color: var(--color-negative);
 }
 
 .cl-tool-copy {

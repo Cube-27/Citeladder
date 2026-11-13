@@ -28,6 +28,11 @@ function renderRail({ scrollWidth, clientWidth }: { scrollWidth: number; clientW
   Object.defineProperty(track, 'clientWidth', { configurable: true, value: clientWidth });
   // jsdom lays nothing out and has no scrolling API on elements.
   track.scrollTo = () => {};
+  track.scrollBy = () => {};
+  // Each card is one 400px step (jsdom lays out nothing).
+  for (const item of track.children) {
+    Object.defineProperty(item, 'offsetWidth', { configurable: true, value: 400 });
+  }
   const rail = container.querySelector<HTMLElement>('[data-card-rail]');
   if (!rail) throw new Error('CardRail rendered no rail');
   mountCardRail(rail);
@@ -57,6 +62,19 @@ describe('mountCardRail', () => {
 
     expect(prev).toBeEnabled();
     expect(next).toBeDisabled();
+  });
+
+  it('announces the card each button brings to the start', () => {
+    const { track, prev, next } = renderRail({ scrollWidth: 1200, clientWidth: 400 });
+    const status = screen.getByRole('status');
+    expect(status.textContent).toBe('');
+
+    fireEvent.click(next);
+    expect(status).toHaveTextContent('Keyword Research, 2 of 2');
+
+    track.scrollLeft = 400;
+    fireEvent.click(prev);
+    expect(status).toHaveTextContent('Site Health, 1 of 2');
   });
 
   it('opens one card in place at a time and closes it again', () => {

@@ -756,3 +756,13 @@ complexity 12 and the 800-line test-file ceiling stay.
 
 Source: owner, 13 November 2026, approving the token-size hook directly, and
 adding the same day that the 500-line rule be removed completely.
+
+## The website's desktop navigation loads only on wide screens
+
+The website navbar's desktop menus stay the Radix island; it hydrates only
+where it shows, from 1280px (`client:media`), not on every page and width.
+Rebuilding it on native popover is declined while the browser matrix lacks
+popover on iOS Safari before 18.3.
+
+Source: owner, 13 November 2026, answering the modern-web audit: "Load only on
+wide screens" (`client:media`), keep Radix, no popover rebuild.

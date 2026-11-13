@@ -6,6 +6,8 @@ import { defineConfig } from 'astro/config';
 import { loadEnv } from 'vite';
 import { publicOrigins } from '../../lib/config/public-origins.ts';
 import { marketingContentSecurityPolicy } from '../../lib/config/content-security-policy.ts';
+import { cspScriptHash } from '../../lib/config/csp-hash.ts';
+import { SPECULATION_RULES_JSON } from '../../lib/config/speculation-rules.ts';
 
 const frontendRoot = fileURLToPath(new URL('../..', import.meta.url));
 
@@ -45,7 +47,10 @@ export default defineConfig({
   // signatures, OAuth transactions and CSRF at their owning endpoints.
   security: {
     checkOrigin: false,
-    csp: marketingContentSecurityPolicy(Boolean(env('NEXT_PUBLIC_GA_MEASUREMENT_ID'))),
+    csp: marketingContentSecurityPolicy({
+      analyticsEnabled: Boolean(env('NEXT_PUBLIC_GA_MEASUREMENT_ID')),
+      scriptHashes: [cspScriptHash(SPECULATION_RULES_JSON)],
+    }),
   },
   adapter: cloudflare({ imageService: 'compile' }),
   integrations: [react()],

@@ -73,43 +73,6 @@ const { items, title = 'On this page' } = Astro.props;
 </style>
 
 <script>
-  // Mark the heading in view: the last one whose top has reached the line a
-  // contents link scrolls it to (its scroll-margin-top, below the top bar), or
-  // the last heading once the page is scrolled to its end.
-  const links = [...document.querySelectorAll<HTMLAnchorElement>('.cl-toc-link')];
-  const ids = [...new Set(links.map((link) => decodeURIComponent(link.hash.slice(1))))];
-  const headings = ids
-    .map((id) => document.getElementById(id))
-    .filter((node): node is HTMLElement => node !== null);
-  const bar = document.querySelector<HTMLElement>('[data-docs-bar]');
-  const landing = (heading: HTMLElement) =>
-    Math.max(
-      Number.parseFloat(getComputedStyle(heading).scrollMarginTop) || 0,
-      bar?.getBoundingClientRect().bottom ?? 0,
-    );
-  let scheduled = false;
-  const update = () => {
-    scheduled = false;
-    let current = headings[0];
-    for (const heading of headings) {
-      if (heading.getBoundingClientRect().top <= landing(heading) + 1) current = heading;
-    }
-    const end = document.documentElement.scrollHeight - 2;
-    if (window.scrollY > 0 && window.scrollY + window.innerHeight >= end) current = headings.at(-1);
-    for (const link of links) {
-      if (decodeURIComponent(link.hash.slice(1)) === current?.id)
-        link.setAttribute('aria-current', 'location');
-      else link.removeAttribute('aria-current');
-    }
-  };
-  const schedule = () => {
-    if (scheduled) return;
-    scheduled = true;
-    requestAnimationFrame(update);
-  };
-  window.addEventListener('scroll', schedule, { passive: true });
-  window.addEventListener('resize', schedule);
-  window.addEventListener('hashchange', schedule);
-  void document.fonts.ready.then(schedule);
-  update();
+  import { mountTocSpy } from './toc-spy';
+  mountTocSpy();
 </script>
