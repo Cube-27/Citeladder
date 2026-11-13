@@ -6,7 +6,6 @@
  * URLs live, because a list of twenty inside a three-metric summary pushed
  * Structure depth off the fold to say what the number already said.
  */
-'use client';
 
 import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';

@@ -356,6 +356,8 @@ describe('Search Intelligence readiness and preferences', () => {
       research_scope: si.default_research_scope,
       depths: si.default_depths,
     });
+    // The market picker offers the reviewed Labs countries, which name the saved one.
+    expect(body.markets).toContainEqual({ country_code: 'AU', location_code: 2036 });
     expect(body.latest_run?.id).toBe(latest);
     expect(new Map(body.datasets.map((row) => [row.id, row.research_scope]))).toEqual(
       new Map([
@@ -382,7 +384,8 @@ describe('Search Intelligence readiness and preferences', () => {
     const read = await call<Readiness>('');
     expect(read.body.preferences).toMatchObject({
       location_code: 2840,
-      depths: { backlinks: 500 },
+      // The saved depth, and the policy default for every dataset left unsaved.
+      depths: { backlinks: 500, ranking_keywords: 200 },
     });
 
     for (const body of [

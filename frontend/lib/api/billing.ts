@@ -31,17 +31,16 @@ import {
   billingInvoiceSchema,
   billingInvoicesSchema,
   billingUsageSchema,
-  noCardClaimSchema,
-  noCardOfferSchema,
   planChangeSchema,
   resolvedQuoteSchema,
   subscriptionChangeSchema,
   subscriptionCheckoutSchema,
   workspaceEntitlementSchema,
+  type CredentialMode,
+  type SelfServePlanKey,
 } from '@citeladder/contracts/billing';
 import type {
   CheckoutVerifyRequest,
-  NoCardClaimRequest,
   PackPurchaseRequest,
   PlanChangeRequest,
   SubscriptionCheckoutRequest,
@@ -59,8 +58,7 @@ export type BillingQuote = z.infer<typeof resolvedQuoteSchema>;
 export type BillingInvoice = z.infer<typeof billingInvoiceSchema>;
 export type WorkspaceEntitlement = z.infer<typeof workspaceEntitlementSchema>;
 export type UsageItem = BillingUsage['items'][number];
-export type CredentialMode = 'byok' | 'funded';
-export type SelfServePlanKey = 'tier_1' | 'tier_2' | 'tier_3';
+export type { CredentialMode, SelfServePlanKey };
 
 /** Customer evidence required to let the server determine GST/export status. */
 export type BillingCustomerDetails = {
@@ -178,23 +176,6 @@ export const billingApi = {
 
   invoicePdf: (invoiceId: string, options?: ApiRequestOptions) =>
     apiClient.getBlob(`/billing/invoices/${encodeURIComponent(invoiceId)}/pdf`, options),
-
-  noCardOffer: async (options?: ApiRequestOptions) => {
-    const response = await apiClient.get<unknown>('/billing/early-access', options);
-    return strictValidate(noCardOfferSchema, response, 'billing.noCardOffer');
-  },
-
-  claimNoCardOffer: async (
-    input: NoCardClaimRequest,
-    idempotencyKey: string,
-    options?: ApiRequestOptions,
-  ) => {
-    const response = await apiClient.post<unknown>('/billing/early-access/claim', input, {
-      ...options,
-      idempotencyKey,
-    });
-    return strictValidate(noCardClaimSchema, response, 'billing.claimNoCardOffer');
-  },
 
   /** Start a base-plan checkout. */
   createSubscription: async (

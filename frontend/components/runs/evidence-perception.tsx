@@ -1,5 +1,3 @@
-'use client';
-
 import type { ExecutionPerception } from '@citeladder/contracts/visibility-perception';
 
 import { Badge } from '@/components/ui/badge';

@@ -1,10 +1,15 @@
 import { createHmac } from 'node:crypto';
 import { z } from 'zod';
-import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
+import {
+  resolvedQuoteSchema,
+  type BillingRegion,
+  type CredentialMode,
+  type Currency,
+  type TaxTreatment,
+} from '@citeladder/contracts/billing';
 import { amount, taxSchema, type Identity } from './contracts.ts';
 import { refuse } from './refusals.ts';
 import type { BillingSettings } from './config.ts';
-import type { CredentialMode } from './credential-mode.ts';
 import type { CatalogPlan, CatalogItem } from './catalog.ts';
 
 export type Quote = z.infer<typeof resolvedQuoteSchema>;
@@ -14,7 +19,7 @@ export type Intent = {
   mode: CredentialMode;
   key: string;
   quantity: number;
-  region: 'india' | 'international';
+  region: BillingRegion;
   country: string;
   priceRef: string;
   quote: Quote;
@@ -50,7 +55,7 @@ export function quoteIntent(
     quantity: number;
     country: string;
     identity: Identity;
-    currency: 'USD' | 'INR';
+    currency: Currency;
     unitAmount: number;
     /** The GST rate frozen with the catalog price: the only rate a quote uses. */
     taxRate: string;
@@ -79,7 +84,7 @@ export function quoteIntent(
   let cgst = 0,
     sgst = 0,
     igst = 0;
-  let treatment: 'CGST_SGST' | 'IGST' | 'EXPORT_ZERO_RATED' = 'EXPORT_ZERO_RATED';
+  let treatment: TaxTreatment = 'EXPORT_ZERO_RATED';
   let rate = '0';
   if (country === 'IN') {
     if (

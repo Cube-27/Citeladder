@@ -1,7 +1,6 @@
 /** Public pricing copy. Amounts, limits and availability come from the catalog. */
+import type { PlanCatalogKey as PlanKey } from '@citeladder/contracts/billing';
 import { ownValue } from '@/lib/utils';
-
-type PlanKey = 'tier_1' | 'tier_2' | 'tier_3' | 'enterprise';
 
 export type PlanPresentation = {
   blurb: string;

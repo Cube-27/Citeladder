@@ -1,5 +1,3 @@
-'use client';
-
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { AGENT_CAPABILITY } from '@/lib/config/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';

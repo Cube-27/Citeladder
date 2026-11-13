@@ -3,6 +3,7 @@ import {
   billingEntitlementSchema,
   billingUsageSchema,
   workspaceEntitlementSchema,
+  type CredentialMode,
 } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import type { ServiceConfig } from '../config.ts';
@@ -12,7 +13,7 @@ import { grantBalances } from '../entitlements/ledger.ts';
 import { runtimeProjection } from '../site-health/plan-runtime.ts';
 import { workspaceAccount } from './purchases.ts';
 import { catalog, capabilityValue } from './catalog.ts';
-import { credentialModeOf, type CredentialMode } from './credential-mode.ts';
+import { credentialModeOf } from './credential-mode.ts';
 import { checkoutAvailable } from './razorpay.ts';
 import { cancellationHeldUntil } from './cancellation.ts';
 import { scheduledSchema } from './settlement.ts';
@@ -75,7 +76,7 @@ export async function publicCatalog(
     currency_minor_units: 2,
     plans: published.payload.plans.map((plan) => {
       // Each mode is purchasable only with its own verified provider plan (B32).
-      const offer = (mode: 'byok' | 'funded') => {
+      const offer = (mode: CredentialMode) => {
         const price = plan.regional_prices[mode][region];
         const listed = mode === 'byok' ? plan.byok_price : plan.funded_price;
         return {

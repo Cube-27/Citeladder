@@ -1,5 +1,3 @@
-'use client';
-
 import { Pause, Play } from 'lucide-react';
 import { type RefObject, useEffect, useId, useRef, useState } from 'react';
 

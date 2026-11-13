@@ -9,6 +9,7 @@
  */
 import { z } from 'zod';
 
+import { policy } from '../config.ts';
 import { hash } from '../crypto-text.ts';
 import type { CandidatePage, CitedUrl } from './load.ts';
 
@@ -87,9 +88,6 @@ function urlPath(url: string): string {
   }
 }
 
-const MAX_TITLES = 10;
-const MAX_HEADINGS = 10;
-
 /**
  * The owned-match request for one topic's angles and their prefiltered
  * candidates; `pageIds` is the ID the model sees for each offered page, by
@@ -106,13 +104,13 @@ export function matchPrompt(input: {
     angles: input.angles.map((angle, index) => ({
       id: angleId(index),
       label: angle.label,
-      cited_titles: angle.titles.slice(0, MAX_TITLES),
+      cited_titles: angle.titles.slice(0, policy.content_optimization.match_max_titles),
       candidate_ids: angle.candidates.map((siteUrlId) => input.pageIds.get(siteUrlId)),
     })),
     pages: input.pages.map((page) => ({
       id: input.pageIds.get(page.siteUrlId),
       title: page.title,
-      headings: page.headings.slice(0, MAX_HEADINGS),
+      headings: page.headings.slice(0, policy.content_optimization.match_max_headings),
       excerpt: page.excerpt,
     })),
   });

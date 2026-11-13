@@ -1,5 +1,3 @@
-'use client';
-
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { AlertTriangle, X } from 'lucide-react';
 import { useInsertionEffect, useRef, type ReactNode, type RefObject } from 'react';

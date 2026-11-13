@@ -1,5 +1,3 @@
-'use client';
-
 import { Inline, Stack } from '@/components/ui/layout';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import type { RootError } from '@citeladder/contracts';

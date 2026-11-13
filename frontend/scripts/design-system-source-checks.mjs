@@ -1089,7 +1089,7 @@ export function tsxGeometryFindings(source, label) {
 }
 
 /*
- * Atomic layering (docs/design.md §Component recipes, app geometry decision 8).
+ * Atomic layering (app geometry decision 8).
  * Geometry lives in `components/ui` (atoms, organisms, templates) and the
  * shell in `components/layout`; a feature folder composes them and chooses
  * none of its own. The website (`components/marketing`) keeps its own ladder,

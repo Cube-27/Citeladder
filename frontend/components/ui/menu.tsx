@@ -1,5 +1,3 @@
-'use client';
-
 import * as MenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronRight } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';

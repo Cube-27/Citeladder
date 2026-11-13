@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { credentialModeSchema } from './billing.ts';
+
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 
 export const searchTargetSchema = responseObject({
@@ -89,8 +91,6 @@ export const searchDatasetTraits = (kind: string): SearchDatasetTraits | undefin
   const parsed = searchDatasetKindSchema.safeParse(kind);
   return parsed.success ? SEARCH_DATASET_KINDS[parsed.data] : undefined;
 };
-/** 'funded' on a managed plan: the platform's DataForSEO account, paid in AI credits (B40). */
-const researchCredentialModeSchema = z.enum(['byok', 'funded']);
 /**
  * An analysis run's lifecycle: reviewed (priced, awaiting confirmation), then
  * queued and running while its requests are sent, then one of the finished
@@ -122,7 +122,8 @@ export const searchRunSchema = responseObject({
   status: searchRunStatusSchema,
   action: z.string(),
   pricing_version: z.string(),
-  credential_mode: researchCredentialModeSchema,
+  /** 'funded' on a managed plan: the platform's DataForSEO account, paid in AI credits (B40). */
+  credential_mode: credentialModeSchema,
   /** Dollar amounts exist only for a BYOK analysis; a managed one is priced in credits (B41). */
   estimated_cost_usd: z.string().nullable(),
   provider_reported_cost_usd: z.string().nullable(),
@@ -170,7 +171,7 @@ export const searchDatasetSchema = responseObject({
   filtered_saved_count: z.number().int().nullable().optional(),
 }).catchall(z.unknown());
 export const searchReadinessSchema = responseObject({
-  credential_mode: researchCredentialModeSchema,
+  credential_mode: credentialModeSchema,
   connected: z.boolean(),
   connection_id: z.uuid().nullable(),
   owned_targets: z.array(searchTargetSchema),
@@ -178,6 +179,10 @@ export const searchReadinessSchema = responseObject({
   preferences: searchPreferencesSchema,
   latest_run: searchRunSchema.nullable(),
   datasets: z.array(searchDatasetSchema),
+  /** The markets a review may choose: each country and its DataForSEO location code. */
+  markets: z.array(responseObject({ country_code: z.string(), location_code: z.number().int() })),
+  /** The largest depth a list dataset accepts. */
+  max_depth: z.number().int(),
 });
 export const searchRowSchema = responseObject({
   id: z.uuid(),

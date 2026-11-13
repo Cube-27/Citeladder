@@ -1,5 +1,3 @@
-'use client';
-
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { Annotation, Compartment, EditorState, type Extension } from '@codemirror/state';

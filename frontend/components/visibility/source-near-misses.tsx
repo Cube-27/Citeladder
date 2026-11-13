@@ -1,5 +1,3 @@
-'use client';
-
 import { useQuery } from '@tanstack/react-query';
 import { Link2Off } from 'lucide-react';
 import type { z } from 'zod';

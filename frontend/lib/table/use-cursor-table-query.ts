@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 

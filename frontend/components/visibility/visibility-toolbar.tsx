@@ -1,5 +1,3 @@
-'use client';
-
 import { CircleHelp } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';

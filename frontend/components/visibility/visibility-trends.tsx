@@ -1,5 +1,3 @@
-'use client';
-
 import type { UseQueryResult } from '@tanstack/react-query';
 import { FilterChoice } from '@/components/ui/filter-bar';
 import { Callout } from '@/components/ui/callout';

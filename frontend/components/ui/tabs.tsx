@@ -1,5 +1,3 @@
-'use client';
-
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { createContext, useContext, useRef } from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';

@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { auditSchema, executionSchema, auditMetricsSchema } from '@citeladder/contracts/audits';
 import { auditEventSchema } from '@citeladder/contracts/audit-events';
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record, strings } from '../db/json.ts';
 import { utcText, utcTextOf, wireUtc, wireUtcOrNull } from '../db/timestamps.ts';
@@ -48,6 +49,8 @@ async function auditResponses(
   return audits.map((audit) =>
     auditSchema.parse({
       ...audit,
+      // The same rule `cancelAudit` enforces, so the screen never restates it.
+      cancelable: policy.audits.constants.audit_active_statuses.includes(audit.status),
       engine_snapshots: routes.get(audit.id) ?? [],
       market: frozenMarket(audit),
       not_applicable_engines: strings(record(audit.configuration).not_applicable_engines),

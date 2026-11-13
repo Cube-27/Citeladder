@@ -1,5 +1,3 @@
-'use client';
-
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { fixedLabel } from '@/components/site-health/issue-fix-actions';

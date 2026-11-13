@@ -1,5 +1,3 @@
-'use client';
-
 import type { NamedBrand } from '@citeladder/contracts';
 
 import { BrandMark } from '@/components/ui/brand-mark';

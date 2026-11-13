@@ -1,5 +1,3 @@
-'use client';
-
 import { useQuery } from '@tanstack/react-query';
 import { MessageSquareOff } from 'lucide-react';
 import { useParams } from 'react-router-dom';

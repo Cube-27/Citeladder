@@ -1,7 +1,6 @@
+import type { CredentialMode } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import { policy } from '../config.ts';
-
-export type CredentialMode = 'byok' | 'funded';
 
 /**
  * A workspace on a live managed plan measures on the platform's engine and

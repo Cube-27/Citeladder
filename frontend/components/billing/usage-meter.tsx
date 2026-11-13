@@ -1,5 +1,3 @@
-'use client';
-
 import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 import type { UsageItem } from '@/lib/api/billing';
 import { DisplayTime } from '@/components/ui/display-time';

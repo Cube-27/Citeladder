@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -20,7 +18,7 @@ import type { Audit } from '@citeladder/contracts';
 import { saveBlob } from '@/lib/download';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, formatDisplayTime } from '@/lib/format';
-import { AUDIT_STATES, isAuditCancelable } from '@/lib/runs/status';
+import { AUDIT_STATES } from '@/lib/runs/status';
 
 type ExportFormat = 'csv' | 'md';
 
@@ -87,7 +85,7 @@ export function RunActions({
   onExport: (format: ExportFormat) => void;
   exporting: ExportFormat | null;
 }>) {
-  const cancelable = isAuditCancelable(audit.status);
+  const { cancelable } = audit;
   return (
     <>
       <Button variant="secondary" onClick={() => onExport('csv')} disabled={exporting !== null}>
@@ -191,7 +189,7 @@ function ProgressNotices({
 }
 
 /**
- * Run progress panel (F10, design.md §9.7).
+ * Run progress panel (F10).
  *
  * Shows the audit's status badge, the requested/completed/failed counts, the
  * created timestamp, and the outcome of the run's actions (export, cancel and

@@ -1,5 +1,3 @@
-'use client';
-
 import { Badge } from '@/components/ui/badge';
 import { Inline, Stack } from '@/components/ui/layout';
 import { OnPageEntities } from '@/components/ui/on-page-entities';

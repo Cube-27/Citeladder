@@ -1,5 +1,3 @@
-'use client';
-
 import { useMemo } from 'react';
 
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';

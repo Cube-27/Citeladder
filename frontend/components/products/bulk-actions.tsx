@@ -1,5 +1,3 @@
-'use client';
-
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';

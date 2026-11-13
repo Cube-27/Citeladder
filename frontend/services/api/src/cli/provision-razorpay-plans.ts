@@ -1,4 +1,5 @@
 import { parseArgs } from 'node:util';
+import { providerModeSchema } from '@citeladder/contracts/billing';
 import { required, withOperatorDatabase, operatorMain } from './operator.ts';
 import { catalogMutation } from '../billing/admin.ts';
 import { catalogRevision } from '../billing/catalog.ts';
@@ -95,7 +96,7 @@ await operatorMain(async () => {
   if (!['propose', 'verify', 'bind'].includes(operation ?? ''))
     throw new Error('invalid_plan_operation');
   const environment = required(values.environment, 'environment');
-  if (!['test', 'live'].includes(environment)) throw new Error('invalid_provider_mode');
+  if (!providerModeSchema.safeParse(environment).success) throw new Error('invalid_provider_mode');
   if (operation === 'bind' && !values.output && !values.import)
     throw new Error('bind_destination_required');
   await withOperatorDatabase(async (db) => {

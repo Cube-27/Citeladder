@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { ProjectLink } from '@/components/ui/project-link';
 

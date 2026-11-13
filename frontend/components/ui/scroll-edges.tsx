@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useState, type RefObject } from 'react';
 
 /** Which sides of a sideways-scrolling region hide more content. */

@@ -1,5 +1,3 @@
-'use client';
-
 import type { ChangeObservation } from '@citeladder/contracts';
 
 import { CopyButton } from '@/components/ui/copy-button';

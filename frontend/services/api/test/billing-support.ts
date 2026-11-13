@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { credentialModeSchema, type Currency } from '@citeladder/contracts/billing';
 import { catalogSchema } from '../src/billing/catalog.ts';
 import { launchCatalog } from '../src/billing/catalog-authoring.ts';
 import type { Pending } from '../src/billing/contracts.ts';
@@ -50,7 +51,7 @@ function sellableCatalog() {
     launchCatalog({ mode: 'test', settings: billingConfig().billing }),
   );
   for (const plan of payload.plans)
-    for (const mode of ['byok', 'funded'] as const)
+    for (const mode of credentialModeSchema.options)
       for (const [region, price] of Object.entries(plan.regional_prices[mode])) {
         price.provider_price_ref = `plan_${plan.key.replaceAll('_', '')}${mode}${region}`;
         price.tax_verified = true;
@@ -178,7 +179,7 @@ export function paidSubscription(
 ): Extract<Evidence, { kind: 'base' }> {
   const start = new Date(Math.floor(Date.now() / 1000) * 1000 - 1000);
   const end = new Date(start.getTime() + 30 * 86_400_000);
-  const quote = pending.quote as { total_price: { currency: 'USD' | 'INR'; amount_minor: number } };
+  const quote = pending.quote as { total_price: { currency: Currency; amount_minor: number } };
   return {
     kind: 'base',
     subscription: {

@@ -49,7 +49,8 @@
     "check:dead-code": "knip",
     "quality:fix": "node ../scripts/quality.mjs --mode fix",
     "quality:check": "node ../scripts/quality.mjs --mode check",
-    "gate": "node ../scripts/quality.mjs --mode fix --scope changed --builds affected"
+    "gate": "node ../scripts/quality.mjs --mode fix --scope changed --builds affected",
+    "billing:test": "node ../scripts/billing-test.mjs"
   },
   "dependencies": {
     "@astrojs/cloudflare": "14.4.6",

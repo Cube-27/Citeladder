@@ -1,5 +1,3 @@
-'use client';
-
 import type { BillingCustomerDetails } from '@/lib/api/billing';
 
 import { Field } from '@/components/ui/field';

@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { FileText } from 'lucide-react';

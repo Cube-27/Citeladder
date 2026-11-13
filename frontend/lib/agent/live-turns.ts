@@ -1,5 +1,3 @@
-'use client';
-
 /**
  * Turns this tab started. Admission opens one streamed request per accepted
  * run, and the turn runs inside that request: it lives in this module, so

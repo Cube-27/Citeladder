@@ -1,5 +1,3 @@
-'use client';
-
 import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 

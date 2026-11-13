@@ -7,13 +7,14 @@
  */
 import { z } from 'zod';
 
-const selfServePlanKey = () => z.enum(['tier_1', 'tier_2', 'tier_3']);
+import { credentialModeSchema, selfServePlanKeySchema } from './billing.ts';
+
 const nullableText = () => z.string().trim().nullable().default(null);
 
 /** Start a base-plan checkout, with the customer evidence that decides GST or export. */
 export const subscriptionCheckoutRequestSchema = z.strictObject({
-  catalog_key: selfServePlanKey(),
-  credential_mode: z.enum(['byok', 'funded']),
+  catalog_key: selfServePlanKeySchema,
+  credential_mode: credentialModeSchema,
   country_code: z
     .string()
     .trim()
@@ -38,7 +39,7 @@ export const packPurchaseRequestSchema = z.strictObject({
 export type PackPurchaseRequest = z.input<typeof packPurchaseRequestSchema>;
 
 /** A base-plan change; the server decides the direction and prices an upgrade. */
-export const planChangeRequestSchema = z.strictObject({ catalog_key: selfServePlanKey() });
+export const planChangeRequestSchema = z.strictObject({ catalog_key: selfServePlanKeySchema });
 export type PlanChangeRequest = z.input<typeof planChangeRequestSchema>;
 
 /** Claiming the no-card early-access offer, with both explicit consents. */
@@ -48,7 +49,6 @@ export const noCardClaimRequestSchema = z.strictObject({
   data_sharing_consent: z.boolean(),
   operator_code: z.string().min(16).max(255).nullable().default(null),
 });
-export type NoCardClaimRequest = z.input<typeof noCardClaimRequestSchema>;
 
 /**
  * A provider's browser callback, in the NEUTRAL wrapper the API accepts. The

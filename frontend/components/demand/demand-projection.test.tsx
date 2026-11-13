@@ -172,6 +172,20 @@ const snapshot = {
       action_id: null,
     },
   ],
+  // Not the shipped thresholds: each rule must state what the server sent.
+  detector_policy: {
+    striking_distance: { min_impressions: 50, min_position: 4, max_position: 15 },
+    cannibalization: { min_page_impressions: 20, min_page_share: 0.1 },
+    ctr_gap: {
+      min_candidate_impressions: 100,
+      relative_threshold: 0.25,
+      absolute_threshold: 0.03,
+      min_cohort_rows: 20,
+      min_cohort_impressions: 500,
+    },
+    low_ctr: { min_impressions: 10, ctr_threshold: 0.02, max_signals: 50 },
+    trends: { window_days: 21, required_days: 42, emerging_ratio: 1.5, declining_ratio: 0.67 },
+  },
 };
 
 import { demandApi } from '@/lib/api/demand';
@@ -444,7 +458,7 @@ describe('DemandProjection', () => {
         detectors: {
           ...snapshot.summary.detectors,
           query_trends: detector('insufficient_history', [
-            'At least 28 days of coverage are required.',
+            'At least 42 days of coverage are required.',
           ]),
         },
       },
@@ -454,9 +468,10 @@ describe('DemandProjection', () => {
 
     await user.hover(await screen.findByRole('button', { name: 'How the Trends detector works' }));
 
-    // The rule first, then the snapshot's own reason the detector is held back.
-    expect((await screen.findByRole('tooltip')).textContent).toMatch(
-      /last two 14-day windows\..* At least 28 days of coverage are required\.$/,
+    // The rule, in the server's thresholds, then the snapshot's own reason the
+    // detector is held back.
+    expect((await screen.findByRole('tooltip')).textContent).toBe(
+      'Queries whose impressions grew 1.5× or more, or fell to 0.67× or less, between the last two 21-day windows. Needs 42 days of continuous Search Console coverage. At least 42 days of coverage are required.',
     );
   });
 
@@ -481,7 +496,7 @@ describe('DemandProjection', () => {
       screen.getByRole('button', { name: 'How the CTR gap and Low CTR detectors work' }),
     );
     expect((await screen.findByRole('tooltip')).textContent).toMatch(
-      /^CTR gap: Queries with .* No cohort reached 20 queries\. Low CTR: Non-branded queries and pages /,
+      /^CTR gap: Queries with .*, and 3 points, below .* No cohort reached 20 queries\. Low CTR: Non-branded queries and pages /,
     );
   });
 

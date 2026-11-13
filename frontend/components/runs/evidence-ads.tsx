@@ -1,5 +1,3 @@
-'use client';
-
 import type { ExecutionAds } from '@citeladder/contracts/visibility-ads';
 
 import { Inline, Stack } from '@/components/ui/layout';

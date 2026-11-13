@@ -1,5 +1,3 @@
-'use client';
-
 import { Button } from '@/components/ui/button';
 import { Callout } from '@/components/ui/callout';
 import { Stack } from '@/components/ui/layout';

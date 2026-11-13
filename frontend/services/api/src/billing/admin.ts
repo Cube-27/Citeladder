@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { Selectable } from 'kysely';
+import type { ProviderMode } from '@citeladder/contracts/billing';
 import type { BillingCatalogRevisions } from '../generated/db-schema.ts';
 import type { Database } from '../db/database.ts';
 import { operatorTransaction } from '../db/operator-transaction.ts';
@@ -52,7 +53,7 @@ export async function catalogDiff(db: Database, input: unknown) {
 }
 export type CatalogOperation =
   | { kind: 'import'; revision: string; payload: unknown }
-  | { kind: 'seed'; mode: 'test' | 'live' | null; rate?: string }
+  | { kind: 'seed'; mode: ProviderMode | null; rate?: string }
   | { kind: 'publish'; revision: string };
 type CatalogRow = Selectable<BillingCatalogRevisions>;
 type ParsedContext = z.output<typeof contextSchema>;
@@ -381,7 +382,7 @@ export function inspectAccount(
 }
 
 /** Run after identity bootstrap commits. Skip branches stay catalog-free. */
-export function initializeCatalog(db: Database, actorEmail: string, mode: 'test' | 'live' | null) {
+export function initializeCatalog(db: Database, actorEmail: string, mode: ProviderMode | null) {
   return db.transaction().execute(async (trx) => {
     const actor = await requirePlatformAdmin(trx, actorEmail);
     await subjectXactLock(trx, 'billing.catalog.publication');

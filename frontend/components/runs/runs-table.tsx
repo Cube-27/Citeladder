@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import { Play } from 'lucide-react';
 
@@ -36,7 +34,7 @@ function runsColumns(showMarket: boolean): DataTableColumn[] {
 }
 
 /**
- * Runs (audits) list table (F10, design.md §9.7), on the shared `DataTable`.
+ * Runs (audits) list table (F10), on the shared `DataTable`.
  *
  * One row per audit: a run-status badge, the requested/completed/failed
  * counts, and the created timestamp (cut to one line, in full on hover). Each row links to the run detail page.

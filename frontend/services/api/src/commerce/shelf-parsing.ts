@@ -139,7 +139,11 @@ export function matchRecommendation(text: string, target: ShelfCatalog): ShelfMa
       brand < Infinity &&
       distinctiveAttributes(product, target).some((value) => at(value) < Infinity)
     )
-      consider(brand, { product, competitor: null, confidence: 0.9 });
+      consider(brand, {
+        product,
+        competitor: null,
+        confidence: shelfPolicy.brand_attribute_match_confidence,
+      });
   }
   for (const competitor of target.approved_competitors)
     consider(first([competitor.canonical_url, competitor.product_name, competitor.brand_name]), {

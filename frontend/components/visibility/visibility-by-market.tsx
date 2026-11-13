@@ -1,5 +1,3 @@
-'use client';
-
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { ProjectMarket } from '@citeladder/contracts/markets';

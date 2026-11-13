@@ -1,4 +1,3 @@
-'use client';
 import type { z } from 'zod';
 import type { crawlSourceListSchema, crawlSourceSchema } from '@citeladder/contracts/ai-traffic';
 import type { useCrawlConnections } from '@/lib/ai-traffic/use-crawl-connections';

@@ -1,5 +1,3 @@
-'use client';
-
 import { Badge } from '@/components/ui/badge';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Disclosure } from '@/components/ui/disclosure';

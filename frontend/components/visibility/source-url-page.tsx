@@ -1,5 +1,3 @@
-'use client';
-
 import type { z } from 'zod';
 
 import { ProjectLink } from '@/components/ui/project-link';

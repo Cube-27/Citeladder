@@ -1,5 +1,3 @@
-'use client';
-
 import { useContext, useLayoutEffect, type ReactNode, type RefObject } from 'react';
 import { useLocation } from 'react-router-dom';
 

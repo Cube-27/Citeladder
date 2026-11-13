@@ -1,5 +1,3 @@
-'use client';
-
 import type { BillingQuote } from '@/lib/api/billing';
 import { formatMoney } from '@/lib/billing/catalog';
 

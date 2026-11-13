@@ -1,5 +1,3 @@
-'use client';
-
 import type { ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
 import { ChevronDown } from 'lucide-react';
 

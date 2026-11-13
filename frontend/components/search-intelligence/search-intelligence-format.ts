@@ -1,4 +1,5 @@
 import { words } from '@/lib/ai-traffic/vocabulary';
+import type { CredentialMode } from '@/lib/api/billing';
 import { formatDisplayDate, formatWindowDate, pluralCount } from '@/lib/format';
 
 /** A provider figure, or null when the provider did not report one. */
@@ -11,7 +12,7 @@ export function searchNumber(value: unknown, maximumFractionDigits = 0): string 
 }
 
 type RunCost = {
-  credential_mode: 'byok' | 'funded';
+  credential_mode: CredentialMode;
   confirmed_at: string | null;
   estimated_cost_usd: string | null;
   provider_reported_cost_usd: string | null;

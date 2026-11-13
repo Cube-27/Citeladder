@@ -1,3 +1,4 @@
+import type { ProviderMode } from '@citeladder/contracts/billing';
 import api from '../config/api.json' with { type: 'json' };
 import authRuntime from '../config/auth-runtime.json' with { type: 'json' };
 import { billing } from '../config/billing.ts';
@@ -95,7 +96,7 @@ export function razorpaySettings(env: SettingSource = process.env) {
   const canonicalSecret = get('key_secret') as string;
   const aliasId = get('test_key_id_alias') as string;
   const aliasSecret = get('test_key_secret_alias') as string;
-  const mode = get('mode') as 'disabled' | 'test' | 'live';
+  const mode = get('mode') as 'disabled' | ProviderMode;
   const conflicting =
     (canonicalId && aliasId && canonicalId !== aliasId) ||
     (canonicalSecret && aliasSecret && canonicalSecret !== aliasSecret) ||

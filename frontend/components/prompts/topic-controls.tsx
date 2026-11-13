@@ -1,5 +1,3 @@
-'use client';
-
 import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 

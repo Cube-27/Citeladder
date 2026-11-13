@@ -1,5 +1,3 @@
-'use client';
-
 import { Fragment, useId, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronDown, ChevronRight, Link2, ListTree } from 'lucide-react';

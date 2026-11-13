@@ -1,5 +1,3 @@
-'use client';
-
 import { AlertTriangle } from 'lucide-react';
 
 import { MessageTime } from '@/components/agent/message-time';

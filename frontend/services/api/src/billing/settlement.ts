@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
-import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
+import {
+  credentialModeSchema,
+  currencySchema,
+  resolvedQuoteSchema,
+} from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import {
   lockAccount,
@@ -24,10 +28,10 @@ const logger = getLogger('api.billing');
 export const frozenTermsSchema = z.object({
   catalog_key: z.string(),
   catalog_revision: z.string(),
-  credential_mode: z.enum(['byok', 'funded']),
+  credential_mode: credentialModeSchema,
   quantity: amount.min(1),
   price_ref: z.string(),
-  currency: z.enum(['USD', 'INR']),
+  currency: currencySchema,
   quote: resolvedQuoteSchema,
   tax_snapshot: taxSnapshotSchema,
   grant_specs: z.array(z.tuple([z.string(), amount])),

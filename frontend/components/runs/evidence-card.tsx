@@ -1,5 +1,3 @@
-'use client';
-
 import { CheckCircle2, Quote, Search, XCircle } from 'lucide-react';
 
 import { MeasurementContext } from '@/components/runs/measurement-context';

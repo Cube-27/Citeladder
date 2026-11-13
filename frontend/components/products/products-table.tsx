@@ -1,5 +1,3 @@
-'use client';
-
 import { PackageOpen } from 'lucide-react';
 
 import { DataTable, type DataTableColumn, type DataTablePager } from '@/components/ui/data-table';

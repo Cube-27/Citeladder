@@ -1,5 +1,3 @@
-'use client';
-
 import { Card, CardContent } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TreeList, TreeOption } from '@/components/ui/list-row';

@@ -1,5 +1,3 @@
-'use client';
-
 import { useRef, useState, type MutableRefObject } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';

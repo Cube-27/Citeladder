@@ -66,7 +66,6 @@ function finding(target: Pick<Action, 'id' | 'target_url' | 'target_label'>, ext
     target_theme: null,
     target_label: target.target_label,
     action_id: target.id,
-    action_surface: 'actions',
     system_rank: 1,
     display_rank: 1,
     order_source: 'system',

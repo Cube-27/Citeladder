@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 

@@ -1,5 +1,3 @@
-'use client';
-
 import type { ExecutionClaim } from '@citeladder/contracts/fact-checking';
 
 import { Badge } from '@/components/ui/badge';

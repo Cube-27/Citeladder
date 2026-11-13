@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, type ReactNode } from 'react';
 
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';

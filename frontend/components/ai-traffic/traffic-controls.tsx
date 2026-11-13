@@ -1,4 +1,3 @@
-'use client';
 import { Download, Folder } from 'lucide-react';
 import { crawlerResourceClassSchema } from '@citeladder/contracts/site-health';
 import { trafficStatusCode, type useTrafficData } from '@/lib/ai-traffic/use-traffic-data';

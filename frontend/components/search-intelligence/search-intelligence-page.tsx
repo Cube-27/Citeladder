@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react';
@@ -54,10 +52,12 @@ const TAB_CODEC = stringUrlCodec(
  * answers only the newest dataset of each acquisition identity.
  */
 function selectDatasets(
-  latestDatasets: readonly SearchIntelligenceDataset[],
+  readiness: SearchIntelligenceReadiness | undefined,
   scope: string,
   market: string,
 ) {
+  const latestDatasets = readiness?.datasets ?? [];
+  const offered = readiness?.markets ?? [];
   const scopes = [...new Set(latestDatasets.map((item) => item.research_scope ?? 'exact_host'))];
   const activeScope = scopes.includes(scope as 'exact_host' | 'domain_subdomains')
     ? scope
@@ -73,7 +73,7 @@ function selectDatasets(
           `${item.location_code}:${item.language_code}`,
           {
             value: `${item.location_code}:${item.language_code}`,
-            label: `${searchMarketLabel(item.location_code)} · ${item.language_code}`,
+            label: `${searchMarketLabel(item.location_code, offered)} · ${item.language_code}`,
           },
         ]),
     ).values(),
@@ -124,7 +124,7 @@ export function SearchIntelligencePage() {
     },
   });
   const { scopes, activeScope, markets, activeMarket, datasets } = selectDatasets(
-    readiness.data?.datasets ?? [],
+    readiness.data,
     scope,
     market,
   );

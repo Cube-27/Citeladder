@@ -1,5 +1,3 @@
-'use client';
-
 import { useContext, useEffect } from 'react';
 import { UNSAFE_DataRouterContext, useBlocker, type Location } from 'react-router-dom';
 

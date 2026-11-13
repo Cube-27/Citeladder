@@ -53,7 +53,7 @@ export type ApiRequestOptions = {
   timeoutMs?: number;
 };
 
-type ResponseKind = 'json' | 'text' | 'blob';
+type ResponseKind = 'json' | 'blob';
 type RequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
 type InternalRequestOptions = ApiRequestOptions & {
@@ -211,7 +211,6 @@ async function parseResponse<T>(response: Response, kind: ResponseKind): Promise
   if (response.status === 204 || response.headers.get('content-length') === '0') {
     return undefined as T;
   }
-  if (kind === 'text') return response.text() as Promise<T>;
   if (kind === 'blob') return response.blob() as Promise<T>;
   const contentType = response.headers.get('content-type') ?? '';
   if (!isJsonContentType(contentType)) {
@@ -253,8 +252,6 @@ async function request<T>(
 export const apiClient = {
   get: <T>(path: string, options?: ApiRequestOptions) =>
     request<T>('GET', path, 'json', undefined, options),
-  getText: (path: string, options?: ApiRequestOptions) =>
-    request<string>('GET', path, 'text', undefined, options),
   getBlob: (path: string, options?: ApiRequestOptions) =>
     request<Blob>('GET', path, 'blob', undefined, options),
   post: <T>(path: string, body: unknown, options?: ApiRequestOptions) =>

@@ -1,5 +1,3 @@
-'use client';
-
 import { ChevronDown, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 

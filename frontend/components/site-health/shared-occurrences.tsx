@@ -1,5 +1,3 @@
-'use client';
-
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { EvidenceLine } from '@/components/site-health/issue-evidence';
 import { Inline, Stack } from '@/components/ui/layout';

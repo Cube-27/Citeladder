@@ -1,5 +1,3 @@
-'use client';
-
 import { useId, useRef, useState, type ReactNode } from 'react';
 
 import { Input } from '@/components/ui/input';

@@ -1,5 +1,3 @@
-'use client';
-
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';

@@ -1,5 +1,3 @@
-'use client';
-
 import { Check, Link2, Minus, Users } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';

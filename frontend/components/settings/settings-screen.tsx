@@ -1,5 +1,3 @@
-'use client';
-
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';

@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';

@@ -1,5 +1,3 @@
-'use client';
-
 import { useMemo, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 

@@ -1,4 +1,3 @@
-'use client';
 import { Fragment, useState, type ReactNode } from 'react';
 import type { z } from 'zod';
 import type { aiTrafficPagesSchema } from '@citeladder/contracts/ai-traffic';

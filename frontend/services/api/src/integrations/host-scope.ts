@@ -1,12 +1,18 @@
+import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { normalizeDomain } from '../analysis/domains.ts';
 
+const DOMAIN_PROPERTY_PREFIX = policy.integrations.transport.GSC_DOMAIN_PROPERTY_PREFIX;
+
 /**
- * The registrable site of a URL, property or bare host: lower-cased, with
- * `sc-domain:` and a leading `www.` removed. Empty when unparseable.
+ * The registrable site of a URL, property or bare host: lower-cased, with the
+ * Search Console domain-property prefix and a leading `www.` removed. Empty
+ * when unparseable.
  */
 function siteDomain(value: string): string {
-  return normalizeDomain(value.trim().replace(/^sc-domain:/iu, ''));
+  const text = value.trim();
+  const prefixed = text.toLowerCase().startsWith(DOMAIN_PROPERTY_PREFIX);
+  return normalizeDomain(prefixed ? text.slice(DOMAIN_PROPERTY_PREFIX.length) : text);
 }
 
 /**

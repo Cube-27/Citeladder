@@ -1,5 +1,3 @@
-'use client';
-
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';

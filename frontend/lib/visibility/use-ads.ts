@@ -1,5 +1,3 @@
-'use client';
-
 import { useInfiniteQuery } from '@tanstack/react-query';
 import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
 

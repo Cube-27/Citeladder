@@ -1,5 +1,3 @@
-'use client';
-
 import type { ReactNode } from 'react';
 import * as RadioGroupPrimitive from '@radix-ui/react-radio-group';
 

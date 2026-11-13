@@ -1,5 +1,3 @@
-'use client';
-
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline } from '@/components/ui/layout';

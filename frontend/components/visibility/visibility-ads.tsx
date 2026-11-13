@@ -1,5 +1,3 @@
-'use client';
-
 import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
 import { Megaphone } from 'lucide-react';
 

@@ -1,5 +1,3 @@
-'use client';
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { LogOut } from 'lucide-react';
 import { useState } from 'react';

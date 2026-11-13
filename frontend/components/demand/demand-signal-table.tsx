@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, type MouseEvent } from 'react';
 import { ChevronRight, MoreHorizontal, Search } from 'lucide-react';
 
@@ -13,6 +11,7 @@ import { Menu, MenuContent, MenuItem, MenuLinkItem, MenuTrigger } from '@/compon
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
+import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import {
@@ -20,6 +19,7 @@ import {
   numericMetric,
   signalPage,
   signalSubject,
+  signalDefinition,
   signalTarget,
   signalTypeMeta,
   type RankedSignal,
@@ -62,7 +62,10 @@ export function SignalChip({ signalType }: Readonly<{ signalType: string }>) {
  * whole snapshot's types rather than the filtered ones, so choosing a filter
  * never changes it.
  */
-export function SignalLegend({ signals }: Readonly<{ signals: readonly DemandSignal[] }>) {
+export function SignalLegend({
+  signals,
+  policy,
+}: Readonly<{ signals: readonly DemandSignal[]; policy: DemandDetectorPolicy }>) {
   const types = [...new Set(signals.map((signal) => signal.signal_type))];
   if (types.length === 0) return null;
   // One line per type: joined into a sentence, each definition ran into the
@@ -73,7 +76,7 @@ export function SignalLegend({ signals }: Readonly<{ signals: readonly DemandSig
         const meta = signalTypeMeta(type);
         return (
           <span key={type} className="block">
-            {`${meta.label}: ${meta.definition} `}
+            {`${meta.label}: ${signalDefinition(type, policy)} `}
           </span>
         );
       })}

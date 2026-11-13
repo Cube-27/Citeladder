@@ -1,5 +1,3 @@
-'use client';
-
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueFixActions, type IssueFixScope } from '@/components/site-health/issue-fix-actions';

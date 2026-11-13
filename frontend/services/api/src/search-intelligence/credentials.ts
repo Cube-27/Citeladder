@@ -3,10 +3,10 @@
  * managed workspace researches on the platform's account and pays in AI
  * credits; a BYOK workspace uses its own connection and is not charged.
  */
+import type { CredentialMode } from '@citeladder/contracts/billing';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import type { Selectable } from 'kysely';
 
-import type { CredentialMode } from '../billing/credential-mode.ts';
 import type { Database } from '../db/database.ts';
 import type { WorkspaceScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';

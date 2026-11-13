@@ -1,5 +1,3 @@
-'use client';
-
 import { useMutation } from '@tanstack/react-query';
 import { Pencil, Sparkles } from 'lucide-react';
 import { useState, type FormEvent, type ReactNode } from 'react';

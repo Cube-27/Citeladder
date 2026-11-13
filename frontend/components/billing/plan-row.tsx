@@ -1,5 +1,3 @@
-'use client';
-
 import { CreditCard, ExternalLink } from 'lucide-react';
 
 import {

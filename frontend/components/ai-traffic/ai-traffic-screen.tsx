@@ -1,4 +1,3 @@
-'use client';
 import { CRAWL_ONLY_TABS, TRAFFIC_TABS } from '@/lib/config/crawl-logs';
 import { useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';

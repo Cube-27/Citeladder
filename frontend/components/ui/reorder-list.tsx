@@ -1,5 +1,3 @@
-'use client';
-
 import { ArrowDown, ArrowUp, GripVertical } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
