@@ -39,7 +39,7 @@ export const retryAt = (error: ProviderError, at: Date) =>
         1000,
   );
 export const money = usdUnits;
-export const amount = (value: number) => (value / 1e8).toFixed(8);
+const amount = (value: number) => (value / 1e8).toFixed(8);
 
 /** The run's cost, status and error after one paid page is added to it. */
 export function costUpdate(run: Run, call: Call, at: Date) {

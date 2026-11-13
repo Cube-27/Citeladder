@@ -68,7 +68,7 @@ export function initialState(catalog: SkillCatalog, turn: Turn): TurnState {
   };
 }
 /** Records one response's web searches: a step per result, and the pages each returned. */
-export function searched(state: TurnState, ordinal: number, blocks: ConversationBlock[]) {
+function searched(state: TurnState, ordinal: number, blocks: ConversationBlock[]) {
   const { calls, results } = webSearchBlocks(blocks);
   for (const call of calls) state.queries.set(call.id, call.query);
   for (const { callId, sources } of results) {
