@@ -360,28 +360,43 @@ export function SidebarRecordRows({ children }: Readonly<{ children: ReactNode }
 }
 
 /**
- * One record row: its title on one line, a spinner after it while the record
- * works, current when it is the page. When the sidebar cuts the title,
- * hovering or focusing the row shows it in full.
+ * One record row: its title with a spinner after it while the record works,
+ * over a caption line, current when it is the page. When the sidebar cuts
+ * either line, hovering or focusing the row shows both in full.
  */
 export function SidebarRecordRow({
   href,
   active,
   title,
+  meta,
   working = false,
-}: Readonly<{ href: string; active: boolean; title: string; working?: boolean }>) {
+}: Readonly<{
+  href: string;
+  active: boolean;
+  title: string;
+  meta: ReactNode;
+  working?: boolean;
+}>) {
   return (
     <li>
       <SidebarTextTooltip>
         <Link
           to={href}
           aria-current={active ? 'page' : undefined}
-          className={sidebarNavRowClasses(active, true)}
+          className={cn(
+            sidebarNavRowClasses(active, true),
+            'h-auto flex-col items-stretch gap-0.5 py-2',
+          )}
         >
-          <span data-sidebar-text="title" className="min-w-0 flex-1 truncate">
-            {title}
+          <span className="flex min-w-0 items-center gap-2">
+            <span data-sidebar-text="title" className="min-w-0 flex-1 truncate">
+              {title}
+            </span>
+            {working ? <Spinner label="Working" className="text-ink-muted" /> : null}
           </span>
-          {working ? <Spinner label="Working" className="text-ink-muted" /> : null}
+          <span data-sidebar-text="meta" className={textRole('caption', 'truncate')}>
+            {meta}
+          </span>
         </Link>
       </SidebarTextTooltip>
     </li>

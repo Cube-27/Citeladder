@@ -9,7 +9,7 @@
  * here. Parsing drops anything malformed rather than guessing.
  */
 import type { ActionHandoff } from '@citeladder/contracts/actions';
-import type { AgentContextRefs } from '@citeladder/contracts/agent';
+import type { AgentChatOrigin, AgentContextRefs } from '@citeladder/contracts/agent';
 
 import type { DatedEvidence } from '@/lib/agent/evidence';
 import { checkKindLabel, checkStateLabel, measurementLegLabel } from '@/lib/agent/vocabulary';
@@ -280,6 +280,18 @@ export function contextChips(context: AgentContextRefs): ContextChip[] {
   }
   return chips;
 }
+
+/** Where a chat started, in the words its context chips use. */
+export const CHAT_ORIGIN_LABELS = {
+  site_health: 'Site Health',
+  page: 'Page',
+  recommendation: 'Recommendation',
+  demand: 'Demand signal',
+  keyword_research: 'Keyword Research',
+  prompts: 'Prompts',
+  action: 'Action',
+  chat: 'Chat',
+} as const satisfies Record<AgentChatOrigin, string>;
 
 export function withoutContext(
   context: AgentContextRefs,

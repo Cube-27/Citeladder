@@ -52,6 +52,7 @@ const DETAIL = {
     id: CHAT,
     project_id: PROJECT,
     action_id: null,
+    origin: 'chat',
     target_label: null,
     title: 'Missing meta description',
     turn_count: 1,

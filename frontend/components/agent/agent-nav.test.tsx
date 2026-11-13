@@ -24,11 +24,17 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-function chat(id: string, title: string, running: boolean) {
+function chat(
+  id: string,
+  title: string,
+  running: boolean,
+  extra: Partial<{ origin: string; last_activity_at: string }> = {},
+) {
   return {
     id,
     project_id: PROJECT,
     action_id: null,
+    origin: 'chat',
     target_label: null,
     title,
     turn_count: 1,
@@ -36,6 +42,7 @@ function chat(id: string, title: string, running: boolean) {
     last_activity_at: NOW,
     created_at: NOW,
     running,
+    ...extra,
   };
 }
 
@@ -57,6 +64,25 @@ afterEach(() => {
   document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Max-Age=0; Path=/`;
 });
 
+it('tells chats with one title apart by where they started and when they last moved', async () => {
+  serveChats([
+    chat('33333333-3333-4333-8333-333333333331', 'Analyze the Site Health issues', false, {
+      origin: 'site_health',
+      last_activity_at: '2026-09-25T23:30:00Z',
+    }),
+    chat('33333333-3333-4333-8333-333333333332', 'Analyze the Site Health issues', false, {
+      last_activity_at: '2026-09-24T09:30:00Z',
+    }),
+  ]);
+  renderWithProviders(<AgentNav />, { projectSelection: { activeProjectId: PROJECT } });
+
+  const rows = await screen.findAllByRole('link', { name: /Analyze the Site Health issues/ });
+  expect(rows.map((row) => row.textContent)).toEqual([
+    'Analyze the Site Health issuesSite Health · Sep 25',
+    'Analyze the Site Health issuesChat · Sep 24',
+  ]);
+});
+
 it('shows a cut chat title in full on keyboard focus', async () => {
   // jsdom lays nothing out; report every line as wider than the sidebar.
   vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
@@ -75,7 +101,7 @@ it('shows a cut chat title in full on keyboard focus', async () => {
   const row = await screen.findByRole('link', { name: /Analyze the Site Health issues/ });
   focusByKeyboard(row);
   expect((await screen.findByRole('tooltip')).textContent).toBe(
-    'Analyze the Site Health issues on pricing',
+    'Analyze the Site Health issues on pricingChat · Sep 25',
   );
 });
 

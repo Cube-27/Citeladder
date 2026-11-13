@@ -14,8 +14,11 @@ import {
 } from '@/components/ui/app-shell';
 import { Button } from '@/components/ui/button';
 import { SearchField } from '@/components/ui/search-field';
+import { CHAT_ORIGIN_LABELS } from '@/lib/agent/handoff';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatDisplayShortDate } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { MODE_HOMES } from '@/lib/navigation/app-routes';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
@@ -161,10 +164,24 @@ function ChatRows({
             href={scoped(href)}
             active={pathname === href}
             title={chat.title}
+            meta={<ChatMeta chat={chat} />}
             working={chat.running}
           />
         );
       })}
     </SidebarRecordRows>
+  );
+}
+
+/** Where the chat started and when it last moved ("Site Health · Nov 12"). */
+function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
+  const timeZone = useDisplayTimeZone();
+  return (
+    <>
+      {CHAT_ORIGIN_LABELS[chat.origin]} ·{' '}
+      <time dateTime={chat.last_activity_at}>
+        {formatDisplayShortDate(chat.last_activity_at, timeZone)}
+      </time>
+    </>
   );
 }

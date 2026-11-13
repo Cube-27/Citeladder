@@ -24,6 +24,7 @@ function chatDetail(): AgentChatDetail {
       id: CHAT,
       project_id: FIXTURE_PROJECT.id,
       action_id: null,
+      origin: 'chat',
       target_label: null,
       title: 'Discuss buyer needs',
       turn_count: 12,

@@ -169,10 +169,24 @@ export const agentMessageSchema = responseObject({
   created_at: z.string(),
 });
 
+/** Where a chat started, from its context references (the server owns the precedence). */
+export const agentChatOriginSchema = z.enum([
+  'site_health',
+  'page',
+  'recommendation',
+  'demand',
+  'keyword_research',
+  'prompts',
+  'action',
+  'chat',
+]);
+export type AgentChatOrigin = z.infer<typeof agentChatOriginSchema>;
+
 export const agentChatSummarySchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   action_id: uuid().nullable(),
+  origin: agentChatOriginSchema,
   target_label: z.string().nullable(),
   title: z.string(),
   turn_count: z.number().int(),
