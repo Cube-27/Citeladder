@@ -129,7 +129,9 @@ function start(): Slot {
     else job.reject(new Error(error));
   });
   // A crashed thread fails only the job it was running; its queue moves to a replacement.
-  worker.on('error', (error) => retire(slot, error));
+  worker.on('error', (error: unknown) =>
+    retire(slot, error instanceof Error ? error : new Error(String(error))),
+  );
   worker.on('exit', (code) => retire(slot, new Error(`Page interpretation exited (${code})`)));
   slots.push(slot);
   return slot;
