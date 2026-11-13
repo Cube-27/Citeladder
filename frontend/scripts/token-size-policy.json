@@ -33,7 +33,6 @@
     "frontend/services/api/src/entitlements/ledger.ts": 6952,
     "frontend/services/api/src/mcp/evidence-site.ts": 6603,
     "frontend/services/api/src/routes/integrations.ts": 6740,
-    "frontend/services/api/src/search-intelligence/acquisition-state.ts": 8634,
     "frontend/services/api/src/site-health/analysis/facts.ts": 6303,
     "frontend/services/api/src/site-health/frontier.ts": 6556,
     "frontend/services/api/src/site-health/lifecycle.ts": 6294,
