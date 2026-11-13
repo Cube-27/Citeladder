@@ -198,7 +198,7 @@ export async function admitLinkRun(
       kind: 'internal_link_judgment',
       payload: { run_id: runId },
       keyParts: [runId],
-      maxAttempts: 2,
+      maxAttempts: policy.internal_links.task_max_attempts,
     });
     return runId;
   });
