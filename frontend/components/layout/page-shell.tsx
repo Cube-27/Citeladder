@@ -181,24 +181,6 @@ function PageShell<T extends string>({
   // A control row holding only filters is one button: it follows the title
   // rather than taking a band of its own, its menus opening toward the content.
   const headerFilters = !tabs && controls && filtersOnly(controls) ? controls.filters : undefined;
-  // On a tabbed page, a row of filters (and its live note) follows the tabs (D60).
-  const tabControls = tabs && controls && joinsTabRow(controls) ? controls : undefined;
-  const tabBand = tabs ? (
-    <div data-page-band="control" className="flex min-w-0 flex-wrap items-center gap-2">
-      <TabRow {...tabs} />
-      {tabControls ? (
-        <div className="flex min-w-0 flex-1">
-          <FilterBar {...tabControls} />
-        </div>
-      ) : null}
-    </div>
-  ) : null;
-  const filterBand =
-    controls && !headerFilters && !tabControls ? (
-      <div data-page-band="control">
-        <FilterBar {...controls} />
-      </div>
-    ) : null;
   return (
     // header → 16 → tabs → 8 → filters → 8 → content; header → 16 → content.
     <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
@@ -223,15 +205,40 @@ function PageShell<T extends string>({
           </>
         }
       />
-      {tabBand || filterBand ? (
-        <div className="flex min-w-0 flex-col gap-[var(--page-band-gap)]">
-          {tabBand}
-          {filterBand}
-          {content}
+      <ControlBands tabs={tabs} controls={headerFilters ? undefined : controls}>
+        {content}
+      </ControlBands>
+    </div>
+  );
+}
+
+/** The tab row and the control row over the content, 8 apart; the content alone without them. */
+function ControlBands<T extends string>({
+  tabs,
+  controls,
+  children,
+}: Pick<ScreenBands<T>, 'tabs' | 'controls'> & Readonly<{ children: ReactNode }>) {
+  if (!tabs && !controls) return children;
+  // On a tabbed page, a row of filters (and its live note) follows the tabs (D60).
+  const onTabRow = Boolean(tabs && controls && joinsTabRow(controls));
+  return (
+    <div className="flex min-w-0 flex-col gap-[var(--page-band-gap)]">
+      {tabs ? (
+        <div data-page-band="control" className="flex min-w-0 flex-wrap items-center gap-2">
+          <TabRow {...tabs} />
+          {controls && onTabRow ? (
+            <div className="flex min-w-0 flex-1">
+              <FilterBar {...controls} />
+            </div>
+          ) : null}
         </div>
-      ) : (
-        content
-      )}
+      ) : null}
+      {controls && !onTabRow ? (
+        <div data-page-band="control">
+          <FilterBar {...controls} />
+        </div>
+      ) : null}
+      {children}
     </div>
   );
 }
