@@ -196,8 +196,8 @@ function PlanNotices({
       {subscription ? <ScheduledChange subscription={subscription} planName={planName} /> : null}
       {override ? (
         <Callout tone="info">
-          Operator override applied. It is read-only here and expires according to the grant shown
-          by the server; it does not imply a paid subscription or funded AI credits.
+          This access is read-only here and expires with its grant. It is not a paid subscription
+          and includes no funded AI credits.
         </Callout>
       ) : null}
       {entitlement?.trial_grant ? (
