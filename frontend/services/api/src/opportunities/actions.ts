@@ -129,14 +129,15 @@ function actionItem(row: ActionRow) {
   };
 }
 
+/** An Action the list shows: its evidence still stands, or the Agent made it. Search shows the same. */
+export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT})`;
+
 function listed(db: Database, scope: Scope) {
   return db
     .selectFrom('actions')
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
-    .where((eb) =>
-      eb.or([eb('evidence_cleared_at', 'is', null), eb('origin', '=', a.ACTION_ORIGIN_AGENT)]),
-    );
+    .where(LISTED_ACTION);
 }
 
 function cursorPosition(cursor: string, filters: Record<string, unknown>) {

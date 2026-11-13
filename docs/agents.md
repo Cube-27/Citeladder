@@ -213,7 +213,7 @@ read result is bounded to `tool_result_max_chars`, and the frozen context to
 
 Sources are derived by the server, not reported by the model. The model has no
 `evidence` field. A reply's sources are the records its turn's reads supplied
-to the model plus the attached and mentioned Actions its context supplied and
+to the model (a `search` hit and a `fetch`ed record included) plus the attached and mentioned Actions its context supplied and
 their findings ([`sources.ts`](../frontend/services/api/src/agent/sources.ts), bounded
 and deduplicated). A record the result-size bound dropped from a read, or a
 mention or diagnosis the context trimming dropped, is not a source; the tool
@@ -487,24 +487,24 @@ A turn executes only inside that request, exactly once:
   first call.
 - A repeated request finds the run already claimed and never re-executes it.
 
-Streamed text stays on screen through later calls until a newer call writes or
-the saved reply replaces it. Chat polling pauses while the stream is open, the
+Each model call's streamed text is its own segment, kept under the earlier
+calls' text until the saved reply replaces the turn. Chat polling pauses while the stream is open, the
 chat is read again the moment it closes, and another tab or a reload polls with
 a backoff.
 
 The full chat and the Dashboard panel share one thread and composer
 ([`chat-thread.tsx`](../frontend/components/agent/chat-thread.tsx)):
 
-- the user's message appears at once, then the reply and document as they are
-  written, replaced by the saved versions;
+- the user's message appears at once and stays until the chat read holds it,
+  then a collapsed **Thinking** summary, the reply and the document appear as
+  they are written, replaced by the saved versions;
 - Stop replaces Send while a turn runs;
 - the last turn offers **Try again** (after a failure or stop) or
   **Regenerate**, each a new turn, and **Edit last request**; nothing earlier is
   rewritten;
-- a collapsed **Thinking** summary and the reply and document appear as they
-  are written;
-- the activity line names the current call in plain words with elapsed time,
-  and lists the reads a response runs together;
+- a live turn opens with one status line of fixed height that names the current
+  call in plain words (or how many reads run together) with elapsed time, so
+  nothing below the streaming text moves;
 - a turn's activity, live or saved, is one collapsed line grouped by verb
   ("Read Actions and AI visibility · searched the web · saved Document 1")
   that opens to a row per call: verb, the reader's noun and a muted detail.

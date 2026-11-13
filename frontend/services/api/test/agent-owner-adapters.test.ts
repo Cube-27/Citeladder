@@ -273,6 +273,9 @@ describe('Agent bindings to the evidence and Action owners', () => {
     expect(
       JSON.parse((await tools.execute(db, scope, 'read_actions', {}, signal())).text).items,
     ).toEqual([expect.objectContaining({ id: action.id })]);
+    // A search hit is a record the read supplied: a source, and an Action a proposal may name.
+    const found = await tools.execute(db, scope, 'search', { query: 'guide' }, signal());
+    expect(found.refs).toEqual([{ id: action.id, record_uri: `citeladder://action/${action.id}` }]);
   });
   it('replays earlier reads to the model and lists only this turn’s reads as sources', async () => {
     const scope = await fixtures.scope();
