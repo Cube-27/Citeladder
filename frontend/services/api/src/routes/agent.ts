@@ -24,6 +24,7 @@ import {
 import { listSuggestions } from '../page-documents/suggestion-views.ts';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import { readBody } from '../http/body.ts';
+import { eventStreamResponse } from '../http/event-stream.ts';
 import { agentBindings } from '../agent/bindings.ts';
 import { runAgentOnce } from '../agent/worker.ts';
 import type { TurnEvents } from '../agent/stream.ts';
@@ -253,16 +254,7 @@ export const agentRoutes = [
         await execute();
         return c.json(await finished());
       }
-      return new Response(
-        turnStream(execute, finished, () => gone.abort()),
-        {
-          headers: {
-            'content-type': 'text/event-stream',
-            'cache-control': 'no-cache',
-            'x-accel-buffering': 'no',
-          },
-        },
-      );
+      return eventStreamResponse(turnStream(execute, finished, () => gone.abort()));
     },
   }),
   defineGetRoute({

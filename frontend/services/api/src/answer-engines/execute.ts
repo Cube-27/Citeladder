@@ -1,5 +1,5 @@
+import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
 import { z } from 'zod';
-import { retryAfterSeconds } from '../http/retry-after.ts';
 import { providerErrorCode, transientStatus } from '../models/http.ts';
 import { approvedEndpoint } from '../providers/connections.ts';
 import { openaiReasoning, providerPolicy, type ProviderSettings } from '../providers/config.ts';

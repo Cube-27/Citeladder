@@ -1,4 +1,5 @@
 import { randomBytes } from 'node:crypto';
+import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
 import { strings } from '../db/json.ts';
@@ -11,7 +12,6 @@ import type { AuditRuntime } from '../audits/config.ts';
 import { nextRunAfter } from '../audits/schedule-cadence.ts';
 import { getLogger } from '../logging.ts';
 import { ApiError } from '../errors.ts';
-import { retryAfterSeconds } from '../http/retry-after.ts';
 import { claimDueSchedules } from '../queue/audit-queue.ts';
 
 export function schedulerSettings(env: SettingSource = process.env) {

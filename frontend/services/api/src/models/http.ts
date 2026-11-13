@@ -1,5 +1,5 @@
 import { setTimeout } from 'node:timers/promises';
-import { retryAfterSeconds } from '../http/retry-after.ts';
+import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
 import { stripTrailing } from '../text-order.ts';
 
 export function providerErrorCode(status: number) {

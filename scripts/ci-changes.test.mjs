@@ -501,6 +501,24 @@ test('previous CI evidence requires every owner to be successful or intentionall
   );
 });
 
+test('previous Compose evidence needs its classifier, the smoke and the aggregate result', () => {
+  const job = (name, conclusion = 'success') => ({ name, status: 'completed', conclusion });
+  const complete = [
+    job('Classify affected owners'),
+    job('Clean-clone Compose smoke', 'skipped'),
+    job('Compose smoke result'),
+  ];
+  assert.equal(hasTrustworthyJobEvidence(complete, 'compose-smoke.yml'), true);
+  assert.equal(hasTrustworthyJobEvidence(complete.slice(0, 2), 'compose-smoke.yml'), false);
+  assert.equal(
+    hasTrustworthyJobEvidence(
+      [complete[0], complete[1], job('Compose smoke result', 'failure')],
+      'compose-smoke.yml',
+    ),
+    false,
+  );
+});
+
 test('pull-request synchronization uses latest-push diff and main is full', () => {
   assert.deepEqual(
     selectDiff({

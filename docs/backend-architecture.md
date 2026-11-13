@@ -255,7 +255,13 @@ process memory, not PostgreSQL: a further stream is refused with 429 and
 or the client disconnects. An open stream re-checks its caller's session and
 workspace membership every `ABUSE_SSE_ACCESS_RECHECK_SECONDS` (default 30) and
 closes once access ends (or the check fails); the client's reconnect then goes
-through full authorization.
+through full authorization. The Agent's live turn stream is not a tail, but it
+is sent through the same `eventStreamResponse`.
+
+One parser reads every `Retry-After` header, in the API and in the browser:
+[`@citeladder/contracts/retry-after`](../frontend/packages/contracts/src/retry-after.ts).
+Only a positive delay or a future HTTP date is advice; anything else means the
+caller uses its own backoff.
 
 Backend schemas own the wire contract. Coordinate frontend schemas and API
 clients when a DTO changes. [API errors](api-error-contract.md) owns coded

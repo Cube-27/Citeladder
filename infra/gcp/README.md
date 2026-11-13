@@ -12,7 +12,7 @@ The GCP project is reused; nothing here creates or deletes it.
 | `postgres/Dockerfile` | Tag-and-digest pin of the PostgreSQL image the deploy mirrors into Artifact Registry |
 | `run.tf` | Cloud Run API service (min 0, max 2), runner/migrate jobs, the operator-run `citeladder-billing` job and the Cloud Scheduler tick (an OIDC call to the API) |
 | `locals.tf`, `variables.tf` | Shared runtime environment, including `billing_env` (plain billing and platform-credential settings; secret-shaped names are refused), and the required and optional Secret Manager references |
-| `identity.tf` | Database, API (`runtime`), job (`jobs`), scheduler and crawl-log reader service accounts and their least-privilege grants |
+| `identity.tf` | Database, API (`runtime`), job (`jobs`), schema migration (`migrate`), scheduler and crawl-log reader service accounts and their least-privilege grants |
 | `registry.tf` | Artifact Registry with a cleanup policy, and the Secret Manager containers |
 | `budget.tf` | Monthly budget alert, including a forecast rule |
 | `monitoring.tf` | `/health` uptime check, log-based metrics and email alerts (uptime, API 5xx, failed job executions, webhook quarantine, database size) sent to `alert_email` |

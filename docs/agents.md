@@ -463,8 +463,9 @@ A turn executes only inside that request, exactly once:
   admission) ends it as `turn_timeout`.
 - Turns and interactive audit drives share a per-instance cap
   (`interactiveCapacity` in `config/execution.ts`); a full instance answers 429
-  with `Retry-After`; the browser re-posts the run after that delay, up to
-  `AGENT_RUN_RETRY.maxAttempts` (`frontend/lib/config/agent.ts`), and a run
+  with `Retry-After`; the browser re-posts the run after that delay
+  (`AGENT_RUN_RETRY.defaultDelayMs` when the header gives no positive wait), up
+  to `AGENT_RUN_RETRY.maxAttempts` (`frontend/lib/config/agent.ts`), and a run
   another request already claimed or ended answers done, so a re-post is safe.
   Any other refusal ends the browser's live view and the persisted read shows
   the run. A stream that delivers no frame, keep-alives included, for

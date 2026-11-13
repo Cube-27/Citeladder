@@ -9,6 +9,9 @@
  * keyset batches to the response, so the process holds one batch at a time.
  */
 import { ApiError } from '../errors.ts';
+import { getLogger } from '../logging.ts';
+
+const logger = getLogger('api.table_export');
 
 /** Refuses an export whose counted rows exceed the bound, before any row is read. */
 export function assertExportBound(count: number, max: number) {
@@ -66,8 +69,11 @@ export function tableCsv(columns: readonly string[], items: Record<string, unkno
 /**
  * The same CSV as `tableCsv`, encoded one batch at a time as the client
  * reads: the next batch is not requested until the previous one is taken.
+ * The status was sent with the first byte, so a batch that fails ends the
+ * download and leaves only its log record.
  */
 function csvStream(
+  filename: string,
   columns: readonly string[],
   batches: AsyncIterable<Record<string, unknown>[]>,
 ): ReadableStream<Uint8Array> {
@@ -78,9 +84,15 @@ function csvStream(
       controller.enqueue(encoder.encode(columns.join(',') + '\r\n'));
     },
     async pull(controller) {
-      const next = await iterator.next();
-      if (next.done) controller.close();
-      else controller.enqueue(encoder.encode(next.value.map((i) => csvLine(columns, i)).join('')));
+      try {
+        const next = await iterator.next();
+        if (next.done) controller.close();
+        else
+          controller.enqueue(encoder.encode(next.value.map((i) => csvLine(columns, i)).join('')));
+      } catch (error) {
+        logger.exception('table_export_failed', error, { filename });
+        controller.error(error);
+      }
     },
     async cancel() {
       await iterator.return?.();
@@ -94,7 +106,7 @@ export function csvDownload(
   columns: readonly string[],
   batches: AsyncIterable<Record<string, unknown>[]>,
 ) {
-  return new Response(csvStream(columns, batches), {
+  return new Response(csvStream(filename, columns, batches), {
     headers: {
       'content-type': 'text/csv; charset=utf-8',
       'content-disposition': `attachment; filename="${filename}"`,

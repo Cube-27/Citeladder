@@ -88,9 +88,13 @@ GitHub OIDC trust to the `Cube-27/Citeladder` repository (name and ID), the
 `gcp-deploy.yml` workflow, `refs/heads/main` and the `gcp-demo` environment.
 Its printed `NAME=value` lines are the values for section 1.3.
 
-Order after a change to the deployer's roles: run **GCP - Deploy** once with
-the new configuration (Terraform grants the deployer its per-secret version
-roles), then re-run this script to remove the retired grants.
+Order after a change to the deployer's roles: re-run this script first, then
+run **GCP - Deploy**. The deploy needs the APIs and roles the script adds (for
+example Cloud Monitoring for `monitoring.tf`), and the retired grants it removes
+are not needed: `citeladderSecretContainers` keeps
+`secretmanager.secrets.setIamPolicy`, so the deploy's first targeted apply
+grants the deployer its per-secret version roles before it writes any secret
+version.
 
 ### 1.3 GitHub `gcp-demo` environment: variables
 

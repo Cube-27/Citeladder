@@ -44,8 +44,8 @@ Docs Worker (static, no origin)                            │ starts runner aft
   Google-signed ID token for the scheduler account with the configured
   audience, and it is served only when both are configured.
 - **Monitoring.** An uptime check calls `GET /health` every five minutes from
-  three regions. Email alerts, to the address in the `GCP_ALERT_EMAIL`
-  repository variable, fire on: a failing uptime check; any API 5xx response in
+  three regions. Email alerts, to the address in the `gcp-demo` environment's
+  `GCP_ALERT_EMAIL` variable, fire on: a failing uptime check; any API 5xx response in
   five minutes; any failed job execution; a billing webhook entering quarantine;
   and a database larger than `database_size_alert_gb` (20 GB of the 30 GB disk).
   The webhook and database alerts read log-based metrics from the API's

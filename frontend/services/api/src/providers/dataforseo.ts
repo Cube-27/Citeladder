@@ -3,9 +3,9 @@
  * surfaces and Keyword Research) sends through `call`, so a refused account,
  * an unauthorized login and a malformed body mean the same thing everywhere.
  */
+import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
 import { z } from 'zod';
 import { policy } from '../config.ts';
-import { retryAfterSeconds } from '../http/retry-after.ts';
 import { providerErrorCode } from '../models/http.ts';
 import { round } from '../numbers.ts';
 import { approvedEndpoint, basicAuthorization } from './connections.ts';

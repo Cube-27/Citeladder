@@ -417,7 +417,7 @@ export function hasTrustworthyJobEvidence(jobs, workflowFile) {
   if (!Array.isArray(jobs)) return false;
   const compose = workflowFile === 'compose-smoke.yml';
   const expectedNames = compose
-    ? ['Classify affected owners', 'Clean-clone Compose smoke']
+    ? ['Classify affected owners', 'Clean-clone Compose smoke', 'Compose smoke result']
     : [
         'Classify affected owners',
         'Frontend (quality, docs)',

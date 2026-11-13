@@ -1,7 +1,7 @@
+import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
 import { z } from 'zod';
 
 import type { SettingSource } from '../config/settings.ts';
-import { retryAfterSeconds } from '../http/retry-after.ts';
 import {
   codes,
   endpoints,

@@ -127,7 +127,10 @@ export function eventTailStream(tail: EventTail, held: AbortSignal): ReadableStr
   });
 }
 
-/** The response that carries an event stream; proxies must not buffer it. */
+/**
+ * The response that carries every event stream, a tail or the Agent's live
+ * turn; proxies must not buffer it.
+ */
 export function eventStreamResponse(body: ReadableStream<Uint8Array>): Response {
   return new Response(body, {
     headers: {

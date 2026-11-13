@@ -64,6 +64,7 @@ describe('scheduled tick', () => {
       setLogSink(restore);
     }
     expect(phases).toEqual([
+      'database-size',
       'mcp-protocol-cleanup',
       'api-idempotency-cleanup',
       'usage-window-cleanup',
@@ -77,7 +78,6 @@ describe('scheduled tick', () => {
       'integration-dispatcher',
       'crawl-log-maintenance',
       'billing-recovery',
-      'database-size',
     ]);
     // The disk usage alert reads this byte count; any real PostgreSQL database exceeds 1 MB.
     expect(sizes).toEqual([expect.any(Number)]);

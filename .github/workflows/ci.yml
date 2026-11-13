@@ -455,7 +455,8 @@ jobs:
       - name: Lint workflows
         run: '"$RUNNER_TEMP/actionlint" -color'
 
-  # The one status the `main` ruleset requires. Owner jobs are selected per
+  # The status the `main` ruleset requires for this workflow (Compose smoke has
+  # its own `Compose smoke result`). Owner jobs are selected per
   # change, and GitHub reports a job skipped by its condition as successful,
   # so requiring each job by name would also pass a run whose classifier
   # failed. This passes only when the classifier passed and every selected

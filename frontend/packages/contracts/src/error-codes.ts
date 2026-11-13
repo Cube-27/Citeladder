@@ -75,7 +75,6 @@ const API_ERROR_CODES = [
   'fact_limit_reached',
   'forbidden',
   'funded_budget_exhausted',
-  'funded_cost_unresolved',
   'funded_credits_exhausted',
   'funding_unavailable',
   'ga4_dimension_incompatible',
@@ -234,7 +233,6 @@ const API_ERROR_CODES = [
   'workspace_member_not_found',
   'workspace_owner_required',
   'workspace_role_forbidden',
-  'workspace_role_invalid',
 ] as const;
 
 export type ApiErrorCode = (typeof API_ERROR_CODES)[number];
