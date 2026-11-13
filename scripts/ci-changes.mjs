@@ -47,7 +47,8 @@ function isFrontend(path) {
 // Frontend files outside the API package that its code, scripts or tests read:
 // the PDF brand tokens, the docs artifacts its reference exporters check and
 // its tests import, and the formatter settings the exporters write with.
-// scripts/ci-changes.test.mjs derives these reads from the API sources.
+// scripts/ci-changes.test.mjs derives these reads from the API sources. The
+// API quality step also runs the complexity and duplication ratchets.
 const API_EXTERNAL_INPUTS = [
   'frontend/apps/app/src/globals.css',
   'frontend/apps/docs/public/templates/',
@@ -55,6 +56,9 @@ const API_EXTERNAL_INPUTS = [
   'frontend/apps/docs/src/data/mcp-tools.json',
   'frontend/apps/docs/src/data/public-api.json',
   'frontend/vp-shared-config.ts',
+  'frontend/scripts/check-complexity.mjs',
+  'frontend/scripts/check-jscpd.mjs',
+  'frontend/scripts/source-ast.mjs',
 ];
 
 // The TypeScript API service (including its SQL schema baseline), the

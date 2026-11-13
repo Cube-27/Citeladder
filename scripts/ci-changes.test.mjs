@@ -190,6 +190,12 @@ test('every frontend file the API reads outside its package selects the API suit
   assert.equal(classifyPaths(['frontend/apps/app/src/router.tsx']).api, false);
 });
 
+test('the ratchet scripts the API quality step runs select the API owner', () => {
+  const owners = classifyPaths(['frontend/scripts/check-complexity.mjs']);
+  assert.deepEqual([owners.frontend, owners.api], [true, true]);
+  assert.equal(classifyPaths(['frontend/scripts/check-design-system.mjs']).api, false);
+});
+
 const e2eRules = JSON.parse(readFileSync(new URL('./e2e-paths.json', import.meta.url), 'utf8'));
 const appSuiteSpecs = readdirSync(new URL('../frontend/e2e/', import.meta.url))
   .filter((name) => name.endsWith('.spec.ts'))

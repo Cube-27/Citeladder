@@ -33,7 +33,9 @@ A route family, task kind or table has exactly one TypeScript application writer
 The SQL baseline (invariant 17) defines tables; it never writes application rows.
 For route families the route-ownership manifest is the single list: every
 API operation declares exactly one listed family, every listed family is
-served, and the gate fails otherwise. For
+served by exactly one route module, and the gate fails otherwise. For tables
+the API service's table-writer allowlist records each table's writers and may
+only tighten. For
 analytics task kinds the kind registry in
 `frontend/services/api/src/workers/analytics-kinds.ts` (each feature exports
 its kinds' executor, compensation and lease) owns execution and recovery;

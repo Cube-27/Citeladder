@@ -30,12 +30,12 @@ repository check script includes the documentation build.
 
 ### Versions
 
-| Tool                               | Version        | Notes                                                                                                                                |
-| ---------------------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| Node.js                            | 26+            | Frontend and TypeScript services. 26 is the supported minimum and CI version; protected production delivery uses Cloudflare Workers. |
-| pnpm                               | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json).                                       |
-| PostgreSQL                         | 15+            | Via Docker or local                                                                                                                  |
-| Docker + Compose                   | latest         | Local stack                                                                                                                          |
+| Tool             | Version        | Notes                                                                                                                                |
+| ---------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Node.js          | 26+            | Frontend and TypeScript services. 26 is the supported minimum and CI version; protected production delivery uses Cloudflare Workers. |
+| pnpm             | Repository pin | Use the exact `packageManager` version in [`frontend/package.json`](../frontend/package.json).                                       |
+| PostgreSQL       | 15+            | Via Docker or local                                                                                                                  |
+| Docker + Compose | latest         | Local stack                                                                                                                          |
 
 ## API setup
 
@@ -259,9 +259,17 @@ pnpm gen                # regenerate the public API and MCP references
 Application policy and the workspace role matrix live in native config. From the
 repository root,
 `node scripts/quality.mjs --mode check --scope api` needs only Node/pnpm and checks
-types, schema authority and route ownership (`pnpm check:routes`: every
-native operation declares exactly one manifest family); CI
+types, schema authority, route ownership (`pnpm check:routes`: every
+native operation declares exactly one manifest family, and one route module in
+`ROUTE_MODULES` serves each family), the table-writer allowlist, and the API
+complexity and duplication ratchets; CI
 additionally verifies the generated types and runs the suite against PostgreSQL.
+
+`frontend/services/api/table-writers.json` records each table's writer modules
+(`src/`, `scripts/`) and the modules that write a table named by a variable.
+A write from an unlisted module fails, as does a listed writer that no longer
+writes. Against the PR base a table may not gain writers, and a new table
+enters with one writer.
 Site Health, analytics, discovery and integration lanes recover their own
 expired leases and run their backstops on every runner pass, including a pass
 over an empty queue. Tick also runs native queue recovery, so recovery survives
@@ -287,18 +295,18 @@ since on Cloud Run the API serves the tick (below). No HTTP server or perpetual
 polling loop runs in a job. SIGTERM/SIGINT stops
 new admission and lets claimed work finish before destroying the pool.
 
-| Environment variable               | Scope                                   | Default / requirement                                                                                                  |
-| ---------------------------------- | --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `CLOUD_RUN_RUNNER_JOB`             | API                                     | Unset disables wake-up; otherwise `projects/<project>/locations/us-central1/jobs/<job>`                                |
-| `CITELADDER_ORIGIN_TOKEN`          | Cloud Run API                           | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters                                          |
-| `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API                           | Optional previous token during rotation                                                                                |
-| `RUNNER_BUDGET_SECONDS`            | Runner/tick                             | 600; 1–3600 seconds (Terraform allows 60–3000), shared across phases and lanes                                         |
-| `RUNNER_DB_POOL_SIZE`              | Runner/tick                             | 4; 1–4 pooled connections, independent of the API's `DB_POOL_SIZE` (12) + `DB_MAX_OVERFLOW`, which the API keeps even when it starts runner jobs; a draining execution also holds one lock session |
-| `RUNNER_WAKE_TIMEOUT_MS`           | API                                     | 5000; 1–30000 milliseconds for metadata plus job-start requests                                                        |
-| `RUNNER_WAKE_MIN_INTERVAL_MS`      | API                                     | 5000; 1–60000 milliseconds between job-start attempts per instance                                                     |
-| `SCHEDULER_TICK_INVOKER`           | Cloud Run API                           | Unset serves no `/internal/tick`; otherwise the Cloud Scheduler account whose Google ID token admits the tick           |
-| `SCHEDULER_TICK_AUDIENCE`          | Cloud Run API                           | Required with `SCHEDULER_TICK_INVOKER`; the ID token's audience                                                        |
-| `SCHEDULER_TICK_BUDGET_SECONDS`    | Cloud Run API                           | 20; 1–120 seconds of periodic work admitted inside one scheduled request                                               |
+| Environment variable               | Scope         | Default / requirement                                                                                                                                                                              |
+| ---------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CLOUD_RUN_RUNNER_JOB`             | API           | Unset disables wake-up; otherwise `projects/<project>/locations/us-central1/jobs/<job>`                                                                                                            |
+| `CITELADDER_ORIGIN_TOKEN`          | Cloud Run API | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters                                                                                                                      |
+| `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API | Optional previous token during rotation                                                                                                                                                            |
+| `RUNNER_BUDGET_SECONDS`            | Runner/tick   | 600; 1–3600 seconds (Terraform allows 60–3000), shared across phases and lanes                                                                                                                     |
+| `RUNNER_DB_POOL_SIZE`              | Runner/tick   | 4; 1–4 pooled connections, independent of the API's `DB_POOL_SIZE` (12) + `DB_MAX_OVERFLOW`, which the API keeps even when it starts runner jobs; a draining execution also holds one lock session |
+| `RUNNER_WAKE_TIMEOUT_MS`           | API           | 5000; 1–30000 milliseconds for metadata plus job-start requests                                                                                                                                    |
+| `RUNNER_WAKE_MIN_INTERVAL_MS`      | API           | 5000; 1–60000 milliseconds between job-start attempts per instance                                                                                                                                 |
+| `SCHEDULER_TICK_INVOKER`           | Cloud Run API | Unset serves no `/internal/tick`; otherwise the Cloud Scheduler account whose Google ID token admits the tick                                                                                      |
+| `SCHEDULER_TICK_AUDIENCE`          | Cloud Run API | Required with `SCHEDULER_TICK_INVOKER`; the ID token's audience                                                                                                                                    |
+| `SCHEDULER_TICK_BUDGET_SECONDS`    | Cloud Run API | 20; 1–120 seconds of periodic work admitted inside one scheduled request                                                                                                                           |
 
 The API's service account needs permission to execute that runner job
 (`roles/run.invoker` on the job); no new static Google key is needed. Metadata
@@ -432,7 +440,9 @@ Static-analysis commands, pinned by the frozen locks:
 ```powershell
 # From frontend/. These production checks are CI ratchets; the test scan is advisory.
 pnpm check:complexity
+pnpm check:complexity:api
 pnpm check:duplicates
+pnpm check:duplicates:api
 pnpm check:dead-code
 pnpm report:duplicates:tests
 ```
@@ -441,6 +451,15 @@ The frontend complexity policy has its own ceilings. The exception lists are emp
 is no rebaseline command: CI compares the policy with the PR base and rejects
 higher ceilings, higher exceptions, and newly added exceptions. Roots may be
 _added_ (widening the gate is a tightening) but never removed.
+
+The API service has the same ratchets, with the same ceilings, in
+`frontend/services/api/complexity-policy.json` and
+`frontend/services/api/jscpd-baseline.json`. The complexity policy lists the
+functions and modules over the ceiling when it was introduced; an entry may
+only fall or be deleted once its code is within the default. A function's
+exception key is its file and name, an anonymous function named by its
+enclosing function and a repeated name by its occurrence (`#2`), so editing
+other code in the file keeps the key.
 
 ### Coverage
 
