@@ -289,10 +289,11 @@ const sameTitle = (left: string, right: string) =>
 
 /** A whole save of a document this turn already staged: the first is kept and the rest go through edit_document. */
 function repeatedSave(state: DocumentState, requested: number | null | undefined, title: string) {
-  let repeat = requested ?? undefined;
-  if (!repeat)
-    repeat = [...state.staged].find(([, { payload }]) => sameTitle(payload.title, title))?.[0];
-  if (repeat === undefined || !state.staged.has(repeat)) return null;
+  const repeat =
+    requested && state.staged.has(requested)
+      ? requested
+      : [...state.staged].find(([, { payload }]) => sameTitle(payload.title, title))?.[0];
+  if (repeat === undefined) return null;
   return `${documentLabel(repeat)} was already saved in this turn and that save was kept. Change it with edit_document, or reply now.`;
 }
 

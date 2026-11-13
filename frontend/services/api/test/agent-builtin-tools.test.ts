@@ -105,6 +105,10 @@ describe('Agent built-in tools', () => {
     expect(saveDocument(catalog, turn, { ...draft, document: 2, body: 'Other' }, bounds)).toEqual(
       repeat,
     );
+    // Replacing another document with a staged document's title would duplicate it too.
+    expect(saveDocument(catalog, turn, { ...draft, document: 1, body: 'Other' }, bounds)).toEqual(
+      repeat,
+    );
     expect(turn.staged.get(2)?.payload.body).toBe('Body');
     expect([...turn.staged.keys()]).toEqual([2, 3]);
   });
