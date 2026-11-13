@@ -10,7 +10,7 @@ import { loadMcpConfig } from '../src/mcp/config.ts';
 import { authorizedWorkspaceIds, authorizeProject } from '../src/mcp/data.ts';
 import { authenticateMcp, consentCsrf, tokenHash } from '../src/mcp/oauth.ts';
 import { admitRegistration, admitToolCall, registerClient } from '../src/mcp/registration.ts';
-import { pruneUsageWindows } from '../src/abuse/usage.ts';
+import { budget, pruneUsageWindows, spendBudget } from '../src/abuse/usage.ts';
 import { changePassword, consumeChallenge } from '../src/auth/challenges.ts';
 import { hashPassword } from '../src/auth/password.ts';
 import { logoutUser } from '../src/auth/service.ts';
@@ -1002,8 +1002,11 @@ it('caps tool calls per connection and refuses the next until the window ends', 
   onTestFinished(() => {
     vi.useRealTimers();
   });
-  for (let call = 0; call < mcpPolicy.tool_call_grant_limit; call++)
-    await admitToolCall(db, principal.grantId, principal.userId);
+  // All but the last unit in one spend: 120 sequential admissions (240 commits) hit the CI test timeout.
+  await spendBudget(db, budget('mcp_tool_call_grant'), principal.grantId, {
+    amount: mcpPolicy.tool_call_grant_limit - 1,
+  });
+  await admitToolCall(db, principal.grantId, principal.userId);
   const refused = await admitToolCall(db, principal.grantId, principal.userId).catch(
     (error: unknown) => error,
   );
