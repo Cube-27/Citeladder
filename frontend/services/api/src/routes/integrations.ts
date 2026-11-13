@@ -21,7 +21,7 @@ import { readBody, readOptionalBody } from '../http/body.ts';
 import { executeInteractiveSyncs } from '../integrations/interactive.ts';
 import { IntegrationClient, IntegrationError } from '../integrations/client.ts';
 import { integrationPolicy } from '../integrations/config.ts';
-import { recordIntegrationEvents } from '../integrations/events.ts';
+import { recordIntegrationEvents, recordRetiredMappings } from '../integrations/events.ts';
 import { disconnectConnection } from '../integrations/grants.ts';
 import {
   completeOAuth,
@@ -59,40 +59,6 @@ const mappingRequest = integrationPropertyMappingRequestSchema;
 const providerPath = { provider: { scalar: { kind: 'str' }, required: true } } as const;
 const oauthCookie = integrationPolicy.transport.INTEGRATION_OAUTH_TRANSACTION_COOKIE;
 const logger = getLogger('api.integrations');
-
-/**
- * Record each mapping a write retired in the integration audit trail, in the
- * transaction that retired it: a removal and a replacement by another property.
- */
-async function recordRetiredMappings(
-  trx: Database,
-  workspaceId: string,
-  retired: readonly {
-    id: string;
-    connection_id: string;
-    project_id: string;
-    provider: string;
-    property_ref: string;
-  }[],
-  at: Date,
-): Promise<void> {
-  await recordIntegrationEvents(
-    trx,
-    retired.map((mapping) => ({
-      workspaceId,
-      connectionId: mapping.connection_id,
-      type: 'integration.mapping_retired',
-      message: 'Integration property mapping removed',
-      payload: {
-        mapping_id: mapping.id,
-        project_id: mapping.project_id,
-        provider: mapping.provider,
-        property_ref: mapping.property_ref,
-      },
-      at,
-    })),
-  );
-}
 
 /** Land on the screen that started the flow (a validated app path), else Settings. */
 function oauthLanding(

@@ -142,17 +142,12 @@ export async function scopedPrompts(
 }
 
 /** The topic's persisted name and description, or 404 outside the project. */
-async function topicText(
-  db: Kysely<DB>,
-  { workspaceId, projectId }: ProjectScope,
-  topicId: string,
-): Promise<string> {
+async function topicText(db: Kysely<DB>, scope: ProjectScope, topicId: string): Promise<string> {
   const topic = await db
     .selectFrom('topics')
     .select(['name', 'description'])
     .where('id', '=', topicId)
-    .where('workspace_id', '=', workspaceId)
-    .where('project_id', '=', projectId)
+    .where((eb) => eb.and({ workspace_id: scope.workspaceId, project_id: scope.projectId }))
     .executeTakeFirst();
   if (topic === undefined) throw new ApiError(404, "Topic not found in this prompt's project");
   return [topic.name, topic.description].filter(Boolean).join(' ');
