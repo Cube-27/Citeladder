@@ -34,16 +34,8 @@ its line on the pages.
 
 ## Published pages
 
-| Route | Source |
-|---|---|
-| `/terms` | `legal-terms.ts` |
-| `/privacy` | `legal-privacy.ts` |
-| `/dpa`, `/subprocessors` | `legal-dpa.ts` |
-| `/refund-policy`, `/cancellation-policy`, `/contact` | `legal-billing.ts` |
-| `/cookies`, `/ai-policy` | `legal.ts` |
-
-`LEGAL_DOCUMENTS` (`legal-documents.ts`) lists them in footer order; each
-record's `updated` is its "Last updated" line and sitemap date.
+`LEGAL_DOCUMENTS` (`legal-documents.ts`) lists the published pages in footer
+order; each record's `updated` is its "Last updated" line and sitemap date.
 
 Terms acceptance is recorded per user and workspace against
 `terms_revision` (`frontend/services/api/src/config/auth-runtime.json`,

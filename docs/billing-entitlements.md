@@ -15,9 +15,7 @@ the one persisted account for a workspace. TypeScript
 [account provisioning](../frontend/services/api/src/entitlements/bootstrap.ts)
 owns runtime workspace bootstrap. Native operators, login, seed tooling and
 [deployment bootstrap](../frontend/services/api/src/auth/deployment-bootstrap.ts)
-use the same account/grant owners. The [schema baseline](../frontend/services/api/migrations/0001_baseline.sql) holds table
-declarations and column defaults; native config owns application policy.
-Owner-user metadata is not a payer-selection rule.
+use the same account/grant owners. Owner-user metadata is not a payer-selection rule.
 [Workspace roles](workspace-access.md) gate billing and credentials to
 Owner/Admin; product Members receive safe effective allowances rather than
 private billing records.
@@ -317,10 +315,8 @@ operator issues stores its reason.
 Preview executes the real mutation and rolls back its transaction.
 
 Native [execution config](../frontend/services/api/src/config/billing.ts) owns
-checkout, reconciliation, webhook settings and commercial runtime vocabularies.
-Native authoring owns exact rational currency/GST rounding, seller configuration
-and read-only Razorpay admission. Native config owns the entitlement registry.
-Native provider display derives from the native catalog and frozen routes.
+checkout, reconciliation, webhook settings and commercial runtime vocabularies;
+catalog authoring owns exact rational currency/GST rounding.
 
 The shared transaction lock order remains in [architecture](architecture.md).
 Never acquire project/domain locks after billing locks or hold a transaction
@@ -358,11 +354,7 @@ catalog never reads a workspace, so it shows checkout unavailable until the
 audience is everyone; the app reads `/billing/workspace-catalog`, which applies
 the same rules to the active workspace, so in-app billing and marketing agree.
 While no self-serve plan is open, in-app billing lists no prices either.
-The app's `/billing` section
-([billing screen](../frontend/components/billing/billing-screen.tsx) and the
-other [billing components](../frontend/components/billing/)) shows account,
-invoice, usage, intent and subscription state, and runs plan changes and
-add-on/top-up purchases. Every purchase reviews the full server quote with
+Every purchase reviews the full server quote with
 payment consent and the policy links before the provider opens. The checkout controller polls persisted
 activation; only confirmed activation refreshes access caches. Unavailable
 checkout is shown honestly. Pricing remains usable before project creation.
@@ -399,5 +391,3 @@ Razorpay activation follows its
 Provider selection, sandbox captures, recurring methods, tax parity and live
 payment enablement are not established by local tests. The
 [release checklist](release-checklist.md) retains external acceptance gates.
-[Provider-boundary tests](../frontend/services/api/test/billing-boundaries.test.ts)
-exercise provider/environment isolation and fail-closed behavior with doubles.

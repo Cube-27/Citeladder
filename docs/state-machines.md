@@ -2,31 +2,17 @@
 
 Cross-feature catalogue of every persisted lifecycle: its states, the invariants
 that hold over them and where each is enforced, and the transitions with their
-trigger, location and guard. Verified against `main` at `f090d718b`
-(2026-11-07). Code, tests and the feature owners in the
+trigger, location and guard. Code, tests and the feature owners in the
 [documentation index](README.md) remain the authority; this file records where
-each rule is enforced so a change can find every writer. Row IDs such as WS1
-name the state-machine fixes (S01–S12, merged 2026-11-07); git history keeps
-that completed plan.
+each rule is enforced so a change can find every writer. Line references drift;
+search the named function.
 
 Paths are relative to `frontend/services/api/src/` unless they start with
 `frontend/`; `0001:<line>` is `migrations/0001_baseline.sql`. **Enforced**:
 `DB` = CHECK, unique, partial unique index or FK; `App` = code under the named
-lock; `None` = nothing holds it. Migration `0014_status_check_constraints`
-gives each of these columns a CHECK that holds it to its owner's vocabulary:
-every lane table's `status` (the queue statuses, plus `pending_reservation` for
-`audit_tasks`), `audits.status`, the three `site_crawls` sub-states, the
-Keyword Research run, call and dataset `status`, `pending_activations.status`,
-`billing_webhook_events.processing_state`, `billing_subscriptions.status`,
-`integration_oauth_grants.status`, `actions.status`, `prompts.status` and
-`prompt_candidates.disposition`; `platform_calls.status` and the brand fact
-statuses had theirs in 0001. Migration `0035_indexes_and_constraints` adds
-`billing_payments.status`, `billing_catalog_revisions.publication_state`,
-`idempotency_records.state`, `agent_model_attempts.outcome` and
-`settlement_status`, and `execution_cost_projections.projection_status`.
-`test/schema-constraints.test.ts` proves each accepts every value its owner
-declares. Other status columns hold their
-vocabulary in code only. The CHECK enforces the vocabulary, not the edges.
+lock; `None` = nothing holds it. A status CHECK
+(`test/schema-constraints.test.ts` lists them) enforces the vocabulary, not the
+edges; other status columns hold their vocabulary in code only.
 
 ## 1. Shared queue lanes
 

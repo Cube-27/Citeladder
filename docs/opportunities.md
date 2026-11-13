@@ -499,20 +499,3 @@ survive source retention through SET NULL.
 ranking and verification policy.
 [Site Health](site-health.md), [Demand](integrations-traffic-analytics.md) and
 [Visibility](visibility-prompt.md) remain the source authorities.
-[Refresh PostgreSQL tests](../frontend/services/api/test/opportunity-refresh.test.ts)
-exercise admission, TypeScript claim and persisted reads, replay, the
-source-identity skip, concurrent claims and recomputes, supersession, the Agent
-handoff and non-member 404s.
-[Verification PostgreSQL tests](../frontend/services/api/test/opportunity-verification.test.ts)
-exercise per-source folding, scoped traffic and prompt checks, the window,
-unavailable-state behavior, workspace isolation, the enqueue gate and the
-producer, worker and persisted-reader boundary;
-[Action PostgreSQL tests](../frontend/services/api/test/actions.test.ts) cover
-declaration admission, go-live bounds, the baseline at go-live, findings
-resolved before and after go-live, unmeasurable findings, earned
-declarations measured on their prompts, concurrent replay, workspace
-isolation and frozen checks;
-[owned-URL PostgreSQL tests](../frontend/services/api/test/owned-url-cited.test.ts)
-cover what content-gap and Analyze a page declarations freeze and how later
-runs read them. The pending integrations
-follow-up may improve these read surfaces; it is not a second action store.

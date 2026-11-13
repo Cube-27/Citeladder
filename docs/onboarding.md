@@ -126,24 +126,16 @@ URL starts at the first step, while a discovery URL resumes that draft.
 
 ## After onboarding
 
-Company facts are edited on Agent → Context's Company and Audience & Offerings
-tabs ([brand profile cards](../frontend/components/knowledge-base/brand-profile-cards.tsx),
-one save for both through the [profile form](../frontend/components/knowledge-base/use-brand-profile-form.ts)):
-category, buyer type and market scope (saved into the business context as
-`reviewed`), description, positioning, audience and offerings. The Prompts
-screen's Prompt Builder edits the offerings, the business map's audiences,
-situations and attributes, and the five fields onboarding infers (service areas,
-buyer roles, business model, category terms, jobs to be done) through the same
-brand-profile update, which marks each sent field `reviewed`; Context's Business
-map tab shows those read-only with an **Edit in Prompt Builder** link. A changed category
-still clears the fields derived from the old one. Competitors, domains and market are edited in the
-[project editor](../frontend/components/projects/project-edit-panel.tsx) (Context's
-Competitors tab opens it from **Edit competitors**), which
-keeps each competitor's aliases across renames. A save writes the lists as a
-diff through the competitor command, so a kept competitor or domain keeps its ID
-(and a competitor its logo), including through a rename. Overview shows a read-only
-summary. Prompt generation and Site Health archetypes read the stored category
-and facets, so a correction there changes what later generation asks.
+Company facts (Agent → Context) and the Prompt Builder edit through one
+brand-profile update, which marks each sent field `reviewed`; category, buyer
+type and market scope are saved into the business context as `reviewed`. A
+changed category clears the fields derived from the old one. The
+[project editor](../frontend/components/projects/project-edit-panel.tsx) saves
+competitors, domains and market as a diff through the competitor command, so a
+kept competitor or domain keeps its ID (and a competitor its logo and aliases),
+including through a rename. Prompt generation and Site Health archetypes read
+the stored category and facets, so a correction there changes what later
+generation asks.
 
 ## Overview layout
 
@@ -156,24 +148,16 @@ default. While editing, each widget can move, switch between half and full
 width, or be removed; the last widget stays. A save names the version it
 edited (`PUT /projects/{id}/overview/layout`), so a stale save fails with
 `overview_layout_conflict` and shows the layout that won. Viewers see the
-layout without the menu. Each widget appears once. Library widgets (visibility
-over time, share of voice, top movers, retrieved versus cited, perception, AI
-Traffic, Search Console) read their pages' persisted reads with the pages'
-defaults: latest run, organic prompts, default market. They keep a fixed
-footprint whether loading, empty or failed.
+layout without the menu. Each widget appears once. Library widgets read their
+pages' persisted reads with the pages' defaults: latest run, organic prompts,
+default market.
 
 Export PDF (`GET /projects/{id}/overview/report.pdf`,
-[report](../frontend/services/api/src/projects/overview-report.ts)) opens with a
-branded cover (logo, brand, website, measurement date in UTC, engines by their
-catalogue names and prompt count), prints the saved layout widget by widget
-from the same reads under the widgets' own titles, then a plain-English guide
-to the metrics. Project state and Citation share share one stat strip when both
-are shown; a run with no comparable predecessor says so once instead of under
-every figure. Actions print their target and priority band; no internal ID or
-processing-version code is printed (owner, 2026-11-01).
-Before the first completed run a widget reads not available; a missing value
-prints the app's dash and an observed zero stays zero. It replaced the fixed
-Executive PDF.
+[report](../frontend/services/api/src/projects/overview-report.ts)) prints the
+saved layout widget by widget from the same reads. No internal ID or
+processing-version code is printed (owner, 2026-11-01). Before the first
+completed run a widget reads not available; a missing value prints the app's
+dash and an observed zero stays zero.
 
 ## Brand facts
 
@@ -200,7 +184,3 @@ freezes the confirmed revisions when an audit starts.
   rendering service. Missing evidence must not be padded with generic topics.
 - Confirmation authorizes completion, not publishing, an external mutation or a
   crawl. The Agent does not keep a second company memory.
-
-The [completion and worker tests](../frontend/services/api/test/discovery.test.ts)
-cover atomicity, idempotency, workspace and role isolation, lease contention,
-retry and the no-crawl boundary.

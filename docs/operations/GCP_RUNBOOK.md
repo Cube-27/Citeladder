@@ -443,7 +443,7 @@ promotion cannot hide hosting spend.
 
 **Deferred owner action, console only:** if available, create a separate monthly
 Cloud Run spend-cap budget for this project at roughly ₹8,500 ($100), keeping
-the existing hosting-alert budget. It is not configured by this change.
+the existing hosting-alert budget. Terraform does not configure it.
 [Google's spend-cap guidance](https://docs.cloud.google.com/billing/docs/how-to/budgets-spend-caps)
 describes this Preview control; an alerts-only budget cannot be converted in place.
 The cap pauses new Cloud Run usage across the project, including API and jobs,

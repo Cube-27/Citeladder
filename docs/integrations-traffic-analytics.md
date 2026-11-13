@@ -291,7 +291,7 @@ New reviews default to domain-plus-subdomains research; exact-host research rema
 
 Organic top pages, individual backlinks and bounded monthly backlink history use the existing acquisition and projection owner. History is broad domain evidence with its own provider coverage, separate from the live filtered summary; missing months remain gaps. Referring domains and referring root domains are distinct metrics. Reviewed ranking order/minimum volume and backlink grouping choose the bounded rows acquired; refresh and expansion always create newly reviewed snapshots without reusing the old result.
 
-Response availability and received provider items are persisted separately from normalized table rows: summaries can be complete without table rows, an observed empty result is distinct from a missing result, and paid costs remain recorded if normalization fails. The UI displays the saved market, rounded traffic estimates, comparison tables and compact dataset selectors. Zero-row snapshots explain that requests can incur charges without returning data; missing values are never displayed as measured zero.
+Response availability and received provider items are persisted separately from normalized table rows: summaries can be complete without table rows, an observed empty result is distinct from a missing result, and paid costs remain recorded if normalization fails. Zero-row snapshots explain that requests can incur charges without returning data; missing values are never displayed as measured zero.
 
 One acquisition may run per project, one request at a time. All DataForSEO workloads share PostgreSQL account capacity at two concurrent calls and one call start per second. Every send persists append-only dispatch evidence before provider I/O and a separate outcome record after it. An explicit HTTP 429 may retry twice after the bounded provider capacity delay; each rejection remains recorded. A crash or connection loss after dispatch becomes `uncertain`; it is never sent automatically again. Missing provider cost, pricing drift, credential rotation, a refused credential (`auth_failure`), a refused account (`provider_account_unavailable`), scope escape, and over-estimate cost stop remaining calls while preserving completed datasets. Keyword Research and the audit search surfaces send through one DataForSEO envelope client ([`providers/dataforseo.ts`](../frontend/services/api/src/providers/dataforseo.ts)), so an envelope or task status means the same refusal in both. Snapshot reuse requires an exact scope hash and a complete, fresh published dataset; refresh and depth expansion always return to review.
 
@@ -307,9 +307,9 @@ Cancelling never relabels an `uncertain` run. The screen's latest run and the
 run history list confirmed runs only, so an open cost review never hides an
 acquisition in progress.
 
-The `/search-intelligence` UI separates Overview, Keywords, Competitors, and Backlinks. Every empty state names its next step: connect DataForSEO (a managed workspace instead reads that research is unavailable, with no provider link), add the project's website, or review the first analysis; saved results whose credential is gone say they can be read but not refreshed. A new analysis starts from a small preset (the owned footprint and ranked keywords, plus missing and shared keywords for the first competitor); a refresh or deeper fetch re-reads the datasets already saved. Other competitors and the advanced controls (scope, website, language, keyword order, minimum volume, backlink grouping, reuse, saved defaults) are one disclosure away with visible labels, and the review lists each request in plain words before explicit confirmation. An analysis in progress can be cancelled from the screen, and a stopped run explains its reason. Results show no record IDs or raw provider JSON: a dataset never fetched reads "Not fetched", a value the provider did not report is the shared missing mark, and estimates use one rounded-up formatter. Missing keywords that pass the [keyword-gap gates](opportunities.md) become Actions; a row that did links to its Action from its details, and the dataset read joins only the live findings, computing nothing. Citation matching is a deterministic derivation from a selected backlink dataset and selected authorized Visibility audits with answers; a derivation over a partial or truncated parent is `partial`, never a definite empty. Selected rows hand off to the Agent as typed references.
+A managed workspace without research access is told research is unavailable, with no provider link; saved results whose credential is gone can be read but not refreshed. The review lists each request before explicit confirmation. Results show no record IDs or raw provider JSON: a dataset never fetched reads "Not fetched" and a value the provider did not report is the shared missing mark. Missing keywords that pass the [keyword-gap gates](opportunities.md) become Actions; the dataset read joins only the live findings, computing nothing. Citation matching is a deterministic derivation from a selected backlink dataset and selected authorized Visibility audits with answers; a derivation over a partial or truncated parent is `partial`, never a definite empty, and repeating it for the same parent dataset, audit selection and citation evidence returns the existing projection. Selected rows hand off to the Agent as typed references.
 
-Dataset tables use shared cursor pagination with 10 rows per page by default and selectable page sizes. Column sorting applies to the complete persisted dataset, with stable UUID tie-breaking and unknown values last; changing the sort or page size resets the cursor. Compatible rows stay visible during same-dataset reads, and text and numeric columns follow the shared alignment contract. Repeated citation matching for the same parent dataset, audit selection, and citation evidence returns the existing projection.
+Column sorting applies to the complete persisted dataset, with stable UUID tie-breaking and unknown values last; changing the sort or page size resets the cursor.
 
 Text, minimum-volume and intent filters run across persisted rows. Cursors bind filters, ordering, page size, dataset and workspace/project authorization. Saved counts, filtered saved counts and provider totals remain separate. CSV exports traverse only saved matching pages and use the same dataset-specific columns as tables, plus provenance and collection metadata; untrusted cells receive spreadsheet-formula neutralization. Loss of access clears retained rows. Provider-reported costs distinguish unknown, unresolved and not charged from measured USD values.
 
@@ -412,33 +412,12 @@ panel with zero rows, and a project without Bing never shows it.
 
 Cursors bind project, snapshot, dimension, filters, sorting and page size.
 The browser resets cursor history when those inputs change.
-Search Demand is one /demand surface; the AI Traffic Referrals tab exposes
-persisted referral volume/share/source totals. Search Demand
-shows each fact once. Like every page, its search and filter chips sit in the
-top control strip; each chip carries its type's count and, when the detectors
-it counts did not run in full, their status (partial when they disagree, as CTR
-gaps counts both CTR-gap and low-CTR signals), with each rule and limitation in
-an info hint beside the chip. Below, a summary line (signal count, window,
-latent demand) leads one flat table, a row
-per signal in priority order: its query, its landing page beneath, and a signal
-chip; a promoted signal's row opens its Action, any other asks the agent. The
-table pages on the client from the persisted snapshot with a rows-per-page
-choice; a new filter starts at page 1, and paging never moves the layout
-(fixed column widths, a short last page padded to full height). Each signal
-type is explained once in a legend, and the evidence drawer keeps the reading,
-relevance, competing pages and provenance counts, never internal IDs.
+Search Demand shows each fact once; a filter chip whose detectors did not run
+in full shows their status, and the evidence drawer never shows internal IDs.
 [Data source setup](../frontend/components/integrations/data-source-setup.tsx)
-connects sources where they are needed: Performance (Search Console, with GA4 and
-Bing offered), Search Demand (Search Console) and the AI Traffic referrals view
-(GA4). Each source shows only its next step: Connect (one Google consent covers
-Search Console and GA4), Reconnect, or choose the property, with the single
-property that matches the project offered as one click. Consent returns to the
-same screen and opens the property list; choosing a property starts the history
-import and refreshes readiness and data at once. It renders nothing once the
-required sources import into the project, and members see who to ask instead
-of consent controls. Settings → Integrations remains the full management view. The AI Traffic Referrals tab retains its range and granularity controls when
-the selected projection is empty because another persisted range or granularity
-may still be available; measured zero retains them as well.
-[Sync tests](../frontend/services/api/test/integration-sync.test.ts) and
-[Performance tests](../frontend/services/api/test/traffic.test.ts) cover
-frozen targets and persisted reads. Live provider acceptance is separate.
+connects sources on the screens that need them; members see who to ask instead
+of consent controls, and Settings → Integrations remains the full management
+view. The AI Traffic Referrals tab keeps its range and granularity controls
+when the selected projection is empty, because another persisted range or
+granularity may still be available. Live provider acceptance is separate from
+the repository's tests.

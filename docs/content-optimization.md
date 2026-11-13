@@ -221,33 +221,17 @@ thread (E1); every other chat keeps the thread. The workspace is a lazy chunk
   (`mapPos` with `TrackDel`) and one whose boundary is deleted is dropped.
   While a turn runs the page is read-only and shows `edit_document`'s
   streamed body.
-- **Suggestions.** To review / Applied / Dismissed, cards grouped by the
-  passage (or SEO field, or the whole page) they sit in; Apply, Dismiss,
-  Revert and, for a needs-input one, Add to context; Apply all and Dismiss
-  all report the server's counts. A card links its rule's source: "Required
-  by" for a policy, and otherwise worded as an option, with a heuristic
-  labelled "Heuristic". A card shows "Choose one" for an
-  overlapping suggestion; stale ones are a count only. Pressing a highlight
-  opens its card and a card's text shows its highlight. Every change names
-  the revision on screen: `agent_output_conflict` reads the chat and the
-  suggestions again and says the page changed; `agent_suggestion_conflict`
-  shows the server's reason. Changes wait while a turn runs or a draft is
-  unsaved. Leaving for another screen or project, or closing the tab, with an
-  unsaved draft asks first. An Action's content-gap evidence follows as coverage gaps with
-  their evidence and Add to context.
-- **Outline and SEO.** The outline is the current body's ATX headings; a click
-  puts the cursor at one. SEO shows the revision's fields and the fetch's
-  page-local checks (the chat read's `page_fetch.checks`, failing ones
-  first) with the fetch time; editing the page does not rerun them (E5).
-- **Chat.** The conversation and composer dock under the rail. Ask AI (on the
-  selected text) and Add to context write a quoted reference into the
-  composer, with a starting request when it is empty, and never send.
-- **Export.** Copy as Markdown, HTML or plain text, and download `.md` or
-  `.html` (named by the title tag), through the app's react-markdown pipeline.
-- **Header.** Back to the Action, Mark implemented (the declaration dialog
-  with the revision on screen), and Export.
+- **Suggestions.** A card links its rule's source: "Required by" for a
+  policy, and otherwise worded as an option, with a heuristic labelled
+  "Heuristic". Every change names the revision on screen:
+  `agent_output_conflict` reads the chat and the suggestions again and says
+  the page changed; `agent_suggestion_conflict` shows the server's reason.
+  Changes wait while a turn runs or a draft is unsaved.
+- **SEO.** The fetch's page-local checks are shown with the fetch time;
+  editing the page does not rerun them (E5).
+- **Chat.** Ask AI and Add to context write a quoted reference into the
+  composer and never send.
 
-Below 1024px the rail becomes tabs: Page, Suggestions, Outline, SEO, Chat.
 **Work with the agent** on an Action opens `optimize_page` for the Action's
 page when the Action read's `editable_page` is true: a page Action whose
 target is one of the latest crawl's content pages (E3, read-time).

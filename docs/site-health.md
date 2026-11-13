@@ -540,32 +540,9 @@ Outcome normalization:
 whether or not the check is scored. Severity orders issues; `weight` is
 provenance only.
 
-| Scored check (`score_roles`) | Web | AEO pillar |
-|---|:-:|---|
-| `technical.title_present`, `technical.https`, `technical.uncompressed_html`, `technical.soft_error`, `technical.canonical_integrity` (finalize) | yes | |
-| `web.accessibility_image_alt`, `web.accessibility_document_language`, `web.mobile_viewport`, `web.security_mixed_content` | yes | |
-| `technical.indexable` | yes | crawlability |
-| `search.crawler_access` (site), `search.snippet_access` | | crawlability |
-| `aeo.server_rendered_content`, `aeo.schema_required_valid`, `aeo.schema_matches_content` | | machine-readability |
-| `aeo.heading_hierarchy` | | structure |
-| `aeo.product_answer_facts`, `aeo.listing_answer_set` | | answerability |
-| `aeo.product_evidence_facts` | | evidence |
-| `aeo.product_brand_identity`, `aeo.visible_attribution` | | provenance |
-| `aeo.content_date_present`, `aeo.offer_freshness_signal` | | freshness |
-
-Unscored checks:
-
-| Class | Checks |
-|---|---|
-| Advisory | Meta description, canonical present, structured data present, Open Graph, robots.txt present, entity profiles, content recency, recommended schema, source support, answer-first, sitemap noindex |
-| Defect | Form names, heading order, `technical.ai_crawler_access`, organization identity, trust path, listing item facts, question headings, sitemap canonical, sitemap redirect, sitemap lastmod, client-side redirect, broken internal links, internal links to redirects, broken sitewide links, sitewide links to redirects, redirect chains, duplicate content, sitemap URL unreachable, sitemap orphan, hreflang conflict, seven `architecture.*` rules |
-| Diagnostic (no issue) | HSTS, TTFB band, llms.txt |
-
-Pillar weights (`readiness_dimension_weights`) sum to 1:
-
-| Answerability | Structure | Evidence | Machine readability | Provenance | Freshness | Crawlability |
-|---:|---:|---:|---:|---:|---:|---:|
-| 0.20 | 0.15 | 0.15 | 0.20 | 0.10 | 0.05 | 0.15 |
+Which checks are scored, their roles and finding classes are in `rules.json`;
+pillar weights (`readiness_dimension_weights`, summing to 1) are in
+`reads.json`.
 
 **Site checks** run on the crawl root and score on every page. Finalization
 (`terminal-analysis.ts`) and aggregation (`measurement-aggregation.ts`) replace
@@ -747,16 +724,10 @@ non-empty added or removed lists.
 
 ## Versions and provenance
 
-| Version | Source |
-|---|---|
-| Classifier `sh-classifier-1+<digest>`: base plus a SHA-256 prefix of every classification input | `classifierVersion`, `config/site-health.ts` |
-| Traits `sh-traits-1` | `analysis.json` |
-| Extractor `sh-extractor-1`, analyzer `sh-analyzer-1`, rules `sh-rules-1` | `config/site-health.ts` |
-| Scoring `sh-scoring-1`, coverage `sh-coverage-1`, classification formula `sh-classification-1` | `reads.json` |
-| URL admission `sh-url-admission-1`, disposition `sh-disposition-1` | `acquisition.json` |
-| Acquisition `sh-acquisition-1` | `acquisition_policy_version` setting |
-
-Crawls freeze these in their configuration. Final analyses keep
+Processing versions live in `config/site-health.ts` and the policy JSON files;
+the classifier version is its base plus a SHA-256 prefix of every
+classification input (`classifierVersion`). Crawls freeze these in their
+configuration. Final analyses keep
 `supersedes_analysis_id`, `source_evaluation_ids`, `source_artifact_ids` and a
 frozen `expected_checkpoint_profile`. Snapshots, score summaries and change
 snapshots keep their provenance id lists too, but browser responses (dashboard,
@@ -982,48 +953,8 @@ Generating or exporting a deliverable never resolves a finding or moves a score.
 
 ## Configuration
 
-Environment overrides are `SITE_HEALTH_<SETTING>`, defined in
-`config/site-health/settings.json`. `validation.ts` enforces cross-field
-bounds. Settings marked *frozen* are copied into each crawl.
-
-| Setting | Default |
-|---|---|
-| `automatic_page_limit` (the page limit; at most `max_discovery_urls`) | 500 |
-| `max_frontier_urls` / `max_crawl_depth` (frozen) | 50000 / 20 |
-| `sample_url_limit` / `sample_discovery_url_cap` | 10 / 200 |
-| `max_sitemap_documents` / `sitemap_fetch_concurrency` / `max_sitemap_admitted_urls` | 32 / 4 / 5000 |
-| `robots_policy_sample_size` / `robots_snapshot_max_bytes` | 100 / 524288 |
-| `robots_cache_ttl_seconds` / `robots_transient_attempts` / `robots_transient_backoff_seconds` | 86400 / 3 / 1 |
-| `global_concurrency` / `per_host_concurrency` / `per_host_delay_seconds` (frozen) | 8 / 6 / 0.15 |
-| `max_crawl_delay_seconds` / `request_timeout_seconds` / `max_redirects` | 30 / 20 / 5 |
-| `worker_concurrency` / `claim_window_seconds` / `drain_budget_seconds` | 8 / 30 / 300 |
-| `interpretation_worker_threads` / `interpretation_job_timeout_seconds` | 1 / 60 |
-| `lease_ttl_seconds` / `heartbeat_interval_seconds` / `max_attempts` | 120 / 30 / 4 |
-| `analysis_dependency_max_wait_seconds` | 180 |
-| `backstop_interval_seconds` / `stalled_crawl_reconcile_seconds` / `overdue_crawl_seconds` | 15 / 240 / 3600 |
-| `access_check_ttl_seconds` | 30 |
-| `live_score_refresh_page_interval` / `_page_fraction` / `_min_interval_seconds` | 10 / 0.1 / 5 |
-
-The policy files hold the rest:
-
-| File | Contents |
-|---|---|
-| `acquisition.json` | Tiers, exclusion reasons, expected tiers, URL patterns |
-| `analysis.json` | Classification, facts, regions, gates |
-| `reads.json` | Reads, pillars, weights |
-| `config/site-health.ts` | Interactive bounds |
-
-## Source entry points
-
-All paths are under `frontend/services/api/src/`.
-
-| Area | Files |
-|---|---|
-| Claims and drain | `workers/site-health-worker.ts`, `workers/runner.ts` |
-| Crawl, stop, selection | `site-health/planner.ts`, `controls.ts`, `selection.ts` |
-| Scheduled crawls | `site-health/schedules.ts`, `workers/crawl-scheduler.ts` |
-| Admission | `site-health/url-admission.ts`, `url-identity.ts`, `frontier.ts`, `tracked-set.ts`, `crawl-request.ts` |
-| Executors | `site-health/site-setup-task.ts`, `discover-task.ts`, `analyze-task.ts`, `page-fetch.ts` |
-| Terminal and measurement | `site-health/lifecycle*.ts`, `terminal-analysis.ts`, `terminal-counters.ts`, `issue-currency.ts`, `issue-states.ts`, `issue-catalog.ts`, `canonical-alias.ts`, `score-summary.ts`, `coverage.ts` |
-| Analysis | `site-health/analysis/` (`page-kinds.ts`, `rules.ts`, `*-checks.ts`, `scoring.ts`) |
-| Policy | `config/site-health.ts`, `config/site-health/*.json`, `config/crawlers.json` |
+Settings, their defaults and `SITE_HEALTH_<SETTING>` overrides live in
+[`config/site-health/settings.json`](../frontend/services/api/src/config/site-health/settings.json);
+`validation.ts` enforces cross-field bounds, and settings marked frozen are
+copied into each crawl. Policy lives in the sibling `acquisition.json`,
+`analysis.json` and `reads.json`.

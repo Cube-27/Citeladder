@@ -645,13 +645,9 @@ UPDATE` quota-serialization lock.
 
 A workspace with no grants resolves to the **zero-allowance sample policy** (fail-closed:
 sample discovery, zero selectable monitored URLs, no count disclosure). To grant a
-monitored-URL allowance locally, use the native operator command from `frontend/` with
-`DATABASE_URL` pointing at the target database:
-
-```bash
-cd frontend
-pnpm --filter @citeladder/api entitlement:site-health --actor <admin-email> --workspace-id <workspace-uuid> --account-id <account-uuid> --reason "local allowance" --idempotency-key <key> --monitored-urls <allowance> --valid-from <ISO-date> # add --apply after preview
-```
+monitored-URL allowance locally, run the Site Health allowance command under
+[Project utility scripts](#project-utility-scripts) with `DATABASE_URL` pointing
+at the target database.
 
 The command issues an audited operator `override` grant through the append-only write
 service (`services/api/src/entitlements/grants.ts`), re-projects the

@@ -163,10 +163,8 @@ with where the business stands:
 | Not read yet / blocked / last read failed | No successful reading under the roster in force; says why and shows no verdicts. |
 | A competitor's or your own page | Never judged as a place to be listed. |
 
-Below that: when the page was last read and how much was readable, its type
-and how that was established, its use over time as a share of answers, the
-engines that used it, the brands named in the answers that cited it (labelled
-as such) and the prompts.
+Brands named in the answers that cited the page are labelled as such, never
+as listed on it.
 
 ## Boundaries
 
