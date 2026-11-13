@@ -17,20 +17,15 @@ const agentRunStatusSchema = z.enum([
 // One committed piece of an active run. A model call (`tool` null) is in
 // flight (`working`), being processed (`processing`) or done (`reasoned`);
 // each read it requested follows it with its `call_id` and outcome
-// (`completed`, `unavailable`, `failed`, `refused`).
+// (`completed`, `unavailable`, `failed`, `refused`) and `target`.
 export const agentRunStepSchema = responseObject({
   ordinal: z.number().int(),
   status: z.string(),
   tool: z.string().nullable(),
   call_id: z.string().nullable(),
-  model_attempt_id: uuid(),
-  tool_attempt_id: uuid().nullable(),
   run_attempt: z.number().int(),
-  runtime_version: z.string(),
-  protocol_version: z.string(),
-  registry_version: z.string(),
-  skill_catalog_version: z.string(),
-  projection_version: z.string(),
+  /** What a read looked at, from its free-text arguments; never an id. */
+  target: z.string().nullable(),
 });
 
 export const agentRunSchema = responseObject({
@@ -85,6 +80,7 @@ export const agentTurnEventSchema = z.discriminatedUnion('type', [
     call_id: z.string(),
     tool: z.string(),
     status: agentToolStatusSchema,
+    target: z.string().nullable().default(null),
   }),
   z.object({ type: z.literal('done'), run: agentRunSchema }),
   z.object({ type: z.literal('error'), code: z.string() }),
@@ -139,18 +135,38 @@ export const agentOutputSchema = responseObject({
   latest_revision: agentRevisionSchema,
 });
 
-// A step summary is `{kind: 'model', ordinal}`, `{kind: 'skill', skill_id}`,
-// `{kind: 'document'}`, `{kind: 'tool', tool, status, call_id, ordinal}` or
-// `{kind: 'search', query, status, call_id, ordinal}` (a web search).
-const agentStepSchema = responseObject({
-  kind: z.string(),
-  ordinal: z.number().int().optional(),
-  skill_id: z.string().optional(),
-  tool: z.string().optional(),
-  status: z.string().optional(),
-  call_id: z.string().optional(),
-  query: z.string().optional(),
-});
+/**
+ * What a reply's turn did, in order. A `model` step marks each model call (a
+ * reply the model wrote has at least one); a `tool` step's `target` and a
+ * `search` step's `query` are free text the model wrote, scrubbed of ids.
+ */
+export const agentStepSchema = z.discriminatedUnion('kind', [
+  responseObject({ kind: z.literal('model'), ordinal: z.number().int() }),
+  responseObject({ kind: z.literal('skill'), skill_id: z.string() }),
+  responseObject({
+    kind: z.literal('document'),
+    action: z.enum(['created', 'replaced', 'edited']),
+    number: z.number().int(),
+    title: z.string(),
+  }),
+  responseObject({ kind: z.literal('suggestion') }),
+  responseObject({
+    kind: z.literal('tool'),
+    ordinal: z.number().int(),
+    tool: z.string(),
+    status: z.string(),
+    call_id: z.string(),
+    target: z.string().nullable().default(null),
+  }),
+  responseObject({
+    kind: z.literal('search'),
+    ordinal: z.number().int(),
+    status: z.string(),
+    call_id: z.string(),
+    query: z.string(),
+  }),
+]);
+export type AgentStep = z.infer<typeof agentStepSchema>;
 
 /** What a person attached to a message besides its text: a long paste, kept apart as data. */
 function attachmentSchema(text: z.ZodString) {

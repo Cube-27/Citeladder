@@ -10,6 +10,7 @@ import {
   agentRevisionsPageSchema,
   agentRunSchema,
   agentRunStepSchema,
+  agentStepSchema,
   type AgentChatOrigin,
 } from '@citeladder/contracts/agent';
 import type { Database } from '../db/database.ts';
@@ -22,6 +23,7 @@ import { workspaceChat } from './messages.ts';
 import { manifestSchema } from './context.ts';
 import { pageFetchView } from '../page-documents/reads.ts';
 import { openTargetChoice } from './target-adapter.ts';
+import { stepTarget } from './sources.ts';
 
 const iso = (date: Date | null) => date?.toISOString() ?? null;
 // First present reference wins; `action_id` can be attached after the chat started, so it ranks last.
@@ -72,6 +74,17 @@ export function revisionView(revision: {
     created_at: iso(revision.created_at),
   });
 }
+/** A reply's stored steps; one written before its kind's current shape is left out, not a failed read. */
+function messageSteps(steps: unknown) {
+  return z
+    .array(z.unknown())
+    .catch([])
+    .parse(steps)
+    .flatMap((step) => {
+      const parsed = agentStepSchema.safeParse(step);
+      return parsed.success ? [parsed.data] : [];
+    });
+}
 function modelStepStatus(outcome: string, latest: boolean) {
   if (outcome === 'dispatched') return 'working';
   if (outcome !== 'completed') return outcome;
@@ -87,7 +100,7 @@ export async function progress(db: Database, run: Run) {
   const [models, tools] = await Promise.all([
     db
       .selectFrom('agent_model_attempts')
-      .select(['id', 'ordinal', 'run_attempt', 'outcome'])
+      .select(['ordinal', 'run_attempt', 'outcome'])
       .where('workspace_id', '=', run.workspace_id)
       .where('run_id', '=', run.id)
       .orderBy('run_attempt')
@@ -95,15 +108,7 @@ export async function progress(db: Database, run: Run) {
       .execute(),
     db
       .selectFrom('agent_tool_attempts')
-      .select([
-        'id',
-        'ordinal',
-        'run_attempt',
-        'call_id',
-        'tool_name',
-        'status',
-        'registry_version',
-      ])
+      .select(['id', 'ordinal', 'run_attempt', 'call_id', 'tool_name', 'status', 'input'])
       .where('workspace_id', '=', run.workspace_id)
       .where('run_id', '=', run.id)
       .orderBy('run_attempt')
@@ -113,12 +118,6 @@ export async function progress(db: Database, run: Run) {
       .execute(),
   ]);
   const live = active.includes(run.status);
-  const versions = {
-    runtime_version: run.runtime_version,
-    protocol_version: run.protocol_version,
-    skill_catalog_version: run.skill_catalog_version,
-    projection_version: agentPolicy.progress_version,
-  };
   return models.flatMap((model, index) => [
     agentRunStepSchema.parse({
       ordinal: model.ordinal,
@@ -129,11 +128,8 @@ export async function progress(db: Database, run: Run) {
       ),
       tool: null,
       call_id: null,
-      model_attempt_id: model.id,
-      tool_attempt_id: null,
       run_attempt: model.run_attempt,
-      registry_version: run.registry_version,
-      ...versions,
+      target: null,
     }),
     ...tools
       .filter((tool) => tool.run_attempt === model.run_attempt && tool.ordinal === model.ordinal)
@@ -143,11 +139,8 @@ export async function progress(db: Database, run: Run) {
           status: tool.status,
           tool: tool.tool_name,
           call_id: tool.call_id,
-          model_attempt_id: model.id,
-          tool_attempt_id: tool.id,
           run_attempt: tool.run_attempt,
-          registry_version: tool.registry_version,
-          ...versions,
+          target: stepTarget(tool.input),
         }),
       ),
   ]);
@@ -264,6 +257,7 @@ export async function readChat(
         created_at: iso(message.created_at),
         evidence_refs: revisionRefs(message.evidence_refs),
         web_sources: revisionWebSources(message.web_sources),
+        steps: messageSteps(message.steps),
       }),
     ),
     latest_run: run ? runView(run, await progress(db, run)) : null,

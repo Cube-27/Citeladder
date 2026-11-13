@@ -25,7 +25,7 @@ export function revision(id: string, number: number, author: 'agent' | 'user', b
 type DetailRun = {
   status: string;
   error_code?: string;
-  progress?: { ordinal: number; status: string; tool: string | null }[];
+  progress?: { ordinal: number; status: string; tool: string | null; target?: string | null }[];
 };
 
 const DEFAULT_RUN: DetailRun = { status: 'succeeded' };
@@ -74,7 +74,13 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
         steps: [
           { kind: 'model', ordinal: 1 },
           { kind: 'skill', skill_id: 'gsc_optimize' },
-          { kind: 'tool', ordinal: 1, tool: 'read_integration_status', status: 'completed' },
+          {
+            kind: 'tool',
+            ordinal: 1,
+            tool: 'read_integration_status',
+            status: 'completed',
+            call_id: 'call_1',
+          },
           { kind: 'model', ordinal: 2 },
         ],
         created_at: NOW,
@@ -91,15 +97,9 @@ export function detail(latest: ReturnType<typeof revision>, run: DetailRun = DEF
       created_at: NOW,
       completed_at: NOW,
       progress: (run.progress ?? []).map((step) => ({
-        model_attempt_id: RUN,
-        tool_attempt_id: null,
         call_id: null,
         run_attempt: 1,
-        runtime_version: 'agent-runtime-2',
-        protocol_version: 'agent-protocol-1',
-        registry_version: 'agent-tools-2',
-        skill_catalog_version: 'test-catalog',
-        projection_version: 'agent-progress-1',
+        target: null,
         ...step,
       })),
     },

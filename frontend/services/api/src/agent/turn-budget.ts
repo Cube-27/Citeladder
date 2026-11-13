@@ -1,19 +1,12 @@
+import type { z } from 'zod';
+import type { agentStepSchema } from '@citeladder/contracts/agent';
 import type { ConversationBlock, ConversationMessage } from '../models/conversation.ts';
 import type { DocumentState } from './builtin-tools.ts';
 import { AgentError, type Budget } from './contracts.ts';
 import type { AgentModel } from './model-calls.ts';
 import { refused, type ToolOutcome } from './tools.ts';
 
-type StepRecord = {
-  kind: 'model' | 'skill' | 'document' | 'suggestion' | 'tool' | 'search';
-  ordinal?: number;
-  skill_id?: string;
-  tool?: string;
-  status?: string;
-  call_id?: string;
-  /** A web search's query, as the model wrote it. */
-  query?: string;
-};
+type StepRecord = z.input<typeof agentStepSchema>;
 export type TurnState = DocumentState & {
   /** Records this turn's reads supplied to the model: the reply's sources. */
   read: string[];

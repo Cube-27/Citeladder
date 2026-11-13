@@ -1,6 +1,8 @@
 import { renderHook } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 
+import { agentTurnEventSchema } from '@citeladder/contracts/agent';
+import { activityRows, callStep } from './activity';
 import { applyTurnEvent, liveTurn, startLiveTurn, useLiveTurn, type TurnEvent } from './live-turns';
 
 afterEach(() => {
@@ -137,17 +139,39 @@ it('appends one call’s reply and thinking, and lets a later call’s text repl
   });
 });
 
-it('tracks each parallel call by its id and keeps the newest document snapshot', () => {
-  const turn = fold([
-    { type: 'tool', ordinal: 1, call_id: 'a', tool: 'read_site_health', status: 'started' },
-    { type: 'tool', ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'started' },
-    { type: 'tool', ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'unavailable' },
-    { type: 'document_delta', ordinal: 2, title: 'Plan', body: 'Draft' },
-    { type: 'document_delta', ordinal: 2, title: 'Plan', body: 'Draft with more' },
-  ]);
+it('tracks each parallel call by its id and target, and keeps the newest document snapshot', () => {
+  const turn = fold(
+    [
+      {
+        type: 'tool',
+        ordinal: 1,
+        call_id: 'a',
+        tool: 'read_page_text',
+        status: 'started',
+        target: 'https://acme.example/returns',
+      },
+      // A frame from before targets were sent reads as no target.
+      { type: 'tool', ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'started' },
+      { type: 'tool', ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'unavailable' },
+      { type: 'document_delta', ordinal: 2, title: 'Plan', body: 'Draft' },
+      { type: 'document_delta', ordinal: 2, title: 'Plan', body: 'Draft with more' },
+    ].map((event) => agentTurnEventSchema.parse(event)),
+  );
   expect(turn.tools).toEqual([
-    { ordinal: 1, call_id: 'a', tool: 'read_site_health', status: 'started' },
-    { ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'unavailable' },
+    {
+      ordinal: 1,
+      call_id: 'a',
+      tool: 'read_page_text',
+      status: 'started',
+      target: 'https://acme.example/returns',
+    },
+    { ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'unavailable', target: null },
+  ]);
+  expect(
+    activityRows(turn.tools.map(callStep)).map(({ verb, noun, detail }) => [verb, noun, detail]),
+  ).toEqual([
+    ['Reading', 'page', 'https://acme.example/returns'],
+    ['Read', 'search performance', 'no data yet'],
   ]);
   expect(turn.document).toEqual({ title: 'Plan', body: 'Draft with more' });
 });

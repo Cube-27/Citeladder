@@ -729,26 +729,19 @@ describe('Agent runtime on PostgreSQL', () => {
     ]);
     expect(events).toHaveLength(6);
     expect(events).toEqual(
-      expect.arrayContaining([
-        {
+      expect.arrayContaining(
+        [
+          ['call_a', 'completed'],
+          ['call_b', 'completed'],
+          ['call_c', 'refused'],
+        ].map(([call_id, status]) => ({
           ordinal: 1,
-          call_id: 'call_a',
+          call_id,
           tool: 'read_evidence',
-          status: 'completed',
-        },
-        {
-          ordinal: 1,
-          call_id: 'call_b',
-          tool: 'read_evidence',
-          status: 'completed',
-        },
-        {
-          ordinal: 1,
-          call_id: 'call_c',
-          tool: 'read_evidence',
-          status: 'refused',
-        },
-      ]),
+          status,
+          target: null,
+        })),
+      ),
     );
     // Each model call is followed by its reads, which are listed as they finished.
     const rows = (await progress(db, await fixtures.run(run.id))).map(
@@ -938,7 +931,10 @@ describe('Agent runtime on PostgreSQL', () => {
     const uri = `citeladder://project/${scope.projectId}`;
     const fake = scripted(
       [
-        [toolUse('load_skill', { skill_id: 'plan' }), toolUse('read_evidence', {}, 'call_read')],
+        [
+          toolUse('load_skill', { skill_id: 'plan' }),
+          toolUse('read_evidence', { query: `school\n uniform ${uri}` }, 'call_read'),
+        ],
         save('Use the supplied evidence.'),
         reply(`Read ${uri}; invented citeladder://project/${randomUUID()}.`),
       ],
@@ -978,12 +974,16 @@ describe('Agent runtime on PostgreSQL', () => {
           tool: 'read_evidence',
           status: 'completed',
           call_id: 'call_read',
+          target: 'school uniform',
         },
         { kind: 'model', ordinal: 2 },
-        { kind: 'document' },
+        { kind: 'document', action: 'created', number: 1, title: 'Document' },
         { kind: 'model', ordinal: 3 },
       ],
     });
+    expect(
+      detail.latest_run?.progress.flatMap((step) => (step.tool ? [[step.tool, step.target]] : [])),
+    ).toEqual([['read_evidence', 'school uniform']]);
     expect(detail.outputs).toMatchObject([
       {
         number: 1,

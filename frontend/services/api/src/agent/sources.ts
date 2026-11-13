@@ -1,4 +1,6 @@
+import { record } from '../db/json.ts';
 import type { WebSource } from '../models/conversation.ts';
+import { agentPolicy } from './contracts.ts';
 
 /**
  * A turn's sources are the records its reads returned, not references the
@@ -55,6 +57,27 @@ export function scrubRecordRefs(text: string, keep: ReadonlySet<string> = new Se
     .split('\n')
     .map((line) => scrubLine(line, keep))
     .join('\n');
+}
+
+/** Model-written text shown in a step: on one line, without record ids, bounded. */
+export function stepText(text: string) {
+  return scrubRecordRefs(text.replaceAll(/\s+/gu, ' '))
+    .trim()
+    .slice(0, agentPolicy.step_detail_max_chars);
+}
+
+// Free-text arguments only: ids, UUID fields, enums and budgets never name what a read looked at.
+const TARGET_ARGUMENTS = ['url', 'query', 'domain', 'entity', 'folder'] as const;
+
+/** What a read looked at, from the first free-text argument the model gave it. */
+export function stepTarget(input: unknown) {
+  const args = record(input);
+  for (const name of TARGET_ARGUMENTS) {
+    const value = args[name];
+    const text = typeof value === 'string' ? stepText(value) : '';
+    if (text) return text;
+  }
+  return null;
 }
 
 /** The records one read supplied to the model, as the `citeladder://` references screens resolve. */

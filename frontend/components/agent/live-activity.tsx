@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 
+import { ActivityChain } from '@/components/agent/activity-chain';
 import { LiveReply } from '@/components/agent/live-reply';
 import { Callout } from '@/components/ui/callout';
-import { Disclosure } from '@/components/ui/disclosure';
+import { ChainOfThoughtStep } from '@/components/ui/chain-of-thought';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
-import { runErrorCopy, runStepLabel, toolCallLabel } from '@/lib/agent/vocabulary';
+import { activityLabel, activityRows, callStep, modelStepLabel } from '@/lib/agent/activity';
+import { runErrorCopy } from '@/lib/agent/vocabulary';
 import { isPageReading, runOutcome } from '@/lib/agent/run-state';
 import { useLiveTurn, type LiveTurn } from '@/lib/agent/live-turns';
 import type { AgentChatDetail, AgentRun } from '@/lib/api/agent';
@@ -65,7 +67,13 @@ function RunningState({
       ? 'Waiting to start…'
       : (liveStepLabel(live) ?? activeStepLabel(run.progress, run.attempt_count));
   // The current model call's tool calls run at the same time.
-  const current = live?.tools.filter((tool) => tool.ordinal === live.step) ?? [];
+  const current = activityRows(
+    (live?.tools.filter((tool) => tool.ordinal === live.step) ?? []).map(callStep),
+  );
+  // An open stream is the freshest record of the turn; without one the run is polled.
+  const done = activityRows(
+    live?.connected ? live.tools.map(callStep) : run.progress.map(callStep),
+  );
   return (
     <Stack gap="compact">
       <Inline as="span" gap="compact" className={textRole('caption')}>
@@ -78,26 +86,29 @@ function RunningState({
       </Inline>
       {current.length > 1 ? (
         <Stack as="ul" gap="tight" aria-label="Current reads" className={treeBranchClasses()}>
-          {current.map((tool) => (
-            <li key={tool.call_id} className={textRole('caption')}>
-              {toolCallLabel(tool)}
-            </li>
+          {current.map((row) => (
+            <ChainOfThoughtStep
+              key={row.key}
+              label={activityLabel(row)}
+              detail={row.detail}
+              status={row.state}
+            />
           ))}
         </Stack>
       ) : null}
-      {run.progress.length > 0 ? <RunActivity progress={run.progress} /> : null}
+      <ActivityChain rows={done} />
     </Stack>
   );
 }
 /** What the newest model call is doing: its running reads, else deciding. */
 function liveStepLabel(live: LiveTurn | undefined) {
   if (!live?.step) return null;
-  const running = live.tools.filter(
-    (tool) => tool.ordinal === live.step && tool.status === 'started',
-  );
+  const running = activityRows(
+    live.tools.filter((tool) => tool.ordinal === live.step).map(callStep),
+  ).filter((row) => row.state === 'running');
   if (running.length > 1) return `Running ${running.length} reads at once…`;
-  if (running[0]) return toolCallLabel(running[0]);
-  return runStepLabel({ status: 'working', tool: null });
+  if (running[0]) return `${activityLabel(running[0])}…`;
+  return modelStepLabel('working');
 }
 function Elapsed({ since }: Readonly<{ since: number }>) {
   const now = useNow(1000);
@@ -115,21 +126,8 @@ function useNow(intervalMs: number) {
 function activeStepLabel(progress: AgentRun['progress'], attemptCount: number | undefined) {
   const currentAttempt = attemptCount ?? progress.at(-1)?.run_attempt;
   const current = [...progress].reverse().find((step) => step.run_attempt === currentAttempt);
-  return current ? runStepLabel(current) : 'The agent is working…';
-}
-function RunActivity({ progress }: Readonly<{ progress: AgentRun['progress'] }>) {
-  return (
-    <Disclosure title="View activity">
-      <Stack as="ol" gap="tight" aria-label="Agent progress" className={treeBranchClasses()}>
-        {progress.map((step) => (
-          <li
-            key={`${step.run_attempt}:${step.ordinal}:${step.call_id ?? 'model'}`}
-            className={textRole('caption')}
-          >
-            {runStepLabel(step)}
-          </li>
-        ))}
-      </Stack>
-    </Disclosure>
-  );
+  if (!current) return 'The agent is working…';
+  if (current.tool === null) return modelStepLabel(current.status);
+  const [row] = activityRows([callStep(current)]);
+  return row ? activityLabel(row) : modelStepLabel('working');
 }

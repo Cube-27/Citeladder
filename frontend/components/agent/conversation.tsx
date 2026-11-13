@@ -1,6 +1,7 @@
 import { Pencil, RotateCcw } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { ActivityChain } from '@/components/agent/activity-chain';
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { LiveActivity } from '@/components/agent/live-activity';
 import { MessageTime } from '@/components/agent/message-time';
@@ -23,7 +24,7 @@ import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
 import { agentHandoffHref } from '@/lib/agent/handoff';
-import { runStepLabel, toolCallLabel } from '@/lib/agent/vocabulary';
+import { activityRows } from '@/lib/agent/activity';
 import { runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentOutput } from '@/lib/api/agent';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
@@ -258,17 +259,7 @@ function MessageBubble({
         </CopyButton>
       </Inline>
       <WebSources sources={message.web_sources} />
-      {message.steps.length > 0 ? (
-        <Disclosure title={runSummary(message.steps)}>
-          <Stack as="ul" gap="tight" className={treeBranchClasses()}>
-            {message.steps.map((step, index) => (
-              <li key={`${step.kind}-${index}`} className={textRole('caption')}>
-                {stepLabel(step)}
-              </li>
-            ))}
-          </Stack>
-        </Disclosure>
-      ) : null}
+      <ActivityChain rows={activityRows(message.steps)} />
     </AgentTurn>
   );
 }
@@ -377,35 +368,4 @@ function FollowUps({
       ) : null}
     </Stack>
   );
-}
-
-type MessageStep = AgentMessage['steps'][number];
-
-function runSummary(steps: readonly MessageStep[]): string {
-  const count = (kind: string) => steps.filter((step) => step.kind === kind).length;
-  const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
-  const calls = count('model'),
-    reads = steps.filter((step) => step.kind === 'tool' && step.status !== 'refused').length,
-    searches = count('search');
-  return [
-    'Run complete',
-    plural(calls, 'model call', 'model calls'),
-    reads > 0 ? plural(reads, 'data read', 'data reads') : null,
-    searches > 0 ? plural(searches, 'web search', 'web searches') : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
-
-function stepLabel(step: MessageStep): string {
-  if (step.kind === 'skill') return toolCallLabel({ tool: 'load_skill', status: 'completed' });
-  if (step.kind === 'document')
-    return toolCallLabel({ tool: 'save_document', status: 'completed' });
-  if (step.kind === 'suggestion')
-    return toolCallLabel({ tool: 'suggest_edits', status: 'completed' });
-  if (step.kind === 'search')
-    return step.query ? `Searched the web: ${step.query}` : 'Searched the web';
-  if (step.kind === 'tool')
-    return runStepLabel({ tool: step.tool ?? 'read_data', status: step.status ?? 'unknown' });
-  return step.ordinal ? `Model call ${step.ordinal}` : 'Worked on the reply';
 }

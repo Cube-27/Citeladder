@@ -441,8 +441,8 @@ The runtime emits display-only events
 - `thinking`: the next piece of its thinking summary;
 - `document_delta`: the document being saved so far, as a throttled snapshot;
 - `tool`: one call's state (`started`, then `completed`, `unavailable`,
-  `refused` or `failed`), keyed by call ID; a hosted web search is the tool
-  `web_search`.
+  `refused` or `failed`), keyed by call ID, with the same `target` its saved
+  step keeps; a hosted web search is the tool `web_search`.
 
 The settlement transaction saves the validated message and revision; partial
 text is never persisted.
@@ -498,9 +498,18 @@ The full chat and the Dashboard panel share one thread and composer
   are written;
 - the activity line names the current call in plain words with elapsed time,
   and lists the reads a response runs together;
-- a saved reply's run summary counts its model calls, data reads and web
-  searches, and its web sources are listed under the reply as links apart
-  from its cited CiteLadder records;
+- a turn's activity, live or saved, is one collapsed line grouped by verb
+  ("Read Actions and AI visibility · searched the web · saved Document 1")
+  that opens to a row per call: verb, the reader's noun and a muted detail.
+  Both views build rows with one function
+  ([`activity.ts`](../frontend/lib/agent/activity.ts)); model calls are not
+  rows, refused calls are hidden and failed ones say "Couldn't …". A read's
+  detail is its `target`: the first free-text argument (`url`, `query`,
+  `domain`, `entity`, `folder`) on one line, scrubbed of record references and
+  UUIDs and bounded by config, never an ID, enum or budget. A document step
+  keeps its action (created, replaced, edited), number and title;
+- a saved reply's web sources are listed under it as links apart from its
+  cited CiteLadder records;
 - a link in a reply or document opens directly only to the project's site or
   owned domains, the turn's or revision's web sources, or CiteLadder itself
   (subdomains included); any other link, and every `mailto:`, first opens a

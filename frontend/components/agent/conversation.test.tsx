@@ -71,8 +71,8 @@ describe('Conversation order', () => {
   );
 });
 
-describe('A finished reply’s run summary', () => {
-  it('counts model calls and data reads and lists what each step did', async () => {
+describe('A finished reply’s activity', () => {
+  it('summarises what the turn did by verb and lists each visible step without model calls', async () => {
     mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
     renderWithProviders(
       <Conversation
@@ -83,14 +83,13 @@ describe('A finished reply’s run summary', () => {
         canSend
       />,
     );
-    const summary = await screen.findByText(/^Run complete/u);
-    expect(summary).toHaveTextContent('Run complete · 2 model calls · 1 data read');
+    const summary = await screen.findByText('Loaded the method · read connected data');
     expect(
       Array.from(summary.parentElement?.querySelectorAll('li') ?? [], (item) => item.textContent),
-    ).toEqual(['Model call 1', 'Loaded the method', 'Read integration status', 'Model call 2']);
+    ).toEqual(['Loaded the method', 'Read connected data']);
   });
 
-  it('counts web searches, leaves refused reads out of the data reads and lists pages apart from CiteLadder records', async () => {
+  it('shows each step’s detail, hides refused reads and lists pages apart from CiteLadder records', async () => {
     mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)));
     const current = detail(revision(REV2, 2, 'agent', 'Saved result.'));
     const [request, reply] = current.messages;
@@ -102,10 +101,25 @@ describe('A finished reply’s run summary', () => {
           ...reply,
           steps: [
             { kind: 'model', ordinal: 1 },
-            { kind: 'search', ordinal: 1, query: 'acme pricing', status: 'completed' },
-            { kind: 'tool', ordinal: 1, tool: 'fetch', status: 'refused' },
-            { kind: 'tool', ordinal: 1, tool: 'read_actions', status: 'completed' },
+            {
+              kind: 'search',
+              ordinal: 1,
+              query: 'acme pricing',
+              status: 'completed',
+              call_id: 's1',
+            },
+            { kind: 'tool', ordinal: 1, tool: 'fetch', status: 'refused', call_id: 'a' },
+            { kind: 'tool', ordinal: 1, tool: 'read_actions', status: 'completed', call_id: 'b' },
+            {
+              kind: 'tool',
+              ordinal: 1,
+              tool: 'read_page_text',
+              status: 'completed',
+              call_id: 'c',
+              target: 'https://acme.example/returns',
+            },
             { kind: 'model', ordinal: 2 },
+            { kind: 'document', action: 'edited', number: 1, title: 'Pricing page edits' },
           ],
           web_sources: [{ url: 'https://acme.example/pricing', title: 'Acme pricing' }],
         },
@@ -120,16 +134,16 @@ describe('A finished reply’s run summary', () => {
         canSend
       />,
     );
-    const summary = await screen.findByText(/^Run complete/u);
-    expect(summary).toHaveTextContent('Run complete · 2 model calls · 1 data read · 1 web search');
+    const summary = await screen.findByText(
+      'Searched the web · read Actions and page · edited Document 1',
+    );
     expect(
       Array.from(summary.parentElement?.querySelectorAll('li') ?? [], (item) => item.textContent),
     ).toEqual([
-      'Model call 1',
-      'Searched the web: acme pricing',
-      'Fetch · not allowed',
-      'Read actions',
-      'Model call 2',
+      'Searched the web acme pricing',
+      'Read Actions',
+      'Read page https://acme.example/returns',
+      'Edited Document 1 Pricing page edits',
     ]);
     const sources = screen.getByRole('region', { name: 'Web sources' });
     expect(within(sources).getByRole('link', { name: /Acme pricing/u })).toHaveAttribute(

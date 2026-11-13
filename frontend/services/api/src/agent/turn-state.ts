@@ -5,6 +5,7 @@ import {
   type ConversationBlock,
 } from '../models/conversation.ts';
 import { AgentError, type SkillCatalog } from './contracts.ts';
+import { stepText } from './sources.ts';
 import type { ModelResult } from './model-calls.ts';
 import type { chatDocuments } from './outputs.ts';
 import type { Turn } from './runtime.ts';
@@ -67,6 +68,18 @@ export function initialState(catalog: SkillCatalog, turn: Turn): TurnState {
     contextHash: '',
   };
 }
+/** A document a built-in staged: new to the chat, saved whole over an earlier one, or edited. */
+export function documentStep(
+  turn: Turn,
+  state: TurnState,
+  { number, edit }: { number: number; edit: boolean },
+) {
+  let action: 'created' | 'replaced' | 'edited' = 'created';
+  if (edit) action = 'edited';
+  else if (turn.documents.some(({ output }) => output.number === number)) action = 'replaced';
+  const title = stepText(state.staged.get(number)?.payload.title ?? '');
+  return { kind: 'document', action, number, title } as const;
+}
 /** Records one response's web searches: a step per result, and the pages each returned. */
 function searched(state: TurnState, ordinal: number, blocks: ConversationBlock[]) {
   const { calls, results } = webSearchBlocks(blocks);
@@ -77,7 +90,7 @@ function searched(state: TurnState, ordinal: number, blocks: ConversationBlock[]
       ordinal,
       status: sources ? 'completed' : 'failed',
       call_id: callId.slice(0, 64),
-      query: (state.queries.get(callId) ?? '').slice(0, 200),
+      query: stepText(state.queries.get(callId) ?? ''),
     });
     for (const source of sources ?? [])
       if (!state.web.has(source.url)) state.web.set(source.url, source.title);

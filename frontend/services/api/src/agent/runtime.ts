@@ -42,7 +42,14 @@ import {
 } from './outputs.ts';
 import { lockRun, terminalize } from './queue.ts';
 import { appendMessage, appendRecoveryReply, getChat, touchChat, turnRequest } from './messages.ts';
-import { readSources, scrubRecordRefs, uniqueSources, uniqueWeb, writtenIds } from './sources.ts';
+import {
+  readSources,
+  scrubRecordRefs,
+  stepTarget,
+  uniqueSources,
+  uniqueWeb,
+  writtenIds,
+} from './sources.ts';
 import { documentEmitter, type TurnEvents } from './stream.ts';
 import {
   chatTranscripts,
@@ -79,7 +86,13 @@ import {
   type PromptSummary,
   type StoppedTurn,
 } from './turn-ending.ts';
-import { accepted, initialState, pageDocuments, reportedSearches } from './turn-state.ts';
+import {
+  accepted,
+  documentStep,
+  initialState,
+  pageDocuments,
+  reportedSearches,
+} from './turn-state.ts';
 
 export type RuntimeDependencies = {
   catalog: SkillCatalog;
@@ -352,8 +365,9 @@ export class AgentRuntime {
     let parallel = 0;
     const pending = calls.map((call, index) => {
       const callId = (call.id || `call_${index}`).slice(0, 64);
+      const target = isBuiltin(call.name) ? null : stepTarget(call.input);
       const tool = (status: Parameters<NonNullable<TurnEvents['tool']>>[0]['status']) =>
-        events?.tool?.({ ordinal, call_id: callId, tool: call.name, status });
+        events?.tool?.({ ordinal, call_id: callId, tool: call.name, status, target });
       tool('started');
       if (last) {
         tool('refused');
@@ -398,11 +412,12 @@ export class AgentRuntime {
       if (outcome.ok) state.steps.push({ kind: 'suggestion' });
       return outcome;
     }
-    const outcome =
-      call.name === EDIT_DOCUMENT
-        ? editDocument(catalog, state, call.input, turn.budget)
-        : saveDocument(catalog, state, call.input, turn.budget);
-    if (outcome.ok) state.steps.push({ kind: 'document' });
+    const edit = call.name === EDIT_DOCUMENT;
+    const outcome = edit
+      ? editDocument(catalog, state, call.input, turn.budget)
+      : saveDocument(catalog, state, call.input, turn.budget);
+    if (outcome.ok && outcome.document)
+      state.steps.push(documentStep(turn, state, { number: outcome.document, edit }));
     return outcome;
   }
   private async read(
@@ -440,6 +455,7 @@ export class AgentRuntime {
       tool: call.name,
       status: outcome.status,
       call_id: call.id,
+      target: stepTarget(call.input),
     });
     state.read.push(...readSources(outcome.received));
     return outcome;
