@@ -70,10 +70,13 @@ export function useComposerCommands({
   // A paste has no id of its own; a key per paste lets one be removed.
   const pasteCount = useRef(0);
   const keyed = (text: string) => ({ key: `paste-${++pasteCount.current}`, text });
+  // What the chips hold when a send goes out, which may be after its links resolve.
   const latestMentions = useRef(mentions);
+  const latestPastes = useRef(pastes);
   useEffect(() => {
     latestMentions.current = mentions;
-  }, [mentions]);
+    latestPastes.current = pastes;
+  }, [mentions, pastes]);
   const [resolving, setResolving] = useState(false);
   const resolvingRef = useRef(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -161,12 +164,11 @@ export function useComposerCommands({
     prepare: ({ message, edit }, send) => {
       // One send at a time: a second press while links resolve would start a second turn.
       if (resolvingRef.current) return;
-      const attachments = pasteAttachments(pastes);
       const finish = (text: string) =>
         send({
           message: text,
           mentions: latestMentions.current.map((mention) => mention.id),
-          attachments,
+          attachments: pasteAttachments(latestPastes.current),
         });
       if (!actionLinks(message, { origin: window.location.origin, projectId }).length) {
         finish(message);
