@@ -22,7 +22,7 @@ function report(button: HTMLButtonElement, copied: boolean) {
   timers.set(
     button,
     window.setTimeout(() => {
-      button.removeAttribute('data-copied');
+      delete button.dataset.copied;
       if (status) status.textContent = '';
     }, RESET_MS),
   );

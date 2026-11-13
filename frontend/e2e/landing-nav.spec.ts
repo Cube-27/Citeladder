@@ -16,13 +16,23 @@ const DROP_KEYS = NAV_DROPS.map((drop) => drop.key);
 
 /**
  * Open a page once its islands are interactive. The desktop menus hydrate
- * with `client:load`, after the load event `goto` waits for; a key pressed
- * before then reaches server-rendered markup with no handler. Astro removes
- * an island's `ssr` attribute when it hydrates.
+ * with `client:media` only where their query matches (1280px and wider),
+ * after the load event `goto` waits for; a key pressed before then reaches
+ * server-rendered markup with no handler. Astro removes an island's `ssr`
+ * attribute when it hydrates; a media island whose query fails never does.
  */
 async function open(page: Page, path: string): Promise<void> {
   await page.goto(path);
-  await page.waitForFunction(() => !document.querySelector('astro-island[ssr]'));
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll('astro-island[ssr]')].every((island) => {
+      const query: unknown = JSON.parse(island.getAttribute('opts') ?? '{}').value;
+      return (
+        island.getAttribute('client') === 'media' &&
+        typeof query === 'string' &&
+        !matchMedia(query).matches
+      );
+    }),
+  );
 }
 
 const mainNav = (page: Page) => page.getByRole('navigation', { name: 'Main navigation' });

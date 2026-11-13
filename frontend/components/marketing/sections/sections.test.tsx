@@ -424,7 +424,9 @@ describe('ToolPanel', () => {
 
   it('shows a refused copy until the next press', async () => {
     vi.useFakeTimers();
-    const writeText = vi.fn(() => Promise.reject(new DOMException('Denied', 'NotAllowedError')));
+    const writeText = vi.fn((): Promise<void> =>
+      Promise.reject(new DOMException('Denied', 'NotAllowedError')),
+    );
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
     render(
       <ToolPanel title="Robots.txt generator" form={null} result={<pre>x</pre>} copyText="x" />,
