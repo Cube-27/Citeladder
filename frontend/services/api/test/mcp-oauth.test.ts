@@ -10,7 +10,7 @@ import { loadMcpConfig } from '../src/mcp/config.ts';
 import { authorizedWorkspaceIds, authorizeProject } from '../src/mcp/data.ts';
 import { authenticateMcp, consentCsrf, tokenHash } from '../src/mcp/oauth.ts';
 import { admitRegistration, admitToolCall, registerClient } from '../src/mcp/registration.ts';
-import { pruneUsageWindows } from '../src/abuse/usage.ts';
+import { budget, pruneUsageWindows, spendBudget } from '../src/abuse/usage.ts';
 import { changePassword, consumeChallenge } from '../src/auth/challenges.ts';
 import { hashPassword } from '../src/auth/password.ts';
 import { logoutUser } from '../src/auth/service.ts';
@@ -1002,14 +1002,13 @@ it('caps tool calls per connection and refuses the next until the window ends', 
   onTestFinished(() => {
     vi.useRealTimers();
   });
-  for (let call = 0; call < mcpPolicy.tool_call_grant_limit; call++)
-    await admitToolCall(db, principal.grantId, principal.userId);
-  const refused = await admitToolCall(db, principal.grantId, principal.userId).catch(
-    (error: unknown) => error,
-  );
-  expect(refused).toBeInstanceOf(ApiError);
-  expect((refused as ApiError).status).toBe(429);
-  expect((refused as ApiError).headers?.['retry-after']).toBe('45');
+  const grantBudget = budget('mcp_tool_call_grant');
+  await spendBudget(db, grantBudget, principal.grantId, { amount: grantBudget.limit - 1 });
+  await admitToolCall(db, principal.grantId, principal.userId);
+  await expect(admitToolCall(db, principal.grantId, principal.userId)).rejects.toMatchObject({
+    status: 429,
+    headers: { 'retry-after': '45' },
+  });
 });
 
 /** What a person sees on a consent page: its form inputs and its visible text. */
