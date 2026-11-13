@@ -20,7 +20,7 @@ import {
   ProviderError,
   type BillingProvider,
 } from './razorpay.ts';
-import { frozenTermsSchema, scheduledSchema } from './settlement.ts';
+import { frozenTermsSchema, scheduledSchema } from './settlement-terms.ts';
 import { activationResponse, createPending, dispatch, workspaceAccount } from './purchases.ts';
 
 /** Commits a downgrade for the period end; the provider switch follows the commit. */

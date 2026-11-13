@@ -1,110 +1,37 @@
 import { randomUUID } from 'node:crypto';
-import { sql } from 'kysely';
 import { z } from 'zod';
-import {
-  credentialModeSchema,
-  currencySchema,
-  resolvedQuoteSchema,
-} from '@citeladder/contracts/billing';
+import { resolvedQuoteSchema } from '@citeladder/contracts/billing';
 import type { Database } from '../db/database.ts';
 import {
   lockAccount,
   issueBundle,
   revokeBundle,
   bumpLifecycle,
-  grantSource,
   sourceRef,
 } from '../entitlements/grants.ts';
 import { catalog } from './catalog.ts';
 import { refuse } from './refusals.ts';
-import { amount, taxSnapshotSchema, type Pending, type Subscription } from './contracts.ts';
+import type { Pending, Subscription } from './contracts.ts';
 import type { Evidence, RefundEvidence, SubscriptionEvidence } from './razorpay.ts';
 import { recordPayment, recordRefund, type Payment } from './receipts.ts';
 import { policy } from '../config.ts';
 import { getLogger } from '../logging.ts';
+import { paidByPeriod, paidPeriod, periodRefunded, planName } from './settlement-reads.ts';
+import {
+  effectiveTerms,
+  followUps,
+  frozenTermsSchema,
+  grantedStates,
+  providerFailed,
+  refundCancelled,
+  renewedTerms,
+  scheduledSchema,
+  STATUS,
+  terminalStates,
+  verifiedReference,
+} from './settlement-terms.ts';
 
 const logger = getLogger('api.billing');
-
-export const frozenTermsSchema = z.object({
-  catalog_key: z.string(),
-  catalog_revision: z.string(),
-  credential_mode: credentialModeSchema,
-  quantity: amount.min(1),
-  price_ref: z.string(),
-  currency: currencySchema,
-  quote: resolvedQuoteSchema,
-  tax_snapshot: taxSnapshotSchema,
-  grant_specs: z.array(z.tuple([z.string(), amount])),
-});
-export const scheduledSchema = z.object({
-  direction: z.enum(['upgrade', 'downgrade']),
-  state: z.enum(['requested', 'scheduled', 'provider_rejected']),
-  catalog_key: z.string(),
-  effective_at: z.string(),
-  source: z.string(),
-  terms: frozenTermsSchema,
-});
-// `unpaid` (halted at the provider) stays current, so it blocks a second base
-// subscription, until the sweep's cancellation is confirmed.
-const STATUS = policy.billing.subscription_status;
-const grantedStates = new Set<string>([STATUS.active, STATUS.cancel_scheduled]);
-const terminalStates = new Set(policy.billing.contracts.terminal_subscription_statuses);
-/** A payment whose refunds total its amount no longer pays for its period (B52). */
-const refundedInFull = sql<boolean>`coalesce((
-  select sum(r.amount_minor) from billing_payments r
-  where r.parent_payment_id = billing_payments.id and r.receipt_kind = 'refund'
-), 0) >= billing_payments.amount_minor`;
-
-/**
- * Whether a payment for this subscription period was refunded in full: the
- * period's own payment (B52) or an upgrade bought in the period (B70).
- */
-export async function periodRefunded(
-  db: Database,
-  sub: Pick<Subscription, 'id' | 'billing_account_id'>,
-  start: Date | null,
-  end: Date | null,
-) {
-  if (!start || !end) return false;
-  const row = await db
-    .selectFrom('billing_payments')
-    .select('id')
-    .where('billing_account_id', '=', sub.billing_account_id)
-    .where('receipt_kind', '=', 'payment')
-    .where((eb) =>
-      eb.or([
-        eb.and([
-          eb('subscription_id', '=', sub.id),
-          eb('period_start', '=', start),
-          eb('period_end', '=', end),
-        ]),
-        eb.and([
-          eb('subscription_id', 'is', null),
-          eb(
-            'pending_activation_id',
-            'in',
-            eb
-              .selectFrom('pending_activations')
-              .select('id')
-              .where('billing_account_id', '=', sub.billing_account_id)
-              .where('activation_kind', '=', 'upgrade')
-              .where(sql<string>`change_terms->>'subscription_id'`, '=', sub.id),
-          ),
-          eb('paid_at', '>=', start),
-          eb('paid_at', '<', end),
-        ]),
-      ]),
-    )
-    .where(refundedInFull)
-    .executeTakeFirst();
-  return Boolean(row);
-}
-
-/** The frozen revision's display name for a plan, as receipts print it. */
-async function planName(db: Database, revision: string, key: string) {
-  const frozen = await catalog(db, revision);
-  return frozen.payload.plans.find((row) => row.key === key)?.name ?? key;
-}
 
 /** Takes the account lock through its owning workspace; returns that workspace. */
 export async function lockOwner(db: Database, accountId: string) {
@@ -120,33 +47,6 @@ export async function lockOwner(db: Database, accountId: string) {
 type Frozen = Awaited<ReturnType<typeof catalog>>;
 type Quote = z.infer<typeof resolvedQuoteSchema>;
 type PaymentRecord = Extract<Evidence, { kind: 'payment' }>;
-
-/** The provider record must be this intent's, in its mode and catalog revision. */
-function verifiedReference(pending: Pending, mode: string, evidence: Evidence) {
-  if (pending.provider !== 'razorpay' || pending.provider_mode !== mode)
-    refuse('provider_identity_mismatch');
-  const ref = evidence.kind === 'base' ? evidence.subscription.id : evidence.reference;
-  const notes = evidence.kind === 'base' ? evidence.subscription.notes : evidence.notes;
-  const differs = (value: string | undefined, expected: string) =>
-    Boolean(value) && value !== expected;
-  if (
-    pending.external_reference !== ref ||
-    differs(notes.citeladder_intent_id, pending.id) ||
-    differs(notes.citeladder_account_ref, pending.billing_account_id) ||
-    differs(notes.citeladder_catalog_revision, pending.catalog_revision)
-  )
-    refuse('provider_reference_mismatch');
-  return ref;
-}
-
-/** Only a subscription can fail at the provider; an unpaid order ends by abandonment. */
-function providerFailed(evidence: Evidence) {
-  return (
-    evidence.kind === 'base' &&
-    !evidence.subscription.payment &&
-    terminalStates.has(evidence.subscription.status)
-  );
-}
 
 /** Creates the base subscription and settles its first paid period; false while unpaid. */
 async function settleBase(
@@ -352,11 +252,6 @@ export async function settlePending(
     .execute();
 }
 
-/** Whether a full refund cancelled this subscription, pending the provider's confirmation (B52). */
-export function refundCancelled(sub: Pick<Subscription, 'is_current' | 'status'>) {
-  return sub.is_current && sub.status === STATUS.cancelled;
-}
-
 /**
  * Records one paid period's receipt and its plan bundle. A period paid while
  * the provider already reports the subscription ended still runs to its paid
@@ -498,19 +393,6 @@ async function endTerminal(
   return null;
 }
 
-/**
- * A scheduled change takes effect when the provider reports its first period at
- * the new price; a change the provider refused lapses once that period starts.
- */
-function effectiveTerms(sub: Subscription, event: SubscriptionEvidence) {
-  const terms = frozenTermsSchema.parse(sub.frozen_terms);
-  const change = sub.scheduled_change ? scheduledSchema.parse(sub.scheduled_change) : null;
-  const due = Boolean(change && event.start && event.start >= new Date(change.effective_at));
-  if (change && due && event.priceRef === change.terms.price_ref)
-    return { terms: change.terms, renewal: true, lapsed: false };
-  return { terms, renewal: false, lapsed: due && change?.state === 'provider_rejected' };
-}
-
 /** The subscription's state after this evidence; a paid terminal period runs to its end. */
 async function periodOutcome(
   db: Database,
@@ -533,30 +415,6 @@ async function periodOutcome(
   return paidEnd
     ? { ...settled, end: paidEnd, status: STATUS.cancel_scheduled }
     : { ...settled, current: false, endedAt: now };
-}
-
-/** What the evidence asks of later sweeps and of a held cancellation. */
-function followUps(sub: Subscription, event: SubscriptionEvidence, status: string, now: Date) {
-  return {
-    // A cancellation the provider holds can no longer be resumed here (B46).
-    ...(event.cancelAtEnd && !sub.cancellation_sent_at ? { cancellation_sent_at: now } : {}),
-    // The next subscription sweep cancels a halted or refunded subscription
-    // promptly; one the provider already ends at its cycle waits its cadence.
-    ...(status === STATUS.unpaid || (status === STATUS.cancelled && !event.cancelAtEnd)
-      ? { reconciliation_next_at: now }
-      : {}),
-  };
-}
-
-/** The renewed period takes the scheduled change's terms. */
-function renewedTerms(terms: { catalog_key: string; catalog_revision: string; price_ref: string }) {
-  return {
-    catalog_key: terms.catalog_key,
-    catalog_revision: terms.catalog_revision,
-    external_price_id: terms.price_ref,
-    frozen_terms: JSON.stringify(terms),
-    scheduled_change: null,
-  };
 }
 
 export async function settleSubscription(
@@ -711,49 +569,6 @@ export async function settleRefund(
   const { workspaceId, accountId, provider, mode, refund } = request;
   const recorded = await recordRefund(db, workspaceId, accountId, provider, mode, refund);
   if (recorded?.full) await endRefundedPayment(db, workspaceId, recorded.payment, refund);
-}
-
-/** Whether a period plan grant came from this subscription or an activation (an upgrade). */
-function paidByPeriod(ref: string, subscriptionId: string) {
-  const source = grantSource(ref);
-  return (
-    source?.kind === 'activation' ||
-    (source?.kind === 'subscription' && source.subscriptionId === subscriptionId)
-  );
-}
-
-/**
- * The base subscription period a payment paid for: a period payment's own, or
- * for an upgrade the current period of the subscription it upgraded, when it
- * was bought in that period (B70). Null for anything else.
- */
-async function paidPeriod(db: Database, payment: Payment) {
-  const { subscription_id: subscriptionId, period_start: start, period_end: end } = payment;
-  if (subscriptionId && start && end) return { subscriptionId, start, end };
-  if (!payment.pending_activation_id || !payment.paid_at) return null;
-  const upgrade = await db
-    .selectFrom('pending_activations')
-    .select('change_terms')
-    .where('id', '=', payment.pending_activation_id)
-    .where('billing_account_id', '=', payment.billing_account_id)
-    .where('activation_kind', '=', 'upgrade')
-    .executeTakeFirst();
-  if (!upgrade) return null;
-  const { subscription_id: upgraded } = z
-    .object({ subscription_id: z.uuid() })
-    .parse(upgrade.change_terms);
-  const sub = await db
-    .selectFrom('billing_subscriptions')
-    .select(['current_period_start', 'current_period_end'])
-    .where('id', '=', upgraded)
-    .where('billing_account_id', '=', payment.billing_account_id)
-    .where('is_current', '=', true)
-    .where('current_period_start', '<=', payment.paid_at)
-    .where('current_period_end', '>', payment.paid_at)
-    .executeTakeFirst();
-  return sub?.current_period_start && sub.current_period_end
-    ? { subscriptionId: upgraded, start: sub.current_period_start, end: sub.current_period_end }
-    : null;
 }
 
 /**
