@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
  * The field box every text control shares (Input, SearchField, Select's
  * trigger, ChipInput, Textarea, the composer): `surface` with the soft 1px
  * `line` edge and the faint `shadow-edge` smudge under it (decision D5;
- * owner, 6 November 2026: no dark edge), `radius-md`, `control-md` tall.
+ * owner, 6 November 2026: no dark edge), `radius-md`, at least `control-md`
+ * tall so a larger reader text size grows it instead of clipping.
  * Hover steps the edge to `line-strong`; focus
  * thickens it to a 2px `focus` line inside a 3px `line` halo, and an invalid
  * field turns it `negative` (globals.css `.focus-input`/`.focus-frame`, which
@@ -16,7 +17,7 @@ import { cn } from '@/lib/utils';
  */
 export const FIELD_EDGE = 'bg-surface shadow-edge border border-line hover:border-line-strong';
 
-export const FIELD_BOX = `${FIELD_EDGE} h-[var(--control-md)] w-full rounded-md px-3 text-body-sm text-ink transition-[border-color,box-shadow] duration-[var(--motion-fast)]`;
+export const FIELD_BOX = `${FIELD_EDGE} min-h-[var(--control-md)] w-full rounded-md px-3 text-body-sm text-ink transition-[border-color,box-shadow] duration-[var(--motion-fast)]`;
 
 /**
  * A field fills its column (`fill`) unless its role is narrower: `quantity`
@@ -94,7 +95,7 @@ export function Input({
       <input
         ref={ref}
         className={cn(
-          'placeholder:text-ink-muted h-full min-w-0 flex-1 bg-transparent text-body-sm text-ink disabled:cursor-not-allowed',
+          'placeholder:text-ink-muted min-w-0 flex-1 self-stretch bg-transparent text-body-sm text-ink disabled:cursor-not-allowed',
           className,
         )}
         {...props}

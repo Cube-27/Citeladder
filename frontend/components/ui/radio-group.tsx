@@ -56,8 +56,8 @@ export function RadioGroup<T extends string>({
         variant === 'cards'
           ? cn(
               'grid gap-3',
-              columns === 2 && 'desktop:grid-cols-2',
-              columns === 3 && 'desktop:grid-cols-3',
+              columns === 2 && 'column-split:grid-cols-2',
+              columns === 3 && 'column-split:grid-cols-3',
             )
           : 'flex flex-col gap-3',
         className,

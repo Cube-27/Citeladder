@@ -166,6 +166,9 @@ typography:
   metric's figure.
 - **Website sizes:** 12 · 14 · 16 · 18 · 22 · 28 · 56 · 80, and normally no
   more than three on a page. Nothing below 12px; prose holds to 65ch.
+- **Sizes are rem.** Type tokens are declared in rem (the px here ÷ 16), so
+  they follow the reader's text size; spacing stays px, and controls take
+  `control-md` as a minimum height so larger text grows them (D66).
 
 ## Layout
 
@@ -232,6 +235,9 @@ under the full-width header, and the data-source setup card at
 two more: below 900px the navigation is a drawer behind the header's menu
 button, from 900px an icon rail, from 1280px the labelled sidebar. Metric
 cards stay in one row from 981px; the control row wraps in its one order.
+In the main column, app grids and card radio groups measure the column
+instead of the viewport, at the widths those breakpoints give it with the
+default sidebar, so a wider sidebar stacks them (D67).
 
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
 and empty states keep their footprint; a pending button keeps its label's box.

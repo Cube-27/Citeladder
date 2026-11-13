@@ -8,6 +8,9 @@ import { cn } from '@/lib/utils';
  * 12 in the app since decision D11) and cards in a
  * row stretch to one height.
  *
+ * In the main column the breakpoints are the column's width, so a wider
+ * sidebar stacks a grid (`column-split:`/`column-wide:` in globals.css); the
+ * px below are the viewport widths they match at the default sidebar.
  * A KPI row is one row from 981px (decision D9: 4 across at the owner's 982px,
  * never 2 × 2, never 2 + 1) and one column on a phone:
  *
@@ -27,14 +30,14 @@ import { cn } from '@/lib/utils';
  * Grids never nest a second AppGrid and never set widths on their children.
  */
 const LAYOUT = {
-  quarters: 'desktop:grid-cols-4',
-  fifths: 'desktop:grid-cols-5',
-  pair: 'desktop:grid-cols-2',
-  thirds: 'desktop:grid-cols-3',
-  'main-aside': 'shell:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
-  halves: 'shell:grid-cols-2',
-  'table-chart': 'shell:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]',
-  'list-detail': 'desktop:grid-cols-[var(--pane-list-detail)] items-start',
+  quarters: 'column-split:grid-cols-4',
+  fifths: 'column-split:grid-cols-5',
+  pair: 'column-split:grid-cols-2',
+  thirds: 'column-split:grid-cols-3',
+  'main-aside': 'column-wide:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
+  halves: 'column-wide:grid-cols-2',
+  'table-chart': 'column-wide:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]',
+  'list-detail': 'column-split:grid-cols-[var(--pane-list-detail)] items-start',
 } as const;
 
 export type AppGridLayout = keyof typeof LAYOUT;

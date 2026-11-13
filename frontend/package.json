@@ -123,12 +123,12 @@
     "node": ">=26"
   },
   "browserslist": [
-    "chrome >= 120",
-    "edge >= 120",
-    "firefox >= 128",
-    "safari >= 17.4",
-    "ios_saf >= 17.4",
-    "samsung >= 25",
+    "chrome >= 123",
+    "edge >= 123",
+    "firefox >= 132",
+    "safari >= 17.5",
+    "ios_saf >= 17.5",
+    "samsung >= 27",
     "not dead"
   ]
 }

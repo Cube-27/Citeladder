@@ -46,4 +46,14 @@ describe('browser-support.js', () => {
     expect(root.querySelector('h1')?.textContent).toBe('Update your browser');
     expect(document.documentElement.dataset.browserSupport).toBe('unsupported');
   });
+
+  it('shows the update notice when CSS light-dark() is unsupported (Chrome 122, Safari 17.4)', () => {
+    vi.stubGlobal('CSS', {
+      supports: (_property: string, value: string) => !value.startsWith('light-dark('),
+    });
+    const root = runOnPage();
+
+    expect(root.querySelector('h1')?.textContent).toBe('Update your browser');
+    expect(document.documentElement.dataset.browserSupport).toBe('unsupported');
+  });
 });

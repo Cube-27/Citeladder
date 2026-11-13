@@ -104,8 +104,9 @@ The documentation Worker serves assets only, with no Worker script, so Astro emi
 `_headers` file denies framing because browsers ignore `frame-ancestors` there.
 
 Supported browsers are the `browserslist` in `frontend/package.json`: Chrome
-and Edge 120, Firefox 128, Safari and iOS Safari 17.4, and Samsung Internet 25
-or newer. The product build targets the same versions
+and Edge 123, Firefox 132, Safari and iOS Safari 17.5, and Samsung Internet 27
+or newer (owner, 2026-11-13). Native popover needs iOS Safari 18.3, so no UI
+may depend on it alone. The product build targets the same versions
 (`apps/app/vite.config.ts`). `pnpm check:compat`
 (`scripts/check-browser-compat.mjs`) fails when browser source calls a global,
 static or well-known instance API that a matrix browser lacks, by MDN's

@@ -66,6 +66,11 @@ export function Conversation({
   const { skills } = useAgentCatalog();
   const output = latestOutput(detail);
   const { byMessage, unplaced } = outputPlacements(detail);
+  const items = threadItems(detail, new Set(byMessage.keys()));
+  // The latest exchange is on screen when a chat opens; only older turns defer,
+  // and never one holding a document the Documents list scrolls to.
+  const older = (index: number, holdsDocument = false) =>
+    index < items.length - 2 && !holdsDocument ? 'render-when-visible' : undefined;
   const documents = (outputs: readonly AgentOutput[] | undefined) =>
     renderOutput
       ? outputs?.map((placed) => (
@@ -84,9 +89,14 @@ export function Conversation({
       <ContextUsed context={detail.context} />
       {renderOutput ? <DocumentList outputs={detail.outputs} /> : null}
       <Stack as="ol" gap="workspace" aria-label="Messages">
-        {threadItems(detail, new Set(byMessage.keys())).map((item) =>
+        {items.map((item, index) =>
           item.kind === 'message' ? (
-            <Stack as="li" gap="workspace" key={item.message.id}>
+            <Stack
+              as="li"
+              gap="workspace"
+              key={item.message.id}
+              className={older(index, Boolean(renderOutput) && byMessage.has(item.message.id))}
+            >
               <MessageBubble
                 message={item.message}
                 skill={skillLabel(skills, item.message.skill_id)}
@@ -100,7 +110,12 @@ export function Conversation({
               {documents(byMessage.get(item.message.id))}
             </Stack>
           ) : (
-            <Stack as="li" gap="workspace" key={item.request?.id ?? item.failures[0].id}>
+            <Stack
+              as="li"
+              gap="workspace"
+              key={item.request?.id ?? item.failures[0].id}
+              className={older(index)}
+            >
               {item.request ? (
                 <MessageBubble message={item.request} skill={null} actions={detail.actions} />
               ) : null}

@@ -23,7 +23,10 @@ import { useComposerCommands } from './use-composer-commands';
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => mswServer.use(http.get('/api/v1/agent/skills', () => HttpResponse.json(skills))));
-afterEach(() => mswServer.resetHandlers());
+afterEach(() => {
+  mswServer.resetHandlers();
+  vi.unstubAllGlobals();
+});
 afterAll(() => mswServer.close());
 
 /** A host as the chat screens wire it: its own draft, skill and commands. */
@@ -59,7 +62,8 @@ describe('Composer', () => {
     expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
   });
 
-  it('starts one line tall and grows with its text', async () => {
+  it('starts one line tall and grows with its text where the browser lacks field-sizing', async () => {
+    vi.stubGlobal('CSS', { supports: () => false });
     // jsdom has no layout: the field's content height stands in for the browser's.
     const content = vi
       .spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get')
@@ -73,6 +77,20 @@ describe('Composer', () => {
     content.mockReturnValue(140);
     await user.type(field, 'One{Shift>}{Enter}{/Shift}Two');
     expect(field.style.height).toBe('140px');
+    content.mockRestore();
+  });
+
+  it('leaves the height to the browser where it sizes the field itself', async () => {
+    vi.stubGlobal('CSS', { supports: (property: string) => property === 'field-sizing' });
+    const content = vi
+      .spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get')
+      .mockReturnValue(140);
+    const user = userEvent.setup();
+    renderWithProviders(<Host />);
+    const field = screen.getByLabelText('Reply to the agent');
+
+    await user.type(field, 'One{Shift>}{Enter}{/Shift}Two');
+    expect(field.style.height).toBe('');
     content.mockRestore();
   });
 

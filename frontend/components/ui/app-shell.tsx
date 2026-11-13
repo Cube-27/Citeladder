@@ -50,7 +50,8 @@ const FRAME =
 const SIDEBAR_COLUMN =
   'bg-sidebar border-line rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
 const PAGE = 'mx-auto flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
-const MAIN_INSET = '@container min-w-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]';
+// The `main` container the `column-split:`/`column-wide:` variants measure.
+const MAIN_INSET = '@container/main min-w-0 px-[var(--content-gutter)] pb-[var(--content-gutter)]';
 
 /**
  * The reader's sidebar width as the one `--sidebar-width` the grid reads; at
@@ -77,7 +78,7 @@ export function AppShellFrame({
         {sidebar}
         <SidebarResizeHandle sidebarId={sidebarId} />
       </aside>
-      <main id="main" tabIndex={-1} className={MAIN_INSET}>
+      <main id="main" tabIndex={-1} data-main-column="" className={MAIN_INSET}>
         <div className={PAGE}>{children}</div>
       </main>
     </div>
@@ -97,7 +98,7 @@ export function AppShellPlaceholder({
   return (
     <div className={FRAME} style={widthStyle} aria-busy={busy || undefined}>
       <div className={SIDEBAR_COLUMN} />
-      <div className={MAIN_INSET}>
+      <div data-main-column="" className={MAIN_INSET}>
         <div className={PAGE}>{children}</div>
       </div>
     </div>
