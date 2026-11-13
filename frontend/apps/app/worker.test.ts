@@ -48,8 +48,73 @@ describe('product Worker routing', () => {
       expect(policy['frame-ancestors']).toEqual(["'none'"]);
       expect(policy['script-src']).not.toContain("'unsafe-inline'");
       expect(policy['script-src']).not.toContain("'unsafe-eval'");
-      expect(document.headers.get('cache-control')).toBe('no-store');
+      expect(policy['report-to']).toEqual(['csp']);
+      expect(document.headers.get('cache-control')).toBe('no-cache');
     }
+  });
+
+  it('sends each response type its exact cache, isolation and reporting headers', async () => {
+    const pick = (response: Response) =>
+      Object.fromEntries(
+        [
+          'cache-control',
+          'content-security-policy-report-only',
+          'reporting-endpoints',
+          'cross-origin-opener-policy',
+          'cross-origin-resource-policy',
+          'permissions-policy',
+          'clear-site-data',
+        ].map((name) => [name, response.headers.get(name)]),
+      );
+    const isolation = {
+      'cross-origin-resource-policy': 'same-origin',
+      'permissions-policy':
+        'accelerometer=(), browsing-topics=(), camera=(), display-capture=(), geolocation=(), gyroscope=(), hid=(), magnetometer=(), microphone=(), midi=(), serial=(), usb=()',
+      'clear-site-data': null,
+    };
+    const reporting = {
+      'content-security-policy-report-only':
+        "require-trusted-types-for 'script'; trusted-types default; report-to csp",
+      'reporting-endpoints': 'csp="/api/v1/client-errors/csp-reports"',
+    };
+    const upstream = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async () =>
+        Response.json({ user: null }, { headers: { 'Cache-Control': 'no-store' } }),
+      );
+    try {
+      expect(pick(await handleAppRequest(request('/projects'), env))).toEqual({
+        'cache-control': 'no-cache',
+        'cross-origin-opener-policy': 'same-origin-allow-popups',
+        ...isolation,
+        ...reporting,
+      });
+      expect(pick(await handleAppRequest(request('/api/v1/auth/me'), env))).toEqual({
+        'cache-control': 'private, no-store',
+        'cross-origin-opener-policy': 'same-origin-allow-popups',
+        ...isolation,
+        ...reporting,
+      });
+      expect(pick(await handleAppRequest(request('/reset-password?token=secret'), env))).toEqual({
+        'cache-control': 'no-store',
+        'cross-origin-opener-policy': 'same-origin-allow-popups',
+        ...isolation,
+        ...reporting,
+      });
+      // An MCP client's OAuth window signs in on its way to consent and must keep its opener.
+      for (const path of ['/login', '/register/', '/mcp/oauth/consent']) {
+        expect(
+          (await handleAppRequest(request(path), env)).headers.get('cross-origin-opener-policy'),
+        ).toBeNull();
+      }
+    } finally {
+      upstream.mockRestore();
+    }
+  });
+
+  it('serves a manifest that no longer asks to open as a standalone app', async () => {
+    const manifest = await handleAppRequest(request('/site.webmanifest'), env);
+    expect(await manifest.json()).toEqual({ name: 'CiteLadder', start_url: '/' });
   });
 
   it('lets the sign-up and email-link pages load the Turnstile widget and its frame', async () => {
@@ -87,7 +152,7 @@ describe('product Worker routing', () => {
   it('serves document navigation without turning missing resources or methods into HTML', async () => {
     const document = await handleAppRequest(request('/projects'), env);
     expect(document.status).toBe(200);
-    expect(document.headers.get('cache-control')).toBe('no-store');
+    expect(document.headers.get('cache-control')).toBe('no-cache');
     expect(document.headers.get('x-robots-tag')).toContain('noindex');
     expect(
       await handleAppRequest(request('/app-assets/missing.js'), env).then((r) => r.status),

@@ -23,6 +23,21 @@ export function clearSessionCookie(c: Context, config: ServiceConfig): void {
   deleteCookie(c, config.session.cookieName, { ...cookieOptions(config), path: '/' });
 }
 
+/**
+ * What a sign-out asks the browser to clear beyond the cookies it deletes: the
+ * HTTP and back-forward caches holding the account's pages. Not `"storage"`,
+ * which would also clear device preferences (theme, cookie consent), nor
+ * `"cookies"`, which reaches every host on the site.
+ */
+const SIGN_OUT_CLEAR_SITE_DATA = '"cache"';
+
+/** End the browser's session: its cookies, and the account's cached pages. */
+export function endBrowserSession(c: Context, config: ServiceConfig): void {
+  clearSessionCookie(c, config);
+  clearOAuthCookies(c, config);
+  c.header('Clear-Site-Data', SIGN_OUT_CLEAR_SITE_DATA);
+}
+
 export function clearOAuthCookies(c: Context, config: ServiceConfig): void {
   clearAuthOAuthCookie(c, config);
   deleteCookie(c, policy.auth.oauth.integration_cookie_name, {

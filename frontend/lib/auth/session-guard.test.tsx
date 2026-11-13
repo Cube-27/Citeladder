@@ -61,6 +61,43 @@ describe('SessionGuard', () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { now: 'the same person', next: sessionUser, leavesFor: [] },
+    {
+      now: 'another person',
+      next: { ...sessionUser, id: '33333333-3333-4333-8333-333333333333' },
+      leavesFor: [['/']],
+    },
+    { now: 'nobody', next: null, leavesFor: [['/login']] },
+  ])(
+    'asks again on a back-forward cache restore with $now signed in',
+    async ({ next, leavesFor }) => {
+      let current: typeof next = sessionUser;
+      let requestCount = 0;
+      mswServer.use(
+        http.get('/api/v1/auth/me', () => {
+          requestCount += 1;
+          return current
+            ? HttpResponse.json({ user: current })
+            : HttpResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 });
+        }),
+      );
+      renderWithProviders(
+        <SessionGuard fallback={<div>loading</div>}>
+          <Protected />
+        </SessionGuard>,
+      );
+      expect(await screen.findByText(/signed in as guarded@example.com/i)).toBeInTheDocument();
+
+      current = next;
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false }));
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+
+      await waitFor(() => expect(requestCount).toBe(2));
+      await waitFor(() => expect(navigate.mock.calls).toEqual(leavesFor));
+    },
+  );
+
   it('leaves the protected document when an unauthenticated visitor is sent to /login', async () => {
     let requestCount = 0;
     mswServer.use(

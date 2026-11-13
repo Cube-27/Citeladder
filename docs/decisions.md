@@ -558,6 +558,21 @@ and the AI Traffic export change with "ok proceed and include the two items".
 The [API error contract](api-error-contract.md#6-browser-error-reports) owns
 the shipped behavior.
 
+## The app shell may live in the back-forward cache; signing out clears it
+
+The product's HTML shell is served `no-cache` instead of `no-store`, so the
+browser's back-forward cache can restore it. Signing out sends
+`Clear-Site-Data` so cached account pages go with the session, and a restored
+shell re-checks its session. Bearer links and every API response stay
+`no-store`. The app manifest no longer asks to open as a standalone app, since
+the app is not installable.
+
+Source: owner, 13 November 2026, answering the frontend modernisation
+questions: "no-cache app shell + Clear-Site-Data on logout" and "Drop
+`display: standalone`". The sign-out directive is `"cache"` alone; clearing
+`"storage"` as well would reset theme and cookie consent and is not decided.
+[Frontend architecture](frontend-architecture.md) owns the shipped headers.
+
 ## One comparable-baseline rule
 
 A run has one comparable baseline, chosen by the Visibility comparison rule

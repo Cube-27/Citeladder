@@ -6,8 +6,16 @@ import {
 } from '@citeladder/contracts/route-ownership';
 import { proxyWorkerRequest } from '../../lib/server/worker-origin-proxy';
 import { withRequestLog } from '../../lib/server/worker-request-log';
-import { APP_CONTENT_SECURITY_POLICY } from '../../lib/config/content-security-policy';
-import { SECURITY_HEADERS as SHARED_SECURITY_HEADERS } from '../../lib/config/security-headers';
+import {
+  APP_CONTENT_SECURITY_POLICY,
+  APP_CONTENT_SECURITY_POLICY_REPORT_ONLY,
+  APP_REPORTING_ENDPOINTS,
+} from '../../lib/config/content-security-policy';
+import {
+  APP_SECURITY_HEADERS,
+  APP_SHELL_CACHE_CONTROL,
+  OPENER_KEPT_AUTH_PATHS,
+} from '../../lib/config/security-headers';
 import { routePath } from '../../lib/navigation/route-path';
 import type { WorkerEnv as GeneratedEnv } from './worker-configuration';
 
@@ -15,8 +23,6 @@ import type { WorkerEnv as GeneratedEnv } from './worker-configuration';
 // API container; production never sets the binding.
 type WorkerEnv = GeneratedEnv & { LOCAL_WORKER_ORIGIN?: string };
 
-// The product is never indexed.
-const SECURITY_HEADERS = { ...SHARED_SECURITY_HEADERS, 'X-Robots-Tag': 'noindex, nofollow' };
 // Vite's build.assetsDir; unhashed public/ files (for example the theme
 // bootstrap) share the naming shape and must stay revalidated.
 const FINGERPRINTED_DIRECTORY = '/app-assets/';
@@ -31,11 +37,13 @@ function response(body: string | null, status: number, contentType = 'text/plain
 
 function decorate(result: Response, html = false, immutable = false): Response {
   const headers = new Headers(result.headers);
-  for (const [name, value] of Object.entries(SECURITY_HEADERS)) headers.set(name, value);
+  for (const [name, value] of Object.entries(APP_SECURITY_HEADERS)) headers.set(name, value);
   if (!headers.has('Content-Security-Policy')) {
     headers.set('Content-Security-Policy', APP_CONTENT_SECURITY_POLICY);
+    headers.set('Content-Security-Policy-Report-Only', APP_CONTENT_SECURITY_POLICY_REPORT_ONLY);
+    headers.set('Reporting-Endpoints', APP_REPORTING_ENDPOINTS);
   }
-  if (html) headers.set('Cache-Control', 'no-store');
+  if (html) headers.set('Cache-Control', APP_SHELL_CACHE_CONTROL);
   if (immutable) headers.set('Cache-Control', 'public, max-age=31536000, immutable');
   return new Response(result.body, { status: result.status, headers });
 }
@@ -82,11 +90,7 @@ function metadataRoute(path: string, method: string): Response | null {
   }
   if (path === '/site.webmanifest') {
     return documentMethod
-      ? response(
-          '{"name":"CiteLadder","start_url":"/","display":"standalone"}',
-          200,
-          'application/manifest+json',
-        )
+      ? response('{"name":"CiteLadder","start_url":"/"}', 200, 'application/manifest+json')
       : response(null, 405);
   }
   return null;
@@ -168,13 +172,20 @@ export async function handleAppRequest(request: Request, env: WorkerEnv): Promis
   }
   const routed = await dynamicRoute(request, env, path);
   const result = routed ? decorate(routed) : await staticOrNavigation(request, env, url, path);
-  if (CREDENTIAL_LINK_PATHS.has(routePath(path))) {
-    const headers = new Headers(result.headers);
+  return withPathPolicy(result, routePath(path));
+}
+
+function withPathPolicy(result: Response, route: string): Response {
+  const credentialLink = CREDENTIAL_LINK_PATHS.has(route);
+  const keepsOpener = route === MCP_CONSENT_PATH || OPENER_KEPT_AUTH_PATHS.has(route);
+  if (!credentialLink && !keepsOpener) return result;
+  const headers = new Headers(result.headers);
+  if (credentialLink) {
     headers.set('Referrer-Policy', 'no-referrer');
     headers.set('Cache-Control', 'no-store');
-    return new Response(result.body, { status: result.status, headers });
   }
-  return result;
+  if (keepsOpener) headers.delete('Cross-Origin-Opener-Policy');
+  return new Response(result.body, { status: result.status, headers });
 }
 
 const appWorker = { fetch: withRequestLog(handleAppRequest) };

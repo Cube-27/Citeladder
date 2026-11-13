@@ -36,7 +36,8 @@ async function appServes(path) {
   // Browsers navigate with Accept: text/html; only that receives the SPA shell.
   const response = await get(app, path, 'text/html');
   assert.equal(response.status, 200, `${path} serves the application`);
-  assert.match(response.headers.get('cache-control') ?? '', /no-store/, `${path} is not cached`);
+  // Revalidated on every use, so the back-forward cache may keep the shell.
+  assert.equal(response.headers.get('cache-control'), 'no-cache', `${path} is revalidated`);
   const html = await response.text();
   assert.match(html, /id="root"/, `${path} has the application root`);
   const assets = [...html.matchAll(/(?:src|href)="(\/app-assets\/[^"?]+\.(?:js|css))"/g)].map(

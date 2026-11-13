@@ -34,6 +34,7 @@ import {
   clearOAuthCookies,
   clearAuthOAuthCookie,
   clearSessionCookie,
+  endBrowserSession,
   setSessionCookie,
 } from '../auth/cookies.ts';
 import {
@@ -427,8 +428,7 @@ export const authRoutes = [
     status: 204,
     async handle({ c, db, config }) {
       await logoutUser(db, c.get('user').id);
-      clearSessionCookie(c, config);
-      clearOAuthCookies(c, config);
+      endBrowserSession(c, config);
       return c.body(null, 204);
     },
   }),
@@ -443,8 +443,7 @@ export const authRoutes = [
     status: 204,
     async handle({ c, db, config }) {
       await logoutUser(db, c.get('user').id, { disconnect: true });
-      clearSessionCookie(c, config);
-      clearOAuthCookies(c, config);
+      endBrowserSession(c, config);
       return c.body(null, 204);
     },
   }),

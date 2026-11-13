@@ -106,6 +106,24 @@ export function SessionGuard({
     if (isError && httpErrorStatus(error) === 401) void clearSession();
   }, [isError, error, clearSession]);
 
+  // The shell may be restored from the back-forward cache, frozen as it was,
+  // so it asks `me` again: an ended session leads to sign-in, and another
+  // person's session reloads the page with nothing of the frozen account.
+  const onRestore = useEffectEvent(async () => {
+    const shown = user?.id;
+    const { data } = await refetch();
+    if (shown && data && data.id !== shown) {
+      await restartAt(queryClient, window.location.pathname + window.location.search);
+    }
+  });
+  useEffect(() => {
+    const recheck = (event: PageTransitionEvent) => {
+      if (event.persisted) void onRestore();
+    };
+    window.addEventListener('pageshow', recheck);
+    return () => window.removeEventListener('pageshow', recheck);
+  }, []);
+
   // Global 401 watchdog: a 401 from any in-flight/finished query means the
   // session is gone — clear + redirect once, regardless of which query failed.
   //

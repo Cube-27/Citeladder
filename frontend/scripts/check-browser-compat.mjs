@@ -2,12 +2,17 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import bcd from '@mdn/browser-compat-data' with { type: 'json' };
-import browserslist from 'browserslist';
+import { supportMatrix, unsupported } from './browser-support-data.mjs';
+import { checkStylesheets } from './check-css-compat.mjs';
 import { lineIndex, parseSource, walk } from './source-ast.mjs';
+
+export { supportMatrix };
+export { cssCompatViolations, stylesheetFailures } from './check-css-compat.mjs';
 
 /**
  * Browser-compatibility gate: fails when browser source uses a web or
- * JavaScript API that a browser in the support matrix lacks.
+ * JavaScript API that a browser in the support matrix lacks, and runs the
+ * stylesheet gate (`check-css-compat.mjs`) against the same matrix.
  *
  * The matrix is the `browserslist` in package.json, the one statement of
  * supported browsers; `apps/app/vite.config.ts` builds for it and
@@ -20,17 +25,9 @@ import { lineIndex, parseSource, walk } from './source-ast.mjs';
  * well-known global instances (`navigator.clipboard`, `document.startViewTransition`).
  * Instance methods on arbitrary values (`list.toSorted()`) are left to
  * TypeScript, whose `lib` in tsconfig.json stops at the matrix's ECMAScript
- * year.
+ * year. An API read only through optional chaining (`window.trustedTypes?.x`)
+ * is feature-detected: the code handles its absence, so it passes.
  */
-
-const BROWSERS = {
-  chrome: 'chrome',
-  edge: 'edge',
-  firefox: 'firefox',
-  safari: 'safari',
-  ios_saf: 'safari_ios',
-  samsung: 'samsunginternet_android',
-};
 
 // Globals that are instances, mapped to the interface BCD files them under.
 const GLOBAL_INSTANCES = {
@@ -59,72 +56,6 @@ const BROWSER_ROOTS = [
 ];
 const SERVER_ONLY = [/^lib\/server\//];
 const NOT_SHIPPED = /(?:\.test\.|\.spec\.|\.d\.ts$|\/test\/)/;
-
-function versionNumber(version) {
-  return String(version)
-    .replace(/^≤/, '')
-    .split('-')[0]
-    .split('.')
-    .map((part) => Number.parseInt(part, 10) || 0);
-}
-
-function compareVersions(left, right) {
-  const a = versionNumber(left);
-  const b = versionNumber(right);
-  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
-    const difference = (a[index] ?? 0) - (b[index] ?? 0);
-    if (difference) return difference;
-  }
-  return 0;
-}
-
-/** The oldest supported version of each matrix browser, keyed by BCD browser id. */
-export function supportMatrix(queries) {
-  const matrix = {};
-  for (const entry of browserslist(queries)) {
-    const [name, version] = entry.split(' ');
-    const browser = BROWSERS[name];
-    if (!browser) continue;
-    if (!matrix[browser] || compareVersions(version, matrix[browser]) < 0) {
-      matrix[browser] = version;
-    }
-  }
-  return matrix;
-}
-
-// Whether one support statement covers `version`. A partial implementation
-// counts: the API exists, which is all a missing-API crash depends on.
-function covers(statement, version) {
-  const added = statement.version_added;
-  if (added === false || added === 'preview' || added === null) return false;
-  if (added !== true && compareVersions(added, version) > 0) return false;
-  const removed = statement.version_removed;
-  return !removed || (removed !== true && compareVersions(removed, version) > 0);
-}
-
-// The matrix browsers that lack a feature, as `browser version_added` strings.
-function unsupported(feature, matrix) {
-  const support = feature?.__compat?.support;
-  if (!support) return [];
-  const missing = [];
-  for (const [browser, oldest] of Object.entries(matrix)) {
-    // Flagged, prefixed and renamed support is not support for this code.
-    const statements = [support[browser]]
-      .flat()
-      .filter(
-        (statement) =>
-          statement && !statement.flags && !statement.prefix && !statement.alternative_name,
-      );
-    // No data is unknown, not absent; only a recorded gap fails.
-    if (!statements.length || statements.every((statement) => statement.version_added === null)) {
-      continue;
-    }
-    if (statements.some((statement) => covers(statement, oldest))) continue;
-    const added = statements[0].version_added;
-    missing.push(`${browser} ${typeof added === 'string' ? added : 'none'}`);
-  }
-  return missing;
-}
 
 function globalFeature(name) {
   return bcd.api[name] ?? bcd.javascript.builtins[name] ?? bcd.api.Window[name] ?? null;
@@ -200,10 +131,21 @@ function declaredNames(program) {
   return names;
 }
 
+// Expressions only ever used through `?.`: `x?.y` and `x?.()` handle a missing `x`.
+function optionallyUsed(program) {
+  const guarded = new Set();
+  walk(program, (node) => {
+    if (node.type === 'MemberExpression' && node.optional) guarded.add(node.object);
+    if (node.type === 'CallExpression' && node.optional) guarded.add(node.callee);
+  });
+  return guarded;
+}
+
 /** Each API in `source` that a matrix browser lacks, once per API. */
 export function compatViolations(source, label, matrix) {
   const program = parseSource(source, label);
   const declared = declaredNames(program);
+  const guarded = optionallyUsed(program);
   const lineOf = lineIndex(source);
   const found = new Map();
   const report = (api, feature, node) => {
@@ -216,11 +158,12 @@ export function compatViolations(source, label, matrix) {
   walk(program, (node) => {
     if (
       (node.type === 'NewExpression' || node.type === 'CallExpression') &&
-      isGlobal(node.callee)
+      isGlobal(node.callee) &&
+      !guarded.has(node.callee)
     ) {
       report(node.callee.name, globalFeature(node.callee.name), node);
     }
-    if (node.type === 'MemberExpression' && isGlobal(node.object)) {
+    if (node.type === 'MemberExpression' && isGlobal(node.object) && !guarded.has(node)) {
       const owner = node.object.name;
       if (!GLOBAL_SCOPES.has(owner) && !GLOBAL_INSTANCES[owner]) {
         report(owner, globalFeature(owner), node);
@@ -269,11 +212,12 @@ export function checkBrowserSource(root, matrix) {
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
   const queries = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).browserslist;
-  const failures = checkBrowserSource(root, supportMatrix(queries));
+  const matrix = supportMatrix(queries);
+  const failures = [...checkBrowserSource(root, matrix), ...checkStylesheets(root, matrix)];
   if (failures.length) {
     console.error(failures.join('\n'));
     console.error(
-      'These APIs are newer than the browserslist in package.json. Use an older API, or raise the matrix with an owner decision.',
+      'These features are newer than the browserslist in package.json. Use an older one, guard it (`?.` in scripts, `@supports` in CSS), acknowledge a CSS enhancement that degrades acceptably in check-css-compat.mjs, or raise the matrix with an owner decision.',
     );
     process.exit(1);
   }

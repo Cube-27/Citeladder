@@ -4,13 +4,14 @@
  * trace in the API's logs. A report names the failure and the screen's path,
  * never its query string or what the reader typed; the API takes who reported
  * it from the session. One error is sent once per page load, and a tab stops
- * after `CLIENT_ERROR_REPORTS_PER_SESSION` reports.
+ * after `CLIENT_ERROR_REPORTS_PER_SESSION` reports, slow interaction reports
+ * (`lib/interaction-timing.ts`) included.
  */
 import {
   CLIENT_ERROR_FIELD_LIMITS,
   withoutQueryStrings,
   type ClientErrorKind,
-  type ClientErrorReport,
+  type ClientReport,
 } from '@citeladder/contracts/client-errors';
 
 import {
@@ -44,7 +45,7 @@ export function isChunkLoadError(error: unknown): boolean {
 }
 
 /** Read at report time from index.html, which the build writes and no chunk hash covers. */
-function releaseId(): string {
+export function releaseId(): string {
   const value = document
     .querySelector<HTMLMetaElement>(`meta[name="${RELEASE_META_NAME}"]`)
     ?.getAttribute('content');
@@ -105,20 +106,33 @@ export function reportClientError({
   const signature = [kind, component ?? '', message].join('\n');
   if (sent.has(signature)) return;
   sent.add(signature);
-  if (!claimSlot()) return;
-  const report: ClientErrorReport = {
+  sendClientReport({
     kind,
     message,
     stack:
       described.stack === null ? null : clip(withoutQueryStrings(described.stack), limits.stack),
-    route: clip(window.location.pathname, limits.route),
+    route: reportRoute(),
     release: releaseId(),
     ...(component ? { component } : {}),
-  };
+  });
+}
+
+/** The screen's path as a report names it: no query string or fragment. */
+export function reportRoute(): string {
+  return clip(window.location.pathname, CLIENT_ERROR_FIELD_LIMITS.route);
+}
+
+/**
+ * Send one report unless the tab's budget is spent. Reports are background
+ * work, so the request yields to everything the reader is waiting for.
+ */
+export function sendClientReport(report: ClientReport): void {
+  if (!claimSlot()) return;
   // A report must never become a second failure, so every rejection is dropped.
   fetch(`${API_BASE_URL}/client-errors`, {
     method: 'POST',
     keepalive: true,
+    priority: 'low',
     credentials: 'same-origin',
     headers: {
       'Content-Type': 'application/json',
