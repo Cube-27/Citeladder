@@ -981,7 +981,6 @@ describe('Agent runtime on PostgreSQL', () => {
         { kind: 'model', ordinal: 3 },
       ],
     });
-    // The run's progress names the same target from the stored call.
     expect(
       detail.latest_run?.progress.flatMap((step) => (step.tool ? [[step.tool, step.target]] : [])),
     ).toEqual([['read_evidence', 'school uniform']]);
