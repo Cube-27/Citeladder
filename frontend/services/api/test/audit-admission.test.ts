@@ -1,7 +1,10 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { sql } from 'kysely';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
 import { setLogSink } from '../src/logging.ts';
 import { createAudits } from '../src/audits/creation.ts';
+import { capacityLock } from '../src/entitlements/ledger.ts';
+import { lockProjectRow } from '../src/projects/service.ts';
 import { auditRuntime } from '../src/audits/config.ts';
 import { auditInput } from '../src/audits/inputs.ts';
 import { record } from '../src/db/json.ts';
@@ -296,6 +299,35 @@ describe('atomic audit admission', () => {
       reason: { code: 'manual_run_rate_exceeded' },
     });
     expect(await queued(t.workspaceId)).toHaveLength(1);
+  });
+  it('waits behind a project deletion instead of deadlocking on the account capacity lock', async () => {
+    const t = await auditTenant(db, fixtures);
+    const accountId = await billingAccount(db, t.workspaceId);
+    await grant(db, accountId, { key: 'manual_runs_per_day', value: 1, sourceKind: 'override' });
+    // A deletion locks the project row, then checks occupancy under the capacity lock.
+    const deletion = await db.startTransaction().execute();
+    let launch: Promise<string[]> | undefined;
+    try {
+      await lockProjectRow(deletion, { workspaceId: t.workspaceId, projectId: t.projectId });
+      const { rows } = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(deletion);
+      launch = createAudits(db, t.workspaceId, input(t), {}, runtime);
+      await vi.waitFor(
+        async () => {
+          const blocked = await sql<{ waiting: boolean }>`select exists (
+            select 1 from pg_stat_activity where ${rows[0]!.pid} = any(pg_blocking_pids(pid))
+          ) as waiting`.execute(db);
+          expect(blocked.rows[0]!.waiting).toBe(true);
+        },
+        { timeout: 5000, interval: 20 },
+      );
+      await capacityLock(deletion, accountId);
+      await deletion.rollback().execute();
+      expect(await launch).toHaveLength(1);
+      expect(await queued(t.workspaceId)).toHaveLength(1);
+    } finally {
+      if (!deletion.isRolledBack) await deletion.rollback().execute();
+      await launch?.catch(() => undefined);
+    }
   });
   it('refuses a BYOK launch once its prompt runs are spent, queuing nothing', async () => {
     const t = await auditTenant(db, fixtures);

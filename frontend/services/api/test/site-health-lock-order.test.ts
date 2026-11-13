@@ -16,6 +16,7 @@ import { lockRuntime } from '../src/site-health/frontier.ts';
 import { refreshRuntime } from '../src/site-health/plan-runtime.ts';
 import { createCrawl } from '../src/site-health/planner.ts';
 import { rerunPage } from '../src/site-health/selection.ts';
+import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { asOwner, testConfig, testDatabase } from './support.ts';
@@ -129,6 +130,33 @@ async function blocksAnother(pid: number) {
   );
 }
 
+/** A URL a discover commit admits into the seed's project. */
+function foundUrl(seed: SiteSeed, path: string) {
+  const identity = canonicalIdentity(path, seed.root);
+  const now = new Date();
+  return {
+    id: randomUUID(),
+    workspace_id: seed.workspaceId,
+    project_id: seed.projectId,
+    url_hash: identity.hash,
+    normalized_url: identity.url,
+    display_url: identity.url,
+    host: 'example.test',
+    item_kind: 'page',
+    depth: 1,
+    corpus_disposition: 'eligible',
+    disposition_reason: '',
+    disposition_version: 'fixture',
+    first_seen_at: now,
+    last_seen_at: now,
+    first_seen_crawl_id: seed.crawlId,
+    last_seen_crawl_id: seed.crawlId,
+    latest_content_type: 'text/html',
+    latest_source_kind: 'link',
+    latest_title: '',
+  };
+}
+
 async function monitoredLimit(seed: SiteSeed) {
   const row = await db
     .selectFrom('workspace_site_health_runtime')
@@ -151,6 +179,11 @@ describe('Site Health lock order', () => {
           .transaction()
           .execute((trx) => rerunPage(trx, seed.workspaceId, seed.projectId, page.id));
         await blocksAnother(await backendPid(worker));
+        // It writes a URL it found: the foreign key key-share locks the project row.
+        await worker
+          .insertInto('site_urls')
+          .values(foundUrl(seed, `/found-${round}`))
+          .execute();
         const crawl = await worker
           .selectFrom('site_crawls')
           .select('id')

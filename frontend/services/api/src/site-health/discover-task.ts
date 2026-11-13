@@ -413,6 +413,6 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
 
 export async function runDiscover(ctx: SiteTaskContext, claimed: SiteTask) {
   const scope = await prepareTask(ctx, claimed);
-  if (!scope || !(await markRunning(ctx, scope.task))) return;
+  if (!scope || !(await markRunning(ctx, claimed))) return;
   await persist(ctx, claimed, await acquire(ctx, scope.crawl, scope.task));
 }

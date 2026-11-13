@@ -287,8 +287,8 @@ export function exclusiveDrain(
     lock.on('error', (error) =>
       getLogger('workers.runner').exception('runner_drain_lock_lost', error),
     );
-    await lock.connect();
     try {
+      await lock.connect();
       const until = Math.min(now() + waitMs, options.deadline);
       for (;;) {
         const { rows } = await lock.query<{ locked: boolean }>( // NOSONAR -- Each attempt waits for the previous one.
@@ -308,10 +308,15 @@ export function exclusiveDrain(
       try {
         return await drain();
       } finally {
-        await lock.query('select pg_advisory_unlock(hashtextextended($1, 0))', [DRAIN_LOCK]);
+        // A lost session already released the lock; the drain's outcome stands.
+        await lock
+          .query('select pg_advisory_unlock(hashtextextended($1, 0))', [DRAIN_LOCK])
+          .catch((error: unknown) =>
+            getLogger('workers.runner').exception('runner_drain_unlock_failed', error),
+          );
       }
     } finally {
-      await lock.end();
+      await lock.end().catch(() => undefined);
     }
   };
 }

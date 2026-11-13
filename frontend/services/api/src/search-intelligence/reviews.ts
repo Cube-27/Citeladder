@@ -307,7 +307,7 @@ export async function createReview(
       .selectFrom(trx, 'projects')
       .select('id')
       .where('id', '=', scope.projectId)
-      .forUpdate()
+      .forNoKeyUpdate()
       .executeTakeFirstOrThrow();
     const replay = await existing(trx, scope, key);
     if (replay) return runView(replay);

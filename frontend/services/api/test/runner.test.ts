@@ -18,7 +18,7 @@ import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { sql } from 'kysely';
 import { createDatabase } from '../src/db/database.ts';
 import { testConfig } from './support.ts';
-import { executionSettings } from '../src/config/execution.ts';
+import { DRAIN_LOCK, executionSettings } from '../src/config/execution.ts';
 import { runnerStarter } from '../src/workers/start-runner.ts';
 import { loadConfig } from '../src/config.ts';
 import { setLogSink } from '../src/logging.ts';
@@ -865,6 +865,35 @@ describe('exclusive drain on PostgreSQL', () => {
       // A failed assertion must not leave the lock session open.
       holding.resolve();
       await active.catch(() => undefined);
+    }
+  });
+
+  it('returns what the drain did when its lock session is lost during the drain', async () => {
+    const config = testConfig();
+    const db = createDatabase(config);
+    const restore = setLogSink(() => {});
+    const holder = sql<{ pid: number }>`select pid from pg_locks
+      where locktype = 'advisory' and granted
+      and database = (select oid from pg_database where datname = current_database())
+      and classid = ((hashtextextended(${DRAIN_LOCK}, 0) >> 32) & 4294967295)::oid
+      and objid = (hashtextextended(${DRAIN_LOCK}, 0) & 4294967295)::oid
+      and objsubid = 1`;
+    try {
+      const drained = await exclusiveDrain(
+        config,
+        live(),
+        0,
+      )(async () => {
+        // A database restart drops the session that holds the drain lock.
+        const [session] = (await holder.execute(db)).rows;
+        await sql`select pg_terminate_backend(${session!.pid})`.execute(db);
+        await vi.waitFor(async () => expect((await holder.execute(db)).rows).toEqual([]));
+        return 3;
+      });
+      expect(drained).toBe(3);
+    } finally {
+      restore();
+      await db.destroy();
     }
   });
 

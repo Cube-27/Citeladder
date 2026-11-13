@@ -138,7 +138,13 @@ with the profile after the crawl (`project -> runtime -> profile` when no crawl
 is locked). The runtime row is a domain lock: admission and monitored-set
 controls hold it first and resolve it from grants under the capacity lock last.
 A grant change never writes it inside the billing transaction; the
-transaction's owner refreshes the runtime after the commit. Cancellation remains `audit -> task
+transaction's owner refreshes the runtime after the commit.
+Inserting a row that references a project takes a key-share lock on the
+project row through its foreign key, so that implicit lock is a project lock
+too. Only project deletion locks the row `FOR UPDATE`, which blocks those
+inserts; every other project writer serializes with `FOR NO KEY UPDATE`, which
+does not. A path that inserts project rows after the capacity lock (an audit
+launch) takes the project's key-share lock before the capacity lock. Cancellation remains `audit -> task
 mutation -> reservation release`. A transaction that has acquired the account
 capacity or any billing row must not acquire project, prompt, runtime, audit, or
 task locks afterward. Candidate grants are locked in UUID order; commercial

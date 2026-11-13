@@ -363,7 +363,7 @@ async function prepare(
     });
     return deferred ? 'deferred' : null;
   }
-  if (!(await markRunning(ctx, task))) return null;
+  if (!(await markRunning(ctx, claimed))) return null;
   if (!artifact) return acquire(ctx, crawl, task);
   if (artifact.facts.has_html) await expectClassification(ctx.db, task, ctx.owner);
   return {

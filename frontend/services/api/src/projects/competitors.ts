@@ -57,7 +57,7 @@ export async function lockProject(db: Database, scope: ProjectScope): Promise<vo
     .select('id')
     .where('id', '=', scope.projectId)
     .where('workspace_id', '=', scope.workspaceId)
-    .forUpdate()
+    .forNoKeyUpdate()
     .executeTakeFirst();
   if (project === undefined) throw notFound('Project');
 }

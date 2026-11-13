@@ -315,7 +315,7 @@ export async function createCrawl(db: Database, workspaceId: string, request: Cr
     .select('website_url')
     .where('workspace_id', '=', workspaceId)
     .where('id', '=', request.project_id)
-    .forUpdate()
+    .forNoKeyUpdate()
     .executeTakeFirst();
   if (!project) throw notFound('Project');
   const existing = await db

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import { z } from 'zod';
 import { fingerprint } from '../crypto-text.ts';
+import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { jsonObject } from '../db/json.ts';
@@ -172,8 +173,7 @@ export class AgentStore {
   private async lockWorkspace(trx: Database, scope: Scope) {
     await authorize(trx, scope);
     // Serialize workspace keys before chat locks.
-    const lockKey = 'agent-enqueue:' + scope.workspaceId;
-    await sql`select pg_advisory_xact_lock(hashtextextended(${lockKey}, 0))`.execute(trx);
+    await subjectXactLock(trx, `agent-enqueue:${scope.workspaceId}`);
   }
   /**
    * A new chat. A page workflow (`optimize_page`) commits the chat and its
