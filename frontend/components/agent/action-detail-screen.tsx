@@ -231,11 +231,11 @@ function Overview({ action }: Readonly<{ action: ActionDetail }>) {
         </Inline>
       }
     >
-      <p className={textRole('body')}>{action.handoff.message}</p>
+      <p className={textRole('body', 'text-ink')}>{action.handoff.message}</p>
       {happened.length > 0 ? (
         <Stack as="ul" gap="tight" className="list-inside list-disc">
           {happened.map((item) => (
-            <li key={item} className={textRole('body')}>
+            <li key={item} className={textRole('body', 'text-ink')}>
               {item}
             </li>
           ))}
@@ -293,7 +293,7 @@ function WhatToDo({ action }: Readonly<{ action: ActionDetail }>) {
     <Section title="What to do" id="action-todo">
       <Stack as="ol" gap="tight" className="list-inside list-decimal">
         {todo.map((step) => (
-          <li key={step} className={textRole('body')}>
+          <li key={step} className={textRole('body', 'text-ink')}>
             {step}
           </li>
         ))}
@@ -312,7 +312,7 @@ function TextList({
     <Section title={title} id={id}>
       <Stack as="ul" gap="tight" className="list-inside list-disc">
         {items.map((item) => (
-          <li key={item} className={textRole('body')}>
+          <li key={item} className={textRole('body', 'text-ink')}>
             {item}
           </li>
         ))}

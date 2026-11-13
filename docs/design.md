@@ -68,6 +68,7 @@ colors:
   positive: '#0b6e69' # dark '#4fd1c5'
   positive-soft: '#d6f2ef' # dark '#0e2e2b'
   scrim: 'rgb(17 17 17 / 32%)' # dark 'rgb(0 0 0 / 64%)'
+  sidebar: '#f4f4f4' # dark '#0a0a0a'
   stage-lilac: '#dfd6f7' # dark '#231b3d'
   stage-mint: '#cdeedf' # dark '#0f2a26'
   stage-peach: '#fcdac6' # dark '#2f1b22'
@@ -86,17 +87,27 @@ colors:
 - **Ink** carries every primary action, heading and figure. **Ink secondary**
   is the one grey for supporting text; `ink-muted` is its alias, so there is
   never a third grey.
-- **The app rebinds a few values** (D58): its ink is 10% lower in contrast
-  (`#1c1c1c`, dark `#e8e8e8`), and its dark fills and edges are a code
-  editor's softer greys (paper `#161616`, surface `#1e1e1e`, sunken `#262626`,
-  line `#2e2e2e`, line-strong `#3e3e3e`, chart-grid `#2b2b2b`). The website and
-  docs keep the values above.
+- **The app rebinds a few values** (D58, D59): its ink is 10% lower in
+  contrast (`#1c1c1c`, dark `#e8e8e8`), and its fills are a ladder with the
+  sidebar on its own step. Light: paper `#fcfcfc`, sidebar `#fafafa`, surface
+  `#ffffff`, sunken `#f4f4f5`, ink-secondary `#61616b`. Dark: sidebar
+  `#0a0a0a`, paper `#111111`, surface `#1c1c1c`, sunken `#141414` (a well
+  inside the card), line `rgb(255 255 255 / 8%)`, line-strong
+  `rgb(255 255 255 / 14%)`, state-hover `rgb(244 244 244 / 4%)`, chart-grid
+  `#2b2b2b`, ink-secondary `#9a9a9a`. The secondary ink is the lightest grey
+  that holds 4.5:1 under every state overlay on every app fill. The website
+  and docs keep the values above.
 - **Accent** (Flare) is a mark, never a fill for actions: the logo's bars, the
   own-brand chart series, the current nav item's 2px bar, a dot, a link's ink
   (`accent-ink`). The primary button is ink, not accent.
 - **Three fills, never deeper:** `paper` is the ground, `surface` the container
   (card, panel, table, every floating surface), `surface-sunken` the inset,
-  used only inside a container.
+  used only inside a container. The app's sidebar sits on its own `sidebar`
+  step beside the ground, and its selected row lifts to `surface`.
+- **Reading text is ink:** words someone reads as the content (their own
+  chat message, a prompt, a fact, a remediation, a quoted passage) take the
+  primary ink at the body size; descriptions, captions, metadata and labels
+  stay secondary.
 - **States are ink overlays** over whatever fill is beneath: `state-hover`,
   `state-pressed`, `state-selected`, so the three always look different.
 - **Edges:** `line` for every container edge and divider, `line-strong` for a

@@ -63,7 +63,7 @@ export function InternalLinkReview({
           <Stack as="section">
             <EditorialSectionHeader title="Source passage" />
             {link.placement ? (
-              <p className="type-body">
+              <p className="type-body text-ink">
                 {link.placement.text.slice(0, link.placement.anchor_start)}
                 <mark>{link.anchor}</mark>
                 {link.placement.text.slice(link.placement.anchor_start + link.anchor.length)}
@@ -77,7 +77,7 @@ export function InternalLinkReview({
           <PageSummary heading="Add a link to" page={link.target} />
           <Stack as="section">
             <EditorialSectionHeader title="Suggested anchor text" />
-            <p className="type-body">{link.anchor}</p>
+            <p className="type-body text-ink">{link.anchor}</p>
             <p className="type-caption">
               {link.target.contextual_inbound === null
                 ? 'Existing contextual links to the destination were not measured.'

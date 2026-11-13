@@ -80,6 +80,45 @@ test('a dark rebinding fails the dark scope only', () => {
   );
 });
 
+test('an app rebinding fails the app scope it reaches and spares the website', () => {
+  const appLight = ':root:not([data-public-surface]) { --color-ink-secondary: #eeeeee; }';
+  const violations = paletteViolations(css({ extra: appLight }));
+  assert.ok(violations.length > 0);
+  assert.ok(violations.every((violation) => violation.includes(':not([data-public-surface])')));
+  assert.ok(
+    violations.some((violation) =>
+      violation.includes(
+        ':root:not([data-public-surface]) --color-ink-secondary on --color-sidebar is 1.',
+      ),
+    ),
+  );
+});
+
+test("the app's light rebinding reaches the app's dark unless the app's dark rebinds it", () => {
+  const appLight = ':root:not([data-public-surface]) { --color-ink-secondary: #555555; }';
+  const appDark =
+    ":root[data-theme='dark']:not([data-public-surface]) { --color-ink-secondary: #ffffff; }";
+  const unbound = paletteViolations(css({ extra: appLight }));
+  assert.ok(
+    unbound.some((violation) =>
+      violation.includes(
+        ":root[data-theme='dark']:not([data-public-surface]) --color-ink-secondary on --color-paper is 2.",
+      ),
+    ),
+  );
+  assert.deepEqual(paletteViolations(css({ extra: `${appLight}\n${appDark}` })), []);
+});
+
+test('a website stage holds the website palettes only, since the app has none', () => {
+  const violations = paletteViolations(css({ light: { '--color-stage-lilac': '#000000' } }));
+  assert.ok(
+    violations.includes(
+      'apps/app/src/globals.css: :root --color-ink on --color-stage-lilac is 1.00:1; needs 4.5:1',
+    ),
+  );
+  assert.ok(!violations.some((violation) => violation.includes('data-public-surface')));
+});
+
 test('a translucent soft is composited onto the surface before measuring', () => {
   const violations = paletteViolations(
     css({ light: { '--color-positive-soft': 'rgb(0 0 0 / 90%)' } }),
@@ -99,7 +138,7 @@ test('a light chart series must hold 3:1 on every ground', () => {
   );
 });
 
-test('the shipped palette meets every pair in both themes', () => {
+test('the shipped palette meets every pair in the website and app palettes, both themes', () => {
   const source = readFileSync(
     new URL('../frontend/apps/app/src/globals.css', import.meta.url),
     'utf8',

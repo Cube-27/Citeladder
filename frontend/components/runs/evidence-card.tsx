@@ -90,7 +90,7 @@ function EvidencePromptHeader({
           />
         </Inline>
       </Inline>
-      <p className={textRole('body')}>{displayPrompt}</p>
+      <p className={textRole('body', 'text-ink')}>{displayPrompt}</p>
     </Stack>
   );
 }

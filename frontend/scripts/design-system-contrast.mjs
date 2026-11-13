@@ -6,12 +6,25 @@ import { composite, contrastRatio, isHex, separation } from './design-system-col
 const TOKEN_CSS = 'apps/app/src/globals.css';
 const LIGHT = ':root';
 const DARK = ":root[data-theme='dark']";
-const SCOPES = [LIGHT, DARK];
+const APP_LIGHT = ':root:not([data-public-surface])';
+const APP_DARK = ":root[data-theme='dark']:not([data-public-surface])";
+/**
+ * Each palette the product renders, as the rule blocks that build it in
+ * cascade order: the website's two themes, then the app's two, which rebind
+ * on top (D58, D59). The app's light block follows the system dark at the
+ * same specificity, so it sits under the app's dark block in the app's dark.
+ */
+const SCOPES = [
+  { name: LIGHT, layers: [LIGHT], website: true },
+  { name: DARK, layers: [DARK], website: true },
+  { name: APP_LIGHT, layers: [APP_LIGHT], website: false },
+  { name: APP_DARK, layers: [DARK, APP_LIGHT, APP_DARK], website: false },
+];
 
 const color = (role) => `--color-${role}`;
 const STATUSES = ['positive', 'negative', 'warning', 'info'];
 const SOFTS = ['accent', ...STATUSES].map((role) => color(`${role}-soft`));
-const GROUNDS = ['paper', 'surface', 'surface-sunken'].map(color);
+const GROUNDS = ['paper', 'sidebar', 'surface', 'surface-sunken'].map(color);
 const SERIES = ['data-1', 'data-2', 'data-3'].map(color);
 const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(color);
 
@@ -24,7 +37,7 @@ const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(col
  * beneath it.
  */
 const CONTRAST_PAIRS = [
-  // The three inks on the three grounds.
+  // The three inks on the page, the sidebar, the card and the inset.
   { inks: ['ink', 'ink-secondary', 'ink-muted'].map(color), surfaces: GROUNDS, minimum: 4.5 },
   // A hovered, pressed or selected row keeps its text readable (D51). The
   // states are overlays, so each is checked over every ground it can tint.
@@ -38,8 +51,14 @@ const CONTRAST_PAIRS = [
   { inks: [color('ink')], surfaces: SOFTS, minimum: 4.5 },
   // The website's stages (D35): copy on a tinted stage or hero wash, the
   // CtaBand's note and the hero's trial line included, is ink or
-  // ink-secondary (D36), never muted.
-  { inks: [color('ink'), color('ink-secondary')], surfaces: STAGES, minimum: 4.5 },
+  // ink-secondary (D36), never muted. The app has no stages, so only the
+  // website's palettes are held to this row.
+  {
+    inks: [color('ink'), color('ink-secondary')],
+    surfaces: STAGES,
+    minimum: 4.5,
+    websiteOnly: true,
+  },
   // A status ink on paper, surface and its own tint.
   ...STATUSES.map((status) => ({
     inks: [color(status)],
@@ -134,7 +153,8 @@ function customProperties(body) {
 
 /**
  * The raw declared value of every token a scope sees, before alias
- * resolution: `@theme` and `:root` for light, then the dark rebinds on top.
+ * resolution: `@theme` and `:root` for light, then each rebinding block on
+ * top in order. `selector` is one block's selector or the list of them.
  */
 export function paletteDeclarations(source, selector) {
   const clean = source.replace(/\/\*[\s\S]*?\*\//g, '');
@@ -143,10 +163,13 @@ export function paletteDeclarations(source, selector) {
     rules
       .filter(({ selectors }) => selectors.includes(scope))
       .flatMap(({ body }) => customProperties(body));
+  const layers = (Array.isArray(selector) ? selector : [selector]).filter(
+    (layer) => layer !== LIGHT,
+  );
   return new Map([
     ...declarations('@theme'),
-    ...declarations(':root'),
-    ...(selector === ':root' ? [] : declarations(selector)),
+    ...declarations(LIGHT),
+    ...layers.flatMap((layer) => declarations(layer)),
   ]);
 }
 
@@ -213,8 +236,10 @@ function rowViolations(palette, { scope, cssLabel }, row) {
   });
 }
 
-function contrastViolations(palette, scope, cssLabel) {
-  return CONTRAST_PAIRS.flatMap((row) => rowViolations(palette, { scope, cssLabel }, row));
+function contrastViolations(palette, { name: scope, website }, cssLabel) {
+  return CONTRAST_PAIRS.filter((row) => website || !row.websiteOnly).flatMap((row) =>
+    rowViolations(palette, { scope, cssLabel }, row),
+  );
 }
 
 function separationViolations(palette, scope, cssLabel) {
@@ -258,10 +283,10 @@ export function paletteViolations(source, cssLabel = TOKEN_CSS) {
     violations.push(`${cssLabel}: dark theme token mapping is missing`);
   }
   for (const scope of SCOPES) {
-    const palette = resolvePalette(source, scope);
+    const palette = resolvePalette(source, scope.layers);
     violations.push(
       ...contrastViolations(palette, scope, cssLabel),
-      ...separationViolations(palette, scope, cssLabel),
+      ...separationViolations(palette, scope.name, cssLabel),
     );
   }
   return violations;

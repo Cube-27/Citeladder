@@ -259,7 +259,7 @@ function CheckRow({ check }: Readonly<{ check: ReadinessCheck }>) {
         <span className={textRole('itemTitle')}>{check.title}</span>
         <Badge tone={CHECK_TONES[state]}>{state}</Badge>
       </Inline>
-      <p className={textRole('body')}>
+      <p className={textRole('body', check.remediation ? 'text-ink' : undefined)}>
         {check.remediation || 'No remediation guidance is recorded for this check.'}
       </p>
       <p className="type-caption tabular-nums">

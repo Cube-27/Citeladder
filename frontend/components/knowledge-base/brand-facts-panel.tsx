@@ -200,7 +200,7 @@ function FactRow({
         )}
       </Inline>
       {editing === null ? (
-        <span className={textRole('body')}>{fact.statement}</span>
+        <span className={textRole('body', 'text-ink')}>{fact.statement}</span>
       ) : (
         <Textarea
           aria-label="Edit fact"

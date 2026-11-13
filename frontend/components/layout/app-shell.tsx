@@ -21,7 +21,7 @@ import { useRouteAnnouncement } from './use-route-announcement';
 /**
  * AppShell — the authenticated application chrome: the system's AppSidebar
  * (project switcher, Dashboard | Agent, destinations, account; no logo, per
- * decision D11) beside the page on `paper`. From 900px to 1280px the sidebar
+ * decision D11) on its own `sidebar` fill beside the page on `paper` (D59). From 900px to 1280px the sidebar
  * is the icon rail (decision D3); below 900px the page header's menu button
  * opens the same sidebar, labelled, in a left drawer that closes when the
  * route changes (owner, 2026-11-06). There is no top bar.
