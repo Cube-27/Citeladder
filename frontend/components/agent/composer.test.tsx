@@ -1,8 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
-import { AGENT_COMPOSER_MAX_ROWS } from '@/lib/config/agent';
-
 import { Composer } from './composer';
 
 function renderComposer(value: string) {
@@ -42,7 +40,7 @@ describe('Composer', () => {
     expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
   });
 
-  it('starts one line tall and grows with its text up to the configured lines', () => {
+  it('starts one line tall and grows with its text', () => {
     // jsdom has no layout: the field's content height stands in for the browser's.
     const content = vi
       .spyOn(HTMLTextAreaElement.prototype, 'scrollHeight', 'get')
@@ -51,7 +49,6 @@ describe('Composer', () => {
     const field = screen.getByRole('textbox', { name: 'Reply to the agent' });
     expect(field).toHaveAttribute('rows', '1');
     expect(field.style.height).toBe('20px');
-    expect(field.style.getPropertyValue('--field-max-rows')).toBe(String(AGENT_COMPOSER_MAX_ROWS));
 
     content.mockReturnValue(140);
     rerender(

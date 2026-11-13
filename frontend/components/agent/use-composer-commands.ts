@@ -122,7 +122,10 @@ export function useComposerCommands({
           text.length >= AGENT_PASTE_ATTACHMENT_MIN_CHARS &&
           text.length <= limits.attachment_max_chars &&
           pastes.length < limits.attachments_max;
-        if (fits) setPastes((current) => [...current, keyed(text)]);
+        if (fits) {
+          const paste = keyed(text);
+          setPastes((current) => [...current, paste]);
+        }
         return fits;
       },
       remove: (key) => setPastes((current) => current.filter((paste) => paste.key !== key)),
