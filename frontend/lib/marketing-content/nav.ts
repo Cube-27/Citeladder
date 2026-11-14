@@ -29,7 +29,12 @@ export type NavDrop =
       key: Exclude<NavDropKey, 'resources'>;
       groups: readonly NavDropGroup[];
     })
-  | (NavDropBase & { key: 'resources'; groups: readonly LabelledNavDropGroup[] });
+  | (NavDropBase & {
+      key: 'resources';
+      groups: readonly LabelledNavDropGroup[];
+      /** Sections the menu does not list that still mark it current. */
+      sections: readonly string[];
+    });
 
 export const PLATFORM_OVERVIEW = {
   title: 'Platform overview',
@@ -165,6 +170,11 @@ export const NAV_DROPS: readonly NavDrop[] = [
     key: 'resources',
     label: 'Resources',
     href: '/blog',
+    // Every study section, and the root-level guide no menu lists.
+    sections: [
+      ...Object.values(STUDY_INDEXES).map((index) => index.path),
+      '/best-ai-visibility-platforms',
+    ],
     // Labelled sections, shown side by side as columns (owner, 2026-10-31).
     groups: [
       {
@@ -326,7 +336,7 @@ export const FOOTER_COLUMNS: readonly FooterColumn[] = [
   },
 ];
 
-/** The footer's social row under the launch badges (D20), one icon each. */
+/** The footer's social row under the launch badges, one icon each. */
 export const FOOTER_SOCIAL: readonly SocialLink[] = [
   { network: 'github', label: 'github.com', href: CITELADDER_GITHUB },
   { network: 'x', label: 'x.com', href: CITELADDER_X },

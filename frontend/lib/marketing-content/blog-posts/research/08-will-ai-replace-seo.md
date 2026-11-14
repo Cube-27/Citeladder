@@ -25,7 +25,7 @@ A search engine can remain heavily used while sending fewer visits to a particul
 
 For a website owner, the useful question is how customers discover information and what makes visiting your website worthwhile.
 
-## Three different meanings of "AI replacing SEO"
+## Three different meanings of “AI replacing SEO”
 
 | Claim                                | Evidence needed                                       | What it would mean for a website                   |
 | ------------------------------------ | ----------------------------------------------------- | -------------------------------------------------- |

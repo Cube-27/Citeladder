@@ -5,9 +5,9 @@
  * another script, or in punctuation — would otherwise slug to the bare prefix,
  * so every such heading in a post would answer to the same anchor. The
  * character-sum fallback keeps those distinct. Two headings with identical
- * text still collide by construction; `content.test.ts` fails the build on a
- * post that contains a pair, which is the point at which an editor can retitle
- * one rather than ship a contents link that jumps to the wrong section.
+ * text still collide here; a Markdown guide numbers repeats through
+ * `headingIds`, and `content.test.ts` fails the build on a block post that
+ * contains a pair.
  */
 export function headingId(text: string): string {
   const slug = text
@@ -18,6 +18,17 @@ export function headingId(text: string): string {
   let sum = 0;
   for (const character of text) sum = (sum * 31 + character.codePointAt(0)!) % 1_000_000;
   return `s-h${sum}`;
+}
+
+/** Anchor ids for one document's headings in order: a repeated heading gets `-2`, `-3`… */
+export function headingIds() {
+  const seen = new Map<string, number>();
+  return (text: string) => {
+    const base = headingId(text);
+    const count = (seen.get(base) ?? 0) + 1;
+    seen.set(base, count);
+    return count === 1 ? base : `${base}-${count}`;
+  };
 }
 
 /** Stable React keys for a list whose values may repeat. */

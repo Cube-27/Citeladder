@@ -58,7 +58,6 @@ to resolve within the authorized scope, not permission to weaken a constraint.
 - [Backend](backend-architecture.md) and [frontend](frontend-architecture.md):
   shared layering, contracts, state and extension patterns.
 - [Design](design.md): the design system, its tokens and rules.
-- [Design decisions](design-decisions.md): the owner's design decisions (D-numbers) and the page contracts they produced.
 - [Invariants](invariants.md): durable correctness and safety constraints.
 - [State machines](state-machines.md): every persisted lifecycle's states,
   where each invariant is enforced, and its transitions and known invalid states.

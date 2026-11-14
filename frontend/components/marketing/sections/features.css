@@ -1,7 +1,7 @@
 /* ---------- FeatureCard ---------- */
-/* D44: no borders, no shadows, no lift. Two editorial forms:
-   - with a product image, or linked: a soft tint panel (the tint turns per
-     tile) holding the white product image and the copy;
+/* No borders, no shadows, no lift. Two editorial forms:
+   - with a product image, or linked: a flat neutral panel holding the white
+     product image and the copy;
    - static, text only: a column under a hairline rule. */
 
 .cl-fcard {
@@ -16,41 +16,6 @@
   color: var(--color-ink);
   text-decoration: none;
   transition: background-color var(--motion-fast) var(--ease-standard);
-}
-
-:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 1)
-  > :is(.cl-fcard, .cl-railcard) {
-  --cl-tint: var(--tint-mint);
-}
-
-:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 2)
-  > :is(.cl-fcard, .cl-railcard) {
-  --cl-tint: var(--tint-sky);
-}
-
-:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 3)
-  > :is(.cl-fcard, .cl-railcard) {
-  --cl-tint: var(--tint-lilac);
-}
-
-:is(.cl-tiles > li, .cl-bento-cell, .cl-rail-item):nth-child(4n + 4)
-  > :is(.cl-fcard, .cl-railcard) {
-  --cl-tint: var(--tint-peach);
-}
-
-/* A large linked card on its own (the blog's featured post) is lilac, with
-   room round its copy. */
-
-a.cl-fcard--lg {
-  --cl-tint: var(--tint-lilac);
-
-  padding: 32px;
-}
-
-@media (max-width: 767px) {
-  a.cl-fcard--lg {
-    padding: 16px;
-  }
 }
 
 a.cl-fcard:hover {
@@ -104,7 +69,7 @@ a.cl-fcard:hover {
   margin-top: 4px;
 }
 
-/* D28: the display face is the section's heading alone, so a card title is the sans face at 500. */
+/* The display face is the section's heading alone, so a card title is the sans face at 500. */
 
 .cl-fcard-title {
   margin: 0;
@@ -113,11 +78,6 @@ a.cl-fcard:hover {
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
-}
-
-.cl-fcard--lg .cl-fcard-title {
-  font-size: var(--text-display-md);
-  line-height: var(--text-display-md--line-height);
 }
 
 .cl-fcard-text {
@@ -133,25 +93,159 @@ a.cl-fcard:hover {
   padding-top: 12px;
 }
 
-/* D21: a card alone in its row sets its points in a column beside the title
-   and copy, so the row has no empty half. */
+/* A card alone in its row keeps one column: its points sit under the copy,
+   so no side column leaves empty space beneath it. */
 
-.cl-fcard--wide .cl-fcard-body {
+/* Copy to its check list: 20px, the same as a FeatureSplit's 20px gap. */
+
+.cl-fcard-body > .cl-checks {
+  margin-top: 16px;
+}
+
+/* From 1024px its title and copy hold the prose measure on the left and the
+   points run beneath as three columns across the whole row. */
+
+@media (min-width: 1024px) {
+  .cl-fcard--wide .cl-fcard-body > :is(.cl-fcard-title, .cl-fcard-text) {
+    max-width: 65ch;
+  }
+
+  .cl-fcard--wide .cl-fcard-body > .cl-checks {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px 32px;
+    align-self: stretch;
+  }
+
+  /* Two columns where three would leave a short last row (2, 4, 5 or 8 points). */
+  .cl-fcard--wide
+    .cl-fcard-body
+    > .cl-checks:is(
+      :has(> li:last-child:nth-child(2)),
+      :has(> li:last-child:nth-child(4)),
+      :has(> li:last-child:nth-child(5)),
+      :has(> li:last-child:nth-child(8))
+    ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* ---------- A row of text cards on shared rows ----------
+   Each card's title and body sit on rows its neighbours share (subgrid), so
+   a title that wraps moves every body in the row, not only its own. */
+
+.cl-tiles.cl-tiles--rows:is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  grid-template-rows: auto 1fr;
-  align-items: start;
-  gap: 8px 48px;
 }
 
-.cl-fcard--wide .cl-fcard-body > .cl-checks {
-  grid-row: 1 / span 2;
-  grid-column: 2;
+.cl-tiles--rows > li,
+.cl-tiles--rows > li > .cl-fcard,
+.cl-tiles--rows > li > .cl-fcard > .cl-fcard-body {
+  display: grid;
+  grid-row: span 2;
+  grid-template-rows: subgrid;
 }
 
-@media (max-width: 899px) {
-  .cl-fcard--wide .cl-fcard-body {
-    display: flex;
+.cl-tiles--rows > li > .cl-fcard > .cl-fcard-body {
+  row-gap: 4px;
+  align-content: start;
+}
+
+/* ---------- The blog's featured post: two columns from 768px ---------- */
+
+@media (min-width: 768px) {
+  .cl-featured-post .cl-fcard-body {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    grid-template-rows: auto 1fr;
+    align-items: start;
+    gap: 8px 48px;
+  }
+
+  .cl-featured-post .cl-fcard-body > .cl-fcard-title {
+    grid-row: 1;
+    grid-column: 1;
+    margin-top: 0;
+  }
+
+  .cl-featured-post .cl-fcard-text {
+    grid-row: 2;
+    grid-column: 1;
+    max-width: none;
+  }
+
+  .cl-featured-post .cl-fcard-body > .cl-eyebrow {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .cl-featured-post .cl-fcard-more {
+    grid-row: 2;
+    grid-column: 2;
+    margin-top: 0;
+    padding-top: 0;
+  }
+}
+
+/* ---------- Audience list: the home page's "Who uses" cards ----------
+   From 1280px one row of equal columns, every card the row's height; below,
+   hairline rows (title beside its description, the arrow link at the right
+   edge), the website's link-row spec. */
+
+@media (min-width: 1280px) {
+  .cl-audience {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1279px) {
+  .cl-audience {
+    gap: 0;
+    border-top: 1px solid var(--color-line);
+  }
+
+  .cl-audience > li {
+    border-bottom: 1px solid var(--color-line);
+  }
+
+  .cl-audience .cl-fcard,
+  .cl-audience a.cl-fcard:hover {
+    padding: 0;
+    border-radius: 0;
+    background: none;
+  }
+
+  /* The title track is a fixed share, so every description starts on one edge
+     whatever its row's link width. */
+  .cl-audience .cl-fcard-body {
+    display: grid;
+    grid-template-columns: 30% minmax(0, 1fr) auto;
+    align-items: baseline;
+    gap: 8px 32px;
+    padding: 24px 0;
+  }
+
+  .cl-audience .cl-fcard-more {
+    margin-top: 0;
+    padding-top: 0;
+    justify-self: end;
+  }
+
+  .cl-audience a.cl-fcard:hover .cl-fcard-title {
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 4px;
+  }
+}
+
+@media (max-width: 767px) {
+  .cl-audience .cl-fcard-body {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 20px 0;
+  }
+
+  .cl-audience .cl-fcard-more {
+    justify-self: start;
   }
 }
 
@@ -200,7 +294,7 @@ a.cl-fcard:hover {
   grid-column: span 12;
 }
 
-/* D21: a product image beside a taller tile fills its cell; its well grows
+/* A product image beside a taller tile fills its cell; its well grows
    and centres the screen (screens/product-frame.css) instead of leaving a strip under it. */
 
 .cl-bento-cell > * {
@@ -254,7 +348,7 @@ a.cl-fcard:hover {
 }
 
 .cl-split + .cl-split {
-  margin-top: 128px;
+  margin-top: 96px;
 }
 
 .cl-split-copy {
@@ -264,36 +358,28 @@ a.cl-fcard:hover {
   gap: 20px;
 }
 
-/* D28: a split's title is the sans face at 500 under a section header or beside
-   other splits, so a section never sets the display face twice. */
+/* A split's title is its section's heading, so it matches the section header. */
 
 .cl-split-title {
   margin: 0;
   color: var(--color-ink);
-  font-size: var(--text-display-md);
-  font-weight: 500;
-  line-height: var(--text-display-md--line-height);
-  letter-spacing: var(--text-display-md--letter-spacing);
-  text-wrap: balance;
-}
-
-/* The one split in a section without a header is that section's heading. */
-
-.cl-page-section:not(:has(.cl-shead-title, .cl-split ~ .cl-split)) .cl-split-title {
   font-family: var(--font-display);
+  font-size: var(--text-site-section);
   font-weight: 400;
+  line-height: var(--text-site-section--line-height);
   letter-spacing: -0.01em;
+  text-wrap: balance;
 }
 
 .cl-split-text {
   margin: 0;
   color: var(--color-ink-secondary);
-  font-size: var(--text-body-lg);
-  line-height: var(--text-body-lg--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 .cl-split-copy .cl-checks {
-  padding: 4px 0;
+  padding: 0;
 }
 
 .cl-split-media {
@@ -338,30 +424,7 @@ a.cl-fcard:hover {
   }
 }
 
-/* ---------- The stage: tints over paper, with grain ---------- */
-/* Neighbouring tiles and splits take different mixes, so a row of cards is
-   four colours of one light, never one colour four times. */
-
-.cl-bento-cell:nth-child(4n + 2),
-.cl-split--reverse {
-  --stage-a: var(--color-stage-sky);
-  --stage-b: var(--color-stage-mint);
-  --stage-c: var(--color-stage-lilac);
-}
-
-.cl-bento-cell:nth-child(4n + 3) {
-  --stage-a: var(--color-stage-mint);
-  --stage-b: var(--color-stage-sky);
-  --stage-c: var(--color-stage-peach);
-}
-
-.cl-bento-cell:nth-child(4n + 4) {
-  --stage-a: var(--color-stage-lilac);
-  --stage-b: var(--color-stage-peach);
-  --stage-c: var(--color-stage-mint);
-}
-
-/* ---------- A FeatureCard: its tint panel holds the white image (D44) ---------- */
+/* ---------- A FeatureCard: its tint panel holds the white image ---------- */
 .cl-fcard > .cl-frame .cl-frame-well {
   padding: 24px;
   border: 0;

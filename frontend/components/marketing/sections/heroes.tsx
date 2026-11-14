@@ -6,13 +6,12 @@ import { Breadcrumbs, type Crumb } from '../chrome/breadcrumbs';
 import './heroes.css';
 
 /**
- * PageHero: an inner page's opening, its H1 the site title (80, 32 on
- * phones) or, for a reading page such as the blog, the section size (56, 28
- * on phones; D36), then the lead, actions, a meta line and the page's product
- * image below. Landing pages centre the copy (D18); long-form and utility
- * pages pass `align="left"`. `size` only changes the measure of a
- * left-aligned hero. `entrance` gives a landing page's copy the one load-in
- * the website keeps (D36).
+ * PageHero: an inner page's opening, its H1 the site title (44, 32 on
+ * phones), then the lead, actions, a meta line and the page's product image
+ * below, left-aligned on the page's column edge; from 1280px the image sits
+ * beside the copy (5/12 copy, 7/12 image). `size` only changes the
+ * title's measure. `entrance` gives a landing page's copy the one load-in
+ * the website keeps.
  */
 export function PageHero({
   crumbs,
@@ -21,8 +20,6 @@ export function PageHero({
   actions,
   meta,
   size = 'lg',
-  align = 'center',
-  titleSize = 'hero',
   entrance = false,
   children,
 }: Readonly<{
@@ -32,21 +29,14 @@ export function PageHero({
   actions?: ReactNode;
   meta?: ReactNode;
   size?: 'lg' | '2xl';
-  align?: 'left' | 'center';
-  titleSize?: 'hero' | 'section';
   entrance?: boolean;
-  /** The hero's product image, under the copy. */
+  /** The hero's product image, under the copy or beside it from 1280px. */
   children?: ReactNode;
 }>) {
   return (
     // `data-cta-placement` names where a clicked call to action sat, for marketing analytics.
     <section
-      className={cn(
-        'cl-phero',
-        `cl-phero--${size}`,
-        align === 'center' && 'cl-phero--center',
-        titleSize === 'section' && 'cl-phero--reading',
-      )}
+      className={cn('cl-phero', `cl-phero--${size}`, children && 'cl-phero--split')}
       data-cta-placement="hero"
     >
       <div className="cl-container">
@@ -64,11 +54,9 @@ export function PageHero({
 }
 
 /**
- * LandingHero: the home page's opening, centred (D18). The announcement sits
+ * LandingHero: the home page's opening, left-aligned. The announcement sits
  * over the H1, then the lead, actions and note; the frame goes below the copy.
- * Its copy loads in (D36); the frame is static. With an `aside` (D52) the
- * hero splits from 1280px: the copy left-aligned, the aside to its right; on
- * narrower screens the aside sits under the centred copy.
+ * Its copy loads in; the frame is static.
  */
 export function LandingHero({
   announcement,
@@ -76,7 +64,6 @@ export function LandingHero({
   lead,
   actions,
   note,
-  aside,
   frame,
 }: Readonly<{
   announcement?: ReactNode;
@@ -84,11 +71,10 @@ export function LandingHero({
   lead?: ReactNode;
   actions?: ReactNode;
   note?: ReactNode;
-  aside?: ReactNode;
   frame?: ReactNode;
 }>) {
   return (
-    <section className={cn('cl-lhero', aside && 'cl-lhero--split')}>
+    <section className="cl-lhero">
       <div className="cl-container">
         <div className="cl-lhero-copy mk-hero-in">
           {announcement}
@@ -97,7 +83,6 @@ export function LandingHero({
           {actions && <div className="cl-lhero-actions">{actions}</div>}
           {note && <p className="cl-lhero-note">{note}</p>}
         </div>
-        {aside && <div className="cl-lhero-aside">{aside}</div>}
         {frame && <div className="cl-lhero-frame">{frame}</div>}
       </div>
     </section>

@@ -1,8 +1,9 @@
 ---
 /**
  * AuthorCard — about the author, after an article: a 56px initials avatar on
- * `surface-sunken`, an eyebrow, the name at 500, the role and links,
- * under a 1px `line` rule as wide as the prose column. No box.
+ * `ink` (as in the byline), an eyebrow, the name at 500, the role and links.
+ * No box and no rule of its own: after Sources, the list's closing rule
+ * divides them.
  */
 interface Props {
   name: string;
@@ -47,8 +48,6 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
     gap: 20px;
     align-items: center;
     max-width: var(--container-prose);
-    padding-top: 32px;
-    border-top: 1px solid var(--color-line);
   }
   .cl-author-avatar {
     display: inline-grid;
@@ -56,8 +55,8 @@ const initials = [words[0], words.length > 1 ? words.at(-1) : undefined]
     width: 56px;
     height: 56px;
     border-radius: var(--radius-full);
-    background: var(--color-surface-sunken);
-    color: var(--color-ink);
+    background: var(--color-ink);
+    color: var(--color-on-ink);
     font-size: var(--text-label-lg);
     line-height: var(--text-label-lg--line-height);
     font-weight: 500;

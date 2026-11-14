@@ -8,9 +8,9 @@ import { NavIcon, hasNavIcon } from './nav-icons';
 import './mega-menu.css';
 
 /**
- * One navbar menu (the system's MegaMenu): one fixed-width column per group,
+ * One navbar menu (the system's MegaMenu): one content-wide column per group,
  * so the shared popup takes the menu's own width (Solutions one column,
- * Platform and Resources three; D22), with Platform's overview as the footer
+ * Platform and Resources three), with Platform's overview as the footer
  * row. Rows are Radix navigation links, so the arrow keys move between them
  * and choosing one closes the menu. External rows (CiteLadder's own docs)
  * open in a new tab and say so.

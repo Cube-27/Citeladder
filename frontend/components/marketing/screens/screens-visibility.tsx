@@ -72,7 +72,7 @@ export function ScreenAnswer() {
 }
 
 /**
- * The AI Visibility overview, a full app layout at 1200 × 680 scaled to fit
+ * The AI Visibility overview, a full app layout at 1200 × 704 scaled to fit
  * its frame: the KPI row, the trend against competitors and the brand ranking.
  */
 export function ScreenVisibility() {

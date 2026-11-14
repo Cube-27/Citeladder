@@ -119,7 +119,7 @@ function RankingTable({
             onChange={setRanking}
           />
         ),
-        // The page's window and category, beside the ranking switch (D60).
+        // The page's window and category, beside the ranking switch.
         filters,
       }}
       columns={[

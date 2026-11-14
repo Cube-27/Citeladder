@@ -36,7 +36,7 @@ const URL_HEADERS = [
 ] as const;
 
 /**
- * The table's toolbar, above whichever table is showing (D57): the Domains |
+ * The table's toolbar, above whichever table is showing: the Domains |
  * URLs switch (`view`, the inventory only), search, All filters (domain,
  * type, standing), then Export at the end.
  *

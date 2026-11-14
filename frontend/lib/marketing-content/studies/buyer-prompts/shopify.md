@@ -24,7 +24,7 @@ CiteLadder's Prompt Builder drafts the buyer questions a brand tracks in AI answ
 
 ## What Shopify sells, according to the business profile
 
-The business profile describes Shopify as an ecommerce platform with a b2b_saas business model and business buyers. Its category terms include online store builder, commerce platform, point of sale system and online selling software.
+The business profile describes Shopify as an ecommerce platform with a B2B SaaS business model and business buyers. Its category terms include online store builder, commerce platform, point of sale system and online selling software.
 
 The profile lists four offerings. Each one became a topic:
 

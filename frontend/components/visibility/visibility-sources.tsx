@@ -287,8 +287,8 @@ export function SourcesPanel({
         : { column, direction: 'desc' },
     );
 
-  // The table's own filters, in its toolbar's All filters after the search
-  // (D57): they narrow this table alone. On a domain's own page the publisher
+  // The table's own filters, in its toolbar's All filters after the search:
+  // they narrow this table alone. On a domain's own page the publisher
   // is fixed.
   const tableFilters = sourceTableFilters({
     dimension,

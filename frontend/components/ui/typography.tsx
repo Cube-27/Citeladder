@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
  * in `apps/app/src/globals.css`; this map only names them, so retuning a role
  * is one CSS edit and no call site changes.
  *
- * Size carries the hierarchy, then ink, and weight last (D49). Every role is
+ * Size carries the hierarchy, then ink, and weight last. Every role is
  * one of three text styles:
  * - heading: 500 in `ink`. Page, section, card, dialog and drawer titles, a
  *   metric's figure, buttons and the selected tab or nav item.
@@ -18,11 +18,11 @@ import { cn } from '@/lib/utils';
  *   item titles, names, values, table cells, prose.
  * - secondary: 400 in the app's one grey. What supports it: descriptions,
  *   labels, column heads, captions, meta, counts, inactive tabs and nav.
- * `ink-muted` is an alias of `ink-secondary` (D50), so there are two inks. The sizes below are the `.type-*` recipes in globals.css
+ * `ink-muted` is an alias of `ink-secondary`, so there are two inks. The sizes below are the `.type-*` recipes in globals.css
  * (size/leading in px).
  */
 const TEXT_ROLES = {
-  /** The route `h1`. 20/28 (D58), −0.01em, ink, display face at its one weight (D7, D11). One per page. */
+  /** The route `h1`. 20/28, −0.01em, ink, display face at its one weight. One per page. */
   pageTitle: 'type-page-title',
   /** A section, card, drawer or dialog heading. 16/24, heading (500, ink). */
   sectionTitle: 'type-section-title',
@@ -36,7 +36,7 @@ const TEXT_ROLES = {
   label: 'type-label',
   /** Timestamps, counts, help, footnotes. 12/16, secondary (400, grey). */
   caption: 'type-caption',
-  /** A metric value. 24/32 (D48), heading (500, ink), tabular digits. */
+  /** A metric value. 24/32, heading (500, ink), tabular digits. */
   figure: 'type-figure',
   /** A value inside a dense row or cell. 14/20, primary (400, ink), tabular digits. */
   figureSm: 'type-figure-sm',

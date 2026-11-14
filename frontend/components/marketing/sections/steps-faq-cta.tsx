@@ -69,7 +69,7 @@ export function FaqList({
 
 /**
  * CtaBand: the closing call to action, a stage inside the container (never
- * full-bleed), the title at the section size (D36) over the lead and actions.
+ * full-bleed), the title at the section size over the lead and actions.
  */
 export function CtaBand({
   title,

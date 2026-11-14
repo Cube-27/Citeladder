@@ -1,10 +1,16 @@
-/* ---------- Reading pages: guides, posts, legal and reference (D36) ----------
+@import '../../content/prose.css';
+
+/* ---------- Reading pages: guides, posts, legal and reference ----------
    The shared Prose keeps its 720 column for tables, figures and code; on the
-   website running text holds to a 65-character measure inside it, and links
-   in copy, footnote markers included, are ink with an underline: the accent
-   stays a mark (D35). */
+   website running text holds to a 65-character measure inside it, except in
+   an article, whose one 640px column every block shares. Links in copy are
+   ink with an underline: the accent stays a mark. */
 .cl-site .cl-prose > :is(p, ul, ol, h2, h3, h4, blockquote, dl) {
   max-width: 65ch;
+}
+
+.cl-site .cl-cpage-article .cl-prose > :is(p, ul, ol, h2, h3, h4, blockquote, dl) {
+  max-width: none;
 }
 
 .cl-site .cl-prose a,
@@ -12,10 +18,225 @@
   color: var(--color-ink);
 }
 
+/* At every width an article's running prose is body 16/26 in the primary
+   ink, its opening paragraph included; h2 is the site's section heading and
+   h3 24/30 sans 500, stepping down on phones through the site tokens. The
+   docs' Prose keeps its own headings. */
+
+.cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) {
+  color: var(--color-ink);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+.cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) h2:not([class]) {
+  font-family: var(--font-display);
+  font-size: var(--text-site-section);
+  font-weight: 400;
+  line-height: var(--text-site-section--line-height);
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) h3:not([class]) {
+  font-family: var(--font-sans);
+  font-size: var(--text-display-md);
+  font-weight: 500;
+  line-height: var(--text-display-md--line-height);
+  letter-spacing: normal;
+}
+
+/* An article quote is a note in the reading size beside a hairline rule. */
+.cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) blockquote:not([class]) {
+  margin-top: 20px;
+  margin-bottom: 0;
+  padding: 2px 0 2px 20px;
+  border-left: 2px solid var(--color-line-strong);
+}
+
+.cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) blockquote:not([class]) p {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+}
+
+/* A list number is set like the text it numbers: the same face, size and
+   ink, in tabular figures. */
+.cl-site .cl-prose ol:not([class]) > li::marker {
+  color: inherit;
+  font-family: inherit;
+  font-size: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A short code token stays on one line. */
+.cl-site .cl-prose code[data-whole] {
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .cl-site .cl-cpage-article .cl-prose:not(.cl-prose--docs) h3:not([class]) {
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+  }
+}
+
+/* One table pattern at every width. The first column stays put (paper
+   behind it) while a table wider than its frame scrolls over an
+   always-visible scrollbar, a shade on the end edge while more columns lie
+   beyond it. Short columns (labels, models, figures) take their content's
+   width and prose columns the rest; a figure stays on one line in tabular
+   numerals sharing a right edge with its header, which may wrap. A source
+   column renders as a 14px secondary line under the row's first cell. */
+
+/* A table sits at the running text's width and widens only as far as its
+   columns need (its min-content width), up to the Prose column; past that
+   it scrolls (owner, 2026-11-14). */
+.cl-site .cl-prose-table {
+  width: min-content;
+  min-width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  border-radius: var(--site-radius-card);
+  overscroll-behavior-x: contain;
+  /* Set to auto, Chromium and Safari draw the `::-webkit-scrollbar` below,
+     which stays visible at rest even where scrollbars overlay; the global
+     quiet scrollbar would otherwise hide it until hover. */
+  scrollbar-color: auto;
+  scrollbar-width: auto;
+  /* The paper cover scrolls with the table (local) and hides the shade once
+     the last column is in view; the shade stays on the frame's edge. */
+  background:
+    linear-gradient(to left, var(--color-paper) 40%, transparent) right / 48px 100% no-repeat local,
+    linear-gradient(to left, color-mix(in srgb, var(--color-ink) 20%, transparent), transparent)
+      right / 24px 100% no-repeat scroll;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  .cl-site .cl-prose-table {
+    scrollbar-color: var(--color-line-strong) var(--color-surface-sunken);
+    scrollbar-width: thin;
+  }
+}
+
+.cl-site .cl-prose > .cl-prose-table {
+  min-width: min(100%, 65ch);
+}
+
+.cl-site .cl-cpage-article .cl-prose > .cl-prose-table {
+  min-width: 100%;
+}
+
+/* In an article with a Toc a table may widen on to the content's right edge
+   (100cqw is the grid), the edge the nav and footer share; across the grid's
+   third track from 1280px. */
+.cl-site .cl-cpage-article--toc .cl-cpage-article-body .cl-prose-table {
+  max-width: 100cqw;
+}
+
+@media (min-width: 1280px) {
+  .cl-site .cl-cpage-article--toc .cl-cpage-article-body .cl-prose-table {
+    max-width: calc(100cqw - var(--cpage-toc-width) - 48px);
+  }
+}
+
+.cl-site .cl-prose-table::-webkit-scrollbar {
+  height: 8px;
+}
+
+.cl-site .cl-prose-table::-webkit-scrollbar-track {
+  background: var(--color-surface-sunken);
+}
+
+.cl-site .cl-prose-table::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-xs);
+  background: var(--color-line-strong);
+}
+
+.cl-site .cl-prose-table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 120px;
+  background: var(--color-paper);
+}
+
+.cl-site .cl-prose-table :is(th, td)[data-fit] {
+  width: 1%;
+  white-space: nowrap;
+}
+
+/* A prose column never narrows to a word a line. */
+.cl-site .cl-prose-table td:not([data-fit], [data-numeric]) {
+  min-width: 144px;
+}
+
+/* A long header over figures wraps, evenly, rather than widening them. */
+.cl-site .cl-prose-table th[data-numeric]:not([data-fit]) {
+  min-width: 96px;
+  text-wrap: balance;
+}
+
+.cl-site .cl-prose-table .cl-cell-source {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  white-space: normal;
+}
+
+.cl-site .cl-prose .cl-whole {
+  white-space: nowrap;
+}
+
+.cl-site .cl-prose td[data-numeric] {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cl-site .cl-prose :is(th, td)[data-align='end'] {
+  padding-left: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* Citation markers: the sans face at 12px, medium in the secondary ink,
+   underlined only under the pointer or focus; a cluster never wraps and
+   keeps 2px between its markers. */
+
 .cl-site .cl-icite a,
 .cl-site .cl-prose .cl-icite a {
-  color: var(--color-ink);
+  position: relative;
+  color: var(--color-ink-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  line-height: 0;
+  text-decoration: none;
+}
+
+.cl-site .cl-icite a:is(:hover, :focus-visible),
+.cl-site .cl-prose .cl-icite a:is(:hover, :focus-visible) {
   text-decoration: underline;
   text-decoration-thickness: 1px;
   text-underline-offset: 2px;
+}
+
+/* A 24px hit area round each marker; the glyph keeps its size. */
+.cl-site .cl-icite a::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 24px);
+  height: 24px;
+  transform: translate(-50%, -50%);
+}
+
+.cl-site .cl-icite-run {
+  white-space: nowrap;
+}
+
+.cl-site .cl-icite + .cl-icite {
+  margin-left: 2px;
 }

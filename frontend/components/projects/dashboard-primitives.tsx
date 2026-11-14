@@ -83,8 +83,8 @@ export function actionItem(action: Opportunity): ReorderItem {
   return {
     key: action.id,
     name: action.title,
-    // The severity badge carries the priority; the score is not repeated
-    // (decision D14). The title truncates so the badge stays on its line.
+    // The severity badge carries the priority; the score is not repeated.
+    // The title truncates so the badge stays on its line.
     content: (
       <Stack gap="tight">
         <Inline>

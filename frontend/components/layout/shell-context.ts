@@ -7,7 +7,7 @@ import { createContext, type ReactNode } from 'react';
 export const ShellContext = createContext<Readonly<{
   /** The navigation drawer, opened by the header's menu button below 900px (owner, 2026-11-06). */
   navDrawer: Readonly<{ open: boolean; onOpen: () => void }>;
-  /** The search that opens the command palette, at the top bar's centre (D62). */
+  /** The search that opens the command palette, at the top bar's centre. */
   searchTrigger: ReactNode;
   /** The header's Agent trigger; the shell owns the Agent panel it opens. */
   agentTrigger: ReactNode;

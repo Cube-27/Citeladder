@@ -1,10 +1,10 @@
 /* ---------- PageHighlight: the page's lead tile ----------
-   A soft mint panel with ink text in both themes (D44); never an inverted
-   ground (D27). */
+   A flat neutral panel with ink text in both themes; never an inverted
+   ground. */
 .cl-page-hl {
   height: 100%;
   border-radius: var(--site-radius-card);
-  background: var(--tint-mint);
+  background: var(--tint-neutral);
   container-type: inline-size;
 }
 

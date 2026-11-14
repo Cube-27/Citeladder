@@ -234,6 +234,6 @@ older text:
   resume and the expanded Agent evaluation corpus.
 - Already shipped: Site Health Recrawl, the app shell's first-wave bootstrap,
   shared section skeletons, and drawer and table width roles.
-- No longer defects: accent check marks in dropdowns (D34 deleted the
-  accent-as-mark rule) and TrendChart's own SVG axes (product charts are plain
+- No longer defects: accent check marks in dropdowns (the accent-as-mark
+  rule was deleted) and TrendChart's own SVG axes (product charts are plain
   SVG by decision).

@@ -3,8 +3,9 @@
  * Toc — "On this page" (or the page's own `title`, such as Topics): the
  * article's h2 and h3 headings on a 1px `line` rail, h3 indented. The
  * heading in view turns its link `ink` with a 2px `ink` marker on the rail;
- * weight never changes, so lines never re-wrap. Shared by the docs and the
- * website's long-form pages.
+ * weight never changes, so lines never re-wrap. A hyphenated name
+ * (Claude-User, robots-txt) never breaks at its hyphen. Shared by the docs and
+ * the website's long-form pages.
  */
 export type TocItem = Readonly<{ id: string; label: string; level: number }>;
 
@@ -13,6 +14,9 @@ interface Props {
   title?: string;
 }
 const { items, title = 'On this page' } = Astro.props;
+// Word joiners (zero-width, no glyph) hold the hyphen to both its neighbours.
+const unbroken = (label: string) =>
+  label.replace(/(?<=\p{L}|\p{N})-(?=\p{L}|\p{N})/gu, '\u2060-\u2060');
 ---
 
 <nav class="cl-toc" aria-label={title}>
@@ -25,7 +29,7 @@ const { items, title = 'On this page' } = Astro.props;
             class:list={['cl-toc-link', { 'cl-toc-link--sub': item.level === 3 }]}
             href={`#${item.id}`}
           >
-            {item.label}
+            {unbroken(item.label)}
           </a>
         </li>
       ))

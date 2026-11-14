@@ -18,9 +18,9 @@ type SectionHeaderProps = Readonly<{
 
 /**
  * SectionHeader: the section's title (56, 28 on phones), its lead and one
- * action, stacked and left-aligned so the copy always sits under its heading
- * (D33). Every website section heads with this, so section titles never vary
- * in size page to page. No eyebrow: the heading says what the section is (D36).
+ * action, stacked and left-aligned so the copy always sits under its heading.
+ * Every website section heads with this, so section titles never vary
+ * in size page to page. No eyebrow: the heading says what the section is.
  */
 export function SectionHeader({
   title,
@@ -54,12 +54,12 @@ type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'titleId'> &
     label?: string;
     /**
      * With `label`: the label is also the section's h2, visually hidden, so
-     * the card titles (h3) under it keep the page's heading order (D36).
+     * the card titles (h3) under it keep the page's heading order.
      */
     labelHeading?: boolean;
     /**
-     * `aside` puts the header (and `aside` content) in a sticky 4/12 column
-     * beside the body, for FAQs, long-form and utility pages (D33).
+     * `aside` puts the header (and `aside` content) in a sticky 5/12 column
+     * beside the body, for FAQs, long-form and utility pages.
      */
     layout?: 'stack' | 'aside';
     aside?: ReactNode;
@@ -67,13 +67,13 @@ type PageSectionProps = Omit<SectionHeaderProps, 'title' | 'titleId'> &
     split?: 'default' | 'even';
     /** `reading` holds the body to the 720 reading measure, for lists. */
     measure?: 'full' | 'reading';
-    /** `compact` is the one tighter rhythm (64, 48 under 1024), for strips. */
+    /** `compact` quiets an aside header's lead; the section keeps the site's one top spacing. */
     spacing?: 'default' | 'compact';
     children?: ReactNode;
   }>;
 
 /**
- * PageSection: one band of a website page, 128px above (96 under 1024), the
+ * PageSection: one band of a website page, 96px above (64 under 1024), the
  * left-aligned header 48px over its content, inside the 1320 container. Pages
  * compose sections and never set spacing themselves.
  */

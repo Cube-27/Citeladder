@@ -145,7 +145,7 @@ export function ScreenAppPage({
 const FILTERS = ['Latest run', 'Last 90 days', 'Weekly', 'All engines'] as const;
 
 /**
- * The home page's first product view (D25): the AI Visibility page inside
+ * The home page's first product view: the AI Visibility page inside
  * the app's own chrome, as the shipped app draws it. The sidebar holds the
  * project switcher in the top bar's cell, Dashboard | Agent, the palette
  * field and the navigation; the page has its 24px title and actions on the
@@ -154,7 +154,7 @@ const FILTERS = ['Latest run', 'Last 90 days', 'Weekly', 'All engines'] as const
  */
 export function ScreenAppVisibility() {
   return (
-    <div className="cl-screen cl-screen--app">
+    <div className="cl-screen cl-screen--app cl-screen--app-overview">
       <ScreenSidebar active="AI Visibility" />
       <div className="cl-app-main">
         <div className="cl-app-topbar cl-app-header">

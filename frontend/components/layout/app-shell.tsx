@@ -20,9 +20,9 @@ import { useRouteAnnouncement } from './use-route-announcement';
 
 /**
  * AppShell — the authenticated application chrome: the system's AppSidebar
- * (project switcher, Dashboard | Agent, destinations, account; no logo, per
- * decision D11) on its own `sidebar` fill beside the page on `paper` (D59). From 900px to 1280px the sidebar
- * is the icon rail (decision D3); below 900px the page header's menu button
+ * (project switcher, Dashboard | Agent, destinations, account; no logo)
+ * on its own `sidebar` fill beside the page on `paper`. From 900px to 1280px the sidebar
+ * is the icon rail; below 900px the page header's menu button
  * opens the same sidebar, labelled, in a left drawer that closes when the
  * route changes (owner, 2026-11-06). There is no top bar.
  */
@@ -76,7 +76,7 @@ function AppSidebar() {
       controls={
         <>
           <ModeSwitch />
-          {/* The search is in the top bar from 900px (D62); below it, in the drawer. */}
+          {/* The search is in the top bar from 900px; below it, in the drawer. */}
           <CommandPaletteTrigger className="hidden [[data-nav-drawer]_&]:flex" />
         </>
       }

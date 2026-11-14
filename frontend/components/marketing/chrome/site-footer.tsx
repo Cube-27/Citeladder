@@ -39,7 +39,7 @@ function ColumnLink({ link }: Readonly<{ link: FooterLink }>) {
   );
 }
 
-/** The social profiles as one row of icon-only links, named by their domains (D20). */
+/** The social profiles as one row of icon-only links, named by their domains. */
 function SocialLinks() {
   return (
     <ul className="cl-footer-social">
@@ -67,7 +67,10 @@ function SocialLinks() {
 // Tests run without the define and fall back to the local clock.
 const COPYRIGHT_YEAR = Number(process.env.PUBLIC_BUILD_YEAR) || new Date().getFullYear();
 
-/** Launch-directory badges, in each directory's own embed markup. */
+/**
+ * Launch-directory badges, in each directory's own embed markup, on one row.
+ * Loaded eagerly: lazy, they missed long pages' renders.
+ */
 function DirectoryBadges() {
   return (
     <div className="cl-footer-badges">
@@ -81,46 +84,34 @@ function DirectoryBadges() {
           alt="Featured on CodeHype"
           width={112}
           height={40}
-          loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
-          className="block h-auto w-28"
+          className="cl-footer-badge"
         />
       </a>
-      <span className="inline-flex flex-col items-center">
-        <a
-          href="https://tools.launchllama.co/products/citeladder?utm_source=badge&utm_medium=referral"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img
-            src="https://tools.launchllama.co/featured-badge.png?v=2"
-            alt="Featured on Launch"
-            width={112}
-            height={29}
-            loading="lazy"
-            decoding="async"
-            referrerPolicy="no-referrer"
-            className="block h-auto w-28"
-          />
-        </a>
-        <a
-          href="https://launchmcp.co/?utm_source=badge&utm_medium=referral"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="cl-footer-badge-link focus-ring"
-        >
-          Launch MCP
-        </a>
-      </span>
+      <a
+        href="https://tools.launchllama.co/products/citeladder?utm_source=badge&utm_medium=referral"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <img
+          src="https://tools.launchllama.co/featured-badge.png?v=2"
+          alt="Featured on Launch"
+          width={112}
+          height={29}
+          decoding="async"
+          referrerPolicy="no-referrer"
+          className="cl-footer-badge"
+        />
+      </a>
     </div>
   );
 }
 
 /**
  * The website footer (the system's SiteFooter): the brand and tagline beside
- * five link columns on its grained ground, dark in both themes (D29), then the ownership line and the
- * policy row. Every column comes from `lib/marketing-content/nav.ts`, the
+ * five link columns on the page's paper under a hairline, then the ownership line and the
+ * policy row, with the directory badges at its right. Every column comes from `lib/marketing-content/nav.ts`, the
  * same registry as the navbar. Static: it ships no island.
  */
 export function SiteFooter() {
@@ -130,16 +121,15 @@ export function SiteFooter() {
         <div className="cl-footer-top">
           <div className="cl-footer-brand">
             <a href="/" aria-label="CiteLadder home" className="cl-footer-logo focus-ring">
-              <LogoMark className="text-footer-ink" />
+              <LogoMark className="text-ink" />
             </a>
             <p className="cl-footer-tagline">{FOOTER_TAGLINE}</p>
-            <DirectoryBadges />
             <SocialLinks />
           </div>
           <nav aria-label="Footer" className="cl-footer-cols">
             {FOOTER_COLUMNS.map((column) => (
               <div key={column.key} className="cl-footer-col">
-                {/* A column title names its list; it is not a heading of the page (D36). */}
+                {/* A column title names its list; it is not a heading of the page. */}
                 <p id={`footer-col-${column.key}`} className="cl-footer-head">
                   {column.label}
                 </p>
@@ -155,35 +145,38 @@ export function SiteFooter() {
           </nav>
         </div>
         <div className="cl-footer-bottom">
-          {/* CiteLadder is a Cube27 product, so the parent company is named in
+          <div className="cl-footer-bottom-main">
+            {/* CiteLadder is a Cube27 product, so the parent company is named in
               the ownership line rather than tucked into a link column alone. */}
-          <p className="cl-footer-copy">
-            © {COPYRIGHT_YEAR} CiteLadder. A{' '}
-            <a className="focus-ring" href={PARENT_COMPANY.href} target="_blank" rel="noreferrer">
-              {PARENT_COMPANY.name}
-            </a>{' '}
-            product. All rights reserved.
-          </p>
-          <nav aria-label="Legal">
-            <ul className="cl-footer-legal">
-              {FOOTER_POLICY_LINKS.map((link) => (
-                <li key={link.href}>
-                  <a className="focus-ring" href={link.href}>
-                    {link.label}
-                  </a>
+            <p className="cl-footer-copy">
+              © {COPYRIGHT_YEAR} CiteLadder. A{' '}
+              <a className="focus-ring" href={PARENT_COMPANY.href} target="_blank" rel="noreferrer">
+                {PARENT_COMPANY.name}
+              </a>{' '}
+              product. All rights reserved.
+            </p>
+            <nav aria-label="Legal">
+              <ul className="cl-footer-legal">
+                {FOOTER_POLICY_LINKS.map((link) => (
+                  <li key={link.href}>
+                    <a className="focus-ring" href={link.href}>
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
+                <li>
+                  <button
+                    type="button"
+                    className="cl-footer-cookie focus-ring"
+                    {...{ [COOKIE_PREFERENCES_ATTRIBUTE]: '' }}
+                  >
+                    Cookie preferences
+                  </button>
                 </li>
-              ))}
-              <li>
-                <button
-                  type="button"
-                  className="cl-footer-cookie focus-ring"
-                  {...{ [COOKIE_PREFERENCES_ATTRIBUTE]: '' }}
-                >
-                  Cookie preferences
-                </button>
-              </li>
-            </ul>
-          </nav>
+              </ul>
+            </nav>
+          </div>
+          <DirectoryBadges />
         </div>
       </div>
     </footer>

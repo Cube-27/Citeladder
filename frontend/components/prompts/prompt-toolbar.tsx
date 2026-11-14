@@ -24,7 +24,7 @@ const PROMPT_STATUSES: readonly { value: PromptStatus; label: string }[] = [
 ];
 
 /**
- * The prompt library's control row (D57): the Active / Archived view, the
+ * The prompt library's control row: the Active / Archived view, the
  * search, then every filter in All filters: Topic first, then Intent, Buyer
  * stage, Persona (when the library has any), Enabled and Branded.
  * Presentational; state lives in the page.

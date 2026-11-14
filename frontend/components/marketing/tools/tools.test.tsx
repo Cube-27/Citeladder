@@ -36,6 +36,14 @@ describe('free tools user workflows', () => {
     expect(screen.getByRole('button', { name: 'Copy' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
   });
+  it('keeps Download disabled on the live social preview until the tags are generated', () => {
+    render(<SocialPreview />);
+    expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Load example' }));
+    expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Generate social tags' }));
+    expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+  });
   it('hides stale results after editing and shows actionable validation errors', () => {
     render(<CrawlerChecker bots={bots} />);
     fireEvent.click(screen.getByRole('button', { name: 'Load example' }));

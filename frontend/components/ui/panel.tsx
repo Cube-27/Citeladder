@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
  * these boxes land on `div`, `li`, `section`, `fieldset` and `dd` alike and the
  * element must stay semantic.
  *
- * The box takes its fill from where it sits (D51, after Carbon's contextual
+ * The box takes its fill from where it sits (after Carbon's contextual
  * layers), so it is never a box drawn inside a box: on the page ground it is a
  * container (`surface` with a 1px `line` border, like a Card); inside a card,
  * panel, dialog or drawer it is the inset (`surface-sunken`, its border

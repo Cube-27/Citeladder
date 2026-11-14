@@ -3,6 +3,7 @@ import { Callout, type CalloutTone } from '@/components/ui/callout';
 import { Tag } from '@/components/ui/tag';
 
 import { headingId, withOccurrenceKeys } from './heading-id';
+import { isSourceHeader, wholeRuns } from './table-dates';
 import './reading.css';
 
 type RichPart = Extract<BlogBlock, { type: 'richParagraph' }>['content'][number];
@@ -42,35 +43,156 @@ function emphasisedCell(cell: string, heatmap: boolean | undefined): boolean {
   return Number.parseFloat(cell) >= HEATMAP_EMPHASIS_PERCENT;
 }
 
+/** Longest cell, in characters, that still sizes its column to its content. */
+const FIT_CELL_LENGTH = 24;
+/** Longest header kept on one line over such a column; a longer one wraps. */
+const FIT_HEADER_LENGTH = 16;
+
+/** Magnitude words and hedges that still leave a figure, as in "over 1.1 billion". */
+const FIGURE_WORDS = /\b(?:thousand|million|billion|trillion|over|under|about|nearly)\b/gi;
+
+/** Text led by a figure, as in "7359 bytes", "~48% in February" or "down 20". */
+const FIGURE_LED = /^(?:(?:over|under|about|nearly|up|down)\s+)?[~<>+-]?\$?\d/i;
+
+/**
+ * A figure, not a phrase: a digit, short, and either led by the figure or
+ * with no other word of four letters or more.
+ */
+export function isNumericCell(text: string) {
+  const value = text.trim();
+  return (
+    /\d/.test(value) &&
+    value.length <= FIT_CELL_LENGTH &&
+    (FIGURE_LED.test(value) || !/[A-Za-z]{4,}/.test(value.replace(FIGURE_WORDS, '')))
+  );
+}
+
+/**
+ * A column of mostly figures, its other cells led by a figure or short notes
+ * ("none found"), shares a right edge with its header.
+ */
+export function endAlignedColumn(cells: readonly string[]) {
+  const filled = cells.map((cell) => cell.trim()).filter(Boolean);
+  const figures = filled.filter(isNumericCell).length;
+  return (
+    figures * 2 > filled.length &&
+    filled.every(
+      (cell) => isNumericCell(cell) || FIGURE_LED.test(cell) || cell.length <= FIT_CELL_LENGTH,
+    )
+  );
+}
+
+/**
+ * A short column (a label, stage, model or figure) takes its content's width
+ * on one line, leaving the rest of the table to its prose columns.
+ */
+function fitColumn({ cells, header }: Readonly<{ cells: readonly string[]; header: string }>) {
+  const fit = cells.every((cell) => cell.trim().length <= FIT_CELL_LENGTH);
+  return { cells: fit, header: fit && header.trim().length <= FIT_HEADER_LENGTH };
+}
+
+/**
+ * Each column's fit; when every column is short, the first takes the table's
+ * spare width, so the figures keep their own widths at the end edge.
+ */
+export function fitColumns(columns: readonly Parameters<typeof fitColumn>[0][]) {
+  const fits = columns.map(fitColumn);
+  if (fits.length > 1 && fits.every((fit) => fit.cells)) fits[0] = { cells: false, header: false };
+  return fits;
+}
+
+/** A cell's text with each date or name kept on one line. */
+function CellText({ text }: Readonly<{ text: string }>) {
+  const runs = wholeRuns(text);
+  if (!runs.some((run) => run.whole)) return text;
+  return runs.map((run, index) =>
+    run.whole ? (
+      <span key={`${run.text}:${index}`} className="cl-whole">
+        {run.text}
+      </span>
+    ) : (
+      run.text
+    ),
+  );
+}
+
+/** A row without its source column, the source kept to render under the first cell. */
+function foldSource(row: readonly string[], column: number) {
+  if (column <= 0) return { cells: row, source: '' };
+  return { cells: row.filter((_, index) => index !== column), source: row[column]?.trim() ?? '' };
+}
+
+/** Columns after the first with any figure keep their header on one line. */
+function numericColumns(rows: readonly (readonly string[])[], count: number) {
+  return Array.from(
+    { length: count },
+    (_, column) => column > 0 && rows.some((row) => isNumericCell(row[column] ?? '')),
+  );
+}
+
 function PostTable({ block }: Readonly<{ block: Extract<BlogBlock, { type: 'table' }> }>) {
+  const sourceColumn = block.headers.findIndex(isSourceHeader);
+  const sourceLabel = block.headers[sourceColumn] ?? '';
+  const headers = foldSource(block.headers, sourceColumn).cells;
+  const rows = block.rows.map((row) => foldSource(row, sourceColumn));
+  const cellRows = rows.map((row) => row.cells);
+  const columnCells = headers.map((_, column) => cellRows.map((row) => row[column] ?? ''));
+  const numericHeader = numericColumns(cellRows, headers.length);
+  const align = (column: number) =>
+    column > 0 && endAlignedColumn(columnCells[column] ?? []) ? 'end' : undefined;
+  const fit = fitColumns(
+    headers.map((header, column) => ({ cells: columnCells[column] ?? [], header })),
+  );
+  const flag = (on: boolean | undefined) => (on ? '' : undefined);
   return (
     <div className="cl-prose-table">
       <table>
         {/* A real `<caption>`: assistive technology announces the table's name
             only when the text is the table's own caption element. */}
         {block.caption && <caption>{block.caption}</caption>}
-        <thead>
-          <tr>
-            {withOccurrenceKeys(block.headers, (header) => header).map(({ key, value }) => (
-              <th key={key} scope="col">
-                {value}
-              </th>
-            ))}
-          </tr>
-        </thead>
+        {headers.some((header) => header.trim()) && (
+          <thead>
+            <tr>
+              {withOccurrenceKeys(headers, (header) => header).map(({ key, value }, column) => (
+                <th
+                  key={key}
+                  scope="col"
+                  data-align={align(column)}
+                  data-numeric={flag(numericHeader[column])}
+                  data-fit={flag(fit[column]?.header)}
+                >
+                  {value}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        )}
         <tbody>
-          {withOccurrenceKeys(block.rows, (row) => row.join('')).map(
+          {withOccurrenceKeys(rows, (row) => [...row.cells, row.source].join('')).map(
             ({ key: rowKey, value: row }) => (
               <tr key={rowKey}>
-                {withOccurrenceKeys(row, (cell) => cell).map(({ key: cellKey, value: cell }) => (
-                  <td key={cellKey}>
-                    {emphasisedCell(cell, block.heatmap) ? (
-                      <strong data-emphasised="true">{cell}</strong>
-                    ) : (
-                      cell
-                    )}
-                  </td>
-                ))}
+                {withOccurrenceKeys(row.cells, (cell) => cell).map(
+                  ({ key: cellKey, value: cell }, column) => (
+                    <td
+                      key={cellKey}
+                      data-align={align(column)}
+                      data-numeric={flag(isNumericCell(cell))}
+                      data-fit={flag(fit[column]?.cells)}
+                    >
+                      {emphasisedCell(cell, block.heatmap) ? (
+                        <strong data-emphasised="true">{cell}</strong>
+                      ) : (
+                        <CellText text={cell} />
+                      )}
+                      {column === 0 && row.source && (
+                        <span className="cl-cell-source">
+                          <span className="sr-only">{`${sourceLabel}: `}</span>
+                          <CellText text={row.source} />
+                        </span>
+                      )}
+                    </td>
+                  ),
+                )}
               </tr>
             ),
           )}
@@ -140,7 +262,15 @@ function RichParagraph({
   return (
     <p>
       {content.map((part, index) => {
-        if (typeof part === 'string') return <span key={`${part}:${index}`}>{part}</span>;
+        if (typeof part === 'string') {
+          // A citation joins the word before it, so its marker never starts a line alone.
+          const next = content[index + 1];
+          const joined =
+            typeof next === 'object' &&
+            next.type === 'citation' &&
+            sources.some((source) => source.id === next.sourceId);
+          return <span key={`${part}:${index}`}>{joined ? `${part.trimEnd()}\u2060` : part}</span>;
+        }
         if (part.type === 'link') {
           return (
             <a

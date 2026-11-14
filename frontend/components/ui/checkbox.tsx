@@ -25,7 +25,7 @@ export type CheckboxProps = AccessibleCheckbox & {
 
 /**
  * The 16px box: `surface` with the soft field edge (`line`, `shadow-edge`,
- * `line-strong` on hover; decision D5); checked and
+ * `line-strong` on hover); checked and
  * indeterminate are an `ink` fill with an `on-ink` check or dash. Shared with
  * the table's row checkbox.
  */

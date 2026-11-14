@@ -23,7 +23,7 @@
 .cl-rail-nav {
   display: flex;
   flex: none;
-  gap: 16px;
+  gap: 8px;
 }
 
 /* The buttons keep their space before the script mounts them, so nothing moves. */
@@ -32,17 +32,18 @@
   visibility: hidden;
 }
 
-/* Outlined circles: the only round controls on the site. */
+/* Outlined 40px squares at the control radius, edged like a secondary button
+   (the control line, 3:1 on the page) whether or not they can move. */
 
 .cl-rail-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   padding: 0;
-  border: 1px solid var(--color-ink);
-  border-radius: 999px;
+  border: 1px solid var(--color-line-control);
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-ink);
   cursor: pointer;
@@ -54,19 +55,20 @@
 }
 
 .cl-rail-btn:disabled {
-  border-color: var(--color-line-strong);
   color: var(--color-ink-muted);
   cursor: default;
 }
 
-/* A RailCard: tint panel, copy on top, its image inset below and cut by the foot. */
+/* A RailCard: tint panel, copy on top, its image inset below, ending 24px
+   under the image. The row's cards share the tallest card's height (the
+   track's items stretch). `--cl-card-h` only sizes the open card's page. */
 
 .cl-railcard {
   --cl-tint: var(--tint-neutral);
   --cl-card-h: 460px;
 
   position: relative;
-  height: var(--cl-card-h);
+  height: 100%;
   overflow: hidden;
   border-radius: var(--site-radius-card);
   background: var(--cl-tint);
@@ -131,10 +133,10 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 48px;
-  height: 48px;
+  width: 32px;
+  height: 32px;
   padding: 0;
-  border: 1px solid var(--color-ink);
+  border: 1px solid var(--color-line-strong);
   border-radius: 999px;
   background: transparent;
   color: var(--color-ink);
@@ -179,13 +181,14 @@
     visibility 0s;
 }
 
-/* The miniature: whole, at the card's foot, inset by the card's own 28px
-   padding on the sides and below. */
+/* The miniature: in flow 24px under the header, inset by the card's own
+   28px padding on the sides, the card's foot 24px under it. It keeps its
+   place while hidden, so an open card keeps the closed card's height. */
 
 .cl-railcard-shot {
-  bottom: 28px;
-  left: 28px;
+  position: relative;
   width: calc(var(--cl-card-w) - 56px);
+  margin: 24px 28px;
 }
 
 /* The open card's image (the reference's open panel): the feature's page in
@@ -195,8 +198,10 @@
 
 .cl-railcard-page {
   top: 100px;
+  bottom: 28px;
   left: calc(var(--cl-open-w) / 2 + 16px);
   width: 1000px;
+  overflow: hidden;
 }
 
 .cl-railcard-page .cl-frame {
@@ -204,8 +209,9 @@
   margin-inline: 0;
 }
 
-/* Zoom scales a length too, so the drawn height is the card's less the
-   page's top and the foot's padding. */
+/* Zoom scales a length too, so the drawn height is the 460px card's less
+   the page's top and the foot's padding; a shorter card crops it at its
+   layer's foot. */
 
 .cl-railcard-page .cl-screen {
   height: calc((var(--cl-card-h) - 128px) / 0.7);
@@ -235,8 +241,8 @@
   max-width: 420px;
   margin: 0;
   color: var(--color-ink-secondary);
-  font-size: var(--text-body-lg);
-  line-height: var(--text-body-lg--line-height);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 /* Both images: the bare screen with its shadow. */
@@ -261,27 +267,24 @@
   }
 }
 
-/* A flex row, so one item can widen when its card opens. As in the
-   reference it runs to both edges of the screen: its padding puts the first
-   card (and each card the arrows bring to the start) on the page's column,
-   and the others show to either side. Its content box is that column, the
-   cards' size container: a closed card is 420px, an open one 720px (the
-   whole column when narrower). */
+/* A flex row, so one item can widen when its card opens. It is the content
+   row's width and the items' size container (the custom properties resolve
+   on each item, against the track): whole closed cards fill it 24px apart
+   (three, 418px in the 1302px row at 1440; two in a row under 1100px), and
+   an open card is 720px (the whole row when narrower). */
 
 .cl-rail-track {
-  --cl-card-w: min(420px, 85cqw);
+  --cl-rail-gap: 24px;
+  --cl-card-w: calc((100cqw - 2 * var(--cl-rail-gap)) / 3);
   --cl-open-w: min(720px, 100cqw);
-  /* The rail is the page's column (a size container), so this is a length
-     scroll-padding can use, unlike a percentage of the row. */
-  --cl-bleed: calc(50vw - 50cqw);
 
   container-type: inline-size;
   display: flex;
-  gap: 16px;
-  margin: 0 calc(-1 * var(--cl-bleed));
-  padding: 0 var(--cl-bleed);
+  gap: var(--cl-rail-gap);
+  width: 100%;
+  margin: 0;
+  padding: 0;
   overflow-x: auto;
-  scroll-padding-inline: var(--cl-bleed);
   overscroll-behavior-x: contain;
   list-style: none;
   scroll-snap-type: x mandatory;
@@ -292,11 +295,10 @@
   display: none;
 }
 
-/* 100vw counts a classic scrollbar, so the full-bleed row would overhang
-   the page by half of one; its section clips that. */
-
-.cl-page-section:has(.cl-rail) {
-  overflow-x: clip;
+@container (width < 1100px) {
+  .cl-rail-track {
+    --cl-card-w: calc((100cqw - var(--cl-rail-gap)) / 2);
+  }
 }
 
 .cl-rail-item {
@@ -390,15 +392,9 @@
   .cl-railcard-toggle {
     width: 24px;
     height: 24px;
-    border: none;
-    /* A lighter orange with a white plus; the dark theme's on-ink is dark,
-       on its own lighter accent below. */
-    background: color-mix(in srgb, var(--color-accent) 70%, var(--color-on-ink));
-    color: var(--color-on-ink);
-  }
-
-  :root[data-theme='dark'] .cl-railcard-toggle {
-    background: var(--color-accent-ink);
+    border: 1px solid var(--color-line-strong);
+    background: none;
+    color: var(--color-ink);
   }
 
   .cl-railcard-toggle > svg {
@@ -410,6 +406,7 @@
     position: static;
     display: none;
     width: auto;
+    margin: 0;
     opacity: 1;
     visibility: visible;
     transition: none;
@@ -428,10 +425,5 @@
     display: flex;
     gap: 16px;
     padding: 16px 0 24px;
-  }
-
-  .cl-railcard-body {
-    font-size: var(--text-body);
-    line-height: var(--text-body--line-height);
   }
 }

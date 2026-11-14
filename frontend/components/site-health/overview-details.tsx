@@ -88,7 +88,7 @@ function DimensionLedger({
               </ClampText>
             </div>
           </TableCell>
-          {/* The number only (decision D8); a pillar with no score says why. */}
+          {/* The number only; a pillar with no score says why. */}
           <TableCell numeric>
             {dimension.score === null ? (
               <ClampText lines={1} className="type-caption">

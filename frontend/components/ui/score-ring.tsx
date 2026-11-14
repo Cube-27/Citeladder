@@ -34,8 +34,8 @@ const SIZE = 64;
 const STROKE = 5;
 
 /**
- * ScoreRing — a 0–100 score as a ring, the app's only score graphic
- * (decisions D8, D48): 64px with the number at its centre in the metric
+ * ScoreRing — a 0–100 score as a ring, the app's only score graphic:
+ * 64px with the number at its centre in the metric
  * figure (500, 24/32). A `chart-grid` track; the arc is `ink`, or banded
  * with `tone="auto"` where several scores are compared and in score stats.
  * Shares are a `StackedBar`. It has no other size and shows no percent sign.

@@ -30,12 +30,12 @@ const { id } = Astro.props;
     gap: 12px;
     max-width: var(--container-prose);
   }
+  /* An operation sits under its page's display-face h2, so its title is the sans face. */
   .cl-docs-op :global(.cl-docs-op-title) {
     color: var(--color-ink);
-    font-family: var(--font-display);
-    font-size: var(--text-title);
-    line-height: var(--text-title--line-height);
-    font-weight: 400;
+    font-size: var(--text-heading);
+    line-height: var(--text-heading--line-height);
+    font-weight: 500;
   }
   .cl-docs-op :global(.cl-docs-op-line) {
     display: flex;

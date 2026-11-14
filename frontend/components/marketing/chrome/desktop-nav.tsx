@@ -10,14 +10,14 @@ import {
   NavigationMenuTrigger as Trigger,
   NavigationMenuViewport as Viewport,
 } from '@/components/ui/navigation-menu';
-import { NAV_DROPS, NAV_LINKS } from '@/lib/marketing-content/nav';
+import { NAV_DROPS, NAV_LINKS, type NavDrop } from '@/lib/marketing-content/nav';
 
 import { MegaMenu } from './mega-menu';
 import { inSection } from './site-nav';
 import './site-nav.css';
 
 /**
- * Hover intent (D22): a resting pointer opens the first menu after this
+ * Hover intent: a resting pointer opens the first menu after this
  * long, and a neighbouring trigger switches at once for this long after a
  * menu closes, so sweeping across the bar neither flashes nor stalls.
  */
@@ -47,11 +47,28 @@ function usePill() {
   return { pill, showAt, hide };
 }
 
+/**
+ * A menu is current on its own section, on any page it lists and on the
+ * sections it names, so a guide at the site root (/open-source) or a study
+ * page (/ai-crawlers/gptbot) still marks Resources.
+ */
+function dropCurrent(path: string, drop: NavDrop): boolean {
+  return (
+    inSection(path, drop.href) ||
+    (drop.key === 'resources' && drop.sections.some((section) => inSection(path, section))) ||
+    drop.groups.some((group) =>
+      group.items.some(
+        (item) => !('external' in item && item.external) && inSection(path, item.href),
+      ),
+    )
+  );
+}
+
 /** Where the popup hangs: its x offset from the trigger row, and whether it slides there. */
 type Stage = Readonly<{ shift: number; slide: boolean }>;
 
 /**
- * The popup's x offset (D27): a multi-column menu (Platform, Resources)
+ * The popup's x offset: a multi-column menu (Platform, Resources)
  * starts at the navbar's own left edge; a one-column menu (Solutions) hangs
  * from the trigger row. The root's offsetLeft is its distance from the bar.
  */
@@ -62,13 +79,13 @@ function stageShift(key: string, root: HTMLElement | null): number {
 }
 
 /**
- * The website navbar's desktop menus (D22): one Radix NavigationMenu whose
+ * The website navbar's desktop menus: one Radix NavigationMenu whose
  * menus all render into a single shared popup under the whole bar. Moving
  * between triggers keeps the popup open; its height follows the open menu
  * and the menus crossfade. Enterprise and Pricing are plain links in the
  * same list, so the arrow keys move across every item.
  *
- * Below 1280px the bar hides this and the server-rendered sheet takes over.
+ * Below 960px the bar hides this and the server-rendered sheet takes over.
  */
 export function DesktopNav({ path }: Readonly<{ path: string }>) {
   const [value, setValue] = useState('');
@@ -146,7 +163,7 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
                   if (node) triggers.current.set(drop.key, node);
                 }}
                 className="cl-navbar-link focus-ring"
-                data-current={inSection(path, drop.href) ? '' : undefined}
+                data-current={dropCurrent(path, drop) ? '' : undefined}
                 onPointerEnter={(event) => {
                   // Only a mouse hover-opens (as in Radix), so only a mouse
                   // arriving starts a new hover; a tap enters on every touch.
@@ -180,7 +197,7 @@ export function DesktopNav({ path }: Readonly<{ path: string }>) {
           ))}
         </List>
         {/* Hangs under the bar, not under its trigger: from the trigger row, or
-            from the bar's left edge for a multi-column menu (D27). */}
+            from the bar's left edge for a multi-column menu. */}
         <div
           className="cl-navmenu-stage"
           data-slide={stage.slide ? '' : undefined}

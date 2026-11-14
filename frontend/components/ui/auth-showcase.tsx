@@ -70,7 +70,7 @@ function ShotPicture({
     <picture className={cn('absolute block', place)}>
       <source type="image/avif" srcSet={`/auth/${shot.file}.avif`} />
       {/* Lazy: the panel is hidden below `desktop:`, so phones never fetch it.
-          Grayscale: the panel is black and white (D24); the captures predate
+          Grayscale: the panel is black and white; the captures predate
           the system's palette. */}
       <img
         src={`/auth/${shot.file}.webp`}
@@ -142,7 +142,7 @@ const SHOWCASE_CONTROL =
 
 /**
  * AuthShowcase — account access's product showcase: one feature per slide on
- * a black-and-white, grained `surface-sunken` field (D24: no colour). Every
+ * a black-and-white, grained `surface-sunken` field (no colour). Every
  * slide shares one grid cell, so the stage and caption keep the tallest
  * slide's size and nothing moves between slides. It turns slowly, pauses
  * while hovered or focused, and never turns on its own under reduced motion;

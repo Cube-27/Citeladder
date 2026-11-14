@@ -3,8 +3,8 @@
 Keep accepted, still-applicable choices with their reason, scope and actual
 source. Feature-local rationale belongs in its feature owner; correctness
 rules belong in [invariants](invariants.md). Visual choices (faces, colours,
-material, table styling, page layouts) are recorded in
-[design decisions](design-decisions.md) with their owner source, not here. Git and PRs retain superseded history.
+material, table styling, page layouts) are preferences that live in
+[design](design.md), not here. Git and PRs retain superseded history.
 
 ## TypeScript application, forward SQL migrations
 

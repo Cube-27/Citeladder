@@ -32,13 +32,13 @@ export type PageBack = Readonly<{
  * AppShell bands.
  *
  *   1. header   — the PageHeader: the route's one H1 and its actions, the
- *                 page's half of the sticky top bar (decision D12).
+ *                 page's half of the sticky top bar.
  *   2. controls — the route's tabs (settings sections, a screen's views),
  *                 then its FilterBar (search, filters, one action) for the
  *                 selected tab.
  *   3. content  — the work, its cards 12 apart.
  *
- * The template owns every band-to-band gap (decision D11): header → 16 →
+ * The template owns every band-to-band gap: header → 16 →
  * tabs → 8 → filters → 8 → content (16 straight to the content when there
  * are no controls). The header and the controls sit on the sidebar's lines.
  * A page passes data, organisms and slots and adds no margins between bands.
@@ -52,8 +52,8 @@ type ScreenBands<T extends string> = Readonly<{
   tabs?: TabRowProps<T>;
   /**
    * The selected tab's control row, drawn as the `FilterBar`: view, search,
-   * All filters, then the count and the action at its end (D57). A row of
-   * filters alone follows the tabs, or with no tabs the header's title (D60).
+   * All filters, then the count and the action at its end. A row of
+   * filters alone follows the tabs, or with no tabs the header's title.
    */
   controls?: FilterBarProps;
   children?: ReactNode;
@@ -89,7 +89,7 @@ export function ListScreen<T extends string = string>(
 /**
  * `narrow` centres the tabs, controls and content in one column at the thread
  * width (`max-w-thread`, the Agent's): settings, a short list or a setup page
- * whose rows would leave their actions stranded at a wide page's far edge (D61).
+ * whose rows would leave their actions stranded at a wide page's far edge.
  */
 type NarrowLayout = Readonly<{ narrow?: boolean }>;
 
@@ -239,7 +239,7 @@ function ControlBands<T extends string>({
   children,
 }: Pick<ScreenBands<T>, 'tabs' | 'controls'> & Readonly<{ children: ReactNode }>) {
   if (!tabs && !controls) return children;
-  // On a tabbed page, a row of filters (and its live note) follows the tabs (D60).
+  // On a tabbed page, a row of filters (and its live note) follows the tabs.
   const onTabRow = Boolean(tabs && controls && joinsTabRow(controls));
   return (
     <div className="flex min-w-0 flex-col gap-[var(--page-band-gap)]">

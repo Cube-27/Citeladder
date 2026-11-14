@@ -1,9 +1,10 @@
-/* ---------- RelatedCards: a full-width editorial index (D44) ----------
-   number 64 | title 5fr | summary 6fr | arrow, between hairline rules. */
+/* ---------- RelatedCards: the website's link row (ContentIndex's) ----------
+   title 20/24 over its summary, the arrow at the right edge, 24px padding,
+   between hairline rules. */
 .cl-related {
   margin: 0;
   padding: 0;
-  border-top: 1px solid var(--color-line-strong);
+  border-top: 1px solid var(--color-line);
   list-style: none;
 }
 
@@ -13,19 +14,12 @@
 
 .cl-related-row {
   display: grid;
-  grid-template-columns: 64px minmax(0, 5fr) minmax(0, 6fr) 20px;
-  align-items: baseline;
-  column-gap: 32px;
-  padding: 28px 0;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  align-items: start;
+  gap: 8px 32px;
+  padding: 24px 0;
   color: var(--color-ink);
   text-decoration: none;
-}
-
-.cl-related-n {
-  color: var(--color-ink-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-data);
-  line-height: var(--text-data--line-height);
 }
 
 .cl-related-head {
@@ -42,13 +36,13 @@
   font-weight: 500;
   line-height: var(--text-heading-lg--line-height);
   letter-spacing: var(--text-heading-lg--letter-spacing);
-  text-wrap: balance;
+  text-wrap: pretty;
 }
 
-/* The summary column starts with the title's first line. */
-
 .cl-related-text {
-  grid-column: 3;
+  grid-row: 2;
+  grid-column: 1;
+  max-width: 640px;
   color: var(--color-ink-secondary);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
@@ -56,18 +50,16 @@
 }
 
 .cl-related-arrow {
-  grid-column: 4;
+  grid-row: 1 / span 2;
+  grid-column: 2;
   align-self: center;
   color: var(--color-ink-muted);
-  transition:
-    color var(--motion-fast) var(--ease-standard),
-    transform var(--motion-fast) var(--ease-standard);
+  transition: color var(--motion-fast) var(--ease-standard);
 }
 
 .cl-related-row:hover .cl-related-arrow,
 .cl-related-row:focus-visible .cl-related-arrow {
   color: var(--color-ink);
-  transform: translateX(4px);
 }
 
 .cl-related-row:hover .cl-related-title {
@@ -76,31 +68,24 @@
   text-underline-offset: 4px;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .cl-related-row:hover .cl-related-arrow,
-  .cl-related-row:focus-visible .cl-related-arrow {
-    transform: none;
+/* Columns: the same rows two up from 1024px, each column's top rule its own. */
+
+.cl-related--columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  column-gap: 48px;
+}
+
+@media (min-width: 1024px) {
+  .cl-related--columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-/* Narrower: the summary drops under the title. */
-
-@media (max-width: 899px) {
+@media (max-width: 767px) {
   .cl-related-row {
-    grid-template-columns: 40px minmax(0, 1fr) 20px;
-    row-gap: 8px;
     column-gap: 16px;
-    padding: 24px 0;
-  }
-
-  .cl-related-text {
-    grid-row: 2;
-    grid-column: 2;
-  }
-
-  .cl-related-arrow {
-    grid-row: 1 / span 2;
-    grid-column: 3;
+    padding: 20px 0;
   }
 }
 
@@ -122,20 +107,8 @@
   height: 100%;
   padding: 24px;
   border-radius: var(--site-radius-card);
-  background: var(--tint-mint);
+  background: var(--tint-neutral);
   color: var(--color-ink);
-}
-
-.cl-qcard:nth-child(4n + 2) {
-  background: var(--tint-sky);
-}
-
-.cl-qcard:nth-child(4n + 3) {
-  background: var(--tint-lilac);
-}
-
-.cl-qcard:nth-child(4n + 4) {
-  background: var(--tint-peach);
 }
 
 .cl-qcard-q {
@@ -172,8 +145,80 @@
   }
 }
 
+/* The list: questions that go nowhere read as text, not controls. Three
+   columns 24px apart, each question under its own hairline, no fill. */
+
+.cl-qlist {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cl-qlist > li {
+  min-width: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-qlist[data-cols='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* A lone question on the last row takes the whole row. */
+
+.cl-qlist[data-cols='3'] > li:last-child:nth-child(3n + 1) {
+  grid-column: 1 / -1;
+}
+
+/* Five questions at three a row fill both rows: three, then two halves, as
+   five tiles do. */
+
+@media (min-width: 900px) {
+  .cl-qlist[data-cols='3']:has(> li:nth-child(5):last-child) {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .cl-qlist[data-cols='3']:has(> li:nth-child(5):last-child) > li {
+    grid-column: span 2;
+  }
+
+  .cl-qlist[data-cols='3']:has(> li:nth-child(5):last-child) > li:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+}
+
+.cl-qlist .cl-qcard-q {
+  margin: 0;
+}
+
+@media (max-width: 899px) {
+  .cl-qlist,
+  .cl-qlist[data-cols='3'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cl-qlist[data-cols='3'] > li:last-child:nth-child(3n + 1) {
+    grid-column: auto;
+  }
+
+  .cl-qlist > li:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 767px) {
+  .cl-qlist,
+  .cl-qlist[data-cols] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
+
 /* ---------- EngineStrip ---------- */
-/* Centred under the landing opening it follows (D18). */
+/* Centred under the landing opening it follows. */
 
 .cl-engines,
 .cl-engines-list {
@@ -216,19 +261,19 @@
   }
 }
 
-/* ---------- LogoTile ---------- */
+/* ---------- LogoTile ----------
+   Like every card: the mark top-left, the copy left-aligned under it, 24px in. */
 .cl-logotile {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
   gap: 12px;
   min-height: 128px;
   padding: 24px;
   border-radius: var(--site-radius-card);
   background: var(--tint-neutral);
   color: var(--color-ink-secondary);
-  text-align: center;
+  text-align: left;
   text-decoration: none;
   transition:
     color var(--motion-fast) var(--ease-standard),
@@ -251,14 +296,17 @@ a.cl-logotile:hover {
   color: inherit;
 }
 
+/* The name is the site's one card title: 20/24, the sans face at 500. */
+
 .cl-logotile-name {
-  color: inherit;
-  font-size: var(--text-label-lg);
-  font-weight: 400;
-  line-height: var(--text-label-lg--line-height);
+  color: var(--color-ink);
+  font-size: var(--text-heading-lg);
+  font-weight: 500;
+  line-height: var(--text-heading-lg--line-height);
+  letter-spacing: var(--text-heading-lg--letter-spacing);
 }
 
-/* A description is a sentence, so it is the sans face (D36). */
+/* A description is a sentence, so it is the sans face. */
 
 .cl-logotile-caption {
   color: var(--color-ink-secondary);

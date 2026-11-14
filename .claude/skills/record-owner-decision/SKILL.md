@@ -10,8 +10,6 @@ Owner decisions live only in these logs, each entry with its date and source:
 - [Decisions](../../../docs/decisions.md): cross-feature choices.
 - [Billing decisions](../../../docs/billing-decisions.md): billing, pricing,
   credits and plan gating (B-numbers).
-- [Design decisions](../../../docs/design-decisions.md): visual and
-  interaction choices and page contracts (D-numbers).
 - [Legal decisions](../../../docs/operations/legal-decisions.md): legal
   commitments, subprocessors, company details.
 - A plan's owner-decisions section, for decisions scoped to that plan.

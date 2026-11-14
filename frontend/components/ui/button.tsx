@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
  * border and the `shadow-edge` smudge, like a field) everything else, `ghost`
  * toolbars, nav and rows, `danger` destructive confirmations. Buttons are
  * black, white or clear; never coloured. Hover, pressed and open are the
- * state overlays (D51), so a toggled or open button never looks hovered.
+ * state overlays, so a toggled or open button never looks hovered.
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 

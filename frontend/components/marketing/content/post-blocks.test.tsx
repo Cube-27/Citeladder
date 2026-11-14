@@ -46,6 +46,38 @@ describe('PostBlock', () => {
     const citation = screen.getByRole('link', { name: 'Source 1: Official guidance' });
     expect(citation).toHaveAttribute('href', '#source-1');
     expect(citation).toHaveTextContent('[1]');
+    // The marker joins the word before it; a string before a link keeps its space.
+    expect(citation.closest('p')?.textContent).toBe(
+      'Read solutionsProvider documentation and the source\u2060[1]',
+    );
+  });
+
+  it('joins a citation to the word before it only when its source is listed', () => {
+    render(
+      <PostBlock
+        block={{
+          type: 'richParagraph',
+          content: [
+            'Listed ',
+            { type: 'citation', sourceId: 'official' },
+            ' and unlisted ',
+            { type: 'citation', sourceId: 'missing' },
+            'sources.',
+          ],
+        }}
+        sources={[
+          {
+            id: 'official',
+            title: 'Official guidance',
+            publisher: 'Publisher',
+            url: 'https://example.com',
+          },
+        ]}
+      />,
+    );
+    expect(
+      screen.getByRole('link', { name: 'Source 1: Official guidance' }).closest('p')?.textContent,
+    ).toBe('Listed\u2060[1] and unlisted sources.');
   });
 
   it('renders a table with column headers and its caption', () => {
@@ -69,6 +101,69 @@ describe('PostBlock', () => {
     for (const column of columns) expect(column).toHaveAttribute('scope', 'col');
     expect(within(table).getAllByRole('row')).toHaveLength(3);
     expect(screen.getByText('Directional priority')).toBeInTheDocument();
+  });
+
+  it('drops a header row with no text', () => {
+    render(
+      <PostBlock
+        block={{
+          type: 'table',
+          headers: ['', ' '],
+          rows: [['Quotation addition', 'Strongest lift']],
+        }}
+      />,
+    );
+    const table = screen.getByRole('table');
+    expect(within(table).queryAllByRole('columnheader')).toEqual([]);
+    expect(within(table).getAllByRole('row')).toHaveLength(1);
+    expect(within(table).getByRole('cell', { name: 'Strongest lift' })).toBeInTheDocument();
+  });
+
+  it('fits short label and figure columns to their content, not prose or long headers', () => {
+    render(
+      <PostBlock
+        block={{
+          type: 'table',
+          headers: ['Stage', 'Estimated monthly users', 'What happens'],
+          rows: [
+            ['Crawl', '245 million', 'The crawler fetches every page the sitemap lists.'],
+            ['Answer', 'about 11%', 'Short note'],
+          ],
+        }}
+      />,
+    );
+    const fit = (name: string, role: 'cell' | 'columnheader' = 'cell') =>
+      screen.getByRole(role, { name }).hasAttribute('data-fit');
+    expect(fit('Crawl')).toBe(true);
+    expect(fit('Stage', 'columnheader')).toBe(true);
+    expect(fit('245 million')).toBe(true);
+    expect(fit('Estimated monthly users', 'columnheader')).toBe(false);
+    expect(fit('Short note')).toBe(false);
+    expect(fit('What happens', 'columnheader')).toBe(false);
+  });
+
+  it('marks figure cells, magnitude words included, as numeric and leaves text cells alone', () => {
+    render(
+      <PostBlock
+        block={{
+          type: 'table',
+          headers: ['Measure', 'Claude'],
+          rows: [
+            ['Estimated monthly users', '245 million'],
+            ['Audience', 'over 1.1 billion'],
+            ['Share of prompts', 'about 11%'],
+            ['Direction', 'Strongest lift'],
+          ],
+        }}
+      />,
+    );
+
+    const numeric = (text: string) =>
+      screen.getByText(text).closest('td')?.hasAttribute('data-numeric');
+    expect(numeric('245 million')).toBe(true);
+    expect(numeric('over 1.1 billion')).toBe(true);
+    expect(numeric('about 11%')).toBe(true);
+    expect(numeric('Strongest lift')).toBe(false);
   });
 
   it('emphasises only the bare percentages at or above the heatmap threshold', () => {

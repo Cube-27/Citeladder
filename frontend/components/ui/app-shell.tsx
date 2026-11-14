@@ -24,7 +24,7 @@ import { cn } from '@/lib/utils';
  * From the `shell:` variant (1280px) the sidebar is the full `sidebar-width`
  * column with labels, which the reader can widen by dragging its inner edge
  * (stored per browser, `lib/sidebar-width.ts`); from `rail:` (900px) to `shell:` it is a rail one
- * control wide (decision D3) whose rows show only their icons and name
+ * control wide whose rows show only their icons and name
  * themselves in right-side tooltips, and the main gutter (`--content-gutter`)
  * narrows from 24 to 16. Below `rail:` there is no sidebar column: the page
  * header's menu button opens the same sidebar, labelled, in a left drawer
@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
  * wherever it shows its labels. The page bands (header, controls, content)
  * are the page template's (`components/layout/page-shell.tsx`).
  *
- * The sidebar and the page share their lines (decisions D11, D12): the
+ * The sidebar and the page share their lines: the
  * project switcher's cell and the PageHeader are one sticky top bar
  * (`page-header-band`, ruled underneath), and the mode switch and the
  * palette field sit where the page's tabs and filter rows do. The main
@@ -46,7 +46,7 @@ const FRAME =
   'bg-paper text-ink shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] grid min-h-dvh grid-cols-[minmax(0,1fr)]';
 // A `line` rule always separates the sidebar from the page, in both themes
 // (owner, 2026-11-10); the resize handle's line strengthens it on hover,
-// focus and drag. The sidebar sits on its own fill, one step off the page (D59).
+// focus and drag. The sidebar sits on its own fill, one step off the page.
 const SIDEBAR_COLUMN =
   'bg-sidebar border-line rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
 const PAGE = 'mx-auto flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
@@ -108,11 +108,11 @@ export function AppShellPlaceholder({
 /**
  * The sidebar's column, on the page's lines: the project switcher in the
  * top bar's cell (`page-header-band`, 56, ruled underneath like the
- * PageHeader, decision D12), level with the page title; `page-section-gap`
+ * PageHeader), level with the page title; `page-section-gap`
  * under it the controls (mode switch, then the palette field
  * `page-band-gap` below, as the page's tabs and filters are), then the
- * scrolling destinations and the account at the foot. There is no logo
- * (decision D11). Below the controls: 8 to the destinations, 12 between
+ * scrolling destinations and the account at the foot. There is no logo.
+ * Below the controls: 8 to the destinations, 12 between
  * groups, and the account under a rule 8 below them; a window too short for
  * every destination scrolls them. In the rail the destinations do not scroll, so their
  * tooltips are never clipped. In the navigation drawer the ident row leaves
@@ -219,7 +219,7 @@ export function SidebarNavGroup({
  * A destination row's face, for the link that carries it: `control-md` (32) tall,
  * the label in `ink-secondary` at weight 400; the current row's label is 500
  * (owner, 2026-11-10). Hover is the hover overlay; the current row lifts to
- * the card's `surface` fill (D59) with a 2px Flare bar on its leading edge, and its
+ * the card's `surface` fill with a 2px Flare bar on its leading edge, and its
  * icon turns Flare, the app's one selected-nav marker; the bar is painted
  * over the row, so selecting a row moves nothing. In the rail the row is one control square. A label that
  * cannot fit (larger text spacing, WCAG 1.4.12) wraps and the row grows, so

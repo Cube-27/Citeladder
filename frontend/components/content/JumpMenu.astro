@@ -1,11 +1,12 @@
 ---
 /**
  * JumpMenu — where a rail or Toc goes on narrow screens (DocLayout,
- * ContentArticle): a 48px `surface` summary with the menu's name and a caret,
+ * ContentArticle): a 48px `surface` summary on the control edge with the
+ * menu's name and a caret, filling its column,
  * closed by default, whose panel overlays the page, so opening it moves
  * nothing. It closes on a link, a click outside or Esc (focus back on its
  * summary). A panel holding a Toc hides the Toc's own title, which the
- * summary already shows.
+ * summary already shows, followed by the current section (toc-spy).
  */
 import { ChevronDown } from 'lucide-react';
 
@@ -38,9 +39,9 @@ const { label } = Astro.props;
     height: var(--control-lg);
     padding: 0 16px;
     background: var(--color-surface);
-    border: 1px solid var(--color-line);
+    /* The outline control's edge: 3:1 or more on paper in both themes. */
+    border: 1px solid var(--color-line-control);
     border-radius: var(--radius-md);
-    box-shadow: var(--shadow-xs);
     color: var(--color-ink);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);

@@ -172,7 +172,7 @@ Commands, environment, entitlement, migration, and the clean-clone runbook:
 | [`docs/invariants.md`](docs/invariants.md) | The review-blocking rules |
 | [`docs/README.md`](docs/README.md) | Runtime owners, active work, operations, and historical evidence |
 | [`docs/site-health.md`](docs/site-health.md) | Site crawl, page kinds, rules, issues, readiness, and crawl changes |
-| [`docs/design.md`](docs/design.md) | The design system: tokens and the rules for using them ([decisions](docs/design-decisions.md)) |
+| [`docs/design.md`](docs/design.md) | The design system: tokens and the rules for using them |
 
 Archived history, when present, is **not** an implementation authority.
 

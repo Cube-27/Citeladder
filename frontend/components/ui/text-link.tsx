@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 /**
  * TextLink — the text link, with the 2px focus ring.
  *
- * Where it stands decides its underline (decision D13). A link set at a type
+ * Where it stands decides its underline. A link set at a type
  * role stands on its own in a list, table, row or card (an item title, a
  * URL, "Ask agent about this page"): its place says it is a link, so it is
  * underlined only on hover and keyboard focus. A link inside a sentence

@@ -1,36 +1,34 @@
-/* ---------- Footer: dark in both themes, with a fine film grain (D29) ----------
-   It tucks 40px under the page's curved foot. Its own four tokens keep one
-   value in both themes; the focus ring follows them. */
+/* ---------- Footer: flat on the page's paper, under a hairline ----------
+   Both hairlines span the content container, not the viewport. */
 .cl-footer {
-  --color-focus: var(--color-footer-ink);
-
-  position: relative;
-  isolation: isolate;
-  margin-top: -40px;
-  padding: 136px 0 40px;
-  background: var(--color-footer);
-  color: var(--color-footer-ink-muted);
-  color-scheme: dark;
+  padding: 0 0 40px;
+  background: var(--color-paper);
+  color: var(--color-ink-secondary);
 }
 
-/* Tiled fractal noise with its colour removed, faded until it reads only up
-   close; decoration, no colour of its own. */
-
-.cl-footer::before {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
-  background-size: 240px 240px;
-  opacity: 0.12;
-  content: '';
-  pointer-events: none;
-}
-
+/* The brand above five full-width link columns, so no label wraps. */
 .cl-footer-top {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 48px;
+  padding-top: 64px;
+  border-top: 1px solid var(--color-line);
+}
+
+/* A page that closes on the CTA band keeps one gap (the main column's foot)
+   between the band and the footer, with no hairline. `~`, not `+`: React
+   hoists the badges' image preloads between the main column and the footer. */
+.cl-site-main:has(section:last-child .cl-cta) ~ .cl-footer .cl-footer-top {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* A page that closes on a ruled link list already ends on a hairline, so the
+   footer draws no second one across the empty band. */
+.cl-site-main:has(main > section:last-child :is(.cl-cpage-index, .cl-related):last-child)
+  ~ .cl-footer
+  .cl-footer-top {
+  border-top: 0;
 }
 
 .cl-footer-brand {
@@ -45,51 +43,60 @@
   margin: -4px;
   padding: 4px;
   border-radius: var(--radius-sm);
-  color: var(--color-footer-ink);
+  color: var(--color-ink);
 }
 
 .cl-footer-tagline {
   max-width: 320px;
   margin: 0;
-  color: var(--color-footer-ink-muted);
+  color: var(--color-ink-secondary);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
 
+/* In the bottom row at the right, 8px apart and centred on one line: each
+   badge in the same fixed 112x32 box, its embed contained in it, so a slow or
+   failed third-party load never changes the row. */
 .cl-footer-badges {
   display: flex;
-  flex-wrap: wrap;
+  flex: none;
   align-items: center;
-  gap: 12px;
-  padding-top: 8px;
+  gap: 8px;
 }
 
-/* A text link under a badge: a 24px target, never a 16px line of caption. */
-
-.cl-footer-badge-link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 24px;
-  border-radius: var(--radius-xs);
-  color: var(--color-footer-ink-muted);
-  font-size: var(--text-caption);
-  font-weight: 400;
-  line-height: var(--text-caption--line-height);
-  text-decoration: none;
+.cl-footer-badges > a {
+  display: block;
+  flex: none;
 }
 
-.cl-footer-badge-link:hover {
-  color: var(--color-footer-ink);
-  text-decoration: underline;
-  text-underline-offset: 3px;
+/* Third-party badges in their own colours would be the page's only colour.
+   The transparent text keeps a failed load's alt text out of the layout. */
+.cl-footer-badge {
+  position: relative;
+  display: block;
+  width: 112px;
+  height: 32px;
+  overflow: hidden;
+  object-fit: contain;
+  color: transparent;
+  filter: grayscale(1);
 }
 
-/* D20: the social profiles, one row of icon links under the badges. The row
+/* Drawn only when the image fails to load: it covers the browser's
+   broken-image icon, leaving an empty slot of the badge's size. */
+.cl-footer-badge::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-paper);
+}
+
+/* The social profiles, one row of icon links under the badges. The row
    pulls left by the icon's inset so the first glyph lines up with the copy. */
 
 .cl-footer-social {
   display: flex;
-  gap: 4px;
+  gap: 8px;
   margin: 0 0 0 -8px;
   padding: 0;
   list-style: none;
@@ -99,18 +106,18 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--control-md);
-  height: var(--control-md);
+  width: 32px;
+  height: 32px;
   border-radius: var(--radius-md);
-  color: var(--color-footer-ink-muted);
+  color: var(--color-ink-secondary);
   transition:
     background-color var(--motion-fast) var(--ease-standard),
     color var(--motion-fast) var(--ease-standard);
 }
 
 .cl-footer-social-link:hover {
-  background: var(--color-footer-line);
-  color: var(--color-footer-ink);
+  background: var(--color-state-hover);
+  color: var(--color-ink);
 }
 
 .cl-footer-cols {
@@ -121,7 +128,7 @@
 
 .cl-footer-head {
   margin: 0 0 16px;
-  color: var(--color-footer-ink);
+  color: var(--color-ink);
   font-size: var(--text-label);
   font-weight: 500;
   line-height: var(--text-label--line-height);
@@ -143,37 +150,45 @@
   align-items: center;
   gap: 4px;
   border-radius: var(--radius-xs);
-  color: var(--color-footer-ink-muted);
+  color: var(--color-ink-secondary);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
   text-decoration: none;
 }
 
 .cl-footer-col a svg {
-  color: var(--color-footer-ink-muted);
+  color: var(--color-ink-secondary);
 }
 
 .cl-footer-col a:hover,
 .cl-footer-legal a:hover,
 .cl-footer-cookie:hover,
 .cl-footer-copy a:hover {
-  color: var(--color-footer-ink);
+  color: var(--color-ink);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .cl-footer-bottom {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
   margin-top: 64px;
   padding-top: 24px;
-  border-top: 1px solid var(--color-footer-line);
+  border-top: 1px solid var(--color-line);
+}
+
+.cl-footer-bottom-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 
 .cl-footer-copy {
   margin: 0;
-  color: var(--color-footer-ink-muted);
+  color: var(--color-ink-secondary);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
@@ -183,10 +198,11 @@
   text-decoration: none;
 }
 
+/* 16px apart, so the nine policy links fit one line beside the badges at 1440. */
 .cl-footer-legal {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
+  gap: 8px 16px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -200,22 +216,31 @@
   cursor: pointer;
 }
 
+/* Fewer columns than groups: the groups flow down the columns, so a short
+   group never leaves a hole beside a long one. */
 @media (max-width: 1023px) {
-  .cl-footer-top {
-    grid-template-columns: minmax(0, 1fr);
+  .cl-footer-cols {
+    display: block;
+    columns: 3;
+    column-gap: 24px;
   }
 
-  .cl-footer-cols {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .cl-footer-col {
+    margin-bottom: 32px;
+    break-inside: avoid;
+  }
+
+  .cl-footer-col:last-child {
+    margin-bottom: 0;
   }
 }
 
 @media (max-width: 767px) {
-  .cl-footer {
-    padding-top: 104px;
+  .cl-footer-cols {
+    columns: 2;
   }
 
-  .cl-footer-cols {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .cl-footer-bottom {
+    flex-direction: column;
   }
 }

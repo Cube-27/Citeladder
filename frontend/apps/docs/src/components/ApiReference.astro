@@ -28,7 +28,7 @@ import TypeLabel from './TypeLabel.astro';
   {
     API_GROUPS.map(({ group, operations }) => (
       <section class="cl-docs-ref-group" aria-label={group}>
-        <p class="type-eyebrow">{group}</p>
+        <p class="cl-docs-ref-group-title">{group}</p>
         {operations.map((operation) => (
           <ApiOperation operation={operation} />
         ))}
@@ -63,16 +63,26 @@ import TypeLabel from './TypeLabel.astro';
 </section>
 
 <style>
+  /* The reference keeps to the prose measure, so its rules end with the text. */
   .cl-docs-ref,
   .cl-docs-ref-group {
     display: flex;
     flex-direction: column;
     gap: 40px;
     min-width: 0;
+    max-width: var(--container-prose);
   }
   .cl-docs-ref-group {
     padding-top: 24px;
     border-top: 1px solid var(--color-line);
+  }
+  /* A resource: a step between the page's h2 and its operations. */
+  .cl-docs-ref-group-title {
+    margin: 0;
+    color: var(--color-ink);
+    font-size: var(--text-title-sm);
+    line-height: var(--text-title-sm--line-height);
+    font-weight: 500;
   }
   .cl-docs-schemas {
     border-top: 1px solid var(--color-line);

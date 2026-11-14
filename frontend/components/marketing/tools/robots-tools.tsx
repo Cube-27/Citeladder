@@ -75,15 +75,17 @@ export function RobotsGenerator({ bots }: Readonly<{ bots: ToolBot[] }>) {
           return text;
         }}
       >
-        <fieldset className="flex flex-col gap-3">
-          <legend className="cl-tool-rtitle mb-3">Block selected crawlers</legend>
-          <p className="cl-tool-desc">
+        {/* Legend and helper read like a Field's label and hint; each row is a 24px target. */}
+        <fieldset className="flex flex-col gap-1">
+          <legend className="text-body-sm text-ink mb-2">Block selected crawlers</legend>
+          <p className="cl-tool-group-hint">
             Unchecked crawlers follow the general path rules below. Search and training permissions
             are separate choices.
           </p>
           {bots.map((bot) => (
             <Checkbox
               key={bot.label}
+              className="[&_button[data-state=unchecked]]:border-line-control [&_button[data-state=unchecked]:hover]:border-ink-secondary min-h-6 items-center py-0.5"
               label={`${bot.label} · ${bot.purpose.replaceAll('_', ' ')}`}
               checked={bot.tokens.some((token) => blocked.includes(token))}
               onCheckedChange={(checked) =>

@@ -30,7 +30,7 @@ export function AuthLogo() {
 
 /**
  * AuthSplitShell — account access (sign-in, sign-up and the mailbox screens)
- * across the whole viewport (D24, the pre-redesign layout): the sign-in form
+ * across the whole viewport (the pre-redesign layout): the sign-in form
  * (no card) centred in a column on `paper` with the ThemeSwitch above it and the
  * caller's footer line under it, and from `desktop:` the black-and-white
  * product showcase beside it. Below `desktop:` the showcase drops away and the
@@ -109,7 +109,7 @@ export function AuthShell({
 
 /**
  * The card's head: an optional 40px icon tile, the title 32/38 in the sans
- * face at 500 (the app sets no display face, decision D54) and a 16/26 line
+ * face at 500 (the app sets no display face) and a 16/26 line
  * under it. The title is the page's one `h1`; it takes focus by
  * script (`tabIndex -1`) when a flow moves to a new step.
  */
@@ -180,7 +180,7 @@ function AuthCardFrame({
           'text-ink flex flex-col gap-[var(--card-padding)]',
           // Account access sits straight on the left half's `paper`, with no
           // card (owner, 2026-11-06), and keeps the pre-redesign 44px
-          // controls (D24): every button and field inside reads `control-md`.
+          // controls: every button and field inside reads `control-md`.
           signIn
             ? '[--control-md:44px]'
             : cn(CARD_FACE, 'surface-card desktop:p-10 p-[var(--card-padding)]'),
@@ -211,7 +211,7 @@ export function AuthCard(props: AuthCardProps) {
 }
 
 /**
- * AuthSignInCard — the account-access form inside AuthSplitShell (D24): the
+ * AuthSignInCard — the account-access form inside AuthSplitShell: the
  * AuthCard's head and body with the logo centred at its top, a centred head
  * and the 44px controls, but no card: no fill, edge, radius, shadow or
  * padding box, so the whole left half is one plain `paper` surface (owner,
@@ -304,7 +304,7 @@ export function AuthLinkRow({ children }: Readonly<{ children: ReactNode }>) {
 /**
  * A list of whole-row choices (the workspace chooser's rows), divided by rules
  * and never boxed: it sits inside the AuthCard, and a container never holds a
- * second bordered box (D51).
+ * second bordered box.
  */
 export function AuthRowList({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (

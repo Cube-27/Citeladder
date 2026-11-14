@@ -2,14 +2,16 @@
 /**
  * ContentArticle — the website's reading layout for research guides, blog
  * posts, the FAQ and the AI reference: the `header` slot (an ArticleHeader)
- * and the body (Prose) in one 840px column, the end matter (the `end` slot:
+ * and the body (Prose) in one 640px column, the end matter (the `end` slot:
  * FAQ, sources, author, pager) under the body, 64px under the navbar.
  *
- * - **With `toc`:** from 1280px the column sits in the middle of the
- *   container with the Toc at its left edge; 900–1279px a 200px rail beside
- *   the column; below 900px an "On this page" JumpMenu between the header and
- *   the body, its closed height reserved. The Toc starts level with the body
- *   and stops being sticky where the end matter begins.
+ * - **With `toc`:** the column starts on the content edge. From 1280px the
+ *   280px Toc starts on the content edge and the column follows 48px on; the
+ *   header starts with the column, its title, lead and byline kept to the
+ *   column, and tables run on to the content's right
+ *   edge; below 1280px an "On this page" JumpMenu between
+ *   the header and the body, its closed height reserved. The Toc starts level
+ *   with the body and stays sticky until the end matter ends.
  * - **Without:** the column is centred.
  */
 import JumpMenu from '@/components/content/JumpMenu.astro';
@@ -32,7 +34,7 @@ const hasEnd = Astro.slots.has('end');
       {
         hasToc && (
           <>
-            <div class="cl-cpage-article-toc">
+            <div class="cl-cpage-article-toc" data-toc-scroll>
               <Toc items={toc} title={tocTitle} />
             </div>
             <div class="cl-cpage-article-jump">
@@ -57,23 +59,20 @@ const hasEnd = Astro.slots.has('end');
 
 <style is:global>
   .cl-cpage-article {
-    /* A little wider than the prose token, so tables and code have room; the Toc keeps 200px. */
-    --cpage-article-width: 840px;
+    /* One measure: the header, body, tables, figures and end matter share it. */
+    --cpage-article-width: 640px;
     padding-top: 64px;
   }
   .cl-cpage-article-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, var(--cpage-article-width)) minmax(0, 1fr);
+    grid-template-columns: minmax(0, var(--cpage-article-width));
+    justify-content: center;
     column-gap: 48px;
     container-type: inline-size;
-  }
-  .cl-cpage-article--toc .cl-cpage-article-grid {
-    grid-template-columns: minmax(200px, 1fr) minmax(0, var(--cpage-article-width)) minmax(0, 1fr);
   }
   .cl-cpage-article-head,
   .cl-cpage-article-body,
   .cl-cpage-article-end {
-    grid-column: 2;
     min-width: 0;
   }
   .cl-cpage-article-head {
@@ -81,62 +80,121 @@ const hasEnd = Astro.slots.has('end');
     padding-bottom: 48px;
   }
   .cl-cpage-article-toc {
-    position: sticky;
-    top: calc(var(--nav-height) + 40px);
-    grid-column: 1;
-    grid-row: 2;
-    align-self: start;
-    justify-self: start;
-    width: 100%;
-    max-width: 240px;
-  }
-  .cl-cpage-article-body {
-    grid-row: 2;
+    display: none;
   }
   .cl-cpage-article-body > .cl-prose {
     max-width: none;
   }
-  .cl-cpage-article-jump {
-    display: none;
+  /* The body's first block, a heading included, starts on the row's top edge,
+     level with the Toc's title. */
+  .cl-cpage-article-body > .cl-prose > :first-child {
+    margin-top: 0;
+  }
+  .cl-cpage-article--toc .cl-cpage-article-grid {
+    justify-content: start;
   }
   .cl-cpage-article-end {
     display: flex;
     flex-direction: column;
-    grid-row: 3;
     gap: 48px;
     padding-top: 64px;
   }
-  @media (max-width: 1279px) {
+  /* Below 1280px the Toc is a JumpMenu between the header and the body, its
+     closed height reserved, so the column keeps its full width. */
+  .cl-cpage-article--toc .cl-cpage-article-jump {
+    grid-row: 2;
+    height: var(--control-lg);
+    margin-bottom: 32px;
+  }
+  .cl-cpage-article--toc .cl-cpage-article-body {
+    grid-row: 3;
+  }
+  .cl-cpage-article--toc .cl-cpage-article-end {
+    grid-row: 4;
+  }
+  /* From 1280px the 280px Toc starts on the content edge and the column
+     follows 48px on; the header starts with the column and runs to the
+     content's right edge (a third track takes the rest), so the title gets
+     the width and its lead stays at the column's measure. */
+  @media (min-width: 1280px) {
     .cl-cpage-article--toc .cl-cpage-article-grid {
-      grid-template-columns: 200px minmax(0, var(--cpage-article-width));
-      justify-content: center;
+      --cpage-toc-width: 280px;
+      grid-template-columns:
+        var(--cpage-toc-width) minmax(0, var(--cpage-article-width))
+        minmax(0, 1fr);
+      justify-content: start;
     }
-    .cl-cpage-article--toc :is(.cl-cpage-article-head, .cl-cpage-article-body, .cl-cpage-article-end) {
+    .cl-cpage-article--toc :is(.cl-cpage-article-body, .cl-cpage-article-end) {
       grid-column: 2;
     }
-  }
-  @media (max-width: 899px) {
-    .cl-cpage-article--toc .cl-cpage-article-grid {
-      grid-template-columns: minmax(0, var(--cpage-article-width));
+    .cl-cpage-article--toc .cl-cpage-article-head {
+      grid-column: 2 / -1;
     }
-    .cl-cpage-article--toc :is(.cl-cpage-article-head, .cl-cpage-article-body, .cl-cpage-article-end) {
-      grid-column: 1;
+    .cl-cpage-article--toc .cl-cpage-article-head .cl-ahead {
+      max-width: none;
     }
+    .cl-cpage-article--toc .cl-cpage-article-head :is(.cl-ahead-title, .cl-ahead-lead, .cl-ahead-byline, .cl-crumbs) {
+      max-width: var(--cpage-article-width);
+    }
+    /* Toc entries wrap on phrases; the entry in view is ink beside its bar, at
+       the same weight, so it never re-wraps. */
+    .cl-site .cl-cpage-article-toc .cl-toc-link {
+      color: var(--color-ink-secondary);
+      text-wrap: pretty;
+    }
+    .cl-site .cl-cpage-article-toc .cl-toc-link:hover,
+    .cl-site .cl-cpage-article-toc .cl-toc-link[aria-current='location'] {
+      color: var(--color-ink);
+    }
+    /* A wrapped entry stays flush left; entries are 8px apart (their 4px
+       padding each), and the bar spans the whole entry. */
+    .cl-site .cl-cpage-article-toc .cl-toc-link {
+      line-height: var(--text-body-sm--line-height);
+    }
+    /* Sticky through the body and the end matter rows. A long Toc scrolls its
+       entries under its fixed title, so every entry stays reachable. */
     .cl-cpage-article-toc {
-      display: none;
+      display: flex;
+      flex-direction: column;
+      position: sticky;
+      top: calc(var(--nav-height) + 40px);
+      grid-column: 1;
+      grid-row: 2 / span 2;
+      align-self: start;
+      max-height: calc(100dvh - var(--nav-height) - 80px);
+    }
+    .cl-site .cl-cpage-article-toc .cl-toc {
+      min-height: 0;
+    }
+    /* The rail's line is the top background layer over 1px of padding, so
+       the scrollport never clips the 2px marker. A shade marks each edge with
+       more entries beyond it; the paper covers scroll with the entries (local)
+       and hide a shade once its end is in view. */
+    .cl-site .cl-cpage-article-toc .cl-toc-list {
+      min-height: 0;
+      padding-left: 1px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      border-left: 0;
+      background:
+        linear-gradient(var(--color-line), var(--color-line)) left / 1px 100% no-repeat,
+        linear-gradient(var(--color-paper) 40%, transparent) top / 100% 32px no-repeat local,
+        linear-gradient(transparent, var(--color-paper) 60%) bottom / 100% 32px no-repeat local,
+        linear-gradient(color-mix(in srgb, var(--color-ink) 14%, transparent), transparent) top /
+          100% 16px no-repeat scroll,
+        linear-gradient(transparent, color-mix(in srgb, var(--color-ink) 14%, transparent)) bottom /
+          100% 16px no-repeat scroll;
+      scrollbar-width: thin;
+      scrollbar-color: var(--color-line-strong) transparent;
     }
     .cl-cpage-article--toc .cl-cpage-article-jump {
-      display: block;
-      grid-column: 1;
-      grid-row: 2;
-      height: var(--control-lg);
-      margin-bottom: 32px;
+      display: none;
     }
     .cl-cpage-article--toc .cl-cpage-article-body {
-      grid-row: 3;
+      grid-row: 2;
     }
     .cl-cpage-article--toc .cl-cpage-article-end {
-      grid-row: 4;
+      grid-row: 3;
     }
   }
   @media (max-width: 767px) {

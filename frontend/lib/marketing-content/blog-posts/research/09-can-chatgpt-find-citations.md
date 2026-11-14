@@ -52,7 +52,7 @@ Choose the tool for the task:
 
 No tool removes the need to check whether the cited material says what you claim.
 
-## Why asking for "five references" can go wrong
+## Why asking for “five references” can go wrong
 
 A language model can produce text that resembles a bibliography. Plausible formatting is not evidence of retrieval.
 

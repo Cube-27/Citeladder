@@ -9,9 +9,8 @@ description: >-
 # CiteLadder Design System
 
 The design system's reference, in the [DESIGN.md](https://github.com/google-labs-code/design.md)
-format: tokens, then the rules for using them. It states what holds today; the
-owner's decisions behind it, and the page contracts they produced, are in
-[design decisions](design-decisions.md). The token blocks are generated from
+format: tokens, then the rules for using them. It states what holds today. The
+token blocks are generated from
 the product's CSS and checked by `pnpm check:policy`; never edit them by hand.
 
 ## Overview
@@ -46,10 +45,6 @@ colors:
   data-3: '#7a7a7a' # dark '#8c8c8c'
   data-other: '#c2c2c2' # dark '#4a4a4a'
   focus: '#111111' # dark '#f4f4f4'
-  footer: '#151515' # dark '#151515'
-  footer-ink: '#f4f4f4' # dark '#f4f4f4'
-  footer-ink-muted: '#a6a6a6' # dark '#a6a6a6'
-  footer-line: '#2a2a2a' # dark '#2a2a2a'
   info: '#1f5fbf' # dark '#7fb0ff'
   info-soft: '#e3edfc' # dark '#14243d'
   ink: '#111111' # dark '#f4f4f4'
@@ -59,7 +54,6 @@ colors:
   line: '#e5e5e5' # dark '#2a2a2a'
   line-control: '#858585' # dark '#747474'
   line-strong: '#d4d4d4' # dark '#3a3a3a'
-  nav-glass: 'rgb(244 244 244 / 78%)' # dark 'rgb(30 30 30 / 78%)'
   negative: '#c4122f' # dark '#ff7387'
   negative-soft: '#ffe2e6' # dark '#3d0e16'
   on-accent: '#111111' # dark '#111111'
@@ -87,7 +81,7 @@ colors:
 - **Ink** carries every primary action, heading and figure. **Ink secondary**
   is the one grey for supporting text; `ink-muted` is its alias, so there is
   never a third grey.
-- **The app rebinds a few values** (D58, D59): its ink is 10% lower in
+- **The app rebinds a few values**: its ink is 10% lower in
   contrast (`#1c1c1c`, dark `#e8e8e8`), and its fills are a ladder with the
   sidebar on its own step. Light: paper `#fcfcfc`, sidebar `#fafafa`, surface
   `#ffffff`, sunken `#f4f4f5`, ink-secondary `#61616b`. Dark: sidebar
@@ -117,8 +111,8 @@ colors:
   fill. Red is reserved for errors and destructive actions.
 - **Data:** `data-1` is the own brand (accent), `data-2` ink, `data-3` grey,
   `data-other` the rest.
-- **Website only:** the `stage-*` tints colour panels and picture stages; the
-  footer is dark in both themes on its own `footer-*` tokens.
+- **Website and docs:** `paper` is white in light. The `stage-*` tints
+  are for editorial illustrations only, never a page fill, panel or card.
 
 ## Typography
 
@@ -142,17 +136,17 @@ typography:
   cl-body: { fontSize: 16px, lineHeight: 26px }
   cl-fcard-title: { fontSize: 22px, lineHeight: 28px }
   cl-lead: { fontSize: 18px, lineHeight: 30px }
-  cl-lhero-title: { fontSize: 80px, lineHeight: 86px }
+  cl-lhero-title: { fontSize: 48px, lineHeight: 52px }
   cl-note: { fontSize: 14px, lineHeight: 20px }
-  cl-phero-title: { fontSize: 80px, lineHeight: 86px }
-  cl-shead-title: { fontSize: 56px, lineHeight: 60px }
+  cl-phero-title: { fontSize: 48px, lineHeight: 52px }
+  cl-shead-title: { fontSize: 32px, lineHeight: 40px }
 ```
 
 <!-- generated:type:end -->
 
 - **Faces by role:** the sans face sets everything; the mono face sets data,
   code and short labels, never a sentence; the display face sets only the
-  website's and docs' display headings, at 400. The app uses no display face.
+  website's and docs' headings from 32px, at 400. The app uses no display face.
 - **Three text styles:**
   - _Heading_, 500 in ink: page, section, card, dialog and drawer titles, a
     metric's figure, buttons, the selected tab, segment or nav item.
@@ -162,13 +156,13 @@ typography:
     heads, captions, counts, hints, inactive tabs and nav.
 - **Nothing is heavier than 500.**
 - **App sizes:** 14 body and controls, 16 section and card titles, 12
-  captions, badges and code, 20 for the page title (D58) and 24 only for a
+  captions, badges and code, 20 for the page title and 24 only for a
   metric's figure.
 - **Website sizes:** 12 · 14 · 16 · 18 · 22 · 28 · 56 · 80, and normally no
   more than three on a page. Nothing below 12px; prose holds to 65ch.
 - **Sizes are rem.** Type tokens are declared in rem (the px here ÷ 16), so
   they follow the reader's text size; spacing stays px, and controls take
-  `control-md` as a minimum height so larger text grows them (D66).
+  `control-md` as a minimum height so larger text grows them.
 
 ## Layout
 
@@ -218,8 +212,7 @@ first, left to right and top to bottom.
    Columns). Two or more filters share All filters; a lone filter is its own
    trigger ("Page kind: All page kinds"). A row of filters alone, with no
    view, search or action, joins the tab row right after the tabs, its live
-   note at the far end (D60); with no tabs it follows the header's title
-   (D58).
+   note at the far end; with no tabs it follows the header's title.
 4. **Content.**
 
 A control sits in the row of the thing it acts on: the page's control row when
@@ -229,7 +222,7 @@ header when it changes how that card draws.
 **Page width.** A page is full width. Settings, Billing, Issues, Skills, Context,
 Actions, Runs and New chat sit in one centred column at `container-thread`
 under the full-width header, and the data-source setup card at
-`container-prose`, so a row's action is never far from its text (D61).
+`container-prose`, so a row's action is never far from its text.
 
 **Breakpoints.** Components change at one breakpoint, 981px. The shell has
 two more: below 900px the navigation is a drawer behind the header's menu
@@ -237,7 +230,7 @@ button, from 900px an icon rail, from 1280px the labelled sidebar. Metric
 cards stay in one row from 981px; the control row wraps in its one order.
 In the main column, app grids and card radio groups measure the column
 instead of the viewport, at the widths those breakpoints give it with the
-default sidebar, so a wider sidebar stacks them (D67).
+default sidebar, so a wider sidebar stacks them.
 
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
 and empty states keep their footprint; a pending button keeps its label's box.
@@ -249,9 +242,9 @@ and empty states keep their footprint; a pending button keeps its label's box.
 - **Floating surfaces** (menus, select lists, popovers, dialogs, drawers,
   toasts, the command palette, chart tips) share one face: `surface`, a `line`
   edge and `shadow-float`.
-- **The website gets depth from pictures.** Panels have no border or shadow
-  and are told apart by tint; a product image is the one surface with a
-  shadow (`shadow-pop`). The primary button is a raised key (`shadow-press`).
+- **The website and docs are flat.** Panels are one flat neutral fill
+  with no border or shadow; a product image's screen is edged by a `line`
+  hairline ring. Buttons have no sheen, press shadow or press nudge.
 
 ## Shapes
 
@@ -274,7 +267,7 @@ rounded:
 - **Full round** only for avatars, status dots, switch tracks and count pills.
   A chip, citation pill, meter or progress track takes a small radius.
 - **The website** keeps 2 to 8 for controls and chips; its surfaces are 4 for
-  an inner card or popup, 12 for a card and 16 for a stage.
+  an inner card or popup, 12 for a card and 16 for a product-image panel.
 
 ## Components
 

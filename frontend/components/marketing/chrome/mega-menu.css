@@ -1,13 +1,17 @@
 /* ---------- MegaMenu (the shared popup draws its frame) ---------- */
+/* Each column is as wide as its longest row, so every subtitle sits on one
+   line; the menu sizes to that content (the popup follows it) and is held
+   inside the bar's content row (100cqw), where the columns share the width. */
+
 .cl-mega {
+  width: max-content;
+  max-width: calc(100cqw - 2px);
   padding: 12px;
 }
 
-/* Fixed columns give each menu its own width for the popup to follow. */
-
 .cl-mega .cl-mega-groups {
   display: grid;
-  grid-template-columns: repeat(var(--cols), 280px);
+  grid-template-columns: repeat(var(--cols), minmax(0, max-content));
   gap: 8px;
 }
 

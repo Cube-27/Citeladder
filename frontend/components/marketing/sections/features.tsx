@@ -7,20 +7,20 @@ import './features.css';
 
 /**
  * A linked card names where it goes ("Explore AI Visibility"), never a bare
- * "Learn more" (D36), so a link always brings its label.
+ * "Learn more", so a link always brings its label.
  */
 type FeatureCardLink =
   | Readonly<{ href: string; linkLabel: string }>
   | Readonly<{ href?: undefined; linkLabel?: undefined }>;
 
 /**
- * FeatureCard (D44: no border, shadow or lift): a soft tint panel when it
+ * FeatureCard (no border, shadow or lift): a soft tint panel when it
  * links or holds a product image, otherwise a column under a hairline rule;
  * an optional product image on top, then an optional eyebrow (only where it
- * adds what the title lacks, such as a unit), a title (title, or display-md
- * at `lg`), body, an optional check list and, as a link, an arrow line
- * naming the destination. With an `href` the whole card is the link. A
- * `wide` card (alone in its row) sets its points beside the copy, not under it.
+ * adds what the title lacks, such as a unit), a title (20/24 at every size),
+ * body, an optional check list and, as a link, an arrow line naming the
+ * destination. With an `href` the whole card is the link. A `wide` card
+ * (alone in its row) keeps its points under the copy in one column.
  */
 export function FeatureCard({
   href,
@@ -31,6 +31,7 @@ export function FeatureCard({
   points,
   size = 'md',
   wide = false,
+  text = 'body',
   as: Heading = 'h3',
   media,
 }: FeatureCardLink &
@@ -41,8 +42,10 @@ export function FeatureCard({
     /** What the card covers, as a small check list under the body. */
     points?: readonly string[];
     size?: 'md' | 'lg';
-    /** The card fills a full row: the points sit in a column beside the copy (D21). */
+    /** The card fills a full row; its points stay under the copy. */
     wide?: boolean;
+    /** `lead` sets the full-size check list, as a FeatureSplit does. */
+    text?: 'body' | 'lead';
     /** `h2` when the card heads its own part of the page (no section title above it). */
     as?: 'h2' | 'h3';
     /** The card's product image (a ProductFrame; its well sits straight in the card), above the copy. */
@@ -61,7 +64,7 @@ export function FeatureCard({
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
         <Heading className="cl-fcard-title">{title}</Heading>
         {body && <p className="cl-fcard-text">{body}</p>}
-        {points && points.length > 0 && <CheckList items={points} small />}
+        {points && points.length > 0 && <CheckList items={points} small={text === 'body'} />}
         {href && <SiteArrowLink className="cl-fcard-more">{linkLabel}</SiteArrowLink>}
       </div>
     </>
@@ -107,7 +110,7 @@ export function Bento({
 }
 
 /**
- * FeatureSplit: copy (no eyebrow, D36) on 5/12 beside a product image on 7/12, reversible;
+ * FeatureSplit: copy (no eyebrow) on 5/12 beside a product image on 7/12, reversible;
  * stacked under 1024px with the copy first. Consecutive splits sit 128 apart.
  */
 export function FeatureSplit({

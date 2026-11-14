@@ -180,7 +180,7 @@ function ReadinessLedger({
                 </ClampText>
               </Pressable>
             </TableCell>
-            {/* The number only (decision D8); the State column says why a
+            {/* The number only; the State column says why a
                 dimension has none. */}
             <TableCell numeric>{formatScore(dimension.score)}</TableCell>
             <TableCell numeric>

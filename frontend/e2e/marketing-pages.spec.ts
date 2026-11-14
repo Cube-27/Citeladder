@@ -562,7 +562,7 @@ test.describe('marketing routes', () => {
       'href',
       'https://docs.citeladder.com/changelog/',
     );
-    // The social row sits under the launch badges, outside the link columns (D20).
+    // The social row sits under the launch badges, outside the link columns.
     const siteFooter = page.getByRole('contentinfo');
     await expect(siteFooter.getByRole('link', { name: 'github.com' })).toHaveAttribute(
       'href',

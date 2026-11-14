@@ -21,13 +21,14 @@
 }
 
 .cl-step-n {
-  color: var(--color-ink-muted);
+  color: var(--color-ink-secondary);
   font-family: var(--font-mono);
-  font-size: var(--text-data);
-  line-height: var(--text-data--line-height);
+  font-size: var(--text-label);
+  font-weight: 500;
+  line-height: var(--text-label--line-height);
 }
 
-/* A step's note is a sentence, so it is the sans face (D36). */
+/* A step's note is a sentence, so it is the sans face. */
 
 .cl-step-meta {
   margin: 4px 0 0;
@@ -86,7 +87,7 @@
   }
 }
 
-/* D21: on a tablet three or six steps go three a row, so no step sits alone. */
+/* On a tablet three or six steps go three a row, so no step sits alone. */
 
 @media (min-width: 768px) and (max-width: 1023px) {
   .cl-steps--horizontal:is(
@@ -180,7 +181,7 @@
   margin-top: 12px;
 }
 
-/* Links in copy are ink with their underline; the accent stays a mark (D35). */
+/* Links in copy are ink with their underline; the accent stays a mark. */
 
 .cl-faq-a a {
   color: var(--color-ink);
@@ -190,9 +191,8 @@
 }
 
 /* ---------- CtaBand: a stage inside the container, never full-bleed ----------
-   D18/D21: the copy and actions stack centred, so the band has no empty side.
-   D44: set off by its stage, tints over paper with grain, and no border or
-   shadow: the page's last stage. */
+   The copy and actions stack centred, so the band has no empty side.
+   Set off by a flat neutral fill, with no border or shadow. */
 .cl-cta {
   display: flex;
   flex-direction: column;
@@ -201,17 +201,7 @@
   padding: 64px;
   border: 0;
   border-radius: var(--site-radius-stage);
-  background: var(--color-paper);
-  background-image:
-    var(--stage-grain), radial-gradient(90% 120% at 0% 0%, var(--stage-a) 0%, transparent 70%),
-    radial-gradient(90% 120% at 100% 100%, var(--stage-b) 0%, transparent 70%),
-    radial-gradient(70% 90% at 100% 0%, var(--stage-c) 0%, transparent 70%);
-  background-size:
-    200px 200px,
-    100% 100%,
-    100% 100%,
-    100% 100%;
-  background-blend-mode: soft-light, normal, normal, normal;
+  background: var(--tint-neutral);
   box-shadow: none;
   text-align: center;
 }
@@ -223,7 +213,7 @@
   gap: 16px;
 }
 
-/* The closing band's title is a section heading, at the section size (D36). */
+/* The closing band's title is a section heading, at the section size. */
 
 .cl-cta-title {
   max-width: 960px;
@@ -237,10 +227,12 @@
   text-wrap: balance;
 }
 
+/* A centred lead balances its lines over a short measure. */
+
 .cl-cta-lead {
-  max-width: var(--container-narrow);
+  max-width: 560px;
   margin: 0;
-  text-wrap: pretty;
+  text-wrap: balance;
 }
 
 .cl-cta-side {
