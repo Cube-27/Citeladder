@@ -9,8 +9,7 @@ const path = new URL('../../../apps/docs/src/content/ai-traffic.md', import.meta
 const START = '<!-- gcp-log-filter:start -->';
 const END = '<!-- gcp-log-filter:end -->';
 
-// A checkout may convert line endings; the article's text is what must match.
-const current = (await readFile(path, 'utf8')).replaceAll('\r\n', '\n');
+const current = await readFile(path, 'utf8');
 const start = current.indexOf(START);
 const end = current.indexOf(END);
 if (start < 0 || end < start) throw new Error(`ai-traffic.md lacks the ${START} block`);

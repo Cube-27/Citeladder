@@ -15,7 +15,7 @@
  * count. Dependency-free, so the classifier job tests it.
  */
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { join, relative } from 'node:path';
 
 const KYSELY_WRITE =
   /\b(?:insertInto|updateTable|deleteFrom|mergeInto)\s*\(\s*(?:(['"])([^'"]*)\1)?/gu;
@@ -203,7 +203,7 @@ export function apiModules(apiRoot) {
       if (!entry.isFile() || !/\.[cm]?[jt]s$/u.test(entry.name) || entry.name.endsWith('.d.ts'))
         continue;
       const path = join(entry.parentPath, entry.name);
-      modules.set(relative(apiRoot, path).split(sep).join('/'), readFileSync(path, 'utf8'));
+      modules.set(relative(apiRoot, path), readFileSync(path, 'utf8'));
     }
   }
   return modules;

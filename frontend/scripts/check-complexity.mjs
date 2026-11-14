@@ -12,8 +12,8 @@ import { lineIndex, parseSource } from './source-ast.mjs';
 
 const FRONTEND = path.resolve(import.meta.dirname, '..');
 const REPOSITORY = path.resolve(FRONTEND, '..');
-const GIT_EXECUTABLE =
-  process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
+// An absolute path, not PATH lookup: a PATH entry cannot substitute git (Sonar S4036).
+const GIT_EXECUTABLE = '/usr/bin/git';
 /** Each policy's file below `frontend/`, its fixed roots and its historical root renames. */
 export const POLICIES = {
   frontend: {
@@ -187,7 +187,7 @@ export function measure(file) {
     }
   };
   visit(program, null, null);
-  return { loc: source.split(/\r?\n/).length, test: isTestFile(file), functions };
+  return { loc: source.split('\n').length, test: isTestFile(file), functions };
 }
 
 function hasExactKeys(value, keys) {
@@ -249,7 +249,7 @@ export function collect(policy) {
   const measurements = {};
   for (const root of policy.roots)
     for (const file of filesUnder(path.join(FRONTEND, root))) {
-      const relative = path.relative(FRONTEND, file).split(path.sep).join('/');
+      const relative = path.relative(FRONTEND, file);
       if (!GENERATED_DIRECTORIES.some((directory) => relative.startsWith(directory)))
         measurements[relative] = measure(file);
     }

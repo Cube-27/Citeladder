@@ -1,7 +1,7 @@
 /** Packaged model input; files stay under their existing config owner. */
 import { createHash } from 'node:crypto';
 import { readFile, readdir } from 'node:fs/promises';
-import { join, relative, sep } from 'node:path';
+import { join, relative } from 'node:path';
 import { z } from 'zod';
 import { policy } from '../config.ts';
 import { parseContentFormats, type ContentFormat } from '../config/skill-inputs.ts';
@@ -70,8 +70,8 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
   let formats: PackagedCatalog['formats'] = new Map();
   const inputs = await Promise.all(
     (await markdownFiles(root)).map(async (file) => ({
-      path: relative(root, file).split(sep).join('/'),
-      body: expand((await readFile(file, 'utf8')).replaceAll('\r\n', '\n')),
+      path: relative(root, file),
+      body: expand(await readFile(file, 'utf8')),
     })),
   );
   for (const { path, body } of inputs) {
@@ -87,10 +87,7 @@ export async function loadSkillCatalog(root: string): Promise<PackagedCatalog> {
     throw new TypeError('Incomplete skill catalog');
   // Workflows are presentation and routing, but they change what a run is
   // started with, so they share the catalog fingerprint.
-  const workflowFile = (await readFile(join(root, 'workflows.json'), 'utf8')).replaceAll(
-    '\r\n',
-    '\n',
-  );
+  const workflowFile = await readFile(join(root, 'workflows.json'), 'utf8');
   digest.update('workflows.json').update('\0').update(workflowFile).update('\0');
   // The content rule catalog is the page methodology's rule list, so a change to
   // it asks a queued turn again like a skill change does.

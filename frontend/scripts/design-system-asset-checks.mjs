@@ -103,10 +103,6 @@ function svgPaths(directory) {
 /** Every SVG colour finding under public/. */
 export function svgColorScan(root, palette) {
   return svgPaths(join(root, 'public')).flatMap((path) =>
-    svgColorFindings(
-      readFileSync(path, 'utf8'),
-      relative(root, path).replaceAll('\\', '/'),
-      palette,
-    ),
+    svgColorFindings(readFileSync(path, 'utf8'), relative(root, path), palette),
   );
 }

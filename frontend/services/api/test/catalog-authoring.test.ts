@@ -233,11 +233,7 @@ it('contains existing and new output paths, including symlink escapes', async ()
   await mkdir(join(root, 'inside', '.runtime'));
   await writeFile(join(root, 'inside', '.runtime', 'catalog.json'), '{"revision":"fixture"}');
   await writeFile(join(root, 'outside', 'catalog.json'), '{"secret":"fixture-private"}');
-  await symlink(
-    join(root, 'outside'),
-    join(root, 'inside', 'escape'),
-    process.platform === 'win32' ? 'junction' : 'dir',
-  );
+  await symlink(join(root, 'outside'), join(root, 'inside', 'escape'));
   process.chdir(join(root, 'inside'));
   try {
     await expect(readOperatorJson('.runtime/catalog.json')).resolves.toEqual({

@@ -11,7 +11,7 @@ const checkOutput = fileURLToPath(new URL('./check-marketing-worker-output.mjs',
 // Its own output, not apps/marketing/dist: `wrangler dev` holds its local state
 // and served assets open under the config's directory, so sharing production's
 // dist made every `pnpm build` or quality check fail while the dev server ran
-// (on Windows as EBUSY, or Astro's rmdirSync `recursive` error on Node 26).
+// (Astro's rmdirSync `recursive` error on Node 26).
 const outDir = 'apps/marketing/.dev/dist';
 const env = {
   ...process.env,

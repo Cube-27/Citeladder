@@ -1,4 +1,4 @@
-# bootstrap.ps1 creates this account first and grants its only project role
+# bootstrap.mjs creates this account first and grants its only project role
 # (logging.logWriter): the deployer cannot edit project IAM.
 resource "google_service_account" "db" {
   account_id                   = "${local.name}-db"
@@ -6,7 +6,7 @@ resource "google_service_account" "db" {
   create_ignore_already_exists = true
 }
 
-# The log-writer grant moved to bootstrap.ps1; forget it without revoking it.
+# The log-writer grant moved to bootstrap.mjs; forget it without revoking it.
 removed {
   from = google_project_iam_member.db_logging
 

@@ -119,11 +119,7 @@ export async function workspacePath(path: string, output = false) {
     actual = resolve(await realpath(dirname(resolved)), basename(resolved));
   }
   const rel = relative(root, actual);
-  if (
-    isAbsolute(rel) ||
-    rel === '..' ||
-    rel.startsWith(`..${process.platform === 'win32' ? '\\' : '/'}`)
-  )
+  if (isAbsolute(rel) || rel === '..' || rel.startsWith('../'))
     throw new Error('path_outside_workspace');
   return actual;
 }

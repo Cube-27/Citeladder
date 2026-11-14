@@ -112,9 +112,6 @@ describe('a fresh database', () => {
     );
     expect(await ledger(client)).toEqual(directory);
 
-    // A CRLF checkout is the same file.
-    const crlf = migrations.map((file) => ({ ...file, sql: file.sql.replaceAll('\n', '\r\n') }));
-    expect(await applyMigrations(client, crlf)).toEqual([]);
     const edited = migrations.map((file, index) =>
       index === 0
         ? { ...file, sql: `${file.sql}\nCREATE TABLE public.extra (id integer);\n` }

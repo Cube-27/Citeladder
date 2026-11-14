@@ -53,7 +53,7 @@ function sourceFiles(directory) {
     const path = join(directory, name);
     if (statSync(path).isDirectory()) return sourceFiles(path);
     if (!/\.(?:css|tsx?|astro)$/.test(path) || /\.(?:test|spec)\./.test(path)) return [];
-    return [{ path: relative(root, path).replaceAll('\\', '/'), text: readFileSync(path, 'utf8') }];
+    return [{ path: relative(root, path), text: readFileSync(path, 'utf8') }];
   });
 }
 
@@ -342,7 +342,6 @@ export function generatedBlocks(tokenCss, websiteCss) {
  */
 export function refreshGeneratedBlocks(document, blocks) {
   let text = document;
-  const eol = document.includes('\r\n') ? '\r\n' : '\n';
   const stale = [];
   const missing = [];
   for (const [name, block] of blocks) {
@@ -356,10 +355,8 @@ export function refreshGeneratedBlocks(document, blocks) {
     }
     // A blank line each side of the block, as the Markdown formatter leaves it.
     const fresh = `\n\n${block}\n\n`;
-    if (match[2].replaceAll('\r\n', '\n') !== fresh) stale.push(name);
-    // Write in the document's own line endings: no mixed endings on a CRLF checkout.
-    const written = fresh.replaceAll('\n', eol);
-    text = text.replace(pattern, (_, start, __, end) => `${start}${written}${end}`);
+    if (match[2] !== fresh) stale.push(name);
+    text = text.replace(pattern, (_, start, __, end) => `${start}${fresh}${end}`);
   }
   return { text, stale, missing };
 }

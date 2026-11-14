@@ -11,8 +11,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 const FRONTEND = path.resolve(import.meta.dirname, '..');
 const ROOT = path.resolve(FRONTEND, '..');
 const CONFIG_PATH = path.join(ROOT, 'jscpd.json');
-const GIT_EXECUTABLE =
-  process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
+// An absolute path, not PATH lookup: a PATH entry cannot substitute git (Sonar S4036).
+const GIT_EXECUTABLE = '/usr/bin/git';
 const BIN = process.execPath;
 const JSCPD_ENTRYPOINT = path.join(FRONTEND, 'node_modules', 'jscpd', 'run-jscpd.js');
 const REVISION = /^(?:HEAD|[0-9a-fA-F]{40})$/;
@@ -37,10 +37,7 @@ const scanPaths = (scope) => scope.map((directory) => `./${directory.slice('fron
 const FINGERPRINT_PATTERN = /^[^|]+\|[^|]+\|[^|]+\|[0-9a-f]{16}\|\d+\|\d+$/;
 
 function normalizeName(value) {
-  const reported = String(value);
-  const nativePath = reported.startsWith('\\\\?\\') ? reported.slice(4) : reported;
-  const absolute = path.resolve(nativePath);
-  return path.relative(ROOT, absolute).split(path.sep).join('/');
+  return path.relative(ROOT, path.resolve(String(value)));
 }
 
 function endOfLine(source, index) {
@@ -104,11 +101,9 @@ function normalizedCloneContent(source) {
 }
 
 function cloneBody(file) {
-  const reported = String(file.name);
-  const nativePath = reported.startsWith('\\\\?\\') ? reported.slice(4) : reported;
   const source = fs
-    .readFileSync(path.resolve(nativePath), 'utf8')
-    .split(/\r?\n/)
+    .readFileSync(path.resolve(String(file.name)), 'utf8')
+    .split('\n')
     .slice(file.start - 1, file.end)
     .join('\n');
   return normalizedCloneContent(source);

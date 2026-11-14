@@ -17,7 +17,7 @@ const config = {
   fmt: fmtConfig,
   staged: {
     // Restrict to JS/TS/CSS/JSON: oxfmt/oxlint no-op on other types, and this
-    // keeps commits of .md/.ps1 files from paying for a pointless check.
+    // keeps commits of .md/.sql files from paying for a pointless check.
     '*.{js,jsx,mjs,ts,tsx,mts,cts,css,json}': 'vp check --fix',
     // The design-system policy is a whole-tree ratchet (per-file counts against
     // frontend/scripts/design-system-baseline.json), so it judges the tree once

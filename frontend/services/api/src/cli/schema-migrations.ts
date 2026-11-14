@@ -42,9 +42,8 @@ export function readMigrations(): Migration[] {
   });
 }
 
-/** Line endings are not schema: a CRLF checkout records the same checksum. */
 function checksum(sqlText: string): string {
-  return createHash('sha256').update(sqlText.replaceAll('\r\n', '\n')).digest('hex');
+  return createHash('sha256').update(sqlText).digest('hex');
 }
 
 async function exists(client: pg.ClientBase, relation: string): Promise<boolean> {

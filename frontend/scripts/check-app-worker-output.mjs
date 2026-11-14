@@ -18,9 +18,7 @@ const entry = await readFile(new URL('index.html', root), 'utf8');
 if (!entry.includes('name="robots" content="noindex"')) {
   throw new Error('App entry lost noindex policy.');
 }
-const hasManifest = files.some((file) =>
-  file.replaceAll('\\', '/').endsWith('.vite/manifest.json'),
-);
+const hasManifest = files.some((file) => file.endsWith('.vite/manifest.json'));
 if (!hasManifest) throw new Error('App build manifest missing.');
 await writeFile(
   new URL('.assetsignore', root),

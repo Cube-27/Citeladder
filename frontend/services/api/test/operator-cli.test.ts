@@ -3,18 +3,15 @@ import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { mkdtemp, writeFile, mkdir, copyFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, mkdir, copyFile, rm, chmod, readFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { expect, it, vi } from 'vitest';
 import { operatorMain } from '../src/cli/operator.ts';
 
 const execute = promisify(execFile);
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const systemEnv = Object.fromEntries(
-  Object.entries(process.env).filter(([key]) =>
-    /^(PATH|SYSTEMROOT|WINDIR|TEMP|TMP|COMSPEC|PATHEXT|USERPROFILE|LOCALAPPDATA|APPDATA|PROCESSOR_ARCHITECTURE|OS)$/iu.test(
-      key,
-    ),
-  ),
+  Object.entries(process.env).filter(([key]) => /^(PATH|TMPDIR)$/u.test(key)),
 );
 it('billing administration returns nonzero without echoing malformed secret-bearing input', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'operator-redaction-'));
@@ -151,39 +148,136 @@ it('native local configuration preserves dotenv precedence and disable admission
   }
 }, 90000);
 
-it.each([false, true])(
-  'production wrapper reads no operator password, keeps secrets off argv and restores the environment after child failure=%s',
-  async (failure) => {
-    const psQuote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
-    const script = `
-$env:DATABASE_URL = 'original-database'
-$env:DB_SSL_MODE = 'original-tls'
-$env:ACCOUNT_MANAGER_OPERATOR_PASSWORD = 'original-operator'
-function gcloud {
-  $global:LASTEXITCODE = 0
-  if ($args -contains 'describe') { return '{"networkInterfaces":[{"networkIP":"10.28.0.10"}]}' }
-  if ($args -contains '--secret=citeladder-database-url') { return 'postgresql://fixture-user:fixture-database-password@10.28.0.10:5432/fixture' }
-  throw 'Unexpected GCP operation'
-}
-function node {
-  if ($args -contains 'fixture-database-password' -or $args -notcontains '--platform') { throw 'Unsafe arguments' }
-  if ($env:ACCOUNT_MANAGER_OPERATOR_PASSWORD) { throw 'Inherited operator password reached the manager' }
-  if (([Uri]$env:DATABASE_URL).Host -ne '127.0.0.1') { throw 'Missing tunnel target' }
-  $global:LASTEXITCODE = ${failure ? '1' : '0'}
-}
-try { & ${psQuote(join(root, 'scripts/provision-dev-login.ps1'))} -UseExistingTunnel }
-catch { if (${failure ? '$false' : '$true'}) { throw }; Write-Output 'expected-child-failure' }
-if ($env:DATABASE_URL -ne 'original-database' -or $env:DB_SSL_MODE -ne 'original-tls' -or $env:ACCOUNT_MANAGER_OPERATOR_PASSWORD -ne 'original-operator') { throw 'Environment not restored' }
-Write-Output 'environment-restored'
-`;
-    const result = await execute('pwsh', ['-NoProfile', '-Command', script], {
-      env: systemEnv,
-      timeout: 30000,
+const freePort = () =>
+  new Promise<number>((resolve) => {
+    const server = createServer().listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (typeof address !== 'object' || !address) throw new Error('no port');
+      server.close(() => resolve(address.port));
     });
-    expect(result.stdout).toContain('environment-restored');
-    expect(result.stdout + result.stderr).not.toContain('fixture-database-password');
-    if (failure) expect(result.stdout).toContain('expected-child-failure');
+  });
+
+// Stub gcloud and node record each call; the gcloud tunnel listens on the forwarded port.
+const GCLOUD_STUB = `
+const { appendFileSync } = require('node:fs');
+const args = process.argv.slice(2);
+appendFileSync(process.env.STUB_CALLS, JSON.stringify(args) + '\\n');
+if (args.includes('describe')) console.log(JSON.stringify({ networkInterfaces: [{ networkIP: '10.28.0.10' }] }));
+else if (args.includes('--secret=citeladder-database-url')) console.log(process.env.STUB_SECRET);
+else if (args.includes('--command=true')) process.exit(0);
+else if (args.includes('--command=sleep 86400')) {
+  const port = Number(args.at(-1).split(':')[1]);
+  require('node:net').createServer().listen(port, '127.0.0.1');
+} else process.exit(9);
+`;
+const NODE_STUB = `
+const { writeFileSync } = require('node:fs');
+const { DATABASE_URL, DB_SSL_MODE, CITELADDER_DISABLE_DOTENV, ACCOUNT_MANAGER_OPERATOR_PASSWORD } = process.env;
+writeFileSync(process.env.STUB_CHILD, JSON.stringify({ args: process.argv.slice(2).map((a) => a.split('/').at(-1)), DATABASE_URL, DB_SSL_MODE, CITELADDER_DISABLE_DOTENV, ACCOUNT_MANAGER_OPERATOR_PASSWORD: ACCOUNT_MANAGER_OPERATOR_PASSWORD ?? null }));
+process.exit(Number(process.env.STUB_NODE_STATUS));
+`;
+
+it.each([
+  { name: 'existing tunnel', tunnel: false, status: 0, host: '10.28.0.10', extra: [], refusal: '' },
+  {
+    name: 'existing tunnel, manager fails',
+    tunnel: false,
+    status: 1,
+    host: '10.28.0.10',
+    extra: [],
+    refusal: '',
   },
-  // A cold PowerShell start alone can exceed the default 5 s on CI runners.
-  30000,
+  { name: 'opened tunnel', tunnel: true, status: 0, host: '10.28.0.10', extra: [], refusal: '' },
+  {
+    name: 'secret for another host',
+    tunnel: false,
+    status: 0,
+    host: '10.28.0.99',
+    extra: [],
+    refusal: 'The database secret does not target the selected production database instance.\n',
+  },
+  {
+    name: 'flag-shaped instance',
+    tunnel: false,
+    status: 0,
+    host: '10.28.0.10',
+    extra: ['--database-instance=--impersonate-service-account=fixture'],
+    refusal: '--database-instance is not a valid value.\n',
+  },
+])(
+  'production wrapper reads no operator password and keeps secrets off argv: $name',
+  async ({ tunnel, status, host, extra, refusal }) => {
+    const directory = await mkdtemp(join(tmpdir(), 'provision-login-'));
+    const bin = join(directory, 'bin');
+    await mkdir(bin);
+    for (const [name, body] of Object.entries({ gcloud: GCLOUD_STUB, node: NODE_STUB })) {
+      await writeFile(join(bin, name), `#!${process.execPath}\n${body}`);
+      await chmod(join(bin, name), 0o755);
+    }
+    const port = await freePort();
+    const calls = join(directory, 'calls.jsonl');
+    const child = join(directory, 'child.json');
+    const args = [
+      '--local-port',
+      String(port),
+      ...(tunnel ? [] : ['--use-existing-tunnel']),
+      ...extra,
+    ];
+    try {
+      const result = await execute(
+        process.execPath,
+        [join(root, 'scripts/provision-dev-login.mjs'), ...args],
+        {
+          env: {
+            ...systemEnv,
+            PATH: `${bin}:${systemEnv.PATH}`,
+            STUB_CALLS: calls,
+            STUB_CHILD: child,
+            STUB_NODE_STATUS: String(status),
+            STUB_SECRET: `postgresql://fixture-user:fixture-database-password@${host}:5432/fixture`,
+            DATABASE_URL: 'postgresql://inherited/database',
+            ACCOUNT_MANAGER_OPERATOR_PASSWORD: 'inherited-operator',
+          },
+        },
+      ).then(
+        ({ stdout, stderr }) => ({ code: 0, stdout, stderr }),
+        (error: { code: number; stdout: string; stderr: string }) => error,
+      );
+      expect(result.stdout + result.stderr).not.toContain('fixture-database-password');
+      const gcloud = (await readFile(calls, 'utf8').catch(() => ''))
+        .split('\n')
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as string[]);
+      const ssh = gcloud
+        .filter((call) => call[1] === 'ssh')
+        .map((call) => call.find((arg) => arg.startsWith('--command=')));
+      expect(ssh).toEqual(tunnel ? ['--command=true', '--command=sleep 86400'] : []);
+      if (refusal) {
+        expect(result).toMatchObject({ code: 1, stderr: refusal });
+        // A flag-shaped value is refused before gcloud runs; a foreign host after it reads the secret.
+        expect(gcloud.length).toBe(extra.length ? 0 : 2);
+        await expect(readFile(child, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
+        return;
+      }
+      expect(JSON.parse(await readFile(child, 'utf8'))).toEqual({
+        args: ['account-manager.ts', '--platform', '--actor', 'dev@citeladder.com'],
+        DATABASE_URL: `postgresql://fixture-user:fixture-database-password@127.0.0.1:${port}/fixture`,
+        DB_SSL_MODE: 'disable',
+        CITELADDER_DISABLE_DOTENV: '1',
+        ACCOUNT_MANAGER_OPERATOR_PASSWORD: null,
+      });
+      expect(result.code).toBe(status);
+      if (status)
+        expect(result.stderr).toBe(
+          'Account management failed; no further operations were attempted.\n',
+        );
+      // The tunnel the wrapper opened is gone once it returns.
+      await new Promise<void>((resolve, reject) => {
+        const server = createServer().once('error', reject);
+        server.listen(port, '127.0.0.1', () => server.close(() => resolve()));
+      });
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
+  },
 );

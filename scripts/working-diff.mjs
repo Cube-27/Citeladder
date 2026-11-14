@@ -6,9 +6,8 @@ export function gitPaths(root, arguments_) {
   // core.quotePath=false keeps non-ASCII names literal instead of quoted escapes.
   const args = ['-c', 'core.quotePath=false', '-C', root, ...arguments_];
   return execFileSync('git', args, { encoding: 'utf8' }) // NOSONAR: trusted PATH.
-    .split(/\r?\n/u)
-    .filter(Boolean)
-    .map((path) => path.replaceAll('\\', '/'));
+    .split('\n')
+    .filter(Boolean);
 }
 
 /** The branch's changes against origin/main: committed, unstaged, staged and untracked. */

@@ -208,7 +208,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
               // every domain's schemas in every route.
               {
                 name: 'ui',
-                test: /[\\/]components[\\/]ui[\\/]/,
+                test: /\/components\/ui\//,
                 minShareCount: 2,
                 priority: 10,
                 entriesAware: true,
