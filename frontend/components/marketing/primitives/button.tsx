@@ -1,6 +1,8 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { buttonClasses } from '@/components/ui/button';
+import { appHref } from '@/lib/config/app-link';
+import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { DEMO_CTA, DEMO_EXTERNAL, DEMO_HREF } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
@@ -78,5 +80,24 @@ export function DemoButtonLink({
     >
       {children ?? DEMO_CTA}
     </ButtonLink>
+  );
+}
+
+/**
+ * The website's one pair of calls to action, the same on every page: Start
+ * free trial while self-serve signup is open, then Book a demo (the primary
+ * when signup is closed).
+ */
+export function SiteActions() {
+  const signup = selfServeSignupOpen();
+  return (
+    <>
+      {signup ? (
+        <ButtonLink href={appHref('/register')} size="marketing">
+          Start free trial
+        </ButtonLink>
+      ) : null}
+      <DemoButtonLink variant={signup ? 'soft' : 'primary'} size="marketing" />
+    </>
   );
 }

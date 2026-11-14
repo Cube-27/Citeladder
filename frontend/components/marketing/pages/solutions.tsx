@@ -1,23 +1,12 @@
-import { DEMO_CTA, DEMO_HREF } from '@/lib/marketing-content/nav';
+import { DEMO_HREF } from '@/lib/marketing-content/nav';
 import { SOLUTION_SEGMENTS, SOLUTIONS_HERO } from '@/lib/marketing-content/solutions';
 
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { SiteActions } from '../primitives/button';
 import { FeatureSplit } from '../sections/features';
 import { PageHero } from '../sections/heroes';
 import { PageSection } from '../sections/page-section';
 import { CtaBand } from '../sections/steps-faq-cta';
 import { CatalogFrame } from '../screens/screen-catalog';
-
-function SolutionsActions() {
-  return (
-    <>
-      <DemoButtonLink size="marketing">{DEMO_CTA}</DemoButtonLink>
-      <ButtonLink href="/pricing" variant="soft" size="marketing">
-        See pricing
-      </ButtonLink>
-    </>
-  );
-}
 
 /**
  * `/solutions`: one section per team, its copy beside the screen that team
@@ -32,7 +21,7 @@ export function SolutionsPage() {
         crumbs={[{ label: 'Home', href: '/' }, { label: 'Solutions' }]}
         title={SOLUTIONS_HERO.title}
         lead={SOLUTIONS_HERO.lead}
-        actions={<SolutionsActions />}
+        actions={<SiteActions />}
       />
       {SOLUTION_SEGMENTS.map((segment, index) => (
         <PageSection
@@ -58,7 +47,7 @@ export function SolutionsPage() {
         <CtaBand
           title="See the workflow that matches how you are measured"
           lead="Each team reads the same evidence differently. We will walk through the view your team reports on."
-          actions={<SolutionsActions />}
+          actions={<SiteActions />}
         />
       </PageSection>
     </>

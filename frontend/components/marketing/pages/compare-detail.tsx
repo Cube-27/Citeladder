@@ -8,7 +8,7 @@ import {
   type Competitor,
 } from '@/lib/marketing-content/compare';
 
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { SiteActions } from '../primitives/button';
 import { RelatedCards } from '../sections/cards';
 import { FeatureSplit } from '../sections/features';
 import { PageHero } from '../sections/heroes';
@@ -26,17 +26,6 @@ const FURTHER_READING = [
   { href: '/platform/cited-sources', title: 'Cited Sources' },
   { href: '/ai-search-share-of-voice', title: 'AI share of voice' },
 ] as const;
-
-function CompareActions() {
-  return (
-    <>
-      <DemoButtonLink size="marketing" />
-      <ButtonLink href="/compare" variant="soft" size="marketing">
-        All comparisons
-      </ButtonLink>
-    </>
-  );
-}
 
 function SourceLink({ source }: Readonly<{ source: Competitor['sources'][number] }>) {
   return (
@@ -67,7 +56,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
         ]}
         title={`CiteLadder vs ${competitor.name}`}
         lead={competitor.lead}
-        actions={<CompareActions />}
+        actions={<SiteActions />}
       />
 
       <PageSection spacing="compact" title="Side-by-side comparison" lead={competitor.context}>
@@ -176,7 +165,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
         <CtaBand
           title="Run the same investigation in both demos"
           lead="Bring a small prompt portfolio and one question your team needs to answer."
-          actions={<CompareActions />}
+          actions={<SiteActions />}
         />
       </PageSection>
     </>

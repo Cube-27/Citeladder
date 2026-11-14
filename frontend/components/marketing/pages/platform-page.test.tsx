@@ -10,8 +10,8 @@ afterEach(() => vi.unstubAllEnvs());
 it.each([
   ['trial', true, 'Start free trial', 'https://app.citeladder.com/register'],
   ['trial', false, 'Book a demo', '/contact'],
-  ['demo', true, 'Book a demo', '/contact'],
-  ['setup', true, 'Discuss setup', '/contact'],
+  ['demo', true, 'Start free trial', 'https://app.citeladder.com/register'],
+  ['setup', false, 'Book a demo', '/contact'],
 ] as const)('leads %s pages with signup enabled=%s', (cta, enabled, label, href) => {
   vi.stubEnv('NEXT_PUBLIC_SELF_SERVE_SIGNUP', String(enabled));
   vi.stubEnv('PUBLIC_APP_ORIGIN', 'https://app.citeladder.com');
