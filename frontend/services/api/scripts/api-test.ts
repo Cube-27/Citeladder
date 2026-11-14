@@ -8,7 +8,7 @@
  *   pnpm test:api test/billing.test.ts      (from frontend/)
  *   pnpm test:api --types
  */
-import { execFileSync, spawnSync } from 'node:child_process';
+import { execFileSync, spawnSync, type SpawnSyncOptions } from 'node:child_process';
 import { closeSync, openSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -46,11 +46,12 @@ const command = types ? ['db:types'] : ['exec', 'vitest', 'run', ...files];
 const output = openSync(log, 'w');
 let status: number | null;
 try {
-  status = spawnSync('pnpm', command, {
+  const options = {
     cwd: apiRoot,
     env,
     stdio: ['ignore', output, output],
-  }).status; // NOSONAR: trusted PATH.
+  } satisfies SpawnSyncOptions;
+  status = spawnSync('pnpm', command, options).status; // NOSONAR: trusted PATH.
 } finally {
   closeSync(output);
 }

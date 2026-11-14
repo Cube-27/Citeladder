@@ -178,27 +178,51 @@ process.exit(Number(process.env.STUB_NODE_STATUS));
 `;
 
 it.each([
-  { name: 'existing tunnel', tunnel: false, status: 0, host: '10.28.0.10' },
-  { name: 'existing tunnel, manager fails', tunnel: false, status: 1, host: '10.28.0.10' },
-  { name: 'opened tunnel', tunnel: true, status: 0, host: '10.28.0.10' },
-  { name: 'secret for another host', tunnel: false, status: 0, host: '10.28.0.99' },
+  { name: 'existing tunnel', tunnel: false, status: 0, host: '10.28.0.10', extra: [], refusal: '' },
+  {
+    name: 'existing tunnel, manager fails',
+    tunnel: false,
+    status: 1,
+    host: '10.28.0.10',
+    extra: [],
+    refusal: '',
+  },
+  { name: 'opened tunnel', tunnel: true, status: 0, host: '10.28.0.10', extra: [], refusal: '' },
+  {
+    name: 'secret for another host',
+    tunnel: false,
+    status: 0,
+    host: '10.28.0.99',
+    extra: [],
+    refusal: 'The database secret does not target the selected production database instance.\n',
+  },
+  {
+    name: 'flag-shaped instance',
+    tunnel: false,
+    status: 0,
+    host: '10.28.0.10',
+    extra: ['--database-instance=--impersonate-service-account=fixture'],
+    refusal: '--database-instance is not a valid value.\n',
+  },
 ])(
   'production wrapper reads no operator password and keeps secrets off argv: $name',
-  async ({ tunnel, status, host }) => {
+  async ({ tunnel, status, host, extra, refusal }) => {
     const directory = await mkdtemp(join(tmpdir(), 'provision-login-'));
     const bin = join(directory, 'bin');
     await mkdir(bin);
-    for (const [name, body] of [
-      ['gcloud', GCLOUD_STUB],
-      ['node', NODE_STUB],
-    ]) {
+    for (const [name, body] of Object.entries({ gcloud: GCLOUD_STUB, node: NODE_STUB })) {
       await writeFile(join(bin, name), `#!${process.execPath}\n${body}`);
       await chmod(join(bin, name), 0o755);
     }
     const port = await freePort();
     const calls = join(directory, 'calls.jsonl');
     const child = join(directory, 'child.json');
-    const args = ['--local-port', String(port), ...(tunnel ? [] : ['--use-existing-tunnel'])];
+    const args = [
+      '--local-port',
+      String(port),
+      ...(tunnel ? [] : ['--use-existing-tunnel']),
+      ...extra,
+    ];
     try {
       const result = await execute(
         process.execPath,
@@ -220,19 +244,18 @@ it.each([
         (error: { code: number; stdout: string; stderr: string }) => error,
       );
       expect(result.stdout + result.stderr).not.toContain('fixture-database-password');
-      const ssh = (await readFile(calls, 'utf8'))
-        .trim()
+      const gcloud = (await readFile(calls, 'utf8').catch(() => ''))
         .split('\n')
-        .map((line) => JSON.parse(line) as string[])
+        .filter(Boolean)
+        .map((line) => JSON.parse(line) as string[]);
+      const ssh = gcloud
         .filter((call) => call[1] === 'ssh')
         .map((call) => call.find((arg) => arg.startsWith('--command=')));
       expect(ssh).toEqual(tunnel ? ['--command=true', '--command=sleep 86400'] : []);
-      if (host !== '10.28.0.10') {
-        expect(result).toMatchObject({
-          code: 1,
-          stderr:
-            'The database secret does not target the selected production database instance.\n',
-        });
+      if (refusal) {
+        expect(result).toMatchObject({ code: 1, stderr: refusal });
+        // A flag-shaped value is refused before gcloud runs; a foreign host after it reads the secret.
+        expect(gcloud.length).toBe(extra.length ? 0 : 2);
         await expect(readFile(child, 'utf8')).rejects.toMatchObject({ code: 'ENOENT' });
         return;
       }

@@ -187,7 +187,7 @@ export function measure(file) {
     }
   };
   visit(program, null, null);
-  return { loc: source.split(/\r?\n/).length, test: isTestFile(file), functions };
+  return { loc: source.split('\n').length, test: isTestFile(file), functions };
 }
 
 function hasExactKeys(value, keys) {

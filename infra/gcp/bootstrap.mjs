@@ -130,8 +130,8 @@ async function setProjectLabels({ id, run, fetch, wait }) {
     { method: 'PATCH', body: JSON.stringify({ labels }) },
   );
   for (let attempt = 0; !operation.done && attempt < 30; attempt++) {
-    await wait(1000);
-    operation = await call(`${RESOURCE_MANAGER}/${operation.name}`, { method: 'GET' });
+    await wait(1000); // NOSONAR -- polls one operation, once a second.
+    operation = await call(`${RESOURCE_MANAGER}/${operation.name}`, { method: 'GET' }); // NOSONAR -- as above.
   }
   if (!operation.done)
     throw new BootstrapError(`Timed out while applying labels to project ${id}.`);

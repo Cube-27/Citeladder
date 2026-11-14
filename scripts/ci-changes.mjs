@@ -410,7 +410,7 @@ function changedPaths(range) {
     ['diff', '--no-renames', '--name-only', '--diff-filter=ACMDT', range],
     { encoding: 'utf8' },
   );
-  return output.split(/\r?\n/u).filter(Boolean);
+  return output.split('\n').filter(Boolean);
 }
 
 export function hasTrustworthyJobEvidence(jobs, workflowFile) {
