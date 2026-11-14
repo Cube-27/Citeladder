@@ -3345,6 +3345,8 @@ export interface SiteUrlObservations {
   rewrite_reason: string;
   rewrite_version: string;
   site_url_id: string;
+  sitemap_lastmod: string | null;
+  sitemap_member: Generated<boolean>;
   source_artifact_id: string | null;
   source_kind: string;
   status_code: number | null;

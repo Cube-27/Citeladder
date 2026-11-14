@@ -267,8 +267,8 @@ twin is chosen.
 Every full crawl's `site_setup` reads the sitemaps first. When they list
 admissible URLs, their deduplicated count is the crawl's `discovered_url_count`
 and `site_facts.sitemap.discovered_count` ("Discovered N").
-`site_facts.sitemap.discovered_complete` is false when a safety ceiling
-(`max_sitemap_documents`, `max_sitemap_urls`, bytes, index depth) or an
+`site_facts.sitemap.discovered_complete` is false when a document's own parse
+limit (`max_sitemap_document_urls`, bytes), the index depth or an
 unreadable document cut the walk short ("at least N"); `limit_reached` and
 `unread_count` say which (coverage reasons `sitemap_limit_reached` and
 `sitemap_documents_unread`). A document is unread when no answer settled it
@@ -303,18 +303,19 @@ stays tracked; a failed fetch releases only a sample's membership.
 `sample_url_limit` (`free_sample`). It ends `sample_completed` and never walks
 sitemaps or requests llms.txt.
 
-**Sitemaps.** The walk starts from the declared sitemaps or `/sitemap.xml`. It
-runs breadth-first in `sitemap_fetch_concurrency` waves, and attempts count
-against `max_sitemap_documents`. URLs are taken in queue order, so response
-timing cannot change what fits. The first `max_sitemap_admitted_urls`
-admissible URLs in the tracked order fill the tracked set and are recorded in
-`site_facts.sitemap.urls`, the only authority for sitemap
-membership: a crawl without that list has no sitemap members. Each admitted
-URL's first declared `<lastmod>` is kept, as written, in
-`site_facts.sitemap.lastmod` (keyed by the admitted URL); a page's analysis
-reads its own as `sitemap_lastmod`. Crawl reads (dashboard, crawl and crawl
-list) project neither map: they carry the manifest's size as
-`site_facts.sitemap.url_count`, and page detail reports each page's membership.
+**Sitemaps.** The walk starts from the declared sitemaps or `/sitemap.xml` and
+reads the whole tree breadth-first in `sitemap_fetch_concurrency` waves, with
+no document or site-wide URL limit
+([SH-B5](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)).
+Every admissible URL it lists is saved as a `site_urls` identity and a
+`site_url_observations` row with `sitemap_member` set, tracked or not, so the
+crawl's inventory shows them all. That flag is the only authority for sitemap
+membership, and the row keeps the URL's first declared `<lastmod>`, as written,
+in `sitemap_lastmod`, which a page's analysis reads. A URL the crawl had
+already observed (the root) keeps its first sighting and gains the flag. The
+listed pages then fill the tracked set in the tracked order. A large sitemap
+writes in one `site_setup` commit, chunked under PostgreSQL's bind-parameter
+limit.
 
 **Referrers and failed fetches.** Each discovered URL keeps the pages that
 linked it, first sighting first. The frontier row holds up to
@@ -685,7 +686,7 @@ failed.
 
 | State | When |
 |---|---|
-| `partial` | the frontier limit was reached, the frontier was not exhausted (`requested_page_limit_reached` when the page limit left frontier URLs), or discovery was bounded (sample, non-`auto`, cancelled); for a sitemap crawl, the sitemap read hit a ceiling or left a document unread, or it lists pages the crawl did not observe |
+| `partial` | the frontier limit was reached, the frontier was not exhausted (`requested_page_limit_reached` when the page limit left frontier URLs), or discovery was bounded (sample, non-`auto`, cancelled); for a sitemap crawl, a document's parse limit or the index depth cut the read short, a document went unread, or it lists URLs the crawl does not audit |
 | `unknown` | discovery failed, observed nothing or did not complete |
 | `complete` | the frontier was exhausted, or the crawl observed every URL of a sitemap read in full |
 

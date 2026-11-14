@@ -26,7 +26,12 @@ import {
 import { InterpretationTimeoutError, parseSitemapAsync } from './analysis/off-thread.ts';
 import { robotsPolicy } from '../web-evidence/acquisition.ts';
 import { crawlerRootFacts, crawlerSamplePolicy } from './crawler-policy.ts';
-import { candidateObservation, enqueueCrawlTasks, insertObservations } from './admission-writes.ts';
+import {
+  candidateObservation,
+  enqueueCrawlTasks,
+  insertSitemapObservations,
+  upsertSiteUrls,
+} from './admission-writes.ts';
 import { insertRobotsSnapshot } from './robots-snapshots.ts';
 import { analyzeSeed, candidate, crawlScope, lockRuntime, type Candidate } from './frontier.ts';
 import { fillTrackedSet, trackedOrder } from './tracked-set.ts';
@@ -53,13 +58,10 @@ export function setupSettings(env: SettingSource = process.env) {
     policySampleSize: number('robots_policy_sample_size'),
     snapshotBytes: number('robots_snapshot_max_bytes'),
     llmsBytes: number('llms_txt_max_decoded_bytes'),
-    maxDocuments: number('max_sitemap_documents'),
     concurrency: Math.max(1, number('sitemap_fetch_concurrency')),
-    maxAdmitted: number('max_sitemap_admitted_urls'),
-    batch: Math.max(1, number('admission_batch_size')),
     sitemap: {
       maxDecodedBytes: number('max_sitemap_decoded_bytes'),
-      maxUrls: number('max_sitemap_urls'),
+      maxUrls: number('max_sitemap_document_urls'),
       maxIndexDepth: number('max_sitemap_index_depth'),
     },
   };
@@ -230,9 +232,9 @@ async function readSitemap(
 }
 
 /**
- * Walk the sitemap tree breadth-first in bounded concurrent waves, counting
- * attempts (not successes) against the document budget. Each wave is consumed
- * in queue order, so response timing cannot change which URLs fit the cap.
+ * Walk the whole sitemap tree breadth-first in bounded concurrent waves, each
+ * consumed in queue order. Only a document's own parse limits or the index
+ * depth leave URLs unread (owner, 2026-11-14: no limit to sitemap reading).
  */
 async function walkSitemaps(
   ctx: SiteTaskContext,
@@ -252,32 +254,22 @@ async function walkSitemaps(
     unread: 0,
   };
   walk.queue = [...walk.queued].map((url) => ({ url, depth: 0 }));
-  let attempted = 0;
-  // A full collector cannot gain a URL from any further document.
-  while (
-    walk.queue.length &&
-    attempted < settings.maxDocuments &&
-    walk.collector.urls.length < settings.sitemap.maxUrls
-  ) {
-    const wave = walk.queue.splice(
-      0,
-      Math.min(settings.concurrency, settings.maxDocuments - attempted),
-    );
-    attempted += wave.length;
+  while (walk.queue.length) {
+    const wave = walk.queue.splice(0, settings.concurrency);
     const pages = await Promise.all(wave.map(({ url }) => readSitemap(ctx, url, settings))); // NOSONAR -- Waves are bounded and sequential: a wave's references feed the next one.
     ctx.signal.throwIfAborted();
     for (const [index, entry] of wave.entries()) collect(walk, entry, pages[index]);
   }
-  const files = walk.files.slice(0, settings.maxDocuments);
-  // A ceiling or a reference left unwalked makes the count a lower bound, as an unread document does.
-  const limitReached = walk.queue.length > 0 || walk.collector.truncated;
+  const files = walk.files;
+  // A document's parse limit or the depth bound makes the count a lower bound, as an unread document does.
+  const limitReached = walk.collector.truncated;
   const complete = !limitReached && !walk.unread && files.length > 0;
   return {
     files,
     complete,
     limitReached,
     unread: walk.unread,
-    ...admittedUrls(walk.collector, crawl, settings),
+    ...admittedUrls(walk.collector, crawl),
   };
 }
 
@@ -306,14 +298,13 @@ function collect(walk: Walk, { url, depth }: { url: string; depth: number }, rea
 }
 
 /**
- * The collected URLs that pass the crawl's admission, canonical and unique:
- * how many there are (the crawl's discovered count), and the first
- * `max_sitemap_admitted_urls` of them in the tracked set's stable order as
- * candidates, each with its declared `<lastmod>`.
+ * Every collected URL that passes the crawl's admission, canonical and unique,
+ * in the tracked set's stable order, each with its first declared `<lastmod>`.
+ * Their count is the crawl's discovered count.
  */
-function admittedUrls(collector: SitemapCollector, crawl: Crawl, settings: Settings) {
+function admittedUrls(collector: SitemapCollector, crawl: Crawl) {
   const scope = crawlScope(crawl);
-  const found = new Map<string, { item: Candidate; lastmod: string | undefined }>();
+  const found = new Map<string, SitemapUrl>();
   for (const raw of collector.urls) {
     const admission = classifyUrlAdmission(raw, scope);
     if (!admission.accepted || !admission.url || found.has(admission.hash)) continue;
@@ -326,28 +317,45 @@ function admittedUrls(collector: SitemapCollector, crawl: Crawl, settings: Setti
         parentPosition: 0,
         linkOrdinal: found.size,
       }),
-      lastmod: collector.lastmod.get(raw),
+      lastmod: collector.lastmod.get(raw) ?? null,
     });
   }
-  const kept = [...found.values()]
-    .toSorted((a, b) => trackedOrder(a.item, b.item))
-    .slice(0, settings.maxAdmitted);
-  const lastmod: Record<string, string> = {};
-  for (const { item, lastmod: declared } of kept) if (declared) lastmod[item.url] = declared;
-  return { discovered: found.size, candidates: kept.map(({ item }) => item), lastmod };
+  const listed = [...found.values()].toSorted((a, b) => trackedOrder(a.item, b.item));
+  return { discovered: found.size, listed };
 }
+type SitemapUrl = { item: Candidate; lastmod: string | null };
 
 /**
- * A sitemap fills the tracked set's free slots in the stable order and queues
- * the new pages' analysis; each joins the inventory as a sparse sitemap
- * sighting. Returns how many joined.
+ * Every listed URL joins the inventory as a sitemap sighting; the sitemap then
+ * fills the tracked set's free slots in the stable order and queues the new
+ * pages' analysis. Returns how many joined the tracked set.
  */
-async function trackSitemapPages(trx: Database, crawl: Crawl, candidates: Candidate[]) {
-  const joined = await fillTrackedSet(trx, crawl, candidates);
-  await insertObservations(
+async function trackSitemapPages(trx: Database, crawl: Crawl, listed: SitemapUrl[]) {
+  // A URL this crawl already observed (the root, planner seeds) keeps the identity it recorded.
+  const seen = await trx
+    .selectFrom('site_url_observations as o')
+    .innerJoin('site_urls as u', (join) =>
+      join.onRef('u.id', '=', 'o.site_url_id').onRef('u.workspace_id', '=', 'o.workspace_id'),
+    )
+    .select(['u.url_hash', 'u.id'])
+    .where('o.workspace_id', '=', crawl.workspace_id)
+    .where('o.crawl_id', '=', crawl.id)
+    .execute();
+  const ids = new Map(seen.map((row) => [row.url_hash, row.id]));
+  const fresh = listed.filter(({ item }) => !ids.has(item.hash)).map(({ item }) => item);
+  for (const [hash, id] of await upsertSiteUrls(trx, crawl, fresh)) ids.set(hash, id);
+  await insertSitemapObservations(
     trx,
     crawl,
-    joined.map(({ item, siteUrlId }) => candidateObservation(siteUrlId, item, null)),
+    listed.map(({ item, lastmod }) => ({
+      observation: candidateObservation(ids.get(item.hash)!, item, null),
+      lastmod,
+    })),
+  );
+  const joined = await fillTrackedSet(
+    trx,
+    crawl,
+    listed.map(({ item }) => item),
   );
   await enqueueCrawlTasks(
     trx,
@@ -369,8 +377,8 @@ async function discover(
   walk: SitemapWalk | null,
 ): Promise<{ admitted?: number; discovered?: number; discoveryStatus?: 'completed' | 'running' }> {
   if (crawl.sample_mode || crawl.discovery_status !== 'pending') return {};
-  if (walk?.candidates.length) {
-    const admitted = await trackSitemapPages(trx, crawl, walk.candidates);
+  if (walk?.listed.length) {
+    const admitted = await trackSitemapPages(trx, crawl, walk.listed);
     return { admitted, discovered: walk.discovered, discoveryStatus: 'completed' };
   }
   await enqueueCrawlTasks(
@@ -423,7 +431,7 @@ async function persist(
   walk: SitemapWalk | null,
   settings: Settings,
 ) {
-  const urls = walk?.candidates.map((item) => item.url) ?? [];
+  const urls = walk?.listed.map(({ item }) => item.url) ?? [];
   await commitTask(ctx, claimed, async (trx, lock) => {
     const live = await loadScope(trx, claimed);
     if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
@@ -550,9 +558,7 @@ export async function runSiteSetup(
       sitemap: {
         fetched: walk.files.length > 0,
         files: walk.files,
-        urls: walk.candidates.map((item) => item.url),
-        lastmod: walk.lastmod,
-        // "Discovered N", or "at least N" when a safety ceiling or an unread document cut it short.
+        // "Discovered N", or "at least N" when a document limit or an unread document cut it short.
         discovered_count: walk.discovered,
         discovered_complete: walk.complete,
         limit_reached: walk.limitReached,

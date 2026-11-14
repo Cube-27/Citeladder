@@ -319,6 +319,32 @@ describe('crawl control admission', () => {
     ]);
   });
 
+  it('fills a full sitemap’s worth of tracked pages past the bind-parameter limit', async () => {
+    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    await allow(tenant, 5001);
+    const crawl = await create(tenant);
+    const items = Array.from({ length: 5000 }, (_, index) => {
+      const admission = classifyUrlAdmission(`https://example.test/products/p${index}`);
+      return candidate(admission, {
+        url: admission.url!,
+        hash: admission.hash,
+        depth: 1,
+        sourceKind: 'sitemap',
+        parentPosition: 0,
+        linkOrdinal: index,
+      });
+    });
+    const joined = await db.transaction().execute((trx) => fillTrackedSet(trx, crawl, items));
+    expect(joined).toHaveLength(5000);
+    const active = await db
+      .selectFrom('monitored_site_urls')
+      .select((eb) => eb.fn.countAll<string>().as('count'))
+      .where('project_id', '=', tenant.projectId)
+      .where('active', '=', true)
+      .executeTakeFirstOrThrow();
+    expect(Number(active.count)).toBe(5001);
+  });
+
   it('sizes a full crawl to the plan’s tracked pages and its HTML walk to the discovery cap', async () => {
     vi.stubEnv('SITE_HEALTH_AUTOMATIC_PAGE_LIMIT', '7');
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });

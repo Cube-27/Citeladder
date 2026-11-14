@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
-import { record, strings } from '../db/json.ts';
+import { record } from '../db/json.ts';
 import { onlyOf } from '../lists.ts';
 import { compareText, scalarText } from '../text-order.ts';
 import { insertEvaluations } from './analysis-rows.ts';
@@ -164,15 +164,13 @@ function duplicateComparisons(rows: { final_url: string; normalized_facts: unkno
 }
 
 async function sitemapObservations(db: Database, crawl: Crawl) {
-  const urls = strings(record(record(crawl.site_facts).sitemap).urls);
-  if (!urls.length) return [];
   const rows = await db
     .selectFrom('site_url_observations')
     .select('observed_url')
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('crawl_id', '=', crawl.id)
-    .where((eb) => eb('observed_url', '=', eb.fn.any(eb.val(urls))))
+    .where('sitemap_member', '=', true)
     .execute();
   return rows.map((row) => row.observed_url);
 }

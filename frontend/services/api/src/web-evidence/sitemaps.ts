@@ -97,14 +97,17 @@ export function sitemapRef(value: string) {
   }
 }
 
-/** A bounded walk over one site's sitemap tree; it never fetches anything itself. */
+/**
+ * A walk over one site's whole sitemap tree; it never fetches anything itself.
+ * Only each document's parse limits and the index depth bound it.
+ */
 export class SitemapCollector {
   readonly urls: string[] = [];
   /** Declared `<lastmod>` by collected URL, as the sitemap spells both. */
   readonly lastmod = new Map<string, string>();
   readonly #visited = new Set<string>();
   readonly limits: SitemapLimits;
-  /** A safety ceiling dropped URLs or references, so the collected list is a lower bound. */
+  /** A document's parse limit or the depth bound dropped URLs or references: a lower bound. */
   truncated = false;
   constructor(limits: SitemapLimits) {
     this.limits = limits;
@@ -115,11 +118,10 @@ export class SitemapCollector {
    */
   add(source: string, document: SitemapDocument, depth: number) {
     this.#visited.add(sitemapRef(source) ?? source);
-    const room = Math.max(0, this.limits.maxUrls - this.urls.length);
-    const kept = document.urls.slice(0, room);
-    if (document.truncated || kept.length < document.urls.length) this.truncated = true;
-    this.urls.push(...kept);
-    for (const url of kept) {
+    if (document.truncated) this.truncated = true;
+    // One push per URL: spreading a 50,000-URL document can overflow the call stack.
+    for (const url of document.urls) this.urls.push(url);
+    for (const url of document.urls) {
       const declared = document.lastmod.get(url);
       if (declared && !this.lastmod.has(url)) this.lastmod.set(url, declared);
     }

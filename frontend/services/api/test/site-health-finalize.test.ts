@@ -558,12 +558,12 @@ describe('crawl coverage', () => {
     });
   });
 
-  it('covers a sitemap crawl only when it read the whole sitemap and observed every URL it lists', () => {
-    const sitemap = (discovered: number, observed: number, short = {}) =>
+  it('covers a sitemap crawl only when it read the whole sitemap and audits every URL it lists', () => {
+    const sitemap = (discovered: number, tracked: number, short = {}) =>
       assessCoverage(
         signals({
           discoveryTaskCount: 0,
-          sitemap: { discovered, observed, limitReached: false, unreadDocuments: 0, ...short },
+          sitemap: { discovered, tracked, limitReached: false, unreadDocuments: 0, ...short },
         }),
       );
     expect(sitemap(3, 3)).toMatchObject({
@@ -571,7 +571,7 @@ describe('crawl coverage', () => {
       evidence: { reasons: ['sitemap_exhausted'] },
     });
     expect(sitemap(10, 3).evidence.reasons).toEqual(['tracked_pages_below_site']);
-    // A ceiling and an unread document are different reasons the count is a lower bound.
+    // A document limit and an unread document are different reasons the count is a lower bound.
     expect(sitemap(3, 3, { limitReached: true }).evidence.reasons).toEqual([
       'sitemap_limit_reached',
     ]);

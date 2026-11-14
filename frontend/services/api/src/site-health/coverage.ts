@@ -2,7 +2,7 @@
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { record, strings } from '../db/json.ts';
+import { record } from '../db/json.ts';
 import { compareText } from '../text-order.ts';
 import type { Crawl } from './site-task.ts';
 import { failedAs } from './task-outcome.ts';
@@ -26,14 +26,15 @@ export type CoverageSignals = {
   valueKinds?: ValueKindCoverage[];
   /**
    * A crawl whose discovery was its sitemap: how many URLs it listed, whether
-   * a safety ceiling cut the read short, how many documents went unread, and
-   * how many of its URLs this crawl observed. Null for an HTML walk or a sample.
+   * a document's parse limit cut the read short, how many documents went
+   * unread, and how many listed URLs this crawl audits. Null for an HTML walk
+   * or a sample.
    */
   sitemap?: {
     discovered: number;
     limitReached: boolean;
     unreadDocuments: number;
-    observed: number;
+    tracked: number;
   } | null;
 };
 export type ValueKindCoverage = { kind: string; found: number; analyzed: number };
@@ -42,7 +43,7 @@ const BOUNDED_DISCOVERY = new Set(['cancelled', 'sample_completed', 'stopped']);
 
 /**
  * A sitemap crawl covers the site only when its sitemap was read whole and
- * this crawl observed every URL it lists; a tracked set smaller than the site
+ * this crawl audits every URL it lists; a tracked set smaller than the site
  * is partial coverage, never complete.
  */
 function sitemapPartialReasons(
@@ -52,7 +53,7 @@ function sitemapPartialReasons(
   const reasons: string[] = [];
   if (sitemap.limitReached) reasons.push('sitemap_limit_reached');
   if (sitemap.unreadDocuments > 0) reasons.push('sitemap_documents_unread');
-  if (sitemap.observed < sitemap.discovered) reasons.push('tracked_pages_below_site');
+  if (sitemap.tracked < sitemap.discovered) reasons.push('tracked_pages_below_site');
   if (signals.cancelled) reasons.push('discovery_bounded_or_stopped');
   return reasons;
 }
@@ -204,22 +205,28 @@ export async function inventoryComplete(db: Database, crawl: Crawl) {
 
 /** A full crawl whose site setup found sitemap URLs discovered through them, not an HTML walk. */
 async function sitemapCoverage(db: Database, crawl: Crawl) {
+  if (crawl.sample_mode) return null;
   const sitemap = record(record(crawl.site_facts).sitemap);
-  const urls = strings(sitemap.urls);
-  if (crawl.sample_mode || !urls.length) return null;
-  const observed = await db
-    .selectFrom('site_url_observations')
-    .select(sql<number>`count(distinct observed_url)::int`.as('count'))
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('project_id', '=', crawl.project_id)
-    .where('crawl_id', '=', crawl.id)
-    .where((eb) => eb('observed_url', '=', eb.fn.any(eb.val(urls))))
+  const members = await db
+    .selectFrom('site_url_observations as o')
+    .select([
+      sql<number>`count(*)::int`.as('listed'),
+      sql<number>`count(*) filter (where exists (
+        select 1 from site_crawl_tasks t
+        where t.workspace_id = o.workspace_id and t.crawl_id = o.crawl_id
+          and t.site_url_id = o.site_url_id and t.task_kind = 'analyze'))::int`.as('tracked'),
+    ])
+    .where('o.workspace_id', '=', crawl.workspace_id)
+    .where('o.project_id', '=', crawl.project_id)
+    .where('o.crawl_id', '=', crawl.id)
+    .where('o.sitemap_member', '=', true)
     .executeTakeFirstOrThrow();
+  if (!members.listed) return null;
   return {
-    discovered: Number(sitemap.discovered_count) || urls.length,
+    discovered: Number(sitemap.discovered_count) || members.listed,
     limitReached: sitemap.limit_reached === true,
     unreadDocuments: Number(sitemap.unread_count) || 0,
-    observed: observed.count,
+    tracked: members.tracked,
   };
 }
 

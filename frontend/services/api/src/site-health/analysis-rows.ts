@@ -8,7 +8,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
-import { record, strings } from '../db/json.ts';
+import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import type { FetchCall, FetchedPage } from '../safe-fetch.ts';
 import type { SiteTask } from '../queue/task-queue.ts';
@@ -174,18 +174,16 @@ export async function writeAttempts(
   await db.insertInto('site_fetch_attempts').values(rows).execute();
 }
 
-/** The observation supporting membership in the crawl's stored sitemap manifest. */
+/** The observation recording the page's membership in the crawl's sitemaps. */
 async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string) {
-  const urls = strings(record(record(crawl.site_facts).sitemap).urls);
-  if (!urls.length) return null;
   const row = await db
     .selectFrom('site_url_observations')
-    .select(['id', 'observed_url'])
+    .select(['id', 'observed_url', 'sitemap_lastmod'])
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('crawl_id', '=', crawl.id)
     .where('site_url_id', '=', siteUrlId)
-    .where((eb) => eb('observed_url', '=', eb.fn.any(eb.val(urls))))
+    .where('sitemap_member', '=', true)
     .limit(1)
     .executeTakeFirst();
   return row ?? null;
@@ -316,13 +314,11 @@ export async function pageAnalysisContext(
   const observation = await sitemapObservation(db, crawl, task.site_url_id);
   const observationId = observation?.id ?? null;
   const siteFacts = rootSiteFacts(crawl, task);
-  const lastmod = record(record(record(crawl.site_facts).sitemap).lastmod);
-  const declared = observation ? lastmod[observation.observed_url] : undefined;
   return {
     sitemapMember: observationId !== null,
     // The URL as the sitemap lists it: a redirect makes it differ from the final URL.
     sitemapUrl: observation?.observed_url ?? null,
-    sitemapLastmod: typeof declared === 'string' ? declared : null,
+    sitemapLastmod: observation?.sitemap_lastmod ?? null,
     siteFacts,
     auditTime: auditTime ? new Date(auditTime).toISOString() : null,
     // The crawl owns setup facts and audit time; the observation owns membership.

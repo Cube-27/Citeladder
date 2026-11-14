@@ -294,7 +294,7 @@ describe('sitemaps', () => {
     expect(() => parseSitemap(bomb, 'application/gzip', limits)).toThrow(SitemapParseError);
   });
 
-  it('caps collected URLs and stops following references at the depth bound or a loop', () => {
+  it('collects every document’s URLs and stops following references at the depth bound or a loop', () => {
     const collector = new SitemapCollector(limits);
     const index = Buffer.from(
       '<sitemapindex><sitemap><loc>https://example.test/root.xml</loc></sitemap>' +
@@ -306,7 +306,9 @@ describe('sitemaps', () => {
     expect(collector.add('https://example.test/child.xml', read(index), 1)).toEqual([]);
     collector.add('https://example.test/u1.xml', read(urlset('a', 'b')), 1);
     collector.add('https://example.test/u2.xml', read(urlset('c', 'd')), 1);
-    expect(collector.urls).toEqual(['a', 'b', 'c']);
+    // Each document is held to its own limit; the site's total has none.
+    expect(collector.urls).toEqual(['a', 'b', 'c', 'd']);
+    expect(collector.truncated).toBe(false);
     // A fragment or spelling variant of a visited sitemap is the same document.
     const again = Buffer.from(
       '<sitemapindex><sitemap><loc>https://EXAMPLE.test/root.xml#top</loc></sitemap></sitemapindex>',

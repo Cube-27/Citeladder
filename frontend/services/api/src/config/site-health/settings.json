@@ -114,31 +114,21 @@
     "type": "int",
     "default": 3
   },
-  "max_sitemap_urls": {
-    "env": ["SITE_HEALTH_MAX_SITEMAP_URLS"],
+  "max_sitemap_document_urls": {
+    "env": ["SITE_HEALTH_MAX_SITEMAP_DOCUMENT_URLS"],
     "type": "int",
-    "default": 5000
+    "default": 50000
   },
   "max_sitemap_decoded_bytes": {
     "env": ["SITE_HEALTH_MAX_SITEMAP_DECODED_BYTES"],
     "type": "int",
     "default": 8000000
   },
-  "max_sitemap_documents": {
-    "env": ["SITE_HEALTH_MAX_SITEMAP_DOCUMENTS"],
-    "type": "int",
-    "default": 32
-  },
   "sitemap_fetch_concurrency": {
     "env": ["SITE_HEALTH_SITEMAP_FETCH_CONCURRENCY"],
     "type": "int",
     "default": 4,
     "minimum": 1
-  },
-  "max_sitemap_admitted_urls": {
-    "env": ["SITE_HEALTH_MAX_SITEMAP_ADMITTED_URLS"],
-    "type": "int",
-    "default": 5000
   },
   "robots_max_decoded_bytes": {
     "env": ["SITE_HEALTH_ROBOTS_MAX_DECODED_BYTES"],
