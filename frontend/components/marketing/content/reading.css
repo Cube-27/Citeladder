@@ -106,7 +106,7 @@
   /* The paper cover scrolls with the table (local) and hides the shade once
      the last column is in view; the shade stays on the frame's edge. */
   background:
-    linear-gradient(to left, var(--color-paper) 40%, transparent) right / 48px 100% no-repeat local,
+    linear-gradient(to left, var(--site-page) 40%, transparent) right / 48px 100% no-repeat local,
     linear-gradient(to left, color-mix(in srgb, var(--color-ink) 20%, transparent), transparent)
       right / 24px 100% no-repeat scroll;
 }
@@ -157,7 +157,7 @@
   left: 0;
   z-index: 1;
   min-width: 120px;
-  background: var(--color-paper);
+  background: var(--site-page);
 }
 
 .cl-site .cl-prose-table :is(th, td)[data-fit] {

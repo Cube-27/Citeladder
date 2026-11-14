@@ -6,8 +6,9 @@
  */
 
 /* ---------- Page root, container and section rhythm ---------- */
-/* The website is flat on white paper (owner, 2026-11-14): panels are told
-   apart by a soft fill or a hairline, never a shadow, gradient or grain. */
+/* Nothing floats (owner, 2026-11-14): depth comes from recessed wells, washes,
+   gradient hairlines and a lit backdrop behind product images, never a raised
+   shadow. Orange is the brand colour; blue-violet is the second. */
 
 .cl-site {
   /* The website sets exactly eight sizes, 12 · 14 · 16 · 18 · 20 · 24 · 32 ·
@@ -44,12 +45,32 @@
   --site-radius-card: 12px;
   --site-radius-stage: 16px;
 
-  /* Panels are told apart by one flat near-paper fill. */
-  --tint-neutral: color-mix(in srgb, var(--color-ink) 4%, var(--color-paper));
+  /* The site's colours (globals.css owns their light and dark values).
+     Panels are wells: a shade under the page, darker along their top edge
+     and ringed by a hairline, so they sit in it rather than on it. */
+  --site-page: var(--color-site-page);
+  --site-violet: var(--color-site-violet);
+  --site-violet-ink: var(--color-site-violet-ink);
+  --site-violet-soft: var(--color-site-violet-soft);
+  --site-guide: var(--color-site-guide);
+  --site-rule-from: var(--color-site-rule-from);
+  --site-rule-to: var(--color-site-rule-to);
+  --tint-neutral: var(--color-site-well);
+  --site-well-shade: linear-gradient(180deg, var(--color-site-well-shade), transparent 12px);
+  --site-band-vignette: var(--color-site-vignette);
 
-  background: var(--color-paper);
+  /* The lit backdrop behind a product image: a violet wash lit from above, a
+     halo round the picture, a warm orange corner, darker edges and grain. */
+  --spot-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
+
+  background: var(--site-page);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+/* Dark grain is light specks. */
+:root[data-theme='dark'] .cl-site {
+  --spot-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .16 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
 }
 
 /* A section heading sets 32/36 from 768px up; phones keep their own step. */
@@ -66,13 +87,28 @@
   padding-inline: var(--site-gutter);
 }
 
+/* Between sections, a violet-to-orange hairline across the content column,
+   halfway down the section's top space. It is 2px at a lighter alpha, so it
+   keeps its colour where a section starts on a fractional pixel. */
+
 .cl-section {
   padding-top: 96px;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--site-rule-from) 30%,
+    var(--site-rule-to) 70%,
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-position: 50% 48px;
+  background-size: min(var(--container-site), calc(100% - 2 * var(--site-gutter))) 2px;
 }
 
 @media (max-width: 1023px) {
   .cl-section {
     padding-top: 64px;
+    background-position: 50% 32px;
   }
 }
 
@@ -152,7 +188,7 @@
 
 .cl-checks svg {
   margin-top: 4px;
-  color: var(--color-ink);
+  color: var(--site-violet);
 }
 
 .cl-checks--sm {
@@ -276,6 +312,7 @@
 
 .cl-arrowlink-icon {
   flex-shrink: 0;
+  color: var(--color-accent);
   transition: transform var(--motion-fast) var(--ease-standard);
 }
 
@@ -303,7 +340,57 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
 /* ---------- The page above the footer ---------- */
 .cl-site-main {
   padding-bottom: 96px;
-  background: var(--color-paper);
+  background: var(--site-page);
+}
+
+/* Dashed guides on the content column's edges and quarters, behind every
+   section; wells and product images cover them. */
+
+.cl-site-main::before {
+  --guide: repeating-linear-gradient(180deg, var(--site-guide) 0 4px, transparent 4px 12px);
+
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: min(var(--container-site), calc(100% - 2 * var(--site-gutter)));
+  background-image: var(--guide), var(--guide), var(--guide), var(--guide), var(--guide);
+  background-repeat: no-repeat;
+  background-position:
+    0 0,
+    25% 0,
+    50% 0,
+    75% 0,
+    100% 0;
+  background-size: 1px 100%;
+  pointer-events: none;
+  translate: -50% 0;
+}
+
+/* Running prose keeps only the edge guides, so no line crosses a paragraph. */
+
+.cl-site-main:has(.cl-cpage-article-grid, .prose-content)::before {
+  background-image: var(--guide), var(--guide);
+  background-position:
+    0 0,
+    100% 0;
+}
+
+@media (max-width: 1023px) {
+  .cl-site-main::before {
+    background-image: var(--guide), var(--guide);
+    background-position:
+      0 0,
+      100% 0;
+  }
+}
+
+/* Public eyebrows take the second brand colour. */
+
+.cl-site .type-eyebrow:not(:is(.cl-screen, .cl-vig) *) {
+  color: var(--site-violet-ink);
 }
 
 @media (max-width: 1023px) {

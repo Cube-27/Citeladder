@@ -587,6 +587,49 @@
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
 }
 
+/* The marketing site's second colour and depth palette (docs and the app
+   keep theirs): orange stays the brand colour beside a Stripe-like
+   blue-violet; panels are wells a shade under a page that lifts in dark. */
+:root[data-marketing-surface] {
+  --color-site-page: #ffffff;
+  --color-site-violet: #635bff;
+  --color-site-violet-ink: #4f46e5;
+  --color-site-violet-soft: #eeedff;
+  --color-site-guide: rgb(66 71 112 / 16%);
+  --color-site-rule-from: rgb(99 91 255 / 60%);
+  --color-site-rule-to: rgb(232 80 26 / 55%);
+  --color-site-well: #f5f5fa;
+  --color-site-well-shade: rgb(30 27 75 / 7%);
+  --color-site-well-edge: rgb(30 27 75 / 7%);
+  --color-site-vignette: rgb(79 70 229 / 9%);
+  --color-spot-from: #e4e1ff;
+  --color-spot-to: #f3f1ff;
+  --color-spot-glow: rgb(99 91 255 / 40%);
+  --color-spot-halo: rgb(99 91 255 / 30%);
+  --color-spot-warm: rgb(255 120 60 / 30%);
+  --color-spot-vignette: rgb(49 40 140 / 10%);
+}
+
+:root[data-marketing-surface][data-theme='dark'] {
+  --color-site-page: #0e0e15;
+  --color-site-violet: #8b84ff;
+  --color-site-violet-ink: #a9a4ff;
+  --color-site-violet-soft: #23204d;
+  --color-site-guide: rgb(255 255 255 / 9%);
+  --color-site-rule-from: rgb(139 132 255 / 60%);
+  --color-site-rule-to: rgb(255 106 51 / 55%);
+  --color-site-well: #08080d;
+  --color-site-well-shade: rgb(0 0 0 / 55%);
+  --color-site-well-edge: rgb(255 255 255 / 6%);
+  --color-site-vignette: rgb(139 132 255 / 11%);
+  --color-spot-from: #1d1950;
+  --color-spot-to: #0b0a1d;
+  --color-spot-glow: rgb(118 108 255 / 60%);
+  --color-spot-halo: rgb(118 108 255 / 36%);
+  --color-spot-warm: rgb(255 106 51 / 30%);
+  --color-spot-vignette: rgb(0 0 0 / 55%);
+}
+
 [data-public-surface] .button-key {
   background-image: none;
 }

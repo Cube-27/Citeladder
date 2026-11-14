@@ -6,8 +6,10 @@
   margin: 0;
 }
 
-/* The product image's frame: a flat neutral panel with no edge or shadow of
-   its own. On its own it holds the picture's white card (below). */
+/* The product image's frame: a lit backdrop (a spotlight), not a shadow. A
+   violet glow from above, a warm corner, a vignette and fine grain; no text
+   sits on it (the caption is under the panel). On its own it holds the
+   picture's white card (below). */
 
 .cl-frame-card {
   display: flex;
@@ -16,7 +18,13 @@
   padding: 48px;
   border: 0;
   border-radius: var(--site-radius-stage);
-  background: var(--tint-neutral);
+  background:
+    var(--spot-grain),
+    radial-gradient(120% 110% at 50% 45%, transparent 55%, var(--color-spot-vignette)),
+    radial-gradient(60% 55% at 50% 0%, var(--color-spot-glow), transparent),
+    radial-gradient(70% 75% at 50% 50%, var(--color-spot-halo), transparent),
+    radial-gradient(45% 60% at 100% 100%, var(--color-spot-warm), transparent),
+    linear-gradient(180deg, var(--color-spot-from), var(--color-spot-to));
   box-shadow: none;
 }
 
@@ -175,7 +183,8 @@
   border: 0;
 }
 
-/* The picture's own white card, edged by a hairline ring, never a shadow. */
+/* The picture's own white card, edged by a hairline ring, never a shadow;
+   the backdrop's centred halo lights it from behind. */
 
 .cl-frame-card > .cl-frame-well > .cl-frame-screen {
   overflow: hidden;
