@@ -371,10 +371,20 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   translate: -50% 0;
 }
 
-/* Eyebrows are highlighter chips: violet ink on pale violet, with an orange
-   square on the top-right corner. Product images keep their own. */
+/* On a phone the content runs to the gutters, so the guides would sit on
+   its edges: they are left out. */
 
-.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig) *) {
+@media (max-width: 767px) {
+  .cl-site-main::before {
+    content: none;
+  }
+}
+
+/* Eyebrows are highlighter chips: violet ink on pale violet, with an orange
+   square on the top-right corner. Product images keep their own, and a
+   featured post's date line is plain text, not a label. */
+
+.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *) {
   position: relative;
   width: fit-content;
   padding: 0 8px;
@@ -383,7 +393,7 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   color: var(--site-violet-ink);
 }
 
-.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig) *)::after {
+.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *)::after {
   position: absolute;
   top: -4px;
   right: -4px;

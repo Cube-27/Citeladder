@@ -1,8 +1,8 @@
 /* ---------- Home integrations: a logo field ---------- */
 /* The title above, then the tiles in an arch: one at each end of the top row,
    two at each end of the next, a full row of seven below; the lead and link
-   sit in the arch's hollow. Under 960px everything stacks over a wrapping
-   grid. Tiles are flat and static. */
+   sit in the arch's hollow. Under 960px everything stacks over wrapping
+   chips. Tiles are flat and static. */
 
 .cl-ifield {
   --ifield-gap: 16px;
@@ -140,6 +140,45 @@
 
   .cl-ifield-tile:is(:nth-child(2), :nth-child(6)) {
     grid-column: 7;
+  }
+}
+
+/* Under 960px the tiles become a centred, wrapping set of chips: the logo
+   beside the name, so fourteen integrations take a few rows, not a column. */
+
+@media (max-width: 959px) {
+  .cl-ifield-tiles {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .cl-ifield-tile {
+    flex-direction: row;
+    gap: 8px;
+    min-height: 0;
+    padding: 8px 12px;
+    border-radius: var(--radius-md);
+  }
+
+  .cl-ifield-logo {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cl-ifield-logo:empty {
+    display: none;
+  }
+
+  .cl-ifield-logo > :is(svg, img) {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cl-ifield-name {
+    min-height: 0;
+    white-space: nowrap;
   }
 }
 
