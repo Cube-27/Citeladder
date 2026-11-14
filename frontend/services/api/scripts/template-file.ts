@@ -14,9 +14,8 @@ export async function writeTemplate(name: string, source: string, command: strin
   if (formatted.errors.length) throw new Error(`${name} does not parse`);
   const contents = formatted.code;
   if (process.argv.includes('--check')) {
-    // A checkout may convert line endings; the template's text is what must match.
     const current = await readFile(path, 'utf8').catch(() => '');
-    if (current.replaceAll('\r\n', '\n') !== contents)
+    if (current !== contents)
       throw new Error(`${name} is stale; run pnpm --filter @citeladder/api ${command}`);
   } else {
     await mkdir(directory, { recursive: true });

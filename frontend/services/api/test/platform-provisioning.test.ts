@@ -188,7 +188,6 @@ it('previews CLI rotation unless apply is explicit and refuses conflicting mutat
           JWT_SECRET_KEY: config.session.secretKey,
         },
         timeout: 10_000,
-        windowsHide: true,
       },
     );
   const prior = await db

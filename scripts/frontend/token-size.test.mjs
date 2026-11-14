@@ -23,7 +23,6 @@ function repository() {
   git('init', '-q');
   git('config', 'user.email', 'test@example.com');
   git('config', 'user.name', 'Test');
-  git('config', 'core.autocrlf', 'false');
   const write = (file, content) => {
     mkdirSync(dirname(join(root, file)), { recursive: true });
     writeFileSync(join(root, file), content);

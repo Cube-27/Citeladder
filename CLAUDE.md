@@ -140,7 +140,7 @@ the `validate-change` skill.
 - Edit files with the Edit tool, not shell
   rewrites, heredocs or throwaway edit scripts. Developer and agent workflow
   scripts are Node, run through pnpm (`pnpm gate`, `pnpm test:api`); do not add
-  PowerShell or bash scripts for them. Stage explicit paths and preserve user-owned changes.
+  bash scripts for them. Stage explicit paths and preserve user-owned changes.
 
 ## Completion
 

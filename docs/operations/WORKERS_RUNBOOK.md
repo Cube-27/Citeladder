@@ -256,9 +256,9 @@ the domain.
 
 For local Worker verification after `pnpm --dir frontend install --frozen-lockfile`:
 
-```powershell
-$env:PUBLIC_WEBSITE_ORIGIN='https://citeladder.com'
-$env:PUBLIC_APP_ORIGIN='https://app.citeladder.com'
+```bash
+export PUBLIC_WEBSITE_ORIGIN='https://citeladder.com'
+export PUBLIC_APP_ORIGIN='https://app.citeladder.com'
 pnpm --dir frontend build:app
 pnpm --dir frontend types:app-worker
 pnpm --dir frontend dev:app-worker -- --local-protocol https --ip 127.0.0.1 --port 8787

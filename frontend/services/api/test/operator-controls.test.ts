@@ -192,7 +192,6 @@ it('reads bounded agreement reference JSON from stdin, previews by default and a
           DATABASE_URL: config.databaseUrl,
           JWT_SECRET_KEY: config.session.secretKey,
         },
-        windowsHide: true,
         timeout: 10_000,
       },
     );

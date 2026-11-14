@@ -73,7 +73,7 @@ folder.
   - `cli/seed-*.ts`, `cli/reset-*.ts`, `cli/provision-dev-login.ts`,
     `cli/local-environment.ts`, `config/dev-seed.ts` and `audits/seed.ts`.
   - The orphaned `cli/seed-audit.ts` (**BE-705**).
-  - `scripts/reset-db.ps1` and `scripts/provision-dev-login.ps1`.
+  - `scripts/reset-db.ps1` and `scripts/provision-dev-login.mjs`.
   - Their `package.json` scripts, the docs that run them (`DEVELOPMENT.md`,
     the runbooks), any CI step (Compose smoke), and tests that import them.
 - **Move them** to a git-ignored folder (for example `local/dev-tools/`) and add
@@ -94,7 +94,7 @@ folder.
 
 ### c. PR 3: Deploy pipeline trust
 - **OPS-006 (code half):** add `job_workflow_ref` (the deploy workflow) and
-  `repository_id` to the WIF provider condition (`infra/gcp/bootstrap.ps1`,
+  `repository_id` to the WIF provider condition (`infra/gcp/bootstrap.mjs`,
   `identity.tf`).
 - **OPS-007:** the deploy gate trusts only the last `ci.yml` run, ignores
   Compose smoke, and a docs-only commit can mask code that was never validated.

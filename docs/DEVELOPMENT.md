@@ -125,7 +125,7 @@ token-efficient Playwright Agent CLI. The repository-local skill is under
 `.claude/skills/playwright-cli`; use the root command below so no global npm
 install is required:
 
-```powershell
+```bash
 # Start an isolated, headless browser session against a local app.
 pnpm run playwright:cli -- open http://127.0.0.1:3000
 
@@ -461,7 +461,7 @@ leave its required statuses pending.
 
 Static-analysis commands, pinned by the frozen locks:
 
-```powershell
+```bash
 # From frontend/. These production checks are CI ratchets; the test scan is advisory.
 pnpm check:complexity
 pnpm check:complexity:api
@@ -541,8 +541,8 @@ Acquisition, agreement and platform provisioning commands roll back unless
 preview; combining it with `--apply` is refused. Platform provisioning
 requires an active platform administrator, accepts only opaque references and
 makes no provider calls. Agreement reference JSON is read from bounded stdin
-(PowerShell: `Get-Content -Raw local-reference.json | pnpm --filter
-@citeladder/api agreement:record --actor <admin-email>`). The account manager
+(`pnpm --filter @citeladder/api agreement:record --actor <admin-email>
+< local-reference.json`). The account manager
 requires an interactive terminal for passwords and confirmation for mutations.
 The API image also supports these entrypoints via
 `node src/cli/<entrypoint>.ts`, including the migrate job's `migrate.ts` and

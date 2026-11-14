@@ -37,7 +37,7 @@ const privateNames = new Set([
 ]);
 for (const file of files) {
   if (/\.(js|html)$/.test(file)) {
-    const content = await readFile(new URL(`client/${file.split(sep).join('/')}`, root), 'utf8'); // NOSONAR -- Stops at the first leaking file, in a stable order.
+    const content = await readFile(new URL(`client/${file}`, root), 'utf8'); // NOSONAR -- Stops at the first leaking file, in a stable order.
     const urls = content.match(/https?:\/\/[^\s"'`<>\\]+/gu) ?? [];
     const hasMailEndpoint = urls.some((value) => {
       try {
@@ -75,7 +75,6 @@ const headers = await readFile(new URL('client/_headers', root), 'utf8');
 // results should never list; the articles that link them stay indexable.
 const unindexed = [
   ...files
-    .map((file) => file.split(sep).join('/'))
     .filter((file) => file.startsWith('research/') && file.endsWith('.json'))
     .map((file) => `/${file}`),
   '/manifest.webmanifest',
@@ -96,7 +95,6 @@ await writeFile(
 // Asset delivery would answer a trailing-slash URL with a temporary 307; a
 // permanent redirect to each prerendered page tells crawlers which URL is canonical.
 const pages = files
-  .map((file) => file.split(sep).join('/'))
   .filter((file) => file.endsWith('.html') && file !== '404.html' && file !== 'index.html')
   .map((file) => `/${file.slice(0, -'.html'.length)}`);
 await writeFile(

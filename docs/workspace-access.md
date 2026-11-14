@@ -395,20 +395,20 @@ Accepted rationale is in [decisions](decisions.md).
 
 ## Operator account management
 
-The existing `scripts/provision-dev-login.ps1` is the interactive **production**
-entry point (its historical filename is retained). Run it from the repository root:
+`scripts/provision-dev-login.mjs` is the interactive **production** entry point
+(its historical filename is retained). Run it from the repository root:
 
-```powershell
-./scripts/provision-dev-login.ps1
+```bash
+node scripts/provision-dev-login.mjs
 ```
 
 It uses the active `gcloud` login to verify the database instance against the
 database secret, authenticate SSH and open a loopback IAP tunnel; production
 keeps no operator password secret (BL9), so the manager prompts for the
-operator's password without echo. It restores the
-calling shell's environment and closes only its own tunnel on exit. A first
-connection may ask gcloud's SSH host-key trust question. With a tunnel already
-open, use `-UseExistingTunnel -LocalPort 15432`. Project, instance, zone,
+operator's password without echo. It passes the database URL to the manager's
+environment only, never the calling shell's, and closes only its own tunnel on
+exit. A first connection may ask gcloud's SSH host-key trust question. With a
+tunnel already open, use `--use-existing-tunnel --local-port 15432`. Project, instance, zone,
 database secret name and actor can be selected explicitly. No password is passed on argv or saved to disk.
 
 The platform menu lists identities/workspaces, creates batches of customer

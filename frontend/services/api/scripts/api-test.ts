@@ -46,15 +46,10 @@ const command = types ? ['db:types'] : ['exec', 'vitest', 'run', ...files];
 const output = openSync(log, 'w');
 let status: number | null;
 try {
-  const [program, programArgs] =
-    process.platform === 'win32'
-      ? [process.env.ComSpec ?? 'cmd.exe', ['/d', '/s', '/c', 'pnpm', ...command]]
-      : ['pnpm', command];
-  status = spawnSync(program, programArgs, {
+  status = spawnSync('pnpm', command, {
     cwd: apiRoot,
     env,
     stdio: ['ignore', output, output],
-    windowsHide: true,
   }).status; // NOSONAR: trusted PATH.
 } finally {
   closeSync(output);

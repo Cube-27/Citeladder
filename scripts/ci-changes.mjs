@@ -6,8 +6,8 @@ import { pathToFileURL } from 'node:url';
 
 const TRUE = 'true';
 const FALSE = 'false';
-const GIT_EXECUTABLE =
-  process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
+// An absolute path, not PATH lookup: a PATH entry cannot substitute git (Sonar S4036).
+const GIT_EXECUTABLE = '/usr/bin/git';
 const E2E_RULES = JSON.parse(readFileSync(new URL('./e2e-paths.json', import.meta.url), 'utf8'));
 const DOC_FILES = new Set([
   'CLAUDE.md',
@@ -335,7 +335,7 @@ export function classifyPaths(paths, { full = false } = {}) {
     };
   }
 
-  const normalized = [...new Set(paths.map((path) => path.replaceAll('\\', '/')))];
+  const normalized = [...new Set(paths)];
   const unowned = normalized.filter((path) => !isOwnerFree(path) && !isFrontend(path));
   const shared = unowned.length > 0;
   const e2eFiles = selectE2EFiles(normalized);
@@ -360,7 +360,7 @@ export function classifyPaths(paths, { full = false } = {}) {
 
 /** True only for a known, non-empty change that touches no owner. */
 export function isOwnerFreeChange(paths) {
-  return paths.length > 0 && paths.every((path) => isOwnerFree(path.replaceAll('\\', '/')));
+  return paths.length > 0 && paths.every((path) => isOwnerFree(path));
 }
 
 export function selectDiff({

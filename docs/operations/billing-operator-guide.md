@@ -2,7 +2,7 @@
 
 ## Isolated local Razorpay test
 
-Follow the [manual PowerShell testing runbook](razorpay-local-testing.md) for
+Follow the [manual testing runbook](razorpay-local-testing.md) for
 isolated startup, operator setup, INR catalog provisioning, webhook configuration,
 payment scenarios, recovery, evidence collection and cleanup. Local INR approval
 and international approval are owner-confirmed. INR/USD plan setup, actual

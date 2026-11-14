@@ -2,7 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import { closeSync, mkdirSync, openSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join, resolve, sep } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync, spawnSync } from 'node:child_process';
 
@@ -177,7 +177,6 @@ function step(name, command, commandArgs, cwd, env = process.env) {
     result = spawnSync(command, commandArgs, {
       cwd,
       env,
-      windowsHide: true,
       stdio: ['ignore', log, log],
     });
   } finally {
@@ -192,15 +191,6 @@ function step(name, command, commandArgs, cwd, env = process.env) {
 }
 
 function pnpm(name, commandArgs, env = process.env) {
-  if (process.platform === 'win32') {
-    return step(
-      name,
-      process.env.ComSpec ?? 'cmd.exe',
-      ['/d', '/s', '/c', 'pnpm', ...commandArgs],
-      frontendRoot,
-      env,
-    );
-  }
   return step(name, 'pnpm', commandArgs, frontendRoot, env);
 }
 
@@ -284,7 +274,7 @@ function schemaAuthorityViolations(root) {
     .filter((entry) => entry.isFile() && !entry.parentPath.includes('node_modules'))
     .map((entry) => join(entry.parentPath, entry.name))
     .filter((path) => {
-      const relative = path.slice(root.length).replaceAll(sep, '/');
+      const relative = path.slice(root.length);
       if (SCHEMA_MIGRATION.test(relative)) return false;
       if (/\/migrations?\//u.test(relative) || relative.endsWith('.sql')) return true;
       // Tests build disposable databases and constraint fixtures; only shipped source is policed.

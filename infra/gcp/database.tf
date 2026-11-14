@@ -61,7 +61,7 @@ resource "google_compute_instance" "db" {
   }
 
   # The startup script reads its secret and pulls its image on first boot. Its
-  # log-writer grant comes from bootstrap.ps1, before any deploy.
+  # log-writer grant comes from bootstrap.mjs, before any deploy.
   depends_on = [
     google_secret_manager_secret_iam_member.db_password,
     google_artifact_registry_repository_iam_member.db_reader,

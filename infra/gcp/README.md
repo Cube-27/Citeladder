@@ -30,7 +30,7 @@ secret supplies a value.
 Data lives on the database VM's boot disk. Replacing the VM is the explicit,
 irreversible database reset. No backups are kept.
 
-`bootstrap.ps1` runs once per workstation-authorised setup. It enables APIs,
+`bootstrap.mjs` runs once per workstation-authorised setup. It enables APIs,
 creates the state bucket and the deploy identity with its narrowed roles,
 grants the database account's log-writer role (the deployer cannot edit
 project IAM), and establishes the exact GitHub OIDC trust for the

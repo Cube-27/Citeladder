@@ -7,8 +7,7 @@ export function gitPaths(root, arguments_) {
   const args = ['-c', 'core.quotePath=false', '-C', root, ...arguments_];
   return execFileSync('git', args, { encoding: 'utf8' }) // NOSONAR: trusted PATH.
     .split(/\r?\n/u)
-    .filter(Boolean)
-    .map((path) => path.replaceAll('\\', '/'));
+    .filter(Boolean);
 }
 
 /** The branch's changes against origin/main: committed, unstaged, staged and untracked. */

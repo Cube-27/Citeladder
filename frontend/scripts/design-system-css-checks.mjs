@@ -263,7 +263,7 @@ function stylesheetPaths(directory) {
 export function cssPolicyScan(root) {
   return SCANNED_ROOTS.flatMap((directory) => stylesheetPaths(join(root, directory))).flatMap(
     (path) => {
-      const label = relative(root, path).replaceAll('\\', '/');
+      const label = relative(root, path);
       const source = readFileSync(path, 'utf8');
       return label.endsWith('.astro')
         ? astroStyleFindings(source, label)

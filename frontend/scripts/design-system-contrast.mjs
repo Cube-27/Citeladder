@@ -294,6 +294,6 @@ export function paletteViolations(source, cssLabel = TOKEN_CSS) {
 
 export function textContrastViolations(root) {
   const cssPath = join(root, ...TOKEN_CSS.split('/'));
-  const cssLabel = relative(root, cssPath).replaceAll('\\', '/');
+  const cssLabel = relative(root, cssPath);
   return paletteViolations(readFileSync(cssPath, 'utf8'), cssLabel);
 }

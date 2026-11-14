@@ -50,10 +50,10 @@ deleted by automation.
 
 ### 1.1 Workstation
 
-Install Google Cloud CLI, Terraform 1.10.5 or later, PowerShell 7.3 or later,
-and the GitHub CLI. Then authenticate:
+Install Google Cloud CLI, Terraform 1.10.5 or later, Node (the repository's
+`engines` version) and the GitHub CLI. Then authenticate:
 
-```powershell
+```bash
 gcloud auth login
 gcloud auth application-default login
 gcloud config set project project-setup-20260711
@@ -64,11 +64,11 @@ gcloud config set project project-setup-20260711
 From an up-to-date `main` at the repository root, reuse the existing project
 and state bucket:
 
-```powershell
-./infra/gcp/bootstrap.ps1 `
-  -ProjectId 'project-setup-20260711' `
-  -BillingAccount '<BILLING_ACCOUNT_ID>' `
-  -StateBucket 'project-setup-20260711-tfstate'
+```bash
+node infra/gcp/bootstrap.mjs \
+  --project-id 'project-setup-20260711' \
+  --billing-account '<BILLING_ACCOUNT_ID>' \
+  --state-bucket 'project-setup-20260711-tfstate'
 ```
 
 `gcloud billing projects describe project-setup-20260711` shows the billing
@@ -218,10 +218,10 @@ documentation through its global Worker network.
 
 After a deploy:
 
-```powershell
-curl.exe --fail https://app.citeladder.com/health
-curl.exe --fail https://app.citeladder.com/api/v1/auth/oauth/providers
-curl.exe --fail https://api.citeladder.com/.well-known/oauth-authorization-server
+```bash
+curl --fail https://app.citeladder.com/health
+curl --fail https://app.citeladder.com/api/v1/auth/oauth/providers
+curl --fail https://api.citeladder.com/.well-known/oauth-authorization-server
 ```
 
 After the first deploy with monitoring, confirm alert delivery once: Cloud
@@ -242,14 +242,14 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
   logs reach Cloud Logging under the `citeladder-db` instance.
 - **Database shell** (break-glass, IAP):
 
-  ```powershell
-  gcloud compute ssh citeladder-db --zone us-central1-a --tunnel-through-iap `
+  ```bash
+  gcloud compute ssh citeladder-db --zone us-central1-a --tunnel-through-iap \
     --command 'sudo docker exec -it citeladder-postgres psql -U citeladder -d citeladder'
   ```
 
 - **Operator account tool:** forward the database over the same SSH session.
   For the complete interactive platform account manager, run
-  `./scripts/provision-dev-login.ps1` from the repository root. It opens and
+  `node scripts/provision-dev-login.mjs` from the repository root. It opens and
   closes its own tunnel; [Workspace access](../workspace-access.md#operator-account-management)
   owns the menu, previews and deletion rules. The manual workspace-scoped tool
   below remains available.
@@ -257,7 +257,7 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
   --workspace-id <uuid>` from `frontend/` against `127.0.0.1:15432`
   with the production secrets exported in that shell only:
 
-  ```powershell
+  ```bash
   gcloud compute ssh citeladder-db --zone us-central1-a --tunnel-through-iap --ssh-flag="-N" --ssh-flag="-L 15432:127.0.0.1:5432"
   ```
 
@@ -321,8 +321,8 @@ until the same command is repeated with `--apply`. The
 
 Put a workspace on the checkout allow-list (dry run, then add `--apply`):
 
-```powershell
-gcloud run jobs execute citeladder-billing --region us-central1 --wait `
+```bash
+gcloud run jobs execute citeladder-billing --region us-central1 --wait \
   '--args=src/cli/billing-admin.ts,grant,--workspace-id,<workspace-uuid>,--account-id,<billing-account-uuid>,--key,billing_checkout,--value,1,--valid-from,2026-10-11T00:00:00Z,--actor,<admin-email>,--reason,checkout-allow-list,--idempotency-key,grant:checkout:<workspace-uuid>'
 ```
 
@@ -335,16 +335,15 @@ development login, so this explicit grant is the only way the operator's
 workspace gets them; do it once after the first deploy that ships it (dry run,
 then add `--apply`):
 
-```powershell
-gcloud run jobs execute citeladder-billing --region us-central1 --wait `
+```bash
+gcloud run jobs execute citeladder-billing --region us-central1 --wait \
   '--args=src/cli/billing-admin.ts,grant,--workspace-id,<operator-workspace-uuid>,--account-id,<billing-account-uuid>,--key,operator_controls,--value,1,--valid-from,<now-rfc3339>,--actor,<admin-email>,--reason,operator-controls,--idempotency-key,grant:operator-controls:<operator-workspace-uuid>'
 ```
 
 Bind Razorpay plan IDs to a revision, store the result as a draft and publish
 it. The job's `BILLING_RAZORPAY_MODE` must equal `--environment`. The refs JSON
 contains commas, so switch gcloud's list delimiter with its `^;^` prefix and
-separate arguments with `;`. Run this from a POSIX shell such as Cloud Shell,
-where single quotes keep the JSON intact. First the dry run, which verifies
+separate arguments with `;`; single quotes keep the JSON intact. First the dry run, which verifies
 every plan at Razorpay and previews the import:
 
 ```bash

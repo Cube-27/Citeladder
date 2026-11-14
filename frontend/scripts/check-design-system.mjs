@@ -80,7 +80,7 @@ for (const path of files(root)) {
   const extension = extname(path);
   if (!sourceExtensions.has(extension) && extension !== '.astro') continue;
   const source = readFileSync(path, 'utf8');
-  const label = relative(root, path).replaceAll('\\', '/');
+  const label = relative(root, path);
   if (extension === '.astro') continue;
   if (/\.tsx?$/.test(label) && !/\.test\.tsx?$/.test(label)) scriptSources.push({ label, source });
   if (
@@ -172,8 +172,8 @@ violations.push(
 // Fonts live in the private Cube-27/cube27-fonts repo (some are licensed for
 // self-hosting, not redistribution) and reach public/fonts only through
 // `pnpm fonts:pull`. Git's index, not the disk, is what gets published.
-const GIT_EXECUTABLE =
-  process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
+// An absolute path, not PATH lookup: a PATH entry cannot substitute git (Sonar S4036).
+const GIT_EXECUTABLE = '/usr/bin/git';
 const trackedFiles = execFileSync(GIT_EXECUTABLE, ['-C', root, 'ls-files', '--', ':(top)'], {
   encoding: 'utf8',
 }).split('\n');

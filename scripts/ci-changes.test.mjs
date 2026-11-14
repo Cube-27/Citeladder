@@ -150,7 +150,7 @@ function apiExternalReads() {
   for (const directory of ['src', 'scripts', 'test']) {
     const root = join(repositoryRoot, 'frontend/services/api', directory);
     for (const name of readdirSync(root, { recursive: true })) {
-      const file = posix.join('frontend/services/api', directory, name.replaceAll('\\', '/'));
+      const file = posix.join('frontend/services/api', directory, name);
       if (!/\.[cm]?[jt]s$/u.test(file) || file.includes('/fixtures/')) continue;
       const source = readFileSync(join(repositoryRoot, file), 'utf8');
       for (const [, specifier] of source.matchAll(reference)) {
@@ -165,7 +165,7 @@ function apiExternalReads() {
           for (const entry of readdirSync(absolute, { recursive: true, withFileTypes: true })) {
             if (!entry.isFile()) continue;
             const path = join(entry.parentPath, entry.name).slice(repositoryRoot.length);
-            reads.add(path.replaceAll('\\', '/'));
+            reads.add(path);
           }
         }
       }

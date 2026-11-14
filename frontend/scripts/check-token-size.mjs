@@ -8,8 +8,8 @@ import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 
 export const POLICY_PATH = 'frontend/scripts/token-size-policy.json';
-const GIT_EXECUTABLE =
-  process.platform === 'win32' ? String.raw`C:\Program Files\Git\cmd\git.exe` : '/usr/bin/git';
+// An absolute path, not PATH lookup: a PATH entry cannot substitute git (Sonar S4036).
+const GIT_EXECUTABLE = '/usr/bin/git';
 const REVISION = /^[0-9a-fA-F]{7,40}$|^HEAD$/u;
 
 export const SPLIT_INSTRUCTIONS = [
