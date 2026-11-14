@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
  * hung off a rule, and boxed at two different radii — so the same list of
  * evidence rows looked like a different component on each screen. The list
  * sits on whatever container already holds it and is never outlined: a
- * container never holds a second bordered box (D51).
+ * container never holds a second bordered box.
  */
 export function ledgerClasses(className?: string) {
   return cn('divide-line grid divide-y', className);
@@ -35,7 +35,7 @@ export function ledgerItemClasses(className?: string) {
  * The sunken inset: a shared fact inside a card that is not one of its rows
  * (the element several affected pages share, over the pages themselves).
  * 12 down, 16 across, its lines 4 apart; inside a card it is the sunken fill
- * with no edge, so the card stays the only bordered surface (D51).
+ * with no edge, so the card stays the only bordered surface.
  */
 export function insetClasses(className?: string) {
   return cn('surface-inset grid min-w-0 gap-1 rounded-md px-4 py-3', className);
@@ -179,7 +179,7 @@ export function EditorialSectionHeader({
  * The editing controls that float over a widget's top-end corner while its
  * layout is being edited: a cluster of `IconButton`s lifted off the widget
  * like a menu (the menu surface and shadow), hugging the controls with a 4px
- * inset and 4 between them (the floating face, D51). Each control names the widget it acts on. The
+ * inset and 4 between them (the floating face). Each control names the widget it acts on. The
  * widget it sits on must be `relative`.
  */
 export function FloatingToolbar({ children }: Readonly<{ children: ReactNode }>) {

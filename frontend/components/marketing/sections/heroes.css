@@ -1,9 +1,6 @@
-/* ---------- Heroes: the page's H1 is the site title, 60 → 32, never larger ---------- */
-/* Relative and isolated for the hero wash (below). */
+/* ---------- Heroes: the page's H1 is the site title, 48 → 32 ---------- */
 .cl-phero,
 .cl-lhero {
-  position: relative;
-  isolation: isolate;
   padding-top: 64px;
 }
 
@@ -40,20 +37,14 @@
   max-width: 960px;
 }
 
-/* A reading page (the blog) opens at the section size (D36). */
-
-.cl-phero--reading .cl-phero-title {
-  font-size: var(--text-site-section);
-  line-height: var(--text-site-section--line-height);
-}
-
 .cl-phero-lead {
-  max-width: var(--container-prose);
+  max-width: 62ch;
   margin: 0;
+  text-wrap: pretty;
 }
 
 .cl-lhero-lead {
-  max-width: var(--container-prose);
+  max-width: 62ch;
   margin: 0;
   text-wrap: pretty;
 }
@@ -66,8 +57,7 @@
   padding-top: 8px;
 }
 
-/* A sentence under the actions: the sans face, never mono (D36), in the secondary ink
-   that holds 4.5:1 on the hero's tinted wash. */
+/* A sentence under the actions: the sans face, never mono, in the secondary ink. */
 
 .cl-phero-meta,
 .cl-lhero-note {
@@ -82,27 +72,6 @@
   margin-top: 64px;
 }
 
-/* D18: landing openings centre the copy; the title keeps 960, the lead 720. */
-
-.cl-phero--center .cl-phero-inner,
-.cl-lhero-copy {
-  align-items: center;
-  text-align: center;
-}
-
-.cl-phero--center .cl-phero-title {
-  max-width: 1120px;
-}
-
-.cl-phero--center .cl-phero-lead {
-  text-wrap: pretty;
-}
-
-.cl-phero--center .cl-phero-actions,
-.cl-lhero-actions {
-  justify-content: center;
-}
-
 @media (max-width: 767px) {
   .cl-phero-media,
   .cl-lhero-frame {
@@ -110,100 +79,46 @@
   }
 }
 
-/* D52: a landing hero with an aside. Under the centred copy from 768px, in
-   two columns; beside the left-aligned copy from 1280px; not on phones. */
-
-.cl-lhero-aside {
-  max-width: 680px;
-  margin: 40px auto 0;
-}
-
-@media (max-width: 767px) {
-  .cl-lhero-aside {
-    display: none;
-  }
-}
+/* A feature page's hero from 1280px: the copy in the left 5/12, the product
+   image in the right 7/12, both from the top. */
 
 @media (min-width: 1280px) {
-  .cl-lhero--split > .cl-container {
+  .cl-phero--split > .cl-container {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 432px);
-    align-items: center;
-    column-gap: 48px;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: 32px;
+    align-items: start;
   }
 
-  .cl-lhero--split .cl-lhero-copy {
-    align-items: flex-start;
-    text-align: left;
+  .cl-phero--split .cl-phero-inner {
+    grid-column: 1 / span 5;
   }
 
-  .cl-lhero--split .cl-lhero-actions {
-    justify-content: flex-start;
-  }
-
-  .cl-lhero--split .cl-lhero-aside {
-    max-width: none;
-    margin: 0;
-  }
-
-  .cl-lhero--split .cl-lhero-frame {
-    grid-column: 1 / -1;
+  .cl-phero--split .cl-phero-media {
+    grid-column: 6 / span 7;
+    min-width: 0;
+    margin-top: 0;
   }
 }
 
-/* ---------- Hero washes: a tinted glow that fades into the page ---------- */
-/* Behind the floating navbar too, so the glow starts at the top of the
-   window; it never takes pointer events. */
-
-.cl-phero::before,
-.cl-lhero::before {
-  position: absolute;
-  inset: -112px 0 auto;
-  z-index: -1;
-  height: 720px;
-  background-image:
-    var(--stage-grain), radial-gradient(45% 60% at 20% 30%, var(--stage-a) 0%, transparent 70%),
-    radial-gradient(45% 60% at 80% 25%, var(--stage-c) 0%, transparent 70%),
-    radial-gradient(50% 60% at 50% 70%, var(--stage-b) 0%, transparent 70%);
-  background-size:
-    200px 200px,
-    100% 100%,
-    100% 100%,
-    100% 100%;
-  background-blend-mode: soft-light, normal, normal, normal;
-  -webkit-mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
-  mask-image: linear-gradient(to bottom, black 30%, transparent 100%);
-  opacity: var(--stage-wash);
-  content: '';
-  pointer-events: none;
-}
-
-/* ---------- Motion (D36) ---------- */
+/* ---------- Motion ---------- */
 @keyframes mk-rise-in {
   from {
     opacity: 0;
-    transform: translateY(14px);
-    filter: blur(6px);
+    transform: translateY(8px);
   }
 }
 
 /* The H1 is the page's largest paint, so it never starts invisible: it only
-   sharpens and settles, which keeps it a first-paint LCP candidate. */
+   settles, which keeps it a first-paint LCP candidate. */
 
 @keyframes mk-focus-in {
   from {
-    transform: translateY(10px);
-    filter: blur(5px);
+    transform: translateY(6px);
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* A split hero's aside follows the copy in, and its rows stream in. */
-  .cl-lhero-aside {
-    animation: mk-rise-in var(--motion-reveal) var(--ease-reveal) both;
-    animation-delay: calc(var(--motion-reveal-step) * 4);
-  }
-
   /* A landing hero's copy arrives in reading order: the title, then the
      lead, then the actions and note. */
   .mk-hero-in > * {

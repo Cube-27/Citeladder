@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
  * What a route puts in its control row. A route passes these to its screen
  * template's `controls` (or a `DataTable`'s `toolbar`); it never renders a
  * `FilterBar` itself, so no feature draws a toolbar of its own. The slots are
- * the row's order (D57): a page fills slots, it never arranges controls.
+ * the row's order: a page fills slots, it never arranges controls.
  */
 export type FilterBarProps = Readonly<{
   /**
@@ -224,7 +224,7 @@ function FilterTriggerText({
  * metric), in that card's header actions: the trigger names the choice by
  * its visible value (`label` stays for assistive tech), the menu lists the
  * options. A list's filters are never this: they live in its row's All
- * filters (D57).
+ * filters.
  */
 export function FilterChoice<T extends string>({
   label,

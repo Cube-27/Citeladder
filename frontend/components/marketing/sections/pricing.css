@@ -11,7 +11,8 @@
 }
 
 .cl-plan--featured {
-  background: var(--tint-mint);
+  background: var(--color-surface);
+  box-shadow: inset 0 0 0 1px var(--color-ink);
 }
 
 .cl-plan-head {
@@ -119,6 +120,13 @@
   .cl-page-plans-grid {
     gap: 16px;
   }
+}
+
+/* The provider-keys note under the plans reads at body size. */
+
+#your-keys .cl-shead-lead {
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
 }
 
 /* ---------- Website tables: PricingTable ---------- */

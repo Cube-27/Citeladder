@@ -9,18 +9,20 @@ import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, NAV_LINKS, PLATFORM_OVERVIEW } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
 
+import { DemoButtonLink } from '../primitives/button';
 import { DesktopNav } from './desktop-nav';
 import './site-nav.css';
 import { NavIcon } from './nav-icons';
 import { routePath } from './site-nav';
 
 /**
- * The website's navbar (the system's SiteNav): a floating glass bar, sticky
- * 8px under the viewport top, with the three mega menus, Enterprise and
- * Pricing, the ThemeSwitch and the account actions. Below 1280px the links
+ * The website's navbar (the system's SiteNav): a full-bleed bar, sticky at
+ * the viewport top over a hairline, with the three mega menus, Enterprise and
+ * Pricing, the ThemeSwitch and the account actions (Log in, then Sign up, or
+ * the demo link while self-serve signup is closed). Below 960px the links
  * fold into a sheet under the bar.
  *
- * The desktop menus are one island (`DesktopNav`, D22): a Radix navigation
+ * The desktop menus are one island (`DesktopNav`): a Radix navigation
  * menu with a shared popup. The sheet is server-rendered, hidden, and
  * `site-nav.ts` adds its behaviour with plain listeners. Every menu
  * destination is also in the sheet and the footer, so the server HTML links
@@ -43,13 +45,21 @@ const register = appHref('/register');
         <a href="/" aria-label="CiteLadder home" class="cl-navbar-logo focus-ring">
           <LogoMark />
         </a>
-        <DesktopNav path={path} client:media="(min-width: 1280px)" />
+        <DesktopNav path={path} client:media="(min-width: 960px)" />
         <div class="cl-navbar-end">
           <div class="cl-navbar-actions cl-navbar-hide-sm">
             <ThemeSwitch client:load />
           </div>
           <a href={login} class={buttonClasses('ghost', 'cl-navbar-hide-sm')}>Log in</a>
-          {signupOpen && <a href={register} class={buttonClasses('primary')}>Sign up</a>}
+          {
+            signupOpen ? (
+              <a href={register} class={buttonClasses('primary')}>
+                Sign up
+              </a>
+            ) : (
+              <DemoButtonLink className="cl-navbar-hide-sm" />
+            )
+          }
           <button
             type="button"
             class="cl-navbar-toggle focus-ring"
@@ -136,12 +146,16 @@ const register = appHref('/register');
           <div class="cl-sheet-actions">
             <ThemeSwitch client:load />
           </div>
-          <a href={login} class={buttonClasses('secondary', 'cl-btn-lg')}>Log in</a>
+          <a href={login} class={buttonClasses('secondary', 'cl-btn-lg')} data-button-variant="secondary">
+            Log in
+          </a>
           {
-            signupOpen && (
+            signupOpen ? (
               <a href={register} class={cn(buttonClasses('primary'), 'cl-btn-lg')}>
                 Sign up
               </a>
+            ) : (
+              <DemoButtonLink className="cl-btn-lg w-full" />
             )
           }
         </div>

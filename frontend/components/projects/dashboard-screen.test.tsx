@@ -312,7 +312,7 @@ describe('DashboardScreen', () => {
       '/agent/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
     );
     expect(ranked.getByText('/pricing · 3 persisted evidence item(s)')).toBeVisible();
-    // The badge carries the priority; the score is not repeated beside it (D14).
+    // The badge carries the priority; the score is not repeated beside it.
     expect(ranked.getByText('High')).toBeVisible();
     expect(ranked.queryByText('7.5')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'No open actions' })).not.toBeInTheDocument();

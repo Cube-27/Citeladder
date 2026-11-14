@@ -31,7 +31,7 @@ This page explains what rank means inside an answer, why one answer is not a ran
 
 **Disclosure:** CiteLadder publishes this page and sells an [AI visibility](/platform/ai-visibility) tracker. Third-party findings below are cited to their sources and are not CiteLadder test results.
 
-## What "rank" means inside an AI answer
+## What “rank” means inside an AI answer
 
 Search engines give you a numbered list of URLs. AI assistants give you prose, sometimes with a list inside it, sometimes with a source panel beside it. Two definitions of rank are in practical use, and a tracker should tell you which one it reports.
 

@@ -101,7 +101,7 @@ test('below 1280px the icon rail keeps every destination named and the palette o
   await page.waitForURL((url) => url.pathname === '/performance');
   await expect(page.getByRole('heading', { level: 1, name: 'Performance' })).toBeVisible();
 
-  // The palette's button is in the top bar, not the rail (D62); the shortcut opens it too.
+  // The palette's button is in the top bar, not the rail; the shortcut opens it too.
   const palette = page.getByRole('dialog', { name: 'Command palette', exact: true });
   await page.getByRole('button', { name: /search or jump to/i }).click();
   await expect(palette).toBeVisible();

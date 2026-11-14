@@ -8,8 +8,8 @@ import './card-rail.css';
 /**
  * RailCard: one card of a CardRail. Its label and headline (a link to the
  * card's page, so it works without script) sit at the top beside a plus
- * button; its product image, a miniature, sits below, inset and cut off by
- * the card's foot, so every card is one height whatever its screen holds.
+ * button; its product image, a miniature, sits below, inset, with the card's
+ * foot 24px under it; the row's cards share the tallest card's height.
  *
  * The plus (or a press anywhere on the card) opens it in place
  * (`mountCardRail`): the card widens to the right, to 720px, and the plus

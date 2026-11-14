@@ -329,7 +329,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
     <Stack gap="workspace">
       <Stack as="section" gap="compact">
         <h3 className={textRole('sectionTitle')}>What will be fetched</h3>
-        {/* The three figures share one row, never 2 × 2 (decision D9). */}
+        {/* The three figures share one row, never 2 × 2. */}
         <Stack as="dl" gap="compact" className="type-body grid-cols-3">
           <div>
             <dt className="type-label">Requests</dt>

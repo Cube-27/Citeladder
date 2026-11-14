@@ -167,7 +167,7 @@ export function PerformanceActions({
 }
 
 /**
- * The chart's bucket size, in All filters (D57): it changes how the window is
+ * The chart's bucket size, in All filters: it changes how the window is
  * read, like AI Traffic's chart interval, while the range leads the row.
  */
 export function granularityFilter(

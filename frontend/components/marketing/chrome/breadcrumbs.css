@@ -1,9 +1,15 @@
-/* ---------- Breadcrumbs ---------- */
+/* ---------- Breadcrumbs ----------
+   One line, never wider than its column: the current crumb gives way first
+   and ends in an ellipsis, so no chevron is left dangling. */
+.cl-crumbs {
+  max-width: 100%;
+  min-width: 0;
+}
+
 .cl-crumbs ol {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -11,11 +17,24 @@
 
 .cl-crumbs li {
   display: inline-flex;
+  flex: none;
   align-items: center;
   gap: 8px;
   color: var(--color-ink-muted);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
+  white-space: nowrap;
+}
+
+.cl-crumbs li:last-child {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.cl-crumbs li:last-child > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .cl-crumbs a {

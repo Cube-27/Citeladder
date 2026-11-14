@@ -35,7 +35,7 @@ export function ToolPanel({
   status?: ReactNode;
   result?: ReactNode;
   empty?: ReactNode;
-  /** The text Copy writes to the clipboard; Copy is disabled without it. */
+  /** The text Copy writes to the clipboard; Copy and Download are disabled without it. */
   copyText?: string;
   onDownload?: () => void;
   downloadLabel?: string;
@@ -84,16 +84,14 @@ export function ToolPanel({
               Copy
             </Button>
             {onDownload && (
-              <Button variant="ghost" disabled={result === undefined} onClick={onDownload}>
+              <Button variant="ghost" disabled={!copyText} onClick={onDownload}>
                 <Icon icon={Download} />
                 {downloadLabel}
               </Button>
             )}
           </div>
         </div>
-        <div className="cl-tool-output" aria-live="polite">
-          {result ?? <p className="cl-tool-empty">{empty}</p>}
-        </div>
+        <div className="cl-tool-output">{result ?? <p className="cl-tool-empty">{empty}</p>}</div>
       </div>
     </section>
   );

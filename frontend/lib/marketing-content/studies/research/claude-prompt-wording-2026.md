@@ -84,7 +84,7 @@ Keywords and the current year moved answers more. Both also produced longer list
 
 The most-named brand tells a slightly different story. It stayed the same in 18 of 20 questions for formal and first_person, 17 for honest, 16 for casual and current_year, 15 for typo, 14 for imperative, 13 for keywords and top_three, and 11 for which_do_most_use. Typos kept the brand set close but flipped the top brand more often than formal wording did. When the top two brands are close, small changes can swap their order.
 
-## The "which do most people use" style
+## The “which do most people use” style
 
 This style changes the meaning on purpose. It keeps the category but asks about popularity, not quality. It moved answers the most after top_three, at 54.5% agreement, and kept the most-named brand in only 11 of 20 questions.
 
@@ -216,7 +216,7 @@ Formal wording and typos came closest to the baseline, at 67.3% and 66.8% agains
 
 Yes. The top_three style had the lowest agreement with the original, at 52.4%, and averaged 6.2 brands per answer against 8.5 for the originals. Claude often still named more than three brands, but lower-ranked brands were more likely to drop out.
 
-### Should I track "best" and "most popular" prompts separately?
+### Should I track “best” and “most popular” prompts separately?
 
 Yes. Asking which option most people use kept the top brand in only 11 of 20 questions. For wireless earbuds it moved the top brand from Sony to Apple. Where the best and most common option were the same, as with Ahrefs for backlink data, results stayed stable.
 

@@ -39,7 +39,6 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
 >
   <main id="main">
     <PageHero
-      align="left"
       crumbs={[{ label: 'Free tools', href: '/tools' }, { label: tool.title }]}
       title={tool.title}
       lead={tool.description}
@@ -54,11 +53,13 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
       {tool.slug === 'sitemap-comparison' && <SitemapComparison client:load />}
       {tool.slug === 'social-preview' && <SocialPreview client:load />}
     </PageSection>
-    <ContentArticle>
-      <Prose>
-        <ToolNotes slug={tool.slug} />
-      </Prose>
-    </ContentArticle>
+    <div class="cl-tool-notes">
+      <ContentArticle>
+        <Prose>
+          <ToolNotes slug={tool.slug} />
+        </Prose>
+      </ContentArticle>
+    </div>
     <PageSection label="More free tools">
       <ContentIndex groups={otherTools(tool.slug)} />
     </PageSection>
@@ -76,6 +77,14 @@ const bots = catalog.bots.map((bot) => ({ label: bot.label, purpose: bot.purpose
     display: flex;
     flex-wrap: wrap;
     gap: 12px;
+  }
+  /* The notes start on the page gutter, level with the tool above, not centred. */
+  .cl-tool-notes .cl-cpage-article-grid {
+    justify-content: start;
+  }
+  /* The notes have no article header, so its 48px foot would double the section gap. */
+  .cl-tool-notes .cl-cpage-article-head {
+    display: none;
   }
   /* The robots generator's test of its own rules, under the tool. */
   .cl-tool-extra {

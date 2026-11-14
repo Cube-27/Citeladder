@@ -1,8 +1,8 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * The one light/dark/system preference for the app, the website and the docs
- * (owner decision D2, 2026-11-05). It follows a person between them: one
+ * The one light/dark/system preference for the app, the website and the docs.
+ * It follows a person between them: one
  * cookie on the parent domain (`citeladder.com` for `app.`, `docs.` and the
  * apex), so choosing dark on the website opens the app in dark. With no cookie
  * the preference is `system`, which follows the device's colour scheme live.

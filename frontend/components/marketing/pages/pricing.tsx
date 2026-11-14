@@ -1,3 +1,4 @@
+import { Callout } from '@/components/ui/callout';
 import { TextLink } from '@/components/ui/text-link';
 import { appHref } from '@/lib/config/app-link';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
@@ -9,6 +10,7 @@ import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { PageHero } from '../sections/heroes';
 import { PageSection } from '../sections/page-section';
 import { CtaBand, FaqList } from '../sections/steps-faq-cta';
+import '../sections/pricing.css';
 
 /**
  * Server-safe pricing composition.
@@ -47,7 +49,7 @@ export const PRICING_FAQS = [
 ] as const;
 
 /**
- * The pricing opening leads with the trial (D36): what it includes, that a
+ * The pricing opening leads with the trial: what it includes, that a
  * paid plan is by contact, and both ways in. The limits restate the trial
  * answer above. Should self-serve checkout open, the lead stops saying it is
  * closed and points at the plans below.
@@ -94,14 +96,17 @@ export function PricingKeys() {
   );
 }
 
-/** Without a catalog no price is shown, and the page says so. */
+/**
+ * Without a catalog no price is shown, and the page says so where the plans
+ * sit, in the site's one note style (the neutral Callout).
+ */
 export function PricingUnavailable() {
   return (
-    <PageSection
-      spacing="compact"
-      title="Plans are temporarily unavailable"
-      lead="Please try again shortly. No price is shown while the public catalog is unavailable."
-    />
+    <PageSection spacing="compact" label="Plans" labelHeading>
+      <Callout tone="neutral" title="Plans are temporarily unavailable">
+        Please try again shortly. No price is shown while the public catalog is unavailable.
+      </Callout>
+    </PageSection>
   );
 }
 

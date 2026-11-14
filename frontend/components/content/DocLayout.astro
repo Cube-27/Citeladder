@@ -5,9 +5,12 @@
  * 48px apart, the rail and Toc sticky under the bar. The docs pass their
  * sidebar in the `rail` slot; the website's legal pages pass `nav`, a list of
  * pages drawn on the rail's 36px rows (the current one on `surface-sunken`).
- * Below 1200px the Toc leaves the grid for an "On this page" JumpMenu above
- * the article; below 900px the rail leaves too: the docs move it into the
- * top bar's sheet, and `nav` becomes a second JumpMenu named `navSummary`.
+ * Below 1200px the Toc leaves the grid for an "On this page" JumpMenu across
+ * the reading column (on the website, under the page's ArticleHeader, which
+ * it passes in the `header` slot so the DOM keeps that order); below
+ * 900px the rail leaves too: the docs move it into the top bar's sheet, and
+ * `nav` becomes a second JumpMenu named `navSummary`, the two side by side.
+ * A Toc taller than the viewport scrolls on its own.
  */
 import JumpMenu from './JumpMenu.astro';
 import Toc, { type TocItem } from './Toc.astro';
@@ -52,6 +55,7 @@ const hasBar = hasToc || nav !== undefined;
     }
   </aside>
   <main id="main" class="cl-doc-main" tabindex="-1">
+    <slot name="header" />
     {
       hasBar && (
         <div class:list={['cl-doc-bar', { 'cl-doc-bar--nav': nav, 'cl-doc-bar--toc': hasToc }]}>
@@ -88,7 +92,7 @@ const hasBar = hasToc || nav !== undefined;
   </main>
   {
     hasToc && (
-      <aside class="cl-doc-toc">
+      <aside class="cl-doc-toc" data-toc-scroll>
         <Toc items={toc} />
         <slot name="toc-end" />
       </aside>
@@ -123,6 +127,13 @@ const hasBar = hasToc || nav !== undefined;
     display: flex;
     flex-direction: column;
     gap: 40px;
+    max-height: calc(100vh - var(--nav-height) - 64px);
+    margin: 0 -4px;
+    padding: 0 4px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
   }
   .cl-doc-main {
     display: flex;
@@ -157,6 +168,9 @@ const hasBar = hasToc || nav !== undefined;
     background: var(--color-surface-sunken);
     color: var(--color-ink);
   }
+  .cl-doc-link.is-active {
+    font-weight: 500;
+  }
   .cl-doc-bar {
     display: none;
     gap: 12px;
@@ -177,6 +191,11 @@ const hasBar = hasToc || nav !== undefined;
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    /* While the rail is still beside the column, the Toc is the bar's only
+       menu and takes its whole width. */
+    .cl-doc-bar-toc {
+      grid-column: 1 / -1;
+    }
   }
   @media (max-width: 899px) {
     .cl-doc,
@@ -193,6 +212,9 @@ const hasBar = hasToc || nav !== undefined;
     }
     .cl-doc-bar-nav {
       display: block;
+    }
+    .cl-doc-bar--nav .cl-doc-bar-toc {
+      grid-column: auto;
     }
   }
   @media (max-width: 639px) {

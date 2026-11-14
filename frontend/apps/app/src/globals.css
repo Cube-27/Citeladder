@@ -34,8 +34,8 @@
 @custom-variant desktop (@media (min-width: 981px));
 @custom-variant labelled (@media (min-width: 1280px), &:where([data-nav-drawer] *));
 
-/* Grids in the app's main column switch on the column, not the viewport
-   (D67), so a wider sidebar stacks them. `column-split:` is `desktop:`
+/* Grids in the app's main column switch on the column, not the viewport,
+   so a wider sidebar stacks them. `column-split:` is `desktop:`
    (981 less the 56px rail, two 16px gutters and a thin scrollbar),
    `column-wide:` is `shell:` (1280 less the 248px sidebar, two 24px gutters
    and a thin scrollbar). Outside that column (drawers, dialogs, setup) they
@@ -64,7 +64,7 @@
 
 @theme {
   /* Faces. The display face sets the website's and docs' headings at
-     weight 400 only, never anything in the app (D54); the sans face everything
+     weight 400 only, never anything in the app; the sans face everything
      people read and click; the mono face eyebrows, deltas, dates, citation
      numbers and code. The hosted faces are named only in
      lib/config/brand-fonts.json, which writes `--font-face-*`. */
@@ -82,26 +82,18 @@
   --color-paper: #f4f4f4;
   --color-surface: #ffffff;
   --color-surface-sunken: #ececec;
-  /* The app's sidebar column (D59): its own step beside the page. The
+  /* The app's sidebar column: its own step beside the page. The
      website has no sidebar, so the system's value is the ground; the app
      rebinds it below. */
   --color-sidebar: var(--color-paper);
-  /* States (D51): an ink overlay over whatever fill is beneath, so hover,
+  /* States: an ink overlay over whatever fill is beneath, so hover,
      pressed and selected read the same on paper, surface and sunken and
      never share one fill. Applied with the `overlay-*` utilities below. */
   --color-state-hover: rgb(17 17 17 / 6%);
   --color-state-pressed: rgb(17 17 17 / 8%);
   --color-state-selected: rgb(17 17 17 / 10%);
-  /* The website footer is dark in both themes (D29), so its four roles keep
-     one value and are not rebound in dark. */
-  --color-footer: #151515;
-  --color-footer-ink: #f4f4f4;
-  --color-footer-ink-muted: #a6a6a6;
-  --color-footer-line: #2a2a2a;
-  --color-nav-glass: rgb(244 244 244 / 78%);
-  /* The website's stages (D35): soft tints mixed into the grained field a
-     product image, a hero's wash and the CtaBand sit on. Text, buttons and
-     cards stay black and white. */
+  /* Soft tints the website's editorial illustrations draw with; never text,
+     a button, a card or a page fill. */
   --color-stage-sky: #d2e2f8;
   --color-stage-mint: #cdeedf;
   --color-stage-lilac: #dfd6f7;
@@ -112,7 +104,7 @@
   --color-ink: #111111;
   --color-ink-hover: #2a2a2a;
   --color-ink-secondary: #525252;
-  /* One grey on every surface (D49, D50): muted is the secondary ink. */
+  /* One grey on every surface: muted is the secondary ink. */
   --color-ink-muted: var(--color-ink-secondary);
   --color-on-ink: #ffffff;
   --color-accent: #e8501a;
@@ -144,11 +136,11 @@
 
   /* Type. Each role owns size, leading, weight and tracking; on the website
      and docs the display roles (display-*, title, title-sm, stat) pair with
-     `font-display`. The app sets no display face (D54): its page title, auth
+     `font-display`. The app sets no display face: its page title, auth
      card titles and other titles and figures set these sizes in the sans face at 500. The mono roles
      (eyebrow, data, code) pair with `font-mono`, the rest are the sans face, never above 500.
      Sizes and leading are rem, the system's px ÷ 16, so they follow the
-     reader's text size (D66); spacing stays px. */
+     reader's text size; spacing stays px. */
   --text-*: initial;
   --text-display-2xl: 2.75rem;
   --text-display-2xl--line-height: 3rem;
@@ -170,7 +162,7 @@
   --text-display-sm--line-height: 2rem;
   --text-display-sm--font-weight: 500;
   --text-display-sm--letter-spacing: -0.01em;
-  /* The app's PageHeader title: 4px under display-sm (D58). */
+  /* The app's PageHeader title: 4px under display-sm. */
   --text-page-title: 1.25rem;
   --text-page-title--line-height: 1.75rem;
   --text-page-title--font-weight: 500;
@@ -183,7 +175,7 @@
   --text-title-sm--font-weight: 400;
   --text-stat: 1.75rem;
   --text-stat--line-height: 2.25rem;
-  /* The sans face at 500 since D7: an app number is never the display face; 28 since D15. */
+  /* The sans face at 500: an app number is never the display face. */
   --text-stat--font-weight: 500;
   --text-stat--letter-spacing: -0.02em;
   --text-lead: 1.25rem;
@@ -206,9 +198,9 @@
   --text-label-lg--font-weight: 500;
   --text-heading: 1rem;
   --text-heading--line-height: 1.5rem;
-  /* The sans face never sets above 500 (decision D6). */
+  /* The sans face never sets above 500. */
   --text-heading--font-weight: 500;
-  /* Dialog and drawer titles and the plan name: the sans face at 500, 22/28 (D7). */
+  /* Dialog and drawer titles and the plan name: the sans face at 500, 22/28. */
   --text-heading-lg: 1.375rem;
   --text-heading-lg--line-height: 1.75rem;
   --text-heading-lg--font-weight: 500;
@@ -233,7 +225,7 @@
      system's steps are 1 2 3 4 5 6 8 10 12 16 24 32 (4 to 128px). */
   --spacing: 4px;
 
-  /* Radius, only slightly rounded and never over 8 (decision D10). 2xs chart
+  /* Radius, only slightly rounded and never over 8. 2xs chart
      bars, swatches and rungs; xs badges, favicons and checkboxes; sm tabs in
      a track, menu items and chips; md buttons, inputs and code; lg app cards,
      menus and dialogs; xl website cards, frames and the navbar; full only
@@ -271,7 +263,7 @@
   --motion-menu: 200ms;
   --ease-standard: ease-out;
   --ease-exit: ease-in;
-  /* The website's shared nav popup (D22): it opens over --motion-menu and
+  /* The website's shared nav popup: it opens over --motion-menu and
      closes over 100ms on a decelerating curve; menus inside it fade over
      --motion-fast, unblur over 180ms and settle in 160ms steps of 20ms. */
   --motion-menu-exit: 100ms;
@@ -279,7 +271,7 @@
   --motion-menu-settle: 160ms;
   --motion-menu-step: 20ms;
   --ease-menu: cubic-bezier(0.22, 1, 0.36, 1);
-  /* The website's one entrance (D36): a landing hero's copy loads in over
+  /* The website's one entrance: a landing hero's copy loads in over
      700ms, its parts in 80ms steps; a chart's latest point pings every 2.4s. */
   --motion-reveal: 700ms;
   --motion-reveal-step: 80ms;
@@ -289,12 +281,6 @@
      widens to the right while its layers cross-fade, all over 400ms. */
   --motion-card: 400ms;
   --ease-card: ease-in-out;
-  /* The landing hero's capability panel (D52, D53): its lifted bar rests 2.4s
-     on each of ten rows, starting 2s after load, and a light sweeps across
-     its heading every 6s. */
-  --motion-tour-step: 2400ms;
-  --motion-tour-start: 2000ms;
-  --motion-sheen: 6000ms;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
   /* Loops that say "working": the Spinner turns in 800ms, a Skeleton pulses
@@ -312,25 +298,25 @@
 :root {
   color-scheme: light;
 
-  /* Depth is quiet. In the app (D51) nothing at rest has a shadow and an edge
+  /* Depth is quiet. In the app nothing at rest has a shadow and an edge
      is always a 1px `line` border: float is the drop under a floating
      surface (menus, popovers, dialogs, drawers, toasts) and edge the faint
-     smudge under a control's soft edge (D5, D46); press is the primary
+     smudge under a control's soft edge; press is the primary
      button. The website and docs draw their borderless edges with the ring
-     inside xs and pop (D44, D45). Never two shadows on nested surfaces. */
+     inside xs and pop. Never two shadows on nested surfaces. */
   --shadow-edge: 0 1px 2px rgba(17, 17, 17, 0.05);
   --shadow-xs: 0 0 0 1px rgb(17 17 17 / 8%), 0 1px 2px rgb(17 17 17 / 6%);
   --shadow-float: 0 2px 6px rgb(17 17 17 / 6%), 0 16px 40px -8px rgb(17 17 17 / 14%);
   --shadow-pop:
     0 0 0 1px rgb(17 17 17 / 8%), 0 2px 6px rgb(17 17 17 / 6%),
     0 16px 40px -8px rgb(17 17 17 / 14%);
-  /* press (D29): a top highlight, a bottom inner shade, a tight drop and a
+  /* press: a top highlight, a bottom inner shade, a tight drop and a
      soft lift, so the primary button reads as a raised key. */
   --shadow-press:
     inset 0 1px 0 rgb(255 255 255 / 35%), inset 0 -2px 0 rgb(0 0 0 / 20%),
     0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px -6px rgb(17 17 17 / 35%);
 
-  /* Controls. Every interactive row in one view uses one height: 32 (D11),
+  /* Controls. Every interactive row in one view uses one height: 32,
      28 compact, 48 for website calls to action. `row-app` is the app's
      table and fact row, its header title row and the sidebar's ident row. */
   --control-sm: 28px;
@@ -342,12 +328,12 @@
      it wider (to 480px), and the shell then sets this variable inline from
      the stored width (lib/sidebar-width.ts). */
   --sidebar-width: 248px;
-  /* The sidebar below 1280px: one control wide inside its 12px inset (56px,
-     decision D3). One `line` rule divides the sidebar from the page (D12). */
+  /* The sidebar below 1280px: one control wide inside its 12px inset (56px).
+     One `line` rule divides the sidebar from the page. */
   --sidebar-rail-width: calc(var(--control-md) + 24px);
 
   /* Component geometry the components read. Each derives from a system token. */
-  /* What sticks under the app's top bar starts below it (D12). */
+  /* What sticks under the app's top bar starts below it. */
   --sticky-header-offset: var(--page-header-band);
   --nav-item-height: var(--control-md);
   /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
@@ -391,7 +377,7 @@
   --table-min-width-md: 48rem;
   --table-min-width-lg: 64rem;
   --table-min-width-xl: 76rem;
-  /* The app shell's top bar (D12): the sidebar's project switcher cell and
+  /* The app shell's top bar: the sidebar's project switcher cell and
      the PageHeader are one sticky 56px bar at the top of the window, the
      `row-app` title row with space-2 above and below and a 1px `line` rule
      under it. Below it the mode switch is level with the page's tabs or
@@ -420,7 +406,6 @@
   --color-state-hover: rgb(244 244 244 / 6%);
   --color-state-pressed: rgb(244 244 244 / 8%);
   --color-state-selected: rgb(244 244 244 / 10%);
-  --color-nav-glass: rgb(30 30 30 / 78%);
   --color-stage-sky: #13223d;
   --color-stage-mint: #0f2a26;
   --color-stage-lilac: #231b3d;
@@ -457,7 +442,7 @@
     0 1px 2px rgb(0 0 0 / 60%), 0 8px 24px -6px rgb(0 0 0 / 60%);
 }
 
-/* The app's dark (D58, D59): a clear ladder of fills, the sidebar darkest,
+/* The app's dark: a clear ladder of fills, the sidebar darkest,
    then the page, the card one step lighter and the inset a well inside it;
    edges and hover are translucent white over whatever fill is beneath; the
    primary ink 10% lower in contrast. It rebinds every colour the app's light
@@ -470,7 +455,6 @@
   --color-surface: #1c1c1c;
   --color-surface-sunken: #141414;
   --color-state-hover: rgb(244 244 244 / 4%);
-  --color-nav-glass: rgb(32 32 32 / 78%);
   --color-line: rgb(255 255 255 / 8%);
   --color-line-strong: rgb(255 255 255 / 14%);
   --color-chart-grid: #2b2b2b;
@@ -496,7 +480,7 @@
   box-shadow: var(--shadow-press);
 }
 
-/* State layers (D51): the state's ink overlay painted as a background image,
+/* State layers: the state's ink overlay painted as a background image,
    so it tints an opaque control (a surface button) and a transparent row
    alike without replacing their fill. A selected element takes no hover
    overlay, so the two never compete. */
@@ -529,16 +513,16 @@
   }
 }
 
-/* The app's density (decision D11): compact and technical, like GitHub or
+/* The app's density: compact and technical, like GitHub or
    Claude Code, not airy. The app's document is the one without
    `data-public-surface`; the website and docs keep the system's spacing
    (controls are 32 everywhere). One value per role still holds inside the
    app: table and fact rows `row-app` (40), card and dialog padding 16,
    header → controls 16, the controls band's rows 8 apart, peers 12 apart. */
 :root:not([data-public-surface]) {
-  /* The app's primary ink, 10% lower in contrast than the system's (D58). */
+  /* The app's primary ink, 10% lower in contrast than the system's. */
   --color-ink: #1c1c1c;
-  /* The app's light fills and secondary ink (D59): a near-white page, the
+  /* The app's light fills and secondary ink: a near-white page, the
      sidebar one step off it, white cards and selected sidebar rows, and one
      inset. The secondary ink is the lightest grey that still holds 4.5:1
      under every state overlay on every one of those fills. */
@@ -567,28 +551,66 @@
   }
 }
 
-/* The marketing site's responsive display sizes: the page title (H1) is 80
-   and a section heading 56 from 768px up, the owner's 982px desktop
-   included, and 32 and 28 on phones (D34); display-lg is 32, 26 on phones.
-   Marketing pages only, so a docs article title keeps its own fallback. */
+/* The marketing site's responsive display sizes (owner, 2026-11-14): the
+   page title (H1) is 48 and a section heading 32 from 768px up, the owner's
+   982px desktop included, and 32 and 26 on phones. Marketing pages only, so
+   a docs article title keeps its own fallback. */
 [data-marketing-surface] {
-  --text-site-title: 5rem;
-  --text-site-title--line-height: 5.375rem;
-  --text-site-section: 3.5rem;
-  --text-site-section--line-height: 3.75rem;
-  --text-site-feature: var(--text-display-lg);
-  --text-site-feature--line-height: var(--text-display-lg--line-height);
+  --text-site-title: 3rem;
+  --text-site-title--line-height: 3.25rem;
+  --text-site-section: 2rem;
+  --text-site-section--line-height: 2.5rem;
 }
 
 @media (max-width: 767px) {
   [data-marketing-surface] {
     --text-site-title: 2rem;
-    --text-site-title--line-height: 2.375rem;
-    --text-site-section: 1.75rem;
+    --text-site-title--line-height: 2.5rem;
+    --text-site-section: 1.625rem;
     --text-site-section--line-height: 2.125rem;
-    --text-site-feature: 1.625rem;
-    --text-site-feature--line-height: 2rem;
+    --text-site-feature: 1.375rem;
+    --text-site-feature--line-height: 1.875rem;
   }
+}
+
+/* The website and docs are flat on white paper (owner, 2026-11-14): no
+   button sheen, press shadow or press nudge, and edges are hairlines. Dark
+   keeps its own paper. */
+:root[data-public-surface]:not([data-theme='dark']) {
+  --color-paper: #ffffff;
+}
+
+:root[data-public-surface] {
+  --shadow-press: none;
+  --shadow-edge: none;
+  --shadow-xs: 0 0 0 1px var(--color-line);
+  --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
+}
+
+[data-public-surface] .button-key {
+  background-image: none;
+}
+
+/* A secondary (outline) button's edge is the control line, at least 3:1 on
+   paper and on the neutral panel in both themes. Drawn app screens keep the app's. */
+[data-public-surface]
+  :is([data-button-variant='secondary'], .marketing-soft-button):not(:is(.cl-screen, .cl-vig) *) {
+  border-color: var(--color-line-control);
+}
+
+/* Public eyebrows are quiet sans labels; product images keep the app's mono. */
+[data-public-surface] .type-eyebrow:not(:is(.cl-screen, .cl-vig) *) {
+  color: var(--color-ink-secondary);
+  font-family: var(--font-sans);
+  font-size: var(--text-label);
+  font-weight: 500;
+  line-height: var(--text-label--line-height);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+[data-public-surface] :is(.button-key, [data-button-variant], .focus-ring):active {
+  translate: none;
 }
 
 @media (min-width: 1280px) {
@@ -640,7 +662,7 @@
 }
 
 /* The app, login, onboarding and the website sit on `paper`; the docs
-   (`data-public-surface` alone on <html>) on `surface` (D29). Wide content scrolls in its
+   (`data-public-surface` alone on <html>) on `surface`. Wide content scrolls in its
    owning region; document overflow stays observable. */
 html {
   min-height: 100%;
@@ -689,7 +711,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
    components layer so a status utility still overrides the ink where the
    value's meaning is its colour.
 
-   Three text styles, never more (D49): heading (500, ink) for page, section,
+   Three text styles, never more: heading (500, ink) for page, section,
    card, dialog and drawer titles, buttons, the selected tab or nav item and
    a metric's figure; primary (400, ink) for what is read first in a row or
    sentence (titles, names, values, cells, prose); secondary (400, the app's
@@ -704,9 +726,9 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: var(--text-page-title--letter-spacing);
     color: var(--color-ink);
   }
-  /* The app sets two families, the sans and mono faces (D54): every title and
-     number, the page title included, is the sans face, never above 500 (D6). The app's sizes are 12, 14 and 16; only the page title
-     (20, D58) and a metric's figure (24, D48) are larger. */
+  /* The app sets two families, the sans and mono faces: every title and
+     number, the page title included, is the sans face, never above 500. The app's sizes are 12, 14 and 16; only the page title
+     (20) and a metric's figure (24) are larger. */
   .type-section-title {
     font-family: var(--font-sans);
     font-size: var(--text-heading);
@@ -768,7 +790,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     color: var(--color-ink-muted);
   }
   /* The number in a Stat or a ScoreRing's centre: the sans face at 500 at
-     24/32 (D48), digits of one width. */
+     24/32, digits of one width. */
   .type-figure {
     font-family: var(--font-sans);
     font-size: var(--text-display-sm);
@@ -1140,7 +1162,7 @@ a.focus-ring:active .type-caption {
     0 0 0 4px var(--color-line);
 }
 
-/* Containers (D51). A container is a card, a panel or a dialog or drawer:
+/* Containers. A container is a card, a panel or a dialog or drawer:
    `surface` with one 1px `line` border. What sits inside one never draws a
    second edge (a table drops its frame) and an inset inside one is the
    sunken fill. On the ground there is no inset (sunken on paper is 1.07:1),
@@ -1206,7 +1228,7 @@ a.focus-ring:active .type-caption {
      while its end is in view; the shades stay on the edges (`scroll`). */
   /* The track is a pressed-state tint of the fill beneath it, mixed opaque so
      the covers can hide the shades: over paper on the ground, over surface
-     inside a container (D51). */
+     inside a container. */
   .scroll-shade-x {
     --scroll-shade-ground: color-mix(in srgb, var(--color-ink) 8%, var(--color-paper));
     --scroll-shade-ink: color-mix(in srgb, var(--color-ink) 16%, transparent);
@@ -1235,7 +1257,7 @@ a.focus-ring:active .type-caption {
   padding: 0;
 }
 
-/* The primary button is a raised key (D29): a faint light-to-shade sheen over
+/* The primary button is a raised key: a faint light-to-shade sheen over
    its ink fill, under the press shadow; pressed, it drops to the edge shadow. */
 .button-key {
   background-image: linear-gradient(rgb(255 255 255 / 14%), rgb(0 0 0 / 8%));
@@ -1252,8 +1274,8 @@ a.focus-ring:active .type-caption {
   letter-spacing: 0;
 }
 
-/* Public CTAs: the website's buttons are control-md; the hero rung is
-   control-lg with the label-lg role. */
+/* Public CTAs: the website's buttons are control-md; the page size (hero,
+   sections, the closing band) is 40px with the label role. */
 [data-public-surface] .marketing-cta-button {
   height: auto;
   min-height: var(--control-md);
@@ -1265,10 +1287,10 @@ a.focus-ring:active .type-caption {
 }
 
 [data-public-surface] .marketing-cta-button[data-button-size='marketing'] {
-  min-height: var(--control-lg);
-  padding-inline: 1rem;
-  font-size: var(--text-label-lg);
-  line-height: var(--text-label-lg--line-height);
+  min-height: 40px;
+  padding-inline: 16px;
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
 }
 
 @media (max-width: 540px) {
@@ -1639,7 +1661,8 @@ samp {
   top: 0.5rem;
   left: 0.5rem;
   z-index: 100;
-  transform: translateY(-200%);
+  /* Far enough up that its drop shadow stays off screen too. */
+  transform: translateY(calc(-100% - 5rem));
   border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-ink);

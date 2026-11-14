@@ -74,7 +74,7 @@ subtopic cannot have children, and deleting a parent promotes its subtopics.
 The library's Topic filter ends with "Add topic", whose dialog adds a topic or
 a subtopic under a chosen top-level topic, and "Manage topics…", whose dialog
 lists every topic with its count and renames (Enter saves, a failed save keeps
-the typed name) or deletes it (design D40).
+the typed name) or deletes it.
 
 The [business map](../frontend/services/api/src/projects/business-map.ts), edited only in
 the Prompt Builder (Agent → Context shows it read-only with a link there), and
@@ -404,7 +404,7 @@ is secondary detail on the question, available on keyboard focus and to screen r
 
 `/prompts` opens directly on the prompt library: Active/Archived, search and
 All filters (Topic first, then intent, stage, persona, enabled, branded) in one
-control row (design D57) over the full-width
+control row over the full-width
 table with each prompt's topic tag, latest measured visibility and owned
 citation rate. A prompt's question opens its detail view (below). Its actions are
 Bulk upload, Prompt Builder, Add prompt and **Launch audit**, which reuses the

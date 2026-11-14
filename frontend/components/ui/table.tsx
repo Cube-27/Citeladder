@@ -131,7 +131,7 @@ export function TableRow({
       {...props}
       className={cn(
         'h-[var(--table-row-height)] transition-colors duration-[var(--motion-fast)]',
-        // Hover and selected are two states (D51): a selected row takes the
+        // Hover and selected are two states: a selected row takes the
         // selected overlay and no hover; the tracked brand's own row takes
         // `accent-soft`, and hover never changes it.
         pressable && !highlight && 'not-aria-selected:hover:overlay-hover',

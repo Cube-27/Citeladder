@@ -27,7 +27,7 @@ import { cn } from '@/lib/utils';
 function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
   return cn(
     'relative rounded-md transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
-    // Three states, three overlays (D51): selected never looks hovered.
+    // Three states, three overlays: selected never looks hovered.
     selected
       ? 'overlay-selected text-ink'
       : 'text-ink-secondary hover:overlay-hover hover:text-ink active:overlay-pressed',

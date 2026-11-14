@@ -79,7 +79,25 @@ describe('DesktopNav', () => {
       'page',
     );
     expect(screen.getByRole('link', { name: 'Pricing' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('button', { name: 'Resources' })).not.toHaveAttribute('data-current');
     unmount();
+
+    // A page a menu lists marks its trigger, even outside the menu's own section.
+    const listed = render(<DesktopNav path="/open-source" />);
+    expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute('data-current', '');
+    expect(screen.getByRole('button', { name: 'Platform' })).not.toHaveAttribute('data-current');
+    listed.unmount();
+
+    // A study section and a root-level guide the menu does not list still mark Resources.
+    for (const path of [
+      '/ai-crawlers/gptbot',
+      '/claude-recommendations',
+      '/best-ai-visibility-platforms',
+    ]) {
+      const page = render(<DesktopNav path={path} />);
+      expect(screen.getByRole('button', { name: 'Resources' })).toHaveAttribute('data-current', '');
+      page.unmount();
+    }
 
     render(<DesktopNav path="/platform/mcp" />);
     await user.click(screen.getByRole('button', { name: 'Platform' }));

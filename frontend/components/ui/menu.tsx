@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The floating panel menus and listboxes share: the floating face (`surface`,
- * a 1px `line` border, `shadow-float`; D51), `radius-lg`, a 4px inset,
+ * a 1px `line` border, `shadow-float`), `radius-lg`, a 4px inset,
  * entering in 200ms ease-out.
  */
 export const MENU_PANEL = cn(
@@ -18,7 +18,7 @@ export const MENU_PANEL = cn(
 /**
  * One 32px row, which never shrinks when a long menu scrolls: `radius-sm`, 8px padding, 14/20 `ink`, a 16px lead column for
  * an icon or a check so labels align. Hover and keyboard highlight take the
- * hover overlay (D51); keyboard focus adds the shared 2px ring, which the
+ * hover overlay; keyboard focus adds the shared 2px ring, which the
  * panel's 4px inset holds. A row a script focused as the pointer moved draws
  * no ring once the reader has pressed (`input-modality.ts`). `danger` is `negative` text with a `negative-soft`
  * highlight.

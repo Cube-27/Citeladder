@@ -96,7 +96,7 @@ function VisibilityWorkspace({
     );
   }
   // The root spans the whole page: the filters every tab shares follow the
-  // strip (D60), and the panels are one band below. A table's own filters
+  // strip, and the panels are one band below. A table's own filters
   // lead its toolbar.
   return (
     <TabsRoot value={filters.activeTab} onValueChange={filters.selectTab}>

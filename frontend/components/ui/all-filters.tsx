@@ -173,12 +173,12 @@ function activeFilterCount(filters: readonly FilterDefinition[]): number {
 /**
  * AllFilters — every filter of a list behind one button, after the search in
  * its control row (`FilterBar` draws it from its `filters` when there are two
- * or more, D57; a lone filter is its own trigger, `FilterControls`). The menu
+ * or more; a lone filter is its own trigger, `FilterControls`). The menu
  * opens toward the content from the button's edge on that side (`align`):
  * `start` (the default), so the menu and its submenus open to the right and
  * never over the sidebar; `end` for a button at its row's far right. The
  * button counts the filters moved off their defaults
- * ("All filters (2)", D16); its menu lists each filter with its current value,
+ * ("All filters (2)"); its menu lists each filter with its current value,
  * and each opens a submenu of its options with a check on the selected one.
  * Long lists get a search box. Radix's menu keyboard model throughout: arrows
  * move, Right or Enter opens a filter, Left comes back, Escape closes.

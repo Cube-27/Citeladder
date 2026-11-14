@@ -48,7 +48,7 @@ const ROUTES = [
   '/agent/context',
 ] as const;
 
-/** One control height for the product: control-md, 32 in the app (decision D11). */
+/** One control height for the product: control-md, 32 in the app. */
 const CONTROL_HEIGHT = 32;
 /** One badge height. */
 const BADGE_HEIGHT = 22;
@@ -58,28 +58,28 @@ const ICON_CONTROL_PADDING_X = 0;
 /**
  * The sidebar's project and account buttons: as tall as the PageHeader's
  * title row (row-app, 40) in the full column and in the 57px rail,
- * so the sidebar and the page share their first line (decision D11).
+ * so the sidebar and the page share their first line.
  */
 const SIDEBAR_IDENT_HEIGHT_FULL = 40;
 const SIDEBAR_IDENT_HEIGHT_RAIL = 40;
 /**
  * The sticky top bar: the switcher cell and the PageHeader are one 56px bar
- * from the top of the window, the 40 title row with 8 above and below (D12).
+ * from the top of the window, the 40 title row with 8 above and below.
  */
 const TOP_BAR_HEIGHT = 56;
 /** The rail stacks the Dashboard | Agent track: one control wide. */
 const RAIL_MODE_TRACK_WIDTH = 32;
 /** The shell's breakpoint (`shell:`): the full sidebar from here, the rail below. */
 const SHELL_MIN_WIDTH = 1280;
-/** The page template: header → 16 → controls → 8 → content; 16 with no controls (D11). */
+/** The page template: header → 16 → controls → 8 → content; 16 with no controls. */
 const HEADER_BAND_GAP = 16;
 const CONTROL_BAND_GAP = 8;
 /** The content band's children (cards, sections) stand 12 apart, as do cards inside them. */
 const CONTENT_GAP = 12;
 const CARD_GAP = 12;
 /**
- * One box recipe: padding 16 on the box element (D11), radius 8 (rounded-lg,
- * D10), and a 1px border: every box's edge is a border, never a shadow (D51).
+ * One box recipe: padding 16 on the box element, radius 8 (rounded-lg),
+ * and a 1px border: every box's edge is a border, never a shadow.
  */
 const CARD_INSET = 16;
 const BOX_RADIUS = 8;
@@ -109,7 +109,7 @@ const ICON_TILE_SIZE = 32;
 const ROW_PART_GAP = 8;
 /** A ruled fact list pads each fact 8 above and below. */
 const FACT_ROW_PADDING_Y = 8;
-/** A field's end target (clear, reveal) is a 24px square, WCAG 2.5.8's minimum (D38). */
+/** A field's end target (clear, reveal) is a 24px square, WCAG 2.5.8's minimum. */
 const FIELD_END_TARGET_SIZE = 24;
 /** An inline code token is padded 8 across and 4 down. */
 const CODE_TOKEN_PADDING_X = 8;
@@ -208,7 +208,7 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
       element,
       element.getBoundingClientRect().height,
     );
-  // The sticky top bar (D12): the sidebar's switcher cell and the PageHeader
+  // The sticky top bar: the sidebar's switcher cell and the PageHeader
   // end on one line, the rule under both, scrolled or not.
   for (const element of all('[data-top-bar], [data-page-header]'))
     add('top-bar.bottom', element, element.getBoundingClientRect().bottom);

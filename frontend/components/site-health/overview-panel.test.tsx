@@ -218,7 +218,7 @@ describe('OverviewPanel', () => {
     expect(
       screen.getByRole('img', { name: 'Crawl Coverage score: 40 out of 100' }),
     ).toBeInTheDocument();
-    // A score is a ring, never a segmented bar (decision D8).
+    // A score is a ring, never a segmented bar.
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
     expect(overviewRequests).toBe(0);

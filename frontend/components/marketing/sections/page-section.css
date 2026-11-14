@@ -31,8 +31,14 @@
 }
 
 .cl-shead-lead {
-  max-width: var(--container-narrow);
+  max-width: 62ch;
   margin: 0;
+  text-wrap: pretty;
+}
+
+/* Points under the lead keep the reading measure, not the full row. */
+.cl-shead-side > .cl-checks {
+  max-width: var(--container-prose);
 }
 
 /* ---------- PageSection: header, 48, content; sections never set spacing themselves ---------- */
@@ -40,21 +46,11 @@
   margin-top: 48px;
 }
 
-.cl-page-section--compact {
-  padding-top: 64px;
-}
-
-@media (max-width: 1023px) {
-  .cl-page-section--compact {
-    padding-top: 48px;
-  }
-}
-
 .cl-page-section-body {
   min-width: 0;
 }
 
-/* A list under its left-aligned header reads at the 720 measure (D33). */
+/* A list under its left-aligned header reads at the 720 measure. */
 
 .cl-page-section-body--reading {
   max-width: var(--container-prose);
@@ -66,7 +62,7 @@
 
 .cl-page-section-grid {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
   align-items: start;
   gap: 24px;
 }
@@ -81,16 +77,22 @@
   padding-right: 24px;
 }
 
+/* An FAQ is short, so its header stays put, its title's cap height level with
+   the first question's top hairline (the half-leading trimmed off). */
+
+.cl-page-section-aside:has(+ .cl-page-section-body > .cl-faq) {
+  position: static;
+}
+
+.cl-page-section-aside:has(+ .cl-page-section-body > .cl-faq) .cl-shead-title {
+  margin-top: calc((1cap - 1lh) / 2);
+}
+
 .cl-page-section-aside > .cl-shead + .cl-page-section-aside-body {
   margin-top: 32px;
 }
 
-/* Compact aside (content pages): a quieter header, display-md title and body lead. */
-
-.cl-page-section--aside.cl-page-section--compact .cl-shead-title {
-  font-size: var(--text-display-md);
-  line-height: var(--text-display-md--line-height);
-}
+/* Compact aside (content pages): a quieter header with a body lead. */
 
 .cl-page-section--aside.cl-page-section--compact .cl-shead-lead {
   font-size: var(--text-body);

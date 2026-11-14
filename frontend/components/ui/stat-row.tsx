@@ -19,11 +19,11 @@ import { cn } from '@/lib/utils';
  *
  * A Stat's anatomy, in order: the mono eyebrow label (with an optional leading
  * icon and a trailing marker), an optional caption naming the value's period,
- * the value at 500, 24/32 (decision D48), the change
+ * the value at 500, 24/32, the change
  * line (a `Delta`), a sub-line, a comparison window's value, and one action. A
  * 0–100 score is a 64px `ScoreRing` (auto tone) with the number inside, on the
  * right beside the label and action, so the Stat is the ring's height — never
- * a bar (decisions D8, D48).
+ * a bar.
  *
  * `value: null` is the missing state — the muted dash with `missingLabel`
  * (default "Not measured") as its accessible name. A string or number is the
@@ -128,8 +128,8 @@ export function StatRow(props: StatGroupProps) {
 
 /**
  * KpiRow — the row of numbers that opens a report page: one Card holding the
- * Stats as a single strip (decision D48), one row from the desktop breakpoint
- * for up to six (D9: never 2 × 2 or 2 + 1), stacked below. A page's headline
+ * Stats as a single strip, one row from the desktop breakpoint
+ * for up to six (never 2 × 2 or 2 + 1), stacked below. A page's headline
  * figures are a KpiRow; a group of figures inside a card that also holds
  * other content is a `StatRow`. A record's page passes its summary as `lead`:
  * it opens the same card above a hairline, so the record and its figures are
@@ -151,7 +151,7 @@ export function KpiRow({ lead, ...props }: StatGroupProps & Readonly<{ lead?: Re
 
 /**
  * A pressable Stat's state: selected takes the selected overlay and the
- * foreground ink; unselected takes the hover overlay (D51).
+ * foreground ink; unselected takes the hover overlay.
  */
 function statSelectionClasses(selected: boolean) {
   return cn(

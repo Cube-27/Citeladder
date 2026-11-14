@@ -4,7 +4,7 @@
  * pointer moves between triggers. It brings hover intent, arrow-key
  * movement across the top-level items, Escape with focus return, and
  * dismissal on a chosen link. The caller styles every part; the website's
- * DesktopNav is the one user (D22).
+ * DesktopNav is the one user.
  */
 export {
   Content as NavigationMenuContent,

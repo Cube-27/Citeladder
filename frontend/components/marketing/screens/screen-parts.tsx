@@ -50,14 +50,15 @@ export function ScreenButton({
 
 /**
  * The app's tab track, drawn: the first item named in `selected` lifts onto
- * surface, and a count follows its label in brackets (D16).
+ * surface, and a count follows its label in brackets. The track sits on
+ * surface inside a hairline, so unselected labels read at body contrast.
  */
 export function ScreenTabs({
   items,
   selected,
 }: Readonly<{ items: readonly Readonly<{ label: string; count?: number }>[]; selected: string }>) {
   return (
-    <span className={TAB_TRACK}>
+    <span className={cn(TAB_TRACK, 'cl-screen-tabs')}>
       {items.map((item) => (
         <span key={item.label} className={tabClasses(item.label === selected)}>
           {item.label}
@@ -143,7 +144,7 @@ export function ScreenStat({
 /**
  * A drawn card's title. The app's CardTitle is an h3, but a picture of the
  * app holds no headings of the page around it, so the screens draw the
- * title as a paragraph (D36).
+ * title as a paragraph.
  */
 function ScreenCardTitle({ children }: Readonly<{ children: ReactNode }>) {
   return <p className="cl-screen-card-title">{children}</p>;
@@ -158,7 +159,9 @@ export function ScreenChartCard({
 }: Readonly<{ title: string; controls?: ReactNode; footnote?: string; children: ReactNode }>) {
   return (
     <Card>
-      <CardHeader actions={controls}>
+      <CardHeader
+        actions={controls && <span className="cl-screen-controls contents">{controls}</span>}
+      >
         <ScreenCardTitle>{title}</ScreenCardTitle>
       </CardHeader>
       <div className="text-ink grid min-w-0 gap-y-6">

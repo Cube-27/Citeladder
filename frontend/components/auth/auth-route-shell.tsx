@@ -10,7 +10,7 @@ const COPYRIGHT_YEAR = new Date().getFullYear();
 
 /**
  * Account access (sign-in, sign-up and the mailbox screens): the split shell
- * with the product showcase (D24), closed by the copyright and legal links.
+ * with the product showcase, closed by the copyright and legal links.
  */
 export function AuthRouteShell({ children }: Readonly<{ children: ReactNode }>) {
   return <AuthSplitShell footer={<AuthLegalFooter />}>{children}</AuthSplitShell>;

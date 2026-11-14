@@ -7,7 +7,7 @@ import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 
 import { AnnouncementPill } from '../chrome/announcement-pill';
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
-import { EngineStrip, LogoTile } from '../sections/cards';
+import { EngineStrip } from '../sections/cards';
 import { FeatureCard, FeatureSplit } from '../sections/features';
 import { CardRail, RailCard } from '../sections/rail-cards';
 import { LandingHero } from '../sections/heroes';
@@ -16,10 +16,10 @@ import { SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { ProductFrame } from '../screens/product-frame';
 import { ScreenAppPage, ScreenAppVisibility } from '../screens/screen-app';
-import { MODULE_SCREENS, SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
-import { CapabilityPanel } from '../sections/capability-panel';
+import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
+import './integrations.css';
 
 function PrimaryActions() {
   const signup = selfServeSignupOpen();
@@ -35,34 +35,9 @@ function PrimaryActions() {
   );
 }
 
-/**
- * What each module does, as the hero panel's short statement (D52, D53). Keyed by
- * the module rail's routes, so a module cannot ship without one.
- */
-const CAPABILITIES: Readonly<Record<keyof typeof MODULE_SCREENS, string>> = {
-  '/platform/ai-visibility': 'Track citations and mentions',
-  '/platform/cited-sources': 'See the sources AI cites',
-  '/platform/ai-referral-analytics': 'Measure AI referral traffic',
-  '/platform/product-visibility': 'Track product rankings in AI',
-  '/platform/site-health': 'Audit site health',
-  '/platform/search-demand': 'Find search demand gaps',
-  '/platform/keyword-research': 'Keyword research',
-  '/platform/content-optimization': 'Optimize content',
-  '/platform/agents': 'Plan work with the AI Agent',
-  '/platform/mcp': 'Connect to Claude and ChatGPT',
-};
-
-const isModuleRoute = (href: string): href is keyof typeof MODULE_SCREENS => href in MODULE_SCREENS;
-
-/** The panel's rows, in the module rail's order. */
-const CAPABILITY_ROWS = PLATFORM_GROUPS.flatMap((group) => group.items).flatMap((item) =>
-  isModuleRoute(item.href) ? [{ href: item.href, text: CAPABILITIES[item.href] }] : [],
-);
-
 function Hero() {
   return (
     <LandingHero
-      aside={<CapabilityPanel question="What can CiteLadder do?" items={CAPABILITY_ROWS} />}
       announcement={
         <AnnouncementPill href="/platform/mcp" tag="New">
           Connect CiteLadder to Claude, ChatGPT and more
@@ -77,7 +52,7 @@ function Hero() {
           : null
       }
       frame={
-        // D25: the real app, chrome and all, as the page's first product view.
+        // The real app, chrome and all, as the page's first product view.
         <ProductFrame label="The AI Visibility page in the CiteLadder app" fit="scale">
           <ScreenAppVisibility />
         </ProductFrame>
@@ -182,29 +157,27 @@ function Evidence() {
   );
 }
 
-/** The source's own logo: brand marks the site already draws, or a logo file. */
+/** The source's own logo: an engine mark the site already draws, a logo file, or an icon. */
 function IntegrationLogo({ mark }: Readonly<{ mark: IntegrationMark }>) {
   switch (mark.kind) {
-    case 'engines':
-      return (
-        <span className="cl-logo-group">
-          {mark.engines.map((engine) => (
-            <EngineMark key={engine} engine={engine} className="size-7" />
-          ))}
-        </span>
-      );
+    case 'engine':
+      return <EngineMark engine={mark.engine} className="size-9" />;
     case 'image':
       return (
         <img
           src={mark.src}
           alt=""
-          width={28}
-          height={28}
+          width={36}
+          height={36}
           loading="lazy"
           decoding="async"
-          className="size-7"
+          className="size-9 object-contain"
         />
       );
+    case 'icon': {
+      const Icon = mark.icon;
+      return <Icon className="text-ink size-9" aria-hidden />;
+    }
     default: {
       const exhaustive: never = mark;
       return exhaustive;
@@ -212,25 +185,34 @@ function IntegrationLogo({ mark }: Readonly<{ mark: IntegrationMark }>) {
   }
 }
 
+/**
+ * The integrations as a logo field: the title above, the logo tiles in an arch
+ * round the lead and link (integrations.css places them).
+ */
 function Integrations() {
   return (
-    <PageSection
-      id="integrations"
-      title="Connect the data you already have"
-      lead="Start with AI answers. Add other sources when you need them."
-      action={<SiteArrowLink href="/platform/integrations">Explore integrations</SiteArrowLink>}
-    >
-      <ul className="cl-tiles cl-cols-3">
-        {INTEGRATIONS.map((integration) => (
-          <li key={integration.title}>
-            <LogoTile
-              name={integration.title}
-              caption={integration.body}
-              logo={<IntegrationLogo mark={integration.mark} />}
-            />
-          </li>
-        ))}
-      </ul>
+    <PageSection id="integrations" label="Connect the data you already have">
+      <div className="cl-ifield">
+        <div className="cl-ifield-head">
+          <SectionHeader
+            title="Connect the data you already have"
+            lead="Start with AI answers. Add other sources when you need them."
+            action={
+              <SiteArrowLink href="/platform/integrations">Explore integrations</SiteArrowLink>
+            }
+          />
+        </div>
+        <ul className="cl-ifield-tiles">
+          {INTEGRATIONS.map((integration) => (
+            <li key={integration.title} className="cl-ifield-tile">
+              <span className="cl-ifield-logo">
+                <IntegrationLogo mark={integration.mark} />
+              </span>
+              <span className="cl-ifield-name">{integration.title}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </PageSection>
   );
 }
@@ -243,7 +225,7 @@ function Teams() {
       title="Who uses CiteLadder"
       action={<SiteArrowLink href="/solutions">Explore solutions</SiteArrowLink>}
     >
-      <ul className={`cl-tiles cl-cols-${columnsFor(solutions.length)}`}>
+      <ul className="cl-tiles cl-audience">
         {solutions.map((item) => (
           <li key={item.href}>
             <FeatureCard

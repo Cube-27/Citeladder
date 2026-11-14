@@ -1,11 +1,12 @@
 ---
 /**
  * ContentIndex — the listing on the research, blog and tools index pages:
- * groups of whole-row links (a 500-weight title, a one-line excerpt and a mono
- * meta line) between hairlines, the group's display-face title, description and count in
- * a sticky 4/12 column beside its 8/12 rows. An untitled group takes the full
- * width, its meta in a left column from 1024px; below 1024px the header sits
- * above its rows. A row's arrow
+ * groups of whole-row links (a 500-weight title, a one-line excerpt and a
+ * meta line) between hairlines, the group's title, description and count on
+ * their own row above its rows, which take the full width, a row's meta in a
+ * 320px left column from 1024px. Every list closes on its own hairline,
+ * except where an untitled group follows straight on. A row's arrow sits at
+ * its right edge, in RelatedCards' 20px column, and
  * turns `ink` and its title underlines on hover; nothing moves.
  */
 import { ArrowRight } from 'lucide-react';
@@ -57,7 +58,16 @@ const { groups, as: Heading = 'h2' } = Astro.props;
                 {item.eyebrow && <span class="type-eyebrow">{item.eyebrow}</span>}
                 <span class="cl-cpage-index-name">{item.title}</span>
                 {item.body && <span class="cl-cpage-index-body">{item.body}</span>}
-                {item.meta && <span class="cl-cpage-index-meta">{item.meta}</span>}
+                {item.meta && (
+                  <span class="cl-cpage-index-meta">
+                    {item.meta.split(' · ').map((part, index) => (
+                      <>
+                        {index > 0 && ' · '}
+                        <span class="cl-cpage-index-part">{part}</span>
+                      </>
+                    ))}
+                  </span>
+                )}
                 <span class="cl-cpage-index-arrow" aria-hidden="true">
                   <ArrowRight className="size-5" />
                 </span>
@@ -74,33 +84,29 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   .cl-cpage-index {
     display: flex;
     flex-direction: column;
-    gap: 96px;
+    gap: 64px;
   }
   .cl-cpage-index-group {
     display: grid;
-    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 48px;
     align-items: start;
   }
-  /* An untitled group is the page's own listing: it takes the full width. */
-  .cl-cpage-index-group--untitled {
-    grid-template-columns: minmax(0, 1fr);
-  }
   .cl-cpage-index-head {
-    position: sticky;
-    top: calc(var(--nav-height) + 40px);
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-width: 400px;
+    max-width: var(--container-prose);
   }
+  /* A group title is a section heading, set like the website's section h2. */
   .cl-cpage-index-title {
     margin: 0;
     color: var(--color-ink);
     font-family: var(--font-display);
-    font-size: var(--text-display-md);
-    line-height: var(--text-display-md--line-height);
+    font-size: var(--text-site-section, var(--text-display-md));
+    line-height: var(--text-site-section--line-height, var(--text-display-md--line-height));
     font-weight: 400;
+    letter-spacing: -0.01em;
     text-wrap: balance;
   }
   .cl-cpage-index-desc {
@@ -123,6 +129,8 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     border-top: 1px solid var(--color-line);
     list-style: none;
   }
+  /* The arrow sits at the row's right edge; the title and excerpt column
+     grows to 720 at most. */
   .cl-cpage-index-link {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 20px;
@@ -135,6 +143,7 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   }
   .cl-cpage-index-link > :not(.cl-cpage-index-arrow) {
     grid-column: 1;
+    max-width: var(--container-prose);
   }
   .cl-cpage-index-name {
     color: var(--color-ink);
@@ -157,14 +166,18 @@ const { groups, as: Heading = 'h2' } = Astro.props;
     font-size: var(--text-body);
     line-height: var(--text-body--line-height);
     -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
+    -webkit-line-clamp: 3;
   }
+  /* Dates and meta are the sans face, as in the featured card and the article byline. */
   .cl-cpage-index-meta {
     margin-top: 4px;
     color: var(--color-ink-muted);
-    font-family: var(--font-mono);
-    font-size: var(--text-data);
-    line-height: var(--text-data--line-height);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  /* Each meta part (a date, a read time, a topic) wraps whole. */
+  .cl-cpage-index-part {
+    white-space: nowrap;
   }
   .cl-cpage-index-arrow {
     display: inline-flex;
@@ -177,37 +190,32 @@ const { groups, as: Heading = 'h2' } = Astro.props;
   .cl-cpage-index-link:hover .cl-cpage-index-arrow {
     color: var(--color-ink);
   }
-  /* A full-width row with a meta line reads like a contents page: the mono
+  /* An untitled next group's top hairline closes this one, so only one line falls between. */
+  .cl-cpage-index-group:has(+ .cl-cpage-index-group--untitled) .cl-cpage-index-list > li:last-child > .cl-cpage-index-link {
+    border-bottom: 0;
+  }
+  /* A full-width row with a meta line reads like a contents page: the
      meta in its own left column, level with the title. */
   @media (min-width: 1024px) {
-    .cl-cpage-index-group--untitled .cl-cpage-index-link:has(.cl-cpage-index-meta) {
-      grid-template-columns: 240px minmax(0, 1fr) 20px;
-      padding: 28px 0;
+    .cl-cpage-index-link:has(.cl-cpage-index-meta) {
+      grid-template-columns: 320px minmax(0, 1fr) 20px;
     }
-    .cl-cpage-index-group--untitled .cl-cpage-index-link:has(.cl-cpage-index-meta) > :not(.cl-cpage-index-arrow) {
+    .cl-cpage-index-link:has(.cl-cpage-index-meta) > :not(.cl-cpage-index-arrow) {
       grid-column: 2;
     }
-    .cl-cpage-index-group--untitled .cl-cpage-index-link > .cl-cpage-index-meta {
+    .cl-cpage-index-link:has(.cl-cpage-index-meta) > .cl-cpage-index-meta {
       grid-row: 1 / span 3;
       grid-column: 1;
       margin-top: 0;
       padding-top: 2px;
     }
-    .cl-cpage-index-group--untitled .cl-cpage-index-link:has(.cl-cpage-index-meta) > .cl-cpage-index-arrow {
+    .cl-cpage-index-link:has(.cl-cpage-index-meta) > .cl-cpage-index-arrow {
       grid-column: 3;
     }
   }
   @media (max-width: 1023px) {
     .cl-cpage-index {
-      gap: 64px;
-    }
-    .cl-cpage-index-group {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 24px;
-    }
-    .cl-cpage-index-head {
-      position: static;
-      max-width: var(--container-prose);
+      gap: 48px;
     }
   }
   @media (max-width: 767px) {

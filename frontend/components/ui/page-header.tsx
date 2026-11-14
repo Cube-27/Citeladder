@@ -14,8 +14,8 @@ const BAR_LAYER =
 
 /**
  * PageHeader — the top of every app page and its half of the app's sticky
- * top bar (decision D12): the page name in `type-page-title` (20/28,
- * decision D58) and the page's actions on the right (secondary first, then the one
+ * top bar: the page name in `type-page-title` (20/28)
+ * and the page's actions on the right (secondary first, then the one
  * primary), on one `row-app` row with space-2 above and below and a 1px
  * `line` rule under it, level with the sidebar's project switcher. A detail
  * page leads the title with its way back.
@@ -35,14 +35,14 @@ export function PageHeader({
 }: Readonly<{
   title: string;
   /**
-   * The bar's middle from 900px: the shell's search (D62). The title and the
+   * The bar's middle from 900px: the shell's search. The title and the
    * actions then share the rest equally, so it sits on the bar's centre.
    */
   center?: ReactNode;
   /** Before the title: a detail page's back button. */
   lead?: ReactNode;
   /**
-   * After the title: a page's filters when they are its only controls (D58),
+   * After the title: a page's filters when they are its only controls,
    * on the title's side so their menus open toward the content.
    */
   filters?: ReactNode;

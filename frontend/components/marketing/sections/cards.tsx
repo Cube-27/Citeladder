@@ -24,19 +24,20 @@ export type RelatedCard = Readonly<{
 }>;
 
 /**
- * RelatedCards: where to go next, as a full-width editorial index (D44): each
- * row is the link, a mono number, the title, its summary in a wider column
- * and an arrow, between hairline rules. A `linkLabel` is for screen readers.
+ * RelatedCards: where to go next, as the website's one link row (the blog
+ * index's): each row is the link, the title over its summary and an arrow
+ * at the row's right edge, between hairline rules. `columns` lays the rows
+ * two up from 1024px, for long lists. A `linkLabel` is for screen readers.
  */
-export function RelatedCards({ items }: Readonly<{ items: readonly RelatedCard[] }>) {
+export function RelatedCards({
+  items,
+  layout = 'index',
+}: Readonly<{ items: readonly RelatedCard[]; layout?: 'index' | 'columns' }>) {
   return (
-    <ul className="cl-related">
-      {items.map((item, index) => (
+    <ul className={cn('cl-related', layout === 'columns' && 'cl-related--columns')}>
+      {items.map((item) => (
         <li key={item.href}>
           <a href={item.href} className="cl-related-row focus-ring">
-            <span className="cl-related-n" aria-hidden>
-              {String(index + 1).padStart(2, '0')}
-            </span>
             <span className="cl-related-head">
               {item.eyebrow && <span className="type-eyebrow cl-eyebrow">{item.eyebrow}</span>}
               <h3 className="cl-related-title">{item.title}</h3>
@@ -60,8 +61,27 @@ export type QuestionCard = Readonly<{
   meta?: ReactNode;
 }>;
 
-/** QuestionCards: the buyer prompts a capability answers, as quiet cards. */
-export function QuestionCards({ items }: Readonly<{ items: readonly QuestionCard[] }>) {
+/**
+ * QuestionCards: the buyer prompts a capability answers, as quiet cards, or
+ * with `layout="list"` the bare questions in ruled columns (two or three, by count).
+ */
+export function QuestionCards({
+  items,
+  layout = 'cards',
+}: Readonly<{ items: readonly QuestionCard[]; layout?: 'cards' | 'list' }>) {
+  if (layout === 'list') {
+    // Two columns where three would leave a short last row (4 or 8 questions).
+    const cols = items.length % 3 !== 0 && items.length % 2 === 0 ? 2 : 3;
+    return (
+      <ul className="cl-qlist" data-cols={cols}>
+        {items.map((item) => (
+          <li key={item.question}>
+            <p className="cl-qcard-q">{item.question}</p>
+          </li>
+        ))}
+      </ul>
+    );
+  }
   return (
     <ul className={cn('cl-qcards', `cl-cols-${columnsFor(items.length)}`)}>
       {items.map((item) => (
@@ -81,7 +101,7 @@ export function QuestionCards({ items }: Readonly<{ items: readonly QuestionCard
 }
 
 /**
- * LogoTile: an integration or engine as a tile, its mark over its name. With
+ * LogoTile: an integration or engine as a tile, its mark top-left over its name. With
  * `hideName` the name is for screen readers only; with an `href` the tile links.
  */
 export function LogoTile({

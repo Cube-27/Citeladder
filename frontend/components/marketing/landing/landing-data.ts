@@ -1,54 +1,49 @@
-/** Public copy for the landing page's integration list and FAQ. */
+/** Public copy for the landing page's integration field and FAQ. */
+
+import { Cloud, type LucideIcon } from 'lucide-react';
 
 import type { EngineKey } from '@/components/ui/engine-mark';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 import { countWordCapitalized, projectCount } from '@/lib/marketing-content/count-words';
 
 /**
- * An integration's logo: engine marks the site already draws inline, or a
- * logo file fetched once from logo.dev and served from `public/brand/integrations`.
+ * An integration's logo: an engine mark the site already draws inline, a
+ * logo file served from `public/brand/integrations`, or a lucide icon in ink
+ * for a source without a usable logo.
  */
 export type IntegrationMark =
-  | { readonly kind: 'engines'; readonly engines: readonly EngineKey[] }
-  | { readonly kind: 'image'; readonly src: string };
+  | { readonly kind: 'engine'; readonly engine: EngineKey }
+  | { readonly kind: 'image'; readonly src: string }
+  | { readonly kind: 'icon'; readonly icon: LucideIcon };
 
 export type Integration = {
   readonly title: string;
-  readonly body: string;
   readonly mark: IntegrationMark;
 };
 
 export const INTEGRATIONS: readonly Integration[] = [
   {
     title: 'Google Search Console',
-    body: 'Queries, pages and clicks from your verified property.',
-    mark: { kind: 'engines', engines: ['google'] },
+    mark: { kind: 'image', src: '/brand/integrations/googlesearchconsole.png' },
   },
   {
     title: 'Google Analytics 4',
-    body: 'AI referral sessions, landing pages and key events.',
-    mark: { kind: 'engines', engines: ['google'] },
+    mark: { kind: 'image', src: '/brand/integrations/googleanalytics.png' },
   },
+  { title: 'Bing Webmaster Tools', mark: { kind: 'image', src: '/brand/integrations/bing.png' } },
+  { title: 'OpenAI', mark: { kind: 'engine', engine: 'chatgpt' } },
+  { title: 'Google Gemini', mark: { kind: 'engine', engine: 'gemini' } },
+  { title: 'Anthropic', mark: { kind: 'engine', engine: 'claude' } },
+  { title: 'DataForSEO', mark: { kind: 'image', src: '/brand/integrations/dataforseo.png' } },
+  { title: 'MCP clients', mark: { kind: 'image', src: '/brand/integrations/mcp.png' } },
+  { title: 'Shopify', mark: { kind: 'image', src: '/brand/integrations/shopify.png' } },
   {
-    title: 'Bing Webmaster Tools',
-    body: 'Bing search data through its own consent flow.',
-    mark: { kind: 'image', src: '/brand/integrations/bing.png' },
+    title: 'Google Merchant Center',
+    mark: { kind: 'image', src: '/brand/integrations/google.png' },
   },
-  {
-    title: 'Model providers',
-    body: 'OpenAI, Google and Anthropic accounts for audits.',
-    mark: { kind: 'engines', engines: ['chatgpt', 'gemini', 'claude'] },
-  },
-  {
-    title: 'DataForSEO',
-    body: 'Optional keyword, competitor and backlink research.',
-    mark: { kind: 'image', src: '/brand/integrations/dataforseo.png' },
-  },
-  {
-    title: 'MCP clients',
-    body: 'Use your project evidence from your own AI assistant.',
-    mark: { kind: 'image', src: '/brand/integrations/mcp.png' },
-  },
+  { title: 'Cloudflare', mark: { kind: 'image', src: '/brand/integrations/cloudflare.png' } },
+  { title: 'Amazon CloudFront', mark: { kind: 'icon', icon: Cloud } },
+  { title: 'Google Cloud', mark: { kind: 'image', src: '/brand/integrations/googlecloud.png' } },
 ];
 
 export const FAQS = [

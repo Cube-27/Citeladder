@@ -1,17 +1,17 @@
 /*
  * The website's shared base, loaded on every page by MarketingLayout: the page
  * root and container, the section rhythm, text roles, check lists, card-grid
- * columns, the large buttons and the stage tokens. Everything else lives next
+ * columns, the large buttons and the tint tokens. Everything else lives next
  * to the component that draws it and ships only on pages that render it.
  */
 
 /* ---------- Page root, container and section rhythm ---------- */
-/* The website sits on paper and its cards on surface with the card shadow
-   (D29): grey with white cards in light, black with lighter cards in dark. */
+/* The website is flat on white paper (owner, 2026-11-14): panels are told
+   apart by a soft fill or a hairline, never a shadow, gradient or grain. */
 
 .cl-site {
-  /* D36: the website sets exactly eight sizes, 12 · 14 · 16 · 18 · 22 · 28 ·
-     56 · 80, with nothing under 12px and 12px text at least 1.4 leading. The
+  /* The website sets exactly eight sizes, 12 · 14 · 16 · 18 · 20 · 24 · 32 ·
+     48, with nothing under 12px and 12px text at least 1.4 leading. The
      product roles the website reuses (the eyebrow, the mono data and code
      roles, the drawn app's page title, the 18px title) and the shared
      components drawn in product images are re-pointed onto that scale here,
@@ -21,42 +21,42 @@
   --text-caption--line-height: var(--text-body-sm--line-height);
   --text-data: var(--text-caption);
   --text-code: var(--text-body-sm);
-  --text-title-sm--line-height: var(--text-heading-lg--line-height);
+  --text-title-sm--line-height: 1.75rem;
   --text-display-sm: var(--text-title);
   --text-display-sm--line-height: var(--text-title--line-height);
   --text-display-lg: var(--text-display-md);
   --text-display-lg--line-height: var(--text-display-md--line-height);
   --text-lead: var(--text-body-lg);
   --text-lead--line-height: var(--text-body-lg--line-height);
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.5rem;
+  --text-heading-lg: 1.25rem;
+  --text-heading-lg--line-height: 1.5rem;
+  --text-display-md: 1.5rem;
+  --text-display-md--line-height: 1.875rem;
   --text-site-feature: var(--text-display-md);
   --text-site-feature--line-height: var(--text-display-md--line-height);
 
-  /* D36, D47: surfaces take three radii (each 8px under D36's 12/20/24, so
+  /* Surfaces take three radii (each 8px under the former 12/20/24, so
      an inner card stays concentric in a card's 8px inset), controls and
      chips the system's 2–8. */
   --site-radius-inner: 4px;
   --site-radius-card: 12px;
   --site-radius-stage: 16px;
 
-  /* D44: panels are told apart by a soft fill, never a border or a shadow.
-     The four stage colours thinned with paper, and a near-paper neutral. */
-  --tint-mint: color-mix(in srgb, var(--color-stage-mint) 55%, var(--color-paper));
-  --tint-sky: color-mix(in srgb, var(--color-stage-sky) 55%, var(--color-paper));
-  --tint-lilac: color-mix(in srgb, var(--color-stage-lilac) 55%, var(--color-paper));
-  --tint-peach: color-mix(in srgb, var(--color-stage-peach) 55%, var(--color-paper));
+  /* Panels are told apart by one flat near-paper fill. */
   --tint-neutral: color-mix(in srgb, var(--color-ink) 4%, var(--color-paper));
-
-  /* The stage: tints over paper, with grain. The default stage mix; a context
-     re-mixes it by setting the three tints. */
-  --stage-a: var(--color-stage-peach);
-  --stage-b: var(--color-stage-lilac);
-  --stage-c: var(--color-stage-sky);
-  --stage-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  --stage-wash: 0.8;
 
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
+}
+
+/* A section heading sets 32/36 from 768px up; phones keep their own step. */
+@media (min-width: 768px) {
+  .cl-site {
+    --text-site-section--line-height: 2.25rem;
+  }
 }
 
 .cl-container {
@@ -67,12 +67,12 @@
 }
 
 .cl-section {
-  padding-top: 128px;
+  padding-top: 96px;
 }
 
 @media (max-width: 1023px) {
   .cl-section {
-    padding-top: 96px;
+    padding-top: 64px;
   }
 }
 
@@ -80,13 +80,34 @@
   margin: 0;
 }
 
-/* The lead under a heading: body-lg 18/30 at every width (D26). */
+/* The site sets four radii: controls 6, the card, the panel and full pills.
+   Callouts, notices and alerts are boxes, so they take the card's; the
+   product images keep the app's own. */
+
+.cl-site :is([data-callout-tone], [role='alert'], [role='status']):not(:is(.cl-screen, .cl-vig) *) {
+  border-radius: var(--site-radius-card);
+}
+
+/* A section's note (a disclaimer, an unavailable notice) is held to the text
+   measure as a whole box, not a full-width box with short lines. */
+.cl-page-section-body > [data-callout-tone] {
+  max-width: 760px;
+}
+
+/* The lead under a heading: body-lg 18/30 at every width. */
 
 .cl-lead {
   margin: 0;
   color: var(--color-ink-secondary);
   font-size: var(--text-body-lg);
   line-height: var(--text-body-lg--line-height);
+  text-wrap: pretty;
+}
+
+/* Running text avoids one-word last lines; at zero specificity, so a
+   component that balances its own text keeps it. */
+
+:where(.cl-site) :is(p, li, dd, blockquote) {
   text-wrap: pretty;
 }
 
@@ -192,13 +213,30 @@
   grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
 }
 
-/* D21: a card list never leaves an empty cell. A short last row (five cards
-   at three a row) sits centred under the full rows instead. */
+/* A short last row (five cards at three a row) starts at the column edge,
+   like every row above it. */
 
 :is(.cl-tiles, .cl-qcards):is(.cl-cols-2, .cl-cols-3, .cl-cols-4) {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+}
+
+/* Five cards at three a row fill both rows: three, then two halves, on a
+   six-column grid. */
+
+@media (min-width: 900px) {
+  .cl-tiles.cl-cols-3:has(> li:nth-child(5):last-child) {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .cl-tiles.cl-cols-3:has(> li:nth-child(5):last-child) > li {
+    grid-column: span 2;
+  }
+
+  .cl-tiles.cl-cols-3:has(> li:nth-child(5):last-child) > li:nth-child(n + 4) {
+    grid-column: span 3;
+  }
 }
 
 /* `height: auto` lets a card that is itself the list item stretch to its row. */
@@ -208,12 +246,12 @@
   height: auto;
 }
 
-/* ---------- Large website buttons and the standalone arrow link ---------- */
+/* ---------- The page-size website button and the standalone arrow link ---------- */
 .cl-btn-lg {
-  height: var(--control-lg);
+  min-height: 40px;
   padding-inline: 16px;
-  font-size: var(--text-label-lg);
-  line-height: var(--text-label-lg--line-height);
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
 }
 
 .cl-arrowlink {
@@ -262,19 +300,15 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   }
 }
 
-/* ---------- The page above the footer: a paper sheet with a curved foot ----------
-   D29: the page's last section ends on a rounded edge that the dark footer
-   shows round, so the footer reads as the ground the page sits on. */
+/* ---------- The page above the footer ---------- */
 .cl-site-main {
-  padding-bottom: 128px;
-  border-radius: 0 0 40px 40px;
+  padding-bottom: 96px;
   background: var(--color-paper);
 }
 
 @media (max-width: 1023px) {
   .cl-site-main {
-    padding-bottom: 96px;
-    border-radius: 0 0 24px 24px;
+    padding-bottom: 64px;
   }
 }
 
@@ -292,20 +326,4 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
 .cl-tiles > li {
   display: grid;
   min-width: 0;
-}
-
-/* Several marks on one tile (the model providers' three logos). */
-
-.cl-logo-group {
-  display: inline-flex;
-  gap: 8px;
-}
-
-/* ---------- The stage's dark grain ---------- */
-/* Soft-light grain reads far louder on a dark ground: the same noise at a
-   third of its strength, and a dimmer hero wash. */
-
-:root[data-theme='dark'] .cl-site {
-  --stage-grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' opacity='0.3' filter='url(%23n)'/%3E%3C/svg%3E");
-  --stage-wash: 0.6;
 }

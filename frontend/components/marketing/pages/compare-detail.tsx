@@ -124,7 +124,7 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
 
       <PageSection
         id="checklist"
-        measure="reading"
+        layout="aside"
         title="Questions to ask both vendors"
         lead="Compare the same use case across vendors rather than one aggregate percentage."
       >
@@ -149,24 +149,27 @@ export function CompareDetailView({ competitor }: Readonly<{ competitor: Competi
       </PageSection>
 
       <PageSection spacing="compact" label="Comparison sources and disclosure">
-        <Callout tone="neutral">
-          {COMPARISON_DISCLOSURE}
-          {competitor.sources.map((item) => (
-            <span key={item.url}>
-              {' '}
-              <SourceLink source={item} />
-              {'. '}
-              <time dateTime={item.reviewedDate}>
-                Source reviewed {formatBlogDate(item.reviewedDate)}
-              </time>
-              .
-            </span>
-          ))}
-        </Callout>
+        {/* Wrapped, the disclosure spans the content width, level with the sections above. */}
+        <div>
+          <Callout tone="neutral">
+            {COMPARISON_DISCLOSURE}
+            {competitor.sources.map((item) => (
+              <span key={item.url}>
+                {' '}
+                <SourceLink source={item} />
+                {'. '}
+                <time dateTime={item.reviewedDate}>
+                  Source reviewed {formatBlogDate(item.reviewedDate)}
+                </time>
+                .
+              </span>
+            ))}
+          </Callout>
+        </div>
       </PageSection>
 
       <PageSection title="Related guides">
-        <RelatedCards items={FURTHER_READING} />
+        <RelatedCards layout="columns" items={FURTHER_READING} />
       </PageSection>
 
       <PageSection label="Get started">

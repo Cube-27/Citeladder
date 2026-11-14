@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 /**
  * FloatingBar — a page's few actions, centered at the foot of its column and
  * floating over it while it scrolls, then resting after its last section, so
- * it never covers that section. A floating surface (D51): the float face at
+ * it never covers that section. A floating surface: the float face at
  * the card radius, secondary actions first and the one primary last. A
  * fieldset names the group for assistive technology.
  */

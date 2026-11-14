@@ -20,7 +20,7 @@ export type ReorderItem = Readonly<{
 /**
  * A shared, ranked list the reader can reorder: each row is its position, its
  * content and move-up/move-down controls. The row's content carries its rank
- * (a severity badge); no score column repeats it (decision D14). Dragging a row
+ * (a severity badge); no score column repeats it. Dragging a row
  * onto another is a progressive enhancement; the buttons are the complete
  * keyboard path. Rows are divided like a ledger and padded 12; below
  * `desktop` the position, content and controls stack.

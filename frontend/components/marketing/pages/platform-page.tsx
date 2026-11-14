@@ -147,10 +147,10 @@ function groupFeatures(features: readonly Feature[]): FeatureGroup[] {
   return groups;
 }
 
-/** A row of cards keeps the system's bento rhythm: 12, 7 + 5, thirds, 7 + 5 / 5 + 7. */
+/** A row of cards keeps the system's bento rhythm: 12, halves, thirds, 7 + 5 / 5 + 7. */
 function cardSpans(count: number): readonly BentoSpan[] {
   if (count === 1) return [12];
-  if (count === 2) return [7, 5];
+  if (count === 2) return [6, 6];
   if (count === 3) return [4, 4, 4];
   if (count === 4) return [7, 5, 5, 7];
   return Array.from({ length: count }, (): BentoSpan => 6);
@@ -158,7 +158,7 @@ function cardSpans(count: number): readonly BentoSpan[] {
 
 function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) {
   const spans = cardSpans(features.length);
-  // A card alone in its row spreads its copy and points across the width (D21).
+  // A card alone in its row spreads its copy and points across the width.
   const wide = features.length === 1;
   return (
     <Bento
@@ -169,6 +169,7 @@ function FeatureCards({ features }: Readonly<{ features: readonly Feature[] }>) 
           <FeatureCard
             size="lg"
             wide={wide}
+            text="lead"
             title={feature.title}
             body={feature.body}
             points={feature.points}
@@ -198,7 +199,7 @@ function Features({ page }: Readonly<{ page: PlatformPage }>) {
         switch (group.kind) {
           case 'full': {
             const { feature, screen } = group.item;
-            // Title, copy and points stack together over the screen (D21).
+            // Title, copy and points stack together over the screen.
             return (
               <PageSection
                 key={feature.title}
@@ -259,15 +260,11 @@ function Related({ page }: Readonly<{ page: PlatformPage }>) {
   });
   if (!items.length) return null;
   return (
-    <PageSection
-      title="Keep exploring"
-      action={
-        page.cta === 'mcp' ? (
-          <SiteArrowLink href={docsHref('/mcp/')}>MCP setup and tool reference</SiteArrowLink>
-        ) : undefined
-      }
-    >
-      <RelatedCards items={items} />
+    <PageSection title="Keep exploring">
+      <RelatedCards items={items} layout="columns" />
+      {page.cta === 'mcp' && (
+        <SiteArrowLink href={docsHref('/mcp/')}>MCP setup and tool reference</SiteArrowLink>
+      )}
     </PageSection>
   );
 }
@@ -308,7 +305,7 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
       </PageSection>
 
       <PageSection spacing="compact" label={`${label} highlights`} labelHeading>
-        <ul className={`cl-tiles cl-cols-${columnsFor(page.highlights.length)}`}>
+        <ul className={`cl-tiles cl-tiles--rows cl-cols-${columnsFor(page.highlights.length)}`}>
           {page.highlights.map((highlight) => (
             <li key={highlight.title}>
               <FeatureCard title={highlight.title} body={highlight.body} />
@@ -327,7 +324,10 @@ export function PlatformPageContent({ page }: Readonly<{ page: PlatformPage }>) 
         title="Questions you can answer"
         lead="CiteLadder answers each one from the AI answers and site data it has recorded."
       >
-        <QuestionCards items={page.questions.map((question) => ({ question, eyebrow: false }))} />
+        <QuestionCards
+          layout="list"
+          items={page.questions.map((question) => ({ question, eyebrow: false }))}
+        />
       </PageSection>
 
       {overview && (

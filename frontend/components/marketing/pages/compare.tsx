@@ -5,7 +5,7 @@ import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
 import { ButtonLink, DemoButtonLink } from '../primitives/button';
 import { RelatedCards } from '../sections/cards';
-import { Bento, FeatureCard, type BentoSpan } from '../sections/features';
+import { Bento, FeatureCard } from '../sections/features';
 import { PageHero } from '../sections/heroes';
 import { PageSection } from '../sections/page-section';
 import { CtaBand, FaqList } from '../sections/steps-faq-cta';
@@ -54,9 +54,6 @@ const GUIDES = [
   },
 ] as const;
 
-/** Vendor tiles keep the bento rhythm: 7 + 5, then 5 + 7. */
-const VENDOR_SPANS: readonly BentoSpan[] = [7, 5, 5, 7];
-
 /**
  * `/compare`: the comparison index. Each vendor is a linked card with its
  * public positioning, followed by the shared evaluation questions and
@@ -72,18 +69,23 @@ export function CompareIndex() {
       />
 
       <PageSection spacing="compact" label="Comparisons" labelHeading>
-        <Callout tone="neutral" className="mb-6">
-          Published by CiteLadder. These are vendor-authored comparisons, not independent rankings.
-          Product scope, plans and availability can change; use the linked official sources when
-          evaluating a purchase.
-        </Callout>
+        {/* Wrapped, the notice spans the content width (site-base caps a bare section note at 760). */}
+        <div>
+          <Callout tone="neutral">
+            <span className="block max-w-[72ch]">
+              Published by CiteLadder. These are vendor-authored comparisons, not independent
+              rankings. Product scope, plans and availability can change; use the linked official
+              sources when evaluating a purchase.
+            </span>
+          </Callout>
+        </div>
         {COMPETITORS.length === 0 ? (
           <p className="cl-body">Comparison notes publish as each vendor review completes.</p>
         ) : (
           <Bento
-            cells={COMPETITORS.map((competitor, index) => ({
+            cells={COMPETITORS.map((competitor) => ({
               key: competitor.slug,
-              span: VENDOR_SPANS[index % VENDOR_SPANS.length] ?? 6,
+              span: 6,
               content: (
                 <FeatureCard
                   size="lg"
@@ -100,7 +102,7 @@ export function CompareIndex() {
 
       <PageSection
         id="checklist"
-        measure="reading"
+        layout="aside"
         title="Agree on the measurement before comparing the score"
         lead="Ask each vendor what it observes, how it selects prompts, what it counts and how you can inspect the evidence."
         action={
@@ -127,6 +129,7 @@ export function CompareIndex() {
 
       <PageSection title="Related guides">
         <RelatedCards
+          layout="columns"
           items={GUIDES.map(({ href, title, desc }) => ({ href, title, body: desc }))}
         />
       </PageSection>

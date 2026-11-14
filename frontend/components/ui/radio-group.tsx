@@ -11,8 +11,8 @@ export type RadioOption<T extends string> = {
 };
 
 /**
- * The 16px radio: a 1px `line` circle (`line-strong` on hover, decision
- * D5); selected is an `ink` disc with
+ * The 16px radio: a 1px `line` circle (`line-strong` on hover);
+ * selected is an `ink` disc with
  * a `surface` centre (an inset 4px ring), so the mark never changes size.
  */
 const RADIO =

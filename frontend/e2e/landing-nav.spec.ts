@@ -6,7 +6,7 @@ import { NAV_DROPS } from '@/lib/marketing-content/nav';
  * Marketing navigation in a real engine.
  *
  * The desktop menus are a Radix navigation menu island with one shared
- * popup (components/marketing/chrome/desktop-nav.tsx, D22); the mobile sheet
+ * popup (components/marketing/chrome/desktop-nav.tsx); the mobile sheet
  * is server-rendered markup with a plain script (site-nav.ts). Their
  * interaction contract (hover intent, the popup staying open between menus,
  * focus return, the inert page behind the sheet) is pinned here against the
@@ -16,7 +16,7 @@ const DROP_KEYS = NAV_DROPS.map((drop) => drop.key);
 
 /**
  * Open a page once its islands are interactive. The desktop menus hydrate
- * with `client:media` only where their query matches (1280px and wider),
+ * with `client:media` only where their query matches (960px and wider),
  * after the load event `goto` waits for; a key pressed before then reaches
  * server-rendered markup with no handler. Astro removes an island's `ssr`
  * attribute when it hydrates; a media island whose query fails never does.
@@ -83,10 +83,10 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(page.locator('#mobile-menu')).toBeHidden();
   });
 
-  test('serves the desktop nav above the lg breakpoint and the mobile menu below it', async ({
+  test('serves the desktop nav from 960px, the owner 982px desktop included, and the mobile menu below it', async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.setViewportSize({ width: 982, height: 900 });
     await open(page, '/');
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Open menu' })).toBeHidden();
@@ -124,9 +124,7 @@ test.describe('marketing navigation (real-engine CSS contract)', () => {
     await expect(menuLink(page, /Platform overview/)).toBeHidden();
   });
 
-  test('one popup stays open from trigger to trigger and down into the menu (D22)', async ({
-    page,
-  }) => {
+  test('one popup stays open from trigger to trigger and down into the menu', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await open(page, '/faq');
     const platform = trigger(page, 'Platform');

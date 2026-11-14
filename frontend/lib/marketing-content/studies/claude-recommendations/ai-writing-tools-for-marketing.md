@@ -94,7 +94,7 @@ One site stood out. eesel.ai was returned for 42 answers, 70% of searched answer
 - searchatlas.com and resources.rework.com, each for 16 answers (27%)
 - trysight.ai and brightseotools.com, each for 15 answers (25%)
 
-These are mostly comparison and roundup pages from third parties. None of the top hosts in DATA is a vendor of the leading brands.
+These are mostly comparison and roundup pages from third parties. None of the top ten hosts is a vendor of the leading brands.
 
 ## What a brand in this category can take from this
 

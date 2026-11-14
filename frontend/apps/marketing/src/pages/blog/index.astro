@@ -43,8 +43,6 @@ const [featured, ...rest] = newestFirst(POSTS);
 >
   <main id="main">
     <PageHero
-      align="left"
-      titleSize="section"
       crumbs={[{ label: 'Home', href: '/' }, { label: 'Blog' }]}
       title="Practical guides to AI visibility"
       lead="How to build a baseline, trace the sources behind an answer and check that your website can be read. Start with the question your team is asking."
@@ -95,7 +93,7 @@ const [featured, ...rest] = newestFirst(POSTS);
 
     {
       RESEARCH_ARTICLES.length > 0 && (
-        <PageSection label="Research guides">
+        <PageSection label="Research guides" spacing="compact">
           <ContentIndex
             groups={[
               {
@@ -116,7 +114,7 @@ const [featured, ...rest] = newestFirst(POSTS);
       )
     }
 
-    <PageSection label={research.heroTitle}>
+    <PageSection label={research.heroTitle} spacing="compact">
       <ContentIndex
         groups={[
           ...studyGroups(research, `${research.path}/`),

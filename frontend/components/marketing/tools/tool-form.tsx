@@ -100,11 +100,20 @@ export function ToolForm({
       aria-label="Generated output"
     />
   ) : undefined;
+  const shown =
+    preview || output ? (
+      <div className="cl-tool-run">
+        {preview}
+        {output ?? <p className="cl-tool-hint">{status}</p>}
+      </div>
+    ) : undefined;
   return (
     <ToolPanel
       title="Your input"
       resultTitle="Your result"
-      status={<output>{status}</output>}
+      // Until there is output, the status is a line in the result well, not a bar label.
+      status={output ? status : undefined}
+      empty={status}
       form={
         <form onSubmit={submit} className="cl-tool-run">
           {children}
@@ -124,6 +133,9 @@ export function ToolForm({
               Load example
             </Button>
           </div>
+          {/* The visible status moves between the result well and the bar; this
+              one live region stays mounted, so every change is announced. */}
+          <output className="sr-only">{status}</output>
           {error && (
             <p role="alert" className="text-negative">
               {error}
@@ -131,14 +143,7 @@ export function ToolForm({
           )}
         </form>
       }
-      result={
-        preview || output ? (
-          <div className="cl-tool-run">
-            {preview}
-            {output}
-          </div>
-        ) : undefined
-      }
+      result={shown}
       copyText={current || undefined}
       onDownload={() => {
         if (current) download(current, filename);

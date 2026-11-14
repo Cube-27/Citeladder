@@ -51,6 +51,7 @@ const clauses = document.sections.map((section, index) => ({
       toc={clauses.map((clause) => ({ id: clause.id, label: clause.heading, level: 2 }))}
     >
       <ArticleHeader
+        slot="header"
         title={document.title}
         meta={[{ prefix: 'Last updated', text: updatedLabel, dateTime: updated }]}
       >

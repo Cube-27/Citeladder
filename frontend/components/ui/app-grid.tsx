@@ -5,13 +5,13 @@ import { cn } from '@/lib/utils';
 /**
  * AppGrid — the app's only grids, so a page picks a layout instead of
  * setting columns or gaps. The gap is always the card gap (`workspace-gap`,
- * 12 in the app since decision D11) and cards in a
+ * 12 in the app) and cards in a
  * row stretch to one height.
  *
  * In the main column the breakpoints are the column's width, so a wider
  * sidebar stacks a grid (`column-split:`/`column-wide:` in globals.css); the
  * px below are the viewport widths they match at the default sidebar.
- * A KPI row is one row from 981px (decision D9: 4 across at the owner's 982px,
+ * A KPI row is one row from 981px (4 across at the owner's 982px,
  * never 2 × 2, never 2 + 1) and one column on a phone:
  *
  *   `quarters`    — four equal (a KPI row).

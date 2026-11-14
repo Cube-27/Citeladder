@@ -88,7 +88,7 @@ describe('StatRow', () => {
     expect(within(group).getByText('TTFB').closest('[data-stat-segment]')).toHaveTextContent(
       'Not measured',
     );
-    // A score is its ring (decision D8): one image named with the number, no bar.
+    // A score is its ring: one image named with the number, no bar.
     expect(within(group).getByRole('img', { name: 'Crawl score: 72 out of 100' })).toBeVisible();
     expect(within(group).queryByRole('meter')).not.toBeInTheDocument();
     const toggle = within(group).getByRole('button', { name: 'View 3 orphaned pages' });

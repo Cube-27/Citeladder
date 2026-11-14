@@ -25,7 +25,7 @@ const breadcrumb = breadcrumbJsonLd([
   jsonLd={breadcrumb ? [breadcrumb] : []}
 >
   <main id="main">
-    <PageHero align="left" title={index.heroTitle} lead={index.lead} />
+    <PageHero title={index.heroTitle} lead={index.lead} />
     <PageSection label={index.title}>
       <ContentIndex groups={studyGroups(index, '/claude-recommendations/')} />
     </PageSection>

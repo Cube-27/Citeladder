@@ -282,7 +282,7 @@ export function DataSourceSetup({
     );
 
   return (
-    // At the prose width, so a row's Connect button sits close to its text (D61).
+    // At the prose width, so a row's Connect button sits close to its text.
     <Card data-testid="data-source-setup" className="mx-auto w-full max-w-[var(--container-prose)]">
       <CardHeader>
         <CardTitle>{title}</CardTitle>

@@ -164,7 +164,7 @@ const STUDY_PARENTS = [
 /**
  * The breadcrumb parent: comparison guides sit under Compare, study pages
  * under their section, every other guide under the Blog, named as the nav
- * and URL name it (D36).
+ * and URL name it.
  */
 export function researchParent(slug: string) {
   if (slug.startsWith('/compare/')) return { label: 'Compare', href: '/compare' };

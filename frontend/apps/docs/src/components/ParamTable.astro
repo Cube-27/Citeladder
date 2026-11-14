@@ -1,8 +1,8 @@
 ---
 /**
  * ParamTable — the reference blocks' parameter table (DocsParams in the
- * system): the Table component's 36px `surface-sunken` header and `line`
- * rules with wrapping cells. The Parameter cell holds the mono name, its
+ * system): a 36px header over a `line` hairline, like prose tables, and
+ * `line` rules with wrapping cells. The Parameter cell holds the mono name, its
  * type and whether it is required; Description shows only when the source
  * describes a row, with the allowed values and the default under it. Named
  * API schemas link to their entry. Columns are fixed, so rows never reflow.
@@ -77,11 +77,13 @@ const described = rows.some((row) => row.description || row.values.length || row
 </div>
 
 <style>
+  /* Capped at the prose measure, so a table shares the text's right edge. */
   .cl-docs-params {
     display: flex;
     flex-direction: column;
     gap: 12px;
     min-width: 0;
+    max-width: var(--container-prose);
   }
   .cl-docs-sub {
     color: var(--color-ink);
@@ -107,22 +109,13 @@ const described = rows.some((row) => row.description || row.values.length || row
   th {
     height: var(--table-header-height);
     padding: 0 12px;
-    background: var(--color-surface-sunken);
+    border-bottom: 1px solid var(--color-line);
     color: var(--color-ink-secondary);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
     font-weight: 500;
     text-align: left;
     white-space: nowrap;
-  }
-  th:first-child {
-    border-radius: var(--radius-sm) 0 0 var(--radius-sm);
-  }
-  th:last-child {
-    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  }
-  th:only-child {
-    border-radius: var(--radius-sm);
   }
   td {
     padding: 12px;
@@ -154,8 +147,9 @@ const described = rows.some((row) => row.description || row.values.length || row
     overflow-wrap: anywhere;
   }
   .cl-docs-param-meta a {
-    color: var(--color-accent-ink);
+    color: var(--color-ink);
     text-decoration: underline;
+    text-decoration-color: var(--color-line-control);
     text-decoration-thickness: 1px;
     text-underline-offset: 2px;
   }

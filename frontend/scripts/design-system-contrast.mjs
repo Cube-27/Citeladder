@@ -11,7 +11,7 @@ const APP_DARK = ":root[data-theme='dark']:not([data-public-surface])";
 /**
  * Each palette the product renders, as the rule blocks that build it in
  * cascade order: the website's two themes, then the app's two, which rebind
- * on top (D58, D59). The app's light block follows the system dark at the
+ * on top. The app's light block follows the system dark at the
  * same specificity, so it sits under the app's dark block in the app's dark.
  */
 const SCOPES = [
@@ -39,7 +39,7 @@ const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(col
 const CONTRAST_PAIRS = [
   // The three inks on the page, the sidebar, the card and the inset.
   { inks: ['ink', 'ink-secondary', 'ink-muted'].map(color), surfaces: GROUNDS, minimum: 4.5 },
-  // A hovered, pressed or selected row keeps its text readable (D51). The
+  // A hovered, pressed or selected row keeps its text readable. The
   // states are overlays, so each is checked over every ground it can tint.
   {
     inks: ['ink', 'ink-secondary'].map(color),
@@ -49,9 +49,9 @@ const CONTRAST_PAIRS = [
   },
   // Callout and badge bodies are ink on every tint.
   { inks: [color('ink')], surfaces: SOFTS, minimum: 4.5 },
-  // The website's stages (D35): copy on a tinted stage or hero wash, the
+  // The website's stages: copy on a tinted stage or hero wash, the
   // CtaBand's note and the hero's trial line included, is ink or
-  // ink-secondary (D36), never muted. The app has no stages, so only the
+  // ink-secondary, never muted. The app has no stages, so only the
   // website's palettes are held to this row.
   {
     inks: [color('ink'), color('ink-secondary')],

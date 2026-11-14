@@ -17,7 +17,7 @@ function statColumns(count: number): 1 | 2 | 3 | 4 | 6 {
 
 /**
  * PageHighlight: the page's lead tile, a flat bordered card on the surface
- * like every other card (never inverted, D27). Stats never orphan: three
+ * like every other card (never inverted). Stats never orphan: three
  * hold one row while the tile is 480px wide and then stack; four go 4,
  * 2 × 2, then 1.
  */

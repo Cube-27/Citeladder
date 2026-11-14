@@ -10,16 +10,22 @@ export function postMeta(post: Pick<BlogPost, 'date' | 'readTime' | 'tags'>): st
     .join(' · ');
 }
 
-/** The blog index's newest post: a large linked FeatureCard, a tint panel of text alone (D44). */
+/**
+ * The blog index's newest post: a large linked FeatureCard, a tint panel of
+ * text alone; from 1024px its title and excerpt fill the left 7/12 and
+ * the meta line and read link the right 5/12 (features.css).
+ */
 export function FeaturedPost({ post }: Readonly<{ post: BlogPost }>) {
   return (
-    <FeatureCard
-      size="lg"
-      href={`/blog/${post.slug}`}
-      linkLabel="Read article"
-      eyebrow={postMeta(post)}
-      title={post.title}
-      body={post.excerpt}
-    />
+    <div className="cl-featured-post">
+      <FeatureCard
+        size="lg"
+        href={`/blog/${post.slug}`}
+        linkLabel="Read article"
+        eyebrow={postMeta(post)}
+        title={post.title}
+        body={post.excerpt}
+      />
+    </div>
   );
 }

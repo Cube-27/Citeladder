@@ -238,7 +238,6 @@ export function ContactPage() {
   return (
     <main id="main">
       <PageHero
-        align="left"
         crumbs={[{ label: 'Home', href: '/' }, { label: 'Contact' }]}
         title="Talk to the CiteLadder team"
         lead="Ask a question, book a demo or check whether CiteLadder fits your team."
@@ -266,7 +265,12 @@ export function ContactPage() {
         </noscript>
       </PageSection>
 
-      <PageSection id="details" layout="aside" title="Company, support and grievance details">
+      <PageSection
+        id="details"
+        layout="aside"
+        split="even"
+        title="Company, support and grievance details"
+      >
         <FaqList
           exclusive
           items={CONTACT_PAGE.sections.map((section) => ({

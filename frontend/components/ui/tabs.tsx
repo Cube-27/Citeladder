@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 /**
  * The segmented track every in-page switch shares (Tabs, SegmentedControl,
  * the sidebar's mode switch): the pressed tint of whatever fill it sits on
- * (D51; `scroll-shade-x` paints it, since sunken would not show on the page
+ * (`scroll-shade-x` paints it, since sunken would not show on the page
  * ground), `radius-md`, 32px with a 2px inset and 2px between segments. It
  * keeps its width when the selection changes. Its scrollbar is hidden, so when
  * the segments overflow it a soft shade marks each edge with more of them;
@@ -19,10 +19,10 @@ export const TAB_TRACK =
 /**
  * One segment: full track height, 12px padding, `radius-sm`, 14/20 regular
  * `ink-secondary`; the selected one lifts onto `surface` with a 1px `line`
- * border (D51: an edge is a border, never a shadow ring) in `ink` at weight
+ * border (an edge is a border, never a shadow ring) in `ink` at weight
  * 500 (owner, 2026-11-10; buttons stay 500 throughout). Every segment keeps a
  * 1px border, transparent until selected, so selecting one moves nothing. A
- * count follows the label in brackets (`ControlCount`, D16).
+ * count follows the label in brackets (`ControlCount`).
  */
 export function tabClasses(selected: boolean, className?: string) {
   return cn(
@@ -51,8 +51,8 @@ export function modeSegmentClasses(selected: boolean) {
 
 /**
  * The count a tab, segment or filter chip carries after its label: the sans face at
- * the control's own size, `ink-muted`, in brackets ("All signals (107)",
- * decision D16), never mono. Its text leads with a space, so an accessible
+ * the control's own size, `ink-muted`, in brackets ("All signals (107)"),
+ * never mono. Its text leads with a space, so an accessible
  * name reads "All signals (107)".
  */
 export function ControlCount({ count }: Readonly<{ count: number }>) {
@@ -122,8 +122,8 @@ export type TabRowProps<T extends string = string> = Readonly<
 
 /**
  * TabRow — the route's navigation strip, inside a `TabsRoot`. The page shell
- * sets a control row of filters alone right after it (D60); a row with a
- * view, search or action stays the band under it (D57).
+ * sets a control row of filters alone right after it; a row with a
+ * view, search or action stays the band under it.
  */
 export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
   return <TabStrip items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;

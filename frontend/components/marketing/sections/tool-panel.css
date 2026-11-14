@@ -38,18 +38,19 @@
   margin-top: 12px;
 }
 
+/* The well sits 32px inside the shell on its outer sides, level with the inputs' inset. */
 .cl-tool-result {
   display: flex;
   flex-direction: column;
   min-width: 0;
   min-height: 420px;
+  margin: 24px 24px 24px 0;
   border-radius: var(--site-radius-inner);
   background: var(--color-paper);
 }
 
 .cl-tool-bar {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 4px 12px;
   min-height: 52px;
@@ -66,15 +67,16 @@
 }
 
 .cl-tool-status {
+  flex: 1 1 auto;
+  min-width: 0;
   color: var(--color-ink-muted);
-  font-family: var(--font-mono);
-  font-size: var(--text-data);
-  line-height: var(--text-data--line-height);
-  white-space: nowrap;
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
 }
 
 .cl-tool-actions {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 4px;
   margin-left: auto;
@@ -115,9 +117,22 @@
   text-align: center;
 }
 
+/* The status line under a live preview, before the tool has run. */
+.cl-tool-hint {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  text-align: center;
+}
+
 @media (max-width: 1023px) {
   .cl-tool {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .cl-tool-result {
+    margin: 0 24px 24px;
   }
 }
 
@@ -128,5 +143,46 @@
 
   .cl-tool-result {
     min-height: 360px;
+    margin: 0 16px 16px;
   }
+}
+
+/* A file input's button is the secondary button ("Load example") set 4px
+   inside the field, centred with the file name beside it. */
+.cl-tool input[type='file'] {
+  padding: 4px 12px 4px 4px;
+  color: var(--color-ink-secondary);
+}
+
+.cl-tool input[type='file']::file-selector-button {
+  height: calc(var(--control-md) - 10px);
+  margin-right: 12px;
+  padding: 0 12px;
+  border: 1px solid var(--color-line-control);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-sm);
+  font-weight: 500;
+  line-height: var(--text-body-sm--line-height);
+  cursor: pointer;
+}
+
+.cl-tool input[type='file']:hover::file-selector-button {
+  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+}
+
+/* A date field and its segments use the form's sans face, not the browser's. */
+.cl-tool input[type='date'],
+.cl-tool input[type='date']::-webkit-datetime-edit {
+  font-family: var(--font-sans);
+}
+
+/* A checkbox group's helper reads like a Field's hint. */
+.cl-tool-group-hint {
+  margin-bottom: 8px;
+  color: var(--color-ink-muted);
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
 }

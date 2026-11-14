@@ -171,7 +171,7 @@ OpenAI moved away from native Instant Checkout in March 2026 and lets merchants 
 
 In Adobe's US retail data, yes: 42% higher conversion and 37% higher revenue per visit than non-AI traffic in March 2026.[\[3\]](#source-3) A year earlier, AI visitors converted at about half the non-AI rate. Your own site may differ, so measure it.
 
-### Is the "$1 trillion agentic commerce" figure real?
+### Is the “$1 trillion agentic commerce” figure real?
 
 It is a McKinsey projection for US B2C retail by 2030, based on moderate assumptions about merchant readiness.[\[17\]](#source-17) It is not a measurement of current sales.
 

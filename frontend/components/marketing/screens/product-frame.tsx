@@ -9,7 +9,7 @@ import './product-frame.css';
  * laid out at the well's width, text at real size, the frame at most 760px
  * wide and centred. `scale`: a full app screen laid out at its natural size
  * and scaled down whole to the well's width (CSS only, see `.cl-frame--scale`
- * in product-frame.css), never up and never cropped.
+ * in product-frame.css), never up; below 1280px drawn unscaled and cropped.
  */
 export type FrameFit = 'fluid' | 'scale';
 
@@ -20,7 +20,7 @@ export type FrameFit = 'fluid' | 'scale';
  *
  * Inside a FeatureCard the card's own border stands in for the frame's, and
  * the well becomes a grey inset holding the screen as a white card above the
- * card's copy (docs/design-decisions.md D31).
+ * card's copy.
  *
  * The screen is `inert` (no tab stops, out of the accessibility tree); `label`
  * describes it as one image.

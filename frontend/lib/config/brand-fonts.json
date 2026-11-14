@@ -1,16 +1,16 @@
 {
   "repository": "Cube-27/cube27-fonts",
-  "revision": "302689afa47ff9e7431d13f444427a91b4efb018",
+  "revision": "e080f046e23e07455a20917303230e3531683dba",
   "faces": {
     "display": {
-      "family": "Cal Sans",
-      "file": "CalSans.woff2",
+      "family": "Stack Sans Notch",
+      "file": "StackSansNotch-Variable.woff2",
       "preload": ["public", "docs"],
-      "weights": "400",
+      "weights": "400 600",
       "fallback": {
-        "sizeAdjust": "100.19%",
-        "ascentOverride": "99.81%",
-        "descentOverride": "29.94%",
+        "sizeAdjust": "107.9%",
+        "ascentOverride": "92.68%",
+        "descentOverride": "27.8%",
         "lineGapOverride": "0%"
       }
     },

@@ -16,19 +16,35 @@
 
 /* The AI Visibility overview: KPIs, the trend and the brand ranking. */
 
+/* 704 tall: the aside (brands, then the by-engine card) ends on its padded edge. */
 .cl-screen--visibility {
-  --screen-w: 1200px;
-  --screen-h: 680px;
+  --screen-natural: 1200px;
+  --screen-w: var(--screen-natural);
+  --screen-h: 704px;
 }
 
-/* ---------- The app in its chrome (D25): the home page's first view ----------
+/* Drawn unscaled (below 1280px) the ranking would stack
+   under the trend and be cut mid-card, so the overview draws the KPI row and
+   the trend at their own height, the trend's caption included. */
+
+@media (max-width: 1279px) {
+  .cl-frame--scale .cl-screen--visibility {
+    height: auto;
+  }
+
+  .cl-frame--scale .cl-screen--visibility .cl-screen-cols > :nth-child(2) {
+    display: none;
+  }
+}
+
+/* ---------- The app in its chrome: the home page's first view ----------
    The shell's own geometry: the sidebar column, the ruled top bar
    (`page-header-band`) shared by the project switcher and the page title,
    the tab and filter bands `page-band-gap` apart, then the content
    `page-section-gap` below. The live rows fold to a rail below 1280px, so
    the screen draws them at full width with the same tokens. */
 .cl-screen--app {
-  /* The app's density (D11, `:root:not([data-public-surface])` in
+  /* The app's density (`:root:not([data-public-surface])` in
      globals.css): the website keeps the system's looser spacing, so the
      screen restores the app's values for everything inside it. */
   --content-gutter: 24px;
@@ -37,7 +53,8 @@
   --compact-gap: 8px;
   --card-padding: 16px;
   --table-row-height: var(--row-app);
-  --screen-w: 1440px;
+  --screen-natural: 1440px;
+  --screen-w: var(--screen-natural);
   --screen-h: 820px;
 
   display: grid;
@@ -48,7 +65,12 @@
   background: var(--color-paper);
 }
 
-/* On the website the display face is the hero's H1 alone (D28), so the drawn
+/* The overview ends just under its sidebar and trend card, with no empty band. */
+.cl-screen--app-overview {
+  --screen-h: 728px;
+}
+
+/* On the website the display face is the hero's H1 alone, so the drawn
    app's page title is the sans face at 500 at its own size. */
 
 .cl-screen--app .type-page-title {
@@ -151,6 +173,8 @@
   height: 28px;
   margin: 0;
   padding: 0 12px;
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .cl-app-nav-row {
@@ -243,6 +267,25 @@
 
 .cl-app-content .cl-screen-cols {
   gap: var(--workspace-gap);
+}
+
+/* Below 1280px the drawn app drops its sidebar; the frame draws the main
+   pane at scale 1 (product-frame.css). The brand table would stack under the
+   trend and be cut mid-card, so the pane ends whole on the trend's caption. */
+
+@media (max-width: 1279px) {
+  .cl-frame--scale .cl-screen--app {
+    grid-template-columns: minmax(0, 1fr);
+    height: auto;
+  }
+
+  .cl-frame--scale .cl-screen--app .cl-app-content .cl-screen-cols > :nth-child(2) {
+    display: none;
+  }
+
+  .cl-frame--scale .cl-screen--app > .cl-app-side {
+    display: none;
+  }
 }
 
 /* The KPI row is one row of four here at every viewport. */

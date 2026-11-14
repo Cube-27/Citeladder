@@ -101,7 +101,7 @@ function TrafficDataView({
   const model = useTrafficData(tab);
   const { summary } = model;
   // Every narrowing in All filters after the tabs; Export, on the tabs that
-  // list rows, is a header action (D60).
+  // list rows, is a header action.
   const controls: FilterBarProps = { filters: trafficFilters({ model, crawlAvailable }) };
   const actions = tab === 'overview' ? undefined : <TrafficExport model={model} />;
   // First load keeps the identity, tab and control bands; only the work waits.
