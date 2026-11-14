@@ -201,15 +201,12 @@
   gap: 8px;
 }
 
-.cl-checks--sm li {
-  font-size: var(--text-body-sm);
-  line-height: var(--text-body-sm--line-height);
-}
-
 /* The small list's tile is its line's height (20px), so no off-grid nudge. */
 
 .cl-checks--sm li {
   grid-template-columns: 20px minmax(0, 1fr);
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .cl-checks--sm svg {
