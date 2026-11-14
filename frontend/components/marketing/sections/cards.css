@@ -192,8 +192,14 @@
   }
 }
 
+/* A listed question reads as a line of text: 16px at the regular weight. */
+
 .cl-qlist .cl-qcard-q {
   margin: 0;
+  font-size: var(--text-body);
+  font-weight: 400;
+  line-height: var(--text-body--line-height);
+  letter-spacing: normal;
 }
 
 @media (max-width: 899px) {

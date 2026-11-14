@@ -221,3 +221,13 @@
   background: none;
   box-shadow: none;
 }
+
+/* A screen drawn without the app's shell (panels only) sits on the app's
+   page fill, so the backdrop never shows through the gaps between panels. */
+
+.cl-frame--scale
+  > .cl-frame-card
+  > .cl-frame-well
+  > .cl-frame-screen:has(> .cl-screen--visibility) {
+  background: var(--color-paper);
+}

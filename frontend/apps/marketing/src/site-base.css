@@ -179,16 +179,22 @@
 
 .cl-checks li {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   gap: 12px;
   color: var(--color-ink-secondary);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
 
+/* Each mark is a duotone tile: the orange check on pale violet. */
+
 .cl-checks svg {
-  margin-top: 4px;
-  color: var(--site-violet);
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--site-violet-soft);
+  color: var(--color-accent);
 }
 
 .cl-checks--sm {
@@ -200,11 +206,16 @@
   line-height: var(--text-body-sm--line-height);
 }
 
-/* The 16px mark centres in a box its line's height, so no off-grid nudge. */
+/* The small list's tile is its line's height (20px), so no off-grid nudge. */
+
+.cl-checks--sm li {
+  grid-template-columns: 20px minmax(0, 1fr);
+}
 
 .cl-checks--sm svg {
-  height: var(--text-body-sm--line-height);
-  margin-top: 0;
+  width: 20px;
+  height: 20px;
+  padding: 2px;
 }
 
 /* Card grids whose column count follows the item count, so 2, 3 or 4 cards
@@ -343,8 +354,8 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   background: var(--site-page);
 }
 
-/* Dashed guides on the content column's edges and quarters, behind every
-   section; wells and product images cover them. */
+/* Dashed guides on the content column's two edges, behind every section;
+   wells and product images cover them. */
 
 .cl-site-main::before {
   --guide: repeating-linear-gradient(180deg, var(--site-guide) 0 4px, transparent 4px 12px);
@@ -356,41 +367,36 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   bottom: 0;
   left: 50%;
   width: min(var(--container-site), calc(100% - 2 * var(--site-gutter)));
-  background-image: var(--guide), var(--guide), var(--guide), var(--guide), var(--guide);
+  background-image: var(--guide), var(--guide);
   background-repeat: no-repeat;
   background-position:
     0 0,
-    25% 0,
-    50% 0,
-    75% 0,
     100% 0;
   background-size: 1px 100%;
   pointer-events: none;
   translate: -50% 0;
 }
 
-/* Running prose keeps only the edge guides, so no line crosses a paragraph. */
+/* Eyebrows are highlighter chips: violet ink on pale violet, with an orange
+   square on the top-right corner. Product images keep their own. */
 
-.cl-site-main:has(.cl-cpage-article-grid, .prose-content)::before {
-  background-image: var(--guide), var(--guide);
-  background-position:
-    0 0,
-    100% 0;
-}
-
-@media (max-width: 1023px) {
-  .cl-site-main::before {
-    background-image: var(--guide), var(--guide);
-    background-position:
-      0 0,
-      100% 0;
-  }
-}
-
-/* Public eyebrows take the second brand colour. */
-
-.cl-site .type-eyebrow:not(:is(.cl-screen, .cl-vig) *) {
+.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig) *) {
+  position: relative;
+  width: fit-content;
+  padding: 0 8px;
+  border-radius: var(--radius-xs);
+  background: var(--site-violet-soft);
   color: var(--site-violet-ink);
+}
+
+.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig) *)::after {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  background: var(--color-accent);
+  content: '';
 }
 
 @media (max-width: 1023px) {
