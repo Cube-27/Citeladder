@@ -62,13 +62,15 @@ function groupCitations(node: TreeNode) {
     else if (isCitationRun(last)) last.children.push(child);
     else {
       if (last?.type === 'text') last.value = (last.value ?? '').trimEnd();
-      grouped.push({ type: 'text', value: WORD_JOINER });
-      grouped.push({
-        type: 'element',
-        tagName: 'span',
-        properties: { className: 'cl-icite-run' },
-        children: [child],
-      });
+      grouped.push(
+        { type: 'text', value: WORD_JOINER },
+        {
+          type: 'element',
+          tagName: 'span',
+          properties: { className: 'cl-icite-run' },
+          children: [child],
+        },
+      );
     }
   }
   node.children = grouped;
@@ -230,22 +232,33 @@ function markNumericColumns(node: TreeNode) {
     })),
   );
   for (const [column, cells] of columnCells.entries()) {
-    const headers = columnHeaders[column] ?? [];
-    const numeric = cells.filter((cell) => isNumericCell(nodeText(cell)));
-    for (const cell of numeric) cell.properties = { ...cell.properties, dataNumeric: '' };
-    if (fits[column]?.cells) {
-      for (const cell of cells) cell.properties = { ...cell.properties, dataFit: '' };
-    }
-    if (fits[column]?.header) {
-      for (const header of headers) header.properties = { ...header.properties, dataFit: '' };
-    }
-    if (column === 0 || numeric.length === 0) continue;
-    for (const header of headers) header.properties = { ...header.properties, dataNumeric: '' };
-    if (!endAlignedColumn(cells.map(nodeText))) continue;
-    for (const cell of [...cells, ...headers]) {
-      cell.properties = { ...cell.properties, dataAlign: 'end' };
-    }
+    markColumn({ column, cells, headers: columnHeaders[column] ?? [], fit: fits[column] });
   }
+}
+
+const mark = (nodes: readonly TreeNode[], properties: Record<string, string>) => {
+  for (const node of nodes) node.properties = { ...node.properties, ...properties };
+};
+
+/** One body column's marks: figures, fit widths and, for a figure column, end alignment. */
+function markColumn({
+  column,
+  cells,
+  headers,
+  fit,
+}: Readonly<{
+  column: number;
+  cells: readonly TreeNode[];
+  headers: readonly TreeNode[];
+  fit: ReturnType<typeof fitColumns>[number] | undefined;
+}>) {
+  const numeric = cells.filter((cell) => isNumericCell(nodeText(cell)));
+  mark(numeric, { dataNumeric: '' });
+  if (fit?.cells) mark(cells, { dataFit: '' });
+  if (fit?.header) mark(headers, { dataFit: '' });
+  if (column === 0 || numeric.length === 0) return;
+  mark(headers, { dataNumeric: '' });
+  if (endAlignedColumn(cells.map(nodeText))) mark([...cells, ...headers], { dataAlign: 'end' });
 }
 
 const rehypeNumericColumns = () => markNumericColumns;

@@ -91,9 +91,7 @@ export function ToolPanel({
             )}
           </div>
         </div>
-        <div className="cl-tool-output" aria-live="polite">
-          {result ?? <p className="cl-tool-empty">{empty}</p>}
-        </div>
+        <div className="cl-tool-output">{result ?? <p className="cl-tool-empty">{empty}</p>}</div>
       </div>
     </section>
   );

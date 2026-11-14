@@ -87,12 +87,10 @@
 /* Room for a two-digit marker inside the column. */
 .cl-prose ol:not([class]) {
   padding-left: 32px;
+  list-style: decimal;
 }
 .cl-prose ul:not([class]) {
   list-style: disc;
-}
-.cl-prose ol:not([class]) {
-  list-style: decimal;
 }
 .cl-prose li:not([class]) + li {
   margin-top: 8px;

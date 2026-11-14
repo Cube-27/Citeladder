@@ -69,3 +69,4 @@ frontend/public/fonts/
 frontend/services/api/assets/mcp-app/
 frontend/services/api/assets/design-tokens.css
 frontend/packages/mcp-app/dist/
+/.playwright-mcp/

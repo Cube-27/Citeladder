@@ -6,7 +6,7 @@ import { Breadcrumbs, type Crumb } from '../chrome/breadcrumbs';
 import './heroes.css';
 
 /**
- * PageHero: an inner page's opening, its H1 the site title (44, 32 on
+ * PageHero: an inner page's opening, its H1 the site title (48, 32 on
  * phones), then the lead, actions, a meta line and the page's product image
  * below, left-aligned on the page's column edge; from 1280px the image sits
  * beside the copy (5/12 copy, 7/12 image). `size` only changes the

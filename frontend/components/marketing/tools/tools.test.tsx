@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vite-plus/test';
 import { CrawlerChecker, RobotsGenerator } from './robots-tools';
@@ -43,6 +43,17 @@ describe('free tools user workflows', () => {
     expect(screen.getByRole('button', { name: 'Download' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Generate social tags' }));
     expect(screen.getByRole('button', { name: 'Download' })).toBeEnabled();
+  });
+  it('announces the status from one live region before, after and once a run goes stale', () => {
+    render(<CrawlerChecker bots={bots} />);
+    const form = screen.getByRole('button', { name: 'Load example' }).closest('form')!;
+    const status = within(form).getByRole('status');
+    expect(status).toHaveTextContent('Enter your details or load an example, then run the tool.');
+    fireEvent.click(screen.getByRole('button', { name: 'Load example' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Test crawler rules' }));
+    expect(status).toHaveTextContent('Ready. Based only on the input you supplied.');
+    fireEvent.change(screen.getByLabelText('Page URL to test'), { target: { value: 'not a URL' } });
+    expect(status).toHaveTextContent('Input changed. Run the tool again to update your result.');
   });
   it('hides stale results after editing and shows actionable validation errors', () => {
     render(<CrawlerChecker bots={bots} />);

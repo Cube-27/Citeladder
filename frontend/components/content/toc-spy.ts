@@ -1,15 +1,20 @@
 /**
  * The Toc's scrollspy: marks the link of the heading in view, the last one
  * whose top has passed the reading line (a third down the viewport, or the
- * top bar's bottom plus the heading's scroll-margin-top when that is lower),
+ * heading's scroll-margin-top, where a jump lands it, when that is lower),
  * or the last heading once the content holding it has ended in view or the
- * page is scrolled to its end. A JumpMenu holding a Toc names that heading in
+ * page is scrolled to its end. A Toc link that is followed marks its own
+ * entry until the reader next scrolls, even when a short section lets the
+ * heading after it cross the line too. A JumpMenu holding a Toc names that heading in
  * its summary ("On this page: Setup"). IntersectionObserver reports the
  * crossings, so scrolling itself reads no layout; a rail that scrolls on its
  * own (`data-toc-scroll`, or the Toc's list inside it) brings the marked link
  * into view, again once a resize shows it.
  */
 const linkId = (link: HTMLAnchorElement) => decodeURIComponent(link.hash.slice(1));
+
+/** Keys that scroll the page, so they end a followed link's hold on the mark. */
+const SCROLL_KEYS = new Set(['ArrowDown', 'ArrowUp', 'PageDown', 'PageUp', 'Home', 'End', ' ']);
 
 /** Scrolls the rail's scroller (its Toc list, or the rail) just enough to show the marked link. */
 function reveal(link: HTMLAnchorElement) {
@@ -45,13 +50,13 @@ export function mountTocSpy(root: Document = document): void {
   const reached = new Set<Element>();
   let atEnd = false;
   let contentEnded = false;
+  let followed: HTMLElement | undefined;
   // A resize can show a rail that was hidden when its link was marked.
   let revealDue = false;
   const mark = () => {
-    const current =
-      atEnd || contentEnded
-        ? headings.at(-1)
-        : (headings.filter((h) => reached.has(h)).at(-1) ?? first);
+    let current = followed;
+    if (!current && (atEnd || contentEnded)) current = headings.at(-1);
+    current ??= headings.filter((h) => reached.has(h)).at(-1) ?? first;
     for (const link of links) {
       if (linkId(link) !== current?.id) {
         link.removeAttribute('aria-current');
@@ -74,11 +79,10 @@ export function mountTocSpy(root: Document = document): void {
   const observeHeadings = () => {
     headingObserver?.disconnect();
     contentObserver?.disconnect();
-    const bar = root.querySelector<HTMLElement>('[data-docs-bar], [data-site-nav]');
+    // scroll-margin-top already clears the top bar.
     const line = Math.max(
       view.innerHeight / 3,
-      (bar?.getBoundingClientRect().bottom ?? 0) +
-        (Number.parseFloat(view.getComputedStyle(first).scrollMarginTop) || 0),
+      Number.parseFloat(view.getComputedStyle(first).scrollMarginTop) || 0,
     );
     const below = Math.max(0, Math.floor(view.innerHeight - line - 1));
     headingObserver = new IntersectionObserver(
@@ -134,6 +138,27 @@ export function mountTocSpy(root: Document = document): void {
     },
     { passive: true },
   );
+
+  for (const link of links) {
+    link.addEventListener('click', (event) => {
+      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+        return;
+      }
+      followed = headings.find((heading) => heading.id === linkId(link));
+      mark();
+    });
+  }
+  const release = () => {
+    if (!followed) return;
+    followed = undefined;
+    mark();
+  };
+  for (const type of ['wheel', 'touchstart', 'pointerdown'] as const) {
+    view.addEventListener(type, release, { passive: true });
+  }
+  view.addEventListener('keydown', (event) => {
+    if (SCROLL_KEYS.has(event.key)) release();
+  });
 
   observeHeadings();
   view.addEventListener('resize', () => {

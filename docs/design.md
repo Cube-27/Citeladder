@@ -158,7 +158,7 @@ typography:
 - **App sizes:** 14 body and controls, 16 section and card titles, 12
   captions, badges and code, 20 for the page title and 24 only for a
   metric's figure.
-- **Website sizes:** 12 · 14 · 16 · 18 · 22 · 28 · 56 · 80, and normally no
+- **Website sizes:** 12 · 14 · 16 · 18 · 20 · 24 · 32 · 48, and normally no
   more than three on a page. Nothing below 12px; prose holds to 65ch.
 - **Sizes are rem.** Type tokens are declared in rem (the px here ÷ 16), so
   they follow the reader's text size; spacing stays px, and controls take

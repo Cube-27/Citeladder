@@ -11,7 +11,7 @@
 
 .cl-site {
   /* The website sets exactly eight sizes, 12 · 14 · 16 · 18 · 20 · 24 · 32 ·
-     44, with nothing under 12px and 12px text at least 1.4 leading. The
+     48, with nothing under 12px and 12px text at least 1.4 leading. The
      product roles the website reuses (the eyebrow, the mono data and code
      roles, the drawn app's page title, the 18px title) and the shared
      components drawn in product images are re-pointed onto that scale here,

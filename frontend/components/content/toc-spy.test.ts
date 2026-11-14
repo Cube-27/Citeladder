@@ -47,7 +47,21 @@ function page({ barBottom }: { barBottom?: number } = {}) {
         isIntersecting: ids.includes(id),
       })),
     );
-  return { current, reach, end: end!, headings: headings!, content: content! };
+  // Reports each heading as a browser would: crossing when its top is above the band's bottom.
+  const land = (tops: Record<string, number>) => {
+    const below = Number(/-(\d+)px 0px$/.exec(headings!.rootMargin ?? '')?.[1]);
+    headings!.report(
+      Object.entries(tops).map(([id, top]) => ({
+        target: document.getElementById(id)!,
+        isIntersecting: top < window.innerHeight - below,
+      })),
+    );
+  };
+  const follow = (label: string) =>
+    [...document.querySelectorAll<HTMLElement>('.cl-toc-link')]
+      .find((link) => link.textContent === label)!
+      .click();
+  return { current, reach, land, follow, end: end!, headings: headings!, content: content! };
 }
 
 beforeEach(() => {
@@ -56,6 +70,7 @@ beforeEach(() => {
 
 afterEach(() => {
   observers.length = 0;
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   window.scrollY = 0;
   document.body.innerHTML = '';
@@ -73,13 +88,34 @@ describe('Toc scrollspy', () => {
     expect(current()).toEqual(['Intro']);
   });
 
-  it('activates a heading a third down the viewport, or under a top bar that reaches lower', () => {
-    // jsdom's viewport is 768px tall: the band ends 1px past the reading line.
-    expect(page().headings.rootMargin).toBe('100000% 0px -511px 0px');
-    observers.length = 0;
-    expect(page({ barBottom: 100 }).headings.rootMargin).toBe('100000% 0px -511px 0px');
-    observers.length = 0;
-    expect(page({ barBottom: 300 }).headings.rootMargin).toBe('100000% 0px -467px 0px');
+  it.each([
+    // A tall viewport: the line is a third down, so a heading at 200px has passed it.
+    [768, { intro: -400, setup: 200, faq: 300 }, 'Setup'],
+    // A short one: the line is where a jump lands a heading (its 96px
+    // scroll-margin-top, which already clears the 64px bar), not 160px.
+    [240, { intro: -400, setup: 96, faq: 130 }, 'Setup'],
+    [240, { intro: -400, setup: -40, faq: 90 }, 'FAQ'],
+  ])('with a %ipx viewport, marks the heading at %o: %s', (height, tops, marked) => {
+    vi.stubGlobal('innerHeight', height);
+    vi.spyOn(window, 'getComputedStyle').mockReturnValue({
+      scrollMarginTop: '96px',
+    } as CSSStyleDeclaration);
+    const { current, land } = page({ barBottom: 64 });
+    land(tops);
+    expect(current()).toEqual([marked]);
+  });
+
+  it('keeps a followed Toc link marked until the reader scrolls', () => {
+    const { current, reach, follow, end } = page();
+    follow('Setup');
+    // The jump carried the short Setup section's successor over the line too.
+    reach('intro', 'setup', 'faq');
+    window.scrollY = 900;
+    end.report([{ target: end.targets[0], isIntersecting: true }]);
+    expect(current()).toEqual(['Setup']);
+
+    window.dispatchEvent(new WheelEvent('wheel'));
+    expect(current()).toEqual(['FAQ']);
   });
 
   it('marks the last heading once the content holding it has ended in view', () => {
@@ -142,8 +178,9 @@ describe('Toc scrollspy', () => {
     vi.spyOn(setup, 'getBoundingClientRect').mockReturnValue(box(300, 330));
     mountTocSpy();
     const reachSetup = () =>
-      observers
-        .findLast((observer) => observer.targets.length === 2)!
+      [...observers]
+        .reverse()
+        .find((observer) => observer.targets.length === 2)!
         .report([{ target: document.getElementById('setup')!, isIntersecting: true }]);
 
     // Hidden below the rail's breakpoint, nothing scrolls.

@@ -6,7 +6,8 @@
  * sidebar in the `rail` slot; the website's legal pages pass `nav`, a list of
  * pages drawn on the rail's 36px rows (the current one on `surface-sunken`).
  * Below 1200px the Toc leaves the grid for an "On this page" JumpMenu across
- * the reading column (on the website, under the page's ArticleHeader); below
+ * the reading column (on the website, under the page's ArticleHeader, which
+ * it passes in the `header` slot so the DOM keeps that order); below
  * 900px the rail leaves too: the docs move it into the top bar's sheet, and
  * `nav` becomes a second JumpMenu named `navSummary`, the two side by side.
  * A Toc taller than the viewport scrolls on its own.
@@ -54,6 +55,7 @@ const hasBar = hasToc || nav !== undefined;
     }
   </aside>
   <main id="main" class="cl-doc-main" tabindex="-1">
+    <slot name="header" />
     {
       hasBar && (
         <div class:list={['cl-doc-bar', { 'cl-doc-bar--nav': nav, 'cl-doc-bar--toc': hasToc }]}>
@@ -193,10 +195,6 @@ const hasBar = hasToc || nav !== undefined;
        menu and takes its whole width. */
     .cl-doc-bar-toc {
       grid-column: 1 / -1;
-    }
-    /* The website's policies read breadcrumb, title, then the menu. */
-    [data-marketing-surface] .cl-doc-bar + .cl-ahead {
-      order: -1;
     }
   }
   @media (max-width: 899px) {

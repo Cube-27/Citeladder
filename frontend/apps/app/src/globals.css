@@ -552,7 +552,7 @@
 }
 
 /* The marketing site's responsive display sizes (owner, 2026-11-14): the
-   page title (H1) is 44 and a section heading 32 from 768px up, the owner's
+   page title (H1) is 48 and a section heading 32 from 768px up, the owner's
    982px desktop included, and 32 and 26 on phones. Marketing pages only, so
    a docs article title keeps its own fallback. */
 [data-marketing-surface] {
