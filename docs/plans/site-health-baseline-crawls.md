@@ -120,6 +120,14 @@ this plan's review conversation (2026-11-12).
 - **SH-B5, discovery.**
   - Sitemap only, deduplicated, free (it does not spend the page-fetch
     allowance), with no plan cap.
+  - No product limit to sitemap reading, and every discovered URL is saved,
+    tracked or not; the HTML walk keeps its cap. (Owner, in chat, 2026-11-14:
+    "save every discovered URL and ship it no limit to sitemap reading HTML
+    link following is fine".) The walk follows index entries only on the
+    site's own domain and stops at a high safety ceiling (about 1,000 sitemap
+    files or 500,000 URLs, read as "at least N"); a file over the 50 MB
+    sitemap standard stays unread rather than absent. (Owner, same day,
+    choosing "Both" and "Flag + raise to 50 MB".)
   - Every full crawl re-reads it. There is no manual discovery.
   - The discovered count is display only.
   - An HTML walk runs only when the site has no sitemap. That site also gets a

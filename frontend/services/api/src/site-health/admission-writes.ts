@@ -14,6 +14,9 @@ import type { Database } from '../db/database.ts';
 import type { Candidate } from './frontier.ts';
 import type { Crawl } from './site-task.ts';
 
+/** Rows per multi-row insert, so a large sitemap stays under PostgreSQL's 65,535 bind parameters. */
+const ROWS_PER_INSERT = 1000;
+
 /** What admission already finds for a batch, keyed by URL hash or site URL id. */
 export type AdmissionState = {
   siteUrlIds: Map<string, string>;
@@ -86,9 +89,20 @@ export async function readAdmissionState(
  * disposition so this crawl re-decides them. Returns the id per URL hash.
  */
 export async function upsertSiteUrls(trx: Database, crawl: Crawl, items: Candidate[]) {
-  if (!items.length) return new Map<string, string>();
+  const ids = new Map<string, string>();
+  for (let offset = 0; offset < items.length; offset += ROWS_PER_INSERT) {
+    const chunk = items.slice(offset, offset + ROWS_PER_INSERT);
+    const rows = await upsertSiteUrlChunk(trx, crawl, chunk); // NOSONAR: chunks bound each insert's bind parameters, in order in one transaction.
+    for (const row of rows) ids.set(row.url_hash, row.id);
+  }
+  const foreign = items.find((item) => !ids.has(item.hash));
+  if (foreign) throw new Error(`SiteUrl ${foreign.hash} belongs to another workspace`);
+  return ids;
+}
+
+function upsertSiteUrlChunk(trx: Database, crawl: Crawl, items: Candidate[]) {
   const now = new Date();
-  const rows = await trx
+  return trx
     .insertInto('site_urls')
     .values(
       items.map((item) => ({
@@ -132,10 +146,6 @@ export async function upsertSiteUrls(trx: Database, crawl: Crawl, items: Candida
     )
     .returning(['id', 'url_hash'])
     .execute();
-  const ids = new Map(rows.map((row) => [row.url_hash, row.id]));
-  const foreign = items.find((item) => !ids.has(item.hash));
-  if (foreign) throw new Error(`SiteUrl ${foreign.hash} belongs to another workspace`);
-  return ids;
 }
 
 /** Insert or reactivate system memberships; returns how many became active now. */
@@ -290,8 +300,29 @@ export function candidateObservation(
   };
 }
 
-/** Rows per insert, so a large sitemap stays under PostgreSQL's bind-parameter limit. */
-const OBSERVATIONS_PER_INSERT = 1000;
+function observationValues(crawl: Crawl, row: Observation, now: Date) {
+  return {
+    id: randomUUID(),
+    workspace_id: crawl.workspace_id,
+    project_id: crawl.project_id,
+    crawl_id: crawl.id,
+    site_url_id: row.siteUrlId,
+    source_kind: row.sourceKind,
+    value_kind: row.valueKind,
+    value_priority: row.valuePriority,
+    rewrite_reason: row.rewriteReason,
+    rewrite_version: row.rewriteVersion,
+    depth: row.depth,
+    observed_url: row.observedUrl,
+    final_url: row.finalUrl,
+    source_artifact_id: row.artifactId,
+    parent_site_url_id: row.parentSiteUrlId,
+    status_code: row.statusCode,
+    content_type: row.contentType.slice(0, 128),
+    title: row.title,
+    created_at: now,
+  };
+}
 
 /**
  * The only writer of observations. A crawl keeps its first sighting of each
@@ -300,31 +331,13 @@ const OBSERVATIONS_PER_INSERT = 1000;
 export async function insertObservations(trx: Database, crawl: Crawl, observed: Observation[]) {
   const now = new Date();
   let inserted = 0;
-  for (let offset = 0; offset < observed.length; offset += OBSERVATIONS_PER_INSERT) {
+  for (let offset = 0; offset < observed.length; offset += ROWS_PER_INSERT) {
     const rows = await trx // NOSONAR: chunks bound each insert's bind parameters, in order in one transaction.
       .insertInto('site_url_observations')
       .values(
-        observed.slice(offset, offset + OBSERVATIONS_PER_INSERT).map((row) => ({
-          id: randomUUID(),
-          workspace_id: crawl.workspace_id,
-          project_id: crawl.project_id,
-          crawl_id: crawl.id,
-          site_url_id: row.siteUrlId,
-          source_kind: row.sourceKind,
-          value_kind: row.valueKind,
-          value_priority: row.valuePriority,
-          rewrite_reason: row.rewriteReason,
-          rewrite_version: row.rewriteVersion,
-          depth: row.depth,
-          observed_url: row.observedUrl,
-          final_url: row.finalUrl,
-          source_artifact_id: row.artifactId,
-          parent_site_url_id: row.parentSiteUrlId,
-          status_code: row.statusCode,
-          content_type: row.contentType.slice(0, 128),
-          title: row.title,
-          created_at: now,
-        })),
+        observed
+          .slice(offset, offset + ROWS_PER_INSERT)
+          .map((row) => observationValues(crawl, row, now)),
       )
       .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
       .returning('id')
@@ -332,6 +345,32 @@ export async function insertObservations(trx: Database, crawl: Crawl, observed: 
     inserted += rows.length;
   }
   return inserted;
+}
+
+/** A URL the crawl's sitemaps list, as listed, and its first declared `<lastmod>` (null when none). */
+export type SitemapEntry = { siteUrlId: string; listedUrl: string; lastmod: string | null };
+
+/** The only writer of sitemap membership; an entry the crawl already recorded is kept. */
+export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries: SitemapEntry[]) {
+  const now = new Date();
+  for (let offset = 0; offset < entries.length; offset += ROWS_PER_INSERT) {
+    await trx // NOSONAR: chunks bound each insert's bind parameters, in order in one transaction.
+      .insertInto('site_sitemap_entries')
+      .values(
+        entries.slice(offset, offset + ROWS_PER_INSERT).map((entry) => ({
+          id: randomUUID(),
+          workspace_id: crawl.workspace_id,
+          project_id: crawl.project_id,
+          crawl_id: crawl.id,
+          site_url_id: entry.siteUrlId,
+          listed_url: entry.listedUrl,
+          lastmod: entry.lastmod,
+          created_at: now,
+        })),
+      )
+      .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
+      .execute();
+  }
 }
 
 /** One `site_crawl_tasks` row to enqueue; unset fields are a root-level first-generation task. */

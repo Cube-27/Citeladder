@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
-import { record, strings } from '../db/json.ts';
+import { record } from '../db/json.ts';
 import { onlyOf } from '../lists.ts';
 import { compareText, scalarText } from '../text-order.ts';
 import { insertEvaluations } from './analysis-rows.ts';
@@ -163,18 +163,29 @@ function duplicateComparisons(rows: { final_url: string; normalized_facts: unkno
   };
 }
 
+/**
+ * The sitemap URLs this crawl audits: the listed pages it tracks. An untracked
+ * listed URL is never fetched, so it can neither pass nor fail these checks.
+ */
 async function sitemapObservations(db: Database, crawl: Crawl) {
-  const urls = strings(record(record(crawl.site_facts).sitemap).urls);
-  if (!urls.length) return [];
   const rows = await db
-    .selectFrom('site_url_observations')
-    .select('observed_url')
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('project_id', '=', crawl.project_id)
-    .where('crawl_id', '=', crawl.id)
-    .where((eb) => eb('observed_url', '=', eb.fn.any(eb.val(urls))))
+    .selectFrom('site_sitemap_entries as e')
+    .select('e.listed_url')
+    .where('e.workspace_id', '=', crawl.workspace_id)
+    .where('e.project_id', '=', crawl.project_id)
+    .where('e.crawl_id', '=', crawl.id)
+    .where(({ exists, selectFrom }) =>
+      exists(
+        selectFrom('site_crawl_tasks as t')
+          .select('t.id')
+          .whereRef('t.workspace_id', '=', 'e.workspace_id')
+          .whereRef('t.crawl_id', '=', 'e.crawl_id')
+          .whereRef('t.site_url_id', '=', 'e.site_url_id')
+          .where('t.task_kind', '=', 'analyze'),
+      ),
+    )
     .execute();
-  return rows.map((row) => row.observed_url);
+  return rows.map((row) => row.listed_url);
 }
 
 /** The root page also carries the crawl-wide sitemap presence, orphan and reachability checks. */

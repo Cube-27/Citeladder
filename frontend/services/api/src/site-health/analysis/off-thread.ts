@@ -11,6 +11,7 @@ import { policy } from '../../config.ts';
 import { resolveSettingSpec } from '../../config/settings.ts';
 import {
   SitemapParseError,
+  SitemapTooLargeError,
   type parseSitemap,
   type SitemapLimits,
 } from '../../web-evidence/sitemaps.ts';
@@ -41,7 +42,8 @@ export type Interpretation =
 /** A sitemap job's reply: an invalid document is an answer, not a thread failure. */
 export type SitemapParse =
   | { kind: 'parsed'; document: ReturnType<typeof parseSitemap> }
-  | { kind: 'invalid'; reason: string };
+  | { kind: 'invalid'; reason: string }
+  | { kind: 'too_large'; reason: string };
 
 type Pending = {
   input: Interpretation;
@@ -190,8 +192,16 @@ export const discoverAsync = (
 /** `parseSitemap` off the event loop; a document that does not parse throws `SitemapParseError`. */
 export async function parseSitemapAsync(body: Buffer, contentType: string, limits: SitemapLimits) {
   const reply = await interpret<SitemapParse>({ kind: 'sitemap', body, contentType, limits });
-  if (reply.kind === 'invalid') throw new SitemapParseError(reply.reason);
-  return reply.document;
+  switch (reply.kind) {
+    case 'parsed':
+      return reply.document;
+    case 'invalid':
+      throw new SitemapParseError(reply.reason);
+    case 'too_large':
+      throw new SitemapTooLargeError(reply.reason);
+    default:
+      return reply satisfies never;
+  }
 }
 
 /** The icon links a fetched homepage declares, parsed off the event loop. */

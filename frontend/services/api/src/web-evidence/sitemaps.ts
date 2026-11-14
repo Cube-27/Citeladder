@@ -1,7 +1,7 @@
 /**
  * Bounded sitemap parsing. Sitemaps are attacker-influenced XML: entity
  * declarations are refused outright, gzip expansion is capped before parsing,
- * extracted URLs are capped, and index recursion is depth-bounded and
+ * each document's URLs are capped, and index recursion is depth-bounded and
  * loop-safe. This module only parses; the caller fetches each document.
  */
 import { gunzipSync } from 'node:zlib';
@@ -9,6 +9,8 @@ import { gunzipSync } from 'node:zlib';
 import { XMLParser, XMLValidator } from 'fast-xml-parser';
 
 export class SitemapParseError extends Error {}
+/** A document over the decoded-byte cap: unread, not the server's answer that it has none. */
+export class SitemapTooLargeError extends SitemapParseError {}
 export type SitemapLimits = { maxDecodedBytes: number; maxUrls: number; maxIndexDepth: number };
 
 const parser = new XMLParser({
@@ -25,13 +27,16 @@ const parser = new XMLParser({
 function sitemapBytes(body: Buffer, contentType: string, maxBytes: number) {
   const gzip = (body[0] === 0x1f && body[1] === 0x8b) || contentType.toLowerCase().includes('gzip');
   if (!gzip) {
-    if (body.length > maxBytes) throw new SitemapParseError('sitemap exceeds the decoded byte cap');
+    if (body.length > maxBytes)
+      throw new SitemapTooLargeError('sitemap exceeds the decoded byte cap');
     return body;
   }
   try {
     return gunzipSync(body, { maxOutputLength: maxBytes });
-  } catch {
-    throw new SitemapParseError('malformed gzip sitemap or compression bomb');
+  } catch (error) {
+    if (error instanceof RangeError)
+      throw new SitemapTooLargeError('gzip sitemap exceeds the decoded byte cap');
+    throw new SitemapParseError('malformed gzip sitemap');
   }
 }
 
@@ -97,35 +102,48 @@ export function sitemapRef(value: string) {
   }
 }
 
-/** A bounded walk over one site's sitemap tree; it never fetches anything itself. */
+type CollectorOptions = {
+  limits: SitemapLimits;
+  /** The site-wide safety ceiling on collected URLs. */
+  maxSiteUrls: number;
+  /** Whether a child reference may be fetched; one that may not leaves the list short. */
+  follows: (ref: string) => boolean;
+};
+
+/** A walk over one site's sitemap tree; it never fetches anything itself. */
 export class SitemapCollector {
   readonly urls: string[] = [];
   /** Declared `<lastmod>` by collected URL, as the sitemap spells both. */
   readonly lastmod = new Map<string, string>();
   readonly #visited = new Set<string>();
   readonly limits: SitemapLimits;
-  /** A safety ceiling dropped URLs or references, so the collected list is a lower bound. */
+  readonly #options: CollectorOptions;
+  /** A limit, the depth bound or an unfollowed reference dropped URLs: a lower bound. */
   truncated = false;
-  constructor(limits: SitemapLimits) {
-    this.limits = limits;
+  constructor(options: CollectorOptions) {
+    this.limits = options.limits;
+    this.#options = options;
   }
   /**
    * Ingest one parsed document (the caller parses, off the event loop); return
-   * the unvisited child references still within depth.
+   * the unvisited child references it may follow within depth.
    */
   add(source: string, document: SitemapDocument, depth: number) {
     this.#visited.add(sitemapRef(source) ?? source);
-    const room = Math.max(0, this.limits.maxUrls - this.urls.length);
+    const room = Math.max(0, this.#options.maxSiteUrls - this.urls.length);
     const kept = document.urls.slice(0, room);
     if (document.truncated || kept.length < document.urls.length) this.truncated = true;
-    this.urls.push(...kept);
+    // One push per URL: spreading a 50,000-URL document can overflow the call stack.
+    for (const url of kept) this.urls.push(url);
     for (const url of kept) {
       const declared = document.lastmod.get(url);
       if (declared && !this.lastmod.has(url)) this.lastmod.set(url, declared);
     }
-    const refs = [...new Set(document.refs.flatMap((ref) => sitemapRef(ref) ?? []))].filter(
+    const unseen = [...new Set(document.refs.flatMap((ref) => sitemapRef(ref) ?? []))].filter(
       (ref) => !this.#visited.has(ref),
     );
+    const refs = unseen.filter((ref) => this.#options.follows(ref));
+    if (refs.length < unseen.length) this.truncated = true;
     // Only an unread reference past the depth bound leaves the list short.
     if (depth >= this.limits.maxIndexDepth) {
       if (refs.length) this.truncated = true;

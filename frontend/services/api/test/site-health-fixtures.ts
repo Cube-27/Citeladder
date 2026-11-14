@@ -371,7 +371,51 @@ export class SiteFixtures extends VisibilityFixtures {
     return { id, artifactId, taskId, analysisId };
   }
 
-  /** Make exactly these URLs the project's active monitored set, as a crawl's admission would. */
+  /** A second project on the same site and workspace, with its own profile and crawl. */
+  async otherProject(seed: SiteSeed) {
+    const id = await this.project(seed.workspaceId);
+    await this.siteDb
+      .updateTable('projects')
+      .set({ website_url: seed.root })
+      .where('id', '=', id)
+      .execute();
+    const profileId = randomUUID();
+    const now = new Date();
+    await this.siteDb
+      .insertInto('site_health_profiles')
+      .values({
+        id: profileId,
+        workspace_id: seed.workspaceId,
+        project_id: id,
+        root_url: seed.root,
+        root_host: 'example.test',
+        registrable_domain: 'example.test',
+        selection_version: 0,
+        created_at: now,
+        updated_at: now,
+      })
+      .execute();
+    const other = { ...seed, projectId: id, profileId };
+    return { ...other, crawlId: await this.sibling(other) };
+  }
+
+  /** Record that the crawl's sitemaps list this page, as site setup would. */
+  async sitemapEntry(seed: SiteSeed, page: { siteUrlId: string; url: string }, lastmod?: string) {
+    await this.siteDb
+      .insertInto('site_sitemap_entries')
+      .values({
+        id: randomUUID(),
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        crawl_id: seed.crawlId,
+        site_url_id: page.siteUrlId,
+        listed_url: page.url,
+        lastmod: lastmod ?? null,
+        created_at: new Date(),
+      })
+      .execute();
+  }
+
   /** Make exactly these pages the project's tracked set, in this fill order. */
   async monitor(seed: SiteSeed, siteUrlIds: string[]) {
     const now = new Date();
