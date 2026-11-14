@@ -608,10 +608,13 @@
   --color-spot-halo: rgb(99 91 255 / 30%);
   --color-spot-warm: rgb(255 120 60 / 30%);
   --color-spot-vignette: rgb(49 40 140 / 10%);
-  --color-site-band-from: #1e1b4b;
-  --color-site-band-to: #0c0a24;
-  --color-site-band-glow: rgb(255 106 51 / 50%);
-  --color-site-band-violet: rgb(99 91 255 / 45%);
+  --color-site-band-from: #3c5468;
+  --color-site-band-mid: #262d5e;
+  --color-site-band-to: #150f1e;
+  --color-site-band-mist: #a7b9c0;
+  --color-site-band-slate: rgb(96 118 140 / 55%);
+  --color-site-band-blue: rgb(58 70 150 / 60%);
+  --color-site-band-scrim: rgb(21 24 60 / 60%);
   --color-site-band-ink: #ffffff;
   --color-site-band-ink-hover: #e6e4ff;
   --color-site-band-ink-secondary: #c9c6f0;
@@ -636,10 +639,10 @@
   --color-spot-halo: rgb(118 108 255 / 36%);
   --color-spot-warm: rgb(255 106 51 / 30%);
   --color-spot-vignette: rgb(0 0 0 / 55%);
-  --color-site-band-from: #1a1745;
-  --color-site-band-to: #07061a;
-  --color-site-band-glow: rgb(255 106 51 / 45%);
-  --color-site-band-violet: rgb(118 108 255 / 35%);
+  --color-site-band-from: #31465a;
+  --color-site-band-mid: #20264f;
+  --color-site-band-to: #110c18;
+  --color-site-band-mist: #7f949e;
 }
 
 [data-public-surface] .button-key {
