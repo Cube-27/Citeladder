@@ -84,12 +84,21 @@
   padding-inline: var(--site-gutter);
 }
 
-/* Between sections, a violet-to-orange hairline across the content column,
-   halfway down the section's top space. It is 2px at a lighter alpha, so it
+/* The "Answers collected from" strip is framed by a violet-to-orange
+   hairline above and below it (its own section's top and the next
+   section's), across the content column, halfway down the section's top
+   space. Other sections have no rule. It is 2px at a lighter alpha, so it
    keeps its colour where a section starts on a fractional pixel. */
 
 .cl-section {
-  padding-top: 96px;
+  padding-top: 128px;
+  background-repeat: no-repeat;
+  background-position: 50% 64px;
+  background-size: min(var(--container-site), calc(100% - 2 * var(--site-gutter))) 2px;
+}
+
+.cl-section:has(.cl-engines),
+.cl-section:has(.cl-engines) + .cl-section {
   background-image: linear-gradient(
     90deg,
     transparent,
@@ -97,15 +106,12 @@
     var(--site-rule-to) 70%,
     transparent
   );
-  background-repeat: no-repeat;
-  background-position: 50% 48px;
-  background-size: min(var(--container-site), calc(100% - 2 * var(--site-gutter))) 2px;
 }
 
 @media (max-width: 1023px) {
   .cl-section {
-    padding-top: 64px;
-    background-position: 50% 32px;
+    padding-top: 80px;
+    background-position: 50% 40px;
   }
 }
 
@@ -282,6 +288,71 @@
   padding-inline: 16px;
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
+}
+
+/* Calls to action (the page's, the bar's sign-up and the menu sheet's) are
+   square blocks with a mono, uppercase label and a small play triangle after
+   it; the secondary is a flat grey block with no edge. An external link keeps
+   its up-right arrow instead of the triangle. */
+
+.cl-site
+  :is(.marketing-cta-button, .cl-navbar-end > a:not(.cl-navbar-hide-sm), .cl-sheet-foot > a) {
+  gap: 8px;
+  border-radius: 0;
+  font-family: var(--font-mono);
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cl-site .marketing-cta-button {
+  min-height: 44px;
+}
+
+.cl-site
+  :is(
+    .marketing-cta-button,
+    .cl-navbar-end > a:not(.cl-navbar-hide-sm),
+    .cl-sheet-foot > a
+  )[data-button-variant='secondary'] {
+  border-color: transparent;
+  background: var(--tint-neutral);
+}
+
+.cl-site
+  :is(
+    .marketing-cta-button,
+    .cl-navbar-end > a:not(.cl-navbar-hide-sm),
+    .cl-sheet-foot > a
+  )[data-button-variant='secondary']:hover {
+  background: color-mix(in srgb, var(--color-ink) 8%, var(--tint-neutral));
+}
+
+/* On the closing band the secondary is a translucent block in the band's ink. */
+
+.cl-site .cl-cta a.marketing-cta-button[data-button-variant='secondary'] {
+  background: var(--color-site-band-soft);
+  color: var(--color-site-band-ink);
+}
+
+.cl-site .cl-cta a.marketing-cta-button[data-button-variant='secondary']:hover {
+  background: color-mix(in srgb, var(--color-site-band-ink) 22%, transparent);
+}
+
+.cl-site
+  :is(.marketing-cta-button, .cl-navbar-end > a:not(.cl-navbar-hide-sm), .cl-sheet-foot > a):not(
+    :has(.lucide-arrow-up-right)
+  )::after {
+  flex: none;
+  width: 6px;
+  height: 8px;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  content: '';
+}
+
+.cl-site .marketing-cta-button > svg.lucide-arrow-right {
+  display: none;
 }
 
 .cl-arrowlink {

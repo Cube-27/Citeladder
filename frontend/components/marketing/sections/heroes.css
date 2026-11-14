@@ -5,7 +5,11 @@
 }
 
 .cl-phero-inner,
-.cl-lhero-copy {
+.cl-lhero-copy,
+.cl-phero-head,
+.cl-lhero-head,
+.cl-phero-side,
+.cl-lhero-side {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -14,6 +18,26 @@
 
 .cl-phero-inner .cl-crumbs {
   margin-bottom: 16px;
+}
+
+/* From 1024px a hero without a beside image is two columns, as the
+   reference's: the title (7/12) on the left, the lead, the trial line and
+   the actions (5/12) on the right, their feet on one line, the pair set
+   lower on the page (128px under the bar). */
+
+@media (min-width: 1024px) {
+  .cl-lhero,
+  .cl-phero:not(.cl-phero--split) {
+    padding-top: 128px;
+  }
+
+  .cl-lhero-copy,
+  .cl-phero:not(.cl-phero--split) .cl-phero-inner {
+    display: grid;
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+    column-gap: 64px;
+    align-items: end;
+  }
 }
 
 .cl-phero-title,
@@ -27,6 +51,19 @@
   line-height: var(--text-site-title--line-height);
   letter-spacing: -0.01em;
   text-wrap: balance;
+}
+
+/* The home page's H1 is the largest title on the site (60, 32 on phones),
+   and its lead the smallest (14). */
+
+.cl-lhero .cl-lhero-title {
+  font-size: var(--text-site-home);
+  line-height: var(--text-site-home--line-height);
+}
+
+.cl-lhero .cl-lhero-lead {
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
 }
 
 .cl-lhero-title .cl-mark {
@@ -54,7 +91,6 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  padding-top: 8px;
 }
 
 /* A sentence under the actions: the sans face, never mono, in the secondary ink. */

@@ -1,12 +1,11 @@
 import { EngineMark } from '@/components/ui/engine-mark';
-import { appHref } from '@/lib/config/app-link';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { NAV_DROPS, PLATFORM_GROUPS, platformLabel } from '@/lib/marketing-content/nav';
 import { PLATFORM_PAGES } from '@/lib/marketing-content/platform-pages';
 
 import { AnnouncementPill } from '../chrome/announcement-pill';
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { SiteActions } from '../primitives/button';
 import { EngineStrip } from '../sections/cards';
 import { FeatureCard, FeatureSplit } from '../sections/features';
 import { CardRail, RailCard } from '../sections/rail-cards';
@@ -21,20 +20,6 @@ import { SCREEN_CATALOG, moduleScreen } from '../screens/screen-catalog';
 import { FAQS, INTEGRATIONS, type IntegrationMark } from './landing-data';
 import './integrations.css';
 
-function PrimaryActions() {
-  const signup = selfServeSignupOpen();
-  return (
-    <>
-      {signup ? (
-        <ButtonLink href={appHref('/register')} size="marketing">
-          Start free trial
-        </ButtonLink>
-      ) : null}
-      <DemoButtonLink variant={signup ? 'soft' : 'primary'} size="marketing" />
-    </>
-  );
-}
-
 function Hero() {
   return (
     <LandingHero
@@ -45,7 +30,7 @@ function Hero() {
       }
       title="Get your business recommended by AI"
       lead="CiteLadder helps marketing and SEO teams grow their AI visibility, traffic and revenue."
-      actions={<PrimaryActions />}
+      actions={<SiteActions />}
       note={
         selfServeSignupOpen()
           ? `${PUBLIC_TRIAL.days}-day free trial on ChatGPT answers. Trial limits apply.`
@@ -295,7 +280,7 @@ export function LandingPage() {
         <CtaBand
           title="See what AI says about you today"
           lead="Add your site and your buyers' questions to get a first baseline."
-          actions={<PrimaryActions />}
+          actions={<SiteActions />}
         />
       </PageSection>
     </>

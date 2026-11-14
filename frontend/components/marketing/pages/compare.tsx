@@ -1,9 +1,8 @@
 import { Callout } from '@/components/ui/callout';
 import { TextLink } from '@/components/ui/text-link';
 import { COMPARISON_CHECKLIST, COMPETITORS } from '@/lib/marketing-content/compare';
-import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { SiteActions } from '../primitives/button';
 import { RelatedCards } from '../sections/cards';
 import { Bento, FeatureCard } from '../sections/features';
 import { PageHero } from '../sections/heroes';
@@ -138,14 +137,7 @@ export function CompareIndex() {
         <CtaBand
           title="Evaluate CiteLadder with your own questions"
           lead="Bring a small prompt portfolio and the reporting questions your team needs to answer."
-          actions={
-            <>
-              <DemoButtonLink size="marketing">{DEMO_CTA}</DemoButtonLink>
-              <ButtonLink href="/faq" variant="soft" size="marketing">
-                Read the FAQ
-              </ButtonLink>
-            </>
-          }
+          actions={<SiteActions />}
         />
       </PageSection>
     </>

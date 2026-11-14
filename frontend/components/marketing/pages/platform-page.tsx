@@ -1,7 +1,5 @@
 import { ConnectStrip } from '@/components/mcp/connect-strip';
-import { appHref } from '@/lib/config/app-link';
 import { docsHref } from '@/lib/config/docs';
-import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
 import { cn } from '@/lib/utils';
 import '../chrome/mega-menu.css';
 import { PLATFORM_GROUPS, PLATFORM_OVERVIEW, platformLabel } from '@/lib/marketing-content/nav';
@@ -13,7 +11,7 @@ import type {
 } from '@/lib/marketing-content/platform-pages';
 
 import { NavIcon, hasNavIcon } from '../chrome/nav-icons';
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { ButtonLink, DemoButtonLink, SiteActions } from '../primitives/button';
 import { EngineStrip, QuestionCards, RelatedCards } from '../sections/cards';
 import { Bento, FeatureCard, FeatureSplit, type BentoSpan } from '../sections/features';
 import { PageHero } from '../sections/heroes';
@@ -22,30 +20,18 @@ import { CheckList, SiteArrowLink, columnsFor } from '../sections/site-parts';
 import { CtaBand, FaqList, Steps } from '../sections/steps-faq-cta';
 import { CatalogFrame, SCREEN_CATALOG } from '../screens/screen-catalog';
 
-/** The page's primary and secondary actions, chosen by what a visitor can do today. */
+/**
+ * The page's actions: the site's one pair (SiteActions), except on the MCP
+ * page, whose primary is its setup guide.
+ */
 export function PlatformActions({ cta }: Readonly<{ cta: PlatformCta }>) {
-  const mcp = cta === 'mcp';
-  const trial = cta === 'trial' && selfServeSignupOpen();
+  if (cta !== 'mcp') return <SiteActions />;
   return (
     <>
-      {mcp && (
-        <ButtonLink href={docsHref('/mcp/')} size="marketing">
-          Read the MCP docs
-        </ButtonLink>
-      )}
-      {trial && (
-        <ButtonLink href={appHref('/register')} size="marketing">
-          Start free trial
-        </ButtonLink>
-      )}
-      <DemoButtonLink variant={trial || mcp ? 'soft' : 'primary'} size="marketing">
-        {cta === 'setup' ? 'Discuss setup' : 'Book a demo'}
-      </DemoButtonLink>
-      {(cta === 'demo' || cta === 'setup') && (
-        <ButtonLink href="/pricing" variant="soft" size="marketing">
-          See pricing
-        </ButtonLink>
-      )}
+      <ButtonLink href={docsHref('/mcp/')} size="marketing">
+        Read the MCP docs
+      </ButtonLink>
+      <DemoButtonLink variant="soft" size="marketing" />
     </>
   );
 }

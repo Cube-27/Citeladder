@@ -131,9 +131,7 @@ export function ScreenAppPage({
         <div className="cl-app-topbar cl-app-header">
           <p className={textRole('pageTitle')}>{title}</p>
           <span className="cl-app-actions">
-            <ScreenButton variant="primary" icon={Rocket}>
-              Launch audit
-            </ScreenButton>
+            <ScreenButton icon={Rocket}>Launch audit</ScreenButton>
           </span>
         </div>
         <div className="cl-app-content cl-app-page">{children}</div>
@@ -160,9 +158,7 @@ export function ScreenAppVisibility() {
         <div className="cl-app-topbar cl-app-header">
           <p className={textRole('pageTitle')}>AI Visibility</p>
           <span className="cl-app-actions">
-            <ScreenButton variant="primary" icon={Rocket}>
-              Launch audit
-            </ScreenButton>
+            <ScreenButton icon={Rocket}>Launch audit</ScreenButton>
             <ScreenButton icon={CircleHelp} label="About these metrics" />
             <ScreenButton icon={Download}>Export</ScreenButton>
           </span>

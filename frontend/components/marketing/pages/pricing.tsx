@@ -1,12 +1,9 @@
 import { Callout } from '@/components/ui/callout';
 import { TextLink } from '@/components/ui/text-link';
-import { appHref } from '@/lib/config/app-link';
 import { PUBLIC_TRIAL } from '@/lib/config/public-trial';
 import { countWord, countWordCapitalized, projectCount } from '@/lib/marketing-content/count-words';
-import { selfServeSignupOpen } from '@/lib/config/self-serve-signup';
-import { DEMO_CTA } from '@/lib/marketing-content/nav';
 
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { SiteActions } from '../primitives/button';
 import { PageHero } from '../sections/heroes';
 import { PageSection } from '../sections/page-section';
 import { CtaBand, FaqList } from '../sections/steps-faq-cta';
@@ -65,22 +62,7 @@ export function PricingHero({ checkoutOpen = false }: Readonly<{ checkoutOpen?: 
           ? `${trial} Paid plans are below, or contact us.`
           : `${trial} Paid checkout is not open yet: contact us for a paid plan.`
       }
-      actions={
-        <>
-          {selfServeSignupOpen() ? (
-            <ButtonLink href={appHref('/register')} size="marketing">
-              Start free trial
-            </ButtonLink>
-          ) : null}
-          <ButtonLink
-            href="/contact"
-            variant={selfServeSignupOpen() ? 'soft' : 'primary'}
-            size="marketing"
-          >
-            Contact sales
-          </ButtonLink>
-        </>
-      }
+      actions={<SiteActions />}
     />
   );
 }
@@ -138,14 +120,7 @@ export function PricingCta() {
       <CtaBand
         title="See it on your own category first"
         lead="Walk through your prompts, competitors and cited sources with us, then pick the volume you need."
-        actions={
-          <>
-            <DemoButtonLink size="marketing">{DEMO_CTA}</DemoButtonLink>
-            <ButtonLink href="/enterprise" variant="soft" size="marketing">
-              Enterprise
-            </ButtonLink>
-          </>
-        }
+        actions={<SiteActions />}
       />
     </PageSection>
   );

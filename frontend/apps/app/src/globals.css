@@ -556,6 +556,8 @@
    982px desktop included, and 32 and 26 on phones. Marketing pages only, so
    a docs article title keeps its own fallback. */
 [data-marketing-surface] {
+  --text-site-home: 3.75rem;
+  --text-site-home--line-height: 4rem;
   --text-site-title: 3rem;
   --text-site-title--line-height: 3.25rem;
   --text-site-section: 2rem;
@@ -564,6 +566,8 @@
 
 @media (max-width: 767px) {
   [data-marketing-surface] {
+    --text-site-home: 2rem;
+    --text-site-home--line-height: 2.5rem;
     --text-site-title: 2rem;
     --text-site-title--line-height: 2.5rem;
     --text-site-section: 1.625rem;
@@ -593,7 +597,8 @@
 
 /* The marketing site's second colour and depth palette (docs and the app
    keep theirs): orange stays the brand colour beside a Stripe-like
-   blue-violet; panels are wells a shade under a page that lifts in dark. */
+   blue-violet; panels are wells a shade under the page in light, and a
+   neutral shade over the jet-black page in dark. */
 :root[data-marketing-surface] {
   --color-site-page: #ffffff;
   --color-site-violet: #635bff;
@@ -623,17 +628,18 @@
   --color-site-band-ink-hover: #e6e4ff;
   --color-site-band-ink-secondary: #c9c6f0;
   --color-site-band-on-ink: #111111;
+  --color-site-band-soft: rgb(255 255 255 / 14%);
 }
 
 :root[data-marketing-surface][data-theme='dark'] {
-  --color-site-page: #0e0e15;
+  --color-site-page: #000000;
   --color-site-violet: #8b84ff;
   --color-site-violet-ink: #a9a4ff;
   --color-site-violet-soft: #23204d;
   --color-site-guide: rgb(255 255 255 / 9%);
   --color-site-rule-from: rgb(139 132 255 / 60%);
   --color-site-rule-to: rgb(255 106 51 / 55%);
-  --color-site-well: #08080d;
+  --color-site-well: #121212;
   --color-site-well-shade: rgb(0 0 0 / 55%);
   --color-site-well-edge: rgb(255 255 255 / 6%);
   --color-site-vignette: rgb(139 132 255 / 11%);

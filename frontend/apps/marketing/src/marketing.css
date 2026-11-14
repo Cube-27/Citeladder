@@ -50,13 +50,9 @@
 /* Arrow glyphs in calls to action lean toward where they go, only for
    readers who have not asked for reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
-  [data-public-surface] .marketing-cta-button svg:is(.lucide-arrow-right, .lucide-arrow-up-right) {
+  [data-public-surface] .marketing-cta-button svg.lucide-arrow-up-right {
     transition: transform var(--motion-slow) var(--ease-standard);
   }
-}
-
-[data-public-surface] .marketing-cta-button:hover svg.lucide-arrow-right {
-  transform: translateX(3px);
 }
 
 [data-public-surface] .marketing-cta-button:hover svg.lucide-arrow-up-right {

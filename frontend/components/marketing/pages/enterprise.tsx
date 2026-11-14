@@ -1,4 +1,4 @@
-import { ButtonLink, DemoButtonLink } from '../primitives/button';
+import { SiteActions } from '../primitives/button';
 import { Bento, FeatureCard, FeatureSplit } from '../sections/features';
 import { PageHero } from '../sections/heroes';
 import { PageSection } from '../sections/page-section';
@@ -115,14 +115,7 @@ export function EnterprisePage() {
         crumbs={[{ label: 'Home', href: '/' }, { label: 'Enterprise' }]}
         title="The AEO platform whose scoring you can audit"
         lead="Measure how AI describes your brand, with results your security and analytics teams can check."
-        actions={
-          <>
-            <DemoButtonLink size="marketing">Book a demo</DemoButtonLink>
-            <ButtonLink href="/pricing" variant="soft" size="marketing">
-              Compare plans
-            </ButtonLink>
-          </>
-        }
+        actions={<SiteActions />}
       >
         <CatalogFrame screen="answer" />
       </PageHero>
@@ -177,14 +170,7 @@ export function EnterprisePage() {
         <CtaBand
           title="Bring your volumes and your review questions"
           lead="Tell us your prompt volumes, engines and security requirements. We will walk your reviewers through the evidence trail and the code that scores it."
-          actions={
-            <>
-              <DemoButtonLink size="marketing">Book a demo</DemoButtonLink>
-              <ButtonLink href="/faq" variant="soft" size="marketing">
-                Read the FAQ
-              </ButtonLink>
-            </>
-          }
+          actions={<SiteActions />}
         />
       </PageSection>
     </>
