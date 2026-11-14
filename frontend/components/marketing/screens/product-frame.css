@@ -160,6 +160,18 @@
   --text-data: var(--text-caption);
 }
 
+/* A product image draws the app, so it keeps the app's body sizes where the
+   website's own body type steps down on a phone. */
+
+@media (max-width: 767px) {
+  .cl-frame-screen {
+    --text-body-lg: 1.125rem;
+    --text-body-lg--line-height: 1.875rem;
+    --text-body: 1rem;
+    --text-body--line-height: 1.625rem;
+  }
+}
+
 .cl-frame-screen .type-delta {
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);

@@ -570,6 +570,10 @@
     --text-site-section--line-height: 2.125rem;
     --text-site-feature: 1.375rem;
     --text-site-feature--line-height: 1.875rem;
+    --text-body-lg: 1rem;
+    --text-body-lg--line-height: 1.625rem;
+    --text-body: 0.875rem;
+    --text-body--line-height: 1.375rem;
   }
 }
 
