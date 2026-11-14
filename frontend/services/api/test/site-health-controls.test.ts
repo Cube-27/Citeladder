@@ -62,28 +62,20 @@ async function allow(tenant: Tenant, limit: number, fetches?: number) {
     await grant(db, account, { key: 'site_health_page_fetches_per_period', value: fetches });
   return account;
 }
-async function otherProject(seed: SiteSeed) {
-  const id = await fixtures.project(seed.workspaceId);
-  await db.updateTable('projects').set({ website_url: seed.root }).where('id', '=', id).execute();
-  const profileId = randomUUID();
-  const now = new Date();
-  await db
-    .insertInto('site_health_profiles')
-    .values({
-      id: profileId,
-      workspace_id: seed.workspaceId,
-      project_id: id,
-      root_url: seed.root,
-      root_host: 'example.test',
-      registrable_domain: 'example.test',
-      selection_version: 0,
-      created_at: now,
-      updated_at: now,
-    })
-    .execute();
-  const other = { ...seed, projectId: id, profileId };
-  return { ...other, crawlId: await fixtures.sibling(other) };
-}
+const otherProject = (seed: SiteSeed) => fixtures.otherProject(seed);
+/** Sitemap candidates for these URLs, as site setup would build them. */
+const sitemapCandidates = (urls: string[]) =>
+  urls.map((url, index) => {
+    const admission = classifyUrlAdmission(url);
+    return candidate(admission, {
+      url: admission.url!,
+      hash: admission.hash,
+      depth: 1,
+      sourceKind: 'sitemap',
+      parentPosition: 0,
+      linkOrdinal: index,
+    });
+  });
 async function create(tenant: Tenant, options: Record<string, unknown> = {}) {
   return db
     .transaction()
@@ -262,17 +254,7 @@ describe('crawl control admission', () => {
     const crawl = await create(tenant);
     const fill = (paths: string[]) =>
       db.transaction().execute(async (trx) => {
-        const items = paths.map((path) => {
-          const admission = classifyUrlAdmission(`https://example.test${path}`);
-          return candidate(admission, {
-            url: admission.url!,
-            hash: admission.hash,
-            depth: 1,
-            sourceKind: 'sitemap',
-            parentPosition: 0,
-            linkOrdinal: 0,
-          });
-        });
+        const items = sitemapCandidates(paths.map((path) => `https://example.test${path}`));
         return (await fillTrackedSet(trx, crawl, items)).map(({ item }) => item.url);
       });
     const fit = (limit: number) =>
@@ -323,17 +305,9 @@ describe('crawl control admission', () => {
     const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     await allow(tenant, 5001);
     const crawl = await create(tenant);
-    const items = Array.from({ length: 5000 }, (_, index) => {
-      const admission = classifyUrlAdmission(`https://example.test/products/p${index}`);
-      return candidate(admission, {
-        url: admission.url!,
-        hash: admission.hash,
-        depth: 1,
-        sourceKind: 'sitemap',
-        parentPosition: 0,
-        linkOrdinal: index,
-      });
-    });
+    const items = sitemapCandidates(
+      Array.from({ length: 5000 }, (_, index) => `https://example.test/products/p${index}`),
+    );
     const joined = await db.transaction().execute((trx) => fillTrackedSet(trx, crawl, items));
     expect(joined).toHaveLength(5000);
     const active = await db

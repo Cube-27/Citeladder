@@ -100,7 +100,7 @@ export async function upsertSiteUrls(trx: Database, crawl: Crawl, items: Candida
   return ids;
 }
 
-async function upsertSiteUrlChunk(trx: Database, crawl: Crawl, items: Candidate[]) {
+function upsertSiteUrlChunk(trx: Database, crawl: Crawl, items: Candidate[]) {
   const now = new Date();
   return trx
     .insertInto('site_urls')

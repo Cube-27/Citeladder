@@ -222,7 +222,9 @@ async function sitemapCoverage(db: Database, crawl: Crawl) {
     .executeTakeFirstOrThrow();
   if (!members.listed) return null;
   return {
-    discovered: Number(sitemap.discovered_count) || members.listed,
+    // A stored zero stays visible; only a missing count falls back to the entries.
+    discovered:
+      typeof sitemap.discovered_count === 'number' ? sitemap.discovered_count : members.listed,
     limitReached: sitemap.limit_reached === true,
     unreadDocuments: Number(sitemap.unread_count) || 0,
     tracked: members.tracked,

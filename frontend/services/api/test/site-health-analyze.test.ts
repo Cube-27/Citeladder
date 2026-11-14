@@ -116,19 +116,7 @@ describe('analyze acquisition', () => {
       })
       .execute();
     // Site setup records each listed URL's entry, the authority for membership.
-    await db
-      .insertInto('site_sitemap_entries')
-      .values({
-        id: crypto.randomUUID(),
-        workspace_id: seed.workspaceId,
-        project_id: seed.projectId,
-        crawl_id: seed.crawlId,
-        site_url_id: page.siteUrlId,
-        listed_url: page.url,
-        lastmod: null,
-        created_at: new Date(),
-      })
-      .execute();
+    await fixtures.sitemapEntry(seed, page);
     await analyze(
       site({
         '/sitemap-page': {

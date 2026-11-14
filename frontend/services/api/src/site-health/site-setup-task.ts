@@ -352,12 +352,7 @@ export async function runSiteSetup(
     });
     return;
   }
-  let origin = '';
-  try {
-    origin = new URL(task.requested_url).origin;
-  } catch {
-    origin = '';
-  }
+  const origin = URL.parse(task.requested_url)?.origin ?? '';
   const walks = Boolean(origin) && !crawl.sample_mode;
   let facts: SiteFacts;
   if (published) facts = published;
@@ -396,30 +391,50 @@ export async function runSiteSetup(
   }
   let walk: SitemapWalk | null = null;
   if (walks) {
-    const declared = record(facts.robots).sitemaps;
-    const seeds =
-      Array.isArray(declared) && declared.length
-        ? declared.filter((url): url is string => typeof url === 'string')
-        : crawlPolicy.sitemap_default_paths.map((path) => `${origin}${path}`);
-    walk = await walkSitemaps(ctx, crawl, seeds, settings);
-    if (
-      crawl.discovery_status === 'pending' &&
-      !(await saveSitemapInventory(ctx, claimed, walk.listed))
-    )
-      return;
-    facts = {
-      ...facts,
-      sitemap: {
-        fetched: walk.fileCount > 0,
-        file_count: walk.fileCount,
-        // "Discovered N", or "at least N" when a ceiling or an unread document cut it short.
-        discovered_count: walk.discovered,
-        discovered_complete: walk.complete,
-        limit_reached: walk.limitReached,
-        // Documents no answer settled: without a read one, "No sitemap" stays unknown.
-        unread_count: walk.unread,
-      },
-    };
+    const found = await sitemapDiscovery({ ctx, claimed, crawl, origin, facts, settings });
+    if (!found) return;
+    ({ walk, facts } = found);
   }
   await persist(ctx, claimed, facts, walk, settings);
+}
+
+/**
+ * A full crawl's sitemap discovery: walk the tree from the declared sitemaps
+ * (or the default paths), save every listed URL to the inventory, and fold the
+ * counts into the facts. Null when the lease or the crawl was lost meanwhile.
+ */
+async function sitemapDiscovery(input: {
+  ctx: SiteTaskContext;
+  claimed: SiteTask;
+  crawl: Crawl;
+  origin: string;
+  facts: SiteFacts;
+  settings: Settings;
+}) {
+  const { ctx, claimed, crawl, origin, settings } = input;
+  const declared = record(input.facts.robots).sitemaps;
+  const seeds =
+    Array.isArray(declared) && declared.length
+      ? declared.filter((url): url is string => typeof url === 'string')
+      : crawlPolicy.sitemap_default_paths.map((path) => `${origin}${path}`);
+  const walk = await walkSitemaps(ctx, crawl, seeds, settings);
+  if (
+    crawl.discovery_status === 'pending' &&
+    !(await saveSitemapInventory(ctx, claimed, walk.listed))
+  )
+    return null;
+  const facts: SiteFacts = {
+    ...input.facts,
+    sitemap: {
+      fetched: walk.fileCount > 0,
+      file_count: walk.fileCount,
+      // "Discovered N", or "at least N" when a ceiling or an unread document cut it short.
+      discovered_count: walk.discovered,
+      discovered_complete: walk.complete,
+      limit_reached: walk.limitReached,
+      // Documents no answer settled: without a read one, "No sitemap" stays unknown.
+      unread_count: walk.unread,
+    },
+  };
+  return { walk, facts };
 }
