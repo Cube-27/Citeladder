@@ -142,18 +142,13 @@
   }
 }
 
-/* Below 1280px the screen is never scaled: it is drawn at scale 1 at the
-   frame's width (720px at least) and cropped at the frame's hard edge from
-   its top-left, so no label shrinks under its size. */
+/* Below 1280px the screen is laid out at the frame's width, never under
+   800px, and a frame narrower than that (a phone) shows it whole, scaled
+   down like a screenshot, instead of cropping its right side. */
 
 @media (max-width: 1279px) {
-  .cl-frame--scale .cl-frame-screen {
-    justify-content: flex-start;
-  }
-
   .cl-frame--scale .cl-frame-screen > .cl-screen {
-    --screen-fit: 1;
-    --screen-w: max(100cqi, 720px);
+    --screen-w: clamp(800px, 100cqi, var(--screen-natural));
   }
 }
 
@@ -163,6 +158,18 @@
 .cl-frame-screen {
   --text-eyebrow: var(--text-caption);
   --text-data: var(--text-caption);
+}
+
+/* A product image draws the app, so it keeps the app's body sizes where the
+   website's own body type steps down on a phone. */
+
+@media (max-width: 767px) {
+  .cl-frame-screen {
+    --text-body-lg: 1.125rem;
+    --text-body-lg--line-height: 1.875rem;
+    --text-body: 1rem;
+    --text-body--line-height: 1.625rem;
+  }
 }
 
 .cl-frame-screen .type-delta {
@@ -225,6 +232,12 @@
 .cl-frame--scale > .cl-frame-card {
   padding-bottom: 32px;
   overflow: hidden;
+}
+
+@media (max-width: 767px) {
+  .cl-frame--scale > .cl-frame-card {
+    padding-bottom: 16px;
+  }
 }
 
 .cl-frame--scale > .cl-frame-card > .cl-frame-well {

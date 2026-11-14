@@ -370,8 +370,12 @@
     width: auto;
   }
 
-  .cl-railcard-copy > .cl-eyebrow {
+  /* The row's name is a title here, not a label chip. */
+  .cl-rail .cl-railcard-copy > .cl-eyebrow.type-eyebrow {
+    width: auto;
     margin: 0;
+    padding: 0;
+    background: none;
     color: var(--color-ink);
     font-family: var(--font-sans);
     font-size: var(--text-body-lg);
@@ -379,6 +383,10 @@
     line-height: var(--text-body-lg--line-height);
     letter-spacing: normal;
     text-transform: none;
+  }
+
+  .cl-rail .cl-railcard-copy > .cl-eyebrow.type-eyebrow::after {
+    content: none;
   }
 
   /* The row reads the same before and after the script mounts, so nothing

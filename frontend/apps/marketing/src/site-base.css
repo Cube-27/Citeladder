@@ -176,40 +176,29 @@
 
 .cl-checks li {
   display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
+  grid-template-columns: 6px minmax(0, 1fr);
   gap: 12px;
   color: var(--color-ink-secondary);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
 
-/* Each mark is a duotone tile: the orange check on pale violet. */
+/* Each mark is a small violet square, centred on the item's first line. */
 
-.cl-checks svg {
-  width: 24px;
-  height: 24px;
-  padding: 4px;
-  border-radius: var(--radius-sm);
-  background: var(--site-violet-soft);
-  color: var(--color-accent);
+.cl-checks-mark {
+  width: 6px;
+  height: 6px;
+  margin-top: calc((1lh - 6px) / 2);
+  background: var(--site-violet);
 }
 
 .cl-checks--sm {
   gap: 8px;
 }
 
-/* The small list's tile is its line's height (20px), so no off-grid nudge. */
-
 .cl-checks--sm li {
-  grid-template-columns: 20px minmax(0, 1fr);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
-}
-
-.cl-checks--sm svg {
-  width: 20px;
-  height: 20px;
-  padding: 2px;
 }
 
 /* Card grids whose column count follows the item count, so 2, 3 or 4 cards
@@ -371,10 +360,20 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   translate: -50% 0;
 }
 
-/* Eyebrows are highlighter chips: violet ink on pale violet, with an orange
-   square on the top-right corner. Product images keep their own. */
+/* On a phone the content runs to the gutters, so the guides would sit on
+   its edges: they are left out. */
 
-.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig) *) {
+@media (max-width: 767px) {
+  .cl-site-main::before {
+    content: none;
+  }
+}
+
+/* Eyebrows are highlighter chips: violet ink on pale violet, with an orange
+   square on the top-right corner. Product images keep their own, and a
+   featured post's date line is plain text, not a label. */
+
+.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *) {
   position: relative;
   width: fit-content;
   padding: 0 8px;
@@ -383,7 +382,7 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   color: var(--site-violet-ink);
 }
 
-.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig) *)::after {
+.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *)::after {
   position: absolute;
   top: -4px;
   right: -4px;

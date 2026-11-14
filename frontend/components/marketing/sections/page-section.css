@@ -110,3 +110,15 @@
     padding-right: 0;
   }
 }
+
+/* On a phone the header sits 32 above its content, not 48. */
+
+@media (max-width: 767px) {
+  .cl-page-section > .cl-container > .cl-shead + .cl-page-section-body {
+    margin-top: 32px;
+  }
+
+  .cl-page-section-grid {
+    gap: 32px;
+  }
+}
