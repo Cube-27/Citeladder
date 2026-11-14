@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ArrowRight, Check } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import { DEMO_EXTERNAL } from '@/lib/marketing-content/nav';
 import { cn } from '@/lib/utils';
@@ -56,7 +56,7 @@ export function CheckList({
     <ul className={cn('cl-checks', small && 'cl-checks--sm')}>
       {items.map((item) => (
         <li key={item}>
-          <Check aria-hidden className="size-4" />
+          <span aria-hidden className="cl-checks-mark" />
           <span>{item}</span>
         </li>
       ))}
