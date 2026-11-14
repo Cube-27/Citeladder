@@ -8,7 +8,7 @@ import { FetchError } from '../src/safe-fetch.ts';
 import { admitCandidates, candidate, lockRuntime } from '../src/site-health/frontier.ts';
 import { orderedUnique } from '../src/site-health/tracked-set.ts';
 import { reconcileDuplicateAliases } from '../src/site-health/canonical-alias.ts';
-import { valueKindCoverage } from '../src/site-health/coverage.ts';
+import { crawlCoverage, valueKindCoverage } from '../src/site-health/coverage.ts';
 import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
 import { pages } from '../src/site-health/reads/pages.ts';
@@ -146,6 +146,20 @@ const memberships = (seed: SiteSeed) =>
     .orderBy('u.normalized_url')
     .execute();
 const url = (path: string) => `https://example.test${path}`;
+const observations = (seed: SiteSeed) =>
+  db
+    .selectFrom('site_url_observations')
+    .select(['observed_url', 'source_kind', 'depth'])
+    .where('crawl_id', '=', seed.crawlId)
+    .orderBy('observed_url')
+    .execute();
+const entries = (seed: SiteSeed) =>
+  db
+    .selectFrom('site_sitemap_entries')
+    .select(['listed_url', 'lastmod'])
+    .where('crawl_id', '=', seed.crawlId)
+    .orderBy('listed_url')
+    .execute();
 
 describe('discover', () => {
   it('interrupts request-bound acquisition and leaves durable work for background retry', async () => {
@@ -682,27 +696,18 @@ describe('site setup', () => {
     expect(facts.llms_txt).toMatchObject({ fetched: true, present: true, status_code: 200 });
     expect(facts.sitemap).toEqual({
       fetched: true,
-      files: [url('/index.xml'), url('/pages.xml')],
+      file_count: 2,
       discovered_count: 1,
       discovered_complete: true,
       limit_reached: false,
       unread_count: 0,
     });
     expect(requests).toEqual(['/robots.txt', '/llms.txt', '/index.xml', '/pages.xml']);
-    const observations = await db
-      .selectFrom('site_url_observations')
-      .select(['observed_url', 'source_kind', 'sitemap_member', 'sitemap_lastmod'])
-      .where('crawl_id', '=', seed.crawlId)
-      .execute();
-    // The cart URL is refused, so only the admitted URL keeps its first declared lastmod.
-    expect(observations).toEqual([
-      {
-        observed_url: url('/a'),
-        source_kind: 'sitemap',
-        sitemap_member: true,
-        sitemap_lastmod: '2026-09-01',
-      },
+    expect(await observations(seed)).toEqual([
+      { observed_url: url('/a'), source_kind: 'sitemap', depth: 1 },
     ]);
+    // The cart URL is refused, so only the admitted URL keeps its first declared lastmod.
+    expect(await entries(seed)).toEqual([{ listed_url: url('/a'), lastmod: '2026-09-01' }]);
     // Discovery fetched no page: the tracked page is analyzed directly.
     expect(await tasks(seed, 'discover')).toEqual([]);
     expect((await tasks(seed, 'analyze')).map((row) => row.requested_url)).toEqual([url('/a')]);
@@ -714,7 +719,7 @@ describe('site setup', () => {
     });
   });
 
-  it('saves every sitemap URL beyond the tracked set, and counts a lower bound at a document limit', async () => {
+  it('saves every sitemap URL beyond the tracked set, and counts a lower bound at the ceiling', async () => {
     const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 2 } });
     const setup = await queued(seed, 'site_setup');
     const site = worker({
@@ -741,15 +746,11 @@ describe('site setup', () => {
       {
         kind: 'acquire',
         run: (ctx, claimed) => {
-          const settings = setupSettings({});
-          return runSiteSetup(ctx, claimed, {
-            ...settings,
-            sitemap: { ...settings.sitemap, maxUrls: 4 },
-          });
+          return runSiteSetup(ctx, claimed, { ...setupSettings({}), maxSiteUrls: 4 });
         },
       },
     );
-    // The document's limit kept four of five URLs: "at least 4". Two pages fill the tracked set,
+    // The site-wide ceiling kept four of five URLs: "at least 4". Two pages fill the tracked set,
     // most valuable first; the PDF counts as discovered but is a document, never a tracked page.
     expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toMatchObject({
       discovered_count: 4,
@@ -762,23 +763,18 @@ describe('site setup', () => {
       url('/about'),
       url('/products/a'),
     ]);
-    // Every listed URL is saved as this crawl's sitemap sighting, tracked or not.
-    const saved = await db
-      .selectFrom('site_url_observations')
-      .select('observed_url')
-      .where('crawl_id', '=', seed.crawlId)
-      .where('sitemap_member', '=', true)
-      .orderBy('observed_url')
-      .execute();
-    expect(saved.map((row) => row.observed_url)).toEqual([
-      url('/about'),
-      url('/blog/x'),
-      url('/products/a'),
-      url('/products/manual.pdf'),
-    ]);
+    // Every listed URL joins the inventory with its sitemap entry, tracked or not.
+    const listed = [url('/about'), url('/blog/x'), url('/products/a'), url('/products/manual.pdf')];
+    expect((await observations(seed)).map((row) => row.observed_url)).toEqual(listed);
+    expect((await entries(seed)).map((row) => row.listed_url)).toEqual(listed);
+    // Coverage counts the listed pages this crawl audits, not every saved one.
+    expect((await crawlCoverage(db, await crawlRow(seed))).evidence).toMatchObject({
+      reasons: ['sitemap_limit_reached', 'tracked_pages_below_site'],
+      sitemap: { discovered: 4, limitReached: true, unreadDocuments: 0, tracked: 2 },
+    });
   });
 
-  it('marks a URL the crawl already observed as a sitemap member without rewriting it', async () => {
+  it('records a sitemap entry for a URL the crawl already observed without rewriting it', async () => {
     const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
     // Admission tracks and observes the root before site setup runs.
     const root = await fixtures.page(seed, '/', {}, { observed: true });
@@ -794,28 +790,14 @@ describe('site setup', () => {
       }),
       setup,
     );
-    const observations = await db
-      .selectFrom('site_url_observations')
-      .select(['observed_url', 'source_kind', 'depth', 'sitemap_member', 'sitemap_lastmod'])
-      .where('crawl_id', '=', seed.crawlId)
-      .orderBy('observed_url')
-      .execute();
-    // The root keeps its first sighting and identity; only membership and lastmod join it.
-    expect(observations).toEqual([
-      {
-        observed_url: url('/'),
-        source_kind: 'link',
-        depth: 0,
-        sitemap_member: true,
-        sitemap_lastmod: '2026-10-01',
-      },
-      {
-        observed_url: url('/a'),
-        source_kind: 'sitemap',
-        depth: 1,
-        sitemap_member: true,
-        sitemap_lastmod: null,
-      },
+    // The root keeps its first sighting and identity; its sitemap entry records membership.
+    expect(await observations(seed)).toEqual([
+      { observed_url: url('/'), source_kind: 'link', depth: 0 },
+      { observed_url: url('/a'), source_kind: 'sitemap', depth: 1 },
+    ]);
+    expect(await entries(seed)).toEqual([
+      { listed_url: url('/'), lastmod: '2026-10-01' },
+      { listed_url: url('/a'), lastmod: null },
     ]);
     expect(await urlRow(seed, '/')).toMatchObject({ depth: 0, latest_source_kind: 'root' });
   });
@@ -853,34 +835,44 @@ describe('site setup', () => {
     expect((await crawlRow(failing)).discovery_status).toBe('running');
   });
 
-  it('walks every sitemap document past absent ones and skips llms.txt for a sample', async () => {
+  it('bounds the walk by its ceilings and domain, keeps an oversized document unread, and skips llms.txt for a sample', async () => {
     const seed = await crawl({ sample: true });
     const setup = await queued(seed, 'site_setup');
     const requests: string[] = [];
     await run(worker({ '/robots.txt': robots }, requests), setup);
     const facts = record((await crawlRow(seed)).site_facts);
     expect(facts.llms_txt).toMatchObject({ fetched: false, url: url('/llms.txt') });
-    expect(facts.sitemap).toEqual({ fetched: false, files: [] });
+    expect(facts.sitemap).toEqual({ fetched: false, file_count: 0 });
     expect(requests).toEqual(['/robots.txt']);
 
     const full = await crawl();
     const resumed = await queued(full, 'site_setup');
-    const site = worker({
-      '/index.xml': {
-        contentType: 'application/xml',
-        body: `<sitemapindex>${['/s1.xml', '/s2.xml', '/s3.xml']
-          .map((path) => `<sitemap><loc>${url(path)}</loc></sitemap>`)
-          .join('')}</sitemapindex>`,
+    const walkedPaths: string[] = [];
+    const site = worker(
+      {
+        '/index.xml': {
+          contentType: 'application/xml',
+          body: `<sitemapindex>${[
+            url('/s1.xml'),
+            'https://other.test/s4.xml',
+            url('/s2.xml'),
+            url('/s3.xml'),
+          ]
+            .map((loc) => `<sitemap><loc>${loc}</loc></sitemap>`)
+            .join('')}</sitemapindex>`,
+        },
+        '/s2.xml': urlset(...Array.from({ length: 20 }, (_, index) => url(`/p${index}`))),
+        '/s3.xml': urlset(url('/z')),
       },
-      '/s3.xml': urlset(url('/z')),
-    });
+      walkedPaths,
+    );
     // Published facts still marked pending resume at the walk, without re-probing robots.
     await db
       .updateTable('site_crawls')
       .set({
         site_facts: JSON.stringify({
           robots: { sitemaps: [url('/index.xml')] },
-          sitemap: { fetched: false, files: [], pending: true },
+          sitemap: { fetched: false, file_count: 0, pending: true },
         }),
       })
       .where('id', '=', full.crawlId)
@@ -898,18 +890,29 @@ describe('site setup', () => {
       await task(resumed),
       {
         kind: 'acquire',
-        run: (ctx, claimed) => runSiteSetup(ctx, claimed),
+        run: (ctx, claimed) => {
+          const settings = setupSettings({});
+          return runSiteSetup(ctx, claimed, {
+            ...settings,
+            // One document per wave, so the request order is the queue order.
+            concurrency: 1,
+            maxDocuments: 3,
+            sitemap: { ...settings.sitemap, maxDecodedBytes: 400 },
+          });
+        },
       },
     );
     const walked = record((await crawlRow(full)).site_facts);
-    // s1.xml and s2.xml answered 404; no document budget stops the walk before s3.xml.
+    // The off-domain entry is never fetched, and the document ceiling leaves s3.xml unwalked.
+    expect(walkedPaths).toEqual(['/robots.txt', '/index.xml', '/s1.xml', '/s2.xml']);
+    // s1.xml answered 404 (absent); s2.xml is over the byte cap, so it stays unread.
     expect(walked.sitemap).toEqual({
       fetched: true,
-      files: [url('/index.xml'), url('/s3.xml')],
-      discovered_count: 1,
-      discovered_complete: true,
-      limit_reached: false,
-      unread_count: 0,
+      file_count: 1,
+      discovered_count: 0,
+      discovered_complete: false,
+      limit_reached: true,
+      unread_count: 1,
     });
   });
 
@@ -960,7 +963,7 @@ describe('site setup', () => {
     const facts = record((await crawlRow(seed)).site_facts);
     expect(record(facts.robots).sitemaps).toEqual([declared]);
     expect(requests).toEqual(['/robots.txt', '/llms.txt']);
-    expect(facts.sitemap).toMatchObject({ fetched: false, files: [], discovered_count: 0 });
+    expect(facts.sitemap).toMatchObject({ fetched: false, file_count: 0, discovered_count: 0 });
   });
 });
 

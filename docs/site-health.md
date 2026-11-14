@@ -267,12 +267,14 @@ twin is chosen.
 Every full crawl's `site_setup` reads the sitemaps first. When they list
 admissible URLs, their deduplicated count is the crawl's `discovered_url_count`
 and `site_facts.sitemap.discovered_count` ("Discovered N").
-`site_facts.sitemap.discovered_complete` is false when a document's own parse
-limit (`max_sitemap_document_urls`, bytes), the index depth or an
-unreadable document cut the walk short ("at least N"); `limit_reached` and
+`site_facts.sitemap.discovered_complete` is false when a safety ceiling
+(`max_sitemap_documents`, `max_sitemap_urls`, `max_sitemap_document_urls`,
+index depth), an index entry on another domain or an unread document cut the
+walk short ("at least N"); `limit_reached` and
 `unread_count` say which (coverage reasons `sitemap_limit_reached` and
 `sitemap_documents_unread`). A document is unread when no answer settled it
-(no response, a timeout, a 408, 429 or 5xx); a 4xx, a response refused as no
+(no response, a timeout, a 408, 429 or 5xx, or a body over
+`max_sitemap_decoded_bytes`, the 50 MB standard); a 4xx, a response refused as no
 sitemap type, or a body that does not parse is the server's answer that it
 serves none. Discovery is free, has no plan cap and no manual trigger, and
 fetches no page. A site whose sitemaps list nothing falls back to an HTML walk:
@@ -304,18 +306,23 @@ stays tracked; a failed fetch releases only a sample's membership.
 sitemaps or requests llms.txt.
 
 **Sitemaps.** The walk starts from the declared sitemaps or `/sitemap.xml` and
-reads the whole tree breadth-first in `sitemap_fetch_concurrency` waves, with
-no document or site-wide URL limit
+reads the tree breadth-first in `sitemap_fetch_concurrency` waves, consumed in
+queue order so response timing cannot change what fits. It has no product
+limit, only safety ceilings, and follows index entries only on the crawl's
+registrable domain
 ([SH-B5](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)).
-Every admissible URL it lists is saved as a `site_urls` identity and a
-`site_url_observations` row with `sitemap_member` set, tracked or not, so the
-crawl's inventory shows them all. That flag is the only authority for sitemap
-membership, and the row keeps the URL's first declared `<lastmod>`, as written,
-in `sitemap_lastmod`, which a page's analysis reads. A URL the crawl had
-already observed (the root) keeps its first sighting and gains the flag. The
-listed pages then fill the tracked set in the tracked order. A large sitemap
-writes in one `site_setup` commit, chunked under PostgreSQL's bind-parameter
-limit.
+`site_facts.sitemap` keeps counts (`file_count`, `discovered_count`), never
+URL lists. Every admissible listed URL, tracked or not, is saved as a
+`site_urls` identity, an observation and a `site_sitemap_entries` row, so the
+crawl's inventory shows them all. The entry is the only authority for sitemap
+membership and keeps the URL as listed and its first declared `<lastmod>`, as
+written, which a page's analysis reads. A URL the crawl had already observed
+(the root, planner seeds) keeps its identity and first sighting. The inventory
+writes in chunked commits under the task lease, before the commit that takes
+the workspace runtime lock, fills the tracked set in the tracked order and
+queues analysis, so a large sitemap never holds that lock. The sitemap checks
+at finalize (`sitemap_url_unreachable`, `sitemap_orphan`) judge the listed
+pages the crawl tracks; an untracked one is never fetched.
 
 **Referrers and failed fetches.** Each discovered URL keeps the pages that
 linked it, first sighting first. The frontier row holds up to
@@ -686,7 +693,7 @@ failed.
 
 | State | When |
 |---|---|
-| `partial` | the frontier limit was reached, the frontier was not exhausted (`requested_page_limit_reached` when the page limit left frontier URLs), or discovery was bounded (sample, non-`auto`, cancelled); for a sitemap crawl, a document's parse limit or the index depth cut the read short, a document went unread, or it lists URLs the crawl does not audit |
+| `partial` | the frontier limit was reached, the frontier was not exhausted (`requested_page_limit_reached` when the page limit left frontier URLs), or discovery was bounded (sample, non-`auto`, cancelled); for a sitemap crawl, a safety ceiling or an off-domain index entry cut the read short, a document went unread, or it lists URLs the crawl does not audit |
 | `unknown` | discovery failed, observed nothing or did not complete |
 | `complete` | the frontier was exhausted, or the crawl observed every URL of a sitemap read in full |
 

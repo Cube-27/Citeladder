@@ -174,17 +174,21 @@ export async function writeAttempts(
   await db.insertInto('site_fetch_attempts').values(rows).execute();
 }
 
-/** The observation recording the page's membership in the crawl's sitemaps. */
+/** The page's sitemap entry in the crawl, with the observation supporting it. */
 async function sitemapObservation(db: Database, crawl: Crawl, siteUrlId: string) {
   const row = await db
-    .selectFrom('site_url_observations')
-    .select(['id', 'observed_url', 'sitemap_lastmod'])
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('project_id', '=', crawl.project_id)
-    .where('crawl_id', '=', crawl.id)
-    .where('site_url_id', '=', siteUrlId)
-    .where('sitemap_member', '=', true)
-    .limit(1)
+    .selectFrom('site_sitemap_entries as e')
+    .innerJoin('site_url_observations as o', (join) =>
+      join
+        .onRef('o.workspace_id', '=', 'e.workspace_id')
+        .onRef('o.crawl_id', '=', 'e.crawl_id')
+        .onRef('o.site_url_id', '=', 'e.site_url_id'),
+    )
+    .select(['o.id', 'e.listed_url', 'e.lastmod'])
+    .where('e.workspace_id', '=', crawl.workspace_id)
+    .where('e.project_id', '=', crawl.project_id)
+    .where('e.crawl_id', '=', crawl.id)
+    .where('e.site_url_id', '=', siteUrlId)
     .executeTakeFirst();
   return row ?? null;
 }
@@ -317,8 +321,8 @@ export async function pageAnalysisContext(
   return {
     sitemapMember: observationId !== null,
     // The URL as the sitemap lists it: a redirect makes it differ from the final URL.
-    sitemapUrl: observation?.observed_url ?? null,
-    sitemapLastmod: observation?.sitemap_lastmod ?? null,
+    sitemapUrl: observation?.listed_url ?? null,
+    sitemapLastmod: observation?.lastmod ?? null,
     siteFacts,
     auditTime: auditTime ? new Date(auditTime).toISOString() : null,
     // The crawl owns setup facts and audit time; the observation owns membership.

@@ -208,18 +208,17 @@ async function sitemapCoverage(db: Database, crawl: Crawl) {
   if (crawl.sample_mode) return null;
   const sitemap = record(record(crawl.site_facts).sitemap);
   const members = await db
-    .selectFrom('site_url_observations as o')
+    .selectFrom('site_sitemap_entries as e')
     .select([
       sql<number>`count(*)::int`.as('listed'),
       sql<number>`count(*) filter (where exists (
         select 1 from site_crawl_tasks t
-        where t.workspace_id = o.workspace_id and t.crawl_id = o.crawl_id
-          and t.site_url_id = o.site_url_id and t.task_kind = 'analyze'))::int`.as('tracked'),
+        where t.workspace_id = e.workspace_id and t.crawl_id = e.crawl_id
+          and t.site_url_id = e.site_url_id and t.task_kind = 'analyze'))::int`.as('tracked'),
     ])
-    .where('o.workspace_id', '=', crawl.workspace_id)
-    .where('o.project_id', '=', crawl.project_id)
-    .where('o.crawl_id', '=', crawl.id)
-    .where('o.sitemap_member', '=', true)
+    .where('e.workspace_id', '=', crawl.workspace_id)
+    .where('e.project_id', '=', crawl.project_id)
+    .where('e.crawl_id', '=', crawl.id)
     .executeTakeFirstOrThrow();
   if (!members.listed) return null;
   return {

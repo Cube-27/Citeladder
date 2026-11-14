@@ -325,8 +325,8 @@ function observationValues(crawl: Crawl, row: Observation, now: Date) {
 }
 
 /**
- * The writer of ordinary observations. A crawl keeps its first sighting of
- * each URL: a later one, however rich, is dropped. Returns how many were new.
+ * The only writer of observations. A crawl keeps its first sighting of each
+ * URL: a later one, however rich, is dropped. Returns how many were new.
  */
 export async function insertObservations(trx: Database, crawl: Crawl, observed: Observation[]) {
   const now = new Date();
@@ -347,36 +347,28 @@ export async function insertObservations(trx: Database, crawl: Crawl, observed: 
   return inserted;
 }
 
-/** A URL the crawl's sitemaps list, and its first declared `<lastmod>` (null when none). */
-export type SitemapSighting = { observation: Observation; lastmod: string | null };
+/** A URL the crawl's sitemaps list, as listed, and its first declared `<lastmod>` (null when none). */
+export type SitemapEntry = { siteUrlId: string; listedUrl: string; lastmod: string | null };
 
-/**
- * The writer of sitemap membership: every URL the sitemaps list is observed as
- * a member. A URL the crawl already observed (the root) keeps its first
- * sighting and only gains membership and its `<lastmod>`.
- */
-export async function insertSitemapObservations(
-  trx: Database,
-  crawl: Crawl,
-  sightings: SitemapSighting[],
-) {
+/** The only writer of sitemap membership; an entry the crawl already recorded is kept. */
+export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries: SitemapEntry[]) {
   const now = new Date();
-  for (let offset = 0; offset < sightings.length; offset += ROWS_PER_INSERT) {
+  for (let offset = 0; offset < entries.length; offset += ROWS_PER_INSERT) {
     await trx // NOSONAR: chunks bound each insert's bind parameters, in order in one transaction.
-      .insertInto('site_url_observations')
+      .insertInto('site_sitemap_entries')
       .values(
-        sightings.slice(offset, offset + ROWS_PER_INSERT).map(({ observation, lastmod }) => ({
-          ...observationValues(crawl, observation, now),
-          sitemap_member: true,
-          sitemap_lastmod: lastmod,
+        entries.slice(offset, offset + ROWS_PER_INSERT).map((entry) => ({
+          id: randomUUID(),
+          workspace_id: crawl.workspace_id,
+          project_id: crawl.project_id,
+          crawl_id: crawl.id,
+          site_url_id: entry.siteUrlId,
+          listed_url: entry.listedUrl,
+          lastmod: entry.lastmod,
+          created_at: now,
         })),
       )
-      .onConflict((conflict) =>
-        conflict.columns(['crawl_id', 'site_url_id']).doUpdateSet((eb) => ({
-          sitemap_member: true,
-          sitemap_lastmod: eb.ref('excluded.sitemap_lastmod'),
-        })),
-      )
+      .onConflict((conflict) => conflict.columns(['crawl_id', 'site_url_id']).doNothing())
       .execute();
   }
 }

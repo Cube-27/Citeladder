@@ -3332,6 +3332,17 @@ export interface SiteRuleEvaluations {
   workspace_id: string;
 }
 
+export interface SiteSitemapEntries {
+  crawl_id: string;
+  created_at: Timestamp;
+  id: string;
+  lastmod: string | null;
+  listed_url: string;
+  project_id: string;
+  site_url_id: string;
+  workspace_id: string;
+}
+
 export interface SiteUrlObservations {
   content_type: string;
   crawl_id: string;
@@ -3345,8 +3356,6 @@ export interface SiteUrlObservations {
   rewrite_reason: string;
   rewrite_version: string;
   site_url_id: string;
-  sitemap_lastmod: string | null;
-  sitemap_member: Generated<boolean>;
   source_artifact_id: string | null;
   source_kind: string;
   status_code: number | null;
@@ -3792,6 +3801,7 @@ export interface DB {
   site_page_analyses: SitePageAnalyses;
   site_page_link_metrics: SitePageLinkMetrics;
   site_rule_evaluations: SiteRuleEvaluations;
+  site_sitemap_entries: SiteSitemapEntries;
   site_url_observations: SiteUrlObservations;
   site_urls: SiteUrls;
   source_page_entity_presences: SourcePageEntityPresences;

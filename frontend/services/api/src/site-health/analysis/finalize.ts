@@ -158,7 +158,7 @@ export function sitemapPresent(input: { sampleMode: boolean; sitemap: Record<str
     return finalizeEvaluation(rule, 'not_applicable', { reason: 'sample_crawl' });
   if (typeof input.sitemap.fetched !== 'boolean' || input.sitemap.pending === true)
     return finalizeEvaluation(rule, 'unknown', { reason: 'insufficient_evidence' });
-  const files = Array.isArray(input.sitemap.files) ? input.sitemap.files.length : 0;
+  const files = Number(input.sitemap.file_count) || 0;
   const unread = Number(input.sitemap.unread_count) || 0;
   if (!input.sitemap.fetched && unread > 0)
     return finalizeEvaluation(rule, 'unknown', {

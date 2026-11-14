@@ -172,15 +172,18 @@ describe('terminal checks from persisted evidence', () => {
   it('raises "No sitemap" only for a full crawl whose setup read no sitemap document', () => {
     const outcome = (sampleMode: boolean, sitemap: Record<string, unknown>) =>
       sitemapPresent({ sampleMode, sitemap }).outcome;
-    expect(outcome(false, { fetched: false, files: [], unread_count: 0 })).toBe('missing');
+    expect(outcome(false, { fetched: false, file_count: 0, unread_count: 0 })).toBe('missing');
     // A document that timed out or answered 5xx is no evidence the site has none.
-    expect(outcome(false, { fetched: false, files: [], unread_count: 1 })).toBe('unknown');
-    expect(outcome(false, { fetched: true, files: ['https://a.test/sitemap.xml'] })).toBe(
-      'satisfied',
-    );
+    expect(outcome(false, { fetched: false, file_count: 0, unread_count: 1 })).toBe('unknown');
+    expect(
+      sitemapPresent({ sampleMode: false, sitemap: { fetched: true, file_count: 2 } }),
+    ).toMatchObject({
+      outcome: 'satisfied',
+      evidence: { sitemap_file_count: 2 },
+    });
     // A sample never reads sitemaps; setup that never finished is no evidence of absence.
-    expect(outcome(true, { fetched: false, files: [] })).toBe('not_applicable');
-    expect(outcome(false, { fetched: false, files: [], pending: true })).toBe('unknown');
+    expect(outcome(true, { fetched: false, file_count: 0 })).toBe('not_applicable');
+    expect(outcome(false, { fetched: false, file_count: 0, pending: true })).toBe('unknown');
     expect(outcome(false, {})).toBe('unknown');
   });
 

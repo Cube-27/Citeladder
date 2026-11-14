@@ -112,8 +112,20 @@ describe('analyze acquisition', () => {
         content_type: '',
         value_kind: 'page',
         value_priority: 0,
-        // Site setup marks each listed URL's observation, the authority for membership.
-        sitemap_member: true,
+        created_at: new Date(),
+      })
+      .execute();
+    // Site setup records each listed URL's entry, the authority for membership.
+    await db
+      .insertInto('site_sitemap_entries')
+      .values({
+        id: crypto.randomUUID(),
+        workspace_id: seed.workspaceId,
+        project_id: seed.projectId,
+        crawl_id: seed.crawlId,
+        site_url_id: page.siteUrlId,
+        listed_url: page.url,
+        lastmod: null,
         created_at: new Date(),
       })
       .execute();
