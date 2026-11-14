@@ -2,7 +2,7 @@
    Both hairlines span the content container, not the viewport. */
 .cl-footer {
   padding: 0 0 40px;
-  background: var(--color-paper);
+  background: var(--site-page);
   color: var(--color-ink-secondary);
 }
 
@@ -88,7 +88,7 @@
   content: '';
   position: absolute;
   inset: 0;
-  background: var(--color-paper);
+  background: var(--site-page);
 }
 
 /* The social profiles, one row of icon links under the badges. The row

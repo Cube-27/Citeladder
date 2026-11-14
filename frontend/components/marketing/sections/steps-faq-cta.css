@@ -20,8 +20,18 @@
   border-top: 1px solid var(--color-line);
 }
 
+/* A duotone number tile: violet ink on pale violet, an orange corner. */
+
 .cl-step-n {
-  color: var(--color-ink-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background:
+    linear-gradient(135deg, var(--color-accent) 0 8px, transparent 8px), var(--site-violet-soft);
+  color: var(--site-violet-ink);
   font-family: var(--font-mono);
   font-size: var(--text-label);
   font-weight: 500;
@@ -72,7 +82,7 @@
 }
 
 .cl-steps--vertical .cl-step-n {
-  padding-top: 4px;
+  margin-top: -8px;
 }
 
 .cl-steps--vertical .cl-step-text {
@@ -119,7 +129,7 @@
   }
 
   .cl-steps .cl-step-n {
-    padding-top: 4px;
+    margin-top: -8px;
   }
 }
 
@@ -152,16 +162,16 @@
 }
 
 .cl-faq-icon {
-  color: var(--color-ink-secondary);
+  color: var(--site-violet);
   transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 .cl-faq-q:hover .cl-faq-icon {
-  color: var(--color-ink);
+  color: var(--color-accent);
 }
 
 .cl-faq-item[open] .cl-faq-icon {
-  color: var(--color-ink);
+  color: var(--color-accent);
   transform: rotate(45deg);
 }
 
@@ -190,20 +200,66 @@
   text-underline-offset: 3px;
 }
 
-/* ---------- CtaBand: a stage inside the container, never full-bleed ----------
-   The copy and actions stack centred, so the band has no empty side.
-   Set off by a flat neutral fill, with no border or shadow. */
+/* ---------- CtaBand: the signature band ----------
+   The copy and actions stack centred in the container while a misty
+   slate-to-navy gradient (soft diagonal streaks, a dark corner) runs full-bleed behind them (a pseudo-element the main column's
+   overflow-x clip holds). The band re-points the ink tokens, so its text and
+   primary button invert in both themes. */
 .cl-cta {
+  --color-ink: var(--color-site-band-ink);
+  --color-ink-hover: var(--color-site-band-ink-hover);
+  --color-on-ink: var(--color-site-band-on-ink);
+  --color-ink-secondary: var(--color-site-band-ink-secondary);
+  --color-ink-muted: var(--color-site-band-ink-secondary);
+  --color-surface: transparent;
+  --color-line-control: rgb(255 255 255 / 45%);
+
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 32px;
-  padding: 64px;
+  padding: 96px 64px;
   border: 0;
-  border-radius: var(--site-radius-stage);
-  background: var(--tint-neutral);
+  background: none;
   box-shadow: none;
+  color: var(--color-ink);
   text-align: center;
+}
+
+.cl-cta::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(50% - 50vw);
+  background:
+    radial-gradient(34% 70% at 50% 50%, var(--color-site-band-scrim), transparent 80%),
+    radial-gradient(45% 120% at 6% 0%, var(--color-site-band-mist), transparent 70%),
+    linear-gradient(115deg, transparent 16%, var(--color-site-band-slate) 28%, transparent 44%),
+    linear-gradient(115deg, transparent 52%, var(--color-site-band-blue) 66%, transparent 82%),
+    radial-gradient(50% 120% at 100% 100%, var(--color-site-band-to), transparent 70%),
+    linear-gradient(
+      115deg,
+      var(--color-site-band-from) 0%,
+      var(--color-site-band-mid) 45%,
+      var(--color-site-band-mid) 65%,
+      var(--color-site-band-to) 100%
+    );
+  content: '';
+}
+
+/* Heavy film grain over the whole band, blended with `overlay` so the
+   gradient reads as a grainy print. */
+
+.cl-cta::after {
+  position: absolute;
+  z-index: -1;
+  inset: 0 calc(50% - 50vw);
+  background: var(--site-noise);
+  content: '';
+  mix-blend-mode: overlay;
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .cl-cta-copy {
@@ -260,13 +316,13 @@
 
 @media (max-width: 1023px) {
   .cl-cta {
-    padding: 40px;
+    padding: 64px 40px;
   }
 }
 
 @media (max-width: 767px) {
   .cl-cta {
-    padding: 32px 24px;
+    padding: 48px 0;
   }
 }
 

@@ -6,8 +6,9 @@
  */
 
 /* ---------- Page root, container and section rhythm ---------- */
-/* The website is flat on white paper (owner, 2026-11-14): panels are told
-   apart by a soft fill or a hairline, never a shadow, gradient or grain. */
+/* Nothing floats (owner, 2026-11-14): depth comes from recessed wells, washes,
+   gradient hairlines and a lit backdrop behind product images, never a raised
+   shadow. Orange is the brand colour; blue-violet is the second. */
 
 .cl-site {
   /* The website sets exactly eight sizes, 12 · 14 · 16 · 18 · 20 · 24 · 32 ·
@@ -44,10 +45,27 @@
   --site-radius-card: 12px;
   --site-radius-stage: 16px;
 
-  /* Panels are told apart by one flat near-paper fill. */
-  --tint-neutral: color-mix(in srgb, var(--color-ink) 4%, var(--color-paper));
+  /* The site's colours (globals.css owns their light and dark values).
+     Panels are wells: a shade under the page, darker along their top edge
+     and ringed by a hairline, so they sit in it rather than on it. */
+  --site-page: var(--color-site-page);
+  --site-violet: var(--color-site-violet);
+  --site-violet-ink: var(--color-site-violet-ink);
+  --site-violet-soft: var(--color-site-violet-soft);
+  --site-guide: var(--color-site-guide);
+  --site-rule-from: var(--color-site-rule-from);
+  --site-rule-to: var(--color-site-rule-to);
+  --tint-neutral: var(--color-site-well);
+  --site-well-shade: linear-gradient(180deg, var(--color-site-well-shade), transparent 12px);
+  --site-band-vignette: var(--color-site-vignette);
 
-  background: var(--color-paper);
+  /* Film-grain noise: grey speckle centred on mid-grey, so an `overlay`
+     blend lightens and darkens a gradient pixel by pixel without shifting its
+     hue (the backdrop and the closing band use it). */
+  --site-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='1' stitchTiles='stitch'/%3E%3CfeColorMatrix values='1.1 1.1 1.1 0 -1.15 1.1 1.1 1.1 0 -1.15 1.1 1.1 1.1 0 -1.15 0 0 0 0 1'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")
+    0 0 / 220px 220px;
+
+  background: var(--site-page);
   color: var(--color-ink);
   font-family: var(--font-sans);
 }
@@ -66,13 +84,28 @@
   padding-inline: var(--site-gutter);
 }
 
+/* Between sections, a violet-to-orange hairline across the content column,
+   halfway down the section's top space. It is 2px at a lighter alpha, so it
+   keeps its colour where a section starts on a fractional pixel. */
+
 .cl-section {
   padding-top: 96px;
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    var(--site-rule-from) 30%,
+    var(--site-rule-to) 70%,
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-position: 50% 48px;
+  background-size: min(var(--container-site), calc(100% - 2 * var(--site-gutter))) 2px;
 }
 
 @media (max-width: 1023px) {
   .cl-section {
     padding-top: 64px;
+    background-position: 50% 32px;
   }
 }
 
@@ -143,32 +176,40 @@
 
 .cl-checks li {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
+  grid-template-columns: 24px minmax(0, 1fr);
   gap: 12px;
   color: var(--color-ink-secondary);
   font-size: var(--text-body);
   line-height: var(--text-body--line-height);
 }
 
+/* Each mark is a duotone tile: the orange check on pale violet. */
+
 .cl-checks svg {
-  margin-top: 4px;
-  color: var(--color-ink);
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border-radius: var(--radius-sm);
+  background: var(--site-violet-soft);
+  color: var(--color-accent);
 }
 
 .cl-checks--sm {
   gap: 8px;
 }
 
+/* The small list's tile is its line's height (20px), so no off-grid nudge. */
+
 .cl-checks--sm li {
+  grid-template-columns: 20px minmax(0, 1fr);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
 }
 
-/* The 16px mark centres in a box its line's height, so no off-grid nudge. */
-
 .cl-checks--sm svg {
-  height: var(--text-body-sm--line-height);
-  margin-top: 0;
+  width: 20px;
+  height: 20px;
+  padding: 2px;
 }
 
 /* Card grids whose column count follows the item count, so 2, 3 or 4 cards
@@ -276,6 +317,7 @@
 
 .cl-arrowlink-icon {
   flex-shrink: 0;
+  color: var(--color-accent);
   transition: transform var(--motion-fast) var(--ease-standard);
 }
 
@@ -303,7 +345,52 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
 /* ---------- The page above the footer ---------- */
 .cl-site-main {
   padding-bottom: 96px;
-  background: var(--color-paper);
+  background: var(--site-page);
+}
+
+/* Dashed guides on the content column's two edges, behind every section;
+   wells and product images cover them. */
+
+.cl-site-main::before {
+  --guide: repeating-linear-gradient(180deg, var(--site-guide) 0 4px, transparent 4px 12px);
+
+  content: '';
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: min(var(--container-site), calc(100% - 2 * var(--site-gutter)));
+  background-image: var(--guide), var(--guide);
+  background-repeat: no-repeat;
+  background-position:
+    0 0,
+    100% 0;
+  background-size: 1px 100%;
+  pointer-events: none;
+  translate: -50% 0;
+}
+
+/* Eyebrows are highlighter chips: violet ink on pale violet, with an orange
+   square on the top-right corner. Product images keep their own. */
+
+.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig) *) {
+  position: relative;
+  width: fit-content;
+  padding: 0 8px;
+  border-radius: var(--radius-xs);
+  background: var(--site-violet-soft);
+  color: var(--site-violet-ink);
+}
+
+.cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig) *)::after {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 8px;
+  height: 8px;
+  background: var(--color-accent);
+  content: '';
 }
 
 @media (max-width: 1023px) {

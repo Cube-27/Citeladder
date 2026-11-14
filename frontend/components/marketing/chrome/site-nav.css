@@ -4,7 +4,7 @@
   z-index: var(--z-index-modal);
   top: 0;
   border-bottom: 1px solid var(--color-line);
-  background: var(--color-paper);
+  background: var(--site-page);
 }
 
 /* The bar's row is the page column: the logo and the last action sit on the

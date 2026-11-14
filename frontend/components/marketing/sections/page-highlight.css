@@ -1,10 +1,14 @@
 /* ---------- PageHighlight: the page's lead tile ----------
-   A flat neutral panel with ink text in both themes; never an inverted
-   ground. */
+   A recessed well whose edges fade to a violet tint (a vignette), with ink
+   text in both themes; never an inverted ground. */
 .cl-page-hl {
   height: 100%;
   border-radius: var(--site-radius-card);
-  background: var(--tint-neutral);
+  background:
+    var(--site-well-shade),
+    radial-gradient(120% 120% at 50% 40%, transparent 50%, var(--site-band-vignette)),
+    var(--tint-neutral);
+  box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
   container-type: inline-size;
 }
 
