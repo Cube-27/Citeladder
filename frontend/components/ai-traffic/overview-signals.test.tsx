@@ -140,7 +140,7 @@ it('shows a measured zero as 0 and a window with no completed run as not availab
   expect(cell.queryByText('0')).not.toBeInTheDocument();
 });
 
-it('offers GA4\'s own next step until a referral snapshot exists, then says it synced', () => {
+it("offers GA4's own next step until a referral snapshot exists, then says it synced", () => {
   const view = renderWithProviders(figures({}));
   expect(within(figure('AI referral sessions, latest day')).getByText('Not synced')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Connect GA4' })).toBeVisible();

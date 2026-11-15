@@ -12,7 +12,10 @@ import { launchReadiness } from '@/lib/runs/launch';
 
 import { LaunchDialog } from './launch-dialog';
 
-type LaunchRunProps = Omit<ButtonProps, 'variant' | 'asChild' | 'children' | 'onClick' | 'disabled'>;
+type LaunchRunProps = Omit<
+  ButtonProps,
+  'variant' | 'asChild' | 'children' | 'onClick' | 'disabled'
+>;
 
 /**
  * Launch run: opens the shared run configuration dialog and routes directly

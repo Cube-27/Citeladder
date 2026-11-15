@@ -157,10 +157,7 @@ function crawlFigures(
   ];
 }
 
-function referralFigure(
-  referrals: Overview['referrals'],
-  ga4: SourceStep | null,
-): FigureSegment {
+function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null): FigureSegment {
   const latest = referrals.referral_volume.at(-1);
   // Only a persisted snapshot carries a window; without one nothing has synced.
   const synced = referrals.window_end !== null;
@@ -195,7 +192,8 @@ function referralFigure(
 
 /** Before a referral snapshot exists: GA4's real step, never a guessed "not connected". */
 function referralSetup(ga4: SourceStep | null): { note: string; action: string | null } {
-  if (ga4 === null) return { note: 'Referral sessions appear once GA4 imports a report.', action: null };
+  if (ga4 === null)
+    return { note: 'Referral sessions appear once GA4 imports a report.', action: null };
   switch (ga4.kind) {
     case 'connect':
       return {
@@ -205,9 +203,15 @@ function referralSetup(ga4: SourceStep | null): { note: string; action: string |
     case 'reconnect':
       return { note: 'GA4 needs your consent again.', action: 'Reconnect GA4' };
     case 'choose':
-      return { note: 'GA4 is connected. Choose its property to import referral sessions.', action: 'Choose GA4 property' };
+      return {
+        note: 'GA4 is connected. Choose its property to import referral sessions.',
+        action: 'Choose GA4 property',
+      };
     case 'ready':
-      return { note: 'GA4 is connected. Referral sessions appear after its next import.', action: null };
+      return {
+        note: 'GA4 is connected. Referral sessions appear after its next import.',
+        action: null,
+      };
     default:
       return ga4 satisfies never;
   }

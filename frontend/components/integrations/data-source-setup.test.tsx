@@ -162,7 +162,9 @@ describe('DataSourceSetup', () => {
       await screen.findByRole('button', { name: 'Choose Search Console property' }),
     ).toBeInTheDocument();
     // A connected source is never headed "Connect …".
-    expect(screen.getByRole('heading', { name: 'Choose the Search Console property' })).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Choose the Search Console property' }),
+    ).toBeVisible();
     expect(screen.getByRole('button', { name: 'Reconnect Google' })).toBeInTheDocument();
   });
 
@@ -178,10 +180,10 @@ describe('DataSourceSetup', () => {
 
   it('claims no missing source while the reads load', async () => {
     let answer: (connections: unknown[]) => void = () => undefined;
-    const pending = new Promise<unknown[]>((resolve) => (answer = resolve));
-    mswServer.use(
-      http.get('/api/v1/integrations', async () => HttpResponse.json(await pending)),
-    );
+    const pending = new Promise<unknown[]>((resolve) => {
+      answer = resolve;
+    });
+    mswServer.use(http.get('/api/v1/integrations', async () => HttpResponse.json(await pending)));
     renderSetup();
 
     expect(screen.queryByRole('heading', { name: 'Connect Search Console' })).toBeNull();
