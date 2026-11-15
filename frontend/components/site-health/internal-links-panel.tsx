@@ -29,7 +29,7 @@ import {
   type LinksRead,
 } from './internal-links-panel-bands';
 import { Notice } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
+import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
 /**
  * The Internal links tab's content. Its read, header actions and control band
@@ -88,7 +88,7 @@ function Notices({ read }: Readonly<{ read: LinksRead }>) {
         <StateBlock
           kind="error"
           error={read.query.error}
-          fallback="The request failed or timed out."
+          fallback={READ_FAILED}
           title="Couldn't load internal links"
           onRetry={() => void read.query.refetch()}
         />

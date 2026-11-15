@@ -630,7 +630,14 @@ describe('AI Traffic state and navigation', () => {
       ),
       http.get(root + '/ai-traffic/pages/' + page.url_hash, () =>
         HttpResponse.json({
-          page,
+          // A flagged count keeps its state beside the value; key events carry
+          // the qualifiers of the GA4 rows they share with referral sessions.
+          page: {
+            ...page,
+            crawl: { state: 'flagged', value: 3, coverage: 'partial', reason: null },
+            referrals: { ...page.referrals, reason: 'projection_pending' },
+            key_events: 2,
+          },
           window_start: '2026-10-01',
           window_end: '2026-10-04',
           crawls: [],
@@ -716,9 +723,13 @@ describe('AI Traffic state and navigation', () => {
     // One row per metric: its value or one absence word, then its source; each state once.
     const record = (name: string) =>
       within(panel).getByText(name, { selector: 'dt' }).nextElementSibling?.textContent;
-    expect(record('Crawler requests')).toBe('0Crawlers');
+    expect(record('Crawler requests')).toBe(
+      '3Flagged by a data-quality check · Partial coverageCrawlers',
+    );
     expect(record('AI referral sessions')).toBe('UnavailableReferrals');
-    expect(record('Key events (GA4)')).toBe('Unavailable');
+    expect(record('Key events (GA4)')).toBe(
+      '2Flagged by a data-quality check · Partial coverage · A newer GA4 import is still being processed',
+    );
     expect(record('Tracked citations')).toBe('Not connectedVisibility');
     expect(record('Open Website findings')).toBe('UnavailableWebsite');
     expect(record('First and last observations')).toBe('None');

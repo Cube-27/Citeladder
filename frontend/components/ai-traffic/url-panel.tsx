@@ -120,14 +120,17 @@ type MetricRow = Readonly<{
   link?: Readonly<{ label: string; to: string }>;
 }>;
 
-/** A leg's row value: its count with its coverage note, or its one absence word. */
+/** A leg's row value: its count with its state and coverage note, or its one absence word. */
 function legRow(leg: Leg): Pick<MetricRow, 'value' | 'note'> {
   if (leg.value === null) return { value: <LegAbsence leg={leg} /> };
-  const notes = [
-    leg.coverage && leg.coverage !== 'complete' ? coverageLabel(leg.coverage) : null,
-    leg.reason ? reasonLabel(leg.reason) : null,
-  ].filter(Boolean);
-  return { value: formatCount(leg.value), note: notes.length ? notes.join(' · ') : null };
+  const notes = new Set(
+    [
+      leg.state === 'value' || leg.state === 'zero' ? null : legStateLabel(leg.state),
+      leg.coverage && leg.coverage !== 'complete' ? coverageLabel(leg.coverage) : null,
+      leg.reason ? reasonLabel(leg.reason) : null,
+    ].filter((note) => note !== null),
+  );
+  return { value: formatCount(leg.value), note: notes.size ? [...notes].join(' · ') : null };
 }
 
 function UrlEvidence({
@@ -164,13 +167,8 @@ function UrlEvidence({
     },
     {
       name: 'Key events (GA4)',
-      // Key events come from GA4 with the referral sessions, so they share its connection.
-      value:
-        page.key_events === null ? (
-          <LegAbsence leg={page.referrals} />
-        ) : (
-          formatCount(page.key_events)
-        ),
+      // Key events come from the referral sessions' GA4 rows, so they share its connection and quality.
+      ...legRow({ ...page.referrals, value: page.key_events }),
     },
     {
       name: 'Tracked citations',

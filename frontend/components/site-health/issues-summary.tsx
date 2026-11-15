@@ -12,6 +12,7 @@ import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/co
 import { formatCount } from '@/lib/format';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
 import { Notice } from '@/components/ui/notice';
+import { READ_FAILED } from '@/components/ui/state-block';
 import {
   Section,
   SectionContent,
@@ -42,7 +43,7 @@ export function IssuesSummary({
       <Notice
         kind="read"
         error={query.error}
-        fallback="The request failed or timed out."
+        fallback={READ_FAILED}
         title="Couldn't load the issue summary"
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
