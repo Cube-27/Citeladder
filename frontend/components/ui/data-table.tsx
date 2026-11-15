@@ -321,9 +321,12 @@ function DataTableHeader({
 }>) {
   if (!title && !toolbar && !description) return null;
   return (
-    <header data-data-table-header="" className="grid min-w-0 gap-1">
+    <header className="grid min-w-0 gap-1">
       {title || toolbar ? (
-        <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center gap-2">
+        <div
+          data-data-table-header=""
+          className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center gap-2"
+        >
           {title ? (
             <h3 id={headingId} className={textRole('heading', 'min-w-0 truncate')}>
               {title}
