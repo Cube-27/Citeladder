@@ -589,6 +589,17 @@ Source: owner, 2 November 2026, approving the read-projection work that
 included unifying the baseline rule: "ok proceed and include the two items".
 [Visibility](visibility-prompt.md) owns the shipped behavior.
 
+## Failed reads surface within seconds
+
+A read that fails with a server error or timeout retries once after a short
+pause, then shows its inline error with Retry, about 2 to 3 seconds after it
+started instead of after a run of silent retries. A bare network failure gets
+one more quick try. The policy lives in `QUERY_*` in
+`frontend/lib/config/operational.ts`.
+
+Source: owner, 15 November 2026, asked whether a server error should surface
+sooner during the design review: "Surface sooner".
+
 ## Plain module names and redirects on the public website
 
 The website names each module by its job, not as an "Intelligence":

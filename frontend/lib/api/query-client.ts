@@ -1,9 +1,10 @@
 /**
  * TanStack Query client factory + retry policy (F2).
  *
- * `shouldRetryQuery`: retry transient failures only — network errors and
- * 408/429/5xx — capped at 2 attempts. 4xx (except 408/429) and aborts never
- * retry. When the backend (or the A3 timeout surface) classifies the failure
+ * `shouldRetryQuery`: retry transient failures only, briefly — 408/429/5xx
+ * and timeouts once, bare network failures twice (`QUERY_*_RETRIES`), so a
+ * failed read reaches its inline error quickly. 4xx (except 408/429) and aborts
+ * never retry. When the backend (or the A3 timeout surface) classifies the failure
  * with an explicit `retryable` flag, that classification wins — an A3
  * `request_timeout` ApiError carries `retryable: true` and slots in here.
  * Read-mostly projections stay fresh for 60s and remain recoverable from the
@@ -12,6 +13,12 @@
  * auto-retry.
  */
 import { QueryClient, type FetchQueryOptions, type QueryKey } from '@tanstack/react-query';
+
+import {
+  QUERY_NETWORK_ERROR_RETRIES,
+  QUERY_RETRY_DELAY_MS,
+  QUERY_SERVER_ERROR_RETRIES,
+} from '@/lib/config/operational';
 
 import { ApiError, httpErrorStatus, isAbortError } from './errors';
 
@@ -58,13 +65,16 @@ export function readFromIntent<TData, TKey extends QueryKey>(
 }
 
 export function shouldRetryQuery(failureCount: number, error: unknown) {
-  if (failureCount >= 2 || isAbortError(error)) return false;
+  if (isAbortError(error)) return false;
+  const status = httpErrorStatus(error);
+  if (status === undefined && !(error instanceof ApiError)) {
+    return failureCount < QUERY_NETWORK_ERROR_RETRIES;
+  }
+  if (failureCount >= QUERY_SERVER_ERROR_RETRIES) return false;
   if (error instanceof ApiError && typeof error.retryable === 'boolean') {
     return error.retryable;
   }
-  const status = httpErrorStatus(error);
-  if (status === undefined) return true; // network / unknown → retry
-  return status === 408 || status === 429 || status >= 500;
+  return status === 408 || status === 429 || (status !== undefined && status >= 500);
 }
 
 /**
@@ -116,6 +126,7 @@ export function createAppQueryClient() {
     defaultOptions: {
       queries: {
         retry: shouldRetryQuery,
+        retryDelay: QUERY_RETRY_DELAY_MS,
         staleTime: 60_000,
         gcTime: 30 * 60_000,
         refetchOnWindowFocus: false,
