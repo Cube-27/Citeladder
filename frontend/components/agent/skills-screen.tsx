@@ -1,17 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
+import { ChevronRight } from 'lucide-react';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { CollectionPage } from '@/components/templates/collection-page';
 import { ProjectLink } from '@/components/ui/project-link';
 import { AppGrid } from '@/components/ui/app-grid';
+import { Icon } from '@/components/ui/icon';
 import { Tag } from '@/components/ui/tag';
-import { Button } from '@/components/ui/button';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
+import { pluralCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { StateBlock } from '@/components/ui/state-block';
 import { slipClasses } from '@/components/ui/slip';
@@ -56,7 +58,11 @@ export function SkillsScreen() {
  * no badge rather than a placeholder.
  */
 function OutputBadge({ label }: Readonly<{ label: string | undefined }>) {
-  return label ? <Tag>{`Output: ${label}`}</Tag> : <span />;
+  return label ? (
+    <p className="flex">
+      <Tag>{`Output: ${label}`}</Tag>
+    </p>
+  ) : null;
 }
 
 function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
@@ -69,36 +75,45 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
   return (
     <>
       {[...groups].map(([group, rows]) => (
-        <Section key={group} aria-label={group}>
+        <Section key={group} variant="group" aria-label={group}>
           <SectionHeader>
             <SectionTitle level={2}>{group}</SectionTitle>
-            <SectionDescription>
-              {rows.length} {rows.length === 1 ? 'skill' : 'skills'}
-            </SectionDescription>
+            <SectionDescription>{pluralCount(rows.length, 'skill')}</SectionDescription>
           </SectionHeader>
-          <AppGrid as="ul" layout="halves">
+          {/* Auto-fit slips at least 280 wide: two across at 982. */}
+          <AppGrid
+            as="ul"
+            layout="pair"
+            className="column-split:grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))] grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]"
+          >
             {rows.map((skill) => (
-              <Stack as="li" key={skill.id} className={slipClasses()}>
-                <Stack gap="tight">
-                  <h3 className={textRole('subheading')}>{skill.label}</h3>
-                  <p className={textRole('body', 'text-ink-2')}>{skill.description}</p>
-                </Stack>
-                <Inline className="flex-wrap justify-between self-end">
-                  <OutputBadge label={outputKind(skill.output_kind)?.label} />
-                  <Button asChild variant="secondary">
-                    <ProjectLink
-                      href={agentHandoffHref({ skillId: skill.id })}
-                      aria-label={`Start a chat with ${skill.label}`}
-                    >
-                      Start a chat
-                    </ProjectLink>
-                  </Button>
-                </Inline>
-              </Stack>
+              <li key={skill.id} className="flex">
+                <SkillSlip skill={skill} output={outputKind(skill.output_kind)?.label} />
+              </li>
             ))}
           </AppGrid>
         </Section>
       ))}
     </>
+  );
+}
+
+/** A skill as a slip that starts a chat with it: the underlined title and a chevron say so at rest. */
+function SkillSlip({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
+  return (
+    <ProjectLink
+      href={agentHandoffHref({ skillId: skill.id })}
+      aria-label={`Start a chat with ${skill.label}`}
+      className={slipClasses('focus-ring flex w-full flex-col gap-3', { opens: true })}
+    >
+      <Inline className="justify-between">
+        <h3 className={textRole('subheading', 'underline decoration-1 underline-offset-3')}>
+          {skill.label}
+        </h3>
+        <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
+      </Inline>
+      <p className={textRole('body', 'text-ink-2 flex-1')}>{skill.description}</p>
+      <OutputBadge label={output} />
+    </ProjectLink>
   );
 }

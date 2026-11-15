@@ -1,10 +1,13 @@
 import { useMutation } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { JUMP_LINK } from '@/components/agent/jump-link';
 
 import { GapEvidence, type GapMember } from '@/components/agent/content-gap-evidence';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
+import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -183,6 +186,7 @@ function Actions({
         aria-describedby={textId}
         onClick={() => onChange(suggestion, 'dismiss')}
       >
+        <Icon icon={X} />
         Dismiss
       </Button>
     </Inline>
@@ -231,7 +235,7 @@ function SuggestionCard({
         {suggestion.choose_one ? <StatusMark tone="neutral">Choose one</StatusMark> : null}
       </Inline>
       {inPage ? (
-        <Pressable className="hover:text-accent-text" onClick={() => onShow(suggestion.id)}>
+        <Pressable className={`${JUMP_LINK} text-start`} onClick={() => onShow(suggestion.id)}>
           <span className="sr-only">Show in the page: </span>
           {text}
         </Pressable>
@@ -370,6 +374,7 @@ function BulkActions({
         Apply all
       </Button>
       <Button variant="quiet" disabled={disabled} onClick={changes.dismissAll}>
+        <Icon icon={X} />
         Dismiss all
       </Button>
     </Inline>

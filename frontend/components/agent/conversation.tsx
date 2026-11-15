@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { ActionChip } from '@/components/agent/action-chip';
 import { ActivityChain } from '@/components/agent/activity-chain';
 import { EvidenceChips } from '@/components/agent/evidence-chips';
+import { JUMP_LINK } from '@/components/agent/jump-link';
 import { LiveActivity } from '@/components/agent/live-activity';
 import { MessageTime } from '@/components/agent/message-time';
 import { ProposalCards } from '@/components/agent/proposal-cards';
@@ -13,7 +14,6 @@ import { TurnFailure } from '@/components/agent/turn-failure';
 import { turnParts } from '@/components/agent/turn-parts';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { WebSources } from '@/components/agent/web-sources';
-import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { AgentThread, AgentTurn, PastedTextChip, UserTurn } from '@/components/ui/chat-dock';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -21,6 +21,7 @@ import { Disclosure } from '@/components/ui/disclosure';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import { documentAnchor, latestOutput, outputPlacements } from '@/lib/agent/documents';
@@ -199,7 +200,7 @@ function DocumentList({ outputs }: Readonly<{ outputs: readonly AgentOutput[] }>
         {outputs.map((output) => (
           <li key={output.id}>
             <Pressable
-              className={textRole('caption', 'hover:text-accent-text w-auto')}
+              className={textRole('caption', `${JUMP_LINK} w-auto`)}
               onClick={() =>
                 document
                   .getElementById(documentAnchor(output.id))
@@ -450,18 +451,17 @@ function FollowUps({
         <Inline as="nav" aria-label="Next steps" className="flex-wrap">
           <span className={textRole('caption')}>Next, in a new chat:</span>
           {next.map(({ workflow, prompt }) => (
-            <Button key={workflow.id} asChild variant="quiet">
-              <ProjectLink
-                href={agentHandoffHref({
-                  actionId,
-                  prompt,
-                  workflowId: workflow.id,
-                  outputRevision: { outputId, revisionId },
-                })}
-              >
-                {workflow.label}
-              </ProjectLink>
-            </Button>
+            <TextLink
+              key={workflow.id}
+              href={agentHandoffHref({
+                actionId,
+                prompt,
+                workflowId: workflow.id,
+                outputRevision: { outputId, revisionId },
+              })}
+            >
+              {workflow.label}
+            </TextLink>
           ))}
         </Inline>
       ) : null}

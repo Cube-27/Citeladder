@@ -10,6 +10,8 @@ import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { ComposerDock } from '@/components/ui/chat-dock';
+import { Icon } from '@/components/ui/icon';
+import { ICONS } from '@/lib/icons';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import type { AgentChatDetail } from '@/lib/api/agent';
@@ -149,8 +151,11 @@ function ChatView({
 function ChatHeaderActions({ detail }: Readonly<{ detail: AgentChatDetail }>) {
   if (!detail.chat.action_id) return null;
   return (
-    <Button asChild variant="quiet">
-      <ProjectLink href={`/agent/actions/${detail.chat.action_id}`}>Open Action</ProjectLink>
+    <Button asChild variant="secondary">
+      <ProjectLink href={`/agent/actions/${detail.chat.action_id}`}>
+        <Icon icon={ICONS.opportunities} />
+        Open Action
+      </ProjectLink>
     </Button>
   );
 }

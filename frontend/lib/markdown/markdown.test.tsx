@@ -85,7 +85,18 @@ describe('ContentMarkdown', () => {
     expect(screen.getByRole('heading', { name: 'Title' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
     expect(screen.getByText('one')).toBeInTheDocument();
-    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Table: A, B' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'A' })).toHaveAttribute('scope', 'col');
+  });
+
+  it('names a wide reply table by its first three heads', () => {
+    render(
+      <ContentMarkdown
+        markdown={'| Page | Score | Clicks | Views |\n| - | - | - | - |\n| /a | 1 | 2 | 3 |'}
+      />,
+    );
+
+    expect(screen.getByRole('table', { name: 'Table: Page, Score, Clicks, …' })).toBeVisible();
   });
 
   it('demotes every generated heading below the route-owned h1', () => {

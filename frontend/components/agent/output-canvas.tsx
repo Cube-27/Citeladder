@@ -1,7 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
-import { Pencil, Sparkles } from 'lucide-react';
+import { Pencil, Sparkles, X } from 'lucide-react';
 import { useState, type FormEvent, type ReactNode } from 'react';
 
+import { JUMP_LINK } from '@/components/agent/jump-link';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -65,7 +66,7 @@ export function OutputCanvas({
               section.heading === null ? null : (
                 <li key={section.start}>
                   <Pressable
-                    className={textRole('caption', 'hover:text-accent-text w-auto')}
+                    className={textRole('caption', `${JUMP_LINK} w-auto`)}
                     onClick={() =>
                       document
                         .getElementById(sectionId(revision.id, index))
@@ -215,6 +216,7 @@ function ReviseForm({
         Ask agent
       </Button>
       <Button type="button" variant="quiet" onClick={onCancel}>
+        <Icon icon={X} />
         Cancel
       </Button>
     </Inline>
@@ -280,6 +282,7 @@ function SectionEditor({
       ) : null}
       <Inline className="justify-end">
         <Button type="button" variant="quiet" onClick={done} disabled={save.isPending}>
+          <Icon icon={X} />
           Cancel
         </Button>
         <Button

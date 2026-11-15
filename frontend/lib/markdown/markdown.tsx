@@ -90,6 +90,26 @@ function MarkdownSpan({
   return <span {...props}>{children}</span>;
 }
 
+type HastNode = Readonly<{ type: string; tagName?: string; value?: string; children?: HastNode[] }>;
+
+function hastText(node: HastNode): string {
+  if (node.type === 'text') return node.value ?? '';
+  return (node.children ?? []).map(hastText).join('');
+}
+
+function hastHeads(node: HastNode): string[] {
+  if (node.tagName === 'th') return [hastText(node).trim()];
+  return (node.children ?? []).flatMap(hastHeads);
+}
+
+/** A reply table's name: "Table: " and its first three column heads. */
+function tableName(node: HastNode | undefined): string {
+  const heads = node ? hastHeads(node).filter(Boolean) : [];
+  if (heads.length === 0) return 'Table';
+  const shown = heads.slice(0, 3).join(', ');
+  return `Table: ${shown}${heads.length > 3 ? ', …' : ''}`;
+}
+
 /** Restricted component map (no props closed over, so it is stable across renders). */
 const MARKDOWN_COMPONENTS: Components = {
   // Generated headings begin below the route-owned page title. The raw
@@ -102,16 +122,22 @@ const MARKDOWN_COMPONENTS: Components = {
   h6: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
   // Untrusted output: never render images (remote-fetch beacon risk).
   img: () => null,
-  // A wide table scrolls inside its frame, with the fade and stepper that say so.
-  table: ({ node: _node, ...props }) => (
-    <ScrollFrame label="Table" className="prose-table-frame">
-      {(ref, region) => (
-        <div ref={ref} {...region} className="overflow-x-auto">
-          <table {...props} />
-        </div>
-      )}
-    </ScrollFrame>
-  ),
+  // A wide table scrolls inside its frame, with the fade and stepper that say
+  // so; the frame and the table are named by the table's column heads.
+  table: ({ node, ...props }) => {
+    const name = tableName(node);
+    return (
+      <ScrollFrame label={name} className="prose-table-frame">
+        {(ref, region) => (
+          <div ref={ref} {...region} className="overflow-x-auto">
+            <table {...props} aria-label={name} />
+          </div>
+        )}
+      </ScrollFrame>
+    );
+  },
+  // GFM makes a head cell only in the head row, so each one heads its column.
+  th: ({ node: _node, ...props }) => <th {...props} scope="col" />,
   // Forward the remaining DOM props (id, aria-describedby,
   // data-footnote-*) so GFM footnote back-links keep working; `node`
   // is react-markdown's AST handle, not a DOM attribute.

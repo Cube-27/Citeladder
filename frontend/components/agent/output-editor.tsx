@@ -1,7 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
+import { X } from 'lucide-react';
 import type { FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Textarea } from '@/components/ui/textarea';
@@ -74,6 +76,7 @@ export function OutputEditor({
       ) : null}
       <Inline className="justify-end">
         <Button type="button" variant="quiet" onClick={onDone} disabled={save.isPending}>
+          <Icon icon={X} />
           Cancel
         </Button>
         <Button type="submit" variant="primary" disabled={unchanged || blank || save.isPending}>

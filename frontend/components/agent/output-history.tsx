@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { Eye, EyeOff, GitCompare } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { LineDiff } from '@/components/ui/line-diff';
@@ -114,6 +116,7 @@ function RevisionRow({
         {latest ? <span className={textRole('caption')}>Current</span> : null}
         <span className="flex-1" />
         <Button variant="quiet" aria-expanded={open === 'view'} onClick={() => onToggle('view')}>
+          <Icon icon={open === 'view' ? EyeOff : Eye} />
           {open === 'view' ? 'Hide' : 'View'}
         </Button>
         {latest || !current ? null : (
@@ -122,6 +125,7 @@ function RevisionRow({
             aria-expanded={open === 'compare'}
             onClick={() => onToggle('compare')}
           >
+            <Icon icon={GitCompare} />
             Compare with current
           </Button>
         )}

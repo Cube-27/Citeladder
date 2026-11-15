@@ -107,7 +107,7 @@ function NewChat({
       {/* The greeting, composer and briefing start at the top of the thread
           column, where a chat's first turn will be. */}
       <Stack gap="section">
-        <h2 className={textRole('display')}>What can I help with?</h2>
+        <h2 className={textRole('headingLg')}>What can I help with?</h2>
         {unavailable ? (
           <Notice tone="negative">
             This Action is unavailable. The chat will start without it.

@@ -1,3 +1,4 @@
+import { ClampText } from '@/components/ui/clamp-text';
 import { Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -19,10 +20,12 @@ export function WebSources({
       <Stack as="ul" gap="tight">
         {sources.map((source) => (
           <li key={source.url} className="min-w-0">
-            <TextLink variant="external" href={source.url} text="caption" className="truncate">
-              {source.title.trim() || hostOf(source.url)}
-            </TextLink>
-            <span className={textRole('caption')}> · {hostOf(source.url)}</span>
+            <ClampText className={textRole('caption')}>
+              <TextLink variant="external" href={source.url} text="caption">
+                {source.title.trim() || hostOf(source.url)}
+              </TextLink>{' '}
+              · {hostOf(source.url)}
+            </ClampText>
           </li>
         ))}
       </Stack>

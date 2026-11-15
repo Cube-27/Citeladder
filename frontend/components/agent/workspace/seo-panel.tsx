@@ -1,3 +1,4 @@
+import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -14,7 +15,7 @@ type PageCheck = AgentPageFetchDone['checks'][number];
 
 /** A value as it reads on the page, or that the page has none. */
 function FieldValue({ value }: Readonly<{ value: string }>) {
-  if (!value.trim()) return <span className={textRole('body', 'text-ink-2')}>None</span>;
+  if (!value.trim()) return <Absence state="none" />;
   return <span className={textRole('body', '[overflow-wrap:anywhere]')}>{value}</span>;
 }
 
