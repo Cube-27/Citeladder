@@ -330,7 +330,7 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
 /**
  * Each engine's change since the comparable run. With nothing comparable yet
  * the card holds one compact note rather than a tall empty block beside its
- * sibling. The note's action opens the Launch audit dialog, where the person
+ * sibling. The note's action opens the Launch run dialog, where the person
  * confirms the run and its credits (owner, 2026-11-06); nothing starts from
  * here. A comparable run that produced no movement rows is a different
  * answer: there is nothing to launch, only no change to show.

@@ -2,6 +2,7 @@ import { Rocket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
+import { ACTIONS } from '@/components/ui/actions';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { useProjectHref } from '@/lib/navigation/project-destination';
@@ -18,7 +19,7 @@ export function LaunchAuditButton(props: Readonly<ButtonProps & { showIcon?: boo
 }
 
 function LaunchAudit({
-  children = 'Launch audit',
+  children = ACTIONS.launchRun.label,
   showIcon = true,
   ...buttonProps
 }: Readonly<ButtonProps & { showIcon?: boolean }>) {

@@ -10,18 +10,16 @@ import { cn } from '@/lib/utils';
 /**
  * TextLink — the text link, with the 2px focus ring.
  *
- * Where it stands decides its underline. A link set at a type
- * role stands on its own in a list, table, row or card (an item title, a
- * URL, "Ask agent about this page"): its place says it is a link, so it is
- * underlined only on hover and keyboard focus. A link inside a sentence
- * (`text="inherit"`) is underlined at rest, so it never depends on colour
- * alone.
+ * A link is always underlined at rest, wherever it stands (a sentence, a
+ * table cell, a row title), so it never depends on colour or position alone;
+ * text that is not a link is never underlined (an unsafe external URL renders
+ * as plain text without one).
  *
- *   tone `ink` (default, the app): `ink`; in a sentence a `line-control`
- *     underline that turns `ink` on hover.
+ *   tone `ink` (default, the app): `ink` with a `control-line` underline
+ *     that turns `ink` on hover.
  *   tone `prose` (docs, blog and legal copy): `accent-ink` with a solid
  *     underline that thickens on hover.
- *   tone `muted` (footers, metadata): `ink-secondary`, underlined on hover.
+ *   tone `muted` (footers, metadata): `ink-2` with the same underline.
  *
  *   variant `internal` — an app route, scoped to the active project (or
  *     `projectId`) through `ProjectLink`.
@@ -45,20 +43,14 @@ const TONE: Record<TextLinkTone, string> = {
 
 const UNDERLINE = {
   prose: 'decoration-current hover:decoration-2',
-  sentence: 'decoration-control-line hover:decoration-current',
-  standing: 'decoration-transparent hover:decoration-current focus-visible:decoration-current',
+  ink: 'decoration-control-line hover:decoration-current focus-visible:decoration-current',
 } as const;
-
-function underline(tone: TextLinkTone, text: TextLinkText) {
-  if (tone === 'prose') return UNDERLINE.prose;
-  return tone === 'ink' && text === 'inherit' ? UNDERLINE.sentence : UNDERLINE.standing;
-}
 
 function textLinkClasses({ tone, text }: Readonly<{ tone: TextLinkTone; text: TextLinkText }>) {
   const recipe = cn(
     'focus-ring rounded-mark underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
     TONE[tone],
-    underline(tone, text),
+    tone === 'prose' ? UNDERLINE.prose : UNDERLINE.ink,
   );
   return text === 'inherit' ? recipe : textRole(text, recipe);
 }
@@ -134,7 +126,7 @@ export function TextLink({
   if (variant === 'external' && !asChild && !parseAbsoluteHttpUrl(href)) {
     return (
       <span
-        className={text === 'inherit' ? className : textRole(text, className)}
+        className={cn(text === 'inherit' ? className : textRole(text, className), 'no-underline')}
         title={props.title}
       >
         {children}
@@ -166,9 +158,9 @@ export function TextLink({
 
 /**
  * ArrowLink — a standalone "go there" link: the label and an `arrow-right` in
- * `ink`, 16/24 medium, 8px apart. On hover the label underlines (1px, 4px
- * offset) and the arrow moves 2px right in 120ms; under reduced motion only
- * the underline appears. Without `href` it renders a span for the last line
+ * `ink`, 16/24 medium, 8px apart. The label is underlined at rest (1px, 4px
+ * offset, `control-line`), turning `ink` on hover as the arrow moves 2px
+ * right in 120ms; under reduced motion the arrow stays still. Without `href` it renders a span for the last line
  * of a card that is itself the link (the card's hover drives it). An app
  * route is scoped to the active project through `ProjectLink`.
  */
@@ -179,7 +171,7 @@ export function ArrowLink({
 }: Readonly<{ href?: string; projectId?: string | null; children: ReactNode }>) {
   const content = (
     <>
-      <span className="underline decoration-transparent decoration-1 underline-offset-4 transition-[text-decoration-color] group-hover:decoration-current">
+      <span className="decoration-control-line underline decoration-1 underline-offset-4 transition-[text-decoration-color] group-hover:decoration-current">
         {children}
       </span>
       <ArrowRight

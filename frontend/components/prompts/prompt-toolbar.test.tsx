@@ -98,7 +98,7 @@ describe('promptFilterControls filters', () => {
 });
 
 describe('PromptActions', () => {
-  it('offers Launch audit only once the project has an active prompt', () => {
+  it('offers Launch run only once the project has an active prompt', () => {
     const projectId = '44444444-4444-4444-8444-444444444444';
     const selection = {
       activeProject: { id: projectId } as never,
@@ -115,9 +115,9 @@ describe('PromptActions', () => {
     );
 
     const { rerender } = renderWithProviders(actions(false), { projectSelection: selection });
-    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Launch run' })).toBeDisabled();
 
     rerender(actions(true));
-    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Launch run' })).toBeEnabled();
   });
 });

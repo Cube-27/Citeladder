@@ -35,7 +35,7 @@ export function VisibilityEmptyState({
             <ProjectLink href="/runs">View runs</ProjectLink>
           </Button>
         ) : (
-          // The masthead holds the page's one primary Launch audit.
+          // The masthead holds the page's one primary Launch run.
           <LaunchAuditButton variant="secondary">Launch your first audit</LaunchAuditButton>
         )
       }

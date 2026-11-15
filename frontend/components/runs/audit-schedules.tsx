@@ -220,7 +220,7 @@ function ScheduleForm({
           </Stack>
           <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
           <div className="flex items-end">
-            {/* The masthead's Launch audit is the page's one primary. */}
+            {/* The masthead's Launch run is the page's one primary. */}
             <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
               {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
             </Button>

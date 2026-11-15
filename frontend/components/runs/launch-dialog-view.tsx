@@ -1,6 +1,7 @@
 import { Plus, X } from 'lucide-react';
 
 import { ProviderList } from '@/components/providers/provider-list';
+import { ACTIONS } from '@/components/ui/actions';
 import { Button, IconButton } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -282,7 +283,7 @@ export function LaunchDialogView({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
-      title="Launch an audit"
+      title="Launch a run"
       width="wide"
       footer={
         <>
@@ -290,7 +291,7 @@ export function LaunchDialogView({
             Cancel
           </Button>
           <Button variant="primary" onClick={onLaunch} disabled={!selectionReady || launchPending}>
-            {launchPending ? 'Launching…' : 'Launch audit'}
+            {launchPending ? 'Launching…' : ACTIONS.launchRun.label}
           </Button>
         </>
       }

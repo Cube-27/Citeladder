@@ -100,7 +100,7 @@ function stubApis(estimate: unknown = undefined) {
 /** Pick one engine, which is what makes the selection launchable. */
 async function selectEngineAndLaunch() {
   fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
-  fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Launch run' }));
 }
 
 describe('Prompt set field', () => {
@@ -219,7 +219,7 @@ describe('Consumer engine selection', () => {
     for (const name of ['ChatGPT Search', 'ChatGPT API', 'Gemini API', 'Claude API']) {
       fireEvent.click(screen.getByRole('button', { name }));
     }
-    fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Launch run' }));
     await waitFor(() =>
       expect(launch).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -265,10 +265,10 @@ describe('Market selection', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'ChatGPT API' }));
     const fallback = await screen.findByRole('button', { name: 'United States · English' });
     fireEvent.click(fallback);
-    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Launch run' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Germany · German' }));
     fireEvent.click(fallback);
-    fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Launch run' }));
     await waitFor(() => expect(launch).toHaveBeenCalled());
     expect(vi.mocked(launch).mock.calls[0]![0].market_ids).toEqual([GERMANY.id, null]);
   });
@@ -314,7 +314,7 @@ describe('Inline provider setup', () => {
     await screen.findByRole('region', { name: 'Connect a provider' });
     rerender(dialog(false));
     rerender(dialog(true));
-    await screen.findByRole('button', { name: 'Launch audit' });
+    await screen.findByRole('button', { name: 'Launch run' });
     expect(screen.queryByRole('region', { name: 'Connect a provider' })).toBeNull();
   });
 });
@@ -357,7 +357,7 @@ describe('Engine availability changes', () => {
     expect(
       await screen.findByRole('button', { name: 'ChatGPT Search, not connected' }),
     ).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Launch run' })).toBeDisabled();
   });
 });
 
@@ -595,7 +595,7 @@ describe('LaunchDialog prompt batching', () => {
     await user.click(await screen.findByLabelText(/Prompts to run/));
     await user.click(screen.getByRole('option', { name: 'Prompts 21-23' }));
     fireEvent.click(screen.getByRole('button', { name: 'ChatGPT API' }));
-    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Launch run' })).toBeEnabled();
 
     act(() => {
       queryClient.setQueryData(
@@ -604,18 +604,16 @@ describe('LaunchDialog prompt batching', () => {
       );
     });
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Launch audit' })).toBeDisabled(),
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Launch run' })).toBeDisabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Launch run' }));
     expect(launch).not.toHaveBeenCalled();
 
     const recoverySelect = screen.getByLabelText(/Prompts to run/);
     await user.click(recoverySelect);
     expect(screen.getByRole('option', { name: 'All 7 prompts' })).toBeInTheDocument();
     await user.click(screen.getByRole('option', { name: 'All 7 prompts' }));
-    expect(screen.getByRole('button', { name: 'Launch audit' })).toBeEnabled();
-    fireEvent.click(screen.getByRole('button', { name: 'Launch audit' }));
+    expect(screen.getByRole('button', { name: 'Launch run' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Launch run' }));
     await waitFor(() =>
       expect(launch).toHaveBeenCalledWith(
         expect.objectContaining({ prompt_set_id: PROMPT_SET_ID }),
