@@ -212,13 +212,18 @@ it('charts the prompt over time with declared work marked, and hands off to its 
 });
 
 it('opens on where the prompt stands: the latest rates and their change', async () => {
-  getPromptHistory.mockResolvedValue(history(null));
+  const base = history(null);
+  // The change is the server's comparison, never worked out from the points.
+  getPromptHistory.mockResolvedValue({
+    ...base,
+    latest: { ...base.latest!, visibility_delta: 12.5 },
+  });
   renderScreen();
 
   const figures = within(await screen.findByRole('group', { name: 'Latest measurement' }));
   const cell = (label: string) =>
     figures.getByText(label).closest('[data-figure-cell]')?.textContent;
-  expect(cell('Visibility')).toMatch(/^Visibility100\.0%/);
+  expect(cell('Visibility')).toMatch(/^Visibility100\.0%.*12\.5 pp/);
   expect(cell('Owned citation rate')).toMatch(/^Owned citation rate50\.0%/);
   expect(cell('Measured runs')).toMatch(/^Measured runs3/);
 });
@@ -227,14 +232,19 @@ it('says an archived prompt is archived and restores it', async () => {
   const user = userEvent.setup();
   const updatePrompt = vi.spyOn(promptsApi, 'updatePrompt').mockResolvedValue({} as never);
   const base = history(null);
-  getPromptHistory.mockResolvedValue({ ...base, prompt: { ...base.prompt, status: 'archived' } });
+  getPromptHistory
+    .mockResolvedValueOnce({ ...base, prompt: { ...base.prompt, status: 'archived' } })
+    .mockResolvedValue(base);
   renderScreen();
 
   expect(await screen.findByText('Runs no longer ask this prompt.')).toBeVisible();
   await user.click(screen.getByRole('button', { name: 'Restore' }));
 
   expect(updatePrompt).toHaveBeenCalledWith(PROMPT, { status: 'active' }, expect.anything());
-  await waitFor(() => expect(getPromptHistory).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(screen.queryByText('Runs no longer ask this prompt.')).not.toBeInTheDocument(),
+  );
+  expect(screen.getByRole('group', { name: 'Latest measurement' })).toBeVisible();
 });
 
 it('reads the market from the address and keeps a run without answers unavailable', async () => {

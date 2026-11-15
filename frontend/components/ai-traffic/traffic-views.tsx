@@ -15,6 +15,7 @@ import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { coverageLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
 import { formatCount, formatWindowDate } from '@/lib/format';
 import { useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { CalendarX, SearchX, Unplug } from 'lucide-react';
 import { TabPanel } from '@/components/ui/tabs';
 import { Absence } from '@/components/ui/absence';
@@ -115,7 +116,13 @@ function noMatches(
       icon: Unplug,
       heading: 'Crawl logs are not connected',
       description: 'Connect your CDN or server logs to see which AI crawlers request your pages.',
-      action: <ActionButton action="connectCrawlLogs" onClick={setup.connect} />,
+      action: (
+        <ActionButton
+          action="connectCrawlLogs"
+          onClick={setup.connect}
+          disabled={!setup.canManage}
+        />
+      ),
     };
   return { kind: 'empty', icon: SearchX, ...copy };
 }
@@ -129,10 +136,12 @@ type CrawlSetup = ReturnType<typeof useCrawlSetup>;
  */
 function useCrawlSetup({ workspaceId, projectId }: Omit<TrafficTableScope, 'filters'>) {
   const sources = useCrawlSources(projectId, workspaceId);
+  const canManage = useWorkspaceCapability('manage_credentials');
   const [open, setOpen] = useState(false);
   const unconnected = sources.data?.items.length === 0;
   return {
     unconnected,
+    canManage,
     connect: () => setOpen(true),
     section: (empty: boolean) => {
       if (unconnected)

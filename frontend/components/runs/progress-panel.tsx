@@ -137,7 +137,7 @@ export function ProgressSkeleton() {
   return (
     <FigureStrip
       label="Run figures"
-      lead={<Skeleton variant="text" lines={1} />}
+      lead={<Skeleton variant="text" lines={1} label="Loading run" />}
       segments={RUN_FIGURES.map(({ key, label }) => ({ key, label, value: null, loading: true }))}
     />
   );

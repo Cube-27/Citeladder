@@ -130,12 +130,10 @@ export function PromptTable({
       {pagedPrompts.map((prompt) => (
         <TableRow key={prompt.id}>
           <TableCell>
-            {/* The question opens its history: the prompt is the object. It
-                wraps to two lines. Topic and classification are filters in
-                the control strip, not tags on every row (owner, 2026-11-06);
-                the question is one line, its whole text in a tooltip;
-                the caption names the prompt's set when there are several,
-                and says when audits skip the prompt. */}
+            {/* The question opens its history: one line, its whole text in a
+                tooltip. Topic and classification are filters, not row tags
+                (owner, 2026-11-06); the caption names the prompt's set when
+                there are several, and says when audits skip the prompt. */}
             <TableCellLines
               title
               primary={

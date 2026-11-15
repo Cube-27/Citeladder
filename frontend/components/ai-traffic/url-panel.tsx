@@ -43,7 +43,6 @@ function CompactTrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) 
   const detail = trafficLegExplanation(leg, unit);
   if (leg.value === null) return <Absence state={legAbsence(leg)} narrow reason={detail} />;
   const qualified =
-    leg.value === null ||
     !['value', 'zero'].includes(leg.state) ||
     Boolean(leg.reason) ||
     Boolean(leg.coverage && leg.coverage !== 'complete');

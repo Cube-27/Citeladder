@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
+import { AUDIT_STATES } from '@/lib/runs/status';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
@@ -22,7 +23,7 @@ export function VisibilityEmptyState({ activeRun }: Readonly<{ activeRun: Active
         kind="empty"
         icon={Activity}
         heading="A run is in progress"
-        description="Results appear here when it finishes."
+        description={`${AUDIT_STATES[activeRun.status].label}. Results appear here when it finishes.`}
         action={
           <Button asChild variant="secondary">
             <ProjectLink href={`/runs/${activeRun.id}`}>

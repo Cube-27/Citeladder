@@ -52,7 +52,8 @@ describe('VisibilityEmptyState', () => {
       'href',
       `/runs/${run.id}`,
     );
-    expect(screen.getByText(/results appear here when it finishes/i)).toBeVisible();
+    // The banner it replaced named the run's status; the block still does.
+    expect(screen.getByText('Running. Results appear here when it finishes.')).toBeVisible();
   });
 });
 

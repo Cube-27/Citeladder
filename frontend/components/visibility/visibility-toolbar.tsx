@@ -257,8 +257,10 @@ function outcomeFilter({ outcome, onChangeOutcome }: ToolbarProps): FilterDefini
   });
 }
 
-/** Header actions beside the page title: run a new audit, and how the metrics work. */
-/** `launch: false` when the empty state carries Launch run itself, so it shows once. */
+/**
+ * Header actions beside the page title: run a new audit, and how the metrics
+ * work. `launch: false` when the empty state carries Launch run itself.
+ */
 export function VisibilityActions({ launch = true }: Readonly<{ launch?: boolean }>) {
   return (
     <>

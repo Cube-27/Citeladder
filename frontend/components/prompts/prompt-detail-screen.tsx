@@ -191,19 +191,6 @@ function MeasurementTrail({ history }: Readonly<{ history: PromptHistory }>) {
   );
 }
 
-type HistoryPoint = PromptHistory['points'][number];
-
-/**
- * The change in visibility since the run before, in points, when the two
- * runs measured under the same conditions and both had answers.
- */
-function visibilityChange(points: readonly HistoryPoint[]) {
-  const [previous, latest] = points.slice(-2);
-  if (!previous || latest?.comparable_with_previous !== true) return null;
-  if (previous.mention_rate === null || latest.mention_rate === null) return null;
-  return { points: (latest.mention_rate - previous.mention_rate) * 100, since: previous };
-}
-
 /**
  * Whether this prompt cites you and how that has moved: the latest run's
  * rates first, then visibility and owned citation rate per run, with declared
@@ -213,7 +200,8 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   const data = mentionRatePoints(history.points, timeZone);
   const latest = history.points.at(-1);
-  const change = visibilityChange(history.points);
+  // The server's comparison, the same one the prompt table's Change column reads.
+  const baselineAt = history.latest?.comparison?.baseline_at ?? null;
   return (
     <Section>
       <SectionHeader>
@@ -235,14 +223,15 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
                   value: latest.mention_rate === null ? null : formatPercent(latest.mention_rate),
                   delta: (
                     <Delta
-                      value={change?.points ?? null}
+                      value={history.latest?.visibility_delta ?? null}
                       unit=" pp"
                       missingReason="No comparable run before this one."
                     />
                   ),
-                  sub: change
-                    ? `vs ${formatDisplayDate(change.since.completed_at, timeZone)}`
-                    : undefined,
+                  sub:
+                    history.latest?.visibility_delta != null && baselineAt
+                      ? `vs ${formatDisplayDate(baselineAt, timeZone)}`
+                      : undefined,
                 },
                 {
                   key: 'owned',

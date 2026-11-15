@@ -12,16 +12,20 @@ const project = makeProject({
   id: '88888888-8888-4888-8888-888888888888',
   workspace_id: '11111111-1111-4111-8111-111111111111',
 });
+const capability = vi.hoisted(() => ({ manage: true }));
 vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => ({ activeProject: project, isLoading: false }),
   useOptionalProjectContext: () => ({ activeProjectId: project.id }),
-  useWorkspaceCapability: () => true,
+  useWorkspaceCapability: (name: string) => name !== 'manage_credentials' || capability.manage,
   useActiveWorkspaceId: () => project.workspace_id,
 }));
 const root = '/api/v1/projects/' + project.id;
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
-afterEach(() => mswServer.resetHandlers());
+afterEach(() => {
+  mswServer.resetHandlers();
+  capability.manage = true;
+});
 afterAll(() => mswServer.close());
 
 const catalog = {
@@ -104,7 +108,7 @@ it('says the crawler catalog failed inside the activity table instead of showing
   expect(within(table).queryByRole('alert')).not.toBeInTheDocument();
 });
 
-it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', async (tab) => {
+function serveNoSources(tab: 'crawlers' | 'activity') {
   mswServer.use(
     http.get(root + '/crawl-logs/catalog', () => HttpResponse.json(catalog)),
     http.get(root + '/crawl-logs/sources', () =>
@@ -123,6 +127,23 @@ it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', a
       HttpResponse.json({ items: [], next_cursor: null }),
     ),
   );
+}
+
+it('does not let a role that may not manage credentials connect crawl logs', async () => {
+  capability.manage = false;
+  serveNoSources('crawlers');
+  renderWithProviders(
+    <TabsRoot value="crawlers" onValueChange={() => {}}>
+      <TrafficCrawlers {...scope} />
+    </TabsRoot>,
+  );
+  const table = await screen.findByRole('region', { name: 'Recognized crawlers' });
+  await within(table).findByRole('heading', { name: 'Crawl logs are not connected' });
+  expect(within(table).getByRole('button', { name: 'Connect crawl logs' })).toBeDisabled();
+});
+
+it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', async (tab) => {
+  serveNoSources(tab);
   const user = userEvent.setup();
   renderWithProviders(
     <TabsRoot value={tab} onValueChange={() => {}}>
