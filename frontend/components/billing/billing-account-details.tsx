@@ -22,7 +22,6 @@ export function BillingCountryInput({
           value={country}
           onChange={(event) => setCountry(event.target.value.toUpperCase().slice(0, 2))}
           placeholder="US"
-          className="uppercase tabular-nums"
         />
       )}
     </Field>

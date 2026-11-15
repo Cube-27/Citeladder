@@ -385,6 +385,11 @@ describe('BillingScreen', () => {
     expect(screen.queryByText('$49 / month')).toBeNull();
     expect(screen.queryByRole('button', { name: /Choose Starter/ })).toBeNull();
     expect(screen.getByRole('link', { name: 'Contact us' })).toBeInTheDocument();
+    // The plan step is not the primary while checkout is closed: disabled, with its reason.
+    const step = screen.getByRole('button', { name: 'Choose a plan' });
+    expect(step).toBeDisabled();
+    expect(step).toHaveAccessibleDescription('Checkout is not open yet');
+    expect(screen.queryByRole('link', { name: 'Choose a plan' })).toBeNull();
   });
 
   it('renders Enterprise as contact-only, with no checkout and no trial CTA', async () => {

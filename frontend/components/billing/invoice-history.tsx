@@ -4,7 +4,9 @@ import { billingApi, type BillingInvoice } from '@/lib/api/billing';
 import { formatMoney } from '@/lib/billing/catalog';
 import { DisplayTime } from '@/components/ui/display-time';
 
-import { Button } from '@/components/ui/button';
+import { Download } from 'lucide-react';
+
+import { IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import {
@@ -28,7 +30,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'paid', label: 'Date', kind: 'date', width: 'status' },
   { key: 'amount', label: 'Amount', kind: 'number' },
   { key: 'tax', label: 'GST', kind: 'text', width: 'category' },
-  { key: 'download', label: 'Download', kind: 'actions', width: 'name', hideLabel: true },
+  { key: 'download', label: 'Download', kind: 'actions', width: 'action', hideLabel: true },
 ];
 
 const TREATMENT_LABEL: Record<BillingInvoice['tax_treatment'], string> = {
@@ -72,6 +74,7 @@ function invoicesState(read: InvoicesRead, count: number): DataTableState | unde
     icon: ICONS.billing,
     headingLevel: 3,
     heading: 'No invoices have been issued yet',
+    description: 'An invoice and its receipt appear here after each payment.',
   };
 }
 
@@ -116,12 +119,7 @@ export function InvoiceHistory({
         {downloadError ? (
           <Notice tone="negative">Receipt download failed. Please retry.</Notice>
         ) : null}
-        <DataTable
-          label="Invoices"
-          columns={COLUMNS}
-          minWidth="lg"
-          state={invoicesState(read, invoices.length)}
-        >
+        <DataTable label="Invoices" columns={COLUMNS} state={invoicesState(read, invoices.length)}>
           {invoices.map((invoice) => (
             <TableRow key={invoice.invoice_id}>
               <TableCell>
@@ -141,13 +139,12 @@ export function InvoiceHistory({
                 <ClampText lines={1}>{taxBreakdown(invoice)}</ClampText>
               </TableCell>
               <TableActionsCell>
-                <Button
-                  variant="secondary"
+                <IconButton
+                  icon={Download}
+                  label={downloadLabel(invoice, downloading)}
                   disabled={downloading === invoice.invoice_id}
                   onClick={() => void download(invoice)}
-                >
-                  {downloadLabel(invoice, downloading)}
-                </Button>
+                />
               </TableActionsCell>
             </TableRow>
           ))}

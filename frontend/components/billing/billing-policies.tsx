@@ -16,7 +16,8 @@ import { Section, SectionContent, SectionHeader, SectionTitle } from '@/componen
 function PolicyLink({ path, children }: Readonly<{ path: `/${string}`; children: string }>) {
   return (
     <TextLink asChild variant="external" text="inherit">
-      <a href={websiteHref(path)} target="_blank" rel="noreferrer">
+      {/* Short labels: the new-tab glyph stays with the last word. */}
+      <a href={websiteHref(path)} target="_blank" rel="noreferrer" className="whitespace-nowrap">
         {children}
       </a>
     </TextLink>
@@ -66,7 +67,7 @@ export function BillingSupport({
           </TextLink>
           {contact?.phone ? `, call ${contact.phone}` : ''} or use the{' '}
           <TextLink asChild variant="external" text="inherit">
-            <a href={url} target="_blank" rel="noreferrer">
+            <a href={url} target="_blank" rel="noreferrer" className="whitespace-nowrap">
               contact form
             </a>
           </TextLink>
