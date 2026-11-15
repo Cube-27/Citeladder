@@ -239,6 +239,13 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
   await page.goto('/onboarding');
   const field = page.getByLabel(/^Brand name/);
   await expect(field).toBeVisible();
+  // A script focus shows the caret only (input-modality.ts); the reader's Tab draws the ring.
+  const tabInto = async () => {
+    await field.focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await expect(field).toBeFocused();
+  };
   for (const theme of ['light', 'dark']) {
     if (theme === 'dark') await page.getByRole('button', { name: 'Switch to dark theme' }).click();
     await field.evaluate((node) => {
@@ -249,7 +256,7 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
       await Promise.all(node.getAnimations().map((animation) => animation.finished));
       return getComputedStyle(node).borderColor;
     });
-    await field.focus();
+    await tabInto();
     const ordinaryRing = await field.evaluate((node) => getComputedStyle(node).outlineColor);
     expect(await field.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('solid');
     // Isolate the primitive's rendering contract from form validation policy.
@@ -263,7 +270,7 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
     });
     expect(edge).not.toBe(ordinaryEdge);
     expect(await field.evaluate((node) => getComputedStyle(node).borderStyle)).not.toBe('none');
-    await field.focus();
+    await tabInto();
     const focused = await field.evaluate(async (node) => {
       await Promise.all(node.getAnimations().map((animation) => animation.finished));
       const style = getComputedStyle(node);

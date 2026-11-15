@@ -3,6 +3,48 @@ import { expect, test, type Page } from '@playwright/test';
 import { skills } from '../test/agent-chat-fixture';
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
+const PROMPT_SET_ID = '44444444-4444-4444-8444-000000000001';
+/** One brand set holding one active prompt, so the library draws its search. */
+const PROMPT_SETS = {
+  prompt_sets: [
+    {
+      id: PROMPT_SET_ID,
+      project_id: FIXTURE_PROJECT.id,
+      name: 'Main',
+      kind: 'brand',
+      prompt_count: 1,
+      prompts: [
+        {
+          id: '44444444-4444-4444-8444-000000000002',
+          prompt_set_id: PROMPT_SET_ID,
+          text: 'Best pricing tools for small teams',
+          theme: '',
+          intent: '',
+          cohort: 'core',
+          branded: false,
+          enabled: true,
+          status: 'active',
+          origin: 'manual',
+          over_plan_limit: false,
+        },
+      ],
+      created_at: '2026-08-01T00:00:00Z',
+      updated_at: '2026-08-01T00:00:00Z',
+    },
+  ],
+  limits: {
+    generation_count_max: 50,
+    import_rows_max: 500,
+    persona_max_chars: 200,
+    run_context_max_chars: 2000,
+    distribution_personas_max: 5,
+    seed_query_ids_max: 20,
+    context_list_max_entries: 20,
+    audit_repetitions_min: 1,
+    audit_repetitions_max: 5,
+  },
+};
+
 /**
  * The rendered geometry census: what the browser DRAWS, not what the code
  * asks for.
@@ -595,8 +637,9 @@ async function expectOneGeometry(page: Page) {
   ]);
   records.push(...(await census(page, '/agent/skills', { label: '/agent/skills (slips)' })));
 
-  // A search holding a value, so its end target (Clear search) is drawn.
-  await stubAuthedShell(page);
+  // A search holding a value, so its end target (Clear search) is drawn. The
+  // library needs a prompt: an empty or failed one draws no search at all.
+  await stubAuthedShell(page, [['**/api/v1/prompt-sets?*', PROMPT_SETS]]);
   records.push(
     ...(await census(page, '/prompts', {
       label: '/prompts (searched)',
