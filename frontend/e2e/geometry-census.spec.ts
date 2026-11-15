@@ -97,6 +97,11 @@ const QUERY_STATE_PADDING = 0;
  * + 4 + a caption line (16) + 8, the last row included.
  */
 const TABLE_ROW_HEIGHT_TWO_LINES = 56;
+/**
+ * A one-line row is 36 (2.2) with or without a 24 tag or status mark in a
+ * cell: the mark takes the 20 line and lends the rest from the cell's 8 and 8.
+ */
+const TABLE_ROW_HEIGHT_WITH_TAG = 36;
 const TABLE_CELL_PADDING_Y = 8;
 /** A DataTable's title-and-toolbar row is one control high; the card's 16 insets it. */
 const DATA_TABLE_HEADER_HEIGHT = 32;
@@ -386,6 +391,15 @@ function measure({ route }: { route: string }) {
   for (const row of all('tbody tr:not([data-table-state])')) {
     if (row.querySelector('[data-cell-lines] > :nth-child(2)'))
       add('table-row.height.two-lines', row, row.getBoundingClientRect().height);
+    else if (
+      row.closest('[data-data-table-frame]') &&
+      row.querySelector('td [data-tag-kind], td [data-status-tone]') &&
+      !row.querySelector('[data-cell-lines]') &&
+      !Array.from(row.querySelectorAll('.line-clamp-2')).some(
+        (text) => text.getBoundingClientRect().height > 20,
+      )
+    )
+      add('table-row.height.tag', row, row.getBoundingClientRect().height);
     const cell = row.querySelector('td');
     if (cell) add('table-cell.padding-y', cell, px(getComputedStyle(cell).paddingTop));
   }
@@ -593,6 +607,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'query-state.height', QUERY_STATE_HEIGHT);
   expectOneValue(records, 'query-state.padding', QUERY_STATE_PADDING);
   expectOneValue(records, 'table-row.height.two-lines', TABLE_ROW_HEIGHT_TWO_LINES);
+  expectOneValue(records, 'table-row.height.tag', TABLE_ROW_HEIGHT_WITH_TAG);
   expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
   expectOneValue(records, 'data-table-header.height', DATA_TABLE_HEADER_HEIGHT);
   expectOneValue(records, 'figure-cell.padding-y', FIGURE_CELL_PADDING_Y);

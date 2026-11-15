@@ -8,7 +8,7 @@ import {
 } from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
-import { ScrollEdgeFades, useScrollEdges } from '@/components/ui/scroll-edges';
+import { ScrollFrame, type ScrollRegionProps } from '@/components/ui/scroll-edges';
 import { cn } from '@/lib/utils';
 
 /**
@@ -23,28 +23,22 @@ const TAB_STRIP =
   'relative inline-flex max-w-full shrink-0 items-stretch gap-4 overflow-x-auto border-b border-rule [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
- * The strip's frame: a fade over an edge that hides more items, so a strip
- * cut at a narrow width says more exists without its hidden scrollbar.
+ * The strip's `ScrollFrame`: an edge that hides more items fades and carries
+ * a stepper chevron, so a strip cut at a narrow width says more exists
+ * without its hidden scrollbar. The items take focus themselves, so the frame
+ * is no tab stop.
  */
 function StripFrame({
   fill = false,
   children,
 }: Readonly<{
   fill?: boolean;
-  children: (ref: RefObject<HTMLDivElement | null>) => ReactNode;
+  children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
 }>) {
-  const ref = useRef<HTMLDivElement>(null);
-  const edges = useScrollEdges(ref);
   return (
-    <div
-      className={cn(
-        'relative inline-flex max-w-full min-w-0 shrink-0 [--scroll-edge-ground:var(--color-ground)]',
-        fill && 'flex w-full',
-      )}
-    >
-      {children(ref)}
-      <ScrollEdgeFades edges={edges} />
-    </div>
+    <ScrollFrame className={cn('inline-flex max-w-full shrink-0', fill && 'flex w-full')}>
+      {children}
+    </ScrollFrame>
   );
 }
 
@@ -70,7 +64,7 @@ function tabFace(selected: boolean, className?: string) {
  * above.
  */
 export const TAB_TRACK =
-  'scroll-shade-x inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /** A segment of the website's track (see `TAB_TRACK`). */
 export function tabClasses(selected: boolean, className?: string) {
@@ -179,8 +173,9 @@ function TabStrip<T extends string>({
   const active = useContext(ActiveTabContext);
   return (
     <StripFrame fill={fill}>
-      {(ref) => (
+      {(ref, region) => (
         <TabsPrimitive.List
+          {...region}
           ref={ref}
           aria-label={ariaLabel}
           className={cn(TAB_STRIP, fill && 'flex w-full', className)}
@@ -325,8 +320,8 @@ export function SegmentedControl<T extends string>({
 
   return (
     <StripFrame>
-      {(ref) => (
-        <div ref={ref} data-segmented-track="" className={cn(TAB_STRIP, className)}>
+      {(ref, region) => (
+        <div {...region} ref={ref} data-segmented-track="" className={cn(TAB_STRIP, className)}>
           {/* A nested flex row, NOT `display: contents`: some browsers drop a
           contents box from the accessibility tree, costing the group its name. */}
           <div

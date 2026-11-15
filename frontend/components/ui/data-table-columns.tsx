@@ -68,13 +68,35 @@ type DataTableColumnWidth = keyof typeof COLUMN_WIDTH;
 /** The widths that grow with the table: the flexible text column and the lead. */
 const FLEXIBLE_WIDTHS: ReadonlySet<DataTableColumnWidth> = new Set(['flex', 'lead']);
 
+/**
+ * What a column holds. The kind sets the head and every cell of the column
+ * together: alignment, face, default width and how a long value is cut, so a
+ * head can never disagree with its column.
+ */
+export type ColumnKind = 'identity' | 'text' | 'number' | 'date' | 'status' | 'url' | 'actions';
+
+type KindSpec = Readonly<{ align: 'start' | 'end'; mono: boolean; width: DataTableColumnWidth }>;
+
+const KIND = {
+  identity: { align: 'start', mono: false, width: 'flex' },
+  text: { align: 'start', mono: false, width: 'flex' },
+  number: { align: 'end', mono: true, width: 'figure' },
+  date: { align: 'start', mono: true, width: 'date' },
+  status: { align: 'start', mono: false, width: 'status' },
+  url: { align: 'start', mono: true, width: 'flex' },
+  actions: { align: 'end', mono: false, width: 'rowActions' },
+} as const satisfies Record<ColumnKind, KindSpec>;
+
 export type DataTableColumn = Readonly<{
   key: string;
   label: string;
+  /** What the column holds; decides the head's and the cells' alignment and face. */
+  kind?: ColumnKind;
+  /** Defaults to the kind's width, else `flex`. */
   width?: DataTableColumnWidth;
-  /** Right-aligned figures in tabular digits, header included. */
+  /** The `number` kind, in the spelling the columns used before kinds. */
   numeric?: boolean;
-  /** Trailing row controls (`TableActionsCell`): the header ends on their edge. */
+  /** The `actions` kind, in the spelling the columns used before kinds. */
   trailing?: boolean;
   /** Keep the header for assistive technology only (an actions column). */
   hideLabel?: boolean;
@@ -105,6 +127,39 @@ export type DataTableSelection = Readonly<{
   noun: string;
 }>;
 
+/** A column's kind, from `kind` or the older `numeric` and `trailing` flags. */
+export function columnKind(column: DataTableColumn): ColumnKind {
+  if (column.kind) return column.kind;
+  if (column.numeric) return 'number';
+  return column.trailing ? 'actions' : 'text';
+}
+
+function widthOf(column: DataTableColumn): DataTableColumnWidth {
+  return column.width ?? (column.kind ? KIND[column.kind].width : 'flex');
+}
+
+/**
+ * The table's column map for the cell rules in globals.css ("r2 data"): the
+ * 1-based positions of the end-aligned and of the mono columns, the
+ * selection column counted, so every cell follows its column's kind whatever
+ * the page passed to the cell.
+ */
+export function columnLayout(
+  columns: readonly DataTableColumn[],
+  selection: boolean,
+): Readonly<{ 'data-end-cols': string; 'data-start-cols': string; 'data-mono-cols': string }> {
+  const offset = selection ? 2 : 1;
+  const at = (test: (spec: KindSpec) => boolean) =>
+    columns
+      .flatMap((column, index) => (test(KIND[columnKind(column)]) ? [index + offset] : []))
+      .join(' ');
+  return {
+    'data-end-cols': at((spec) => spec.align === 'end'),
+    'data-start-cols': at((spec) => spec.align === 'start'),
+    'data-mono-cols': at((spec) => spec.mono),
+  };
+}
+
 /** Column sets already warned about, so a table re-rendering warns once. */
 const warnedColumnSets = new Set<string>();
 
@@ -120,7 +175,7 @@ export function useFlexibleColumnCheck({
 }: Readonly<{ columns: readonly DataTableColumn[]; title?: string; label?: string }>) {
   useEffect(() => {
     if (!import.meta.env?.DEV) return;
-    if (columns.some((column) => FLEXIBLE_WIDTHS.has(column.width ?? 'flex'))) return;
+    if (columns.some((column) => FLEXIBLE_WIDTHS.has(widthOf(column)))) return;
     const name = title ?? label ?? columns.map((column) => column.label).join(', ');
     const widths = columns.map((column) => `${column.key}:${column.width}`).join(',');
     const signature = `${name}|${widths}`;
@@ -175,16 +230,16 @@ export function columnsMinWidth({
   let share = 0;
   for (const column of columns) {
     if (column.desktopOnly && !desktop) continue;
-    const role = COLUMN_WIDTH[column.width ?? 'flex'];
+    const role = COLUMN_WIDTH[widthOf(column)];
     if (role.kind === 'steps') fixedSteps += role.steps;
     else if (role.kind === 'share') share += role.share;
     else rest += 1;
   }
   const parts = [
-    `calc((${steps(fixedSteps)} + ${rest} * var(--table-identity-min)) / ${1 - share})`,
+    `calc((${steps(fixedSteps)} + ${rest} * var(--data-table-identity-min)) / ${1 - share})`,
   ];
   // A share column is a share of the table: the table is wide enough that the share holds the minimum.
-  if (share > 0) parts.push(`calc(var(--table-identity-min) / ${share})`);
+  if (share > 0) parts.push(`calc(var(--data-table-identity-min) / ${share})`);
   if (floor) parts.push(floor);
   return `max(${parts.join(', ')})`;
 }
@@ -201,7 +256,7 @@ export function DataTableColumns({
         {columns.map((column) => (
           <col
             key={column.key}
-            style={{ width: columnWidth(column.width ?? 'flex') }}
+            style={{ width: columnWidth(widthOf(column)) }}
             className={cn(column.desktopOnly && 'hidden desktop:table-column')}
           />
         ))}
@@ -231,11 +286,13 @@ function SelectAllHead({ selection }: Readonly<{ selection: DataTableSelection }
 }
 
 function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
+  const kind = columnKind(column);
+  const numeric = kind === 'number';
   if (column.sort) {
     return (
       <SortableTableHead
         label={column.label}
-        numeric={column.numeric}
+        numeric={numeric}
         sublabel={column.sublabel}
         hint={column.hint}
         desktopOnly={column.desktopOnly}
@@ -248,7 +305,7 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
       <HintedTableHead
         label={column.label}
         hint={column.hint}
-        numeric={column.numeric}
+        numeric={numeric}
         desktopOnly={column.desktopOnly}
       />
     );
@@ -257,8 +314,8 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
   // itself instead of painting over the next header.
   return (
     <TableHead
-      numeric={column.numeric}
-      trailing={column.trailing}
+      numeric={numeric}
+      trailing={kind === 'actions'}
       desktopOnly={column.desktopOnly}
       className="whitespace-normal"
       aria-sort={column.order}

@@ -1622,31 +1622,6 @@ a.focus-ring:active .type-caption {
     inset-inline-end: 0;
     background: linear-gradient(to left, var(--scroll-edge-ground), transparent);
   }
-
-  /* A segmented track that scrolls with its scrollbar hidden (`TAB_TRACK`):
-     a soft ink shade at each edge with segments beyond it. The covers in the
-     track's own fill scroll with the segments (`local`) and hide each shade
-     while its end is in view; the shades stay on the edges (`scroll`). */
-  /* The track is a pressed-state tint of the fill beneath it, mixed opaque so
-     the covers can hide the shades: over paper on the ground, over surface
-     inside a container. */
-  .scroll-shade-x {
-    --scroll-shade-ground: color-mix(in srgb, var(--color-ink) 8%, var(--color-paper));
-    --scroll-shade-ink: color-mix(in srgb, var(--color-ink) 16%, transparent);
-    background:
-      linear-gradient(to right, var(--scroll-shade-ground) 40%, transparent) left / 24px 100%
-        no-repeat local,
-      linear-gradient(to left, var(--scroll-shade-ground) 40%, transparent) right / 24px 100%
-        no-repeat local,
-      linear-gradient(to right, var(--scroll-shade-ink), transparent) left / 12px 100% no-repeat
-        scroll,
-      linear-gradient(to left, var(--scroll-shade-ink), transparent) right / 12px 100% no-repeat
-        scroll,
-      var(--scroll-shade-ground);
-  }
-  :where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .scroll-shade-x {
-    --scroll-shade-ground: color-mix(in srgb, var(--color-ink) 8%, var(--color-surface));
-  }
 }
 
 /* The website's shared buttons (a form's submit, a callout action) take the
@@ -2084,4 +2059,137 @@ label {
     background: white !important;
     color: black !important;
   }
+}
+
+/* r2 data */
+/* Tables, scroll frames and figures (round 2, builder A2). */
+
+:root {
+  /* A table's identity column never narrows past about 25 characters of row
+     name; below it the table scrolls with that column pinned. */
+  --data-table-identity-min: 25ch;
+}
+
+/* A DataTable column's kind sets its head and every cell together
+   (`columnLayout`): the frame lists the 1-based positions of its end-aligned,
+   start-aligned and mono columns. */
+[data-end-cols~='1'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(1),
+[data-end-cols~='2'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(2),
+[data-end-cols~='3'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(3),
+[data-end-cols~='4'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(4),
+[data-end-cols~='5'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(5),
+[data-end-cols~='6'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(6),
+[data-end-cols~='7'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(7),
+[data-end-cols~='8'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(8),
+[data-end-cols~='9'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(9),
+[data-end-cols~='10'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(10),
+[data-end-cols~='11'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(11),
+[data-end-cols~='12'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(12),
+[data-end-cols~='13'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(13),
+[data-end-cols~='14'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(14),
+[data-end-cols~='15'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(15),
+[data-end-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(16) {
+  text-align: end;
+}
+[data-start-cols~='1'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(1),
+[data-start-cols~='2'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(2),
+[data-start-cols~='3'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(3),
+[data-start-cols~='4'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(4),
+[data-start-cols~='5'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(5),
+[data-start-cols~='6'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(6),
+[data-start-cols~='7'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(7),
+[data-start-cols~='8'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(8),
+[data-start-cols~='9'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(9),
+[data-start-cols~='10'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(10),
+[data-start-cols~='11'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(11),
+[data-start-cols~='12'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(12),
+[data-start-cols~='13'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(13),
+[data-start-cols~='14'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(14),
+[data-start-cols~='15'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(15),
+[data-start-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(16) {
+  text-align: start;
+}
+[data-mono-cols~='1'] table > tbody > tr:not([data-table-state]) > :nth-child(1),
+[data-mono-cols~='2'] table > tbody > tr:not([data-table-state]) > :nth-child(2),
+[data-mono-cols~='3'] table > tbody > tr:not([data-table-state]) > :nth-child(3),
+[data-mono-cols~='4'] table > tbody > tr:not([data-table-state]) > :nth-child(4),
+[data-mono-cols~='5'] table > tbody > tr:not([data-table-state]) > :nth-child(5),
+[data-mono-cols~='6'] table > tbody > tr:not([data-table-state]) > :nth-child(6),
+[data-mono-cols~='7'] table > tbody > tr:not([data-table-state]) > :nth-child(7),
+[data-mono-cols~='8'] table > tbody > tr:not([data-table-state]) > :nth-child(8),
+[data-mono-cols~='9'] table > tbody > tr:not([data-table-state]) > :nth-child(9),
+[data-mono-cols~='10'] table > tbody > tr:not([data-table-state]) > :nth-child(10),
+[data-mono-cols~='11'] table > tbody > tr:not([data-table-state]) > :nth-child(11),
+[data-mono-cols~='12'] table > tbody > tr:not([data-table-state]) > :nth-child(12),
+[data-mono-cols~='13'] table > tbody > tr:not([data-table-state]) > :nth-child(13),
+[data-mono-cols~='14'] table > tbody > tr:not([data-table-state]) > :nth-child(14),
+[data-mono-cols~='15'] table > tbody > tr:not([data-table-state]) > :nth-child(15),
+[data-mono-cols~='16'] table > tbody > tr:not([data-table-state]) > :nth-child(16) {
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The row hairline is drawn inside the row (an inset line), so a cell's
+   padding stays 8 and 8; the frame draws the line under the last row. A
+   ledger row and a ruled blank's row take the same hairline. */
+.table-frame tbody > tr > :is(td, th),
+[data-ledger-item],
+[data-ruled-row] {
+  box-shadow: inset 0 -1px 0 var(--color-rule);
+}
+.table-frame tbody > tr:last-child > :is(td, th) {
+  box-shadow: none;
+}
+
+/* Every body row tints on hover as one piece: the tint is on the cells, so
+   the pinned first cell's opaque fill takes it too. Blank filler rows and a
+   state row do not answer the pointer. */
+:root:not([data-public-surface]) .table-frame tbody > tr:not([data-table-state], [aria-hidden='true']):hover > * {
+  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+}
+:root:not([data-public-surface]) .table-frame tbody > tr[aria-selected='true'] > * {
+  background-image: linear-gradient(var(--color-state-selected), var(--color-state-selected));
+}
+
+/* Your row's accent mark keeps the inset row hairline beside it. */
+:root:not([data-public-surface]) .table-frame tbody > tr[data-you] > :first-child {
+  box-shadow:
+    inset var(--mark-width) 0 0 var(--color-accent),
+    inset 0 -1px 0 var(--color-rule);
+}
+:root:not([data-public-surface]) .table-frame tbody > tr[data-you]:last-child > :first-child {
+  box-shadow: inset var(--mark-width) 0 0 var(--color-accent);
+}
+
+/* Rows stay 36 (2.2): a 24 tag or status mark, a checkbox target or a row
+   action in a cell takes the 20px line it sits on and lends the rest from the
+   cell's 8 and 8, so the row is the same height with or without one. */
+:root:not([data-public-surface]) .table-frame tbody td :is([data-tag-kind], [data-status-tone]) {
+  margin-block: calc((var(--text-data--line-height) - var(--tag-height)) / 2);
+}
+:root:not([data-public-surface]) .table-frame tbody td > :has(> [role='checkbox']) {
+  margin-block: calc((var(--text-data--line-height) - var(--target-min)) / 2);
+}
+:root:not([data-public-surface]) .table-frame tbody td :is(button, a)[data-button-size] {
+  margin-block: calc((var(--text-data--line-height) - var(--control-md)) / 2);
+}
+
+/* ScrollFrame: the content fades out at the edge it can scroll towards (a
+   mask on the content itself, never a tinted tray behind it). */
+[data-scroll-frame][data-scroll-end] > [data-scroll-content] {
+  mask-image: linear-gradient(to left, transparent, black 24px);
+}
+[data-scroll-frame][data-scroll-start] > [data-scroll-content] {
+  mask-image: linear-gradient(to right, transparent, black 24px);
+}
+[data-scroll-frame][data-scroll-start][data-scroll-end] > [data-scroll-content] {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 24px,
+    black calc(100% - 24px),
+    transparent
+  );
 }
