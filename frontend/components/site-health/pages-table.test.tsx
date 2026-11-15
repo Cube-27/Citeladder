@@ -49,7 +49,7 @@ describe('PagesTable', () => {
       'Issues',
       'Web Fundamentals',
       'AEO Readiness',
-      'Last Audit',
+      'Last audit',
     ]);
     const link = screen.getByRole('link', { name: /^View Homepage — / });
     expect(link).toHaveTextContent('Homepage');

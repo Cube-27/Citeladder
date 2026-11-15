@@ -2,6 +2,7 @@ import type { InternalLink } from '@citeladder/contracts/site-health';
 import { useState } from 'react';
 
 import { ProjectLink } from '@/components/ui/project-link';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -107,9 +108,7 @@ export function InternalLinkReview({
               </ProjectLink>
             </Button>
             {link.action_id ? (
-              <Button asChild variant="secondary">
-                <ProjectLink href={`/agent/actions/${link.action_id}`}>Open Action</ProjectLink>
-              </Button>
+              <ActionButton action="openAction" href={`/agent/actions/${link.action_id}`} />
             ) : null}
           </Inline>
           <p className="type-caption">

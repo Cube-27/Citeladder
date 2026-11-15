@@ -33,9 +33,10 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
+import { formatPercent } from '@/lib/format';
 
 function percent(value: number | null): string {
-  return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
+  return value === null ? PLACEHOLDER : formatPercent(value);
 }
 
 export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>) {
@@ -77,7 +78,6 @@ function DimensionLedger({
         ),
       }}
       columns={PILLAR_COLUMNS}
-      minWidth="sm"
     >
       {dimensions.map((dimension) => (
         <TableRow key={dimension.key}>
@@ -122,18 +122,18 @@ function DimensionLedger({
 }
 
 const PILLAR_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'pillar', label: 'Pillar' },
-  { key: 'score', label: 'Score', width: 'figure', numeric: true },
-  { key: 'coverage', label: 'Coverage', width: 'figure', numeric: true },
+  { key: 'pillar', label: 'Pillar', kind: 'identity' },
+  { key: 'score', label: 'Score', kind: 'number' },
+  { key: 'coverage', label: 'Coverage', kind: 'number' },
 ];
 
 // Issues and advisories share the table, so a class column would print the
 // same word on most rows; an advisory carries its own badge beside its title
 // instead, as it does on a page's issue list.
 const TOP_ISSUE_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'impact', label: 'Impact', width: 'figure' },
-  { key: 'issue', label: 'Issue' },
-  { key: 'pages', label: 'Pages', width: 'figure', numeric: true },
+  { key: 'impact', label: 'Impact', kind: 'status', width: 'figure' },
+  { key: 'issue', label: 'Issue', kind: 'identity' },
+  { key: 'pages', label: 'Pages', kind: 'number' },
 ];
 
 function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues'] }>) {

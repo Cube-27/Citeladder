@@ -3,7 +3,7 @@ import { ScoreSection } from '@/components/site-health/score-section';
 import { PageKindScores } from '@/components/site-health/page-kind-scores';
 import { SiteFactsPanel } from '@/components/site-health/site-facts-panel';
 import { StatusStrip } from '@/components/site-health/status-strip';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/actions';
 import { Stack } from '@/components/ui/layout';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import type { SiteHealthEntitlement } from '@citeladder/contracts';
@@ -120,13 +120,13 @@ function FirstCrawl({
           heading="Run your first site crawl"
           description="Crawl your site to see page health, issues, and recommendations as results arrive."
           action={
-            <Button
-              variant="primary"
+            <ActionButton
+              action="runCrawl"
               onClick={start.onStart}
-              disabled={start.pending || !start.allowed}
-            >
-              {start.pending ? 'Starting…' : 'Run new crawl'}
-            </Button>
+              pending={start.pending}
+              pendingLabel="Starting…"
+              disabled={!start.allowed}
+            />
           }
         />
       ) : (

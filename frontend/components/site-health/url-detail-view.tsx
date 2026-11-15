@@ -116,11 +116,11 @@ function pageHandoff(detail: PageDetail) {
 function pagePrompt(detail: PageDetail, count: number): string {
   const url = detail.display_url;
   if (count > 0) {
-    const issues = count === 1 ? '1 Site Health issue' : `${count} Site Health issues`;
+    const issues = count === 1 ? '1 Website issue' : `${count} Website issues`;
     return `Review the ${issues} on ${url}, worst first, and propose exact page edits for each.`;
   }
   if (detail.analysis_status !== 'completed')
-    return `The Site Health audit of ${url} did not complete (${statusLabel(detail.analysis_status)}). Investigate why and say what is needed to audit it.`;
+    return `The Website audit of ${url} did not complete (${statusLabel(detail.analysis_status)}). Investigate why and say what is needed to audit it.`;
   return `Review ${url} for search and answer-engine readiness and propose improvements.`;
 }
 

@@ -25,7 +25,14 @@ import type {
 import { formatPercent } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { ChartFrame } from '@/components/ui/chart-frame';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 const COVERAGE_LABELS: Record<CoverageState, string> = {
@@ -157,77 +164,80 @@ function PageKindTable({
   const [openKind, setOpenKind] = useState<string | null>(null);
   const pagesId = useId();
   return (
-    <DataTable
-      title="Page kinds"
-      description={pageKindDescription(coverage, reasons)}
-      toolbar={{
-        actions: (
+    <Section>
+      <SectionHeader
+        actions={
           <StatusMark variant="status" value={coverage === 'complete' ? 'success' : 'warning'}>
             {COVERAGE_LABELS[coverage]}
           </StatusMark>
-        ),
-      }}
-      columns={PAGE_KIND_COLUMNS}
-      minWidth="md"
-      state={
-        pageKinds.length === 0
-          ? {
-              kind: 'empty',
-              icon: ListTree,
-              headingLevel: 3,
-              heading: 'No page kinds were measured',
-            }
-          : undefined
-      }
-    >
-      {pageKinds.map((pageKind) => {
-        const open = openKind === pageKind.page_kind;
-        const pages = grouped.get(pageKind.page_kind) ?? [];
-        const listId = `${pagesId}-${pageKind.page_kind}`;
-        return (
-          <Fragment key={pageKind.page_kind}>
-            <TableRow>
-              <TableCell>
-                <Pressable
-                  type="button"
-                  aria-expanded={open}
-                  aria-controls={listId}
-                  onClick={() => setOpenKind(open ? null : pageKind.page_kind)}
-                  className="w-auto"
-                >
-                  <Inline as="span">
-                    <Icon icon={open ? ChevronDown : ChevronRight} className="text-ink-2" />
-                    <PageKindBadge pageKind={pageKind.page_kind} />
-                  </Inline>
-                </Pressable>
-              </TableCell>
-              <TableCell numeric>{pageKind.page_count}</TableCell>
-              <TableCell numeric>
-                {pageKind.median_depth ?? <Absence state="not_measured" />}
-              </TableCell>
-              <TableCell numeric>
-                {pageKind.indexable_count} / {pageKind.page_count}
-              </TableCell>
-              <TableCell numeric>{pageKind.duplicate_metadata_count}</TableCell>
-              <TableCell numeric>
-                {pageKind.orphan_count ?? <Absence state="not_measured" />}
-              </TableCell>
-            </TableRow>
-            {open ? <PageKindPages id={listId} pages={pages} crawlId={crawlId} /> : null}
-          </Fragment>
-        );
-      })}
-    </DataTable>
+        }
+      >
+        <SectionTitle>Page kinds</SectionTitle>
+        <SectionDescription>{pageKindDescription(coverage, reasons)}</SectionDescription>
+      </SectionHeader>
+      <DataTable
+        label="Page kinds"
+        columns={PAGE_KIND_COLUMNS}
+        state={
+          pageKinds.length === 0
+            ? {
+                kind: 'empty',
+                icon: ListTree,
+                headingLevel: 3,
+                heading: 'No page kinds were measured',
+              }
+            : undefined
+        }
+      >
+        {pageKinds.map((pageKind) => {
+          const open = openKind === pageKind.page_kind;
+          const pages = grouped.get(pageKind.page_kind) ?? [];
+          const listId = `${pagesId}-${pageKind.page_kind}`;
+          return (
+            <Fragment key={pageKind.page_kind}>
+              <TableRow>
+                <TableCell>
+                  <Pressable
+                    type="button"
+                    aria-expanded={open}
+                    aria-controls={listId}
+                    onClick={() => setOpenKind(open ? null : pageKind.page_kind)}
+                    className="w-auto"
+                  >
+                    <Inline as="span">
+                      <Icon icon={open ? ChevronDown : ChevronRight} className="text-ink-2" />
+                      <PageKindBadge pageKind={pageKind.page_kind} />
+                    </Inline>
+                  </Pressable>
+                </TableCell>
+                <TableCell numeric>{pageKind.page_count}</TableCell>
+                <TableCell numeric>
+                  {pageKind.median_depth ?? <Absence state="not_measured" />}
+                </TableCell>
+                <TableCell numeric>
+                  {pageKind.indexable_count} / {pageKind.page_count}
+                </TableCell>
+                <TableCell numeric>{pageKind.duplicate_metadata_count}</TableCell>
+                <TableCell numeric>
+                  {pageKind.orphan_count ?? <Absence state="not_measured" />}
+                </TableCell>
+              </TableRow>
+              {open ? <PageKindPages id={listId} pages={pages} crawlId={crawlId} /> : null}
+            </Fragment>
+          );
+        })}
+      </DataTable>
+    </Section>
   );
 }
 
 const PAGE_KIND_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'kind', label: 'Page kind' },
-  { key: 'pages', label: 'Pages', width: 'figure', numeric: true },
-  { key: 'depth', label: 'Median depth', width: 'figure', numeric: true },
-  { key: 'indexable', label: 'Indexable', width: 'figure', numeric: true },
-  { key: 'duplicates', label: 'Duplicate metadata', width: 'figure', numeric: true },
-  { key: 'orphaned', label: 'Orphaned', width: 'figure', numeric: true },
+  { key: 'kind', label: 'Page kind', kind: 'status', width: 'flex' },
+  { key: 'pages', label: 'Pages', kind: 'number' },
+  { key: 'depth', label: 'Median depth', kind: 'number' },
+  { key: 'indexable', label: 'Indexable', kind: 'number' },
+  { key: 'duplicates', label: 'Duplicate metadata', kind: 'number' },
+  { key: 'orphaned', label: 'Orphaned', kind: 'number' },
 ];
 
 function PageKindPages({
@@ -268,6 +278,15 @@ function PageKindPages({
       </TableCell>
     </TableRow>
   );
+}
+
+/** What the depth distribution shows, for a reader who cannot see the bars. */
+function depthSummary(data: SiteArchitecture): string {
+  const parts = data.structure_depth.buckets.map(
+    (bucket) =>
+      `${DEPTH_LABELS[bucket.key]}: ${bucket.page_count} pages (${formatPercent(bucket.percentage)})`,
+  );
+  return `Share of pages by click depth from the homepage. ${parts.join('; ')}.`;
 }
 
 function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
@@ -328,16 +347,22 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
           </SectionHeader>
           <SectionContent>
             <Stack>
-              {data.structure_depth.buckets.map((bucket) => (
-                <MeterRow
-                  key={bucket.key}
-                  name={DEPTH_LABELS[bucket.key]}
-                  figure={`${bucket.page_count} (${formatPercent(bucket.percentage)})`}
-                  value={bucket.percentage === null ? null : Math.round(bucket.percentage * 100)}
-                  label={`${DEPTH_LABELS[bucket.key]} share of pages`}
-                  tone={{ series: 1 }}
-                />
-              ))}
+              <ChartFrame summary={depthSummary(data)}>
+                <Stack>
+                  {data.structure_depth.buckets.map((bucket) => (
+                    <MeterRow
+                      key={bucket.key}
+                      name={DEPTH_LABELS[bucket.key]}
+                      figure={`${bucket.page_count} (${formatPercent(bucket.percentage)})`}
+                      value={
+                        bucket.percentage === null ? null : Math.round(bucket.percentage * 100)
+                      }
+                      label={`${DEPTH_LABELS[bucket.key]} share of pages`}
+                      tone={{ series: 1 }}
+                    />
+                  ))}
+                </Stack>
+              </ChartFrame>
               {data.structure_depth.unmeasured_page_count > 0 ? (
                 <p className="type-caption">
                   {data.structure_depth.unmeasured_page_count} pages have no measured depth.

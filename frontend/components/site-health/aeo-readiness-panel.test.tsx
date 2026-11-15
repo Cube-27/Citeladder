@@ -163,7 +163,7 @@ describe('AEO Readiness', () => {
 
     const answerability = (await screen.findByText('Answerability')).closest('tr');
     expect(within(answerability!).getByText('Needs work')).toBeInTheDocument();
-    expect(within(answerability!).getByText('83%')).toBeInTheDocument();
+    expect(within(answerability!).getByText('83.3%')).toBeInTheDocument();
     expect(screen.queryByText(/evidence link/i)).toBeNull();
   });
 

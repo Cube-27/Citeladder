@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import type { CrawlRobotsChoice, CrawlRobotsHandling } from '@citeladder/contracts';
 
 import { StatusMark } from '@/components/ui/status-mark';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
@@ -35,15 +36,12 @@ export function robotsChoiceNote(choice: CrawlRobotsChoice | undefined) {
 export function StartCrawlControl({
   siteUrl,
   robots,
-  primary,
   pending,
   onStart,
 }: Readonly<{
   siteUrl: string;
   /** The newest crawl's robots choice, which the crawl keeps. */
   robots: CrawlRobotsChoice;
-  /** Primary unless the tab has its own primary action. */
-  primary: boolean;
   pending: boolean;
   /** No choice keeps the newest crawl's. */
   onStart: (robots?: CrawlRobotsHandling) => void;
@@ -67,13 +65,12 @@ export function StartCrawlControl({
       },
     });
   const button = (
-    <Button
-      variant={primary ? 'primary' : 'secondary'}
+    <ActionButton
+      action="runCrawl"
       onClick={() => onStart()}
-      disabled={pending}
-    >
-      {pending ? 'Starting…' : 'Run new crawl'}
-    </Button>
+      pending={pending}
+      pendingLabel="Starting…"
+    />
   );
   return (
     <>

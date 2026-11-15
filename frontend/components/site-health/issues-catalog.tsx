@@ -134,7 +134,6 @@ export function IssuesCatalog({
         label="Issues"
         // Keeps the Issue column readable beside the fixed severity and pages
         // columns; narrower screens scroll the table instead.
-        minWidth="sm"
         columns={issueColumns(filters.sort, (sort) => updateFilters({ sort }))}
         toolbar={{
           view: (
@@ -212,18 +211,18 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
 /** The issue, its severity, its pages; severity and pages order the list. */
 function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataTableColumn[] {
   return [
-    { key: 'issue', label: 'Issue' },
+    { key: 'issue', label: 'Issue', kind: 'identity' },
     {
       key: 'severity',
       label: 'Severity',
+      kind: 'status',
       width: 'statusLabel',
       sort: { active: sort === 'severity', descending: true, onSort: () => onSort('severity') },
     },
     {
       key: 'pages',
       label: 'Pages',
-      width: 'figure',
-      numeric: true,
+      kind: 'number',
       sort: { active: sort === 'pages', descending: true, onSort: () => onSort('pages') },
     },
   ];

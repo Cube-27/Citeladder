@@ -6,6 +6,8 @@ import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { byPageKindRows } from '@/lib/site-health/page-kinds';
 import { formatScore, measurementCaveat } from '@/lib/site-health/status';
+import { formatPercent } from '@/lib/format';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * Dashboard per-page-kind score breakdown.
@@ -51,11 +53,13 @@ export function PageKindScores({
   const rows = summary === null ? [] : byPageKindRows(summary.by_page_kind);
 
   return (
-    <div data-testid="page-kind-scores" className="grid min-w-0">
+    <Section data-testid="page-kind-scores">
+      <SectionHeader>
+        <SectionTitle>Scores by page kind</SectionTitle>
+      </SectionHeader>
       <DataTable
-        title="Scores by page kind"
+        label="Scores by page kind"
         columns={COLUMNS}
-        minWidth="md"
         footer="Mean scores across the analyzed pages of each type."
         state={emptyState(summary === null, rows.length)}
       >
@@ -85,22 +89,22 @@ export function PageKindScores({
               {row.aeo_measurement_coverage === null ? (
                 <Absence state="not_measured" />
               ) : (
-                `${Math.round(row.aeo_measurement_coverage * 100)}%`
+                formatPercent(row.aeo_measurement_coverage)
               )}
             </TableCell>
           </TableRow>
         ))}
       </DataTable>
-    </div>
+    </Section>
   );
 }
 
 const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'kind', label: 'Page kind' },
-  { key: 'analyzed', label: 'Analyzed', width: 'figure', numeric: true },
-  { key: 'web', label: 'Web Fundamentals', width: 'date', numeric: true },
-  { key: 'aeo', label: 'AEO Readiness', width: 'status', numeric: true },
-  { key: 'coverage', label: 'AEO checklist completion', width: 'date', numeric: true },
+  { key: 'kind', label: 'Page kind', kind: 'status', width: 'flex' },
+  { key: 'analyzed', label: 'Analyzed', kind: 'number' },
+  { key: 'web', label: 'Web Fundamentals', kind: 'number' },
+  { key: 'aeo', label: 'AEO Readiness', kind: 'number' },
+  { key: 'coverage', label: 'AEO checklist completion', kind: 'number', width: 'metric' },
 ];
 
 function MeasurementValue({

@@ -23,7 +23,13 @@ import {
 } from '@/lib/site-health/site-facts';
 import { RobotsHistory } from './robots-history';
 import { Notice } from '@/components/ui/notice';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 export function SiteFactsPanel({
   crawl,
@@ -70,18 +76,20 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
         }
       >
         <SectionTitle>AI crawler robots policy</SectionTitle>
-        <p className={textRole('caption')}>
+        <SectionDescription>
           What robots.txt permits over known URLs. This does not prove that a crawler retrieved a
           page.
-        </p>
-        <p className={textRole('caption')}>
+        </SectionDescription>
+        <SectionDescription>
           robots.txt: {robotsStatusLabels[view.robots.status]}
           {view.robots.status_code !== null ? ` (HTTP ${view.robots.status_code})` : ''} · llms.txt:{' '}
           {llmsStatus}
-        </p>
+        </SectionDescription>
       </SectionHeader>
       <SectionContent>
-        <Stack className="min-w-0">
+        {/* Each disclosure is its own target, a workspace gap from the next
+            group, so a summary never touches the filter above it. */}
+        <Stack gap="workspace" className="min-w-0">
           {unknown ? (
             <Notice tone="warning">
               robots.txt could not be read. Root access and robots policy are unknown.
@@ -144,11 +152,11 @@ function crawlerSummary(view: SiteFactsView): string {
 type CrawlerBot = SiteFactsView['robots']['bots'][number];
 
 const CRAWLER_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'bot', label: 'Bot' },
-  { key: 'operator', label: 'Operator', width: 'status' },
-  { key: 'matched', label: 'Matched group', width: 'status' },
-  { key: 'root', label: 'Root access', width: 'status' },
-  { key: 'policy', label: 'Robots policy', width: 'name' },
+  { key: 'bot', label: 'Bot', kind: 'identity' },
+  { key: 'operator', label: 'Operator', kind: 'text', width: 'status' },
+  { key: 'matched', label: 'Matched group', kind: 'text', width: 'status' },
+  { key: 'root', label: 'Root access', kind: 'status' },
+  { key: 'policy', label: 'Robots policy', kind: 'status', width: 'name' },
 ];
 
 function CrawlerTable({
@@ -166,7 +174,6 @@ function CrawlerTable({
     <DataTable
       label="Crawler robots policy by purpose"
       columns={CRAWLER_COLUMNS}
-      minWidth="md"
       toolbar={{ filters: [filter] }}
     >
       {purposes

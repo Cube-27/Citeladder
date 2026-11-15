@@ -3,7 +3,7 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { GitCompare } from 'lucide-react';
 
 import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/actions';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
@@ -110,7 +110,6 @@ export function ChangesPanel({
       <DataTable
         label="Website changes"
         columns={CHANGE_COLUMNS}
-        minWidth="md"
         {...table}
         state={summaryState ?? table.state}
         pager={summaryState ? undefined : table.pager}
@@ -157,13 +156,11 @@ function ChangeRow({
         </Inline>
       </TableCell>
       <TableCell>
-        <Button
-          variant="quiet"
+        <ActionButton
+          action="viewEvidence"
           onClick={onOpen}
           aria-label={`View evidence: ${field} on ${displayPath(row.normalized_url)}`}
-        >
-          View evidence
-        </Button>
+        />
       </TableCell>
     </TableRow>
   );
@@ -210,8 +207,8 @@ function comparisonState(
 
 // Page is the one flexible column; the evidence is a button at the row's end.
 const CHANGE_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'page', label: 'Page' },
-  { key: 'field', label: 'Field', width: 'name' },
-  { key: 'class', label: 'Class', width: 'name' },
-  { key: 'evidence', label: 'Evidence', width: 'category' },
+  { key: 'page', label: 'Page', kind: 'identity' },
+  { key: 'field', label: 'Field', kind: 'text', width: 'name' },
+  { key: 'class', label: 'Class', kind: 'text', width: 'name' },
+  { key: 'evidence', label: 'Evidence', kind: 'text', width: 'category' },
 ];
