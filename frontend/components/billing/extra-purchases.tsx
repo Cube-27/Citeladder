@@ -97,10 +97,20 @@ function ExtraRow({
 
 type ExtraGrant = BillingEntitlement['grants'][number];
 
+/**
+ * Add-on and top-up grants in force when the entitlement resolved. `grants`
+ * holds the account's whole history, lapsed and revoked grants included.
+ */
 function activeExtraGrants(entitlement: BillingEntitlement | null): ExtraGrant[] {
-  return (entitlement?.grants ?? []).filter(
+  if (!entitlement) return [];
+  const at = Date.parse(entitlement.resolved_at);
+  const after = (time: string | null) => time === null || Date.parse(time) > at;
+  return entitlement.grants.filter(
     (grant) =>
-      (grant.source_kind === 'addon' || grant.source_kind === 'topup') && grant.revoked_at === null,
+      (grant.source_kind === 'addon' || grant.source_kind === 'topup') &&
+      Date.parse(grant.valid_from) <= at &&
+      after(grant.effective_valid_until) &&
+      after(grant.revoked_at),
   );
 }
 
