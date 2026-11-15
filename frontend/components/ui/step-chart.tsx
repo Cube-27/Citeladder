@@ -220,7 +220,6 @@ export function StepChart({
     if (next !== undefined) setActive(next);
   };
   const placed = placedEvents(data, events, scale);
-  const point = active === null ? undefined : data[active];
 
   return (
     <ChartFrame height={heightRole} summary={summarise(label, data, lines, shown)}>
@@ -269,20 +268,15 @@ export function StepChart({
             endLabels={endLabels}
             events={placed}
           />
-          {active === null || !point ? null : (
-            <ChartTipSheet
-              title={point.label}
-              top={scale.padTop}
-              left={tipLeft(scale.x(active), width)}
-              note={point.versionChange?.note}
-              rows={lines.map((line) => ({
-                name: line.name,
-                tone: line.tone,
-                shape: keyed ? line.shape : undefined,
-                value: shown(line.values[active]),
-              }))}
-            />
-          )}
+          <StepChartTip
+            data={data}
+            lines={lines}
+            active={active}
+            scale={scale}
+            width={width}
+            keyed={keyed}
+            shown={shown}
+          />
         </div>
       </div>
       <StepChartTable
@@ -341,6 +335,42 @@ function keyedPoint(
 }
 
 /** Every value, method change and event of the chart, for a reader who cannot see it. */
+/** The hovered or focused point's values, one row per line. */
+function StepChartTip({
+  data,
+  lines,
+  active,
+  scale,
+  width,
+  keyed,
+  shown,
+}: Readonly<{
+  data: readonly TrendPoint[];
+  lines: readonly Line[];
+  active: number | null;
+  scale: TrendScale;
+  width: number;
+  keyed: boolean;
+  shown: (value: number | null | undefined) => string;
+}>) {
+  const point = active === null ? undefined : data[active];
+  if (active === null || !point) return null;
+  return (
+    <ChartTipSheet
+      title={point.label}
+      top={scale.padTop}
+      left={tipLeft(scale.x(active), width)}
+      note={point.versionChange?.note}
+      rows={lines.map((line) => ({
+        name: line.name,
+        tone: line.tone,
+        shape: keyed ? line.shape : undefined,
+        value: shown(line.values[active]),
+      }))}
+    />
+  );
+}
+
 function StepChartTable({
   label,
   data,
