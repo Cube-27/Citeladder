@@ -8,6 +8,7 @@ import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { Button } from '@/components/ui/button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -428,9 +429,11 @@ export default function PricingRoute() {
   return (
     <SettingsPage
       actions={
-        <Button asChild variant={needsChoice(selection, offered) ? 'primary' : 'secondary'}>
-          <a href={websitePricing}>View public pricing</a>
-        </Button>
+        <MastheadPrimary>
+          <Button asChild variant={needsChoice(selection, offered) ? 'primary' : 'secondary'}>
+            <a href={websitePricing}>View public pricing</a>
+          </Button>
+        </MastheadPrimary>
       }
     >
       <PricingState

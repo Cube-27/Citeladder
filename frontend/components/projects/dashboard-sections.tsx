@@ -1,6 +1,7 @@
 import { ArrowRight, Download, TrendingUp } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 
 import { Tag, TagGroup } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
@@ -130,7 +131,9 @@ export function DashboardActions({
       {layoutMenu}
       <PdfButton downloading={downloading} onDownload={onDownload} />
       {/* The one primary: the run the Overview's figures come from. */}
-      <LaunchAuditButton />
+      <MastheadPrimary>
+        <LaunchAuditButton />
+      </MastheadPrimary>
     </>
   );
 }

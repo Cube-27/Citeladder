@@ -230,6 +230,6 @@ function invitationsState(
 const INVITATION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'invitee', label: 'Invitee', kind: 'identity' },
   { key: 'role', label: 'Workspace role', kind: 'status' },
-  { key: 'expires', label: 'Link expires', kind: 'date' },
+  { key: 'expires', label: 'Link expires', kind: 'date', width: 'metric' },
   { key: 'access', label: 'Access', kind: 'actions', width: 'name' },
 ];

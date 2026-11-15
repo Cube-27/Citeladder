@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { ReportPage } from '@/components/templates/report-page';
 import type { Project } from '@citeladder/contracts';
 import { useProjectCreation } from '@/components/layout/use-project-creation';
@@ -64,14 +65,16 @@ export function ProjectsScreen() {
       <ReportPage
         actions={
           mayCreate ? (
-            <Button
-              variant="primary"
-              disabled={!canAddProject}
-              onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
-            >
-              <Icon icon={Plus} />
-              Add project
-            </Button>
+            <MastheadPrimary>
+              <Button
+                variant="primary"
+                disabled={!canAddProject}
+                onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
+              >
+                <Icon icon={Plus} />
+                Add project
+              </Button>
+            </MastheadPrimary>
           ) : undefined
         }
       >

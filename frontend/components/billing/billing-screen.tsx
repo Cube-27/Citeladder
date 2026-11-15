@@ -29,6 +29,7 @@ import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 import { Button } from '@/components/ui/button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
@@ -205,12 +206,14 @@ export function BillingScreen() {
   return (
     <SettingsPage
       actions={
-        <NextStep
-          catalog={catalog}
-          entitlement={entitlement}
-          canManage={canManage}
-          reviewing={checkout.prepared?.status === 'pending'}
-        />
+        <MastheadPrimary>
+          <NextStep
+            catalog={catalog}
+            entitlement={entitlement}
+            canManage={canManage}
+            reviewing={checkout.prepared?.status === 'pending'}
+          />
+        </MastheadPrimary>
       }
     >
       <CheckoutStatus checkout={checkout} />
