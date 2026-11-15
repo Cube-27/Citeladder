@@ -11,6 +11,53 @@
         reader never sees a light frame. The cookie name must match
         THEME_COOKIE in lib/theme/theme.ts, which owns the preference. -->
     <script src="/theme-preference.js"></script>
+    <!-- First paint is the shell (STA-07): the sidebar, the masthead band and
+        the ground in the token colours, until React replaces #root. The
+        sidebar is 224 from 1280px, 200 from 900, none below; 56 when the
+        preference script finds the sidebar collapsed. -->
+    <style>
+      .boot-shell {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        background: #f5f6f8;
+      }
+      .boot-side {
+        flex: none;
+        width: 200px;
+        background: #fbfbfc;
+        border-inline-end: 1px solid #e4e6eb;
+      }
+      .boot-main {
+        flex: 1;
+        min-width: 0;
+      }
+      .boot-mast {
+        height: 56px;
+        background: #fbfbfc;
+        border-block-end: 1px solid #e4e6eb;
+      }
+      @media (min-width: 1280px) {
+        .boot-side {
+          width: 224px;
+        }
+      }
+      [data-sidebar-rail] .boot-side {
+        width: 56px;
+      }
+      @media (max-width: 899.98px) {
+        .boot-side {
+          display: none;
+        }
+      }
+      [data-theme='dark'] .boot-shell {
+        background: #0f1114;
+      }
+      [data-theme='dark'] :is(.boot-side, .boot-mast) {
+        background: #131519;
+        border-color: #2b2e36;
+      }
+    </style>
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="manifest" href="/site.webmanifest" />
     <title>CiteLadder · AI visibility with evidence you can open</title>
@@ -22,7 +69,12 @@
     <!-- brand-fonts -->
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div class="boot-shell" aria-hidden="true">
+        <div class="boot-side"></div>
+        <div class="boot-main"><div class="boot-mast"></div></div>
+      </div>
+    </div>
     <!-- Below the support matrix, this fills #root with an "Update your
         browser" notice before the app shell runs, and main.tsx stays out. -->
     <script src="/browser-support.js"></script>

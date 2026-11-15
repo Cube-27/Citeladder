@@ -14,3 +14,12 @@ try {
 } catch {
   // Cookies or matchMedia unavailable: the stylesheet's light default stands.
 }
+// The app's first-paint shell draws the collapsed rail; the key is
+// COLLAPSED_KEY in lib/sidebar-width.ts. Absent on the website and docs.
+try {
+  if (localStorage.getItem('citeladder:app:sidebar-collapsed') === '1') {
+    document.documentElement.dataset.sidebarRail = '';
+  }
+} catch {
+  // Storage blocked: the shell paints the labelled sidebar.
+}

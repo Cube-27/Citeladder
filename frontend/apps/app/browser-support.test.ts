@@ -8,7 +8,8 @@ const script = readFileSync(join(import.meta.dirname, '../../public/browser-supp
 
 function runOnPage(): HTMLElement {
   document.documentElement.removeAttribute('data-browser-support');
-  document.body.innerHTML = '<div id="root"></div>';
+  // index.html's first-paint shell, which React or the notice replaces.
+  document.body.innerHTML = '<div id="root"><div class="boot-shell"></div></div>';
   // Runs the shipped classic script as the browser does.
   new Function(script)();
   const root = document.getElementById('root');
@@ -24,7 +25,7 @@ describe('browser-support.js', () => {
   it('leaves the root to the app on a browser in the support matrix', () => {
     const root = runOnPage();
 
-    expect(root.innerHTML).toBe('');
+    expect(root.innerHTML).toBe('<div class="boot-shell"></div>');
     expect(document.documentElement.dataset.browserSupport).toBeUndefined();
   });
 
@@ -33,6 +34,7 @@ describe('browser-support.js', () => {
     const root = runOnPage();
 
     expect(root.querySelector('h1')?.textContent).toBe('Update your browser');
+    expect(root.querySelector('.boot-shell')).toBeNull();
     expect(root.querySelector('main p')?.textContent).toBe(
       'CiteLadder needs a newer browser. Update Chrome, Edge, Firefox, Safari or Samsung Internet to the latest version, then reload this page.',
     );

@@ -21,6 +21,8 @@
   document.documentElement.dataset.browserSupport = 'unsupported';
   var root = document.getElementById('root');
   if (!root) return;
+  // The notice replaces index.html's first-paint shell.
+  root.textContent = '';
   var notice = document.createElement('main');
   notice.style.maxWidth = '32rem';
   notice.style.margin = '20vh auto 0';
