@@ -10,7 +10,7 @@ import {
   performanceNotices,
   ProjectionFailure,
 } from './performance-chrome';
-import { Ga4SummaryRow, MetricCards } from './metric-cards';
+import { Ga4SummaryRow, MetricCards, MetricDefinitions } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
 import { METRIC_MARKS, PerformanceChart, type ChartSeries } from './performance-chart';
 import { ReadinessLadder, useProjectReadiness } from './readiness-ladder';
@@ -21,6 +21,7 @@ import { useRangeProjection } from './use-range-projection';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
 import { ReportPage } from '@/components/templates/report-page';
 import { Stack } from '@/components/ui/layout';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { StatusLine } from '@/components/ui/status-line';
 import { formatCount, formatWindowDate } from '@/lib/format';
@@ -184,24 +185,29 @@ function SearchConsoleWorkspace({
   refreshing: boolean;
 }>) {
   if (!available) return null;
-  // The figure strip opens the group with its ink rule; the plot it drives
-  // sits right under it.
+  // The strip and the plot it drives are one section: selecting a figure
+  // changes the lines directly beneath it.
   return (
-    <Stack gap="workspace" className="min-w-0">
-      <MetricCards
-        data-testid="metric-card-strip"
-        className="min-w-0"
-        selected={selected}
-        comparison={comparison}
-        compareLabel={compareLabel}
-        selectedLabel={selectedLabel}
-        active={activeMetrics}
-        onToggle={onToggleMetric}
-        marks={METRIC_MARKS}
-        loading={refreshing}
-      />
-      <PerformanceChart series={series} />
-    </Stack>
+    <Section aria-labelledby="performance-search-console">
+      <SectionHeader actions={<MetricDefinitions />}>
+        <SectionTitle id="performance-search-console">Google Search</SectionTitle>
+      </SectionHeader>
+      <Stack gap="workspace" className="min-w-0">
+        <MetricCards
+          data-testid="metric-card-strip"
+          className="min-w-0"
+          selected={selected}
+          comparison={comparison}
+          compareLabel={compareLabel}
+          selectedLabel={selectedLabel}
+          active={activeMetrics}
+          onToggle={onToggleMetric}
+          marks={METRIC_MARKS}
+          loading={refreshing}
+        />
+        <PerformanceChart series={series} />
+      </Stack>
+    </Section>
   );
 }
 
@@ -220,12 +226,20 @@ function Ga4Workspace({
 }>) {
   if (!available) return null;
   return (
-    <Ga4SummaryRow
-      selected={selected}
-      comparison={comparison}
-      compareLabel={compareLabel}
-      loading={refreshing}
-    />
+    <Section aria-labelledby="performance-ga4">
+      <SectionHeader>
+        <SectionTitle id="performance-ga4">Google Analytics 4</SectionTitle>
+        <SectionDescription>
+          Property-wide organic and AI sessions · Key events as configured in GA4
+        </SectionDescription>
+      </SectionHeader>
+      <Ga4SummaryRow
+        selected={selected}
+        comparison={comparison}
+        compareLabel={compareLabel}
+        loading={refreshing}
+      />
+    </Section>
   );
 }
 

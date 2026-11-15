@@ -2,8 +2,7 @@ import { useState } from 'react';
 
 import { DimensionTable, useWarmDimensionTable } from './dimension-table';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
-import { Stack } from '@/components/ui/layout';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import type { PerformanceDashboard, PerformanceDimension } from '@/lib/api/performance';
 import { BING_DIMENSION_TABS } from '@/lib/performance/performance';
 
@@ -41,11 +40,11 @@ export function BingPanel({
   const warm = useWarmDimensionTable(projectId);
 
   return (
-    <Stack as="section" gap="compact" aria-label="Bing performance" data-testid="bing-panel">
-      <EditorialSectionHeader
-        title="Bing"
-        description="Counted separately from Search Console totals."
-      />
+    <Section aria-label="Bing performance" data-testid="bing-panel">
+      <SectionHeader>
+        <SectionTitle>Bing</SectionTitle>
+        <SectionDescription>Counted separately from Search Console totals.</SectionDescription>
+      </SectionHeader>
       <Tabs
         value={dimension}
         onValueChange={setDimension}
@@ -71,6 +70,6 @@ export function BingPanel({
           </TabPanel>
         ))}
       </Tabs>
-    </Stack>
+    </Section>
   );
 }

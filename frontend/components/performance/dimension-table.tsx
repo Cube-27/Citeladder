@@ -5,7 +5,8 @@ import { SearchX } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { Absence } from '@/components/ui/absence';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText, TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { sharedOrigin } from '@/lib/format';
 import {
   performanceQueries,
   type PerformanceDimension,
@@ -68,14 +69,14 @@ function orderableSort(
 }
 
 /**
- * The header row: the row identity (a quarter of the table, so every tab
- * lays out identically and switching Queries -> Pages does not reflow the
- * metric columns under the pointer), then each metric. Search Console groups
+ * The header row: the row identity, which takes what the figures leave (at
+ * least the identity minimum, so a query stays readable), then each metric. Search Console groups
  * each metric with its own comparison and difference rather than appending
  * all comparisons at the end, so a reader compares adjacent columns. The
  * derived columns are not stored, so they do not sort.
  */
 function dimensionColumns({
+  dimension,
   header,
   metrics,
   activeSort,
@@ -84,6 +85,7 @@ function dimensionColumns({
   selectedLabel,
   compareLabel,
 }: Readonly<{
+  dimension: PerformanceDimension;
   header: string;
   metrics: readonly { key: PerformanceMetricKey; label: string }[];
   activeSort: string;
@@ -93,14 +95,13 @@ function dimensionColumns({
   compareLabel: string;
 }>): DataTableColumn[] {
   return [
-    { key: 'dimension', label: header, width: 'lead' },
+    { key: 'dimension', label: header, kind: dimension === 'page' ? 'url' : 'identity' },
     ...metrics.flatMap((metric): DataTableColumn[] => {
       const label = metric.label.replace(/^(Total|Average) /, '');
       const selected: DataTableColumn = {
         key: metric.key,
         label,
-        width: 'figure',
-        numeric: true,
+        kind: 'number',
         sort: {
           active: sortKey(activeSort) === metric.key,
           descending: sortDirection(activeSort) === 'descending',
@@ -117,15 +118,13 @@ function dimensionColumns({
         {
           key: `${metric.key}-comparison`,
           label,
-          width: 'figure',
-          numeric: true,
+          kind: 'number',
           sublabel: compareLabel,
         },
         {
           key: `${metric.key}-difference`,
           label,
-          width: 'figure',
-          numeric: true,
+          kind: 'number',
           sublabel: 'Difference',
         },
       ];
@@ -254,6 +253,7 @@ export function DimensionTable({
   });
 
   const columns = dimensionColumns({
+    dimension,
     header: tab.header,
     metrics: displayedMetrics,
     activeSort,
@@ -274,7 +274,6 @@ export function DimensionTable({
       <DataTable
         label={tab.header}
         columns={columns}
-        minWidth={comparing ? 'md' : 'sm'}
         reserveRows
         {...table}
         state={{
@@ -287,25 +286,21 @@ export function DimensionTable({
     );
   }
 
+  // A page column drops the origin its rows share and breaks only at slashes.
+  const origin =
+    dimension === 'page' ? sharedOrigin(page?.items.map((row) => row.display_value) ?? []) : null;
   return (
-    <DataTable
-      label={tab.header}
-      columns={columns}
-      minWidth={comparing ? 'md' : 'sm'}
-      reserveRows
-      {...table}
-    >
+    <DataTable label={tab.header} columns={columns} reserveRows {...table}>
       {page?.items.map((row) => (
         <TableRow key={row.dimension_key}>
           <TableCell>
-            <ClampText
-              className={cn(
-                dimension === 'page' && 'tabular-nums break-all',
-                dimension === 'day' && 'tabular-nums',
-              )}
-            >
-              {formatDimensionValue(dimension, row.display_value)}
-            </ClampText>
+            {dimension === 'page' ? (
+              <UrlText url={row.display_value} origin={origin} lines={1} />
+            ) : (
+              <ClampText className={cn(dimension === 'day' && 'tabular-nums')}>
+                {formatDimensionValue(dimension, row.display_value)}
+              </ClampText>
+            )}
           </TableCell>
           {displayedMetrics.flatMap((metric) => {
             const selectedCell = (
