@@ -96,10 +96,6 @@ function serveActions(reads: string[]) {
   );
 }
 
-/** The pricing page's address, which a URL cell draws as a head and a tail. */
-const pricingUrl = (_: string, node: Element | null) =>
-  node?.hasAttribute('data-url-text') === true && node.textContent === 'https://acme.test/pricing';
-
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => window.history.replaceState(null, '', '/agent/actions'));
 afterEach(() => mswServer.resetHandlers());
@@ -134,12 +130,10 @@ describe('Actions', () => {
       'group=products&limit=5',
     ]);
 
-    // The row is titled by the work and links to its Action; the target is secondary.
-    const cells = within(screen.getByText(pricingUrl).closest('tr')!);
-    expect(cells.getByRole('link', { name: 'Improve the existing page' })).toHaveAttribute(
-      'href',
-      `/agent/actions/${ACTION}?project=${PROJECT}`,
-    );
+    // The row is titled by the work and its target, and links to its Action.
+    const pricing = screen.getByRole('link', { name: 'Improve the existing page: /pricing' });
+    expect(pricing).toHaveAttribute('href', `/agent/actions/${ACTION}?project=${PROJECT}`);
+    const cells = within(pricing.closest('tr')!);
     // The band, never the raw score; priority is an order, never a hue.
     expect(cells.getByText('High').closest('[data-status-tone]')).toHaveAttribute(
       'data-status-tone',
@@ -149,8 +143,11 @@ describe('Actions', () => {
     expect(cells.getByText('Page · 1 finding in Website, Search Console')).toBeVisible();
     // An Open row in the queue names no status; one in progress does.
     expect(cells.queryByText('Open')).not.toBeInTheDocument();
-    const started = screen.getByText('acme.test/page-0');
+    const started = screen.getByRole('link', { name: 'Improve the existing page: /page-0' });
     expect(within(started.closest('tr')!).getByText('In progress')).toBeVisible();
+    // No two rows of one kind of work share a title.
+    const titles = screen.getAllByRole('link').map((link) => link.textContent);
+    expect(new Set(titles).size).toBe(titles.length);
     expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'Action',
       'Priority',
@@ -161,26 +158,28 @@ describe('Actions', () => {
       'descending',
     );
     // Five of the seven, then the way to the rest.
-    expect(screen.queryByText('acme.test/page-4')).toBeNull();
+    expect(screen.queryByText('Improve the existing page: /page-4')).toBeNull();
 
     // A header folds its group's rows.
     await user.click(own);
     expect(own).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText(pricingUrl)).toBeNull();
+    expect(screen.queryByText('Improve the existing page: /pricing')).toBeNull();
     await user.click(own);
 
     await user.click(screen.getByRole('button', { name: 'Show all 7 in Improve your own pages' }));
-    expect(await screen.findByText('acme.test/page-5')).toBeVisible();
+    expect(await screen.findByText('Improve the existing page: /page-5')).toBeVisible();
     expect(window.location.search).toBe('?group=own_pages');
     expect(reads.at(-1)).toBe('group=own_pages&limit=10');
-    expect(screen.queryByText('Missing viewport meta tag')).toBeNull();
+    expect(screen.queryByText('Fix a technical issue: Missing viewport meta tag')).toBeNull();
   });
 
   it('lists an issue family in Fix how AI reads your site with its page count', async () => {
     serveActions([]);
     renderActions();
-    const row = (await screen.findByText('Missing viewport meta tag')).closest('tr')!;
-    expect(within(row).getByRole('link', { name: 'Fix a technical issue' })).toBeVisible();
+    const link = await screen.findByRole('link', {
+      name: 'Fix a technical issue: Missing viewport meta tag',
+    });
+    const row = link.closest('tr')!;
     expect(
       within(row).getByText('Issue across pages · 179 pages · 1 finding in Website'),
     ).toBeVisible();
@@ -212,14 +211,21 @@ describe('Actions', () => {
     expect(await screen.findByText('No Actions match these filters')).toBeVisible();
     expect(window.location.search).toBe('?priority=high&status=dismissed');
     expect(screen.getByRole('button', { name: 'All filters (2)' })).toBeVisible();
+
+    // Clear filters returns to the whole work queue.
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(await screen.findByRole('button', { name: 'Improve your own pages, 7' })).toBeVisible();
+    expect(window.location.search).toBe('');
   });
 
   it('opens the Action detail from anywhere on its row', async () => {
     serveActions([]);
     const user = userEvent.setup();
     renderActions();
-    const row = (await screen.findByText('Missing viewport meta tag')).closest('tr')!;
-    await user.click(within(row).getByText('Missing viewport meta tag'));
+    const summary = await screen.findByText(
+      'Issue across pages · 179 pages · 1 finding in Website',
+    );
+    await user.click(summary);
     expect(await screen.findByText('Action detail')).toBeVisible();
   });
 });

@@ -13,10 +13,10 @@ import { ThreadPage } from '@/components/templates/thread-page';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
+import { actionTitle } from '@/lib/agent/action-title';
 import { contextChips, parseAgentHandoff, withoutContext } from '@/lib/agent/handoff';
 import { approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries, type Action } from '@/lib/api/actions';
-import { shortUrlTitle } from '@/lib/format';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -198,11 +198,11 @@ function useAttachedAction(
 }
 
 /**
- * The attached Action as one line in the composer: "Action:", its short
- * title, then its type (the approach, else the kind of target).
+ * The attached Action as one line in the composer: "Action:" and its one
+ * title, then the kind of target when the title names no work.
  */
 function attachmentLabel(action: Action): string {
-  const type = approachLabel(action.approach) ?? targetKindLabel(action.target_kind);
-  const title = `Action: ${shortUrlTitle(action.target_label)}`;
-  return type ? `${title} · ${type}` : title;
+  const title = `Action: ${actionTitle(action)}`;
+  const kind = approachLabel(action.approach) ? null : targetKindLabel(action.target_kind);
+  return kind ? `${title} · ${kind}` : title;
 }

@@ -3,7 +3,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { OnPageEntities } from '@/components/ui/on-page-entities';
 import { TextLink } from '@/components/ui/text-link';
 import { Limitations } from '@/components/ui/passage';
-import { Label, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@citeladder/contracts';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { BrandOnPage } from '@/components/visibility/brand-on-page';
@@ -29,7 +29,7 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
   const format = urlTypeLabel(handoff.page_format);
   return (
     <Stack as="section">
-      <Label>Action handoff</Label>
+      <h3 className={textRole('subheading')}>Action handoff</h3>
       <Stack className={wellClasses()}>
         <p className={textRole('body', 'text-ink-2')}>
           Get listed on this page. Competitors are on it and you are not.

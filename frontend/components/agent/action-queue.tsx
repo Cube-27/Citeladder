@@ -3,9 +3,10 @@ import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters
 import type { DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, UrlText } from '@/components/ui/table';
+import { TableCell } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
+import { actionTitle } from '@/lib/agent/action-title';
 import {
   ACTION_APPROACHES,
   ACTION_FAMILIES,
@@ -25,7 +26,7 @@ import {
   type ActionsParams,
   type ActionStatus,
 } from '@/lib/api/actions';
-import { pluralCount, readableUrl, sharedOrigin } from '@/lib/format';
+import { pluralCount } from '@/lib/format';
 import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import {
@@ -174,6 +175,15 @@ export function useActionFilters() {
     group: group === ALL ? undefined : group,
     // A step into one group, so Back returns to every group.
     showGroup: (next: ActionGroup) => setGroup(next, 'push'),
+    /** Every filter back to its default: the work queue, all groups and kinds. */
+    clear: () => {
+      setStatus(QUEUE);
+      setGroup(ALL);
+      setApproach(ALL);
+      setPriority(ALL);
+      setTarget(ALL);
+      setSource(ALL);
+    },
   };
 }
 
@@ -196,61 +206,37 @@ function workSummary(action: Action): string {
     .join(' · ');
 }
 
-/** What the list's targets share, so each row prints only its path. */
-export function targetsOrigin(actions: readonly Action[]): string | null {
-  return sharedOrigin(actions.map((action) => action.target_label));
-}
-
 /**
- * A row's Action cell: the work, linked to its Action, as the row's title,
- * its status beside it only in the work queue and only when it is not Open
- * (the queue is nearly all Open); the target under it, a URL breaking only
- * after a `/` and less the origin every row shares; then the work summary.
- * An Action with no type is titled by its target.
+ * A row's Action cell: its title (the work and its target, one line, linked
+ * to its Action, the whole target in the tooltip), its status beside it only
+ * in the work queue and only when it is not Open (the queue is nearly all
+ * Open), then the work summary.
  */
 export function ActionTargetCell({
   action,
   status,
-  origin,
 }: Readonly<{
   action: Action;
   /** The list's status filter; undefined for the work queue. */
   status: ActionStatus | undefined;
-  /** The origin every listed target shares, from `targetsOrigin`. */
-  origin: string | null;
 }>) {
-  // A page to create is named by its topic, so the label is not always a URL.
-  const target = readableUrl(action.target_label);
-  const work = approachLabel(action.approach);
   return (
     <TableCell>
-      {/* Title over its captions, one fact 4 apart, as `TableCellLines` binds them. */}
+      {/* Title over its caption, 4 apart, as `TableCellLines` binds them. */}
       <Stack gap="tight" className="min-w-0">
-        <Inline>
-          <ClampText lines={2}>
+        <Inline className="min-w-0 flex-nowrap">
+          <ClampText tooltip={actionTitle(action, { full: true })}>
             <TextLink href={`/agent/actions/${action.id}`} text="body">
-              {work ?? target}
+              {actionTitle(action)}
             </TextLink>
           </ClampText>
           {status === undefined && action.status !== 'open' ? (
             <ActionStatusBadge status={action.status} />
           ) : null}
         </Inline>
-        {work === null ? null : <TargetLine label={action.target_label} origin={origin} />}
-        <ClampText lines={1} className={textRole('caption')}>
-          {workSummary(action)}
-        </ClampText>
+        <ClampText className={textRole('caption')}>{workSummary(action)}</ClampText>
       </Stack>
     </TableCell>
-  );
-}
-
-function TargetLine({ label, origin }: Readonly<{ label: string; origin: string | null }>) {
-  if (/^https?:\/\//iu.test(label)) return <UrlText url={label} origin={origin} />;
-  return (
-    <ClampText lines={1} className={textRole('caption')}>
-      {readableUrl(label)}
-    </ClampText>
   );
 }
 

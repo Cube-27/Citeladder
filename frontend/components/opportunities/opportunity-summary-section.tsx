@@ -1,6 +1,6 @@
 import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row';
 import { TextLink } from '@/components/ui/text-link';
-import { Label } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@citeladder/contracts';
 import { formatAudited } from '@/lib/site-health/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -40,7 +40,7 @@ export function OpportunitySummarySection({ detail }: Readonly<{ detail: Opportu
 
   return (
     <Stack as="section">
-      <Label>Supporting result</Label>
+      <h3 className={textRole('subheading')}>Supporting result</h3>
       <div className={ledgerClasses()}>
         <OpportunityKvRow label="Found" value={formatAudited(detail.created_at, timeZone)} />
         {auditId ? (

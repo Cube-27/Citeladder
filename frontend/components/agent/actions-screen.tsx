@@ -1,11 +1,10 @@
 import { Fragment, useState, type MouseEvent } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import {
   ActionTargetCell,
-  targetsOrigin,
   useActionFilters,
   useActionTable,
   type ActionListQuery,
@@ -17,6 +16,7 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
+import { ProjectLink } from '@/components/ui/project-link';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { ACTION_GROUP_LABEL } from '@/lib/agent/vocabulary';
 import {
@@ -51,9 +51,14 @@ export function ActionsScreen() {
       filters={<FilterBar filters={filters.definitions} />}
     >
       {filters.group ? (
-        <GroupList {...scope} query={filters.query} group={filters.group} />
+        <GroupList {...scope} query={filters.query} group={filters.group} onClear={filters.clear} />
       ) : (
-        <GroupedList {...scope} query={filters.query} onShowGroup={filters.showGroup} />
+        <GroupedList
+          {...scope}
+          query={filters.query}
+          onShowGroup={filters.showGroup}
+          onClear={filters.clear}
+        />
       )}
     </CollectionPage>
   );
@@ -62,31 +67,42 @@ export function ActionsScreen() {
 // No status column: under the default queue nearly every row is Open, so a
 // row names its status beside its title only when it differs (owner,
 // 2026-11-10). The server orders rows by priority. The Action cell is titled
-// by the work (the action type) over its target and sources.
+// by the work and its target (`actionTitle`) over its sources.
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Action', kind: 'identity' },
   { key: 'priority', label: 'Priority', kind: 'status', order: 'descending' },
 ];
 
-type ListProps = Readonly<{ workspaceId: string; projectId: string; query: ActionListQuery }>;
+type ListProps = Readonly<{
+  workspaceId: string;
+  projectId: string;
+  query: ActionListQuery;
+  /** Every filter back to its default, from an empty filtered list. */
+  onClear: () => void;
+}>;
 
 /** One group, narrowed by Show all or the Group filter: paged as the whole list was. */
-function GroupList({ workspaceId, projectId, query, group }: ListProps & { group: ActionGroup }) {
+function GroupList({
+  workspaceId,
+  projectId,
+  query,
+  group,
+  onClear,
+}: ListProps & { group: ActionGroup }) {
   const { page, table } = useActionTable({
     workspaceId,
     projectId,
     query,
     group,
     noun: 'Actions',
-    empty: emptyActions,
+    empty: (read) => emptyActions(read, onClear),
   });
-  const origin = targetsOrigin(page?.items ?? []);
   return (
-    // Every row stacks the target (up to two lines) over its kind, so short
-    // pages pad with blanks and the pager stays where a full page puts it.
-    <DataTable label="Actions" columns={COLUMNS} rowLines={3} {...table}>
+    // Every row is its title over its summary, so short pages pad with
+    // blanks and the pager stays where a full page puts it.
+    <DataTable label="Actions" columns={COLUMNS} rowLines={2} {...table}>
       {page?.items.map((action) => (
-        <ActionRow key={action.id} action={action} status={query.status} origin={origin} />
+        <ActionRow key={action.id} action={action} status={query.status} />
       ))}
     </DataTable>
   );
@@ -102,6 +118,7 @@ function GroupedList({
   projectId,
   query,
   onShowGroup,
+  onClear,
 }: ListProps & { onShowGroup: (group: ActionGroup) => void }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<ActionGroup>>(new Set());
   const reads = useQueries({
@@ -124,7 +141,7 @@ function GroupedList({
       fallback: 'Actions could not be loaded.',
     };
   else if (counts && Object.values(counts.group_counts).every((count) => count === 0))
-    state = emptyActions(counts);
+    state = emptyActions(counts, onClear);
   const toggle = (group: ActionGroup) =>
     setCollapsed((current) => {
       const next = new Set(current);
@@ -135,7 +152,7 @@ function GroupedList({
     <DataTable
       label="Actions"
       columns={COLUMNS}
-      rowLines={3}
+      rowLines={2}
       state={state}
       busy={{
         active: reads.some((read) => read.isFetching && !read.isPending),
@@ -147,8 +164,6 @@ function GroupedList({
         const total = page?.group_counts[group] ?? 0;
         if (!page || total === 0) return null;
         const open = !collapsed.has(group);
-        // Per group: your own pages share an origin, mentions elsewhere do not.
-        const origin = targetsOrigin(page.items);
         return (
           <Fragment key={group}>
             <GroupHeaderRow
@@ -159,12 +174,7 @@ function GroupedList({
             />
             {open
               ? page.items.map((action) => (
-                  <ActionRow
-                    key={action.id}
-                    action={action}
-                    status={query.status}
-                    origin={origin}
-                  />
+                  <ActionRow key={action.id} action={action} status={query.status} />
                 ))
               : null}
             {open && total > page.items.length ? (
@@ -222,10 +232,11 @@ function ShowAllRow({
     <TableRow>
       <TableCell colSpan={COLUMNS.length}>
         <Button
-          variant="quiet"
+          variant="secondary"
           onClick={onShow}
           aria-label={`Show all ${formatCount(total)} in ${ACTION_GROUP_LABEL[group]}`}
         >
+          <Icon icon={ArrowRight} />
           Show all {formatCount(total)}
         </Button>
       </TableCell>
@@ -233,25 +244,36 @@ function ShowAllRow({
   );
 }
 
-/** What a page with no Actions says: nothing matches, or nothing exists yet. */
-function emptyActions(page: ActionsPage): DataTableState {
+/**
+ * What a page with no Actions says: nothing matches the filters (clear
+ * them), or nothing has been found yet: what an Action is, why there are
+ * none, and the one next step.
+ */
+function emptyActions(page: ActionsPage, onClear: () => void): DataTableState {
   const anyActions = Object.values(page.status_counts).some((count) => count > 0);
-  return anyActions
-    ? {
-        kind: 'empty',
-        icon: ICONS.opportunities,
-        headingLevel: 3,
-        heading: 'No Actions match these filters',
-        description: 'Change the filters to see other Actions.',
-      }
-    : {
-        kind: 'empty',
-        icon: ICONS.opportunities,
-        headingLevel: 3,
-        heading: 'No Actions yet',
-        description:
-          'Actions appear when a crawl, visibility run or Search Console sync finds work on a target.',
-      };
+  if (anyActions)
+    return {
+      kind: 'filtered',
+      headingLevel: 3,
+      heading: 'No Actions match these filters',
+      onClear,
+    };
+  return {
+    kind: 'empty',
+    icon: ICONS.opportunities,
+    headingLevel: 3,
+    heading: 'No Actions yet',
+    description:
+      'Actions are the work found on your pages, your products and the sites that cite rivals. None yet, because no crawl, visibility run or Search Console sync has found any.',
+    action: (
+      <Button asChild variant="secondary">
+        <ProjectLink href="/site">
+          <Icon icon={ICONS.site} />
+          Open Website
+        </ProjectLink>
+      </Button>
+    ),
+  };
 }
 
 /**
@@ -261,8 +283,7 @@ function emptyActions(page: ActionsPage): DataTableState {
 function ActionRow({
   action,
   status,
-  origin,
-}: Readonly<{ action: Action; status: ActionStatus | undefined; origin: string | null }>) {
+}: Readonly<{ action: Action; status: ActionStatus | undefined }>) {
   const navigate = useNavigate();
   const projectHref = useProjectHref();
   const href = `/agent/actions/${action.id}`;
@@ -273,7 +294,7 @@ function ActionRow({
   };
   return (
     <TableRow onClick={open} className="cursor-pointer">
-      <ActionTargetCell action={action} status={status} origin={origin} />
+      <ActionTargetCell action={action} status={status} />
       <TableCell>
         <ActionPriorityBadge band={action.priority_band} />
       </TableCell>

@@ -594,7 +594,7 @@ describe('NewChatScreen', () => {
     renderNewChat(`?action_id=${PRICING}&prompt=Plan%20this`);
 
     const context = within(await screen.findByRole('list', { name: 'Context for this request' }));
-    expect(await context.findByText('Action: Pricing page · Create a new page')).toBeVisible();
+    expect(await context.findByText('Action: Create a new page: Pricing page')).toBeVisible();
     expect(screen.getByLabelText('Message the agent')).toHaveValue('Plan this');
   });
 
@@ -607,12 +607,12 @@ describe('NewChatScreen', () => {
 
     // One line in the composer, above the written message; no briefing.
     await screen.findByDisplayValue('Work on Pricing page.');
-    expect(screen.getByText('Action: Pricing page · Create a new page')).toBeVisible();
+    expect(screen.getByText('Action: Create a new page: Pricing page')).toBeVisible();
     expect(screen.queryByRole('region', { name: 'What should I work on?' })).toBeNull();
     expect(screen.queryByText('Type / to pick a skill or @ to mention an Action.')).toBeNull();
 
     await user.click(
-      screen.getByRole('button', { name: 'Remove Action: Pricing page · Create a new page' }),
+      screen.getByRole('button', { name: 'Remove Action: Create a new page: Pricing page' }),
     );
     // The message stays as written; the briefing comes back.
     expect(screen.getByLabelText('Message the agent')).toHaveValue('Work on Pricing page.');
@@ -638,7 +638,7 @@ describe('NewChatScreen', () => {
     // Written from the Action once it is read.
     const message = await screen.findByDisplayValue('Work on Pricing page.');
     expect(message).toHaveAccessibleName('Message the agent');
-    expect(screen.getByText('Action: Pricing page · Create a new page')).toBeVisible();
+    expect(screen.getByText('Action: Create a new page: Pricing page')).toBeVisible();
     await user.type(message, ' Start with the title.');
     await user.click(screen.getByRole('button', { name: 'Send' }));
 

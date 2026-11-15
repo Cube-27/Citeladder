@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
-/** One section of an Action's record: the ink rule, its h2 and actions, then its body. */
+/** One section of an Action's record: a card with its h2 and actions, then its body. */
 export function ActionSection({
   title,
   id,

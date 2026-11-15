@@ -1,5 +1,4 @@
-import { ProjectLink } from '@/components/ui/project-link';
-import { Tag } from '@/components/ui/tag';
+import { RecordTag, Tag } from '@/components/ui/tag';
 import { Inline } from '@/components/ui/layout';
 import { groupEvidence } from '@/lib/agent/evidence';
 
@@ -19,13 +18,7 @@ export function EvidenceChips({
         const text = group.count > 1 ? `${group.label} · ${group.count}` : group.label;
         return (
           <li key={group.label}>
-            {group.href ? (
-              <ProjectLink href={group.href} className="underline-offset-2 hover:underline">
-                <Tag>{text}</Tag>
-              </ProjectLink>
-            ) : (
-              <Tag>{text}</Tag>
-            )}
+            {group.href ? <RecordTag href={group.href} label={text} /> : <Tag>{text}</Tag>}
           </li>
         );
       })}
