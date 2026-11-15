@@ -43,6 +43,25 @@ describe('Dialog', () => {
     );
   });
 
+  it('opens on its first field with the caret only, else its first control', () => {
+    const { rerender } = render(
+      <Dialog open onOpenChange={() => {}} title="Invite member">
+        <input type="checkbox" aria-label="Admin" />
+        <input aria-label="Email" />
+      </Dialog>,
+    );
+    const email = screen.getByRole('textbox', { name: 'Email' });
+    expect([email, email.hasAttribute('data-quiet-focus')]).toEqual([document.activeElement, true]);
+
+    rerender(<Dialog open={false} onOpenChange={() => {}} title="Invite member" />);
+    rerender(
+      <Dialog open onOpenChange={() => {}} title="Invite member">
+        <p>No fields</p>
+      </Dialog>,
+    );
+    expect(screen.getByRole('button', { name: 'Close dialog' })).toHaveFocus();
+  });
+
   it('restores focus to the control that opened it', async () => {
     const user = userEvent.setup();
 

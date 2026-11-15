@@ -21,6 +21,8 @@ function opener(active: Element | null) {
   return (id && document.getElementById(id)) || active;
 }
 
+const FIRST_FIELD =
+  'input:not([type=hidden], [type=checkbox], [type=radio], :disabled), textarea:not(:disabled), select:not(:disabled)';
 const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
 
 /**
@@ -104,8 +106,8 @@ function DialogHeader({
  * Header, body and footer are divided by hairlines. `tone="danger"` is a
  * confirmation: an `alertdialog`, 480px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.
- * Focus opens on the first tabbable element unless `initialFocusRef` is set,
- * and returns to the opener on close.
+ * Focus opens on `initialFocusRef`, else the first field, else the first
+ * tabbable element, and returns to the opener on close.
  */
 export function Dialog({
   open,
@@ -143,9 +145,15 @@ export function Dialog({
           role={danger ? 'alertdialog' : 'dialog'}
           {...(description ? {} : { 'aria-describedby': undefined })}
           onOpenAutoFocus={(event) => {
-            if (!initialFocusRef?.current) return;
+            // The first field takes focus (caret only, input-modality.ts), else Radix's first control.
+            const target =
+              initialFocusRef?.current ??
+              (event.target instanceof HTMLElement
+                ? event.target.querySelector<HTMLElement>(FIRST_FIELD)
+                : null);
+            if (!target) return;
             event.preventDefault();
-            initialFocusRef.current.focus();
+            target.focus();
           }}
           onCloseAutoFocus={returnFocus}
           className={cn(
