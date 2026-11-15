@@ -2,7 +2,10 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
+import { X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -36,7 +39,7 @@ const STAGE_OPTIONS = buyerStageValues.map((value) => ({ value, label: buyerStag
 /** Saving wins over both; otherwise the verb follows which dialog this is. */
 function submitLabel(saving: boolean | undefined, editing: boolean): string {
   if (saving) return 'Saving…';
-  return editing ? 'Save changes' : 'Add prompt';
+  return editing ? 'Save changes' : 'Save prompt';
 }
 
 export function PromptFormDialog({
@@ -102,10 +105,11 @@ export function PromptFormDialog({
     <Dialog
       open={open}
       onOpenChange={handleOpenChange}
-      title={isEdit ? 'Edit prompt' : 'Add prompt'}
+      title={isEdit ? 'Edit prompt' : 'Write a prompt'}
       footer={
         <>
           <Button variant="quiet" onClick={() => handleOpenChange(false)}>
+            <Icon icon={X} />
             Cancel
           </Button>
           <Button variant="primary" onClick={submit} disabled={isSaving}>

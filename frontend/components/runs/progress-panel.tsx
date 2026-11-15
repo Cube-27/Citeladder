@@ -114,7 +114,7 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
   return (
     <Inline className="flex-wrap">
       {/* A date is recorded, not a figure: it reads in the status line. */}
-      <span className="type-data text-ink-2">
+      <span className="type-body text-ink-2">
         Created {formatDisplayTimestamp(audit.created_at, timeZone)}
       </span>
       <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>

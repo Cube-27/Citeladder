@@ -26,7 +26,6 @@ import {
   TitledSection,
 } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { Stack } from '@/components/ui/layout';
 
 type Overview = z.infer<typeof aiTrafficOverviewSchema>;
 type CrawlSummary = z.infer<typeof crawlSummarySchema>;
@@ -41,11 +40,11 @@ const PURPOSE_COLUMNS: readonly DataTableColumn[] = [
 const PURPOSE_PAGE_SIZE = 10;
 
 /**
- * The Overview's key figures in one strip: what the
- * crawl logs observed, the referral sessions GA4 reported and the citations
- * AI Visibility tracked. A figure that cannot be read says which absence it
- * is and carries the one step that fixes it. The notes that qualify the
- * whole window follow under the strip.
+ * The Overview's key figures, as stat cards: first whether AI sends you
+ * visits (the referral sessions GA4 reported), then what the crawl logs
+ * observed and the citations AI Visibility tracked. A figure that cannot be
+ * read says which absence it is and carries the one step that fixes it. The
+ * notes that qualify the whole window sit under the title.
  */
 export function OverviewFigures({
   data,
@@ -63,26 +62,27 @@ export function OverviewFigures({
   onConnectCrawl?: () => void;
 }>) {
   return (
-    <Section>
+    <Section variant="group">
       <SectionHeader>
         <SectionTitle>Key figures</SectionTitle>
+        <CrawlNotes crawl={data.crawl} available={crawlAvailable} />
       </SectionHeader>
       <SectionContent>
-        <Stack>
-          <FigureStrip
-            label="AI Traffic key figures"
-            segments={[
-              ...crawlFigures(data.crawl, crawlAvailable, onConnectCrawl),
-              referralFigure(data.referrals, ga4),
-              citationFigure(data.citations, projectId),
-            ]}
-          />
-          <CrawlNotes crawl={data.crawl} available={crawlAvailable} />
-        </Stack>
+        <FigureStrip
+          label="AI Traffic key figures"
+          segments={[
+            referralFigure(data.referrals, ga4),
+            ...crawlFigures(data.crawl, crawlAvailable, onConnectCrawl),
+            citationFigure(data.citations, projectId),
+          ]}
+        />
       </SectionContent>
     </Section>
   );
 }
+
+/** Short enough that every label in the strip holds one line, so values share a baseline. */
+const CRAWL_REQUESTS = 'Crawler requests';
 
 const CRAWL_EMPTY = {
   not_connected: 'Connect crawl logs to observe recognized automated requests.',
@@ -99,7 +99,7 @@ function crawlFigures(
     return [
       {
         key: 'requests',
-        label: 'Recognized automated requests',
+        label: CRAWL_REQUESTS,
         value: null,
         missingLabel: 'Unavailable',
         sub: 'Crawl log collection is not available for this workspace yet. AI referrals and tracked citations are measured without it.',
@@ -116,7 +116,7 @@ function crawlFigures(
     return [
       {
         key: 'requests',
-        label: 'Recognized automated requests',
+        label: CRAWL_REQUESTS,
         value: null,
         missingLabel: status,
         sub: failedNote
@@ -131,7 +131,7 @@ function crawlFigures(
   return [
     {
       key: 'requests',
-      label: 'Recognized automated requests',
+      label: CRAWL_REQUESTS,
       value: formatCount(crawl.requests),
       sub: status,
     },
@@ -165,7 +165,8 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
   const unsynced = referralSetup(ga4);
   return {
     key: 'referrals',
-    label: 'AI referral sessions, latest day',
+    label: 'AI referral sessions',
+    caption: 'Latest day',
     value: latest?.value == null ? null : formatCount(latest.value),
     missingLabel: synced ? 'Unavailable' : 'Not synced',
     sub: (
@@ -292,5 +293,5 @@ export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['s
 }
 
 function errorShare(value: number) {
-  return value > 0 && value < 0.001 ? '<0.1%' : (value * 100).toFixed(1) + '%';
+  return value > 0 && value < 0.001 ? '<0.1%' : formatPercent(value);
 }

@@ -91,11 +91,11 @@ it('keeps unavailable, missing, awaiting, incomplete and measured zero distinct'
   expect(screen.getByText(/Awaiting the first accepted batch/)).toBeVisible();
   view.rerender(figures({ crawl }));
   expect(screen.getByText(/No matching requests were observed/)).toBeVisible();
-  expect(within(figure('Recognized automated requests')).queryByText('0')).not.toBeInTheDocument();
+  expect(within(figure('Crawler requests')).queryByText('0')).not.toBeInTheDocument();
   view.rerender(
     figures({ crawl: { ...crawl, coverage: 'complete', requests: 0, pages: 0, active_bots: 0 } }),
   );
-  expect(within(figure('Recognized automated requests')).getByText('0')).toBeVisible();
+  expect(within(figure('Crawler requests')).getByText('0')).toBeVisible();
   expect(within(figure('Path-level pages')).getByText('0')).toBeVisible();
   expect(screen.queryByText(/No matching requests were observed/)).not.toBeInTheDocument();
 });
@@ -105,7 +105,7 @@ it('keeps failed verification requests and unavailable active bots visible', () 
     figures({ crawl: { ...crawl, failed_verification_requests: 3 } }),
   );
   expect(
-    within(figure('Recognized automated requests')).getByText(
+    within(figure('Crawler requests')).getByText(
       'No matching requests were observed in the available logs. Coverage is incomplete. 3 failed verification requests are shown separately.',
     ),
   ).toBeVisible();
@@ -142,7 +142,7 @@ it('shows a measured zero as 0 and a window with no completed run as not availab
 
 it("offers GA4's own next step until a referral snapshot exists, then says it synced", () => {
   const view = renderWithProviders(figures({}));
-  expect(within(figure('AI referral sessions, latest day')).getByText('Not synced')).toBeVisible();
+  expect(within(figure('AI referral sessions')).getByText('Not synced')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Connect GA4' })).toBeVisible();
   expect(screen.queryByText(/GA4 · Synced/)).not.toBeInTheDocument();
 
@@ -170,7 +170,7 @@ it("offers GA4's own next step until a referral snapshot exists, then says it sy
       },
     }),
   );
-  const cell = within(figure('AI referral sessions, latest day'));
+  const cell = within(figure('AI referral sessions'));
   expect(cell.getByText(/GA4 · Synced/)).toBeVisible();
   expect(cell.getByText('0')).toBeVisible();
   expect(cell.getByText('Jul 22, 2026')).toBeVisible();

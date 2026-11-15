@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import type { crawlLogAvailabilitySchema } from '@citeladder/contracts/ai-traffic';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { Notice } from '@/components/ui/notice';
+import { TextLink } from '@/components/ui/text-link';
 
 /**
  * Why crawl log collection is unavailable: the plan lacks AI crawler logs (an
@@ -24,12 +25,9 @@ export function CrawlLogAvailabilityNotice({
       <Notice tone="info">
         AI crawler logs are included in paid plans. They show which AI crawlers fetch your pages,
         straight from your CDN or server logs.{' '}
-        <Link
-          to={workspaceDestination('/billing', null, workspaceId)}
-          className="underline underline-offset-2"
-        >
-          Choose a plan
-        </Link>
+        <TextLink asChild text="inherit">
+          <Link to={workspaceDestination('/billing', null, workspaceId)}>Choose a plan</Link>
+        </TextLink>
       </Notice>
     );
   return null;

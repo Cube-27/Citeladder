@@ -1,7 +1,6 @@
 import { Archive, Check, FileSearch, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
-import { ProjectLink } from '@/components/ui/project-link';
 import { TextLink } from '@/components/ui/text-link';
 import { IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
@@ -98,7 +97,8 @@ export function PromptTable({
   const compared = [...(measurements?.values() ?? [])].some(
     (measurement) => measurement.change.kind !== 'first',
   );
-  const measuredColumns = measured ? measuredColumnsFor(compared) : [];
+  const shelf = prompts.some((prompt) => commerceSetIds?.has(prompt.prompt_set_id));
+  const measuredColumns = measured ? measuredColumnsFor({ compared, shelf }) : [];
   const { page, setPage, pageCount, from, to } = useTablePage(prompts.length, PAGE_SIZE);
   const pagedPrompts = prompts.slice(from - 1, to);
 
@@ -111,7 +111,7 @@ export function PromptTable({
       columns={promptColumns(measuredColumns, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
-      rowLines={3}
+      rowLines={2}
       state={
         prompts.length === 0
           ? {
@@ -133,23 +133,21 @@ export function PromptTable({
             {/* The question opens its history: the prompt is the object. It
                 wraps to two lines. Topic and classification are filters in
                 the control strip, not tags on every row (owner, 2026-11-06);
+                the question is one line, its whole text in a tooltip;
                 the caption names the prompt's set when there are several,
                 and says when audits skip the prompt. */}
             <TableCellLines
               title
               primary={
-                <ProjectLink
-                  href={promptHistoryHref(prompt.id)}
-                  className="text-ink hover:underline"
-                >
+                <TextLink href={promptHistoryHref(prompt.id)} text="inherit">
                   {prompt.text}
-                </ProjectLink>
+                </TextLink>
               }
               secondary={rowCaption(prompt, setNames?.get(prompt.prompt_set_id))}
             />
           </TableCell>
           {measured && commerceSetIds?.has(prompt.prompt_set_id) ? (
-            <ShelfMeasuredCells span={measuredColumns.length} />
+            <ShelfMeasuredCells columns={measuredColumns} />
           ) : null}
           {measured && !commerceSetIds?.has(prompt.prompt_set_id) ? (
             <MeasuredCells measurement={measurements?.get(prompt.id)} compared={compared} />
@@ -263,8 +261,18 @@ function promptColumns(
   return columns;
 }
 
+const VISIBILITY_COLUMN: DataTableColumn = {
+  key: 'visibility',
+  label: 'Visibility',
+  width: 'figure',
+  kind: 'number',
+};
+
+/** Said once, in the head, rather than on every shopping row. */
+const SHELF_HINT =
+  'Shopping prompts are measured with the shopping shelf on Shopping, not one prompt at a time, so their figures here are not applicable.';
+
 const MEASURED_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'visibility', label: 'Visibility', width: 'figure', kind: 'number' },
   {
     key: 'mentions',
     label: 'Mentions',
@@ -294,8 +302,12 @@ const CHANGE_COLUMN: DataTableColumn = {
   kind: 'number',
 };
 
-function measuredColumnsFor(compared: boolean): readonly DataTableColumn[] {
-  return compared ? [...MEASURED_COLUMNS, CHANGE_COLUMN] : MEASURED_COLUMNS;
+function measuredColumnsFor({
+  compared,
+  shelf,
+}: Readonly<{ compared: boolean; shelf: boolean }>): readonly DataTableColumn[] {
+  const visibility = shelf ? { ...VISIBILITY_COLUMN, hint: SHELF_HINT } : VISIBILITY_COLUMN;
+  return [visibility, ...MEASURED_COLUMNS, ...(compared ? [CHANGE_COLUMN] : [])];
 }
 
 /** A prompt's measured visibility, and its movement since the last run. */
@@ -344,20 +356,15 @@ function MeasuredCells({
 
 /**
  * A Commerce prompt is measured as part of the shopping shelf, never on its
- * own: its figures do not apply here (a known gap, not a missing run). One
- * sentence across the measured columns says where they are, instead of a
- * "not applicable" mark in each.
+ * own: its figures do not apply here (a known gap, not a missing run). The
+ * Visibility head's hint says why, once.
  */
-function ShelfMeasuredCells({ span }: Readonly<{ span: number }>) {
-  return (
-    <TableCell colSpan={span}>
-      {/* The spanned columns are figures; this sentence reads as text. */}
-      <span className="type-caption block text-start whitespace-normal">
-        Measured with the shopping shelf, not one prompt at a time.{' '}
-        <TextLink href="/products/overview">See Shopping</TextLink>
-      </span>
+function ShelfMeasuredCells({ columns }: Readonly<{ columns: readonly DataTableColumn[] }>) {
+  return columns.map((column) => (
+    <TableCell key={column.key} numeric={column.kind === 'number'}>
+      <Absence state="not_applicable" />
     </TableCell>
-  );
+  ));
 }
 
 const NOT_COMPARED = {

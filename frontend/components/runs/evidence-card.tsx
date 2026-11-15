@@ -294,8 +294,8 @@ function CitationItem({
     <LedgerItem
       title={
         <Inline as="span" className="items-baseline">
-          <span className="type-data text-ink-2">{ordinal}</span>
-          <span className="min-w-0 break-words">
+          <span className="type-body text-ink-2 tabular-nums">{ordinal}</span>
+          <span className="min-w-0 truncate">
             {href ? (
               <TextLink variant="external" text="body" href={href}>
                 {title}

@@ -31,7 +31,7 @@ const SOURCE_LABELS: Record<SeedChoice, string> = {
 function Section({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
     <Stack as="fieldset" gap="compact" className="min-w-0">
-      <legend className={textRole('body', 'text-ink-2')}>{title}</legend>
+      <legend className={textRole('subheading')}>{title}</legend>
       {children}
     </Stack>
   );

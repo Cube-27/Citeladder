@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
 
@@ -26,9 +27,14 @@ vi.mock('@/lib/api/visibility', () => ({ visibilityApi: { getPromptHistory } }))
 vi.mock('@/lib/project/use-project-markets', () => ({ useProjectMarkets: () => [] }));
 vi.mock('@/lib/project/project-context', () => {
   const context = () => ({ activeProjectId: PROJECT, activeWorkspaceId: WORKSPACE });
-  return { useProjectContext: context, useOptionalProjectContext: context };
+  return {
+    useProjectContext: context,
+    useOptionalProjectContext: context,
+    useWorkspaceCapability: () => true,
+  };
 });
 
+import { promptsApi } from '@/lib/api/prompts';
 import { PromptDetailScreen } from './prompt-detail-screen';
 
 const counts = (responses: number, failed = 0) => ({
@@ -203,6 +209,36 @@ it('charts the prompt over time with declared work marked, and hands off to its 
     'href',
     `/agent/actions/${ACTION}?project=${PROJECT}`,
   );
+});
+
+it('opens on where the prompt stands: the latest rates and their change', async () => {
+  getPromptHistory.mockResolvedValue(history(null));
+  renderScreen();
+
+  const figures = within(await screen.findByRole('group', { name: 'Latest measurement' }));
+  expect(figures.getByText('Visibility').closest('[data-figure-cell]')).toHaveTextContent(
+    /^Visibility100\.0%/,
+  );
+  expect(figures.getByText('Owned citation rate').closest('[data-figure-cell]')).toHaveTextContent(
+    /^Owned citation rate50\.0%/,
+  );
+  expect(figures.getByText('Measured runs').closest('[data-figure-cell]')).toHaveTextContent(
+    /^Measured runs3/,
+  );
+});
+
+it('says an archived prompt is archived and restores it', async () => {
+  const user = userEvent.setup();
+  const updatePrompt = vi.spyOn(promptsApi, 'updatePrompt').mockResolvedValue({} as never);
+  const base = history(null);
+  getPromptHistory.mockResolvedValue({ ...base, prompt: { ...base.prompt, status: 'archived' } });
+  renderScreen();
+
+  expect(await screen.findByText('Runs no longer ask this prompt.')).toBeVisible();
+  await user.click(screen.getByRole('button', { name: 'Restore' }));
+
+  expect(updatePrompt).toHaveBeenCalledWith(PROMPT, { status: 'active' }, expect.anything());
+  await waitFor(() => expect(getPromptHistory).toHaveBeenCalledTimes(2));
 });
 
 it('reads the market from the address and keeps a run without answers unavailable', async () => {

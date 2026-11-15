@@ -16,7 +16,7 @@ export function SourceName({
     <Inline as="span">
       <BrandMark name={name} websiteUrl={host ? `https://${host}` : null} />
       <span className="grid min-w-0">
-        <ClampText lines={secondary ? 1 : 2}>{name}</ClampText>
+        <ClampText lines={1}>{name}</ClampText>
         {secondary ? (
           <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
             {secondary}

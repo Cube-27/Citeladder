@@ -90,7 +90,7 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
                 <Absence state="unavailable" className="type-body text-ink-2" />
               ) : (
                 <>
-                  <span className="type-data">{formatPercent(entry.rate.value)}</span>
+                  <span className="type-body tabular-nums">{formatPercent(entry.rate.value)}</span>
                   {/* The denominator is stated once for the list above; the
                       numerator is not, and it is what separates one competitor
                       named in a single overview from one named in fifty. */}

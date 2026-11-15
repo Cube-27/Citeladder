@@ -270,6 +270,11 @@ export function PromptLibrary({
       : createMutation.mutateAsync(formValuesToPromptInput(values));
     await mutation.then(closeForm, () => undefined);
   };
+  const addPrompts = {
+    onImport: () => setImportOpen(true),
+    onAdd: openAdd,
+    onGenerate: () => openBuilder('business'),
+  };
   // Every edit control of the library, for a role that may edit prompts.
   const edits = canWrite
     ? {
@@ -291,7 +296,7 @@ export function PromptLibrary({
             evidence.open({ ...answer, promptText: prompt.text }),
           busyId,
         },
-        add: { onGenerate: () => openBuilder('business'), onAdd: openAdd },
+        add: addPrompts,
         topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
       }
     : undefined;
@@ -330,13 +335,7 @@ export function PromptLibrary({
 
   return (
     <CollectionPage
-      actions={
-        <PromptActions
-          onImport={() => setImportOpen(true)}
-          onAdd={openAdd}
-          onGenerate={() => openBuilder('business')}
-        />
-      }
+      actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
       filters={
         <FilterBar
           {...promptFilterControls({

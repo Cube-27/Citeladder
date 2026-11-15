@@ -1,4 +1,4 @@
-import { ChevronDown, Plus, Sparkles, Upload } from 'lucide-react';
+import { ChevronDown, Pencil, Plus, Sparkles, Upload } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
@@ -149,27 +149,27 @@ export function promptFilterControls({
   };
 }
 
-/**
- * The library's own actions, for the masthead: the three ways to
- * add prompts share one menu, so the band holds one secondary and one primary
- * action at every width instead of wrapping five buttons over the title.
- */
-export function PromptActions({
-  onImport,
-  onAdd,
-  onGenerate,
-}: Readonly<{
+/** The three ways to add prompts, one named action wherever it appears. */
+export type AddPromptsHandlers = Readonly<{
   onImport: () => void;
   onAdd: () => void;
   onGenerate: () => void;
-}>) {
+}>;
+
+/**
+ * The library's own actions, for the masthead: "Add prompts" and Launch run.
+ * An empty library carries "Add prompts" in its empty state instead
+ * (`inEmptyState`), so the action never shows twice in one view.
+ */
+export function PromptActions({
+  add,
+  inEmptyState = false,
+}: Readonly<{ add: AddPromptsHandlers; inEmptyState?: boolean }>) {
   // Each control is offered only to a role that may use it.
   const canWrite = useWorkspaceCapability('write');
   return (
     <>
-      {canWrite ? (
-        <AddPromptsMenu onImport={onImport} onAdd={onAdd} onGenerate={onGenerate} />
-      ) : null}
+      {canWrite && !inEmptyState ? <AddPromptsMenu {...add} /> : null}
       <MastheadPrimary>
         <LaunchAuditButton />
       </MastheadPrimary>
@@ -177,11 +177,8 @@ export function PromptActions({
   );
 }
 
-function AddPromptsMenu({
-  onImport,
-  onAdd,
-  onGenerate,
-}: Readonly<{ onImport: () => void; onAdd: () => void; onGenerate: () => void }>) {
+/** "Add prompts": defined once (label, icon, look) for the masthead and the empty state. */
+export function AddPromptsMenu({ onImport, onAdd, onGenerate }: AddPromptsHandlers) {
   return (
     <Menu>
       <MenuTrigger asChild>
@@ -192,8 +189,8 @@ function AddPromptsMenu({
         </Button>
       </MenuTrigger>
       <MenuContent align="end">
-        <MenuItem icon={<Icon icon={Plus} />} onSelect={onAdd}>
-          Add prompt
+        <MenuItem icon={<Icon icon={Pencil} />} onSelect={onAdd}>
+          Write a prompt
         </MenuItem>
         <MenuItem icon={<Icon icon={Sparkles} />} onSelect={onGenerate}>
           Prompt Builder

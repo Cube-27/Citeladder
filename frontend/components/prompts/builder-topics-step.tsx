@@ -1,4 +1,4 @@
-import { Plus, RotateCcw, Sparkles, Tags, Trash2 } from 'lucide-react';
+import { ChevronDown, Plus, RotateCcw, Sparkles, Tags, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
@@ -145,7 +145,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
       {topics.overflow.length ? (
         <Inline>
           <Button variant="quiet" onClick={topics.showOverflow} disabled={busy}>
-            +{topics.overflow.length} more
+            <Icon icon={ChevronDown} />+{topics.overflow.length} more
           </Button>
         </Inline>
       ) : null}

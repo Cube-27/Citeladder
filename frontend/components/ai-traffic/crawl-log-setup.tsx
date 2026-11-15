@@ -263,7 +263,7 @@ export function IssuedToken({
           <>
             <p>Copy this token now. It is shown once.</p>
             <CopyButton value={issued.token}>Copy token</CopyButton>
-            <p className="type-caption break-all">{endpoint}</p>
+            <code className="type-code break-all">{endpoint}</code>
             <CopyButton value={endpoint}>Copy endpoint</CopyButton>
           </>
         ) : null}

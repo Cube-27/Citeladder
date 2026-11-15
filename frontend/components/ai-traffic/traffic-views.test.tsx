@@ -129,10 +129,16 @@ it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', a
       {tab === 'crawlers' ? <TrafficCrawlers {...scope} /> : <TrafficActivity {...scope} />}
     </TabsRoot>,
   );
-  // The empty state takes the table's place, column heads included.
-  expect(await screen.findByRole('heading', { name: /No matching requests/ })).toBeVisible();
+  // With no source the empty state takes the table's place, column heads
+  // included, and carries Connect crawl logs itself.
+  const table = await screen.findByRole('region', {
+    name: tab === 'crawlers' ? 'Recognized crawlers' : 'Retained automated request activity',
+  });
+  expect(
+    await within(table).findByRole('heading', { name: 'Crawl logs are not connected' }),
+  ).toBeVisible();
   expect(screen.queryByRole('columnheader')).toBeNull();
-  await user.click(await screen.findByRole('button', { name: 'Connect crawl logs' }));
+  await user.click(within(table).getByRole('button', { name: 'Connect crawl logs' }));
   expect(
     await within(screen.getByRole('dialog')).findByRole('radiogroup', {
       name: 'Collection method',

@@ -1,4 +1,4 @@
-import { Download } from 'lucide-react';
+import { Download, X } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -100,6 +100,7 @@ export function CsvImportDialog({
       footer={
         <>
           <Button variant="quiet" onClick={() => handleOpenChange(false)}>
+            <Icon icon={X} />
             Cancel
           </Button>
           <Button

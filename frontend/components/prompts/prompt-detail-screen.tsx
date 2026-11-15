@@ -1,9 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { ArchiveRestore } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { RecordPage } from '@/components/templates/record-page';
+import { ActionButton } from '@/components/ui/actions';
+import { Button } from '@/components/ui/button';
+import { Delta } from '@/components/ui/delta';
+import { FigureStrip } from '@/components/ui/figure-strip';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { Icon } from '@/components/ui/icon';
+import { Stack } from '@/components/ui/layout';
 import { RungTrail, type TrailStep } from '@/components/ui/rung-trail';
 import { TextLink } from '@/components/ui/text-link';
 import { StepChart } from '@/components/ui/step-chart';
@@ -11,13 +18,17 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { marketFilter } from '@/components/visibility/visibility-toolbar';
+import { agentHandoffHref } from '@/lib/agent/handoff';
+import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { promptsMutations } from '@/lib/api/prompts';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, formatPercent, pluralCount } from '@/lib/format';
+import { formatCount, formatDisplayDate, formatPercent } from '@/lib/format';
 import { formatWholePercent } from '@/lib/visibility/dashboard';
 import type { PromptHistory } from '@citeladder/contracts';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import {
   implementationEvents,
@@ -26,7 +37,7 @@ import {
 } from '@/lib/prompts/history';
 
 import { PromptAnswerStates } from './prompt-answer-states';
-import { readErrorProps } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   Section,
@@ -34,7 +45,6 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
-  TitledSection,
 } from '@/components/ui/section';
 
 const BACK = { href: '/prompts', label: 'Back to prompts' } as const;
@@ -73,12 +83,18 @@ export function PromptDetailScreen() {
       </RecordPage>
     );
   const history = query.data;
+  const actionId = history.latest?.action_id ?? null;
   return (
     <RecordPage
       title={history.prompt.text}
       back={BACK}
+      actions={actionId ? <ActionHandoff actionId={actionId} /> : undefined}
       filters={filters}
-      identity={<PromptIdentity history={history} />}
+      identity={
+        history.prompt.status === 'archived' ? (
+          <ArchivedNotice promptId={history.prompt.id} onRestored={() => void query.refetch()} />
+        ) : undefined
+      }
       aside={<MeasurementTrail history={history} />}
     >
       <HistoryCard history={history} />
@@ -88,24 +104,60 @@ export function PromptDetailScreen() {
   );
 }
 
-/**
- * The prompt's facts. The question itself is named once, by the masthead,
- * which gives the whole text in its tooltip when it cuts it.
- */
-function PromptIdentity({ history }: Readonly<{ history: PromptHistory }>) {
-  const archived = history.prompt.status === 'archived';
+/** The prompt's Action and the hand-off to the agent: page-level, so in the masthead. */
+function ActionHandoff({ actionId }: Readonly<{ actionId: string }>) {
   return (
-    <p className="type-caption">
-      {pluralCount(history.points.length, 'measured run')}
-      {archived ? ' · Archived: runs no longer ask it' : ''}
-    </p>
+    <>
+      <ActionButton action="openAction" href={`/agent/actions/${actionId}`} />
+      <ActionButton action="workWithAgent" href={agentHandoffHref({ actionId })} />
+    </>
+  );
+}
+
+/** An archived prompt says so once, with Restore, as an archived product does. */
+function ArchivedNotice({
+  promptId,
+  onRestored,
+}: Readonly<{ promptId: string; onRestored: () => void }>) {
+  const { workspaceId, projectId } = useProjectScope();
+  const canWrite = useWorkspaceCapability('write');
+  const restore = useMutation(promptsMutations.update({ workspaceId, projectId }));
+  return (
+    <Stack gap="compact">
+      <Notice
+        tone="warning"
+        title="Archived"
+        action={
+          canWrite ? (
+            <Button
+              variant="secondary"
+              disabled={restore.isPending}
+              onClick={() =>
+                restore.mutate({ promptId, input: { status: 'active' } }, { onSuccess: onRestored })
+              }
+            >
+              <Icon icon={ArchiveRestore} />
+              Restore
+            </Button>
+          ) : undefined
+        }
+      >
+        Runs no longer ask this prompt.
+      </Notice>
+      {restore.error ? (
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(restore.error, { action: 'restore the prompt' })}
+        />
+      ) : null}
+    </Stack>
   );
 }
 
 /**
  * Every run that measured the prompt, newest first, as rungs: a measured run
- * is done, a run with no successful answer is a hatched gap, and a change in
- * measurement conditions is said on the run that started the new line.
+ * is done, a run with no successful answer is an unavailable rung, and a
+ * change in measurement conditions is said on the run that started the new line.
  */
 function MeasurementTrail({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
@@ -139,39 +191,96 @@ function MeasurementTrail({ history }: Readonly<{ history: PromptHistory }>) {
   );
 }
 
-/** Visibility and owned citation rate per run, with declared work marked. */
+type HistoryPoint = PromptHistory['points'][number];
+
+/**
+ * The change in visibility since the run before, in points, when the two
+ * runs measured under the same conditions and both had answers.
+ */
+function visibilityChange(points: readonly HistoryPoint[]) {
+  const [previous, latest] = points.slice(-2);
+  if (!previous || !latest || latest.comparable_with_previous !== true) return null;
+  if (previous.mention_rate === null || latest.mention_rate === null) return null;
+  return { points: (latest.mention_rate - previous.mention_rate) * 100, since: previous };
+}
+
+/**
+ * Whether this prompt cites you and how that has moved: the latest run's
+ * rates first, then visibility and owned citation rate per run, with declared
+ * work marked.
+ */
 function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   const data = mentionRatePoints(history.points, timeZone);
+  const latest = history.points.at(-1);
+  const change = visibilityChange(history.points);
   return (
     <Section>
       <SectionHeader>
-        <SectionTitle>Over time</SectionTitle>
+        <SectionTitle>Visibility and citations</SectionTitle>
         <SectionDescription>
           Each point is one run that measured this prompt. A run with no successful answer is a gap,
           and a change in measurement conditions starts a new line.
         </SectionDescription>
       </SectionHeader>
-      <SectionContent>
-        {data.length ? (
-          <StepChart
-            label="Visibility over time"
-            name="Visibility"
-            data={data}
-            series={[{ label: 'Owned citation rate', values: ownedCitationValues(history.points) }]}
-            events={implementationEvents(history.implementations, timeZone)}
-            eventsLabel="Marked implemented"
-            yMax={100}
-            yFormat={formatWholePercent}
-          />
-        ) : (
-          <StateBlock
-            kind="empty"
-            inline
-            message="No run has measured this prompt in this market yet."
-          />
-        )}
-      </SectionContent>
+      {latest ? (
+        <SectionContent>
+          <Stack gap="workspace">
+            <FigureStrip
+              label="Latest measurement"
+              segments={[
+                {
+                  key: 'visibility',
+                  label: 'Visibility',
+                  value: latest.mention_rate === null ? null : formatPercent(latest.mention_rate),
+                  delta: (
+                    <Delta
+                      value={change?.points ?? null}
+                      unit=" pp"
+                      missingReason="No comparable run before this one."
+                    />
+                  ),
+                  sub: change
+                    ? `vs ${formatDisplayDate(change.since.completed_at, timeZone)}`
+                    : undefined,
+                },
+                {
+                  key: 'owned',
+                  label: 'Owned citation rate',
+                  value:
+                    latest.owned_citation_rate === null
+                      ? null
+                      : formatPercent(latest.owned_citation_rate),
+                  sub: formatDisplayDate(latest.completed_at, timeZone),
+                },
+                {
+                  key: 'runs',
+                  label: 'Measured runs',
+                  value: formatCount(history.points.length),
+                },
+              ]}
+            />
+            <StepChart
+              label="Visibility over time"
+              name="Visibility"
+              data={data}
+              series={[
+                { label: 'Owned citation rate', values: ownedCitationValues(history.points) },
+              ]}
+              events={implementationEvents(history.implementations, timeZone)}
+              eventsLabel="Marked implemented"
+              yMax={100}
+              yFormat={formatWholePercent}
+            />
+          </Stack>
+        </SectionContent>
+      ) : (
+        <StateBlock
+          kind="empty"
+          inline
+          message="No run has measured this prompt in this market yet."
+        />
+      )}
     </Section>
   );
 }
@@ -181,32 +290,32 @@ function Implementations({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   if (!history.implementations.length) return null;
   return (
-    <TitledSection title="Work marked implemented">
-      <DataTable
-        label="Work marked implemented"
-        columns={IMPLEMENTATION_COLUMNS}
-        footer={
-          <p className="type-caption">
-            A marker shows when work went live, not that it changed these rates: other changes and
-            answer-engine updates can overlap.
-          </p>
-        }
-      >
-        {history.implementations.map((item) => (
-          <TableRow key={`${item.action_id}:${item.implemented_at}`}>
-            <TableCell>
-              <ClampText lines={1} tooltip={item.title}>
-                <TextLink href={`/agent/actions/${item.action_id}`}>{item.title}</TextLink>
-              </ClampText>
-            </TableCell>
-            <TableCell>{formatDisplayDate(item.implemented_at, timeZone)}</TableCell>
-            <TableCell>
-              <ActionStatusBadge status={item.status} />
-            </TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </TitledSection>
+    <DataTable
+      title="Work marked implemented"
+      columns={IMPLEMENTATION_COLUMNS}
+      footer={
+        <p className="type-caption">
+          A marker shows when work went live, not that it changed these rates: other changes and
+          answer-engine updates can overlap.
+        </p>
+      }
+    >
+      {history.implementations.map((item) => (
+        <TableRow key={`${item.action_id}:${item.implemented_at}`}>
+          <TableCell>
+            <ClampText tooltip={item.title}>
+              <TextLink href={`/agent/actions/${item.action_id}`} text="inherit">
+                {item.title}
+              </TextLink>
+            </ClampText>
+          </TableCell>
+          <TableCell>{formatDisplayDate(item.implemented_at, timeZone)}</TableCell>
+          <TableCell>
+            <ActionStatusBadge status={item.status} />
+          </TableCell>
+        </TableRow>
+      ))}
+    </DataTable>
   );
 }
 

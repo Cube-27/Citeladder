@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 
 /**
@@ -31,15 +32,11 @@ export function SourceBreadcrumb({
         <Inline as="ol" gap="tight" className="flex-wrap">
           {trail.map((crumb) => (
             <Inline as="li" gap="tight" key={crumb.label}>
-              <Pressable
-                onClick={crumb.onClick}
-                className={textRole(
-                  'caption',
-                  'text-ink-2 hover:underline w-auto transition-colors',
-                )}
-              >
-                {crumb.label}
-              </Pressable>
+              <TextLink asChild tone="muted" text="caption">
+                <Pressable onClick={crumb.onClick} className="w-auto">
+                  {crumb.label}
+                </Pressable>
+              </TextLink>
               <Icon icon={ChevronRight} className="text-ink-2" />
             </Inline>
           ))}
