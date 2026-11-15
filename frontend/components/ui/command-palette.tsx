@@ -11,7 +11,7 @@ import {
   scopedNavigationDestination,
   useSelectProject,
 } from '@/lib/navigation/project-destination';
-import { SCRIM } from '@/components/ui/dialog';
+import { returnTargetFor, SCRIM } from '@/components/ui/dialog';
 import { pluralCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
@@ -108,9 +108,9 @@ export function CommandPalette({
   const restoreFocus = useCallback(() => {
     const target = returnFocusTo.current;
     returnFocusTo.current = null;
-    // The element may have unmounted while the palette was open — switching
-    // project re-renders the shell — so check it is still in the document.
-    if (target?.isConnected) target.focus();
+    // The element may have unmounted while the palette was open (switching
+    // project re-renders the shell), or be folded behind More.
+    returnTargetFor(target)?.focus();
   }, []);
 
   // Opening resets the palette. Done in the handler, not an effect — the reset

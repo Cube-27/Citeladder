@@ -42,11 +42,16 @@ const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
 
 /**
  * Where focus goes back to: the opener while it shows, else the visible
- * control that expands the region hiding it (the masthead's More
- * button for an action folded into its panel).
+ * control that folds or expands the region hiding it (the masthead's More
+ * button, named by `data-folded-by`, for an action folded behind it).
  */
-function returnTargetFor(node: HTMLElement | null) {
+export function returnTargetFor(node: HTMLElement | null) {
   if (!node?.isConnected || shown(node)) return node?.isConnected ? node : null;
+  const folder = node.closest<HTMLElement>('[data-folded-by]')?.dataset.foldedBy;
+  const more = folder
+    ? document.querySelector<HTMLElement>(`[data-folds="${CSS.escape(folder)}"]`)
+    : null;
+  if (more && shown(more)) return more;
   const controls = [...document.querySelectorAll<HTMLElement>('[aria-controls]')].filter(shown);
   for (let region = node.parentElement; region; region = region.parentElement) {
     const { id } = region;

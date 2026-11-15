@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useId, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreHorizontal } from 'lucide-react';
 
@@ -59,19 +59,27 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
   const [menus] = useState(() => new Map<string, ReactNode>());
   const rowSlot = useContext(MastheadPrimarySlot) ?? null;
   const fold = useFold({ group, rowSlot, foldedSlot });
+  // A folded control's overlay returns focus here (`returnTargetFor` in dialog.tsx).
+  const moreId = useId();
 
   return (
     <>
       {fold.more === 'none' ? null : (
         <MoreMenu
+          id={moreId}
           trigger={fold.more === 'always' ? undefined : 'rail:hidden'}
           read={() => foldedEntries([foldedSlot, group], menus)}
         />
       )}
-      <span ref={setFoldedSlot} data-masthead-folded-primary="" hidden />
+      <span ref={setFoldedSlot} data-masthead-folded-primary="" data-folded-by={moreId} hidden />
       <MastheadPrimarySlot.Provider value={fold.primary ? foldedSlot : rowSlot}>
         <MenuFold.Provider value={menus}>
-          <div ref={setGroup} data-masthead-overflow="" className={GROUP[fold.secondary]}>
+          <div
+            ref={setGroup}
+            data-masthead-overflow=""
+            data-folded-by={moreId}
+            className={GROUP[fold.secondary]}
+          >
             {children}
           </div>
         </MenuFold.Provider>
@@ -117,18 +125,20 @@ function foldOf({
   const secondaryFolded = secondary > 0 && stage >= 1;
   const primaryFolded = primary > 0 && stage >= steps;
   const belowRail = secondary > 1 || (secondary === 1 && primary > 0);
+  const unfolded = belowRail ? 'belowRail' : null;
   return {
     primary: primaryFolded,
-    secondary: secondaryFolded ? 'folded' : belowRail ? 'belowRail' : 'row',
-    more: secondaryFolded || primaryFolded ? 'always' : belowRail ? 'belowRail' : 'none',
+    secondary: secondaryFolded ? 'folded' : (unfolded ?? 'row'),
+    more: secondaryFolded || primaryFolded ? 'always' : (unfolded ?? 'none'),
   } as const;
 }
 
 /** The "More" menu, its rows read from the folded controls each time it opens. */
 function MoreMenu({
+  id,
   trigger,
   read,
-}: Readonly<{ trigger: string | undefined; read: () => FoldedEntry[] }>) {
+}: Readonly<{ id: string; trigger: string | undefined; read: () => FoldedEntry[] }>) {
   const [entries, setEntries] = useState<readonly FoldedEntry[]>([]);
   return (
     <Menu
@@ -138,7 +148,13 @@ function MoreMenu({
       }}
     >
       <MenuTrigger asChild>
-        <IconButton icon={MoreHorizontal} label="More" variant="secondary" className={trigger} />
+        <IconButton
+          data-folds={id}
+          icon={MoreHorizontal}
+          label="More"
+          variant="secondary"
+          className={trigger}
+        />
       </MenuTrigger>
       <MenuContent align="end">
         {entries.map((entry) => (
