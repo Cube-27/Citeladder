@@ -44,6 +44,25 @@ describe('PerformanceChart', () => {
     ]);
   });
 
+  it('keeps the days of a comparison longer than the selection', () => {
+    render(
+      <PerformanceChart
+        series={[
+          {
+            ...clicks,
+            selected: [day(1, '2026-07-01', 12)],
+            comparison: [day(1, '2026-06-01', 10), day(2, '2026-06-02', 14)],
+          },
+        ]}
+      />,
+    );
+    expect(rows('Clicks over 2 days, with comparison period')).toEqual([
+      'SeriesJul 1, 2026 · vs Jun 1, 2026Day 2 · vs Jun 2, 2026',
+      'Clicks12Not measured',
+      'Clicks (comparison)1014',
+    ]);
+  });
+
   it('states which absence it is when nothing can be plotted', () => {
     const { rerender } = render(<PerformanceChart series={[]} />);
     expect(screen.getByText('Select a figure above to chart it.')).toBeVisible();

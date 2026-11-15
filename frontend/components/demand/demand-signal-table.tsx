@@ -38,7 +38,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'ctr', label: 'CTR', kind: 'number', width: 'control' },
   { key: 'position', label: 'Position', kind: 'number', width: 'control' },
   { key: 'rank', label: 'Rank', kind: 'number', width: 'index' },
-  { key: 'open', label: 'Inspect', kind: 'actions' },
+  { key: 'open', label: 'Inspect', kind: 'actions', width: 'index' },
 ];
 
 /** The table's columns, for the loading skeleton's shape. */

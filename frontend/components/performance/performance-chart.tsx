@@ -53,16 +53,23 @@ function dayCount(count: number): string {
   return `${count} ${count === 1 ? 'day' : 'days'}`;
 }
 
-/** The selection's days as chart points: dated, and naming the comparison day each is read against. */
+/** Positions on the shared axis: the longer of the selection and its comparison. */
+function positionCount(series: ChartSeries): number {
+  return Math.max(series.selected.length, series.comparison?.length ?? 0);
+}
+
+/** Each position as a chart point: dated, and naming the comparison day it is read against. */
 function chartPoints(series: ChartSeries): TrendPoint[] {
-  return series.selected.map((point, index) => {
+  return Array.from({ length: positionCount(series) }, (_, index) => {
+    const point = series.selected[index];
+    const date = point?.date ?? null;
     const peer = series.comparison?.[index]?.date ?? null;
-    const day = point.date ? formatWindowDate(point.date) : `Day ${point.index}`;
-    const timestamp = point.date ? Date.parse(`${point.date}T00:00:00Z`) : Number.NaN;
+    const day = date ? formatWindowDate(date) : `Day ${index + 1}`;
+    const timestamp = date ? Date.parse(`${date}T00:00:00Z`) : Number.NaN;
     return {
       label: peer ? `${day} · vs ${formatWindowDate(peer)}` : day,
-      axisLabel: point.date ? formatShortDate(point.date) : `Day ${point.index}`,
-      value: point.value,
+      axisLabel: date ? formatShortDate(date) : `Day ${index + 1}`,
+      value: point?.value ?? null,
       timestamp: Number.isNaN(timestamp) ? undefined : timestamp,
     };
   });
@@ -70,7 +77,7 @@ function chartPoints(series: ChartSeries): TrendPoint[] {
 
 function MetricChart({ series, height }: Readonly<{ series: ChartSeries; height: 'sm' | 'md' }>) {
   const comparing = series.comparison !== null;
-  const label = `${series.label} over ${dayCount(series.selected.length)}${
+  const label = `${series.label} over ${dayCount(positionCount(series))}${
     comparing ? ', with comparison period' : ''
   }`;
   return (
@@ -88,7 +95,8 @@ function MetricChart({ series, height }: Readonly<{ series: ChartSeries; height:
           ? [
               {
                 label: `${series.label} (comparison)`,
-                values: series.selected.map(
+                values: Array.from(
+                  { length: positionCount(series) },
                   (_, index) => series.comparison?.[index]?.value ?? null,
                 ),
                 other: true,
