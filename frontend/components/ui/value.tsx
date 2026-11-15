@@ -7,13 +7,13 @@ import type { DataAvailabilityState } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** Where a value is printed: a key figure, or a row's data. */
-type ValueText = 'figureXl' | 'figure' | 'data';
+type ValueText = 'figureXl' | 'figure' | 'body';
 
 /** The line box per text role, so a slot is one height in every state. */
 const SLOT: Record<ValueText, string> = {
   figureXl: 'min-h-[var(--text-figure-xl--line-height)]',
   figure: 'min-h-[var(--text-figure--line-height)]',
-  data: 'min-h-[var(--text-data--line-height)]',
+  body: 'min-h-[var(--text-body-sm--line-height)]',
 };
 
 export type ValueProps = Readonly<{
@@ -57,7 +57,7 @@ export function Value({
   asOf,
   conflicting = false,
   loading = false,
-  text = 'data',
+  text = 'body',
   after,
   className,
 }: ValueProps) {
