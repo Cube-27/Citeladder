@@ -137,6 +137,7 @@
   --color-raised: var(--color-surface);
   --color-rule: var(--color-line);
   --color-control-line: var(--color-line-control);
+  --color-control-edge: var(--color-line);
   --color-ink-2: var(--color-ink-secondary);
   --color-accent-text: var(--color-accent-ink);
   --color-accent-wash: var(--color-accent-soft);
@@ -299,10 +300,11 @@
   --radius-md: 6px;
   --radius-lg: 8px;
   --radius-full: 9999px;
-  /* The app's radii by role (app code uses only these and `full`): `mark` 2
-     (tags, checkboxes, rung marks, bar ends), `control` 6 (controls, fields,
-     slips, wells), `card` 8 (a card and its small overlays) and `overlay` 12
-     (dialogs, drawers and flow cards). */
+  /* The app's four radii by role (app code uses only these and `full`, which
+     is for avatars and switch thumbs): `mark` 4 (tags, kbd chips, menu items,
+     checkboxes, rung marks), `control` 6 (controls, fields, slips, wells),
+     `card` 8 (cards and menus) and `overlay` 12 (dialogs and drawers). The
+     website keeps `mark` at 2; the app binds 4 in its own block. */
   --radius-mark: 2px;
   --radius-control: var(--radius-md);
   --radius-card: 8px;
@@ -378,6 +380,8 @@
      soft edge. The website and docs draw their borderless edges with the
      ring inside xs and pop. Never two shadows on nested surfaces. */
   --shadow-edge: 0 1px 2px rgba(17, 17, 17, 0.05);
+  /* Under a labelled control's soft edge (a secondary button, an operable tag). */
+  --shadow-control: 0 1px 2px rgb(16 24 40 / 0.06);
   --shadow-xs: 0 0 0 1px rgb(17 17 17 / 8%), 0 1px 2px rgb(17 17 17 / 6%);
   --shadow-pop:
     0 0 0 1px rgb(17 17 17 / 8%), 0 2px 6px rgb(17 17 17 / 6%),
@@ -499,6 +503,7 @@
   --color-scrim: rgb(0 0 0 / 64%);
   --color-chart-grid: #262626;
   --shadow-edge: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-xs: 0 0 0 1px rgb(255 255 255 / 8%), 0 1px 2px rgb(0 0 0 / 50%);
   --shadow-pop: 0 0 0 1px rgb(255 255 255 / 10%), 0 16px 40px rgb(0 0 0 / 60%);
   --shadow-sheet: 0 1px 2px rgb(0 0 0 / 40%), 0 16px 40px -8px rgb(0 0 0 / 60%);
@@ -520,6 +525,7 @@
   --color-raised: #1f2228;
   --color-rule: #2b2e36;
   --color-control-line: #727886;
+  --color-control-edge: #393d47;
   --color-ink: #eceef2;
   --color-ink-2: #a5abb8;
   --color-ink-hover: #d2d6de;
@@ -550,6 +556,7 @@
   --color-state-selected: rgb(236 238 242 / 7%);
   --color-scrim: rgb(0 0 0 / 60%);
   --shadow-card: none;
+  --shadow-control: 0 1px 2px rgb(0 0 0 / 0.35);
   --shadow-pop: 0 4px 12px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-sheet: 0 16px 40px rgb(0 0 0 / 0.55);
 }
@@ -558,6 +565,9 @@
    would freeze the light value; these read the live token instead. */
 @utility shadow-edge {
   box-shadow: var(--shadow-edge);
+}
+@utility shadow-control {
+  box-shadow: var(--shadow-control);
 }
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
@@ -634,6 +644,9 @@
   --color-raised: #ffffff;
   --color-rule: #e4e6eb;
   --color-control-line: #838995;
+  /* A labelled button's soft edge: its words name it, so the edge needs no
+     3:1 (WCAG 1.4.11); fields and toggles keep `control-line`. */
+  --color-control-edge: #d5d8df;
   --color-ink: #16181d;
   --color-ink-2: #565c69;
   /* The primary button's hover: its ink fill one step lighter. */
@@ -707,13 +720,15 @@
   --text-code: 0.8125rem;
   --text-code--line-height: 1.25rem;
 
-  /* Shape (2.4): marks 2, controls and wells 6, cards and small overlays 8,
-     dialogs, drawers and flow cards 12. */
-  --radius-mark: 2px;
+  /* Shape (2.4): four radii plus round. Marks, tags, kbd chips and menu items
+     4; controls and wells 6; cards and menus 8; dialogs and drawers 12; round
+     only for avatars and switch thumbs. */
+  --radius-mark: 4px;
   --radius-control: 6px;
   --radius-card: 8px;
   --radius-overlay: 12px;
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-control: 0 1px 2px rgb(16 24 40 / 0.06);
   --shadow-pop: 0 4px 12px rgb(16 24 40 / 0.1), 0 1px 2px rgb(16 24 40 / 0.06);
   --shadow-sheet: 0 16px 40px rgb(16 24 40 / 0.18);
   /* The accent mark ("you, here"). */
@@ -776,6 +791,8 @@
   :root:not([data-public-surface]) {
     --control-sm: 44px;
     --control-md: 44px;
+    --control-md-padding: 16px;
+    --page-tabs-height: 44px;
     --nav-row-height: 44px;
     --table-row-height: 44px;
   }
@@ -874,6 +891,7 @@
 
 :root[data-public-surface] {
   --shadow-edge: none;
+  --shadow-control: none;
   --shadow-xs: 0 0 0 1px var(--color-line);
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
 }
@@ -1226,7 +1244,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     text-transform: uppercase;
     color: var(--color-ink-2);
   }
-  /* Key caps on the website (Kbd); in the app `type-code` overrides it. */
+  /* Key caps (Kbd): mono 12/16 in the app and on the website. */
   .type-data-sm {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
@@ -1535,8 +1553,9 @@ a.focus-ring:active .type-caption {
   outline: none;
 }
 
-/* A whole-row control inside a bordered list that clips its corners: the
-   same ring, drawn 2px inside the row. */
+/* Only a whole-row control inside a list that clips its corners, and a tab
+   inside its scroll row: the same ring, drawn 2px inside. Every other
+   control (a dialog's close included) takes the standard ring above. */
 .focus-ring-inset:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: -2px;
@@ -1744,6 +1763,7 @@ a.focus-ring:active .type-caption {
   background-color: var(--color-well);
   background-image: none;
   border-color: transparent;
+  box-shadow: none;
   color: color-mix(in srgb, var(--color-ink-2) 60%, transparent);
   opacity: 1;
 }

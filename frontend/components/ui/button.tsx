@@ -19,10 +19,11 @@ import { cn } from '@/lib/utils';
 /**
  * The four buttons. Actions are ink, never the accent:
  * `primary` is the one ink-filled action a view is for, `secondary` a
- * `surface` button with the control line, `quiet` no edge (`ink-2`, `ink`
- * on hover) for toolbars, rows and navigation, `danger` a crimson label and
- * line (filled only in a confirm dialog, `danger-confirm`). Hover is the 6%
- * ink tint, pressed and open the 10% tint; nothing moves.
+ * `surface` button with the soft `control-edge` and `shadow-control` (its
+ * words name it, so the edge needs no 3:1), `quiet` no edge (`ink-2`, `ink`
+ * on hover) for toolbars, rows and navigation, `danger` the secondary face
+ * with a crimson label (filled only in a confirm dialog, `danger-confirm`).
+ * Hover is the 6% ink tint, pressed and open the 10% tint; nothing moves.
  */
 export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
 
@@ -37,27 +38,30 @@ export type ButtonSize = 'md' | 'lg';
 const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
+/** The labelled button's soft edge; the website keeps its control line (globals.css). */
+const SOFT_EDGE = 'bg-surface border border-control-edge shadow-control';
+
 // The app's one disabled look (well fill, no edge) is in globals.css, after
 // every variant. The website keeps its 45% disabled face.
 const BUTTON_BASE =
-  'focus-ring type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
+  'focus-ring type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline pointer-coarse:min-h-[var(--control-coarse)] transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
+// `--control-md-padding` turns 16 where `control-md` turns 44 (app only).
 const BUTTON_SIZE: Record<ButtonSize, string> = {
-  md: 'min-h-[var(--control-md)] px-3',
+  md: 'min-h-[var(--control-md)] px-[var(--control-md-padding,12px)]',
   lg: 'min-h-[var(--control-lg)] px-4',
 };
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
-    'bg-ink text-on-ink border border-ink not-disabled:hover:bg-ink-hover aria-disabled:hover:bg-ink pointer-coarse:min-h-[var(--control-coarse)]',
-  secondary: cn('bg-surface text-ink border-control-line border', HOVER_OVERLAY),
+    'bg-ink text-on-ink border border-ink not-disabled:hover:bg-ink-hover aria-disabled:hover:bg-ink',
+  secondary: cn(SOFT_EDGE, 'text-ink', HOVER_OVERLAY),
   quiet: cn(
     'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
   ),
-  danger: cn('bg-surface text-negative border-negative border', HOVER_OVERLAY),
-  'danger-confirm':
-    'bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90 pointer-coarse:min-h-[var(--control-coarse)]',
+  danger: cn(SOFT_EDGE, 'text-negative [[data-public-surface]_&]:border-negative', HOVER_OVERLAY),
+  'danger-confirm': 'bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90',
 };
 
 /** The button face for an element that is not a `Button` (a link styled as one). */

@@ -3,7 +3,7 @@ import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './s
 
 /**
  * Radius is the system's scale and nothing else: the app's roles
- * `rounded-mark` (2: rung marks, bar ends), `-control` (6: controls, fields,
+ * `rounded-mark` (4: marks, tags, kbd chips), `-control` (6: controls, fields,
  * wells), `-card` (8: cards, menus, popovers, tooltips), `-overlay` (12:
  * dialogs, drawers, flow cards) and `-sheet` (8), the website's
  * `-2xs`, `-xs`, `-sm`, `-md`, `-lg` and `-xl`, and `-full`. No arbitrary
