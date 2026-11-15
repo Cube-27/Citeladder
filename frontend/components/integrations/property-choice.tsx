@@ -1,7 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
+import { List, RefreshCw } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -76,6 +79,7 @@ export function PropertyChoice({
       <Notice tone="info">
         This account has no {source.noun}. Add and verify the site in {source.console}, then{' '}
         <Button variant="quiet" onClick={discover}>
+          <Icon icon={RefreshCw} />
           check again
         </Button>
       </Notice>
@@ -97,6 +101,7 @@ export function PropertyChoice({
           </Button>
           {properties.length > 1 && !showAll ? (
             <Button variant="quiet" onClick={() => setShowAll(true)}>
+              <Icon icon={List} />
               Choose another
             </Button>
           ) : null}

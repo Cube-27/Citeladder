@@ -1,7 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { ChipInput } from '@/components/ui/chip-input';
 import { Drawer } from '@/components/ui/drawer';
 import { Field } from '@/components/ui/field';
@@ -76,6 +79,7 @@ function ProductEditDrawer({
       footer={
         <>
           <Button variant="quiet" onClick={() => close(false)}>
+            <Icon icon={X} />
             Cancel
           </Button>
           <Button variant="primary" onClick={submit} disabled={save.isPending}>

@@ -46,7 +46,7 @@ import { SetupCompetitors } from './setup-competitors';
 import { SetupPrompts } from './setup-prompts';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 /** The KPIs, in the plan's order; merchants have their own section below. */
@@ -305,11 +305,12 @@ function ProductSetup({
   const discovery = useCompetitorDiscovery(projectId);
   const target = { kind: 'product', id: detail.product.holder_id } as const;
   return (
-    <Section aria-labelledby="product-setup">
+    // A titled group: its Actions, competitors and prompts are cards of their own.
+    <Section variant="group" aria-labelledby="product-setup">
       <SectionHeader>
         <SectionTitle id="product-setup">Setup</SectionTitle>
       </SectionHeader>
-      <SectionContent>
+      <SectionStack>
         <ProductActions detail={detail} />
         <SetupCompetitors
           projectId={projectId}
@@ -325,7 +326,7 @@ function ProductSetup({
           query={queries.buyerPrompts}
           level={3}
         />
-      </SectionContent>
+      </SectionStack>
     </Section>
   );
 }

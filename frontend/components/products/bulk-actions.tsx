@@ -1,4 +1,7 @@
+import { X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { COMMERCE_TARGETS_MAX } from '@citeladder/contracts/commerce-suite';
@@ -50,6 +53,7 @@ export function BulkActions({
             Find competitors
           </Button>
           <Button variant="quiet" disabled={pending} onClick={onClear}>
+            <Icon icon={X} />
             Clear selection
           </Button>
         </Inline>

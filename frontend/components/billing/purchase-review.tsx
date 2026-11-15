@@ -1,6 +1,9 @@
 import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
+import { X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import {
   Section,
@@ -77,6 +80,7 @@ export function PurchaseReview({
         <CheckoutConsent recurring={prepared.kind === 'base'} />
         <Inline className="flex-wrap justify-end">
           <Button variant="quiet" disabled={checkout.confirming} onClick={checkout.resetPrepared}>
+            <Icon icon={X} />
             Not now
           </Button>
           <Button
