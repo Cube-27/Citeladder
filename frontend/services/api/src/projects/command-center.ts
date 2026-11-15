@@ -140,12 +140,25 @@ function changeOf(
 }
 const answersOf = (shared: VisibilityComparison | null): ComparedAnswers | null =>
   shared ? { matched: shared.matched_cells, total: shared.current_cells } : null;
+const withAnswers = (
+  measured: View['measurement'],
+  answers: ComparedAnswers | null,
+): View['measurement'] => measured && { ...measured, comparison_answers: answers };
 const brandOf = (side: ChangeSide | undefined) => side?.rankings.find((row) => row.is_brand);
 // With no share of voice (nobody named) the sort order is alphabetical, not a rank.
 const rankOf = (side: ChangeSide | undefined) => {
   const row = brandOf(side);
   return side && row?.share_of_voice != null ? side.rankings.indexOf(row) + 1 : null;
 };
+function citationShare(brand: RankingRow | undefined, change: Change) {
+  return {
+    value: percent(brand?.citation_rate),
+    delta: delta(
+      percent(brandOf(change?.after)?.citation_rate),
+      percent(brandOf(change?.before)?.citation_rate),
+    ),
+  };
+}
 function metrics(current: VisibilityResponse | null, change: Change): View['state'] {
   const brand = brandOf(current ?? undefined);
   const after = brandOf(change?.after);
@@ -464,8 +477,6 @@ export async function commandCenter(
   ]);
   const change = changeOf(current, previous, shared);
   const answers = answersOf(shared);
-  const changeBrand = brandOf(change?.after);
-  const changeBaseline = brandOf(change?.before);
   const count = Number(counted.count);
   const times = [crawl?.completed_at, demand?.created_at].filter((at): at is Date => at != null);
   const analyzedAt = times.length ? new Date(Math.max(...times.map((at) => at.getTime()))) : null;
@@ -528,15 +539,12 @@ export async function commandCenter(
       connected: Boolean(mapping),
     }),
     track: {
-      citation_share: {
-        value: percent(currentBrand?.citation_rate),
-        delta: delta(percent(changeBrand?.citation_rate), percent(changeBaseline?.citation_rate)),
-      },
+      citation_share: citationShare(currentBrand, change),
       engine_coverage: audits?.engines.length ?? 0,
       observed_at: audits ? instant(audits.selected) : null,
       limitations: trackLimitations(audits, change, answers),
     },
-    measurement: measured && { ...measured, comparison_answers: answers },
+    measurement: withAnswers(measured, answers),
     state: metrics(current, change),
     movements: movements(current, previous),
     actions: opportunities.items,
