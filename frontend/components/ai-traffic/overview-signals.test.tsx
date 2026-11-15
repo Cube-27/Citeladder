@@ -1,5 +1,5 @@
-import { screen, within } from '@testing-library/react';
-import { expect, it, onTestFinished } from 'vite-plus/test';
+import { fireEvent, screen, within } from '@testing-library/react';
+import { expect, it, onTestFinished, vi } from 'vite-plus/test';
 import { renderWithProviders } from '@/test/render';
 import { OverviewFigures } from './overview-signals';
 
@@ -61,6 +61,8 @@ const ga4Connection = {
   updated_at: '2026-07-20T00:00:00Z',
 };
 
+const connectCrawl = vi.fn();
+
 function figures(
   overrides: Partial<Overview>,
   crawlAvailable = true,
@@ -71,6 +73,7 @@ function figures(
       projectId={projectId}
       crawlAvailable={crawlAvailable}
       ga4={ga4}
+      onConnectCrawl={connectCrawl}
       data={{ crawl, referrals, citations, ...overrides }}
     />
   );
@@ -78,19 +81,28 @@ function figures(
 /** The figure cell a label names: its label, value, basis and action. */
 const figure = (label: string) =>
   screen.getByText(label).closest('[data-figure-cell]') as HTMLElement;
+/** Why a figure is absent: the label's info hint, heard as its description. */
+const whyAbsent = (label: string) => screen.getByRole('button', { name: `About ${label}` });
 
 it('keeps unavailable, missing, awaiting, incomplete and measured zero distinct', () => {
   const view = renderWithProviders(
     figures({ crawl: { ...crawl, connection: 'not_connected' } }, false),
   );
-  expect(screen.getByText(/not available for this workspace yet/)).toBeVisible();
+  expect(whyAbsent('Crawler requests')).toHaveAccessibleDescription(
+    /not available for this workspace yet/,
+  );
   expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
   view.rerender(figures({ crawl: { ...crawl, connection: 'not_connected' } }));
-  expect(screen.getByRole('button', { name: 'Connect crawl logs' })).toBeEnabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+  expect(connectCrawl).toHaveBeenCalledOnce();
   view.rerender(figures({ crawl: { ...crawl, connection: 'awaiting_data' } }));
-  expect(screen.getByText(/Awaiting the first accepted batch/)).toBeVisible();
+  expect(whyAbsent('Crawler requests')).toHaveAccessibleDescription(
+    /Awaiting the first accepted batch/,
+  );
   view.rerender(figures({ crawl }));
-  expect(screen.getByText(/No matching requests were observed/)).toBeVisible();
+  expect(whyAbsent('Crawler requests')).toHaveAccessibleDescription(
+    /No matching requests were observed/,
+  );
   expect(within(figure('Crawler requests')).queryByText('0')).not.toBeInTheDocument();
   view.rerender(
     figures({ crawl: { ...crawl, coverage: 'complete', requests: 0, pages: 0, active_bots: 0 } }),
@@ -104,11 +116,9 @@ it('keeps failed verification requests and unavailable active bots visible', () 
   const view = renderWithProviders(
     figures({ crawl: { ...crawl, failed_verification_requests: 3 } }),
   );
-  expect(
-    within(figure('Crawler requests')).getByText(
-      'No matching requests were observed in the available logs. Coverage is incomplete. 3 failed verification requests are shown separately.',
-    ),
-  ).toBeVisible();
+  expect(whyAbsent('Crawler requests')).toHaveAccessibleDescription(
+    'No matching requests were observed in the available logs. Coverage is incomplete. 3 failed verification requests are shown separately.',
+  );
   view.rerender(figures({ crawl: { ...crawl, requests: 12, pages: 4, active_bots: null } }));
   expect(within(figure('Path-level pages')).getByText('Active bots unavailable')).toBeVisible();
   view.rerender(figures({ crawl: { ...crawl, requests: 12, pages: 4, active_bots: 2 } }));
@@ -151,7 +161,9 @@ it("offers GA4's own next step until a referral snapshot exists, then says it sy
   expect(screen.getByRole('link', { name: 'Choose GA4 property' })).toBeVisible();
   expect(screen.queryByRole('link', { name: 'Connect GA4' })).not.toBeInTheDocument();
   view.rerender(figures({}, true, null));
-  expect(screen.getByText('Referral sessions appear once GA4 imports a report.')).toBeVisible();
+  expect(whyAbsent('AI referral sessions')).toHaveAccessibleDescription(
+    'Referral sessions appear once GA4 imports a report.',
+  );
   expect(screen.queryByRole('link', { name: /GA4/ })).not.toBeInTheDocument();
 
   // The report day keeps its calendar date in a display zone west of UTC.

@@ -5,8 +5,8 @@ import { cn } from '@/lib/utils';
 import { POP_FACE } from '@/components/ui/slip';
 
 /**
- * Shared editorial structures for authenticated analytical workspaces. A row
- * of label/value facts is a `StatRow` (`stat-row.tsx`), not a recipe here.
+ * Shared editorial structures for authenticated analytical workspaces. Key
+ * figures are a `FigureStrip` (`figure-strip.tsx`), not a recipe here.
  */
 
 /**

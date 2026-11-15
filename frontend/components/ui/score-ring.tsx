@@ -34,22 +34,25 @@ const SIZE = 64;
 const STROKE = 5;
 
 /**
- * ScoreRing — a 0–100 score as a ring, the app's only score graphic:
- * 64px with the number at its centre in the metric
- * figure (500, 24/32). A `chart-grid` track; the arc is `ink`, or banded
- * with `tone="auto"` where several scores are compared and in score stats.
- * Shares are a `StackedBar`. It has no other size and shows no percent sign.
+ * ScoreRing — a 0–100 score as a ring, the app's only score graphic (never a
+ * bar, meter or rungs): 64px with the number at its centre in the `figure`
+ * role. A `rule` track; the arc is `ink`, or banded with `tone="auto"` where
+ * several scores are compared and in metric cards. It has no other size and
+ * draws no percent sign; `unit="%"` names a share as one for assistive tech.
  */
 export function ScoreRing({
   value,
   label,
   tone = 'ink',
+  unit,
 }: Readonly<{
   /** Score 0–100. */
   value: number;
   /** The accessible name, e.g. "Site Health score". */
   label: string;
   tone?: ScoreTone;
+  /** A share out of 100 rather than a score. */
+  unit?: '%';
 }>) {
   const score = clampScore(value);
   const centre = SIZE / 2;
@@ -59,7 +62,7 @@ export function ScoreRing({
     <div
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- The ring and its numeral are one generated image; <img> cannot hold them.
       role="img" // NOSONAR -- the ring and its numeral are one generated image
-      aria-label={`${label}: ${score} out of 100`}
+      aria-label={unit ? `${label}: ${score}%` : `${label}: ${score} out of 100`}
       className="relative inline-grid size-16 shrink-0 place-items-center"
     >
       <svg

@@ -741,7 +741,9 @@ describe('AI Traffic state and navigation', () => {
     await waitFor(() => expect(dashboards.at(-1)?.get('range')).toBe('90d'));
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
-    expect(await screen.findByText(/not available for this workspace yet/)).toBeVisible();
+    expect(
+      await screen.findByRole('button', { name: 'About Crawler requests' }),
+    ).toHaveAccessibleDescription(/not available for this workspace yet/);
     expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
     expect(await openFilterRow(user, 'Period', 'Last 90 days')).toBeVisible();
     expect(screen.queryByRole('menuitem', { name: /^Verification/ })).not.toBeInTheDocument();

@@ -345,17 +345,13 @@ describe('UrlDetail', () => {
     renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
-    const scores = [
-      ['Web fundamentals score', '46 out of 100'],
-      ['AEO readiness score', '64 out of 100'],
-    ] as const;
-    for (const [name, value] of scores)
-      expect(screen.getByRole('progressbar', { name })).toHaveAttribute('aria-valuetext', value);
-    // Completion is a share, drawn like every key figure: its rungs and a percentage.
-    expect(screen.getByRole('progressbar', { name: 'AEO checklist completion' })).toHaveAttribute(
-      'aria-valuetext',
-      '75%',
-    );
+    for (const name of [
+      'Web fundamentals score: 46 out of 100',
+      'AEO readiness score: 64 out of 100',
+    ])
+      expect(screen.getByRole('img', { name })).toBeVisible();
+    // Completion is a share, ringed like the scores and read as a percentage.
+    expect(screen.getByRole('img', { name: 'AEO checklist completion: 75%' })).toBeVisible();
   });
 
   it('preserves the AEO state when measurement coverage is unavailable', async () => {
@@ -621,7 +617,7 @@ describe('UrlDetail', () => {
     expect(within(advisory).getByText('Advisory')).toBeInTheDocument();
     expect(within(advisory).queryByText('Medium')).not.toBeInTheDocument();
     // The page's scores lead, above its issues.
-    const score = screen.getByRole('progressbar', { name: 'Web fundamentals score' });
+    const score = screen.getByRole('img', { name: /^Web fundamentals score:/ });
     expect(score.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 

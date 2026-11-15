@@ -124,8 +124,8 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     renderScreen();
     await user.click(await screen.findByRole('tab', { name: 'Overview' }));
     expect(
-      await screen.findByRole('progressbar', { name: 'Web fundamentals score' }),
-    ).toHaveAttribute('aria-valuetext', '80 out of 100');
+      await screen.findByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
+    ).toBeVisible();
 
     const start = screen.getByRole('button', { name: 'Run new crawl' });
     await waitFor(() => expect(start).toBeEnabled());
@@ -364,8 +364,8 @@ describe('SiteHealthScreen — loading frames', () => {
 
     snapshot.release();
     expect(
-      await screen.findByRole('progressbar', { name: 'Web fundamentals score' }),
-    ).toHaveAttribute('aria-valuetext', '80 out of 100');
+      await screen.findByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
+    ).toBeVisible();
     expect(loadingRegions()).toHaveLength(0);
   });
 
@@ -386,8 +386,8 @@ describe('SiteHealthScreen — loading frames', () => {
 
     const { queryClient } = renderScreen();
     expect(
-      await screen.findByRole('progressbar', { name: 'Web fundamentals score' }),
-    ).toHaveAttribute('aria-valuetext', '80 out of 100');
+      await screen.findByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
+    ).toBeVisible();
 
     refresh = held();
     void queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.all });
@@ -395,10 +395,9 @@ describe('SiteHealthScreen — loading frames', () => {
       expect(queryClient.isFetching({ queryKey: queryKeys.siteHealth.all })).toBeGreaterThan(0),
     );
 
-    expect(screen.getByRole('progressbar', { name: 'Web fundamentals score' })).toHaveAttribute(
-      'aria-valuetext',
-      '80 out of 100',
-    );
+    expect(
+      screen.getByRole('img', { name: 'Web fundamentals score: 80 out of 100' }),
+    ).toBeVisible();
     expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
     expect(loadingRegions()).toHaveLength(0);
     refresh.release();

@@ -202,29 +202,20 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(screen.getByRole('progressbar', { name: 'Web fundamentals score' })).toHaveAttribute(
-      'aria-valuetext',
-      '81 out of 100',
-    );
-    expect(screen.getByRole('progressbar', { name: 'AEO readiness score' })).toHaveAttribute(
-      'aria-valuetext',
-      '62 out of 100',
-    );
+    expect(
+      screen.getByRole('img', { name: 'Web fundamentals score: 81 out of 100' }),
+    ).toBeVisible();
+    expect(screen.getByRole('img', { name: 'AEO readiness score: 62 out of 100' })).toBeVisible();
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
-    // The two completion shares are rung meters too, each with its link.
-    expect(screen.getByRole('progressbar', { name: 'AEO checklist completion' })).toHaveAttribute(
-      'aria-valuetext',
-      '50%',
-    );
+    // The two completion shares are rings too.
+    expect(screen.getByRole('img', { name: 'AEO checklist completion: 50%' })).toBeVisible();
     // Coverage is a share of the pages found, so it reads as a percentage, not a score.
-    expect(screen.getByRole('progressbar', { name: 'Crawl coverage' })).toHaveAttribute(
-      'aria-valuetext',
-      '40%',
-    );
-    // Scores are rung progress bars, never the thin-bar Meter.
+    expect(screen.getByRole('img', { name: 'Crawl coverage: 40%' })).toBeVisible();
+    // Scores are rings, never a bar or rungs.
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
     expect(overviewRequests).toBe(0);
   });
@@ -259,10 +250,7 @@ describe('OverviewPanel', () => {
     );
 
     // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
-    expect(await screen.findByRole('progressbar', { name: 'Crawl coverage' })).toHaveAttribute(
-      'aria-valuetext',
-      '20%',
-    );
+    expect(await screen.findByRole('img', { name: 'Crawl coverage: 20%' })).toBeVisible();
   });
 
   it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {

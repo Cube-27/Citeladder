@@ -76,14 +76,27 @@ describe('Delta', () => {
 });
 
 describe('FigureStrip', () => {
-  it('names a missing value, draws a score as rungs and makes a pressable figure a toggle', () => {
+  it('names a missing value, prints a real zero, rings a score once and makes a pressable figure a toggle', () => {
     const onSelect = vi.fn();
-    render(
+    const onConnect = vi.fn();
+    renderWithProviders(
       <FigureStrip
         label="Delivery"
         segments={[
-          { key: 'ttfb', label: 'TTFB', value: null },
-          { key: 'score', label: 'Crawl', score: { value: 72, label: 'Crawl score' } },
+          {
+            key: 'ttfb',
+            label: 'TTFB',
+            value: null,
+            action: { label: 'Connect logs', onSelect: onConnect },
+          },
+          { key: 'errors', label: 'Errors', value: 0 },
+          {
+            key: 'score',
+            label: 'Crawl',
+            score: { value: 72, label: 'Crawl score' },
+            sub: 'Last crawl',
+            action: { label: 'View details', href: '/issues' },
+          },
           {
             key: 'orphans',
             label: 'Orphaned pages',
@@ -94,24 +107,30 @@ describe('FigureStrip', () => {
           },
         ]}
       />,
+      { projectSelection: null },
     );
     const group = screen.getByRole('group', { name: 'Delivery' });
-    expect(within(group).getByText('TTFB').closest('[data-figure-cell]')).toHaveTextContent(
-      'Not measured',
+    const cell = (label: string) => within(group).getByText(label).closest('[data-figure-cell]');
+    expect(cell('TTFB')).toHaveTextContent('Not measured');
+    expect(cell('Errors')?.textContent).toBe('Errors0');
+    // A score is a ring with its number inside, never a bar or rungs, and the number prints once.
+    expect(within(group).getByRole('img', { name: 'Crawl score: 72 out of 100' })).toBeVisible();
+    expect(within(group).queryByRole('progressbar')).not.toBeInTheDocument();
+    expect(cell('Crawl')?.textContent).toBe('Crawl72Last crawlView details');
+    // The figure's action is a text link on the basis line, never a button of its own.
+    fireEvent.click(within(group).getByRole('button', { name: 'Connect logs' }));
+    expect(onConnect).toHaveBeenCalledOnce();
+    expect(within(group).getByRole('link', { name: 'View details' })).toHaveAttribute(
+      'href',
+      '/issues',
     );
-    // A score is a rung meter carrying its number, never a ring.
-    expect(within(group).getByRole('progressbar', { name: 'Crawl score' })).toHaveAttribute(
-      'aria-valuetext',
-      '72 out of 100',
-    );
-    expect(within(group).queryByRole('img')).not.toBeInTheDocument();
     const toggle = within(group).getByRole('button', { name: 'View 3 orphaned pages' });
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(toggle);
     expect(onSelect).toHaveBeenCalledOnce();
   });
 
-  it('puts a comparison window under the value, its absence named like the value', () => {
+  it('puts a comparison window on the basis line, its absence named like the value', () => {
     render(
       <FigureStrip
         label="Search Console metrics"
@@ -134,9 +153,9 @@ describe('FigureStrip', () => {
     );
     const group = screen.getByRole('group', { name: 'Search Console metrics' });
     const [clicks, ctr] = within(group).getAllByText('Previous 28 days');
-    expect(clicks?.closest('[data-figure-comparison]')).toHaveTextContent('Previous 28 days980');
-    expect(ctr?.closest('[data-figure-comparison]')).toHaveTextContent(
-      'Previous 28 daysNot measured',
+    expect(clicks?.closest('[data-figure-comparison]')?.textContent).toBe('Previous 28 days 980');
+    expect(ctr?.closest('[data-figure-comparison]')?.textContent).toBe(
+      'Previous 28 days Not measured',
     );
   });
 });

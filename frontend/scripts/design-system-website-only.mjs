@@ -9,7 +9,6 @@ const WEBSITE_ONLY_OWNERS = {
   callout: 'Notice',
   card: 'Section, Slip or Well',
   'stat-row': 'FigureStrip',
-  'score-ring': 'RungMeter',
   'trend-chart': 'StepChart',
   sparkline: 'StepChart',
 };

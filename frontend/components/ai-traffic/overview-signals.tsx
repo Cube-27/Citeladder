@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import type { z } from 'zod';
 import type { aiTrafficOverviewSchema, crawlSummarySchema } from '@citeladder/contracts/ai-traffic';
 import { formatCount, formatPercent, formatWindowDate } from '@/lib/format';
@@ -8,11 +8,9 @@ import {
   coverageLabel,
   words,
 } from '@/lib/ai-traffic/vocabulary';
-import { projectDestination } from '@/lib/navigation/project-destination';
 import type { SourceStep } from '@/components/integrations/data-sources';
-import { ActionButton } from '@/components/ui/actions';
-import { Button } from '@/components/ui/button';
-import { ProjectLink } from '@/components/ui/project-link';
+import { ACTIONS } from '@/components/ui/actions';
+import { InfoHint } from '@/components/ui/info-hint';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
@@ -102,7 +100,12 @@ function crawlFigures(
         label: CRAWL_REQUESTS,
         value: null,
         missingLabel: 'Unavailable',
-        sub: 'Crawl log collection is not available for this workspace yet. AI referrals and tracked citations are measured without it.',
+        marker: (
+          <WhyAbsent label={CRAWL_REQUESTS}>
+            Crawl log collection is not available for this workspace yet. AI referrals and tracked
+            citations are measured without it.
+          </WhyAbsent>
+        ),
       },
     ];
   const status =
@@ -113,21 +116,7 @@ function crawlFigures(
   const failedNote =
     failed > 0 ? `${formatCount(failed)} failed verification requests are shown separately.` : null;
   if (crawl.requests === null)
-    return [
-      {
-        key: 'requests',
-        label: CRAWL_REQUESTS,
-        value: null,
-        missingLabel: status,
-        sub: failedNote
-          ? `${CRAWL_EMPTY[crawl.connection]} ${failedNote}`
-          : CRAWL_EMPTY[crawl.connection],
-        action:
-          crawl.connection === 'not_connected' ? (
-            <ActionButton action="connectCrawlLogs" onClick={onConnect} />
-          ) : undefined,
-      },
-    ];
+    return [noRequestsFigure({ connection: crawl.connection, status, failedNote, onConnect })];
   return [
     {
       key: 'requests',
@@ -157,38 +146,74 @@ function crawlFigures(
   ];
 }
 
+/** No crawler requests in the window: why behind the hint, and connecting when not connected. */
+function noRequestsFigure({
+  connection,
+  status,
+  failedNote,
+  onConnect,
+}: Readonly<{
+  connection: CrawlSummary['connection'];
+  status: string;
+  failedNote: string | null;
+  onConnect: (() => void) | undefined;
+}>): FigureSegment {
+  return {
+    key: 'requests',
+    label: CRAWL_REQUESTS,
+    value: null,
+    missingLabel: status,
+    marker: (
+      <WhyAbsent label={CRAWL_REQUESTS}>
+        {failedNote ? `${CRAWL_EMPTY[connection]} ${failedNote}` : CRAWL_EMPTY[connection]}
+      </WhyAbsent>
+    ),
+    action:
+      connection === 'not_connected' && onConnect
+        ? { label: ACTIONS.connectCrawlLogs.label, onSelect: onConnect }
+        : undefined,
+  };
+}
+
 function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null): FigureSegment {
   const latest = referrals.referral_volume.at(-1);
   // Only a persisted snapshot carries a window; without one nothing has synced.
   const synced = referrals.window_end !== null;
   const share = formatPercent(referrals.referral_share.at(-1)?.value ?? null);
   const unsynced = referralSetup(ga4);
+  const reported = referrals.referral_volume.length > 0;
+  const label = 'AI referral sessions';
   return {
     key: 'referrals',
-    label: 'AI referral sessions',
+    label,
     caption: 'Latest day',
     value: latest?.value == null ? null : formatCount(latest.value),
     missingLabel: synced ? 'Unavailable' : 'Not synced',
-    sub: (
-      <>
-        {referrals.referral_volume.length ? `${share} of sessions · GA4 · Synced` : unsynced.note}
-        {referrals.window_end === null ? null : (
-          // A report day is a calendar date, not an instant: it reads the same in every zone.
-          <>
-            {' · Report through '}
-            <time dateTime={referrals.window_end}>{formatWindowDate(referrals.window_end)}</time>
-          </>
-        )}
-      </>
-    ),
+    marker: reported ? undefined : <WhyAbsent label={label}>{unsynced.note}</WhyAbsent>,
+    sub:
+      reported || referrals.window_end !== null ? (
+        <>
+          {reported ? `${share} of sessions · GA4 · Synced` : null}
+          {referrals.window_end === null ? null : (
+            // A report day is a calendar date, not an instant: it reads the same in every zone.
+            <>
+              {reported ? ' · Report through ' : 'Report through '}
+              <time dateTime={referrals.window_end}>{formatWindowDate(referrals.window_end)}</time>
+            </>
+          )}
+        </>
+      ) : undefined,
+    // The referrals view connects and sets up GA4 in place.
     action:
-      synced || unsynced.action === null ? undefined : (
-        <Button asChild variant="secondary">
-          {/* The referrals view connects and sets up GA4 in place. */}
-          <ProjectLink href="/ai-traffic?tab=referrals">{unsynced.action}</ProjectLink>
-        </Button>
-      ),
+      synced || unsynced.action === null
+        ? undefined
+        : { label: unsynced.action, href: '/ai-traffic?tab=referrals' },
   };
+}
+
+/** Why a figure has no value: a sentence is not a figure's job, so it waits behind the hint. */
+function WhyAbsent({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+  return <InfoHint label={`About ${label}`}>{children}</InfoHint>;
 }
 
 /** Before a referral snapshot exists: GA4's real step, never a guessed "not connected". */
@@ -226,11 +251,7 @@ function citationFigure(citations: Overview['citations'], projectId: string): Fi
     value: measured ? formatCount(citations.count) : null,
     missingLabel: 'Not available yet',
     sub: measured ? citations.label : `${citations.label} · ${citationGapLabel(citations.reason)}`,
-    action: (
-      <Button asChild variant="secondary">
-        <Link to={projectDestination('/visibility', null, projectId)}>Open AI Visibility</Link>
-      </Button>
-    ),
+    action: { label: 'Open AI Visibility', href: '/visibility', projectId },
   };
 }
 
