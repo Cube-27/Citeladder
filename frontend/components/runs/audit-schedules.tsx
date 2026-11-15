@@ -161,86 +161,83 @@ function ScheduleForm({
 
   return (
     <>
-      {promptSets.length === 0 ? (
-        <Notice tone="info">Add prompts before scheduling an audit.</Notice>
-      ) : (
-        <Stack>
-          <Stack gap="item" className={textRole('label')}>
-            <span>Prompt set</span>
-            <Select
-              ariaLabel="Prompt set"
-              value={promptSetId}
-              onValueChange={setPromptSetId}
-              options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
-            />
-          </Stack>
-          <Stack gap="item" className={textRole('label')}>
-            <span>Measurement scope</span>
-            <Select
-              ariaLabel="Measurement scope"
-              value={auditScope}
-              onValueChange={setAuditScope}
-              options={[
-                { value: 'brand', label: 'Brand visibility' },
-                { value: 'commerce', label: 'Commerce AI Shelf' },
-              ]}
-            />
-          </Stack>
-          <Stack gap="item" className={textRole('label')}>
-            <span>Cadence</span>
-            <Select
-              ariaLabel="Cadence"
-              value={cadence}
-              onValueChange={setCadence}
-              options={Object.entries(CADENCE_LABELS).map(([value, label]) => ({
-                value: value as AuditScheduleCadence,
-                label,
-              }))}
-            />
-          </Stack>
-          {cadence === 'every_n_minutes' ? (
-            <label htmlFor="audit-schedule-minutes" className={textRole('label')}>
-              <Stack as="span" gap="item">
-                <span>Minutes</span>
-                <Input
-                  id="audit-schedule-minutes"
-                  min="5"
-                  type="number"
-                  value={intervalMinutes}
-                  onChange={(event) => setIntervalMinutes(event.target.value)}
-                />
-              </Stack>
-            </label>
-          ) : null}
-          <Stack as="fieldset" gap="item">
-            <legend className={textRole('label')}>Engines</legend>
-            <Inline className="flex-wrap">
-              {catalog.order.map((engine) => (
-                <Checkbox
-                  key={engine}
-                  label={catalog.label(engine)}
-                  checked={engines.includes(engine)}
-                  onCheckedChange={() =>
-                    setEngines((current) =>
-                      current.includes(engine)
-                        ? current.filter((value) => value !== engine)
-                        : [...current, engine],
-                    )
-                  }
-                />
-              ))}
-            </Inline>
-          </Stack>
-          <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
-          <div>
-            {/* The masthead's Launch run is the page's one primary. */}
-            <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
-              <Icon icon={CalendarPlus} />
-              {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
-            </Button>
-          </div>
+      {/* The Runs screen mounts schedules only once an active prompt exists. */}
+      <Stack>
+        <Stack gap="item" className={textRole('label')}>
+          <span>Prompt set</span>
+          <Select
+            ariaLabel="Prompt set"
+            value={promptSetId}
+            onValueChange={setPromptSetId}
+            options={promptSets.map((set) => ({ value: set.id, label: set.name }))}
+          />
         </Stack>
-      )}
+        <Stack gap="item" className={textRole('label')}>
+          <span>Measurement scope</span>
+          <Select
+            ariaLabel="Measurement scope"
+            value={auditScope}
+            onValueChange={setAuditScope}
+            options={[
+              { value: 'brand', label: 'Brand visibility' },
+              { value: 'commerce', label: 'Commerce AI Shelf' },
+            ]}
+          />
+        </Stack>
+        <Stack gap="item" className={textRole('label')}>
+          <span>Cadence</span>
+          <Select
+            ariaLabel="Cadence"
+            value={cadence}
+            onValueChange={setCadence}
+            options={Object.entries(CADENCE_LABELS).map(([value, label]) => ({
+              value: value as AuditScheduleCadence,
+              label,
+            }))}
+          />
+        </Stack>
+        {cadence === 'every_n_minutes' ? (
+          <label htmlFor="audit-schedule-minutes" className={textRole('label')}>
+            <Stack as="span" gap="item">
+              <span>Minutes</span>
+              <Input
+                id="audit-schedule-minutes"
+                min="5"
+                type="number"
+                value={intervalMinutes}
+                onChange={(event) => setIntervalMinutes(event.target.value)}
+              />
+            </Stack>
+          </label>
+        ) : null}
+        <Stack as="fieldset" gap="item">
+          <legend className={textRole('label')}>Engines</legend>
+          <Inline className="flex-wrap">
+            {catalog.order.map((engine) => (
+              <Checkbox
+                key={engine}
+                label={catalog.label(engine)}
+                checked={engines.includes(engine)}
+                onCheckedChange={() =>
+                  setEngines((current) =>
+                    current.includes(engine)
+                      ? current.filter((value) => value !== engine)
+                      : [...current, engine],
+                  )
+                }
+              />
+            ))}
+          </Inline>
+        </Stack>
+        <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
+        <div>
+          {/* The masthead's Launch run is the page's one primary. */}
+          <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
+            <Icon icon={CalendarPlus} />
+            {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
+          </Button>
+        </div>
+      </Stack>
       {createMutation.isError ? (
         <Notice
           kind="mutation"

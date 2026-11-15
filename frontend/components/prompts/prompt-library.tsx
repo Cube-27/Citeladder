@@ -37,7 +37,7 @@ import { usePromptEvidence, type PromptAnswerRef } from './prompt-evidence';
 import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
 import { CollectionPage } from '@/components/templates/collection-page';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
 import { type TopicDialog, TopicDialogs, topicFilter } from './topic-controls';
@@ -98,6 +98,11 @@ function libraryBodyFor({
       />
     );
   return hasPrompts ? table : <PromptEmptyState add={add} />;
+}
+
+/** A library that never held a prompt has nothing to sort, search or filter. */
+function libraryFilterBar(hasPrompts: boolean, controls: FilterBarProps): ReactNode {
+  return hasPrompts ? <FilterBar {...controls} /> : undefined;
 }
 
 /**
@@ -341,24 +346,23 @@ export function PromptLibrary({
   return (
     <CollectionPage
       actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
-      filters={
-        <FilterBar
-          {...promptFilterControls({
-            status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
-            search,
-            onSearchChange: setSearch,
-            filters,
-            onFiltersChange: setFilters,
-            personas,
-            topic: topicFilter({
-              topics,
-              selectedTopicId,
-              onSelect: setSelectedTopicId,
-              manage: edits?.topics,
-            }),
-          })}
-        />
-      }
+      filters={libraryFilterBar(
+        hasPrompts,
+        promptFilterControls({
+          status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
+          search,
+          onSearchChange: setSearch,
+          filters,
+          onFiltersChange: setFilters,
+          personas,
+          topic: topicFilter({
+            topics,
+            selectedTopicId,
+            onSelect: setSelectedTopicId,
+            manage: edits?.topics,
+          }),
+        }),
+      )}
     >
       <>
         {error && !failedEmpty ? (

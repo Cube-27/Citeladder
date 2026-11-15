@@ -1,9 +1,11 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 
 import type { Audit } from '@citeladder/contracts';
+import { promptsApi } from '@/lib/api/prompts';
 import { runsApi } from '@/lib/api/runs';
 import { makeProject } from '@/test/fixtures/project';
+import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { renderWithProviders } from '@/test/render';
 
 import { RunsScreen } from './runs-screen';
@@ -65,20 +67,38 @@ it('opens on the status a deep link names', async () => {
   expect(screen.getByRole('radio', { name: /Failed/ })).toHaveAttribute('aria-checked', 'true');
 });
 
-it('carries Launch run in the empty state, once, when there is no run yet', async () => {
-  vi.spyOn(runsApi, 'listAudits').mockResolvedValue([]);
-  vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
-  renderWithProviders(<RunsScreen />, {
-    projectSelection: {
-      projects: [project],
-      activeProject: project,
-      activeProjectId: project.id,
-      status: 'ready',
-    },
-  });
+it.each([
+  ['no active prompt', 'archived', { role: 'link', name: 'Add prompts' }, false],
+  ['an active prompt', 'active', { role: 'button', name: 'Launch run' }, true],
+] as const)(
+  'with no run and %s, the empty state carries the next step and no status tabs',
+  async (_label, status, next, schedules) => {
+    vi.spyOn(runsApi, 'listAudits').mockResolvedValue([]);
+    vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
+    vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(
+      makeSetList([makeSet([makePrompt({ status })])]),
+    );
+    renderWithProviders(<RunsScreen />, {
+      projectSelection: {
+        projects: [project],
+        activeProject: project,
+        activeProjectId: project.id,
+        status: 'ready',
+      },
+    });
 
-  const heading = await screen.findByRole('heading', { name: 'No runs yet' });
-  const empty = heading.closest<HTMLElement>('[data-state-block="empty"]')!;
-  expect(within(empty).getByRole('button', { name: 'Launch run' })).toBeVisible();
-  expect(screen.getAllByRole('button', { name: 'Launch run' })).toHaveLength(1);
-});
+    const heading = await screen.findByRole('heading', { name: 'No runs yet' });
+    const empty = within(heading.closest<HTMLElement>('[data-state-block="empty"]')!);
+    // Launch run shows held while the prompt sets load; wait for the settled step.
+    await waitFor(() =>
+      expect(empty.getByRole(next.role, { name: next.name })).not.toHaveAttribute('aria-disabled'),
+    );
+    expect(screen.queryAllByRole('button', { name: 'Launch run' })).toHaveLength(
+      next.name === 'Launch run' ? 1 : 0,
+    );
+    // A schedule needs an active prompt; until one exists the card is not offered.
+    if (schedules) await screen.findByRole('heading', { name: 'Scheduled audits' });
+    else expect(screen.queryByRole('heading', { name: 'Scheduled audits' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: /Completed/ })).toBeNull();
+  },
+);

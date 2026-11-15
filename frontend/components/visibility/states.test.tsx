@@ -1,7 +1,10 @@
-import { screen } from '@testing-library/react';
-import { describe, expect, it } from 'vite-plus/test';
+import { screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
+import { promptsApi } from '@/lib/api/prompts';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
+import { makeProject } from '@/test/fixtures/project';
+import { makePrompt, makeSet, makeSetList } from '@/test/fixtures/prompts';
 import { renderWithProviders as render, selectionAs } from '@/test/render';
 
 import { ActiveRunBanner } from './active-run-banner';
@@ -23,23 +26,41 @@ const run: ActiveRun = {
   createdAt: '2026-08-01T00:00:00Z',
 };
 
-describe('VisibilityEmptyState', () => {
-  it('carries Launch run itself when nothing is running', () => {
-    render(<VisibilityEmptyState activeRun={null} />);
+afterEach(() => vi.restoreAllMocks());
 
-    expect(screen.getByText('No completed runs yet')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Launch run' })).toBeInTheDocument();
+describe('VisibilityEmptyState', () => {
+  it.each([
+    ['Add prompts while no prompt is active', 'archived', 'link', 'Add prompts'],
+    ['Launch run once a prompt is active', 'active', 'button', 'Launch run'],
+  ] as const)('carries %s', async (_label, status, role, name) => {
+    vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(
+      makeSetList([makeSet([makePrompt({ status })])]),
+    );
+    const project = makeProject();
+    render(<VisibilityEmptyState activeRun={null} />, {
+      projectSelection: {
+        projects: [project],
+        activeProject: project,
+        activeProjectId: project.id,
+        status: 'ready',
+      },
+    });
+
+    expect(screen.getByRole('heading', { name: 'No visibility data yet' })).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByRole(role, { name })).not.toHaveAttribute('aria-disabled'),
+    );
     expect(screen.queryByRole('link', { name: /Watch live progress/ })).not.toBeInTheDocument();
   });
 
-  it('does not offer a viewer a Launch run their role may not use', () => {
+  it('does not offer a viewer a step their role may not take', () => {
     render(<VisibilityEmptyState activeRun={null} />, {
       projectSelection: selectionAs('viewer'),
     });
 
-    expect(screen.getByText('No completed runs yet')).toBeVisible();
-    expect(screen.getByText(/No run has measured/)).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'No visibility data yet' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Add prompts' })).not.toBeInTheDocument();
   });
 
   it('links to the running run instead of inviting a duplicate', () => {

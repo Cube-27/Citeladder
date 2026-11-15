@@ -1,6 +1,6 @@
 import { Activity, Rocket } from 'lucide-react';
 
-import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
+import { FirstRunAction } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -12,8 +12,9 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 /**
  * Empty state for a project with no completed runs. The dashboard is a
  * projection over completed audits, so there is nothing to render until one
- * finishes. It carries its own next step: Launch run (the masthead leaves it
- * out meanwhile), or, while a run is in progress, the way to watch it.
+ * finishes. It carries its own next step: "Add prompts" while no prompt is
+ * active, then Launch run (the masthead leaves it out meanwhile), or, while a
+ * run is in progress, the way to watch it.
  */
 export function VisibilityEmptyState({ activeRun }: Readonly<{ activeRun: ActiveRun | null }>) {
   const canRun = useWorkspaceCapability('run');
@@ -38,13 +39,9 @@ export function VisibilityEmptyState({ activeRun }: Readonly<{ activeRun: Active
     <StateBlock
       kind="empty"
       icon={Rocket}
-      heading="No completed runs yet"
-      description={
-        canRun
-          ? 'A run asks AI answer engines your prompts and measures how they talk about your brand.'
-          : 'No run has measured how AI answer engines talk about this brand yet.'
-      }
-      action={canRun ? <LaunchAuditButton captioned /> : undefined}
+      heading="No visibility data yet"
+      description="AI Visibility shows how often AI engines mention and cite you, once a run has finished."
+      action={canRun ? <FirstRunAction /> : undefined}
     />
   );
 }

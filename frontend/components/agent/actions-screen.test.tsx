@@ -218,6 +218,23 @@ describe('Actions', () => {
     expect(window.location.search).toBe('');
   });
 
+  it('offers no filters to a project that has never had an Action', async () => {
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
+        HttpResponse.json(
+          actionsPage([], {
+            status_counts: { open: 0, in_progress: 0, dismissed: 0 },
+            group_counts: {},
+          }),
+        ),
+      ),
+    );
+    renderActions();
+
+    expect(await screen.findByRole('heading', { name: 'No current Actions' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+  });
+
   it('opens the Action detail from anywhere on its row', async () => {
     serveActions([]);
     const user = userEvent.setup();
