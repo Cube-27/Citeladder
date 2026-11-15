@@ -1603,7 +1603,8 @@ a.focus-ring:active .type-caption {
   border: 1px solid var(--color-rule);
 }
 
-:where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .table-frame {
+:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+  .table-frame {
   border: 0;
 }
 
@@ -2441,7 +2442,7 @@ label {
   box-shadow: var(--shadow-card);
 }
 :root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-well, [role='dialog'])
+  :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   :is([data-figure-cell], [data-figure-lead]) {
   padding: 0;
   border: 0;
