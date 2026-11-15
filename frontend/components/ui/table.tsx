@@ -193,17 +193,10 @@ export function TableHead({
   children,
   className,
   numeric,
-  trailing,
   desktopOnly,
   scope = 'col',
   ...props
-}: Readonly<
-  ThHTMLAttributes<HTMLTableCellElement> &
-    CellOptions & {
-      /** Heads a `TableActionsCell` column: ends on the controls' edge. */
-      trailing?: boolean;
-    }
->) {
+}: Readonly<ThHTMLAttributes<HTMLTableCellElement> & CellOptions>) {
   return (
     <th
       scope={scope}
@@ -215,7 +208,6 @@ export function TableHead({
         // rows under it; its opaque fill keeps a sticky header over scrolled rows.
         'bg-well sticky top-0 z-10 h-[var(--table-header-height)] px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums text-right',
-        trailing && 'text-right',
         desktopOnly && desktopOnlyClasses,
         className,
       )}

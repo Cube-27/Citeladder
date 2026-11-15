@@ -144,7 +144,7 @@ describe('FigureStrip', () => {
 describe('DataTable', () => {
   const columns = [
     { key: 'name', label: 'Name' },
-    { key: 'count', label: 'Count', width: 'figure', numeric: true },
+    { key: 'count', label: 'Count', kind: 'number' },
   ] as const;
 
   it('pads a short page to the full page of rows and keeps the header over an empty state', () => {

@@ -90,14 +90,10 @@ const KIND = {
 export type DataTableColumn = Readonly<{
   key: string;
   label: string;
-  /** What the column holds; decides the head's and the cells' alignment and face. */
+  /** What the column holds; decides the head's and the cells' alignment and face. Defaults to `text`. */
   kind?: ColumnKind;
-  /** Defaults to the kind's width, else `flex`. */
+  /** Defaults to the kind's width. */
   width?: DataTableColumnWidth;
-  /** The `number` kind, in the spelling the columns used before kinds. */
-  numeric?: boolean;
-  /** The `actions` kind, in the spelling the columns used before kinds. */
-  trailing?: boolean;
   /** Keep the header for assistive technology only (an actions column). */
   hideLabel?: boolean;
   /** A sortable column: the header becomes the sort button. */
@@ -127,15 +123,12 @@ export type DataTableSelection = Readonly<{
   noun: string;
 }>;
 
-/** A column's kind, from `kind` or the older `numeric` and `trailing` flags. */
 function columnKind(column: DataTableColumn): ColumnKind {
-  if (column.kind) return column.kind;
-  if (column.numeric) return 'number';
-  return column.trailing ? 'actions' : 'text';
+  return column.kind ?? 'text';
 }
 
 function widthOf(column: DataTableColumn): DataTableColumnWidth {
-  return column.width ?? (column.kind ? KIND[column.kind].width : 'flex');
+  return column.width ?? KIND[columnKind(column)].width;
 }
 
 /**
@@ -286,8 +279,7 @@ function SelectAllHead({ selection }: Readonly<{ selection: DataTableSelection }
 }
 
 function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
-  const kind = columnKind(column);
-  const numeric = kind === 'number';
+  const numeric = columnKind(column) === 'number';
   if (column.sort) {
     return (
       <SortableTableHead
@@ -315,7 +307,6 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
   return (
     <TableHead
       numeric={numeric}
-      trailing={kind === 'actions'}
       desktopOnly={column.desktopOnly}
       className="whitespace-normal"
       aria-sort={column.order}
