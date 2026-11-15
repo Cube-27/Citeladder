@@ -14,7 +14,11 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
-import { DemandDataCaveats, DemandSignalFilters } from '@/components/demand/demand-signal-filters';
+import {
+  DemandDataCaveats,
+  DemandDetectorCoverage,
+  DemandSignalFilters,
+} from '@/components/demand/demand-signal-filters';
 import { DemandSignalTable, SignalLegend } from '@/components/demand/demand-signal-table';
 import {
   demandMutations,
@@ -241,7 +245,6 @@ function SearchDemandView({
       // Which signals the table lists is the page's sub-view: its tabs band.
       tabs={
         <DemandSignalFilters
-          snapshot={snapshot}
           activeTab={activeTab}
           onTabChange={setActiveTab}
           tabCounts={tabCounts}
@@ -292,6 +295,7 @@ function SearchDemandView({
           <Inline as="p" gap="meta" className="type-caption">
             <SignalLegend signals={snapshot.signals} policy={snapshot.detector_policy} />
             <DemandDataCaveats snapshot={snapshot} />
+            <DemandDetectorCoverage snapshot={snapshot} />
             <RecomputeStatus mutation={recomputeMutation} />
           </Inline>
           {signalsFeed}

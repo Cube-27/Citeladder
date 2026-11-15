@@ -42,9 +42,9 @@ async function findSignalRow(target: string) {
   return (await screen.findByText(target)).closest('tr')!;
 }
 
-/** A row's priority: its rank in the whole snapshot, after the query and its signal. */
+/** A row's priority: its rank in the whole snapshot, the row's last cell. */
 function rankOf(row: HTMLElement) {
-  return within(row).getAllByRole('cell')[2]!.textContent;
+  return within(row).getAllByRole('cell').at(-1)!.textContent;
 }
 
 // Mutable so a test can switch projects mid-render; `vi.hoisted` keeps it
@@ -231,7 +231,7 @@ describe('DemandProjection', () => {
     );
   }
 
-  it('renders the top-strip filters carrying counts and detector status, a summary line and a flat table', async () => {
+  it('renders the top-strip filters carrying counts, detector status on the summary line and a flat table', async () => {
     renderProjection();
 
     // One summary line; latent demand is the only figure the filters lack.
@@ -240,22 +240,22 @@ describe('DemandProjection', () => {
     // No section heading: the page title already names the page.
     expect(screen.queryByRole('heading', { name: 'Signals' })).not.toBeInTheDocument();
 
-    // Each filter carries its count once, and its detectors' status when they
-    // did not run in full. CTR gaps counts the low-CTR signal, whose detector
-    // ran, beside an unavailable one.
+    // Each filter carries its count once; the detectors that did not run in
+    // full are named by status on the summary line.
     const filters = within(screen.getByRole('radiogroup', { name: 'Signal type' }))
       .getAllByRole('radio')
       .map((chip) => chip.textContent);
     expect(filters).toEqual([
       'All signals (2)',
       'Striking distance (1)',
-      'Cannibalization · Unavailable (0)',
-      'CTR gaps · Partial (1)',
-      'Trends · Needs more history (0)',
+      'Cannibalization (0)',
+      'CTR gaps (1)',
+      'Trends (0)',
     ]);
     expect(
-      screen.getByRole('button', { name: 'How the CTR gap and Low CTR detectors work' }),
+      screen.getByText('Unavailable: Cannibalization, CTR gap · Needs more history: Trends'),
     ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'How each detector works' })).toBeVisible();
     // Caveats shared by the signals sit behind one hint, not a row.
     const caveats = screen.getByRole('button', { name: 'Data caveats' });
     expect(caveats).toBeVisible();
@@ -273,8 +273,8 @@ describe('DemandProjection', () => {
 
     const table = signalTable();
     expect(signalRows().map((row) => row.textContent)).toEqual([
-      expect.stringMatching(/^ai marketing toolsQuery · \/ai-toolsStriking distance125012/),
-      expect.stringMatching(/^school feesQuery · \/feesLow CTR210000\.0%12\.0/),
+      'ai marketing toolsQuery · /ai-toolsStriking distance250124.8%7.21',
+      'school feesQuery · /feesLow CTR10000.0%12.02',
     ]);
     expect(within(table).queryByText('https://example.com/ai-tools')).not.toBeInTheDocument();
     expect(screen.queryByText('Within reach of the top results')).not.toBeInTheDocument();
@@ -320,37 +320,29 @@ describe('DemandProjection', () => {
     expect(within(reading).getByText(/Earns many impressions but few clicks/)).toBeInTheDocument();
     expect(screen.queryByText(/median for this position band/i)).not.toBeInTheDocument();
     const relevance = screen.getByRole('region', { name: 'Query relevance' });
-    expect(relevance).toHaveTextContent('Title50%H10%Page text100%');
+    expect(relevance).toHaveTextContent('Title50.0%H10.0%Page text100.0%');
     expect(relevance).toHaveTextContent('Missing from title or H1: fees, school');
   });
 
-  it('opens a promoted signal’s Action from its row menu and asks about the rest', async () => {
+  it('opens a promoted signal’s Action from its evidence and asks about the rest', async () => {
     const user = userEvent.setup();
     renderProjection();
 
-    await screen.findByText('ai marketing tools');
-    // The promoted signal's menu opens its Action instead of asking the agent.
-    await user.click(screen.getByRole('button', { name: 'Actions for ai marketing tools' }));
-    const menu = await screen.findByRole('menu');
+    // The promoted signal's evidence opens its Action.
+    await user.click(await findSignalRow('ai marketing tools'));
+    const drawer = await screen.findByRole('dialog', { name: 'Signal evidence' });
     expect(
-      within(menu)
-        .getByRole('menuitem', { name: 'Open the Action for ai marketing tools' })
+      within(drawer)
+        .getByRole('link', { name: 'Open the Action for ai marketing tools' })
         .getAttribute('href'),
     ).toContain('/agent/actions/66666666-6666-4666-8666-666666666666');
-    expect(within(menu).queryByRole('menuitem', { name: /^Ask agent/ })).not.toBeInTheDocument();
-    // Opening the menu is not a press on the row: no evidence drawer opens.
-    expect(screen.queryByRole('dialog', { name: 'Signal evidence' })).not.toBeInTheDocument();
     await user.keyboard('{Escape}');
 
-    // An unpromoted signal is asked about instead.
-    await user.click(screen.getByRole('button', { name: 'Actions for school fees' }));
-    const other = await screen.findByRole('menu');
-    expect(
-      within(other).getByRole('menuitem', { name: 'Ask agent about school fees' }),
-    ).toBeVisible();
-    expect(
-      within(other).queryByRole('menuitem', { name: /^Open the Action/ }),
-    ).not.toBeInTheDocument();
+    // An unpromoted signal offers no Action, only the hand-off to the agent.
+    await user.click(await findSignalRow('school fees'));
+    const other = await screen.findByRole('dialog', { name: 'Signal evidence' });
+    expect(within(other).getByRole('link', { name: /Ask agent/ })).toBeVisible();
+    expect(within(other).queryByRole('link', { name: /^Open the Action/ })).not.toBeInTheDocument();
   });
 
   it('inspects a signal from the keyboard on its focused row', async () => {
@@ -453,7 +445,7 @@ describe('DemandProjection', () => {
     expect(rankOf(signalRows()[0]!)).toBe('1');
   });
 
-  it('explains each detector in an info hint with its rule and what limited it', async () => {
+  it('explains every detector in one info hint with its rule and what limited it', async () => {
     vi.mocked(demandApi.getLatest).mockResolvedValue({
       ...snapshot,
       summary: {
@@ -469,16 +461,16 @@ describe('DemandProjection', () => {
     const user = userEvent.setup();
     renderProjection();
 
-    await user.click(await screen.findByRole('button', { name: 'How the Trends detector works' }));
+    await user.click(await screen.findByRole('button', { name: 'How each detector works' }));
 
     // The rule, in the server's thresholds, then the snapshot's own reason the
     // detector is held back.
-    expect((await screen.findByRole('tooltip')).textContent).toBe(
-      'Queries whose impressions grew 1.5× or more, or fell to 0.67× or less, between the last two 21-day windows. Needs 42 days of continuous Search Console coverage. At least 42 days of coverage are required.',
+    expect((await screen.findByRole('tooltip')).textContent).toContain(
+      'Trends: Queries whose impressions grew 1.5× or more, or fell to 0.67× or less, between the last two 21-day windows. Needs 42 days of continuous Search Console coverage. At least 42 days of coverage are required.',
     );
   });
 
-  it('shows no CTR gaps status once both detectors it counts ran, naming each in its hint', async () => {
+  it('drops a detector from the status line once it ran, keeping its rule in the hint', async () => {
     vi.mocked(demandApi.getLatest).mockResolvedValue({
       ...snapshot,
       summary: {
@@ -492,14 +484,12 @@ describe('DemandProjection', () => {
     const user = userEvent.setup();
     renderProjection();
 
-    expect((await screen.findByRole('radio', { name: /^CTR gaps/ })).textContent).toBe(
-      'CTR gaps (1)',
-    );
-    await user.click(
-      screen.getByRole('button', { name: 'How the CTR gap and Low CTR detectors work' }),
-    );
+    expect(
+      await screen.findByText('Unavailable: Cannibalization · Needs more history: Trends'),
+    ).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'How each detector works' }));
     expect((await screen.findByRole('tooltip')).textContent).toMatch(
-      /^CTR gap: Queries with .*, and 3 points, below .* No cohort reached 20 queries\. Low CTR: Non-branded queries and pages /,
+      /CTR gap: Queries with .*, and 3 points, below .* No cohort reached 20 queries\.Low CTR: Non-branded queries and pages /,
     );
   });
 
