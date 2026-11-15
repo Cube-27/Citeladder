@@ -3,7 +3,11 @@ import { Play } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { AuditSchedules } from '@/components/runs/audit-schedules';
-import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
+import {
+  FirstRunAction,
+  LaunchAuditButton,
+  useLaunchReadiness,
+} from '@/components/runs/launch-audit-button';
 import { RunsTable } from '@/components/runs/runs-table';
 import { CollectionPage } from '@/components/templates/collection-page';
 import { FilterBar } from '@/components/ui/filter-bar';
@@ -72,10 +76,10 @@ export function RunsScreen() {
   // Gate only on the runs list: the schedules query errors independently
   // (and refetches whenever its card remounts onto the errored cache entry),
   // so gating the whole screen on it would pin the page on a spinner forever.
-  // The page keeps its action and status filters while the first load lands.
   // Launching is offered only to a role that may run audits.
   const canRun = useWorkspaceCapability('run');
-  // With no run yet, Launch run is the empty state's own button, not the masthead's.
+  const readiness = useLaunchReadiness(projectId);
+  // With no run yet, the empty state carries the next step, not the masthead.
   const empty = runsQuery.isSuccess && audits.length === 0;
   const actions = empty ? undefined : (
     <MastheadPrimary>
@@ -83,28 +87,29 @@ export function RunsScreen() {
     </MastheadPrimary>
   );
   // The status choice is the row's view: the one shared segmented control,
-  // each choice with the number of runs it keeps (2026-11-03 app review).
-  const filters = (
-    <FilterBar
-      view={
-        <SegmentedControl
-          ariaLabel="Filter by status"
-          value={statusFilter}
-          onChange={setStatusFilter}
-          options={STATUS_FILTERS.map((filter) => ({
-            value: filter.id,
-            label: filter.label,
-            count: audits.filter(filter.match).length,
-          }))}
-        />
-      }
-    />
-  );
+  // each choice with the number of runs it keeps. A never-filled list has none.
+  const filters =
+    audits.length === 0 ? undefined : (
+      <FilterBar
+        view={
+          <SegmentedControl
+            ariaLabel="Filter by status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={STATUS_FILTERS.map((filter) => ({
+              value: filter.id,
+              label: filter.label,
+              count: audits.filter(filter.match).length,
+            }))}
+          />
+        }
+      />
+    );
 
   if (runsQuery.isLoading) {
     return (
       <CollectionPage actions={actions} filters={filters}>
-        <StateBlock kind="loading" label="Loading runs…" />
+        <StateBlock kind="loading" label="Loading runs…" shape={{ kind: 'table' }} />
       </CollectionPage>
     );
   }
@@ -118,9 +123,13 @@ export function RunsScreen() {
         statusFilter={statusFilter}
         anyActive={anyActive}
         canRun={canRun}
+        promptsReady={readiness.kind !== 'blocked'}
       />
 
-      <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
+      {/* A schedule runs active prompts, so it waits until one exists. */}
+      {readiness.kind === 'ready' ? (
+        <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
+      ) : null}
     </CollectionPage>
   );
 }
@@ -132,6 +141,7 @@ function RunsContent({
   statusFilter,
   anyActive,
   canRun,
+  promptsReady,
 }: Readonly<{
   /** The runs read: its failure, and the retry of exactly that read. */
   read: RetryableRead;
@@ -141,6 +151,8 @@ function RunsContent({
   anyActive: boolean;
   /** Whether this role may launch an audit. */
   canRun: boolean;
+  /** False while no active prompt exists, so the next step is adding one. */
+  promptsReady: boolean;
 }>) {
   if (read.error) {
     return (
@@ -160,10 +172,10 @@ function RunsContent({
         heading="No runs yet"
         description={
           canRun
-            ? 'A run asks AI engines your prompts and measures how they answer about your brand.'
+            ? `A run asks AI engines your prompts and measures how they answer about your brand.${promptsReady ? '' : ' Add prompts to start.'}`
             : 'No run has measured how AI engines answer questions about this brand yet.'
         }
-        action={canRun ? <LaunchAuditButton captioned /> : undefined}
+        action={canRun ? <FirstRunAction /> : undefined}
       />
     );
   }

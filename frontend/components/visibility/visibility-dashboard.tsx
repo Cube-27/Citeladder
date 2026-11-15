@@ -57,12 +57,22 @@ function dashboardState(
 
 function DashboardState({
   state,
-  auditsQuery,
+  queries,
 }: Readonly<{
-  state: Exclude<VisibilityDashboardState, 'empty' | null>;
-  auditsQuery: ReturnType<typeof useVisibilityQueries>['auditsQuery'];
+  state: Exclude<VisibilityDashboardState, null>;
+  queries: ReturnType<typeof useVisibilityQueries>;
 }>) {
-  if (state === 'loading') return <StateBlock kind="loading" label="Loading visibility…" />;
+  const { auditsQuery } = queries;
+  if (state === 'empty') return <VisibilityEmptyState activeRun={queries.activeRun ?? null} />;
+  // Loading takes the overview's shape: its figures, then its chart, then its table.
+  if (state === 'loading')
+    return (
+      <SectionStack aria-busy>
+        <StateBlock kind="loading" label="Loading visibility…" shape={{ kind: 'figures' }} />
+        <StateBlock kind="loading" label="Loading the trend…" shape={{ kind: 'chart' }} />
+        <StateBlock kind="loading" label="Loading the evidence…" shape={{ kind: 'table' }} />
+      </SectionStack>
+    );
   if (state === 'error')
     return (
       <StateBlock
@@ -89,20 +99,17 @@ function VisibilityWorkspace({
   // The Accuracy tab exists only inside the fact-checking pilot.
   const factChecking = useBrandFacts().data?.enabled ?? false;
   const pageFilters = useVisibilityPageFilters({ filters, queries });
-  if (state === 'empty') {
-    return (
-      <ReportPage actions={<VisibilityActions launch={false} />}>
-        <VisibilityEmptyState activeRun={queries.activeRun ?? null} />
-      </ReportPage>
-    );
-  }
+  // One frame across states: the tabs always show; the filters only over data
+  // (on a failed refetch, over the data the page already showed).
+  const showFilters = state === null || (state === 'error' && queries.hasRuns);
   // The root spans the whole page: the filters every tab shares follow the
   // strip, and the panels are one band below. A table's own filters
   // lead its toolbar.
   return (
     <TabsRoot value={filters.activeTab} onValueChange={filters.selectTab}>
       <ReportPage
-        actions={<VisibilityActions />}
+        // Empty, the state carries the next step, so the masthead leaves out Launch run.
+        actions={<VisibilityActions launch={state !== 'empty'} />}
         tabs={
           <TabRow
             items={visibleTabs(factChecking).map((tab) => ({ value: tab.id, label: tab.label }))}
@@ -110,12 +117,14 @@ function VisibilityWorkspace({
             onIntent={queries.prefetchTab}
           />
         }
-        filters={<FilterBar filters={pageFilters} />}
+        filters={showFilters ? <FilterBar filters={pageFilters} /> : undefined}
       >
-        {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
+        {queries.activeRun && state !== 'empty' ? (
+          <ActiveRunBanner run={queries.activeRun} />
+        ) : null}
         <TabPanel value={filters.activeTab} className="focus-ring">
           {state ? (
-            <DashboardState state={state} auditsQuery={queries.auditsQuery} />
+            <DashboardState state={state} queries={queries} />
           ) : (
             <DashboardPanel filters={filters} queries={queries} />
           )}

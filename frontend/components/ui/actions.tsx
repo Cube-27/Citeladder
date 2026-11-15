@@ -43,6 +43,8 @@ type ActionButtonProps = Omit<ButtonProps, 'variant' | 'asChild' | 'children'> &
   action: ActionName;
   /** Opens a screen instead: an app route, scoped to the active project. */
   href?: string;
+  /** Outside the masthead (a state block, a checklist step) a primary action is drawn secondary. */
+  secondary?: boolean;
 };
 
 /**
@@ -50,8 +52,16 @@ type ActionButtonProps = Omit<ButtonProps, 'variant' | 'asChild' | 'children'> &
  * `aria-label` may add the object it acts on ("View evidence for …"); the
  * visible words are always the preset's.
  */
-export function ActionButton({ action, href, className, ...props }: Readonly<ActionButtonProps>) {
-  const preset: ActionPreset = ACTIONS[action];
+export function ActionButton({
+  action,
+  href,
+  secondary = false,
+  className,
+  ...props
+}: Readonly<ActionButtonProps>) {
+  const named: ActionPreset = ACTIONS[action];
+  const preset: ActionPreset =
+    secondary && named.variant === 'primary' ? { ...named, variant: 'secondary' } : named;
   const content = (
     <>
       {preset.icon ? <Icon icon={preset.icon} /> : null}

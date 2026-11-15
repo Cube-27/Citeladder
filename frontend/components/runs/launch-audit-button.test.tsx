@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vite-plus/test';
 
@@ -27,20 +27,27 @@ function renderWithSets(sets: Parameters<typeof makeSetList>[0]) {
 }
 
 describe('LaunchAuditButton', () => {
-  it('waits for an active prompt on every page and says why', async () => {
+  it('waits for an active prompt on every page, says why and does not open', async () => {
     renderWithSets([makeSet([makePrompt({ status: 'archived' })])]);
 
     const button = await screen.findByRole('button', {
       name: 'Launch run',
       description: 'Add an active prompt to launch a run.',
     });
-    expect(button).toBeDisabled();
+    // Held with aria-disabled, so it keeps focus and its tooltip can open.
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(button);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('launches once a set holds an active prompt', async () => {
     renderWithSets([makeSet([makePrompt()])]);
 
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Launch run' })).toBeEnabled());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Launch run' })).not.toHaveAttribute(
+        'aria-disabled',
+      ),
+    );
     expect(screen.getByRole('button', { name: 'Launch run' })).not.toHaveAccessibleDescription();
   });
 });
