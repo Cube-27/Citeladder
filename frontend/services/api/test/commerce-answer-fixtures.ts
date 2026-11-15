@@ -11,7 +11,7 @@ import { auditInput } from '../src/audits/inputs.ts';
 import { persistExecutionSuccess, type ExecutionResult } from '../src/audits/result-persistence.ts';
 import { prepareShelfExecution } from '../src/commerce/shelf.ts';
 import type { Database } from '../src/db/database.ts';
-import { AuditQueue } from '../src/queue/audit-queue.ts';
+import { AuditQueue, type AuditTask } from '../src/queue/audit-queue.ts';
 import type { auditTenant } from './audit-fixtures.ts';
 
 type Tenant = Awaited<ReturnType<typeof auditTenant>>;
@@ -128,3 +128,44 @@ export async function addCompetitor(
     })
     .execute();
 }
+
+/** A ChatGPT carousel envelope holding `items`, as the scraper returns it. */
+export const carousel = (items: Record<string, unknown>[]) => ({
+  status_code: 20000,
+  tasks: [
+    {
+      id: 'scraper-task',
+      status_code: 20000,
+      result: [{ items: [{ type: 'chat_gpt_products', items }] }],
+    },
+  ],
+});
+/** One organic carousel card. */
+export const carouselCard = (fields: Record<string, unknown>) => ({
+  type: 'chat_gpt_products_element',
+  ...fields,
+});
+/** A ChatGPT answer whose stored provider response carries `envelope`. */
+export const carouselAnswer = (task: AuditTask, envelope: unknown): ExecutionResult => ({
+  logical_engine: 'chatgpt',
+  transport_provider: 'openai',
+  transport_model: task.transport_model,
+  answer_text: 'These are the top picks.',
+  search_used: false,
+  search_events: [],
+  finish_reason: 'stop',
+  raw_finish_reason: 'stop',
+  latency_ms: 1,
+  provider_metadata: { raw_response: envelope },
+  retrieved_sources: null,
+  citations: [],
+  normalized_usage: {
+    uncached_input_tokens: null,
+    cached_input_tokens: null,
+    output_tokens: null,
+    reasoning_tokens: null,
+    total_tokens: null,
+    web_search_requests: null,
+    provider_cost_microusd: null,
+  },
+});

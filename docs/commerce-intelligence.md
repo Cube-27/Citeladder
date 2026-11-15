@@ -145,8 +145,16 @@ keyset-paged SQL read of every product holder's metrics. `source=catalog`
 lists active catalog products; `all` adds approved competitors and pending
 AI-observed competitors (CM6), never rejected, excluded or unreviewed
 discovery candidates; `archived` lists archived catalog products alone. A category narrows products to its members and
-competitors to those targeting it or one of its products; `q` matches name,
+competitors to those with a record targeting it or one of its products; `q` matches name,
 brand or URL.
+
+One real product is one row. A competitor has one candidate record per target
+that saw or approved it, since each target reviews it separately; records
+sharing a canonical page merge into one holder at read time, so its sightings
+under every target and merchant count toward one set of metrics. The approved
+record, else the oldest, heads and names it, and it reads as approved when any
+record is. Source: owner decision of 15 November 2026, "Merge into one product
+row".
 
 Scope is the successful executions completed in the window (7, 30 or 90 days,
 `products` in `config/commerce.ts`; no previous-period deltas, CM8), of one
@@ -191,7 +199,8 @@ Unavailable, unknown, none and zero render as different values.
 one holder over the same executions as the table: its row is the table's read
 narrowed to that holder, so the two never disagree, and a holder the table
 would not list (rejected, unreviewed discovery, another project's) is not found
-(404); an archived catalog product still has its page. Beside the row it
+(404); an archived catalog product still has its page, and any record of a
+merged competitor opens its one page. Beside the row it
 returns, from the same scoped slots and bounded by `products.detail` in
 `config/commerce.ts`:
 
@@ -204,6 +213,8 @@ returns, from the same scoped slots and bounded by `products.detail` in
   executions, with how often each ranked above this one and its mean rank;
   only holders the table lists, so a competitor rejected after the answers
   drops out and every row opens a page;
+- where it was seen: the buyer-prompt targets (categories and owned products)
+  whose answers it appeared in, by executions;
 - merchants, the citations of the executions it appeared in (by URL) and their
   fan-out queries (from each answer's settled analysis), each by executions;
 - per prompt (it appeared for, or targets it): executions, appearances,
@@ -394,7 +405,11 @@ resolver outcome (`resolved`, `omitted` by the call, `not_needed`, `failed` or
 `unavailable`), the model called and the resolver template version. An
 AI-observed competitor is created only from a resolved PDP URL that the answer
 itself contains, that is not merely a citation, and that is not on the
-business's own hosts. Its observation is classified by the candidate's state
+business's own hosts. A product the project already knows under any target (the
+same page, else a known product's name in the title; a brand alone never
+matches) keeps that product's page and name in the new target's record, so a
+marketplace listing such as a walmart.com card of a known competitor attaches
+to it rather than becoming a new product. Its observation is classified by the candidate's state
 when the answer is recorded: approved holds a slot like a frozen competitor,
 pending is `ai_observed_competitor` (shown, outside the share) and rejected is
 excluded from the shelf.
@@ -414,7 +429,8 @@ competitor, then by the product key a card in the project was matched to before
 this answer was captured (used only when that holder is on this target's frozen shelf or is this
 target's AI-observed candidate), then by the name rules above over the title.
 An unmatched card whose link is off the business's hosts creates or reuses an
-AI-observed competitor; the card is that evidence.
+AI-observed competitor of the product it names (see the identity rule above);
+the card is that evidence.
 
 The persisted, formula-versioned snapshot per target and audit exposes:
 

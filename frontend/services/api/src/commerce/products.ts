@@ -154,10 +154,12 @@ const SLOT_RANKING = sql`(o.order_observable AND o.rank IS NOT NULL) DESC,
  * The CTEs every Commerce metrics read (the Products table, a product's page
  * and the Shopping overview) starts from: `scoped_passes`, each successful
  * non-branded execution in scope once, through its latest match pass;
- * `executions`, their count (the visibility denominator); `observed`, the
- * holder observations of those passes; and `slots`, each holder's one slot
- * per execution at its best rank. A window outside the configured ones is
- * refused.
+ * `executions`, their count (the visibility denominator); `competitor_holders`,
+ * each listed candidate's holder (one product's records under several targets
+ * share a canonical page and merge into one holder, approved first, then the
+ * oldest); `observed`, the holder observations of those passes; and `slots`,
+ * each holder's one slot per execution at its best rank. A window outside the
+ * configured ones is refused.
  */
 export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
   requireWindow(executions.windowDays);
@@ -193,12 +195,20 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
       ORDER BY p.artifact_id, r.revision_number DESC NULLS LAST, p.created_at DESC, p.id DESC
     ),
     executions AS (SELECT count(DISTINCT task_id)::int AS n FROM scoped_passes),
+    competitor_holders AS (
+      SELECT c.id AS candidate_id,
+             first_value(c.id) OVER (PARTITION BY c.canonical_url
+               ORDER BY (c.state = 'approved') DESC, c.created_at, c.id) AS holder_id
+      FROM commerce_competitor_candidates c
+      WHERE c.workspace_id = ${ws} AND c.project_id = ${project} AND ${listedCompetitor('c')}
+    ),
     observed AS (
       SELECT o.*,
              CASE WHEN o.classification = 'owned' THEN o.product_id
-                  ELSE o.competitor_candidate_id END AS holder_id
+                  ELSE coalesce(ch.holder_id, o.competitor_candidate_id) END AS holder_id
       FROM commerce_recommendation_observations o
       JOIN scoped_passes sp ON sp.pass_id = o.pass_id
+      LEFT JOIN competitor_holders ch ON ch.candidate_id = o.competitor_candidate_id
       WHERE o.workspace_id = ${ws} AND o.project_id = ${project}
         AND o.classification IN ('owned', 'approved_competitor', 'ai_observed_competitor')
     ),
@@ -212,11 +222,12 @@ export function scopedSlots(scope: CommerceScope, executions: ExecutionScope) {
 
 /**
  * The product holders a read lists, as `kind, holder_id, name, brand, url,
- * catalog_price, catalog_price_max, catalog_currency` rows: the active catalog (or with
+ * catalog_price, catalog_price_max, catalog_currency, members` rows: the active catalog (or with
  * `archived` the archived one), and with `all` the approved and AI-observed
- * competitors; with a category, only its own. One `holder`'s read under
+ * competitors, one row per merged holder whose `members` are its candidate
+ * records; with a category, only its own. One `holder`'s read under
  * `all` (the product page) takes its product in either state; under `catalog`
- * it stays the active product alone.
+ * it stays the active product alone. It reads `scopedSlots`' `competitor_holders`.
  */
 export function holderRows(
   scope: CommerceScope,
@@ -233,19 +244,24 @@ export function holderRows(
       WHERE m.workspace_id = ${ws} AND m.project_id = ${project} AND m.category_id = ${category})`;
   // Optional fragments are built here, so the read below has no nested templates.
   const competitorInCategory = category
-    ? sql`AND ((c.target_kind = 'category' AND c.target_id = ${category})
-           OR (c.target_kind = 'product' AND ${inCategory(COMPETITOR_TARGET)}))`
+    ? sql`AND EXISTS (SELECT 1 FROM commerce_competitor_candidates c
+           WHERE c.workspace_id = ${ws} AND c.project_id = ${project} AND c.id = ANY(g.members)
+             AND ((c.target_kind = 'category' AND c.target_id = ${category})
+               OR (c.target_kind = 'product' AND ${inCategory(COMPETITOR_TARGET)})))`
     : NOTHING;
+  // A merged holder is approved when any of its records is: that one heads it.
   const competitors =
     source === 'all'
       ? sql`UNION ALL
         SELECT CASE WHEN c.state = 'approved' THEN 'approved_competitor'
                     ELSE 'ai_observed_competitor' END,
-               c.id, c.product_name, c.brand_name, c.canonical_url, NULL::float8, NULL::float8, ''
-        FROM commerce_competitor_candidates c
-        WHERE c.workspace_id = ${ws} AND c.project_id = ${project}
-          AND ${listedCompetitor('c')}
-          ${competitorInCategory}`
+               c.id, c.product_name, c.brand_name, c.canonical_url, NULL::float8, NULL::float8, '',
+               g.members
+        FROM (SELECT holder_id, array_agg(candidate_id ORDER BY candidate_id) AS members
+              FROM competitor_holders GROUP BY holder_id) g
+        JOIN commerce_competitor_candidates c
+          ON c.id = g.holder_id AND c.workspace_id = ${ws} AND c.project_id = ${project}
+        WHERE true ${competitorInCategory}`
       : NOTHING;
   const ownedInCategory = category ? sql`AND ${inCategory(OWNED_PRODUCT)}` : NOTHING;
   // A product page reads its holder archived or not; any other read takes one state.
@@ -255,7 +271,8 @@ export function holderRows(
   return sql`
       SELECT 'owned'::text AS kind, p.id AS holder_id, p.name, p.brand, p.canonical_url AS url,
              p.price::float8 AS catalog_price,
-             coalesce(p.price_max, p.price)::float8 AS catalog_price_max, p.currency AS catalog_currency
+             coalesce(p.price_max, p.price)::float8 AS catalog_price_max, p.currency AS catalog_currency,
+             ARRAY[p.id] AS members
       FROM commerce_products p
       WHERE p.workspace_id = ${ws} AND p.project_id = ${project}
         ${ownedLifecycle}
@@ -275,7 +292,8 @@ export async function productMetrics(db: Database, scope: CommerceScope, query: 
   const searchFilter = search
     ? sql`AND (h.name ILIKE ${search} OR h.brand ILIKE ${search} OR h.url ILIKE ${search})`
     : NOTHING;
-  const holderFilter = query.holder ? sql`AND h.holder_id = ${query.holder}` : NOTHING;
+  // Any record of a merged holder opens its row.
+  const holderFilter = query.holder ? sql`AND ${query.holder}::uuid = ANY(h.members)` : NOTHING;
   // LIMIT NULL is no limit.
   const merchantLimit = query.allMerchants ? null : policy.commerce.products.merchant_limit;
   const afterCursor = position

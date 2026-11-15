@@ -66,6 +66,7 @@ const ROAD_DETAIL: CommerceProductDetail = {
     },
   ],
   merchants: [{ domain: 'runnerstore.com', count: 2 }],
+  seen_in: [],
   sources: [
     {
       url: 'https://reviews.example/best-road',

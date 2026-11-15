@@ -63,6 +63,7 @@ const sectionsSchema = z.object({
       rank: z.number().int().nullable(),
     }),
   ),
+  seen_in: commerceProductDetailSchema.shape.seen_in,
   answer_total: count,
   description: z.string().nullable(),
   image_url: z.string().nullable(),
@@ -178,12 +179,27 @@ async function sections(
         FROM mine m JOIN tasks t ON t.task_id = m.task_id
         ORDER BY t.completed_at DESC, t.task_id LIMIT ${answers}
       ) a) AS answers,
+      (SELECT coalesce(json_agg(json_build_object('target_kind', w.target_kind,
+                'target_id', w.target_id, 'name', w.name, 'answers', w.n)
+              ORDER BY w.n DESC, w.name, w.target_id), '[]'::json) FROM (
+        SELECT o.target_kind, o.target_id, coalesce(cat.name, p.name) AS name,
+               count(DISTINCT o.task_id)::int AS n
+        FROM observed o
+        LEFT JOIN commerce_categories cat ON o.target_kind = 'category' AND cat.id = o.target_id
+          AND cat.workspace_id = ${ws} AND cat.project_id = ${project}
+        LEFT JOIN commerce_products p ON o.target_kind = 'product' AND p.id = o.target_id
+          AND p.workspace_id = ${ws} AND p.project_id = ${project}
+        WHERE o.holder_id = ${holder} AND coalesce(cat.name, p.name) IS NOT NULL
+        GROUP BY o.target_kind, o.target_id, cat.name, p.name
+        ORDER BY n DESC, name, o.target_id LIMIT ${list}
+      ) w) AS seen_in,
       (SELECT count(*)::int FROM mine) AS answer_total,
       (SELECT p.description FROM commerce_products p
        WHERE p.id = ${holder} AND p.workspace_id = ${ws} AND p.project_id = ${project}) AS description,
       (SELECT o.observed_image_url FROM commerce_recommendation_observations o
        WHERE o.workspace_id = ${ws} AND o.project_id = ${project}
-         AND (o.product_id = ${holder} OR o.competitor_candidate_id = ${holder})
+         AND (o.product_id = ${holder} OR o.competitor_candidate_id IN (
+           SELECT candidate_id FROM competitor_holders WHERE holder_id = ${holder}))
          AND coalesce(o.observed_image_url, '') <> ''
        ORDER BY o.created_at DESC, o.id DESC LIMIT 1) AS image_url
   `.execute(db);
@@ -218,8 +234,9 @@ async function catalogRecord(db: Database, scope: CommerceScope, holder: string)
 
 /**
  * The page for `holder`: an owned product (active or archived), an approved
- * competitor or an AI-observed one, as the Products table lists it. A holder
- * the table would not list (rejected, another project's) is not found.
+ * competitor or an AI-observed one, as the Products table lists it; any record
+ * of a merged competitor opens its one page. A holder the table would not list
+ * (rejected, another project's) is not found.
  */
 export async function productDetail(
   db: Database,
@@ -227,22 +244,20 @@ export async function productDetail(
   holder: string,
   executions: ExecutionScope,
 ) {
-  // Both reads refuse a window outside the configured ones before any query.
-  const [page, detail] = await Promise.all([
-    productMetrics(db, scope, {
-      ...executions,
-      source: 'all',
-      category: null,
-      q: null,
-      sort: 'name',
-      cursor: null,
-      limit: 1,
-      holder,
-    }),
-    sections(db, scope, executions, holder),
-  ]);
+  // The row names the merged holder the sections read; a bad window is refused first.
+  const page = await productMetrics(db, scope, {
+    ...executions,
+    source: 'all',
+    category: null,
+    q: null,
+    sort: 'name',
+    cursor: null,
+    limit: 1,
+    holder,
+  });
   const [row] = page.items;
   if (!row) commerceMissing('Product not found');
+  const detail = await sections(db, scope, executions, row.holder_id);
   const owned = row.kind === 'owned';
   const [actions, record] = await Promise.all([
     owned ? targetActions(db, scope, { kind: 'product', id: holder }) : [],

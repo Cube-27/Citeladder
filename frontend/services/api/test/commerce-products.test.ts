@@ -294,6 +294,84 @@ describe('Products table read', () => {
     ]);
   });
 
+  it('merges one product’s records across targets into one row and one page', async () => {
+    const merged = await auditTenant(db, fixtures);
+    const scope = { workspaceId: merged.workspaceId, projectId: merged.projectId };
+    await importCatalog(db, scope, CATALOG);
+    await addCompetitor(db, merged, 'Rival Pacer');
+    const ids = (table: 'commerce_products' | 'commerce_categories', name: string) =>
+      db
+        .selectFrom(table)
+        .select('id')
+        .where('workspace_id', '=', merged.workspaceId)
+        .where('name', '=', name)
+        .executeTakeFirstOrThrow();
+    const [road, trail] = [
+      (await ids('commerce_products', 'Acme Road Runner')).id,
+      (await ids('commerce_categories', 'Trail')).id,
+    ];
+    // The same page approved again for the Trail category: one product, two records.
+    const trailRecord = randomUUID();
+    await db
+      .insertInto('commerce_competitor_candidates')
+      .values({
+        id: trailRecord,
+        workspace_id: merged.workspaceId,
+        project_id: merged.projectId,
+        target_kind: 'category',
+        target_id: trail,
+        canonical_url: 'https://rival.example/products/rival-pacer',
+        product_name: 'Rival Pacer',
+        brand_name: 'Rival',
+        evidence: '{}',
+        source_kind: 'ai_observed',
+        state: 'pending',
+        created_at: new Date(),
+      })
+      .execute();
+    const won = await answer(merged, '1. Rival Pacer for tempo days');
+    const lost = await answer(merged, '1. Acme Road Runner for daily miles\n2. Rival Pacer');
+    // Each sighting under its own target's record, as targeted answers record them.
+    const sighting = (task: string, target: { kind: string; id: string }, holder?: string) =>
+      asOwner((owner) =>
+        owner
+          .updateTable('commerce_recommendation_observations')
+          .set({
+            target_kind: target.kind,
+            target_id: target.id,
+            ...(holder ? { competitor_candidate_id: holder } : {}),
+          })
+          .where('task_id', '=', task)
+          .where('observed_product', '=', 'Rival Pacer')
+          .execute(),
+      );
+    await sighting(won, { kind: 'product', id: road });
+    await sighting(lost, { kind: 'category', id: trail }, trailRecord);
+
+    const { body } = await read(merged, 'window=90&source=all');
+    expect(summary(body)).toEqual([
+      ['Rival Pacer', 'approved_competitor', 2, 1, 0.5, 1.5],
+      ['Acme Road Runner', 'owned', 1, 0.5, 1, 1],
+      ['Acme Trail Climber', 'owned', 0, 0, null, null],
+    ]);
+    const rival = body.items[0]!.holder_id;
+    // Seen under Trail, so the Trail category lists it too.
+    const inTrail = await read(merged, `window=90&source=all&category=${trail}`);
+    expect(inTrail.body.items.map((row) => [row.name, row.holder_id])).toEqual([
+      ['Rival Pacer', rival],
+      ['Acme Trail Climber', expect.any(String)],
+    ]);
+    // Either record opens the one page, which lists where it was seen.
+    const page = await detail(merged, trailRecord);
+    expect(page.body.product).toMatchObject({ holder_id: rival, appearances: 2 });
+    expect(page.body.seen_in).toEqual([
+      { target_kind: 'product', target_id: road, name: 'Acme Road Runner', answers: 1 },
+      { target_kind: 'category', target_id: trail, name: 'Trail', answers: 1 },
+    ]);
+    expect(page.body.answers.map((row) => row.task_id).sort()).toEqual([won, lost].sort());
+    expect((await detail(foreign, trailRecord)).status).toBe(404);
+  });
+
   it('reads only the authorized workspace’s answers and holders', async () => {
     const theirs = await read(foreign, 'window=90&source=all');
     expect(theirs.body.executions).toBe(1);
