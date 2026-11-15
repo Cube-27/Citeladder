@@ -71,7 +71,7 @@ function formatPrice(amount: number, currency: string): string {
 }
 
 /** A rate (visibility, win rate, share) as a percentage to one decimal. */
-export const formatRate = (value: number) => formatPercent(value, 1);
+export const formatRate = (value: number) => formatPercent(value);
 /** A mean rank to one decimal. */
 export const formatPosition = (value: number) => value.toFixed(1);
 

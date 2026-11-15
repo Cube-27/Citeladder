@@ -5,7 +5,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ClampText, mutedWhenMissing, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText, mutedWhenMissing, TableCell, TableRow, TableTime } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import { TextLink } from '@/components/ui/text-link';
 import type { PagesSort } from '@/lib/api/site-health';
@@ -23,7 +23,6 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { useProjectHref } from '@/lib/navigation/project-destination';
-import { TableTime } from '@/components/ui/display-time';
 
 /**
  * Analyzed-pages table (Slice 7, mockups 712 + 713).

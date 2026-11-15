@@ -46,6 +46,39 @@ function SelectablePrompts() {
 }
 
 describe('DataTable', () => {
+  it("lays every head and cell out by its column's kind, counting the selection column", () => {
+    const { container } = render(
+      <DataTable
+        label="Pages"
+        columns={[
+          { key: 'page', label: 'Page', kind: 'identity' },
+          { key: 'visits', label: 'Visits', numeric: true },
+          { key: 'seen', label: 'Last seen', kind: 'date' },
+          { key: 'open', label: 'Open', kind: 'actions' },
+        ]}
+        selection={{ all: false, noun: 'pages', onAllChange: () => undefined }}
+      >
+        <TableRow>
+          <TableCell>/pricing</TableCell>
+          <TableCell>12</TableCell>
+          <TableCell>Nov 14, 2026</TableCell>
+          <TableCell>Open</TableCell>
+        </TableRow>
+      </DataTable>,
+    );
+    const frame = container.querySelector('[data-data-table-frame]');
+    expect(frame).toHaveAttribute('data-end-cols', '3 5');
+    expect(frame).toHaveAttribute('data-start-cols', '2 4');
+    expect(frame).toHaveAttribute('data-mono-cols', '3 4');
+    expect(screen.getAllByRole('columnheader').map((head) => head.getAttribute('scope'))).toEqual([
+      'col',
+      'col',
+      'col',
+      'col',
+      'col',
+    ]);
+  });
+
   it('selects every row from the header box and shows a partial selection as mixed', () => {
     render(<SelectablePrompts />);
     const all = screen.getByRole('checkbox', { name: 'Select all suggested prompts' });
@@ -193,7 +226,7 @@ describe('DataTable', () => {
     expect(screen.getByRole('heading', { name: 'No referrers yet' }).tagName).toBe('H3');
   });
 
-  it('fades the edge that hides columns only while the table scrolls sideways', () => {
+  it('cues the edge that hides columns and becomes a tab stop only while the table scrolls sideways', () => {
     const table = (pinFirstColumn?: boolean) => (
       <DataTable
         label="Wide"
@@ -208,8 +241,8 @@ describe('DataTable', () => {
     const { container, rerender } = render(table(false));
     const frame = container.querySelector<HTMLElement>('.table-frame')!;
     const fades = () =>
-      [...container.querySelectorAll('[data-scroll-edge]')].map((fade) =>
-        fade.getAttribute('data-scroll-edge'),
+      [...container.querySelectorAll('[data-scroll-step]')].map((step) =>
+        step.getAttribute('data-scroll-step'),
       );
     const layout = (scrollWidth: number, scrollLeft: number) => {
       Object.defineProperty(frame, 'clientWidth', { configurable: true, value: 400 });
@@ -220,8 +253,11 @@ describe('DataTable', () => {
 
     layout(400, 0);
     expect(fades()).toEqual([]);
+    expect(frame).not.toHaveAttribute('tabindex');
     layout(900, 0);
     expect(fades()).toEqual(['end']);
+    expect(frame).toHaveAttribute('tabindex', '0');
+    expect(frame).toHaveAttribute('aria-label', 'Wide');
     layout(900, 200);
     expect(fades()).toEqual(['start', 'end']);
     layout(900, 500);
@@ -258,8 +294,8 @@ describe('DataTable', () => {
         ],
       }),
     ).toEqual([
-      'max(calc((calc(var(--spacing) * 136) + 1 * var(--table-identity-min)) / 1))',
-      'max(calc((calc(var(--spacing) * 168) + 1 * var(--table-identity-min)) / 1))',
+      'max(calc((calc(var(--spacing) * 136) + 1 * var(--data-table-identity-min)) / 1))',
+      'max(calc((calc(var(--spacing) * 168) + 1 * var(--data-table-identity-min)) / 1))',
     ]);
     // A quarter-width lead holds the minimum too, over the page's own floor.
     expect(
@@ -271,7 +307,7 @@ describe('DataTable', () => {
         minWidth: 'sm',
       })[0],
     ).toBe(
-      'max(calc((calc(var(--spacing) * 28) + 0 * var(--table-identity-min)) / 0.75), calc(var(--table-identity-min) / 0.25), var(--table-min-width-sm))',
+      'max(calc((calc(var(--spacing) * 28) + 0 * var(--data-table-identity-min)) / 0.75), calc(var(--data-table-identity-min) / 0.25), var(--table-min-width-sm))',
     );
   });
 

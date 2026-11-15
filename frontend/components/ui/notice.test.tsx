@@ -20,7 +20,9 @@ describe('Notice kind="read"', () => {
       />,
     );
 
-    expect(screen.getByText('Reference: request-123')).toBeVisible();
+    // The caller's sentence is the headline; the server's words and the reference follow in data-sm.
+    expect(screen.getByRole('alert')).toHaveTextContent('Could not load data.');
+    expect(screen.getByText('Temporarily unavailable · Reference request-123')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
   });

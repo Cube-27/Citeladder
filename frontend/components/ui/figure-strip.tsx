@@ -47,6 +47,23 @@ const WIDE_COLUMNS = {
 
 type Columns = keyof typeof WIDE_COLUMNS;
 
+const WIDE_SPAN = {
+  1: '@min-[720px]:col-span-1',
+  2: '@min-[720px]:col-span-2',
+  3: '@min-[720px]:col-span-3',
+  4: '@min-[720px]:col-span-4',
+} as const satisfies Record<Columns, string>;
+
+/**
+ * The last figure spans what its row leaves, so a strip never ends in an
+ * empty cell: two across below 720px, `columns` across from it.
+ */
+function lastCellSpan(count: number, columns: Columns): string {
+  const narrow = count > 1 && count % 2 === 1 ? 'col-span-2' : undefined;
+  const wide = (columns - ((count - 1) % columns)) as Columns;
+  return cn(narrow, WIDE_SPAN[wide]);
+}
+
 function columnsFor(count: number): Columns {
   const rows = Math.ceil(count / 4);
   return Math.max(1, Math.min(4, Math.ceil(count / Math.max(1, rows)))) as Columns;
@@ -55,7 +72,8 @@ function columnsFor(count: number): Columns {
 /**
  * FigureStrip — key figures side by side under one ink rule, divided by
  * hairlines: four across from 720px of column width,
- * two across below. Each figure is the Figure anatomy: overline label, the
+ * two across below; the last figure spans what its row leaves, so the strip
+ * never ends in an empty cell. The strip owns the value's style (`figure`). Each figure is the Figure anatomy: overline label, the
  * value at `figure` (or its Absence), the change, the basis. A 0–100 score
  * is a RungMeter, never a ring. A record page passes its summary as `lead`,
  * which opens the strip above a hairline.
@@ -90,21 +108,28 @@ export function FigureStrip({
           WIDE_COLUMNS[columns],
         )}
       >
-        {segments.map((segment) => (
-          <FigureCell key={segment.key} segment={segment} />
+        {segments.map((segment, index) => (
+          <FigureCell
+            key={segment.key}
+            segment={segment}
+            span={
+              index === segments.length - 1 ? lastCellSpan(segments.length, columns) : undefined
+            }
+          />
         ))}
       </dl>
     </div>
   );
 }
 
-function FigureCell({ segment }: Readonly<{ segment: FigureSegment }>) {
+function FigureCell({ segment, span }: Readonly<{ segment: FigureSegment; span?: string }>) {
   const pressable = Boolean(segment.onSelect);
   return (
     <div
       data-figure-cell=""
       className={cn(
         'border-rule grid min-w-0 content-start gap-1 border-e border-b p-4',
+        span,
         pressable &&
           cn(
             'relative transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]',

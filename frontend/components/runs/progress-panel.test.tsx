@@ -102,7 +102,7 @@ describe('ProgressPanel', () => {
   it('counts failed answers as finished in the progress percentage', () => {
     renderPanel({ status: 'running', requested_count: 60, completed_count: 40, failed_count: 19 });
 
-    expect(screen.getByText('98%')).toBeVisible();
+    expect(screen.getByText('98.0%')).toBeVisible();
   });
 
   it('shows the updating indicator while reporting and hides it once completed', () => {

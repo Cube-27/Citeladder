@@ -212,13 +212,10 @@ function SourceTotalsRows({ data }: Readonly<{ data: AiReferrals }>) {
             <TableCell>{aiSourceLabel(source.ai_source)}</TableCell>
             <TableCell numeric>{formatCount(source.sessions)}</TableCell>
             <TableCell numeric>
-              <Measure value={source.share} format={(v) => formatPercent(v, 1)} />
+              <Measure value={source.share} format={formatPercent} />
             </TableCell>
             <TableCell numeric>
-              <Measure
-                value={measures?.engagement_rate ?? null}
-                format={(v) => formatPercent(v, 1)}
-              />
+              <Measure value={measures?.engagement_rate ?? null} format={formatPercent} />
             </TableCell>
             <TableCell numeric>
               <Measure value={measures?.key_events ?? null} format={formatCount} />

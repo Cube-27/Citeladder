@@ -110,7 +110,8 @@ function PagerSummary({
 function PageSizeSelect({ pageSize, noun }: Readonly<{ pageSize: PagerPageSize; noun: string }>) {
   const id = useId();
   return (
-    <div className="flex items-center gap-2">
+    // The label is 4 from its select and 16 from the next group: one fact.
+    <div className="flex items-center gap-1">
       <label className="text-caption text-ink-2" htmlFor={id}>
         Rows per page
       </label>
@@ -178,9 +179,19 @@ export function Pager({
 }: PagerProps) {
   if (hideWhenSinglePage && !steps.canPrev && !steps.canNext) return null;
   return (
-    <div className={cn('flex flex-wrap items-center justify-between gap-3', className)}>
-      {pageSize ? <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} /> : <span />}
-      <div className="flex flex-wrap items-center gap-2">
+    // Below 900px the pager stacks: rows per page over the range and its steps.
+    <div
+      className={cn(
+        'rail:flex-row rail:items-center rail:justify-between flex flex-col items-stretch gap-4',
+        className,
+      )}
+    >
+      {pageSize ? (
+        <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} />
+      ) : (
+        <span className="rail:block hidden" />
+      )}
+      <div className="rail:justify-start flex flex-wrap items-center justify-between gap-2">
         <PagerSummary range={range} page={page} pageCount={pageCount} />
         <PagerSteps {...steps} busy={busy} />
       </div>

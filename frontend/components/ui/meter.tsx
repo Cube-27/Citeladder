@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { useId } from 'react';
 
 import { dataFillClass, type DataTone } from '@/components/ui/data-tone';
-import { availabilityLabel } from '@/lib/format';
+import { availabilityLabel, formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -92,7 +92,7 @@ export function Meter({
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <div className="flex items-baseline justify-between gap-3">
-        <span id={labelId} className="text-body-sm text-ink truncate">
+        <span id={labelId} className="text-body-sm text-ink min-w-0 break-words">
           {label}
         </span>
         <span className="text-body-sm text-ink-2 whitespace-nowrap tabular-nums">{shown}</span>
@@ -139,7 +139,9 @@ export function MeterRow({
         max={max}
         fill={dataFillClass(tone)}
         label={label}
-        valueText={percent === null ? availabilityLabel('not_measured') : `${Math.round(percent)}%`}
+        valueText={
+          percent === null ? availabilityLabel('not_measured') : formatPercent(percent / 100)
+        }
       />
       <span className="text-body-sm text-ink text-right tabular-nums">{figure}</span>
     </div>

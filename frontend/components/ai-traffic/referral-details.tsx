@@ -38,7 +38,7 @@ export function ReferralComparison({ data }: Readonly<{ data: AiReferrals }>) {
             <Measure value={r.sessions} format={formatCount} />
           </TableCell>
           <TableCell numeric>
-            <Measure value={r.engagement_rate} format={(v) => formatPercent(v, 1)} />
+            <Measure value={r.engagement_rate} format={formatPercent} />
           </TableCell>
           <TableCell numeric>
             <Measure value={r.key_events} format={formatCount} />

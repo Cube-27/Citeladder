@@ -2,6 +2,7 @@ import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { useId } from 'react';
 
 import { Icon } from '@/components/ui/icon';
+import { formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 const RUNGS = 10;
@@ -96,7 +97,7 @@ function meterReading({
   const measured = typeof value === 'number';
   const ratio = measured && max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
   let shown = valueLabel ?? null;
-  if (shown === null && measured) shown = `${Math.round(ratio * 100)}%`;
+  if (shown === null && measured) shown = formatPercent(ratio);
   if (shown === null && value === null) shown = 'not measured';
   return {
     live: value === undefined,
@@ -152,7 +153,8 @@ function MeterHead({
   return (
     <div className="flex items-baseline justify-between gap-3">
       {label ? (
-        <span id={labelId} className="type-body truncate">
+        // The name wraps rather than being cut: "Prompts" and "Prompt runs" must both read whole.
+        <span id={labelId} className="type-body min-w-0 break-words">
           {label}
         </span>
       ) : null}

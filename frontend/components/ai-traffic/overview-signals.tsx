@@ -156,7 +156,7 @@ function referralFigure(referrals: Overview['referrals']): FigureSegment {
   const latest = referrals.referral_volume.at(-1);
   // Only a persisted snapshot carries a window; without one nothing has synced.
   const synced = referrals.window_end !== null;
-  const share = formatPercent(referrals.referral_share.at(-1)?.value ?? null, 1);
+  const share = formatPercent(referrals.referral_share.at(-1)?.value ?? null);
   return {
     key: 'referrals',
     label: 'AI referral sessions, latest day',

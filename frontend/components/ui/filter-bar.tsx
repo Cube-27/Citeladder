@@ -54,25 +54,26 @@ export type FilterBarProps = Readonly<{
  * FilterBar — the control row at the top of every list and report page, in
  * one order on every page: the view, the search, All filters, then the count
  * and the action at the row's end. Every control is 32px and 8 apart, across
- * and between wrapped rows alike. The search grows to 360px; on a phone it
- * keeps at least 12rem and wraps below the view rather than collapsing.
+ * and between wrapped rows alike. The search grows to 360px. Below 900px the
+ * bar stacks into one full-width column in the same order, so a wrapped row
+ * never regroups its controls.
  */
 export function FilterBar({ view, search, filters, status, actions }: FilterBarProps) {
   return (
     <fieldset
       data-filter-bar=""
       aria-label="Search and filters"
-      className="flex min-h-[var(--control-md)] w-full min-w-0 flex-wrap items-center gap-2"
+      className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] w-full min-w-0 flex-col items-stretch gap-2"
     >
       {view ? <div className="flex max-w-full min-w-0">{view}</div> : null}
       {search ? (
-        <div className="shell:max-w-[360px] shell:flex-[1_1_240px] min-w-0 flex-[1_1_12rem]">
+        <div className="shell:max-w-[360px] shell:flex-[1_1_240px] rail:flex-[1_1_12rem] min-w-0">
           {search}
         </div>
       ) : null}
       {filters ? <FilterControls filters={filters} /> : null}
       {status === undefined ? null : (
-        <output className="type-caption ms-auto flex min-w-0 items-center gap-2 empty:hidden">
+        <output className="type-caption rail:ms-auto flex min-w-0 items-center gap-2 empty:hidden">
           {status}
         </output>
       )}

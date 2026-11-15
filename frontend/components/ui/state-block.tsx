@@ -1,15 +1,17 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
-import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
-import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
 const HEADING_TAG = { 1: 'h1', 2: 'h2', 3: 'h3' } as const;
+
+/** The blank rows a loading block draws: five 36px rows fill the 200px footprint. */
+const LOADING_ROWS = 5;
 type HeadingLevel = keyof typeof HEADING_TAG;
 
 /**
@@ -155,10 +157,10 @@ export function screenState<T, M extends T>(
 /**
  * StateBlock — the loading, empty, filtered-empty, not-measured and error
  * states of a read in one footprint, so a read that
- * goes loading → error → retry → empty never moves the page. The loader is
- * the live rung, shown only after a beat; a failed read replaces it with a
- * Notice and never sits on a placeholder. Callers choose the state, never
- * the geometry.
+ * goes loading → error → retry → empty never moves the page. Loading is the
+ * ruled blank (`Skeleton`): hairline rows with one live rung and its verb,
+ * shown only after a beat; a failed read replaces it with a Notice that names
+ * what failed. Callers choose the state, never the geometry.
  */
 export function StateBlock(props: StateBlockProps) {
   if (props.kind === 'empty' && props.inline) return <InlineEmptyView {...props} />;
@@ -167,7 +169,7 @@ export function StateBlock(props: StateBlockProps) {
       data-state-block={props.kind}
       className={cn(
         'state-block grid min-h-[var(--state-block-height)] min-w-0',
-        props.kind === 'error' ? 'content-start' : 'content-center',
+        props.kind === 'error' || props.kind === 'loading' ? 'content-start' : 'content-center',
       )}
     >
       <BlockBody {...props} />
@@ -216,7 +218,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
   const containerLevel = useContext(StateHeadingLevelContext);
   switch (props.kind) {
     case 'loading':
-      return <DelayedLoader label={props.label ?? 'Loading…'} />;
+      return <Skeleton variant="row" rows={LOADING_ROWS} label={props.label ?? 'Loading…'} />;
     case 'error':
       return (
         <Notice
@@ -275,47 +277,17 @@ function EmptyBody({
   headingLevel: HeadingLevel;
 }>) {
   const Heading = HEADING_TAG[headingLevel];
+  const markNode = mark ?? (Glyph ? <Glyph aria-hidden className="text-ink-2 size-5" /> : null);
+  // One group: the mark 8 over the heading, the sentence 4 under it; the
+  // action stands 16 below the group.
   return (
-    <div className="max-w-narrow flex flex-col items-start gap-2">
-      {mark ?? (Glyph ? <Glyph aria-hidden className="text-ink-2 size-5" /> : null)}
-      <Heading className={textRole('heading')}>{heading}</Heading>
-      {description ? <p className={textRole('body', 'text-ink-2')}>{description}</p> : null}
-      {action ? <div className="flex items-center gap-2 pt-2">{action}</div> : null}
+    <div className="max-w-narrow flex flex-col items-start gap-4">
+      <div className="flex flex-col items-start gap-1">
+        {markNode ? <span className="pb-1">{markNode}</span> : null}
+        <Heading className={textRole('heading')}>{heading}</Heading>
+        {description ? <p className={textRole('body', 'text-ink-2')}>{description}</p> : null}
+      </div>
+      {action ? <div className="flex items-center gap-2">{action}</div> : null}
     </div>
-  );
-}
-
-/**
- * Loaders on screen that have already been revealed. A cold load passes
- * through several owners in turn (shell, route chunk, first read); a loader
- * that mounts while another is showing is the same wait, so it starts revealed.
- */
-let revealedLoaders = 0;
-
-/** The live rung and its label, held back a beat (`loading-delayed`) along with its announcement. */
-function DelayedLoader({ label }: Readonly<{ label: string }>) {
-  const [continued] = useState(() => revealedLoaders > 0);
-  const [revealed, setRevealed] = useState(continued);
-  useEffect(() => {
-    if (!revealed) {
-      const timer = setTimeout(() => setRevealed(true), LOADING_INDICATOR_DELAY_MS);
-      return () => clearTimeout(timer);
-    }
-    revealedLoaders += 1;
-    return () => {
-      revealedLoaders -= 1;
-    };
-  }, [revealed]);
-  return (
-    <span className={cn('flex min-h-5 items-center', continued ? undefined : 'loading-delayed')}>
-      {revealed ? (
-        <output aria-label={label} className="inline-flex items-center gap-2">
-          <Spinner />
-          <span aria-hidden className={textRole('body', 'text-ink-2')}>
-            {label}
-          </span>
-        </output>
-      ) : null}
-    </span>
   );
 }

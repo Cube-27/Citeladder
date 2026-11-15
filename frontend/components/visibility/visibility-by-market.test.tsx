@@ -78,11 +78,11 @@ describe('Visibility by market', () => {
       within(us!)
         .getAllByRole('cell')
         .map((cell) => cell.textContent),
-    ).toEqual(['United States · English', '25%', '↑up +5.0 pp', '50%', '↓down -2.0 pp', '+40']);
+    ).toEqual(['United States · English', '25.0%', 'up +5.0 pp', '50.0%', 'down −2.0 pp', '+40']);
     expect(within(de!).getByText('Being prepared')).toBeInTheDocument();
     expect(within(de!).queryByText('Not run')).not.toBeInTheDocument();
     expect(within(fr!).getByText('Not run')).toBeInTheDocument();
-    expect(within(fr!).queryByText('0%')).not.toBeInTheDocument();
+    expect(within(fr!).queryByText('0.0%')).not.toBeInTheDocument();
   });
 
   it('switches the page to a market picked from the table', () => {

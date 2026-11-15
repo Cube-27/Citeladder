@@ -57,7 +57,7 @@ describe('screenState with StateBlock', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent("Couldn't load crawl coverage");
     expect(alert).toHaveTextContent('Service unavailable');
-    expect(alert).toHaveTextContent('Reference: request-7');
+    expect(alert).toHaveTextContent('Service unavailable · Reference request-7');
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByText('12 pages crawled')).toBeVisible();

@@ -185,8 +185,8 @@ describe('Overview library widgets', () => {
     };
     renderWithProviders(<ShareOfVoiceWidget project={project} />);
     const region = screen.getByRole('region', { name: 'Share of voice' });
-    expect(within(region).getByText('42%')).toBeVisible();
-    expect(within(region).getByText('30%')).toBeVisible();
+    expect(within(region).getByText('42.0%')).toBeVisible();
+    expect(within(region).getByText('30.0%')).toBeVisible();
     expect(within(region).getAllByRole('listitem', { hidden: true })).toHaveLength(5);
   });
 

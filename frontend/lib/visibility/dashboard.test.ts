@@ -89,7 +89,7 @@ describe('visibility dashboard helpers', () => {
   });
 
   it('formats rates and scores, falling back to the placeholder', () => {
-    expect(formatRate(0.5)).toBe('50%');
+    expect(formatRate(0.5)).toBe('50.0%');
     expect(formatRate(null)).toBe(PLACEHOLDER);
     expect(formatScore(72.4)).toBe('72');
     expect(formatScore(null)).toBe(PLACEHOLDER);

@@ -53,7 +53,7 @@ function response(overrides: Partial<AccuracyResponse> = {}): AccuracyResponse {
 describe('AccuracyView', () => {
   it('shows accuracy with its coverage and each contradiction beside the fact it contradicts', () => {
     render(<AccuracyView data={response()} />);
-    expect(screen.getByText('67%')).toBeInTheDocument();
+    expect(screen.getByText('66.7%')).toBeInTheDocument();
     expect(screen.getByText('4 of 5 claims checked · 1 pending')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '“Acme Pro costs $49 per month”' })).toHaveAttribute(
       'href',
@@ -89,6 +89,6 @@ describe('AccuracyView', () => {
       />,
     );
     expect(screen.getByText('No confirmed facts for these runs')).toBeInTheDocument();
-    expect(screen.queryByText('0%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
   });
 });

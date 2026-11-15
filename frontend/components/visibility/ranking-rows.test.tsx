@@ -48,7 +48,7 @@ describe('RankingRowsTable', () => {
     expect(screen.queryByRole('columnheader', { name: 'S.O.V.' })).toBeNull();
     expect(screen.queryByRole('columnheader', { name: 'Citations' })).toBeNull();
     const cells = within(screen.getByText('Acme').closest('tr')!).getAllByRole('cell');
-    expect(cells.map((cell) => cell.textContent).slice(-2)).toEqual(['40%', '25%']);
+    expect(cells.map((cell) => cell.textContent).slice(-2)).toEqual(['40.0%', '25.0%']);
   });
   it('shows a cut brand name in full when its button takes keyboard focus', async () => {
     render(<RankingRowsTable rows={[row({ name: 'Kmart Australia' })]} onSelect={vi.fn()} />);
@@ -68,7 +68,7 @@ describe('RankingRowsTable', () => {
         rows={[row({ mention_rate: 0 }), row({ name: 'Unknown', mention_rate: null })]}
       />,
     );
-    expect(screen.getByText('0%')).toBeVisible();
+    expect(screen.getByText('0.0%')).toBeVisible();
     const unknown = screen.getByText('Unknown').closest('tr')!;
     // Unmeasured visibility leaves the rank unmeasured too: a brand with no
     // measured presence has no standing to report, rather than last place.
@@ -81,7 +81,7 @@ describe('RankingRowsTable', () => {
     render(
       <RankingRowsTable rows={[row({ name: 'Globex', gap_count: 3, visibility_delta: 0.3 })]} />,
     );
-    expect(screen.getByText('0.3 pp').parentElement).toHaveTextContent('↑up +0.3 pp');
+    expect(screen.getByText('0.3 pp').parentElement).toHaveTextContent('up +0.3 pp');
     // The overlap measure is undefined for the tracked brand itself, so it is
     // not a column of a table whose every other column applies to every row.
     // It survives on `gap_count` for opportunity analysis.
@@ -146,7 +146,7 @@ describe('RankingRowsTable', () => {
     );
     // Which comparison produced the number is explained once above the table,
     // so the cell shows the number and nothing else.
-    expect(screen.getByText('10.0 pp').parentElement).toHaveTextContent('↑up +10.0 pp');
+    expect(screen.getByText('10.0 pp').parentElement).toHaveTextContent('up +10.0 pp');
     expect(screen.queryByText('Matched subset')).toBeNull();
   });
 });

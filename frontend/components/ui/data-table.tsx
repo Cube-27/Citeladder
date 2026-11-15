@@ -1,7 +1,8 @@
-import { useId, useRef, type ComponentProps, type CSSProperties, type ReactNode } from 'react';
+import { useId, type ComponentProps, type CSSProperties, type ReactNode } from 'react';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
+  columnLayout,
   columnsMinWidth,
   DataTableColumns,
   useFlexibleColumnCheck,
@@ -11,7 +12,7 @@ import {
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
-import { ScrollEdgeFades, useScrollEdges } from '@/components/ui/scroll-edges';
+import { ScrollFrame } from '@/components/ui/scroll-edges';
 import {
   Table,
   TableBody,
@@ -22,6 +23,7 @@ import {
   TableTitleLinesContext,
   type TableMinWidth,
 } from '@/components/ui/table';
+import { LiveVerb } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 import {
@@ -79,8 +81,11 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
  *            An `inline` empty state is one row instead (else the page's
  *            footprint), so a small table never holds a tall empty block. A
  *            block empty state's heading is an h3, under the table's own.
- *   overflow — while a wide table scrolls sideways, a fade at each edge that
- *            hides columns says so; it overlays the frame and moves nothing.
+ *   overflow — a wide table scrolls sideways in a `ScrollFrame`: the edge
+ *            that hides columns fades and carries a stepper chevron, and the
+ *            frame is a named tab stop that scrolls with the arrow keys.
+ *   columns — each column's kind aligns and faces its head and every cell
+ *            (`columnLayout`), whatever a page passes to the cells.
  *
  * The page passes data, columns and rows; it sets no geometry.
  */
@@ -165,7 +170,9 @@ export function DataTable({
       />
       <DataTableFrame
         minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
+        layout={columnLayout(columns, Boolean(selection))}
         naming={naming}
+        regionLabel={title ?? label ?? 'Table'}
         pinFirstColumn={pinFirstColumn}
       >
         <DataTableColumns columns={columns} selection={selection} />
@@ -210,38 +217,44 @@ function tableMinWidth({
 }
 
 /**
- * The table in its scrolling frame, with the overflow fades laid over the
- * frame's edges. The box is isolated, so the fades never paint over the
- * page's sticky header. A pinned first column keeps the leading edge clear.
+ * The table in its `ScrollFrame`. The box is isolated, so the cues never
+ * paint over the page's sticky header. A pinned first column keeps the
+ * leading edge clear. `layout` is the column map the cell rules read.
  */
 function DataTableFrame({
   minWidth,
+  layout,
   naming,
+  regionLabel,
   pinFirstColumn,
   children,
 }: Readonly<{
   minWidth: CSSProperties;
+  layout: ReturnType<typeof columnLayout>;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
+  regionLabel: string;
   pinFirstColumn: boolean;
   children: ReactNode;
 }>) {
-  const frame = useRef<HTMLDivElement>(null);
-  const edges = useScrollEdges(frame);
   return (
-    <div data-data-table-frame="" className="relative isolate min-w-0" style={minWidth}>
-      <Table
-        fixed
-        {...naming}
-        wrapperRef={frame}
-        wrapperClassName="@container"
-        className={cn(
-          'desktop:min-w-[var(--data-table-min-desktop)] min-w-[var(--data-table-min)]',
-          pinFirstColumn && PINNED_FIRST_COLUMN,
+    <div data-data-table-frame="" {...layout} className="isolate min-w-0" style={minWidth}>
+      <ScrollFrame label={regionLabel} start={!pinFirstColumn} stepper="head">
+        {(ref, region) => (
+          <Table
+            fixed
+            {...naming}
+            wrapperRef={ref}
+            region={region}
+            wrapperClassName="@container"
+            className={cn(
+              'desktop:min-w-[var(--data-table-min-desktop)] min-w-[var(--data-table-min)]',
+              pinFirstColumn && PINNED_FIRST_COLUMN,
+            )}
+          >
+            {children}
+          </Table>
         )}
-      >
-        {children}
-      </Table>
-      <ScrollEdgeFades edges={edges} start={!pinFirstColumn} />
+      </ScrollFrame>
     </div>
   );
 }
@@ -325,7 +338,7 @@ function DataTableHeader({
       {title || toolbar ? (
         <div
           data-data-table-header=""
-          className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center gap-2"
+          className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
         >
           {title ? (
             <h3 id={headingId} className={textRole('heading', 'min-w-0 truncate')}>
@@ -391,6 +404,16 @@ function DataTableBody({
       </TableBody>
     );
   }
+  if (state?.kind === 'loading') {
+    return (
+      <LoadingBody
+        colSpan={colSpan}
+        label={state.label ?? 'Loading…'}
+        rows={pageSize ?? LOADING_ROWS}
+        rowLines={rowLines}
+      />
+    );
+  }
   if (state) {
     return (
       <TableBody>
@@ -415,13 +438,38 @@ function DataTableBody({
   return (
     <TableBody>
       {children}
-      <TableFillerRows
-        count={filler}
-        colSpan={colSpan}
-        spacer={rowLines === 1 ? null : <TableCellLines primary={BLANK} secondary={BLANK} />}
-      />
+      <TableFillerRows count={filler} colSpan={colSpan} spacer={blankLines(rowLines)} />
     </TableBody>
   );
+}
+
+/**
+ * The ruled blank: a page of blank rows under the real column heads, the
+ * first carrying the live rung and its verb, so arriving rows move nothing.
+ */
+function LoadingBody({
+  colSpan,
+  label,
+  rows,
+  rowLines,
+}: Readonly<{ colSpan: number; label: string; rows: number; rowLines: RowLines }>) {
+  return (
+    <TableBody aria-busy="true">
+      <tr data-table-state="" style={stateFootprint(1, rowLines)}>
+        <TableCell colSpan={colSpan} className="h-[var(--data-table-row)]">
+          <InFrame>
+            <LiveVerb label={label} />
+          </InFrame>
+        </TableCell>
+      </tr>
+      <TableFillerRows count={rows - 1} colSpan={colSpan} spacer={blankLines(rowLines)} />
+    </TableBody>
+  );
+}
+
+/** A blank row's lines: none for a one-line table, else a title over a caption. */
+function blankLines(rowLines: RowLines) {
+  return rowLines === 1 ? null : <TableCellLines primary={BLANK} secondary={BLANK} />;
 }
 
 /**
@@ -457,6 +505,9 @@ function stateFootprint(rows: number, rowLines: RowLines) {
     '--data-table-row': ROW_HEIGHT[rowLines],
   } as CSSProperties;
 }
+
+/** Blank rows a loading table without a page size draws. */
+const LOADING_ROWS = 5;
 
 /** A non-breaking space: a blank line that still takes a line's height. */
 const BLANK = ' ';

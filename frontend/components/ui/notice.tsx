@@ -56,7 +56,7 @@ type ReadFailure = Readonly<{
   fallback: string;
   onRetry: () => void;
   pending?: boolean;
-  /** Names what failed to load ("Couldn't load the business map"). */
+  /** Names what failed to load ("Couldn't load the business map"); else `fallback` is the headline. */
   title?: string;
   className?: string;
 }>;
@@ -173,6 +173,12 @@ function MutationFailureNotice({ notice, onRetry, recovery, className }: Mutatio
   );
 }
 
+/**
+ * The headline names what failed ("Couldn't load runs"): the `title`, else
+ * the caller's own sentence. A server's words are never the headline: a
+ * sentence a person can act on follows it, and a server failure's status
+ * text joins the reference in `data-sm` (2.9).
+ */
 function ReadFailureNotice({
   error,
   fallback,
@@ -184,18 +190,30 @@ function ReadFailureNotice({
   const detail = humanizeApiError(error, fallback);
   const accessFailure = detail.status === 401 || detail.status === 403;
   const retryable = detail.retryable !== false && !accessFailure;
+  const headline = title ?? fallback;
+  const { sentence, code } = failureLines(detail, [headline, fallback]);
   const action = retryable ? (
     <Button variant="secondary" onClick={onRetry} pending={pending} pendingLabel="Retrying…">
       Retry
     </Button>
   ) : null;
   return (
-    <MessageNoticeView tone="negative" title={title} action={action} className={className}>
-      <p>{detail.message}</p>
+    <MessageNoticeView tone="negative" title={headline} action={action} className={className}>
+      {sentence ? <p>{sentence}</p> : null}
       {accessFailure ? <p>Check your workspace access, then try again.</p> : null}
-      {detail.requestId ? (
-        <p className={textRole('caption')}>Reference: {detail.requestId}</p>
-      ) : null}
+      {code ? <p className="type-data-sm text-ink-2">{code}</p> : null}
     </MessageNoticeView>
   );
+}
+
+/**
+ * Where a failure's own words go: a person's sentence under the headline, or,
+ * for a server fault, beside the reference. Words repeating the headline drop.
+ */
+function failureLines(detail: ReturnType<typeof humanizeApiError>, shown: readonly string[]) {
+  const said = shown.includes(detail.message) ? null : detail.message;
+  const serverFault = detail.status !== undefined && detail.status >= 500;
+  const reference = detail.requestId ? `Reference ${detail.requestId}` : null;
+  const code = [serverFault ? said : null, reference].filter(Boolean).join(' · ');
+  return { sentence: serverFault ? null : said, code: code || null };
 }

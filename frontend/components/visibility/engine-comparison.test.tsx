@@ -25,13 +25,13 @@ function visibility(
 describe('model outcome comparison', () => {
   it('shows presence, citations and sample coverage without duplicating the composite', () => {
     render(<EngineComparison visibility={visibility([engine()])} filter="all" />);
-    expect(screen.getByText('50%')).toBeVisible();
-    expect(screen.getByText('25%')).toBeVisible();
+    expect(screen.getByText('50.0%')).toBeVisible();
+    expect(screen.getByText('25.0%')).toBeVisible();
     // The answer count is the reader's; the run's expected-vs-measured
     // bookkeeping that used to sit beside it is not.
     expect(screen.getByText('12')).toBeVisible();
     expect(screen.queryByText(/expected/)).toBeNull();
-    expect(screen.queryByText('62%')).toBeNull();
+    expect(screen.queryByText(/^62(\.0)?%$/)).toBeNull();
   });
   it('uses catalog order and narrows to the selected engine', () => {
     const { rerender } = render(
@@ -58,7 +58,7 @@ describe('model outcome comparison', () => {
         filter="all"
       />,
     );
-    expect(screen.getByText('0%')).toBeVisible();
+    expect(screen.getByText('0.0%')).toBeVisible();
     expect(screen.getByText('Not measured')).toBeVisible();
   });
   it('names the model an API route pinned, never an observed surface route id', () => {

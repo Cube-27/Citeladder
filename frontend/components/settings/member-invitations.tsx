@@ -6,12 +6,11 @@ import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-no
 import { CopyButton } from '@/components/ui/copy-button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
-import { TableTime } from '@/components/ui/display-time';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText, TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';

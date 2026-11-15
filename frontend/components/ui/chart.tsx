@@ -233,7 +233,7 @@ export function ChartLegend({
       ))}
       {markerLabel ? (
         <li className={item}>
-          <svg width={12} height={3} viewBox="0 0 12 3" className="shrink-0">
+          <svg aria-hidden width={12} height={3} viewBox="0 0 12 3" className="shrink-0">
             <line
               x1={0}
               y1={1.5}

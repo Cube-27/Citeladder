@@ -1,5 +1,6 @@
 import {
   createContext,
+  Fragment,
   useContext,
   useState,
   type HTMLAttributes,
@@ -10,18 +11,22 @@ import {
 } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatDisplayDate, formatDisplayTime, readableUrl, urlCellText } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
  * Table — the app's data table:
- *  - the header is a sticky 36px `surface-sunken` band with `radius-sm` ends;
- *    its labels are 12/16 medium `ink-secondary`, `ink` while sorted
- *  - `table-row-height` rows (40 in the app) divided by `line` rules, `surface-sunken` when
- *    selected and, for a row that opens or selects on press, on hover; `highlight` tints the tracked brand's own row `accent-soft`
- *    (one row per table, never for emphasis); no zebra stripes, no column
- *    rules, no colour by status (that is a Badge cell)
+ *  - the header is a sticky band of overline column heads (`scope="col"`),
+ *    `ink` while sorted
+ *  - `table-row-height` rows (36 in the app) on inset hairlines, so a cell's
+ *    padding is 8 above and 8 below; every row tints on hover as one piece,
+ *    pinned cells included (the app's tint is on the cells, globals.css
+ *    "r2 data"); `highlight` marks your own row (one row per table, never
+ *    for emphasis); no zebra stripes, no column rules, no colour by status
  *  - text never runs past two lines: `ClampText` cuts it there and moves the
  *    rest into a tooltip, so a row is one line or two, never an outlier
  *  - numeric columns align right in tabular figures, under a right-aligned
@@ -49,6 +54,7 @@ export function Table({
   fixed = false,
   wrapperClassName,
   wrapperRef,
+  region,
   ariaLabel,
   ariaLabelledBy,
 }: Readonly<{
@@ -68,9 +74,12 @@ export function Table({
   fixed?: boolean;
   wrapperClassName?: string;
   wrapperRef?: Ref<HTMLDivElement>;
+  /** The scrolling frame's cue hook and, while it scrolls, its name and tab stop (`ScrollFrame`). */
+  region?: ScrollRegionProps;
 }>) {
   return (
     <div
+      {...region}
       ref={wrapperRef}
       className={cn(
         'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto rounded-sheet',
@@ -123,8 +132,8 @@ export function TableRow({
   highlight,
   ...props
 }: Readonly<HTMLAttributes<HTMLTableRowElement> & { highlight?: boolean }>) {
-  // Only a row that does something when pressed answers the pointer: a
-  // row of a table with nothing to select stays still on hover.
+  // The app tints every row's cells on hover and selection (globals.css "r2
+  // data"); the website keeps its row-level tint on pressable rows.
   const pressable = props.onClick !== undefined;
   return (
     <tr
@@ -134,8 +143,10 @@ export function TableRow({
         // Hover and selected are two states: a selected row takes the
         // selected overlay and no hover; the tracked brand's own row takes
         // `accent-soft`, and hover never changes it.
-        pressable && !highlight && 'not-aria-selected:hover:overlay-hover',
-        'aria-selected:overlay-selected',
+        pressable &&
+          !highlight &&
+          '[[data-public-surface]_&]:not-aria-selected:hover:overlay-hover',
+        '[[data-public-surface]_&]:aria-selected:overlay-selected',
         // The website tints its brand row; the app marks yours with the accent rung (globals.css).
         highlight && '[[data-public-surface]_&]:bg-accent-wash',
         className,
@@ -184,6 +195,7 @@ export function TableHead({
   numeric,
   trailing,
   desktopOnly,
+  scope = 'col',
   ...props
 }: Readonly<
   ThHTMLAttributes<HTMLTableCellElement> &
@@ -194,6 +206,7 @@ export function TableHead({
 >) {
   return (
     <th
+      scope={scope}
       {...props}
       className={cn(
         tableHeadClasses,
@@ -295,10 +308,8 @@ export function ClampText({
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
-    'text-body-sm text-ink border-rule px-[var(--table-cell-padding-x)] pt-[var(--table-cell-padding-y)] pb-[var(--table-cell-padding-bottom)] text-left align-middle',
-    // Row rule, dropped on the last row (the frame draws the line under it);
-    // that row takes the rule's pixel back as padding, so every row is one height.
-    'border-b [tr:last-child>&]:border-b-0 [tr:last-child>&]:pb-[var(--table-cell-padding-y)]',
+    // Padding 8 and 8: the row hairline is drawn inside the row (globals.css "r2 data").
+    'text-body-sm text-ink px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)] text-left align-middle',
     // A value never wraps: "Not measured" split over two lines read as two values.
     // Tabular figures, so a right-aligned column lines up place by place.
     numeric && 'whitespace-nowrap text-right tabular-nums',
@@ -428,5 +439,54 @@ export function TableRowHeader({
     <th scope="row" className={cn(cellClasses({}), 'type-body', className)}>
       {isPlainText(children) ? <ClampText>{children}</ClampText> : children}
     </th>
+  );
+}
+
+/**
+ * A URL in a cell: mono, without the origin its column shares
+ * (`sharedOrigin`), able to break only after a `/`, cut at the row's lines
+ * with the whole address in the tooltip.
+ */
+export function UrlText({
+  url,
+  origin = null,
+  lines,
+}: Readonly<{ url: string; origin?: string | null; lines?: 1 | 2 }>) {
+  const text = urlCellText(url, origin);
+  // Each part keyed by where it starts in the text, so a break follows every '/'.
+  const parts = text.split(/(?<=\/)/u).map((part, index, all) => ({
+    part,
+    at: all.slice(0, index).join('').length,
+  }));
+  return (
+    <ClampText lines={lines} tooltip={readableUrl(url)} className="type-data">
+      {parts.map(({ part, at }) => (
+        <Fragment key={at}>
+          {part}
+          {at + part.length < text.length ? <wbr /> : null}
+        </Fragment>
+      ))}
+    </ClampText>
+  );
+}
+
+/**
+ * A date-time in a table's date column: the date over its time and zone. On
+ * one line ("Nov 1, 2026, 05:03 PM GMT+5:30") it is wider than the column and
+ * ran into the next one.
+ */
+export function TableTime({
+  value,
+  fallback = null,
+}: Readonly<{ value: string | null | undefined; fallback?: ReactNode }>) {
+  const timeZone = useDisplayTimeZone();
+  if (!value) return fallback;
+  return (
+    <time dateTime={value} className="block min-w-0">
+      <TableCellLines
+        primary={<span className="type-data">{formatDisplayDate(value, timeZone)}</span>}
+        secondary={formatDisplayTime(value, timeZone)}
+      />
+    </time>
   );
 }

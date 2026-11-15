@@ -24,20 +24,24 @@ export type FrameHeight = keyof typeof FRAME_HEIGHT;
  * ChartFrame — the box every chart and every state standing in for it share
  *: the height role as a floor, so loading, a
  * read error or an empty selection hold the plot's footprint, and the text
- * summary assistive technology reads instead of the drawing.
+ * summary assistive technology reads instead of the drawing. A drawing sized
+ * by its own rows (a distribution of MeterRows) passes no `height`.
  */
 export function ChartFrame({
   height,
   summary,
   children,
 }: Readonly<{
-  height: FrameHeight;
+  height?: FrameHeight;
   /** One or two sentences: what the chart shows and where it ends. */
   summary?: string;
   children: ReactNode;
 }>) {
   return (
-    <div data-chart-frame={height} className={cn('grid min-w-0 *:min-w-0', FRAME_HEIGHT[height])}>
+    <div
+      data-chart-frame={height ?? 'auto'}
+      className={cn('grid min-w-0 *:min-w-0', height && FRAME_HEIGHT[height])}
+    >
       {summary ? <p className="sr-only">{summary}</p> : null}
       {children}
     </div>
