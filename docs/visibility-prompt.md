@@ -402,11 +402,25 @@ after reopening; its quality description is associated with its checkbox. The li
 prioritizes question text, topic, measurement and enabled state; classification
 is secondary detail on the question, available on keyboard focus and to screen readers.
 
-`/prompts` opens directly on the prompt library: Active/Archived, search and
-All filters (Topic first, then intent, stage, persona, enabled, branded) in one
+`/prompts` opens directly on the prompt library: every prompt of every prompt
+set in the project, each row naming its set, with adds going to the main brand
+set ([decision](decisions.md#one-prompt-library-across-every-prompt-set)).
+Active/Archived, search and
+All filters (Topic first, then intent, stage, persona, enabled, branded) sit in one
 control row over the full-width
 table with each prompt's topic tag, latest measured visibility and owned
-citation rate. A prompt's question opens its detail view (below). Its actions are
+citation rate. Those figures come from `GET /visibility/prompts?latest=prompt`
+([per-prompt latest](../frontend/services/api/src/visibility/prompt-latest.ts)):
+each prompt's own latest scored brand run in the default market, so a run of
+other prompts never hides an earlier result. The library shows every cohort a
+run scores (core, comparison and brand questions), each prompt in its own;
+headline totals elsewhere keep counting core prompts only. Change compares a
+prompt's latest measurement with the run that measured that same prompt before
+it: a first measurement reads Not applicable, and a pair whose frozen
+comparison key, text, versions or answers do not allow it reads Unknown, never
+zero. Commerce runs write no per-prompt scores, so a Commerce prompt has no
+figures here. Source: owner, 15 November 2026, choosing "Show every group" and
+Change "Vs its previous measurement". A prompt's question opens its detail view (below). Its actions are
 Bulk upload, Prompt Builder, Add prompt and **Launch audit**, which reuses the
 shared launch dialog and its admission/funding checks and stays disabled until
 the project has an active prompt. `/prompts?generate=1` opens the Prompt
@@ -903,7 +917,7 @@ Evidence-backed Opportunity sorting and a Trends summary are not planned
 `GET /visibility/prompts/{prompt_id}/history`
 ([prompt history](../frontend/services/api/src/visibility/prompt-history.ts))
 reads one tracked prompt in one market (`market`, optional `engine`, and
-`cohort`, which defaults to the prompt's own):
+`cohort`, which defaults to the prompt's own, brand questions included):
 the newest `trend_max_points` dashboard-ready brand runs that scored it in
 `prompt_metric_snapshots`, oldest first, each with its mention rate and owned
 citation rate over that run's persisted answers for the prompt, the four
