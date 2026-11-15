@@ -5,11 +5,9 @@ import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { ActionButton, ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
-import { RungTrail, type RungStatus, type TrailStep } from '@/components/ui/rung-trail';
+import { SetupSteps, type SetupStep } from '@/components/ui/rung-trail';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { pluralCount } from '@/lib/format';
 import { PROMPTS_HREF } from '@/lib/prompts/routes';
 
 /** Whether a loop stage has evidence yet. */
@@ -21,47 +19,36 @@ export function needsStart(data: CommandCenter): boolean {
   return !data.measurement || data.active_prompt_count === 0;
 }
 
-function startSteps(data: CommandCenter): TrailStep[] {
-  const prompts = data.active_prompt_count > 0;
+/** The steps in order; the first one not done is the one you are on, the rest wait. */
+function startSteps(data: CommandCenter): SetupStep[] {
   const running = data.next_action.kind === 'audit_running';
-  let runStatus: RungStatus = running ? 'running' : 'pending';
-  if (data.measurement) runStatus = 'done';
-  return [
-    {
-      id: 'prompts',
-      label: ACTIONS.addPrompts.label,
-      status: prompts ? 'done' : 'pending',
-      detail: prompts
-        ? pluralCount(data.active_prompt_count, 'active prompt')
-        : 'Choose the questions buyers ask that you want to track.',
-    },
-    {
-      id: 'run',
-      label: ACTIONS.launchRun.label,
-      status: runStatus,
-      detail: data.measurement
-        ? null
-        : 'Each engine answers your prompts; the run measures how they cite you.',
-    },
-    {
-      id: 'crawl',
-      label: 'Run crawl',
-      status: reached(data.loop.analyzed) ? 'done' : 'pending',
-      detail: 'Finds the page issues behind later Actions.',
-    },
+  const steps = [
+    { id: 'prompts', label: ACTIONS.addPrompts.label, done: data.active_prompt_count > 0 },
+    { id: 'run', label: ACTIONS.launchRun.label, done: Boolean(data.measurement) },
+    { id: 'crawl', label: 'Run crawl', done: reached(data.loop.analyzed) },
     {
       id: 'connect',
       label: 'Connect Search Console or GA4',
-      status: reached(data.loop.connected) ? 'done' : 'pending',
-      detail: 'Adds clicks and AI referrals to the Overview.',
+      done: reached(data.loop.connected),
     },
-  ];
+  ] as const;
+  const current = steps.findIndex((step) => !step.done);
+  return steps.map((step, index): SetupStep => {
+    if (step.done) return { id: step.id, label: step.label, state: 'done' };
+    if (index !== current) return { id: step.id, label: step.label, state: 'waiting' };
+    return {
+      id: step.id,
+      label: step.label,
+      state: step.id === 'run' && running ? 'running' : 'next',
+      action: <StartButton data={data} />,
+    };
+  });
 }
 
 /**
- * The one card a project sees before its Overview has figures: the steps as a
- * rung trail and the one button for the step that is next. Widgets join it as
- * their data arrives. Each step's button is its named action's one look.
+ * The one card a project sees before its Overview has figures: the steps as
+ * one checklist, the step you are on carrying its one button. Widgets join it
+ * as their data arrives. Each step's button is its named action's one look.
  */
 export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
   const firstRun = !data.measurement;
@@ -77,12 +64,7 @@ export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
             : 'No prompt is active, so the next run has nothing to measure.'}
         </SectionDescription>
       </SectionHeader>
-      <Stack gap="workspace">
-        <RungTrail label="Steps to your first results" steps={startSteps(data)} />
-        <div>
-          <StartButton data={data} />
-        </div>
-      </Stack>
+      <SetupSteps label="Steps to your first results" steps={startSteps(data)} />
     </Section>
   );
 }
@@ -99,5 +81,5 @@ function StartButton({ data }: Readonly<{ data: CommandCenter }>) {
         </ProjectLink>
       </Button>
     );
-  return <LaunchAuditButton />;
+  return <LaunchAuditButton secondary />;
 }

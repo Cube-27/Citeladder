@@ -666,7 +666,11 @@ describe('DashboardScreen', () => {
     // One start card with the steps and the one Launch run; no stack of empty widgets.
     const start = within(screen.getByRole('region', { name: 'Get your first results' }));
     expect(start.getByRole('list', { name: 'Steps to your first results' })).toBeVisible();
-    expect(start.getByRole('button', { name: 'Launch run' })).toBeVisible();
+    // The step you are on carries the card's one action; done steps say so.
+    const next = within(start.getByRole('listitem', { current: 'step' }));
+    expect(next.getByText('Next')).toBeVisible();
+    expect(next.getByRole('button', { name: 'Launch run' })).toBeVisible();
+    expect(start.getAllByRole('listitem')[0]).toHaveTextContent('Add prompts, Done');
     expect(screen.getAllByRole('button', { name: 'Launch run' })).toHaveLength(1);
     expect(screen.queryByRole('region', { name: 'Owned citation rate' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Project state' })).not.toBeInTheDocument();

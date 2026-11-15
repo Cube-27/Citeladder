@@ -209,6 +209,85 @@ function RungRow({
   );
 }
 
+/** A setup step: finished, the one you are on (`next`, or `running` once started), or still to come. */
+export type SetupStep = Readonly<{
+  id: string;
+  label: string;
+  state: 'done' | 'next' | 'running' | 'waiting';
+  /** The current step's one action. */
+  action?: ReactNode;
+}>;
+
+const SETUP_WORD = {
+  done: 'Done',
+  next: 'Next',
+  running: 'Running',
+  waiting: 'Waiting',
+} as const satisfies Record<SetupStep['state'], string>;
+
+const SETUP_MARKER = {
+  done: 'bg-positive text-surface',
+  next: 'bg-accent',
+  running: 'bg-accent',
+  waiting: 'bg-surface border border-control-line',
+} as const satisfies Record<SetupStep['state'], string>;
+
+/**
+ * SetupSteps — a checklist of setup steps, one line each on one connector:
+ * a 12px marker (positive with a check when done, accent for the step you are
+ * on, hollow while waiting), the title, its state word and, on the current
+ * step, that step's action. Rows sit 40px apart.
+ */
+export function SetupSteps({
+  steps,
+  label,
+}: Readonly<{ steps: readonly SetupStep[]; label: string }>) {
+  return (
+    <ol aria-label={label} className="m-0 flex min-w-0 list-none flex-col p-0">
+      {steps.map((step, index) => {
+        const current = step.state === 'next' || step.state === 'running';
+        return (
+          <li
+            key={step.id}
+            aria-current={current ? 'step' : undefined}
+            data-setup-step={step.state}
+            className="relative flex min-h-10 min-w-0 items-center gap-3"
+          >
+            {/* The connector runs through the markers' centres, between the first and last. */}
+            <span
+              aria-hidden
+              className={cn(
+                'bg-control-line absolute start-[5px] w-0.5',
+                index === 0 ? 'top-1/2' : 'top-0',
+                index === steps.length - 1 ? 'bottom-1/2' : 'bottom-0',
+              )}
+            />
+            <span
+              aria-hidden
+              className={cn(
+                'relative grid size-3 shrink-0 place-items-center rounded-[4px]',
+                SETUP_MARKER[step.state],
+              )}
+            >
+              {step.state === 'done' ? <Check className="size-2.5" strokeWidth={3} /> : null}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 py-1">
+              <span className={textRole(current ? 'label' : 'body', 'text-ink min-w-0')}>
+                {step.label}
+              </span>
+              <span className={textRole('caption', 'text-ink-2')}>
+                <span className="sr-only">, </span>
+                {SETUP_WORD[step.state]}
+              </span>
+              {current && step.action ? <span className="ms-auto">{step.action}</span> : null}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 /**
  * A trail folded under a one-line summary: a finished turn's activity opens
  * from its summary; a running one shows its status and seconds in a line
