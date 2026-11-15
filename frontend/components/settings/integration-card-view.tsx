@@ -30,7 +30,6 @@ import {
   Section,
   SectionContent,
   SectionDescription,
-  SectionEyebrow,
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
@@ -103,19 +102,17 @@ function GrantHeader({
   const label = grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected';
 
   return (
-    <SectionHeader
-      actions={
-        badge.variant === 'status' ? (
+    <SectionHeader>
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
+        <SectionTitle>{meta.title}</SectionTitle>
+        {badge.variant === 'status' ? (
           <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
             {label}
           </StatusMark>
         ) : (
           <Tag data-testid={`grant-status-${family}`}>{label}</Tag>
-        )
-      }
-    >
-      <SectionEyebrow>Connection</SectionEyebrow>
-      <SectionTitle>{meta.title}</SectionTitle>
+        )}
+      </div>
       <SectionDescription>{meta.blurb}</SectionDescription>
     </SectionHeader>
   );

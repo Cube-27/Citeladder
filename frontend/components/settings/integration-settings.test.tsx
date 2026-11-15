@@ -225,7 +225,13 @@ describe('IntegrationSettings — grant cards', () => {
       'Reconnect needed',
     );
     expect(within(msCard).getByText(/needs you to sign in again/)).toBeInTheDocument();
-    expect(within(msCard).getByText('Connection')).toBeInTheDocument();
+    // The title alone names the card, its status on the title's line.
+    const msTitle = within(msCard).getByRole('heading', { level: 2 });
+    expect(msTitle).toHaveTextContent('Bing');
+    expect(msTitle.parentElement).toContainElement(
+      within(msCard).getByTestId('grant-status-microsoft'),
+    );
+    expect(within(msCard).queryByText('Connection')).not.toBeInTheDocument();
     expect(within(msCard).queryByText('OAuth grant')).not.toBeInTheDocument();
     expect(
       within(msCard).getByRole('button', { name: 'Sync Bing Webmaster Tools now' }),

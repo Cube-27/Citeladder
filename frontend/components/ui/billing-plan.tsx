@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { textRole } from '@/components/ui/typography';
-import { Section, SectionEyebrow, SectionHeader } from '@/components/ui/section';
+import { Section, SectionHeader } from '@/components/ui/section';
 
 /**
  * BillingPlan — the card that opens the Billing page: what the workspace is
@@ -27,7 +27,6 @@ export function BillingPlan({
   return (
     <Section aria-label={label}>
       <SectionHeader actions={action}>
-        <SectionEyebrow>{label}</SectionEyebrow>
         <div className="flex min-w-0 flex-wrap items-center gap-2">
           <h2 className={textRole('heading', 'min-w-0 break-words')}>{name}</h2>
           {badge}
