@@ -1831,10 +1831,12 @@ a.focus-ring:active .type-caption {
       grid-column: 1 / -1;
       margin-block-end: var(--card-padding);
     }
-  }
-  [data-settings-sections] .surface-section > :is([data-settings-wide], :has([data-data-table-frame])) {
-    grid-column: 1 / -1;
-    max-width: none;
+    [data-settings-sections]
+      .surface-section:not(.surface-section .surface-section)
+      > :is([data-settings-wide], :has([data-data-table-frame])) {
+      grid-column: 1 / -1;
+      max-width: none;
+    }
   }
   .surface-section {
     --section-above: var(--workspace-gap);

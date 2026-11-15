@@ -36,8 +36,8 @@ function draftAttribute(state: DraftState) {
 /** The draft face alone, for a container that lays out its own content. */
 function draftSheetClasses(state: DraftState, className?: string) {
   return cn(
-    'bg-surface rounded-card shadow-card p-[var(--card-padding)]',
-    state === 'declined' ? 'bg-well shadow-none' : 'edge-draft',
+    'rounded-card p-[var(--card-padding)]',
+    state === 'declined' ? 'bg-well' : 'bg-surface shadow-card edge-draft',
     className,
   );
 }
