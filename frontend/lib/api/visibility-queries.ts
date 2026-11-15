@@ -143,7 +143,7 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getMarketVisibility(scope.projectId, params, scoped(scope, signal)),
     }),
-  /** One run's prompt rows; `null` reads the latest default-market run (Prompts table, Overview). */
+  /** One run's prompt rows; `null` reads the latest default-market run (Overview). */
   prompts: (scope: ProjectScope, auditId: string | null = null) =>
     queryOptions({
       queryKey: queryKeys.visibility.prompts(scope, auditId),
@@ -153,6 +153,15 @@ export const visibilityQueries = {
           auditId ?? undefined,
           scoped(scope, signal),
         ),
+    }),
+  /** Each tracked prompt's row from the run that last measured it (Prompts table). */
+  latestPerPrompt: (scope: ProjectScope) =>
+    queryOptions({
+      queryKey: queryKeys.visibility.latestPerPrompt(scope),
+      queryFn: ({ signal }) =>
+        visibilityApi.getPromptMetrics(scope.projectId, undefined, scoped(scope, signal), {
+          latest: 'prompt',
+        }),
     }),
   promptHistory: (
     scope: ProjectScope,

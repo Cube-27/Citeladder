@@ -47,13 +47,20 @@ function metric(visibilityRate: number) {
   };
 }
 
-/** The library's reads, with the latest run's figures answered by `figures`. */
+/**
+ * The library's reads, with each prompt's own latest figures answered by
+ * `figures`. Only the latest run alone would hide prompts an earlier run measured.
+ */
 function libraryReads(figures: () => Promise<Response>) {
   mswServer.use(
     http.get('/api/v1/prompt-sets', () => HttpResponse.json(makeSetList([set]))),
     http.get(`/api/v1/prompt-sets/${set.id}/candidates`, () => HttpResponse.json([])),
     http.get(`/api/v1/projects/${project.id}/topics`, () => HttpResponse.json([])),
-    http.get(`/api/v1/projects/${project.id}/visibility/prompts`, figures),
+    http.get(`/api/v1/projects/${project.id}/visibility/prompts`, ({ request }) =>
+      new URL(request.url).searchParams.get('latest') === 'prompt'
+        ? figures()
+        : HttpResponse.json({ error: { message: 'latest run alone' } }, { status: 400 }),
+    ),
   );
 }
 

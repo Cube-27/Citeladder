@@ -8,19 +8,17 @@ import type { PromptMeasurement } from './prompt-table';
 
 type PromptScope = Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>;
 
-/**
- * The latest default-market run's prompt rows: one query shared by the prompt
- * table and Overview, so both read the same cache entry the same way.
- */
+/** The latest default-market run's prompt rows (Overview). */
 export function useLatestPromptMetrics(scope: PromptScope) {
   return useQuery(visibilityQueries.prompts(scope));
 }
 
 /**
- * What the project's latest run measured for each prompt.
+ * What the run that last measured each prompt found, so a run of other
+ * prompts never hides an earlier result.
  *
  * Keyed by the SOURCE prompt id, because that is what this table's rows are.
- * A prompt added since the last run simply has no entry, which reads as
+ * A prompt no run has measured simply has no entry, which reads as
  * "Not measured" rather than a fabricated zero.
  *
  * Undefined until the first read settles: whether a run exists decides the
@@ -30,7 +28,7 @@ export function useLatestPromptMetrics(scope: PromptScope) {
 export function useLatestPromptMeasurements(
   scope: PromptScope,
 ): ReadonlyMap<string, PromptMeasurement> | undefined {
-  const result = useLatestPromptMetrics(scope);
+  const result = useQuery(visibilityQueries.latestPerPrompt(scope));
   return useMemo(() => {
     if (result.isLoading) return undefined;
     const map = new Map<string, PromptMeasurement>();
