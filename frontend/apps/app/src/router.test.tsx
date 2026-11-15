@@ -124,12 +124,13 @@ describe('application route recovery', () => {
 
     // The shell's `main` is there from the first frame; the error arrives in it.
     const heading = await screen.findByRole('heading', {
-      level: 2,
+      level: 1,
       name: 'This page could not be opened',
     });
     const main = screen.getByRole('main');
     expect(main).toHaveAttribute('id', 'main');
-    expect(main).toContainElement(heading);
+    // One heading: the page's own (FOC-03).
+    expect(within(main).getAllByRole('heading')).toEqual([heading]);
     expect(within(main).getByRole('button', { name: 'Reload page' })).toBeInTheDocument();
     expect(within(main).getByRole('link', { name: 'Go to Overview' })).toHaveAttribute(
       'href',
@@ -145,10 +146,10 @@ describe('application route recovery', () => {
     render(<RouterProvider router={router} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Finish session' }));
-    expect(
-      await screen.findByRole('heading', { name: 'There is no page at this address' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Application shell' })).toBeInTheDocument();
+    const heading = await screen.findByRole('heading', { level: 1, name: 'Page not found' });
+    const shell = screen.getByRole('region', { name: 'Application shell' });
+    expect(within(shell).getAllByRole('heading')).toEqual([heading]);
+    expect(screen.getByText(/There is no page at this address/)).toBeInTheDocument();
     router.dispose();
   });
 });

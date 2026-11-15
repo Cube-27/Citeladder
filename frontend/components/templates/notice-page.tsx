@@ -42,8 +42,9 @@ type NoticeContent = Readonly<{
  * The full-page Notice in a card, its label in `caption-strong` (the tone's
  * word, or `overline`): the tone's glyph beside the heading (never colour
  * alone), the sentence 8 under it (at most 72 characters wide) and the ways
- * forward 16 under that, on the main column's one left edge. `level` 1 when it is
- * the page's only heading (outside the shell), 2 under a masthead.
+ * forward 16 under that, on the main column's one left edge. Outside the
+ * shell its heading is the page's `h1`; under a masthead (`heading` null) the
+ * masthead's title is the one heading and the glyph leads the sentence (FOC-03).
  */
 function NoticeBlock({
   tone,
@@ -52,12 +53,11 @@ function NoticeBlock({
   overline,
   children,
   actions,
-  level,
-}: NoticeContent & Readonly<{ level: 1 | 2 }>) {
+}: Omit<NoticeContent, 'heading'> & Readonly<{ heading: string | null }>) {
   // One loader for a wait that passes through several owners: it hands over without a blank beat.
-  if (tone === 'loading') return <StateBlock kind="loading" label={heading} />;
-  const Heading = level === 1 ? 'h1' : 'h2';
+  if (tone === 'loading') return <StateBlock kind="loading" label={heading ?? undefined} />;
   const [glyph, ink, word] = TONE[tone];
+  const mark = <Icon icon={icon ?? glyph} className={cn('mt-1 size-5 shrink-0', ink)} />;
   return (
     <section
       data-notice-tone={tone}
@@ -65,12 +65,19 @@ function NoticeBlock({
     >
       <p className={textRole('captionStrong')}>{overline ?? word}</p>
       <div className="flex flex-col gap-2">
-        <div className="flex items-start gap-2">
-          <Icon icon={icon ?? glyph} className={cn('mt-1 size-5 shrink-0', ink)} />
-          <Heading className={textRole('display', 'min-w-0 text-balance')}>{heading}</Heading>
-        </div>
+        {heading ? (
+          <div className="flex items-start gap-2">
+            {mark}
+            <h1 className={textRole('display', 'min-w-0 text-balance')}>{heading}</h1>
+          </div>
+        ) : null}
         {children ? (
-          <div className={textRole('body', 'flex max-w-[72ch] flex-col gap-2')}>{children}</div>
+          <div className="flex items-start gap-2">
+            {heading ? null : mark}
+            <div className={textRole('body', 'flex max-w-[72ch] min-w-0 flex-col gap-2')}>
+              {children}
+            </div>
+          </div>
         ) : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
@@ -79,28 +86,30 @@ function NoticeBlock({
 }
 
 /**
- * Notice page inside the shell: the masthead named for
- * the page, then the full-page Notice where the content begins. Not found, a
- * screen that failed, a workspace with no projects, the workspace loading.
+ * Notice page inside the shell: the masthead titled with the notice's heading
+ * (its one `h1`), then the Notice card where the content begins. Not found, a
+ * screen that failed, a workspace with no projects, the workspace loading
+ * (which keeps the route's title).
  */
-export function NoticePage({ title, ...notice }: NoticeContent & Readonly<{ title?: string }>) {
+export function NoticePage({ heading, ...notice }: NoticeContent) {
+  const loading = notice.tone === 'loading';
   return (
-    <PageFrame title={title}>
-      <NoticeBlock {...notice} level={2} />
+    <PageFrame title={loading ? undefined : heading}>
+      <NoticeBlock {...notice} heading={loading ? heading : null} />
     </PageFrame>
   );
 }
 
 /**
- * Notice page outside the shell, before it can open (a route that failed,
- * access that ended, the session loading): the page's own `main` and its
- * one heading, 48 from the top. The caller supplies the frame around it.
+ * Notice page before the shell can open (a route that failed, access that
+ * ended, the session loading), inside `ShellFallback`'s `main`: the card and
+ * its one heading, 48 from the top.
  */
 export function NoticeScreen(notice: NoticeContent) {
   useDocumentTitle(notice.tone === 'loading' ? undefined : notice.heading);
   return (
-    <main id="main" className="flex min-w-0 flex-col pt-[var(--flow-gap)]">
-      <NoticeBlock {...notice} level={1} />
-    </main>
+    <div className="flex min-w-0 flex-col pt-[var(--flow-gap)]">
+      <NoticeBlock {...notice} />
+    </div>
   );
 }

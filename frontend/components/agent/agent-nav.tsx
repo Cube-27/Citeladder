@@ -1,12 +1,13 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { MessagesSquare } from 'lucide-react';
+import { ChevronDown, MessagesSquare } from 'lucide-react';
 
 import { AGENT_NAV_ITEMS, NEW_CHAT_ITEM } from '@/components/layout/nav-items';
 import { DestinationRows, useDestinations } from '@/components/layout/sidebar-nav';
 import { RailFlyout, RailLink } from '@/components/layout/sidebar-rail';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { HistoryList, HistoryNotice, HistoryRow, HistoryRows } from '@/components/ui/history-list';
 import { MenuItem, MenuLinkItem } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
@@ -111,6 +112,7 @@ function ChatSection() {
       more={
         list.more ? (
           <Button variant="quiet" disabled={list.more.busy} onClick={list.more.load}>
+            <Icon icon={ChevronDown} />
             Show more chats
           </Button>
         ) : null
