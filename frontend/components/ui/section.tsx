@@ -96,6 +96,11 @@ export function SectionTitle({
   );
 }
 
+/** SectionTitleLine — the title with the card's status right after it, 8 apart. */
+export function SectionTitleLine({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div>;
+}
+
 /** SectionDescription — one or two sentences under the title, `body` in `ink-2`, at most 72 characters wide. */
 export function SectionDescription({
   children,

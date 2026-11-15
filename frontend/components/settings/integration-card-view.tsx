@@ -32,6 +32,7 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
+  SectionTitleLine,
 } from '@/components/ui/section';
 
 type GrantStatus = IntegrationConnection['grant_status'];
@@ -103,7 +104,7 @@ function GrantHeader({
 
   return (
     <SectionHeader>
-      <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <SectionTitleLine>
         <SectionTitle>{meta.title}</SectionTitle>
         {badge.variant === 'status' ? (
           <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
@@ -112,7 +113,7 @@ function GrantHeader({
         ) : (
           <Tag data-testid={`grant-status-${family}`}>{label}</Tag>
         )}
-      </div>
+      </SectionTitleLine>
       <SectionDescription>{meta.blurb}</SectionDescription>
     </SectionHeader>
   );
