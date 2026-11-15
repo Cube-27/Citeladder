@@ -28,7 +28,12 @@ import {
   type ComparisonCell,
 } from './comparison.ts';
 import { answerCounts, answerRates } from '../analysis/aggregate.ts';
-import { brandIdentities, leadingBrands, type BrandCount } from './brand-identities.ts';
+import {
+  brandIdentities,
+  leadingBrands,
+  namedBrands,
+  type BrandCount,
+} from './brand-identities.ts';
 import { round2 } from './metrics.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
 import { marketOf, type RunScope } from './runs.ts';
@@ -411,42 +416,6 @@ async function loadOutcomes(
     namedBrands(db, scope, { auditIds, cohort, engine }),
   ]);
   return { prompts, answers: answerRows, tasks, mentions };
-}
-
-/**
- * The brands each prompt's answers named, over the same answers its rates
- * count: the tracked brand and every competitor, by distinct answers.
- */
-async function namedBrands(
-  db: Database,
-  scope: RunScope,
-  query: { auditIds: readonly string[]; cohort: string; engine: string | null },
-) {
-  const engine = query.engine ? sql`and answer.logical_engine = ${query.engine}` : sql``;
-  const answers = sql`
-    select answer.id, answer.audit_id, answer.prompt_index
-    from response_analyses answer
-    where answer.workspace_id = ${scope.workspaceId}
-      and answer.audit_id in (${sql.join(query.auditIds)})
-      and answer.cohort in (${sql.join([...selectedCohorts(query.cohort)])})
-      ${engine}`;
-  const { rows } = await sql<BrandCount & { audit_id: string; prompt_index: number }>`
-    with answer as (${answers})
-    select answer.audit_id, answer.prompt_index, 'brand' as kind, mention.brand_name as name,
-      count(distinct answer.id)::int as responses
-    from answer join brand_mentions mention on mention.analysis_id = answer.id
-      and mention.workspace_id = ${scope.workspaceId}
-    where mention.brand_name <> ''
-    group by answer.audit_id, answer.prompt_index, mention.brand_name
-    union all
-    select answer.audit_id, answer.prompt_index, 'competitor' as kind,
-      mention.competitor_name as name, count(distinct answer.id)::int as responses
-    from answer join competitor_mentions mention on mention.analysis_id = answer.id
-      and mention.workspace_id = ${scope.workspaceId}
-    where mention.competitor_name <> ''
-    group by answer.audit_id, answer.prompt_index, mention.competitor_name
-  `.execute(db);
-  return rows;
 }
 
 /** Fill each row's frozen prompt facts, outcome counts and baseline change, in place. */
