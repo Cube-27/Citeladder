@@ -12,7 +12,7 @@ import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/download';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Value } from '@/components/ui/value';
 
 const COLUMNS: readonly DataTableColumn[] = [
@@ -46,8 +46,13 @@ function taxBreakdown(invoice: BillingInvoice): string {
   return parts.length > 0 ? parts.join(' · ') : TREATMENT_LABEL[invoice.tax_treatment];
 }
 
-function invoicesState(loading: boolean, count: number): DataTableState | undefined {
-  if (loading) return { kind: 'loading', label: 'Loading billing documents…' };
+type InvoicesRead = RetryableRead & Readonly<{ isError: boolean; isLoading: boolean }>;
+
+function invoicesState(read: InvoicesRead, count: number): DataTableState | undefined {
+  if (read.isError) {
+    return { kind: 'error', ...readErrorProps(read), fallback: 'Receipts could not be loaded.' };
+  }
+  if (read.isLoading) return { kind: 'loading', label: 'Loading billing documents…' };
   if (count > 0) return undefined;
   return {
     kind: 'empty',
@@ -64,12 +69,10 @@ function downloadLabel(invoice: BillingInvoice, downloading: string | null): str
 
 export function InvoiceHistory({
   invoices,
-  loading,
-  error,
+  read,
 }: Readonly<{
   invoices: BillingInvoice[];
-  loading: boolean;
-  error: boolean;
+  read: InvoicesRead;
 }>) {
   // The receipt belongs to a workspace, so the download names one: the
   // endpoint is workspace-scoped and would otherwise fall back to whatever
@@ -92,51 +95,48 @@ export function InvoiceHistory({
 
   return (
     <Stack gap="compact">
-      {error ? <Notice tone="negative">Receipts could not be loaded.</Notice> : null}
       {downloadError ? (
         <Notice tone="negative">Receipt download failed. Please retry.</Notice>
       ) : null}
-      {error ? null : (
-        <DataTable
-          title="Invoices"
-          description="Invoices with their receipts, and any credit notes."
-          columns={COLUMNS}
-          minWidth="lg"
-          state={invoicesState(loading, invoices.length)}
-        >
-          {invoices.map((invoice) => (
-            <TableRow key={invoice.invoice_id}>
-              <TableCell>
-                <ClampText lines={1} className={textRole('emphasis')}>
-                  {invoice.status === 'credited'
-                    ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
-                    : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
-                </ClampText>
-              </TableCell>
-              {/* The date alone, aligned as every date column is; the
+      <DataTable
+        title="Invoices"
+        description="Invoices with their receipts, and any credit notes."
+        columns={COLUMNS}
+        minWidth="lg"
+        state={invoicesState(read, invoices.length)}
+      >
+        {invoices.map((invoice) => (
+          <TableRow key={invoice.invoice_id}>
+            <TableCell>
+              <ClampText lines={1} className={textRole('emphasis')}>
+                {invoice.status === 'credited'
+                  ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
+                  : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
+              </ClampText>
+            </TableCell>
+            {/* The date alone, aligned as every date column is; the
                   document names whether it was paid or credited. */}
-              <TableCell numeric>
-                <DisplayTime value={invoice.paid_at} dateOnly />
-              </TableCell>
-              <TableCell>
-                <ClampText lines={1}>{taxBreakdown(invoice)}</ClampText>
-              </TableCell>
-              <TableCell numeric>
-                <Value value={formatMoney(invoice.amount_paid, 2)} />
-              </TableCell>
-              <TableActionsCell>
-                <Button
-                  variant="secondary"
-                  disabled={downloading === invoice.invoice_id}
-                  onClick={() => void download(invoice)}
-                >
-                  {downloadLabel(invoice, downloading)}
-                </Button>
-              </TableActionsCell>
-            </TableRow>
-          ))}
-        </DataTable>
-      )}
+            <TableCell numeric>
+              <DisplayTime value={invoice.paid_at} dateOnly />
+            </TableCell>
+            <TableCell>
+              <ClampText lines={1}>{taxBreakdown(invoice)}</ClampText>
+            </TableCell>
+            <TableCell numeric>
+              <Value value={formatMoney(invoice.amount_paid, 2)} />
+            </TableCell>
+            <TableActionsCell>
+              <Button
+                variant="secondary"
+                disabled={downloading === invoice.invoice_id}
+                onClick={() => void download(invoice)}
+              >
+                {downloadLabel(invoice, downloading)}
+              </Button>
+            </TableActionsCell>
+          </TableRow>
+        ))}
+      </DataTable>
     </Stack>
   );
 }
