@@ -6,6 +6,7 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
@@ -135,23 +136,25 @@ function BrandName({
   // keyboard focus as well as on hover; a name that fits shows no tooltip.
   return (
     <Tooltip content={row.name} describe={false} shouldOpen={nameIsCut}>
-      <Pressable
-        aria-pressed={selected}
-        aria-label={
-          selected ? `Stop plotting ${row.name} on its own` : `Plot ${row.name} on its own`
-        }
-        // The name truncates inside its own box before the "You" tag beside it,
-        // never running under it.
-        className="inline-flex min-h-6 w-auto min-w-0 items-center overflow-hidden hover:underline"
-        onClick={(event) => {
-          event.stopPropagation();
-          onSelect(selected ? null : row.name);
-        }}
-      >
-        <span data-brand-name="" className={textRole('emphasis', 'block truncate')}>
-          {row.name}
-        </span>
-      </Pressable>
+      <TextLink asChild text="inherit">
+        <Pressable
+          aria-pressed={selected}
+          aria-label={
+            selected ? `Stop plotting ${row.name} on its own` : `Plot ${row.name} on its own`
+          }
+          // The name truncates inside its own box before the "You" tag beside it,
+          // never running under it.
+          className="inline-flex min-h-6 w-auto min-w-0 items-center overflow-hidden"
+          onClick={(event) => {
+            event.stopPropagation();
+            onSelect(selected ? null : row.name);
+          }}
+        >
+          <span data-brand-name="" className={textRole('emphasis', 'block truncate')}>
+            {row.name}
+          </span>
+        </Pressable>
+      </TextLink>
     </Tooltip>
   );
 }

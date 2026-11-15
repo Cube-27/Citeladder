@@ -357,7 +357,11 @@ describe('Engine availability changes', () => {
     expect(
       await screen.findByRole('button', { name: 'ChatGPT Search, not connected' }),
     ).toHaveAttribute('aria-pressed', 'false');
-    expect(screen.getByRole('button', { name: 'Launch run' })).toBeDisabled();
+    // The disabled primary says why, beside it and as its description.
+    const launch = screen.getByRole('button', { name: 'Launch run' });
+    expect(launch).toBeDisabled();
+    expect(launch).toHaveAccessibleDescription('Choose at least one engine to launch a run.');
+    expect(screen.getByText('Choose at least one engine to launch a run.')).toBeVisible();
   });
 });
 

@@ -4,6 +4,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TitledSection } from '@/components/ui/section';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import type { Visibility } from '@citeladder/contracts';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatCount } from '@/lib/format';
@@ -57,12 +58,14 @@ export function EngineComparison({
                 title
                 primary={
                   onSelect ? (
-                    <Pressable
-                      className="inline-flex min-h-6 w-auto items-center underline-offset-3 hover:underline"
-                      onClick={() => onSelect(engine.logical_engine)}
-                    >
-                      {catalog.label(engine.logical_engine)}
-                    </Pressable>
+                    <TextLink asChild text="inherit">
+                      <Pressable
+                        className="inline-flex min-h-6 w-auto items-center"
+                        onClick={() => onSelect(engine.logical_engine)}
+                      >
+                        {catalog.label(engine.logical_engine)}
+                      </Pressable>
+                    </TextLink>
                   ) : (
                     catalog.label(engine.logical_engine)
                   )

@@ -15,7 +15,7 @@ import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import {
   auditablePrompts,
   buildLaunchPayload,
-  canLaunch,
+  launchBlocker,
   DEFAULT_REPETITIONS,
   promptBatches,
 } from '@/lib/runs/launch';
@@ -205,7 +205,8 @@ export function LaunchDialog({
   };
   // The accepted repetition range arrives with the prompt-set list; no payload is built before it.
   const limits = promptSetsQuery.data?.limits ?? null;
-  const ready = limits !== null && canLaunch(selection);
+  const blocker = limits === null ? 'Checking the run limits…' : launchBlocker(selection);
+  const ready = blocker === null;
   const estimateQuery = useQuery({
     ...runsQueries.estimate(
       workspaceId,
@@ -270,7 +271,7 @@ export function LaunchDialog({
       setConnecting={setConnecting}
       promptSetLocked={fixedSelection.locked}
       promptSelectionLabel={fixedSelection.label}
-      selectionReady={ready}
+      blocker={blocker}
     />
   );
 }

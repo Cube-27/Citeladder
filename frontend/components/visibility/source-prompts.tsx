@@ -1,9 +1,10 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, MessageSquareText } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import {
   ExecutionEvidenceDrawer,
   type EvidenceSubject,
@@ -203,6 +204,7 @@ function PromptRow({
             })
           }
         >
+          <Icon icon={MessageSquareText} />
           Open answer
         </Button>
       </TableCell>

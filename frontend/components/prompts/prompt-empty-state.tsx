@@ -1,20 +1,20 @@
 import { MessageSquarePlus } from 'lucide-react';
 
-import { Button } from '@/components/ui/button';
 import { StateBlock } from '@/components/ui/state-block';
+
+import { AddPromptsMenu, type AddPromptsHandlers } from './prompt-toolbar';
 
 /**
  * Shown when the active project's prompt set has no prompts. Onboarding creates
- * none, so this is the first thing a new project's library shows. Generating
- * is the primary path; adding by hand is the equal alternative, and CSV import
- * stays in the page actions. A role that may not add prompts reads that there
- * are none, with nothing to choose.
+ * none, so this is the first thing a new project's library shows. It carries
+ * "Add prompts" itself (the masthead leaves it out meanwhile). A role that may
+ * not add prompts reads that there are none, with nothing to choose.
  */
 export function PromptEmptyState({
   add,
 }: Readonly<{
   /** The ways to add prompts, for a role that may; omitted otherwise. */
-  add?: Readonly<{ onGenerate: () => void; onAdd: () => void }>;
+  add?: AddPromptsHandlers;
 }>) {
   if (!add) {
     return (
@@ -26,23 +26,13 @@ export function PromptEmptyState({
       />
     );
   }
-  const { onGenerate, onAdd } = add;
   return (
     <StateBlock
       kind="empty"
       icon={MessageSquarePlus}
       heading="Choose the questions you want to track"
-      description="Generate buyer questions from your confirmed offerings, or add your own."
-      action={
-        <>
-          <Button variant="primary" onClick={onGenerate}>
-            Generate prompts
-          </Button>
-          <Button variant="secondary" onClick={onAdd}>
-            Add prompt
-          </Button>
-        </>
-      }
+      description="Generate buyer questions from your confirmed offerings with Prompt Builder, write your own, or upload a file."
+      action={<AddPromptsMenu {...add} />}
     />
   );
 }

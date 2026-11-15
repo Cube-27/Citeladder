@@ -1,4 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { Icon } from '@/components/ui/icon';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
@@ -50,14 +52,17 @@ export type SourceTableFrame = Pick<
   'toolbar' | 'pager' | 'busy' | 'state' | 'pageSize'
 >;
 
-/** The name cell: the whole cell opens the source's own level. */
-function OpenSource({ onOpen, children }: Readonly<{ onOpen: () => void; children: ReactNode }>) {
+/** The name cell: the whole cell opens the source's own level, and its chevron says so at rest. */
+export function OpenSource({
+  onOpen,
+  children,
+}: Readonly<{ onOpen: () => void; children: ReactNode }>) {
   return (
-    <Pressable
-      onClick={onOpen}
-      className="flex max-w-full min-w-0 items-center transition-colors hover:underline"
-    >
-      {children}
+    <Pressable onClick={onOpen} className="block min-w-0">
+      <Inline as="span" className="justify-between">
+        <span className="min-w-0">{children}</span>
+        <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
+      </Inline>
     </Pressable>
   );
 }

@@ -6,7 +6,7 @@ import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { TrafficUrlButton } from './url-panel';
 import { patternLabel } from '@/lib/ai-traffic/vocabulary';
 import { formatWindowDate } from '@/lib/format';
-import { Notice, readErrorProps } from '@/components/ui/notice';
+import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -51,9 +51,17 @@ export function InsightStrip({
         />
       ) : null}
       {query.isLoading ? <StateBlock kind="loading" label="Loading observed patterns…" /> : null}
-      {data?.coverage.notice ? <Notice tone="info">{data.coverage.notice}</Notice> : null}
-      {data && !data.patterns.length && !data.coverage.notice ? (
-        <StateBlock kind="empty" inline message={nothingObservedLine(data.coverage)} />
+      {/* Coverage limits are this card's own caveat, said in the card rather
+          than as a banner that repeats the key figures' connect buttons. */}
+      {data && !data.patterns.length ? (
+        <StateBlock
+          kind="empty"
+          inline
+          message={data.coverage.notice ?? nothingObservedLine(data.coverage)}
+        />
+      ) : null}
+      {data?.patterns.length && data.coverage.notice ? (
+        <SectionDescription>{data.coverage.notice}</SectionDescription>
       ) : null}
       {data?.patterns.length ? (
         <LedgerList>

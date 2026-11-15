@@ -1,5 +1,5 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Check, Sparkles } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, SlidersHorizontal, Sparkles, X } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -281,6 +281,7 @@ function BuilderFooter({
       return (
         <Inline className="justify-end">
           <Button variant="quiet" onClick={onClose}>
+            <Icon icon={X} />
             Cancel
           </Button>
           <Button
@@ -341,9 +342,11 @@ function BuilderFooter({
       return (
         <Inline className="justify-end">
           <Button variant="quiet" onClick={onClose}>
+            <Icon icon={X} />
             Close
           </Button>
           <Button variant="secondary" onClick={() => setStep('distribution')}>
+            <Icon icon={SlidersHorizontal} />
             Adjust run
           </Button>
         </Inline>

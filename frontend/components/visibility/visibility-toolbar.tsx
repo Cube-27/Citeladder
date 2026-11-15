@@ -257,13 +257,18 @@ function outcomeFilter({ outcome, onChangeOutcome }: ToolbarProps): FilterDefini
   });
 }
 
-/** Header actions beside the page title: run a new audit, and how the metrics work. */
-export function VisibilityActions() {
+/**
+ * Header actions beside the page title: run a new audit, and how the metrics
+ * work. `launch: false` when the empty state carries Launch run itself.
+ */
+export function VisibilityActions({ launch = true }: Readonly<{ launch?: boolean }>) {
   return (
     <>
-      <MastheadPrimary>
-        <LaunchAuditButton />
-      </MastheadPrimary>
+      {launch ? (
+        <MastheadPrimary>
+          <LaunchAuditButton />
+        </MastheadPrimary>
+      ) : null}
       <Tooltip content="How these metrics are calculated">
         <IconButton
           variant="secondary"

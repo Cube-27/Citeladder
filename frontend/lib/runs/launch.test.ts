@@ -6,8 +6,8 @@ import {
   auditablePrompts,
   batchLabel,
   buildLaunchPayload as buildWithLimits,
-  canLaunch,
   clampRepetitions,
+  launchBlocker,
   launchReadiness,
   promptBatches,
   PROMPT_BATCH_SIZE,
@@ -45,16 +45,20 @@ describe('clampRepetitions', () => {
   });
 });
 
-describe('canLaunch', () => {
-  it('requires a prompt set and at least one engine', () => {
-    expect(canLaunch(selection())).toBe(true);
-    expect(canLaunch(selection({ promptSetId: null }))).toBe(false);
-    expect(canLaunch(selection({ engines: [] }))).toBe(false);
+describe('launchBlocker', () => {
+  it('requires a prompt set and at least one engine, and says which is missing', () => {
+    expect(launchBlocker(selection())).toBeNull();
+    expect(launchBlocker(selection({ promptSetId: null }))).toBe(
+      'Choose a prompt set to launch a run.',
+    );
+    expect(launchBlocker(selection({ engines: [] }))).toBe(
+      'Choose at least one engine to launch a run.',
+    );
     expect(
-      canLaunch(
+      launchBlocker(
         selection({ promptSetId: null, promptIds: ['33333333-3333-4333-8333-333333333333'] }),
       ),
-    ).toBe(true);
+    ).toBeNull();
   });
 });
 
@@ -66,7 +70,9 @@ describe('markets', () => {
       null,
       GERMANY,
     ]);
-    expect(canLaunch(selection({ marketIds: [] }))).toBe(false);
+    expect(launchBlocker(selection({ marketIds: [] }))).toBe(
+      'Choose at least one market to launch a run.',
+    );
   });
 
   it('toggles the default market apart from a named one', () => {

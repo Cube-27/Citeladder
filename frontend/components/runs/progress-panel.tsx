@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { CircleStop, Download, RotateCcw } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
@@ -6,6 +7,9 @@ import { MeasurementContext } from '@/components/runs/measurement-context';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { RungMeter } from '@/components/ui/rung-meter';
@@ -89,22 +93,53 @@ export function RunActions({
   return (
     <>
       <Button variant="secondary" onClick={() => onExport('csv')} disabled={exporting !== null}>
+        <Icon icon={Download} />
         {exporting === 'csv' ? 'Exporting…' : 'Export CSV'}
       </Button>
       <Button variant="secondary" onClick={() => onExport('md')} disabled={exporting !== null}>
+        <Icon icon={Download} />
         {exporting === 'md' ? 'Exporting…' : 'Export MD'}
       </Button>
       {onCancel && (cancelable || cancelPending) ? (
         <Button variant="danger" onClick={onCancel} disabled={cancelPending}>
+          <Icon icon={CircleStop} />
           {cancelPending ? 'Cancelling…' : 'Cancel run'}
         </Button>
       ) : null}
       {audit.failed_count > 0 && onRerunFailures ? (
-        <Button variant="secondary" onClick={onRerunFailures} disabled={rerunPending}>
-          {rerunPending ? 'Creating repair…' : 'Rerun failed'}
-        </Button>
+        <RerunFailed
+          primary={audit.status === 'failed'}
+          onRerun={onRerunFailures}
+          pending={rerunPending}
+        />
       ) : null}
     </>
+  );
+}
+
+/** On a failed run, rerunning its failures is what the page is for: the view's primary. */
+function RerunFailed({
+  primary,
+  onRerun,
+  pending,
+}: Readonly<{ primary: boolean; onRerun: () => void; pending: boolean }>) {
+  const button = (
+    <Button variant={primary ? 'primary' : 'secondary'} onClick={onRerun} disabled={pending}>
+      <Icon icon={RotateCcw} />
+      {pending ? 'Creating repair…' : 'Rerun failed'}
+    </Button>
+  );
+  return primary ? <MastheadPrimary>{button}</MastheadPrimary> : button;
+}
+
+/** The run's shape while it loads: the status card over its three figures. */
+export function ProgressSkeleton() {
+  return (
+    <FigureStrip
+      label="Run figures"
+      lead={<Skeleton variant="text" lines={1} label="Loading run" />}
+      segments={RUN_FIGURES.map(({ key, label }) => ({ key, label, value: null, loading: true }))}
+    />
   );
 }
 
@@ -114,7 +149,7 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
   return (
     <Inline className="flex-wrap">
       {/* A date is recorded, not a figure: it reads in the status line. */}
-      <span className="type-data text-ink-2">
+      <span className="type-body text-ink-2">
         Created {formatDisplayTimestamp(audit.created_at, timeZone)}
       </span>
       <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
@@ -145,16 +180,22 @@ function RunProgress({
   return <RungMeter label="Progress" value={percent} />;
 }
 
+const RUN_FIGURES = [
+  { key: 'requested', label: 'Requested', count: (audit: Audit) => audit.requested_count },
+  { key: 'completed', label: 'Completed', count: (audit: Audit) => audit.completed_count },
+  { key: 'failed', label: 'Failed', count: (audit: Audit) => audit.failed_count },
+] as const;
+
 function ProgressMetrics({ audit, lead }: Readonly<{ audit: Audit; lead: ReactNode }>) {
   return (
     <FigureStrip
       label="Run figures"
       lead={lead}
-      segments={[
-        { key: 'requested', label: 'Requested', value: formatCount(audit.requested_count) },
-        { key: 'completed', label: 'Completed', value: formatCount(audit.completed_count) },
-        { key: 'failed', label: 'Failed', value: formatCount(audit.failed_count) },
-      ]}
+      segments={RUN_FIGURES.map(({ key, label, count }) => ({
+        key,
+        label,
+        value: formatCount(count(audit)),
+      }))}
     />
   );
 }

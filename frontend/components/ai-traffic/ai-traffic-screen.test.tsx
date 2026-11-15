@@ -622,13 +622,15 @@ describe('AI Traffic state and navigation', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('activity');
-    // No retained rows: the table gives way to its empty state, which says why.
+    // No retained rows and no source: the table gives way to its empty state,
+    // which says why and carries the connect step.
     const activityTable = await screen.findByRole('region', {
       name: 'Retained automated request activity',
     });
     expect(
-      await within(activityTable).findByRole('heading', { name: 'No matching requests' }),
+      await within(activityTable).findByRole('heading', { name: 'Crawl logs are not connected' }),
     ).toBeVisible();
+    expect(within(activityTable).getByRole('button', { name: 'Connect crawl logs' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /^All filters/ }));
     await user.click(screen.getByRole('menuitem', { name: /^Status code/ }));
     const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
@@ -662,11 +664,12 @@ describe('AI Traffic state and navigation', () => {
     await user.keyboard('{Escape}{Escape}');
     expect(await screen.findByRole('button', { name: 'All filters (2)' })).toBeVisible();
     // Pages sort from their column headers, like every other table.
-    await user.click(screen.getByRole('button', { name: /^AI referral sessions/ }));
+    // A column no row measures (referrals here) is left out, so sort by requests.
+    await user.click(screen.getByRole('button', { name: /^Requests/ }));
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportedPages.value?.get('folder')).toBe('/page'));
     expect(exportedPages.value?.get('resource_class')).toBe('page');
-    expect(exportedPages.value?.get('sort')).toBe('sessions_desc');
+    expect(exportedPages.value?.get('sort')).toBe('requests_desc');
     await user.click(
       screen.getByRole('button', { name: 'View AI Traffic for https://example.test/page' }),
     );
@@ -678,8 +681,9 @@ describe('AI Traffic state and navigation', () => {
       ).searchParams.get('project'),
     ).toBe(project.id);
     expect(within(panel).getByText(/0 requests · Measured zero/)).toBeVisible();
-    expect(within(panel).getByText(/Unavailable AI referral sessions · Flagged/)).toBeVisible();
-    expect(within(panel).getByText(/Unavailable tracked citations · Not connected/)).toBeVisible();
+    // An absent leg leads with its absence's word.
+    expect(panel.textContent).toMatch(/Unavailable AI referral sessions · Flagged/);
+    expect(panel.textContent).toMatch(/Not connected tracked citations · Not connected/);
     expect(
       within(panel).getByText(/open Website findings · Unavailable · Coverage is incomplete/),
     ).toBeVisible();

@@ -4,9 +4,13 @@ import { Link } from 'react-router-dom';
 import type { z } from 'zod';
 import type { trafficLegSchema, aiTrafficUrlSchema } from '@citeladder/contracts/ai-traffic';
 import { Drawer } from '@/components/ui/drawer';
+import { PanelRightOpen } from 'lucide-react';
+import { Absence } from '@/components/ui/absence';
 import { Pressable } from '@/components/ui/pressable';
-import { MISSING_MARK } from '@/lib/format';
+import { formatCount, type DataAvailabilityState } from '@/lib/format';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { TextLink } from '@/components/ui/text-link';
 import { Stack } from '@/components/ui/layout';
 import { Tooltip } from '@/components/ui/tooltip';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -18,36 +22,34 @@ import { coverageLabel, legStateLabel, reasonLabel, words } from '@/lib/ai-traff
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
+type Leg = z.infer<typeof trafficLegSchema>;
+
 export function TrafficLeg({
   leg,
   unit,
   compact = false,
-}: Readonly<{ leg: z.infer<typeof trafficLegSchema>; unit: string; compact?: boolean }>) {
+}: Readonly<{ leg: Leg; unit: string; compact?: boolean }>) {
   if (compact) return <CompactTrafficLeg leg={leg} unit={unit} />;
   return (
     <span>
-      {leg.value === null ? 'Unavailable' : leg.value} {unit} · {legStateLabel(leg.state)}
+      {leg.value === null ? <Absence state={legAbsence(leg)} /> : leg.value} {unit} ·{' '}
+      {legStateLabel(leg.state)}
       {leg.coverage ? ' · ' + coverageLabel(leg.coverage) : ''}
       {leg.reason ? ' · ' + reasonLabel(leg.reason) : ''}
     </span>
   );
 }
-function CompactTrafficLeg({
-  leg,
-  unit,
-}: Readonly<{ leg: z.infer<typeof trafficLegSchema>; unit: string }>) {
+function CompactTrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) {
   const detail = trafficLegExplanation(leg, unit);
+  if (leg.value === null) return <Absence state={legAbsence(leg)} narrow reason={detail} />;
   const qualified =
-    leg.value === null ||
     !['value', 'zero'].includes(leg.state) ||
     Boolean(leg.reason) ||
     Boolean(leg.coverage && leg.coverage !== 'complete');
   const value = (
     <>
-      {leg.value ?? MISSING_MARK}
-      {leg.value !== null && leg.coverage === 'partial' ? (
-        <span className="type-caption block">Partial</span>
-      ) : null}
+      {formatCount(leg.value)}
+      {leg.coverage === 'partial' ? <span className="type-caption block">Partial</span> : null}
     </>
   );
   return qualified ? (
@@ -55,7 +57,7 @@ function CompactTrafficLeg({
       <Pressable
         type="button"
         className="w-auto text-center tabular-nums"
-        aria-label={`${leg.value ?? 'Unavailable'} ${unit}`}
+        aria-label={`${formatCount(leg.value)} ${unit}`}
       >
         {value}
       </Pressable>
@@ -63,6 +65,11 @@ function CompactTrafficLeg({
   ) : (
     <span className="tabular-nums">{value}</span>
   );
+}
+/** A leg with no value, as the absence it is. */
+function legAbsence(leg: Leg): DataAvailabilityState {
+  if (leg.state === 'not_connected') return 'not_connected';
+  return leg.state === 'unknown' ? 'unknown' : 'unavailable';
 }
 export function UrlPanel({
   urlHash,
@@ -126,20 +133,24 @@ function UrlEvidence({
         {data.window_start} – {data.window_end} · Path-level identity
       </p>
       <p>
-        <TrafficLeg leg={page.crawl} unit="requests" /> <Link to={link('crawlers')}>Crawlers</Link>
+        <TrafficLeg leg={page.crawl} unit="requests" />{' '}
+        <PanelLink to={link('crawlers')}>Crawlers</PanelLink>
       </p>
       <p>
         <TrafficLeg leg={page.referrals} unit="AI referral sessions" />{' '}
-        <Link to={link('referrals')}>Referrals</Link>
+        <PanelLink to={link('referrals')}>Referrals</PanelLink>
       </p>
-      <p>{page.key_events ?? 'Unavailable'} key events as configured in GA4</p>
+      <p>
+        {page.key_events === null ? <Absence state="unavailable" /> : formatCount(page.key_events)}{' '}
+        key events as configured in GA4
+      </p>
       <p>
         <TrafficLeg leg={page.citations} unit="tracked citations" />{' '}
-        <Link to={projectDestination('/visibility', null, projectId)}>Visibility</Link>
+        <PanelLink to={projectDestination('/visibility', null, projectId)}>Visibility</PanelLink>
       </p>
       <p>
         <TrafficLeg leg={page.findings} unit="open Website findings" />{' '}
-        <Link to={projectDestination('/site', null, projectId)}>Website</Link>
+        <PanelLink to={projectDestination('/site', null, projectId)}>Website</PanelLink>
       </p>
       <p className="type-caption">First and last observations in this window</p>
       {data.crawls.map((r) => (
@@ -162,12 +173,25 @@ function UrlEvidence({
       <p className="type-caption">
         Timeline uses saved crawler rollups, GA4 metric rows and tracked citations.
         {data.provenance.crawl_id ? (
-          <Link to={projectDestination('/site', null, projectId)}>View Website pages</Link>
+          <>
+            {' '}
+            <PanelLink to={projectDestination('/site', null, projectId)}>
+              View Website pages
+            </PanelLink>
+          </>
         ) : (
           ' Inventory unavailable'
         )}
       </p>
     </Stack>
+  );
+}
+/** A link out of the drawer: the one Link look, on a route already scoped to the project. */
+function PanelLink({ to, children }: Readonly<{ to: string; children: React.ReactNode }>) {
+  return (
+    <TextLink asChild text="inherit">
+      <Link to={to}>{children}</Link>
+    </TextLink>
   );
 }
 export function TrafficUrlButton({
@@ -191,6 +215,7 @@ export function TrafficUrlButton({
         aria-label={label}
         className="max-w-full"
       >
+        <Icon icon={PanelRightOpen} />
         {children}
       </Button>
       <UrlPanel urlHash={open ? urlHash : null} onClose={() => setOpen(false)} filters={filters} />

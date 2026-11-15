@@ -1,6 +1,6 @@
 import type { DataTableState } from '@/components/ui/data-table';
 import { ExecutionsTable } from '@/components/runs/executions-table';
-import { ProgressPanel } from '@/components/runs/progress-panel';
+import { ProgressPanel, ProgressSkeleton } from '@/components/runs/progress-panel';
 import { ICONS } from '@/lib/icons';
 import type { MutationNotice } from '@/lib/api/mutation-notice';
 import type { Audit, Execution } from '@citeladder/contracts';
@@ -43,9 +43,7 @@ function AuditSection({
       />
     );
   }
-  if (auditLoading || !audit) {
-    return <StateBlock kind="loading" label="Loading run…" />;
-  }
+  if (auditLoading || !audit) return <ProgressSkeleton />;
   return (
     <ProgressPanel
       audit={audit}

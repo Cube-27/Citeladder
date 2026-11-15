@@ -134,7 +134,8 @@ function Headline({ data }: Readonly<{ data: PerceptionResponse }>) {
   const score = data.brand?.score;
   const recommended = data.recommended;
   return (
-    <Section>
+    // Stat cards on the ground: the strip is never a card inside a card.
+    <Section variant="group">
       <SectionContent>
         <Stack gap="item">
           <FigureStrip

@@ -4,7 +4,8 @@ import { useExecutionFilters } from '@/components/runs/executions-filters';
 import { StatusMark } from '@/components/ui/status-mark';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
-import { ActionButton } from '@/components/ui/actions';
+import { FileSearch } from 'lucide-react';
+import { IconButton } from '@/components/ui/button';
 import { TitledSection } from '@/components/ui/section';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
@@ -25,14 +26,14 @@ const COLUMNS: readonly DataTableColumn[] = [
   // A long waiting state ("Waiting for Google AI Overview") cuts with a title.
   { key: 'status', label: 'Status', width: 'category' },
   { key: 'latency', label: 'Latency', width: 'figure', kind: 'number' },
-  { key: 'evidence', label: 'Evidence', width: 'status', kind: 'actions', hideLabel: true },
+  { key: 'evidence', label: 'Evidence', kind: 'actions', hideLabel: true },
 ];
 
 /**
  * Executions table for a run (F10), on the shared `DataTable`.
  *
  * One row per execution/queue task: the prompt, the
- * engine badge (logical + transport), status badge, and latency (mono).
+ * engine badge (logical + transport), status badge, and latency.
  * Succeeded rows open the evidence drawer without leaving the run. The read's
  * loading, error and empty states render inside the table under its header.
  * The list arrives whole, so the Engine and Status filters and the pages are
@@ -124,14 +125,16 @@ export function ExecutionsTable({
                 )}
               </TableCell>
               <TableActionsCell>
+                {/* An icon button, so the column never cuts its label (its name is the tooltip). */}
                 {execution.status === 'succeeded' ? (
-                  <ActionButton
-                    action="viewEvidence"
+                  <IconButton
+                    icon={FileSearch}
+                    variant="secondary"
                     onClick={() => onSelectEvidence(execution)}
-                    aria-label={`View evidence for ${prompt}, ${engines.label(execution.logical_engine)}`}
+                    label={`View evidence for ${prompt}, ${engines.label(execution.logical_engine)}`}
                   />
                 ) : (
-                  <Absence state="unavailable" />
+                  <Absence state="unavailable" narrow />
                 )}
               </TableActionsCell>
             </TableRow>

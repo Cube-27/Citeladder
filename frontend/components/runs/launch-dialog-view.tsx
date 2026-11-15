@@ -1,4 +1,5 @@
-import { Plus, X } from 'lucide-react';
+import { useId } from 'react';
+import { Check, Plus, X, type LucideIcon } from 'lucide-react';
 
 import { ProviderList } from '@/components/providers/provider-list';
 import { ACTIONS } from '@/components/ui/actions';
@@ -189,24 +190,137 @@ function MarketsField({
   if (markets.length < 2) return null;
   return (
     <Stack as="fieldset" gap="item">
-      <legend className={textRole('body', 'text-ink-2')}>
+      <legend className={textRole('label')}>
         Markets <span className="text-ink-2">*</span>
       </legend>
-      <p className="type-caption text-ink-2">
+      <p className="type-caption">
         Each market runs separately. An engine that cannot measure a market is skipped there.
       </p>
       <Inline className="flex-wrap">
         {markets.map((market) => (
-          <Button
+          <ChoiceChip
             key={market.id ?? 'default'}
-            variant="secondary"
-            aria-pressed={marketIds.includes(market.id)}
+            selected={marketIds.includes(market.id)}
             onClick={() => setMarketIds((current) => toggleMarket(current, market.id))}
           >
             {market.label}
-          </Button>
+          </ChoiceChip>
         ))}
       </Inline>
+    </Stack>
+  );
+}
+
+/**
+ * One chip anatomy for every choice in the dialog (engines and markets): a
+ * selected chip shows a check and the pressed tint; an unselected one may
+ * lead with its own glyph (Plus for an engine still to connect).
+ */
+function ChoiceChip({
+  selected,
+  onClick,
+  leading,
+  children,
+}: Readonly<{
+  selected: boolean;
+  onClick: () => void;
+  leading?: LucideIcon;
+  children: React.ReactNode;
+}>) {
+  const glyph = selected ? Check : leading;
+  return (
+    <Button variant="secondary" aria-pressed={selected} onClick={onClick}>
+      {glyph ? <Icon icon={glyph} /> : null}
+      {children}
+    </Button>
+  );
+}
+
+/** A disabled primary says why beside it: the one launch rule's reason. */
+function LaunchFooter({
+  blocker,
+  pending,
+  onLaunch,
+  onCancel,
+}: Readonly<{
+  blocker: string | null;
+  pending: boolean;
+  onLaunch: () => void;
+  onCancel: () => void;
+}>) {
+  const reasonId = useId();
+  return (
+    <>
+      {blocker ? (
+        <span id={reasonId} className="type-caption me-auto">
+          {blocker}
+        </span>
+      ) : null}
+      <Button variant="quiet" onClick={onCancel}>
+        <Icon icon={X} />
+        Cancel
+      </Button>
+      <Button
+        variant="primary"
+        onClick={onLaunch}
+        disabled={blocker !== null || pending}
+        aria-describedby={blocker ? reasonId : undefined}
+      >
+        {pending ? 'Launching…' : ACTIONS.launchRun.label}
+      </Button>
+    </>
+  );
+}
+
+function RepetitionsField({
+  repetitions,
+  setRepetitions,
+  limits,
+}: Readonly<{
+  repetitions: number;
+  setRepetitions: React.Dispatch<React.SetStateAction<number>>;
+  limits: RepetitionLimits | null;
+}>) {
+  return (
+    <Field
+      label="Repetitions"
+      hint={
+        limits
+          ? `How many times to run each prompt per engine (${limits.audit_repetitions_min}–${limits.audit_repetitions_max}).`
+          : 'How many times to run each prompt per engine.'
+      }
+    >
+      {(props) => (
+        <Input
+          {...props}
+          type="number"
+          min={limits?.audit_repetitions_min}
+          max={limits?.audit_repetitions_max}
+          value={repetitions}
+          onChange={(event) => setRepetitions(Number(event.target.value))}
+          onBlur={() => {
+            if (limits) setRepetitions((current) => clampRepetitions(current, limits));
+          }}
+        />
+      )}
+    </Field>
+  );
+}
+
+function EstimateNote({ estimate }: Readonly<{ estimate: Estimate }>) {
+  return (
+    <Stack gap="tight" className={wellClasses('type-caption')}>
+      <span className={textRole('emphasis', 'text-ink')}>
+        {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
+        planned
+      </span>
+      <span className="text-ink-2">
+        Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s · cost{' '}
+        {estimate.cost_status}
+        {estimate.estimated_total_cost_microusd !== null
+          ? ` · ~$${(estimate.estimated_total_cost_microusd / 1_000_000).toFixed(4)}`
+          : ' · unavailable'}
+      </span>
     </Stack>
   );
 }
@@ -245,7 +359,7 @@ export function LaunchDialogView({
   setConnecting,
   promptSetLocked,
   promptSelectionLabel,
-  selectionReady,
+  blocker,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -275,7 +389,8 @@ export function LaunchDialogView({
   setConnecting: (target: LogicalEngine | 'any' | null) => void;
   promptSetLocked?: boolean;
   promptSelectionLabel?: string;
-  selectionReady: boolean;
+  /** Why Launch run is disabled, or null when the selection can launch. */
+  blocker: string | null;
 }>) {
   const catalog = useEngineCatalog();
   const noEngines = !configuredEngines.length;
@@ -287,14 +402,12 @@ export function LaunchDialogView({
       title="Launch a run"
       width="wide"
       footer={
-        <>
-          <Button variant="quiet" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={onLaunch} disabled={!selectionReady || launchPending}>
-            {launchPending ? 'Launching…' : ACTIONS.launchRun.label}
-          </Button>
-        </>
+        <LaunchFooter
+          blocker={blocker}
+          pending={launchPending}
+          onLaunch={onLaunch}
+          onCancel={() => onOpenChange(false)}
+        />
       }
     >
       <Stack gap="workspace">
@@ -309,7 +422,7 @@ export function LaunchDialogView({
         />
         <BatchField batches={batches} batchIndex={batchIndex} setBatchIndex={setBatchIndex} />
         <Stack as="fieldset" gap="item">
-          <legend className={textRole('body', 'text-ink-2')}>
+          <legend className={textRole('label')}>
             Engines <span className="text-ink-2">*</span>
           </legend>
           {noEngines ? (
@@ -331,30 +444,30 @@ export function LaunchDialogView({
           ) : null}
           {[true, false].map((consumer) => (
             <Stack key={String(consumer)} gap="item">
-              <p className={textRole('body', 'text-ink-2')}>
+              <p className={textRole('captionStrong')}>
                 {consumer ? 'Consumer experiences' : 'APIs'}
               </p>
               <Inline className="flex-wrap">
                 {catalog.order
                   .filter((engine) => catalog.isObserved(engine) === consumer)
-                  .map((engine) => (
-                    <Button
-                      key={engine}
-                      variant="secondary"
-                      aria-pressed={selected.has(engine)}
-                      onClick={() =>
-                        configuredEngines.includes(engine)
-                          ? setEngines((current) => toggleEngine(current, engine))
-                          : setConnecting(engine)
-                      }
-                    >
-                      {configuredEngines.includes(engine) ? null : <Icon icon={Plus} />}
-                      {catalog.label(engine)}
-                      {configuredEngines.includes(engine) ? null : (
-                        <span className="sr-only">, not connected</span>
-                      )}
-                    </Button>
-                  ))}
+                  .map((engine) => {
+                    const connected = configuredEngines.includes(engine);
+                    return (
+                      <ChoiceChip
+                        key={engine}
+                        selected={selected.has(engine)}
+                        leading={connected ? undefined : Plus}
+                        onClick={() =>
+                          connected
+                            ? setEngines((current) => toggleEngine(current, engine))
+                            : setConnecting(engine)
+                        }
+                      >
+                        {catalog.label(engine)}
+                        {connected ? null : <span className="sr-only">, not connected</span>}
+                      </ChoiceChip>
+                    );
+                  })}
               </Inline>
             </Stack>
           ))}
@@ -363,44 +476,12 @@ export function LaunchDialogView({
           ) : null}
         </Stack>
         <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />
-        <Field
-          label="Repetitions"
-          hint={
-            repetitionLimits
-              ? `How many times to run each prompt per engine (${repetitionLimits.audit_repetitions_min}–${repetitionLimits.audit_repetitions_max}).`
-              : 'How many times to run each prompt per engine.'
-          }
-        >
-          {(props) => (
-            <Input
-              {...props}
-              type="number"
-              min={repetitionLimits?.audit_repetitions_min}
-              max={repetitionLimits?.audit_repetitions_max}
-              value={repetitions}
-              onChange={(event) => setRepetitions(Number(event.target.value))}
-              onBlur={() => {
-                if (repetitionLimits)
-                  setRepetitions((current) => clampRepetitions(current, repetitionLimits));
-              }}
-            />
-          )}
-        </Field>
-        {estimate ? (
-          <Stack gap="tight" className={wellClasses('type-caption')}>
-            <span className={textRole('emphasis', 'text-ink')}>
-              {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
-              planned
-            </span>
-            <span className="text-ink-2">
-              Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s · cost{' '}
-              {estimate.cost_status}
-              {estimate.estimated_total_cost_microusd !== null
-                ? ` · ~$${(estimate.estimated_total_cost_microusd / 1_000_000).toFixed(4)}`
-                : ' · unavailable'}
-            </span>
-          </Stack>
-        ) : null}
+        <RepetitionsField
+          repetitions={repetitions}
+          setRepetitions={setRepetitions}
+          limits={repetitionLimits}
+        />
+        {estimate ? <EstimateNote estimate={estimate} /> : null}
         <p className="type-caption text-ink-2">
           Answers that mention you or a competitor are also classified for sentiment. No credits are
           used.

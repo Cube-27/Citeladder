@@ -99,11 +99,15 @@ function TrafficDataView({
   const model = useTrafficData(tab);
   const { summary } = model;
   // Every narrowing in All filters after the tabs; Export, on the tabs that
-  // list rows, is a header action.
+  // list rows, ends that tab's filter bar, so the masthead is the same on every tab.
   const frame = {
     tabs: <TabRow {...tabs} />,
-    filters: <FilterBar filters={trafficFilters({ model, crawlAvailable })} />,
-    actions: tab === 'overview' ? undefined : <TrafficExport model={model} />,
+    filters: (
+      <FilterBar
+        filters={trafficFilters({ model, crawlAvailable })}
+        actions={tab === 'overview' ? undefined : <TrafficExport model={model} />}
+      />
+    ),
   };
   // First load keeps the identity, tab and control bands; only the work waits.
   // The table tabs draw their own loading, error and empty states inside the

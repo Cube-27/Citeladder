@@ -15,7 +15,10 @@ import { LaunchDialog } from './launch-dialog';
 type LaunchRunProps = Omit<
   ButtonProps,
   'variant' | 'asChild' | 'children' | 'onClick' | 'disabled'
->;
+> & {
+  /** Print why it is disabled in a caption beside it (an empty state has the room). */
+  captioned?: boolean;
+};
 
 /**
  * Launch run: opens the shared run configuration dialog and routes directly
@@ -23,16 +26,17 @@ type LaunchRunProps = Omit<
  * and whether it can launch is `launchReadiness`, so every entry agrees.
  * A role that may not run audits is not offered it.
  */
-export function LaunchAuditButton(props: Readonly<LaunchRunProps>) {
+export function LaunchAuditButton({ captioned, ...props }: Readonly<LaunchRunProps>) {
   const canRun = useWorkspaceCapability('run');
   const project = useActiveProject();
   if (!canRun) return null;
   if (!project) return <ActionButton action="launchRun" {...props} disabled />;
-  return <LaunchAudit {...props} projectId={project.id} />;
+  return <LaunchAudit {...props} captioned={captioned} projectId={project.id} />;
 }
 
 function LaunchAudit({
   projectId,
+  captioned = false,
   ...buttonProps
 }: Readonly<LaunchRunProps & { projectId: string }>) {
   const { workspaceId } = useProjectScope();
@@ -63,7 +67,7 @@ function LaunchAudit({
         onClick={() => setOpen(true)}
       />
       {reason ? (
-        <span id={reasonId} hidden>
+        <span id={reasonId} hidden={!captioned} className="type-caption">
           {reason}
         </span>
       ) : null}

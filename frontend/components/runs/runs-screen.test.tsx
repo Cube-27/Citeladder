@@ -64,3 +64,21 @@ it('opens on the status a deep link names', async () => {
   expect(table.queryByRole('link', { name: 'Brand audit · Aug 1, 2026' })).not.toBeInTheDocument();
   expect(screen.getByRole('radio', { name: /Failed/ })).toHaveAttribute('aria-checked', 'true');
 });
+
+it('carries Launch run in the empty state, once, when there is no run yet', async () => {
+  vi.spyOn(runsApi, 'listAudits').mockResolvedValue([]);
+  vi.spyOn(runsApi, 'listSchedules').mockResolvedValue([]);
+  renderWithProviders(<RunsScreen />, {
+    projectSelection: {
+      projects: [project],
+      activeProject: project,
+      activeProjectId: project.id,
+      status: 'ready',
+    },
+  });
+
+  const heading = await screen.findByRole('heading', { name: 'No runs yet' });
+  const empty = heading.closest<HTMLElement>('[data-state-block="empty"]')!;
+  expect(within(empty).getByRole('button', { name: 'Launch run' })).toBeVisible();
+  expect(screen.getAllByRole('button', { name: 'Launch run' })).toHaveLength(1);
+});

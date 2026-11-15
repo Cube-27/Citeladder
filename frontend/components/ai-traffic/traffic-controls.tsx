@@ -15,7 +15,7 @@ import { MenuItem } from '@/components/ui/menu';
 import { Icon } from '@/components/ui/icon';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
 type TrafficControlsProps = ControlProps & Readonly<{ crawlAvailable: boolean }>;
-/** Export for the tabs that list rows, in the page header's actions. */
+/** Export for the tabs that list rows, at the end of their filter bar. */
 export function TrafficExport({ model }: ControlProps) {
   return (
     <Button

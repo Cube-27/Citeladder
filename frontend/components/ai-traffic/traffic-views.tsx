@@ -13,10 +13,15 @@ import {
 } from '@/lib/api/ai-traffic';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { coverageLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
-import { MISSING_MARK, formatCount, formatWindowDate } from '@/lib/format';
-import { CalendarX, SearchX } from 'lucide-react';
+import { formatCount, formatWindowDate } from '@/lib/format';
+import { useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { CalendarX, SearchX, Unplug } from 'lucide-react';
 import { TabPanel } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
+import { Absence } from '@/components/ui/absence';
+import { ActionButton } from '@/components/ui/actions';
+import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import { TableRow, TableCell, TableCellLines, TableTime } from '@/components/ui/table';
 import { CrawlLogConnections } from './crawl-log-connections';
 import { InsightStrip } from './insight-strip';
@@ -98,10 +103,52 @@ export function TrafficOverview({
 }
 /**
  * Absence in a filtered table is an observation within the available logs,
- * not proof of no traffic; with crawl logs connectable, the setup follows.
+ * not proof of no traffic. With no crawl log source at all, the empty state
+ * says so and carries Connect crawl logs itself, at the top of its region.
  */
-function noMatches(heading: string, description: string): DataTableState {
-  return { kind: 'empty', icon: SearchX, heading, description };
+function noMatches(
+  setup: CrawlSetup,
+  copy: Readonly<{ heading: string; description: string }>,
+): DataTableState {
+  if (setup.unconnected)
+    return {
+      kind: 'empty',
+      icon: Unplug,
+      heading: 'Crawl logs are not connected',
+      description: 'Connect your CDN or server logs to see which AI crawlers request your pages.',
+      action: (
+        <ActionButton
+          action="connectCrawlLogs"
+          onClick={setup.connect}
+          disabled={!setup.canManage}
+        />
+      ),
+    };
+  return { kind: 'empty', icon: SearchX, ...copy };
+}
+
+type CrawlSetup = ReturnType<typeof useCrawlSetup>;
+
+/**
+ * Whether the project has no crawl log source yet, and the connect dialog
+ * for an empty table's own button. A project with sources keeps the crawl
+ * log section (diagnostics and Connect) under an empty table.
+ */
+function useCrawlSetup({ workspaceId, projectId }: Omit<TrafficTableScope, 'filters'>) {
+  const sources = useCrawlSources(projectId, workspaceId);
+  const canManage = useWorkspaceCapability('manage_credentials');
+  const [open, setOpen] = useState(false);
+  const unconnected = sources.data?.items.length === 0;
+  return {
+    unconnected,
+    canManage,
+    connect: () => setOpen(true),
+    section: (empty: boolean) => {
+      if (unconnected)
+        return <CrawlLogConnections open={open} onOpenChange={setOpen} headerWhenEmpty={false} />;
+      return empty ? <CrawlLogConnections /> : null;
+    },
+  };
 }
 /** A drawer opened from a row reads the table's window, not its narrowing. */
 function windowFilters(filters: TrafficFilters): TrafficFilters {
@@ -109,6 +156,7 @@ function windowFilters(filters: TrafficFilters): TrafficFilters {
 }
 export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTableScope) {
   const [botId, setBotId] = useState<string | null>(null);
+  const setup = useCrawlSetup({ workspaceId, projectId });
   const { page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
@@ -119,10 +167,11 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
     loading: 'Loading crawlers…',
     subject: 'the crawlers',
     empty: () =>
-      noMatches(
-        'No matching requests were observed',
-        'Check coverage on Overview before interpreting absence in the available logs.',
-      ),
+      noMatches(setup, {
+        heading: 'No matching requests were observed',
+        description:
+          'Check coverage on Overview before interpreting absence in the available logs.',
+      }),
   });
   return (
     <TabPanel value="crawlers">
@@ -141,13 +190,19 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
               <TableCell>{words(b.purpose)}</TableCell>
               <TableCell numeric>{formatCount(b.requests)}</TableCell>
               <TableCell numeric>
-                <Button
-                  variant="quiet"
-                  onClick={() => setBotId(b.bot_id)}
-                  aria-label={`View paths requested by ${b.label}`}
-                >
-                  {b.pages ?? MISSING_MARK} paths
-                </Button>
+                {b.pages === null ? (
+                  <Absence state="unavailable" />
+                ) : (
+                  <TextLink asChild text="inherit">
+                    <Pressable
+                      className="w-auto tabular-nums"
+                      onClick={() => setBotId(b.bot_id)}
+                      aria-label={`View paths requested by ${b.label}`}
+                    >
+                      {formatCount(b.pages)} paths
+                    </Pressable>
+                  </TextLink>
+                )}
               </TableCell>
               <TableCell>
                 <TableTime value={b.last_seen} />
@@ -167,7 +222,7 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
             </TableRow>
           ))}
         </DataTable>
-        {page?.items.length === 0 ? <CrawlLogConnections /> : null}
+        {setup.section(page?.items.length === 0)}
       </SectionStack>
       <CrawlerPages
         botId={botId}
@@ -200,6 +255,7 @@ function catalogState(
 export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTableScope) {
   // The screen's controls read the same entry, so this adds no request.
   const catalog = useQuery(aiTrafficQueries.catalog({ workspaceId, projectId }));
+  const setup = useCrawlSetup({ workspaceId, projectId });
   const { page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
@@ -210,10 +266,10 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
     loading: 'Loading request activity…',
     subject: 'the request activity',
     empty: () =>
-      noMatches(
-        'No matching requests',
-        'Nothing in the available retained logs matches these filters.',
-      ),
+      noMatches(setup, {
+        heading: 'No matching requests',
+        description: 'Nothing in the available retained logs matches these filters.',
+      }),
   });
   return (
     <TabPanel value="activity">
@@ -260,7 +316,7 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
             </TableRow>
           ))}
         </DataTable>
-        {page?.items.length === 0 ? <CrawlLogConnections /> : null}
+        {setup.section(page?.items.length === 0)}
       </SectionStack>
     </TabPanel>
   );

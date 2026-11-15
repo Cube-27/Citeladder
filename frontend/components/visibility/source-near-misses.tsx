@@ -4,10 +4,9 @@ import type { z } from 'zod';
 
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { Pressable } from '@/components/ui/pressable';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { NumericCell, SourceName } from '@/components/visibility/source-cells';
-import type { SourceFilters } from '@/components/visibility/source-rows';
+import { OpenSource, type SourceFilters } from '@/components/visibility/source-rows';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useEngineCatalog } from '@/lib/providers/engines';
@@ -157,16 +156,13 @@ export function NearMissTable({
       {items.map((row) => (
         <TableRow key={row.url_hash ?? row.url}>
           <TableCell>
-            <Pressable
-              onClick={() => onOpenUrl(row.url)}
-              className="flex max-w-full min-w-0 items-center transition-colors hover:underline"
-            >
+            <OpenSource onOpen={() => onOpenUrl(row.url)}>
               <SourceName
                 name={row.title.trim() || pathOf(row.url)}
                 host={hostOf(row.url)}
                 secondary={row.title.trim() ? pathOf(row.url) : null}
               />
-            </Pressable>
+            </OpenSource>
           </TableCell>
           <NumericCell value={count(row.retrieved)} />
           <NumericCell value={count(row.cited)} />

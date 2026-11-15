@@ -1,4 +1,3 @@
-import { ActionButton } from '@/components/ui/actions';
 import { Stack } from '@/components/ui/layout';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -6,7 +5,6 @@ import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { PromptMetricItem } from '@citeladder/contracts';
-import { agentHandoffHref } from '@/lib/agent/handoff';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, pluralCount } from '@/lib/format';
 import { ANSWER_STATES, competitorGaps, type CompetitorGap } from '@/lib/prompts/history';
@@ -25,17 +23,16 @@ import { FigureStrip } from '@/components/ui/figure-strip';
 /**
  * Mentions and citations for one prompt in the latest run that measured it:
  * each answer in one of four states, which engines answered, the competitors
- * named where the brand was not, and the hand-off to the prompt's Action.
+ * named where the brand was not.
  */
 export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricItem | null }>) {
   const timeZone = useDisplayTimeZone();
-  const actionId = latest?.action_id ?? null;
   const outcomes = latest?.outcomes ?? [];
   const gaps = competitorGaps(outcomes);
   return (
     <>
       <Section>
-        <SectionHeader actions={actionId ? <ActionHandoff actionId={actionId} /> : null}>
+        <SectionHeader>
           <SectionTitle>Mentions and citations</SectionTitle>
           <SectionDescription>
             {latest
@@ -51,15 +48,6 @@ export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricIt
       </Section>
       {outcomes.length ? <EngineTable outcomes={outcomes} /> : null}
       {gaps.length ? <CompetitorGapTable gaps={gaps} /> : null}
-    </>
-  );
-}
-
-function ActionHandoff({ actionId }: Readonly<{ actionId: string }>) {
-  return (
-    <>
-      <ActionButton action="openAction" href={`/agent/actions/${actionId}`} />
-      <ActionButton action="workWithAgent" href={agentHandoffHref({ actionId })} />
     </>
   );
 }

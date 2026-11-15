@@ -112,16 +112,17 @@ export function clampRepetitions(value: number, limits: RepetitionLimits): numbe
 }
 
 /**
- * True when the selection is launchable: a prompt set is chosen and at least one
- * engine is selected. (The backend also requires a configured provider route per
- * engine; the dialog only offers configured engines.)
+ * Why the selection cannot launch, or null when it can: a prompt set (or
+ * fixed prompts), at least one engine and at least one market. The dialog
+ * prints the reason beside its disabled Launch run. (The backend also requires
+ * a configured provider route per engine; the dialog only offers configured engines.)
  */
-export function canLaunch(selection: LaunchSelection): boolean {
-  return (
-    Boolean(selection.promptSetId || selection.promptIds?.length) &&
-    selection.engines.length > 0 &&
-    selection.marketIds?.length !== 0
-  );
+export function launchBlocker(selection: LaunchSelection): string | null {
+  if (!selection.promptSetId && !selection.promptIds?.length)
+    return 'Choose a prompt set to launch a run.';
+  if (!selection.engines.length) return 'Choose at least one engine to launch a run.';
+  if (selection.marketIds?.length === 0) return 'Choose at least one market to launch a run.';
+  return null;
 }
 
 /** Explicit prompts win over the prompt set; neither means nothing to launch. */
@@ -133,14 +134,14 @@ function launchPrompts(selection: LaunchSelection) {
 
 /**
  * Build the `POST /audits` payload from a launchable selection. Throws if the
- * selection is not launchable — callers gate on `canLaunch` first.
+ * selection is not launchable — callers gate on `launchBlocker` first.
  */
 export function buildLaunchPayload(
   selection: LaunchSelection,
   limits: RepetitionLimits,
 ): AuditLaunchRequest {
   const prompts = launchPrompts(selection);
-  if (!prompts || !canLaunch(selection)) {
+  if (!prompts || launchBlocker(selection) !== null) {
     throw new Error('Cannot build a launch payload from an incomplete selection.');
   }
   return {

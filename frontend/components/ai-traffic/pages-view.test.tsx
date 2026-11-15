@@ -94,7 +94,7 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
           },
           {
             ...pathRow('second'),
-            crawl: { state: 'unknown', value: null, coverage: 'partial', reason: 'missing_days' },
+            crawl: { state: 'value', value: 5, coverage: 'partial', reason: 'missing_days' },
             key_events: null,
             errors_5xx: null,
           },
@@ -111,19 +111,44 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
     name: '12 citations',
   });
   expect(partial).toHaveTextContent('12Partial');
-  const missing = within(row).getByRole('button', { name: 'Unavailable requests' });
+  // A missing value is its absence's kind, with why on focus.
+  const missing = within(row).getByRole('button', { name: 'Not connected' });
   expect(missing).toHaveTextContent('–');
   focusByKeyboard(missing);
   expect(await screen.findByRole('tooltip')).toHaveTextContent('requests: Not connected');
   await user.keyboard('{Escape}');
-  expect(within(row).getByRole('button', { name: /4xx and 5xx unavailable/ })).toHaveTextContent(
-    '–',
-  );
+  expect(within(row).getAllByRole('cell').at(-1)).toHaveTextContent('–Unavailable');
   const second = screen.getByRole('row', { name: /\/second/ });
-  expect(
-    within(second).getByRole('button', { name: '5xx unavailable' }).closest('td'),
-  ).toHaveTextContent('0 / –');
+  expect(within(second).getAllByRole('cell').at(-1)).toHaveTextContent('0 / –Unavailable');
   expect(screen.getByText(/Crawl coverage unknown · 200 known pages/)).toBeVisible();
+});
+
+it('leaves out a column no row measures, and gives way to one state when none is', async () => {
+  const unmeasured = {
+    ...pathRow('unmeasured'),
+    crawl: unavailable,
+    key_events: null,
+    errors_4xx: null,
+    errors_5xx: null,
+  };
+  let rows: unknown[] = [pathRow('a'), pathRow('b')];
+  mswServer.use(http.get(PAGES, () => HttpResponse.json(pagesBody(rows))));
+  const view = renderPages();
+  const table = await screen.findByRole('table', {
+    name: 'Path-level AI Traffic with separate signal units',
+  });
+  await within(table).findByRole('row', { name: /\/a\b/ });
+  // Referrals, citations, findings and last crawl are absent on every row.
+  expect(
+    within(table)
+      .getAllByRole('columnheader')
+      .map((head) => head.textContent),
+  ).toEqual(['Path', 'Requests', 'Key events', '4xx / 5xx']);
+
+  rows = [unmeasured];
+  await view.queryClient.refetchQueries();
+  expect(await screen.findByText(/No signal measured these paths/)).toBeVisible();
+  expect(screen.queryByRole('columnheader')).toBeNull();
 });
 
 it('keeps the rows and the pager on screen while the next page loads', async () => {
