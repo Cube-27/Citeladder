@@ -613,6 +613,42 @@ const settled = (seed: SiteSeed, taskId: string) => ({
   workspace_id: seed.workspaceId,
 });
 const cadence = () => new ScoreRefreshCadence(siteWorkerSettings({}).scoreRefresh);
+/** A fresh page whose `kind` task failed; a status code is recorded as its fetch answered. */
+async function failedTask(
+  seed: SiteSeed,
+  failure: { path: string; error_code: string; kind?: string; status_code?: number },
+) {
+  const page = await fixtures.analyzable(seed, failure.path);
+  const { error_code, kind = 'analyze', status_code } = failure;
+  await db
+    .updateTable('site_crawl_tasks')
+    .set({ task_kind: kind, status: 'failed', error_code })
+    .where('id', '=', page.taskId)
+    .execute();
+  if (status_code === undefined) return page;
+  await db
+    .insertInto('site_fetch_attempts')
+    .values({
+      id: randomUUID(),
+      workspace_id: seed.workspaceId,
+      crawl_id: seed.crawlId,
+      task_id: page.taskId,
+      attempt_number: 1,
+      request_ordinal: 0,
+      method: 'GET',
+      outcome: 'error',
+      error_code,
+      status_code,
+      target_host: 'example.test',
+      acquisition_policy_version: 'fixture',
+      acquisition_transport: 'recorded',
+      acquisition_trigger: 'fixture',
+      impersonation_profile: '',
+      created_at: new Date(),
+    })
+    .execute();
+  return page;
+}
 
 describe('crawl lifecycle', () => {
   it('refreshes the live summary while work remains, then terminalizes exactly once', async () => {
@@ -680,40 +716,9 @@ describe('crawl lifecycle', () => {
   it('does not count a policy exclusion or a page that is gone as an incomplete analysis', async () => {
     const seed = await running();
     await monitoredPage(seed, '/');
-    const excluded = await fixtures.analyzable(seed, '/account');
-    await db
-      .updateTable('site_crawl_tasks')
-      .set({ status: 'failed', error_code: 'url_admission_rejected' })
-      .where('id', '=', excluded.taskId)
-      .execute();
+    await failedTask(seed, { path: '/account', error_code: 'url_admission_rejected' });
     // A tracked page that now answers 404 is reported as an issue, not an unanalyzed page.
-    const gone = await fixtures.analyzable(seed, '/products/retired');
-    await db
-      .updateTable('site_crawl_tasks')
-      .set({ status: 'failed', error_code: 'http_4xx' })
-      .where('id', '=', gone.taskId)
-      .execute();
-    await db
-      .insertInto('site_fetch_attempts')
-      .values({
-        id: randomUUID(),
-        workspace_id: seed.workspaceId,
-        crawl_id: seed.crawlId,
-        task_id: gone.taskId,
-        attempt_number: 1,
-        request_ordinal: 0,
-        method: 'GET',
-        outcome: 'error',
-        error_code: 'http_4xx',
-        status_code: 404,
-        target_host: 'example.test',
-        acquisition_policy_version: 'fixture',
-        acquisition_transport: 'recorded',
-        acquisition_trigger: 'fixture',
-        impersonation_profile: '',
-        created_at: new Date(),
-      })
-      .execute();
+    await failedTask(seed, { path: '/products/retired', error_code: 'http_4xx', status_code: 404 });
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'completed',
@@ -727,42 +732,15 @@ describe('crawl lifecycle', () => {
   it('does not call discovery failed for robots exclusions, pages that are gone, or non-HTML links', async () => {
     const seed = await running();
     await monitoredPage(seed, '/');
-    const failedDiscovery = async (
-      path: string,
-      error_code: string,
-      status_code: number | null,
-    ) => {
-      const page = await fixtures.analyzable(seed, path);
-      await db
-        .updateTable('site_crawl_tasks')
-        .set({ task_kind: 'discover', status: 'failed', error_code })
-        .where('id', '=', page.taskId)
-        .execute();
-      await db
-        .insertInto('site_fetch_attempts')
-        .values({
-          id: randomUUID(),
-          workspace_id: seed.workspaceId,
-          crawl_id: seed.crawlId,
-          task_id: page.taskId,
-          attempt_number: 1,
-          request_ordinal: 0,
-          method: 'GET',
-          outcome: 'error',
-          error_code,
-          status_code,
-          target_host: 'example.test',
-          acquisition_policy_version: 'fixture',
-          acquisition_transport: 'recorded',
-          acquisition_trigger: 'fixture',
-          impersonation_profile: '',
-          created_at: new Date(),
-        })
-        .execute();
-    };
-    await failedDiscovery('/policies/privacy-policy', 'robots_denied', null);
-    await failedDiscovery('/products/retired', 'http_4xx', 404);
-    await failedDiscovery('/size-chart', 'unsupported_content_type', null);
+    const kind = 'discover';
+    await failedTask(seed, { path: '/policies/privacy-policy', kind, error_code: 'robots_denied' });
+    await failedTask(seed, {
+      path: '/products/retired',
+      kind,
+      error_code: 'http_4xx',
+      status_code: 404,
+    });
+    await failedTask(seed, { path: '/size-chart', kind, error_code: 'unsupported_content_type' });
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
     expect(await crawlRow(seed.crawlId)).toMatchObject({ status: 'completed', partial_reason: '' });
     const snapshot = await db
@@ -778,12 +756,7 @@ describe('crawl lifecycle', () => {
     // A server error is a real discovery failure.
     const other = await running();
     await monitoredPage(other, '/');
-    const page = await fixtures.analyzable(other, '/broken');
-    await db
-      .updateTable('site_crawl_tasks')
-      .set({ task_kind: 'discover', status: 'failed', error_code: 'http_5xx' })
-      .where('id', '=', page.taskId)
-      .execute();
+    await failedTask(other, { path: '/broken', kind: 'discover', error_code: 'http_5xx' });
     await reconcileCrawl(db, other.workspaceId, other.crawlId);
     expect((await crawlRow(other.crawlId)).status).toBe('partially_completed');
   });
@@ -792,16 +765,11 @@ describe('crawl lifecycle', () => {
     const seed = await running();
     await monitoredPage(seed, '/');
     // The fetch fails at discovery, so no analyze task is ever planned for these pages.
-    const failedFetch = async (path: string, error_code: string) => {
-      const page = await fixtures.analyzable(seed, path);
-      await db
-        .updateTable('site_crawl_tasks')
-        .set({ task_kind: 'discover', status: 'failed', error_code })
-        .where('id', '=', page.taskId)
-        .execute();
-    };
-    await failedFetch('/rate-limited', 'http_4xx');
-    await failedFetch('/policies/privacy-policy', 'robots_denied');
+    for (const [path, error_code] of [
+      ['/rate-limited', 'http_4xx'],
+      ['/policies/privacy-policy', 'robots_denied'],
+    ])
+      await failedTask(seed, { path, kind: 'discover', error_code });
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
     const snapshot = await db
       .selectFrom('site_health_snapshots')
@@ -815,14 +783,8 @@ describe('crawl lifecycle', () => {
   });
 
   it('fails a page rerun or a site crawl whose every analysis failed', async () => {
-    const failAnalysis = async (seed: SiteSeed, path: string) => {
-      const page = await fixtures.analyzable(seed, path);
-      await db
-        .updateTable('site_crawl_tasks')
-        .set({ status: 'failed', error_code: 'task_failed' })
-        .where('id', '=', page.taskId)
-        .execute();
-    };
+    const failAnalysis = (seed: SiteSeed, path: string) =>
+      failedTask(seed, { path, error_code: 'task_failed' });
     const rerun = await running({
       configuration: JSON.stringify({ page_rerun: true }),
       discovery_status: 'completed',
