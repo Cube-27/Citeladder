@@ -210,7 +210,7 @@ function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
     }),
     noun: 'resolved issues',
     loading: 'Loading issue history…',
-    error: 'Could not load issue history.',
+    subject: 'the issue history',
     empty: (current) => ({
       kind: 'empty',
       icon: History,

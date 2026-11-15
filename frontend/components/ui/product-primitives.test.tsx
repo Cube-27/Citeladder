@@ -448,10 +448,12 @@ describe('StateBlock', () => {
       <StateBlock
         kind="error"
         error={new ApiError('Temporarily unavailable', 503, '')}
-        fallback="Issues could not be loaded."
+        title="Couldn't load the issues"
+        fallback="The request failed or timed out."
         onRetry={onRetry}
       />,
     );
+    expect(screen.getByText("Couldn't load the issues")).toBeVisible();
     expect(screen.getByText('Temporarily unavailable')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();

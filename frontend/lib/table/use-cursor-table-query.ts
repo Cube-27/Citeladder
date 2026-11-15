@@ -3,6 +3,7 @@ import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-q
 import type { DataTablePager, DataTableState } from '@/components/ui/data-table';
 import { cursorControls, pageRange, useCursorTable } from './use-cursor-table';
 import { readErrorProps } from '@/components/ui/notice';
+import { READ_FAILED } from '@/components/ui/state-block';
 
 /** A keyset page as the API returns it. */
 type CursorPage = Readonly<{ items: readonly unknown[]; next_cursor: string | null }>;
@@ -43,8 +44,8 @@ type CursorTableQueryOptions<TPage extends CursorPage, TKey extends QueryKey> = 
   /** What the rows are, for the pager's range ("1–10 crawlers"). */
   noun: string;
   loading: string;
-  /** The message when a failed read carries none of its own. */
-  error: string;
+  /** What a failed read could not load: "the crawlers" → "Couldn't load the crawlers". */
+  subject: string;
   /** What a settled page with no rows says. */
   empty: (page: TPage) => DataTableState;
   /**
@@ -83,7 +84,7 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
   query: pageQuery,
   noun,
   loading,
-  error,
+  subject,
   empty,
   fixedPageSize,
   enabled = true,
@@ -109,7 +110,13 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
   const page = query.data;
   let state: DataTableState | undefined;
   if (query.isPending) state = { kind: 'loading', label: loading };
-  else if (query.isError) state = { kind: 'error', ...readErrorProps(query), fallback: error };
+  else if (query.isError)
+    state = {
+      kind: 'error',
+      ...readErrorProps(query),
+      title: `Couldn't load ${subject}`,
+      fallback: READ_FAILED,
+    };
   else if (query.data.items.length === 0) state = empty(query.data);
   const total = totalOf?.(page);
   const table: CursorTableProps = {

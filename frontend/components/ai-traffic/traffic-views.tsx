@@ -114,7 +114,7 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
       aiTrafficQueries.crawlers({ workspaceId, projectId }, { ...filters, ...request }),
     noun: 'crawlers',
     loading: 'Loading crawlers…',
-    error: "Couldn't load the crawlers",
+    subject: 'the crawlers',
     empty: () =>
       noMatches(
         'No matching requests were observed',
@@ -205,7 +205,7 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
       aiTrafficQueries.activity({ workspaceId, projectId }, { ...filters, ...request }),
     noun: 'requests',
     loading: 'Loading request activity…',
-    error: "Couldn't load the request activity",
+    subject: 'the request activity',
     empty: () =>
       noMatches(
         'No matching requests',
@@ -300,7 +300,7 @@ function CoverageTable({
       aiTrafficQueries.coverage({ workspaceId, projectId }, { range, ...request }),
     noun: 'reporting days',
     loading: 'Loading coverage…',
-    error: "Couldn't load the coverage",
+    subject: 'the coverage',
     empty: () => ({
       kind: 'empty',
       icon: CalendarX,

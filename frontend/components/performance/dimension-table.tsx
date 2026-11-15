@@ -242,7 +242,7 @@ export function DimensionTable({
       ),
     noun: tab.noun,
     loading: `Loading ${tab.noun}…`,
-    error: `Could not load ${tab.noun}. Check your connection and try again.`,
+    subject: `the ${tab.noun}`,
     empty: () => ({
       kind: 'empty',
       icon: SearchX,

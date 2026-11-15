@@ -71,7 +71,7 @@ export function ChangesPanel({
     query: (request) => siteHealthQueries.changes(scope, { crawlAId, crawlBId, ...request }),
     noun: 'changes',
     loading: 'Loading persisted website changes…',
-    error: 'Could not load Website Changes.',
+    subject: 'the website changes',
     empty: () => ({
       kind: 'empty',
       icon: GitCompare,

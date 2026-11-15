@@ -104,7 +104,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
     query: (request) => siteHealthQueries.inventory(crawl.workspace_id, crawl.id, request),
     noun: 'pages',
     loading: 'Loading discovered pages…',
-    error: 'Could not load the page inventory.',
+    subject: 'the page inventory',
     empty: () => ({
       kind: 'empty',
       icon: FileText,
@@ -336,7 +336,7 @@ function ScoredInventoryState({
       }),
     noun: 'pages',
     loading: 'Loading pages…',
-    error: 'Could not load pages for this view.',
+    subject: 'the pages for this view',
     empty: () => ({
       kind: 'empty',
       icon: FileText,
