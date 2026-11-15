@@ -4,6 +4,7 @@ import type { CommandCenter } from '@citeladder/contracts';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { RungTrail, type RungStatus, type TrailStep } from '@/components/ui/rung-trail';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -22,7 +23,8 @@ export function needsStart(data: CommandCenter): boolean {
 function startSteps(data: CommandCenter): TrailStep[] {
   const prompts = data.active_prompt_count > 0;
   const running = data.next_action.kind === 'audit_running';
-  const runStatus: RungStatus = data.measurement ? 'done' : running ? 'running' : 'pending';
+  let runStatus: RungStatus = running ? 'running' : 'pending';
+  if (data.measurement) runStatus = 'done';
   return [
     {
       id: 'prompts',
@@ -74,12 +76,12 @@ export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
             : 'No prompt is active, so the next run has nothing to measure.'}
         </SectionDescription>
       </SectionHeader>
-      <div className="grid gap-4">
+      <Stack gap="workspace">
         <RungTrail label="Steps to your first results" steps={startSteps(data)} />
         <div>
           <StartButton data={data} primary={firstRun} />
         </div>
-      </div>
+      </Stack>
     </Section>
   );
 }

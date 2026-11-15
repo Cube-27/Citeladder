@@ -8,6 +8,7 @@ import {
   SectionTitle,
 } from '@/components/ui/section';
 import { UsageMeter } from '@/components/billing/usage-meter';
+import { Stack } from '@/components/ui/layout';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -101,10 +102,10 @@ function UsageBody({
   }
   // Cells of at least 220px that drop a column before a label could break.
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(13.75rem,1fr))] gap-4">
+    <Stack gap="workspace" className="grid-cols-[repeat(auto-fill,minmax(13.75rem,1fr))]">
       {items.map((item) => (
         <UsageMeter key={item.key} item={item} />
       ))}
-    </div>
+    </Stack>
   );
 }

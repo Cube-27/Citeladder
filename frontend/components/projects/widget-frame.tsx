@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { Inline, Stack } from '@/components/ui/layout';
 import { SectionDescription } from '@/components/ui/section';
 import { slipClasses } from '@/components/ui/slip';
 import { StateHeadingLevelContext } from '@/components/ui/state-block';
@@ -41,20 +42,22 @@ export function WidgetFrame({
   children: ReactNode;
 }>) {
   return (
-    <section
+    <Stack
+      as="section"
+      gap="workspace"
       aria-labelledby={id}
       data-overview-widget=""
-      className={slipClasses('flex h-full min-w-0 flex-col gap-4')}
+      className={slipClasses('flex h-full min-w-0 flex-col')}
     >
-      <header className="flex min-w-0 items-start justify-between gap-2">
-        <div className="grid min-w-0 gap-1">
+      <Inline as="header" className="items-start justify-between">
+        <Stack gap="tight" className="min-w-0">
           <h2 id={id} className={textRole('subheading', 'truncate')}>
             {title}
           </h2>
           {description ? <SectionDescription>{description}</SectionDescription> : null}
-        </div>
+        </Stack>
         {status || link ? (
-          <div className="flex shrink-0 items-center gap-2">
+          <Inline className="shrink-0">
             {status}
             {link ? (
               <TextLink href={link.href}>
@@ -62,14 +65,15 @@ export function WidgetFrame({
                 {link.label}
               </TextLink>
             ) : null}
-          </div>
+          </Inline>
         ) : null}
-      </header>
-      <div
-        className={cn('flex min-w-0 flex-1 flex-col gap-2', fill === 'figure' && 'justify-center')}
+      </Inline>
+      <Stack
+        gap="item"
+        className={cn('flex min-w-0 flex-1 flex-col', fill === 'figure' && 'justify-center')}
       >
         <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
-      </div>
-    </section>
+      </Stack>
+    </Stack>
   );
 }

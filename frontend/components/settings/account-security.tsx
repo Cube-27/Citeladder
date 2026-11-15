@@ -59,10 +59,10 @@ function SignInMethods({
 /** A group head inside a card: `subheading`, with its caption. */
 function GroupHead({ title, caption }: Readonly<{ title: string; caption: string }>) {
   return (
-    <div className="grid gap-1">
+    <Stack gap="tight">
       <h3 className={textRole('subheading')}>{title}</h3>
       <p className={textRole('caption')}>{caption}</p>
-    </div>
+    </Stack>
   );
 }
 

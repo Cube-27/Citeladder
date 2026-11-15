@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { FlowBlock, FlowPage } from '@/components/templates/flow-page';
 import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';
@@ -93,12 +94,12 @@ function RefusedInvitation({ error, onLeave }: Readonly<{ error: unknown; onLeav
           : 'It has expired, was already used or revoked, or was sent to another address. Ask the person who invited you for a new link.'
       }
     >
-      <div className="grid justify-items-start gap-4">
+      <Stack gap="workspace" className="justify-items-start">
         <Button type="button" variant="secondary" onClick={onLeave}>
           Go to your workspace
         </Button>
         {reference ? <p className="type-caption">Reference: {reference}</p> : null}
-      </div>
+      </Stack>
     </FlowBlock>
   );
 }
