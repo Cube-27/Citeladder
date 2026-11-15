@@ -42,9 +42,9 @@ import { createAppQueryClient } from '@/lib/api/query-client';
 
 import { UserMenuController, UserMenuTrigger } from './user-menu';
 
-function renderMenu(compact = false) {
+function renderMenu(compact = false, path = '/visibility') {
   return render(
-    <MemoryRouter initialEntries={['/visibility']}>
+    <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={createAppQueryClient()}>
         <TooltipProvider>
           <UserMenuController>
@@ -78,6 +78,20 @@ describe('UserMenu', () => {
     window.localStorage.clear();
     clearSession.mockClear();
     logoutMock.mockReset().mockResolvedValue(undefined);
+  });
+
+  it.each([
+    ['/billing', 'page'],
+    ['/pricing', 'page'],
+    ['/settings?tab=members', 'page'],
+    // Integrations has its own sidebar row, which marks it instead.
+    ['/settings?tab=integrations', null],
+    ['/visibility', null],
+  ])('marks the account button as the location on %s', (path, current) => {
+    renderMenu(false, path);
+    const account = screen.getByRole('button', { name: /test\.user@example\.test/i });
+    if (current) expect(account).toHaveAttribute('aria-current', current);
+    else expect(account).not.toHaveAttribute('aria-current');
   });
 
   it('shows Settings, Billing, MCP docs, and the tour replay above Sign out', async () => {

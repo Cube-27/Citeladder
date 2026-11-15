@@ -1,6 +1,7 @@
 import { Check, ChevronLeft, type LucideIcon } from 'lucide-react';
 import { useId, type ReactNode } from 'react';
 
+import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { LogoMark } from '@/components/ui/logo-mark';
@@ -30,10 +31,13 @@ function FlowLogo() {
 /**
  * Flow: a page with no shell. Sign-in, sign-up, the
  * mailbox screens, the workspace chooser, workspace and project setup and an
- * invitation. A bar as tall as the masthead holds the logo, the horizontal
- * rung trail when the flow has steps, and a way out (`barEnd`, the account
- * menu) with the theme switch; under it one 480px column, 48 from the bar,
- * whose controls are 40 tall. `footer` is one caption line at the foot.
+ * invitation. A bar as tall as the masthead holds the logo and a way out
+ * (`barEnd`, the account menu) with the theme switch. Under it one 480px
+ * column, starting a fifth of the way down the window: a flow with steps
+ * opens it with the horizontal rung trail, then the column hangs from an ink
+ * rule with a mono overline naming the step ("Step 1 of 3 · Basics", or the
+ * flow's `label`), then the heading and the form; its controls are 44 tall.
+ * `footer` is one caption line at the foot.
  */
 export function FlowPage({
   label,
@@ -43,7 +47,7 @@ export function FlowPage({
   footer,
   children,
 }: Readonly<{
-  /** The main landmark's name ("Account access", "Project setup"). */
+  /** The main landmark's name and the overline of a one-screen flow ("Account access"). */
   label: string;
   /** The flow's steps; leave out for a one-screen flow. */
   steps?: readonly [string, ...string[]];
@@ -54,14 +58,14 @@ export function FlowPage({
   children: ReactNode;
 }>) {
   const index = steps ? Math.max(0, Math.min(steps.length - 1, current)) : 0;
+  const overline = steps ? `Step ${index + 1} of ${steps.length} · ${steps[index]}` : label;
   return (
     <div className="bg-ground text-ink flex min-h-dvh flex-col antialiased">
-      <header className="desktop:grid-cols-[1fr_auto_1fr] grid min-h-[var(--masthead-height)] shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-[var(--card-padding)] px-[var(--content-gutter)]">
-        <span className="inline-flex justify-self-start">
+      <header className="flex min-h-[var(--masthead-height)] shrink-0 items-center justify-between gap-[var(--card-padding)] px-[var(--content-gutter)]">
+        <span className="inline-flex">
           <FlowLogo />
         </span>
-        {steps ? <FlowRungTrail steps={steps} current={index} /> : <span />}
-        <div className="flex items-center gap-2 justify-self-end">
+        <div className="flex items-center gap-2">
           {barEnd}
           <ThemeSwitch />
         </div>
@@ -69,9 +73,15 @@ export function FlowPage({
       <main
         id="main"
         aria-label={label}
-        className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[var(--flow-gap)] [--control-md:var(--control-lg)]"
+        className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] [--control-md:var(--control-lg)]"
       >
-        {children}
+        {steps ? <FlowRungTrail steps={steps} current={index} /> : null}
+        <div className="border-rule-ink flex flex-1 flex-col border-t pt-3">
+          <p aria-hidden={steps ? true : undefined} className="type-overline mb-4">
+            {overline}
+          </p>
+          {children}
+        </div>
       </main>
       {footer ? (
         <footer className={textRole('caption', 'px-[var(--content-gutter)] py-4 text-center')}>
@@ -83,9 +93,10 @@ export function FlowPage({
 }
 
 /**
- * The flow's steps as a horizontal rung trail: a done step's ink rung with a
- * check, the current step's accent rung (you are here), a later step's rule
- * rung; each with its label from `desktop:`, "Step n of N" below it. The
+ * The flow's steps as a horizontal rung trail at the top of the column, with
+ * the form it describes: a done step's ink rung with a check, the current
+ * step's accent rung (you are here), a later step's rule rung, each with its
+ * whole label; a narrow column wraps the trail, never cuts a label. The
  * current step is `aria-current="step"`, and the count is a native progress
  * bar named by the current step.
  */
@@ -95,7 +106,7 @@ function FlowRungTrail({
 }: Readonly<{ steps: readonly [string, ...string[]]; current: number }>) {
   const count = `Step ${current + 1} of ${steps.length}`;
   return (
-    <section aria-label="Setup progress" className="flex min-w-0 justify-center">
+    <section aria-label="Setup progress" className="mb-[var(--workspace-gap)] flex min-w-0">
       <progress
         className="sr-only"
         aria-label={steps[current]}
@@ -103,8 +114,8 @@ function FlowRungTrail({
         value={current + 1}
         aria-valuetext={count}
       />
-      <p className={textRole('dataSm', 'text-ink-2 desktop:sr-only truncate')}>{count}</p>
-      <ol className="desktop:flex hidden items-center gap-4">
+      <p className="sr-only">{count}</p>
+      <ol className="flex flex-wrap items-center gap-x-4 gap-y-2">
         {steps.map((step, index) => (
           <li
             key={step}
@@ -136,13 +147,17 @@ function FlowRungTrail({
   );
 }
 
-/** A flow's heading in the display face and the line under it; the page's one `h1`. */
+/**
+ * A flow's heading in the display face and the line under it; the page's one
+ * `h1`. A heading in words also names the document ("Sign in · CiteLadder").
+ */
 function FlowHead({
   id,
   title,
   sub,
   icon,
 }: Readonly<{ id: string; title: ReactNode; sub?: ReactNode; icon?: LucideIcon }>) {
+  useDocumentTitle(typeof title === 'string' ? title : undefined);
   return (
     <header className="flex flex-col gap-2">
       {icon ? <Icon icon={icon} className="text-ink-2" /> : null}

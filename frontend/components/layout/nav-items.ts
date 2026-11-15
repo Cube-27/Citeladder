@@ -72,6 +72,23 @@ export function resolveCommandGroups({ managed = false }: { managed?: boolean } 
 const atOrBelow = (pathname: string, base: string) =>
   pathname === base || pathname.startsWith(`${base}/`);
 
+/** The pages behind the account button: its menu's pages, and Pricing, reached from Billing. */
+const ACCOUNT_PATHS = [
+  ...ACCOUNT_MENU_ITEMS.map((item) => new URL(item.href, 'https://citeladder.local').pathname),
+  '/pricing',
+];
+
+/**
+ * The current page lives behind the account button (Settings, Billing,
+ * Pricing), so the button carries the location mark; a settings tab that has
+ * its own sidebar row (Integrations) marks that row instead.
+ */
+export function isAccountCurrent(pathname: string, searchParams: URLSearchParams): boolean {
+  const rows = [...NAV_GROUPS.flatMap((entry) => entry.items), ...FOOT_NAV_ITEMS];
+  if (rows.some((item) => isNavItemActive(pathname, searchParams, item))) return false;
+  return ACCOUNT_PATHS.some((base) => atOrBelow(pathname, base));
+}
+
 /**
  * A destination is current when the path is it or below it, unless another
  * destination sits deeper on that path: Shopping (`/products/overview`) is

@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import { LogOut } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/sidebar';
@@ -21,7 +21,7 @@ import { scopedNavigationDestination } from '@/lib/navigation/project-destinatio
 import { useProjectContext } from '@/lib/project/project-context';
 import { Avatar } from '@/components/ui/avatar';
 
-import { ACCOUNT_MENU_ITEMS } from './nav-items';
+import { ACCOUNT_MENU_ITEMS, isAccountCurrent, isNavItemActive } from './nav-items';
 
 type UserMenuState = {
   email: string;
@@ -43,6 +43,15 @@ function useUserMenu() {
 function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
   const { email, logout } = useUserMenu();
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
+  const pathname = useLocation().pathname ?? '';
+  const searchParams = useSearchParams()[0];
+  // The deepest match is current: Connect AI assistants, not also Settings.
+  const currentHref = ACCOUNT_MENU_ITEMS.filter((item) =>
+    isNavItemActive(pathname, searchParams, item),
+  ).reduce<string | undefined>(
+    (deepest, item) => (item.href.length > (deepest?.length ?? 0) ? item.href : deepest),
+    undefined,
+  );
   const sidebar = presenter === 'sidebar';
   return (
     <MenuContent align={sidebar ? 'start' : 'end'} side={sidebar ? 'top' : 'bottom'}>
@@ -50,7 +59,10 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
       <MenuSeparator />
       {ACCOUNT_MENU_ITEMS.map(({ label, href, icon: Icon, scope }) => (
         <MenuLinkItem key={href}>
-          <Link to={scopedNavigationDestination(href, scope, activeProjectId, activeWorkspaceId)}>
+          <Link
+            to={scopedNavigationDestination(href, scope, activeProjectId, activeWorkspaceId)}
+            aria-current={href === currentHref ? 'page' : undefined}
+          >
             <Icon className="size-4 shrink-0" aria-hidden />
             <span>{label}</span>
           </Link>
@@ -88,6 +100,8 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
 export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
   const { activePresenter, email, setOpen } = useUserMenu();
   const { activeWorkspace } = useProjectContext();
+  const pathname = useLocation().pathname ?? '';
+  const current = isAccountCurrent(pathname, useSearchParams()[0]);
   const open = activePresenter === presenter;
   const label = `Account menu for ${email}`;
   return (
@@ -99,6 +113,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
               aria-label={label}
               title={email}
               meta={activeWorkspace?.name}
+              current={current}
               lead={<Avatar name={email} />}
             />
           </MenuTrigger>

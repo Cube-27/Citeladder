@@ -29,6 +29,8 @@ describe('FlowPage', () => {
     expect(within(main).getByRole('region', { name: 'Welcome back' })).toHaveTextContent('form');
     expect(main).toHaveTextContent('New here?');
     expect(screen.getByRole('contentinfo')).toHaveTextContent('© CiteLadder');
+    // A screen outside the shell names the document after its heading.
+    expect(document.title).toBe('Welcome back · CiteLadder');
   });
 
   it('names the current step on its rung trail and counts it against the whole flow', () => {

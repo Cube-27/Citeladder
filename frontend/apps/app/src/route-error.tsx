@@ -4,7 +4,7 @@ import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { NoticePage, NoticeScreen } from '@/components/templates/notice-page';
-import { Button } from '@/components/ui/button';
+import { Button, buttonClasses } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { isChunkLoadError, reportClientError } from '@/lib/client-errors';
 
@@ -68,6 +68,7 @@ export function NotFoundScreen() {
       title="Page not found"
       tone="info"
       icon={SearchX}
+      overline="Not found"
       heading="There is no page at this address"
       actions={<OverviewLink />}
     >
@@ -76,7 +77,10 @@ export function NotFoundScreen() {
   );
 }
 
-/** A fresh document also recovers route chunks replaced by a deployment. */
+/**
+ * A signed-out route that failed to load. A fresh document also recovers
+ * route chunks replaced by a deployment.
+ */
 export function RouteError() {
   useReportedRouteError('route');
   return (
@@ -88,6 +92,34 @@ export function RouteError() {
       >
         Reload this page to try again.
       </NoticeScreen>
+    </ShellFallback>
+  );
+}
+
+/**
+ * The signed-in routes failed before the shell could open (the session or
+ * workspace read failed): the shell's frame with the page's masthead and the
+ * error where the content begins, never a bare page. Its navigation needs the
+ * session that failed, so the way out is a fresh load of Overview.
+ */
+export function ShellRouteError() {
+  useReportedRouteError('route');
+  return (
+    <ShellFallback>
+      <NoticePage
+        tone="warning"
+        heading="This page could not be opened"
+        actions={
+          <>
+            <ReloadButton />
+            <a href="/projects" className={buttonClasses('secondary')}>
+              Go to Overview
+            </a>
+          </>
+        }
+      >
+        Reload to try again, or go back to Overview.
+      </NoticePage>
     </ShellFallback>
   );
 }

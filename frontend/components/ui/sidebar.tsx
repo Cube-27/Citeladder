@@ -28,7 +28,7 @@ export function SidebarFrame({
         {ident}
       </div>
       {/* The 4px inset keeps the first and last rows' focus outlines inside the scroller. */}
-      <div className="labelled:px-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-1 py-[var(--page-top-gap)]">
+      <div className="labelled:px-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-1 py-4">
         {nav}
       </div>
       <div className="border-rule labelled:px-2 flex flex-col gap-1 border-t px-1 py-2">{foot}</div>
@@ -37,8 +37,9 @@ export function SidebarFrame({
 }
 
 /**
- * The destinations: groups 24 apart on one 1px `rule` rail. Rows sit on the
- * rail, so the current row's rung lands on it.
+ * The destinations: groups 16 apart (their heads 4 above their rows) on one
+ * 1px `rule` rail, so the whole list shows at 982×800. Rows sit on the rail,
+ * so the current row's rung lands on it.
  */
 export function SidebarNavList({
   label,
@@ -47,7 +48,7 @@ export function SidebarNavList({
   return (
     <nav
       aria-label={label}
-      className="labelled:border-s labelled:border-rule labelled:ms-2 flex flex-col gap-[var(--page-top-gap)]"
+      className="labelled:border-s labelled:border-rule labelled:ms-2 flex flex-col gap-4"
     >
       {children}
     </nav>
@@ -72,16 +73,17 @@ export function SidebarNavGroup({
 }
 
 /**
- * A destination row's face: 28 tall, `label` type in `ink-2`, the icon and
- * the label 4 apart. Hover is the hover overlay; the current row is `ink` and
- * carries the 2px accent rung over the rail, painted over the row so
- * selecting a row moves nothing. Every label fits on one line at the default
- * width; one that cannot (a narrowed sidebar, larger text
- * spacing, WCAG 1.4.12) wraps and the row grows, so no label is cut.
+ * A destination row's face: a link 28 tall (44 below 900px), `label` type in
+ * `ink-2`, the icon and the label 4 apart inside 8 of padding. Hover is the
+ * hover overlay; the current row is `ink` and carries the 2px accent rung
+ * over the rail, painted over the row so selecting a row moves nothing.
+ * Labels never wrap: every label fits on one line at the default widths with
+ * room to spare; one that cannot (larger text spacing, WCAG 1.4.12) ends in an
+ * ellipsis and the row's tooltip shows it whole.
  */
 export function sidebarNavRowClasses(active: boolean) {
   return cn(
-    'focus-ring group type-label labelled:justify-start labelled:px-3 relative flex min-h-[var(--control-sm)] shrink-0 items-center justify-center gap-1 rounded-control transition-colors',
+    'focus-ring group type-label labelled:justify-start labelled:px-2 relative flex min-h-[var(--nav-row-height)] shrink-0 items-center justify-center gap-1 rounded-control transition-colors',
     'before:absolute before:inset-y-1 before:-start-px before:w-[var(--mark-width)] before:rounded-mark',
     active ? 'text-ink before:bg-accent' : 'text-ink-2 hover:overlay-hover hover:text-ink',
   );
@@ -101,8 +103,10 @@ export function SidebarNavRowContent({
   return (
     <>
       <Icon className="size-4 shrink-0" aria-hidden />
-      <span className="labelled:not-sr-only labelled:min-w-0 labelled:flex-1 sr-only break-words">
-        {label}
+      <span className="labelled:not-sr-only labelled:min-w-0 labelled:flex-1 sr-only">
+        <span data-sidebar-text="title" className="block truncate">
+          {label}
+        </span>
       </span>
       {count == null ? null : (
         <span className="type-data-sm labelled:not-sr-only labelled:w-[4ch] labelled:shrink-0 labelled:text-right sr-only">
@@ -122,6 +126,7 @@ export function SidebarIdentButton({
   lead,
   title,
   meta,
+  current = false,
   ref,
   className,
   ...props
@@ -130,6 +135,8 @@ export function SidebarIdentButton({
     lead: ReactNode;
     title: string;
     meta?: string;
+    /** The current page lives behind this button (the account's Settings): it carries the rung. */
+    current?: boolean;
     ref?: Ref<HTMLButtonElement>;
   }
 >) {
@@ -138,7 +145,10 @@ export function SidebarIdentButton({
       ref={ref}
       type="button"
       data-sidebar-ident=""
+      aria-current={current ? 'page' : undefined}
       className={cn(
+        current &&
+          'before:bg-accent before:rounded-mark relative before:absolute before:inset-y-2 before:start-0 before:w-[var(--mark-width)]',
         'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-2 labelled:justify-start labelled:px-2 rounded-control flex min-h-[var(--control-lg)] w-full min-w-0 items-center justify-center gap-2 text-left transition-colors disabled:pointer-events-none',
         className,
       )}
@@ -186,13 +196,18 @@ function isRail(trigger: HTMLElement) {
   return Boolean(trigger.closest('[data-sidebar-state="collapsed"]'));
 }
 
-/** Names a row in the rail; where its own label shows, it never opens. */
+/** Names a row in the rail, or one whose label is cut; where its whole label shows, it never opens. */
 export function SidebarRowTooltip({
   label,
   children,
 }: Readonly<{ label: string; children: ReactNode }>) {
+  const shouldOpen = (trigger: HTMLElement) => {
+    if (isRail(trigger)) return true;
+    const text = trigger.querySelector<HTMLElement>('[data-sidebar-text]');
+    return text !== null && isTextCut(text);
+  };
   return (
-    <Tooltip content={label} side="right" describe={false} shouldOpen={isRail}>
+    <Tooltip content={label} side="right" describe={false} shouldOpen={shouldOpen}>
       {children}
     </Tooltip>
   );

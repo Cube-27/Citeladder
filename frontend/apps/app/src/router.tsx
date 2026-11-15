@@ -6,7 +6,7 @@ import { ShellFallback } from '@/components/layout/shell-fallback';
 import { APP_ROUTES, HOME_PATH, type AppRouteRecord } from '@/lib/navigation/app-routes';
 import { registerRouteChunk } from '@/lib/navigation/route-chunks';
 import { bootstrapPrivateRoutes } from '@/lib/project/bootstrap-loader';
-import { NotFoundScreen, RouteError, ScreenError } from './route-error';
+import { NotFoundScreen, RouteError, ScreenError, ShellRouteError } from './route-error';
 import { ApplicationRouteLayout, PrivateRouteLayout } from './private-routes';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -56,7 +56,7 @@ export const appRoutes: RouteObject[] = [
     // front of every click.
     shouldRevalidate: () => false,
     hydrateFallbackElement: <ShellFallback />,
-    ErrorBoundary: RouteError,
+    ErrorBoundary: ShellRouteError,
     children: [
       ...routes.filter((route) => route.scope !== 'public' && !route.shell).map(manifestRoute),
       {
