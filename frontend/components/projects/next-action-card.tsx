@@ -9,12 +9,13 @@ import { Icon } from '@/components/ui/icon';
 import { textRole } from '@/components/ui/typography';
 import { pluralCount } from '@/lib/format';
 import type { CommandCenter } from '@citeladder/contracts';
-import { SectionEyebrow } from '@/components/ui/section';
+import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 
 import { ActionFacts } from './dashboard-primitives';
 import { WidgetFrame } from './widget-frame';
 
-const RECOMMENDED = 'Action recommended';
+/** A step that asks the reader to act needs attention. */
+const RECOMMENDED = { status: 'Action recommended', tone: 'warning' } as const;
 
 /**
  * Every step the server can name; steps that are not a call to act say what
@@ -22,33 +23,34 @@ const RECOMMENDED = 'Action recommended';
  */
 const NEXT_ACTION_COPY: Record<
   CommandCenter['next_action']['kind'],
-  { status: string; link: string; reason: string | null }
+  { status: string; tone: StatusTone; link: string; reason: string | null }
 > = {
   // The Action's title and evidence already say why it is next.
-  opportunity: { status: RECOMMENDED, link: ACTIONS.openAction.label, reason: null },
+  opportunity: { ...RECOMMENDED, link: ACTIONS.openAction.label, reason: null },
   connect: {
-    status: RECOMMENDED,
+    ...RECOMMENDED,
     link: 'Open Integrations',
     reason: 'Search Console or GA4 data sharpens which Actions matter.',
   },
   crawl: {
-    status: RECOMMENDED,
+    ...RECOMMENDED,
     link: 'Open Website',
     reason: 'A crawl finds the page issues behind later Actions.',
   },
   configure_prompts: {
-    status: RECOMMENDED,
-    link: 'Choose prompts',
+    ...RECOMMENDED,
+    link: 'Add prompts',
     reason: 'Track the questions buyers ask to start measuring.',
   },
   audit: {
-    status: RECOMMENDED,
+    ...RECOMMENDED,
     link: 'Open Runs',
     reason: 'A run measures how answer engines cite you.',
   },
-  audit_running: { status: 'In progress', link: 'View progress', reason: null },
+  audit_running: { status: 'In progress', tone: 'info', link: 'View progress', reason: null },
   monitor: {
     status: 'Up to date',
+    tone: 'positive',
     link: 'View trends',
     reason: 'The next run shows whether visibility moves.',
   },
@@ -102,10 +104,10 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   return (
     <WidgetFrame
       id="next-action"
-      eyebrow={<SectionEyebrow>Next action</SectionEyebrow>}
-      title={step.title}
-      actions={<span className={textRole('body', 'text-ink-2')}>{copy.status}</span>}
+      title="Next action"
+      status={<StatusMark tone={copy.tone}>{copy.status}</StatusMark>}
     >
+      <p className={textRole('label')}>{step.title}</p>
       {copy.reason ? <p className={textRole('body', 'text-ink-2')}>{copy.reason}</p> : null}
       {nextActionEvidence(data)}
       <div>

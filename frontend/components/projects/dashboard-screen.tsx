@@ -13,8 +13,8 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { DashboardActions, ProjectMeta } from './dashboard-sections';
 import { OverviewGrid } from './overview-grid';
 import { OverviewLayoutMenu } from './overview-layout-menu';
-import { OverviewWidgetView } from './overview-widget';
-import { PromptSetupCard } from './prompt-setup-card';
+import { OverviewStart, needsStart } from './overview-start';
+import { OverviewWidgetView, widgetShows } from './overview-widget';
 import { useCommandCenterActions } from './use-command-center-actions';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Notice } from '@/components/ui/notice';
@@ -69,20 +69,20 @@ function useWarmWidgets(project: Project, widgets: readonly OverviewWidget[] | u
   }, [client, project, widgets]);
 }
 
-/** Widgets the ruled blank holds a place for: the default layout's first two rows. */
+/** Widgets the loading shape holds a place for: the default layout's first two rows. */
 const LOADING_WIDGETS = 4;
 
-/**
- * The ruled blank of the widget grid: blank slips where the widgets land, the
- * first carrying the one live rung, so the page does not move when they do.
- */
+/** The widget grid's shape: a card per widget with its figures, so nothing moves when they land. */
 function DashboardLoading() {
   return (
     <ReportPage>
       <AppGrid layout="halves" aria-busy="true">
         {Array.from({ length: LOADING_WIDGETS }, (_, index) => (
-          <div key={index} className={slipClasses('min-h-64')}>
-            {index === 0 ? <Skeleton variant="block" label="Loading the Overview" /> : null}
+          <div key={index} className={slipClasses()}>
+            <Skeleton
+              variant={index % 2 ? 'block' : 'stat'}
+              label={index === 0 ? 'Loading the Overview' : undefined}
+            />
           </div>
         ))}
       </AppGrid>
@@ -118,6 +118,7 @@ function DashboardData({
     );
   if (!layout.query.data) return <DashboardLoading />;
   const saved = layout.query.data;
+  const widgets = saved.widgets.filter((widget) => widgetShows(widget.key, data));
   return (
     <ReportPage
       actions={
@@ -126,6 +127,7 @@ function DashboardData({
           onEditProject={onEditProject}
           downloading={actions.downloading}
           onDownload={actions.download}
+          launch={Boolean(data.measurement)}
           layoutMenu={
             canEdit ? (
               <OverviewLayoutMenu
@@ -141,7 +143,7 @@ function DashboardData({
       }
     >
       <ProjectMeta data={data} />
-      {data.active_prompt_count === 0 ? <PromptSetupCard /> : null}
+      {needsStart(data) ? <OverviewStart data={data} /> : null}
       {actions.downloadError ? (
         <Notice tone="negative">The report could not be downloaded. Try again.</Notice>
       ) : null}
@@ -155,8 +157,9 @@ function DashboardData({
           Someone else changed this Overview. The latest layout is shown; make your change again.
         </Notice>
       ) : null}
+      {/* While editing, every saved widget is shown, so the whole layout can be arranged. */}
       <OverviewGrid
-        widgets={saved.widgets}
+        widgets={editing ? saved.widgets : widgets}
         editing={canEdit && editing}
         pending={layout.pending}
         onChange={layout.save}

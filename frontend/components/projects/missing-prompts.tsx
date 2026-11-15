@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 
-import { ActionButton } from '@/components/ui/actions';
+import { Absence } from '@/components/ui/absence';
+import { ClampText } from '@/components/ui/clamp-text';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
-import { SectionDescription } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
-import { ArrowLink, TextLink } from '@/components/ui/text-link';
+import { TextLink } from '@/components/ui/text-link';
 import { missingPrompts, promptHistoryHref, type MissingPrompt } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
@@ -31,12 +31,8 @@ export function MissingPrompts({
     <WidgetFrame
       id="missing-prompts"
       title="Where you're missing"
-      description={
-        <SectionDescription>
-          Prompts in the latest run where an answer named a competitor but not you.
-        </SectionDescription>
-      }
-      actions={rows.length > SHOWN ? <ArrowLink href="/prompts">All prompts</ArrowLink> : null}
+      description="Prompts in the latest run where an answer named a competitor but not you."
+      link={rows.length > SHOWN ? { href: '/prompts', label: 'All prompts' } : null}
     >
       <MissingBody query={query} rows={rows} />
     </WidgetFrame>
@@ -85,17 +81,24 @@ function MissingRow({ row }: Readonly<{ row: MissingPrompt }>) {
   const engines = useEngineCatalog();
   return (
     <LedgerItem
-      title={<TextLink href={promptHistoryHref(row.promptId)}>{row.text}</TextLink>}
-      caption={`${row.engines.map(engines.label).join(', ')} named ${row.competitors.join(', ')}`}
+      title={
+        <TextLink href={promptHistoryHref(row.promptId)} className="flex min-w-0">
+          <ClampText>{row.text}</ClampText>
+        </TextLink>
+      }
+      caption={
+        <ClampText>{`${row.engines.map(engines.label).join(', ')} named ${row.competitors.join(', ')}`}</ClampText>
+      }
       meta={
         row.actionId ? (
-          <ActionButton
-            action="openAction"
+          <TextLink
             href={`/agent/actions/${row.actionId}`}
             aria-label={`Open Action for ${row.text}`}
-          />
+          >
+            Open Action
+          </TextLink>
         ) : (
-          <span className="type-caption">No Action yet</span>
+          <Absence state="none" label="No Action yet" />
         )
       }
     />

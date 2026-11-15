@@ -57,6 +57,33 @@ const WIDGETS: Record<OverviewWidgetKey, (props: WidgetProps) => ReactNode> = {
   search_console: ({ project }) => <SearchConsoleWidget project={project} />,
 };
 
+const hasEvidence = (stage: CommandCenter['loop']['connected']) =>
+  stage.state === 'observed' || stage.state === 'partial';
+
+/**
+ * Before the first measured run, the widgets that have something to show: the
+ * rest would be empty cards, so they return as their data arrives. Nothing is
+ * removed from the layout.
+ */
+const SHOWS_BEFORE_RUN: Partial<Record<OverviewWidgetKey, (data: CommandCenter) => boolean>> = {
+  company_facts: ({ facts }) =>
+    Boolean(
+      facts.positioning.trim() ||
+      facts.description.trim() ||
+      facts.target_audience.trim() ||
+      facts.products_services.length,
+    ),
+  ranked_actions: ({ actions }) => actions.length > 0,
+  ai_traffic: ({ loop }) => hasEvidence(loop.connected),
+  search_console: ({ loop }) => hasEvidence(loop.connected),
+};
+
+/** Whether the widget is drawn: always once a run is measured. */
+export function widgetShows(key: OverviewWidgetKey, data: CommandCenter): boolean {
+  if (data.measurement) return true;
+  return SHOWS_BEFORE_RUN[key]?.(data) ?? false;
+}
+
 /** One Overview widget by its layout key. */
 export function OverviewWidgetView({
   widgetKey,

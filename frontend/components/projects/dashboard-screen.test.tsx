@@ -438,7 +438,9 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    const next = within(screen.getByRole('region', { name: 'Publish a comparison page' }));
+    const next = within(screen.getByRole('region', { name: 'Next action' }));
+    expect(next.getByText('Publish a comparison page')).toBeVisible();
+    expect(next.getByText('Action recommended')).toBeVisible();
     expect(next.getByText('/pricing · 3 evidence items')).toBeVisible();
     expect(next.getByText('High')).toBeVisible();
     expect(next.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
@@ -661,47 +663,44 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
+    // One start card with the steps and the one Launch run; no stack of empty widgets.
+    const start = within(screen.getByRole('region', { name: 'Get your first results' }));
+    expect(start.getByRole('list', { name: 'Steps to your first results' })).toBeVisible();
+    expect(start.getByRole('button', { name: 'Launch run' })).toBeVisible();
+    expect(screen.getAllByRole('button', { name: 'Launch run' })).toHaveLength(1);
+    expect(screen.queryByRole('region', { name: 'Owned citation rate' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Project state' })).not.toBeInTheDocument();
+    // A widget with something to show stays.
     expect(screen.getByRole('heading', { name: 'Company facts' })).toBeVisible();
-    // The Product loop strip was removed from Overview; loop evidence still
-    // arrives on the projection but no longer has a station-tile surface.
-    expect(screen.queryByRole('heading', { name: 'Product loop' })).not.toBeInTheDocument();
-    expect(screen.getByText('Run the first visibility audit')).toBeVisible();
-    // The next step's button says where it goes, never a bare "Continue".
-    expect(
-      within(screen.getByRole('region', { name: 'Run the first visibility audit' })).getByRole(
-        'link',
-        { name: 'Open Runs' },
-      ),
-    ).toHaveAttribute('href', '/runs?project=00000000-0000-4000-8000-000000000001');
-    expect(
-      within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('Not run'),
-    ).toBeVisible();
     // The PDF exports the layout, so it is available before the first audit too.
     expect(screen.getByRole('button', { name: /export pdf/i })).toBeVisible();
   });
-  it('asks a project with no active prompts to choose what to track', () => {
+  it('asks a project with no active prompts to add some', () => {
     queryResult.data = { ...commandCenter, active_prompt_count: 0 };
     renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
-    const setup = screen.getByRole('region', { name: 'Choose the questions you want to track' });
-    expect(within(setup).getByRole('link', { name: 'Generate prompts' })).toHaveAttribute(
+    const setup = within(screen.getByRole('region', { name: 'Track prompts again' }));
+    expect(setup.getByRole('link', { name: 'Add prompts' })).toHaveAttribute(
       'href',
-      expect.stringContaining('/prompts?generate=1'),
+      '/prompts?project=00000000-0000-4000-8000-000000000001',
     );
-    expect(within(setup).getByRole('link', { name: 'Add or import prompts' })).toBeVisible();
+    // A measured project keeps its widgets beside the card.
+    expect(screen.getByRole('region', { name: 'Project state' })).toBeVisible();
   });
-  it('omits prompt setup once the project tracks prompts', () => {
+  it('omits the start card once a run is measured and prompts are tracked', () => {
     renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
       </TooltipProvider>,
     );
+    expect(screen.queryByRole('region', { name: 'Track prompts again' })).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('region', { name: 'Choose the questions you want to track' }),
+      screen.queryByRole('region', { name: 'Get your first results' }),
     ).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Project state' })).toBeVisible();
   });
   it('labels a null owned citation rate from an observed run as unavailable', () => {
     queryResult.data = {
