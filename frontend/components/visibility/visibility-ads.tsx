@@ -144,7 +144,8 @@ function EngineApplicability({ engines }: Readonly<{ engines: VisibilityAdsRespo
 
 function Headline({ data }: Readonly<{ data: VisibilityAdsResponse }>) {
   return (
-    <Section>
+    // Stat cards on the ground: the strip is never a card inside a card.
+    <Section variant="group">
       <SectionContent>
         <Stack gap="item">
           <FigureStrip

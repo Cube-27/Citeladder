@@ -1,7 +1,9 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
+import { CalendarPlus, Play } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
@@ -28,7 +30,13 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { schedulePauseReason } from '@/lib/runs/status';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -64,51 +72,57 @@ function WorkspaceSchedules({
   const resumeMutation = useMutation(runsMutations.resumeSchedule(scope));
   const canWrite = useWorkspaceCapability('write');
 
+  // A settings-style card: its title on the left third, the schedules and the
+  // form's rows on the right, stacked when the card is narrow.
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Scheduled audits</SectionTitle>
-        <p className="type-caption">Runs use the selected prompt set and your connected engines.</p>
-      </SectionHeader>
-      <SectionContent>
-        <Stack>
-          {schedulesQuery.isError ? (
-            <Notice
-              kind="read"
-              {...readErrorProps(schedulesQuery)}
-              title="Couldn't load the scheduled runs"
-              fallback="The request failed or timed out."
+    <div data-settings-sections="">
+      <Section>
+        <SectionHeader>
+          <SectionTitle>Scheduled audits</SectionTitle>
+          <SectionDescription>
+            Runs use the selected prompt set and your connected engines.
+          </SectionDescription>
+        </SectionHeader>
+        <SectionContent>
+          <Stack>
+            {schedulesQuery.isError ? (
+              <Notice
+                kind="read"
+                {...readErrorProps(schedulesQuery)}
+                title="Couldn't load the scheduled runs"
+                fallback="The request failed or timed out."
+              />
+            ) : null}
+            {schedulesQuery.data?.length ? (
+              <LedgerList>
+                {schedulesQuery.data.map((schedule) => (
+                  <ScheduleRow
+                    key={schedule.id}
+                    schedule={schedule}
+                    markets={markets}
+                    resuming={resumeMutation.isPending}
+                    onResume={canWrite ? () => resumeMutation.mutate(schedule.id) : undefined}
+                  />
+                ))}
+              </LedgerList>
+            ) : null}
+            {schedulesQuery.isSuccess && schedulesQuery.data.length === 0 ? (
+              <StateBlock kind="empty" inline message="No scheduled audits yet." />
+            ) : null}
+            {/* Scheduling is offered only to a role that may write schedules. */}
+            {canWrite ? (
+              <ScheduleForm scope={scope} promptSets={promptSets} markets={markets} />
+            ) : null}
+            <ResumeNotice
+              error={resumeMutation.error}
+              onRetry={() => {
+                if (resumeMutation.variables) resumeMutation.mutate(resumeMutation.variables);
+              }}
             />
-          ) : null}
-          {schedulesQuery.data?.length ? (
-            <LedgerList>
-              {schedulesQuery.data.map((schedule) => (
-                <ScheduleRow
-                  key={schedule.id}
-                  schedule={schedule}
-                  markets={markets}
-                  resuming={resumeMutation.isPending}
-                  onResume={canWrite ? () => resumeMutation.mutate(schedule.id) : undefined}
-                />
-              ))}
-            </LedgerList>
-          ) : null}
-          {schedulesQuery.isSuccess && schedulesQuery.data.length === 0 ? (
-            <StateBlock kind="empty" inline message="No scheduled audits yet." />
-          ) : null}
-          {/* Scheduling is offered only to a role that may write schedules. */}
-          {canWrite ? (
-            <ScheduleForm scope={scope} promptSets={promptSets} markets={markets} />
-          ) : null}
-          <ResumeNotice
-            error={resumeMutation.error}
-            onRetry={() => {
-              if (resumeMutation.variables) resumeMutation.mutate(resumeMutation.variables);
-            }}
-          />
-        </Stack>
-      </SectionContent>
-    </Section>
+          </Stack>
+        </SectionContent>
+      </Section>
+    </div>
   );
 }
 
@@ -152,7 +166,7 @@ function ScheduleForm({
       {promptSets.length === 0 ? (
         <Notice tone="info">Add prompts before scheduling an audit.</Notice>
       ) : (
-        <Stack className="desktop:grid-cols-3">
+        <Stack>
           <Stack gap="item" className={textRole('label')}>
             <span>Prompt set</span>
             <Select
@@ -200,7 +214,7 @@ function ScheduleForm({
               </Stack>
             </label>
           ) : null}
-          <Stack as="fieldset" gap="item" className="desktop:col-span-2">
+          <Stack as="fieldset" gap="item">
             <legend className={textRole('label')}>Engines</legend>
             <Inline className="flex-wrap">
               {catalog.order.map((engine) => (
@@ -220,9 +234,10 @@ function ScheduleForm({
             </Inline>
           </Stack>
           <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
-          <div className="flex items-end">
+          <div>
             {/* The masthead's Launch run is the page's one primary. */}
             <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
+              <Icon icon={CalendarPlus} />
               {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
             </Button>
           </div>
@@ -259,7 +274,7 @@ function MarketChecklist({
 }>) {
   if (markets.length < 2) return null;
   return (
-    <Stack as="fieldset" gap="item" className="desktop:col-span-2">
+    <Stack as="fieldset" gap="item">
       <legend className={textRole('label')}>Markets</legend>
       <Inline className="flex-wrap">
         {markets.map((market) => (
@@ -332,6 +347,7 @@ function ScheduleRow({
       links={
         resumable ? (
           <Button variant="secondary" disabled={resuming} onClick={onResume}>
+            <Icon icon={Play} />
             Resume
           </Button>
         ) : undefined

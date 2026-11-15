@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Inbox, Search } from 'lucide-react';
+import { ArrowRight, Inbox, Search } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
@@ -141,8 +141,11 @@ function FanoutEmpty({
       }
       action={
         isFiltered ? undefined : (
-          <Button asChild variant="quiet">
-            <ProjectLink href="/runs">View Runs</ProjectLink>
+          <Button asChild variant="secondary">
+            <ProjectLink href="/runs">
+              <Icon icon={ArrowRight} />
+              View Runs
+            </ProjectLink>
           </Button>
         )
       }
@@ -373,8 +376,8 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
     <>
       {group.label ? (
         <TableRow>
-          <TableCell colSpan={3} className="bg-well">
-            <ClampText className={textRole('body')}>{group.label}</ClampText>
+          <TableCell colSpan={3}>
+            <ClampText className={textRole('captionStrong')}>{group.label}</ClampText>
           </TableCell>
         </TableRow>
       ) : null}

@@ -91,9 +91,8 @@ function VisibilityWorkspace({
   const pageFilters = useVisibilityPageFilters({ filters, queries });
   if (state === 'empty') {
     return (
-      <ReportPage actions={<VisibilityActions />}>
-        {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
-        <VisibilityEmptyState hasActiveRun={Boolean(queries.activeRun)} />
+      <ReportPage actions={<VisibilityActions launch={false} />}>
+        <VisibilityEmptyState activeRun={queries.activeRun ?? null} />
       </ReportPage>
     );
   }

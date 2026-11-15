@@ -8,7 +8,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { ClampText } from '@/components/ui/clamp-text';
+import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { PromptImportRowRequest } from '@citeladder/contracts/prompt-requests';
@@ -31,9 +31,8 @@ import { Notice } from '@/components/ui/notice';
  * from the same column contract the parser reads.
  */
 function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
-  if (errors.length > 0)
-    return <ClampText className="type-caption text-negative">{errors.join(' ')}</ClampText>;
-  return <span className="type-caption text-positive">Ready</span>;
+  if (errors.length > 0) return <StatusMark tone="negative">{errors.join(' ')}</StatusMark>;
+  return <StatusMark tone="positive">Ready</StatusMark>;
 }
 
 const PREVIEW_COLUMNS: readonly DataTableColumn[] = [

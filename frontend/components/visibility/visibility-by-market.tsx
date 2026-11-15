@@ -3,7 +3,8 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
 import type { VisibilityMarkets } from '@citeladder/contracts/visibility';
 
-import { Button } from '@/components/ui/button';
+import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { TitledSection } from '@/components/ui/section';
 import { Delta } from '@/components/ui/delta';
@@ -69,13 +70,15 @@ export function VisibilityByMarket({
         {(query.data?.markets ?? []).map((row) => (
           <TableRow key={row.market.id ?? 'default'}>
             <TableCell>
-              <Button
-                variant="quiet"
-                aria-current={row.market.id === market ? 'true' : undefined}
-                onClick={() => onSelectMarket(row.market.id)}
-              >
-                {row.market.label}
-              </Button>
+              <TextLink asChild text="inherit">
+                <Pressable
+                  className="w-auto"
+                  aria-current={row.market.id === market ? 'true' : undefined}
+                  onClick={() => onSelectMarket(row.market.id)}
+                >
+                  {row.market.label}
+                </Pressable>
+              </TextLink>
             </TableCell>
             {row.state === 'measured' ? (
               <>

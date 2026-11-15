@@ -140,40 +140,38 @@ export function SurfaceRatesPanel({
       </SectionHeader>
       <SectionContent>
         <Stack gap="workspace">
-          <div className="border-rule border-b">
-            <FigureStrip
-              segments={[
-                rateStat({
-                  key: 'trigger',
-                  label: 'Overview shown',
-                  caption:
-                    'A property of the QUERIES, not of your brand. It moves when Google changes what it answers with.',
-                  rate: data.trigger_rate,
-                }),
-                rateStat({
-                  key: 'named',
-                  label: 'Named, when shown',
-                  caption:
-                    'Conditional. It can rise while overall visibility falls, if Google shows fewer overviews but names you in more of them.',
-                  rate: data.brand_mention_rate_when_present,
-                }),
-                rateStat({
-                  key: 'overall',
-                  label: 'Overall visibility',
-                  caption:
-                    "Unconditional, and the closest to 'how visible are we here'. A search with no overview counts against it.",
-                  rate: data.overall_brand_visibility,
-                }),
-                rateStat({
-                  key: 'cited',
-                  label: 'Your site cited',
-                  caption:
-                    'Independent of being named: an overview can name you without citing you, and cite you without naming you.',
-                  rate: data.owned_citation_rate_when_present,
-                }),
-              ]}
-            />
-          </div>
+          <FigureStrip
+            segments={[
+              rateStat({
+                key: 'trigger',
+                label: 'Overview shown',
+                caption:
+                  'A property of the QUERIES, not of your brand. It moves when Google changes what it answers with.',
+                rate: data.trigger_rate,
+              }),
+              rateStat({
+                key: 'named',
+                label: 'Named, when shown',
+                caption:
+                  'Conditional. It can rise while overall visibility falls, if Google shows fewer overviews but names you in more of them.',
+                rate: data.brand_mention_rate_when_present,
+              }),
+              rateStat({
+                key: 'overall',
+                label: 'Overall visibility',
+                caption:
+                  "Unconditional, and the closest to 'how visible are we here'. A search with no overview counts against it.",
+                rate: data.overall_brand_visibility,
+              }),
+              rateStat({
+                key: 'cited',
+                label: 'Your site cited',
+                caption:
+                  'Independent of being named: an overview can name you without citing you, and cite you without naming you.',
+                rate: data.owned_citation_rate_when_present,
+              }),
+            ]}
+          />
           <CompetitorRates rates={data.competitor_mention_rates} />
         </Stack>
       </SectionContent>

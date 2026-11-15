@@ -75,7 +75,9 @@ export function RunsScreen() {
   // The page keeps its action and status filters while the first load lands.
   // Launching is offered only to a role that may run audits.
   const canRun = useWorkspaceCapability('run');
-  const actions = (
+  // With no run yet, Launch run is the empty state's own button, not the masthead's.
+  const empty = runsQuery.isSuccess && audits.length === 0;
+  const actions = empty ? undefined : (
     <MastheadPrimary>
       <LaunchAuditButton />
     </MastheadPrimary>
@@ -158,9 +160,10 @@ function RunsContent({
         heading="No runs yet"
         description={
           canRun
-            ? 'Launch run, above, measures how AI engines answer questions about your brand.'
+            ? 'A run asks AI engines your prompts and measures how they answer about your brand.'
             : 'No run has measured how AI engines answer questions about this brand yet.'
         }
+        action={canRun ? <LaunchAuditButton captioned /> : undefined}
       />
     );
   }

@@ -138,7 +138,8 @@ function CoverageNote({ coverage }: Readonly<{ coverage: AccuracyCoverage }>) {
 function Headline({ data }: Readonly<{ data: AccuracyResponse }>) {
   const { coverage } = data.score;
   return (
-    <Section>
+    // Stat cards on the ground: the strip is never a card inside a card.
+    <Section variant="group">
       <SectionContent>
         <Stack gap="item">
           <FigureStrip

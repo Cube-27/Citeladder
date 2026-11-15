@@ -17,42 +17,46 @@ import { VisibilityEmptyState } from './empty-state';
  * duplicate, paid run; showing a bare empty state hides the fact that results
  * are on the way.
  */
+const run: ActiveRun = {
+  id: '11111111-1111-4111-8111-111111111111',
+  status: 'running',
+  createdAt: '2026-08-01T00:00:00Z',
+};
+
 describe('VisibilityEmptyState', () => {
-  it('points to the masthead Launch run when nothing is running, without a second button', () => {
-    render(<VisibilityEmptyState />);
+  it('carries Launch run itself when nothing is running', () => {
+    render(<VisibilityEmptyState activeRun={null} />);
 
     expect(screen.getByText('No completed runs yet')).toBeVisible();
-    expect(screen.getByText(/Launch run, above,/)).toBeVisible();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'View runs' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Launch run' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Watch live progress/ })).not.toBeInTheDocument();
   });
 
-  it('does not point a viewer to a Launch run the masthead does not offer them', () => {
-    render(<VisibilityEmptyState />, { projectSelection: selectionAs('viewer') });
+  it('does not offer a viewer a Launch run their role may not use', () => {
+    render(<VisibilityEmptyState activeRun={null} />, {
+      projectSelection: selectionAs('viewer'),
+    });
 
     expect(screen.getByText('No completed runs yet')).toBeVisible();
     expect(screen.getByText(/No run has measured/)).toBeVisible();
-    expect(screen.queryByText(/Launch run/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
   });
 
-  it('routes to Runs instead of inviting a duplicate when one is already running', () => {
-    render(<VisibilityEmptyState hasActiveRun />);
+  it('links to the running run instead of inviting a duplicate', () => {
+    render(<VisibilityEmptyState activeRun={run} />);
 
     // Offering "launch" here would invite a second paid run for results that
     // are already on the way.
     expect(screen.queryByRole('button', { name: /Launch/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View runs' })).toHaveAttribute('href', '/runs');
+    expect(screen.getByRole('link', { name: 'Watch live progress' })).toHaveAttribute(
+      'href',
+      `/runs/${run.id}`,
+    );
     expect(screen.getByText(/results appear here when it finishes/i)).toBeVisible();
   });
 });
 
 describe('ActiveRunBanner', () => {
-  const run: ActiveRun = {
-    id: '11111111-1111-4111-8111-111111111111',
-    status: 'running',
-    createdAt: '2026-08-01T00:00:00Z',
-  };
-
   it('names the run’s current status', () => {
     render(<ActiveRunBanner run={run} />);
 
