@@ -28,6 +28,7 @@ import { ROW_TASK, ROW_TASK_ORDER } from './crawl-counters.ts';
 import { siteLevelRuleOf } from './rules.ts';
 
 const PERSISTED = ['completed', 'partially_completed'];
+const DUPLICATE = policy.site_health.crawl.exclusions.duplicate;
 // The largest integer depth; an unmeasured page sorts after every measured one.
 const UNMEASURED_DEPTH = 2_147_483_647;
 const MAX_REFERRERS = policy.site_health.crawl.max_referrers_per_url;
@@ -190,6 +191,8 @@ export async function pageRows(
       : sql`and (sort_value, site_url_id) > (${value}, ${after.id}::uuid)`;
   }
   const direction = sql.raw(spec.descending ? 'desc' : 'asc');
+  const duplicate = sql`(k.analysis_id is null and k.error_code = ${DUPLICATE})`;
+  const unmeasured = sql`case when ${duplicate} then 'excluded' else 'not_measured' end`;
   // The cursor and the order cut the window first (PERF-007): only its rows
   // pay for the projection's per-row subqueries.
   const result = await sql<PageRow>`
@@ -203,6 +206,8 @@ export async function pageRows(
           when t.status is null then
             case when m.site_url_id is not null then ${unmonitoredStatus} else 'not_selected' end
           when t.status = 'cancelled' then 'cancelled'
+          -- Finalization retired the analysis of a canonical alias: settled, never pending.
+          when t.status = 'succeeded' and u.disposition_reason = ${DUPLICATE} then 'not_measured'
           when t.status = 'failed' then
             case when ${failedAs('t', ['blocked', 'excluded'])}
               then 'blocked' else 'error' end
@@ -212,6 +217,7 @@ export async function pageRows(
         case
           when a.status = any(${PERSISTED}::text[]) then ''
           when t.status in ('cancelled', 'failed') then coalesce(t.error_code, '')
+          when t.status = 'succeeded' and u.disposition_reason = ${DUPLICATE} then u.disposition_reason
           else ''
         end as error_code,
         l.inbound_count,
@@ -287,11 +293,12 @@ export async function pageRows(
       a.page_kind,
       a.web_fundamentals_score,
       a.web_fundamentals_coverage,
-      coalesce(a.web_fundamentals_state, 'not_measured') as web_fundamentals_state,
+      coalesce(a.web_fundamentals_state, ${unmeasured}) as web_fundamentals_state,
       a.aeo_readiness_score,
       a.aeo_measurement_coverage,
-      coalesce(a.aeo_measurement_state, 'not_measured') as aeo_measurement_state,
-      coalesce(a.aeo_measurement_reason, '') as aeo_measurement_reason,
+      coalesce(a.aeo_measurement_state, ${unmeasured}) as aeo_measurement_state,
+      coalesce(a.aeo_measurement_reason, case when ${duplicate} then k.error_code else '' end)
+        as aeo_measurement_reason,
       a.main_content_indexable,
       coalesce((
         select (f.acquisition_options ->> 'robots_excluded')::boolean

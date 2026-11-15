@@ -400,6 +400,17 @@ describe('page projections', () => {
         .execute();
       if (path === '/waiting') await monitor(seed, row.id);
     }
+    // A canonical alias: its analyze task succeeded, then finalization excluded it
+    // as a duplicate and retired its analysis.
+    const alias = await page(seed, '/alias', { current: false });
+    await db
+      .updateTable('site_urls')
+      .set({
+        corpus_disposition: 'exclude',
+        disposition_reason: policy.site_health.crawl.exclusions.duplicate,
+      })
+      .where('id', '=', alias.id)
+      .execute();
 
     const pages = byUrl(
       (await json(seed, `/site-crawls/${seed.crawlId}/pages`, pagesPageSchema)).items,
@@ -440,7 +451,24 @@ describe('page projections', () => {
     const terminal = byUrl(
       (await json(seed, `/site-crawls/${seed.crawlId}/pages`, pagesPageSchema)).items,
     );
-    expect(terminal['/waiting']!.analysis_status).toBe('not_measured');
+    expect(terminal['/waiting']).toMatchObject({
+      analysis_status: 'not_measured',
+      error_code: '',
+      web_fundamentals_state: 'not_measured',
+      aeo_measurement_state: 'not_measured',
+    });
+    const duplicate = await json(
+      seed,
+      `/site-crawls/${seed.crawlId}/pages/${alias.id}`,
+      pageDetailSchema,
+    );
+    expect(duplicate).toMatchObject({
+      analysis_status: 'not_measured',
+      error_code: policy.site_health.crawl.exclusions.duplicate,
+      web_fundamentals_state: 'excluded',
+      aeo_measurement_state: 'excluded',
+      aeo_measurement_reason: policy.site_health.crawl.exclusions.duplicate,
+    });
   });
 
   it('search a crawl’s pages by URL, case-insensitively, binding the cursor to the search', async () => {
