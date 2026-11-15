@@ -69,11 +69,15 @@ function SiteHealthContent({
     enabled: tab === 'internal-links' && !blocking,
     canAnalyze: mutationsAllowed,
   });
-  const linksActions = tab === 'internal-links' ? links.actions : null;
-  const controls = tabControls({ tab, blocking, links: links.controls });
-  // Each export sits at the end of the row of the list it exports: the pages
-  // table's toolbar, Internal links' control row. The header keeps the crawl
-  // controls and a tab's primary action.
+  const controls = tabControls({
+    tab,
+    blocking,
+    links: links.controls,
+    linksActions: links.actions,
+  });
+  // The masthead holds the crawl controls and is the same on every tab; a
+  // tab's own actions (Internal links' Analyze again, each export) sit at the
+  // end of that tab's control row or table toolbar.
   const headerActions =
     crawl && mutationsAllowed && canRun ? (
       <CrawlActions
@@ -81,14 +85,11 @@ function SiteHealthContent({
         active={active}
         cancelPending={cancelMutation.isPending}
         startPending={startPending}
-        tabActions={linksActions}
         schedule={schedule.control}
         onCancel={cancelCrawl}
         onStart={(robots) => startCrawl({ project_id: projectId, robots })}
       />
-    ) : (
-      (linksActions ?? undefined)
-    );
+    ) : undefined;
   const prefetchTab = useSiteHealthTabPrefetch(workspaceId, projectId, crawl?.id, !active);
   // Every state draws the loaded page's bands — the tab row included — with
   // the state where the panel will be, so a failed read or the first load
@@ -126,23 +127,34 @@ function SiteHealthContent({
 
 /**
  * The selected tab's control row: Internal links alone has one (Pages' view,
- * filter and export scope its table, so they lead that table's toolbar). It
- * holds the row through the first load, so its work starts on the same line
- * once it lands.
+ * filter and export scope its table, so they lead that table's toolbar), and
+ * it ends with that tab's own run action before its export. It holds the row
+ * through the first load, so its work starts on the same line once it lands.
  */
 function tabControls({
   tab,
   blocking,
   links,
+  linksActions,
 }: Readonly<{
   tab: AnalysisTab;
   blocking: BlockingState | null;
   links: FilterBarProps | undefined;
+  linksActions: ReactNode;
 }>): FilterBarProps | undefined {
   if (tab !== 'internal-links') return undefined;
   if (blocking?.kind === 'loading') return RESERVED_CONTROLS;
-  if (blocking) return undefined;
-  return links;
+  if (blocking || !links) return undefined;
+  if (!linksActions) return links;
+  return {
+    ...links,
+    actions: (
+      <>
+        {linksActions}
+        {links.actions}
+      </>
+    ),
+  };
 }
 
 /** What stands in for the analysis: the one first-load wait, or a state that replaces the page. */
@@ -291,7 +303,7 @@ const ANALYSIS_TABS: ReadonlyArray<{ value: AnalysisTab; label: string }> = [
   { value: 'overview', label: 'Overview' },
   { value: 'pages', label: 'Pages' },
   { value: 'architecture', label: 'Architecture' },
-  { value: 'aeo-readiness', label: 'AEO Readiness' },
+  { value: 'aeo-readiness', label: 'AEO readiness' },
   { value: 'internal-links', label: 'Internal links' },
   { value: 'changes', label: 'Changes' },
 ];
@@ -352,7 +364,13 @@ function AnalysisPanel({
   if (tab === 'internal-links')
     return <InternalLinksPanel read={linksRead} workspaceId={workspaceId} />;
   if (tab === 'changes') return <ChangesPanel projectId={projectId} workspaceId={workspaceId} />;
-  return <Notice tone="info">Run a crawl before opening Website analysis.</Notice>;
+  return (
+    <StateBlock
+      kind="empty"
+      heading="No crawl to analyse yet"
+      description="This view reads a finished crawl of your site. Start the first crawl from the Pages tab."
+    />
+  );
 }
 
 function screenBlockingState({
@@ -419,7 +437,6 @@ function CrawlActions({
   active,
   cancelPending,
   startPending,
-  tabActions,
   schedule,
   onCancel,
   onStart,
@@ -429,12 +446,6 @@ function CrawlActions({
   active: boolean;
   cancelPending: boolean;
   startPending: boolean;
-  /**
-   * A tab's own primary action (Internal links' Analyze again), which takes
-   * the masthead's primary slot. Run new crawl is one named action with one
-   * look everywhere (`ACTIONS.runCrawl`).
-   */
-  tabActions: ReactNode;
   /** The crawl schedule, beside the crawl button. */
   schedule: ReactNode;
   onCancel: () => void;
@@ -456,8 +467,7 @@ function CrawlActions({
           {cancelPending ? 'Stopping…' : 'Stop crawl'}
         </Button>
       ) : null}
-      {start && !tabActions ? <MastheadPrimary>{start}</MastheadPrimary> : start}
-      {tabActions ? <MastheadPrimary>{tabActions}</MastheadPrimary> : null}
+      {start ? <MastheadPrimary>{start}</MastheadPrimary> : null}
     </>
   );
 }

@@ -1,5 +1,8 @@
 import { Inline, Stack } from '@/components/ui/layout';
 import { Absence } from '@/components/ui/absence';
+import { StatusMark } from '@/components/ui/status-mark';
+import { ClampText } from '@/components/ui/clamp-text';
+import { formatCount } from '@/lib/format';
 import type { RootError } from '@citeladder/contracts';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
@@ -42,12 +45,10 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               data-testid="root-error-row"
               className={ledgerItemClasses()}
             >
-              <span className={textRole('body', 'tabular-nums')}>{error.method}</span>
-              <span className="type-body text-ink-2 min-w-0 flex-1 truncate tabular-nums">
-                {error.target}
-              </span>
+              <span className="type-code">{error.method}</span>
+              <ClampText className="type-body text-ink-2 flex-1">{error.target}</ClampText>
               {error.error_code ? (
-                <span className="type-body text-negative tabular-nums">{error.error_code}</span>
+                <StatusMark tone="negative">{error.error_code}</StatusMark>
               ) : null}
               <span className="type-body text-ink-2 tabular-nums">
                 {error.status_code !== null ? (
@@ -60,7 +61,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
                 {/* B6: 0 ms is an unmeasured hop (DNS failure never reached the
                   wire), not an instant response — show the placeholder. */}
                 {error.latency_ms !== null && error.latency_ms > 0 ? (
-                  `${error.latency_ms} ms`
+                  `${formatCount(error.latency_ms)} ms`
                 ) : (
                   <Absence state="not_measured" />
                 )}

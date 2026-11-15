@@ -202,11 +202,11 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(screen.getByRole('progressbar', { name: 'Web Fundamentals score' })).toHaveAttribute(
+    expect(screen.getByRole('progressbar', { name: 'Web fundamentals score' })).toHaveAttribute(
       'aria-valuetext',
       '81 out of 100',
     );
-    expect(screen.getByRole('progressbar', { name: 'AEO Readiness score' })).toHaveAttribute(
+    expect(screen.getByRole('progressbar', { name: 'AEO readiness score' })).toHaveAttribute(
       'aria-valuetext',
       '62 out of 100',
     );
@@ -214,13 +214,14 @@ describe('OverviewPanel', () => {
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
     // The two completion shares are rung meters too, each with its link.
-    expect(screen.getByRole('progressbar', { name: 'AEO Checklist Completion' })).toHaveAttribute(
+    expect(screen.getByRole('progressbar', { name: 'AEO checklist completion' })).toHaveAttribute(
       'aria-valuetext',
       '50%',
     );
-    expect(screen.getByRole('progressbar', { name: 'Crawl Coverage score' })).toHaveAttribute(
+    // Coverage is a share of the pages found, so it reads as a percentage, not a score.
+    expect(screen.getByRole('progressbar', { name: 'Crawl coverage' })).toHaveAttribute(
       'aria-valuetext',
-      '40 out of 100',
+      '40%',
     );
     // Scores are rung progress bars, never the thin-bar Meter.
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
@@ -258,9 +259,10 @@ describe('OverviewPanel', () => {
     );
 
     // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
-    expect(
-      await screen.findByRole('progressbar', { name: 'Crawl Coverage score' }),
-    ).toHaveAttribute('aria-valuetext', '20 out of 100');
+    expect(await screen.findByRole('progressbar', { name: 'Crawl coverage' })).toHaveAttribute(
+      'aria-valuetext',
+      '20%',
+    );
   });
 
   it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {
@@ -293,8 +295,8 @@ describe('OverviewPanel', () => {
     );
 
     await screen.findByRole('table', { name: 'Top issues' });
-    expect(stat('Crawl Coverage')).toHaveTextContent('Not measured');
-    expect(screen.queryByRole('img', { name: /Crawl Coverage score/ })).not.toBeInTheDocument();
+    expect(stat('Crawl coverage')).toHaveTextContent('Not measured');
+    expect(screen.queryByRole('progressbar', { name: 'Crawl coverage' })).not.toBeInTheDocument();
   });
 
   it('links each score to where it is acted on', () => {
@@ -343,7 +345,7 @@ describe('OverviewPanel', () => {
         .getAllByRole('row')
         .map((row) => row.textContent),
     ).toEqual(['Series2026-08-282026-08-30', 'Open issues129']);
-    expect(screen.queryByRole('heading', { name: 'AEO Readiness trend' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'AEO readiness trend' })).not.toBeInTheDocument();
   });
 
   it('explains a changed scored cohort once, beside the score changes', async () => {
@@ -376,7 +378,7 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(await screen.findByRole('heading', { name: 'Change summary' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Score change' })).toBeVisible();
     expect(screen.getAllByText('Scored cohort composition changed.')).toHaveLength(1);
     expect(
       screen.getByText(
@@ -385,7 +387,7 @@ describe('OverviewPanel', () => {
     ).toBeInTheDocument();
   });
 
-  it('opens HTTP Web Fundamentals evidence without browser-only checks', async () => {
+  it('opens HTTP Web fundamentals evidence without browser-only checks', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
         HttpResponse.json(terminalOverview()),
@@ -403,10 +405,10 @@ describe('OverviewPanel', () => {
 
     await screen.findByRole('table', { name: 'Top issues' });
     // One list, one area a row, each with its state.
-    const areas = within(screen.getByRole('list', { name: 'Web Fundamentals areas' }));
+    const areas = within(screen.getByRole('list', { name: 'Web fundamentals areas' }));
     expect(areas.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
       'accessibilityMeasured',
-      'mobileLimited Evidence',
+      'mobileLimited evidence',
     ]);
     await user.click(screen.getByRole('button', { name: 'View evidence' }));
     expect(screen.getByRole('dialog')).toHaveTextContent('Images missing alt attributes');
@@ -443,7 +445,7 @@ describe('OverviewPanel', () => {
     );
     const rows = within(table).getAllByRole('row');
     expect(rows.map((row) => row.textContent)).toEqual([
-      'ImpactIssuePages',
+      'ImpactIssuePages affected',
       'HighMissing page title1',
       'MediumVisible creator attribution incompleteAdvisory1',
       'LowMissing meta descriptionAdvisory1',

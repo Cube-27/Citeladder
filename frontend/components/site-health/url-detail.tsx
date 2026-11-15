@@ -6,21 +6,16 @@ import { History } from 'lucide-react';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableRow, TableTime } from '@/components/ui/table';
+import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Drawer } from '@/components/ui/drawer';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { PageDetail } from '@citeladder/contracts';
 import { ApiError } from '@/lib/api/errors';
 import { RERUN_MAX_PRE_ACTIVE_POLLS, RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
-import {
-  dimensionLabel,
-  issueTitle,
-  severityBadgeValue,
-  severityLabel,
-} from '@/lib/site-health/issues';
-import { formatAudited } from '@/lib/site-health/status';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
 import { PAGE_DETAIL_BACK, UrlDetailView } from './url-detail-view';
@@ -180,6 +175,7 @@ function IssueHistoryButton(target: HistoryTarget) {
           setOpen(true);
         }}
       >
+        <Icon icon={History} />
         History
       </Button>
       <Drawer
@@ -195,7 +191,6 @@ function IssueHistoryButton(target: HistoryTarget) {
 }
 
 function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
-  const timeZone = useDisplayTimeZone();
   // A page turn keeps the rows and the pager in place until the next page
   // lands; the first load, a failed read and an empty history draw inside the
   // table at the height of a full page.
@@ -231,11 +226,13 @@ function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
             <Tag>{dimensionLabel(row.dimension)}</Tag>
           </TableCell>
           <TableCell>
-            <StatusMark variant="status" value={severityBadgeValue(row.severity)}>
+            <StatusMark variant="severity" value={row.severity}>
               {severityLabel(row.severity)}
             </StatusMark>
           </TableCell>
-          <TableCell numeric>{formatAudited(row.created_at, timeZone)}</TableCell>
+          <TableCell>
+            <TableTime value={row.created_at} fallback={<Absence state="not_measured" />} />
+          </TableCell>
         </TableRow>
       ))}
     </DataTable>

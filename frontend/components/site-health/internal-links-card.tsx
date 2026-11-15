@@ -7,7 +7,8 @@ import type { PageDetail } from '@citeladder/contracts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { StateBlock } from '@/components/ui/state-block';
-import { formatPercent } from '@/lib/format';
+import { formatCount, formatPercent } from '@/lib/format';
+import { ClampText } from '@/components/ui/clamp-text';
 
 /**
  * Internal links — the crawl's persisted link-graph projection for this page.
@@ -34,35 +35,38 @@ export function InternalLinksCard({
     ).length,
   };
   const metrics = [
-    { label: 'Inbound', value: links.inbound_count },
-    { label: 'Main-content inbound', value: links.main_content_inbound_count },
-    { label: 'Outbound', value: links.outbound_count },
-    { label: 'Main-content outbound', value: links.main_content_outbound_count },
-    { label: 'Nofollow inbound', value: links.nofollow_inbound_count },
+    { label: 'Inbound', value: formatCount(links.inbound_count) },
+    { label: 'Main-content inbound', value: formatCount(links.main_content_inbound_count) },
+    { label: 'Outbound', value: formatCount(links.outbound_count) },
+    { label: 'Main-content outbound', value: formatCount(links.main_content_outbound_count) },
+    { label: 'Nofollow inbound', value: formatCount(links.nofollow_inbound_count) },
     {
       label: 'Internal authority',
       value: formatPercent(links.authority_share),
     },
-    { label: 'Authority rank', value: links.authority_rank },
-    { label: 'Generic anchor patterns', value: diagnosticCounts.generic },
+    { label: 'Authority rank', value: formatCount(links.authority_rank) },
+    { label: 'Generic anchor patterns', value: formatCount(diagnosticCounts.generic) },
     {
       label: 'Repeated destination patterns',
-      value: diagnosticCounts.repeated_destination,
+      value: formatCount(diagnosticCounts.repeated_destination),
     },
     {
       label: 'Low lexical alignment',
-      value: diagnosticCounts.low_lexical_alignment,
+      value: formatCount(diagnosticCounts.low_lexical_alignment),
     },
     {
       label: 'Depth from home',
       // Null is a measurement: no observed link path reaches this page from the home page.
-      value: links.depth_from_home ?? 'Not reached from home',
+      value:
+        links.depth_from_home === null
+          ? 'Not reached from home'
+          : formatCount(links.depth_from_home),
     },
   ];
   return (
     <Stack gap="workspace" className="min-w-0">
       <p className={textRole('caption')}>
-        {`Modelled over ${links.source_page_count} observed crawl page${links.source_page_count === 1 ? '' : 's'}${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
+        {`Modelled over ${formatCount(links.source_page_count)} ${links.source_page_count === 1 ? 'page' : 'pages'} crawled${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
       </p>
       <FactList layout="ruled" label="Internal link measurements" facts={metrics} />
       <AppGrid layout="halves">
@@ -113,20 +117,18 @@ function NeighbourList({
               {neighbour.site_url_id ? (
                 <TextLink
                   text="caption"
-                  className="min-w-0 truncate tabular-nums"
+                  className="min-w-0 truncate"
                   href={`/site/crawls/${crawlId}/pages/${neighbour.site_url_id}`}
                   title={neighbour.url}
                 >
                   {neighbour.url}
                 </TextLink>
               ) : (
-                <span className="type-caption min-w-0 truncate tabular-nums" title={neighbour.url}>
-                  {neighbour.url}
-                </span>
+                <ClampText className="type-caption">{neighbour.url}</ClampText>
               )}
               <Inline as="span" className="shrink-0">
                 {neighbour.main_content ? <Tag>Main</Tag> : null}
-                {neighbour.nofollow ? <Tag className="text-ink-2">nofollow</Tag> : null}
+                {neighbour.nofollow ? <Tag>Nofollow</Tag> : null}
                 <span className="type-caption tabular-nums">×{neighbour.anchor_count}</span>
               </Inline>
             </Inline>

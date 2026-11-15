@@ -1,4 +1,5 @@
 import { useRef, useState, type Ref } from 'react';
+import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
 
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { askAgentPrompt, buildFixPrompt } from '@/components/site-health/issue-detail-dialog';
@@ -12,11 +13,18 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { OpenRow } from '@/components/ui/list-row';
 import { Pager } from '@/components/ui/pager';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses, SubsectionHeader } from '@/components/ui/workspace';
+import { insetClasses, ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { Icon } from '@/components/ui/icon';
 import type { PageIssue } from '@citeladder/contracts';
 import { scoreRoleLabels, severityRank } from '@/lib/site-health/issues';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /** Issues the list shows before "View all". */
 const PREVIEW_COUNT = 5;
@@ -114,6 +122,7 @@ function IssueList({
       </ol>
       {issues.length > PREVIEW_COUNT ? (
         <Button variant="quiet" className="w-fit" onClick={() => setExpanded(!expanded)}>
+          <Icon icon={expanded ? ChevronUp : ChevronDown} />
           {expanded ? 'Show fewer issues' : `View all ${issues.length} issues`}
         </Button>
       ) : null}
@@ -138,45 +147,46 @@ function IssueDetails({
   rerun?: RerunControl;
 }>) {
   const shown = issues.slice(start, start + CARDS_PER_VIEW);
+  // One card headed "Issue details", its pager in the head; each issue is an
+  // inset inside it, so no card sits inside a card.
   return (
-    <Stack
-      as="section"
-      gap="item"
-      ref={ref}
-      aria-labelledby="page-issue-details"
-      className="scroll-mt-24"
-    >
-      <Inline className="flex-wrap justify-between">
-        <h2 id="page-issue-details" className={textRole('heading')}>
-          Issue details
-        </h2>
-        <Pager
-          hideWhenSinglePage
-          range={{
-            from: start + 1,
-            to: start + shown.length,
-            total: issues.length,
-            noun: 'issues',
-          }}
-          canPrev={start > 0}
-          canNext={start + CARDS_PER_VIEW < issues.length}
-          onPrev={() => onStart(Math.max(0, start - CARDS_PER_VIEW))}
-          onNext={() => onStart(start + CARDS_PER_VIEW)}
-        />
-      </Inline>
-      <AppGrid layout="pair">
-        {shown.map((issue, offset) => (
-          <IssueCard
-            key={issue.occurrence_id}
-            issue={issue}
-            position={start + offset + 1}
-            total={issues.length}
-            crawlId={crawlId}
-            rerun={rerun}
-          />
-        ))}
-      </AppGrid>
-    </Stack>
+    <div ref={ref} className="min-w-0 scroll-mt-24">
+      <Section aria-labelledby="page-issue-details">
+        <SectionHeader
+          actions={
+            <Pager
+              hideWhenSinglePage
+              range={{
+                from: start + 1,
+                to: start + shown.length,
+                total: issues.length,
+                noun: 'issues',
+              }}
+              canPrev={start > 0}
+              canNext={start + CARDS_PER_VIEW < issues.length}
+              onPrev={() => onStart(Math.max(0, start - CARDS_PER_VIEW))}
+              onNext={() => onStart(start + CARDS_PER_VIEW)}
+            />
+          }
+        >
+          <SectionTitle id="page-issue-details">Issue details</SectionTitle>
+        </SectionHeader>
+        <SectionContent>
+          <AppGrid layout="pair">
+            {shown.map((issue, offset) => (
+              <IssueCard
+                key={issue.occurrence_id}
+                issue={issue}
+                position={start + offset + 1}
+                total={issues.length}
+                crawlId={crawlId}
+                rerun={rerun}
+              />
+            ))}
+          </AppGrid>
+        </SectionContent>
+      </Section>
+    </div>
   );
 }
 
@@ -200,7 +210,7 @@ function IssueCard({
   const head = { ...issue, title: issue.issue_title, affected_url_count: 1 };
   const scores = scoreRoleLabels(issue.score_roles);
   return (
-    <Section aria-label={issue.issue_title}>
+    <section aria-label={issue.issue_title} className={insetClasses()}>
       <Stack gap="compact">
         <Inline className="flex-wrap justify-between">
           <IssueMetadata issue={issue} />
@@ -234,12 +244,13 @@ function IssueCard({
           </CopyButton>
           {rerun ? (
             <Button variant="quiet" onClick={rerun.onRerun} disabled={rerun.busy}>
+              <Icon icon={RefreshCw} />
               Re-audit to verify
             </Button>
           ) : null}
         </Inline>
       </Stack>
-    </Section>
+    </section>
   );
 }
 
@@ -247,12 +258,12 @@ function IssueCard({
 function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] }>) {
   return (
     <Section>
+      <SectionHeader>
+        <SectionTitle>{`Advisories (${advisories.length})`}</SectionTitle>
+        <SectionDescription>Recommendations to consider.</SectionDescription>
+      </SectionHeader>
       <SectionContent>
-        <Stack as="section" gap="item">
-          <SubsectionHeader
-            title={`Advisories (${advisories.length})`}
-            description="Recommendations to consider."
-          />
+        <Stack gap="item">
           <ol className={ledgerClasses()}>
             {advisories.map((issue) => (
               <Stack as="li" gap="tight" key={issue.occurrence_id} className={ledgerItemClasses()}>

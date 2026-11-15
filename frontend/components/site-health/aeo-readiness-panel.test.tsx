@@ -147,7 +147,7 @@ function stubReadiness(overrides: Record<string, unknown> = {}) {
   );
 }
 
-describe('AEO Readiness', () => {
+describe('AEO readiness', () => {
   it('renders all seven dimensions with a plain-language description', async () => {
     stubReadiness();
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
@@ -253,8 +253,26 @@ describe('AEO Readiness', () => {
     const row = (await screen.findByText('Answerability')).closest('tr');
     expect(within(row!).queryByText('Passing')).toBeNull();
     expect(within(row!).getByText('Nearly there')).toBeInTheDocument();
+    // The printed 100 and the lower band carry the reason, so they agree.
+    expect(within(row!).getByText('1 check incomplete')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Answerability evidence' }));
     expect(screen.getAllByText('Incomplete')).toHaveLength(1);
+  });
+
+  it('says how many checks hold a printed 100 below Passing', async () => {
+    const dimensions = DIMENSIONS.map(([key, label], index) => {
+      const base = dimension(key, label, false);
+      return index === 1 ? { ...base, unresolved_count: 1 } : base;
+    });
+    stubReadiness({ dimensions });
+    renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    const held = (await screen.findByText(DIMENSIONS[1][1])).closest('tr');
+    expect(within(held!).getByText('Nearly there')).toBeInTheDocument();
+    expect(within(held!).getByText('1 check unresolved')).toBeInTheDocument();
+    const passing = screen.getByText(DIMENSIONS[0][1]).closest('tr');
+    expect(within(passing!).getByText('Passing')).toBeInTheDocument();
+    expect(within(passing!).queryByText(/unresolved|incomplete/)).toBeNull();
   });
 
   it('labels unknown-only checks as incomplete rather than not applicable', async () => {
@@ -313,7 +331,7 @@ describe('AEO Readiness', () => {
     renderWithProviders(<AeoReadinessPanel projectId={PROJECT} crawlId={CRAWL} />);
 
     await userEvent.click(await screen.findByRole('button', { name: 'Answerability evidence' }));
-    expect(screen.getByText(/Showing the 2 most affected of 140 pages/)).toBeInTheDocument();
+    expect(screen.getByText(/Showing 2 of 140 pages affected/)).toBeInTheDocument();
   });
 
   it('shows the persisted empty state rather than an empty grid', async () => {

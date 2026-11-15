@@ -18,6 +18,7 @@ import {
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
 import { Notice } from '@/components/ui/notice';
+import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -206,7 +207,7 @@ function RunNotice({ crawl, message }: Readonly<{ crawl: SiteCrawl; message: str
 
 /**
  * The crawl's one status line: its status mark, the live rung while work
- * goes on, the narration, then the counts as mono figures, wrapping on
+ * goes on, the narration, then the counts in tabular figures, wrapping on
  * narrow screens. Extra content (the sample note, a count-fetch warning)
  * stacks under it.
  */
@@ -219,40 +220,47 @@ function ProgressRow({
 }: Readonly<{
   crawl: SiteCrawl;
   narration: string;
-  counts: ReadonlyArray<{ label: string; value: number | null; className?: string }>;
+  counts: readonly ProgressCount[];
   /** Show the live pulse — work is ongoing but not reflected in the counters. */
   active?: boolean;
   children?: ReactNode;
 }>) {
+  // The crawl's status is a group of content, so it is a card like the rest.
   return (
-    <Stack>
-      <Inline gap="meta" className="justify-between">
-        <Inline gap="item" className="min-w-0">
-          <CrawlStatusBadge crawl={crawl} />
-          {active ? (
-            <span data-testid="activity-pulse" className="inline-flex">
-              <Spinner />
-            </span>
-          ) : null}
-          {/* The live region is the TEXT, not the row: announcing the whole
+    <Section aria-label="Crawl status">
+      <Stack>
+        <Inline gap="meta" className="justify-between">
+          <Inline gap="item" className="min-w-0">
+            <CrawlStatusBadge crawl={crawl} />
+            {active ? (
+              <span data-testid="activity-pulse" className="inline-flex">
+                <Spinner />
+              </span>
+            ) : null}
+            {/* The live region is the TEXT, not the row: announcing the whole
                 row would re-read every counter on each poll. */}
-          <span className="type-body min-w-0" aria-live="polite">
-            {narration}
-          </span>
+            <span className="type-body min-w-0" aria-live="polite">
+              {narration}
+            </span>
+          </Inline>
+          <Inline as="dl" gap="meta">
+            {counts.map((count) => (
+              <Inline key={count.label} gap="item">
+                <dt className="type-body text-ink-2">{count.label}</dt>
+                <dd className="type-body text-ink tabular-nums">
+                  {count.value === null ? (
+                    <Absence state="not_measured" />
+                  ) : (
+                    formatCount(count.value)
+                  )}
+                </dd>
+              </Inline>
+            ))}
+          </Inline>
         </Inline>
-        <Inline as="dl" gap="meta">
-          {counts.map((count) => (
-            <Inline key={count.label} gap="item">
-              <dt className="type-body text-ink-2">{count.label}</dt>
-              <dd className={count.className ? `type-data ${count.className}` : 'type-data'}>
-                {count.value === null ? <Absence state="not_measured" /> : formatCount(count.value)}
-              </dd>
-            </Inline>
-          ))}
-        </Inline>
-      </Inline>
-      {children}
-    </Stack>
+        {children}
+      </Stack>
+    </Section>
   );
 }
 
@@ -339,7 +347,7 @@ function AnalysisStrip({
   );
 }
 
-type ProgressCount = { label: string; value: number | null; className?: string };
+type ProgressCount = { label: string; value: number | null };
 
 function analysisNarration(crawl: SiteCrawl, cancelPending: boolean): string {
   if (cancelPending) return 'Cancelling — finishing the page in flight and stopping';
@@ -352,7 +360,7 @@ function analysisNarration(crawl: SiteCrawl, cancelPending: boolean): string {
     return 'Worker lease expired — recovery is pending';
   return !crawl.sample_mode && !isDiscoveryTerminal(crawl.discovery_status)
     ? 'Auditing monitored pages while discovery re-scans the site in the background'
-    : 'Auditing monitored pages for Web Fundamentals and AEO issues';
+    : 'Auditing monitored pages for Web fundamentals and AEO issues';
 }
 
 function analysisCounts(crawl: SiteCrawl, selected: number): ProgressCount[] {
@@ -363,16 +371,21 @@ function analysisCounts(crawl: SiteCrawl, selected: number): ProgressCount[] {
   ];
   const robots = counters.failure_breakdown.robots_denied;
   if (robots > 0) {
-    fixed.push({ label: 'Blocked by robots.txt', value: robots, className: 'text-warning' });
+    fixed.push({ label: 'Blocked by robots.txt', value: robots });
   }
   return [
     ...fixed,
     ...(['http_4xx', 'http_5xx', 'timeout'] as const)
       .filter((code) => counters.failure_breakdown[code] > 0)
       .map((code) => ({
-        label: code === 'timeout' ? 'Timeouts' : code.replace('_', ' ').toUpperCase(),
+        label: FAILURE_LABELS[code],
         value: counters.failure_breakdown[code],
-        className: 'text-negative',
       })),
   ];
 }
+
+const FAILURE_LABELS = {
+  http_4xx: 'HTTP 4xx',
+  http_5xx: 'HTTP 5xx',
+  timeout: 'Timeouts',
+} as const;

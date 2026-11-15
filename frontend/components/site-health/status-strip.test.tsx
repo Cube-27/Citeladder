@@ -149,8 +149,8 @@ describe('StatusStrip — analysis activity', () => {
     });
 
     expect(screen.getByText('Blocked by robots.txt').parentElement?.textContent).toContain('36');
-    expect(screen.getByText('HTTP 4XX').parentElement?.textContent).toContain('1');
-    expect(screen.getByText('HTTP 5XX').parentElement?.textContent).toContain('2');
+    expect(screen.getByText('HTTP 4xx').parentElement?.textContent).toContain('1');
+    expect(screen.getByText('HTTP 5xx').parentElement?.textContent).toContain('2');
   });
 
   it('explains a persisted host-gate wait without calling it stalled', () => {

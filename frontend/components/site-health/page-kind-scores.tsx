@@ -6,13 +6,13 @@ import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { byPageKindRows } from '@/lib/site-health/page-kinds';
 import { formatScore, measurementCaveat } from '@/lib/site-health/status';
-import { formatPercent } from '@/lib/format';
+import { formatCount, formatPercent } from '@/lib/format';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * Dashboard per-page-kind score breakdown.
  * Renders `score_summary.by_page_kind` — one row per observed page-kind
- * bucket with its analyzed count and mean Web Fundamentals and AEO scores.
+ * bucket with its analyzed count and mean Web fundamentals and AEO scores.
  * The panel is data-driven and follows the same dashboard-then-crawl fallback
  * as the score cards. Classification completeness and the exact scored cohort
  * come from their own persisted fields. An `other` bucket can be scored by
@@ -68,9 +68,7 @@ export function PageKindScores({
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={row.page_kind} />
             </TableCell>
-            <TableCell numeric className="text-ink-2">
-              {row.analyzed_count}
-            </TableCell>
+            <TableCell numeric>{formatCount(row.analyzed_count)}</TableCell>
             <TableCell numeric className={mutedWhenMissing(row.web_fundamentals_score)}>
               <MeasurementValue
                 score={row.web_fundamentals_score}
@@ -100,10 +98,10 @@ export function PageKindScores({
 }
 
 const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'kind', label: 'Page kind', kind: 'status', width: 'flex' },
-  { key: 'analyzed', label: 'Analyzed', kind: 'number' },
-  { key: 'web', label: 'Web Fundamentals', kind: 'number' },
-  { key: 'aeo', label: 'AEO Readiness', kind: 'number' },
+  { key: 'kind', label: 'Page kind', kind: 'identity' },
+  { key: 'analyzed', label: 'Pages analyzed', kind: 'number' },
+  { key: 'web', label: 'Web fundamentals', kind: 'number' },
+  { key: 'aeo', label: 'AEO readiness', kind: 'number' },
   { key: 'coverage', label: 'AEO checklist completion', kind: 'number', width: 'metric' },
 ];
 
@@ -122,7 +120,8 @@ function MeasurementValue({
       </span>
     );
   }
-  if (state === 'limited_evidence') return 'Limited evidence';
-  if (state === 'excluded') return 'Excluded';
+  if (state === 'limited_evidence')
+    return <Absence state="not_measured" label="Limited evidence" />;
+  if (state === 'excluded') return <Absence state="excluded" />;
   return <Absence state="not_measured" />;
 }

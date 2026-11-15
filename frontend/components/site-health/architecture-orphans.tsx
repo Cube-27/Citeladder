@@ -11,7 +11,8 @@ import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import type { SiteArchitecture } from '@citeladder/contracts';
-import { pluralCount } from '@/lib/format';
+import { ClampText } from '@/components/ui/clamp-text';
+import { formatCount, pluralCount, readableUrl } from '@/lib/format';
 import { type FigureSegment } from '@/components/ui/figure-strip';
 
 // Scope, in the metric's own words. The count is a fact about the pages this
@@ -78,19 +79,21 @@ export function OrphanPageDrawer({
               {crawlId ? (
                 <TextLink
                   text="body"
-                  className="truncate"
+                  className="block min-w-0"
                   href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
                 >
-                  {page.title || page.url}
+                  <ClampText>{page.title || page.url}</ClampText>
                 </TextLink>
               ) : (
-                <span className="type-body text-ink-2 truncate">{page.title || page.url}</span>
+                <ClampText className="type-body text-ink">{page.title || page.url}</ClampText>
               )}
-              <span className="type-caption truncate">{page.url}</span>
+              <ClampText className="type-caption">{readableUrl(page.url)}</ClampText>
             </Stack>
           ))}
         </Stack>
-        {undisclosed > 0 ? <p className="type-caption">and {undisclosed} more</p> : null}
+        {undisclosed > 0 ? (
+          <p className="type-caption">and {formatCount(undisclosed)} more</p>
+        ) : null}
       </Stack>
     </Drawer>
   );

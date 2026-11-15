@@ -72,25 +72,28 @@ export function StartCrawlControl({
       pendingLabel="Starting…"
     />
   );
+  // One split button: the action and its options share an edge and a height.
   return (
     <>
-      {note ? <Tooltip content={`${note}.`}>{button}</Tooltip> : button}
-      <Menu>
-        <MenuTrigger asChild>
-          <Button variant="secondary" disabled={pending} aria-label="More crawl options">
-            <Icon icon={ChevronDown} />
-          </Button>
-        </MenuTrigger>
-        <MenuContent align="end">
-          {note ? (
-            <MenuItem onSelect={() => onStart('respect')}>
-              Run new crawl respecting robots.txt
-            </MenuItem>
-          ) : (
-            <MenuItem onSelect={askToIgnore}>Run new crawl ignoring robots.txt…</MenuItem>
-          )}
-        </MenuContent>
-      </Menu>
+      <span data-split-button="" className="inline-flex">
+        {note ? <Tooltip content={`${note}.`}>{button}</Tooltip> : button}
+        <Menu>
+          <MenuTrigger asChild>
+            <Button variant="secondary" disabled={pending} aria-label="More crawl options">
+              <Icon icon={ChevronDown} />
+            </Button>
+          </MenuTrigger>
+          <MenuContent align="end">
+            {note ? (
+              <MenuItem onSelect={() => onStart('respect')}>
+                Run new crawl respecting robots.txt
+              </MenuItem>
+            ) : (
+              <MenuItem onSelect={askToIgnore}>Run new crawl ignoring robots.txt…</MenuItem>
+            )}
+          </MenuContent>
+        </Menu>
+      </span>
       <ConfirmDialog request={confirm} onCancel={() => setConfirm(null)} />
     </>
   );

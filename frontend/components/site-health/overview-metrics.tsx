@@ -100,7 +100,7 @@ function metricContext(
 function technicalMetric(context: MetricContext): AuditMetric {
   const source = context.overview ?? context.summary;
   return {
-    title: 'Web Fundamentals',
+    title: 'Web fundamentals',
     value: source?.web_fundamentals_score ?? null,
     href: '/issues?section=technical',
     icon: ICONS.siteHealth,
@@ -110,7 +110,7 @@ function technicalMetric(context: MetricContext): AuditMetric {
 function aeoMetric(context: MetricContext): AuditMetric {
   const source = context.overview ?? context.summary;
   return {
-    title: 'AEO Readiness',
+    title: 'AEO readiness',
     value: source?.aeo_readiness_score ?? null,
     href: '/issues?section=aeo',
     icon: ICONS.visibility,
@@ -120,7 +120,7 @@ function aeoMetric(context: MetricContext): AuditMetric {
 function measurementMetric(context: MetricContext): AuditMetric {
   const source = context.overview ?? context.summary;
   return {
-    title: 'AEO Checklist Completion',
+    title: 'AEO checklist completion',
     valueUnit: 'percent',
     value: percentRatio(source?.aeo_measurement_coverage),
     href: '/site?tab=aeo-readiness',
@@ -147,7 +147,8 @@ function crawlMetric(context: MetricContext): AuditMetric {
   if (counts)
     progress = counts.found ? (100 * Math.min(counts.analyzed, counts.found)) / counts.found : null;
   return {
-    title: 'Crawl Coverage',
+    title: 'Crawl coverage',
+    valueUnit: 'percent',
     value: progress,
     href: '/site?tab=pages',
     icon: ICONS.site,

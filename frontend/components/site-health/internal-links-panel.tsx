@@ -3,7 +3,11 @@ import { Absence } from '@/components/ui/absence';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { PanelRightOpen } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { Section } from '@/components/ui/section';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
@@ -90,7 +94,11 @@ function Notices({ read }: Readonly<{ read: LinksRead }>) {
         />
       ) : null}
       {failure ? <Notice kind="mutation" notice={failure} /> : null}
-      {read.query.isPending ? <StateBlock kind="loading" label="Loading internal links…" /> : null}
+      {read.query.isPending ? (
+        <Section>
+          <StateBlock kind="loading" label="Loading internal links…" />
+        </Section>
+      ) : null}
     </>
   );
 }
@@ -99,29 +107,34 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
   const canRun = useWorkspaceCapability('run');
   const data = read.data;
   if (!data) return null;
+  // One block in its own card, so the tab's empty state holds the card's footprint.
   if (!data.crawl_id)
     return (
+      <Section>
+        <StateBlock
+          kind="empty"
+          icon={ICONS.site}
+          heading="Run a crawl first"
+          description="A completed crawl provides the pages and existing links to analyze."
+        />
+      </Section>
+    );
+  return (
+    <Section>
       <StateBlock
         kind="empty"
         icon={ICONS.site}
-        heading="Run a crawl first"
-        description="A completed crawl provides the pages and existing links to analyze."
+        heading="Find missing internal links"
+        description="Suggests the contextual links each crawled page is missing, with the passage to link from."
+        action={
+          canRun ? (
+            <Button variant="primary" pending={read.analyze.isPending} onClick={read.startAnalysis}>
+              Analyze internal links
+            </Button>
+          ) : undefined
+        }
       />
-    );
-  return (
-    <StateBlock
-      kind="empty"
-      icon={ICONS.site}
-      heading="Find missing internal links"
-      description="Find the contextual links each page is missing."
-      action={
-        canRun ? (
-          <Button variant="primary" pending={read.analyze.isPending} onClick={read.startAnalysis}>
-            Analyze internal links
-          </Button>
-        ) : undefined
-      }
-    />
+    </Section>
   );
 }
 
@@ -140,11 +153,13 @@ function LinksResult({
   const notice = internalLinkStateNotice(analysis);
   if (isRunning(analysis.state) && !analysis.recommendations.length)
     return (
-      <output className="type-body text-ink-2">
-        {summary
-          ? `Checking related pages… ${formatCount(summary.candidates - summary.pending)} of ${formatCount(summary.candidates)} page pairs done.`
-          : 'Checking related pages…'}
-      </output>
+      <Section>
+        <output className="type-body text-ink-2">
+          {summary
+            ? `Checking related pages… ${formatCount(summary.candidates - summary.pending)} of ${formatCount(summary.candidates)} page pairs done.`
+            : 'Checking related pages…'}
+        </output>
+      </Section>
     );
   return (
     <>
@@ -263,10 +278,11 @@ function LinksTable({
           </TableCell>
           <TableCell>
             <Button
-              variant="quiet"
+              variant="secondary"
               onClick={() => onSelect(link.id)}
               aria-label={`Review link from ${link.source.title || link.source.url} to ${link.target.title || link.target.url}`}
             >
+              <Icon icon={PanelRightOpen} />
               Review
             </Button>
           </TableCell>
@@ -280,7 +296,7 @@ function LinksTable({
 function LinkActionStatus({ status }: Readonly<{ status: string | null }>) {
   if (status === null) return <NoAction />;
   if (status in ACTION_STATUS_LABEL) return <ActionStatusBadge status={status as ActionStatus} />;
-  return <>Unknown status</>;
+  return <Absence state="unknown" label="Unknown status" />;
 }
 
 /**
@@ -295,10 +311,8 @@ function PageCell({ title, url }: Readonly<{ title: string; url: string }>) {
   const path = new URL(url).pathname;
   return (
     <span className="grid max-w-sm min-w-0">
-      <ClampText lines={1} tooltip={title || url}>
-        {title || path}
-      </ClampText>
-      <ClampText lines={1} tooltip={url} className="type-caption">
+      <ClampText tooltip={title || url}>{title || path}</ClampText>
+      <ClampText tooltip={url} className="type-caption">
         {readableUrl(path)}
       </ClampText>
     </span>

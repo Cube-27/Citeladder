@@ -15,7 +15,7 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { ReadinessCheck, ReadinessDimension } from '@citeladder/contracts';
 import { scoreBand } from '@/lib/score-band';
-import { formatScore, PLACEHOLDER } from '@/lib/site-health/status';
+import { formatScore } from '@/lib/site-health/status';
 import { textRole } from '@/components/ui/typography';
 import {
   EditorialSectionHeader,
@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/workspace';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { formatPercent } from '@/lib/format';
+import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 
 function pageLabel(url: string) {
   try {
@@ -33,10 +33,6 @@ function pageLabel(url: string) {
   } catch {
     return url;
   }
-}
-
-function formatCoverage(coverage: number | null): string {
-  return coverage === null ? PLACEHOLDER : formatPercent(coverage);
 }
 
 type DimensionState =
@@ -80,6 +76,29 @@ function dimensionState(dimension: ReadinessDimension): DimensionState {
 }
 
 /**
+ * Why a pillar that prints 100 is still "Nearly there". The band drops a step
+ * while a check is unresolved; without the reason the word and the number
+ * contradict each other. Below a printed 100 the number is the reason.
+ */
+function bandReason(dimension: ReadinessDimension): string | null {
+  if (dimension.score === null || Math.round(dimension.score) < 100) return null;
+  if (dimensionState(dimension) !== 'Nearly there') return null;
+  if (dimension.unresolved_count > 0) {
+    return `${pluralCount(dimension.unresolved_count, 'check')} unresolved`;
+  }
+  const incomplete = dimension.checks.filter(
+    (check) => check.error_count > 0 || check.unknown_count > 0,
+  ).length;
+  if (incomplete > 0) return `${pluralCount(incomplete, 'check')} incomplete`;
+  const partial = dimension.checks.filter(
+    (check) => check.partial_count > 0 || check.missing_count > 0,
+  ).length;
+  if (partial > 0) return `${pluralCount(partial, 'check')} not fully met`;
+  if (dimension.dimension_measurement_state === 'limited_evidence') return 'Limited evidence';
+  return 'Not every check resolved';
+}
+
+/**
  * Each band its own tone, so "Nearly there" never reads as "Needs work". A
  * pillar with no score has no band: it takes the neutral badge.
  */
@@ -117,15 +136,15 @@ export function AeoReadinessPanel({
   const [detailKey, setDetailKey] = useState<string | null>(null);
 
   if (readiness.isLoading) {
-    return <StateBlock kind="loading" label="Loading AEO Readiness…" />;
+    return <StateBlock kind="loading" label="Loading AEO readiness" />;
   }
   if (readiness.isError)
     return (
       <StateBlock
         kind="error"
         error={readiness.error}
-        fallback="Could not load AEO Readiness."
-        title="Could not load AEO Readiness"
+        fallback="Retry in a moment."
+        title="Couldn't load AEO readiness"
         onRetry={() => void readiness.refetch()}
         pending={readiness.isFetching}
       />
@@ -134,7 +153,7 @@ export function AeoReadinessPanel({
     return (
       <Notice tone="info">
         {readiness.data?.limitations[0] ??
-          'AEO Readiness appears once a crawl has finished analyzing pages.'}
+          'AEO readiness appears once a crawl has finished analyzing pages.'}
       </Notice>
     );
   }
@@ -160,6 +179,7 @@ function ReadinessLedger({
     <DataTable title="Readiness dimensions" columns={READINESS_COLUMNS}>
       {dimensions.map((dimension) => {
         const state = dimensionState(dimension);
+        const reason = bandReason(dimension);
         const open = () => onOpen(dimension.key);
         return (
           // The row is the drawer's trigger; its name cell is the button a
@@ -190,11 +210,15 @@ function ReadinessLedger({
               {dimension.coverage === null ? (
                 <Absence state="not_measured" />
               ) : (
-                formatCoverage(dimension.coverage)
+                formatPercent(dimension.coverage)
               )}
             </TableCell>
             <TableCell>
-              <StatusMark tone={DIMENSION_TONES[state]}>{state}</StatusMark>
+              {/* Reads "Nearly there: 1 check unresolved". */}
+              <Inline>
+                <StatusMark tone={DIMENSION_TONES[state]}>{state}</StatusMark>
+                {reason ? <ClampText className="type-caption">{reason}</ClampText> : null}
+              </Inline>
             </TableCell>
           </TableRow>
         );
@@ -284,9 +308,10 @@ function checkState(check: ReadinessCheck): CheckState {
 /** Says whether the list is the whole set or only its worst rows. */
 function failingPagesCaption(shown: number, total: number): string {
   if (total === 0) return 'No failing pages were recorded.';
-  if (shown < total) return `Showing the ${shown} most affected of ${total} pages, worst first.`;
-  const noun = total === 1 ? 'page' : 'pages';
-  return `${total} ${noun} failed at least one check, worst first.`;
+  if (shown < total) {
+    return `Showing ${formatCount(shown)} of ${formatCount(total)} pages affected, worst first.`;
+  }
+  return `${pluralCount(total, 'page')} failed at least one check, worst first.`;
 }
 
 function FailingPages({

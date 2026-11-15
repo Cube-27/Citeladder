@@ -6,8 +6,8 @@ import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { ActionButton } from '@/components/ui/actions';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { readableUrl, sharedOrigin } from '@/lib/format';
 import { TextLink } from '@/components/ui/text-link';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { ChangeObservation, ChangeSummary } from '@citeladder/contracts';
@@ -39,15 +39,6 @@ const CLASS_TONES: Readonly<Record<keyof typeof CLASS_LABELS, StatusTone>> = {
   'critical-regression': 'negative',
 };
 
-function displayPath(url: string) {
-  try {
-    const parsed = new URL(url);
-    return `${parsed.hostname}${parsed.pathname}`;
-  } catch {
-    return url;
-  }
-}
-
 export function ChangesPanel({
   workspaceId,
   projectId,
@@ -77,7 +68,7 @@ export function ChangesPanel({
       kind: 'empty',
       icon: GitCompare,
       headingLevel: 3,
-      heading: 'No changes were observed in this comparable pair',
+      heading: 'No tracked fields changed between your last two crawls',
     }),
     enabled: pairAvailable,
   });
@@ -88,14 +79,16 @@ export function ChangesPanel({
   // Until the summary says which pair to compare, and whenever no pair can
   // be compared, that answer stands in the table's place at its full height.
   const summaryState = comparisonState(summary, pairAvailable);
+  const origin = sharedOrigin(page?.items.map((row) => row.normalized_url) ?? []);
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="website-changes">
       <Section>
         <SectionHeader>
-          <SectionTitle>Since the previous crawl</SectionTitle>
+          <SectionTitle>Tracked field changes since the previous crawl</SectionTitle>
           <SectionDescription>
-            What changed on your pages between your last two crawls. Expected means the change
-            matches an implementation you declared.
+            Counts tracked field changes on pages present in both crawls, comparing your latest
+            crawl with the one before it. Expected means the change matches an implementation you
+            declared.
           </SectionDescription>
         </SectionHeader>
         <SectionContent>
@@ -119,6 +112,7 @@ export function ChangesPanel({
           <ChangeRow
             key={row.id}
             row={row}
+            origin={origin}
             crawlBId={summary.data?.crawl_b_id ?? null}
             onOpen={() => setSelected(row)}
           />
@@ -136,15 +130,27 @@ export function ChangesPanel({
 
 function ChangeRow({
   row,
+  origin,
   crawlBId,
   onOpen,
-}: Readonly<{ row: ChangeObservation; crawlBId: string | null; onOpen: () => void }>) {
+}: Readonly<{
+  row: ChangeObservation;
+  origin: string | null;
+  crawlBId: string | null;
+  onOpen: () => void;
+}>) {
   const field = changeFieldLabel(row.field);
+  const url = readableUrl(row.normalized_url);
   return (
     <TableRow>
       <TableCell>
-        <TextLink text="emphasis" href={`/site/crawls/${crawlBId}/pages/${row.site_url_id}`}>
-          <ClampText>{displayPath(row.normalized_url)}</ClampText>
+        <TextLink
+          text="emphasis"
+          className="flex min-w-0"
+          href={`/site/crawls/${crawlBId}/pages/${row.site_url_id}`}
+          aria-label={url}
+        >
+          <UrlText url={row.normalized_url} origin={origin} />
         </TextLink>
       </TableCell>
       <TableCell>{field}</TableCell>
@@ -160,14 +166,14 @@ function ChangeRow({
         <ActionButton
           action="viewEvidence"
           onClick={onOpen}
-          aria-label={`View evidence: ${field} on ${displayPath(row.normalized_url)}`}
+          aria-label={`View evidence: ${field} on ${url}`}
         />
       </TableCell>
     </TableRow>
   );
 }
 
-/** What the table shows while the summary decides, or cannot name, a comparable pair. */
+/** What the table shows while the summary decides, or cannot name, the two crawls it compares. */
 function comparisonState(
   summary: UseQueryResult<ChangeSummary>,
   pairAvailable: boolean,
@@ -177,15 +183,17 @@ function comparisonState(
     return {
       kind: 'error',
       ...readErrorProps(summary),
-      fallback: 'Could not load Website Changes.',
-      title: 'Could not load Website Changes',
+      fallback: 'The request failed or timed out.',
+      title: 'Couldn’t load the website changes',
     };
   if (summary.data.state === 'unavailable')
     return {
       kind: 'empty',
       icon: GitCompare,
       headingLevel: 3,
-      heading: 'Website Changes need two usable crawls with persisted page evidence',
+      heading: 'Changes need two completed crawls',
+      description:
+        'Changes compare the pages of your latest crawl with the crawl before it. Run a new crawl to start comparing.',
     };
   if (summary.data.state === 'non_comparable')
     return {

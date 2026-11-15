@@ -128,7 +128,9 @@ describe('Website Changes', () => {
     renderWithProviders(<ChangesPanel projectId={PROJECT} />);
     expect(await screen.findByRole('cell', { name: 'Page content' })).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole('button', { name: 'View evidence: Page content on acme.test/guide' }),
+      screen.getByRole('button', {
+        name: 'View evidence: Page content on https://acme.test/guide',
+      }),
     );
     const drawer = await screen.findByRole('dialog', { name: 'Page content' });
     const after = within(drawer).getByRole('region', { name: 'After' });
@@ -144,17 +146,17 @@ describe('Website Changes', () => {
     handlers('available', { implementation_event_id: '88888888-8888-4888-8888-888888888888' });
     renderWithProviders(<ChangesPanel projectId={PROJECT} />);
 
-    expect(await screen.findByRole('link', { name: 'acme.test/guide' })).toHaveAttribute(
-      'href',
-      `/site/crawls/${CRAWL_B}/pages/${SITE_URL}`,
-    );
+    const pageLink = await screen.findByRole('link', { name: 'https://acme.test/guide' });
+    expect(pageLink).toHaveAttribute('href', `/site/crawls/${CRAWL_B}/pages/${SITE_URL}`);
+    // The cell drops the origin its column shares and keeps the path, never the host alone.
+    expect(pageLink.textContent).toBe('/guide');
     expect(screen.getByRole('cell', { name: 'HTTP status' })).toBeInTheDocument();
     const table = screen.getByRole('region', { name: 'Website changes' });
     expect(
       within(table).getByText('Critical regression').closest('[data-status-tone]'),
     ).toHaveAttribute('data-status-tone', 'negative');
     const open = screen.getByRole('button', {
-      name: 'View evidence: HTTP status on acme.test/guide',
+      name: 'View evidence: HTTP status on https://acme.test/guide',
     });
     await userEvent.click(open);
     const drawer = await screen.findByRole('dialog', { name: 'HTTP status' });
@@ -214,14 +216,16 @@ describe('Website Changes', () => {
 
     await userEvent.click(await screen.findByRole('button', { name: 'Next page' }));
 
-    expect(screen.getByRole('link', { name: 'acme.test/first' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'https://acme.test/first' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Website changes' })).toHaveAttribute(
       'aria-busy',
       'true',
     );
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeInTheDocument();
-    expect(await screen.findByRole('link', { name: 'acme.test/later' })).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'acme.test/first' })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: 'https://acme.test/later' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'https://acme.test/first' })).not.toBeInTheDocument();
   });
 
   it('drops the previous pair’s rows when the summary names a different pair', async () => {
@@ -248,7 +252,7 @@ describe('Website Changes', () => {
         <ChangesPanel projectId={PROJECT} />
       </QueryClientProvider>,
     );
-    expect(await screen.findByRole('link', { name: 'acme.test/old' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'https://acme.test/old' })).toHaveAttribute(
       'href',
       `/site/crawls/${CRAWL_B}/pages/${SITE_URL}`,
     );
@@ -265,7 +269,7 @@ describe('Website Changes', () => {
     expect(
       await within(table).findByRole('status', { name: 'Loading persisted website changes…' }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'acme.test/old' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'https://acme.test/old' })).not.toBeInTheDocument();
   });
 
   it('colours an improvement apart from a regression', async () => {

@@ -81,8 +81,8 @@ export function severityRank(severity: IssueSeverity): number {
 }
 
 const SCORE_ROLE_LABEL: Readonly<Record<string, string>> = {
-  web_fundamentals: 'Web Fundamentals',
-  aeo_readiness: 'AEO Readiness',
+  web_fundamentals: 'Web fundamentals',
+  aeo_readiness: 'AEO readiness',
 };
 
 /**

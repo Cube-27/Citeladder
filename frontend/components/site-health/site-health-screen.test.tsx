@@ -124,7 +124,7 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     renderScreen();
     await user.click(await screen.findByRole('tab', { name: 'Overview' }));
     expect(
-      await screen.findByRole('progressbar', { name: 'Web Fundamentals score' }),
+      await screen.findByRole('progressbar', { name: 'Web fundamentals score' }),
     ).toHaveAttribute('aria-valuetext', '80 out of 100');
 
     const start = screen.getByRole('button', { name: 'Run new crawl' });
@@ -163,7 +163,7 @@ describe('SiteHealthScreen — Pages tab reads', () => {
     renderScreen();
 
     const views = await screen.findByRole('radiogroup', { name: 'Page inventory views' });
-    expect(within(views).getByRole('radio', { name: 'Errors & Blocked' })).toHaveAttribute(
+    expect(within(views).getByRole('radio', { name: 'Errors' })).toHaveAttribute(
       'aria-checked',
       'true',
     );
@@ -364,7 +364,7 @@ describe('SiteHealthScreen — loading frames', () => {
 
     snapshot.release();
     expect(
-      await screen.findByRole('progressbar', { name: 'Web Fundamentals score' }),
+      await screen.findByRole('progressbar', { name: 'Web fundamentals score' }),
     ).toHaveAttribute('aria-valuetext', '80 out of 100');
     expect(loadingRegions()).toHaveLength(0);
   });
@@ -386,7 +386,7 @@ describe('SiteHealthScreen — loading frames', () => {
 
     const { queryClient } = renderScreen();
     expect(
-      await screen.findByRole('progressbar', { name: 'Web Fundamentals score' }),
+      await screen.findByRole('progressbar', { name: 'Web fundamentals score' }),
     ).toHaveAttribute('aria-valuetext', '80 out of 100');
 
     refresh = held();
@@ -395,7 +395,7 @@ describe('SiteHealthScreen — loading frames', () => {
       expect(queryClient.isFetching({ queryKey: queryKeys.siteHealth.all })).toBeGreaterThan(0),
     );
 
-    expect(screen.getByRole('progressbar', { name: 'Web Fundamentals score' })).toHaveAttribute(
+    expect(screen.getByRole('progressbar', { name: 'Web fundamentals score' })).toHaveAttribute(
       'aria-valuetext',
       '80 out of 100',
     );

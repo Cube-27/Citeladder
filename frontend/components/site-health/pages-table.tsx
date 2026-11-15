@@ -31,7 +31,7 @@ import { useProjectHref } from '@/lib/navigation/project-destination';
  *
  * Seven columns: the row's ordinal, the page (its title, which links to the
  * per-URL detail, over its URL), the page-kind badge (v2 P1), the issue count,
- * the Web Fundamentals and AEO Readiness scores and the last audit. A page whose
+ * the Web fundamentals and AEO readiness scores and the last audit. A page whose
  * analysis has not completed (queued, running, error, blocked…) carries its
  * status badge beside the title, so a failure stays visible on every view.
  * Missing / not-yet-analysed scores render the `Not measured` placeholder —
@@ -80,9 +80,9 @@ function pagesColumns(
     // low-priority tail and scrolls in the frame when it does not.
     { key: 'type', label: 'Type', kind: 'status' },
     { key: 'issues', label: 'Issues', kind: 'number', width: 'short' },
-    { key: 'web', label: 'Web Fundamentals', kind: 'number', width: 'short' },
-    { key: 'aeo', label: 'AEO Readiness', kind: 'number', width: 'short' },
-    { key: 'audited', label: 'Last audit', kind: 'date', width: 'metric' },
+    { key: 'web', label: 'Web fundamentals', kind: 'number', width: 'short' },
+    { key: 'aeo', label: 'AEO readiness', kind: 'number', width: 'short' },
+    { key: 'audited', label: 'Last audit', kind: 'date', width: 'metric', priority: 'low' },
   ];
 }
 
@@ -168,7 +168,7 @@ export function PagesTable({
                   )}
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
                 </Inline>
-                <span className="type-data-sm text-ink-2 min-w-0">
+                <span className="type-caption min-w-0">
                   <UrlText url={page.display_url} origin={origin} />
                 </span>
                 <LinkedFromLine page={page} />
