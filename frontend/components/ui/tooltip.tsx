@@ -12,9 +12,9 @@ import {
 import { focusFromKeyboard } from '@/components/ui/input-modality';
 
 /**
- * Tooltip — a short `ink` label that names an icon button or explains a
- * number: `on-ink` 12/16 medium, `radius-sm`, 4/8px padding, 8px from its
- * anchor, no arrow and no shadow. It shows after 300ms on hover and at once on
+ * Tooltip — a short label that names an icon button or explains a number, on
+ * a sheet (`raised`, hairline edge, the one shadow), `caption` type, 4/8px
+ * padding, 8px from its anchor, no arrow. It shows after 300ms on hover and at once on
  * keyboard focus; a shortcut prints as mono `on-ink` text, never a Kbd cap.
  * Only keyboard focus opens it: the focus a browser restores when the reader
  * returns to the tab, or one a script moves after a press, does not.
@@ -24,6 +24,10 @@ import { focusFromKeyboard } from '@/components/ui/input-modality';
  * provider brings a provider of its own; the one-open rule still holds.
  */
 const Provided = createContext(false);
+
+/** The tooltip's sheet: `raised`, a hairline edge and the one shadow. Help hints share it. */
+export const TOOLTIP_SHEET =
+  'tooltip-panel bg-raised text-ink border-rule shadow-sheet z-modal type-caption rounded-sheet inline-flex max-w-72 items-center gap-2 border px-2 py-1';
 
 /** True when a clamped or truncated element is not showing all of its text. */
 export function isTextCut(node: Element): boolean {
@@ -91,11 +95,7 @@ export function Tooltip({
         {children}
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Content
-          side={side}
-          sideOffset={8}
-          className="tooltip-panel bg-raised text-ink border-rule shadow-sheet z-modal type-caption rounded-sheet inline-flex max-w-72 items-center gap-2 border px-2 py-1"
-        >
+        <TooltipPrimitive.Content side={side} sideOffset={8} className={TOOLTIP_SHEET}>
           {content}
           {shortcut ? <span className="type-data-sm text-ink-2">{shortcut}</span> : null}
         </TooltipPrimitive.Content>

@@ -150,6 +150,7 @@ export function SearchableSelect({
           className={cn(MENU_PANEL, 'absolute mt-1 max-h-74 w-full min-w-60 overflow-auto')}
         >
           {filtered.map((option, index) => (
+            // oxlint-disable-next-line jsx-a11y/click-events-have-key-events -- The field's arrow keys and Enter choose an option; a click is the pointer's way.
             <li
               key={option.value}
               // By position, not value: a value may hold characters that are
@@ -165,10 +166,9 @@ export function SearchableSelect({
                   index === activeIndex && 'not-aria-selected:overlay-hover',
                 ),
               })}
-              onMouseDown={(event) => {
-                event.preventDefault();
-                commit(option);
-              }}
+              // Focus stays in the field; the choice commits on release (WCAG 2.5.2).
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => commit(option)}
               onMouseEnter={() => setHighlight(index)}
             >
               {renderLeading ? renderLeading(option) : null}

@@ -12,7 +12,7 @@ const ROW_DRAG_TYPE = 'application/x-citeladder-reorder-row';
 
 export type ReorderItem = Readonly<{
   key: string;
-  /** Names the item in its move controls ("Move <name> up"). */
+  /** Names the item in its move controls, after its rank ("Move 2, <name>, up"). */
   name: string;
   content: ReactNode;
 }>;
@@ -105,13 +105,13 @@ function ReorderRow({
       <div className="flex items-center justify-end gap-2">
         <IconButton
           icon={ArrowUp}
-          label={`Move ${item.name} up`}
+          label={`Move ${index + 1}, ${item.name}, up`}
           onClick={() => onMove(index, index - 1)}
           disabled={pending || index === 0}
         />
         <IconButton
           icon={ArrowDown}
-          label={`Move ${item.name} down`}
+          label={`Move ${index + 1}, ${item.name}, down`}
           onClick={() => onMove(index, index + 1)}
           disabled={pending || last}
         />

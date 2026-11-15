@@ -20,6 +20,8 @@ import {
   scopedNavigationDestination,
   useSelectProject,
 } from '@/lib/navigation/project-destination';
+import { SCRIM } from '@/components/ui/dialog';
+import { pluralCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
@@ -311,7 +313,7 @@ export function CommandPalette({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={setOpenState}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="bg-scrim z-overlay fixed inset-0" />
+        <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
         <DialogPrimitive.Content
           // Radix requires a Title for the dialog's accessible name and
           // warns when one is absent. The palette has no visible heading —
@@ -333,8 +335,8 @@ export function CommandPalette({
           )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-          {/* The search row is the dialog's header: the open dialog is the
-              focus context, so its divider stays the soft `line` rule. */}
+          {/* The search row is the dialog's header; it draws the field's
+              2px focus edge along its foot (globals.css, `palette-field`). */}
           <div className="palette-field border-rule text-ink-2 flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-4 shrink-0" aria-hidden />
             <input
@@ -355,6 +357,9 @@ export function CommandPalette({
             />
             <Kbd>Esc</Kbd>
           </div>
+          <output className="sr-only">
+            {query.trim() ? paletteOutcome(results.length, query) : ''}
+          </output>
 
           <div
             ref={listRef}
@@ -448,4 +453,9 @@ export function CommandPalette({
       </DialogPrimitive.Portal>
     </DialogPrimitive.Root>
   );
+}
+
+/** What a search found, for assistive technology as the reader types. */
+function paletteOutcome(count: number, query: string) {
+  return count === 0 ? `No matches for “${query}”` : pluralCount(count, 'result');
 }

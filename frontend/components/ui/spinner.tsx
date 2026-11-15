@@ -1,8 +1,10 @@
 import { cn } from '@/lib/utils';
 
 /**
- * Spinner — the live rung: one accent rung, the logo's
- * bar, pulsing its opacity every 1.2s while work is live. It is the only
+ * Spinner — the live rung: one rung in the text's ink (`on-ink` inside a
+ * primary button), the logo's
+ * bar, pulsing its opacity every 1.2s while work is live. Motion says
+ * "working"; the accent never does (it marks only you and here). It is the only
  * "working" mark: no arcs, shimmers or bounces. Reduced motion holds it still.
  * Inside a busy button it stands beside the button's verb.
  *
@@ -34,7 +36,7 @@ export function Spinner({
       className={cn('inline-flex shrink-0 items-center gap-2 align-middle', className)}
     >
       <span aria-hidden className="inline-grid size-4 shrink-0 place-items-center">
-        <span className="bg-accent animate-live-rung rounded-mark block h-3 w-1" />
+        <span className="animate-live-rung rounded-mark block h-3 w-1 bg-current" />
       </span>
       {label && showLabel ? <span className="type-body text-ink-2">{label}</span> : null}
     </Root>

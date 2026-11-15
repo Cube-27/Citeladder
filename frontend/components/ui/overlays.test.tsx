@@ -67,6 +67,35 @@ describe('Dialog', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(trigger).toHaveFocus();
   });
+
+  it('returns focus to the menu trigger when a menu item opened it', async () => {
+    const user = userEvent.setup();
+
+    function MenuDialogHarness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <Menu>
+            <MenuTrigger>Manage project</MenuTrigger>
+            <MenuContent>
+              <MenuItem onSelect={() => setOpen(true)}>Edit project</MenuItem>
+            </MenuContent>
+          </Menu>
+          <Dialog open={open} onOpenChange={setOpen} title="Edit project">
+            <p>Project fields</p>
+          </Dialog>
+        </>
+      );
+    }
+
+    render(<MenuDialogHarness />);
+    await user.click(screen.getByRole('button', { name: 'Manage project' }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Edit project' }));
+    expect(await screen.findByRole('dialog', { name: 'Edit project' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Manage project' })).toHaveFocus();
+  });
 });
 
 describe('Drawer', () => {

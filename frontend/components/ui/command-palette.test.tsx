@@ -217,13 +217,17 @@ describe('CommandPalette', () => {
     expect(after[after.length - 1]).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('reports no matches instead of an empty list', async () => {
+  it('reports and announces no matches instead of an empty list', async () => {
     const user = await open();
+    await user.keyboard('re');
+    const found = screen.getAllByRole('option').length;
+    expect(screen.getByRole('status')).toHaveTextContent(`${found} result`);
     await user.keyboard('zzzzz');
     expect(screen.queryAllByRole('option')).toHaveLength(0);
     expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
+    // Focus stays in the field, so the outcome is announced as a status.
+    expect(screen.getByRole('status')).toHaveTextContent('No matches for “rezzzzz”');
     // The message is not an option, so it sits outside the listbox.
-    expect(screen.getByText(/no matches for/i)).toBeInTheDocument();
     expect(within(screen.getByRole('listbox')).queryByText(/no matches for/i)).toBeNull();
   });
 

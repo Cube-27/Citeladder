@@ -321,6 +321,7 @@ export function SuggestionList({
       )}
     >
       {options.map((option, index) => (
+        // oxlint-disable-next-line jsx-a11y/click-events-have-key-events -- The field's arrow keys and Enter choose an option; a click is the pointer's way.
         <li
           key={option.key}
           id={`${id}-${index}`}
@@ -329,10 +330,9 @@ export function SuggestionList({
           aria-selected={index === selected}
           data-active={index === selected}
           className={menuItemClasses({ className: 'grid h-auto gap-0.5 py-2' })}
-          onMouseDown={(event) => {
-            event.preventDefault();
-            onPick(index);
-          }}
+          // Focus stays in the field; the choice commits on release (WCAG 2.5.2).
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onPick(index)}
         >
           {option.aside ? (
             <span className="flex min-w-0 items-center justify-between gap-2">
