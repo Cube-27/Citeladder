@@ -177,11 +177,7 @@ export function BillingScreen() {
         />
       ) : null}
       <UsageMeters />
-      <InvoiceHistory
-        invoices={invoiceQuery.data ?? []}
-        loading={invoiceQuery.isLoading}
-        error={invoiceQuery.isError}
-      />
+      <InvoiceHistory invoices={invoiceQuery.data ?? []} read={invoiceQuery} />
       <BillingSupport contact={catalog?.support_contact ?? null} />
     </SettingsPage>
   );

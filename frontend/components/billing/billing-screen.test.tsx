@@ -606,6 +606,28 @@ describe('BillingScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
     expect(await screen.findByText('Receipt download failed. Please retry.')).toBeInTheDocument();
   });
+  it('recovers a failed invoice read with Retry', async () => {
+    entitlementValue = resolvedEntitlement();
+    let invoiceReads = 0;
+    mswServer.use(
+      catalogHandler(),
+      entitlementHandler(),
+      usageHandler(),
+      http.get('/api/v1/billing/invoices', () => {
+        invoiceReads += 1;
+        return invoiceReads === 1
+          ? HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 })
+          : HttpResponse.json({ invoices: [] });
+      }),
+    );
+
+    renderWithProviders(<BillingScreen />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('No invoices have been issued yet')).toBeVisible();
+    expect(invoiceReads).toBe(2);
+  });
+
   it('quotes the prorated upgrade charge before any payment opens', async () => {
     entitlementValue = resolvedEntitlement(ACTIVE_STARTER);
     const changes: unknown[] = [];
