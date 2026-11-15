@@ -24,14 +24,7 @@ export const GoogleGlyph: BrandGlyph = (props) => {
   );
 };
 
-/** Google's 24px mark beside a title; on a surface chip in dark, where the card is dark. */
+/** Google's 24px mark beside a title, on the card's own surface in both themes. */
 export function GoogleMark() {
-  return (
-    <span
-      aria-hidden
-      className="rounded-control [[data-theme=dark]_&]:bg-surface grid shrink-0 place-items-center [[data-theme=dark]_&]:p-1"
-    >
-      <GoogleGlyph className="size-6" />
-    </span>
-  );
+  return <GoogleGlyph aria-hidden className="size-6 shrink-0" />;
 }
