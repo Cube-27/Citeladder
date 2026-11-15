@@ -202,7 +202,8 @@ analysis drain, one locked transaction:
 2. evaluates crawl-finalize checks;
 3. appends a final analysis per page (`supersedes_analysis_id`);
 4. persists the snapshot and score summary (none for a page rerun);
-5. sets `completed`, `partially_completed` (with `partial_reason`) or `failed`
+5. sets `completed`, `partially_completed` (with `partial_reason`; an analysis
+   that met a page that is gone or not HTML is no shortfall, as in discovery) or `failed`
    (nothing analyzed, and either discovery found nothing or every applicable
    analysis failed), persists the terminal dashboard counters (`site_crawls.terminal_counters`,
    `terminal-counters.ts`), and settles the fetch reservation;
@@ -340,7 +341,8 @@ declared canonical names another active page this crawl already fetched becomes
 `duplicate` and loses its membership. A page whose target is not fetched yet is
 analyzed; finalization resolves chains and cycles and excludes it only when its
 target ended active. The crawl root is never aliased, because it carries the
-site checks.
+site checks. An alias whose analysis was retired reads `not_measured` with
+error code `duplicate` and `excluded` scores, never pending.
 
 ## Acquisition and evidence guarantees
 

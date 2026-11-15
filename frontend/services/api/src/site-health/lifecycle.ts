@@ -76,6 +76,8 @@ type Summary = {
   analyzeSucceeded: number;
   /** Pages the crawl could ever analyze: cancelled tasks and policy exclusions are not failures. */
   analyzeApplicable: number;
+  /** Applicable pages neither analyzed nor expected to fail (gone, not HTML). */
+  analyzeShortfall: number;
 };
 
 async function taskSummary(db: Database, crawl: Crawl): Promise<Summary> {
@@ -89,7 +91,7 @@ async function taskSummary(db: Database, crawl: Crawl): Promise<Summary> {
       sql<number>`count(*) filter (where status = 'cancelled')::int`.as('cancelled'),
       sql<number>`count(*) filter (where status = 'failed')::int`.as('failed'),
       sql<number>`count(*) filter (where status = 'failed' and ${EXCLUDED})::int`.as('excluded'),
-      // Discovery that met only robots/admission exclusions and 404/410s is complete.
+      // Discovery or analysis that met only robots/admission exclusions, non-HTML and 404/410s is complete.
       sql<number>`count(*) filter (where status = 'failed' and ${expectedTaskFailure})::int`.as(
         'expected',
       ),
@@ -109,6 +111,7 @@ async function taskSummary(db: Database, crawl: Crawl): Promise<Summary> {
     analyzeTotal: analyze.total,
     analyzeSucceeded: analyze.succeeded,
     analyzeApplicable: analyze.total - analyze.cancelled - analyze.excluded,
+    analyzeShortfall: analyze.total - analyze.cancelled - analyze.succeeded - analyze.expected,
   };
 }
 
@@ -184,7 +187,7 @@ async function reconcileInventory(
 function analysisOutcome(summary: Summary, fullyFailed: boolean) {
   if (summary.analyzeTotal > 0 && summary.analyzeApplicable === 0) return 'cancelled';
   if (fullyFailed) return 'failed';
-  if (summary.analyzeSucceeded === summary.analyzeApplicable) return 'completed';
+  if (summary.analyzeShortfall === 0) return 'completed';
   return summary.analyzeSucceeded > 0 ? 'partially_completed' : 'failed';
 }
 
@@ -270,8 +273,7 @@ async function terminalize(
     });
     return;
   }
-  const analysisPartial =
-    summary.analyzeApplicable > 0 && summary.analyzeSucceeded < summary.analyzeApplicable;
+  const analysisPartial = summary.analyzeApplicable > 0 && summary.analyzeShortfall > 0;
   crawl.partial_reason = partialReason(discoveryPartial, analysisPartial);
   crawl.status = crawl.partial_reason ? 'partially_completed' : 'completed';
   await saveState(db, crawl);
