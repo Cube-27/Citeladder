@@ -7,6 +7,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
+import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import { Value } from '@/components/ui/value';
 import { ProductName } from '@/components/products/products-table';
@@ -20,6 +21,7 @@ import type { ProductWindowDays } from '@/lib/config/commerce';
 import { categoryFilter, windowFilter } from './product-scope-filters';
 import { formatCount, pluralCount } from '@/lib/format';
 import { formatPosition, formatRate } from '@/lib/products/product-columns';
+import { targetHref } from '@/lib/products/targets';
 import {
   overviewSearch,
   useOverviewFilters,
@@ -56,8 +58,7 @@ const VISIBILITY: DataTableColumn = {
   key: 'visibility',
   label: 'Visibility',
   hint: 'Share of answers in the window that named it.',
-  width: 'figure',
-  numeric: true,
+  kind: 'number',
 };
 const METRIC_COLUMNS: readonly DataTableColumn[] = [
   VISIBILITY,
@@ -65,23 +66,20 @@ const METRIC_COLUMNS: readonly DataTableColumn[] = [
     key: 'win_rate',
     label: 'Win rate',
     hint: 'Of the ranked answers that named it, the share that ranked it first.',
-    width: 'figure',
-    numeric: true,
+    kind: 'number',
   },
   {
     key: 'position',
     label: 'Position',
     hint: 'Its mean rank in the answers that ranked it; a carousel rank counts first.',
-    width: 'figure',
-    numeric: true,
+    kind: 'number',
   },
 ];
 const SHARE_COLUMN: DataTableColumn = {
   key: 'share_of_shelf',
   label: 'Share of Shelf',
   hint: 'Its products’ share of every product recommendation in the answers.',
-  width: 'figure',
-  numeric: true,
+  kind: 'number',
 };
 
 /** A rate or mean as a narrow cell's Value: unavailable when nothing in scope measured it. */
@@ -95,13 +93,13 @@ function Measured({
 function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | CommerceOverviewBrand }>) {
   return (
     <>
-      <TableCell numeric>
+      <TableCell>
         <Measured value={row.visibility} format={formatRate} />
       </TableCell>
-      <TableCell numeric>
+      <TableCell>
         <Measured value={row.win_rate} format={formatRate} />
       </TableCell>
-      <TableCell numeric>
+      <TableCell>
         <Measured value={row.position} format={formatPosition} />
       </TableCell>
     </>
@@ -135,7 +133,7 @@ function RankingTable({
         ),
       }}
       columns={[
-        { key: 'name', label: brands ? 'Brand' : 'Product' },
+        { key: 'name', label: brands ? 'Brand' : 'Product', kind: 'identity' },
         ...METRIC_COLUMNS,
         ...(brands ? [SHARE_COLUMN] : []),
       ]}
@@ -154,7 +152,7 @@ function RankingTable({
                 />
               </TableCell>
               <MetricCells row={row} />
-              <TableCell numeric>
+              <TableCell>
                 <Measured value={row.share_of_shelf} format={formatRate} />
               </TableCell>
             </TableRow>
@@ -189,13 +187,12 @@ function ProductList({
       title={title}
       description={description}
       columns={[
-        { key: 'name', label: 'Product' },
+        { key: 'name', label: 'Product', kind: 'identity' },
         {
           key: 'appearances',
           label: 'Appearances',
           hint: 'Answers that named it.',
-          width: 'figure',
-          numeric: true,
+          kind: 'number',
         },
         VISIBILITY,
       ]}
@@ -208,10 +205,10 @@ function ProductList({
           <TableCell>
             <ProductName row={row} scope={scope} />
           </TableCell>
-          <TableCell numeric>
+          <TableCell>
             <Value value={formatCount(row.appearances)} />
           </TableCell>
-          <TableCell numeric>
+          <TableCell>
             <Measured value={row.visibility} format={formatRate} />
           </TableCell>
         </TableRow>
@@ -226,9 +223,9 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
       title="Top merchants"
       description="Where the answers send shoppers to buy."
       columns={[
-        { key: 'domain', label: 'Merchant' },
-        { key: 'answers', label: 'Answers', width: 'figure', numeric: true },
-        { key: 'products', label: 'Products', width: 'figure', numeric: true },
+        { key: 'domain', label: 'Merchant', kind: 'identity' },
+        { key: 'answers', label: 'Answers', kind: 'number' },
+        { key: 'products', label: 'Products', kind: 'number' },
       ]}
       rowCount={rows.length}
       state={rows.length ? undefined : emptyRow('No answer named a merchant.')}
@@ -236,10 +233,10 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
       {rows.map((row) => (
         <TableRow key={row.domain}>
           <TableCell>{row.domain}</TableCell>
-          <TableCell numeric>
+          <TableCell>
             <Value value={formatCount(row.answers)} />
           </TableCell>
-          <TableCell numeric>
+          <TableCell>
             <Value value={formatCount(row.products)} />
           </TableCell>
         </TableRow>
@@ -271,8 +268,8 @@ function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
       title="Top fan-out queries"
       description={fanoutCoverage(fanout)}
       columns={[
-        { key: 'query', label: 'Query' },
-        { key: 'answers', label: 'Answers', width: 'figure', numeric: true },
+        { key: 'query', label: 'Query', kind: 'identity' },
+        { key: 'answers', label: 'Answers', kind: 'number' },
       ]}
       rowCount={fanout.queries.length}
       state={fanout.queries.length ? undefined : emptyRow(empty)}
@@ -280,7 +277,7 @@ function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
       {fanout.queries.map((row) => (
         <TableRow key={row.query}>
           <TableCell>{row.query}</TableCell>
-          <TableCell numeric>
+          <TableCell>
             <Value value={formatCount(row.answers)} />
           </TableCell>
         </TableRow>
@@ -295,7 +292,10 @@ const shelfPercent = (value: number | null) => (value === null ? null : formatRa
  * The chosen category's AI Shelf from its latest Commerce run: the
  * category-target metrics, unchanged. Not measured until a run covers it.
  */
-function CategoryShelf({ shelf }: Readonly<{ shelf: Overview['category_shelf'] }>) {
+function CategoryShelf({
+  shelf,
+  categoryId,
+}: Readonly<{ shelf: Overview['category_shelf']; categoryId: string }>) {
   // A run measured it but a metric had no denominator: unavailable, not unmeasured.
   const missing = shelf ? 'unavailable' : 'not_measured';
   const segments = [
@@ -332,7 +332,12 @@ function CategoryShelf({ shelf }: Readonly<{ shelf: Overview['category_shelf'] }
               {pluralCount(shelf.recognized_slot_count, 'recognized recommendation')}.
             </>
           ) : (
-            'No Commerce run has measured this category yet.'
+            <>
+              No Commerce run has measured this category yet.{' '}
+              <TextLink href={targetHref(categoryId)} text="inherit">
+                Set up its shopping prompts
+              </TextLink>
+            </>
           )}
         </SectionDescription>
       </SectionHeader>
@@ -391,7 +396,9 @@ export function OverviewSections({
           },
         ]}
       />
-      {overview.category ? <CategoryShelf shelf={overview.category_shelf} /> : null}
+      {overview.category ? (
+        <CategoryShelf shelf={overview.category_shelf} categoryId={overview.category} />
+      ) : null}
       <RankingTable overview={overview} scope={scope} />
       <AppGrid layout="halves">
         <ProductList

@@ -194,7 +194,7 @@ describe('ProductDetailScreen', () => {
     const setup = within(screen.getByRole('region', { name: 'Setup' }));
     expect(setup.getByRole('link', { name: 'Add the missing price' })).toBeInTheDocument();
     const agent = setup
-      .getAllByRole('link', { name: 'Work with the agent' })
+      .getAllByRole('link', { name: /^Work with the agent/ })
       .map((link) => new URL(link.getAttribute('href')!, 'https://app.test').searchParams);
     expect(agent.map((params) => params.get('action_id'))).toEqual([null, ACTION]);
     expect(agent[0]!.get('target_url')).toBe('https://shop.example/products/road');

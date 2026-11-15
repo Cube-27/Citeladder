@@ -3,7 +3,9 @@ import { Users } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
+import { TextLink } from '@/components/ui/text-link';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
@@ -11,8 +13,6 @@ import type { useCompetitorDiscovery } from '@/lib/products/competitor-discovery
 
 import type { CommerceQueries } from './commerce-queries';
 import { competitorHost, competitorState, discoveryMessage } from './commerce-format';
-import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { sameTarget } from '@/lib/products/targets';
@@ -39,17 +39,20 @@ function forTarget(
 /**
  * Competitor discovery and review for one catalog product or category, on its
  * page's Setup: Find competitors, then approve or reject each candidate.
+ * `level` 3 when it sits inside the product's Setup section.
  */
 export function SetupCompetitors({
   projectId,
   target,
   query,
   discovery,
+  level = 2,
 }: Readonly<{
   projectId: string;
   target: CommerceTarget;
   query: CommerceQueries['competitors'];
   discovery: Discovery;
+  level?: 2 | 3;
 }>) {
   const { workspaceId } = useProjectScope();
   const decide = useMutation(commerceMutations.decideCompetitor({ workspaceId, projectId }));
@@ -78,7 +81,7 @@ export function SetupCompetitors({
           ) : undefined
         }
       >
-        <SectionTitle>Competitors</SectionTitle>
+        <SectionTitle level={level}>Competitors</SectionTitle>
         <SectionDescription>Candidates do not enter measurement until approved.</SectionDescription>
       </SectionHeader>
       <SectionContent>
@@ -160,9 +163,14 @@ function CompetitorRows({
 }>) {
   if (query.isError)
     return (
-      <Notice kind="read" {...readErrorProps(query)} fallback="Competitors could not be loaded." />
+      <Notice
+        kind="read"
+        {...readErrorProps(query)}
+        title="Couldn't load competitors"
+        fallback="Competitors could not be loaded."
+      />
     );
-  if (query.isPending) return <StateBlock kind="loading" />;
+  if (query.isPending) return <StateBlock kind="loading" label="Loading competitors" />;
   if (!rows.length) {
     return (
       <StateBlock
@@ -175,51 +183,49 @@ function CompetitorRows({
     );
   }
   return (
-    <ul className={ledgerClasses()}>
+    <LedgerList>
       {rows.map((row) => (
-        <Inline as="li" key={row.id} gap="compact" className={ledgerItemClasses('flex-wrap')}>
-          <Stack gap="tight" className="min-w-0 flex-1">
-            <a
-              className={textRole('emphasis', 'text-link truncate')}
-              href={row.canonical_url}
-              target="_blank"
-              rel="noreferrer"
-            >
+        <LedgerItem
+          key={row.id}
+          title={
+            <TextLink variant="external" href={row.canonical_url} text="inherit">
               {row.product_name || competitorHost(row.canonical_url)}
-            </a>
-            <span className="type-caption truncate">
-              {[
-                row.brand_name,
-                competitorHost(row.canonical_url),
-                row.source_kind === 'ai_observed' ? 'Seen in AI answers' : '',
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-            </span>
-          </Stack>
-          <StatusMark variant="status" value={competitorState(row.state).tone}>
-            {competitorState(row.state).label}
-          </StatusMark>
-          {row.state === 'pending' && onDecide ? (
-            <Inline>
-              <Button
-                variant="secondary"
-                disabled={pending}
-                onClick={() => onDecide(row.id, 'approved')}
-              >
-                Approve
-              </Button>
-              <Button
-                variant="secondary"
-                disabled={pending}
-                onClick={() => onDecide(row.id, 'rejected')}
-              >
-                Reject
-              </Button>
-            </Inline>
-          ) : null}
-        </Inline>
+            </TextLink>
+          }
+          caption={[
+            row.brand_name,
+            competitorHost(row.canonical_url),
+            row.source_kind === 'ai_observed' ? 'Seen in AI answers' : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+          meta={
+            <StatusMark variant="status" value={competitorState(row.state).tone}>
+              {competitorState(row.state).label}
+            </StatusMark>
+          }
+          links={
+            row.state === 'pending' && onDecide ? (
+              <>
+                <Button
+                  variant="secondary"
+                  disabled={pending}
+                  onClick={() => onDecide(row.id, 'approved')}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={pending}
+                  onClick={() => onDecide(row.id, 'rejected')}
+                >
+                  Reject
+                </Button>
+              </>
+            ) : undefined
+          }
+        />
       ))}
-    </ul>
+    </LedgerList>
   );
 }

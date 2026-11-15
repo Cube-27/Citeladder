@@ -7,8 +7,8 @@ import { StateHeadingLevelContext } from '@/components/ui/state-block';
 /**
  * One Overview widget: a slip, because the grid's modules are unrelated
  * peers (brand 2.4), with its title, an optional link at the head's end and
- * its body. Every widget has the same floor, so loading, empty and error
- * states never resize it.
+ * its body. Side by side, every widget has the same floor, so loading, empty
+ * and error states never resize a row.
  */
 export function WidgetFrame({
   id,
@@ -30,7 +30,7 @@ export function WidgetFrame({
     <section
       aria-labelledby={id}
       data-overview-widget=""
-      className={slipClasses('flex h-full min-h-64 min-w-0 flex-col')}
+      className={slipClasses('column-wide:min-h-64 flex h-full min-w-0 flex-col')}
     >
       <SectionHeader actions={actions}>
         {eyebrow}

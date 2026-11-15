@@ -40,12 +40,12 @@ import {
   SeenIn,
   Sources,
 } from './product-sections';
-import { MetricValue } from './products-table';
+import { MissingValue } from './products-table';
 import { SetupCompetitors } from './setup-competitors';
 import { SetupPrompts } from './setup-prompts';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section } from '@/components/ui/section';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 /** The KPIs, in the plan's order; merchants have their own section below. */
@@ -203,9 +203,9 @@ function HolderDetail({
           <Merchants detail={data} />
           <SeenIn detail={data} scope={scopeFilters} />
           <Sources detail={data} />
-          <FanOutQueries detail={data} />
         </AppGrid>
       ) : null}
+      {named ? <FanOutQueries detail={data} /> : null}
       {named || data.prompts.length > 0 ? <PromptMetrics detail={data} /> : null}
       {named ? (
         <Answers detail={data} />
@@ -230,10 +230,9 @@ function HolderDetail({
 }
 
 /**
- * The record's identity: its full name (the masthead's title may be cut),
- * who holds it, image, description and a link to its page; a catalog
- * product's Edit and Archive controls, or Add to tracking for a product the
- * answers showed.
+ * The record's identity, facts first (the masthead names it): who holds it,
+ * image, description and a link to its page; a catalog product's Edit and
+ * Archive controls, or Add to tracking for a product the answers showed.
  */
 function ProductIdentity({
   detail,
@@ -244,7 +243,6 @@ function ProductIdentity({
     <Inline gap="compact" className="flex-wrap items-start">
       {product.image_url ? <ProductImage src={product.image_url} /> : null}
       <Stack gap="tight" className="min-w-0 flex-[1_1_16rem]">
-        <p className={textRole('subheading', 'break-words')}>{product.name}</p>
         <span className="type-caption">
           {holderCaption(product)} · From{' '}
           <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
@@ -275,7 +273,7 @@ function ProductIdentity({
   );
 }
 
-/** Its figures in one strip, each label carrying its definition. */
+/** Its figures in one strip, at the strip's own figure style, each label carrying its definition. */
 function ProductKpis({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
     <FigureStrip
@@ -283,10 +281,12 @@ function ProductKpis({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
       segments={KPIS.map((key) => {
         const column = PRODUCT_COLUMNS.find((row) => row.key === key);
         const label = column?.label ?? key;
+        const cell = productCell(detail.product, key);
         return {
           key,
           label,
-          value: <MetricValue cell={productCell(detail.product, key)} />,
+          value: cell.kind === 'value' ? cell.text : <MissingValue cell={cell} narrow={false} />,
+          sub: cell.note,
           // The definition is a hint on the label, not a paragraph under every figure.
           marker: column ? <InfoHint label={`About ${label}`}>{column.hint}</InfoHint> : undefined,
         };
@@ -304,23 +304,27 @@ function ProductSetup({
   const discovery = useCompetitorDiscovery(projectId);
   const target = { kind: 'product', id: detail.product.holder_id } as const;
   return (
-    <Stack as="section" gap="workspace" aria-labelledby="product-setup">
-      <h2 id="product-setup" className={textRole('heading')}>
-        Setup
-      </h2>
-      <ProductActions detail={detail} />
-      <SetupCompetitors
-        projectId={projectId}
-        target={target}
-        query={queries.competitors}
-        discovery={discovery}
-      />
-      <SetupPrompts
-        projectId={projectId}
-        target={target}
-        targetLabel={detail.product.name}
-        query={queries.buyerPrompts}
-      />
-    </Stack>
+    <Section aria-labelledby="product-setup">
+      <SectionHeader>
+        <SectionTitle id="product-setup">Setup</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
+        <ProductActions detail={detail} />
+        <SetupCompetitors
+          projectId={projectId}
+          target={target}
+          query={queries.competitors}
+          discovery={discovery}
+          level={3}
+        />
+        <SetupPrompts
+          projectId={projectId}
+          target={target}
+          targetLabel={detail.product.name}
+          query={queries.buyerPrompts}
+          level={3}
+        />
+      </SectionContent>
+    </Section>
   );
 }

@@ -230,7 +230,7 @@ export function ProductCatalogControls({
       <Inline gap="compact">
         <Button onClick={() => setEditing(true)}>Edit product</Button>
         {archived ? null : (
-          <Button variant="quiet" onClick={toggle} disabled={lifecycle.isPending}>
+          <Button onClick={toggle} disabled={lifecycle.isPending}>
             {lifecycle.isPending ? 'Archiving…' : 'Archive'}
           </Button>
         )}

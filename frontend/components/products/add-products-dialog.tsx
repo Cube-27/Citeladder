@@ -391,7 +391,7 @@ export function AddProductsDialog({
     const busy = reading || stage.isPending;
     footer = (
       <>
-        <Button variant="secondary" onClick={() => close(false)}>
+        <Button variant="quiet" onClick={() => close(false)}>
           Cancel
         </Button>
         <Button variant="primary" disabled={!ready || busy} onClick={() => void submit()}>

@@ -6,7 +6,8 @@ import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Textarea } from '@/components/ui/textarea';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
@@ -18,7 +19,6 @@ import { sameTarget } from '@/lib/products/targets';
 import { useGenerateBuyerPrompts } from '@/lib/products/use-generate-buyer-prompts';
 
 import type { CommerceQueries } from './commerce-queries';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -43,18 +43,21 @@ function forTarget(
 /**
  * The buyer prompts that measure one catalog product (hero-product prompts)
  * or category (its shopping-prompt matrix), on its page's Setup: generate,
- * approve, add manually, and review and launch an audit.
+ * approve, add manually, and review and launch an audit. `level` 3 when it
+ * sits inside the product's Setup section.
  */
 export function SetupPrompts({
   projectId,
   target,
   targetLabel,
   query,
+  level = 2,
 }: Readonly<{
   projectId: string;
   target: CommerceTarget;
   targetLabel: string;
   query: CommerceQueries['buyerPrompts'];
+  level?: 2 | 3;
 }>) {
   const workspaceId = useActiveWorkspaceId();
   const [text, setText] = useState('');
@@ -101,7 +104,7 @@ export function SetupPrompts({
           />
         }
       >
-        <SectionTitle>Prompts that measure it</SectionTitle>
+        <SectionTitle level={level}>Prompts that measure it</SectionTitle>
         <SectionDescription>
           {approvedIds.length
             ? 'Generated prompts stay disabled until you approve them.'
@@ -211,7 +214,7 @@ function SetupPromptActions({
     <>
       {kind === 'category' ? matrix : generate}
       {canRun ? (
-        <Button variant="primary" disabled={!approved || busy} onClick={onLaunch}>
+        <Button variant="secondary" disabled={!approved || busy} onClick={onLaunch}>
           Review and launch
         </Button>
       ) : null}
@@ -259,10 +262,11 @@ function PromptRows({
       <Notice
         kind="read"
         {...readErrorProps(query)}
+        title="Couldn't load prompts"
         fallback="Buyer prompts could not be loaded."
       />
     );
-  if (query.isPending) return <StateBlock kind="loading" />;
+  if (query.isPending) return <StateBlock kind="loading" label="Loading prompts" />;
   if (!rows.length) {
     return (
       <StateBlock
@@ -275,23 +279,26 @@ function PromptRows({
     );
   }
   return (
-    <ul className={ledgerClasses()}>
+    <LedgerList>
       {rows.map((row) => (
-        <Inline as="li" key={row.id} gap="compact" className={ledgerItemClasses('flex-wrap')}>
-          <span className="text-ink-2 min-w-0 flex-1">{row.text}</span>
-          {onToggle ? (
-            <Button
-              variant={row.enabled ? 'secondary' : 'primary'}
-              disabled={pending}
-              onClick={() => onToggle(row.id, !row.enabled)}
-            >
-              {row.enabled ? 'Disable' : 'Approve'}
-            </Button>
-          ) : (
-            <Tag>{row.enabled ? 'Approved' : 'Not approved'}</Tag>
-          )}
-        </Inline>
+        <LedgerItem
+          key={row.id}
+          title={row.text}
+          meta={
+            onToggle ? (
+              <Button
+                variant="secondary"
+                disabled={pending}
+                onClick={() => onToggle(row.id, !row.enabled)}
+              >
+                {row.enabled ? 'Disable' : 'Approve'}
+              </Button>
+            ) : (
+              <Tag>{row.enabled ? 'Approved' : 'Not approved'}</Tag>
+            )
+          }
+        />
       ))}
-    </ul>
+    </LedgerList>
   );
 }

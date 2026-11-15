@@ -80,7 +80,8 @@ export function MetricValue({
   );
 }
 
-function MissingValue({
+/** A metric's absence, or "None": never a zero. */
+export function MissingValue({
   cell,
   narrow,
 }: Readonly<{ cell: Extract<ProductCell, { kind: 'missing' }>; narrow: boolean }>) {
@@ -166,6 +167,7 @@ export function ProductsTable({
     {
       key: 'product',
       label: 'Product',
+      kind: 'identity',
       width: 'lead',
       sort: { active: sort === 'name', descending: false, onSort: () => onSort('name') },
     },
@@ -176,7 +178,7 @@ export function ProductsTable({
         label: column.label,
         hint: column.hint,
         width: COLUMN_WIDTHS[column.key],
-        numeric: column.key !== 'merchants',
+        kind: column.key === 'merchants' ? 'text' : 'number',
         ...(sortKey
           ? {
               sort: {
@@ -194,7 +196,7 @@ export function ProductsTable({
             key: 'track',
             label: 'Tracking',
             width: 'name',
-            trailing: true,
+            kind: 'actions',
             hideLabel: true,
           } satisfies DataTableColumn,
         ]
@@ -242,7 +244,7 @@ export function ProductsTable({
           {shown.map((column) => {
             const cell = productCell(row, column.key);
             return (
-              <TableCell key={column.key} numeric={column.key !== 'merchants'}>
+              <TableCell key={column.key}>
                 <MetricValue cell={cell} narrow={column.key !== 'merchants'} />
               </TableCell>
             );
