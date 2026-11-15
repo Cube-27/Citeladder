@@ -56,6 +56,30 @@ const sourceBody = (availability: string, items: Record<string, unknown>[] = [])
   },
   items: items.map((item) => ({ pull: null, ...item })),
 });
+const STALLED_SOURCE = {
+  id: '99999999-9999-4999-8999-999999999999',
+  kind: 'webhook',
+  setup: 'custom',
+  preset: 'custom_ndjson',
+  buffer_interval_seconds: null,
+  format: 'ndjson',
+  collection_point: 'application',
+  sampling: { kind: 'none' },
+  origin: 'https://example.test',
+  host: 'example.test',
+  status: 'active',
+  state: 'stalled',
+  stall_reason: 'oversize',
+  stalled_at: '2026-10-10T00:00:00.000Z',
+  token_prefix: 'clw_abcdefgh',
+  connection: 'connected',
+  last_accepted_batch: '2026-10-09T00:00:00.000Z',
+  last_processed_at: null,
+  rejected_lines: 0,
+  overlapping_lines: 0,
+  unsupported_uploads: 0,
+  unsupported_batches: 0,
+};
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
@@ -86,34 +110,7 @@ describe('AI Traffic state and navigation', () => {
   it('shows why a live source is stalled on its row', async () => {
     mswServer.use(
       http.get(root + '/crawl-logs/sources', () =>
-        HttpResponse.json(
-          sourceBody('available', [
-            {
-              id: '99999999-9999-4999-8999-999999999999',
-              kind: 'webhook',
-              setup: 'custom',
-              preset: 'custom_ndjson',
-              buffer_interval_seconds: null,
-              format: 'ndjson',
-              collection_point: 'application',
-              sampling: { kind: 'none' },
-              origin: 'https://example.test',
-              host: 'example.test',
-              status: 'active',
-              state: 'stalled',
-              stall_reason: 'oversize',
-              stalled_at: '2026-10-10T00:00:00.000Z',
-              token_prefix: 'clw_abcdefgh',
-              connection: 'connected',
-              last_accepted_batch: '2026-10-09T00:00:00.000Z',
-              last_processed_at: null,
-              rejected_lines: 0,
-              overlapping_lines: 0,
-              unsupported_uploads: 0,
-              unsupported_batches: 0,
-            },
-          ]),
-        ),
+        HttpResponse.json(sourceBody('available', [STALLED_SOURCE])),
       ),
     );
     renderWithProviders(<CrawlLogConnections />);
@@ -502,6 +499,37 @@ describe('AI Traffic state and navigation', () => {
       pattern: 'key_event_concentration',
     });
   });
+  it('shows one setup state, without filters, on every view while nothing is connected', async () => {
+    mswServer.use(
+      http.get('/api/v1/integrations', () => HttpResponse.json([])),
+      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('available'))),
+      http.get(root + '/ai-traffic/overview', () =>
+        HttpResponse.json({
+          crawl: { ...crawl, connection: 'not_connected' },
+          referrals,
+          citations: {
+            unit: 'tracked_citations',
+            state: 'not_available',
+            reason: 'no_completed_run',
+            count: null,
+            label: 'Tracked answers',
+          },
+        }),
+      ),
+    );
+    renderWithProviders(<AiTrafficScreen />, { projectSelection: { activeProject: project } });
+    expect(await screen.findByRole('heading', { name: 'Connect a traffic source' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Connect GA4' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: 'Key figures' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Activity' }));
+    expect(await screen.findByRole('heading', { name: 'Connect a traffic source' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Times in /)).not.toBeInTheDocument();
+  });
   it('persists tab selection, renders accessible activity and exports the selected filters', async () => {
     let exportStatus: string | null = null;
     const exportedPages = { value: null as URLSearchParams | null };
@@ -532,14 +560,16 @@ describe('AI Traffic state and navigation', () => {
           referrals,
           citations: {
             unit: 'tracked_citations',
-            state: 'not_available',
-            reason: 'no_completed_run',
-            count: null,
+            state: 'measured',
+            count: 0,
             label: 'Tracked answers',
+            sources: [{ audit_id: '99999999-9999-4999-8999-999999999999', analyzer_version: '1' }],
           },
         }),
       ),
-      http.get(root + '/crawl-logs/sources', () => HttpResponse.json(sourceBody('available'))),
+      http.get(root + '/crawl-logs/sources', () =>
+        HttpResponse.json(sourceBody('available', [STALLED_SOURCE])),
+      ),
       http.get(root + '/ai-traffic/coverage', () =>
         HttpResponse.json({ sources: [], items: [], next_cursor: null }),
       ),
@@ -600,7 +630,14 @@ describe('AI Traffic state and navigation', () => {
       ),
       http.get(root + '/ai-traffic/pages/' + page.url_hash, () =>
         HttpResponse.json({
-          page,
+          // A flagged count keeps its state beside the value; key events carry
+          // the qualifiers of the GA4 rows they share with referral sessions.
+          page: {
+            ...page,
+            crawl: { state: 'flagged', value: 3, coverage: 'partial', reason: null },
+            referrals: { ...page.referrals, reason: 'projection_pending' },
+            key_events: 2,
+          },
           window_start: '2026-10-01',
           window_end: '2026-10-04',
           crawls: [],
@@ -622,15 +659,13 @@ describe('AI Traffic state and navigation', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('activity');
-    // No retained rows and no source: the table gives way to its empty state,
-    // which says why and carries the connect step.
+    // No retained rows from a connected source: an observation, not a setup step.
     const activityTable = await screen.findByRole('region', {
       name: 'Retained automated request activity',
     });
     expect(
-      await within(activityTable).findByRole('heading', { name: 'Crawl logs are not connected' }),
+      await within(activityTable).findByRole('heading', { name: 'No matching requests' }),
     ).toBeVisible();
-    expect(within(activityTable).getByRole('button', { name: 'Connect crawl logs' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: /^All filters/ }));
     await user.click(screen.getByRole('menuitem', { name: /^Status code/ }));
     const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
@@ -643,6 +678,11 @@ describe('AI Traffic state and navigation', () => {
     expect(await screen.findByRole('button', { name: 'All filters (1)' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportStatus).toBe('404'));
+    // The narrowing emptied the table: none match, and Clear filters undoes it.
+    await user.click(await within(activityTable).findByRole('button', { name: 'Clear filters' }));
+    await waitFor(() =>
+      expect(new URLSearchParams(window.location.search).get('status')).toBeNull(),
+    );
     await user.click(screen.getByRole('tab', { name: 'Referrals' }));
     expect(await openFilterRow(user, 'Chart interval', 'Week')).toBeVisible();
     await user.keyboard('{Escape}');
@@ -680,13 +720,19 @@ describe('AI Traffic state and navigation', () => {
         window.location.origin,
       ).searchParams.get('project'),
     ).toBe(project.id);
-    expect(within(panel).getByText(/0 requests · Measured zero/)).toBeVisible();
-    // An absent leg leads with its absence's word.
-    expect(panel.textContent).toMatch(/Unavailable AI referral sessions · Flagged/);
-    expect(panel.textContent).toMatch(/Not connected tracked citations · Not connected/);
-    expect(
-      within(panel).getByText(/open Website findings · Unavailable · Coverage is incomplete/),
-    ).toBeVisible();
+    // One row per metric: its value or one absence word, then its source; each state once.
+    const record = (name: string) =>
+      within(panel).getByText(name, { selector: 'dt' }).nextElementSibling?.textContent;
+    expect(record('Crawler requests')).toBe(
+      '3Flagged by a data-quality check · Partial coverageCrawlers',
+    );
+    expect(record('AI referral sessions')).toBe('UnavailableReferrals');
+    expect(record('Key events (GA4)')).toBe(
+      '2Flagged by a data-quality check · Partial coverage · A newer GA4 import is still being processed',
+    );
+    expect(record('Tracked citations')).toBe('Not connectedVisibility');
+    expect(record('Open Website findings')).toBe('UnavailableWebsite');
+    expect(record('First and last observations')).toBe('None');
     mswServer.use(
       http.get(
         root + '/ai-traffic/pages/' + page.url_hash,
@@ -695,7 +741,7 @@ describe('AI Traffic state and navigation', () => {
     );
     await view.queryClient.refetchQueries({ predicate: (q) => q.queryKey.includes('url') });
     await waitFor(() =>
-      expect(within(panel).queryByText(/0 requests · Measured zero/)).not.toBeInTheDocument(),
+      expect(within(panel).queryByText('Crawler requests')).not.toBeInTheDocument(),
     );
   }, 20_000);
   it('leads with Referrals and drops crawl-only views when crawl logs are unavailable', async () => {

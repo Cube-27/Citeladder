@@ -1,17 +1,12 @@
-import { useId } from 'react';
-
 import { InventorySection } from '@/components/site-health/inventory-section';
 import { ScoreSection } from '@/components/site-health/score-section';
 import { PageKindScores } from '@/components/site-health/page-kind-scores';
 import { SiteFactsPanel } from '@/components/site-health/site-facts-panel';
 import { StatusStrip } from '@/components/site-health/status-strip';
-import { ActionButton } from '@/components/ui/actions';
 import { Stack } from '@/components/ui/layout';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import type { SiteHealthEntitlement } from '@citeladder/contracts';
-import { ICONS } from '@/lib/icons';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * The canonical Site Health dashboard layout.
@@ -54,101 +49,45 @@ export function SiteHealthDashboardLayout({
   } = screen;
   // Starting a crawl is offered only to a role that may run one.
   const canRun = useWorkspaceCapability('run');
+  // Before the first crawl the screen shows its first-crawl state on every tab.
+  if (!crawl) return null;
 
   return (
     // `min-w-0` so a wide table inside a section scrolls in its own wrapper
     // instead of widening this column (and every ancestor) to its max-content.
     <Stack gap="workspace" className="min-w-0" data-testid="site-health-canonical">
-      {!crawl ? (
-        <FirstCrawl
-          start={
-            canRun
-              ? { onStart: () => startCrawl(), pending: startPending, allowed: mutationsAllowed }
-              : undefined
-          }
+      {/* Where the crawl stands, then the headline score cards (owner,
+          2026-11-10: as before the one-line status strip), two blocks 12 apart. */}
+      <Stack gap="workspace">
+        <StatusStrip
+          crawl={crawl}
+          phase={phase}
+          entitlement={entitlement}
+          cancelPending={cancelMutation.isPending}
+          startPending={startPending}
+          pages={pagesQuery.data?.items ?? []}
+          selectedTotal={projectSelectedTotal}
+          selectedError={projectSelectedError}
+          onRerun={mutationsAllowed && canRun ? () => startCrawl() : undefined}
         />
-      ) : (
-        <>
-          {/* Where the crawl stands, then the headline score cards (owner,
-              2026-11-10: as before the one-line status strip), two blocks 12 apart. */}
-          <Stack gap="workspace">
-            <StatusStrip
-              crawl={crawl}
-              phase={phase}
-              entitlement={entitlement}
-              cancelPending={cancelMutation.isPending}
-              startPending={startPending}
-              pages={pagesQuery.data?.items ?? []}
-              selectedTotal={projectSelectedTotal}
-              selectedError={projectSelectedError}
-              onRerun={mutationsAllowed && canRun ? () => startCrawl() : undefined}
-            />
 
-            <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />
-          </Stack>
+        <ScoreSection crawl={crawl} dashboard={dashboardQuery.data} />
+      </Stack>
 
-          <InventorySection
-            mode={inventoryMode}
-            crawl={crawl}
-            active={active}
-            exportPages={
-              mutationsAllowed
-                ? { onExport: () => void runExport('csv', 'pages'), exporting }
-                : undefined
-            }
-          />
+      <InventorySection
+        mode={inventoryMode}
+        crawl={crawl}
+        active={active}
+        exportPages={
+          mutationsAllowed
+            ? { onExport: () => void runExport('csv', 'pages'), exporting }
+            : undefined
+        }
+      />
 
-          <PageKindScores crawl={crawl} dashboard={dashboardQuery.data} />
+      <PageKindScores crawl={crawl} dashboard={dashboardQuery.data} />
 
-          <SiteFactsPanel crawl={crawl} dashboard={dashboardQuery.data} />
-        </>
-      )}
+      <SiteFactsPanel crawl={crawl} dashboard={dashboardQuery.data} />
     </Stack>
-  );
-}
-
-/** The project before its first crawl; starting one is offered to a role that may run it. */
-function FirstCrawl({
-  start,
-}: Readonly<{
-  start?: Readonly<{ onStart: () => void; pending: boolean; allowed: boolean }>;
-}>) {
-  const noteId = useId();
-  return (
-    <div data-testid="site-health-empty">
-      {start ? (
-        <StateBlock
-          kind="empty"
-          icon={ICONS.siteHealth}
-          heading="Run your first site crawl"
-          description="Crawl your site to see page health, issues, and recommendations as results arrive."
-          action={
-            <ActionButton
-              action="runCrawl"
-              onClick={start.onStart}
-              pending={start.pending}
-              pendingLabel="Starting…"
-              disabled={!start.allowed}
-              aria-describedby={start.allowed ? undefined : noteId}
-            />
-          }
-          actionNote={
-            start.allowed
-              ? undefined
-              : {
-                  id: noteId,
-                  text: "Your plan's crawl limits couldn't be checked. Reload to try again.",
-                }
-          }
-        />
-      ) : (
-        <StateBlock
-          kind="empty"
-          icon={ICONS.siteHealth}
-          heading="No site crawl yet"
-          description="Page health, issues, and recommendations appear here once a crawl runs."
-        />
-      )}
-    </div>
   );
 }

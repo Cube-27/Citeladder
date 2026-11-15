@@ -484,7 +484,7 @@ describe('OverviewPanel', () => {
     expect(scoreOf('Answerability')).toBe('Not measured');
   });
 
-  const ALERT = 'Could not load the Website overview.';
+  const ALERT = "Couldn't load the Website overview";
 
   function renderTerminal() {
     renderWithProviders(
@@ -529,8 +529,8 @@ describe('OverviewPanel', () => {
     renderTerminal();
 
     // The shared read error names the failure and, for 403, the one recovery.
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Check your workspace access, then try again.',
-    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Check your workspace access, then try again.');
+    expect(alert).toHaveTextContent(ALERT);
   });
 });

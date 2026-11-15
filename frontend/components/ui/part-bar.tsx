@@ -57,6 +57,8 @@ export function PartBar({
   remainderLabel = 'Unclassified',
   format = formatCount,
   label,
+  legend = 'direct',
+  labelledBy,
   className,
 }: Readonly<{
   /** At most four parts; your own first when there is one. */
@@ -69,6 +71,14 @@ export function PartBar({
   format?: (value: number) => string;
   /** What the bar breaks down, e.g. "Source types". */
   label: string;
+  /**
+   * `direct` names wide parts under their segments; `row` is a thin bar
+   * (8 tall) over a one-row legend (swatch, word, share and count) that wraps
+   * only below 480 wide, for a card whose title already names the whole.
+   */
+  legend?: 'direct' | 'row';
+  /** `row` only: the title that names the bar. */
+  labelledBy?: string;
   className?: string;
 }>) {
   const shown = parts.slice(0, 4);
@@ -104,6 +114,40 @@ export function PartBar({
   const described = rows
     .map((row) => `${row.label} ${chartPercent(row.value, whole)} (${format(row.value)})`)
     .join(', ');
+  if (legend === 'row')
+    return (
+      <div className={cn('@container flex min-w-0 flex-col gap-2', className)}>
+        <div // NOSONAR -- the segments are one picture of a whole; <img> cannot hold them
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the segments are one picture of a whole
+          role="img"
+          aria-labelledby={labelledBy}
+          aria-label={labelledBy ? undefined : label}
+          className="flex h-2 gap-0.5 overflow-hidden"
+        >
+          {rows.map((row) =>
+            row.value > 0 ? (
+              <span
+                key={row.label}
+                data-part={row.tone ?? 'remainder'}
+                className={cn('block h-full min-w-0.5 basis-0 rounded-sm', row.fill)}
+                style={{ flexGrow: row.value }}
+              />
+            ) : null,
+          )}
+        </div>
+        <ul aria-label={label} className="flex flex-wrap gap-x-4 gap-y-1 @min-[30rem]:flex-nowrap">
+          {rows.map((row) => (
+            <li key={row.label} className={textRole('body', 'flex items-center gap-2')}>
+              <span aria-hidden className={cn('rounded-mark size-2 shrink-0', row.fill)} />
+              <span className="text-ink">{row.label}</span>
+              <span className="text-ink-2 whitespace-nowrap tabular-nums">
+                {chartPercent(row.value, whole)} ({format(row.value)})
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
   const direct = new Set(rows.filter((row) => row.share >= DIRECT_LABEL_SHARE));
   const listed = rows.filter((row) => row.share < DIRECT_LABEL_SHARE);
   return (

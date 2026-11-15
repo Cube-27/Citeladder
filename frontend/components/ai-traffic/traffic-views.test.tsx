@@ -7,6 +7,7 @@ import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { TabsRoot } from '@/components/ui/tabs';
 import { TrafficActivity, TrafficCrawlers } from './traffic-views';
+import { TrafficSetupState } from './traffic-setup';
 
 const project = makeProject({
   id: '88888888-8888-4888-8888-888888888888',
@@ -43,6 +44,7 @@ const scope = {
   workspaceId: project.workspace_id,
   projectId: project.id,
   filters: { range: '30d' },
+  onClearFilters: () => {},
 };
 
 it('says the crawler catalog failed inside the activity table instead of showing raw bot ids', async () => {
@@ -132,37 +134,52 @@ function serveNoSources(tab: 'crawlers' | 'activity') {
 it('does not let a role that may not manage credentials connect crawl logs', async () => {
   capability.manage = false;
   serveNoSources('crawlers');
-  renderWithProviders(
-    <TabsRoot value="crawlers" onValueChange={() => {}}>
-      <TrafficCrawlers {...scope} />
-    </TabsRoot>,
-  );
-  const table = await screen.findByRole('region', { name: 'Recognized crawlers' });
-  await within(table).findByRole('heading', { name: 'Crawl logs are not connected' });
-  expect(within(table).getByRole('button', { name: 'Connect crawl logs' })).toBeDisabled();
+  const view = renderWithProviders(<TrafficSetupState ga4Missing={false} crawlAvailable />);
+  expect(await screen.findByRole('button', { name: 'Connect crawl logs' })).toBeDisabled();
+  view.rerender(<TrafficSetupState ga4Missing crawlAvailable />);
+  expect(screen.getByRole('button', { name: 'Connect crawl logs' })).toBeDisabled();
 });
 
-it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', async (tab) => {
-  serveNoSources(tab);
+it.each([
+  { ga4Missing: true, heading: 'Connect a traffic source' },
+  { ga4Missing: false, heading: 'Connect crawl logs' },
+])('connects crawl logs from the setup state (GA4 missing: $ga4Missing)', async (input) => {
+  serveNoSources('crawlers');
   const user = userEvent.setup();
-  renderWithProviders(
-    <TabsRoot value={tab} onValueChange={() => {}}>
-      {tab === 'crawlers' ? <TrafficCrawlers {...scope} /> : <TrafficActivity {...scope} />}
-    </TabsRoot>,
-  );
-  // With no source the empty state takes the table's place, column heads
-  // included, and carries Connect crawl logs itself.
-  const table = await screen.findByRole('region', {
-    name: tab === 'crawlers' ? 'Recognized crawlers' : 'Retained automated request activity',
-  });
-  expect(
-    await within(table).findByRole('heading', { name: 'Crawl logs are not connected' }),
-  ).toBeVisible();
-  expect(screen.queryByRole('columnheader')).toBeNull();
-  await user.click(within(table).getByRole('button', { name: 'Connect crawl logs' }));
+  renderWithProviders(<TrafficSetupState ga4Missing={input.ga4Missing} crawlAvailable />);
+  expect(screen.getByRole('heading', { name: input.heading })).toBeVisible();
+  // GA4 is connected from Referrals, which sets it up in place.
+  const ga4 = screen.queryByRole('link', { name: 'Connect GA4' });
+  if (input.ga4Missing) expect(ga4?.getAttribute('href')).toMatch(/tab=referrals/);
+  else expect(ga4).toBeNull();
+  await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
   expect(
     await within(screen.getByRole('dialog')).findByRole('radiogroup', {
       name: 'Collection method',
     }),
   ).toBeVisible();
 });
+
+it.each(['crawlers', 'activity'] as const)(
+  'offers Clear filters when a narrowing empties %s, and says absence is an observation otherwise',
+  async (tab) => {
+    serveNoSources(tab);
+    const onClearFilters = vi.fn();
+    const table = (filters: Record<string, string>) => (
+      <TabsRoot value={tab} onValueChange={() => {}}>
+        {tab === 'crawlers' ? (
+          <TrafficCrawlers {...scope} filters={filters} onClearFilters={onClearFilters} />
+        ) : (
+          <TrafficActivity {...scope} filters={filters} onClearFilters={onClearFilters} />
+        )}
+      </TabsRoot>
+    );
+    const user = userEvent.setup();
+    const view = renderWithProviders(table({ range: '30d' }));
+    expect(await screen.findByText(/No matching requests/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
+    view.rerender(table({ range: '30d', folder: '/blog' }));
+    await user.click(await screen.findByRole('button', { name: 'Clear filters' }));
+    expect(onClearFilters).toHaveBeenCalledOnce();
+  },
+);

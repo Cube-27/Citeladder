@@ -178,6 +178,24 @@ describe('Website Changes', () => {
     await waitFor(() => expect(open).toHaveFocus());
   });
 
+  it('says once why nothing compares, without a row of unmeasured counts', async () => {
+    handlers('unavailable');
+    const { unmount } = renderWithProviders(<ChangesPanel projectId={PROJECT} />);
+    expect(
+      await screen.findByRole('heading', { name: 'Changes need two completed crawls' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Not measured')).not.toBeInTheDocument();
+    unmount();
+
+    handlers('available');
+    renderWithProviders(<ChangesPanel projectId={PROJECT} />);
+    expect(
+      await screen.findByRole('heading', {
+        name: 'Tracked field changes since the previous crawl',
+      }),
+    ).toBeInTheDocument();
+  });
+
   it('draws the first load inside the changes table, under its header', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health/changes/summary`, async () => {

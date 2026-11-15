@@ -19,6 +19,7 @@ import {
   type DataTableState,
 } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
+import { READ_FAILED } from '@/components/ui/state-block';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { SearchField } from '@/components/ui/search-field';
@@ -193,8 +194,8 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
     return {
       kind: 'error',
       error: query.error,
-      fallback: 'Could not load issues for this crawl.',
-      title: 'Could not load issues for this crawl',
+      fallback: READ_FAILED,
+      title: "Couldn't load issues for this crawl",
       onRetry: () => void query.refetch(),
       pending: query.isFetching,
     } satisfies DataTableState;

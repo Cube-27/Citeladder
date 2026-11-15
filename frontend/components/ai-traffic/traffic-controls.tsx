@@ -2,6 +2,7 @@ import { Download, Folder } from 'lucide-react';
 import { crawlerResourceClassSchema } from '@citeladder/contracts/site-health';
 import { trafficStatusCode, type useTrafficData } from '@/lib/ai-traffic/use-traffic-data';
 import { words } from '@/lib/ai-traffic/vocabulary';
+import type { TrafficFilters } from '@/lib/api/ai-traffic';
 import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,28 @@ export function TrafficExport({ model }: ControlProps) {
       Export CSV
     </Button>
   );
+}
+
+/** Keys that set the window or the order, not a narrowing of the rows. */
+const NOT_NARROWING: ReadonlySet<string> = new Set(['range', 'sort']);
+
+/** Whether a tab's read is narrowed past its window, so an empty table means "none match". */
+export function trafficNarrowed(filters: TrafficFilters): boolean {
+  return Object.entries(filters).some(
+    ([key, value]) => !NOT_NARROWING.has(key) && value !== undefined && value !== null,
+  );
+}
+
+/** Clears every narrowing All filters offers; the window stays as chosen. */
+export function clearTrafficFilters({ selection }: ControlProps['model']) {
+  // One history entry: the first write pushes, the rest replace it.
+  selection.setVerification('default');
+  selection.setPurpose(null, 'replace');
+  selection.setBot(null, 'replace');
+  selection.setStatus(null, 'replace');
+  selection.setFolder(null, 'replace');
+  selection.setResource(null, 'replace');
+  selection.setPattern(null, 'replace');
 }
 
 /** One filter of All filters, or none where the tab does not offer it. */

@@ -15,6 +15,7 @@ import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { changeFieldLabel } from '@/lib/site-health/change-fields';
 import { ChangeEvidenceDrawer } from './changes-panel-evidence';
 import { readErrorProps } from '@/components/ui/notice';
+import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 import {
   Section,
   SectionContent,
@@ -91,25 +92,35 @@ export function ChangesPanel({
   const origin = sharedOrigin(page?.items.map((row) => row.normalized_url) ?? []);
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="website-changes">
-      <Section>
-        <SectionHeader>
-          <SectionTitle>Tracked field changes since the previous crawl</SectionTitle>
-          <SectionDescription>
-            Counts tracked field changes on pages present in both crawls, comparing your latest
-            crawl with the one before it. Expected means the change matches an implementation you
-            declared.
-          </SectionDescription>
-        </SectionHeader>
-        <SectionContent>
-          <FigureStrip
-            segments={Object.entries(CLASS_LABELS).map(([key, label]) => ({
-              key,
-              label,
-              value: counts ? (counts[key] ?? 0) : null,
-            }))}
-          />
-        </SectionContent>
-      </Section>
+      {summary.isPending ? (
+        <StateBlock
+          kind="loading"
+          label="Loading the change counts…"
+          shape={{ kind: 'figures', count: 4 }}
+        />
+      ) : null}
+      {/* Without a comparable pair the table's own state says why, once. */}
+      {counts ? (
+        <Section>
+          <SectionHeader>
+            <SectionTitle>Tracked field changes since the previous crawl</SectionTitle>
+            <SectionDescription>
+              Counts tracked field changes on pages present in both crawls, comparing your latest
+              crawl with the one before it. Expected means the change matches an implementation you
+              declared.
+            </SectionDescription>
+          </SectionHeader>
+          <SectionContent>
+            <FigureStrip
+              segments={Object.entries(CLASS_LABELS).map(([key, label]) => ({
+                key,
+                label,
+                value: counts[key] ?? 0,
+              }))}
+            />
+          </SectionContent>
+        </Section>
+      ) : null}
       <DataTable
         label="Website changes"
         columns={CHANGE_COLUMNS}
@@ -192,8 +203,8 @@ function comparisonState(
     return {
       kind: 'error',
       ...readErrorProps(summary),
-      fallback: 'The request failed or timed out.',
-      title: 'Couldn’t load the website changes',
+      fallback: READ_FAILED,
+      title: "Couldn't load the website changes",
     };
   if (summary.data.state === 'unavailable')
     return {

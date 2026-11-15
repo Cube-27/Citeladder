@@ -24,7 +24,6 @@ import type {
   SiteArchitecture,
 } from '@citeladder/contracts';
 import { formatCount, formatPercent } from '@/lib/format';
-import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   Section,
@@ -91,10 +90,14 @@ export function ArchitecturePanel({
     );
   if (!architecture.data || architecture.data.state === 'unavailable') {
     return (
-      <Notice tone="info">
-        {architecture.data?.limitations[0] ??
-          'Page kinds appear once a crawl has finished and its structure has been derived.'}
-      </Notice>
+      <StateBlock
+        kind="empty"
+        heading="Site architecture isn't available yet"
+        description={
+          architecture.data?.limitations[0] ??
+          'Page kinds appear once a crawl has finished and its structure has been derived.'
+        }
+      />
     );
   }
   return <ArchitectureLedger data={architecture.data} />;

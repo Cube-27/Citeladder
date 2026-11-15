@@ -1,8 +1,9 @@
+import { useId } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { fixedLabel } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
-import { AppGrid } from '@/components/ui/app-grid';
+import { Stack } from '@/components/ui/layout';
 import { OpenRow } from '@/components/ui/list-row';
 import { PartBar, type Part } from '@/components/ui/part-bar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +12,7 @@ import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/co
 import { formatCount } from '@/lib/format';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
 import { Notice } from '@/components/ui/notice';
+import { READ_FAILED } from '@/components/ui/state-block';
 import {
   Section,
   SectionContent,
@@ -41,58 +43,60 @@ export function IssuesSummary({
       <Notice
         kind="read"
         error={query.error}
-        fallback="Could not load the issue summary."
-        title="Could not load the issue summary"
+        fallback={READ_FAILED}
+        title="Couldn't load the issue summary"
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
     );
   if (!query.data) return <IssuesSummaryLoading />;
   const { summary, items } = query.data;
-  const severity = <SeverityCard summary={summary} />;
-  if (items.length === 0) return severity;
+  // The severity card is far shorter than the priority list, so it takes the
+  // full row above it rather than stretching beside it.
   return (
-    <AppGrid layout="main-aside">
-      <FixFirst issues={items} fixes={fixes} onOpen={onOpen} />
-      {severity}
-    </AppGrid>
+    <Stack gap="workspace" className="min-w-0">
+      <SeverityCard summary={summary} />
+      {items.length > 0 ? <FixFirst issues={items} fixes={fixes} onOpen={onOpen} /> : null}
+    </Stack>
   );
 }
 
 /** The loaded layout's two cards, as blocks, so the table below does not move. */
 export function IssuesSummaryLoading() {
   return (
-    <AppGrid layout="main-aside">
+    <Stack gap="workspace" className="min-w-0">
+      <Section>
+        <Skeleton variant="text" lines={2} label="Loading the issue summary" />
+      </Section>
       <Section>
         <Skeleton variant="block" rows={3} label="Loading the issue summary" />
       </Section>
-      <Section>
-        <Skeleton variant="text" lines={3} label="Loading the issue summary" />
-      </Section>
-    </AppGrid>
+    </Stack>
   );
 }
 
 /** Issue types by severity: the count, the high-severity count, the pages they reach. */
 function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary'] }>) {
+  const titleId = useId();
   const total = summary.defect_issue_type_count;
   const high = severityCount(summary.severity_counts, 'high');
-  const slices: readonly Part[] = [
+  const parts: readonly Part[] = [
     { label: 'High', value: high, status: 'negative' },
     { label: 'Medium', value: severityCount(summary.severity_counts, 'medium'), status: 'warning' },
     { label: 'Low', value: severityCount(summary.severity_counts, 'low'), status: 'neutral' },
   ];
   return (
-    <Section aria-labelledby="issues-by-severity">
+    <Section aria-labelledby={titleId}>
       <SectionHeader>
-        <SectionTitle id="issues-by-severity">{issueTypesLabel(total)}</SectionTitle>
+        <SectionTitle id={titleId}>{issueTypesLabel(total)}</SectionTitle>
         <SectionDescription>{attentionLine(high, summary)}</SectionDescription>
       </SectionHeader>
-      {total > 0 ? (
+      {parts.some((part) => part.value > 0) ? (
         <SectionContent>
           <PartBar
-            parts={slices}
-            totalLabel={total === 1 ? 'issue type' : 'issue types'}
+            parts={parts}
+            legend="row"
+            labelledBy={titleId}
             label="Issue types by severity"
           />
         </SectionContent>
@@ -110,9 +114,7 @@ function issueTypesLabel(total: number): string {
 function attentionLine(high: number, summary: SiteIssuesPage['summary']): string {
   const pages = summary.affected_url_count;
   if (summary.defect_issue_type_count === 0) return 'This crawl found nothing to fix.';
-  const reach = `${formatCount(pages)} ${pages === 1 ? 'page affected' : 'pages affected'}.`;
-  const severe = `${formatCount(high)} ${high === 1 ? 'high-severity issue type' : 'high-severity issue types'}`;
-  return `${severe}. ${reach}`;
+  return `${formatCount(high)} high severity · ${formatCount(pages)} ${pages === 1 ? 'page' : 'pages'} affected`;
 }
 
 /** The first sentence of a rule's fix, so a priority line stays one line of advice. */
