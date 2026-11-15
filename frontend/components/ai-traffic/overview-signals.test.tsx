@@ -163,6 +163,8 @@ it("offers GA4's own next step once, under the figures, until a referral snapsho
   expect(screen.getByRole('link', { name: 'Choose GA4 property' })).toBeVisible();
   expect(screen.queryByRole('link', { name: 'Connect GA4' })).not.toBeInTheDocument();
   view.rerender(figures({}, true, null));
+  // An unknown GA4 step is never assumed to be "not run yet".
+  expect(within(figure('AI referral sessions')).getByText('Unavailable')).toBeVisible();
   expect(whyAbsent('AI referral sessions')).toHaveAccessibleDescription(
     'Referral sessions appear once GA4 imports a report.',
   );

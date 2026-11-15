@@ -22,7 +22,7 @@ import { projectDestination } from '@/lib/navigation/project-destination';
 import { aiSourceLabel } from '@/lib/ai-traffic/series';
 import { coverageLabel, legStateLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
-import { cn } from '@/lib/utils';
+import { FactList } from '@/components/ui/facts';
 
 type Leg = z.infer<typeof trafficLegSchema>;
 type UrlEvidenceData = z.infer<typeof aiTrafficUrlSchema>;
@@ -189,16 +189,23 @@ function UrlEvidence({
         {formatWindowDate(data.window_start)} – {formatWindowDate(data.window_end)} · Path-level
         identity
       </p>
-      <dl className="min-w-0">
-        {rows.map((row) => (
-          <RecordRow key={row.name} name={row.name} note={row.note} link={row.link}>
-            {row.value}
-          </RecordRow>
-        ))}
-        <RecordRow name="First and last observations">
-          <Observations data={data} botLabel={botLabel} />
-        </RecordRow>
-      </dl>
+      <FactList
+        layout="record"
+        label="Page record"
+        facts={[
+          ...rows.map((row) => ({
+            key: row.name,
+            label: row.name,
+            value: row.value,
+            note: row.note,
+            end: row.link ? <PanelLink to={row.link.to}>{row.link.label}</PanelLink> : null,
+          })),
+          {
+            label: 'First and last observations',
+            value: <Observations data={data} botLabel={botLabel} />,
+          },
+        ]}
+      />
       <p className={textRole('caption')}>
         Timeline uses saved crawler rollups, GA4 metric rows and tracked citations.
         {data.provenance.bounded ? ' It reached its display bound.' : null}
@@ -212,41 +219,6 @@ function UrlEvidence({
         )}
       </p>
     </Stack>
-  );
-}
-
-/** One row of the record: 40 high, 56 with a note, a rule between rows and no boxes. */
-function RecordRow({
-  name,
-  note,
-  link,
-  children,
-}: Readonly<{
-  name: string;
-  note?: string | null;
-  link?: MetricRow['link'];
-  children: ReactNode;
-}>) {
-  return (
-    <div
-      className={cn(
-        'border-rule grid grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-center gap-x-3 border-b py-2 last:border-b-0',
-        note ? 'min-h-14' : 'min-h-10',
-      )}
-    >
-      <dt className={textRole('body', 'text-ink min-w-0')}>{name}</dt>
-      <dd className="flex min-w-0 items-center justify-between gap-3">
-        <span className="min-w-0">
-          <span className={textRole('body', 'text-ink block tabular-nums')}>{children}</span>
-          {note ? <span className={textRole('caption', 'block')}>{note}</span> : null}
-        </span>
-        {link ? (
-          <span className={textRole('body', 'shrink-0 text-right')}>
-            <PanelLink to={link.to}>{link.label}</PanelLink>
-          </span>
-        ) : null}
-      </dd>
-    </div>
   );
 }
 

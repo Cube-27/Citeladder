@@ -5,12 +5,11 @@ import { fixedLabel } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { Stack } from '@/components/ui/layout';
 import { OpenRow } from '@/components/ui/list-row';
+import { PartBar, type Part } from '@/components/ui/part-bar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
-import { formatCount, percentText } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatCount } from '@/lib/format';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
 import { Notice } from '@/components/ui/notice';
 import {
@@ -75,61 +74,30 @@ export function IssuesSummaryLoading() {
   );
 }
 
-const SEVERITIES = [
-  { key: 'high', label: 'High', fill: 'bg-negative' },
-  { key: 'medium', label: 'Medium', fill: 'bg-warning' },
-  { key: 'low', label: 'Low', fill: 'bg-well' },
-] as const;
-
 /** Issue types by severity: the count, the high-severity count, the pages they reach. */
 function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary'] }>) {
   const titleId = useId();
   const total = summary.defect_issue_type_count;
-  const parts = SEVERITIES.map((severity) => ({
-    ...severity,
-    count: severityCount(summary.severity_counts, severity.key),
-  }));
-  const whole = parts.reduce((sum, part) => sum + part.count, 0);
+  const high = severityCount(summary.severity_counts, 'high');
+  const parts: readonly Part[] = [
+    { label: 'High', value: high, status: 'negative' },
+    { label: 'Medium', value: severityCount(summary.severity_counts, 'medium'), status: 'warning' },
+    { label: 'Low', value: severityCount(summary.severity_counts, 'low'), status: 'neutral' },
+  ];
   return (
     <Section aria-labelledby={titleId}>
       <SectionHeader>
         <SectionTitle id={titleId}>{issueTypesLabel(total)}</SectionTitle>
-        <SectionDescription>
-          {attentionLine(severityCount(summary.severity_counts, 'high'), summary)}
-        </SectionDescription>
+        <SectionDescription>{attentionLine(high, summary)}</SectionDescription>
       </SectionHeader>
-      {whole > 0 ? (
-        <SectionContent className="@container">
-          <div // NOSONAR -- the segments are one picture of a whole; <img> cannot hold them
-            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the segments are one picture of a whole
-            role="img"
-            aria-labelledby={titleId}
-            className="flex h-2 gap-0.5 overflow-hidden"
-          >
-            {parts.map((part) =>
-              part.count > 0 ? (
-                <span
-                  key={part.key}
-                  className={cn('block h-full min-w-0.5 basis-0 rounded-sm', part.fill)}
-                  style={{ flexGrow: part.count }}
-                />
-              ) : null,
-            )}
-          </div>
-          <ul
-            aria-label="Issue types by severity"
-            className="mt-2 flex flex-wrap gap-x-4 gap-y-1 @min-[30rem]:flex-nowrap"
-          >
-            {parts.map((part) => (
-              <li key={part.key} className={textRole('body', 'flex items-center gap-2')}>
-                <span aria-hidden className={cn('size-2 shrink-0 rounded-xs', part.fill)} />
-                <span className="text-ink">{part.label}</span>
-                <span className="text-ink-2 whitespace-nowrap tabular-nums">
-                  {percentText(part.count / whole)} ({formatCount(part.count)})
-                </span>
-              </li>
-            ))}
-          </ul>
+      {parts.some((part) => part.value > 0) ? (
+        <SectionContent>
+          <PartBar
+            parts={parts}
+            legend="row"
+            labelledBy={titleId}
+            label="Issue types by severity"
+          />
         </SectionContent>
       ) : null}
     </Section>

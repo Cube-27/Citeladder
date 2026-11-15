@@ -91,7 +91,8 @@ export function ArchitecturePanel({
   if (!architecture.data || architecture.data.state === 'unavailable') {
     return (
       <StateBlock
-        kind="not_measured"
+        kind="empty"
+        heading="Site architecture isn't available yet"
         description={
           architecture.data?.limitations[0] ??
           'Page kinds appear once a crawl has finished and its structure has been derived.'

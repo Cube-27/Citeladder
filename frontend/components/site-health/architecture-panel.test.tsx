@@ -264,7 +264,9 @@ describe('Architecture panel', () => {
       limitations: ['This crawl has no observed architecture yet.'],
     });
     renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
-    expect(await screen.findByRole('heading', { name: 'Not measured yet' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: "Site architecture isn't available yet" }),
+    ).toBeInTheDocument();
     expect(screen.getByText('This crawl has no observed architecture yet.')).toBeInTheDocument();
   });
 });

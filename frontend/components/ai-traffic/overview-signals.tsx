@@ -266,7 +266,8 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
 
 /** Which absence a referral figure is before GA4 has synced, by GA4's step. */
 function unsyncedKind(ga4: SourceStep | null): DataAvailabilityState {
-  if (ga4 === null) return 'not_run';
+  // GA4's step is unknown (its read is pending or failed), never assumed.
+  if (ga4 === null) return 'unavailable';
   switch (ga4.kind) {
     case 'connect':
     case 'reconnect':
@@ -318,7 +319,10 @@ function citationFigure(citations: Overview['citations']): FigureSegment {
     key: 'citations',
     label: 'Tracked citations',
     value: measured ? formatCount(citations.count) : null,
-    missingLabel: availabilityLabel('not_run'),
+    // No run is "not run yet"; a run not yet counted is unavailable for now.
+    missingLabel: availabilityLabel(
+      !measured && citations.reason === 'no_completed_run' ? 'not_run' : 'unavailable',
+    ),
     sub: measured ? citations.label : `${citations.label} · ${citationGapLabel(citations.reason)}`,
   };
 }

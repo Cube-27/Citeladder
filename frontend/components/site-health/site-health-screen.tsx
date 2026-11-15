@@ -125,15 +125,10 @@ function SiteHealthContent({
               />
             ) : (
               <FirstCrawl
-                start={
-                  canRun
-                    ? {
-                        onStart: () => startCrawl(),
-                        pending: startPending,
-                        allowed: mutationsAllowed,
-                      }
-                    : undefined
-                }
+                canRun={canRun}
+                onStart={() => startCrawl()}
+                pending={startPending}
+                allowed={mutationsAllowed}
               />
             )}
           </Stack>
@@ -404,11 +399,11 @@ function AnalysisPanel({
 
 /** The project before its first crawl, on every tab; starting one is offered to a role that may run it. */
 function FirstCrawl({
-  start,
-}: Readonly<{
-  start?: Readonly<{ onStart: () => void; pending: boolean; allowed: boolean }>;
-}>) {
+  canRun,
+  ...run
+}: Readonly<{ canRun: boolean; onStart: () => void; pending: boolean; allowed: boolean }>) {
   const noteId = useId();
+  const start = canRun ? run : undefined;
   return (
     <div data-testid="site-health-empty">
       <StateBlock
