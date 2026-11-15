@@ -88,8 +88,8 @@ function Notices({ read }: Readonly<{ read: LinksRead }>) {
         <StateBlock
           kind="error"
           error={read.query.error}
-          fallback="Internal links could not be loaded."
-          title="Internal links could not be loaded"
+          fallback="The request failed or timed out."
+          title="Couldn't load internal links"
           onRetry={() => void read.query.refetch()}
         />
       ) : null}
@@ -108,14 +108,13 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
   const data = read.data;
   if (!data) return null;
   // One block in its own card, so the tab's empty state holds the card's footprint.
+  // Before the first crawl the screen shows its own state, so this is a crawl still running.
   if (!data.crawl_id)
     return (
       <Section>
         <StateBlock
-          kind="empty"
-          icon={ICONS.site}
-          heading="Run a crawl first"
-          description="A completed crawl provides the pages and existing links to analyze."
+          kind="not_measured"
+          description="Internal links can be analyzed once the crawl finishes."
         />
       </Section>
     );

@@ -1,7 +1,9 @@
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { ICONS } from '@/lib/icons';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { TabRow, TabsRoot } from '@/components/ui/tabs';
 import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
@@ -32,7 +34,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
+import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
 export function SiteHealthScreen() {
   const { workspaceId, projectId } = useProjectScope();
@@ -66,12 +68,13 @@ function SiteHealthContent({
   // Internal links' search, filters and header actions act on the analysis its panel draws.
   const links = useInternalLinksBands({
     scope: { projectId, workspaceId },
-    enabled: tab === 'internal-links' && !blocking,
+    enabled: tab === 'internal-links' && !blocking && Boolean(crawl),
     canAnalyze: mutationsAllowed,
   });
   const controls = tabControls({
     tab,
     blocking,
+    crawled: Boolean(crawl),
     links: links.controls,
     linksActions: links.actions,
   });
@@ -108,16 +111,31 @@ function SiteHealthContent({
             <SiteHealthNotices screen={screen} mutationsAllowed={mutationsAllowed} />
             {schedule.notice}
             <SiteHealthRefreshFailures screen={screen} />
-            <AnalysisPanel
-              tab={tab}
-              crawlId={crawl?.id}
-              projectId={projectId}
-              workspaceId={workspaceId}
-              screen={screen}
-              entitlement={entitlementQuery.data!.site_health}
-              mutationsAllowed={mutationsAllowed}
-              linksRead={links.read}
-            />
+            {/* Before the first crawl every tab says the same one next step. */}
+            {crawl ? (
+              <AnalysisPanel
+                tab={tab}
+                crawlId={crawl.id}
+                projectId={projectId}
+                workspaceId={workspaceId}
+                screen={screen}
+                entitlement={entitlementQuery.data!.site_health}
+                mutationsAllowed={mutationsAllowed}
+                linksRead={links.read}
+              />
+            ) : (
+              <FirstCrawl
+                start={
+                  canRun
+                    ? {
+                        onStart: () => startCrawl(),
+                        pending: startPending,
+                        allowed: mutationsAllowed,
+                      }
+                    : undefined
+                }
+              />
+            )}
           </Stack>
         )}
       </ReportPage>
@@ -134,17 +152,20 @@ function SiteHealthContent({
 function tabControls({
   tab,
   blocking,
+  crawled,
   links,
   linksActions,
 }: Readonly<{
   tab: AnalysisTab;
   blocking: BlockingState | null;
+  /** False before the first crawl, when the tab holds only the first-crawl state. */
+  crawled: boolean;
   links: FilterBarProps | undefined;
   linksActions: ReactNode;
 }>): FilterBarProps | undefined {
   if (tab !== 'internal-links') return undefined;
   if (blocking?.kind === 'loading') return RESERVED_CONTROLS;
-  if (blocking || !links) return undefined;
+  if (blocking || !crawled || !links) return undefined;
   if (!linksActions) return links;
   return {
     ...links,
@@ -167,7 +188,13 @@ function SiteHealthBlocked({ blocking }: Readonly<{ blocking: BlockingState }>) 
     case 'state':
       return blocking.node;
     case 'loading':
-      return <StateBlock kind="loading" label={blocking.label} />;
+      // The default tab's shape: its figures, then its table.
+      return (
+        <Stack gap="workspace" className="min-w-0">
+          <StateBlock kind="loading" label={blocking.label} shape={{ kind: 'figures' }} />
+          <StateBlock kind="loading" label={blocking.label} shape={{ kind: 'table' }} />
+        </Stack>
+      );
     default: {
       const exhaustive: never = blocking;
       return exhaustive;
@@ -200,8 +227,8 @@ function SiteHealthRefreshFailures({
         <Notice
           kind="read"
           error={screen.dashboardQuery.error}
-          fallback="Could not refresh the latest Website crawl."
-          title="Could not refresh the latest Website crawl"
+          fallback={READ_FAILED}
+          title="Couldn't load the latest Website crawl"
           onRetry={() => void screen.dashboardQuery.refetch()}
           pending={screen.dashboardQuery.isFetching}
         />
@@ -210,8 +237,8 @@ function SiteHealthRefreshFailures({
         <Notice
           kind="read"
           error={screen.entitlementQuery.error}
-          fallback="Could not refresh your Website access."
-          title="Could not refresh your Website access"
+          fallback={READ_FAILED}
+          title="Couldn't load your Website access"
           onRetry={() => void screen.entitlementQuery.refetch()}
           pending={screen.entitlementQuery.isFetching}
         />
@@ -328,8 +355,8 @@ function AnalysisPanel({
   mutationsAllowed,
   linksRead,
 }: Readonly<{
-  tab: string;
-  crawlId: string | undefined;
+  tab: AnalysisTab;
+  crawlId: string;
   projectId: string;
   workspaceId: string;
   screen: ReturnType<typeof useSiteHealthScreen>;
@@ -337,39 +364,80 @@ function AnalysisPanel({
   mutationsAllowed: boolean;
   linksRead: LinksRead;
 }>) {
-  if (tab === 'pages')
-    return (
-      <SiteHealthDashboardLayout
-        screen={screen}
-        entitlement={entitlement}
-        mutationsAllowed={mutationsAllowed}
-      />
-    );
-  if (tab === 'overview' && crawlId)
-    return (
-      <OverviewPanel
-        projectId={projectId}
-        workspaceId={workspaceId}
-        crawlId={crawlId}
-        crawl={screen.crawl}
-        dashboard={screen.dashboardQuery.data}
-      />
-    );
-  // Architecture reads a project-scoped projection, so it renders its own
-  // "derived after the crawl finishes" state rather than needing a crawl here.
-  if (tab === 'architecture')
-    return <ArchitecturePanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />;
-  if (tab === 'aeo-readiness' && crawlId)
-    return <AeoReadinessPanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />;
-  if (tab === 'internal-links')
-    return <InternalLinksPanel read={linksRead} workspaceId={workspaceId} />;
-  if (tab === 'changes') return <ChangesPanel projectId={projectId} workspaceId={workspaceId} />;
+  switch (tab) {
+    case 'pages':
+      return (
+        <SiteHealthDashboardLayout
+          screen={screen}
+          entitlement={entitlement}
+          mutationsAllowed={mutationsAllowed}
+        />
+      );
+    case 'overview':
+      return (
+        <OverviewPanel
+          projectId={projectId}
+          workspaceId={workspaceId}
+          crawlId={crawlId}
+          crawl={screen.crawl}
+          dashboard={screen.dashboardQuery.data}
+        />
+      );
+    case 'architecture':
+      return (
+        <ArchitecturePanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />
+      );
+    case 'aeo-readiness':
+      return (
+        <AeoReadinessPanel projectId={projectId} workspaceId={workspaceId} crawlId={crawlId} />
+      );
+    case 'internal-links':
+      return <InternalLinksPanel read={linksRead} workspaceId={workspaceId} />;
+    case 'changes':
+      return <ChangesPanel projectId={projectId} workspaceId={workspaceId} />;
+    default: {
+      const exhaustive: never = tab;
+      return exhaustive;
+    }
+  }
+}
+
+/** The project before its first crawl, on every tab; starting one is offered to a role that may run it. */
+function FirstCrawl({
+  start,
+}: Readonly<{
+  start?: Readonly<{ onStart: () => void; pending: boolean; allowed: boolean }>;
+}>) {
+  const noteId = useId();
   return (
-    <StateBlock
-      kind="empty"
-      heading="No crawl to analyze yet"
-      description="This view reads a finished crawl of your site. Start the first crawl from the Pages tab."
-    />
+    <div data-testid="site-health-empty">
+      <StateBlock
+        kind="empty"
+        icon={ICONS.siteHealth}
+        heading={start ? 'Run your first site crawl' : 'No site crawl yet'}
+        description="A crawl reads your pages so CiteLadder can find issues, page structure and internal links."
+        action={
+          start ? (
+            <ActionButton
+              action="runCrawl"
+              onClick={start.onStart}
+              pending={start.pending}
+              pendingLabel="Starting…"
+              disabled={!start.allowed}
+              aria-describedby={start.allowed ? undefined : noteId}
+            />
+          ) : undefined
+        }
+        actionNote={
+          !start || start.allowed
+            ? undefined
+            : {
+                id: noteId,
+                text: "Your plan's crawl limits couldn't be checked. Reload to try again.",
+              }
+        }
+      />
+    </div>
   );
 }
 
@@ -391,8 +459,8 @@ function screenBlockingState({
         <StateBlock
           kind="error"
           error={dashboard.error}
-          fallback="Could not load the latest Website crawl."
-          title="Could not load the latest Website crawl"
+          fallback={READ_FAILED}
+          title="Couldn't load the latest Website crawl"
           onRetry={() => void dashboard.refetch()}
           pending={dashboard.isFetching}
         />
@@ -405,8 +473,8 @@ function screenBlockingState({
         <StateBlock
           kind="error"
           error={entitlement.error}
-          fallback="Could not load your Website access."
-          title="Could not load your Website access"
+          fallback={READ_FAILED}
+          title="Couldn't load your Website access"
           onRetry={() => void entitlement.refetch()}
           pending={entitlement.isFetching}
         />

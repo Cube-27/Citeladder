@@ -97,9 +97,15 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     expect(await screen.findByRole('heading', { name: '47 issue types' })).toBeInTheDocument();
+    expect(screen.getByText('12 high severity · 50 pages affected')).toBeInTheDocument();
+    // The bar is named by the title alone; its legend carries each share and count.
+    expect(screen.getByRole('img', { name: '47 issue types' })).toBeInTheDocument();
+    const legend = screen.getByRole('list', { name: 'Issue types by severity' });
     expect(
-      screen.getByText('12 high-severity issue types. 50 pages affected.'),
-    ).toBeInTheDocument();
+      within(legend)
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['High25.5% (12)', 'Medium48.9% (23)', 'Low25.5% (12)']);
     const fixFirst = screen.getByRole('region', { name: 'Fix these first' });
     expect(within(fixFirst).getByText('Top 3 by severity, then reach')).toBeInTheDocument();
     // Each names its fix in one sentence.

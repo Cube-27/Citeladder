@@ -8,7 +8,7 @@ import { httpErrorStatus } from '@/lib/api/client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { CRAWL_STATES } from '@/lib/site-health/status';
-import { StateBlock } from '@/components/ui/state-block';
+import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
 /**
  * Overview shares the screen's single polling dashboard while a crawl runs.
@@ -36,7 +36,8 @@ export function OverviewPanel({
   if (useAwaitingFirstSnapshot(terminal && overview.isPending))
     return (
       <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
-        <StateBlock kind="loading" label="Loading Overview" />
+        <StateBlock kind="loading" label="Loading Overview" shape={{ kind: 'figures' }} />
+        <StateBlock kind="loading" label="Loading Overview details" />
       </Stack>
     );
   let overviewBody: ReactNode = null;
@@ -52,8 +53,8 @@ export function OverviewPanel({
       <StateBlock
         kind="error"
         error={overview.error}
-        fallback="Could not load the Website overview."
-        title="Could not load the Website overview"
+        fallback={READ_FAILED}
+        title="Couldn't load the Website overview"
         onRetry={() => void overview.refetch()}
         pending={overview.isFetching}
       />

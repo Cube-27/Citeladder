@@ -331,8 +331,15 @@ function loadingRegions() {
   return document.querySelectorAll('[data-state-block="loading"]');
 }
 
+/** The loading shapes on screen, in order. */
+function loadingShapes() {
+  return [...document.querySelectorAll('[data-skeleton]')].map((node) =>
+    node.getAttribute('data-skeleton'),
+  );
+}
+
 describe('SiteHealthScreen — loading frames', () => {
-  it('shows one loading box under the tab row until the Overview arrives, never a lone score row', async () => {
+  it('shapes the load like the page under the tab row until the Overview arrives, never a lone score row', async () => {
     setSearch('tab=overview');
     const dashboard = held();
     const snapshot = held();
@@ -353,13 +360,13 @@ describe('SiteHealthScreen — loading frames', () => {
     // The crawl is still being read: the loaded page's tab row, one box.
     expect(await screen.findByRole('tablist', { name: 'Website analysis' })).toBeVisible();
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
-    expect(loadingRegions()).toHaveLength(1);
+    expect(loadingShapes()).toEqual(['figures', 'table']);
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
 
-    // The crawl is known but its Overview is not: still the one box, no scores.
+    // The crawl is known but its Overview is not: still loading, no scores.
     dashboard.release();
     expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
-    expect(loadingRegions()).toHaveLength(1);
+    expect(loadingShapes()).toEqual(['figures', 'card']);
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
 
     snapshot.release();
@@ -450,9 +457,14 @@ describe('SiteHealthScreen — before the first crawl', () => {
     const runButtons = screen.getAllByRole('button', { name: 'Run new crawl' });
     expect(runButtons).toHaveLength(1);
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
+    // Every tab says the same next step, its own placeholder gone.
+    await user.click(screen.getByRole('tab', { name: 'Changes' }));
+    expect(screen.getByRole('heading', { name: 'Run your first site crawl' })).toBeVisible();
+    expect(screen.queryByText('Not measured')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Pages' }));
 
     await waitFor(() => expect(monitoredRequests).toBe(1));
-    await user.click(runButtons[0]!);
+    await user.click(screen.getByRole('button', { name: 'Run new crawl' }));
     await waitFor(() => expect(createBody).toEqual({ project_id: PROJECT }));
     await waitFor(() => expect(monitoredRequests).toBeGreaterThanOrEqual(2));
   });

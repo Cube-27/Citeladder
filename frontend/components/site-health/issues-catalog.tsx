@@ -193,8 +193,8 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
     return {
       kind: 'error',
       error: query.error,
-      fallback: 'Could not load issues for this crawl.',
-      title: 'Could not load issues for this crawl',
+      fallback: 'The request failed or timed out.',
+      title: "Couldn't load issues for this crawl",
       onRetry: () => void query.refetch(),
       pending: query.isFetching,
     } satisfies DataTableState;
