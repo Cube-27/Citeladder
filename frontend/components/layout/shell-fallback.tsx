@@ -5,7 +5,6 @@ import { MessagesSquare, type LucideIcon } from 'lucide-react';
 import { NoticeScreen } from '@/components/templates/notice-page';
 import { AppShellPlaceholder } from '@/components/ui/app-shell';
 import {
-  SIDEBAR_MODE_TRACK,
   SidebarFrame,
   SidebarIdentButton,
   SidebarNavGroup,
@@ -13,6 +12,7 @@ import {
   SidebarRailList,
   SidebarScrollList,
   sidebarModeSegmentClasses,
+  sidebarModeTrackClasses,
   sidebarNavRowClasses,
   sidebarRailButtonClasses,
 } from '@/components/ui/sidebar';
@@ -147,9 +147,9 @@ function PlaceholderSidebar() {
     <SidebarFrame
       ident={<IdentBlock />}
       mode={
-        <div className={SIDEBAR_MODE_TRACK}>
+        <div className={sidebarModeTrackClasses(rail)}>
           {MODES.map(({ mode: key, label, icon: Icon }) => (
-            <span key={key} className={sidebarModeSegmentClasses(key === mode)}>
+            <span key={key} className={sidebarModeSegmentClasses(key === mode, rail)}>
               <Icon aria-hidden />
               <span className="labelled:not-sr-only sr-only">{label}</span>
             </span>

@@ -231,14 +231,17 @@ export function sidebarRailButtonClasses(current: boolean) {
  * (44 in the drawer) with the current segment raised on `surface`. In the
  * rail it is two stacked rail buttons.
  */
-export const SIDEBAR_MODE_TRACK =
-  'labelled:grid labelled:h-[var(--nav-row-height)] labelled:grid-cols-2 labelled:bg-well labelled:p-0.5 labelled:rounded-control flex flex-col items-center';
+export function sidebarModeTrackClasses(rail: boolean) {
+  return rail
+    ? 'flex flex-col items-center'
+    : 'bg-well rounded-control grid h-[var(--nav-row-height)] grid-cols-2 p-0.5';
+}
 
-export function sidebarModeSegmentClasses(current: boolean) {
+export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
+  if (rail) return sidebarRailButtonClasses(current);
   return cn(
-    sidebarRailButtonClasses(current),
-    'type-label labelled:size-auto labelled:h-full labelled:w-full labelled:gap-2 labelled:rounded-sm labelled:before:hidden labelled:[&_svg]:size-4',
-    current && 'labelled:bg-surface labelled:shadow-card',
+    'focus-ring type-label relative flex h-full w-full items-center justify-center gap-2 rounded-sm transition-colors [&_svg]:size-4',
+    current ? 'bg-surface text-ink shadow-card' : AT_REST,
   );
 }
 

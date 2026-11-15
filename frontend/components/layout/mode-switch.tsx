@@ -3,9 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { PanelsTopLeft, type LucideIcon } from 'lucide-react';
 
 import {
-  SIDEBAR_MODE_TRACK,
   SidebarRowTooltip,
   sidebarModeSegmentClasses,
+  sidebarModeTrackClasses,
 } from '@/components/ui/sidebar';
 import { ICONS } from '@/lib/icons';
 import { MODE_HOMES, navigationMode, type NavigationMode } from '@/lib/navigation/app-routes';
@@ -48,12 +48,12 @@ export function useModeMemory() {
  * stay right; each segment returns to the last route used in that mode for
  * this project, or to the mode's home.
  */
-export function ModeSwitch() {
+export function ModeSwitch({ rail }: Readonly<{ rail: boolean }>) {
   const pathname = useLocation().pathname ?? '';
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const current = navigationMode(pathname);
   return (
-    <nav aria-label="Mode" data-segmented-track="" className={SIDEBAR_MODE_TRACK}>
+    <nav aria-label="Mode" data-segmented-track="" className={sidebarModeTrackClasses(rail)}>
       {MODES.map(({ mode, label, icon: Icon }) => {
         const selected = mode === current;
         const target =
@@ -68,7 +68,7 @@ export function ModeSwitch() {
                 activeWorkspaceId,
               )}
               aria-current={selected ? 'true' : undefined}
-              className={sidebarModeSegmentClasses(selected)}
+              className={sidebarModeSegmentClasses(selected, rail)}
             >
               <Icon aria-hidden />
               <span data-sidebar-text="title" className="labelled:not-sr-only sr-only truncate">

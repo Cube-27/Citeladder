@@ -81,7 +81,7 @@ function SidebarNav() {
   useModeMemory();
   return (
     <div data-sidebar-state="expanded">
-      <ModeSwitch />
+      <ModeSwitch rail={false} />
       {navigationMode(pathname) === 'agent' ? <AgentNav /> : <DashboardNav />}
       <SidebarFootNav rail={false} />
     </div>

@@ -99,7 +99,7 @@ function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
   return (
     <SidebarFrame
       ident={<ProjectSwitcher />}
-      mode={<ModeSwitch />}
+      mode={<ModeSwitch rail={rail} />}
       nav={nav}
       foot={
         <>
