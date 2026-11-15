@@ -14,6 +14,7 @@ import { DraftSheet } from '@/components/ui/draft-sheet';
 import { revisionDraft } from '@/components/agent/revision-draft';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
+import { ClampText } from '@/components/ui/clamp-text';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -91,7 +92,9 @@ export function OutputPane({
             <Tag>{kindLabel(output.kind)}</Tag>
             <span className={textRole('caption')}>Revision {revision.number}</span>
             {output.target_label ? (
-              <span className={textRole('caption', 'truncate')}>{output.target_label}</span>
+              <ClampText className={textRole('caption', 'min-w-0 flex-1')}>
+                {output.target_label}
+              </ClampText>
             ) : null}
           </Inline>
           {editing ? null : (

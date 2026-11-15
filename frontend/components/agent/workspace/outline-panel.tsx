@@ -1,3 +1,4 @@
+import { JUMP_LINK } from '@/components/agent/jump-link';
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { textRole } from '@/components/ui/typography';
@@ -29,7 +30,7 @@ function Branch({
       {nodes.map((node) => (
         <Stack as="li" gap="tight" key={node.heading.from}>
           <Pressable
-            className={textRole('body', 'hover:text-accent-text w-auto text-start')}
+            className={textRole('body', `${JUMP_LINK} w-auto text-start`)}
             onClick={() => onJump(node.heading.from)}
           >
             {node.heading.text}

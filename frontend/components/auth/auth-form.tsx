@@ -189,15 +189,15 @@ function GoogleEntry({
 
 /**
  * Sign-in, sign-up and the mailbox screens as one Flow block: the title and
- * line, the form's one alert, Continue with Google and the "or" rule (when the
- * form authenticates), the fields, the Turnstile slot (when challenged) and
- * the submit, the agreement line, and the switch under the card.
+ * line, Continue with Google and the "or" rule (when the form authenticates),
+ * the form's one alert directly above the first field, the fields, the
+ * Turnstile slot (when challenged) and the submit, the agreement line, and the
+ * switch under the card. An error about one field is that field's own error.
  */
 export function AuthFormShell({
   title,
   description,
   error,
-  errorId,
   onSubmit,
   pending,
   submitLabel,
@@ -215,8 +215,6 @@ export function AuthFormShell({
   /** A line under the title; sign-in and sign-up have none unless they report something. */
   description?: ReactNode;
   error?: string;
-  /** The form error's id, so the field it is about can point to it. */
-  errorId?: string;
   onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>;
   pending: boolean;
   submitLabel: string;
@@ -243,6 +241,7 @@ export function AuthFormShell({
   children: ReactNode;
 }>) {
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
+  const notice = error ? <Notice tone="negative">{error}</Notice> : null;
 
   return (
     <FlowBlock
@@ -259,11 +258,7 @@ export function AuthFormShell({
         ) : undefined
       }
     >
-      {error ? (
-        <div id={errorId}>
-          <Notice tone="negative">{error}</Notice>
-        </div>
-      ) : null}
+      {showForm ? null : notice}
 
       {consent.terms ? (
         <>
@@ -285,6 +280,7 @@ export function AuthFormShell({
           submitLabel={submitLabel}
           pendingLabel={pendingLabel}
         >
+          {notice}
           {children}
         </AuthEmailForm>
       ) : null}
@@ -295,8 +291,10 @@ export function AuthFormShell({
 }
 
 /**
- * The fields, the Turnstile slot (when challenged) and submit. A held form
- * swallows submit (Enter in a field) until the gate opens.
+ * The fields, the Turnstile slot (when challenged) and submit. A held or
+ * pending form swallows submit until the gate opens or the attempt ends. The
+ * submit is `aria-disabled`, never `disabled`, so it keeps keyboard focus
+ * while the attempt is pending (WCAG 2.4.3).
  */
 function AuthEmailForm({
   consent,
@@ -314,7 +312,7 @@ function AuthEmailForm({
   children: ReactNode;
 }>) {
   const handleSubmit: NonNullable<ComponentProps<'form'>['onSubmit']> = (event) => {
-    if (consent.held) {
+    if (pending || consent.held) {
       event.preventDefault();
       return;
     }
@@ -327,10 +325,12 @@ function AuthEmailForm({
 
       {consent.verification ? <AuthHumanCheck widget={consent.verification} /> : null}
 
+      {/* Not `pending`: Button's pending sets `disabled`, which drops focus to
+          the document. The changed label says it is working. */}
       <AuthButton
         type="submit"
         variant="primary"
-        disabled={pending || consent.held}
+        aria-disabled={pending || consent.held || undefined}
         aria-describedby={consent.terms ? consent.noticeId : undefined}
       >
         {pending ? pendingLabel : submitLabel}

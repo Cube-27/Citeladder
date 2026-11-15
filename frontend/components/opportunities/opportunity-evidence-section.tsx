@@ -2,10 +2,11 @@ import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row'
 import { Inline, Stack } from '@/components/ui/layout';
 import { OpportunitySourcePattern } from '@/components/opportunities/opportunity-source-pattern';
 import { StatusMark } from '@/components/ui/status-mark';
-import { Label } from '@/components/ui/typography';
+import { ClampText } from '@/components/ui/clamp-text';
+import { textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@citeladder/contracts';
 import { observedSourcePattern } from '@/lib/opportunities/source-pattern';
-import { formatCount } from '@/lib/format';
+import { formatCount, readableUrl } from '@/lib/format';
 import { keywordGapEvidenceSchema } from '@citeladder/contracts';
 import { wellClasses } from '@/components/ui/slip';
 
@@ -35,10 +36,12 @@ function KeywordGapEvidence({ evidence }: Readonly<{ evidence: Record<string, un
       )}
       <Stack as="ul" gap="tight" className="type-body text-ink-2">
         {competitors.map((item) => (
-          <li key={item.row_id}>
-            {item.name} ranks
-            {item.rank_group === null ? '' : ` #${item.rank_group}`}
-            {item.url ? ` with ${item.url}` : ''}
+          <li key={item.row_id} className="min-w-0">
+            <ClampText>
+              {item.name} ranks
+              {item.rank_group === null ? '' : ` #${item.rank_group}`}
+              {item.url ? ` with ${readableUrl(item.url)}` : ''}
+            </ClampText>
           </li>
         ))}
       </Stack>
@@ -47,12 +50,16 @@ function KeywordGapEvidence({ evidence }: Readonly<{ evidence: Record<string, un
   );
 }
 
+function EvidenceHeading() {
+  return <h3 className={textRole('subheading')}>Evidence</h3>;
+}
+
 export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   const evidence = detail.evidence;
   if (detail.rule_id === 'search_keyword_gap')
     return (
       <Stack as="section">
-        <Label>Evidence</Label>
+        <EvidenceHeading />
         {detail.target_theme ? (
           <OpportunityKvRow label="Search" value={detail.target_theme} />
         ) : null}
@@ -67,14 +74,16 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
 
   return (
     <Stack as="section">
-      <Label>Evidence</Label>
+      <EvidenceHeading />
       {promptText ? (
         <blockquote className={wellClasses()}>
           <p className="type-body text-ink">“{promptText}”</p>
         </blockquote>
       ) : null}
       {url ? (
-        <p className={wellClasses('type-caption text-ink break-all tabular-nums')}>{url}</p>
+        <p className={wellClasses('min-w-0')}>
+          <ClampText className="type-body text-ink">{readableUrl(url)}</ClampText>
+        </p>
       ) : null}
       {theme ? <OpportunityKvRow label="Topic" value={theme} /> : null}
       {competitors.length > 0 ? (

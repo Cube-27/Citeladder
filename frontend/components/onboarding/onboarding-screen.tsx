@@ -1,9 +1,11 @@
+import { X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { FlowPage, StepBack } from '@/components/templates/flow-page';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -141,7 +143,10 @@ function stageActions(
         // Same rule as the exit above: cancelling has to lead somewhere.
         flow.isAdditional && projectsHref ? (
           <Button asChild variant="quiet">
-            <Link to={projectsHref}>Cancel</Link>
+            <Link to={projectsHref}>
+              <Icon icon={X} />
+              Cancel
+            </Link>
           </Button>
         ) : undefined,
       next: (

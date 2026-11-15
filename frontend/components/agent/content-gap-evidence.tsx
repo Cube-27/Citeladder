@@ -1,3 +1,4 @@
+import { ClampText } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FactList } from '@/components/ui/facts';
@@ -103,14 +104,16 @@ export function GapEvidence({ evidence }: Readonly<{ evidence: ContentGapEvidenc
           <span className={textRole('body', 'text-ink-2')}>Prompts</span>
           <Stack as="ul" gap="tight">
             {prompts.map((prompt) => (
-              <li key={prompt.id}>
+              <li key={prompt.id} className="min-w-0">
                 {prompt.text === null ? (
                   // Recorded at the refresh without text: the library no longer had it.
                   <span className={textRole('body', 'text-ink-2')}>{DELETED_PROMPT}</span>
                 ) : (
-                  <TextLink href={promptHistoryHref(prompt.id)} text="body">
-                    {prompt.text}
-                  </TextLink>
+                  <ClampText tooltip={prompt.text}>
+                    <TextLink href={promptHistoryHref(prompt.id)} text="body">
+                      {prompt.text}
+                    </TextLink>
+                  </ClampText>
                 )}
               </li>
             ))}
@@ -134,9 +137,11 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
     : page.domain;
   return (
     <Stack as="li" gap="tight" className={ledgerItemClasses()}>
-      <TextLink variant="external" href={page.url} text="body" className="justify-self-start">
-        {page.title || readableUrl(page.url)}
-      </TextLink>
+      <ClampText tooltip={readableUrl(page.url)}>
+        <TextLink variant="external" href={page.url} text="body">
+          {page.title || readableUrl(page.url)}
+        </TextLink>
+      </ClampText>
       <Inline gap="compact" className="flex-wrap">
         {classification.success ? (
           <StatusMark

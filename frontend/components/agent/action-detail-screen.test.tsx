@@ -147,7 +147,7 @@ describe('An Action page', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Fix a technical issue: acme.test/pricing',
+        name: 'Fix a technical issue: /pricing',
       }),
     ).toBeVisible();
     expect(screen.getByRole('link', { name: 'Back to Actions' })).toHaveAttribute(
@@ -169,22 +169,23 @@ describe('An Action page', () => {
 
     const overview = screen.getByRole('region', { name: 'Overview' });
     expect(within(overview).getByText(MESSAGE)).toBeVisible();
-    expect(within(overview).getByText('Missing structured data on owned page')).toBeVisible();
+    // Each fact once: the finding is listed under Findings, not again in the Overview.
+    const findings = within(screen.getByRole('region', { name: 'Findings' }));
+    expect(findings.getByText('Missing structured data on owned page')).toBeVisible();
+    expect(within(overview).queryByText('Missing structured data on owned page')).toBeNull();
 
     const details = within(screen.getByRole('region', { name: 'Details' }));
     expect(details.getByRole('heading', { level: 2 })).toHaveTextContent('Details');
     expect(details.getAllByRole('term').map((term) => term.textContent)).toEqual([
       'Status',
       'Priority',
-      'Action type',
       'Target',
       'Source',
     ]);
     expect(details.getAllByRole('definition').map((value) => value.textContent)).toEqual([
       'Open',
       'High',
-      'Fix a technical issue',
-      'https://acme.test/pricingPageOpen the page (opens in a new tab)',
+      'https://acme.test/pricing (opens in a new tab)Page',
       'Website',
     ]);
 
@@ -208,14 +209,16 @@ describe('An Action page', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'Fix a technical issue: bestandless.com.au/…/WR3458_PAISLEY',
+        name: 'Fix a technical issue: /Categories/…/WR3458_PAISLEY',
       }),
     ).toBeVisible();
+    const full =
+      "https://www.bestandless.com.au/Categories/Women/Women's-Clothing/Women's-Dresses/WR3458_PAISLEY";
     expect(
-      within(screen.getByRole('region', { name: 'Details' })).getByText(
-        "https://www.bestandless.com.au/Categories/Women/Women's-Clothing/Women's-Dresses/WR3458_PAISLEY",
-      ),
-    ).toBeVisible();
+      within(screen.getByRole('region', { name: 'Details' })).getByRole('link', {
+        name: (name) => name.startsWith(full),
+      }),
+    ).toHaveAttribute('href', stored);
   });
 
   it('offers Dismiss, Mark implemented and Work with the agent in the action bar', async () => {
@@ -224,9 +227,11 @@ describe('An Action page', () => {
     renderDetail();
 
     const bar = within(await screen.findByRole('group', { name: 'Work on this Action' }));
+    // More holds Dismiss and Mark implemented where the bar is too narrow for them (CSS).
     expect(bar.getAllByRole('button').map((button) => button.textContent)).toEqual([
       'Dismiss',
       'Mark implemented',
+      'More',
     ]);
     expect(chatOf(bar.getByRole('link', { name: 'Work with the agent' }))).toEqual({
       path: '/agent',

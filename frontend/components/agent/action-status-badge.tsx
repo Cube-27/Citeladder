@@ -1,5 +1,5 @@
+import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
-import { Tag } from '@/components/ui/tag';
 import {
   ACTION_STATUS_LABEL,
   ACTION_STATUS_TONE,
@@ -12,8 +12,9 @@ import type { ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
 export function ActionStatusBadge({ status }: Readonly<{ status: ActionStatus }>) {
   const tone = ACTION_STATUS_TONE[status];
   const label = ACTION_STATUS_LABEL[status];
+  // Open and Dismissed are the neutral tone: the well fill and its plain glyph.
   return tone === 'neutral' ? (
-    <Tag>{label}</Tag>
+    <StatusMark tone="neutral">{label}</StatusMark>
   ) : (
     <StatusMark variant="status" value={tone}>
       {label}
@@ -23,7 +24,7 @@ export function ActionStatusBadge({ status }: Readonly<{ status: ActionStatus }>
 
 /** An Action's priority as High, Medium or Low; an unscored Action says so. */
 export function ActionPriorityBadge({ band }: Readonly<{ band: ActionPriorityBand | null }>) {
-  if (band === null) return <Tag>Not scored</Tag>;
+  if (band === null) return <Absence state="not_measured" label="Not scored" />;
   return (
     <StatusMark variant="priority" value={PRIORITY_BAND_VALUE[band]}>
       {PRIORITY_BAND_LABEL[band]}

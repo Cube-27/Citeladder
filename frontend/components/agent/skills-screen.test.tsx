@@ -50,6 +50,12 @@ describe('Skills', () => {
 
     const post = (await screen.findByRole('heading', { name: 'Social post' })).closest('li')!;
     expect(within(post).getByText('Output: LinkedIn post')).toBeVisible();
+    // The whole slip starts the chat with its skill; no separate button. Its
+    // name replaces its content, so what the skill does is its description.
+    const start = within(post).getByRole('link', { name: 'Start a chat with Social post' });
+    expect(start).toHaveAttribute('href', expect.stringContaining('skill=social_post'));
+    expect(start).toHaveAccessibleDescription('A short professional post. Output: LinkedIn post');
+    expect(within(post).queryByRole('button')).not.toBeInTheDocument();
     // An output the catalog does not name gets no badge, not a placeholder.
     const mystery = screen.getByRole('heading', { name: 'Mystery skill' }).closest('li')!;
     expect(within(mystery).queryByText(/^Output/)).not.toBeInTheDocument();

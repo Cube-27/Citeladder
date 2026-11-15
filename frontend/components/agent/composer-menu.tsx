@@ -11,10 +11,10 @@ import {
 } from '@/components/ui/menu';
 import { PromptActionMenu, PromptMenuLink } from '@/components/ui/prompt-action-menu';
 import { actionHandoffHref } from '@/lib/agent/handoff';
-import { approachLabel, targetKindLabel } from '@/lib/agent/vocabulary';
+import { actionTitle } from '@/lib/agent/action-title';
+import { targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_TOP_ACTIONS } from '@/lib/config/agent';
-import { readableUrl } from '@/lib/format';
 
 /**
  * The composer's + menu, shared by every composer: Skills sets the next
@@ -80,15 +80,14 @@ function TopActions({ scope }: Readonly<{ scope: { workspaceId: string; projectI
   const top = query.data.items.slice(0, AGENT_TOP_ACTIONS);
   if (top.length === 0) return <MenuItem disabled>No open Actions</MenuItem>;
   return top.map((action) => {
-    const target = readableUrl(action.target_label);
-    const type = approachLabel(action.approach) ?? targetKindLabel(action.target_kind);
+    const title = actionTitle(action);
     return (
       <PromptMenuLink
         key={action.id}
         href={actionHandoffHref(action)}
-        label={target}
-        detail={type}
-        accessibleName={`Work on ${target}`}
+        label={title}
+        detail={targetKindLabel(action.target_kind)}
+        accessibleName={`Work on ${title}`}
       />
     );
   });

@@ -13,6 +13,8 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
 import { DockedThread } from '@/components/ui/chat-dock';
 import { Drawer } from '@/components/ui/drawer';
+import { Icon } from '@/components/ui/icon';
+import { ICONS } from '@/lib/icons';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { contextChips, withoutContext, type AgentHandoff } from '@/lib/agent/handoff';
@@ -53,7 +55,7 @@ export function AgentPanel() {
       open={open}
       onOpenChange={panel.setOpen}
       title="Agent"
-      description="Ask about this screen. Chats are saved in the Agent workspace."
+      description="Chats are saved in the Agent workspace."
       closeLabel="Close agent"
       // The panel body lays out its own scroll area and bottom-pinned composer.
       body="dock"
@@ -68,6 +70,7 @@ export function AgentPanel() {
           toolbar={
             <Inline className="flex-wrap justify-end">
               <Button variant="quiet" onClick={() => panel.setChat(null)}>
+                <Icon icon={ICONS.newChat} />
                 New chat
               </Button>
               <Button asChild variant="secondary">
@@ -130,7 +133,7 @@ function PanelStart({
           }
           pending={create.pending || commands.resolving}
           disabled={!access.canSend}
-          placeholder="Ask about this screen"
+          placeholder="Ask a question"
           chips={contextChips(context)}
           commands={commands}
           onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}

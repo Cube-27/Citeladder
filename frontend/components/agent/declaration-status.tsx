@@ -1,13 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 
-import { ProjectLink } from '@/components/ui/project-link';
 import { VerificationObservations } from '@/components/opportunities/verification-observations';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
+import { ClampText } from '@/components/ui/clamp-text';
 import { DisplayTime } from '@/components/ui/display-time';
-import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -203,8 +202,8 @@ function FamilyPages({
       {shown.length ? (
         <Stack as="ul" gap="tight" aria-label="Pages still failing">
           {shown.map((page) => (
-            <li key={page.site_url_id} className={textRole('caption', 'break-all')}>
-              {readableUrl(page.url)}
+            <li key={page.site_url_id} className="min-w-0">
+              <ClampText className={textRole('caption')}>{readableUrl(page.url)}</ClampText>
             </li>
           ))}
           {more > 0 ? <li className={textRole('caption')}>and {more} more</li> : null}
@@ -225,7 +224,7 @@ function CheckSubject({
         {subject}
       </TextLink>
     );
-  return <span className={textRole('caption', 'break-all')}>{subject}</span>;
+  return <ClampText className={textRole('caption')}>{subject}</ClampText>;
 }
 
 /**
@@ -240,9 +239,9 @@ function Deployment({ declaration }: Readonly<{ declaration: ActionDeclaration }
       {reference ? (
         <>
           {' · '}
-          <ExternalHttpLink href={reference} className="underline underline-offset-2">
+          <TextLink variant="external" href={reference} text="inherit">
             {reference}
-          </ExternalHttpLink>
+          </TextLink>
         </>
       ) : null}
     </p>
@@ -276,9 +275,9 @@ function LegRow({
         {waiting && owner ? (
           <>
             {' '}
-            <ProjectLink href={owner.href} className="underline underline-offset-2">
+            <TextLink href={owner.href} text="inherit">
               {owner.label}
-            </ProjectLink>
+            </TextLink>
           </>
         ) : null}
       </span>
@@ -297,9 +296,9 @@ function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
     return (
       <output className={textRole('caption')}>
         Crawl started. The checks update when it finishes.{' '}
-        <ProjectLink href="/site" className="underline underline-offset-2">
+        <TextLink href="/site" text="inherit">
           Open Website
-        </ProjectLink>
+        </TextLink>
       </output>
     );
   return (

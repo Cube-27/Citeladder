@@ -10,7 +10,7 @@ import { Inline } from '@/components/ui/layout';
 import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { ProjectLink } from '@/components/ui/project-link';
+import { TextLink } from '@/components/ui/text-link';
 import { Textarea } from '@/components/ui/textarea';
 import { actionEvidence, type DatedEvidence } from '@/lib/agent/evidence';
 import { developerTicket } from '@/lib/agent/handoff';
@@ -42,16 +42,13 @@ export function ActionEvidence({ action }: Readonly<{ action: ActionDetail }>) {
             className={ledgerItemClasses('items-baseline justify-between')}
           >
             {item.href ? (
-              <ProjectLink
-                href={item.href}
-                className={textRole('body', 'underline underline-offset-2')}
-              >
+              <TextLink href={item.href} text="body">
                 {item.label}
-              </ProjectLink>
+              </TextLink>
             ) : (
               <span className={textRole('body')}>{item.label}</span>
             )}
-            <span className={textRole('dataSm', 'text-ink-2')}>
+            <span className={textRole('caption', 'tabular-nums')}>
               {BASIS_LABEL[item.basis]} ·{' '}
               <DisplayTime value={item.at} dateOnly fallback="date not recorded" />
             </span>

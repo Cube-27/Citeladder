@@ -1,4 +1,5 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { ListChecks } from 'lucide-react';
 import { useState } from 'react';
 
 import { DeclarationStatus } from '@/components/agent/declaration-status';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -30,21 +32,7 @@ type Declarable = Pick<
   'id' | 'project_id' | 'members' | 'member_measurement' | 'declarable_since'
 >;
 
-/**
- * "Mark implemented": the user's explicit declaration. The server freezes the
- * targets and expected checks; the user names only the revision they shipped
- * (or none, for work done outside CiteLadder) and the day it went live.
- */
-export function MarkImplementedButton({
-  workspaceId,
-  action,
-  revision,
-  disabled = false,
-  recommendationIds,
-  selectionDescription,
-  onDeclared,
-  proposed,
-}: Readonly<{
+type MarkImplementedProps = Readonly<{
   workspaceId: string;
   action: Declarable;
   /** The output revision shipped; null declares work done outside CiteLadder. */
@@ -55,7 +43,36 @@ export function MarkImplementedButton({
   onDeclared?: () => void;
   /** What the Agent proposed from what the person said; the dialog opens with it, still editable. */
   proposed?: Proposed;
-}>) {
+}>;
+
+/**
+ * "Mark implemented": the user's explicit declaration. The server freezes the
+ * targets and expected checks; the user names only the revision they shipped
+ * (or none, for work done outside CiteLadder) and the day it went live.
+ */
+export function MarkImplementedButton(props: MarkImplementedProps) {
+  const { start, dialog } = useMarkImplemented(props);
+  return (
+    <>
+      <ActionButton action="markImplemented" disabled={props.disabled} onClick={start} />
+      {dialog}
+    </>
+  );
+}
+
+/**
+ * The declaration dialog and the way to open it, for a surface that starts it
+ * from more than one control (a record's bar and its More menu).
+ */
+export function useMarkImplemented({
+  workspaceId,
+  action,
+  revision,
+  recommendationIds,
+  selectionDescription,
+  onDeclared,
+  proposed,
+}: MarkImplementedProps) {
   const [open, setOpen] = useState(false);
   // One key per dialog opening and chosen day, so a retry after an ambiguous
   // failure replays the identical declaration instead of sending a request the
@@ -84,112 +101,107 @@ export function MarkImplementedButton({
         },
       },
     );
-  return (
-    <>
-      <ActionButton
-        action="markImplemented"
-        disabled={disabled}
-        onClick={() => {
-          declare.reset();
-          setAttempt(newAttempt(proposed));
-          setOpen(true);
-        }}
-      />
-      <Dialog
-        open={open}
-        onOpenChange={setOpen}
-        title="Mark implemented"
-        description={
-          selectionDescription ??
-          (revision
-            ? `Declare that revision ${revision.number} of this output is live on your site.`
-            : 'Declare that this work is live, done outside CiteLadder.')
-        }
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              variant="primary"
-              pending={declare.isPending}
-              pendingLabel="Declaring…"
-              disabled={!valid}
-              onClick={submit}
-            >
-              Declare implemented
-            </Button>
-          </>
-        }
-      >
-        <Stack gap="workspace">
-          <Field
-            label="When did it go live?"
-            hint={`Any day from ${range.min} to today. Readings before this day are not counted.`}
-            error={valid ? undefined : `Choose a day from ${range.min} to ${range.max}.`}
+  const start = () => {
+    declare.reset();
+    setAttempt(newAttempt(proposed));
+    setOpen(true);
+  };
+  const dialog = (
+    <Dialog
+      open={open}
+      onOpenChange={setOpen}
+      title="Mark implemented"
+      description={
+        selectionDescription ??
+        (revision
+          ? `Declare that revision ${revision.number} of this output is live on your site.`
+          : 'Declare that this work is live, done outside CiteLadder.')
+      }
+      footer={
+        <>
+          <Button variant="secondary" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            pending={declare.isPending}
+            pendingLabel="Declaring…"
+            disabled={!valid}
+            onClick={submit}
           >
-            {(field) => (
-              <DateField
-                {...field}
-                ariaLabel="Go-live date"
-                value={attempt.day}
-                min={range.min}
-                max={range.max}
-                disabled={declare.isPending}
-                onChange={(day) => {
-                  declare.reset();
-                  setAttempt((current) => ({
-                    ...current,
-                    day,
-                    idempotencyKey: newIdempotencyKey(),
-                  }));
-                }}
-              />
-            )}
-          </Field>
-          <Field
-            label="What shipped it?"
-            hint="Optional: the release, pull request or commit. The deployment is recorded under your account."
-          >
-            {(field) => (
-              <Input
-                {...field}
-                value={attempt.reference}
-                maxLength={DEPLOYMENT_REFERENCE_MAX}
-                disabled={declare.isPending}
-                onChange={(event) => {
-                  const reference = event.target.value;
-                  declare.reset();
-                  setAttempt((current) => ({
-                    ...current,
-                    reference,
-                    idempotencyKey: newIdempotencyKey(),
-                  }));
-                }}
-              />
-            )}
-          </Field>
-          <MeasurementPreview action={action} />
-          {recommendationIds ? (
-            <p className={textRole('body', 'text-ink-2')}>
-              Only these {recommendationIds.length} selected links will be measured, together with
-              the page&apos;s other findings. Include every link you want to declare now; this page
-              Action can be declared once.
-            </p>
-          ) : null}
-          {declare.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(declare.error, {
-                action: 'declare this Action implemented',
-              })}
-              onRetry={submit}
+            Declare implemented
+          </Button>
+        </>
+      }
+    >
+      <Stack gap="workspace">
+        <Field
+          label="When did it go live?"
+          hint={`Any day from ${range.min} to today. Readings before this day are not counted.`}
+          error={valid ? undefined : `Choose a day from ${range.min} to ${range.max}.`}
+        >
+          {(field) => (
+            <DateField
+              {...field}
+              ariaLabel="Go-live date"
+              value={attempt.day}
+              min={range.min}
+              max={range.max}
+              disabled={declare.isPending}
+              onChange={(day) => {
+                declare.reset();
+                setAttempt((current) => ({
+                  ...current,
+                  day,
+                  idempotencyKey: newIdempotencyKey(),
+                }));
+              }}
             />
-          ) : null}
-        </Stack>
-      </Dialog>
-    </>
+          )}
+        </Field>
+        <Field
+          label="What shipped it?"
+          hint="Optional: the release, pull request or commit. The deployment is recorded under your account."
+        >
+          {(field) => (
+            <Input
+              {...field}
+              value={attempt.reference}
+              maxLength={DEPLOYMENT_REFERENCE_MAX}
+              disabled={declare.isPending}
+              onChange={(event) => {
+                const reference = event.target.value;
+                declare.reset();
+                setAttempt((current) => ({
+                  ...current,
+                  reference,
+                  idempotencyKey: newIdempotencyKey(),
+                }));
+              }}
+            />
+          )}
+        </Field>
+        <MeasurementPreview action={action} />
+        {recommendationIds ? (
+          <p className={textRole('body', 'text-ink-2')}>
+            Only these {recommendationIds.length} selected links will be measured, together with the
+            page&apos;s other findings. Include every link you want to declare now; this page Action
+            can be declared once.
+          </p>
+        ) : null}
+        {declare.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(declare.error, {
+              action: 'declare this Action implemented',
+            })}
+            onRetry={submit}
+          />
+        ) : null}
+      </Stack>
+    </Dialog>
   );
+  return { start, dialog };
 }
 
 /** `MarkImplementedButton` for a surface that holds only the Action's id. */
@@ -444,10 +456,20 @@ function AttachedDeclaration({
   );
 }
 
-export function ContextualLinkDeclarationRoute() {
+/** Contextual links are declared one link at a time, from the Website's link review. */
+export const SELECT_IMPLEMENTED_LINKS = {
+  label: 'Select implemented links',
+  href: '/site?tab=internal-links',
+  icon: ListChecks,
+} as const;
+
+export function ContextualLinkDeclarationRoute({ className }: Readonly<{ className?: string }>) {
   return (
-    <Button asChild variant="secondary">
-      <ProjectLink href="/site?tab=internal-links">Select implemented links</ProjectLink>
+    <Button asChild variant="secondary" className={className}>
+      <ProjectLink href={SELECT_IMPLEMENTED_LINKS.href}>
+        <Icon icon={SELECT_IMPLEMENTED_LINKS.icon} />
+        {SELECT_IMPLEMENTED_LINKS.label}
+      </ProjectLink>
     </Button>
   );
 }

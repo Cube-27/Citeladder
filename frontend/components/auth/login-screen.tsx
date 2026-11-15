@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import {
@@ -8,6 +8,7 @@ import {
   AuthPasswordField,
   AuthRecoveryLinks,
 } from '@/components/auth/auth-form';
+import { Stack } from '@/components/ui/layout';
 import { authApi } from '@/lib/api/auth';
 import {
   authErrorMessage,
@@ -81,18 +82,18 @@ export function LoginScreen({
     verification.reset();
   };
   const failure = mutation.isError ? mutation.error : terms.error;
-  // Refused credentials are about the password field: it is marked invalid and
-  // points to the form's alert, unless it shows an error of its own.
-  const errorId = useId();
-  const refused =
-    mutation.error instanceof ApiError && mutation.error.status === 401 && !errors.password;
+  // Refused credentials are about the password field: the message is that
+  // field's own error, under it, not a form alert above the form.
+  const refused = mutation.error instanceof ApiError && mutation.error.status === 401;
+  const formError = failure && !refused ? authErrorMessage(failure) : oauthError;
+  const passwordError =
+    errors.password?.message ?? (refused ? authErrorMessage(mutation.error) : undefined);
 
   return (
     <AuthFormShell
       title="Welcome back"
       description={description}
-      error={failure ? authErrorMessage(failure) : oauthError}
-      errorId={errorId}
+      error={formError}
       onSubmit={handleSubmit(signIn)}
       pending={isSubmitting || mutation.isPending}
       submitLabel="Continue"
@@ -110,25 +111,25 @@ export function LoginScreen({
       showFooter={!demoMode && signupOpen}
     >
       <AuthEmailField error={errors.email?.message} inputProps={register('email')} />
-      <AuthPasswordField
-        label="Password"
-        error={errors.password?.message}
-        inputProps={{
-          ...register('password'),
-          ...(refused ? { 'aria-invalid': true, 'aria-describedby': errorId } : {}),
-        }}
-        autoComplete="current-password"
-        placeholder="••••••••"
-      />
-      <AuthRecoveryLinks
-        links={[
-          { href: withAuthReturnPath('/forgot-password', returnTo), label: 'Forgot password?' },
-          {
-            href: withAuthReturnPath('/resend-verification', returnTo),
-            label: 'Resend verification email',
-          },
-        ]}
-      />
+      {/* The recovery links belong to the password: 4 under it, 16 above submit. */}
+      <Stack gap="tight">
+        <AuthPasswordField
+          label="Password"
+          error={passwordError}
+          inputProps={register('password')}
+          autoComplete="current-password"
+          placeholder="••••••••"
+        />
+        <AuthRecoveryLinks
+          links={[
+            { href: withAuthReturnPath('/forgot-password', returnTo), label: 'Forgot password?' },
+            {
+              href: withAuthReturnPath('/resend-verification', returnTo),
+              label: 'Resend verification email',
+            },
+          ]}
+        />
+      </Stack>
     </AuthFormShell>
   );
 }

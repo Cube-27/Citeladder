@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { ClampText } from '@/components/ui/clamp-text';
 import { DisplayTime } from '@/components/ui/display-time';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -41,9 +42,11 @@ export function AffectedPages({ action }: Readonly<{ action: ActionDetail }>) {
       <ul className={ledgerClasses()} aria-label="Affected pages">
         {shown.map((page) => (
           <li key={page.site_url_id} className={ledgerItemClasses()}>
-            <TextLink variant="external" href={page.url} text="body" className="break-all">
-              {readableUrl(page.url)}
-            </TextLink>
+            <ClampText tooltip={readableUrl(page.url)}>
+              <TextLink variant="external" href={page.url} text="body">
+                {readableUrl(page.url)}
+              </TextLink>
+            </ClampText>
           </li>
         ))}
       </ul>

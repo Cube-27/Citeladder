@@ -8,7 +8,7 @@ import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-typ
 import { StatusMark } from '@/components/ui/status-mark';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Label, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail } from '@citeladder/contracts';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
@@ -16,7 +16,6 @@ import { Limitations } from '@/components/ui/passage';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { wellClasses } from '@/components/ui/slip';
 
 /** One Action member's evidence, backed by the persisted detail projection. */
 export function EvidenceDrawer({
@@ -84,11 +83,10 @@ function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail 
       </Stack>
       <OpportunityEvidenceSection detail={detail} />
       {detail.remediation ? (
+        // The rule's own guidance, plain prose: neither measured evidence nor a model's draft.
         <Stack as="section">
-          <Label>Recommended improvements</Label>
-          <div className={wellClasses()}>
-            <p className="type-body text-ink whitespace-pre-line">{detail.remediation}</p>
-          </div>
+          <h3 className={textRole('subheading')}>Recommended improvements</h3>
+          <p className="type-body text-ink whitespace-pre-line">{detail.remediation}</p>
         </Stack>
       ) : null}
       <OpportunitySummarySection detail={detail} />
@@ -111,13 +109,9 @@ function ActionHandoff({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   }
   return (
     <Stack as="section">
-      <Label>Action handoff</Label>
-      <Stack className={wellClasses()}>
-        <p className={textRole('body', 'text-ink-2')}>
-          Create or improve content the brand controls.
-        </p>
-        <Limitations items={detail.content_handoff.limitations} />
-      </Stack>
+      <h3 className={textRole('subheading')}>Action handoff</h3>
+      <p className={textRole('body')}>Create or improve content the brand controls.</p>
+      <Limitations items={detail.content_handoff.limitations} />
     </Stack>
   );
 }

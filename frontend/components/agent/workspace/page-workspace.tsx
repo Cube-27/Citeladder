@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Undo2 } from 'lucide-react';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 
 import { isDeclarable, MarkImplementedButton } from '@/components/agent/action-declaration';
@@ -353,6 +353,7 @@ function PageHead({
           {draft.draft ? (
             <>
               <Button variant="quiet" disabled={draft.saving} onClick={draft.discard}>
+                <Icon icon={Undo2} />
                 Discard
               </Button>
               <Button

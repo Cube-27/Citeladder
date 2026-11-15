@@ -1,6 +1,7 @@
+import { ClampText } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Label, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import type { SourcePattern } from '@citeladder/contracts';
 import {
   classCountChips,
@@ -27,7 +28,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
   return (
     <Stack as="section">
       <Inline gap="compact" className="items-baseline justify-between">
-        <Label>Observed sources</Label>
+        <h4 className={textRole('subheading')}>Observed sources</h4>
         <span className="type-caption">
           {pattern.distinct_domain_count}{' '}
           {pattern.distinct_domain_count === 1 ? 'domain' : 'domains'}
@@ -57,9 +58,9 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
           {competitorSourceDomains.map(([competitor, domains]) => (
             <Inline key={competitor} gap="compact" className="items-start justify-between">
               <span className={textRole('body', 'text-ink-2 shrink-0')}>{competitor}</span>
-              <span className="type-caption text-right break-all tabular-nums">
+              <ClampText className="type-caption min-w-0 text-right">
                 {domains.join(', ')}
-              </span>
+              </ClampText>
             </Inline>
           ))}
         </Stack>
@@ -74,8 +75,10 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
               key={citation.url || citation.domain}
               className={wellClasses()}
             >
-              <span className="type-caption text-ink">{citation.title || citation.domain}</span>
-              <span className="type-caption break-all tabular-nums">{citation.domain}</span>
+              <ClampText className="type-caption text-ink">
+                {citation.title || citation.domain}
+              </ClampText>
+              <ClampText className="type-caption">{citation.domain}</ClampText>
             </Stack>
           ))}
         </Stack>
@@ -89,7 +92,8 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
       ) : null}
 
       {action ? (
-        <Stack gap="tight" className={wellClasses()}>
+        // The rule's guidance, plain: not an observation, so not in an evidence well.
+        <Stack gap="tight">
           <span className="type-caption">Suggested next action</span>
           <p className="type-body text-ink">{action}</p>
         </Stack>

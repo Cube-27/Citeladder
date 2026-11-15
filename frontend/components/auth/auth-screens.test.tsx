@@ -16,6 +16,11 @@ const SIGN_IN_AGREEMENT =
 const SIGN_UP_AGREEMENT =
   'By creating an account, you agree to the Terms of Service and acknowledge the Privacy Policy.';
 
+/** The email submit is held with `aria-disabled` (it keeps focus), never `disabled`. */
+const held = (button: HTMLElement) => button.getAttribute('aria-disabled') === 'true';
+const follows = (a: Node, b: Node) =>
+  Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
 // Cloudflare's widget cannot run here: a stand-in renders nothing and hands
 // the form a token when the test "solves" it.
 let solveChallenge: (token: string) => void = () => {};
@@ -112,10 +117,10 @@ describe('account entry', () => {
 
     const email = screen.getByRole('button', { name: 'Continue' });
     const google = screen.getByRole('button', { name: 'Continue with Google' });
-    await waitFor(() => expect(email).toBeEnabled());
+    await waitFor(() => expect(held(email)).toBe(false));
     expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(google).toBeEnabled();
     for (const way of [email, google]) {
-      expect(way).toBeEnabled();
       expect(way).toHaveAccessibleDescription(SIGN_IN_AGREEMENT);
     }
     expect(screen.getByRole('link', { name: 'Terms of Service' })).toHaveAttribute(
@@ -138,6 +143,50 @@ describe('account entry', () => {
     );
   });
 
+  it('keeps focus on the submit while signing in and sends one attempt', async () => {
+    const login = vi.spyOn(authApi, 'login').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
+
+    await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
+    await user.type(screen.getByLabelText(/^Password/), 'correct horse');
+    const signIn = screen.getByRole('button', { name: 'Continue' });
+    await waitFor(() => expect(held(signIn)).toBe(false));
+    await user.click(signIn);
+
+    const pending = await screen.findByRole('button', { name: 'Signing in…' });
+    expect(pending).toBe(signIn);
+    // Still in the tab order and focused, held rather than disabled.
+    expect(pending).toBeEnabled();
+    expect(pending).toHaveFocus();
+    expect(held(pending)).toBe(true);
+    await user.keyboard('{Enter}');
+    await user.click(pending);
+    expect(login).toHaveBeenCalledTimes(1);
+  });
+
+  it('says refused credentials under the password field, not above the form', async () => {
+    vi.spyOn(authApi, 'login').mockRejectedValue(
+      new ApiError('Invalid email or password', 401, ''),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<LoginScreen demoMode={false} signupOpen searchParams={noParams} />);
+
+    await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
+    const password = screen.getByLabelText(/^Password/);
+    await user.type(password, 'wrong horse');
+    const signIn = screen.getByRole('button', { name: 'Continue' });
+    await waitFor(() => expect(held(signIn)).toBe(false));
+    await user.click(signIn);
+
+    const alert = await screen.findByRole('alert');
+    expect(password).toHaveAttribute('aria-invalid', 'true');
+    expect(password).toHaveAccessibleDescription(alert.textContent ?? '');
+    // Adjacent to its field: after the password, before the submit, said once.
+    expect([follows(password, alert), follows(alert, signIn)]).toEqual([true, true]);
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+  });
+
   it('shows the check once the API challenges a sign-in, holds submit until solved, then sends the token', async () => {
     const login = vi
       .spyOn(authApi, 'login')
@@ -153,7 +202,7 @@ describe('account entry', () => {
     await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
     await user.type(screen.getByLabelText(/^Password/), 'correct horse');
     const signIn = screen.getByRole('button', { name: 'Continue' });
-    await waitFor(() => expect(signIn).toBeEnabled());
+    await waitFor(() => expect(held(signIn)).toBe(false));
     await user.click(signIn);
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
@@ -161,7 +210,10 @@ describe('account entry', () => {
     );
     expect(screen.getByRole('group', { name: 'Verification' })).toBeInTheDocument();
     await waitFor(() => expect(widgetHost).not.toBeNull());
-    expect(screen.getByRole('button', { name: 'Continue' })).toBeDisabled();
+    expect(held(screen.getByRole('button', { name: 'Continue' }))).toBe(true);
+    // A held submit swallows the attempt.
+    await user.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(login).toHaveBeenCalledTimes(1);
 
     solveChallenge('solved-token');
     await user.click(screen.getByRole('button', { name: 'Continue' }));
@@ -191,9 +243,15 @@ describe('account entry', () => {
     await user.type(screen.getByLabelText(/^Email address/), 'reader@example.com');
     await user.type(screen.getByLabelText(/^Password/), 'correct horse');
     const signIn = screen.getByRole('button', { name: 'Continue' });
-    await waitFor(() => expect(signIn).toBeEnabled());
+    await waitFor(() => expect(held(signIn)).toBe(false));
     await user.click(signIn);
-    expect(await screen.findByRole('alert')).toHaveTextContent('The Terms changed.');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('The Terms changed.');
+    // A form-level alert sits directly above the first field, under the Google way in.
+    expect([
+      follows(screen.getByRole('button', { name: 'Continue with Google' }), alert),
+      follows(alert, screen.getByLabelText(/^Email address/)),
+    ]).toEqual([true, true]);
     await user.click(screen.getByRole('button', { name: 'Continue' }));
 
     await waitFor(() =>
@@ -240,11 +298,11 @@ describe('account entry', () => {
     }
     // The widget has not handed over a token yet.
     await waitFor(() => expect(widgetHost).not.toBeNull());
-    expect(create).toBeDisabled();
+    expect(held(create)).toBe(true);
     expect(google).toBeDisabled();
 
     solveChallenge('solved-token');
-    expect(create).toBeEnabled();
+    expect(held(create)).toBe(false);
     expect(google).toBeEnabled();
     await user.click(create);
 
@@ -267,8 +325,6 @@ describe('account entry', () => {
     const slot = screen.getByRole('group', { name: 'Verification' });
     const confirm = screen.getByLabelText(/^Confirm password/);
     const create = screen.getByRole('button', { name: 'Create account' });
-    const follows = (a: Node, b: Node) =>
-      Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     expect([follows(confirm, slot), follows(slot, create)]).toEqual([true, true]);
 
     await waitFor(() => expect(widgetHost).not.toBeNull());
