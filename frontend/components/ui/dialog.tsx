@@ -35,9 +35,11 @@ function returnTargetFor(node: HTMLElement): HTMLElement | null {
   if (!node.isConnected) return null;
   if (shown(node)) return node;
   for (let region = node.parentElement; region; region = region.parentElement) {
-    if (!region.id) continue;
-    const controls = document.querySelectorAll<HTMLElement>(`[aria-controls="${region.id}"]`);
-    const control = [...controls].find(shown);
+    const id = region.id;
+    if (!id) continue;
+    const control = [...document.querySelectorAll<HTMLElement>('[aria-controls]')].find(
+      (node) => node.getAttribute('aria-controls')?.split(/\s+/).includes(id) && shown(node),
+    );
     if (control) return control;
   }
   return null;

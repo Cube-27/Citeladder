@@ -227,7 +227,9 @@ describe('CommandPalette', () => {
     expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
     // Focus stays in the field, so the outcome is announced as a status.
     expect(screen.getByRole('status')).toHaveTextContent('No matches for “rezzzzz”');
-    // The message is not an option, so it sits outside the listbox.
+    // One message the reader sees, one announced; it is not an option, so it
+    // sits outside the listbox.
+    expect(screen.getAllByText('No matches for “rezzzzz”')).toHaveLength(2);
     expect(within(screen.getByRole('listbox')).queryByText(/no matches for/i)).toBeNull();
   });
 

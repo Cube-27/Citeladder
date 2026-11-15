@@ -150,35 +150,38 @@ export function SearchableSelect({
           className={cn(MENU_PANEL, 'absolute mt-1 max-h-74 w-full min-w-60 overflow-auto')}
         >
           {filtered.map((option, index) => (
-            // oxlint-disable-next-line jsx-a11y/click-events-have-key-events -- The field's arrow keys and Enter choose an option; a click is the pointer's way.
-            <li
-              key={option.value}
-              // By position, not value: a value may hold characters that are
-              // not valid in an id reference (spaces, for one).
-              id={`${listId}-${index}`}
-              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- ARIA listbox options keep focus on the editable input.
-              role="option"
-              aria-selected={option.value === value}
-              className={menuItemClasses({
-                className: cn(
-                  'grid h-auto min-h-8 gap-x-3 py-1.5',
-                  optionGridClass(Boolean(renderLeading), Boolean(renderOptionEnd)),
-                  index === activeIndex && 'not-aria-selected:overlay-hover',
-                ),
-              })}
-              // Focus stays in the field; the choice commits on release (WCAG 2.5.2).
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => commit(option)}
-              onMouseEnter={() => setHighlight(index)}
-            >
-              {renderLeading ? renderLeading(option) : null}
-              <span className="grid min-w-0 gap-0.5">
-                <span className="truncate">{option.label}</span>
-                {option.detail ? (
-                  <span className="text-ink-2 truncate">{option.detail}</span>
-                ) : null}
-              </span>
-              {renderOptionEnd ? renderOptionEnd(option) : null}
+            <li key={option.value} role="none">
+              <button
+                type="button"
+                // By position, not value: a value may hold characters that are
+                // not valid in an id reference (spaces, for one).
+                id={`${listId}-${index}`}
+                // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- ARIA listbox options keep focus on the editable input.
+                role="option"
+                // Options are reached through the input's active descendant, never by Tab.
+                tabIndex={-1}
+                aria-selected={option.value === value}
+                className={menuItemClasses({
+                  className: cn(
+                    'grid h-auto min-h-8 w-full gap-x-3 py-1.5 text-left',
+                    optionGridClass(Boolean(renderLeading), Boolean(renderOptionEnd)),
+                    index === activeIndex && 'not-aria-selected:overlay-hover',
+                  ),
+                })}
+                // Focus stays in the field; the choice commits on release (WCAG 2.5.2).
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => commit(option)}
+                onMouseEnter={() => setHighlight(index)}
+              >
+                {renderLeading ? renderLeading(option) : null}
+                <span className="grid min-w-0 gap-0.5">
+                  <span className="truncate">{option.label}</span>
+                  {option.detail ? (
+                    <span className="text-ink-2 truncate">{option.detail}</span>
+                  ) : null}
+                </span>
+                {renderOptionEnd ? renderOptionEnd(option) : null}
+              </button>
             </li>
           ))}
         </ul>

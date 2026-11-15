@@ -321,30 +321,33 @@ export function SuggestionList({
       )}
     >
       {options.map((option, index) => (
-        // oxlint-disable-next-line jsx-a11y/click-events-have-key-events -- The field's arrow keys and Enter choose an option; a click is the pointer's way.
-        <li
-          key={option.key}
-          id={`${id}-${index}`}
-          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- ARIA listbox options keep focus on the editable field.
-          role="option"
-          aria-selected={index === selected}
-          data-active={index === selected}
-          className={menuItemClasses({ className: 'grid h-auto gap-0.5 py-2' })}
-          // Focus stays in the field; the choice commits on release (WCAG 2.5.2).
-          onMouseDown={(event) => event.preventDefault()}
-          onClick={() => onPick(index)}
-        >
-          {option.aside ? (
-            <span className="flex min-w-0 items-center justify-between gap-2">
+        <li key={option.key} role="none">
+          <button
+            type="button"
+            id={`${id}-${index}`}
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- ARIA listbox options keep focus on the editable field.
+            role="option"
+            // Options are reached through the field's active descendant, never by Tab.
+            tabIndex={-1}
+            aria-selected={index === selected}
+            data-active={index === selected}
+            className={menuItemClasses({ className: 'grid h-auto w-full gap-0.5 py-2 text-left' })}
+            // Focus stays in the field; the choice commits on release (WCAG 2.5.2).
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => onPick(index)}
+          >
+            {option.aside ? (
+              <span className="flex min-w-0 items-center justify-between gap-2">
+                <span className="truncate">{option.label}</span>
+                {option.aside}
+              </span>
+            ) : (
               <span className="truncate">{option.label}</span>
-              {option.aside}
-            </span>
-          ) : (
-            <span className="truncate">{option.label}</span>
-          )}
-          {option.detail ? (
-            <span className={textRole('caption', 'truncate')}>{option.detail}</span>
-          ) : null}
+            )}
+            {option.detail ? (
+              <span className={textRole('caption', 'truncate')}>{option.detail}</span>
+            ) : null}
+          </button>
         </li>
       ))}
     </ul>

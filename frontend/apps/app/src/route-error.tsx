@@ -106,20 +106,22 @@ export function ShellRouteError() {
   useReportedRouteError('route');
   return (
     <ShellFallback>
-      <NoticePage
-        tone="warning"
-        heading="This page could not be opened"
-        actions={
-          <>
-            <ReloadButton />
-            <a href="/projects" className={buttonClasses('secondary')}>
-              Go to Overview
-            </a>
-          </>
-        }
-      >
-        Reload to try again, or go back to Overview.
-      </NoticePage>
+      <main id="main" className="min-w-0">
+        <NoticePage
+          tone="warning"
+          heading="This page could not be opened"
+          actions={
+            <>
+              <ReloadButton />
+              <a href="/projects" className={buttonClasses('secondary')}>
+                Go to Overview
+              </a>
+            </>
+          }
+        >
+          Reload to try again, or go back to Overview.
+        </NoticePage>
+      </main>
     </ShellFallback>
   );
 }
