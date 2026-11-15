@@ -9,7 +9,7 @@ import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { followCatalogAnalysis } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
-import { formatCount, pluralCount } from '@/lib/format';
+import { availabilityLabel, formatCount, pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { crawlPollInterval } from '@/lib/site-health/status';
 
@@ -70,13 +70,13 @@ function crawlSegments(read: CrawlRead): FigureSegment[] {
       key: 'analyzed',
       label: 'Pages analyzed',
       value: crawl ? analyzedLabel(crawl) : null,
-      missingLabel: 'Not run',
+      missingLabel: availabilityLabel('not_run'),
     },
     {
       key: 'site-health',
       label: 'Website',
       value: crawl ? <CrawlStatusBadge crawl={crawl} /> : null,
-      missingLabel: 'No crawl yet',
+      missingLabel: availabilityLabel('not_run'),
     },
   ];
 }
@@ -101,9 +101,8 @@ function projectionBadge(projection: CommerceProjection | undefined) {
         {pluralCount(projection.failed, 'page')} not projected
       </StatusMark>
     );
+  // An unconfirmed business model is a sentence in its own notice, not a figure.
   if (projection.applicability === 'not_applicable') return <Absence state="not_applicable" />;
-  if (projection.applicability === 'unknown')
-    return <StatusMark tone="warning">Business model unconfirmed</StatusMark>;
   return null;
 }
 
@@ -198,6 +197,8 @@ export function useCatalogHeader({
   // Importing products and starting a crawl are runs; re-reading is not.
   const canRun = useWorkspaceCapability('run');
   return {
+    /** Opens Add products, for a role that may run it; else undefined. */
+    addProducts: canRun ? () => setAdding(true) : undefined,
     actions: (
       <>
         {canRun ? (
@@ -228,9 +229,26 @@ export function useCatalogHeader({
     ),
     stats: <CatalogStats catalog={query} projection={projection} crawl={crawl} />,
     notices: (
-      <CatalogNotices refreshError={discover.error ?? dashboard.error} onRefresh={refresh} />
+      <>
+        <CatalogNotices refreshError={discover.error ?? dashboard.error} onRefresh={refresh} />
+        <BusinessModelNotice projection={projection} />
+      </>
     ),
   };
+}
+
+/** A projection waiting on the business model says so in a sentence, not a figure. */
+function BusinessModelNotice({
+  projection,
+}: Readonly<{ projection: CommerceProjection | undefined }>) {
+  if (projection?.applicability !== 'unknown' || projection.in_flight || projection.failed)
+    return null;
+  return (
+    <Notice tone="warning" title="Business model unconfirmed">
+      Website pages become catalog products once your business model is confirmed as one that sells
+      products.
+    </Notice>
+  );
 }
 
 /** Whatever the last catalog-wide action has to report, above the counts. */

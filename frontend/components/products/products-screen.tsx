@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { Columns3, Download } from 'lucide-react';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { Columns3, Download, PackageOpen } from 'lucide-react';
 
 import { CollectionPage } from '@/components/templates/collection-page';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuCheckboxItem, MenuContent, MenuLabel, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
+import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { TextLink } from '@/components/ui/text-link';
 import { InlineFigure } from '@/components/ui/typography';
@@ -124,6 +125,39 @@ function narrowed(filters: ProductFilters): boolean {
   );
 }
 
+/** Nothing in the catalog and nothing listed: one state replaces the counts and the toolbar. */
+function noProducts({
+  catalog,
+  page,
+  filters,
+}: Readonly<{
+  catalog: Pick<UseQueryResult<{ product_total: number }>, 'data' | 'isError'>;
+  page: Pick<UseQueryResult<{ items: readonly unknown[] }>, 'data' | 'isError'>;
+  filters: ProductFilters;
+}>) {
+  // A failed refetch keeps its cached zero, which is no longer a current zero.
+  if (catalog.isError || page.isError) return false;
+  if (filters.source !== 'catalog' || narrowed(filters)) return false;
+  return catalog.data?.product_total === 0 && page.data?.items.length === 0;
+}
+
+function NoProducts({ header }: Readonly<{ header: ReturnType<typeof useCatalogHeader> }>) {
+  return (
+    <CollectionPage actions={header.actions}>
+      {header.notices}
+      <StateBlock
+        kind="empty"
+        icon={PackageOpen}
+        heading="No products yet"
+        description="Add your products so CiteLadder can track how AI answers mention and price them."
+        action={
+          header.addProducts ? <Button onClick={header.addProducts}>Add products</Button> : null
+        }
+      />
+    </CollectionPage>
+  );
+}
+
 /**
  * Commerce's Products collection (commerce improvement PR 3): every product
  * holder with its metrics over the chosen window, narrowed by the filter bar
@@ -179,6 +213,7 @@ function ProductsContent({
       csv.rows,
     );
   };
+  if (noProducts({ catalog, page, filters })) return <NoProducts header={header} />;
   return (
     <CollectionPage
       actions={header.actions}

@@ -151,12 +151,15 @@ describe('CatalogHeader', () => {
     expect(screen.queryByText('Projection')).not.toBeInTheDocument();
 
     // A business that does not sell a catalog, and one whose model is not yet
-    // confirmed, each say so rather than reading as a clean projection.
+    // confirmed, each say so rather than reading as a clean projection: the
+    // first as a figure, the second as a sentence in its own notice.
     rerender(host(0, 0, 'not_applicable'));
     expect(statValue('Projection')).toHaveTextContent('Not applicable');
+    expect(screen.queryByText('Business model unconfirmed')).not.toBeInTheDocument();
 
     rerender(host(0, 0, 'unknown'));
-    expect(statValue('Projection')).toHaveTextContent('Business model unconfirmed');
+    expect(screen.queryByText('Projection')).not.toBeInTheDocument();
+    expect(screen.getByText('Business model unconfirmed')).toBeInTheDocument();
   });
 
   it('never prints a progress fraction that reads backwards', async () => {
@@ -232,8 +235,8 @@ describe('CatalogHeader', () => {
     await waitFor(() =>
       expect(screen.getByRole('button', { name: 'Run Website crawl' })).toBeInTheDocument(),
     );
-    expect(screen.getByText('No crawl yet')).toBeInTheDocument();
-    expect(statValue('Pages analyzed')).toHaveTextContent('Not run');
+    expect(statValue('Website')).toHaveTextContent('Not run yet');
+    expect(statValue('Pages analyzed')).toHaveTextContent('Not run yet');
   });
 
   it('never reads a failed Site Health read as no crawl, and Refresh reads it again', async () => {
@@ -250,7 +253,7 @@ describe('CatalogHeader', () => {
 
     await waitFor(() => expect(statValue('Website')).toHaveTextContent("Couldn't load"));
     expect(statValue('Pages analyzed')).toHaveTextContent("Couldn't load");
-    expect(screen.queryByText('No crawl yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not run yet')).not.toBeInTheDocument();
     const refresh = screen.getByRole('button', { name: 'Refresh from Website' });
 
     getDashboard.mockResolvedValue(crawl());
@@ -268,13 +271,13 @@ describe('CatalogHeader', () => {
         query={catalogQuery()}
       />,
     );
-    expect(await screen.findByText('No crawl yet')).toBeInTheDocument();
+    await waitFor(() => expect(statValue('Website')).toHaveTextContent('Not run yet'));
 
     getDashboard.mockRejectedValue(new ApiError('Bad request', 400, ''));
     await act(() => queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY }));
 
     await waitFor(() => expect(statValue('Website')).toHaveTextContent("Couldn't load"));
-    expect(screen.queryByText('No crawl yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('Not run yet')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh from Website' })).toBeInTheDocument();
   });
 });

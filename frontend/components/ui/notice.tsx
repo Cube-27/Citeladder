@@ -125,7 +125,8 @@ function MessageNoticeView({
       data-notice-tone={tone}
       className={cn(
         textRole('body'),
-        'rounded-control flex items-start gap-2 px-3 py-2',
+        // Actions that do not fit beside the text wrap under it, at the right.
+        'rounded-control flex flex-wrap items-start gap-2 px-3 py-2',
         style.wash,
         className,
       )}
@@ -133,7 +134,7 @@ function MessageNoticeView({
       <span aria-hidden className={cn('inline-flex h-5 shrink-0 items-center', style.ink)}>
         <Icon icon={icon ?? style.icon} className="my-0" />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <div className="flex min-w-0 flex-[1_1_12rem] flex-col gap-1">
         {title != null ? (
           <p className="type-emphasis">
             {word}
@@ -144,7 +145,11 @@ function MessageNoticeView({
         )}
         {children != null ? <div>{children}</div> : null}
       </div>
-      {action ? <div className="flex shrink-0 items-center gap-2 self-center">{action}</div> : null}
+      {action ? (
+        <div className="ms-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2 self-center">
+          {action}
+        </div>
+      ) : null}
     </Root>
   );
 }
