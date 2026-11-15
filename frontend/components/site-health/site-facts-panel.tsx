@@ -214,7 +214,7 @@ function PolicySample({ bot }: Readonly<{ bot: CrawlerBot }>) {
   const sample =
     bot.policy === 'unknown'
       ? 'No complete policy sample is available.'
-      : `${bot.disallowed_url_count} of ${bot.evaluated_url_count} known URLs disallowed`;
+      : `${formatCount(bot.disallowed_url_count)} of ${formatCount(bot.evaluated_url_count)} known URLs disallowed`;
   // One line per crawler: the sample truncates in a narrow column and keeps its full text.
   return (
     <ClampText lines={1} className={textRole('caption')}>

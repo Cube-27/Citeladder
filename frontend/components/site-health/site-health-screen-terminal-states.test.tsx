@@ -103,7 +103,7 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
     renderScreen();
 
     await screen.findByText(/The site returned HTTP 404 for the start URL/);
-    await user.click(screen.getByRole('radio', { name: 'Errors & Blocked' }));
+    await user.click(screen.getByRole('radio', { name: 'Errors' }));
     const block = await screen.findByTestId('root-errors-block');
     expect(within(block).getByText('http_4xx')).toBeInTheDocument();
     expect(within(block).getByText('HTTP 404')).toBeInTheDocument();
@@ -183,19 +183,16 @@ describe('SiteHealthScreen — terminal states on the canonical screen', () => {
 
     renderScreen();
 
-    expect(await screen.findByRole('radio', { name: 'Audited so far' })).toHaveAttribute(
+    expect(await screen.findByRole('radio', { name: 'Audited' })).toHaveAttribute(
       'aria-checked',
       'true',
     );
     await waitFor(() => expect(requestedStatuses).toContain('completed'));
 
-    await user.click(screen.getByRole('radio', { name: 'All Discovered' }));
+    await user.click(screen.getByRole('radio', { name: 'All discovered' }));
     await waitFor(() => expect(requestedStatuses).toContain(null));
     // Selecting another view never renames this one (or shifts the strip).
-    expect(screen.getByRole('radio', { name: 'Audited so far' })).toHaveAttribute(
-      'aria-checked',
-      'false',
-    );
+    expect(screen.getByRole('radio', { name: 'Audited' })).toHaveAttribute('aria-checked', 'false');
   });
 
   it('opens partial results on Pages and keeps their Overview available', async () => {

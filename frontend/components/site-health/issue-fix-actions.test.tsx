@@ -74,7 +74,7 @@ describe('Mark fixed and Re-run all in the issue dialog', () => {
     expect(await within(dialog).findByText('32 of 32 pages fixed')).toBeInTheDocument();
     expect(within(dialog).getByText('32 awaiting a re-audit')).toBeInTheDocument();
     expect(within(dialog).getByRole('button', { name: 'Mark fixed' })).toBeDisabled();
-    await user.click(within(dialog).getByRole('button', { name: 'Close dialog' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Close drawer' }));
     const fixFirst = await screen.findByRole('region', { name: 'Fix these first' });
     expect(within(fixFirst).getByText('32 of 32 pages fixed')).toBeInTheDocument();
   });

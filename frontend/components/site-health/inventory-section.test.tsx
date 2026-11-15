@@ -81,15 +81,12 @@ describe('InventorySection', () => {
     renderWithProviders(<PagesBrowser />);
     expect(await screen.findByText('Homepage')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('radio', { name: 'Errors & Blocked' }));
+    await user.click(screen.getByRole('radio', { name: 'Errors' }));
 
     expect(screen.getByText('Homepage')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Pages' })).toHaveAttribute('aria-busy', 'true');
     expect(await screen.findByText('Broken page')).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'Errors & Blocked' })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    );
+    expect(screen.getByRole('radio', { name: 'Errors' })).toHaveAttribute('aria-checked', 'true');
   });
 
   it('asks the server for the page kind picked in the table toolbar', async () => {

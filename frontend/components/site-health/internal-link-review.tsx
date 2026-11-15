@@ -5,13 +5,17 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { FileSearch } from 'lucide-react';
+
+import { ClampText } from '@/components/ui/clamp-text';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Drawer } from '@/components/ui/drawer';
+import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { MarkActionImplemented } from '@/components/agent/action-declaration';
-import { formatCount } from '@/lib/format';
+import { formatCount, readableUrl } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 const escapeHtml = (value: string) =>
@@ -24,8 +28,8 @@ function PageSummary({
   return (
     <Stack as="section" className="justify-items-start">
       <EditorialSectionHeader title={heading} />
-      <TextLink variant="external" text="body" className="break-all" href={page.url}>
-        {page.title || page.url}
+      <TextLink variant="external" text="body" className="block max-w-full min-w-0" href={page.url}>
+        <ClampText tooltip={page.url}>{page.title || readableUrl(page.url)}</ClampText>
       </TextLink>
       {page.description || page.excerpt ? (
         <p className="type-body text-ink-2">{page.description || page.excerpt}</p>
@@ -104,6 +108,7 @@ export function InternalLinkReview({
             </CopyButton>
             <Button asChild variant="secondary">
               <ProjectLink href={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}`}>
+                <Icon icon={FileSearch} />
                 View source page evidence
               </ProjectLink>
             </Button>

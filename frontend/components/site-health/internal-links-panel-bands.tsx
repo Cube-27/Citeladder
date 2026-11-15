@@ -175,10 +175,12 @@ function linksControls({
       }),
       ...savedAnalysisFilter(data.history, analysis.id, update, timeZone),
     ],
+    // The summary is the row's flexible part: it truncates before Export moves,
+    // and its whole text stays in the title.
     status: (
-      <>
+      <span className="truncate" title={analysisSummary(analysis)}>
         {analysisSummary(analysis)} · <DisplayTime value={analysis.created_at} />
-      </>
+      </span>
     ),
     // Held while the filters match nothing, so the row never reflows.
     actions: (
@@ -225,7 +227,7 @@ function savedAnalysisFilter(
 function analysisSummary(analysis: InternalLinkAnalysis): string {
   const parts = [
     `${formatCount(analysis.recommendations.length)} suggestions`,
-    `${formatCount(analysis.page_count)} pages`,
+    `${formatCount(analysis.page_count)} pages analyzed`,
   ];
   const summary = analysis.diagnostics;
   if (summary && !isRunning(analysis.state))

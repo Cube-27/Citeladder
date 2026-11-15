@@ -79,17 +79,29 @@ function Navigation() {
   );
 }
 
-/** The tab as the screen draws it: actions in the header, search and filters in the control band. */
+/** The tab as the screen draws it: its own actions lead the filter bar's end, before Export. */
 function LinksTab({ canAnalyze }: Readonly<{ canAnalyze?: boolean }>) {
   const links = useInternalLinksBands({
     scope: { projectId: project.id, workspaceId: project.workspace_id },
     enabled: true,
     canAnalyze,
   });
+  const controls = links.controls;
   return (
     <ReportPage
-      actions={links.actions}
-      filters={links.controls ? <FilterBar {...links.controls} /> : undefined}
+      filters={
+        controls ? (
+          <FilterBar
+            {...controls}
+            actions={
+              <>
+                {links.actions}
+                {controls.actions}
+              </>
+            }
+          />
+        ) : undefined
+      }
     >
       <InternalLinksPanel read={links.read} workspaceId={project.workspace_id} />
     </ReportPage>
@@ -299,10 +311,11 @@ describe('Internal links', () => {
     // No Action yet reads as an absence, never a blank cell.
     const firstRow = screen.getByRole('row', { name: /Anchor 0/ });
     expect(within(firstRow).getByText('No Action yet')).toHaveAttribute('data-absence', 'not_set');
-    // One export, at the end of the control row; the header keeps the tab's primary action.
+    // The tab's own action and its one export sit in its filter bar, not the masthead.
     const header = screen.getByRole('banner');
-    expect(within(header).getByRole('button', { name: 'Analyze again' })).toBeInTheDocument();
+    expect(within(header).queryByRole('button', { name: 'Analyze again' })).not.toBeInTheDocument();
     const controls = screen.getByRole('group', { name: 'Search and filters' });
+    expect(within(controls).getByRole('button', { name: 'Analyze again' })).toBeInTheDocument();
     await userEvent.click(within(controls).getByRole('button', { name: 'Export CSV' }));
     expect(downloadCsv).toHaveBeenCalledWith(
       'internal-links',

@@ -143,10 +143,33 @@ describe('Architecture panel', () => {
     const tree = await screen.findByRole('region', { name: 'Observed hierarchy pages' });
     const row = (url: string) => within(tree).getByRole('link', { name: url }).parentElement!;
     expect(row('https://acme.test/shop/bags')).toHaveTextContent('Breadcrumb');
+    // Rows print the path without the origin every row shares.
     const bootsRow = row('https://acme.test/shop/boots');
-    expect(bootsRow.textContent).toBe('https://acme.test/shop/bootsProduct');
+    expect(bootsRow.textContent).toBe('/shop/bootsProduct');
     // The home page is the root, not a page missing its parent.
-    expect(row('https://acme.test/').textContent).toBe('https://acme.test/Homepage');
+    expect(row('https://acme.test/').textContent).toBe('/Homepage');
+  });
+
+  it('shows the first rows of a long hierarchy and expands the rest in place', async () => {
+    const [home] = architecture().nodes;
+    const pages = Array.from({ length: 11 }, (_, index) => ({
+      ...home,
+      site_url_id: `66666666-6666-4666-8666-${String(index).padStart(12, '0')}`,
+      url: `https://acme.test/p/${String(index).padStart(2, '0')}`,
+      page_kind: 'product',
+      parent_site_url_id: HOME,
+      parent_source: 'url_parent',
+      depth_from_home: 1,
+    }));
+    stubArchitecture({ nodes: [home, ...pages] });
+    renderWithProviders(<ArchitecturePanel projectId={PROJECT} crawlId={CRAWL} />);
+
+    const tree = await screen.findByRole('region', { name: 'Observed hierarchy pages' });
+    expect(within(tree).getAllByRole('link')).toHaveLength(10);
+    expect(within(tree).queryByRole('link', { name: 'https://acme.test/p/10' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Show all 12' }));
+    expect(within(tree).getAllByRole('link')).toHaveLength(12);
+    expect(screen.queryByRole('button', { name: /Show all/ })).toBeNull();
   });
 
   it('reveals all URLs assigned to a page kind in the row it controls', async () => {

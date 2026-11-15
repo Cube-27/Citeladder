@@ -1,5 +1,8 @@
+import { ArrowLeft } from 'lucide-react';
+
 import { choiceFilter, menuFieldKeys, type FilterDefinition } from '@/components/ui/all-filters';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -23,6 +26,7 @@ export function CollectionViewControl({ collection }: Readonly<{ collection: Sea
   return (
     <Inline gap="compact">
       <Button variant="quiet" onClick={collection.showAllCompetitors}>
+        <Icon icon={ArrowLeft} />
         All competitors
       </Button>
       {views}

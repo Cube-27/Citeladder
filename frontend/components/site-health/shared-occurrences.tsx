@@ -52,7 +52,7 @@ export function SharedOccurrences({
     <Stack as="li" gap="workspace" className={ledgerItemClasses()}>
       <div className={insetClasses()}>
         <EvidenceLine lead={sharedEvidenceLead(entry.ruleId)} facts={entry.facts} text="body" />
-        <span className="type-caption tabular-nums">{sharedPagesLabel(scope)}</span>
+        <span className="type-caption">{sharedPagesLabel(scope)}</span>
         <AskAgentLink
           appearance="text"
           handoff={{
@@ -83,8 +83,8 @@ export function SharedOccurrences({
 
 /**
  * One affected page, linking to its detail: its title with its kind at the
- * row's end, bound 4 over its URL. The URL keeps to one line (the full
- * address in its tooltip), so a long query string never stacks the row.
+ * row's end, bound 4 over its URL. Title and URL each keep to one line (the
+ * full value in its tooltip), so a long title or query never stacks the row.
  */
 export function AffectedPageLink({
   crawlId,
@@ -107,14 +107,17 @@ export function AffectedPageLink({
     >
       <Stack as="span" gap="tight" className="min-w-0">
         <Inline as="span" className="items-baseline justify-between">
-          <span className={textRole('body', 'min-w-0 [overflow-wrap:anywhere]')}>
+          <span
+            className={textRole('body', 'min-w-0 truncate')}
+            title={pageDisplayTitle(title, url)}
+          >
             {pageDisplayTitle(title, url)}
           </span>
           {pageKind ? (
             <span className="type-caption shrink-0">{pageKindLabel(pageKind)}</span>
           ) : null}
         </Inline>
-        <span className="type-caption min-w-0 truncate tabular-nums" title={url}>
+        <span className="type-caption min-w-0 truncate" title={url}>
           {url}
         </span>
       </Stack>

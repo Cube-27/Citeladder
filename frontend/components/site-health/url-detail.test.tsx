@@ -281,7 +281,7 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
     expect(screen.queryByText(/purpose unresolved/i)).not.toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: /^AEO Readiness score:/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /^AEO readiness score:/ })).not.toBeInTheDocument();
   });
 
   it('renders the not-measured state for a missing score, never a zero', async () => {
@@ -304,7 +304,7 @@ describe('UrlDetail', () => {
     expect(screen.getAllByText('Not measured').length).toBeGreaterThan(0);
     // No score ring at all: a missing measurement never renders as 0.
     expect(
-      screen.queryByRole('img', { name: /^(Web Fundamentals|AEO Readiness) score:/ }),
+      screen.queryByRole('img', { name: /^(Web fundamentals|AEO readiness) score:/ }),
     ).toBeNull();
   });
 
@@ -346,8 +346,8 @@ describe('UrlDetail', () => {
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     const scores = [
-      ['Web Fundamentals score', '46 out of 100'],
-      ['AEO Readiness score', '64 out of 100'],
+      ['Web fundamentals score', '46 out of 100'],
+      ['AEO readiness score', '64 out of 100'],
     ] as const;
     for (const [name, value] of scores)
       expect(screen.getByRole('progressbar', { name })).toHaveAttribute('aria-valuetext', value);
@@ -556,7 +556,7 @@ describe('UrlDetail', () => {
     expect(within(disclosure).getByText('840ms')).toBeVisible();
     // Inbound and main-content inbound are different facts and both are shown.
     expect(within(disclosure).getByText('Main-content inbound')).toBeVisible();
-    expect(screen.getByText('Modelled over 7 observed crawl pages')).toBeInTheDocument();
+    expect(screen.getByText('Modelled over 7 pages crawled')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'https://acme.com/collections/bags' })).toHaveAttribute(
       'href',
       `/site/crawls/${CRAWL}/pages/dddddddd-1111-4111-8111-111111111111`,
@@ -612,16 +612,16 @@ describe('UrlDetail', () => {
     const website = screen.getByRole('region', { name: 'WebSite schema is missing' });
     expect(
       within(website)
-        .getAllByText(/^(AEO Readiness|Web Fundamentals)$/)
+        .getAllByText(/^(AEO readiness|Web fundamentals)$/)
         .map((badge) => badge.textContent),
-    ).toEqual(['AEO Readiness', 'Web Fundamentals']);
+    ).toEqual(['AEO readiness', 'Web fundamentals']);
     expect(screen.getByText('Advisories (1)')).toBeInTheDocument();
     // The advisory is labelled as one, never with a severity.
     const advisory = screen.getByText('Missing meta description').closest('li')!;
     expect(within(advisory).getByText('Advisory')).toBeInTheDocument();
     expect(within(advisory).queryByText('Medium')).not.toBeInTheDocument();
     // The page's scores lead, above its issues.
-    const score = screen.getByRole('progressbar', { name: 'Web Fundamentals score' });
+    const score = screen.getByRole('progressbar', { name: 'Web fundamentals score' });
     expect(score.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 

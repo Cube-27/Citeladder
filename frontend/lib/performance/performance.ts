@@ -201,11 +201,10 @@ export const METRIC_CARDS: readonly {
 /**
  * Whether a smaller value is the better one.
  *
- * Average position is a rank, so it improves downward — which flips both the
- * chart's vertical direction and the tone of a difference. One owner, because
- * the two disagreeing would draw a line one way and colour it the other.
+ * Average position is a rank, so it improves downward, which flips the tone
+ * of a difference.
  */
-export function isInvertedMetric(key: PerformanceMetricKey): boolean {
+function isInvertedMetric(key: PerformanceMetricKey): boolean {
   return key === 'position';
 }
 
@@ -309,33 +308,6 @@ export function toChartPoints(series: readonly PerformanceSeriesPoint[]): Perfor
   }));
 }
 
-/** The largest bucket value across every series drawn on one axis. */
-export function seriesMax(...series: readonly PerformanceChartPoint[][]): number {
-  return series
-    .flat()
-    .reduce((max, point) => (point.value !== null && point.value > max ? point.value : max), 0);
-}
-
-/** Nice-ceiling steps for truthful count domains (1/1.5/2/2.5/3/4/5/6/8 × 10^n). */
-const NICE_STEPS = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10] as const;
-
-/**
- * Top of a chart axis: the smallest nice-step ceiling at or above the series
- * max, so the axis scales truthfully instead of clipping a peak.
- */
-export function axisDomainMax(max: number): number {
-  if (max <= 0) return 10;
-  const exponent = Math.floor(Math.log10(max));
-  for (const candidateExponent of [exponent - 1, exponent, exponent + 1]) {
-    const base = 10 ** candidateExponent;
-    for (const step of NICE_STEPS) {
-      const candidate = step * base;
-      if (candidate >= max) return candidate;
-    }
-  }
-  return 10 ** (exponent + 1);
-}
-
 /** Compact axis tick: 60000 → `60K`, 1500 → `1.5K`, 500 → `500`. */
 export function formatAxisTick(key: PerformanceMetricKey, value: number): string {
   if (key === 'ctr') return formatCtr(value, 1);
@@ -346,33 +318,6 @@ export function formatAxisTick(key: PerformanceMetricKey, value: number): string
     return `${Number.isInteger(thousands) ? thousands : Math.round(thousands * 10) / 10}K`;
   }
   return `${Math.round(value)}`;
-}
-
-/**
- * Compute evenly distributed tick indices for the horizontal axis.
- *
- * If `columnCount` is small (<= maxTicks), returns all indices 0..columnCount-1.
- * Otherwise, samples `maxTicks` indices evenly between 0 and columnCount-1.
- *
- * A single tick is the explicit one-tick case, not a degenerate span: the
- * even-spacing step divides by `maxTicks - 1`, so asking for fewer than two
- * ticks would divide by zero and put NaN in the returned indices.
- */
-export function computeTickIndices(columnCount: number, maxTicks = 6): number[] {
-  if (columnCount <= 0) return [];
-  if (maxTicks <= 1) return [0];
-  if (columnCount <= maxTicks) {
-    return Array.from({ length: columnCount }, (_, i) => i);
-  }
-  const indices: number[] = [];
-  const step = (columnCount - 1) / (maxTicks - 1);
-  for (let i = 0; i < maxTicks; i++) {
-    const idx = Math.min(columnCount - 1, Math.round(i * step));
-    if (!indices.includes(idx)) {
-      indices.push(idx);
-    }
-  }
-  return indices;
 }
 
 // ---------------------------------------------------------------------------

@@ -29,7 +29,6 @@
       "frontend/components/ui/sidebar.tsx",
       "frontend/components/ui/slip.tsx",
       "frontend/components/ui/state-block.tsx",
-      "frontend/components/ui/status-line.tsx",
       "frontend/components/ui/table.tsx",
       "frontend/components/ui/tabs.tsx",
       "frontend/components/ui/tag.tsx",

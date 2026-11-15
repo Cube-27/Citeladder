@@ -11,6 +11,7 @@ import {
 } from 'vite-plus/test';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 
 import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
@@ -25,7 +26,10 @@ const TASK = '33333333-3333-4333-8333-333333333333';
 const activeProject = makeProject({ id: PROJECT, workspace_id: WORKSPACE });
 
 vi.mock('@/components/integrations/data-source-setup', () => ({
-  DataSourceSetup: ({ title }: { title: string }) => <section aria-label={title} />,
+  // Search Console is connected: the setup shows what the page gives it for that case.
+  DataSourceSetup: ({ title, whenReady }: { title: string; whenReady?: ReactNode }) => (
+    <section aria-label={title}>{whenReady}</section>
+  ),
 }));
 vi.mock('@/lib/project/project-context', () => ({
   useActiveWorkspaceId: () => WORKSPACE,
@@ -221,19 +225,66 @@ describe('PerformanceScreen evidence states', () => {
     renderPerformance();
     await waitFor(() => expect(dashboardRead && readinessRead).toBe(true));
     // The `status` announcement is held back until the spinner becomes visible.
-    expect(await screen.findByRole('status', { name: 'Loading performance…' })).toBeInTheDocument();
-    expect(screen.queryByText('No imported history')).not.toBeInTheDocument();
+    expect(await screen.findByRole('status', { name: 'Loading performance' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'No Search Console history yet' })).toBeNull();
     act(() => release());
-    expect(await screen.findByText('No imported history')).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'No Search Console history yet' }),
+    ).toBeVisible();
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
   });
 
-  it('disables Sync now only when the connections read answered with none', async () => {
+  it('draws no range controls and no Sync now before any history, then both once it exists', async () => {
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(dashboard())),
     );
     const { unmount } = renderPerformance();
-    expect(await screen.findByText('No imported history')).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'No Search Console history yet' }),
+    ).toBeVisible();
+    expect(screen.queryByRole('radiogroup', { name: 'Date range' })).toBeNull();
+    // Sync now is the empty state's one step, not a masthead action.
+    expect(
+      within(screen.getByRole('region', { name: 'Connect Search Console' })).getByTestId(
+        'sync-now-button',
+      ),
+    ).toBeVisible();
+    expect(screen.getAllByTestId('sync-now-button')).toHaveLength(1);
+    unmount();
+
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () =>
+        HttpResponse.json(
+          dashboard({
+            coverage: {
+              earliest_date: '2026-08-01',
+              latest_date: '2026-08-28',
+              covered_days: 28,
+              analytics_quality: {},
+            },
+          }),
+        ),
+      ),
+    );
+    renderPerformance();
+    expect(await screen.findByText('Data through Aug 28, 2026')).toBeVisible();
+    expect(screen.getByTestId('sync-now-button')).toBeInTheDocument();
+  });
+
+  it('disables Sync now only when the connections read answered with none', async () => {
+    const covered = dashboard({
+      coverage: {
+        earliest_date: '2026-08-01',
+        latest_date: '2026-08-28',
+        covered_days: 28,
+        analytics_quality: {},
+      },
+    });
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/performance`, () => HttpResponse.json(covered)),
+    );
+    const { unmount } = renderPerformance();
+    expect(await screen.findByText('Data through Aug 28, 2026')).toBeVisible();
     await waitFor(() => expect(screen.getByTestId('sync-now-button')).toBeDisabled());
     unmount();
 
@@ -245,7 +296,7 @@ describe('PerformanceScreen evidence states', () => {
       ),
     );
     renderPerformance();
-    expect(await screen.findByText('No imported history')).toBeVisible();
+    expect(await screen.findByText('Data through Aug 28, 2026')).toBeVisible();
     expect(screen.getByTestId('sync-now-button')).toBeEnabled();
   });
 
@@ -267,14 +318,16 @@ describe('PerformanceScreen evidence states', () => {
 
     // The dashboard alone controls first paint: the advisory readiness ladder
     // must not hold the whole surface on the slowest of two independent reads.
-    expect(await screen.findByText('No imported history')).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'No Search Console history yet' }),
+    ).toBeVisible();
     expect(screen.queryByTestId('readiness-ladder')).not.toBeInTheDocument();
 
     act(() => release());
     expect(await screen.findByTestId('readiness-ladder')).toBeVisible();
   });
 
-  it('says everything in one status line: the covered history at rest, a notice in its place', async () => {
+  it('states the covered history on the Google Search card, and a notice only when there is one', async () => {
     const covered = {
       earliest_date: '2026-08-01',
       latest_date: '2026-08-28',
@@ -301,9 +354,10 @@ describe('PerformanceScreen evidence states', () => {
     );
 
     const { unmount } = renderPerformance();
-    expect(await screen.findByTestId('performance-status')).toHaveTextContent(
+    expect(await screen.findByTestId('performance-coverage')).toHaveTextContent(
       'Imported history Aug 1, 2026 – Aug 28, 2026 · 28 days',
     );
+    expect(screen.queryByTestId('performance-status')).toBeNull();
     // The freshness note reads in the same date style, not as an ISO key.
     expect(screen.getByText('Data through Aug 28, 2026')).toBeVisible();
     expect(screen.queryAllByRole('alert')).toHaveLength(0);
@@ -329,7 +383,9 @@ describe('PerformanceScreen evidence states', () => {
 
     renderPerformance();
 
-    expect(await screen.findByText('No imported history')).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'No Search Console history yet' }),
+    ).toBeVisible();
     expect(screen.queryByTestId('metric-card-strip')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('tablist', { name: 'Performance breakdowns' }),
@@ -439,7 +495,9 @@ describe('PerformanceScreen evidence states', () => {
 
     renderPerformance();
 
-    expect(await screen.findByText('No imported history')).toBeVisible();
+    expect(
+      await screen.findByRole('heading', { name: 'No Search Console history yet' }),
+    ).toBeVisible();
     expect(screen.queryByTestId('bing-panel')).not.toBeInTheDocument();
   });
 

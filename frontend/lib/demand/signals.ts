@@ -46,8 +46,6 @@ export const FILTER_TABS: readonly { tab: FilterTab; label: string }[] = [
   { tab: 'branded', label: 'Branded' },
 ];
 
-type SignalTone = 'info' | 'warning' | 'danger' | 'success' | 'neutral';
-
 /** A definition that states a detector threshold reads it from the snapshot's policy. */
 type Definition = string | ((policy: DemandDetectorPolicy) => string);
 
@@ -55,53 +53,43 @@ type Definition = string | ((policy: DemandDetectorPolicy) => string);
  * Each signal type's chip label and its one-sentence definition. The screen
  * explains a type once, in its legend, rather than repeating prose per row.
  */
-const SIGNAL_TYPE_META: Readonly<
-  Record<SignalType, { label: string; tone: SignalTone; definition: Definition }>
-> = {
+const SIGNAL_TYPE_META: Readonly<Record<SignalType, { label: string; definition: Definition }>> = {
   striking_distance: {
     label: 'Striking distance',
-    tone: 'info',
     definition:
       'Ranks close enough to the top results that better coverage can lift it into the positions that earn clicks.',
   },
   query_cannibalization: {
     label: 'Cannibalization',
-    tone: 'warning',
     definition: 'More than one of your pages ranks for the query, splitting its impressions.',
   },
   property_relative_ctr_gap: {
     label: 'CTR gap',
-    tone: 'danger',
     definition: 'Clicked less often than results at the same position across your property.',
   },
   high_impression_low_ctr: {
     label: 'Low CTR',
-    tone: 'danger',
     definition: 'Earns many impressions but few clicks for its ranking.',
   },
   emerging_query: {
     label: 'Emerging',
-    tone: 'neutral',
     definition: ({ trends }) =>
       `Impressions rose across the last two ${trends.window_days}-day windows.`,
   },
   declining_query: {
     label: 'Declining',
-    tone: 'neutral',
     definition: ({ trends }) =>
       `Impressions fell across the last two ${trends.window_days}-day windows.`,
   },
   branded_query_performance: {
     label: 'Branded',
-    tone: 'neutral',
     definition:
       'Navigational demand for your brand, tracked apart so it cannot skew the gap analysis.',
   },
 };
 
-const FALLBACK_TYPE_META: { label: string; tone: SignalTone; definition: Definition } = {
+const FALLBACK_TYPE_META: { label: string; definition: Definition } = {
   label: 'Demand signal',
-  tone: 'neutral',
   definition: 'A Search Console gap identified by demand analysis.',
 };
 

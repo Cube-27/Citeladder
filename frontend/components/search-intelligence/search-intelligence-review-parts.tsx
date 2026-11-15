@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Field } from '@/components/ui/field';
+import { FigureStrip } from '@/components/ui/figure-strip';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
@@ -329,25 +330,16 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
     <Stack gap="workspace">
       <Stack as="section" gap="compact">
         <h3 className={textRole('heading')}>What will be fetched</h3>
-        {/* The three figures share one row, never 2 × 2. */}
-        <Stack as="dl" gap="compact" className="type-body text-ink-2 grid-cols-3">
-          <div>
-            <dt className="type-body text-ink-2">Requests</dt>
-            <dd className="type-figure">{review.planned_calls}</dd>
-          </div>
-          <div>
-            <dt className="type-body text-ink-2">Results, at most</dt>
-            <dd className="type-figure">{formatCount(review.planned_rows)}</dd>
-          </div>
-          <div>
-            <dt className="type-body text-ink-2">Estimated cost</dt>
-            <dd className="type-figure">{runEstimate(review)}</dd>
-          </div>
-          <div className="col-span-full">
-            <dt className="type-body text-ink-2">Scope</dt>
-            <dd>{searchScopeLabel(typeof scope === 'string' ? scope : undefined)}</dd>
-          </div>
-        </Stack>
+        <FigureStrip
+          segments={[
+            { key: 'requests', label: 'Requests', value: formatCount(review.planned_calls) },
+            { key: 'results', label: 'Results, at most', value: formatCount(review.planned_rows) },
+            { key: 'cost', label: 'Estimated cost', value: runEstimate(review) },
+          ]}
+        />
+        <p className={textRole('body', 'text-ink-2')}>
+          Scope: {searchScopeLabel(typeof scope === 'string' ? scope : undefined)}
+        </p>
         <p className={textRole('caption')}>
           The estimate is a ceiling: a request that could take the cost past it is not sent.{' '}
           {review.credential_mode === 'funded'

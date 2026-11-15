@@ -51,7 +51,6 @@ export function BingPanel({
         items={BING_DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
         ariaLabel="Bing breakdowns"
         spaced
-        fill
         onIntent={(next) => warm({ snapshotId, compareSnapshotId }, next)}
       >
         {BING_DIMENSION_TABS.map((tab) => (

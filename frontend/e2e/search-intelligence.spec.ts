@@ -213,7 +213,7 @@ for (const viewport of [
     await expect(page.getByText('https://publisher.test/story', { exact: true })).toBeVisible();
     await expect(page.getByText('400', { exact: true })).toBeVisible();
     await expect(page.getByText('250', { exact: true })).toBeVisible();
-    await expect(page.getByRole('region', { name: 'Saved backlink history' })).toBeVisible();
+    await expect(page.getByRole('region', { name: 'Backlink history' })).toBeVisible();
     await page.getByRole('tab', { name: 'Keywords', exact: true }).click();
     await page.getByRole('radio', { name: 'Top pages', exact: true }).click();
     await expect(page.getByRole('cell', { name: '22', exact: true })).toBeVisible();

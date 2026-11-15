@@ -139,9 +139,10 @@ function PageIdentity({
     {
       label: 'URL',
       value: (
+        // The record's own address wraps: this page is the record.
         <TextLink
           variant="external"
-          text="data"
+          text="body"
           href={detail.display_url}
           className="min-w-0 [overflow-wrap:anywhere]"
         >
@@ -152,7 +153,11 @@ function PageIdentity({
     { label: 'Kind', value: <PageKindBadge pageKind={detail.page_kind} /> },
     {
       label: 'Audited',
-      value: <span className="type-data">{formatAudited(detail.last_audited, timeZone)}</span>,
+      value: detail.last_audited ? (
+        formatAudited(detail.last_audited, timeZone)
+      ) : (
+        <Absence state="not_measured" />
+      ),
     },
     ...(detail.analysis_status === 'completed'
       ? []
@@ -194,7 +199,7 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
                 variant="external"
                 href={referrer.url}
                 title={referrer.url}
-                className="block min-w-0 truncate tabular-nums"
+                className="block min-w-0 truncate"
               >
                 {referrer.url}
               </TextLink>

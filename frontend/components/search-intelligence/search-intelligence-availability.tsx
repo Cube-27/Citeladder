@@ -1,7 +1,9 @@
-import { Unplug } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Database, Unplug } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
+import { Section } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import type { CredentialMode } from '@/lib/api/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -10,44 +12,97 @@ import { StateBlock } from '@/components/ui/state-block';
 
 const PROVIDER_SETTINGS = '/settings?tab=providers';
 
+/** Keyword Research's tabs, by the value the URL carries. */
+export type ResearchTab = 'overview' | 'keywords' | 'competitors' | 'backlinks';
+
+/** What each tab shows, said by its empty state before anything is saved. */
+const TAB_EMPTY: Readonly<Record<ResearchTab, { heading: string; shows: string }>> = {
+  overview: {
+    heading: 'See where you rank and where competitors outrank you',
+    shows: 'Your organic keywords, estimated traffic and backlinks appear here.',
+  },
+  keywords: {
+    heading: 'See the keywords your website ranks for',
+    shows: 'Ranking keywords, your top pages and keyword ideas appear here.',
+  },
+  competitors: {
+    heading: 'See the keywords competitors rank for and you do not',
+    shows: 'Missing and shared keywords against each saved competitor appear here.',
+  },
+  backlinks: {
+    heading: 'See who links to your website',
+    shows: 'Backlinks, referring domains and their monthly history appear here.',
+  },
+};
+
+/**
+ * The card a Keyword Research region's state sits in, its headline the
+ * card's h2: the same layout as Search Demand's states.
+ */
+export function ResearchEmpty({ children }: Readonly<{ children: ReactNode }>) {
+  return <Section>{children}</Section>;
+}
+
+/** No saved analysis yet: what this tab shows, and the analysis that fills it. */
+export function NoAnalysisYet({ tab, action }: Readonly<{ tab: ResearchTab; action: ReactNode }>) {
+  const copy = TAB_EMPTY[tab];
+  return (
+    <ResearchEmpty>
+      <StateBlock
+        kind="empty"
+        icon={Database}
+        heading={copy.heading}
+        description={`${copy.shows} Run the first analysis; you see the exact cost before anything is fetched.`}
+        action={action}
+        headingLevel={2}
+      />
+    </ResearchEmpty>
+  );
+}
+
 /**
  * Keyword Research without a DataForSEO login and no saved results:
  * unavailable on a funded plan, else a login to add. The login is a
  * credential, so only a role that manages credentials is sent to add it.
  */
-export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
+export function NotConnected({ funded, tab }: Readonly<{ funded: boolean; tab: ResearchTab }>) {
   const canManage = useWorkspaceCapability('manage_credentials');
-  if (funded)
-    return (
-      <StateBlock
-        kind="empty"
-        icon={Unplug}
-        heading="Keyword Research is unavailable"
-        description="Research is temporarily unavailable on your plan. Try again later."
-      />
-    );
-  if (!canManage)
-    return (
-      <StateBlock
-        kind="empty"
-        icon={Unplug}
-        heading="Connect DataForSEO"
-        description="Ask a workspace Owner or Admin to add a DataForSEO login."
-      />
-    );
-  return (
+  const { shows } = TAB_EMPTY[tab];
+  let state = (
     <StateBlock
       kind="empty"
       icon={Unplug}
       heading="Connect DataForSEO"
-      description="Add your DataForSEO login once to run analyses."
+      description={`${shows} Add your DataForSEO login once to run analyses.`}
+      headingLevel={2}
       action={
-        <Button asChild variant="secondary">
+        <Button asChild variant="primary">
           <ProjectLink href={PROVIDER_SETTINGS}>Open provider settings</ProjectLink>
         </Button>
       }
     />
   );
+  if (!canManage)
+    state = (
+      <StateBlock
+        kind="empty"
+        icon={Unplug}
+        heading="Connect DataForSEO"
+        description={`${shows} Ask a workspace Owner or Admin to add a DataForSEO login.`}
+        headingLevel={2}
+      />
+    );
+  if (funded)
+    state = (
+      <StateBlock
+        kind="empty"
+        icon={Unplug}
+        heading="Keyword Research is unavailable"
+        description={`${shows} Research is temporarily unavailable on your plan. Try again later.`}
+        headingLevel={2}
+      />
+    );
+  return <ResearchEmpty>{state}</ResearchEmpty>;
 }
 
 /** Why saved results cannot be refreshed: a missing connection, or managed research being down. */

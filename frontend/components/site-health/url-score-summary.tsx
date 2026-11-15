@@ -8,13 +8,13 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
     <AuditScores
       metrics={[
         {
-          title: 'Web Fundamentals',
+          title: 'Web fundamentals',
           value: detail.web_fundamentals_score,
           icon: ICONS.siteHealth,
           unavailable: scoreUnavailableState(detail.web_fundamentals_state),
         },
         {
-          title: 'AEO Readiness',
+          title: 'AEO readiness',
           value: detail.aeo_readiness_score,
           icon: ICONS.visibility,
           unavailable: scoreUnavailableState(
@@ -40,14 +40,12 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
 
 function scoreUnavailableState(state: string, reason?: string) {
   if (state === 'limited_evidence') {
-    return <span className="type-caption">Limited evidence</span>;
+    return <Absence state="not_measured" label="Limited evidence" />;
   }
-  if (state === 'excluded') {
-    return <span className="type-caption">Excluded</span>;
-  }
+  if (state === 'excluded') return <Absence state="excluded" />;
   // The page's kind has no AEO checklist: a fact about the page, not a missing measurement.
   if (reason === 'unsupported_purpose_checklist') {
-    return <span className="type-caption">No AEO checklist for this page kind</span>;
+    return <Absence state="not_applicable" label="No AEO checklist for this page kind" />;
   }
   return <Absence state="not_measured" />;
 }

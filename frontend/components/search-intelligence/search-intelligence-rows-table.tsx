@@ -17,7 +17,7 @@ function cellText(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
 
-/** Fields that hold a page address: mono, broken at its slashes, without the column's shared origin. */
+/** Fields that hold a page address: one line, the path's tail kept, without the column's shared origin. */
 const URL_FIELDS: ReadonlySet<string> = new Set(['url', 'url_from']);
 
 function displayValue(row: SearchIntelligenceRow, column: SearchColumn, origin: string | null) {
@@ -112,11 +112,16 @@ export function SearchIntelligenceRows({
             <TextLink asChild text="body">
               <Pressable
                 type="button"
-                className="block max-w-full text-left"
+                className="flex max-w-full min-w-0 text-left"
                 aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
                 onClick={() => onSelect(row)}
               >
-                <ClampText>{displayValue(row, column, null)}</ClampText>
+                {/* The row's identity keeps its host: a backlink's source site is the finding. */}
+                {URL_FIELDS.has(column.field) ? (
+                  displayValue(row, column, null)
+                ) : (
+                  <ClampText>{displayValue(row, column, null)}</ClampText>
+                )}
               </Pressable>
             </TextLink>
           ) : (

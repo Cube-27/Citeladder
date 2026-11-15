@@ -96,15 +96,12 @@ describe('IssuesCatalog', () => {
 
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
+    expect(await screen.findByRole('heading', { name: '47 issue types' })).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'You have 47 outstanding issues' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        '12 issues need attention first: they hold back how search and answer engines read your site. They affect 50 pages.',
-      ),
+      screen.getByText('12 high-severity issue types. 50 pages affected.'),
     ).toBeInTheDocument();
     const fixFirst = screen.getByRole('region', { name: 'Fix these first' });
+    expect(within(fixFirst).getByText('Top 3 by severity, then reach')).toBeInTheDocument();
     // Each names its fix in one sentence.
     const [first, second] = within(fixFirst).getAllByRole('listitem');
     expect(within(first!).getByText('Add a JSON-LD WebSite schema.')).toBeInTheDocument();
@@ -185,7 +182,7 @@ describe('IssuesCatalog', () => {
     });
     expect(pageHandoff.prompt).toContain('https://acme.com/');
 
-    await user.click(within(dialog).getByRole('button', { name: 'Close dialog' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(currentUrl()).not.toContain('issue=');
   });
@@ -242,7 +239,7 @@ describe('IssuesCatalog', () => {
       await screen.findByRole('dialog', { name: 'Canonical tag is missing' }),
     ).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Close dialog' }));
+    await user.click(screen.getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(currentUrl()).not.toContain('issue=');
   });
@@ -275,7 +272,7 @@ describe('IssuesCatalog', () => {
 
     const first = await openIssue(user, 'WebSite schema is missing');
     await within(first).findByRole('link', { name: /Homepage/ });
-    await user.click(within(first).getByRole('button', { name: 'Close dialog' }));
+    await user.click(within(first).getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
     const second = await openIssue(user, 'Canonical tag is missing');
@@ -563,7 +560,8 @@ describe('IssuesCatalog', () => {
     expect(
       await screen.findByText(
         (_, element) =>
-          element?.tagName === 'P' && element.textContent === '47 issues · 12 high · 50 pages',
+          element?.tagName === 'P' &&
+          element.textContent === '47 issue types · 12 high severity · 50 pages affected',
       ),
     ).toBeInTheDocument();
 
@@ -576,7 +574,8 @@ describe('IssuesCatalog', () => {
     expect(
       screen.getByText(
         (_, element) =>
-          element?.tagName === 'P' && element.textContent === '2 advisories · 50 pages',
+          element?.tagName === 'P' &&
+          element.textContent === '2 advisory types · 50 pages affected',
       ),
     ).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^All filters/ }));
@@ -686,7 +685,7 @@ describe('IssuesCatalog', () => {
     expect(seenCursors).toEqual([null, 'cursor-page-2']);
     await user.click(within(dialog).getByRole('button', { name: 'Previous page' }));
     await within(dialog).findByRole('link', { name: /Homepage/ });
-    await user.click(within(dialog).getByRole('button', { name: 'Close dialog' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
     // The list steps forward and back along the cursors it followed.
@@ -712,7 +711,7 @@ describe('IssuesCatalog', () => {
     const typed = await openIssue(user, 'WebSite schema is missing');
     expect(within(typed).getByText('32 pages affected')).toBeInTheDocument();
     expect(within(typed).getByText('Product, Category')).toBeInTheDocument();
-    await user.click(within(typed).getByRole('button', { name: 'Close dialog' }));
+    await user.click(within(typed).getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
     const untyped = await openIssue(user, 'Canonical tag is missing');

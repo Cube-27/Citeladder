@@ -19,7 +19,11 @@ import {
   DemandDetectorCoverage,
   DemandSignalFilters,
 } from '@/components/demand/demand-signal-filters';
-import { DemandSignalTable, SignalLegend } from '@/components/demand/demand-signal-table';
+import {
+  DemandSignalTable,
+  SIGNAL_COLUMN_COUNT,
+  SignalLegend,
+} from '@/components/demand/demand-signal-table';
 import {
   demandMutations,
   demandQueries,
@@ -48,6 +52,8 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
+import { Section } from '@/components/ui/section';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
@@ -91,17 +97,29 @@ function RecomputeAction({
   );
 }
 
-/** Recompute's outcome as one more fact on the summary line. */
+/** Recompute's outcome as an info notice; the header button checks for the new snapshot. */
 function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
   if (mutation.isSuccess)
     return (
-      <span className="type-caption text-info">
+      <Notice tone="info">
         {mutation.data.status === 'already_queued'
           ? 'A recompute for this window is already queued.'
           : 'Recompute queued. Signals refresh once the job finishes.'}
-      </span>
+      </Notice>
     );
   return null;
+}
+
+/**
+ * The card a Search Demand region's state sits in, its headline the card's
+ * h2. Keyword Research lays out its tab states the same way.
+ */
+function DemandEmpty({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <Section>
+      <Stack>{children}</Stack>
+    </Section>
+  );
 }
 
 /** A failed recompute as the shared notice; the header button is its retry. */
@@ -182,45 +200,41 @@ function SearchDemandView({
     }, []);
   }, [snapshot.signals, activeTab, searchQuery]);
 
+  // What the figures mean, and how far each detector ran: the table's caption,
+  // and the reason an empty snapshot is empty.
+  const caption = (
+    <Inline as="span" gap="meta">
+      <SignalLegend signals={snapshot.signals} policy={snapshot.detector_policy} />
+      <DemandDataCaveats snapshot={snapshot} />
+      <DemandDetectorCoverage snapshot={snapshot} />
+    </Inline>
+  );
   // An empty feed has two different causes, and they need different words:
   // nothing was detected at all, or the filter hid everything that was.
-  let signalsFeed: ReactNode = (
-    <StateBlock
-      kind="empty"
-      icon={Search}
-      heading="No signals match your filter"
-      description="Try choosing a different filter tab or clearing your search term."
-      action={
-        <Button
-          variant="secondary"
-          onClick={() => {
-            setActiveTab('all');
-            setSearchQuery('');
-          }}
-        >
-          Clear filters
-        </Button>
-      }
-    />
-  );
-  if (filteredSignals.length > 0) {
-    signalsFeed = (
+  const signalsFeed: ReactNode =
+    snapshot.signals.length === 0 ? (
+      <DemandEmpty>
+        <StateBlock
+          kind="empty"
+          icon={Sparkles}
+          heading="No qualifying search gaps observed"
+          description="Search Console data was observed, but no configured detector emitted a signal in this window."
+          headingLevel={2}
+        />
+        <p className="type-caption">{caption}</p>
+      </DemandEmpty>
+    ) : (
       <DemandSignalTable
         rows={filteredSignals}
         filterKey={`${activeTab}\u0000${searchQuery.trim().toLowerCase()}`}
         onInspect={handleInspect}
+        description={caption}
+        onClearFilters={() => {
+          setActiveTab('all');
+          setSearchQuery('');
+        }}
       />
     );
-  } else if (snapshot.signals.length === 0) {
-    signalsFeed = (
-      <StateBlock
-        kind="empty"
-        icon={Sparkles}
-        heading="No qualifying search gaps observed"
-        description="Search Console data was observed, but no configured detector emitted a signal in this window."
-      />
-    );
-  }
 
   return (
     <CollectionPage
@@ -269,7 +283,7 @@ function SearchDemandView({
               </span>
               <Inline as="span" gap="tight">
                 <Icon icon={Calendar} />
-                <span className="type-data-sm">{windowLabel}</span>
+                <span className="tabular-nums">{windowLabel}</span>
               </Inline>
               <DemandLatentDemand snapshot={snapshot} />
             </>
@@ -289,17 +303,8 @@ function SearchDemandView({
           />
         ) : null}
         <RecomputeFailure mutation={recomputeMutation} />
-        {/* What the figures mean, then the table the control row narrows.
-            A queued recompute rides this line and the header button. */}
-        <Stack>
-          <Inline as="p" gap="meta" className="type-caption">
-            <SignalLegend signals={snapshot.signals} policy={snapshot.detector_policy} />
-            <DemandDataCaveats snapshot={snapshot} />
-            <DemandDetectorCoverage snapshot={snapshot} />
-            <RecomputeStatus mutation={recomputeMutation} />
-          </Inline>
-          {signalsFeed}
-        </Stack>
+        <RecomputeStatus mutation={recomputeMutation} />
+        {signalsFeed}
 
         <DemandEvidenceDrawer
           signal={selectedSignal}
@@ -348,7 +353,12 @@ export function DemandProjection() {
 
 /** Every non-loaded state of `/demand`, in the order it is decided. */
 function demandFallback(latest: UseQueryResult<DemandSnapshot | null, Error>) {
-  if (latest.isLoading) return <StateBlock kind="loading" label="Loading search demand…" />;
+  if (latest.isLoading)
+    return (
+      <Section>
+        <Skeleton variant="table" columns={SIGNAL_COLUMN_COUNT} label="Loading search demand…" />
+      </Section>
+    );
   if (latest.data === null) return <SearchConsoleSetup />;
   if (latest.isError)
     return (
@@ -370,11 +380,15 @@ function SearchConsoleSetup() {
       required={['gsc']}
       title="Connect Search Console"
       whenReady={
-        <StateBlock
-          kind="empty"
-          icon={Search}
-          heading="Search Demand appears after the next Search Console import"
-        />
+        <DemandEmpty>
+          <StateBlock
+            kind="empty"
+            icon={Search}
+            heading="Search Demand appears after the next Search Console import"
+            description="Queries and pages where search demand outruns your clicks are listed here once Search Console has imported a window."
+            headingLevel={2}
+          />
+        </DemandEmpty>
       }
     />
   );

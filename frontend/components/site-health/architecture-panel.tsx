@@ -23,7 +23,7 @@ import type {
   CoverageState,
   SiteArchitecture,
 } from '@citeladder/contracts';
-import { formatPercent } from '@/lib/format';
+import { formatCount, formatPercent } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
@@ -83,8 +83,8 @@ export function ArchitecturePanel({
       <StateBlock
         kind="error"
         error={architecture.error}
-        fallback="Could not load Architecture."
-        title="Could not load Architecture"
+        fallback="Couldn't load the site architecture."
+        title="Couldn't load the site architecture"
         onRetry={() => void architecture.refetch()}
         pending={architecture.isFetching}
       />
@@ -233,12 +233,12 @@ function PageKindTable({
 }
 
 const PAGE_KIND_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'kind', label: 'Page kind', kind: 'status', width: 'flex' },
-  { key: 'pages', label: 'Pages', kind: 'number' },
+  { key: 'kind', label: 'Page kind', kind: 'identity' },
+  { key: 'pages', label: 'Pages crawled', kind: 'number' },
   { key: 'depth', label: 'Median depth', kind: 'number' },
   { key: 'indexable', label: 'Indexable', kind: 'number' },
-  { key: 'duplicates', label: 'Duplicate metadata', kind: 'number' },
-  { key: 'orphaned', label: 'Orphaned', kind: 'number' },
+  { key: 'duplicates', label: 'Duplicate metadata', kind: 'number', priority: 'low' },
+  { key: 'orphaned', label: 'Orphaned', kind: 'number', priority: 'low' },
 ];
 
 function PageKindPages({
@@ -294,91 +294,87 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
   const linking = data.internal_linking;
   const [orphansOpen, setOrphansOpen] = useState(false);
   const linkedShare = linking.pages_with_incoming_percentage;
+  // Two thirds for the three linking figures, so they hold one row (160px a cell).
   return (
-    <>
-      <AppGrid layout="halves">
-        <Section>
-          <SectionHeader>
-            <SectionTitle>
-              <Inline as="span">
-                <Icon icon={Link2} className="text-ink-2" />
-                Internal linking
-              </Inline>
-            </SectionTitle>
-          </SectionHeader>
-          <SectionContent>
-            <FigureStrip
-              segments={[
-                {
-                  key: 'content-links',
-                  label: 'In-content links',
-                  value: linking.content_link_count,
-                  sub: `${linking.internal_link_count} including menus`,
-                },
-                {
-                  key: 'incoming',
-                  label: 'Have incoming links',
-                  value: linkedShare === null ? null : formatPercent(linkedShare),
-                  sub: `${linking.pages_with_incoming_count} pages`,
-                },
-                orphanSegment({
-                  pages: linking.orphan_pages,
-                  total: linking.orphan_page_count,
-                  onOpen: () => setOrphansOpen(true),
-                }),
-              ]}
-            />
-            <OrphanPageDrawer
-              pages={linking.orphan_pages}
-              total={linking.orphan_page_count}
-              crawlId={data.crawl_id}
-              open={orphansOpen}
-              onOpenChange={setOrphansOpen}
-            />
-          </SectionContent>
-        </Section>
-        <Section>
-          <SectionHeader>
-            <SectionTitle>
-              <Inline as="span">
-                <Icon icon={ListTree} className="text-ink-2" />
-                Structure depth
-              </Inline>
-            </SectionTitle>
-          </SectionHeader>
-          <SectionContent>
-            <Stack>
-              <ChartFrame summary={depthSummary(data)}>
-                <Stack>
-                  {data.structure_depth.buckets.map((bucket) => (
-                    <MeterRow
-                      key={bucket.key}
-                      name={DEPTH_LABELS[bucket.key]}
-                      figure={`${bucket.page_count} (${formatPercent(bucket.percentage)})`}
-                      value={
-                        bucket.percentage === null ? null : Math.round(bucket.percentage * 100)
-                      }
-                      label={`${DEPTH_LABELS[bucket.key]} share of pages`}
-                      tone={{ series: 1 }}
-                    />
-                  ))}
-                </Stack>
-              </ChartFrame>
-              {data.structure_depth.unmeasured_page_count > 0 ? (
-                <p className="type-caption">
-                  {data.structure_depth.unmeasured_page_count} pages have no measured depth.
-                </p>
-              ) : null}
-            </Stack>
-          </SectionContent>
-        </Section>
-      </AppGrid>
-      <TextLink
-        className="inline-flex min-h-6 items-center justify-self-start"
-        href="/site?tab=internal-links"
-      >
-        Review internal link suggestions
-      </TextLink>
-    </>
+    <AppGrid layout="main-aside">
+      <Section>
+        <SectionHeader
+          actions={
+            <TextLink href="/site?tab=internal-links">Review internal link suggestions</TextLink>
+          }
+        >
+          <SectionTitle>
+            <Inline as="span">
+              <Icon icon={Link2} className="text-ink-2" />
+              Internal linking
+            </Inline>
+          </SectionTitle>
+        </SectionHeader>
+        <SectionContent>
+          <FigureStrip
+            segments={[
+              {
+                key: 'content-links',
+                label: 'In-content links',
+                value: linking.content_link_count,
+                sub: `${formatCount(linking.internal_link_count)} including menus`,
+              },
+              {
+                key: 'incoming',
+                label: 'Have incoming links',
+                value: linkedShare === null ? null : formatPercent(linkedShare),
+                sub: `${formatCount(linking.pages_with_incoming_count)} pages crawled`,
+              },
+              orphanSegment({
+                pages: linking.orphan_pages,
+                total: linking.orphan_page_count,
+                onOpen: () => setOrphansOpen(true),
+              }),
+            ]}
+          />
+          <OrphanPageDrawer
+            pages={linking.orphan_pages}
+            total={linking.orphan_page_count}
+            crawlId={data.crawl_id}
+            open={orphansOpen}
+            onOpenChange={setOrphansOpen}
+          />
+        </SectionContent>
+      </Section>
+      <Section>
+        <SectionHeader>
+          <SectionTitle>
+            <Inline as="span">
+              <Icon icon={ListTree} className="text-ink-2" />
+              Structure depth
+            </Inline>
+          </SectionTitle>
+        </SectionHeader>
+        <SectionContent>
+          <Stack>
+            <ChartFrame summary={depthSummary(data)}>
+              <Stack>
+                {data.structure_depth.buckets.map((bucket) => (
+                  <MeterRow
+                    key={bucket.key}
+                    name={DEPTH_LABELS[bucket.key]}
+                    figure={`${formatCount(bucket.page_count)} (${formatPercent(bucket.percentage)})`}
+                    value={bucket.percentage === null ? null : Math.round(bucket.percentage * 100)}
+                    label={`${DEPTH_LABELS[bucket.key]} share of pages`}
+                    tone={{ series: 1 }}
+                  />
+                ))}
+              </Stack>
+            </ChartFrame>
+            {data.structure_depth.unmeasured_page_count > 0 ? (
+              <p className="type-caption">
+                {formatCount(data.structure_depth.unmeasured_page_count)} pages crawled have no
+                measured depth.
+              </p>
+            ) : null}
+          </Stack>
+        </SectionContent>
+      </Section>
+    </AppGrid>
   );
 }

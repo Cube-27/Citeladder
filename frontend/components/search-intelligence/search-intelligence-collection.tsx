@@ -1,6 +1,6 @@
 import { Database } from 'lucide-react';
 import { Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import type {
   SearchIntelligenceDataset,
   SearchIntelligenceReadiness,
@@ -12,6 +12,7 @@ import { SearchIntelligenceHistory } from './search-intelligence-history';
 import { SearchValue } from './search-intelligence-value';
 import type { SearchCollection } from './search-intelligence-collection-state';
 import { StateBlock } from '@/components/ui/state-block';
+import { ResearchEmpty } from './search-intelligence-availability';
 
 /**
  * A tab's saved collection: the result the page's control strip chose (the
@@ -47,6 +48,10 @@ export function SearchIntelligenceCollection({
   );
 }
 
+/**
+ * The backlink summary's figures, each dated: the summary is the latest
+ * reading, while the chart under it is the monthly history, a different capture.
+ */
 function BacklinkMetrics({
   datasets,
   targetOrigin,
@@ -63,21 +68,26 @@ function BacklinkMetrics({
   );
   return (
     <>
-      <SearchMetrics
-        metrics={[
-          ['Backlinks', summary, 'backlinks'],
-          ['Referring domains', summary, 'referring_domains'],
-          ['Referring root domains', summary, 'referring_main_domains'],
-          ['Domain rank', summary, 'rank'],
-        ]}
-      />
-      {summary ? (
-        <p className={textRole('caption')}>
-          Referring pages: <SearchValue value={summary.summary.referring_pages} /> · Broken
-          backlinks: <SearchValue value={summary.summary.broken_backlinks} /> · Target spam:{' '}
-          <SearchValue value={summary.summary.target_spam_score} />
-        </p>
-      ) : null}
+      <Section variant="group" aria-labelledby="backlink-summary">
+        <SectionHeader>
+          <SectionTitle id="backlink-summary">Backlink summary</SectionTitle>
+          {summary ? (
+            <SectionDescription>
+              Referring pages: <SearchValue value={summary.summary.referring_pages} /> · Broken
+              backlinks: <SearchValue value={summary.summary.broken_backlinks} /> · Target spam:{' '}
+              <SearchValue value={summary.summary.target_spam_score} />
+            </SectionDescription>
+          ) : null}
+        </SectionHeader>
+        <SearchMetrics
+          metrics={[
+            ['Backlinks', summary, 'backlinks', { asOf: true }],
+            ['Referring domains', summary, 'referring_domains', { asOf: true }],
+            ['Referring root domains', summary, 'referring_main_domains', { asOf: true }],
+            ['Domain rank', summary, 'rank', { asOf: true }],
+          ]}
+        />
+      </Section>
       {history ? <SearchIntelligenceHistory dataset={history} /> : null}
       {summary ? <SearchSummaryEvidence datasets={[summary]} /> : null}
     </>
@@ -86,28 +96,29 @@ function BacklinkMetrics({
 
 function CollectionResult({ collection }: Readonly<{ collection: SearchCollection }>) {
   const { dataset, title } = collection;
-  return (
-    <Stack gap="workspace" className="min-w-0">
-      {collection.tab === 'competitors' && dataset ? (
-        <p className={textRole('body')}>
-          {collection.label(dataset)} compared with {dataset.target_hostname}
-        </p>
-      ) : null}
-      {dataset ? (
-        <SearchIntelligenceDatasetView
-          key={dataset.id}
-          dataset={dataset}
-          title={title}
-          keywordFilters={collection.keywordDataset ? collection.keywordFilters : undefined}
-        />
-      ) : (
+  if (!dataset)
+    return (
+      <ResearchEmpty>
         <StateBlock
           kind="empty"
           icon={Database}
           heading={`No saved ${title.toLowerCase()}`}
           description="Choose it in a new analysis, then review the cost before anything is fetched."
+          headingLevel={2}
         />
-      )}
-    </Stack>
+      </ResearchEmpty>
+    );
+  return (
+    <SearchIntelligenceDatasetView
+      key={dataset.id}
+      dataset={dataset}
+      title={title}
+      description={
+        collection.tab === 'competitors'
+          ? `${collection.label(dataset)} compared with ${dataset.target_hostname}`
+          : undefined
+      }
+      keywordFilters={collection.keywordDataset ? collection.keywordFilters : undefined}
+    />
   );
 }

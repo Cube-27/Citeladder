@@ -56,15 +56,15 @@ describe('ScoreSection', () => {
 
     render(<ScoreSection crawl={null} dashboard={dashboard} />);
 
-    expect(screen.getByRole('progressbar', { name: 'Web Fundamentals score' })).toHaveAttribute(
+    expect(screen.getByRole('progressbar', { name: 'Web fundamentals score' })).toHaveAttribute(
       'aria-valuetext',
       '73 out of 100',
     );
-    expect(screen.getByRole('progressbar', { name: 'AEO Readiness score' })).toHaveAttribute(
+    expect(screen.getByRole('progressbar', { name: 'AEO readiness score' })).toHaveAttribute(
       'aria-valuetext',
       '61 out of 100',
     );
-    expect(screen.getByRole('progressbar', { name: 'AEO Checklist Completion' })).toHaveAttribute(
+    expect(screen.getByRole('progressbar', { name: 'AEO checklist completion' })).toHaveAttribute(
       'aria-valuetext',
       '70%',
     );

@@ -47,8 +47,8 @@ describe('PagesTable', () => {
       'Page',
       'Type',
       'Issues',
-      'Web Fundamentals',
-      'AEO Readiness',
+      'Web fundamentals',
+      'AEO readiness',
       'Last audit',
     ]);
     const link = screen.getByRole('link', { name: /^View Homepage — / });

@@ -31,7 +31,8 @@ import {
   SearchIntelligenceRows,
   searchIntelligenceColumns,
 } from './search-intelligence-rows-table';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { StateBlock } from '@/components/ui/state-block';
+import { ResearchEmpty } from './search-intelligence-availability';
 
 /**
  * One saved dataset's rows. The table's own toolbar keeps only the search,
@@ -41,10 +42,13 @@ import { Section, SectionContent, SectionHeader, SectionTitle } from '@/componen
 export function SearchIntelligenceDatasetView({
   dataset,
   title = 'Ranking keywords',
+  description,
   keywordFilters,
 }: Readonly<{
   dataset: SearchIntelligenceDataset;
   title?: string;
+  /** The caption under the title, e.g. which competitor the rows compare with. */
+  description?: string;
   keywordFilters?: KeywordFilterValues;
 }>) {
   const { workspaceId, projectId } = useProjectScope();
@@ -90,11 +94,12 @@ export function SearchIntelligenceDatasetView({
   });
   const rows = page?.items ?? [];
   useRowsPanelSeed(dataset.id, selected, page?.items, title);
-  if (!hasRows) return <EmptyDataset dataset={dataset} title={title} />;
+  if (!hasRows) return <EmptyDataset dataset={dataset} />;
   return (
     <>
       <DataTable
         title={title}
+        description={description}
         toolbar={{
           search: (
             <SearchField
@@ -215,39 +220,31 @@ function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
       {evidenceFields(row, labels, timeZone).map((field) => (
         <Stack key={field.key} gap="tight" className={ledgerItemClasses()}>
           <dt className="text-ink-2">{field.label}</dt>
-          <dd className="break-all">{field.value ?? <Absence />}</dd>
+          {/* The row's own detail fields: a long address wraps here, never in the table. */}
+          <dd className="break-words">{field.value ?? <Absence />}</dd>
         </Stack>
       ))}
     </dl>
   );
 }
 
-function EmptyDataset({
-  dataset,
-  title,
-}: Readonly<{ dataset: SearchIntelligenceDataset; title: string }>) {
+/** A saved dataset with no rows: what the provider answered, as the region's one state. */
+function EmptyDataset({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
+  const scope = `${dataset.target_hostname}${
+    dataset.comparison_origin
+      ? `, compared with ${new URL(dataset.comparison_origin).hostname}`
+      : ''
+  }`;
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>{title}</SectionTitle>
-      </SectionHeader>
-      <SectionContent>
-        <Stack gap="compact">
-          <p className={textRole('body')}>{emptyDatasetHeading(dataset)}</p>
-          <p className={textRole('body', 'text-ink-2')}>
-            Requests can incur charges even when no results are returned. Check the website and
-            market before reviewing another analysis.
-          </p>
-          <p className={textRole('caption')}>
-            {dataset.target_hostname}
-            {dataset.comparison_origin
-              ? ` · compared with ${new URL(dataset.comparison_origin).hostname}`
-              : ''}{' '}
-            · 0 saved rows
-          </p>
-        </Stack>
-      </SectionContent>
-    </Section>
+    <ResearchEmpty>
+      <StateBlock
+        kind="empty"
+        icon={SearchX}
+        heading={emptyDatasetHeading(dataset)}
+        description={`0 saved rows for ${scope}. Requests can incur charges even when no results are returned, so check the website and market before reviewing another analysis.`}
+        headingLevel={2}
+      />
+    </ResearchEmpty>
   );
 }
 

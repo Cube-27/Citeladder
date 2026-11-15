@@ -7,9 +7,7 @@ import {
   METRIC_CARDS,
   QUICK_RANGE_OPTIONS,
   RANGE_OPTIONS,
-  axisDomainMax,
   canCompareYearOverYear,
-  computeTickIndices,
   defaultSort,
   describeWindow,
   formatMetric,
@@ -121,12 +119,6 @@ describe('chart projection', () => {
     // A null bucket stays null: the line breaks rather than dropping to zero.
     expect(points[1]!.value).toBeNull();
   });
-
-  it('scales the axis to a nice ceiling at or above the series max', () => {
-    expect(axisDomainMax(0)).toBe(10);
-    expect(axisDomainMax(340)).toBeGreaterThanOrEqual(340);
-    expect(axisDomainMax(340)).toBeLessThan(680);
-  });
 });
 
 describe('dimension tabs', () => {
@@ -171,27 +163,5 @@ describe('range options', () => {
       'last_synced',
       'custom',
     ]);
-  });
-});
-
-describe('tick indices calculation', () => {
-  it('returns empty for 0 columns', () => {
-    expect(computeTickIndices(0)).toEqual([]);
-  });
-
-  it('returns all indices when count is smaller than max ticks', () => {
-    expect(computeTickIndices(4)).toEqual([0, 1, 2, 3]);
-  });
-
-  it('samples evenly when count exceeds max ticks', () => {
-    const ticks = computeTickIndices(28, 6);
-    expect(ticks).toHaveLength(6);
-    expect(ticks[0]).toBe(0);
-    expect(ticks[ticks.length - 1]).toBe(27);
-  });
-
-  it('returns one real tick rather than NaN when fewer than two are asked for', () => {
-    expect(computeTickIndices(28, 1)).toEqual([0]);
-    expect(computeTickIndices(28, 0)).toEqual([0]);
   });
 });

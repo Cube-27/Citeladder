@@ -11,6 +11,9 @@ import { httpErrorStatus } from '@/lib/api/errors';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
+import { IssuesSummaryLoading } from '@/components/site-health/issues-summary';
+import { Section } from '@/components/ui/section';
+import { Skeleton } from '@/components/ui/skeleton';
 
 /**
  * Issues screen container (Slice 8, mockup 710).
@@ -40,7 +43,10 @@ function IssuesDataRegion({
   if (dashboard.isLoading)
     return (
       <CollectionPage>
-        <StateBlock kind="loading" label="Loading issues…" />
+        <IssuesSummaryLoading />
+        <Section>
+          <Skeleton variant="table" columns={4} rows={8} label="Loading issues" />
+        </Section>
       </CollectionPage>
     );
 
@@ -121,7 +127,7 @@ function IssuesLoadedRegion({
           kind="empty"
           icon={ICONS.issues}
           heading="No Website crawl yet"
-          description="Run a crawl in Website to discover and analyze this project's pages — grouped issues will appear here once a crawl finishes."
+          description="Issue types appear here once a Website crawl finishes. Run one from Website."
           action={
             <Button variant="secondary" asChild>
               <ProjectLink href="/site">Go to Website</ProjectLink>

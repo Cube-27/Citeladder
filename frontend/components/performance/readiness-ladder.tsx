@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 
+import { RefreshCw } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { RungTrail, type RungStatus } from '@/components/ui/rung-trail';
 import { textRole } from '@/components/ui/typography';
@@ -13,7 +16,7 @@ import { pollReadiness } from '@/lib/performance/status';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { formatWindowDate } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
-import { wellClasses } from '@/components/ui/slip';
+import { Section } from '@/components/ui/section';
 
 /**
  * Where a freshly connected project's data actually is.
@@ -99,6 +102,7 @@ export function ReadinessLadder({
         recovery={
           sync ? (
             <Button type="button" variant="secondary" onClick={sync}>
+              <Icon icon={RefreshCw} />
               Sync again
             </Button>
           ) : undefined
@@ -109,28 +113,24 @@ export function ReadinessLadder({
 
   const reached = stageIndex(data.stage);
   return (
-    <Stack
-      as="section"
-      gap="compact"
-      className={wellClasses()}
-      aria-label="Data readiness"
-      data-testid="readiness-ladder"
-    >
-      <RungTrail
-        orientation="horizontal"
-        label="Readiness stages"
-        steps={LADDER.map((step, index) => ({
-          id: step.stage,
-          label: step.label,
-          status: ladderStepState(index, reached),
-        }))}
-      />
-      <p className={textRole('caption')}>
-        {EXPLANATION[data.stage]}
-        {data.imported_through
-          ? ` Imported through ${formatWindowDate(data.imported_through)}.`
-          : ''}
-      </p>
-    </Stack>
+    <Section aria-label="Data readiness" data-testid="readiness-ladder">
+      <Stack gap="compact">
+        <RungTrail
+          orientation="horizontal"
+          label="Readiness stages"
+          steps={LADDER.map((step, index) => ({
+            id: step.stage,
+            label: step.label,
+            status: ladderStepState(index, reached),
+          }))}
+        />
+        <p className={textRole('caption')}>
+          {EXPLANATION[data.stage]}
+          {data.imported_through
+            ? ` Imported through ${formatWindowDate(data.imported_through)}.`
+            : ''}
+        </p>
+      </Stack>
+    </Section>
   );
 }

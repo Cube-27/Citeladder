@@ -147,8 +147,9 @@ type ViewKey = 'monitored' | 'all' | 'errors';
 
 const VIEWS: ReadonlyArray<{ key: ViewKey; label: string }> = [
   { key: 'monitored', label: 'Monitored' },
-  { key: 'all', label: 'All Discovered' },
-  { key: 'errors', label: 'Errors & Blocked' },
+  // Short labels keep the view switch, search, page kind and Export on one row at 982.
+  { key: 'all', label: 'All discovered' },
+  { key: 'errors', label: 'Errors' },
 ];
 
 /** What each view asks the pages endpoint for. */
@@ -216,8 +217,8 @@ type ExportPages = Readonly<{ onExport: () => void; exporting: boolean }>;
 
 /**
  * The page browser's toolbar, in the table's own header row because it scopes
- * this table alone: the Monitored / All Discovered / Errors & Blocked
- * view, All filters (page kind), then Export at the end. Both choices are
+ * this table alone: the Monitored / All discovered / Errors (failed or
+ * blocked) view, All filters (page kind), then Export at the end. Both choices are
  * server-backed and live in the address.
  */
 function usePagesToolbar(active: boolean, exportPages: ExportPages | undefined): FilterBarProps {
@@ -231,7 +232,7 @@ function usePagesToolbar(active: boolean, exportPages: ExportPages | undefined):
         // the monitored view lists audited pages for the whole active run.
         options={VIEWS.map((item) => ({
           value: item.key,
-          label: active && item.key === 'monitored' ? 'Audited so far' : item.label,
+          label: active && item.key === 'monitored' ? 'Audited' : item.label,
         }))}
         ariaLabel="Page inventory views"
       />
@@ -345,7 +346,7 @@ function ScoredInventoryState({
     }),
   });
   // B3 (SH-4): the root fetch's failed calls ride the pages response. They
-  // render ONLY on the Errors & Blocked view, above the table, as a distinct
+  // render ONLY on the Errors view, above the table, as a distinct
   // non-clickable block — the `error_or_blocked` filter keeps its real-page
   // semantics (a root failure never created a page row).
   const rootErrors = view === 'errors' ? (page?.root_errors ?? []) : [];
