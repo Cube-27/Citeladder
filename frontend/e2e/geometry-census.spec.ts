@@ -56,9 +56,12 @@ const TAG_HEIGHT = 24;
 /** Text controls have one horizontal padding; icon-only controls are square, with none. */
 const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
-/** Tabs and segments are text on a hairline: no padding, 16 between labels (3.1). */
-const TAB_PADDING_X = 0;
-const TAB_GAP = 16;
+/** A page's tab row (`--page-tabs-height`); section tab rows are one control high. */
+const PAGE_TABS_HEIGHT = 40;
+/** Tabs are text on a hairline with 12 each side and 4 between; segments no padding and 16 between. */
+const TAB_PADDING_X = 12;
+const TAB_GAP = 4;
+const SEGMENT_GAP = 16;
 /** The sidebar's project and account buttons: control-lg, 44, at 982 and at 1280. */
 const SIDEBAR_IDENT_HEIGHT = 44;
 /**
@@ -196,11 +199,17 @@ function measure({ route }: { route: string }) {
   // Tabs and segmented switches are measured by their track: the tabs and
   // segments sit inside it.
   for (const element of all('[role="tablist"]'))
-    add('tab.height', element, element.getBoundingClientRect().height);
+    add(
+      element.closest('[data-page-band="tabs"]') ? 'page-tab.height' : 'tab.height',
+      element,
+      element.getBoundingClientRect().height,
+    );
   for (const element of all('[role="tab"]'))
     add('tab.padding-x', element, px(getComputedStyle(element).paddingLeft));
-  for (const element of all('[role="tablist"], [data-segmented-track] > [role="radiogroup"]'))
+  for (const element of all('[role="tablist"]'))
     add('tab.gap', element, px(getComputedStyle(element).columnGap));
+  for (const element of all('[data-segmented-track] > [role="radiogroup"]'))
+    add('segment.gap', element, px(getComputedStyle(element).columnGap));
   for (const element of all(
     '[data-segmented-track], [role="radiogroup"]:not([data-segmented-track] *)',
   )) {
@@ -613,6 +622,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'input.height', CONTROL_HEIGHT);
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);
   expectOneValue(records, 'tab.height', CONTROL_HEIGHT);
+  expectOneValue(records, 'page-tab.height', PAGE_TABS_HEIGHT);
   expectOneValue(records, 'segmented.height', CONTROL_HEIGHT);
   expectOneValue(records, 'nav-row.height', NAV_ROW_HEIGHT);
   expectOneValue(records, 'header-cluster.height', CONTROL_HEIGHT);
@@ -622,6 +632,7 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'button.padding-x.icon', ICON_CONTROL_PADDING_X);
   expectOneValue(records, 'tab.padding-x', TAB_PADDING_X);
   expectOneValue(records, 'tab.gap', TAB_GAP);
+  expectOneValue(records, 'segment.gap', SEGMENT_GAP);
   expectOneValue(records, 'sidebar-ident.height', SIDEBAR_IDENT_HEIGHT);
   expectOneValue(records, 'masthead.bottom', MASTHEAD_HEIGHT);
   expectOneValue(records, 'band.gap', BAND_GAP);

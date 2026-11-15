@@ -569,6 +569,10 @@
 @utility shadow-control {
   box-shadow: var(--shadow-control);
 }
+/* A `rule` hairline drawn inside an element's foot, so a tab row keeps its height. */
+@utility rule-below {
+  box-shadow: inset 0 -1px 0 var(--color-rule);
+}
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
 }

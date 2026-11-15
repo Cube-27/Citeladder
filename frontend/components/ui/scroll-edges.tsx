@@ -135,7 +135,7 @@ export function ScrollFrame({
   if (stepper === 'row-end') {
     const forward = state.edges.end || !state.edges.start;
     return (
-      <div {...state.frame} className={cn('flex min-w-0 items-stretch', className)}>
+      <div {...state.frame} className={cn('flex min-w-0 items-center', className)}>
         <div className="flex min-w-0 flex-1">{children(state.ref, state.region)}</div>
         {state.scrolls ? (
           <ScrollStep

@@ -14,14 +14,15 @@ import { cn } from '@/lib/utils';
 
 /**
  * Tabs and Segmented: text on a hairline. The strip is
- * one row with a 1px `rule` under it that scrolls sideways inside itself
- * (its scrollbar hidden) when its items overflow; each item is `body` in
- * `ink-2`, and the current one is `ink` at `label` weight with the 2px
- * accent underline ("you are here") on the hairline. One face for page tabs,
- * in-section tabs and the Segmented view switch.
+ * one row with a 1px `rule` drawn inside its foot (`rule-below`, so the row
+ * keeps its height) that scrolls sideways inside itself (its scrollbar
+ * hidden) when its items overflow; each item is `body` in `ink-2`, and the
+ * current one is `ink` at `label` weight with the 2px accent underline
+ * ("you are here") on the hairline. One face for page tabs, in-section tabs
+ * and the Segmented view switch.
  */
 const TAB_STRIP =
-  'relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto shadow-[inset_0_-1px_0_var(--color-rule)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'rule-below relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
  * The strip's `ScrollFrame`: the edge that hides more items fades, and one
@@ -48,21 +49,31 @@ function StripFrame({
 
 /**
  * One item: the label, and the current item's accent rung on the hairline.
- * A page tab fills the tabs row (40, 44 below 900px or under a coarse
- * pointer) with 12 each side and hovers on a 6% tile inset 4 top and bottom;
- * a segment is one control high with no padding.
+ * A page tab fills the page's tabs row (40), a section tab is one control
+ * high (32); both are 44 below 900px or under a coarse pointer, take 12 each
+ * side and hover on a 6% tile inset 4 top and bottom. A segment is one
+ * control high with no padding.
  */
+type TabKind = 'page' | 'section' | 'segment';
+
+const TAB_KIND: Record<TabKind, string> = {
+  page: 'min-h-[var(--page-tabs-height,var(--control-md))]',
+  section: 'min-h-[var(--control-md)]',
+  segment: 'min-h-[var(--control-md)]',
+};
+
 function tabFace({
+  kind,
   selected,
-  segment = false,
   className,
-}: Readonly<{ selected: boolean; segment?: boolean; className?: string }>) {
+}: Readonly<{ kind: TabKind; selected: boolean; className?: string }>) {
+  const tab = kind !== 'segment';
   return cn(
     'focus-ring-inset type-body relative inline-flex shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
-    segment
-      ? 'min-h-[var(--control-md)]'
-      : 'isolate min-h-[var(--page-tabs-height,var(--control-md))] px-3 before:absolute before:inset-x-0 before:inset-y-1 before:-z-10 before:rounded-mark before:content-[""]',
-    !segment && !selected && 'not-disabled:hover:before:bg-state-hover',
+    TAB_KIND[kind],
+    tab &&
+      'isolate px-3 before:absolute before:inset-x-0 before:inset-y-1 before:-z-10 before:rounded-mark before:content-[""]',
+    tab && !selected && 'not-disabled:hover:before:bg-state-hover',
     'after:absolute after:inset-x-0 after:bottom-0 after:h-[var(--mark-width)] after:content-[""]',
     selected
       ? 'text-ink after:bg-accent font-medium'
@@ -166,7 +177,7 @@ export type TabRowProps<T extends string = string> = Readonly<
  * view, search or action stays the band under it.
  */
 export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowProps<T>) {
-  return <TabStrip items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;
+  return <TabStrip kind="page" items={items} ariaLabel={ariaLabel} onIntent={onIntent} />;
 }
 
 /**
@@ -179,7 +190,8 @@ function TabStrip<T extends string>({
   className,
   onIntent,
   fill = false,
-}: Readonly<TabStripProps<T>>) {
+  kind = 'section',
+}: Readonly<TabStripProps<T> & { kind?: Exclude<TabKind, 'segment'> }>) {
   const active = useContext(ActiveTabContext);
   return (
     <StripFrame fill={fill}>
@@ -201,6 +213,7 @@ function TabStrip<T extends string>({
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
               }}
               className={tabFace({
+                kind,
                 selected: item.value === active,
                 className: fill ? 'min-w-max flex-1 basis-0' : undefined,
               })}
@@ -370,7 +383,7 @@ export function SegmentedControl<T extends string>({
                     event.preventDefault();
                     move(index, delta);
                   }}
-                  className={tabFace({ selected, segment: true })}
+                  className={tabFace({ kind: 'segment', selected })}
                 >
                   {option.label}
                   {/* Each part leads with a space, so the radio's accessible name
@@ -422,7 +435,7 @@ export function SegmentedAction({
   }
 >) {
   return (
-    <button {...props} type="button" className={tabFace({ selected, segment: true, className })}>
+    <button {...props} type="button" className={tabFace({ kind: 'segment', selected, className })}>
       <span className="inline-grid justify-items-center">
         {labels.map((reserved) => (
           <span key={reserved} aria-hidden="true" className="invisible col-start-1 row-start-1">
