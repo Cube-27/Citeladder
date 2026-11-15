@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { AppGrid } from '@/components/ui/app-grid';
-import { formatChartCount } from '@/components/ui/chart';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { StepChart, type TrendPoint } from '@/components/ui/step-chart';
@@ -9,6 +8,7 @@ import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
+import { formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -79,7 +79,7 @@ export function SearchIntelligenceHistory({
           name="Backlinks"
           data={points((row) => row.backlinks)}
           yFormat={compactCount}
-          format={formatChartCount}
+          format={formatCount}
         />
       </Stack>
       <Stack gap="compact" className="min-w-0 content-start">
@@ -90,7 +90,7 @@ export function SearchIntelligenceHistory({
           data={points((row) => row.new)}
           series={[{ label: 'Lost backlinks', values: data.map((row) => row.lost) }]}
           yFormat={compactCount}
-          format={formatChartCount}
+          format={formatCount}
         />
       </Stack>
     </AppGrid>

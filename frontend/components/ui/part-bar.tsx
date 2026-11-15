@@ -1,6 +1,14 @@
-import { chartPercent, formatChartCount } from '@/components/ui/chart';
-import { SERIES_FILL, seriesTone, type SeriesTone } from '@/components/ui/step-chart-parts';
+import { useContext } from 'react';
+
+import { chartPercent } from '@/components/ui/chart';
+import {
+  SERIES_FILL,
+  SeriesTonesContext,
+  seriesTone,
+  type SeriesTone,
+} from '@/components/ui/step-chart-parts';
 import { textRole } from '@/components/ui/typography';
+import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 export type Part = Readonly<{
@@ -8,8 +16,10 @@ export type Part = Readonly<{
   value: number;
   /** Your own share: the accent. At most one part is you. */
   you?: boolean;
-  /** The merged remainder: hatched, so it never reads as another part. */
+  /** The merged remainder: `data-other`, so it never reads as another brand. */
   other?: boolean;
+  /** Who the part is (a rival's domain), for its page-wide colour; defaults to `label`. */
+  identity?: string;
   /**
    * A part that is a status (an issue severity), not a brand: it takes the
    * hue of that status's mark, and its direct label carries the word.
@@ -30,13 +40,14 @@ const DIRECT_LABEL_SHARE = 0.18;
 /**
  * PartBar — part to whole as one stacked bar with direct labels (brand
  * direction 3.3: no donuts, rings or pies). Square-ended segments start at
- * zero, divided by 2px gaps; you take the accent, the rest take ink and the
- * cool hues in order, and the merged remainder is hatched. A wide segment
- * names its share right under itself; narrow ones are named in a row after.
- * One image to assistive technology, named with every share and count.
+ * zero, divided by 2px gaps; you take the accent, rivals their page-wide
+ * identity colours (`SeriesTonesContext`, else ink and the cool hues in
+ * order), and the merged remainder `data-other`. A wide segment names its
+ * share right under itself; narrow ones are named in a row after. One image
+ * to assistive technology, named with every share and count.
  *
  * When `total` exceeds the parts, the rest belongs to no part: it stays an
- * unfilled `rule` track listed as `remainderLabel`, so the parts are never
+ * unfilled `well` track listed as `remainderLabel`, so the parts are never
  * stretched to a whole they do not cover.
  */
 export function PartBar({
@@ -44,7 +55,7 @@ export function PartBar({
   total,
   totalLabel,
   remainderLabel = 'Unclassified',
-  format = formatChartCount,
+  format = formatCount,
   label,
   className,
 }: Readonly<{
@@ -65,13 +76,15 @@ export function PartBar({
   const whole = Math.max(total ?? sum, sum);
   const remainder = whole - sum;
   const hasYou = shown.some((part) => part.you);
+  const known = useContext(SeriesTonesContext);
   const entries = shown.map((part, index) => {
     // Rivals take their hues in order, after you and never counting the remainder.
     const rank = shown.slice(0, index).filter((before) => !before.you && !before.other).length;
     const slot = hasYou ? rank + 1 : rank;
-    const tone: SeriesTone = part.you ? 'you' : seriesTone(part, slot, hasYou);
-    let fill: string = tone === 'other' ? 'hatch' : SERIES_FILL[tone];
-    if (part.status) fill = STATUS_FILL[part.status];
+    const placed = seriesTone(part, slot, hasYou);
+    let tone: SeriesTone = part.you ? 'you' : placed;
+    if (!part.you && !part.other) tone = known?.get(part.identity ?? part.label) ?? placed;
+    const fill = part.status ? STATUS_FILL[part.status] : SERIES_FILL[tone];
     return { ...part, tone, fill, share: whole ? part.value / whole : 0 };
   });
   const rows = [
@@ -82,7 +95,7 @@ export function PartBar({
             label: remainderLabel,
             value: remainder,
             tone: null,
-            fill: 'bg-rule',
+            fill: 'bg-well',
             share: remainder / whole,
           },
         ]
@@ -97,7 +110,7 @@ export function PartBar({
     <div className={cn('flex min-w-0 flex-col gap-2', className)}>
       {totalLabel ? (
         <p className={textRole('caption')}>
-          <span className="type-data text-ink">{format(whole)}</span> {totalLabel}
+          <span className="type-emphasis text-ink tabular-nums">{format(whole)}</span> {totalLabel}
         </p>
       ) : null}
       <div // NOSONAR -- the segments are one picture of a whole; <img> cannot hold them
@@ -117,7 +130,7 @@ export function PartBar({
             />
           ) : null,
         )}
-        {whole === 0 ? <span className="bg-rule block h-full grow" /> : null}
+        {whole === 0 ? <span className="bg-well block h-full grow" /> : null}
       </div>
       <div aria-hidden className="flex min-w-0 gap-0.5">
         {rows.map((row) =>
@@ -161,7 +174,7 @@ function PartLabel({
       <span className={textRole('caption', 'truncate')} title={label}>
         {label}
       </span>
-      <span className="type-data-sm text-ink whitespace-nowrap">
+      <span className="type-caption text-ink whitespace-nowrap tabular-nums">
         {share} <span className="text-ink-2">{value}</span>
       </span>
     </span>

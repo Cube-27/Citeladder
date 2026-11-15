@@ -64,7 +64,7 @@ export function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape
           x={8}
           y={5}
           shape={shape}
-          className={cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-ground')}
+          className={cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-surface')}
         />
       </svg>
     );
@@ -155,7 +155,10 @@ export function ChartTipSheet({
   );
 }
 
-/** Every value of a chart, for a reader who cannot see the plot. */
+/**
+ * Every value of a chart, and every drawn marker, for a reader who cannot see
+ * the plot: one row per series, values right-aligned under right-aligned heads.
+ */
 export function ChartTable({
   label,
   columns,
@@ -175,7 +178,7 @@ export function ChartTable({
           <tr>
             <th scope="col">Series</th>
             {columns.map((column, index) => (
-              <th key={`${column}-${index}`} scope="col">
+              <th key={`${column}-${index}`} scope="col" className="text-right">
                 {column}
               </th>
             ))}
@@ -186,7 +189,9 @@ export function ChartTable({
             <tr key={row.name}>
               <th scope="row">{row.name}</th>
               {row.values.map((value, index) => (
-                <td key={`${columns[index]}-${index}`}>{value}</td>
+                <td key={`${columns[index]}-${index}`} className="text-right tabular-nums">
+                  {value}
+                </td>
               ))}
             </tr>
           ))}

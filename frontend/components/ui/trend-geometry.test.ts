@@ -29,6 +29,33 @@ describe('trendScale', () => {
     expect(scale.xAt(0.5)).toBe(206);
   });
 
+  it('places measurements by date, so an uneven gap looks uneven', () => {
+    const scale = trendScale({
+      width: 400,
+      height: 200,
+      lines: [[1, 2, 3]],
+      timestamps: [0, 1 * DAY, 4 * DAY],
+      tickWidth: () => 3,
+    });
+    // 276px between the insets: day 1 of 4 is a quarter of the way along.
+    expect([0, 1, 2].map(scale.x)).toEqual([68, 137, 344]);
+  });
+
+  it('draws at most the gridlines it is allowed, the floor included', () => {
+    const ticks = (maxTicks?: number) =>
+      trendScale({
+        width: 400,
+        height: 200,
+        lines: [[0, 87]],
+        timestamps: [0, DAY],
+        tickWidth: () => 3,
+        tickCount: 5,
+        maxTicks,
+      }).ticks;
+    expect(ticks()).toEqual([0, 20, 40, 60, 80, 100]);
+    expect(ticks(4)).toEqual([0, 50, 100]);
+  });
+
   it('uses the whole width of a plot too narrow for the insets', () => {
     const scale = scaleOf(2, 160);
     expect([scale.x(0), scale.x(1)]).toEqual([36, 136]);

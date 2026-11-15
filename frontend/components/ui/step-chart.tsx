@@ -1,6 +1,6 @@
 import { useId, useState, type ComponentProps, type KeyboardEvent } from 'react';
 
-import { CHART_HEIGHT_PX, useChartWidth } from '@/components/ui/chart';
+import { CHART_HEIGHT_PX, chartPath, useChartWidth } from '@/components/ui/chart';
 import {
   ChartFrame,
   ChartKey,
@@ -13,15 +13,15 @@ import {
   EndLabels,
   EventTicks,
   GapBands,
-  HatchPattern,
   LABEL_CHAR_WIDTH,
   MARKER_SHAPES,
   Markers,
   SERIES_STROKE,
+  YouFill,
+  areaPath,
   gapBands,
   placeEndLabels,
-  seriesTone,
-  stepPath,
+  useSeriesTones,
   type MarkerShape,
   type SeriesTone,
 } from '@/components/ui/step-chart-parts';
@@ -31,6 +31,8 @@ import {
   trendScale,
   type TrendScale,
 } from '@/components/ui/trend-geometry';
+import { textRole } from '@/components/ui/typography';
+import { Value } from '@/components/ui/value';
 import { availabilityLabel } from '@/lib/format';
 
 export type TrendPoint = {
@@ -38,7 +40,7 @@ export type TrendPoint = {
   label: string;
   /** The short form under the axis, when `label` is too long to sit there. */
   axisLabel?: string;
-  /** Null is a missing period: a hatched band, never a drop to zero. */
+  /** Null is a missing period: a `well` band with its word, never a drop to zero. */
   value: number | null;
   /** Measured under a changed method: marked across the plot, with its note. */
   versionChange?: { note: string } | null;
@@ -54,6 +56,8 @@ export type TrendSeries = {
   values: readonly (number | null)[];
   /** The merged remainder, in `data-other`, so it never reads as a brand. */
   other?: boolean;
+  /** Who the line is (a rival's domain), for its page-wide colour; defaults to `label`. */
+  identity?: string;
 };
 
 /** Something that happened at a moment: an ink tick on the time axis with its flag. */
@@ -69,6 +73,8 @@ type Line = {
 const TIP_WIDTH = 216;
 /** Markers are drawn while every one still has room. */
 const MARKER_LIMIT = 40;
+/** At most four gridlines, the floor included. */
+const MAX_GRIDLINES = 4;
 const defaultFormat = (value: number) => `${Math.round(value * 100) / 100}`;
 
 /**
@@ -92,11 +98,14 @@ function StepChartKeys({
 }
 
 /**
- * StepChart — a time series as steps: each measurement
- * holds until the next, with a square marker per point up to 40. Your line
- * is the accent at 2px with filled markers; rivals take ink and the cool hues
- * at 1.5px with hollow markers. A missing period breaks the line and shows a
- * hatched band with its word; nothing is interpolated. Lines are named at
+ * StepChart — a time series as straight segments between measurements, on a
+ * time axis proportional to the dates, with a round marker per point up to
+ * 40. Your line is the accent at 2px with filled markers and a soft accent
+ * fill under it; rivals take their page-wide identity colours
+ * (`SeriesTonesContext`) at 1.5px with hollow markers. A missing period breaks
+ * the line and shows a `well` band with its word; nothing is interpolated.
+ * A chart whose lines hold one measurement each is no chart: each line prints
+ * as a figure with its date. Lines are named at
  * their right end with their latest value (dated when it is older than the
  * last point), and a key replaces the labels when they would collide or a
  * line has no value to label.
@@ -144,25 +153,37 @@ export function StepChart({
 }>) {
   const [plotRef, width] = useChartWidth<HTMLDivElement>();
   const [active, setActive] = useState<number | null>(null);
-  const hatch = `gap-hatch-${useId().replaceAll(':', '')}`;
+  const fillId = `you-fill-${useId().replaceAll(':', '')}`;
   const height = CHART_HEIGHT_PX[heightRole];
   const plotted: readonly Readonly<{
     name: string;
+    identity: string;
     values: readonly (number | null)[];
     other?: boolean;
   }>[] = [
-    { name: name ?? label, values: data.map((point) => point.value) },
-    ...series
-      .slice(0, 3)
-      .map((entry) => ({ name: entry.label, values: entry.values, other: entry.other })),
+    { name: name ?? label, identity: name ?? label, values: data.map((point) => point.value) },
+    ...series.slice(0, 3).map((entry) => ({
+      name: entry.label,
+      identity: entry.identity ?? entry.label,
+      values: entry.values,
+      other: entry.other,
+    })),
   ];
+  const tones = useSeriesTones(plotted, you);
   const toned = plotted.map((line, index) => ({
     name: line.name,
     values: line.values,
-    tone: seriesTone(line, index, you),
+    tone: tones[index] ?? 'other',
   }));
   const shown = (value: number | null | undefined) =>
     value === null || value === undefined ? availabilityLabel('not_measured') : format(value);
+  if (data.length > 0 && toned.every((line) => measuredCount(line.values) <= 1)) {
+    return (
+      <ChartFrame height={heightRole}>
+        <SingleMeasurements label={label} data={data} lines={toned} format={format} />
+      </ChartFrame>
+    );
+  }
   const latestOf = (line: Pick<Line, 'values'>) => line.values[lastMeasured(line.values)] ?? null;
   const latestText = (line: Pick<Line, 'values'>) => {
     const at = lastMeasured(line.values);
@@ -186,6 +207,7 @@ export function StepChart({
       yMax,
       padRight,
       tickCount: 3,
+      maxTicks: MAX_GRIDLINES,
       tickWidth: (ticks) => Math.max(...ticks.map((tick) => yFormat(tick).length)),
     });
   const labelled = scaleFor(gutter);
@@ -200,7 +222,7 @@ export function StepChart({
   const keyed = !endLabels && toned.length > 1;
   const lines: Line[] = toned.map((line, index) => ({
     ...line,
-    shape: keyed ? (MARKER_SHAPES[index % MARKER_SHAPES.length] ?? 'square') : 'square',
+    shape: keyed ? (MARKER_SHAPES[index % MARKER_SHAPES.length] ?? 'circle') : 'circle',
   }));
   const count = data.length;
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -256,7 +278,7 @@ export function StepChart({
             height={height}
             active={active}
             yFormat={yFormat}
-            hatch={hatch}
+            fillId={fillId}
             endLabels={endLabels}
             events={placed}
           />
@@ -314,6 +336,52 @@ function summarise(
   return `${label}. ${parts.join('; ')}.`;
 }
 
+function measuredCount(values: readonly (number | null)[]) {
+  return values.filter((value) => value !== null).length;
+}
+
+/**
+ * One measurement per line draws no line: each line is a figure (its name,
+ * its value and the date it was measured), in the chart's footprint.
+ */
+function SingleMeasurements({
+  label,
+  data,
+  lines,
+  format,
+}: Readonly<{
+  label: string;
+  data: readonly TrendPoint[];
+  lines: readonly Readonly<{ name: string; values: readonly (number | null)[] }>[];
+  format: (value: number) => string;
+}>) {
+  return (
+    <ul
+      aria-label={label}
+      data-single-measurement=""
+      className="flex flex-wrap content-start gap-8"
+    >
+      {lines.map((line) => {
+        const at = lastMeasured(line.values);
+        const value = line.values[at];
+        const point = at >= 0 ? data[at] : undefined;
+        return (
+          <li key={line.name} className="flex min-w-0 flex-col gap-2">
+            <span className={textRole('body', 'text-ink-2 truncate')}>{line.name}</span>
+            <Value
+              text="figure"
+              value={value === null || value === undefined ? null : format(value)}
+            />
+            {point ? (
+              <span className={textRole('caption')}>{`Measured ${point.label}`}</span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 /** The index of the latest measured value, or -1. */
 function lastMeasured(values: readonly (number | null)[]) {
   for (let index = values.length - 1; index >= 0; index -= 1)
@@ -334,7 +402,7 @@ function StepPlot({
   height,
   active,
   yFormat,
-  hatch,
+  fillId,
   endLabels,
   events,
 }: Readonly<{
@@ -345,7 +413,7 @@ function StepPlot({
   height: number;
   active: number | null;
   yFormat: (value: number) => string;
-  hatch: string;
+  fillId: string;
   endLabels: ReturnType<typeof placeEndLabels>;
   events: ReturnType<typeof placedEvents>;
 }>) {
@@ -354,7 +422,7 @@ function StepPlot({
   const markers = data.length <= MARKER_LIMIT;
   // Past the limit a keyed chart still marks its labelled points: the shape names the line.
   const sparse = new Set(labelledIndexes(scale, data.length));
-  const keyed = lines.some((line) => line.shape !== 'square');
+  const keyed = lines.some((line) => line.shape !== 'circle');
   return (
     <svg
       aria-hidden
@@ -364,15 +432,11 @@ function StepPlot({
       viewBox={`0 0 ${width} ${height}`}
       className="block overflow-visible"
     >
-      <defs>
-        <HatchPattern id={hatch} />
-      </defs>
       <GapBands
         bands={gapBands(lines[0]?.values ?? [], scale)}
         top={scale.padTop}
         bottom={bottom}
-        hatch={hatch}
-        word={availabilityLabel('not_measured').toLowerCase()}
+        word={availabilityLabel('not_measured')}
       />
       {scale.ticks.map((tick) => {
         const y = Math.round(scale.y(tick)) + 0.5;
@@ -439,11 +503,13 @@ function StepPlot({
         const marked = markedPoints(points, { markers, keyed, sparse });
         return (
           <g key={line.name} data-trend-line={line.tone}>
+            {line.tone === 'you' ? <YouFill id={fillId} d={areaPath(points, bottom)} /> : null}
             <path
-              d={stepPath(points)}
+              d={chartPath(points)}
               fill="none"
               strokeWidth={line.tone === 'you' ? 2 : 1.5}
-              strokeLinejoin="miter"
+              strokeLinejoin="round"
+              strokeLinecap="round"
               className={SERIES_STROKE[line.tone]}
             />
             {marked ? <Markers points={marked} tone={line.tone} shape={line.shape} /> : null}

@@ -13,7 +13,7 @@ import {
   type ChartHeight,
   type ChartTone,
 } from '@/components/ui/chart';
-import { ChartKey, ChartTipSheet } from '@/components/ui/chart-frame';
+import { ChartKey, ChartTable, ChartTipSheet } from '@/components/ui/chart-frame';
 import type { SeriesTone } from '@/components/ui/step-chart-parts';
 import {
   breakConnectors,
@@ -24,7 +24,6 @@ import {
   type TrendScale,
 } from '@/components/ui/trend-geometry';
 import { LineEndLabels } from '@/components/ui/trend-line-labels';
-import { TrendTable } from '@/components/ui/trend-table';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -197,12 +196,21 @@ export function TrendChart({
           />
         )}
       </div>
-      <TrendTable
+      <ChartTable
         label={label}
-        data={data}
-        lines={lines}
-        events={placedEvents(data, events, scale).map(({ event }) => event)}
-        shown={shown}
+        columns={data.map((point) => point.label)}
+        rows={lines.map((line) => ({
+          name: line.name,
+          values: data.map((_, index) => shown(line.values[index])),
+        }))}
+        notes={[
+          ...data.flatMap((point) =>
+            point.versionChange
+              ? [`Method changed at ${point.label}: ${point.versionChange.note}`]
+              : [],
+          ),
+          ...placedEvents(data, events, scale).map(({ event }) => event.label),
+        ]}
       />
     </div>
   );
