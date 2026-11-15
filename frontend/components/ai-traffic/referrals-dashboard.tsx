@@ -1,7 +1,7 @@
 import { SearchX } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
+import { AppGrid } from '@/components/ui/app-grid';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { StepChart, type TrendPoint } from '@/components/ui/step-chart';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
@@ -28,7 +28,9 @@ import {
   SectionContent,
   SectionDescription,
   SectionHeader,
+  SectionStack,
   SectionTitle,
+  TitledSection,
 } from '@/components/ui/section';
 
 const REFERRAL_VIEWS = [
@@ -49,7 +51,7 @@ export function AiReferralsDashboard({
   // The view is in the URL like every other tab, so it links and Back returns to it.
   const [tab, setTab] = useUrlState('referrals_view', viewCodec);
   return (
-    <Stack gap="workspace" aria-busy={fetching}>
+    <SectionStack aria-busy={fetching}>
       <ReferralQuality data={data} />
       <Tabs
         value={tab}
@@ -58,15 +60,14 @@ export function AiReferralsDashboard({
         spaced
         items={REFERRAL_VIEWS}
       >
-        {/* The tab strip, the cards and the comparison are blocks: 12 apart. */}
         <TabPanel value="overview">
-          <Stack gap="workspace">
-            <Stack gap="workspace" className="desktop:grid-cols-2">
+          <SectionStack>
+            <AppGrid layout="halves">
               <ReferralVolumeCard data={data} />
               <ReferralShareCard data={data} />
-            </Stack>
+            </AppGrid>
             <ReferralComparison data={data} />
-          </Stack>
+          </SectionStack>
         </TabPanel>
         <TabPanel value="sources">
           <SourceTotals data={data} />
@@ -75,7 +76,7 @@ export function AiReferralsDashboard({
           <ReferralLandingPages data={data} />
         </TabPanel>
       </Tabs>
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -155,7 +156,7 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
   const total = totalSourceSessions(data.sources);
   const measured = data.referral_volume.some((point) => point.value !== null);
   return (
-    <DataTable
+    <TitledSection
       title="AI referral sources"
       description={
         <>
@@ -166,38 +167,42 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
           . Shares use all GA4 source-report sessions as the denominator.
         </>
       }
-      columns={sourceColumns(data.currency_code)}
-      minWidth="lg"
-      state={
-        data.sources.length
-          ? undefined
-          : {
-              kind: 'empty',
-              icon: SearchX,
-              heading: measured
-                ? 'GA4 data was measured, but no sessions matched a known AI source in this window'
-                : 'AI-referral classification is not complete for this window, so source totals are unavailable',
-            }
-      }
     >
-      <SourceTotalsRows data={data} />
-    </DataTable>
+      <DataTable
+        label="AI referral sources"
+        columns={sourceColumns(data.currency_code)}
+        minWidth="lg"
+        state={
+          data.sources.length
+            ? undefined
+            : {
+                kind: 'empty',
+                icon: SearchX,
+                heading: measured
+                  ? 'GA4 data was measured, but no sessions matched a known AI source in this window'
+                  : 'AI-referral classification is not complete for this window, so source totals are unavailable',
+              }
+        }
+      >
+        <SourceTotalsRows data={data} />
+      </DataTable>
+    </TitledSection>
   );
 }
 
 function sourceColumns(currency: string | null): DataTableColumn[] {
   return [
     { key: 'source', label: 'Source' },
-    { key: 'sessions', label: 'Sessions', width: 'figure', numeric: true },
-    { key: 'share', label: 'Share of GA4 sessions', width: 'metric', numeric: true },
-    { key: 'engagement', label: 'Engagement rate', width: 'metric', numeric: true },
-    { key: 'key-events', label: 'Key events', width: 'figure', numeric: true },
-    { key: 'transactions', label: 'Transactions', width: 'figure', numeric: true },
+    { key: 'sessions', label: 'Sessions', width: 'figure', kind: 'number' },
+    { key: 'share', label: 'Share of GA4 sessions', width: 'metric', kind: 'number' },
+    { key: 'engagement', label: 'Engagement rate', width: 'metric', kind: 'number' },
+    { key: 'key-events', label: 'Key events', width: 'figure', kind: 'number' },
+    { key: 'transactions', label: 'Transactions', width: 'figure', kind: 'number' },
     {
       key: 'revenue',
       label: `Purchase revenue (${currency ?? 'currency unavailable'})`,
       width: 'metric',
-      numeric: true,
+      kind: 'number',
     },
   ];
 }

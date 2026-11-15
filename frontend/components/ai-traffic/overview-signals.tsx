@@ -22,6 +22,7 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
+  TitledSection,
 } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Stack } from '@/components/ui/layout';
@@ -30,9 +31,9 @@ type Overview = z.infer<typeof aiTrafficOverviewSchema>;
 type CrawlSummary = z.infer<typeof crawlSummarySchema>;
 
 const PURPOSE_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'day', label: 'Reporting day', width: 'date' },
+  { key: 'day', label: 'Reporting day', kind: 'date' },
   { key: 'purpose', label: 'Purpose' },
-  { key: 'requests', label: 'Requests', width: 'figure', numeric: true },
+  { key: 'requests', label: 'Requests', width: 'figure', kind: 'number' },
 ];
 
 /** Rows per page of the daily purpose table (client-side; the series arrives whole). */
@@ -233,27 +234,29 @@ export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['s
   const rows = [...series].reverse();
   const { page, setPage, pageCount, from, to } = useTablePage(rows.length, PURPOSE_PAGE_SIZE);
   return (
-    <DataTable
-      title="Recognized requests by purpose"
-      columns={PURPOSE_COLUMNS}
-      minWidth="sm"
-      pageSize={PURPOSE_PAGE_SIZE}
-      rowCount={Math.min(PURPOSE_PAGE_SIZE, to - from + 1)}
-      pager={{
-        range: { from, to, total: rows.length, noun: 'rows' },
-        ...pageNumberControls(page, pageCount, setPage),
-      }}
-    >
-      {rows.slice(from - 1, to).map((s) => (
-        <TableRow key={s.date + s.purpose}>
-          <TableCell className="type-data">
-            <time dateTime={s.date}>{formatWindowDate(s.date)}</time>
-          </TableCell>
-          <TableCell>{words(s.purpose)}</TableCell>
-          <TableCell numeric>{formatCount(s.requests)}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Recognized requests by purpose">
+      <DataTable
+        label="Recognized requests by purpose"
+        columns={PURPOSE_COLUMNS}
+        minWidth="sm"
+        pageSize={PURPOSE_PAGE_SIZE}
+        rowCount={Math.min(PURPOSE_PAGE_SIZE, to - from + 1)}
+        pager={{
+          range: { from, to, total: rows.length, noun: 'rows' },
+          ...pageNumberControls(page, pageCount, setPage),
+        }}
+      >
+        {rows.slice(from - 1, to).map((s) => (
+          <TableRow key={s.date + s.purpose}>
+            <TableCell>
+              <time dateTime={s.date}>{formatWindowDate(s.date)}</time>
+            </TableCell>
+            <TableCell>{words(s.purpose)}</TableCell>
+            <TableCell numeric>{formatCount(s.requests)}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 

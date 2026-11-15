@@ -229,12 +229,9 @@ describe('AI Traffic state and navigation', () => {
       renderWithProviders(
         <InsightStrip projectId={project.id} workspaceId={project.workspace_id} range="30d" />,
       );
-      await waitFor(() =>
-        expect(screen.queryByText('Loading persisted insights…')).not.toBeInTheDocument(),
-      );
       // The card holds its slot either way, so the Overview below never jumps up.
+      expect(await screen.findByText(shown)).toBeVisible();
       expect(screen.getByText('Observed patterns')).toBeVisible();
-      expect(screen.getByText(shown)).toBeVisible();
     },
   );
   it('creates an Amazon CloudFront source with its buffer interval and shows the Firehose endpoint', async () => {

@@ -17,7 +17,6 @@ import { MISSING_MARK, formatCount, formatWindowDate } from '@/lib/format';
 import { CalendarX, SearchX } from 'lucide-react';
 import { TabPanel } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Stack } from '@/components/ui/layout';
 import { TableRow, TableCell, TableCellLines, TableTime } from '@/components/ui/table';
 import { CrawlLogConnections } from './crawl-log-connections';
 import { InsightStrip } from './insight-strip';
@@ -25,31 +24,31 @@ import { OverviewFigures, RequestsByPurpose } from './overview-signals';
 import { CrawlerPages } from './crawler-pages';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
-import { SectionStack } from '@/components/ui/section';
+import { SectionStack, TitledSection } from '@/components/ui/section';
 
 const CRAWLER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'crawler', label: 'Crawler', width: 'name' },
   { key: 'purpose', label: 'Purpose', width: 'category' },
-  { key: 'requests', label: 'Requests', width: 'figure', numeric: true },
-  { key: 'pages', label: 'Path-level pages', width: 'metric', numeric: true },
-  { key: 'last-seen', label: 'Last observed', width: 'date', numeric: true },
+  { key: 'requests', label: 'Requests', width: 'figure', kind: 'number' },
+  { key: 'pages', label: 'Path-level pages', width: 'metric', kind: 'number' },
+  { key: 'last-seen', label: 'Last observed', width: 'date', kind: 'date' },
   { key: 'status', label: 'Status and verification' },
   { key: 'breakdown', label: 'Folder and resource breakdown' },
 ];
 const COVERAGE_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'day', label: 'Day', width: 'date' },
+  { key: 'day', label: 'Day', kind: 'date' },
   { key: 'source', label: 'Source', width: 'name' },
   { key: 'coverage', label: 'Coverage' },
-  { key: 'counts', label: 'Batch / heartbeat count', width: 'metric', numeric: true },
-  { key: 'gap', label: 'Longest receipt gap', width: 'metric', numeric: true },
+  { key: 'counts', label: 'Batch / heartbeat count', width: 'metric', kind: 'number' },
+  { key: 'gap', label: 'Longest receipt gap', width: 'metric', kind: 'number' },
 ];
 
 const ACTIVITY_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'observed', label: 'Observed', width: 'date', numeric: true },
+  { key: 'observed', label: 'Observed', width: 'date', kind: 'date' },
   { key: 'bot', label: 'Bot', width: 'status' },
   { key: 'path', label: 'Host and path' },
   { key: 'resource', label: 'Resource', width: 'status' },
-  { key: 'status', label: 'Status', width: 'figure', numeric: true },
+  { key: 'status', label: 'Status', width: 'figure', kind: 'number' },
   { key: 'verification', label: 'Verification' },
 ];
 export function TrafficOverview({
@@ -69,14 +68,16 @@ export function TrafficOverview({
   const crawlConnected = data.crawl.connection !== 'not_connected';
   return (
     <TabPanel value="overview">
+      {/* The figures lead: they say what the window measured before the
+          patterns read across it. */}
       <SectionStack>
-        <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />
         <OverviewFigures
           data={data}
           projectId={projectId}
           crawlAvailable={crawlAvailable}
           onConnectCrawl={() => setConnectOpen(true)}
         />
+        <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />
         {data.crawl.series.length ? <RequestsByPurpose series={data.crawl.series} /> : null}
         {crawlAvailable ? (
           <CrawlLogConnections
@@ -113,7 +114,7 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
       aiTrafficQueries.crawlers({ workspaceId, projectId }, { ...filters, ...request }),
     noun: 'crawlers',
     loading: 'Loading crawlers…',
-    error: 'Could not read crawlers',
+    error: "Couldn't load the crawlers",
     empty: () =>
       noMatches(
         'No matching requests were observed',
@@ -122,7 +123,7 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
   });
   return (
     <TabPanel value="crawlers">
-      <Stack gap="workspace">
+      <SectionStack>
         {/* Status and breakdown stack their qualifiers: two-line rows. */}
         <DataTable
           label="Recognized crawlers"
@@ -145,7 +146,7 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
                   {b.pages ?? MISSING_MARK} paths
                 </Button>
               </TableCell>
-              <TableCell numeric>
+              <TableCell>
                 <TableTime value={b.last_seen} />
               </TableCell>
               <TableCell>
@@ -164,7 +165,7 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
           ))}
         </DataTable>
         {page?.items.length === 0 ? <CrawlLogConnections /> : null}
-      </Stack>
+      </SectionStack>
       <CrawlerPages
         botId={botId}
         onClose={() => setBotId(null)}
@@ -187,7 +188,8 @@ function catalogState(
     return {
       kind: 'error',
       ...readErrorProps(catalog),
-      fallback: 'Could not read the crawler catalog, so bots cannot be named',
+      title: "Couldn't load the crawler catalog",
+      fallback: 'Without it the bots in this table cannot be named.',
     };
   if (catalog.isPending) return { kind: 'loading', label: 'Loading the crawler catalog…' };
   return undefined;
@@ -203,7 +205,7 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
       aiTrafficQueries.activity({ workspaceId, projectId }, { ...filters, ...request }),
     noun: 'requests',
     loading: 'Loading request activity…',
-    error: 'Could not read request activity',
+    error: "Couldn't load the request activity",
     empty: () =>
       noMatches(
         'No matching requests',
@@ -212,7 +214,7 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
   });
   return (
     <TabPanel value="activity">
-      <Stack gap="workspace">
+      <SectionStack>
         <DataTable
           label="Retained automated request activity"
           columns={ACTIVITY_COLUMNS}
@@ -223,7 +225,7 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
         >
           {page?.items.map((r) => (
             <TableRow key={r.id}>
-              <TableCell numeric>
+              <TableCell>
                 <TableTime value={r.occurred_at} />
               </TableCell>
               <TableCell>
@@ -256,7 +258,7 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
           ))}
         </DataTable>
         {page?.items.length === 0 ? <CrawlLogConnections /> : null}
-      </Stack>
+      </SectionStack>
     </TabPanel>
   );
 }
@@ -298,7 +300,7 @@ function CoverageTable({
       aiTrafficQueries.coverage({ workspaceId, projectId }, { range, ...request }),
     noun: 'reporting days',
     loading: 'Loading coverage…',
-    error: 'Could not read coverage',
+    error: "Couldn't load the coverage",
     empty: () => ({
       kind: 'empty',
       icon: CalendarX,
@@ -306,31 +308,33 @@ function CoverageTable({
     }),
   });
   return (
-    <DataTable
-      title="Coverage by source and reporting day"
-      columns={COVERAGE_COLUMNS}
-      minWidth="md"
-      // Every row stacks a qualifier under its value.
-      rowLines={2}
-      {...table}
-    >
-      {data?.items.map((r) => (
-        <TableRow key={r.source_id + r.reporting_date + r.reporting_timezone}>
-          <TableCell>
-            <CellLines lines={[formatWindowDate(r.reporting_date), r.reporting_timezone]} />
-          </TableCell>
-          <TableCell>
-            <SourceLines source={data.sources.find((s) => s.id === r.source_id)} />
-          </TableCell>
-          <TableCell>
-            <CellLines lines={[coverageLabel(r.coverage), reasonLabel(r.reason)]} />
-          </TableCell>
-          <TableCell numeric>
-            {formatCount(r.batch_count)} / {formatCount(r.heartbeat_count)}
-          </TableCell>
-          <TableCell numeric>{r.max_gap_minutes.toFixed(1)} minutes</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Coverage by source and reporting day">
+      <DataTable
+        label="Coverage by source and reporting day"
+        columns={COVERAGE_COLUMNS}
+        minWidth="md"
+        // Every row stacks a qualifier under its value.
+        rowLines={2}
+        {...table}
+      >
+        {data?.items.map((r) => (
+          <TableRow key={r.source_id + r.reporting_date + r.reporting_timezone}>
+            <TableCell>
+              <CellLines lines={[formatWindowDate(r.reporting_date), r.reporting_timezone]} />
+            </TableCell>
+            <TableCell>
+              <SourceLines source={data.sources.find((s) => s.id === r.source_id)} />
+            </TableCell>
+            <TableCell>
+              <CellLines lines={[coverageLabel(r.coverage), reasonLabel(r.reason)]} />
+            </TableCell>
+            <TableCell numeric>
+              {formatCount(r.batch_count)} / {formatCount(r.heartbeat_count)}
+            </TableCell>
+            <TableCell numeric>{r.max_gap_minutes.toFixed(1)} minutes</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }

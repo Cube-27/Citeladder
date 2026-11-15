@@ -9,93 +9,99 @@ import { reasonLabel } from '@/lib/ai-traffic/vocabulary';
 import { Absence } from '@/components/ui/absence';
 import { TrafficUrlButton } from './url-panel';
 import { Notice } from '@/components/ui/notice';
+import { TitledSection } from '@/components/ui/section';
 
 const COMPARISON_COLUMNS: readonly DataTableColumn[] = [
   { key: 'channel', label: 'Channel' },
-  { key: 'sessions', label: 'Sessions', width: 'figure', numeric: true },
-  { key: 'engagement', label: 'Engagement rate', width: 'metric', numeric: true },
-  { key: 'key-events', label: 'Key events', width: 'figure', numeric: true },
+  { key: 'sessions', label: 'Sessions', width: 'figure', kind: 'number' },
+  { key: 'engagement', label: 'Engagement rate', width: 'metric', kind: 'number' },
+  { key: 'key-events', label: 'Key events', width: 'figure', kind: 'number' },
 ];
 const LANDING_COLUMNS: readonly DataTableColumn[] = [
   { key: 'path', label: 'Landing path' },
   { key: 'source', label: 'Source', width: 'status' },
-  { key: 'sessions', label: 'Sessions', width: 'figure', numeric: true },
-  { key: 'key-events', label: 'Key events', width: 'figure', numeric: true },
+  { key: 'sessions', label: 'Sessions', width: 'figure', kind: 'number' },
+  { key: 'key-events', label: 'Key events', width: 'figure', kind: 'number' },
   { key: 'quality', label: 'Quality' },
 ];
 
 export function ReferralComparison({ data }: Readonly<{ data: AiReferrals }>) {
   return (
-    <DataTable
+    <TitledSection
       title="Property-wide channel comparison"
       description="GA4 sessions, engagement rate and key events as configured in your property."
-      columns={COMPARISON_COLUMNS}
     >
-      {data.channel_comparison.map((r) => (
-        <TableRow key={r.channel}>
-          <TableCell>{r.channel}</TableCell>
-          <TableCell numeric>
-            <Measure value={r.sessions} format={formatCount} />
-          </TableCell>
-          <TableCell numeric>
-            <Measure value={r.engagement_rate} format={formatPercent} />
-          </TableCell>
-          <TableCell numeric>
-            <Measure value={r.key_events} format={formatCount} />
-          </TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+      <DataTable label="Property-wide channel comparison" columns={COMPARISON_COLUMNS}>
+        {data.channel_comparison.map((r) => (
+          <TableRow key={r.channel}>
+            <TableCell>{r.channel}</TableCell>
+            <TableCell numeric>
+              <Measure value={r.sessions} format={formatCount} />
+            </TableCell>
+            <TableCell numeric>
+              <Measure value={r.engagement_rate} format={formatPercent} />
+            </TableCell>
+            <TableCell numeric>
+              <Measure value={r.key_events} format={formatCount} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 export function ReferralLandingPages({ data }: Readonly<{ data: AiReferrals }>) {
   return (
-    <DataTable
+    <TitledSection
       title="AI referral landing pages"
       description={
         <>
-          Host-scoped path identities · {data.reporting_timezone ?? 'Timezone unavailable'} ·{' '}
+          Pages on your site · {data.reporting_timezone ?? 'Timezone unavailable'} ·{' '}
           {data.unattributed_landing === null
-            ? 'Unattributed landing sessions unavailable.'
-            : `${formatCount(data.unattributed_landing)} unattributed landing sessions.`}
+            ? 'Sessions whose landing page could not be identified: unavailable.'
+            : `${formatCount(data.unattributed_landing)} sessions whose landing page could not be identified.`}
         </>
       }
-      columns={LANDING_COLUMNS}
-      minWidth="md"
-      state={
-        data.landing_pages.length
-          ? undefined
-          : {
-              kind: 'empty',
-              icon: SearchX,
-              heading:
-                'No identifiable AI referrals to joinable landing paths were observed in the saved report',
-            }
-      }
     >
-      {data.landing_pages.map((r) => (
-        <TableRow key={r.url_hash + r.ai_source}>
-          <TableCell>
-            <TrafficUrlButton
-              urlHash={r.url_hash}
-              filters={{ start_date: data.window_start, end_date: data.window_end }}
-            >
-              <ClampText lines={1}>{new URL(r.canonical_url).pathname}</ClampText>
-            </TrafficUrlButton>
-          </TableCell>
-          <TableCell>{aiSourceLabel(r.ai_source)}</TableCell>
-          <TableCell numeric>
-            <Measure value={r.sessions} format={formatCount} />
-          </TableCell>
-          <TableCell numeric>
-            <Measure value={r.key_events} format={formatCount} />
-          </TableCell>
-          <TableCell>
-            {r.analytics_quality.map(reasonLabel).join('; ') || 'No quality flags'}
-          </TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+      <DataTable
+        label="AI referral landing pages"
+        columns={LANDING_COLUMNS}
+        minWidth="md"
+        state={
+          data.landing_pages.length
+            ? undefined
+            : {
+                kind: 'empty',
+                icon: SearchX,
+                heading:
+                  'No identifiable AI referrals to joinable landing paths were observed in the saved report',
+              }
+        }
+      >
+        {data.landing_pages.map((r) => (
+          <TableRow key={r.url_hash + r.ai_source}>
+            <TableCell>
+              <TrafficUrlButton
+                urlHash={r.url_hash}
+                filters={{ start_date: data.window_start, end_date: data.window_end }}
+              >
+                <ClampText lines={1}>{new URL(r.canonical_url).pathname}</ClampText>
+              </TrafficUrlButton>
+            </TableCell>
+            <TableCell>{aiSourceLabel(r.ai_source)}</TableCell>
+            <TableCell numeric>
+              <Measure value={r.sessions} format={formatCount} />
+            </TableCell>
+            <TableCell numeric>
+              <Measure value={r.key_events} format={formatCount} />
+            </TableCell>
+            <TableCell>
+              {r.analytics_quality.map(reasonLabel).join('; ') || 'No quality flags'}
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 export function ReferralQuality({ data }: Readonly<{ data: AiReferrals }>) {

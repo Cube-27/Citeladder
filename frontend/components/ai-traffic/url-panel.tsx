@@ -93,7 +93,8 @@ export function UrlPanel({
         <StateBlock
           kind="error"
           error={query.error}
-          fallback="Could not read URL evidence"
+          title="Couldn't load this page's AI Traffic"
+          fallback="The request failed or timed out."
           onRetry={() => query.refetch()}
         />
       ) : null}
