@@ -1,4 +1,4 @@
-import { CreditCard, ExternalLink } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 
 import {
   billingDetailsError,
@@ -19,9 +19,9 @@ import { contactSalesHref } from '@/lib/config/contact';
 
 import { Button } from '@/components/ui/button';
 import { ControlRow } from '@/components/ui/control-row';
-import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
+import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 
 export function PlanRow({
@@ -59,16 +59,15 @@ export function PlanRow({
       data-tier={plan.key}
       controls={
         plan.contact_only ? (
-          <Button asChild variant="secondary">
-            <ExternalHttpLink
-              href={contactSalesHref(
-                plan.contact_url,
-                new URL(websiteHref('/contact'), 'https://citeladder.com').href,
-              )}
-            >
-              Contact sales <Icon icon={ExternalLink} />
-            </ExternalHttpLink>
-          </Button>
+          <TextLink
+            variant="external"
+            href={contactSalesHref(
+              plan.contact_url,
+              new URL(websiteHref('/contact'), 'https://citeladder.com').href,
+            )}
+          >
+            Contact sales
+          </TextLink>
         ) : (
           <Button
             variant="secondary"

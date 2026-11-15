@@ -4,8 +4,14 @@ import { Button } from '@/components/ui/button';
 import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
   BillingCatalog,
   BillingEntitlement,
@@ -31,7 +37,7 @@ export type PlanChangeControls = {
 
 type Option = { plan: CatalogPlan; key: SelfServePlanKey; direction: PlanChangeDirection };
 
-function changeOptions(catalog: BillingCatalog, current: CatalogPlan): Option[] {
+export function changeOptions(catalog: BillingCatalog, current: CatalogPlan): Option[] {
   return catalog.plans.flatMap((plan) => {
     const key = plan.key;
     const direction = planChangeDirection(current, plan);
@@ -71,14 +77,15 @@ export function PlanChanges({
       subscription.scheduled_change.state !== 'provider_rejected');
   if (options.length === 0) return null;
   return (
-    // A section of the Plan card, so no card of its own.
-    <Stack as="section" gap="compact" aria-labelledby="plan-changes-title">
-      <EditorialSectionHeader
-        headingId="plan-changes-title"
-        title="Change plan"
-        description="Upgrades start as soon as the prorated charge for the rest of this period is paid. Downgrades take effect at your next renewal, with no refund for the current period."
-      />
-      <Stack gap="compact">
+    <Section id="change-plan" aria-labelledby="plan-changes-title">
+      <SectionHeader>
+        <SectionTitle id="plan-changes-title">Change plan</SectionTitle>
+        <SectionDescription>
+          Upgrades start as soon as the prorated charge for the rest of this period is paid.
+          Downgrades take effect at your next renewal, with no refund for the current period.
+        </SectionDescription>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="compact">
         {options.map((option) => (
           <ControlRow
             key={option.key}
@@ -108,49 +115,49 @@ export function PlanChanges({
             ) : null}
           </ControlRow>
         ))}
+        {options.some(
+          (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
+        ) ? (
+          <p className="type-caption">Upgrades are unavailable while checkout is closed.</p>
+        ) : null}
+        {controls.downgradeError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(controls.downgradeError, {
+              action: 'schedule the downgrade',
+            })}
+          />
+        ) : null}
+        <Dialog
+          open={downgradeTo !== null}
+          onOpenChange={(open) => {
+            if (!open) setDowngradeTo(null);
+          }}
+          title={downgradeTo ? `Downgrade to ${downgradeTo.plan.name}` : 'Downgrade'}
+          description="The downgrade takes effect at your next renewal."
+          footer={
+            <>
+              <Button variant="quiet" onClick={() => setDowngradeTo(null)}>
+                Keep {currentPlan.name}
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (downgradeTo) controls.downgrade(downgradeTo.key);
+                  setDowngradeTo(null);
+                }}
+              >
+                Schedule downgrade
+              </Button>
+            </>
+          }
+        >
+          <p className={textRole('body', 'text-ink-2')}>
+            You keep {currentPlan.name} and its allowances until the end of the current period. The
+            current period is not refunded.
+          </p>
+        </Dialog>
       </Stack>
-      {options.some(
-        (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
-      ) ? (
-        <p className="type-caption">Upgrades are unavailable while checkout is closed.</p>
-      ) : null}
-      {controls.downgradeError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(controls.downgradeError, {
-            action: 'schedule the downgrade',
-          })}
-        />
-      ) : null}
-      <Dialog
-        open={downgradeTo !== null}
-        onOpenChange={(open) => {
-          if (!open) setDowngradeTo(null);
-        }}
-        title={downgradeTo ? `Downgrade to ${downgradeTo.plan.name}` : 'Downgrade'}
-        description="The downgrade takes effect at your next renewal."
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setDowngradeTo(null)}>
-              Keep {currentPlan.name}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                if (downgradeTo) controls.downgrade(downgradeTo.key);
-                setDowngradeTo(null);
-              }}
-            >
-              Schedule downgrade
-            </Button>
-          </>
-        }
-      >
-        <p className={textRole('body', 'text-ink-2')}>
-          You keep {currentPlan.name} and its allowances until the end of the current period. The
-          current period is not refunded.
-        </p>
-      </Dialog>
-    </Stack>
+    </Section>
   );
 }

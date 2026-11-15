@@ -5,7 +5,7 @@ import { overviewWidgetTitles, type OverviewWidget } from '@citeladder/contracts
 import { AppGrid } from '@/components/ui/app-grid';
 import { IconButton } from '@/components/ui/button';
 import { FloatingToolbar } from '@/components/ui/workspace';
-import { moveWidget, removeWidget, toggleWidth } from '@/lib/overview/layout';
+import { loneHalves, moveWidget, removeWidget, toggleWidth } from '@/lib/overview/layout';
 import { cn } from '@/lib/utils';
 
 /**
@@ -26,6 +26,7 @@ export function OverviewGrid({
   onChange: (widgets: OverviewWidget[]) => void;
   render: (widget: OverviewWidget) => ReactNode;
 }>) {
+  const lone = loneHalves(widgets);
   return (
     <AppGrid layout="halves">
       {widgets.map((widget, index) => (
@@ -33,7 +34,10 @@ export function OverviewGrid({
         <div
           key={widget.key}
           data-widget={widget.key}
-          className={cn('relative min-w-0', widget.size === 'full' && 'shell:col-span-2')}
+          className={cn(
+            'relative min-w-0',
+            (widget.size === 'full' || lone.has(widget.key)) && 'column-wide:col-span-2',
+          )}
         >
           {render(widget)}
           {editing ? (

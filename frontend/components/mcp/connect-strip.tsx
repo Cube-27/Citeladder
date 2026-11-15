@@ -74,7 +74,15 @@ function useHoverMenu() {
  * button (or ArrowDown from it) offers the other assistants. Shared by
  * Settings and the public site.
  */
-export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
+export function ConnectStrip({
+  className,
+  surface = 'website',
+}: Readonly<{
+  className?: string;
+  /** In the app the strip sits in a page body, so it takes no primary (3.1). */
+  surface?: 'website' | 'app';
+}>) {
+  const inApp = surface === 'app';
   const [primary, ...others] = MCP_CLIENT_LINKS;
   const menu = useHoverMenu();
   const link = useRef<HTMLAnchorElement>(null);
@@ -94,7 +102,7 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
         {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}
         <MenuTrigger asChild>
           <span className="group inline-flex shrink-0">
-            <Button asChild variant="primary">
+            <Button asChild variant={inApp ? 'secondary' : 'primary'}>
               <a
                 ref={link}
                 href={primary.href}
@@ -154,7 +162,11 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
       <Inline>
         <span className={textRole('body', 'text-ink-2 shrink-0')}>MCP URL</span>
         <CodeToken>{MCP_SERVER_URL}</CodeToken>
-        <CopyButton value={MCP_SERVER_URL} variant="quiet" copiedLabel="MCP URL copied">
+        <CopyButton
+          value={MCP_SERVER_URL}
+          variant={inApp ? 'secondary' : 'quiet'}
+          copiedLabel="MCP URL copied"
+        >
           Copy
         </CopyButton>
       </Inline>

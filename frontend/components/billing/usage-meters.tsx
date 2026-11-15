@@ -1,7 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { AppGrid } from '@/components/ui/app-grid';
-import { Stack } from '@/components/ui/layout';
 import {
   Section,
   SectionContent,
@@ -54,16 +53,14 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   return (
     <Section aria-labelledby="usage-title">
       <SectionHeader>
-        <SectionTitle id="usage-title" level={2}>
-          Usage
-        </SectionTitle>
+        <SectionTitle id="usage-title">Usage</SectionTitle>
         <SectionDescription>
           Measured against the allowances your active grants provide.
         </SectionDescription>
       </SectionHeader>
-      <Stack as={SectionContent} gap="workspace">
+      <SectionContent>
         <UsageBody enabled={enabled} query={usageQuery} />
-      </Stack>
+      </SectionContent>
     </Section>
   );
 }
@@ -82,6 +79,7 @@ function UsageBody({
     return (
       <Notice
         kind="read"
+        title="Couldn't load usage"
         {...readErrorProps(query)}
         fallback="Could not load usage. Check your connection and retry."
       />

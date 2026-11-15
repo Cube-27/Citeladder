@@ -2,6 +2,7 @@ import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-quer
 import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
@@ -9,7 +10,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ICONS } from '@/lib/icons';
 import type { McpConnection } from '@citeladder/contracts/mcp';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -51,17 +52,21 @@ function ConnectionRow({
         </div>
       </TableCell>
       <TableActionsCell>
-        <Button variant="secondary" onClick={onRevoke}>
-          {adminView ? 'Remove workspace access' : 'Revoke'}
-        </Button>
+        {adminView ? (
+          <Button variant="danger" onClick={onRevoke}>
+            Remove workspace access
+          </Button>
+        ) : (
+          <ActionButton action="revoke" onClick={onRevoke} />
+        )}
       </TableActionsCell>
     </TableRow>
   );
 }
 
 const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'connection', label: 'Connection' },
-  { key: 'access', label: 'Access', width: 'name', trailing: true, hideLabel: true },
+  { key: 'connection', label: 'Connection', kind: 'identity' },
+  { key: 'access', label: 'Access', kind: 'actions', width: 'name', hideLabel: true },
 ];
 
 /** What the list shows instead of rows: the read's loading, error or empty. */
@@ -73,6 +78,9 @@ function connectionsState(
   if (query.isError)
     return {
       kind: 'error',
+      title: adminView
+        ? "Couldn't load this workspace's connections"
+        : "Couldn't load your connections",
       ...readErrorProps(query),
       fallback: 'Connections could not be loaded.',
     };
@@ -82,6 +90,9 @@ function connectionsState(
     icon: ICONS.agent,
     headingLevel: 3,
     heading: adminView ? 'No connection can read this workspace' : 'No assistant connected yet',
+    description: adminView
+      ? undefined
+      : 'Connect one with the button above; it appears here once you approve it.',
   };
 }
 
@@ -153,21 +164,31 @@ export function McpConnections() {
   const { activeWorkspaceId } = useProjectContext();
   const mayManage = useWorkspaceCapability('manage_members');
   return (
-    <Stack gap="section">
-      <Stack as="section" gap="compact">
-        <EditorialSectionHeader
-          title="Connect an AI assistant"
-          description="Use CiteLadder from Claude, ChatGPT, Gemini, Cursor or Grok."
-        />
-        <ConnectStrip />
-      </Stack>
+    <>
+      <Section aria-labelledby="mcp-connect-title">
+        <SectionHeader>
+          <SectionTitle id="mcp-connect-title">Connect an AI assistant</SectionTitle>
+          <SectionDescription>
+            Use CiteLadder from Claude, ChatGPT, Gemini, Cursor or Grok.
+          </SectionDescription>
+        </SectionHeader>
+        <ConnectStrip surface="app" />
+      </Section>
       {/* Your approvals and the workspace's are peers in one section. */}
-      <Stack gap="workspace">
-        <ConnectionList />
-        {mayManage && activeWorkspaceId ? (
-          <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
-        ) : null}
-      </Stack>
-    </Stack>
+      <Section>
+        <SectionHeader>
+          <SectionTitle>Connections</SectionTitle>
+          <SectionDescription>
+            Assistants you approved, and what each can read. Revoke one to cut it off at once.
+          </SectionDescription>
+        </SectionHeader>
+        <Stack gap="workspace">
+          <ConnectionList />
+          {mayManage && activeWorkspaceId ? (
+            <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
+          ) : null}
+        </Stack>
+      </Section>
+    </>
   );
 }

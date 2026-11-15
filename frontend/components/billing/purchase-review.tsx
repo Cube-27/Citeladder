@@ -2,13 +2,18 @@ import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { BillingCatalog } from '@/lib/api/billing';
 import { catalogPlanByKey, formatMoney } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
-import { slipClasses } from '@/components/ui/slip';
 
 type Checkout = ReturnType<typeof useSubscriptionCheckout>;
 
@@ -41,54 +46,48 @@ export function PurchaseReview({
   const upgradedPlan =
     prepared.kind === 'upgrade' ? catalogPlanByKey(catalog, prepared.catalog_key) : undefined;
   return (
-    <Stack
-      as="section"
-      gap="compact"
-      className={slipClasses()}
-      aria-labelledby="purchase-review-title"
-    >
-      <EditorialSectionHeader
-        headingId="purchase-review-title"
-        title={KIND_TITLE[prepared.kind]}
-        description={
-          <>
-            {itemName(prepared.catalog_key)}
-            {prepared.quantity > 1 ? ` × ${prepared.quantity}` : ''}
-            {prepared.kind === 'upgrade' ? ' · prorated for the rest of this period' : ''}
-          </>
-        }
-      />
-      <BillingQuoteSummary
-        quote={prepared.quote}
-        currencyMinorUnits={catalog.currency_minor_units}
-      />
-      {upgradedPlan?.base_price ? (
-        <p className={textRole('body', 'text-ink-2')}>
-          After this charge, your subscription renews at{' '}
-          {formatMoney(upgradedPlan.base_price, catalog.currency_minor_units)} a month before tax
-          {renewsOn ? (
-            <>
-              , starting <DisplayTime value={renewsOn} dateOnly />
-            </>
-          ) : (
-            ' from your next renewal'
-          )}
-          .
-        </p>
-      ) : null}
-      <CheckoutConsent recurring={prepared.kind === 'base'} />
-      <Inline className="flex-wrap">
-        <Button
-          variant="primary"
-          disabled={checkout.confirming}
-          onClick={() => void checkout.confirmPrepared().catch(() => undefined)}
-        >
-          {checkout.confirming ? 'Opening checkout…' : 'Confirm and pay'}
-        </Button>
-        <Button variant="secondary" disabled={checkout.confirming} onClick={checkout.resetPrepared}>
-          Not now
-        </Button>
-      </Inline>
-    </Stack>
+    <Section aria-labelledby="purchase-review-title">
+      <SectionHeader>
+        <SectionTitle id="purchase-review-title">{KIND_TITLE[prepared.kind]}</SectionTitle>
+        <SectionDescription>
+          {itemName(prepared.catalog_key)}
+          {prepared.quantity > 1 ? ` × ${prepared.quantity}` : ''}
+          {prepared.kind === 'upgrade' ? ' · prorated for the rest of this period' : ''}
+        </SectionDescription>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="compact">
+        <BillingQuoteSummary
+          quote={prepared.quote}
+          currencyMinorUnits={catalog.currency_minor_units}
+        />
+        {upgradedPlan?.base_price ? (
+          <p className={textRole('body', 'text-ink-2')}>
+            After this charge, your subscription renews at{' '}
+            {formatMoney(upgradedPlan.base_price, catalog.currency_minor_units)} a month before tax
+            {renewsOn ? (
+              <>
+                , starting <DisplayTime value={renewsOn} dateOnly />
+              </>
+            ) : (
+              ' from your next renewal'
+            )}
+            .
+          </p>
+        ) : null}
+        <CheckoutConsent recurring={prepared.kind === 'base'} />
+        <Inline className="flex-wrap justify-end">
+          <Button variant="quiet" disabled={checkout.confirming} onClick={checkout.resetPrepared}>
+            Not now
+          </Button>
+          <Button
+            variant="primary"
+            disabled={checkout.confirming}
+            onClick={() => void checkout.confirmPrepared().catch(() => undefined)}
+          >
+            {checkout.confirming ? 'Opening checkout…' : 'Confirm and pay'}
+          </Button>
+        </Inline>
+      </Stack>
+    </Section>
   );
 }

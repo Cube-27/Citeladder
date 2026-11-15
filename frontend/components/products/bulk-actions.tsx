@@ -41,7 +41,7 @@ export function BulkActions({
         </Stack>
         <Inline className="flex-wrap">
           <Button
-            variant="primary"
+            variant="secondary"
             disabled={!count || tooMany}
             pending={pending}
             pendingLabel="Finding…"

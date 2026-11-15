@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
 import { Tag } from '@/components/ui/tag';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -9,9 +10,11 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { ClampText, TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
+import { pluralCount } from '@/lib/format';
 
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
@@ -161,43 +164,52 @@ export function PendingInvitations({
   // Hidden only once a read confirms there is nothing pending; a failed read says so.
   if (!read.isLoading && !read.isError && invitations.length === 0) return null;
   return (
-    <DataTable
-      title="Pending invitations"
-      columns={INVITATION_COLUMNS}
-      state={invitationsState(read)}
-    >
-      {invitations.map((invitation) => (
-        <TableRow key={invitation.id}>
-          <TableCell>
-            <ClampText lines={1}>{invitation.email}</ClampText>
-          </TableCell>
-          <TableCell className="whitespace-nowrap">
-            <Tag>{roleLabel(invitation.role)}</Tag>
-          </TableCell>
-          <TableCell numeric className="type-caption">
-            <TableTime value={invitation.expires_at} />
-          </TableCell>
-          <TableActionsCell>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => onResend(invitation.id)}
-            >
-              Resend
-            </Button>
-            <Button
-              type="button"
-              variant="quiet"
-              disabled={busy}
-              onClick={() => onRevoke(invitation)}
-            >
-              Revoke
-            </Button>
-          </TableActionsCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    // The table is the named region; the section only heads it.
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Pending invitations</SectionTitle>
+        <SectionDescription>
+          {invitations.length
+            ? `${pluralCount(invitations.length, 'invitation')} not yet accepted. Resend a link or revoke it.`
+            : 'Invitations not yet accepted.'}
+        </SectionDescription>
+      </SectionHeader>
+      <DataTable
+        label="Pending invitations"
+        columns={INVITATION_COLUMNS}
+        state={invitationsState(read)}
+      >
+        {invitations.map((invitation) => (
+          <TableRow key={invitation.id}>
+            <TableCell>
+              <ClampText lines={1}>{invitation.email}</ClampText>
+            </TableCell>
+            <TableCell className="whitespace-nowrap">
+              <Tag>{roleLabel(invitation.role)}</Tag>
+            </TableCell>
+            <TableCell>
+              <TableTime value={invitation.expires_at} />
+            </TableCell>
+            <TableActionsCell>
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={busy}
+                onClick={() => onResend(invitation.id)}
+              >
+                Resend
+              </Button>
+              <ActionButton
+                action="revoke"
+                type="button"
+                disabled={busy}
+                onClick={() => onRevoke(invitation)}
+              />
+            </TableActionsCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </Section>
   );
 }
 
@@ -207,6 +219,7 @@ function invitationsState(
   if (read.isError)
     return {
       kind: 'error',
+      title: "Couldn't load pending invitations",
       ...readErrorProps(read),
       fallback: 'Pending invitations could not be loaded.',
     };
@@ -215,8 +228,8 @@ function invitationsState(
 }
 
 const INVITATION_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'invitee', label: 'Invitee' },
-  { key: 'role', label: 'Workspace role', width: 'status' },
-  { key: 'expires', label: 'Link expires', width: 'date', numeric: true },
-  { key: 'access', label: 'Access', width: 'rowActions', trailing: true },
+  { key: 'invitee', label: 'Invitee', kind: 'identity' },
+  { key: 'role', label: 'Workspace role', kind: 'status' },
+  { key: 'expires', label: 'Link expires', kind: 'date', width: 'metric' },
+  { key: 'access', label: 'Access', kind: 'actions', width: 'name' },
 ];

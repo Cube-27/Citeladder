@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { ReportPage } from '@/components/templates/report-page';
 import type { Project } from '@citeladder/contracts';
 import { useProjectCreation } from '@/components/layout/use-project-creation';
@@ -59,19 +60,12 @@ export function ProjectsScreen() {
     );
   }
   if (projects.length === 0) {
+    // The page's one primary sits in the masthead; the empty state names it.
     return (
-      <ReportPage>
-        <StateBlock
-          kind="empty"
-          icon={FolderOpen}
-          heading="No projects yet"
-          description={
-            mayCreate
-              ? 'Add a brand to start tracking how AI answers describe it.'
-              : 'Ask the workspace owner or an admin to add a project.'
-          }
-          action={
-            mayCreate ? (
+      <ReportPage
+        actions={
+          mayCreate ? (
+            <MastheadPrimary>
               <Button
                 variant="primary"
                 disabled={!canAddProject}
@@ -80,7 +74,18 @@ export function ProjectsScreen() {
                 <Icon icon={Plus} />
                 Add project
               </Button>
-            ) : undefined
+            </MastheadPrimary>
+          ) : undefined
+        }
+      >
+        <StateBlock
+          kind="empty"
+          icon={FolderOpen}
+          heading="No projects yet"
+          description={
+            mayCreate
+              ? 'Add project to start tracking how AI answers describe your brand.'
+              : 'Ask the workspace owner or an admin to add a project.'
           }
         />
       </ReportPage>

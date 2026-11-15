@@ -13,9 +13,9 @@ import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspa
 import { ROLE_OPTIONS, roleLabel } from './member-roles';
 
 const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'member', label: 'Member' },
-  { key: 'role', label: 'Workspace role', width: 'name' },
-  { key: 'access', label: 'Access', width: 'rowActions', trailing: true },
+  { key: 'member', label: 'Member', kind: 'identity' },
+  { key: 'role', label: 'Workspace role', kind: 'status', width: 'category' },
+  { key: 'access', label: 'Access', kind: 'actions', width: 'name' },
 ];
 
 /** What the roster shows instead of rows, if anything. */
@@ -36,6 +36,7 @@ function rosterState({
   if (isError)
     return {
       kind: 'error',
+      title: "Couldn't load members",
       error,
       fallback: 'The member list could not be loaded.',
       onRetry,
@@ -51,7 +52,7 @@ function rosterState({
 }
 
 /**
- * The workspace roster, with its search and invite on the table's own header.
+ * The workspace roster, with its search on the table's own header.
  * The Owner row is inert: the single designated Owner changes only through a
  * transfer, which swaps both roles in one server transaction, so no control
  * here can leave the workspace ownerless. Every control reports an intent; the
@@ -73,7 +74,7 @@ export function MemberRoster({
   onRemove,
 }: Readonly<{
   members: readonly WorkspaceMember[];
-  /** The roster's search and invite. */
+  /** The roster's search. */
   toolbar: FilterBarProps;
   /** The search text when it matches nobody; null otherwise. */
   noMatch: string | null;

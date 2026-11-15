@@ -1707,6 +1707,10 @@ a.focus-ring:active .type-caption {
       grid-column: 5 / span 8;
       max-width: var(--container-form);
     }
+    /* A table is not a form row: it takes all eight columns so its priority columns fit. */
+    [data-settings-sections] .surface-section:not(.surface-section .surface-section) > :has([data-data-table-frame]) {
+      max-width: none;
+    }
     [data-settings-sections] .surface-section:not(.surface-section .surface-section) > header:first-child {
       grid-column: 1 / span 4;
       grid-row: 1 / span 16;

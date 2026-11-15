@@ -6,7 +6,11 @@ import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { CurrentPlan, type BillingCancellation } from '@/components/billing/current-plan';
 import { ExtraPurchases, type ExtraPurchase } from '@/components/billing/extra-purchases';
 import { InvoiceHistory } from '@/components/billing/invoice-history';
-import { PlanChanges, type PlanChangeControls } from '@/components/billing/plan-changes';
+import {
+  changeOptions,
+  PlanChanges,
+  type PlanChangeControls,
+} from '@/components/billing/plan-changes';
 import { ChoosePlan, subscribeWith, type NewSubscription } from '@/components/billing/choose-plan';
 import { PurchaseReview } from '@/components/billing/purchase-review';
 import { UsageMeters } from '@/components/billing/usage-meters';
@@ -24,7 +28,10 @@ import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
+import { Button } from '@/components/ui/button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -100,7 +107,51 @@ function currentPlanOf(catalog: BillingCatalog | null, entitlement: BillingEntit
   return catalogPlanByKey(catalog, subscription.catalog_key) ?? null;
 }
 
-/** The dedicated billing section: three cards, Plan, Usage and Invoices. */
+function isSubscribed(entitlement: BillingEntitlement | null): boolean {
+  const status = entitlement?.subscription?.status;
+  return status !== undefined && SUBSCRIBED_STATUSES.has(status);
+}
+
+/**
+ * The page's one next step, in the masthead: changing the plan a workspace
+ * has, or choosing one it lacks. None while a quote is under review, since
+ * its own confirm is then the step.
+ */
+function NextStep({
+  catalog,
+  entitlement,
+  canManage,
+  reviewing,
+}: Readonly<{
+  catalog: BillingCatalog | null;
+  entitlement: BillingEntitlement | null;
+  canManage: boolean;
+  reviewing: boolean;
+}>) {
+  if (!canManage || !catalog || reviewing) return null;
+  const subscription = entitlement?.subscription ?? null;
+  if (subscription?.status === 'pending') return null;
+  const currentPlan = currentPlanOf(catalog, entitlement);
+  if (isSubscribed(entitlement) && currentPlan) {
+    if (changeOptions(catalog, currentPlan).length === 0) return null;
+    return (
+      <Button asChild variant="primary">
+        <a href="#change-plan">Change plan</a>
+      </Button>
+    );
+  }
+  return (
+    <Button asChild variant="primary">
+      <a href="#choose-plan">Choose a plan</a>
+    </Button>
+  );
+}
+
+/**
+ * Billing, in the owner's order (2026-11-10): the plan with everything that
+ * changes it, then usage, then invoices. A prepared purchase is reviewed
+ * right under the plan that started it; the masthead holds the next step.
+ */
 export function BillingScreen() {
   const { isLoading: entitlementLoading } = useEntitlement();
   const workspaceId = useActiveWorkspaceId();
@@ -127,46 +178,57 @@ export function BillingScreen() {
   if (entitlementQuery.isError) {
     return (
       <SettingsPage>
-        <Notice tone="negative">
-          Your entitlement could not be resolved, so no billing change is offered. No paid
-          capability is active until it does; reload the page or contact support.
-        </Notice>
+        <StateBlock
+          kind="error"
+          title="Couldn't load billing"
+          {...readErrorProps(entitlementQuery)}
+          fallback="Your entitlement could not be resolved, so no billing change is offered. No paid capability is active until it does."
+        />
       </SettingsPage>
     );
   }
   const entitlement = entitlementQuery.data ?? null;
   const catalog = catalogQuery.data ?? null;
   const { buyExtra, subscribe } = purchaseActions(checkout, country);
+  const offers = (
+    <PlanOffers
+      catalog={catalog}
+      catalogRead={catalogQuery}
+      entitlement={entitlement}
+      canManage={canManage}
+      checkout={checkout}
+      planChanges={planChanges}
+      onBuyExtra={buyExtra}
+      newSubscription={{ country, setCountry, details, setDetails, subscribe }}
+    />
+  );
 
   return (
-    <SettingsPage>
+    <SettingsPage
+      actions={
+        <MastheadPrimary>
+          <NextStep
+            catalog={catalog}
+            entitlement={entitlement}
+            canManage={canManage}
+            reviewing={checkout.prepared?.status === 'pending'}
+          />
+        </MastheadPrimary>
+      }
+    >
       <CheckoutStatus checkout={checkout} />
       {canManage ? null : (
         <Notice tone="info">
           Only a workspace Owner or Admin can change this workspace’s plan or buy add-ons.
         </Notice>
       )}
-      {/* Three cards (owner, 2026-11-10): the plan with everything that
-          changes it, then usage, then invoices. A prepared purchase is
-          reviewed right under the plan card that started it. */}
       <CurrentPlan
         entitlement={entitlement}
         currentPlan={currentPlanOf(catalog, entitlement)}
         planName={(key) => (catalog ? catalogItemName(catalog, key) : key)}
         canManage={canManage}
         cancellation={cancellation}
-      >
-        <PlanSection
-          catalog={catalog}
-          catalogRead={catalogQuery}
-          entitlement={entitlement}
-          canManage={canManage}
-          checkout={checkout}
-          planChanges={planChanges}
-          onBuyExtra={buyExtra}
-          newSubscription={{ country, setCountry, details, setDetails, subscribe }}
-        />
-      </CurrentPlan>
+      />
       {catalog ? (
         <PurchaseReview
           checkout={checkout}
@@ -175,6 +237,7 @@ export function BillingScreen() {
           renewsOn={entitlement?.subscription?.current_period_end ?? null}
         />
       ) : null}
+      {offers}
       <UsageMeters />
       <InvoiceHistory invoices={invoiceQuery.data ?? []} read={invoiceQuery} />
       <BillingSupport contact={catalog?.support_contact ?? null} />
@@ -182,7 +245,8 @@ export function BillingScreen() {
   );
 }
 
-function PlanSection({
+/** What changes the plan: a plan change and extras for a subscriber, else a new plan. */
+function PlanOffers({
   catalog,
   catalogRead,
   entitlement,
@@ -203,15 +267,22 @@ function PlanSection({
 }>) {
   if (catalogRead.isError) {
     return (
-      <StateBlock
-        kind="error"
-        {...readErrorProps(catalogRead)}
-        fallback="Could not load the plan catalog."
-      />
+      <Section aria-label="Plans">
+        <StateBlock
+          kind="error"
+          title="Couldn't load plans"
+          {...readErrorProps(catalogRead)}
+          fallback="Could not load the plan catalog."
+        />
+      </Section>
     );
   }
   if (catalogRead.isLoading || !catalog)
-    return <StateBlock kind="loading" label="Loading plans…" />;
+    return (
+      <Section aria-label="Plans">
+        <StateBlock kind="loading" label="Loading plans…" />
+      </Section>
+    );
   const subscription = entitlement?.subscription ?? null;
   const currentPlan = subscription ? catalogPlanByKey(catalog, subscription.catalog_key) : null;
   if (subscription && currentPlan && SUBSCRIBED_STATUSES.has(subscription.status)) {

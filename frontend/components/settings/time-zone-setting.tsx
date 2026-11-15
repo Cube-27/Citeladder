@@ -1,16 +1,15 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { textRole } from '@/components/ui/typography';
 import {
   saveTimeZonePreference,
   useDisplayTimeZone,
   useTimeZonePreference,
 } from '@/lib/display-timezone';
-import { Notice } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
 
 type Choice = 'auto' | 'UTC' | 'custom';
@@ -29,68 +28,72 @@ export function TimeZoneSetting() {
   const savedNamedZone = savedChoice === 'custom' ? preference : '';
   const choice = edit?.choice ?? savedChoice;
   const namedZone = edit?.namedZone ?? savedNamedZone;
-  const [error, setError] = useState('');
+  // Each failure belongs to the control that caused it, so its Field can announce it.
+  const [error, setError] = useState<{ at: 'choice' | 'zone'; message: string } | null>(null);
 
   const choose = (next: Choice) => {
-    setError('');
+    setError(null);
     if (next === 'custom') {
       setEdit({ choice: next, namedZone });
     } else if (saveTimeZonePreference(next)) {
       setEdit(null);
     } else {
       setEdit({ choice: next, namedZone });
-      setError('The timezone preference could not be saved on this device.');
+      setError({
+        at: 'choice',
+        message: 'The timezone preference could not be saved on this device.',
+      });
     }
   };
 
   const saveNamedZone = () => {
     if (saveTimeZonePreference(namedZone.trim())) {
       setEdit(null);
-      setError('');
+      setError(null);
     } else {
-      setError('Enter a valid IANA timezone, such as Asia/Kolkata.');
+      setError({ at: 'zone', message: 'Enter a valid IANA timezone, such as Asia/Kolkata.' });
     }
   };
 
   return (
     <Section aria-labelledby="settings-timezone-title">
       <SectionHeader>
-        <SectionTitle id="settings-timezone-title" level={2}>
-          Display timezone
-        </SectionTitle>
+        <SectionTitle id="settings-timezone-title">Display timezone</SectionTitle>
         <SectionDescription>{`Timestamps currently display in ${displayZone}.`}</SectionDescription>
       </SectionHeader>
       <Stack gap="item">
-        <Select
-          value={choice}
-          onValueChange={choose}
-          options={CHOICES}
-          ariaLabel="Display timezone preference"
-          className="max-w-sm"
-        />
+        <Field label="Timezone" error={error?.at === 'choice' ? error.message : undefined}>
+          {(field) => (
+            <Select
+              {...field}
+              value={choice}
+              onValueChange={choose}
+              options={CHOICES}
+              ariaLabel="Display timezone preference"
+              className="max-w-sm"
+            />
+          )}
+        </Field>
         {choice === 'custom' ? (
-          <Stack gap="tight">
-            <label htmlFor="named-display-timezone" className={textRole('body', 'text-ink-2')}>
-              IANA timezone
-            </label>
-            <Inline className="flex-wrap">
-              <Input
-                id="named-display-timezone"
-                value={namedZone}
-                onChange={(event) => {
-                  setEdit({ choice: 'custom', namedZone: event.target.value });
-                }}
-                placeholder="Asia/Kolkata"
-                className="min-w-56 flex-1"
-                aria-invalid={Boolean(error)}
-              />
-              <Button variant="primary" onClick={saveNamedZone}>
-                Save timezone
-              </Button>
-            </Inline>
-          </Stack>
+          <Field label="IANA timezone" error={error?.at === 'zone' ? error.message : undefined}>
+            {(field) => (
+              <Inline className="flex-wrap">
+                <Input
+                  {...field}
+                  value={namedZone}
+                  onChange={(event) => {
+                    setEdit({ choice: 'custom', namedZone: event.target.value });
+                  }}
+                  placeholder="Asia/Kolkata"
+                  className="min-w-56 flex-1"
+                />
+                <Button variant="secondary" onClick={saveNamedZone}>
+                  Save timezone
+                </Button>
+              </Inline>
+            )}
+          </Field>
         ) : null}
-        {error ? <Notice tone="negative">{error}</Notice> : null}
       </Stack>
     </Section>
   );

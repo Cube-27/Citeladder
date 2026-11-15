@@ -1,10 +1,8 @@
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { Inline } from '@/components/ui/layout';
-import { ProjectLink } from '@/components/ui/project-link';
+import { ActionButton } from '@/components/ui/actions';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { Button } from '@/components/ui/button';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import {
@@ -22,7 +20,7 @@ const PAGE_WORKFLOW = 'optimize_page';
  * The open Actions against one catalog product, each with its way into the
  * Agent, and the Agent on the product's own page when no Action names it yet.
  * Commerce Actions come from measured answers, so a new one appears here
- * after the next audit, not from a button.
+ * after the next audit, not from a button. It sits inside the product's Setup.
  */
 export function ProductActions({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   const { actions, product } = detail;
@@ -31,47 +29,40 @@ export function ProductActions({ detail }: Readonly<{ detail: CommerceProductDet
       <SectionHeader
         actions={
           product.url ? (
-            <Button asChild variant="secondary">
-              <ProjectLink
-                href={agentHandoffHref({ targetUrl: product.url, workflowId: PAGE_WORKFLOW })}
-              >
-                Work with the agent
-              </ProjectLink>
-            </Button>
+            <ActionButton
+              action="workWithAgent"
+              href={agentHandoffHref({ targetUrl: product.url, workflowId: PAGE_WORKFLOW })}
+            />
           ) : null
         }
       >
-        <SectionTitle>Actions</SectionTitle>
+        <SectionTitle level={3}>Actions</SectionTitle>
         <SectionDescription>
           Open work that can raise its visibility in AI answers.
         </SectionDescription>
       </SectionHeader>
       <SectionContent>
         {actions.length ? (
-          <ul className={ledgerClasses()}>
+          <LedgerList>
             {actions.map((action) => (
-              <Inline
-                as="li"
+              <LedgerItem
                 key={action.id}
-                gap="compact"
-                className={ledgerItemClasses('flex-wrap')}
-              >
-                <TextLink
-                  href={`/agent/actions/${action.id}`}
-                  text="inherit"
-                  className={textRole('emphasis', 'min-w-0 flex-1')}
-                >
-                  {action.title}
-                </TextLink>
-                <ActionStatusBadge status={action.status} />
-                <Button asChild variant="quiet">
-                  <ProjectLink href={agentHandoffHref({ actionId: action.id })}>
-                    Work with the agent
-                  </ProjectLink>
-                </Button>
-              </Inline>
+                title={
+                  <TextLink href={`/agent/actions/${action.id}`} text="inherit">
+                    {action.title}
+                  </TextLink>
+                }
+                meta={<ActionStatusBadge status={action.status} />}
+                links={
+                  <ActionButton
+                    action="workWithAgent"
+                    href={agentHandoffHref({ actionId: action.id })}
+                    aria-label={`Work with the agent on ${action.title}`}
+                  />
+                }
+              />
             ))}
-          </ul>
+          </LedgerList>
         ) : (
           <p className={textRole('body', 'text-ink-2')}>
             No open Actions for this product. Audits that measure it open Actions when its answers

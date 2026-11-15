@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Spinner } from '@/components/ui/spinner';
+import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
@@ -86,7 +86,7 @@ export function PropertyChoice({
       {suggested ? (
         <Inline className="flex-wrap">
           <Button
-            variant="primary"
+            variant="secondary"
             onClick={() => choose(suggested.property_ref)}
             pending={pendingRef === suggested.property_ref}
             pendingLabel="Importing…"
@@ -139,11 +139,7 @@ function DiscoveryStatus({
       </div>
     );
   if (discovery.isPending)
-    return (
-      <Inline as="output" className="type-caption">
-        <Spinner /> Loading your {noun}s…
-      </Inline>
-    );
+    return <Skeleton variant="row" rows={2} label={`Loading your ${noun}s…`} />;
   return (
     <Notice
       kind="mutation"

@@ -3,9 +3,9 @@ import { useMutation } from '@tanstack/react-query';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { pluralCount } from '@/lib/format';
@@ -61,7 +61,7 @@ export function CategoryMatrixSheet({
   const toggle = (row: BuyerPrompt) =>
     canWrite ? (
       <Button
-        variant={row.enabled ? 'secondary' : 'primary'}
+        variant="secondary"
         disabled={busy}
         onClick={() => decide.mutate({ id: row.id, approved: !row.enabled })}
       >
@@ -74,23 +74,22 @@ export function CategoryMatrixSheet({
     items.length ? (
       <Stack>
         <h3 className={textRole('subheading')}>{title}</h3>
-        <ul className={ledgerClasses()}>
+        <LedgerList>
           {items.map((row) => (
-            <Inline as="li" key={row.id} gap="compact" className={ledgerItemClasses('flex-wrap')}>
-              <span className="text-ink-2 min-w-0 flex-1">
-                {row.text}
-                {row.context ? (
-                  <span className="text-ink-tertiary">
-                    {' '}
-                    · {row.context}
-                    {row.buyer_stage ? `, ${buyerStageLabels[row.buyer_stage]}` : ''}
-                  </span>
-                ) : null}
-              </span>
-              {toggle(row)}
-            </Inline>
+            <LedgerItem
+              key={row.id}
+              title={row.text}
+              caption={
+                row.context
+                  ? [row.context, row.buyer_stage && buyerStageLabels[row.buyer_stage]]
+                      .filter(Boolean)
+                      .join(', ')
+                  : undefined
+              }
+              meta={toggle(row)}
+            />
           ))}
-        </ul>
+        </LedgerList>
       </Stack>
     ) : null;
   return (

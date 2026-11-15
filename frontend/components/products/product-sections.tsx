@@ -4,10 +4,9 @@ import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-dr
 import { StatusMark, type StatusValue } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Inline, Stack } from '@/components/ui/layout';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { Value } from '@/components/ui/value';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { formatCount, pluralCount } from '@/lib/format';
@@ -30,7 +29,7 @@ const OUTCOMES: Record<Answer['outcome'], { label: string; tone: StatusValue }> 
   unranked: { label: 'Unranked', tone: 'info' },
 };
 
-/** One titled card holding a ledger, or a sentence when the ledger is empty. */
+/** One titled section holding a ledger, or a sentence when the ledger is empty. */
 function ProductSection({
   title,
   description,
@@ -45,28 +44,12 @@ function ProductSection({
       </SectionHeader>
       <SectionContent>
         {empty === null ? (
-          <ul className={ledgerClasses()}>{children}</ul>
+          <LedgerList>{children}</LedgerList>
         ) : (
           <p className={textRole('body', 'text-ink-2')}>{empty}</p>
         )}
       </SectionContent>
     </Section>
-  );
-}
-
-function Row({
-  primary,
-  secondary,
-  end,
-}: Readonly<{ primary: ReactNode; secondary?: ReactNode; end?: ReactNode }>) {
-  return (
-    <Inline as="li" gap="compact" className={ledgerItemClasses('flex-wrap')}>
-      <Stack gap="tight" className="min-w-0 flex-1">
-        <span className={textRole('emphasis', 'relative block min-w-0 truncate')}>{primary}</span>
-        {secondary ? <span className="type-caption">{secondary}</span> : null}
-      </Stack>
-      {end}
-    </Inline>
   );
 }
 
@@ -82,19 +65,19 @@ export function CompetingProducts({
       empty={rows.length ? null : 'No other product was named in its answers.'}
     >
       {rows.map((row) => (
-        <Row
+        <LedgerItem
           key={row.holder_id}
-          primary={
+          title={
             <TextLink href={productHref(row.holder_id, scope)} text="inherit">
               {row.name}
             </TextLink>
           }
-          secondary={[
+          caption={[
             holderCaption(row),
             `In ${pluralCount(row.shared, 'shared answer')}`,
             `ranked above it in ${formatCount(row.ahead)}`,
           ].join(' · ')}
-          end={
+          meta={
             <span className="type-caption tabular-nums">
               Position{' '}
               <Value
@@ -117,10 +100,10 @@ export function Merchants({ detail }: Readonly<{ detail: CommerceProductDetail }
       empty={detail.merchants.length ? null : 'No answer named a merchant for it.'}
     >
       {detail.merchants.map((row) => (
-        <Row
+        <LedgerItem
           key={row.domain}
-          primary={row.domain}
-          end={
+          title={row.domain}
+          meta={
             <span className="type-caption tabular-nums">{pluralCount(row.count, 'answer')}</span>
           }
         />
@@ -140,15 +123,15 @@ export function SeenIn({
       empty={detail.seen_in.length ? null : 'No shopping prompt’s answer named it.'}
     >
       {detail.seen_in.map((row) => (
-        <Row
+        <LedgerItem
           key={row.target_id}
-          primary={
+          title={
             <TextLink href={productHref(row.target_id, scope)} text="inherit">
               {row.name}
             </TextLink>
           }
-          secondary={row.target_kind === 'category' ? 'Category' : 'Product'}
-          end={
+          caption={row.target_kind === 'category' ? 'Category' : 'Product'}
+          meta={
             <span className="type-caption tabular-nums">{pluralCount(row.answers, 'answer')}</span>
           }
         />
@@ -165,15 +148,15 @@ export function Sources({ detail }: Readonly<{ detail: CommerceProductDetail }>)
       empty={detail.sources.length ? null : 'The answers that named it cited no pages.'}
     >
       {detail.sources.map((row) => (
-        <Row
+        <LedgerItem
           key={row.url}
-          primary={
+          title={
             <TextLink variant="external" href={row.url} text="inherit">
               {row.title || row.url}
             </TextLink>
           }
-          secondary={row.domain}
-          end={
+          caption={row.domain}
+          meta={
             <span className="type-caption tabular-nums">{pluralCount(row.count, 'answer')}</span>
           }
         />
@@ -194,10 +177,10 @@ export function FanOutQueries({ detail }: Readonly<{ detail: CommerceProductDeta
       }
     >
       {detail.fan_out_queries.map((row) => (
-        <Row
+        <LedgerItem
           key={row.query}
-          primary={row.query}
-          end={
+          title={row.query}
+          meta={
             <span className="type-caption tabular-nums">{pluralCount(row.count, 'answer')}</span>
           }
         />
@@ -214,10 +197,10 @@ export function PromptMetrics({ detail }: Readonly<{ detail: CommerceProductDeta
       empty={detail.prompts.length ? null : 'No prompt named it in this window.'}
     >
       {detail.prompts.map((row) => (
-        <Row
+        <LedgerItem
           key={row.prompt_id ?? row.text}
-          primary={row.text}
-          secondary={
+          title={row.text}
+          caption={
             <>
               Visibility{' '}
               <Value
@@ -259,24 +242,24 @@ export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>)
         empty={detail.answers.length ? null : 'No answer named it in this window.'}
       >
         {detail.answers.map((row) => (
-          <Row
+          <LedgerItem
             key={row.task_id}
-            primary={row.prompt_text}
-            secondary={
+            title={row.prompt_text}
+            caption={
               <>
                 {engines.label(row.engine)} · <DisplayTime value={row.completed_at} dateOnly />
                 {row.rank === null ? null : ` · #${row.rank}`}
               </>
             }
-            end={
-              <Inline gap="compact">
-                <StatusMark variant="status" value={OUTCOMES[row.outcome].tone}>
-                  {OUTCOMES[row.outcome].label}
-                </StatusMark>
-                <Button variant="quiet" onClick={() => setOpen(row)}>
-                  Open answer
-                </Button>
-              </Inline>
+            meta={
+              <StatusMark variant="status" value={OUTCOMES[row.outcome].tone}>
+                {OUTCOMES[row.outcome].label}
+              </StatusMark>
+            }
+            links={
+              <Button variant="secondary" onClick={() => setOpen(row)}>
+                Open answer
+              </Button>
             }
           />
         ))}

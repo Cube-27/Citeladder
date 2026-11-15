@@ -16,7 +16,10 @@ import { OverviewLayoutMenu } from './overview-layout-menu';
 import { OverviewWidgetView } from './overview-widget';
 import { PromptSetupCard } from './prompt-setup-card';
 import { useCommandCenterActions } from './use-command-center-actions';
+import { AppGrid } from '@/components/ui/app-grid';
 import { Notice } from '@/components/ui/notice';
+import { Skeleton } from '@/components/ui/skeleton';
+import { slipClasses } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
 
 export function DashboardScreen({
@@ -38,7 +41,7 @@ export function DashboardScreen({
           kind="error"
           error={commandCenter.error}
           title="Couldn't load the Overview"
-          fallback="The command center could not be loaded."
+          fallback="The Overview's figures could not be loaded."
           onRetry={() => void commandCenter.refetch()}
           pending={commandCenter.isFetching}
         />
@@ -66,10 +69,23 @@ function useWarmWidgets(project: Project, widgets: readonly OverviewWidget[] | u
   }, [client, project, widgets]);
 }
 
+/** Widgets the ruled blank holds a place for: the default layout's first two rows. */
+const LOADING_WIDGETS = 4;
+
+/**
+ * The ruled blank of the widget grid: blank slips where the widgets land, the
+ * first carrying the one live rung, so the page does not move when they do.
+ */
 function DashboardLoading() {
   return (
     <ReportPage>
-      <StateBlock kind="loading" label="Loading the Overview…" />
+      <AppGrid layout="halves" aria-busy="true">
+        {Array.from({ length: LOADING_WIDGETS }, (_, index) => (
+          <div key={index} className={slipClasses('min-h-64')}>
+            {index === 0 ? <Skeleton variant="block" label="Loading the Overview" /> : null}
+          </div>
+        ))}
+      </AppGrid>
     </ReportPage>
   );
 }

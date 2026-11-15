@@ -1,7 +1,8 @@
 import { ArrowRight, Download, TrendingUp } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { ProjectLink } from '@/components/ui/project-link';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { Tag, TagGroup } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
@@ -9,10 +10,10 @@ import { Delta } from '@/components/ui/delta';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { ReorderList } from '@/components/ui/reorder-list';
-import { TextLink } from '@/components/ui/text-link';
+import { ArrowLink, TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
-import { pluralCount } from '@/lib/format';
+import { formatCount, pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
 import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -28,14 +29,9 @@ import {
 } from './dashboard-primitives';
 import { ClampText } from '@/components/ui/table';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionDescription } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+import { WidgetFrame } from './widget-frame';
 
 /**
  * One line over the Overview: the site, and the run it was last tracked in
@@ -85,50 +81,33 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
   const facts = data.facts;
   const offerings = facts.products_services.filter((label) => label.trim());
   return (
-    <Section aria-labelledby="company-facts" className="h-full">
-      <SectionHeader
-        actions={
-          <>
-            <span className={textRole('body', 'text-ink-2')}>
-              {facts.industry || 'Industry not set'}
-            </span>
-            <Button asChild variant="quiet">
-              <ProjectLink href="/agent/context">
-                Edit in Agent context <Icon icon={ArrowRight} />
-              </ProjectLink>
-            </Button>
-          </>
-        }
-      >
-        <SectionTitle id="company-facts">Company facts</SectionTitle>
-      </SectionHeader>
-      <SectionContent>
-        <FigureStrip
-          segments={[
-            {
-              key: 'positioning',
-              label: 'Positioning',
-              value: <FactSummary value={facts.positioning || facts.description} />,
-            },
-            {
-              key: 'audience',
-              label: 'Target audience',
-              value: <FactSummary value={facts.target_audience} />,
-            },
-            {
-              key: 'offerings',
-              label: 'Offerings & competitors',
-              value: offerings.length ? (
-                <TagGroup labels={offerings} />
-              ) : (
-                <Absence state="not_set" />
-              ),
-              sub: pluralCount(facts.competitors.length, 'tracked competitor'),
-            },
-          ]}
-        />
-      </SectionContent>
-    </Section>
+    <WidgetFrame
+      id="company-facts"
+      title="Company facts"
+      description={<SectionDescription>{facts.industry || 'Industry not set'}</SectionDescription>}
+      actions={<ArrowLink href="/agent/context">Edit in Agent context</ArrowLink>}
+    >
+      <FigureStrip
+        segments={[
+          {
+            key: 'positioning',
+            label: 'Positioning',
+            value: <FactSummary value={facts.positioning || facts.description} />,
+          },
+          {
+            key: 'audience',
+            label: 'Target audience',
+            value: <FactSummary value={facts.target_audience} />,
+          },
+          {
+            key: 'offerings',
+            label: 'Offerings & competitors',
+            value: offerings.length ? <TagGroup labels={offerings} /> : <Absence state="not_set" />,
+            sub: pluralCount(facts.competitors.length, 'tracked competitor'),
+          },
+        ]}
+      />
+    </WidgetFrame>
   );
 }
 
@@ -152,6 +131,10 @@ export function DashboardActions({
       <ProjectControls activeProject={activeProject} onEditProject={onEditProject} />
       {layoutMenu}
       <PdfButton downloading={downloading} onDownload={onDownload} />
+      {/* The one primary: the run the Overview's figures come from. */}
+      <MastheadPrimary>
+        <LaunchAuditButton />
+      </MastheadPrimary>
     </>
   );
 }
@@ -241,38 +224,37 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
   // A partial change names the answers it uses, once, under the first figure.
   const note = basis?.kind === 'matched_subset' ? basis.note : undefined;
   return (
-    <Section aria-labelledby="project-state" className="h-full">
-      <SectionHeader actions={<Tag>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Tag>}>
-        <SectionTitle id="project-state">Project state</SectionTitle>
-      </SectionHeader>
-      <SectionContent>
-        <FigureStrip
-          segments={[
-            {
-              ...stateSegment({
-                key: 'visibility',
-                label: 'Visibility',
-                metric: data.state.visibility,
-                kind: 'rate',
-              }),
-              sub: note,
-            },
-            stateSegment({
-              key: 'share',
-              label: 'Share of voice',
-              metric: data.state.share_of_voice,
+    <WidgetFrame
+      id="project-state"
+      title="Project state"
+      actions={<Tag>{data.measurement ? 'Citations measured' : 'Not run'}</Tag>}
+    >
+      <FigureStrip
+        segments={[
+          {
+            ...stateSegment({
+              key: 'visibility',
+              label: 'Visibility',
+              metric: data.state.visibility,
               kind: 'rate',
             }),
-            stateSegment({
-              key: 'rank',
-              label: 'Rank',
-              metric: data.state.brand_rank,
-              kind: 'rank',
-            }),
-          ]}
-        />
-      </SectionContent>
-    </Section>
+            sub: note,
+          },
+          stateSegment({
+            key: 'share',
+            label: 'Share of voice',
+            metric: data.state.share_of_voice,
+            kind: 'rate',
+          }),
+          stateSegment({
+            key: 'rank',
+            label: 'Rank',
+            metric: data.state.brand_rank,
+            kind: 'rank',
+          }),
+        ]}
+      />
+    </WidgetFrame>
   );
 }
 
@@ -286,76 +268,66 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
   const { track } = data;
   const observed = Boolean(track.observed_at);
   return (
-    <Section aria-labelledby="citation-share-track" className="h-full">
-      <SectionHeader
-        actions={
-          <Button asChild variant="quiet">
-            <ProjectLink href="/visibility?tab=trends">
-              Open Trends <Icon icon={ArrowRight} />
-            </ProjectLink>
-          </Button>
-        }
-      >
-        <SectionTitle id="citation-share-track">Owned citation rate</SectionTitle>
-        <SectionDescription>Answers that link to a page you own</SectionDescription>
-      </SectionHeader>
-      <SectionContent>
-        <FigureStrip
-          segments={[
-            {
-              key: 'citation-share',
-              label: observed
-                ? `Across ${pluralCount(track.engine_coverage, 'engine')}`
-                : 'All engines',
-              value:
-                track.citation_share.value === null
-                  ? null
-                  : percentFigure(track.citation_share.value),
-              missingLabel: observed ? 'Unavailable' : 'Not run',
-              // No comparable run means no change; the Movement card says so once.
-              delta:
-                observed && track.citation_share.delta !== null ? (
-                  <Delta value={track.citation_share.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
-                ) : undefined,
-              // Why no change is shown, or which answers a partial change uses.
-              sub: track.limitations[0],
-            },
-          ]}
-        />
-      </SectionContent>
-    </Section>
+    <WidgetFrame
+      id="citation-share-track"
+      title="Owned citation rate"
+      description={<SectionDescription>Answers that link to a page you own</SectionDescription>}
+      actions={<ArrowLink href="/visibility?tab=trends">Open Trends</ArrowLink>}
+    >
+      <FigureStrip
+        segments={[
+          {
+            key: 'citation-share',
+            label: observed
+              ? `Across ${pluralCount(track.engine_coverage, 'engine')}`
+              : 'All engines',
+            value:
+              track.citation_share.value === null
+                ? null
+                : percentFigure(track.citation_share.value),
+            missingLabel: observed ? 'Unavailable' : 'Not run',
+            // No comparable run means no change; the Movement card says so once.
+            delta:
+              observed && track.citation_share.delta !== null ? (
+                <Delta value={track.citation_share.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
+              ) : undefined,
+            // Why no change is shown, or which answers a partial change uses.
+            sub: track.limitations[0],
+          },
+        ]}
+      />
+    </WidgetFrame>
   );
 }
 
 /**
  * Each engine's change since the comparable run. With nothing comparable yet
  * the card holds one compact note rather than a tall empty block beside its
- * sibling. The note's action opens the Launch run dialog, where the person
- * confirms the run and its credits (owner, 2026-11-06); nothing starts from
- * here. A comparable run that produced no movement rows is a different
- * answer: there is nothing to launch, only no change to show.
+ * sibling. The note names the masthead's Launch run, whose dialog is where
+ * the person confirms the run and its credits (owner, 2026-11-06). A
+ * comparable run that produced no movement rows is a different answer: there
+ * is nothing to launch, only no change to show.
  */
 export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Section aria-labelledby="movement" className="h-full">
-      <SectionHeader>
-        <SectionTitle id="movement">Movement</SectionTitle>
-      </SectionHeader>
-      <SectionContent>
-        {data.movements.length ? (
-          <MovementChart movements={data.movements} />
-        ) : (
-          <NoMovement measurement={data.measurement} />
-        )}
-      </SectionContent>
-    </Section>
+    <WidgetFrame id="movement" title="Movement">
+      {data.movements.length ? (
+        <MovementChart movements={data.movements} />
+      ) : (
+        <NoMovement measurement={data.measurement} />
+      )}
+    </WidgetFrame>
   );
 }
 
 function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['measurement'] }>) {
+  const canRun = useWorkspaceCapability('run');
   const note = (message: string) => (
     <StateBlock kind="empty" inline icon={TrendingUp} message={message} />
   );
+  // Nothing to compare yet: the masthead's Launch run, when offered, measures the next one.
+  const declined = (message: string) =>
+    note(canRun ? `${message} Launch run to measure movement.` : message);
   if (!measurement) return declined('No measured run yet.');
   const basis = comparisonBasis({
     status: measurement.comparison_status,
@@ -375,18 +347,6 @@ function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['meas
   }
 }
 
-function declined(message: string) {
-  return (
-    <StateBlock
-      kind="empty"
-      inline
-      icon={TrendingUp}
-      message={message}
-      action={<LaunchAuditButton variant="secondary" />}
-    />
-  );
-}
-
 /** The shared, reorderable action list. */
 export function RankedActionsCard({
   actions,
@@ -397,52 +357,45 @@ export function RankedActionsCard({
   pending: boolean;
   onMove: (from: number, to: number) => void;
 }>) {
-  if (!actions.length)
-    return (
-      <StateBlock
-        kind="empty"
-        icon={ArrowRight}
-        heading="No open actions"
-        headingLevel={3}
-        description="Run another audit to look for new opportunities."
-        action={<ViewAllActions />}
-      />
-    );
   return (
-    <Section aria-labelledby="ranked-actions" className="h-full">
-      <SectionHeader actions={<ViewAllActions />}>
-        <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
-        <SectionDescription>Shared order · drag or use the arrow controls.</SectionDescription>
-      </SectionHeader>
-      <SectionContent>
+    <WidgetFrame
+      id="ranked-actions"
+      title="Ranked actions"
+      description={
+        actions.length ? (
+          <SectionDescription>Shared order · drag or use the arrow controls.</SectionDescription>
+        ) : undefined
+      }
+      actions={<ArrowLink href="/agent/actions">View all</ArrowLink>}
+    >
+      {actions.length ? (
         <ReorderList items={actions.map(actionItem)} pending={pending} onMove={onMove} />
-      </SectionContent>
-    </Section>
+      ) : (
+        <StateBlock
+          kind="empty"
+          icon={ArrowRight}
+          heading="No open actions"
+          description="Launch another run to look for new opportunities."
+        />
+      )}
+    </WidgetFrame>
   );
 }
 
 /** What has been resolved since the comparable run. */
 export function ProgressProofCard({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Section aria-labelledby="progress-proof" className="h-full">
-      <SectionHeader>
-        <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
-      </SectionHeader>
-      <SectionContent>
-        <p className={textRole('body', 'text-ink-2')}>
-          {pluralCount(data.resolved_actions.count, 'action')} resolved since the comparable run.
-        </p>
-      </SectionContent>
-    </Section>
-  );
-}
-
-function ViewAllActions() {
-  return (
-    <Button asChild variant="quiet">
-      <ProjectLink href="/agent/actions">
-        View all <Icon icon={ArrowRight} />
-      </ProjectLink>
-    </Button>
+    <WidgetFrame id="progress-proof" title="Progress and report proof">
+      <FigureStrip
+        segments={[
+          {
+            key: 'resolved',
+            label: 'Resolved actions',
+            value: formatCount(data.resolved_actions.count),
+            sub: 'Since the comparable run',
+          },
+        ]}
+      />
+    </WidgetFrame>
   );
 }

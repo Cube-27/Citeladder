@@ -8,10 +8,11 @@ import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { Button } from '@/components/ui/button';
-import { Notice } from '@/components/ui/notice';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { InlineFigure, textRole } from '@/components/ui/typography';
 import { Value } from '@/components/ui/value';
 import {
@@ -116,8 +117,9 @@ function PurchaseButton({
 }>) {
   const label = pending ? 'Preparing…' : 'Review current quote';
   return (
+    // Once quoted, the quote's own confirm is the one primary.
     <Button
-      variant="primary"
+      variant={quoted ? 'secondary' : 'primary'}
       disabled={!canBuy || !workspaceId || pending || quoted || priceUnavailable}
       onClick={onPurchase}
     >
@@ -220,12 +222,12 @@ function SelectedPurchase({
   return (
     <Section aria-label="Selected purchase">
       <SectionHeader>
-        <SectionTitle level={2}>{plan?.name ?? extra?.name}</SectionTitle>
+        <SectionTitle>{plan?.name ?? extra?.name}</SectionTitle>
       </SectionHeader>
       <Stack as={SectionContent} gap="workspace">
         <p className={textRole('body')}>
           <InlineFigure>{selection.quantity}</InlineFigure> ×{' '}
-          {selection.byok ? 'Your own provider keys' : 'Funded usage'}
+          {selection.byok ? 'Your own keys' : 'Managed'}
         </p>
         <PriceInfo price={price} catalog={catalog} />
         {extra?.unit_price ? (
@@ -273,16 +275,23 @@ function QuoteConfirmation({
 }>) {
   if (!checkout.prepared?.quote || !catalog) return null;
   return (
-    <Stack as="section" gap="workspace" aria-label="Current quote">
-      <BillingQuoteSummary
-        quote={checkout.prepared.quote}
-        currencyMinorUnits={catalog.currency_minor_units}
-      />
-      <CheckoutConsent recurring={checkout.prepared.kind === 'base'} />
-      <Button variant="primary" disabled={pending} onClick={onConfirm}>
-        {pending ? 'Opening checkout…' : 'Confirm and continue to payment'}
-      </Button>
-    </Stack>
+    <Section aria-labelledby="current-quote-title">
+      <SectionHeader>
+        <SectionTitle id="current-quote-title">Current quote</SectionTitle>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="workspace">
+        <BillingQuoteSummary
+          quote={checkout.prepared.quote}
+          currencyMinorUnits={catalog.currency_minor_units}
+        />
+        <CheckoutConsent recurring={checkout.prepared.kind === 'base'} />
+        <Inline className="justify-end">
+          <Button variant="primary" disabled={pending} onClick={onConfirm}>
+            {pending ? 'Opening checkout…' : 'Confirm and continue to payment'}
+          </Button>
+        </Inline>
+      </Stack>
+    </Section>
   );
 }
 
@@ -302,13 +311,17 @@ function BillingErrorNotice({
   return <Notice tone="negative">{message}</Notice>;
 }
 
+/** True when the masthead's link is the page's next step: nothing (or nothing current) is chosen. */
+function needsChoice(selection: Selection | null, offered: boolean | undefined): boolean {
+  return !selection || offered === false;
+}
+
 function PricingState({
   workspaceName,
   canBuy,
   workspaceError,
   retryWorkspace,
-  catalogError,
-  retryCatalog,
+  catalogRead,
   selection,
   offered,
 }: Readonly<{
@@ -316,56 +329,48 @@ function PricingState({
   canBuy: boolean;
   workspaceError: boolean;
   retryWorkspace: () => void;
-  catalogError: boolean;
-  retryCatalog: () => void;
+  catalogRead: RetryableRead & Readonly<{ isError: boolean }>;
   selection: Selection | null;
   offered: boolean | undefined;
 }>) {
+  if (workspaceError) {
+    return (
+      <StateBlock
+        kind="error"
+        title="Couldn't load the workspace"
+        error={null}
+        fallback="The billing workspace could not be loaded."
+        onRetry={retryWorkspace}
+      />
+    );
+  }
+  if (!workspaceName) return <StateBlock kind="loading" label="Loading workspace…" />;
   return (
     <>
-      {workspaceError ? (
-        <Notice
-          tone="negative"
-          action={
-            <Button variant="secondary" onClick={retryWorkspace}>
-              Retry workspace
-            </Button>
-          }
-        >
-          The billing workspace could not be loaded.
-        </Notice>
-      ) : null}
-      <p className={textRole('body')}>
-        {workspaceName ? `Workspace: ${workspaceName}` : 'Loading workspace…'}
-      </p>
-      {!canBuy && workspaceName ? (
+      <p className={textRole('body')}>Workspace: {workspaceName}</p>
+      {canBuy ? null : (
         <Notice tone="info">Ask a workspace Owner or Admin to make this purchase.</Notice>
-      ) : null}
-      {catalogError ? (
+      )}
+      {catalogRead.isError ? (
         <Notice
-          tone="negative"
-          action={
-            <Button variant="secondary" onClick={retryCatalog}>
-              Retry catalog
-            </Button>
-          }
-        >
-          The plan catalog could not be loaded.
-        </Notice>
+          kind="read"
+          title="Couldn't load plans"
+          {...readErrorProps(catalogRead)}
+          fallback="The plan catalog could not be loaded."
+        />
       ) : null}
       {selection && offered === false ? (
         <Notice tone="warning">
-          This selection is no longer in the current catalog. Choose again on the public pricing
-          page.
+          This selection is no longer in the current catalog. Choose again with View public pricing.
         </Notice>
       ) : null}
-      {!selection ? (
+      {selection ? null : (
         <StateBlock
           kind="empty"
           heading="No plan chosen yet"
-          description="Choose a plan on the public pricing page to continue here."
+          description="Choose a plan with View public pricing, then continue the purchase here."
         />
-      ) : null}
+      )}
     </>
   );
 }
@@ -424,9 +429,11 @@ export default function PricingRoute() {
   return (
     <SettingsPage
       actions={
-        <Button asChild variant="secondary">
-          <a href={websitePricing}>View public pricing</a>
-        </Button>
+        <MastheadPrimary>
+          <Button asChild variant={needsChoice(selection, offered) ? 'primary' : 'secondary'}>
+            <a href={websitePricing}>View public pricing</a>
+          </Button>
+        </MastheadPrimary>
       }
     >
       <PricingState
@@ -434,8 +441,7 @@ export default function PricingRoute() {
         canBuy={canBuy}
         workspaceError={isError}
         retryWorkspace={retry}
-        catalogError={catalogQuery.isError}
-        retryCatalog={() => void catalogQuery.refetch()}
+        catalogRead={catalogQuery}
         selection={selection}
         offered={offered}
       />

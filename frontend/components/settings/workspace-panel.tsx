@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { restartAt } from '@/lib/auth/account-transition';
 import { workspacesApi } from '@/lib/api/workspaces';
@@ -18,8 +18,6 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 
 import { MemberSettings } from './member-settings';
 import { ROLE_SUMMARY, roleLabel } from './member-roles';
-import { TextLink } from '@/components/ui/text-link';
-import { PLANS_HREF } from '@/lib/billing/plan-limit';
 import { Notice } from '@/components/ui/notice';
 
 /**
@@ -42,51 +40,44 @@ export function WorkspacePanel() {
   const isOwner = activeWorkspace.role === 'owner';
 
   return (
-    <Stack gap="section">
-      <Stack as="section" gap="compact" aria-labelledby="workspace-panel-title">
-        <Inline className="flex-wrap">
-          <h2 id="workspace-panel-title" className={textRole('heading')}>
-            {activeWorkspace.name}
-          </h2>
-          <Tag>{roleLabel(activeWorkspace.role)}</Tag>
-        </Inline>
-        {/* What the role allows and, for the Owner, the way out: one line. */}
-        <p className={textRole('body', 'text-ink-2')}>
-          {ROLE_SUMMARY[activeWorkspace.role]}
-          {isOwner ? ' To leave, first make another member the owner.' : null}
-        </p>
-        {isOwner ? null : (
-          <Button
-            type="button"
-            variant="danger"
-            className="w-fit"
-            onClick={() => setConfirmLeave(true)}
-          >
-            <Icon icon={LogOut} />
-            Leave workspace
-          </Button>
+    <>
+      <Section aria-labelledby="workspace-panel-title">
+        <SectionHeader actions={<Tag>{roleLabel(activeWorkspace.role)}</Tag>}>
+          <SectionTitle id="workspace-panel-title">{activeWorkspace.name}</SectionTitle>
+          {/* What the role allows and, for the Owner, the way out: one line. */}
+          <SectionDescription>
+            {ROLE_SUMMARY[activeWorkspace.role]}
+            {isOwner ? ' To leave, first make another member the owner.' : null}
+          </SectionDescription>
+        </SectionHeader>
+        {/* An Owner who manages members has nothing here but the head. */}
+        {isOwner && mayManage && !leave.isError ? null : (
+          <Stack gap="compact">
+            {isOwner ? null : (
+              <Inline>
+                <Button type="button" variant="danger" onClick={() => setConfirmLeave(true)}>
+                  <Icon icon={LogOut} />
+                  Leave workspace
+                </Button>
+              </Inline>
+            )}
+            {leave.isError ? (
+              <Notice
+                kind="mutation"
+                notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
+              />
+            ) : null}
+            {mayManage ? null : (
+              <Notice tone="info">
+                The owner and admins manage who belongs to this workspace and what each person may
+                do.
+              </Notice>
+            )}
+          </Stack>
         )}
-        {leave.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(leave.error, { action: 'leave the workspace' })}
-          />
-        ) : null}
-      </Stack>
+      </Section>
 
-      {mayManage && !mayInvite ? (
-        <Notice tone="info">
-          Inviting team members is part of a paid plan. During the trial, this workspace is yours
-          alone. <TextLink href={PLANS_HREF}>See plans</TextLink>
-        </Notice>
-      ) : null}
-      {mayManage ? (
-        <MemberSettings mayInvite={mayInvite} />
-      ) : (
-        <Notice tone="info">
-          The owner and admins manage who belongs to this workspace and what each person may do.
-        </Notice>
-      )}
+      {mayManage ? <MemberSettings mayInvite={mayInvite} /> : null}
 
       <ConfirmDialog
         request={
@@ -104,6 +95,6 @@ export function WorkspacePanel() {
         pending={leave.isPending}
         onCancel={() => setConfirmLeave(false)}
       />
-    </Stack>
+    </>
   );
 }

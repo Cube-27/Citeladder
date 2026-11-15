@@ -12,6 +12,7 @@ import {
   joinProviderLabels,
   type GrantFamily,
 } from '@/components/settings/grant-model';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -127,6 +128,19 @@ function RowFrame({
   );
 }
 
+/** Google's Connect is the named action (3.1); Bing's has its own name. */
+function ConnectButton({
+  family,
+  onConnect,
+}: Readonly<{ family: GrantFamily; onConnect: () => void }>) {
+  if (family === 'google') return <ActionButton action="connectGoogle" onClick={onConnect} />;
+  return (
+    <Button variant="secondary" onClick={onConnect}>
+      Connect {FAMILY_META[family].title}
+    </Button>
+  );
+}
+
 /** Not yet connected: one consent for the family's sources. */
 function ConnectRow({
   family,
@@ -148,9 +162,7 @@ function ConnectRow({
       status={required ? 'Not connected' : 'Optional'}
       action={
         canManage ? (
-          <Button variant={required ? 'primary' : 'secondary'} onClick={() => startConnect(family)}>
-            Connect {FAMILY_META[family].title}
-          </Button>
+          <ConnectButton family={family} onConnect={() => startConnect(family)} />
         ) : (
           <span className="type-caption">Ask a workspace owner or admin</span>
         )
@@ -185,7 +197,7 @@ function SourceRow({
         status={`${familyName} needs your consent again. Imported data is kept.`}
         action={
           canManage ? (
-            <Button variant="primary" onClick={() => startConnect(family)}>
+            <Button variant="secondary" onClick={() => startConnect(family)}>
               Reconnect {familyName}
             </Button>
           ) : null
@@ -297,13 +309,14 @@ export function DataSourceSetup({
         {sources.error ? (
           <Notice
             kind="read"
+            title="Couldn't load your data sources"
             error={sources.error}
             fallback="Could not load your data sources. Check your connection and try again."
             onRetry={sources.retry}
           />
         ) : null}
         {sources.loading ? (
-          <StateBlock kind="loading" />
+          <StateBlock kind="loading" label="Loading data sources…" />
         ) : (
           <ul className={ledgerClasses()}>
             {setupRows(providers, sources.steps).map((row) =>

@@ -56,9 +56,7 @@ export function BillingSupport({
   return (
     <Section aria-labelledby="billing-support-title">
       <SectionHeader>
-        <SectionTitle id="billing-support-title" level={2}>
-          Billing help
-        </SectionTitle>
+        <SectionTitle id="billing-support-title">Billing help</SectionTitle>
       </SectionHeader>
       <Stack as={SectionContent} gap="compact">
         <p className={textRole('body')}>

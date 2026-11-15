@@ -6,7 +6,6 @@ import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
-import { Stack } from '@/components/ui/layout';
 import { followCatalogAnalysis } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -23,7 +22,7 @@ import { Notice } from '@/components/ui/notice';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 /**
- * What the Site Health dashboard read says about the project's crawl. Only an
+ * What the Website dashboard read says about the project's crawl. Only an
  * answered read says there is none: a read still pending or failed says
  * nothing, and must never pass for "No crawl yet" (invariant 7).
  */
@@ -55,7 +54,7 @@ function analyzedLabel(crawl: SiteCrawl): string {
   return `${crawl.analyzed_count}/${Math.max(known, crawl.analyzed_count)}`;
 }
 
-/** The two Site Health stats: pages analyzed, and the crawl's status. */
+/** The two Website stats: pages analyzed, and the crawl's status. */
 function crawlSegments(read: CrawlRead): FigureSegment[] {
   if (read.kind !== 'answered') {
     const loading = read.kind === 'pending';
@@ -184,7 +183,7 @@ export function useCatalogHeader({
     followCatalogAnalysis(client, { workspaceId, projectId }, { readAt: catalogReadAt, analyzed });
   }, [analyzed, catalogReadAt, hasCatalog, client, workspaceId, projectId]);
   const [adding, setAdding] = useState(false);
-  // The descriptor refreshes the Site Health dashboard; the catalog is this screen's own read.
+  // The descriptor refreshes the Website dashboard; the catalog is this screen's own read.
   const discover = useMutation(siteHealthMutations.createCrawl(workspaceId));
   const startDiscovery = () =>
     discover.mutate({ project_id: projectId }, { onSuccess: () => void query.refetch() });
@@ -243,20 +242,16 @@ function CatalogNotices({
 }>) {
   if (!refreshError) return null;
   return (
-    <Stack>
-      {refreshError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(refreshError, {
-            action: 'refresh Website progress',
-          })}
-          recovery={
-            <Button type="button" variant="secondary" onClick={onRefresh}>
-              Refresh again
-            </Button>
-          }
-        />
-      ) : null}
-    </Stack>
+    <Notice
+      kind="mutation"
+      notice={mutationNoticeForError(refreshError, {
+        action: 'refresh Website progress',
+      })}
+      recovery={
+        <Button type="button" variant="secondary" onClick={onRefresh}>
+          Refresh again
+        </Button>
+      }
+    />
   );
 }

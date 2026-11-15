@@ -27,7 +27,7 @@ export function PromptSetupCard() {
         </SectionDescription>
       </SectionHeader>
       <Inline as={SectionContent} className="flex-wrap">
-        <Button asChild variant="primary">
+        <Button asChild variant="secondary">
           <ProjectLink href={PROMPTS_GENERATE_HREF}>Generate prompts</ProjectLink>
         </Button>
         <Button asChild variant="secondary">

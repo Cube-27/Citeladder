@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
@@ -85,7 +86,7 @@ export function BrandFactsPanel({
           message="No facts yet. Add pricing, plans, integrations or other facts to check."
         />
       ) : (
-        <Stack as="ul" gap="compact">
+        <LedgerList label="Brand facts">
           {active.map((fact) => (
             <FactRow
               key={fact.id}
@@ -95,7 +96,7 @@ export function BrandFactsPanel({
               onChange={(update) => changeFact({ fact, update })}
             />
           ))}
-        </Stack>
+        </LedgerList>
       )}
       {retired.length ? (
         <p className={textRole('caption', 'text-ink-2')}>
@@ -191,81 +192,112 @@ function FactRow({
 }>) {
   const [editing, setEditing] = useState<string | null>(null);
   return (
-    <Stack as="li" gap="compact" className={wellClasses('min-w-0')}>
-      <Inline as="span" className="flex-wrap">
-        <Tag>{TOPIC_LABELS[fact.topic]}</Tag>
-        {fact.status === 'confirmed' ? (
-          <StatusMark variant="status" value="success">
-            Confirmed
-          </StatusMark>
+    <LedgerItem
+      title={
+        editing === null ? (
+          fact.statement
         ) : (
-          <StatusMark variant="status" value="warning">
-            Draft · not used until confirmed
-          </StatusMark>
-        )}
-      </Inline>
-      {editing === null ? (
-        <span className={textRole('body', 'text-ink')}>{fact.statement}</span>
-      ) : (
-        <Textarea
-          aria-label="Edit fact"
-          rows={2}
-          maxLength={300}
-          value={editing}
-          onChange={(event) => setEditing(event.target.value)}
-        />
-      )}
-      {fact.source_url ? (
-        <span className={textRole('caption', 'text-ink-2 block truncate')} title={fact.source_url}>
-          {fact.source_url}
-        </span>
-      ) : null}
-      {mayEdit ? (
-        <Inline as="span" className="flex-wrap">
-          {editing === null ? (
-            <>
-              {fact.status === 'draft' ? (
-                <Button
-                  variant="primary"
-                  disabled={pending}
-                  onClick={() => void onChange({ status: 'confirmed' }).catch(() => undefined)}
-                >
-                  Confirm
-                </Button>
-              ) : null}
-              <Button variant="secondary" onClick={() => setEditing(fact.statement)}>
-                Edit
-              </Button>
-              <Button
-                variant="quiet"
-                disabled={pending}
-                onClick={() => void onChange({ status: 'retired' }).catch(() => undefined)}
-              >
-                Retire
-              </Button>
-            </>
+          <Textarea
+            aria-label="Edit fact"
+            rows={2}
+            maxLength={300}
+            value={editing}
+            onChange={(event) => setEditing(event.target.value)}
+          />
+        )
+      }
+      meta={
+        <>
+          <Tag>{TOPIC_LABELS[fact.topic]}</Tag>
+          {fact.status === 'confirmed' ? (
+            <StatusMark variant="status" value="success">
+              Confirmed
+            </StatusMark>
           ) : (
-            <>
-              <Button
-                variant="primary"
-                disabled={pending || !editing.trim()}
-                onClick={() => {
-                  // Keep the draft open until the save lands, so a failed save loses nothing.
-                  onChange({ statement: editing.trim() }).then(
-                    () => setEditing(null),
-                    () => undefined,
-                  );
-                }}
-              >
-                Save
-              </Button>
-              <Button variant="quiet" onClick={() => setEditing(null)}>
-                Cancel
-              </Button>
-            </>
+            <StatusMark variant="status" value="warning">
+              Draft · not used until confirmed
+            </StatusMark>
           )}
-        </Inline>
-      ) : null}
-    </Stack>
+        </>
+      }
+      caption={
+        fact.source_url ? (
+          <span className="block truncate" title={fact.source_url}>
+            {fact.source_url}
+          </span>
+        ) : undefined
+      }
+      links={
+        mayEdit ? (
+          <FactActions
+            fact={fact}
+            editing={editing}
+            pending={pending}
+            onEdit={setEditing}
+            onChange={onChange}
+          />
+        ) : undefined
+      }
+    />
+  );
+}
+
+/** Confirm, Edit and Retire; while editing, Cancel then Save. */
+function FactActions({
+  fact,
+  editing,
+  pending,
+  onEdit,
+  onChange,
+}: Readonly<{
+  fact: BrandFact;
+  editing: string | null;
+  pending: boolean;
+  onEdit: (draft: string | null) => void;
+  onChange: (update: Change['update']) => Promise<unknown>;
+}>) {
+  if (editing === null)
+    return (
+      <Inline as="span" className="flex-wrap">
+        {fact.status === 'draft' ? (
+          <Button
+            variant="secondary"
+            disabled={pending}
+            onClick={() => void onChange({ status: 'confirmed' }).catch(() => undefined)}
+          >
+            Confirm
+          </Button>
+        ) : null}
+        <Button variant="secondary" onClick={() => onEdit(fact.statement)}>
+          Edit
+        </Button>
+        <Button
+          variant="quiet"
+          disabled={pending}
+          onClick={() => void onChange({ status: 'retired' }).catch(() => undefined)}
+        >
+          Retire
+        </Button>
+      </Inline>
+    );
+  return (
+    <Inline as="span" className="flex-wrap">
+      <Button variant="quiet" onClick={() => onEdit(null)}>
+        Cancel
+      </Button>
+      <Button
+        variant="secondary"
+        disabled={pending || !editing.trim()}
+        onClick={() => {
+          // Keep the draft open until the save lands, so a failed save loses nothing.
+          onChange({ statement: editing.trim() }).then(
+            () => onEdit(null),
+            () => undefined,
+          );
+        }}
+      >
+        Save
+      </Button>
+    </Inline>
   );
 }

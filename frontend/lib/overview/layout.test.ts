@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { addWidget, addableWidgets, moveWidget, removeWidget, toggleWidth } from './layout';
+import {
+  addWidget,
+  addableWidgets,
+  loneHalves,
+  moveWidget,
+  removeWidget,
+  toggleWidth,
+} from './layout';
 
 const layout = [
   { key: 'project_state', size: 'half' },
@@ -25,6 +32,21 @@ describe('Overview layout edits', () => {
       { key: 'movement', size: 'full' },
       { key: 'company_facts', size: 'full' },
     ]);
+  });
+
+  it('marks the half widgets left alone in a row, pairing again after each full widget', () => {
+    expect([...loneHalves(layout)]).toEqual(['project_state']);
+    expect([
+      ...loneHalves([
+        { key: 'project_state', size: 'half' },
+        { key: 'citation_share', size: 'half' },
+        { key: 'movement', size: 'half' },
+        { key: 'company_facts', size: 'full' },
+        { key: 'next_action', size: 'half' },
+        { key: 'ranked_actions', size: 'half' },
+        { key: 'progress_proof', size: 'half' },
+      ]),
+    ]).toEqual(['movement', 'progress_proof']);
   });
 
   it('removes a widget but keeps the last one', () => {

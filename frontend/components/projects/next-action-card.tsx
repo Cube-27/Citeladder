@@ -2,22 +2,17 @@ import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { ProjectLink } from '@/components/ui/project-link';
 
-import { StatusMark } from '@/components/ui/status-mark';
+import { ActionButton, ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
-import { pluralCount, readableUrl } from '@/lib/format';
-import { severityLabel, severityPriority } from '@/lib/site-health/issues';
+import { pluralCount } from '@/lib/format';
 import type { CommandCenter } from '@citeladder/contracts';
-import {
-  Section,
-  SectionContent,
-  SectionEyebrow,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionEyebrow } from '@/components/ui/section';
+
+import { ActionFacts } from './dashboard-primitives';
+import { WidgetFrame } from './widget-frame';
 
 const RECOMMENDED = 'Action recommended';
 
@@ -30,7 +25,7 @@ const NEXT_ACTION_COPY: Record<
   { status: string; link: string; reason: string | null }
 > = {
   // The Action's title and evidence already say why it is next.
-  opportunity: { status: RECOMMENDED, link: 'Open the Action', reason: null },
+  opportunity: { status: RECOMMENDED, link: ACTIONS.openAction.label, reason: null },
   connect: {
     status: RECOMMENDED,
     link: 'Open Integrations',
@@ -69,18 +64,7 @@ function nextActionEvidence(data: CommandCenter): ReactNode {
   switch (step.kind) {
     case 'opportunity': {
       const action = data.actions.find((item) => item.id === step.opportunity_id);
-      if (!action) return null;
-      return (
-        <Inline>
-          <StatusMark variant="priority" value={severityPriority(action.severity)}>
-            {severityLabel(action.severity)}
-          </StatusMark>
-          <span className={textRole('caption', 'min-w-0 truncate')}>
-            {action.target_label ? readableUrl(action.target_label) : 'Project-wide'} ·{' '}
-            {pluralCount(action.evidence_summary.count, 'evidence item')}
-          </span>
-        </Inline>
-      );
+      return action ? <ActionFacts action={action} /> : null;
     }
     case 'audit':
     case 'audit_running':
@@ -112,32 +96,31 @@ function captionOrNull(text: string | undefined) {
 
 export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   const copy = NEXT_ACTION_COPY[data.next_action.kind];
+  const step = data.next_action;
   // An opportunity whose Action is not created yet links to the Actions list.
-  const link =
-    data.next_action.kind === 'opportunity' && data.next_action.href === '/agent/actions'
-      ? 'Open Actions'
-      : copy.link;
+  const listOnly = step.kind === 'opportunity' && step.href === '/agent/actions';
   return (
-    <Section aria-labelledby="next-action" className="text-ink h-full">
-      <SectionHeader
-        actions={<span className={textRole('body', 'text-ink-2')}>{copy.status}</span>}
-      >
-        <SectionEyebrow>Next action</SectionEyebrow>
-        <SectionTitle id="next-action">{data.next_action.title}</SectionTitle>
-      </SectionHeader>
-      {/* The reason, its evidence and the button are blocks: 12 apart. */}
-      <Stack as={SectionContent} gap="workspace">
-        {copy.reason ? <p className={textRole('body', 'text-ink-2')}>{copy.reason}</p> : null}
-        {nextActionEvidence(data)}
-        <div>
-          <Button asChild variant="primary">
-            <ProjectLink href={data.next_action.href}>
-              {link}
+    <WidgetFrame
+      id="next-action"
+      eyebrow={<SectionEyebrow>Next action</SectionEyebrow>}
+      title={step.title}
+      actions={<span className={textRole('body', 'text-ink-2')}>{copy.status}</span>}
+    >
+      {copy.reason ? <p className={textRole('body', 'text-ink-2')}>{copy.reason}</p> : null}
+      {nextActionEvidence(data)}
+      <div>
+        {step.kind === 'opportunity' && !listOnly ? (
+          <ActionButton action="openAction" href={step.href} />
+        ) : (
+          // Every other step goes somewhere: the page's one primary is Launch run.
+          <Button asChild variant="secondary">
+            <ProjectLink href={step.href}>
+              {listOnly ? 'Open Actions' : copy.link}
               <Icon icon={ArrowRight} />
             </ProjectLink>
           </Button>
-        </div>
-      </Stack>
-    </Section>
+        )}
+      </div>
+    </WidgetFrame>
   );
 }

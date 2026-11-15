@@ -1,19 +1,15 @@
 import type { UseQueryResult } from '@tanstack/react-query';
-import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
 import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contracts/overview';
 
-import { ProjectLink } from '@/components/ui/project-link';
-import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
-import { Stack } from '@/components/ui/layout';
+import { ArrowLink } from '@/components/ui/text-link';
 import { StepChart } from '@/components/ui/step-chart';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { ValueLedger } from '@/components/ui/facts';
-import { Icon } from '@/components/ui/icon';
 import type { Project } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
 import { formatCount, formatPercent } from '@/lib/format';
@@ -33,32 +29,28 @@ import { hostOf, pathOf } from '@/lib/visibility/sources';
 import { toChartPoints } from '@/lib/visibility/trends';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
-/** Every library widget has the same floor, so loading, empty and error states never resize it. */
+import { WidgetFrame } from './widget-frame';
+
+/** A library widget: its title, and a link to the page it summarises. */
 function WidgetCard({
   id,
   href,
   children,
 }: Readonly<{ id: OverviewWidgetKey; href: string; children: ReactNode }>) {
   return (
-    <Section aria-labelledby={`widget-${id}`} className="flex h-full min-h-64 flex-col">
-      <SectionHeader
-        actions={
-          <Button asChild variant="quiet">
-            <ProjectLink href={href}>
-              Open <Icon icon={ArrowRight} />
-            </ProjectLink>
-          </Button>
-        }
-      >
-        <SectionTitle id={`widget-${id}`}>{overviewWidgetTitles[id]}</SectionTitle>
-      </SectionHeader>
-      <Stack as={SectionContent} gap="compact" className="flex-1 content-start">
-        {children}
-      </Stack>
-    </Section>
+    <WidgetFrame
+      id={`widget-${id}`}
+      title={overviewWidgetTitles[id]}
+      actions={
+        <ArrowLink href={href}>
+          <span className="sr-only">{overviewWidgetTitles[id]}: </span>Open
+        </ArrowLink>
+      }
+    >
+      {children}
+    </WidgetFrame>
   );
 }
 
@@ -71,11 +63,14 @@ function WidgetCard({
 function Loaded<T>({
   query,
   waitsOn,
+  subject,
   fallback,
   children,
 }: Readonly<{
   query: UseQueryResult<T>;
   waitsOn?: UseQueryResult<unknown>;
+  /** What failed, for the error's headline: "Couldn't load {subject}". */
+  subject: string;
   fallback: string;
   children: (data: T) => ReactNode;
 }>) {
@@ -85,13 +80,14 @@ function Loaded<T>({
     return (
       <Notice
         kind="read"
+        title={`Couldn't load ${subject}`}
         error={failed.error}
         fallback={fallback}
         onRetry={() => void failed.refetch()}
         pending={failed.isFetching}
       />
     );
-  if (query.data === undefined) return <StateBlock kind="loading" />;
+  if (query.data === undefined) return <StateBlock kind="loading" label={`Loading ${subject}`} />;
   return children(query.data);
 }
 
@@ -122,7 +118,11 @@ export function VisibilityTrendWidget({ project }: Readonly<{ project: Project }
   const query = useVisibilityTrend(project);
   return (
     <WidgetCard id="visibility_trend" href="/visibility?tab=trends">
-      <Loaded query={query} fallback="Visibility trends could not be loaded.">
+      <Loaded
+        query={query}
+        subject="visibility trends"
+        fallback="Visibility trends could not be loaded."
+      >
         {(points) =>
           points.length ? (
             <StepChart
@@ -146,7 +146,7 @@ export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) 
   const query = useLatestVisibility(project);
   return (
     <WidgetCard id="share_of_voice" href="/visibility?tab=trends">
-      <Loaded query={query} fallback="Share of voice could not be loaded.">
+      <Loaded query={query} subject="share of voice" fallback="Share of voice could not be loaded.">
         {(visibility) => {
           if (!visibility) return noMeasuredRun;
           return visibility.rankings.length ? (
@@ -172,14 +172,14 @@ export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
   if (visibility.isError || (visibility.data !== undefined && status !== 'comparable'))
     return (
       <WidgetCard id="top_movers" href="/visibility?tab=sources">
-        <Loaded query={visibility} fallback="Top movers could not be loaded.">
+        <Loaded query={visibility} subject="top movers" fallback="Top movers could not be loaded.">
           {(latest) => (latest ? notCompared(status, comparison?.skipped_runs) : noMeasuredRun)}
         </Loaded>
       </WidgetCard>
     );
   return (
     <WidgetCard id="top_movers" href="/visibility?tab=sources">
-      <Loaded query={movers} fallback="Top movers could not be loaded.">
+      <Loaded query={movers} subject="top movers" fallback="Top movers could not be loaded.">
         {(data) => {
           if (data.comparison_status !== 'comparable') return notCompared(data.comparison_status);
           const rows = [...data.risers, ...data.fallers].slice(0, WIDGET_ROWS);
@@ -210,6 +210,7 @@ export function RetrievalWidget({ project }: Readonly<{ project: Project }>) {
         <Loaded
           query={misses}
           waitsOn={visibility}
+          subject="retrieved sources"
           fallback="Retrieved sources could not be loaded."
         >
           {(data) => (
@@ -244,7 +245,12 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
     );
   return (
     <WidgetCard id="perception" href="/visibility?tab=perception">
-      <Loaded query={perception} waitsOn={visibility} fallback="Perception could not be loaded.">
+      <Loaded
+        query={perception}
+        waitsOn={visibility}
+        subject="perception"
+        fallback="Perception could not be loaded."
+      >
         {(data) => {
           const score = data.brand?.score ?? null;
           return (
@@ -278,7 +284,7 @@ export function AiTrafficWidget({ project }: Readonly<{ project: Project }>) {
   const query = useTrafficOverview(project);
   return (
     <WidgetCard id="ai_traffic" href="/ai-traffic">
-      <Loaded query={query} fallback="AI Traffic could not be loaded.">
+      <Loaded query={query} subject="AI Traffic" fallback="AI Traffic could not be loaded.">
         {({ crawl, referrals }) => {
           const visits = referrals.referral_volume.at(-1)?.value ?? null;
           return (
@@ -308,7 +314,7 @@ export function SearchConsoleWidget({ project }: Readonly<{ project: Project }>)
   const query = useSearchPerformance(project);
   return (
     <WidgetCard id="search_console" href="/performance">
-      <Loaded query={query} fallback="Search Console could not be loaded.">
+      <Loaded query={query} subject="Search Console" fallback="Search Console could not be loaded.">
         {({ selected }) =>
           selected.evidence_state === 'not_run' ? (
             <StateBlock

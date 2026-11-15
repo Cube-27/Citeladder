@@ -5,8 +5,15 @@ import { ControlRow } from '@/components/ui/control-row';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
   BillingCatalog,
   BillingEntitlement,
@@ -96,17 +103,33 @@ function ActiveExtras({ entitlement }: Readonly<{ entitlement: BillingEntitlemen
   );
   if (grants.length === 0) return null;
   return (
-    <Stack gap="compact">
-      <h3 className={textRole('subheading')}>Active purchases</h3>
-      <Stack as="ul" gap="tight">
-        {grants.map((grant) => (
-          <li key={grant.grant_id} className={textRole('caption')}>
-            +{grant.value} {capabilityLabel(grant.key).toLowerCase()} · usable until{' '}
-            <DisplayTime value={grant.effective_valid_until} dateOnly fallback="your plan ends" />
-          </li>
-        ))}
-      </Stack>
-    </Stack>
+    <Section aria-labelledby="active-extras-title">
+      <SectionHeader>
+        <SectionTitle id="active-extras-title" level={3}>
+          Active purchases
+        </SectionTitle>
+      </SectionHeader>
+      <SectionContent>
+        <LedgerList>
+          {grants.map((grant) => (
+            <LedgerItem
+              key={grant.grant_id}
+              title={`+${grant.value} ${capabilityLabel(grant.key).toLowerCase()}`}
+              caption={
+                <>
+                  Usable until{' '}
+                  <DisplayTime
+                    value={grant.effective_valid_until}
+                    dateOnly
+                    fallback="your plan ends"
+                  />
+                </>
+              }
+            />
+          ))}
+        </LedgerList>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -131,14 +154,14 @@ export function ExtraPurchases({
   const { addons, topups } = extrasForPlan(catalog, planKey);
   if (addons.length === 0 && topups.length === 0) return null;
   return (
-    // A section of the Plan card, so no card of its own.
-    <Stack as="section" gap="compact" aria-labelledby="extras-title">
-      <EditorialSectionHeader
-        headingId="extras-title"
-        title="Add-ons and top-ups"
-        description="One-time purchases. They work only while your paid plan is active and never renew."
-      />
-      <Stack gap="compact">
+    <Section aria-labelledby="extras-title">
+      <SectionHeader>
+        <SectionTitle id="extras-title">Add-ons and top-ups</SectionTitle>
+        <SectionDescription>
+          One-time purchases. They work only while your paid plan is active and never renew.
+        </SectionDescription>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="compact">
         {addons.map((entry) => (
           <ExtraRow
             key={entry.key}
@@ -159,8 +182,8 @@ export function ExtraPurchases({
             onBuy={onBuy}
           />
         ))}
+        <ActiveExtras entitlement={entitlement} />
       </Stack>
-      <ActiveExtras entitlement={entitlement} />
-    </Stack>
+    </Section>
   );
 }

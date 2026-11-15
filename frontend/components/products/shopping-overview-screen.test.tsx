@@ -180,9 +180,13 @@ describe('Shopping overview', () => {
     });
     renderWithProviders(<Harness />, projectRoute);
 
-    expect(
-      await screen.findByText('No Commerce run has measured this category yet.'),
-    ).toBeInTheDocument();
+    const shelf = (await screen.findByText('Category shelf')).closest('section')!;
+    expect(shelf).toHaveTextContent('No Commerce run has measured this category yet.');
+    // The one next step: the category's own page, where its shopping prompts are set up.
+    const setUp = within(shelf).getByRole('link', { name: 'Set up its shopping prompts' });
+    expect(new URL(setUp.getAttribute('href')!, 'https://app.test').pathname).toBe(
+      `/products/${CATEGORY}`,
+    );
     expect(table('Ranking')).toHaveTextContent('No brand yet.');
     expect(table('Top merchants')).toHaveTextContent('No answer named a merchant.');
     expect(table('Top fan-out queries')).toHaveTextContent('No answer named a product.');
