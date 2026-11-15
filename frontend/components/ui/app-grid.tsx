@@ -4,9 +4,9 @@ import { cn } from '@/lib/utils';
 
 /**
  * AppGrid — the app's only grids, so a page picks a layout instead of
- * setting columns or gaps. Columns are 24 apart and rows 32, the section gap,
- * so a grid of sections keeps the page's rhythm; items in a row stretch to
- * one height. Sections side by side are divided by a hairline centred in the
+ * setting columns or gaps. Items are 24 apart, and rows of sections 32 (the
+ * section gap), so a grid of sections keeps the page's rhythm; items in a row
+ * stretch to one height. Sections side by side are divided by a hairline centred in the
  * gap that runs the height of the row; when they stack it goes and each
  * section's ink rule divides them.
  *
@@ -76,9 +76,8 @@ export function AppGrid({
     {
       ...props,
       'data-app-grid': layout,
-      'data-rhythm-gap': '',
       className: cn(
-        'grid min-w-0 grid-cols-1 gap-x-[var(--workspace-gap)] gap-y-[var(--page-section-gap)] *:min-w-0 *:[--rhythm-gap:var(--page-section-gap)]',
+        'grid min-w-0 grid-cols-1 gap-[var(--workspace-gap)] *:min-w-0 has-[>.surface-section]:gap-y-[var(--page-section-gap)]',
         SECTION_DIVIDER,
         LAYOUT[layout],
         className,

@@ -37,6 +37,11 @@ function ReloadButton() {
   );
 }
 
+const COULD_NOT_OPEN = {
+  heading: 'This page could not be opened',
+  children: 'Reload to try again, or go back to Overview.',
+} as const;
+
 /**
  * A screen that failed to render, shown inside the shell so navigation and
  * sign-out stay available. Reloading also recovers a route chunk replaced by a
@@ -48,16 +53,14 @@ export function ScreenError() {
     <NoticePage
       title="Something went wrong"
       tone="negative"
-      heading="This page could not be opened"
+      {...COULD_NOT_OPEN}
       actions={
         <>
           <ReloadButton />
           <OverviewLink variant="secondary" />
         </>
       }
-    >
-      Reload to try again, or go back to Overview.
-    </NoticePage>
+    />
   );
 }
 
@@ -109,7 +112,7 @@ export function ShellRouteError() {
       <main id="main" className="min-w-0">
         <NoticePage
           tone="warning"
-          heading="This page could not be opened"
+          {...COULD_NOT_OPEN}
           actions={
             <>
               <ReloadButton />
@@ -118,9 +121,7 @@ export function ShellRouteError() {
               </a>
             </>
           }
-        >
-          Reload to try again, or go back to Overview.
-        </NoticePage>
+        />
       </main>
     </ShellFallback>
   );

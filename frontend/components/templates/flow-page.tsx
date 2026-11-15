@@ -73,14 +73,14 @@ export function FlowPage({
       <main
         id="main"
         aria-label={label}
-        className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] [--control-md:var(--control-lg)]"
+        className="max-w-flow mx-auto flex w-full flex-1 flex-col gap-[var(--workspace-gap)] px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] [--control-md:var(--control-lg)]"
       >
         {steps ? <FlowRungTrail steps={steps} current={index} /> : null}
-        <div className="border-rule-ink flex flex-1 flex-col border-t pt-3">
-          <p aria-hidden={steps ? true : undefined} className="type-overline mb-4">
+        <div className="border-rule-ink flex flex-1 flex-col gap-4 border-t pt-3">
+          <p aria-hidden={steps ? true : undefined} className="type-overline">
             {overline}
           </p>
-          {children}
+          <div className="flex flex-1 flex-col">{children}</div>
         </div>
       </main>
       {footer ? (
@@ -106,7 +106,7 @@ function FlowRungTrail({
 }: Readonly<{ steps: readonly [string, ...string[]]; current: number }>) {
   const count = `Step ${current + 1} of ${steps.length}`;
   return (
-    <section aria-label="Setup progress" className="mb-[var(--workspace-gap)] flex min-w-0">
+    <section aria-label="Setup progress" className="flex min-w-0">
       <progress
         className="sr-only"
         aria-label={steps[current]}

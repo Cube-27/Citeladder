@@ -40,18 +40,12 @@ function useUserMenu() {
   return state;
 }
 
-function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
+function UserMenuContent({
+  presenter,
+  currentHref,
+}: Readonly<{ presenter: UserMenuPresenter; currentHref?: string }>) {
   const { email, logout } = useUserMenu();
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
-  const pathname = useLocation().pathname ?? '';
-  const searchParams = useSearchParams()[0];
-  // The deepest match is current: Connect AI assistants, not also Settings.
-  const currentHref = ACCOUNT_MENU_ITEMS.filter((item) =>
-    isNavItemActive(pathname, searchParams, item),
-  ).reduce<string | undefined>(
-    (deepest, item) => (item.href.length > (deepest?.length ?? 0) ? item.href : deepest),
-    undefined,
-  );
   const sidebar = presenter === 'sidebar';
   return (
     <MenuContent align={sidebar ? 'start' : 'end'} side={sidebar ? 'top' : 'bottom'}>
@@ -100,8 +94,12 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
 export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPresenter }>) {
   const { activePresenter, email, setOpen } = useUserMenu();
   const { activeWorkspace } = useProjectContext();
-  const pathname = useLocation().pathname ?? '';
-  const current = isAccountCurrent(pathname, useSearchParams()[0]);
+  const { pathname } = useLocation();
+  const [searchParams] = useSearchParams();
+  // The deepest match is current: Connect AI assistants, not also Settings.
+  const currentHref = ACCOUNT_MENU_ITEMS.filter((item) =>
+    isNavItemActive(pathname, searchParams, item),
+  ).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   const open = activePresenter === presenter;
   const label = `Account menu for ${email}`;
   return (
@@ -113,7 +111,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
               aria-label={label}
               title={email}
               meta={activeWorkspace?.name}
-              current={current}
+              current={isAccountCurrent(pathname, searchParams)}
               lead={<Avatar name={email} />}
             />
           </MenuTrigger>
@@ -126,7 +124,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
           <Avatar name={email} />
         </MenuTrigger>
       )}
-      {open ? <UserMenuContent presenter={presenter} /> : null}
+      {open ? <UserMenuContent presenter={presenter} currentHref={currentHref} /> : null}
     </Menu>
   );
 }

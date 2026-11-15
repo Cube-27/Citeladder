@@ -135,7 +135,7 @@ export function SidebarIdentButton({
     lead: ReactNode;
     title: string;
     meta?: string;
-    /** The current page lives behind this button (the account's Settings): it carries the rung. */
+    /** The current page lives behind this button (the account's Settings): it carries the rung (globals.css). */
     current?: boolean;
     ref?: Ref<HTMLButtonElement>;
   }
@@ -147,8 +147,6 @@ export function SidebarIdentButton({
       data-sidebar-ident=""
       aria-current={current ? 'page' : undefined}
       className={cn(
-        current &&
-          'before:bg-accent before:rounded-mark relative before:absolute before:inset-y-2 before:start-0 before:w-[var(--mark-width)]',
         'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-2 labelled:justify-start labelled:px-2 rounded-control flex min-h-[var(--control-lg)] w-full min-w-0 items-center justify-center gap-2 text-left transition-colors disabled:pointer-events-none',
         className,
       )}

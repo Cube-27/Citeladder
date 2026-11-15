@@ -14,31 +14,27 @@ export const SCRIM = 'bg-scrim z-overlay fixed inset-0';
  * The element that opened an overlay. An item of a menu closes with its menu,
  * so the menu's trigger stands in for it.
  */
-function opener(active: Element | null): HTMLElement | null {
+function opener(active: Element | null) {
   if (!(active instanceof HTMLElement) || active === document.body) return null;
-  if (active === document.documentElement || !active.isConnected) return null;
-  const menu = active.closest('[role="menu"]');
-  const triggerId = menu?.getAttribute('aria-labelledby');
-  const trigger = triggerId ? document.getElementById(triggerId) : null;
-  return trigger ?? active;
+  if (active === document.documentElement) return null;
+  const id = active.closest('[role="menu"]')?.getAttribute('aria-labelledby');
+  return (id && document.getElementById(id)) || active;
 }
 
-const shown = (node: HTMLElement) =>
-  typeof node.checkVisibility === 'function' ? node.checkVisibility() : true;
+const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
 
 /**
  * Where focus goes back to: the opener while it shows, else the visible
  * control that expands the region hiding it (the masthead's More actions
  * button for an action folded into its panel).
  */
-function returnTargetFor(node: HTMLElement): HTMLElement | null {
-  if (!node.isConnected) return null;
-  if (shown(node)) return node;
+function returnTargetFor(node: HTMLElement | null) {
+  if (!node?.isConnected || shown(node)) return node?.isConnected ? node : null;
+  const controls = [...document.querySelectorAll<HTMLElement>('[aria-controls]')].filter(shown);
   for (let region = node.parentElement; region; region = region.parentElement) {
-    const id = region.id;
-    if (!id) continue;
-    const control = [...document.querySelectorAll<HTMLElement>('[aria-controls]')].find(
-      (node) => node.getAttribute('aria-controls')?.split(/\s+/).includes(id) && shown(node),
+    const { id } = region;
+    const control = controls.find(
+      (c) => id && c.getAttribute('aria-controls')?.split(' ').includes(id),
     );
     if (control) return control;
   }
@@ -58,9 +54,8 @@ export function useReturnFocus(open: boolean) {
     wasOpenRef.current = open;
   }, [open]);
   return (event: Event) => {
-    const recorded = returnFocusRef.current;
+    const returnTarget = returnTargetFor(returnFocusRef.current);
     returnFocusRef.current = null;
-    const returnTarget = recorded ? returnTargetFor(recorded) : null;
     if (!returnTarget) return;
     event.preventDefault();
     returnTarget.focus();

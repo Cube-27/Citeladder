@@ -15,22 +15,13 @@ import { PageFrame } from './page-frame';
  */
 type NoticeTone = 'info' | 'warning' | 'negative' | 'loading';
 
-const TONE_GLYPH: Readonly<Record<Exclude<NoticeTone, 'loading'>, LucideIcon>> = {
-  info: Info,
-  warning: TriangleAlert,
-  negative: CircleAlert,
-};
-
-const TONE_INK: Readonly<Record<Exclude<NoticeTone, 'loading'>, string>> = {
-  info: 'text-info',
-  warning: 'text-warning',
-  negative: 'text-negative',
-};
-
-const TONE_OVERLINE: Readonly<Record<Exclude<NoticeTone, 'loading'>, string>> = {
-  info: 'Notice',
-  warning: 'Warning',
-  negative: 'Error',
+/** Each tone's glyph, its ink and the overline's word. */
+const TONE: Readonly<
+  Record<Exclude<NoticeTone, 'loading'>, readonly [glyph: LucideIcon, ink: string, word: string]>
+> = {
+  info: [Info, 'text-info', 'Notice'],
+  warning: [TriangleAlert, 'text-warning', 'Warning'],
+  negative: [CircleAlert, 'text-negative', 'Error'],
 };
 
 type NoticeContent = Readonly<{
@@ -66,25 +57,23 @@ function NoticeBlock({
   // One loader for a wait that passes through several owners: it hands over without a blank beat.
   if (tone === 'loading') return <StateBlock kind="loading" label={heading} />;
   const Heading = level === 1 ? 'h1' : 'h2';
+  const [glyph, ink, word] = TONE[tone];
   return (
     <section
       data-notice-tone={tone}
-      className="max-w-flow border-rule-ink flex w-full flex-col border-t pt-3"
+      className="max-w-flow border-rule-ink flex w-full flex-col gap-4 border-t pt-3"
     >
-      <p className="type-overline mb-4">{overline ?? TONE_OVERLINE[tone]}</p>
-      <div className="flex items-start gap-2">
-        <Icon
-          icon={icon ?? TONE_GLYPH[tone]}
-          className={cn('mt-1 size-5 shrink-0', TONE_INK[tone])}
-        />
-        <Heading className={textRole('display', 'min-w-0 text-balance')}>{heading}</Heading>
+      <p className="type-overline">{overline ?? word}</p>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-start gap-2">
+          <Icon icon={icon ?? glyph} className={cn('mt-1 size-5 shrink-0', ink)} />
+          <Heading className={textRole('display', 'min-w-0 text-balance')}>{heading}</Heading>
+        </div>
+        {children ? (
+          <div className={textRole('body', 'flex flex-col gap-2')}>{children}</div>
+        ) : null}
       </div>
-      {children ? (
-        <div className={textRole('body', 'mt-2 flex flex-col gap-2')}>{children}</div>
-      ) : null}
-      {actions ? (
-        <div className="mt-[var(--card-padding)] flex flex-wrap items-center gap-2">{actions}</div>
-      ) : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </section>
   );
 }

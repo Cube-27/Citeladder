@@ -121,10 +121,7 @@ export function SectionContent({
 /** A page's sections, stacked at the section gap. */
 export function SectionStack({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div
-      data-rhythm-gap=""
-      className="flex min-w-0 flex-col gap-[var(--page-section-gap)] *:[--rhythm-gap:var(--page-section-gap)]"
-    >
+    <div data-rhythm-gap="section" className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
       {children}
     </div>
   );

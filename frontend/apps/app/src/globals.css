@@ -443,9 +443,9 @@
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
-  /* 8 and 8: the row's hairline is drawn inside the row (an inset line), so
-     it takes nothing from the padding. */
-  --table-cell-padding-bottom: var(--table-cell-padding-y);
+  /* The row's 1px rule comes out of the row, not on top of it: a cell
+     holding a 24px title line is still `table-row-height` tall. */
+  --table-cell-padding-bottom: calc(var(--table-cell-padding-y) - 1px);
   --table-min-width-sm: 36rem;
   /* Under the 734px main column of the 982px window (200 sidebar, two 24 gutters). */
   --table-min-width-md: 44rem;
@@ -1716,8 +1716,8 @@ a.focus-ring:active .type-caption {
 /* Rhythm (2.2) belongs to Section, the template and the grid, never a page.
    A section that is not first in its container sits 32 below the block above
    it. A container that already spaces its children (Stack, PageSections,
-   AppGrid) publishes its gap as `--rhythm-gap` on them, so the section adds
-   only the difference; the value reaches no deeper than its children. */
+   SectionStack, AppGrid) names its gap in `data-rhythm-gap`, so the section
+   adds only the difference. */
 @layer components {
   /* Settings (3.4): from a 1100px main column each section is two columns
      on the grid, its head and caption in the first four and its rows in the
@@ -1740,10 +1740,37 @@ a.focus-ring:active .type-caption {
     }
   }
   .surface-section:not(:first-child) {
-    margin-block-start: max(0px, calc(var(--page-section-gap) - var(--rhythm-gap, 0px)));
+    margin-block-start: var(--page-section-gap);
   }
-  [data-rhythm-gap] > * > * {
-    --rhythm-gap: 0px;
+  :is([data-rhythm-gap='section'], [data-app-grid]) > .surface-section:not(:first-child) {
+    margin-block-start: 0;
+  }
+  [data-rhythm-gap='workspace'] > .surface-section:not(:first-child) {
+    margin-block-start: calc(var(--page-section-gap) - var(--workspace-gap));
+  }
+  [data-rhythm-gap='compact'] > .surface-section:not(:first-child) {
+    margin-block-start: calc(var(--page-section-gap) - var(--compact-gap));
+  }
+  [data-rhythm-gap='item'] > .surface-section:not(:first-child) {
+    margin-block-start: calc(var(--page-section-gap) - 8px);
+  }
+  [data-rhythm-gap='tight'] > .surface-section:not(:first-child) {
+    margin-block-start: calc(var(--page-section-gap) - 4px);
+  }
+
+  /* The account button carries the location rung while the page is one of
+     the account's (Settings, Billing, Pricing). */
+  [data-sidebar-ident][aria-current='page'] {
+    position: relative;
+  }
+  [data-sidebar-ident][aria-current='page']::before {
+    content: '';
+    position: absolute;
+    inset-block: 8px;
+    inset-inline-start: 0;
+    width: var(--mark-width);
+    border-radius: var(--radius-mark);
+    background: var(--color-accent);
   }
 }
 

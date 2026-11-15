@@ -23,11 +23,11 @@ import { cn } from '@/lib/utils';
  * A Section in a Stack tops the gap up to the section gap (32) itself.
  */
 const STACK_GAP = {
-  section: 'gap-[var(--page-section-gap)] *:[--rhythm-gap:var(--page-section-gap)]',
-  workspace: 'gap-[var(--workspace-gap)] *:[--rhythm-gap:var(--workspace-gap)]',
-  compact: 'gap-[var(--compact-gap)] *:[--rhythm-gap:var(--compact-gap)]',
-  item: 'gap-2 *:[--rhythm-gap:8px]',
-  tight: 'gap-1 *:[--rhythm-gap:4px]',
+  section: 'gap-[var(--page-section-gap)]',
+  workspace: 'gap-[var(--workspace-gap)]',
+  compact: 'gap-[var(--compact-gap)]',
+  item: 'gap-2',
+  tight: 'gap-1',
 } as const;
 
 export type StackGap = keyof typeof STACK_GAP;
@@ -41,7 +41,7 @@ export function Stack({
 }: Readonly<ComponentPropsWithRef<'div'> & { as?: ElementType; gap?: StackGap }>) {
   const Component = as ?? 'div';
   return (
-    <Component {...props} data-rhythm-gap="" className={cn('grid', STACK_GAP[gap], className)}>
+    <Component {...props} data-rhythm-gap={gap} className={cn('grid', STACK_GAP[gap], className)}>
       {children}
     </Component>
   );
