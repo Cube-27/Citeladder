@@ -221,7 +221,7 @@ export function DomainTable({
           />
           <NumericCell value={ratio(row.retrieval_rate)} desktopOnly />
           <NumericCell value={count(row.annotations)} />
-          <NumericCell value={percent(row.citation_share, 1)} desktopOnly />
+          <NumericCell value={percent(row.citation_share)} desktopOnly />
           <NumericCell value={ratio(row.citation_rate)} desktopOnly />
         </TableRow>
       ))}

@@ -1,7 +1,7 @@
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
 import { numericMetric, signalDefinition } from '@/lib/demand/signals';
-import { availabilityLabel, formatCount, formatPercent } from '@/lib/format';
+import { availabilityLabel, formatCount, formatMean, formatPercent } from '@/lib/format';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -44,7 +44,7 @@ function strikingDistanceDetail(signal: DemandSignal): string | null {
   const position = numericMetric(signal, 'position');
   const impressions = numericMetric(signal, 'impressions');
   const observed = [
-    position === null ? null : `ranks #${position.toFixed(1)}`,
+    position === null ? null : `ranks #${formatMean(position)}`,
     impressions === null ? null : `${formatCount(impressions)} impressions`,
   ].filter(Boolean);
   if (!observed.length) return null;

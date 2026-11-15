@@ -13,11 +13,10 @@ import {
   totalSourceSessions,
 } from '@/lib/ai-traffic/series';
 import { bucketCountLabel } from '@/lib/ai-traffic/options';
-import { formatCount, formatPercent, formatWindowDate } from '@/lib/format';
+import { formatAmount, formatCount, formatPercent, formatWindowDate } from '@/lib/format';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Tabs, TabPanel } from '@/components/ui/tabs';
 import {
-  formatRevenue,
   Measure,
   ReferralComparison,
   ReferralLandingPages,
@@ -231,7 +230,7 @@ function SourceTotalsRows({ data }: Readonly<{ data: AiReferrals }>) {
             <TableCell numeric>
               <Measure
                 value={measures?.purchase_revenue ?? null}
-                format={(v) => formatRevenue(v, data.currency_code)}
+                format={(v) => formatAmount(v, data.currency_code)}
               />
             </TableCell>
           </TableRow>

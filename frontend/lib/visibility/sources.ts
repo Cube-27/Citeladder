@@ -7,7 +7,7 @@
  * place and over the selection in another.
  */
 import type { z } from 'zod';
-import { formatCount } from '@/lib/format';
+import { formatCount, formatMean, percentText } from '@/lib/format';
 
 import type {
   visibilitySourceSeriesSchema,
@@ -134,16 +134,16 @@ export function seriesCeiling(series: ReturnType<typeof toChartSeries>): number 
  * caller renders `Absence` instead, which names the state.
  */
 
-/** A ratio as a percentage. */
-export function percent(value: number | null | undefined, digits = 0): string | null {
+/** A ratio as a percentage, one decimal. */
+export function percent(value: number | null | undefined): string | null {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
-  return `${(value * 100).toFixed(digits)}%`;
+  return percentText(value);
 }
 
 /** A plain ratio (citations per response), which is NOT a percentage. */
 export function ratio(value: number | null | undefined): string | null {
   if (value === null || value === undefined || Number.isNaN(value)) return null;
-  return value.toFixed(1);
+  return formatMean(value);
 }
 
 /** A count, grouped. */

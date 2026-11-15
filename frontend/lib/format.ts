@@ -54,7 +54,33 @@ export function availabilityLabel(state: DataAvailabilityState): string {
  */
 export function formatPercent(fraction: number | null): string {
   if (fraction === null) return availabilityLabel('not_measured');
+  return percentText(fraction);
+}
+
+/** A measured fraction as a percentage, one decimal ("12.5%"); absence is the caller's. */
+export function percentText(fraction: number): string {
   return `${(fraction * 100).toFixed(1)}%`;
+}
+
+/**
+ * An amount in its currency when the code is an ISO currency ("$12.50"),
+ * else the bare amount with whatever code it came with ("12.5 pts").
+ */
+export function formatAmount(amount: number, currency: string | null): string {
+  if (currency && /^[A-Z]{3}$/u.test(currency)) {
+    try {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
+    } catch {
+      // An unknown code falls through to the bare amount with its code.
+    }
+  }
+  const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount);
+  return currency ? `${number} ${currency}` : number;
+}
+
+/** A mean or a ratio (an average position, citations per response), one decimal ("8.4"). */
+export function formatMean(value: number): string {
+  return value.toFixed(1);
 }
 
 /**

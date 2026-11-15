@@ -193,9 +193,7 @@ export function AgentTurn({
       <div className="flex min-h-6 flex-wrap items-center gap-2">
         <LogoMark wordmark={false} variant="compact" />
         <span className={textRole('body', 'text-ink-2')}>Agent</span>
-        {time ? (
-          <span className={textRole('caption', 'font-mono tabular-nums')}>{time}</span>
-        ) : null}
+        {time ? <span className={textRole('caption', 'tabular-nums')}>{time}</span> : null}
         {meta ? <span className={textRole('caption')}>{meta}</span> : null}
       </div>
       <div data-turn-rail="" className="border-rule ms-3 flex min-w-0 flex-col gap-3 border-s ps-4">

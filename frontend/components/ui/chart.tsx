@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { percentText } from '@/lib/format';
+
 /**
  * The chart kit every product chart draws with: plain SVG and the chart
  * tokens, no chart library.
@@ -50,7 +52,7 @@ export const CHART_DASH: Record<ChartTone, string | undefined> = {
 /** One share of a whole, to one decimal: `12.5%`. A zero total is `0%`. */
 export function chartPercent(value: number, total: number): string {
   if (!total) return '0%';
-  return `${((value / total) * 100).toFixed(1)}%`;
+  return percentText(value / total);
 }
 
 /**
