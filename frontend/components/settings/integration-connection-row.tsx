@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { LucideIcon } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { PlugZap, type LucideIcon } from 'lucide-react';
+import { useEffect, useId, useState, type ReactNode } from 'react';
 
 import { BackfillHistory } from '@/components/settings/backfill-progress';
 import { PROVIDER_META, type GrantModel } from '@/components/settings/grant-model';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
-import { PropertyPicker, useActiveMapping } from '@/components/settings/property-picker';
+import {
+  PropertyPicker,
+  SelectedPropertyMark,
+  useActiveMapping,
+} from '@/components/settings/property-picker';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,15 +20,13 @@ import {
   type IntegrationConnection,
 } from '@/lib/api/integrations';
 import { humanizeApiError } from '@/lib/api/errors';
-import { formatCount, formatShortDate } from '@/lib/format';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatCount, formatShortDate, formatTableTimestamp } from '@/lib/format';
 import { DisplayTime } from '@/components/ui/display-time';
 import { isSyncInFlight, pollSyncRun, SYNC_RUN_STATES } from '@/lib/integrations/status';
-import { ControlRow } from '@/components/ui/control-row';
-import { FactList } from '@/components/ui/facts';
 import { IconTile } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
+import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
-import { ledgerItemClasses } from '@/components/ui/workspace';
 
 type ConnectionMutation = {
   isPending: boolean;
@@ -59,14 +61,54 @@ const TEST_FAILURE: Record<string, string> = {
   rate_limited: 'The provider is rate limiting requests. Try again in a few minutes.',
 };
 
+/** Sync now, disabled with its reason (tooltip and description) until a property is chosen. */
+function SyncButton({
+  label,
+  disabled,
+  hasProperty,
+  pending,
+  onSync,
+}: Readonly<{
+  label: string;
+  disabled: boolean;
+  hasProperty: boolean;
+  pending: boolean;
+  onSync: () => void;
+}>) {
+  const reasonId = useId();
+  const button = (
+    <Button
+      className="min-w-22"
+      onClick={onSync}
+      disabled={disabled}
+      pending={pending}
+      pendingLabel="Syncing…"
+      aria-label={`Sync ${label} now`}
+      aria-describedby={hasProperty ? undefined : reasonId}
+    >
+      Sync now
+    </Button>
+  );
+  // One tree either way, so the button keeps its node when a property arrives.
+  return (
+    <>
+      <span id={reasonId} hidden>
+        Select a property first
+      </span>
+      <Tooltip content="Select a property first" describe={false} shouldOpen={() => !hasProperty}>
+        {/* A disabled button takes no pointer events, so its wrapper opens the tip. */}
+        <span className="inline-flex">{button}</span>
+      </Tooltip>
+    </>
+  );
+}
+
 function ConnectionActions({
   connection,
-  grant,
   label,
-  Icon,
   busy,
   hasProperty,
-  runInFlight,
+  syncDisabled,
   testPending,
   syncPending,
   removePending,
@@ -75,12 +117,10 @@ function ConnectionActions({
   onRemove,
 }: Readonly<{
   connection: IntegrationConnection;
-  grant: GrantModel;
   label: string;
-  Icon: LucideIcon;
   busy: boolean;
   hasProperty: boolean;
-  runInFlight: boolean;
+  syncDisabled: boolean;
   testPending: boolean;
   syncPending: boolean;
   removePending: boolean;
@@ -88,60 +128,60 @@ function ConnectionActions({
   onSync: () => void;
   onRemove: () => void;
 }>) {
-  const syncDisabled = busy || runInFlight || !hasProperty || grant.status !== 'connected';
   // Testing and removing touch the credential; syncing is a run. Each is
   // offered only to a role that may do it.
   const canManage = useWorkspaceCapability('manage_credentials');
   const canRun = useWorkspaceCapability('run');
 
   return (
-    <ControlRow
-      media={<IconTile icon={Icon} />}
-      controls={
-        <>
-          {canManage ? (
-            <Button
-              variant="secondary"
-              className="min-w-14"
-              onClick={onTest}
-              disabled={busy}
-              aria-label={`Test ${label}`}
-            >
-              {testPending ? 'Testing…' : 'Test'}
-            </Button>
-          ) : null}
-          {canRun ? (
-            <Button
-              variant="secondary"
-              className="min-w-22"
-              onClick={onSync}
-              title={hasProperty ? undefined : 'Select a property first'}
-              disabled={syncDisabled}
-              pending={syncPending}
-              pendingLabel="Syncing…"
-              aria-label={`Sync ${label} now`}
-            >
-              Sync now
-            </Button>
-          ) : null}
-          {hasProperty && canManage ? (
-            <Button
-              variant="danger"
-              onClick={onRemove}
-              disabled={busy}
-              pending={removePending}
-              pendingLabel="Removing…"
-              aria-label={`Remove ${label} property from this project`}
-            >
-              Remove
-            </Button>
-          ) : null}
-        </>
-      }
-    >
-      <div className={textRole('body', 'truncate')}>{label}</div>
+    <div className="flex shrink-0 flex-wrap items-center gap-2">
       <PropertyPicker connection={connection} disabled={busy} />
-    </ControlRow>
+      {canManage ? (
+        <Button
+          variant="quiet"
+          className="min-w-14"
+          onClick={onTest}
+          disabled={busy}
+          aria-label={`Test ${label}`}
+        >
+          <PlugZap className="size-4" aria-hidden />
+          {testPending ? 'Testing…' : 'Test'}
+        </Button>
+      ) : null}
+      {canRun ? (
+        <SyncButton
+          label={label}
+          disabled={syncDisabled}
+          hasProperty={hasProperty}
+          pending={syncPending}
+          onSync={onSync}
+        />
+      ) : null}
+      {hasProperty && canManage ? (
+        <Button
+          variant="danger"
+          onClick={onRemove}
+          disabled={busy}
+          pending={removePending}
+          pendingLabel="Removing…"
+          aria-label={`Remove ${label} property from this project`}
+        >
+          Remove
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
+/** A status mark and the sentence after it, cut to one line with the whole in a tooltip. */
+function MarkLine({ mark, text }: Readonly<{ mark: ReactNode; text: ReactNode }>) {
+  return (
+    <>
+      {mark}
+      <span className="min-w-0 truncate" title={typeof text === 'string' ? text : undefined}>
+        {text}
+      </span>
+    </>
   );
 }
 
@@ -149,44 +189,40 @@ function ConnectionActions({
 function RunSummary({ run, runActive }: Readonly<{ run: SyncRun; runActive: boolean }>) {
   const rows = `${formatCount(run.row_count)} rows`;
   const window = `window ${formatShortDate(run.window_start)}–${formatShortDate(run.window_end)}`;
+  const mark = (
+    <StatusMark variant="run-status" value={SYNC_RUN_STATES[run.status].badge}>
+      {SYNC_RUN_STATES[run.status].label}
+    </StatusMark>
+  );
   if (runActive)
     return (
-      <>
-        <StatusMark variant="run-status" value={SYNC_RUN_STATES[run.status].badge}>
-          {SYNC_RUN_STATES[run.status].label}
-        </StatusMark>
-        <span className="truncate">
-          {run.status === 'running' ? (
+      <MarkLine
+        mark={mark}
+        text={
+          run.status === 'running' ? (
             `${rows} · ${window}`
           ) : (
             <>
               Enqueued <DisplayTime value={run.created_at} /> · {waitingLabel(run.status)}
             </>
-          )}
-        </span>
-      </>
+          )
+        }
+      />
     );
   if (run.processing)
     return (
-      <>
-        <StatusMark variant="run-status" value="running">
-          Processing
-        </StatusMark>
-        <span className="truncate">{`${rows} imported · updating reports`}</span>
-      </>
+      <MarkLine
+        mark={
+          <StatusMark variant="run-status" value="running">
+            Processing
+          </StatusMark>
+        }
+        text={`${rows} imported · updating reports`}
+      />
     );
   const result =
     run.status === 'succeeded' ? `${rows} imported · ${window}` : run.error_detail || window;
-  return (
-    <>
-      <StatusMark variant="run-status" value={SYNC_RUN_STATES[run.status].badge}>
-        {SYNC_RUN_STATES[run.status].label}
-      </StatusMark>
-      <span className="truncate" title={result}>
-        {result}
-      </span>
-    </>
-  );
+  return <MarkLine mark={mark} text={result} />;
 }
 
 /**
@@ -201,48 +237,50 @@ function ConnectionStatus({
   activeRun,
   runActive,
   grantConnected,
-  hasProperty,
 }: Readonly<{
   actionError: unknown;
   testState: { ok: boolean; message: string } | null;
   activeRun: SyncRun | null;
   runActive: boolean;
   grantConnected: boolean;
-  hasProperty: boolean;
 }>) {
   if (actionError) {
-    const message = humanizeApiError(actionError).message;
     return (
-      <>
-        <StatusMark variant="status" value="danger">
-          Failed
-        </StatusMark>
-        <span className="truncate" title={message}>
-          {message}
-        </span>
-      </>
+      <MarkLine
+        mark={
+          <StatusMark variant="status" value="danger">
+            Failed
+          </StatusMark>
+        }
+        text={humanizeApiError(actionError).message}
+      />
     );
   }
   if (testState)
     return (
-      <>
-        <StatusMark variant="status" value={testState.ok ? 'success' : 'danger'}>
-          {testState.ok ? 'Test passed' : 'Test failed'}
-        </StatusMark>
-        <span className="truncate" title={testState.message}>
-          {testState.message}
-        </span>
-      </>
+      <MarkLine
+        mark={
+          <StatusMark variant="status" value={testState.ok ? 'success' : 'danger'}>
+            {testState.ok ? 'Test passed' : 'Test failed'}
+          </StatusMark>
+        }
+        text={testState.message}
+      />
     );
   if (activeRun) return <RunSummary run={activeRun} runActive={runActive} />;
-  if (!grantConnected) return <span className="text-ink-2">Reconnect to sync</span>;
-  if (!hasProperty) return <span className="text-ink-2">Select a property to import</span>;
-  return <span className="text-ink-2">Ready to sync</span>;
+  if (!grantConnected)
+    return (
+      <StatusMark variant="status" value="warning">
+        Reconnect to sync
+      </StatusMark>
+    );
+  return <StatusMark>Ready to sync</StatusMark>;
 }
 
 function ConnectionRowView({
   connection,
   grant,
+  propertyRef,
   testMutation,
   syncMutation,
   removeMutation,
@@ -251,10 +289,10 @@ function ConnectionRowView({
   runActive,
   runInFlight,
   busy,
-  hasProperty,
 }: Readonly<{
   connection: IntegrationConnection;
   grant: GrantModel;
+  propertyRef: string;
   testMutation: ConnectionMutation;
   syncMutation: ConnectionMutation;
   removeMutation: ConnectionMutation;
@@ -263,26 +301,44 @@ function ConnectionRowView({
   runActive: boolean;
   runInFlight: boolean;
   busy: boolean;
-  hasProperty: boolean;
 }>) {
   const { label, Icon } = PROVIDER_META[connection.provider];
   const actionError = syncMutation.error ?? removeMutation.error;
+  const hasProperty = propertyRef !== '';
+  const grantConnected = grant.status === 'connected';
+  // Until a property is chosen the row's only state is that it has none.
+  const status =
+    hasProperty || actionError || testState || activeRun ? (
+      <ConnectionStatus
+        actionError={actionError}
+        testState={testState}
+        activeRun={activeRun}
+        runActive={runActive}
+        grantConnected={grantConnected}
+      />
+    ) : null;
 
   return (
-    <Stack
-      as="li"
-      gap="compact"
-      className={ledgerItemClasses()}
+    <li
+      className="border-rule flex min-h-14 flex-col gap-2 border-b py-3 last:border-b-0 @[640px]:flex-row @[640px]:items-center @[640px]:gap-3"
       data-testid={`connection-row-${connection.provider}`}
     >
+      <ConnectionText connection={connection} label={label} Icon={Icon} />
+      <div
+        className={textRole(
+          'caption',
+          'text-ink-2 flex min-w-0 items-center gap-2 @[640px]:max-w-[40%] @[640px]:flex-[0_1_auto]',
+        )}
+      >
+        <SelectedPropertyMark connection={connection} />
+        {status}
+      </div>
       <ConnectionActions
         connection={connection}
-        grant={grant}
         label={label}
-        Icon={Icon}
         busy={busy}
         hasProperty={hasProperty}
-        runInFlight={runInFlight}
+        syncDisabled={busy || runInFlight || !hasProperty || !grantConnected}
         testPending={testMutation.isPending}
         syncPending={syncMutation.isPending}
         removePending={removeMutation.isPending}
@@ -290,41 +346,41 @@ function ConnectionRowView({
         onSync={syncMutation.mutate}
         onRemove={removeMutation.mutate}
       />
-      <FactList
-        layout="columns"
-        label={`${label} sync status`}
-        facts={[
-          {
-            // The connection is the workspace's, so its sync is too.
-            label: 'Connection last synced',
-            value: (
-              <span className="truncate">
-                <DisplayTime value={connection.last_synced_at} fallback="Never" />
-              </span>
-            ),
-          },
-          {
-            label: 'History',
-            value: (
-              <BackfillHistory workspaceId={connection.workspace_id} connectionId={connection.id} />
-            ),
-          },
-          {
-            label: 'Status',
-            value: (
-              <ConnectionStatus
-                actionError={actionError}
-                testState={testState}
-                activeRun={activeRun}
-                runActive={runActive}
-                grantConnected={grant.status === 'connected'}
-                hasProperty={hasProperty}
-              />
-            ),
-          },
-        ]}
-      />
-    </Stack>
+    </li>
+  );
+}
+
+/** The tile, the source's name and its sync line: when it last synced and how much history it holds. */
+function ConnectionText({
+  connection,
+  label,
+  Icon,
+}: Readonly<{ connection: IntegrationConnection; label: string; Icon: LucideIcon }>) {
+  const timeZone = useDisplayTimeZone();
+  const lastSynced = connection.last_synced_at;
+  return (
+    <div className="flex min-w-0 items-center gap-3 @[640px]:flex-[1_1_16rem]">
+      <IconTile icon={Icon} />
+      <div className="grid min-w-0">
+        <p className={textRole('label', 'text-ink truncate')}>{label}</p>
+        {/* The connection is the workspace's, so its sync is too; the card's foot names the zone. */}
+        <div className={textRole('caption', 'text-ink-2 flex min-w-0 flex-wrap gap-x-1')}>
+          <span className="whitespace-nowrap">
+            Last synced{' '}
+            {lastSynced ? (
+              <time dateTime={lastSynced}>{formatTableTimestamp(lastSynced, timeZone)}</time>
+            ) : (
+              'never'
+            )}{' '}
+            ·
+          </span>
+          <span className="flex min-w-0 gap-1">
+            <span className="shrink-0">History</span>
+            <BackfillHistory workspaceId={connection.workspace_id} connectionId={connection.id} />
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -398,12 +454,13 @@ export function ConnectionRow({
     if (mapping) removeMutation.mutate(mapping.id);
   };
   const busy = testMutation.isPending || syncMutation.isPending || removeMutation.isPending;
-  const hasProperty = mapping !== null;
 
   return (
     <ConnectionRowView
       connection={connection}
       grant={grant}
+      // The active mapping, never the connection's account_ref (see `useActiveMapping`).
+      propertyRef={mapping?.property_ref ?? ''}
       testMutation={connectionAction(testMutation, () => testMutation.mutate())}
       syncMutation={connectionAction(syncMutation, startSync)}
       removeMutation={connectionAction(removeMutation, removeMapping)}
@@ -412,7 +469,6 @@ export function ConnectionRow({
       runActive={runActive}
       runInFlight={runInFlight}
       busy={busy}
-      hasProperty={hasProperty}
     />
   );
 }

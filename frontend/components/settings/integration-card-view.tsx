@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useId, useState, type ReactNode } from 'react';
 
 import { ConnectionRow } from '@/components/settings/integration-connection-row';
 import { Dialog } from '@/components/ui/dialog';
@@ -15,8 +15,11 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
-import { Inline, Stack } from '@/components/ui/layout';
-import { ledgerClasses, MetaFooter } from '@/components/ui/workspace';
+import { GoogleGlyph } from '@/components/ui/google-glyph';
+import { InfoHint } from '@/components/ui/info-hint';
+import { Stack } from '@/components/ui/layout';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatTimeZoneNote } from '@/lib/format';
 import {
   integrationsApi,
   integrationsMutations,
@@ -94,17 +97,32 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   return null;
 }
 
+/** Google's own mark beside its title; on a chip in dark, where the card is dark. */
+function FamilyMark({ family }: Readonly<{ family: GrantFamily }>) {
+  if (family !== 'google') return null;
+  return (
+    <span
+      aria-hidden
+      className="rounded-control [[data-theme=dark]_&]:bg-surface [[data-theme=dark]_&]:border-rule grid shrink-0 place-items-center [[data-theme=dark]_&]:border [[data-theme=dark]_&]:p-1"
+    >
+      <GoogleGlyph className="size-6" />
+    </span>
+  );
+}
+
 function GrantHeader({
   family,
   grant,
-}: Readonly<{ family: GrantFamily; grant: GrantModel | null }>) {
+  actions,
+}: Readonly<{ family: GrantFamily; grant: GrantModel | null; actions?: ReactNode }>) {
   const meta = FAMILY_META[family];
   const badge = grant ? GRANT_STATUS_BADGE[grant.status] : { variant: 'neutral' as const };
   const label = grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected';
 
   return (
-    <SectionHeader>
+    <SectionHeader actions={actions}>
       <SectionTitleLine>
+        <FamilyMark family={family} />
         <SectionTitle>{meta.title}</SectionTitle>
         {badge.variant === 'status' ? (
           <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
@@ -144,22 +162,44 @@ function ConnectCard({
 
   return (
     <Section data-testid={`grant-card-${family}`}>
-      <GrantHeader family={family} grant={null} />
+      <GrantHeader
+        family={family}
+        grant={null}
+        actions={canManage ? <ConnectButton workspaceId={workspaceId} family={family} /> : null}
+      />
       <SectionContent>
-        <Stack gap="compact">
-          <p className={textRole('body', 'text-ink-2')}>
-            {canManage
-              ? `Connect your ${meta.title} account to automatically import traffic and search visibility metrics.`
-              : `A workspace Owner or Admin can connect ${meta.title} to import traffic and search visibility metrics.`}
-          </p>
-          {canManage ? (
-            <Inline>
-              <ConnectButton workspaceId={workspaceId} family={family} />
-            </Inline>
-          ) : null}
-        </Stack>
+        <p className={textRole('body', 'text-ink-2')}>
+          {canManage
+            ? `Connect your ${meta.title} account to automatically import traffic and search visibility metrics.`
+            : `A workspace Owner or Admin can connect ${meta.title} to import traffic and search visibility metrics.`}
+        </p>
       </SectionContent>
     </Section>
+  );
+}
+
+/** Reconnect, with what it does as its description (an info hint beside it). */
+function ReconnectButton({
+  workspaceId,
+  family,
+}: Readonly<{ workspaceId: string; family: GrantFamily }>) {
+  const meta = FAMILY_META[family];
+  const noteId = useId();
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Button
+        aria-describedby={noteId}
+        onClick={() =>
+          hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
+        }
+      >
+        Reconnect
+      </Button>
+      <span id={noteId} hidden>
+        {meta.reconnectNote}
+      </span>
+      <InfoHint label="About reconnecting">{meta.reconnectNote}</InfoHint>
+    </span>
   );
 }
 
@@ -231,45 +271,35 @@ function ConnectedCard({
   family,
   grant,
 }: Readonly<{ workspaceId: string; family: GrantFamily; grant: GrantModel }>) {
-  const meta = FAMILY_META[family];
   // Connecting and disconnecting are credential actions.
   const canManage = useWorkspaceCapability('manage_credentials');
+  const timeZone = useDisplayTimeZone();
+  const datesShown = grant.connections.some((connection) => connection.last_synced_at !== null);
+  const actions = canManage ? (
+    <>
+      {grant.status === 'revoked' ? (
+        <ConnectButton workspaceId={workspaceId} family={family} />
+      ) : (
+        <ReconnectButton workspaceId={workspaceId} family={family} />
+      )}
+      {isGrantGone(grant.status) ? null : <DisconnectGrant grant={grant} />}
+    </>
+  ) : null;
 
   return (
     <Section data-testid={`grant-card-${family}`}>
-      <GrantHeader family={family} grant={grant} />
-      <SectionContent>
+      <GrantHeader family={family} grant={grant} actions={actions} />
+      <SectionContent data-settings-wide="">
         <Stack gap="compact">
           <GrantAlert family={family} status={grant.status} />
-          <ul className={ledgerClasses()}>
+          {/* Rows lay out by the card's width, not the window's. */}
+          <ul className="@container">
             {grant.connections.map((connection) => (
               <ConnectionRow key={connection.id} connection={connection} grant={grant} />
             ))}
           </ul>
-          {canManage ? (
-            <MetaFooter
-              trailing={
-                <span className="text-right">
-                  Reconnecting renews access for every property in this connection.
-                </span>
-              }
-            >
-              <Inline className="flex-wrap">
-                {grant.status === 'revoked' ? (
-                  <ConnectButton workspaceId={workspaceId} family={family} />
-                ) : (
-                  <Button
-                    variant="secondary"
-                    onClick={() =>
-                      hardNavigate(integrationsApi.oauthStartUrl(meta.connectProvider, workspaceId))
-                    }
-                  >
-                    Reconnect
-                  </Button>
-                )}
-                {isGrantGone(grant.status) ? null : <DisconnectGrant grant={grant} />}
-              </Inline>
-            </MetaFooter>
+          {datesShown ? (
+            <p className={textRole('caption', 'text-ink-2')}>{formatTimeZoneNote(timeZone)}</p>
           ) : null}
         </Stack>
       </SectionContent>

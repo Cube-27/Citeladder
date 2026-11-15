@@ -42,7 +42,17 @@ vi.mock('@/lib/project/project-context', () => ({
   }),
 }));
 
-import { PropertyPicker } from './property-picker';
+import { PropertyPicker, SelectedPropertyMark } from './property-picker';
+
+/** The picker as its row shows it: the chosen property (or none), then Select or Change. */
+function renderPicker(subject: IntegrationConnection) {
+  return renderWithProviders(
+    <>
+      <SelectedPropertyMark connection={subject} />
+      <PropertyPicker connection={subject} />
+    </>,
+  );
+}
 
 function connection(overrides: Partial<IntegrationConnection> = {}): IntegrationConnection {
   return {
@@ -114,17 +124,15 @@ describe('PropertyPicker', () => {
   it('shows saved mappings without discovery controls for members and viewers', async () => {
     mayDiscover = false;
     mockMappings([mapping('sc-domain:example.com')]);
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
     expect(await screen.findByText('sc-domain:example.com')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Change Search Console property' })).toBeNull();
   });
   it('flags an unselected connection instead of showing an empty ref', () => {
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
 
     // The state that made syncs fail silently must be visible, not blank.
-    expect(
-      screen.getByText('This project: no Search Console property selected'),
-    ).toBeInTheDocument();
+    expect(screen.getByText('No property selected')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Select Search Console property' }),
     ).toBeInTheDocument();
@@ -139,7 +147,7 @@ describe('PropertyPicker', () => {
         return HttpResponse.json(properties);
       }),
     );
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
 
     // Discovery is a live upstream call — it must be lazy, not on mount.
     expect(calls).toBe(0);
@@ -171,7 +179,7 @@ describe('PropertyPicker', () => {
         );
       }),
     );
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
 
     await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
     await ue.click(await screen.findByText('Example (domain property)'));
@@ -197,7 +205,7 @@ describe('PropertyPicker', () => {
         return response;
       }),
     );
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
     try {
       await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
       await waitFor(() => expect(calls).toBe(1));
@@ -232,7 +240,7 @@ describe('PropertyPicker', () => {
         ),
       ),
     );
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
 
     await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
 
@@ -247,7 +255,7 @@ describe('PropertyPicker', () => {
     const ue = userEvent.setup();
     hasProject = false;
     mockProperties();
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
 
     await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
 
@@ -258,7 +266,7 @@ describe('PropertyPicker', () => {
 
   it('offers a change for an already-selected property', async () => {
     mockMappings([mapping('sc-domain:example.com')]);
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
 
     expect(await screen.findByText('sc-domain:example.com')).toBeInTheDocument();
     expect(
@@ -271,13 +279,9 @@ describe('PropertyPicker', () => {
     // connection. Trusting account_ref showed a confidently "selected"
     // property whose every sync was failing `unmapped_property`.
     mockMappings([mapping('sc-domain:example.com', 'disabled')]);
-    renderWithProviders(
-      <PropertyPicker connection={connection({ account_ref: 'sc-domain:example.com' })} />,
-    );
+    renderPicker(connection({ account_ref: 'sc-domain:example.com' }));
 
-    expect(
-      await screen.findByText('This project: no Search Console property selected'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('No property selected')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Select Search Console property' }),
     ).toBeInTheDocument();
@@ -290,11 +294,9 @@ describe('PropertyPicker', () => {
       mapping('https://other.test/', 'active', '77777777-7777-4777-8777-777777777777'),
     ]);
     mockProperties();
-    renderWithProviders(<PropertyPicker connection={connection()} />);
+    renderPicker(connection());
 
-    expect(
-      await screen.findByText('This project: no Search Console property selected'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('No property selected')).toBeInTheDocument();
     await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
     const foreign = await screen.findByText('Another site');
     expect(foreign.closest('button')).toBeDisabled();

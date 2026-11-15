@@ -71,13 +71,20 @@ export function isGrantGone(status: IntegrationConnection['grant_status']): bool
 
 export const FAMILY_META: Record<
   GrantFamily,
-  { title: string; connectProvider: IntegrationProvider; blurb: string }
+  {
+    title: string;
+    connectProvider: IntegrationProvider;
+    blurb: string;
+    /** What reconnecting does, said beside Reconnect rather than in the head. */
+    reconnectNote: string;
+  }
 > = {
   google: {
     title: 'Google',
     connectProvider: 'gsc',
-    blurb:
-      'One consent links Search Console and Analytics 4 on a shared grant. Signed in with Google? The account is pre-selected.',
+    blurb: 'One consent links Search Console and Analytics 4.',
+    reconnectNote:
+      'Reconnecting renews access for every property in this connection. Signed in with Google? The account is pre-selected.',
   },
   // Titled for the product the user is actually connecting, not the identity
   // provider behind it: a Google grant cannot authorize Bing, and saying
@@ -87,5 +94,6 @@ export const FAMILY_META: Record<
     connectProvider: 'bing',
     blurb:
       'Bing Webmaster Tools needs its own consent — a Google grant cannot authorize it. The Bing account itself can still be one created with a Google ID.',
+    reconnectNote: 'Reconnecting renews access for every property in this connection.',
   },
 };
