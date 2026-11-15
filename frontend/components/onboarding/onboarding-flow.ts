@@ -2,7 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldErrors } from 'react-hook-form';
 
 import {
   brandDiscoveriesApi,
@@ -334,7 +334,7 @@ export function useOnboardingFlow(transactionKey: string) {
     }
     setBrand(values);
     setStep(1);
-  });
+  }, revealFirstInvalid);
 
   // A failed or degraded discovery runs again as a new discovery from the same
   // input; the URL follows its id. Once the new run exists, the old review
@@ -391,4 +391,20 @@ export function useOnboardingFlow(transactionKey: string) {
     submitBrand,
     toggle,
   };
+}
+
+/**
+ * A failed brand submit brings its first invalid field (in reading order) to
+ * the middle of the window, clear of the step's sticky footer, before the
+ * form moves focus to it (focus alone scrolls only to the window's edge,
+ * under the footer).
+ */
+function revealFirstInvalid(errors: FieldErrors<BrandStepValues>) {
+  const fields = Object.values(errors)
+    .map((error) => error?.ref)
+    .filter((ref): ref is HTMLElement => ref instanceof HTMLElement);
+  const [first] = fields.sort((a, b) =>
+    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
+  );
+  first?.scrollIntoView?.({ block: 'center' });
 }

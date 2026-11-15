@@ -67,7 +67,7 @@ it.each(['forgot-password', 'resend-verification'])(
       const user = userEvent.setup();
       await user.type(screen.getByLabelText(/Email address/u), 'reader@example.com');
       const request = screen.getByRole('button', { name: 'Request email' });
-      expect(request).toBeDisabled();
+      expect(request).toHaveAttribute('aria-disabled', 'true');
 
       await waitFor(() => expect(action).toBe(operation));
       solve('solved-token');

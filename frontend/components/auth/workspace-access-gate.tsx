@@ -24,6 +24,7 @@ import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionStack } from '@/components/ui/section';
+import { TextLink } from '@/components/ui/text-link';
 
 // Shown only once access has ended, so the plan checkout and account security
 // load on demand instead of in the shell's first chunk.
@@ -252,9 +253,11 @@ function AccessEnded({
         {workspaces
           .filter((workspace) => workspace.id !== activeWorkspaceId)
           .map((workspace) => (
-            <Link key={workspace.id} reloadDocument to={`/projects?workspace=${workspace.id}`}>
-              {workspace.name}
-            </Link>
+            <TextLink key={workspace.id} asChild text="inherit">
+              <Link reloadDocument to={`/projects?workspace=${workspace.id}`}>
+                {workspace.name}
+              </Link>
+            </TextLink>
           ))}
         {leave.isError ? (
           <Notice tone="negative">

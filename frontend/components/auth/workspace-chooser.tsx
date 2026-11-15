@@ -15,8 +15,7 @@ import { workspaceQueries } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { ownsWorkspace, soleOwnedWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
+import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
 /**
  * Where a signed-in person goes next: their own workspace (or setting one up
@@ -24,7 +23,7 @@ import { StateBlock } from '@/components/ui/state-block';
  * exactly one destination goes straight there.
  */
 export function WorkspaceChooser() {
-  const { workspaces, status, setActiveWorkspaceId } = useProjectContext();
+  const { workspaces, status, setActiveWorkspaceId, retry } = useProjectContext();
   const navigate = useNavigate();
   const ownsOne = ownsWorkspace(workspaces);
   // A fresh document never shows this: the route loader sends it on before
@@ -42,11 +41,21 @@ export function WorkspaceChooser() {
   if (status === 'error')
     return (
       <ChooserFrame>
-        <Notice tone="negative">Your workspaces could not be loaded. Reload to try again.</Notice>
+        <StateBlock
+          kind="error"
+          title="Couldn't load your workspaces"
+          error={null}
+          fallback={READ_FAILED}
+          onRetry={retry}
+        />
       </ChooserFrame>
     );
   if (workspaces.length === 0 || only)
-    return <StateBlock kind="loading" label="Loading your workspaces…" />;
+    return (
+      <ChooserFrame>
+        <StateBlock kind="loading" label="Loading your workspaces…" />
+      </ChooserFrame>
+    );
 
   const enter = (workspace: Workspace) => {
     setActiveWorkspaceId(workspace.id);
