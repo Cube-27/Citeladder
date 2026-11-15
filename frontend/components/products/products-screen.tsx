@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Columns3, Download, PackageOpen } from 'lucide-react';
 
 import { CollectionPage } from '@/components/templates/collection-page';
@@ -127,11 +127,18 @@ function narrowed(filters: ProductFilters): boolean {
 
 /** Nothing in the catalog and nothing listed: one state replaces the counts and the toolbar. */
 function noProducts({
-  total,
-  listed,
+  catalog,
+  page,
   filters,
-}: Readonly<{ total: number | undefined; listed: number | undefined; filters: ProductFilters }>) {
-  return total === 0 && listed === 0 && filters.source === 'catalog' && !narrowed(filters);
+}: Readonly<{
+  catalog: Pick<UseQueryResult<{ product_total: number }>, 'data' | 'isError'>;
+  page: Pick<UseQueryResult<{ items: readonly unknown[] }>, 'data' | 'isError'>;
+  filters: ProductFilters;
+}>) {
+  // A failed refetch keeps its cached zero, which is no longer a current zero.
+  if (catalog.isError || page.isError) return false;
+  if (filters.source !== 'catalog' || narrowed(filters)) return false;
+  return catalog.data?.product_total === 0 && page.data?.items.length === 0;
 }
 
 function NoProducts({ header }: Readonly<{ header: ReturnType<typeof useCatalogHeader> }>) {
@@ -206,8 +213,7 @@ function ProductsContent({
       csv.rows,
     );
   };
-  if (noProducts({ total: catalog.data?.product_total, listed: page.data?.items.length, filters }))
-    return <NoProducts header={header} />;
+  if (noProducts({ catalog, page, filters })) return <NoProducts header={header} />;
   return (
     <CollectionPage
       actions={header.actions}

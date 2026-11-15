@@ -266,6 +266,20 @@ function SourceRow({
   );
 }
 
+/** Every source answered as unconnected, with no callback result to report. */
+function nothingConnected({
+  sources,
+  oauth,
+  rows,
+}: Readonly<{
+  sources: ReturnType<typeof useDataSources>;
+  oauth: ReturnType<typeof useOAuthReturn>;
+  rows: readonly Row[];
+}>) {
+  if (sources.error || oauth.error || oauth.connected) return false;
+  return rows.every((row) => row.kind === 'connect');
+}
+
 /** Nothing connected yet: the page's empty state, with each family's Connect. */
 function UnconnectedState({
   heading,
@@ -362,8 +376,7 @@ export function DataSourceSetup({
     );
 
   const rows = setupRows(providers, sources.steps);
-  const settled = !sources.error && !oauth.error && !oauth.connected;
-  if (unconnected && settled && rows.every((row) => row.kind === 'connect'))
+  if (unconnected && nothingConnected({ sources, oauth, rows }))
     return (
       <UnconnectedState
         {...unconnected}

@@ -289,7 +289,7 @@ function ProductIdentity({
               </TextLink>
             ) : null}
           </Stack>
-          <Inline gap="item" className="flex-wrap items-start max-sm:basis-full">
+          <Inline gap="item" className="flex-wrap items-start">
             <FilterControls filters={filters} align="end" />
             {actions}
           </Inline>
