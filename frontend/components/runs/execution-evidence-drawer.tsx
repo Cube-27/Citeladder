@@ -90,7 +90,8 @@ export function ExecutionEvidenceDrawer({
       <Notice
         kind="read"
         {...readErrorProps(evidenceQuery)}
-        fallback="Could not load this execution's evidence."
+        title="Couldn't load this answer's evidence"
+        fallback="The request failed or timed out."
       />
     );
   } else if (evidenceQuery.isLoading || !evidenceQuery.data) {

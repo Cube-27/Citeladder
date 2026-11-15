@@ -7,13 +7,8 @@ import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText, TableCell, TableRow, TableRowHeader } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
-import {
-  ledgerClasses,
-  ledgerItemClasses,
-  MetaFooter,
-  SubsectionHeader,
-} from '@/components/ui/workspace';
+import { MetaFooter, SubsectionHeader } from '@/components/ui/workspace';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@citeladder/contracts';
 import { cn } from '@/lib/utils';
 import { StateBlock } from '@/components/ui/state-block';
@@ -92,7 +87,7 @@ const PRESENCE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'named', label: 'Named', width: 'figure' },
   { key: 'linked', label: 'Linked', width: 'figure' },
   { key: 'cited', label: 'Cited', width: 'figure' },
-  { key: 'order', label: 'Mention order', width: 'status', numeric: true },
+  { key: 'order', label: 'Mention order', width: 'status', kind: 'number' },
 ];
 
 function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity[] }>) {
@@ -155,7 +150,7 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
           heading="The overview’s text carried no inline links"
         />
       ) : (
-        <ul className={ledgerClasses()}>
+        <LedgerList label="Inline links">
           {links.map((link) => {
             const href = safeLinkUrl(link.url);
             const title = link.title || link.domain || link.url;
@@ -163,24 +158,22 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
               // An overview can point at the same URL from two places in its
               // own text, so the URL alone is not unique among siblings. The
               // element it was drawn from is what separates them.
-              <Stack
-                as="li"
-                gap="tight"
+              <LedgerItem
                 key={`${link.element_index}-${link.url}`}
-                className={ledgerItemClasses()}
-              >
-                {href ? (
-                  <TextLink variant="external" text="body" href={href} className="max-w-full">
-                    <span className="truncate">{title}</span>
-                  </TextLink>
-                ) : (
-                  <p className={textRole('body', 'truncate')}>{title}</p>
-                )}
-                <p className="type-caption truncate">{link.domain}</p>
-              </Stack>
+                title={
+                  href ? (
+                    <TextLink variant="external" text="body" href={href}>
+                      {title}
+                    </TextLink>
+                  ) : (
+                    title
+                  )
+                }
+                caption={link.domain}
+              />
             );
           })}
-        </ul>
+        </LedgerList>
       )}
     </Stack>
   );

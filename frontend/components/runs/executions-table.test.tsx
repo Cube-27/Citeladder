@@ -128,7 +128,7 @@ describe('ExecutionsTable', () => {
     const row = execution({ status: 'succeeded' });
     render(<ExecutionsTable executions={[row]} onSelectEvidence={onSelectEvidence} />);
 
-    await user.click(screen.getByRole('button', { name: 'Evidence' }));
+    await user.click(screen.getByRole('button', { name: /^View evidence for / }));
 
     // The drawer opens without leaving the run, and receives the exact row.
     expect(onSelectEvidence).toHaveBeenCalledTimes(1);
@@ -142,7 +142,7 @@ describe('ExecutionsTable', () => {
       // empty drawer.
       render(<ExecutionsTable executions={[execution({ status })]} onSelectEvidence={vi.fn()} />);
 
-      expect(screen.queryByRole('button', { name: 'Evidence' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /^View evidence/ })).not.toBeInTheDocument();
     },
   );
 

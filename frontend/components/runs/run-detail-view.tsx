@@ -9,8 +9,6 @@ import { StateBlock } from '@/components/ui/state-block';
 
 type RunDetailViewProps = {
   audit: Audit | undefined;
-  /** The run's name, read in full where the masthead cuts it. */
-  title?: string;
   auditLoading: boolean;
   /** The audit read: its failure, and the retry of exactly that read. */
   auditRead: RetryableRead;
@@ -27,7 +25,6 @@ type RunDetailViewProps = {
 
 function AuditSection({
   audit,
-  title,
   auditLoading,
   auditRead,
   exportError,
@@ -41,7 +38,8 @@ function AuditSection({
       <StateBlock
         kind="error"
         {...readErrorProps(auditRead)}
-        fallback="Something went wrong. Please try again."
+        title="Couldn't load this run"
+        fallback="Check your connection and try again."
       />
     );
   }
@@ -51,7 +49,6 @@ function AuditSection({
   return (
     <ProgressPanel
       audit={audit}
-      title={title}
       exportError={exportError}
       cancelNotice={cancelNotice}
       onCancelRetry={onCancel}
@@ -73,7 +70,8 @@ function executionsState({
     return {
       kind: 'error',
       ...readErrorProps(executionsRead),
-      fallback: 'Could not load executions.',
+      title: "Couldn't load the executions",
+      fallback: 'Check your connection and try again.',
     };
   }
   if (executionsLoading || !executions) return { kind: 'loading', label: 'Loading executions…' };
@@ -90,6 +88,9 @@ function executionsState({
 }
 
 export function RunDetailView(props: Readonly<RunDetailViewProps>) {
+  // One error per page: without the run there are no executions to show, so
+  // a failed run read stands alone rather than over a second failed table.
+  if (props.auditRead.error && !props.audit) return <AuditSection {...props} />;
   return (
     <>
       <AuditSection {...props} />

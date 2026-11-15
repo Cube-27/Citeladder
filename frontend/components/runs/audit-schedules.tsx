@@ -76,7 +76,8 @@ function WorkspaceSchedules({
             <Notice
               kind="read"
               {...readErrorProps(schedulesQuery)}
-              fallback="Could not load scheduled audits."
+              title="Couldn't load the scheduled runs"
+              fallback="The request failed or timed out."
             />
           ) : null}
           {schedulesQuery.data?.length ? (

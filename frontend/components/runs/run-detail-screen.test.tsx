@@ -125,4 +125,27 @@ describe('RunDetailScreen', () => {
       'Commerce audit · Aug 1, 2026',
     );
   });
+
+  it('names a failed run read once, without a second failure for its executions', async () => {
+    const failure = () => HttpResponse.json({ error: { message: 'down' } }, { status: 500 });
+    mswServer.use(
+      http.get(`/api/v1/audits/${RUN}`, failure),
+      http.get(`/api/v1/audits/${RUN}/executions`, failure),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/runs/:runId" element={<RunDetailScreen />} />
+      </Routes>,
+      {
+        initialEntries: [`/runs/${RUN}`],
+        projectSelection: {
+          activeProject: makeProject({ id: '33333333-3333-4333-8333-333333333333' }),
+        },
+      },
+    );
+
+    expect(await screen.findByText("Couldn't load this run")).toBeVisible();
+    expect(screen.getAllByRole('button', { name: /Retry/ })).toHaveLength(1);
+    expect(screen.queryByText("Couldn't load the executions")).toBeNull();
+  });
 });
