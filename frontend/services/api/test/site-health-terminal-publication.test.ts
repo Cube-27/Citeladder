@@ -677,7 +677,7 @@ describe('crawl lifecycle', () => {
     expect((await crawlRow(seed.crawlId)).score_summary).toMatchObject({ analyzed_count: 1 });
   });
 
-  it('does not count a policy exclusion as an incomplete analysis', async () => {
+  it('does not count a policy exclusion or a page that is gone as an incomplete analysis', async () => {
     const seed = await running();
     await monitoredPage(seed, '/');
     const excluded = await fixtures.analyzable(seed, '/account');
@@ -686,11 +686,41 @@ describe('crawl lifecycle', () => {
       .set({ status: 'failed', error_code: 'url_admission_rejected' })
       .where('id', '=', excluded.taskId)
       .execute();
+    // A tracked page that now answers 404 is reported as an issue, not an unanalyzed page.
+    const gone = await fixtures.analyzable(seed, '/products/retired');
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'failed', error_code: 'http_4xx' })
+      .where('id', '=', gone.taskId)
+      .execute();
+    await db
+      .insertInto('site_fetch_attempts')
+      .values({
+        id: randomUUID(),
+        workspace_id: seed.workspaceId,
+        crawl_id: seed.crawlId,
+        task_id: gone.taskId,
+        attempt_number: 1,
+        request_ordinal: 0,
+        method: 'GET',
+        outcome: 'error',
+        error_code: 'http_4xx',
+        status_code: 404,
+        target_host: 'example.test',
+        acquisition_policy_version: 'fixture',
+        acquisition_transport: 'recorded',
+        acquisition_trigger: 'fixture',
+        impersonation_profile: '',
+        created_at: new Date(),
+      })
+      .execute();
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'completed',
       partial_reason: '',
-      failed_url_count: 0,
+      analysis_status: 'completed',
+      analyzed_url_count: 1,
+      failed_url_count: 1,
     });
   });
 
