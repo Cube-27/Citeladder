@@ -112,10 +112,15 @@ function evidenceAvailability(data: PerformanceDashboard, readiness: ProjectRead
   };
 }
 
-function performanceCoverage(data: PerformanceDashboard, hasEvidence: boolean) {
+function performanceCoverage(
+  data: PerformanceDashboard,
+  evidence: ReturnType<typeof evidenceAvailability>,
+) {
+  const hasEvidence = evidence.hasSearchConsoleBreakdowns || evidence.hasGa4 || evidence.hasBing;
   const firstUse =
     !hasEvidence && data.coverage.covered_days === 0 && data.selected.snapshot_id === null;
   return {
+    hasEvidence,
     firstUse,
     selectedMissing: !firstUse && data.selected.snapshot_id === null,
     comparisonMissing:
@@ -348,6 +353,11 @@ function answeredNoConnections(
   return read.isSuccess && read.data?.length === 0;
 }
 
+/** The ladder's Sync again, offered only while no sync is starting or running. */
+function idleSync(sync: ReturnType<typeof usePerformanceSync>) {
+  return sync.syncing || sync.mutation.isPending ? undefined : sync.start;
+}
+
 export function PerformanceScreen() {
   const { projectId, workspaceId } = useProjectScope();
   const scope = { workspaceId, projectId };
@@ -412,8 +422,7 @@ export function PerformanceScreen() {
   const comparisonLabel = compareLabel(selection);
   const series = chartSeries(selectedWindow, comparisonWindow, activeMetrics);
   const evidence = evidenceAvailability(data, readiness.data);
-  const hasEvidence = evidence.hasSearchConsoleBreakdowns || evidence.hasGa4 || evidence.hasBing;
-  const coverage = performanceCoverage(data, hasEvidence);
+  const coverage = performanceCoverage(data, evidence);
   const syncAction = (
     <PerformanceActions noConnections={answeredNoConnections(connections)} sync={sync} />
   );
@@ -451,12 +460,7 @@ export function PerformanceScreen() {
           title="Connect Search Console"
           whenReady={coverage.firstUse ? <FirstUseEmptyState action={syncAction} /> : null}
         />
-        {readiness.isError ? null : (
-          <ReadinessLadder
-            data={readiness.data}
-            sync={sync.syncing || sync.mutation.isPending ? undefined : sync.start}
-          />
-        )}
+        {readiness.isError ? null : <ReadinessLadder data={readiness.data} sync={idleSync(sync)} />}
 
         <PerformanceNotice
           messages={performanceNotices({
@@ -471,7 +475,7 @@ export function PerformanceScreen() {
         />
 
         <ProjectionFailure failure={projection.failure} />
-        {!hasEvidence ? (
+        {!coverage.hasEvidence ? (
           <PerformanceEmptyState
             data={data}
             projecting={projection.projecting}

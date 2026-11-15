@@ -158,13 +158,7 @@ export function SearchIntelligencePage() {
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
         <KeywordResearchFrame controls={RESERVED_CONTROLS}>
-          {tab === 'overview' ? (
-            <Skeleton variant="stat" count={5} label="Loading Keyword Research…" />
-          ) : (
-            <Section>
-              <Skeleton variant="table" columns={6} label="Loading Keyword Research…" />
-            </Section>
-          )}
+          <ResearchLoading tab={tab} />
         </KeywordResearchFrame>
       </TabsRoot>
     );
@@ -268,27 +262,14 @@ export function SearchIntelligencePage() {
               </TabPanel>
             ))
           ) : (
-            <TabPanel value="overview" className="min-w-0">
-              <SearchIntelligenceOverview
-                datasets={datasets}
-                competitors={data.competitors}
-                ownedHostname={data.owned_targets[0]?.hostname ?? ''}
-                onOpen={openComparison}
-              />
-            </TabPanel>
+            <ResearchPanels
+              data={data}
+              datasets={datasets}
+              collection={collection}
+              onOpen={openComparison}
+              onSelect={setComparison}
+            />
           )}
-          {TABS.filter((item) => item.value !== 'overview' && !empty).map(({ value }) => (
-            <TabPanel key={value} value={value} className="min-w-0">
-              {collection?.tab === value ? (
-                <SearchIntelligenceCollection
-                  collection={collection}
-                  datasets={datasets}
-                  competitors={data.competitors}
-                  onSelect={setComparison}
-                />
-              ) : null}
-            </TabPanel>
-          ))}
           <Drawer
             open={citationOpen}
             onOpenChange={setCitationOpen}
@@ -384,6 +365,57 @@ function useRoleActions({
     onExpand: () => openReview('increase_depth'),
     onMatch,
   };
+}
+
+/** The first load's shape of the tab's first card: Overview's figures, or a table. */
+function ResearchLoading({ tab }: Readonly<{ tab: Tab }>) {
+  if (tab === 'overview')
+    return <Skeleton variant="stat" count={5} label="Loading Keyword Research…" />;
+  return (
+    <Section>
+      <Skeleton variant="table" columns={6} label="Loading Keyword Research…" />
+    </Section>
+  );
+}
+
+/** Every tab's panel once an analysis is saved: Overview, then each tab's collection. */
+function ResearchPanels({
+  data,
+  datasets,
+  collection,
+  onOpen,
+  onSelect,
+}: Readonly<{
+  data: SearchIntelligenceReadiness;
+  datasets: SearchIntelligenceDataset[];
+  collection: ReturnType<typeof useSearchCollection>;
+  onOpen: (dataset: SearchIntelligenceDataset) => void;
+  onSelect: (dataset: SearchIntelligenceDataset | null) => void;
+}>) {
+  return (
+    <>
+      <TabPanel value="overview" className="min-w-0">
+        <SearchIntelligenceOverview
+          datasets={datasets}
+          competitors={data.competitors}
+          ownedHostname={data.owned_targets[0]?.hostname ?? ''}
+          onOpen={onOpen}
+        />
+      </TabPanel>
+      {TABS.filter((item) => item.value !== 'overview').map(({ value }) => (
+        <TabPanel key={value} value={value} className="min-w-0">
+          {collection?.tab === value ? (
+            <SearchIntelligenceCollection
+              collection={collection}
+              datasets={datasets}
+              competitors={data.competitors}
+              onSelect={onSelect}
+            />
+          ) : null}
+        </TabPanel>
+      ))}
+    </>
+  );
 }
 
 function PageActions({

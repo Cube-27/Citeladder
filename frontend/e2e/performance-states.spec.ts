@@ -99,7 +99,9 @@ test('Performance distinguishes first use, measured zero, and Bing-only evidence
   await page.route('**/api/v1/integrations', (route) => route.fulfill({ json: [] }));
 
   await page.goto(fixtureProjectPath('/performance'));
-  await expect(page.getByText('No imported history')).toBeVisible();
+  // First use: the setup card says what to do, and there is no range to choose.
+  await expect(page.getByTestId('data-source-setup')).toBeVisible();
+  await expect(page.getByRole('radiogroup', { name: 'Date range' })).toHaveCount(0);
   await expect(page.getByTestId('metric-card-strip')).toHaveCount(0);
   await expect(page.getByRole('tablist', { name: 'Performance breakdowns' })).toHaveCount(0);
   expect(tableReads).toBe(0);

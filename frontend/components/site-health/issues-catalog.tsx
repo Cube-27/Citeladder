@@ -19,6 +19,7 @@ import {
   type DataTableState,
 } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
+import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { SearchField } from '@/components/ui/search-field';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -243,17 +244,16 @@ function IssueRow({
       <TableCell>
         <Inline gap="tight">
           <TextLink asChild>
-            <button
-              type="button"
+            <Pressable
               aria-haspopup="dialog"
               onClick={(event) => {
                 event.stopPropagation();
                 onOpen(issue.group_id);
               }}
-              className="min-h-6 min-w-0 text-start"
+              className="min-h-6 w-auto min-w-0"
             >
               <ClampText>{title}</ClampText>
-            </button>
+            </Pressable>
           </TextLink>
           {issue.description ? (
             // The rule's description states the passing check, so it is

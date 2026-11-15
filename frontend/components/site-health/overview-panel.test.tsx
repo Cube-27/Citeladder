@@ -452,6 +452,50 @@ describe('OverviewPanel', () => {
     ]);
   });
 
+  it('says a pillar with no applicable checks is not applicable, apart from one not measured', async () => {
+    const pillar = (key: string, label: string, applicability: string) => ({
+      key,
+      label,
+      description: `${label} checks.`,
+      dimension_applicability: applicability,
+      dimension_measurement_state: 'not_measured',
+      score: null,
+      coverage: null,
+      earned_points: 0,
+      determinate_points: 0,
+      expected_points: 0,
+      determinate_checkpoint_ids: [],
+      unresolved_count: 0,
+      reason: 'no_evidence',
+    });
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health/overview`, () =>
+        HttpResponse.json(
+          terminalOverview({
+            aeo_dimensions: [
+              pillar('commerce', 'Commerce', 'not_applicable'),
+              pillar('answerability', 'Answerability', 'applicable'),
+            ],
+          }),
+        ),
+      ),
+    );
+    renderWithProviders(
+      <OverviewPanel
+        projectId={PROJECT}
+        crawlId={CRAWL}
+        crawl={{ status: 'completed' } as never}
+        dashboard={undefined}
+      />,
+    );
+
+    const table = await screen.findByRole('region', { name: 'AEO readiness by pillar' });
+    const scoreOf = (label: string) =>
+      within(within(table).getByText(label).closest('tr')!).getAllByRole('cell')[1]!.textContent;
+    expect(scoreOf('Commerce')).toBe('Not applicable');
+    expect(scoreOf('Answerability')).toBe('Not measured');
+  });
+
   const ALERT = 'Could not load the Website overview.';
 
   function renderTerminal() {

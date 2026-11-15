@@ -367,7 +367,7 @@ function AnalysisPanel({
   return (
     <StateBlock
       kind="empty"
-      heading="No crawl to analyse yet"
+      heading="No crawl to analyze yet"
       description="This view reads a finished crawl of your site. Start the first crawl from the Pages tab."
     />
   );

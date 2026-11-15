@@ -231,8 +231,6 @@ type PerformanceMessage = Readonly<{
   key: string;
   tone: 'info' | 'warning';
   text: string;
-  /** Work in flight. */
-  busy?: boolean;
 }>;
 
 /**
@@ -243,12 +241,11 @@ type PerformanceMessage = Readonly<{
 export function PerformanceNotice({
   messages,
 }: Readonly<{ messages: readonly PerformanceMessage[] }>) {
-  const [first, ...rest] = messages;
-  if (!first) return null;
+  if (!messages.length) return null;
   return (
     <div data-testid="performance-status" className="min-w-0">
       <Notice tone={messages.some((message) => message.tone === 'warning') ? 'warning' : 'info'}>
-        {[first, ...rest].map((message) => message.text).join(' ')}
+        {messages.map((message) => message.text).join(' ')}
       </Notice>
     </div>
   );
@@ -292,7 +289,6 @@ export function performanceNotices({
     messages.push({
       key: 'syncing',
       tone: 'info',
-      busy: true,
       text: 'Sync in progress — importing the dates not yet covered. Charts and tables update when it completes.',
     });
   if (sync.notice) messages.push({ key: 'sync-notice', tone: 'info', text: sync.notice });
@@ -300,7 +296,6 @@ export function performanceNotices({
     messages.push({
       key: 'projecting',
       tone: 'info',
-      busy: true,
       text: 'Building this range from imported data…',
     });
   if (projectionFailed)

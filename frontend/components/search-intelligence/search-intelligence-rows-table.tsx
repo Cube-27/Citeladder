@@ -116,8 +116,9 @@ export function SearchIntelligenceRows({
                 aria-label={`View evidence for ${row.keyword || row.domain || row.url}`}
                 onClick={() => onSelect(row)}
               >
+                {/* The row's identity keeps its host: a backlink's source site is the finding. */}
                 {URL_FIELDS.has(column.field) ? (
-                  displayValue(row, column, origins.get(column.field) ?? null)
+                  displayValue(row, column, null)
                 ) : (
                   <ClampText>{displayValue(row, column, null)}</ClampText>
                 )}

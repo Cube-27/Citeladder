@@ -39,6 +39,17 @@ const CLASS_TONES: Readonly<Record<keyof typeof CLASS_LABELS, StatusTone>> = {
   'critical-regression': 'negative',
 };
 
+/** The two crawls the summary compares, and whether their changes can be read. */
+function comparedPair(data: ChangeSummary | undefined) {
+  const crawlAId = data?.crawl_a_id ?? undefined;
+  const crawlBId = data?.crawl_b_id ?? undefined;
+  return {
+    crawlAId,
+    crawlBId,
+    pairAvailable: data?.state === 'available' && Boolean(crawlAId && crawlBId),
+  };
+}
+
 export function ChangesPanel({
   workspaceId,
   projectId,
@@ -46,9 +57,7 @@ export function ChangesPanel({
   const scope = { workspaceId, projectId };
   const summary = useQuery(siteHealthQueries.changesSummary(scope));
   const [selected, setSelected] = useState<ChangeObservation | undefined>(undefined);
-  const crawlAId = summary.data?.crawl_a_id ?? undefined;
-  const crawlBId = summary.data?.crawl_b_id ?? undefined;
-  const pairAvailable = summary.data?.state === 'available' && Boolean(crawlAId && crawlBId);
+  const { crawlAId, crawlBId, pairAvailable } = comparedPair(summary.data);
   // A page turn keeps the rows and the pager on screen until the next changes
   // land. The compared pair is part of the cursor's identity server-side, so
   // a new pair restarts paging rather than replaying a refused cursor. No

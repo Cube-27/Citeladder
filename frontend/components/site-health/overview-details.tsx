@@ -52,6 +52,13 @@ function measurementLabel(state: string): string {
   return MEASUREMENT_LABELS[state] ?? statusLabel(state);
 }
 
+/** Why a pillar has no score: no check applies to the site, or how far it was measured. */
+function unscoredLabel(dimension: SiteHealthOverview['aeo_dimensions'][number]): string {
+  if (dimension.dimension_applicability === 'not_applicable') return 'Not applicable';
+  if (dimension.reason === 'measured_at_site_scope') return 'Site-scoped evidence';
+  return measurementLabel(dimension.dimension_measurement_state);
+}
+
 export function OverviewDetails({ data }: Readonly<{ data: SiteHealthOverview }>) {
   const [webFundamentalsOpen, setWebFundamentalsOpen] = useState(false);
   return (
@@ -113,9 +120,7 @@ function DimensionLedger({
           <TableCell numeric>
             {dimension.score === null ? (
               <ClampText lines={1} className="type-caption">
-                {dimension.reason === 'measured_at_site_scope'
-                  ? 'Site-scoped evidence'
-                  : measurementLabel(dimension.dimension_measurement_state)}
+                {unscoredLabel(dimension)}
               </ClampText>
             ) : (
               formatScore(dimension.score)

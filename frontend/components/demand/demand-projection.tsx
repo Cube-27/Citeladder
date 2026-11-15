@@ -21,7 +21,7 @@ import {
 } from '@/components/demand/demand-signal-filters';
 import {
   DemandSignalTable,
-  SIGNAL_COLUMN_COUNT as COLUMN_COUNT,
+  SIGNAL_COLUMN_COUNT,
   SignalLegend,
 } from '@/components/demand/demand-signal-table';
 import {
@@ -356,7 +356,7 @@ function demandFallback(latest: UseQueryResult<DemandSnapshot | null, Error>) {
   if (latest.isLoading)
     return (
       <Section>
-        <Skeleton variant="table" columns={COLUMN_COUNT} label="Loading search demand…" />
+        <Skeleton variant="table" columns={SIGNAL_COLUMN_COUNT} label="Loading search demand…" />
       </Section>
     );
   if (latest.data === null) return <SearchConsoleSetup />;
