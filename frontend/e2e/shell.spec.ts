@@ -14,10 +14,10 @@ test('the first-load indicator keeps pulsing until the workspace answers', async
   });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto(fixtureProjectPath('/projects'));
-  // The loading StateBlock holds the page's place and names the wait.
+  // The shell is drawn at once; the page's loading StateBlock holds its place.
   const indicator = page
     .locator('[data-state-block="loading"]')
-    .getByRole('status', { name: 'Loading your workspace…' });
+    .getByRole('status', { name: 'Loading…' });
   try {
     await expect(indicator).toBeVisible();
     // Its skeleton blocks shimmer; still blocks would read as stuck.
@@ -42,10 +42,10 @@ test('authenticated shell exposes authorized navigation and search, and navigati
 
   await page.goto(fixtureProjectPath('/visibility'));
 
-  // The station list and its destinations are pinned against NAV_GROUPS in
+  // The groups and their destinations are pinned in
   // components/layout/sidebar-nav.test.tsx. What that render cannot show is
-  // that the authed layout actually mounts the nav landmark around the page.
-  const nav = page.getByRole('navigation', { name: 'Primary' });
+  // that the authed layout mounts the mode's nav landmark around the page.
+  const nav = page.getByRole('navigation', { name: 'Dashboard' });
   await expect(nav.getByRole('link', { name: 'Website', exact: true })).toBeVisible();
 
   // Project switcher shows the active brand.
@@ -88,15 +88,15 @@ test('runs resolve on their own while the schedules empty state waits for its re
   await expect(page.getByRole('heading', { name: 'No runs yet' })).toBeVisible();
 });
 
-test('below 1280px the icon rail keeps every destination named and the palette on the keyboard', async ({
+test('below 1280px the sidebar keeps every destination named and the palette on the keyboard', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 982, height: 900 });
   await stubAuthedShell(page);
   await page.goto(fixtureProjectPath('/projects'));
 
-  // The rail draws icons only; each destination keeps its name and still navigates.
-  const nav = page.getByRole('navigation', { name: 'Primary' });
+  // Each destination keeps its name and still navigates.
+  const nav = page.getByRole('navigation', { name: 'Dashboard' });
   const performance = nav.getByRole('link', { name: 'Performance', exact: true });
   await expect(performance).toBeVisible();
   await performance.click();

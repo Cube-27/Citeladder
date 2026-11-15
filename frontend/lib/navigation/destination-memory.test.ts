@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { rememberDestinationRoute, rememberedDestinationRoute } from './destination-memory';
+import {
+  rememberDestinationRoute,
+  rememberedDestinationRoute,
+  routeToRemember,
+} from './destination-memory';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -17,6 +21,15 @@ describe('destination and mode memory', () => {
     expect(rememberedDestinationRoute('mode:dashboard', 'p1')).toBeNull();
     expect(rememberedDestinationRoute('/site', 'p1')).toBe('/site?tab=pages');
     expect(rememberedDestinationRoute('mode:agent', null)).toBeNull();
+  });
+
+  it.each([
+    ['/site', '?tab=pages&project=p1&workspace=w1', '/site?tab=pages'],
+    ['/agent/chats/c1', '?project=p1', '/agent/chats/c1'],
+    // A new chat's handoff is one-time: returning opens a clean new chat.
+    ['/agent', '?project=p1&handoff=action&action_id=a1', '/agent'],
+  ])('remembers %s%s as %s', (pathname, search, expected) => {
+    expect(routeToRemember(pathname, search)).toBe(expected);
   });
 
   it('ignores a stored route that leaves the app', () => {

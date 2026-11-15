@@ -54,6 +54,11 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
   const primary = useChildCount(useContext(MastheadPrimarySlot) ?? null);
   // One secondary action alone stays in the row; beside another action or the primary, it folds.
   const folds = secondary > 1 || (secondary === 1 && primary > 0);
+  const crowded = useCrowdedRow(
+    panel?.closest<HTMLElement>('[data-masthead]') ?? null,
+    secondary + primary,
+  );
+  const always = folds && crowded;
   const close = useEffectEvent((event: Event) => {
     if (!panel) return;
     const outcome = overflowOutcome(event, panel, trigger.current);
@@ -81,7 +86,7 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
-          className="rail:hidden"
+          className={always ? undefined : 'rail:hidden'}
         />
       ) : null}
       <div
@@ -91,18 +96,54 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
         data-open={open || undefined}
         className={cn(
           'flex min-w-0 items-center gap-2',
+          folds && MENU_PANEL,
           folds &&
-            cn(
-              MENU_PANEL,
-              'not-rail:absolute not-rail:end-0 not-rail:top-full not-rail:hidden not-rail:min-w-56 not-rail:flex-col not-rail:items-stretch not-rail:data-open:flex',
-              'rail:contents',
-            ),
+            (always
+              ? 'absolute end-0 top-full hidden min-w-56 flex-col items-stretch data-open:flex'
+              : 'not-rail:absolute not-rail:end-0 not-rail:top-full not-rail:hidden not-rail:min-w-56 not-rail:flex-col not-rail:items-stretch not-rail:data-open:flex rail:contents'),
         )}
       >
         {children}
       </div>
     </>
   );
+}
+
+/**
+ * Whether the masthead's one row overflows with every control in it (a wide
+ * page's many actions). It stays folded until the row is as wide as it
+ * needed, so folding never flips back and forth; new controls measure again.
+ */
+function useCrowdedRow(header: HTMLElement | null, controls: number) {
+  const [fold, setFold] = useState<Readonly<{ need: number; controls: number }> | null>(null);
+  const crowded = fold?.controls === controls;
+  useEffect(() => {
+    if (!header) return;
+    const measure = () => {
+      if (fold && crowded) {
+        if (header.clientWidth >= fold.need) setFold(null);
+        return;
+      }
+      const deficit = rowDeficit(header);
+      if (deficit > 1) setFold({ need: header.clientWidth + deficit, controls });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [header, controls, crowded, fold]);
+  return crowded;
+}
+
+/** How many px the row lacks: the title squeezed under its minimum, plus controls past the edge. */
+function rowDeficit(header: HTMLElement): number {
+  const title = header.querySelector<HTMLElement>('[data-masthead-title]');
+  const end = header.querySelector<HTMLElement>('[data-masthead-end]');
+  const squeezed = title ? Math.max(0, title.scrollWidth - title.clientWidth) : 0;
+  const edge =
+    header.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(header).paddingRight);
+  const past = end ? Math.max(0, end.getBoundingClientRect().right - edge) : 0;
+  return squeezed + past;
 }
 
 type OverflowOutcome = 'stay' | 'close' | 'refocus';

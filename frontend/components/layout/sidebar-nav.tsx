@@ -5,6 +5,7 @@ import { SidebarNavGroup, SidebarScrollList } from '@/components/ui/sidebar';
 import {
   rememberDestinationRoute,
   rememberedDestinationRoute,
+  routeToRemember,
 } from '@/lib/navigation/destination-memory';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { setGroupFolded, useGroupFolded } from '@/lib/navigation/sidebar-folds';
@@ -33,17 +34,8 @@ export function useDestinationMemory() {
   useEffect(() => {
     if (!activeProjectId) return;
     const current = SIDEBAR_ITEMS.find((item) => isNavItemActive(pathname, searchParams, item));
-    // A screen's own `project` and `workspace` scope is added back when the link is built.
-    const params = new URLSearchParams(search);
-    params.delete('project');
-    params.delete('workspace');
-    const query = params.toString();
     if (current)
-      rememberDestinationRoute(
-        current.href,
-        activeProjectId,
-        query ? `${pathname}?${query}` : pathname,
-      );
+      rememberDestinationRoute(current.href, activeProjectId, routeToRemember(pathname, search));
   }, [activeProjectId, pathname, search, searchParams]);
 }
 

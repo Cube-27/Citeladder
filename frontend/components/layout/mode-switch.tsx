@@ -12,6 +12,7 @@ import { MODE_HOMES, navigationMode, type NavigationMode } from '@/lib/navigatio
 import {
   rememberDestinationRoute,
   rememberedDestinationRoute,
+  routeToRemember,
 } from '@/lib/navigation/destination-memory';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -34,15 +35,10 @@ export function useModeMemory() {
   const { activeProjectId } = useProjectContext();
   useEffect(() => {
     if (!activeProjectId) return;
-    const params = new URLSearchParams(search);
-    // A screen's own `project` and `workspace` scope is added back when the link is built.
-    params.delete('project');
-    params.delete('workspace');
-    const query = params.toString();
     rememberDestinationRoute(
       modeSlot(navigationMode(pathname)),
       activeProjectId,
-      query ? `${pathname}?${query}` : pathname,
+      routeToRemember(pathname, search),
     );
   }, [activeProjectId, pathname, search]);
 }
@@ -57,7 +53,7 @@ export function ModeSwitch() {
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const current = navigationMode(pathname);
   return (
-    <nav aria-label="Mode" className={SIDEBAR_MODE_TRACK}>
+    <nav aria-label="Mode" data-segmented-track="" className={SIDEBAR_MODE_TRACK}>
       {MODES.map(({ mode, label, icon: Icon }) => {
         const selected = mode === current;
         const target =

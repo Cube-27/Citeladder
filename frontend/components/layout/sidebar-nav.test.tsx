@@ -157,7 +157,7 @@ describe('station navigation', () => {
     expect(screen.getByRole('link', { name: 'Shopping' })).not.toHaveAttribute('aria-current');
   });
 
-  it('lists the mode of the route: Actions in both, the analysis pages in Dashboard only', () => {
+  it('lists the mode of the route: Actions in both, the analysis pages in Dashboard only', async () => {
     pathname = '/agent/actions';
     const { unmount } = render(<SidebarNav />);
     expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute('aria-current', 'true');
@@ -165,7 +165,8 @@ describe('station navigation', () => {
     expect(screen.getByRole('link', { name: /^Actions/ })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'New chat' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: 'Skills' })).toBeInTheDocument();
-    expect(screen.getByRole('searchbox', { name: 'Search chats' })).toBeInTheDocument();
+    // The chats load in their own chunk after the rows.
+    expect(await screen.findByRole('searchbox', { name: 'Search chats' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Why did citations drop/ })).toHaveAttribute(
       'href',
       '/agent/chats/33333333-3333-4333-8333-333333333331?project=11111111-1111-4111-8111-111111111111',

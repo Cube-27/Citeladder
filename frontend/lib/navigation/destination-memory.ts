@@ -24,6 +24,21 @@ function read(): z.infer<typeof memorySchema> {
 
 const slot = (destination: string, projectId: string) => `${projectId}:${destination}`;
 
+/**
+ * The route to return to: the screen's query without its `project` and
+ * `workspace` scope (added back when the link is built). A new chat's query
+ * is a one-time handoff whose context the reader may since have removed, so
+ * a new chat is remembered bare.
+ */
+export function routeToRemember(pathname: string, search: string): string {
+  if (pathname === '/agent') return pathname;
+  const params = new URLSearchParams(search);
+  params.delete('project');
+  params.delete('workspace');
+  const query = params.toString();
+  return query ? `${pathname}?${query}` : pathname;
+}
+
 export function rememberDestinationRoute(
   destination: string,
   projectId: string,

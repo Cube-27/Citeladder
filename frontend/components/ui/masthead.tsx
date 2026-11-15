@@ -69,7 +69,7 @@ export function Masthead({
       )}
     >
       {/* Below `rail` the title side keeps its content's minimum; the actions give way. */}
-      <div className="rail:min-w-0 me-2 flex flex-1 items-center gap-2">
+      <div data-masthead-title="" className="rail:min-w-0 me-2 flex flex-1 items-center gap-2">
         {lead}
         <Tooltip content={title} side="bottom" describe={false} shouldOpen={isTextCut}>
           <h1
@@ -78,9 +78,10 @@ export function Masthead({
             tabIndex={cut ? 0 : undefined}
             className={textRole(
               'title',
-              // Below `rail` it keeps 112px, room for its first words on two lines.
+              // It keeps 112px (below `rail`, its first words on two lines); a word longer
+              // than its share (a URL) is clipped. A row too full for it folds behind More.
               cn(
-                'not-rail:min-w-28 not-rail:line-clamp-2 rail:truncate min-w-0 break-normal',
+                'not-rail:w-0 not-rail:flex-1 not-rail:line-clamp-2 rail:truncate min-w-28 break-normal',
                 cut && 'focus-ring',
               ),
             )}

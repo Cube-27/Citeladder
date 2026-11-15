@@ -62,12 +62,15 @@ const TAB_GAP = 16;
 /** The sidebar's project and account buttons: control-lg, 44, at 982 and at 1280. */
 const SIDEBAR_IDENT_HEIGHT = 44;
 /**
- * The masthead and the sidebar's switcher cell end on one 48px line from the
+ * The masthead and the sidebar's switcher cell end on one 56px line from the
  * top of the window, the hairline under both.
  */
-const MASTHEAD_HEIGHT = 48;
-/** Sidebar destination rows are 28: links, not controls, and their labels never wrap. */
-const NAV_ROW_HEIGHT = 28;
+const MASTHEAD_HEIGHT = 56;
+/**
+ * Sidebar destination rows and the group labels that fold them are 32 (on a
+ * 34 pitch): rows, not controls, and their labels never wrap.
+ */
+const NAV_ROW_HEIGHT = 32;
 /** Masthead, page tabs and filter bar stack flush; the body starts 24 below them. */
 const BAND_GAP = 0;
 const BODY_TOP_GAP = 24;
@@ -148,8 +151,9 @@ function measure({ route }: { route: string }) {
     if (element.closest('[role="tablist"], [role="radiogroup"], [role="menu"], [role="dialog"]'))
       continue;
     if (element.closest(':has(> input)')) continue;
-    // The sidebar's project and account rows are their own role below.
-    if (element.matches('[data-sidebar-ident]')) continue;
+    // The sidebar's project and account rows, and its group labels (nav rows),
+    // are their own roles below.
+    if (element.matches('[data-sidebar-ident], [data-sidebar-group-toggle]')) continue;
     // A checkbox is its own 16px box, and a column header's sort or hint
     // button is the header's label, measured as `data-table-header.height`.
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
@@ -208,7 +212,7 @@ function measure({ route }: { route: string }) {
   // under both, scrolled or not.
   for (const element of all('[data-sidebar-ident-cell], [data-masthead]'))
     add('masthead.bottom', element, element.getBoundingClientRect().bottom);
-  for (const element of all('aside a, nav a')) {
+  for (const element of all('aside a, nav a, [data-sidebar-group-toggle]')) {
     if (element.closest('[role="radiogroup"], [role="tablist"], [data-segmented-track]')) continue;
     if (!hasText(element)) continue;
     add('nav-row.height', element, element.getBoundingClientRect().height);
