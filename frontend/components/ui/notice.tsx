@@ -56,8 +56,8 @@ type ReadFailure = Readonly<{
   fallback: string;
   onRetry: () => void;
   pending?: boolean;
-  /** Names what failed to load ("Couldn't load the business map"); else `fallback` is the headline. */
-  title?: string;
+  /** The headline: what failed to load ("Couldn't load the business map"). */
+  title: string;
   className?: string;
 }>;
 
@@ -174,9 +174,8 @@ function MutationFailureNotice({ notice, onRetry, recovery, className }: Mutatio
 }
 
 /**
- * The headline names what failed ("Couldn't load runs"): the `title`, else
- * the caller's own sentence. A server's words are never the headline: a
- * sentence a person can act on follows it, and a server failure's status
+ * The headline names what failed ("Couldn't load runs"); a server's words
+ * never are. A sentence a person can act on follows it, and a server failure's status
  * text joins the reference in `data-sm` (2.9).
  */
 function ReadFailureNotice({
@@ -190,15 +189,14 @@ function ReadFailureNotice({
   const detail = humanizeApiError(error, fallback);
   const accessFailure = detail.status === 401 || detail.status === 403;
   const retryable = detail.retryable !== false && !accessFailure;
-  const headline = title ?? fallback;
-  const { sentence, code } = failureLines(detail, [headline, fallback]);
+  const { sentence, code } = failureLines(detail, [title, fallback]);
   const action = retryable ? (
     <Button variant="secondary" onClick={onRetry} pending={pending} pendingLabel="Retrying…">
       Retry
     </Button>
   ) : null;
   return (
-    <MessageNoticeView tone="negative" title={headline} action={action} className={className}>
+    <MessageNoticeView tone="negative" title={title} action={action} className={className}>
       {sentence ? <p>{sentence}</p> : null}
       {accessFailure ? <p>Check your workspace access, then try again.</p> : null}
       {code ? <p className="type-data-sm text-ink-2">{code}</p> : null}

@@ -40,7 +40,7 @@ export function RobotsHistory({
     query: (request) => siteHealthQueries.robotsHistory({ workspaceId, projectId }, request),
     noun: 'observations',
     loading: 'Loading robots.txt observations…',
-    error: 'robots.txt history is unavailable.',
+    subject: 'the robots.txt history',
     empty: () => ({
       kind: 'empty',
       icon: FileText,

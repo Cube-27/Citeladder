@@ -79,7 +79,7 @@ export function TrafficPages({
       aiTrafficQueries.pages({ workspaceId, projectId }, { ...filters, ...request }),
     noun: 'paths',
     loading: 'Loading paths…',
-    error: "Couldn't load the pages",
+    subject: 'the pages',
     empty: () => ({
       kind: 'empty',
       icon: SearchX,

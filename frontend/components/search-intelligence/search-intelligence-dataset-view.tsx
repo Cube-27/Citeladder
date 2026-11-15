@@ -77,7 +77,7 @@ export function SearchIntelligenceDatasetView({
       }),
     noun: 'evidence rows',
     loading: 'Loading saved rows…',
-    error: 'Saved rows could not be loaded.',
+    subject: 'the saved rows',
     empty: () => ({
       kind: 'empty',
       icon: SearchX,

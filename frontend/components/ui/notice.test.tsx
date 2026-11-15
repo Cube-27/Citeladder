@@ -15,13 +15,14 @@ describe('Notice kind="read"', () => {
       <Notice
         kind="read"
         error={new ApiError('Temporarily unavailable', 503, '', 'request-123')}
-        fallback="Could not load data."
+        title="Couldn't load the data"
+        fallback="The request failed or timed out."
         onRetry={onRetry}
       />,
     );
 
-    // The caller's sentence is the headline; the server's words and the reference follow in data-sm.
-    expect(screen.getByRole('alert')).toHaveTextContent('Could not load data.');
+    // The subject is the headline; the server's words and the reference follow in data-sm.
+    expect(screen.getByText("Couldn't load the data")).toBeVisible();
     expect(screen.getByText('Temporarily unavailable · Reference request-123')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
@@ -32,7 +33,8 @@ describe('Notice kind="read"', () => {
       <Notice
         kind="read"
         error={new ApiError('Access denied', 403, '', undefined, { retryable: false })}
-        fallback="Could not load data."
+        title="Couldn't load the data"
+        fallback="The request failed or timed out."
         onRetry={vi.fn()}
       />,
     );
@@ -46,12 +48,14 @@ describe('Notice kind="read"', () => {
       <Notice
         kind="read"
         error={new ApiError('Invalid state', 422, '', undefined, { retryable: false })}
-        fallback="Could not load data."
+        title="Couldn't load the data"
+        fallback="The request failed or timed out."
         onRetry={vi.fn()}
       />,
     );
 
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.getByText('Invalid state')).toBeVisible();
     expect(screen.queryByText(/check your workspace access/i)).not.toBeInTheDocument();
   });
 });

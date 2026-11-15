@@ -82,8 +82,8 @@ export type StateBlockProps =
       /** Retries exactly the read that failed. */
       onRetry: () => void;
       pending?: boolean;
-      /** Names what failed to load, above the error's message. */
-      title?: string;
+      /** The headline: what failed to load ("Couldn't load the business map"). */
+      title: string;
     }>
   | NotMeasured
   | BlockEmpty
@@ -102,6 +102,9 @@ type ScreenRead<T> = RetryableRead &
 type ScreenState<M> =
   | Readonly<{ kind: 'ready'; data: M }>
   | Readonly<{ kind: 'state'; state: StateBlockProps }>;
+
+/** A failed read's sentence when its error carries none of its own. */
+export const READ_FAILED = 'The request failed or timed out.';
 
 type Subject = Readonly<{
   /** What the read loads, in a sentence: "the business map" → "Couldn't load the business map". */
@@ -143,7 +146,7 @@ export function screenState<T, M extends T>(
       state: {
         kind: 'error',
         title: `Couldn't load ${options.subject}`,
-        fallback: 'The request failed or timed out.',
+        fallback: READ_FAILED,
         ...readErrorProps(read),
       },
     };

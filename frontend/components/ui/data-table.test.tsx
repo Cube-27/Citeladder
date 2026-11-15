@@ -52,7 +52,7 @@ describe('DataTable', () => {
         label="Pages"
         columns={[
           { key: 'page', label: 'Page', kind: 'identity' },
-          { key: 'visits', label: 'Visits', numeric: true },
+          { key: 'visits', label: 'Visits', kind: 'number' },
           { key: 'seen', label: 'Last seen', kind: 'date' },
           { key: 'open', label: 'Open', kind: 'actions' },
         ]}
@@ -100,7 +100,7 @@ describe('DataTable', () => {
         description="Shares use all GA4 source-report sessions."
         columns={[
           { key: 'source', label: 'Source' },
-          { key: 'comparison', label: 'Sessions', numeric: true, sublabel: 'Previous period' },
+          { key: 'comparison', label: 'Sessions', kind: 'number', sublabel: 'Previous period' },
         ]}
       >
         <TableRow>
@@ -208,7 +208,7 @@ describe('DataTable', () => {
         title="Referrers"
         columns={[
           { key: 'host', label: 'Host' },
-          { key: 'sessions', label: 'Sessions', width: 'figure', numeric: true },
+          { key: 'sessions', label: 'Sessions', kind: 'number' },
         ]}
         state={state}
       />
@@ -302,7 +302,7 @@ describe('DataTable', () => {
       minWidths({
         columns: [
           { key: 'dimension', label: 'Query', width: 'lead' },
-          { key: 'clicks', label: 'Clicks', width: 'figure', numeric: true },
+          { key: 'clicks', label: 'Clicks', kind: 'number' },
         ],
         minWidth: 'sm',
       })[0],
@@ -318,7 +318,7 @@ describe('DataTable', () => {
         title="Fixed figures"
         columns={[
           { key: 'engine', label: 'Engine', width: 'name' },
-          { key: 'share', label: 'Share', width: 'figure', numeric: true },
+          { key: 'share', label: 'Share', kind: 'number' },
         ]}
       />,
     );
@@ -327,7 +327,7 @@ describe('DataTable', () => {
         title="Flexible figures"
         columns={[
           { key: 'engine', label: 'Engine' },
-          { key: 'share', label: 'Share', width: 'figure', numeric: true },
+          { key: 'share', label: 'Share', kind: 'number' },
         ]}
       />,
     );

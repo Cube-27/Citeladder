@@ -282,7 +282,7 @@ export function useActionTable({
       actionsQueries.list({ workspaceId, projectId }, { ...query, group, ...request }),
     noun,
     loading: `Loading ${noun}…`,
-    error: `${noun} could not be loaded.`,
+    subject: `the ${noun.toLowerCase()}`,
     empty,
   });
 }

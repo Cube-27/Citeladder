@@ -144,7 +144,7 @@ describe('FigureStrip', () => {
 describe('DataTable', () => {
   const columns = [
     { key: 'name', label: 'Name' },
-    { key: 'count', label: 'Count', width: 'figure', numeric: true },
+    { key: 'count', label: 'Count', kind: 'number' },
   ] as const;
 
   it('pads a short page to the full page of rows and keeps the header over an empty state', () => {
@@ -448,10 +448,12 @@ describe('StateBlock', () => {
       <StateBlock
         kind="error"
         error={new ApiError('Temporarily unavailable', 503, '')}
-        fallback="Issues could not be loaded."
+        title="Couldn't load the issues"
+        fallback="The request failed or timed out."
         onRetry={onRetry}
       />,
     );
+    expect(screen.getByText("Couldn't load the issues")).toBeVisible();
     expect(screen.getByText('Temporarily unavailable')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
