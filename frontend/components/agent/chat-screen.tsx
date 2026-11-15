@@ -5,7 +5,6 @@ import { ChatConversation, ReplyComposer, useChatThread } from '@/components/age
 import { OutputPane } from '@/components/agent/output-pane';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail } from '@/components/agent/use-chat-turns';
-import { ChatHistory } from '@/components/agent/chat-history';
 import { ThreadPage } from '@/components/templates/thread-page';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -39,7 +38,7 @@ export function ChatScreen() {
   // A failed background refresh keeps the chat on screen; only a first load fails the page.
   if (query.isError && !query.data)
     return (
-      <ThreadPage history={<ChatHistory />}>
+      <ThreadPage>
         <StateBlock
           kind="error"
           error={query.error}
@@ -52,13 +51,13 @@ export function ChatScreen() {
     );
   if (!query.data)
     return (
-      <ThreadPage history={<ChatHistory />}>
+      <ThreadPage>
         <StateBlock kind="loading" />
       </ThreadPage>
     );
   if (query.data.chat.project_id !== projectId)
     return (
-      <ThreadPage history={<ChatHistory />}>
+      <ThreadPage>
         <Notice tone="negative">This chat belongs to another project.</Notice>
       </ThreadPage>
     );
@@ -69,12 +68,12 @@ export function ChatScreen() {
         label="Page workspace"
         defects="surface"
         loading={
-          <ThreadPage title={query.data.chat.title} history={<ChatHistory />}>
+          <ThreadPage title={query.data.chat.title}>
             <StateBlock kind="loading" label="Loading the page workspace…" />
           </ThreadPage>
         }
         failed={
-          <ThreadPage title={query.data.chat.title} history={<ChatHistory />}>
+          <ThreadPage title={query.data.chat.title}>
             <IslandUnavailable message="The page workspace could not load. Reload the page to try again." />
           </ThreadPage>
         }
@@ -104,7 +103,6 @@ function ChatView({
   return (
     <ThreadPage
       title={detail.chat.title}
-      history={<ChatHistory />}
       scrollRef={scrollRef}
       scrollLabel="Agent conversation"
       composer={

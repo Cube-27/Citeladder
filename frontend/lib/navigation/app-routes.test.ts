@@ -6,6 +6,7 @@ import {
   hasPageTitle,
   isWorkspaceOnlyRoute,
   isAgentPath,
+  navigationMode,
   projectSwitchPathname,
   resolveTitle,
 } from './app-routes';
@@ -55,5 +56,21 @@ describe('app route manifest', () => {
     expect(isAgentPath('/agent/unknown')).toBe(true);
     expect(isAgentPath('/agents-report')).toBe(false);
     expect(isAgentPath('/prompts')).toBe(false);
+  });
+
+  it.each([
+    ['/agent', 'agent'],
+    ['/agent/chats/c1', 'agent'],
+    ['/agent/actions', 'agent'],
+    ['/agent/actions/a1', 'agent'],
+    ['/agent/skills', 'agent'],
+    ['/agent/context', 'agent'],
+    ['/projects', 'dashboard'],
+    ['/site/crawls/c1/pages/p1', 'dashboard'],
+    ['/products/overview', 'dashboard'],
+    ['/agents-report', 'dashboard'],
+    ['/settings', 'dashboard'],
+  ] as const)('puts %s in %s mode', (pathname, mode) => {
+    expect(navigationMode(pathname)).toBe(mode);
   });
 });

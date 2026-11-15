@@ -8,6 +8,10 @@ import { Button } from './button';
 import { Masthead } from './masthead';
 import { MastheadPrimary } from './masthead-actions';
 
+function EmptyEnd() {
+  return null;
+}
+
 const TITLE = 'https://www.example.com/blog/how-to-choose-a-crm-for-a-small-agency';
 
 describe('Masthead', () => {
@@ -26,10 +30,12 @@ describe('Masthead', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent(TITLE);
   });
 
-  it('keeps the primary action beside the title and folds the secondary ones behind More actions', async () => {
+  it('keeps the primary action beside the title and folds the rest behind More', async () => {
     const { rerender } = render(
       <Masthead
         title="Website"
+        search={<Button>Search</Button>}
+        end={<Button>Ask agent</Button>}
         actions={
           <>
             <Button>Crawl schedule</Button>
@@ -41,13 +47,13 @@ describe('Masthead', () => {
         }
       />,
     );
-    const more = await screen.findByRole('button', { name: 'More actions' });
+    const more = await screen.findByRole('button', { name: 'More' });
     const group = document.getElementById(more.getAttribute('aria-controls') ?? '')!;
     expect(
       within(group)
         .getAllByRole('button')
         .map((button) => button.textContent),
-    ).toEqual(['Crawl schedule', 'Export']);
+    ).toEqual(['Search', 'Crawl schedule', 'Export', 'Ask agent']);
     const primary = screen.getByRole('button', { name: 'Run new crawl' });
     expect(group).not.toContainElement(primary);
     expect(more).toHaveAttribute('aria-expanded', 'false');
@@ -62,9 +68,10 @@ describe('Masthead', () => {
     fireEvent.click(within(group).getByRole('button', { name: 'Export' }));
     expect(more).toHaveAttribute('aria-expanded', 'false');
 
-    // One secondary action has nothing to fold: it stays in the row.
-    rerender(<Masthead title="Website" actions={<Button>Export</Button>} />);
+    // One control has nothing to fold: it stays in the row. An end that drew
+    // nothing (no "Ask agent" on an Agent page) is not counted.
+    rerender(<Masthead title="Website" actions={<Button>Export</Button>} end={<EmptyEnd />} />);
     expect(await screen.findByRole('button', { name: 'Export' })).toBeVisible();
-    expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
   });
 });

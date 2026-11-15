@@ -51,7 +51,6 @@ export function ScreenError() {
   useReportedRouteError('render');
   return (
     <NoticePage
-      title="Something went wrong"
       tone="negative"
       {...COULD_NOT_OPEN}
       actions={
@@ -68,14 +67,13 @@ export function ScreenError() {
 export function NotFoundScreen() {
   return (
     <NoticePage
-      title="Page not found"
       tone="info"
       icon={SearchX}
       overline="Not found"
-      heading="There is no page at this address"
+      heading="Page not found"
       actions={<OverviewLink />}
     >
-      Check the link, or go back to Overview.
+      There is no page at this address. Check the link, or go back to Overview.
     </NoticePage>
   );
 }
@@ -109,20 +107,18 @@ export function ShellRouteError() {
   useReportedRouteError('route');
   return (
     <ShellFallback>
-      <main id="main" className="min-w-0">
-        <NoticePage
-          tone="warning"
-          {...COULD_NOT_OPEN}
-          actions={
-            <>
-              <ReloadButton />
-              <a href="/projects" className={buttonClasses('secondary')}>
-                Go to Overview
-              </a>
-            </>
-          }
-        />
-      </main>
+      <NoticePage
+        tone="warning"
+        {...COULD_NOT_OPEN}
+        actions={
+          <>
+            <ReloadButton />
+            <a href="/projects" className={buttonClasses('secondary')}>
+              Go to Overview
+            </a>
+          </>
+        }
+      />
     </ShellFallback>
   );
 }

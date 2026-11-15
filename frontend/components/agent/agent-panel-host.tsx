@@ -2,8 +2,9 @@ import { lazy, Suspense, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { isAgentPath } from '@/lib/navigation/app-routes';
-import { Button, LABEL_FROM_SHELL } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { MASTHEAD_LABELLED } from '@/components/ui/masthead';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAgentPanel } from '@/lib/agent/panel-context';
 import { ICONS } from '@/lib/icons';
@@ -25,7 +26,7 @@ function usePanelAvailable(): boolean {
  * "Ask agent", last in the masthead of every page but the Agent's own: it
  * opens the agent panel over the screen. A page rendered outside the shell (a
  * preview, a test) has no panel and so no trigger, and never reads the
- * project context it lacks. Below 1280px only its glyph shows; its name stays.
+ * project context it lacks. It keeps its word at every width (below 900px, in More).
  */
 export function AgentPanelTrigger() {
   const panel = useAgentPanel();
@@ -41,12 +42,11 @@ function PanelTrigger({ open }: Readonly<{ open: () => void }>) {
       <Button
         variant="secondary"
         aria-haspopup="dialog"
-        aria-label="Ask agent"
         onClick={open}
-        className={LABEL_FROM_SHELL}
+        className={MASTHEAD_LABELLED}
       >
         <Icon icon={ICONS.agent} />
-        <span className="shell:inline hidden">Ask agent</span>
+        Ask agent
       </Button>
     </Tooltip>
   );

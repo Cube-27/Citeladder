@@ -174,8 +174,9 @@ export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: Rea
 /**
  * The agent's turn, with no bubble: the logo mark,
  * "Agent", the time and any `meta` (the skill it used) on one line, then the
- * reply's parts 12 apart on a dashed rail, because the model wrote them.
- * `inProgress` marks the reply still being written.
+ * reply's parts 12 apart on a solid rail. The dashed edge and the "Draft"
+ * tag belong to drafts a person can accept (documents, proposals), not to
+ * the conversation. `inProgress` marks the reply still being written.
  */
 export function AgentTurn({
   time,
@@ -192,17 +193,12 @@ export function AgentTurn({
       <div className="flex min-h-6 flex-wrap items-center gap-2">
         <LogoMark wordmark={false} variant="compact" />
         <span className={textRole('body', 'text-ink-2')}>Agent</span>
-        {/* Model-written, so drafted (law 1): the dashed rail and this word say so. */}
-        <span className={textRole('overline')}>Draft</span>
         {time ? (
           <span className={textRole('caption', 'font-mono tabular-nums')}>{time}</span>
         ) : null}
         {meta ? <span className={textRole('caption')}>{meta}</span> : null}
       </div>
-      <div
-        data-turn-rail=""
-        className="border-control-line ms-3 flex min-w-0 flex-col gap-3 border-s border-dashed ps-4"
-      >
+      <div data-turn-rail="" className="border-rule ms-3 flex min-w-0 flex-col gap-3 border-s ps-4">
         {children}
       </div>
     </article>

@@ -2,6 +2,7 @@ import type { LucideIcon } from 'lucide-react';
 
 import { ICONS } from '@/lib/icons';
 import {
+  MODE_HOMES,
   navDestinations,
   type NavDestination,
   type SidebarGroup,
@@ -10,12 +11,12 @@ import {
 /** A manifest nav entry with its glyph resolved, ready to render as a link. */
 export type NavItem = Omit<NavDestination, 'icon'> & { icon: LucideIcon };
 
-type NavGroup = Readonly<{
+/** A Dashboard group: its label (null draws the rows ungrouped) and its rail glyph. */
+export type NavGroup = Readonly<{
   group: SidebarGroup;
-  /** The sidebar's `overline` head; null draws the group without one. */
-  title: 'Analyze' | 'Commerce' | 'Act' | 'Track' | null;
-  /** The command palette's head for the same group. */
-  paletteTitle: string;
+  title: 'Analyze' | 'Commerce' | 'Track' | null;
+  /** The collapsed rail's one button for the group. */
+  icon: LucideIcon;
   items: readonly NavItem[];
 }>;
 
@@ -23,22 +24,27 @@ function navItems(placement: Parameters<typeof navDestinations>[0]): readonly Na
   return navDestinations(placement).map((entry) => ({ ...entry, icon: ICONS[entry.icon] }));
 }
 
-function group(
-  id: SidebarGroup,
-  title: NavGroup['title'],
-  paletteTitle: string = title ?? '',
-): NavGroup {
-  return { group: id, title, paletteTitle, items: navItems(`sidebar:${id}`) };
+function group(id: SidebarGroup, title: NavGroup['title'], icon: LucideIcon): NavGroup {
+  return { group: id, title, icon, items: navItems(`sidebar:${id}`) };
 }
 
-/** The sidebar's destinations in the order of the product loop. */
-export const NAV_GROUPS: readonly NavGroup[] = [
-  group('overview', null, 'Overview'),
-  group('analyze', 'Analyze'),
-  group('commerce', 'Commerce'),
-  group('act', 'Act'),
-  group('track', 'Track'),
+/** Dashboard mode: Overview and Actions ungrouped, then Analyze, Commerce and Track. */
+export const DASHBOARD_GROUPS: readonly NavGroup[] = [
+  group('overview', null, ICONS.overview),
+  group('analyze', 'Analyze', ICONS.site),
+  group('commerce', 'Commerce', ICONS.products),
+  group('track', 'Track', ICONS.visibility),
 ];
+
+const agentEntries = navItems('sidebar:agent');
+
+/** Agent mode's "New chat" button: the Agent's own home. */
+export const NEW_CHAT_ITEM: NavItem = agentEntries.find(
+  (item) => item.href === MODE_HOMES.agent,
+) ?? { label: 'New chat', icon: ICONS.newChat, href: MODE_HOMES.agent, scope: 'project' };
+
+/** Agent mode's destinations under "New chat": Actions, Skills, Context. */
+export const AGENT_NAV_ITEMS = agentEntries.filter((item) => item !== NEW_CHAT_ITEM);
 
 /** The foot's destinations, above the account button. */
 export const FOOT_NAV_ITEMS = navItems('sidebar:foot');
@@ -46,26 +52,41 @@ export const FOOT_NAV_ITEMS = navItems('sidebar:foot');
 /** The account menu's workspace and account links. */
 export const ACCOUNT_MENU_ITEMS = navItems('account');
 
-/** Every destination a sidebar row stands for, for telling a nested one from its parent. */
-const SIDEBAR_PATHS = [...NAV_GROUPS.flatMap((entry) => entry.items), ...FOOT_NAV_ITEMS].map(
+/** Every sidebar row in either mode, for marking the current one and remembering screens. */
+export const SIDEBAR_ITEMS: readonly NavItem[] = [
+  ...DASHBOARD_GROUPS.flatMap((entry) => entry.items),
+  NEW_CHAT_ITEM,
+  ...AGENT_NAV_ITEMS,
+  ...FOOT_NAV_ITEMS,
+].filter((item, index, all) => all.findIndex((other) => other.href === item.href) === index);
+
+const SIDEBAR_PATHS = SIDEBAR_ITEMS.map(
   (item) => new URL(item.href, 'https://citeladder.local').pathname,
 );
 
+const AGENT_HREFS = new Set([NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS].map((item) => item.href));
+
 /**
- * Every shell destination, grouped for the command palette: the sidebar's
- * groups in the same order with the same labels, then the workspace and
- * account pages. A managed plan has no provider settings (B32).
+ * Every shell destination, grouped for the command palette with the
+ * sidebar's labels: Overview, Analyze, Commerce, Track, Agent, then Settings
+ * (Integrations and the account's pages). An Agent destination the Dashboard
+ * list repeats (Actions) is listed once, under Agent. A managed plan has no
+ * provider settings (B32).
  */
 export function resolveCommandGroups({ managed = false }: { managed?: boolean } = {}): readonly {
   title: string;
   items: readonly NavItem[];
 }[] {
-  const workspace = [...FOOT_NAV_ITEMS, ...ACCOUNT_MENU_ITEMS, ...navItems('palette')].filter(
+  const settings = [...FOOT_NAV_ITEMS, ...ACCOUNT_MENU_ITEMS, ...navItems('palette')].filter(
     (item) => !managed || !item.hiddenWhenManaged,
   );
   return [
-    ...NAV_GROUPS.map(({ paletteTitle, items }) => ({ title: paletteTitle, items })),
-    { title: 'Workspace', items: workspace },
+    ...DASHBOARD_GROUPS.map(({ title, items }) => ({
+      title: title ?? 'Overview',
+      items: items.filter((item) => !AGENT_HREFS.has(item.href)),
+    })),
+    { title: 'Agent', items: [NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS] },
+    { title: 'Settings', items: settings },
   ];
 }
 
@@ -84,18 +105,18 @@ const ACCOUNT_PATHS = [
  * its own sidebar row (Integrations) marks that row instead.
  */
 export function isAccountCurrent(pathname: string, searchParams: URLSearchParams): boolean {
-  const rows = [...NAV_GROUPS.flatMap((entry) => entry.items), ...FOOT_NAV_ITEMS];
-  if (rows.some((item) => isNavItemActive(pathname, searchParams, item))) return false;
+  if (SIDEBAR_ITEMS.some((item) => isNavItemActive(pathname, searchParams, item))) return false;
   return ACCOUNT_PATHS.some((base) => atOrBelow(pathname, base));
 }
 
 /**
  * A destination is current when the path is it or below it, unless another
  * destination sits deeper on that path: Shopping (`/products/overview`) is
- * not also Products, and Actions (`/agent/actions`) is not also Agent. A
- * destination that names query parameters (a settings tab) also needs each of
- * them to match, so Integrations is not current on another settings tab.
- * Screens own their own tabs: every tab of Website is still Website.
+ * not also Products, and Actions (`/agent/actions`) is not also New chat. New
+ * chat is current on its own page only: a chat (`/agent/chats/…`) is marked
+ * in the chat list instead. A destination that names query parameters (a
+ * settings tab) also needs each of them to match, so Integrations is not
+ * current on another settings tab. Every tab of Website is still Website.
  */
 export function isNavItemActive(
   pathname: string,
@@ -103,6 +124,7 @@ export function isNavItemActive(
   item: Pick<NavItem, 'href'>,
 ): boolean {
   const target = new URL(item.href, 'https://citeladder.local');
+  if (target.pathname === MODE_HOMES.agent) return pathname === MODE_HOMES.agent;
   if (!atOrBelow(pathname, target.pathname)) return false;
   const deeper = SIDEBAR_PATHS.some(
     (path) => path.length > target.pathname.length && atOrBelow(pathname, path),

@@ -18,6 +18,8 @@ import { ActiveProjectScopeProvider } from '@/lib/project/active-project-scope';
 import { useProjectContext } from '@/lib/project/project-context';
 import type { FailureScope } from '@/lib/project/selection';
 
+import { RouteLoadingScreen } from './page-shell';
+
 /**
  * The project-route gate.
  *
@@ -80,10 +82,10 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   useOnboardingRedirect(state === 'redirecting', activeWorkspaceId);
   useCanonicalProjectUrl(status === 'ready' && projectRequired);
 
-  // The route's masthead over the loading notice, so the shell never shows a bare page.
+  // The route's masthead over the page's skeleton, so the shell never shows a bare page.
   if (state === 'redirecting')
     return <NoticePage tone="loading" heading="Opening project setup…" />;
-  if (state === 'loading') return <NoticePage tone="loading" heading="Loading your workspace…" />;
+  if (state === 'loading') return <RouteLoadingScreen />;
   if (state !== 'ready') {
     return (
       <GateNotice

@@ -1,32 +1,33 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { AgentNav, AgentRail } from '@/components/agent/agent-nav';
 import { AgentPanelHost, AgentPanelTrigger } from '@/components/agent/agent-panel-host';
 import { AppShellFrame, NavDrawer } from '@/components/ui/app-shell';
 import {
   CommandPaletteHost,
   CommandPaletteTrigger,
 } from '@/components/ui/command-palette-launcher';
-import { SidebarCollapseToggle, SidebarFrame } from '@/components/ui/sidebar';
+import { SidebarCollapseToggle, SidebarFrame, SidebarRailList } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AgentPanelProvider } from '@/lib/agent/panel-context';
-import { resolveTitle } from '@/lib/navigation/app-routes';
+import { navigationMode, resolveTitle } from '@/lib/navigation/app-routes';
 import { useProjectContext } from '@/lib/project/project-context';
 import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 
+import { ModeSwitch, useModeMemory } from './mode-switch';
 import { resolveCommandGroups } from './nav-items';
 import { PageTitleContext } from './page-title-context';
 import { ProjectSwitcher } from './project-switcher';
 import { ShellContext } from './shell-context';
-import { SidebarFootNav, SidebarNav, useDestinationMemory } from './sidebar-nav';
+import { DashboardNav, DashboardRail, SidebarFootNav, useDestinationMemory } from './sidebar-nav';
 import { UserMenuTrigger } from './user-menu';
 import { useRouteAnnouncement } from './use-route-announcement';
 
 /**
- * AppShell — the signed-in application chrome: one
- * sidebar (the project switcher, the destinations in the order of the
- * product loop, Integrations and the account at its foot) beside the page.
- * Below 900px the masthead's menu button opens the same sidebar in a left
+ * AppShell — the signed-in application chrome: the sidebar (the project
+ * switcher, the Dashboard | Agent switch, the mode's list, Integrations and
+ * the account at its foot) beside the page. Below 900px the masthead's menu button opens the same sidebar in a left
  * drawer that closes when the route changes. The masthead's search, "Ask
  * agent" and menu button come from here through `ShellContext`.
  */
@@ -40,6 +41,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
     projectName: activeProject?.name ?? null,
   });
   useDestinationMemory();
+  useModeMemory();
   useCollapseShortcut();
   // The drawer is open for the location it was opened on, so any navigation
   // (a destination, the project switcher) closes it.
@@ -77,17 +79,33 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
 
 const COLLAPSE_SHORTCUT = 'Ctrl \\';
 
+/**
+ * The sidebar: the project switcher, the Dashboard | Agent switch, the
+ * mode's list (the route decides the mode), then Integrations, the account
+ * and the collapse toggle. Collapsed (never in the drawer) it is the 56px
+ * rail: one button per group, flyouts for the groups, and nothing scrolls.
+ */
 function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
   const collapsed = useSidebarCollapsed();
+  const rail = collapsed && !inDrawer;
+  const mode = navigationMode(useLocation().pathname ?? '');
+  let nav = mode === 'agent' ? <AgentNav /> : <DashboardNav />;
+  if (rail)
+    nav = (
+      <SidebarRailList label={mode === 'agent' ? 'Agent' : 'Dashboard'}>
+        {mode === 'agent' ? <AgentRail /> : <DashboardRail />}
+      </SidebarRailList>
+    );
   return (
     <SidebarFrame
       ident={<ProjectSwitcher />}
-      nav={<SidebarNav />}
+      mode={<ModeSwitch rail={rail} />}
+      nav={nav}
       foot={
         <>
-          <SidebarFootNav />
-          <div className="labelled:flex-row flex flex-col items-center gap-1">
-            <div className="min-w-0 flex-1 self-stretch">
+          <SidebarFootNav rail={rail} />
+          <div className="labelled:flex-row labelled:gap-0.5 flex flex-col items-center">
+            <div className="labelled:flex-1 min-w-0">
               <UserMenuTrigger presenter={inDrawer ? 'drawer' : 'sidebar'} />
             </div>
             <SidebarCollapseToggle

@@ -9,7 +9,6 @@ import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
-import { ChatHistory } from '@/components/agent/chat-history';
 import { ThreadPage } from '@/components/templates/thread-page';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -104,7 +103,7 @@ function NewChat({
   const pending = create.pending || commands.resolving;
 
   return (
-    <ThreadPage history={<ChatHistory />}>
+    <ThreadPage>
       {/* The greeting, composer and briefing start at the top of the thread
           column, where a chat's first turn will be. */}
       <Stack gap="section">

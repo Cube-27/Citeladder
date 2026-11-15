@@ -145,6 +145,36 @@ describe('AppShell resizable sidebar', () => {
     expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
   });
 
+  it('collapses to one rail button per group, few enough to fit a window 480 high', async () => {
+    const user = userEvent.setup();
+    window.localStorage.setItem('citeladder:app:sidebar-collapsed', '1');
+    renderShell();
+    const sidebar = screen.getByRole('complementary', { name: 'Sidebar' });
+    const buttons = [
+      ...within(sidebar).getAllByRole('button'),
+      ...within(sidebar).getAllByRole('link'),
+    ];
+    // Project, Dashboard, Agent, Overview, Actions, Analyze, Commerce, Track,
+    // Integrations, account, collapse: 40px each, the first in the 56px cell,
+    // with 21px between the rail's parts.
+    expect(buttons).toHaveLength(11);
+    expect(56 + (buttons.length - 1) * 40 + 21).toBeLessThanOrEqual(480);
+
+    // A group opens its flyout with the right arrow, marking the current page.
+    const analyze = within(sidebar).getByRole('button', { name: 'Analyze' });
+    expect(analyze).toHaveAttribute('aria-current', 'true');
+    analyze.focus();
+    await user.keyboard('{ArrowRight}');
+    const flyout = await screen.findByRole('menu', { name: 'Analyze' });
+    expect(within(flyout).getByRole('menuitem', { name: 'Website' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(analyze).toHaveFocus();
+  });
+
   it('shows the whole account email in a tooltip when the sidebar cuts it', async () => {
     // The full, labelled sidebar (from 1280px), where the email shows as text.
     vi.spyOn(window, 'matchMedia').mockImplementation(

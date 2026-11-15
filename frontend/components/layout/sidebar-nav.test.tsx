@@ -9,10 +9,28 @@ const mocks = vi.hoisted(() => ({
   find: vi.fn((_filters: { queryKey: readonly unknown[] }) => undefined),
   // The Actions list read behind the open count.
   actionsList: { status_counts: { open: 3, in_progress: 2, completed: 9 } },
+  chats: [
+    {
+      id: '33333333-3333-4333-8333-333333333331',
+      title: 'Why did citations drop',
+      origin: 'chat',
+      last_activity_at: '2026-11-12T10:00:00Z',
+      running: true,
+    },
+  ],
 }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useQuery: () => ({ data: mocks.actionsList }),
+  useQuery: () => ({ data: mocks.actionsList, isLoading: false }),
+  // The Agent list's chats.
+  useInfiniteQuery: () => ({
+    data: { pages: [{ items: mocks.chats }] },
+    isPending: false,
+    isError: false,
+    isFetching: false,
+    hasNextPage: false,
+  }),
+  infiniteQueryOptions: <T,>(options: T) => options,
   useQueryClient: () => ({
     prefetchQuery: mocks.prefetchQuery,
     getQueryCache: () => ({ find: mocks.find }),
@@ -22,17 +40,21 @@ vi.mock('@tanstack/react-query', () => ({
   queryOptions: <T,>(options: T) => options,
 }));
 
-vi.mock('@/lib/project/project-context', () => ({
-  useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  useProjectContext: () => ({
+vi.mock('@/lib/project/project-context', () => {
+  const context = {
     activeProject: {
       id: '11111111-1111-4111-8111-111111111111',
       workspace_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
     },
     activeProjectId: '11111111-1111-4111-8111-111111111111',
     activeWorkspaceId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-  }),
-}));
+  };
+  return {
+    useActiveWorkspaceId: () => 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    useProjectContext: () => context,
+    useOptionalProjectContext: () => context,
+  };
+});
 
 let pathname = '/site';
 let searchParams = new URLSearchParams();
@@ -48,16 +70,21 @@ import { performanceQueries } from '@/lib/api/performance';
 import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { INITIAL_DASHBOARD_PARAMS } from '@/lib/performance/performance';
-import { SidebarFootNav, SidebarNav as Destinations, useDestinationMemory } from './sidebar-nav';
+import { navigationMode } from '@/lib/navigation/app-routes';
+import { AgentNav } from '@/components/agent/agent-nav';
+import { ModeSwitch, useModeMemory } from './mode-switch';
+import { DashboardNav, SidebarFootNav, useDestinationMemory } from './sidebar-nav';
 
-/** The sidebar's destinations and foot, remembering screens as the shell does. */
+/** The labelled sidebar as the shell draws it: the switch, the mode's list, the foot. */
 function SidebarNav() {
   useDestinationMemory();
+  useModeMemory();
   return (
-    <>
-      <Destinations />
-      <SidebarFootNav />
-    </>
+    <div data-sidebar-state="expanded">
+      <ModeSwitch rail={false} />
+      {navigationMode(pathname) === 'agent' ? <AgentNav /> : <DashboardNav />}
+      <SidebarFootNav rail={false} />
+    </div>
   );
 }
 
@@ -96,8 +123,9 @@ describe('station navigation', () => {
   it('shows open and in-progress Actions as the Actions count', async () => {
     render(<SidebarNav />);
     // The count's code loads after the shell, so it arrives a moment later.
+    // It says what it counts: open Actions, not issues.
     expect(
-      await screen.findByRole('link', { name: 'Actions, 5 open' }, { timeout: 4_500 }),
+      await screen.findByRole('link', { name: 'Actions, 5 open Actions' }, { timeout: 4_500 }),
     ).toHaveAttribute('href', '/agent/actions?project=11111111-1111-4111-8111-111111111111');
   });
 
@@ -129,26 +157,45 @@ describe('station navigation', () => {
     expect(screen.getByRole('link', { name: 'Shopping' })).not.toHaveAttribute('aria-current');
   });
 
-  it('lists every destination once, Agent among them, with Actions not also Agent', () => {
+  it('lists the mode of the route: Actions in both, the analysis pages in Dashboard only', async () => {
     pathname = '/agent/actions';
-    render(<SidebarNav />);
-    expect(screen.getAllByRole('link', { name: /^Actions/ })).toHaveLength(1);
+    const { unmount } = render(<SidebarNav />);
+    expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
     expect(screen.getByRole('link', { name: /^Actions/ })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: 'Agent' })).not.toHaveAttribute('aria-current');
-    // No mode hides the analysis destinations while an Agent page is open.
-    expect(screen.getByRole('link', { name: 'Website' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'New chat' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Skills' })).toBeInTheDocument();
+    // The chats load in their own chunk after the rows.
+    expect(await screen.findByRole('searchbox', { name: 'Search chats' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Why did citations drop/ })).toHaveAttribute(
+      'href',
+      '/agent/chats/33333333-3333-4333-8333-333333333331?project=11111111-1111-4111-8111-111111111111',
+    );
+    expect(screen.queryByRole('link', { name: 'Website' })).toBeNull();
+    unmount();
+
+    pathname = '/site';
+    render(<SidebarNav />);
+    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'true');
+    expect(screen.getAllByRole('link', { name: /^Actions/ })).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.queryByRole('link', { name: 'Skills' })).toBeNull();
   });
 
-  it('returns each destination to the last screen used under it, and the current one home', () => {
+  it('returns each destination and each mode to the last screen used in it', () => {
     const chat = '/agent/chats/33333333-3333-4333-8333-333333333331';
+    const action = '/agent/actions/44444444-4444-4444-8444-444444444441';
+    pathname = action;
+    const first = render(<SidebarNav />);
+    first.unmount();
     pathname = chat;
-    const { unmount } = render(<SidebarNav />);
-    // On the chat itself, Agent is current and opens a new chat.
-    expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute(
+    const second = render(<SidebarNav />);
+    // On a chat, New chat opens a new chat.
+    expect(screen.getByRole('link', { name: 'New chat' })).toHaveAttribute(
       'href',
       '/agent?project=11111111-1111-4111-8111-111111111111',
     );
-    unmount();
+    second.unmount();
 
     pathname = '/demand';
     render(<SidebarNav />);
@@ -156,11 +203,39 @@ describe('station navigation', () => {
       'href',
       `${chat}?project=11111111-1111-4111-8111-111111111111`,
     );
+    expect(screen.getByRole('link', { name: /^Actions/ })).toHaveAttribute(
+      'href',
+      `${action}?project=11111111-1111-4111-8111-111111111111`,
+    );
     // A destination never used keeps its front door.
     expect(screen.getByRole('link', { name: 'Runs' })).toHaveAttribute(
       'href',
       '/runs?project=11111111-1111-4111-8111-111111111111',
     );
+  });
+
+  it('folds a group to the current page alone, and keeps the fold', () => {
+    pathname = '/site';
+    const { unmount } = render(<SidebarNav />);
+    const analyze = screen.getByRole('button', { name: 'Analyze' });
+    expect(analyze).toHaveAttribute('aria-expanded', 'true');
+    fireEvent.click(analyze);
+    expect(analyze).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('link', { name: 'Issues' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute('aria-current', 'page');
+    unmount();
+
+    // Reloaded on another page, the group stays folded and shows nothing it holds.
+    pathname = '/runs';
+    render(<SidebarNav />);
+    expect(screen.getByRole('button', { name: 'Analyze' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.queryByRole('link', { name: 'Website' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Runs' })).toHaveAttribute('aria-current', 'page');
+    fireEvent.click(screen.getByRole('button', { name: 'Analyze' }));
+    expect(screen.getByRole('link', { name: 'Issues' })).toBeInTheDocument();
   });
 
   // Intent warms the key, but no longer in the same tick: each prefetcher

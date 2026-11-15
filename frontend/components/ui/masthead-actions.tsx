@@ -24,7 +24,7 @@ export const MastheadPrimarySlot = createContext<HTMLElement | null | undefined>
 /**
  * The page's one primary action, wherever the actions component renders it:
  * drawn in the masthead's primary slot after the secondary actions, so it
- * stays in view when they fold behind More actions. Outside a masthead it
+ * stays in view when they fold behind More. Outside a masthead it
  * renders in place.
  */
 export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>) {
@@ -37,9 +37,10 @@ export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>)
 const POPUP_LAYER = '[data-radix-popper-content-wrapper], [role="dialog"], [role="alertdialog"]';
 
 /**
- * The masthead's secondary actions. In a wide masthead they sit in the row.
- * Below `rail`, two or more, or one beside the primary, fold behind a
- * labelled More actions button into a panel under the masthead, rendered once
+ * The masthead's controls other than the primary (search, secondary actions,
+ * "Ask agent"). In a wide masthead they sit in the row. Below `rail`, two or
+ * more, or one beside the primary, fold behind one button named "More" into
+ * a panel under the masthead, rendered once
  * and kept mounted, so their dialogs and state survive it closing. Escape, a
  * press outside or a finished action closes it; Escape returns focus to the
  * button.
@@ -53,6 +54,11 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
   const primary = useChildCount(useContext(MastheadPrimarySlot) ?? null);
   // One secondary action alone stays in the row; beside another action or the primary, it folds.
   const folds = secondary > 1 || (secondary === 1 && primary > 0);
+  const crowded = useCrowdedRow(
+    panel?.closest<HTMLElement>('[data-masthead]') ?? null,
+    secondary + primary,
+  );
+  const always = folds && crowded;
   const close = useEffectEvent((event: Event) => {
     if (!panel) return;
     const outcome = overflowOutcome(event, panel, trigger.current);
@@ -75,12 +81,12 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
         <IconButton
           ref={trigger}
           icon={MoreHorizontal}
-          label="More actions"
+          label="More"
           variant="secondary"
           aria-expanded={open}
           aria-controls={panelId}
           onClick={() => setOpen((current) => !current)}
-          className="rail:hidden"
+          className={always ? undefined : 'rail:hidden'}
         />
       ) : null}
       <div
@@ -90,18 +96,54 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
         data-open={open || undefined}
         className={cn(
           'flex min-w-0 items-center gap-2',
+          folds && MENU_PANEL,
           folds &&
-            cn(
-              MENU_PANEL,
-              'not-rail:absolute not-rail:end-0 not-rail:top-full not-rail:hidden not-rail:min-w-56 not-rail:flex-col not-rail:items-stretch not-rail:data-open:flex',
-              'rail:contents',
-            ),
+            (always
+              ? 'absolute end-0 top-full hidden min-w-56 flex-col items-stretch data-open:flex'
+              : 'not-rail:absolute not-rail:end-0 not-rail:top-full not-rail:hidden not-rail:min-w-56 not-rail:flex-col not-rail:items-stretch not-rail:data-open:flex rail:contents'),
         )}
       >
         {children}
       </div>
     </>
   );
+}
+
+/**
+ * Whether the masthead's one row overflows with every control in it (a wide
+ * page's many actions). It stays folded until the row is as wide as it
+ * needed, so folding never flips back and forth; new controls measure again.
+ */
+function useCrowdedRow(header: HTMLElement | null, controls: number) {
+  const [fold, setFold] = useState<Readonly<{ need: number; controls: number }> | null>(null);
+  const crowded = fold?.controls === controls;
+  useEffect(() => {
+    if (!header) return;
+    const measure = () => {
+      if (fold && crowded) {
+        if (header.clientWidth >= fold.need) setFold(null);
+        return;
+      }
+      const deficit = rowDeficit(header);
+      if (deficit > 1) setFold({ need: header.clientWidth + deficit, controls });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    return () => observer.disconnect();
+  }, [header, controls, crowded, fold]);
+  return crowded;
+}
+
+/** How many px the row lacks: the title squeezed under its minimum, plus controls past the edge. */
+function rowDeficit(header: HTMLElement): number {
+  const title = header.querySelector<HTMLElement>('[data-masthead-title]');
+  const end = header.querySelector<HTMLElement>('[data-masthead-end]');
+  const squeezed = title ? Math.max(0, title.scrollWidth - title.clientWidth) : 0;
+  const edge =
+    header.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(header).paddingRight);
+  const past = end ? Math.max(0, end.getBoundingClientRect().right - edge) : 0;
+  return squeezed + past;
 }
 
 type OverflowOutcome = 'stay' | 'close' | 'refocus';
@@ -128,15 +170,22 @@ function clickOutcome(target: Element, panel: HTMLElement): OverflowOutcome {
   return opensPopup ? 'stay' : 'close';
 }
 
-/** How many elements the box holds, kept current as its children render. */
+/**
+ * How many controls the box holds, kept current as its children render; a
+ * wrapper whose control drew nothing (no "Ask agent" on an Agent page) is none.
+ */
 function useChildCount(node: HTMLElement | null) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     if (!node) return;
-    const update = () => setCount(node.childElementCount);
+    const update = () =>
+      setCount(
+        [...node.children].filter((child) => child.matches('button, a') || child.firstElementChild)
+          .length,
+      );
     update();
     const observer = new MutationObserver(update);
-    observer.observe(node, { childList: true });
+    observer.observe(node, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [node]);
   return count;
