@@ -4,7 +4,9 @@ import { useMemo } from 'react';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { ActiveProjectScope } from '@/lib/project/active-project-scope';
 
-import type { PromptMeasurement } from './prompt-table';
+import type { PromptMetricItem } from '@citeladder/contracts/visibility';
+
+import type { PromptChange, PromptMeasurement } from './prompt-table';
 
 type PromptScope = Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>;
 
@@ -41,7 +43,7 @@ export function useLatestPromptMeasurements(
       map.set(row.prompt_id, {
         visibilityRate: row.visibility_rate ?? null,
         ownedCitationRate: row.owned_citation_rate ?? null,
-        change: row.visibility_delta ?? null,
+        change: promptChange(row),
         position: row.avg_position ?? null,
         mentions: row.mentions,
         brands: row.brands,
@@ -50,4 +52,10 @@ export function useLatestPromptMeasurements(
     }
     return map;
   }, [result.data, result.isError, result.isLoading]);
+}
+
+/** A row's change since the prompt's previous measurement, or why there is none. */
+function promptChange(row: PromptMetricItem): PromptChange {
+  if (row.visibility_delta != null) return { kind: 'delta', points: row.visibility_delta };
+  return row.comparison_status === 'no_baseline' ? { kind: 'first' } : { kind: 'not_compared' };
 }

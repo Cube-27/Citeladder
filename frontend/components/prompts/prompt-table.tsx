@@ -10,19 +10,29 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Switch } from '@/components/ui/switch';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { MissingValue, UnavailableValue } from '@/components/ui/unavailable-value';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
 import type { NamedBrand, Prompt, PromptStatus } from '@citeladder/contracts';
 import { ICONS } from '@/lib/icons';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 
-/** What the latest run measured for one prompt, keyed by prompt id. */
+/**
+ * The change since the run that measured the same prompt before (owner,
+ * 2026-11-15): a delta in points, its first measurement, or a pair that could
+ * not be compared (different settings, or no answers on one side).
+ */
+export type PromptChange =
+  | { kind: 'delta'; points: number }
+  | { kind: 'first' }
+  | { kind: 'not_compared' };
+
+/** What the run that last measured a prompt found, keyed by prompt id. */
 export type PromptMeasurement = {
   visibilityRate: number | null;
   /** Answers citing an owned page, over the prompt's successful answers. */
   ownedCitationRate: number | null;
-  change: number | null;
+  change: PromptChange;
   position: number | null;
   /** Distinct brands named in the answers; `brands` is the leading few. */
   mentions: number;
@@ -302,12 +312,35 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
         )}
       </TableCell>
       <TableCell numeric>
-        {measurement?.change == null ? (
-          <UnavailableValue state="not_measured" />
-        ) : (
-          <Delta value={measurement.change} unit=" pp" />
-        )}
+        <ChangeValue change={measurement?.change} />
       </TableCell>
     </>
   );
+}
+
+/** The change since the prompt's previous measurement, or why there is none. */
+function ChangeValue({ change }: Readonly<{ change?: PromptChange }>) {
+  if (change === undefined) return <UnavailableValue state="not_measured" />;
+  switch (change.kind) {
+    case 'delta':
+      return <Delta value={change.points} unit=" pp" />;
+    case 'first':
+      return (
+        <MissingValue
+          state="not_applicable"
+          reason="First measurement: nothing earlier to compare."
+        />
+      );
+    case 'not_compared':
+      return (
+        <MissingValue
+          state="unknown"
+          reason="Not comparable with its previous measurement: the settings changed or a run had no answers."
+        />
+      );
+    default: {
+      const unhandled: never = change;
+      return unhandled;
+    }
+  }
 }

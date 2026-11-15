@@ -29,7 +29,7 @@ import { scopedPrompt } from '../prompts/prompts.ts';
 import { ratio } from './metrics.ts';
 import { answerStates, getPromptMetrics, outcomeCounts } from './prompts.ts';
 import { marketOf, type RunScope } from './runs.ts';
-import { selectedCohorts, validateCohort, validateEngineAndRange } from './selection.ts';
+import { selectedCohorts, validateEngineAndRange, validatePromptCohort } from './selection.ts';
 
 const visibility = policy.visibility;
 
@@ -54,15 +54,12 @@ export async function getPromptHistory(
   validateEngineAndRange({ logicalEngine: request.logicalEngine, fromAt: null, toAt: null });
   const prompt = await scopedPrompt(db, scope.workspaceId, request.promptId);
   if (prompt.project_id !== scope.projectId) throw notFound('Prompt');
-  // A prompt is measured in its own cohort; one no read serves falls back to core.
-  const own = promptCohortSchema.parse(prompt.cohort);
+  // A prompt is measured in its own cohort, brand questions included.
   const query: ResolvedQuery = {
     ...request,
-    cohort:
-      request.cohort ??
-      (visibility.requestable_cohorts.includes(own) ? own : promptCohortSchema.enum.core),
+    cohort: request.cohort ?? promptCohortSchema.parse(prompt.cohort),
   };
-  validateCohort(query.cohort);
+  validatePromptCohort(query.cohort);
   const [points, implementations] = await Promise.all([
     historyPoints(db, scope, query),
     implementationMarkers(db, scope, query.promptId),

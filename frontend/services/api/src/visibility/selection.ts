@@ -7,6 +7,7 @@
  * never an empty answer; an answer whose task did not succeed is not
  * evidence of anything, so it is excluded from the base scope itself.
  */
+import { promptCohortSchema } from '@citeladder/contracts/project';
 import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -90,6 +91,14 @@ export function validateCohort(cohort: string): void {
   if (!visibility.requestable_cohorts.includes(cohort)) {
     throw new TrendQueryError(`Unknown prompt cohort: ${cohort}`);
   }
+}
+
+/**
+ * A per-prompt read also serves a prompt's own cohort that no headline read
+ * requests (brand questions): every group shows on its prompt (owner, 2026-11-15).
+ */
+export function validatePromptCohort(cohort: string): void {
+  if (!promptCohortSchema.safeParse(cohort).success) validateCohort(cohort);
 }
 
 /**

@@ -10421,9 +10421,15 @@
             "in": "query",
             "required": false,
             "schema": {
-              "default": "core",
-              "type": "string",
-              "enum": ["core", "comparison", "all"]
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["core", "comparison", "all"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           },
           {

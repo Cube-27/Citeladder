@@ -714,24 +714,32 @@ describe('GET /visibility/prompts', () => {
       ],
     });
   });
-  it("reads each tracked prompt's own latest run, so a later run of other prompts keeps earlier results", async () => {
+  it("reads every prompt's own latest run in its own cohort, with the change since its previous one", async () => {
     const tenant = await fixtures.tenant();
     const outsider = await fixtures.tenant();
     const set = await promptSet(db, tenant.projectId);
-    const [older, newer] = [
+    const [older, newer, brandQuestion] = [
       await trackedPrompt(db, set, 'best crm'),
       await trackedPrompt(db, set, 'cheap crm'),
+      await trackedPrompt(db, set, 'is acme crm any good'),
     ];
-    const run = async (owner: Tenant, day: string, prompts: [string, string][]) => {
+    type Measured = [promptId: string, text: string, cohort?: string];
+    const run = async (
+      owner: Tenant,
+      day: string,
+      prompts: Measured[],
+      configuration = frozen(),
+    ) => {
       const auditId = await fixtures.audit(owner, {
         completedAt: new Date(`${day}T00:00:00Z`),
-        configuration: frozen(),
+        configuration,
       });
-      for (const [index, [promptId, promptText]] of prompts.entries()) {
+      for (const [index, [promptId, promptText, cohort = 'core']] of prompts.entries()) {
         await fixtures.execution(owner, {
           auditId,
           promptIndex: index,
           promptText,
+          cohort,
           analysis: { brandMentioned: index === 0 },
         });
         await fixtures.promptScore(owner, auditId, {
@@ -739,13 +747,17 @@ describe('GET /visibility/prompts', () => {
           promptText,
           composite: 50,
           promptId,
+          cohort,
         });
       }
       return auditId;
     };
+    // Measured once before, from another country: no comparable previous reading.
+    await run(tenant, '2026-02-23', [[older, 'best crm']], frozen({ country_code: 'GB' }));
     const first = await run(tenant, '2026-03-02', [
       [older, 'best crm'],
       [newer, 'cheap crm'],
+      [brandQuestion, 'is acme crm any good', 'brand_diagnostic'],
     ]);
     // The next batch measures only the newer prompt.
     const second = await run(tenant, '2026-03-09', [[newer, 'cheap crm']]);
@@ -758,21 +770,37 @@ describe('GET /visibility/prompts', () => {
     const { status, body } = await get(tenant, route(tenant, '/prompts'), { latest: 'prompt' });
 
     expect(status).toBe(200);
+    const byPrompt = new Map(body.map((item) => [item.prompt_id, item]));
     expect(
-      body
-        .map((item) => [item.prompt_id, item.audit_id, item.visibility_rate])
-        .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
-    ).toEqual(
-      [
-        [older, first, 1],
-        [newer, second, 1],
-      ].sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
-    );
-    // The default read is still the latest run alone.
+      [older, newer, brandQuestion].map((id) => {
+        const item = byPrompt.get(id)!;
+        return [
+          item.audit_id,
+          item.cohort,
+          item.visibility_rate,
+          item.visibility_delta,
+          item.comparison_status,
+        ];
+      }),
+    ).toEqual([
+      [first, 'core', 1, null, 'changed_context'],
+      [second, 'core', 1, 100, 'comparable'],
+      // A brand question is shown too; one measurement has nothing to compare, and its 0 is a reading.
+      [first, 'brand_diagnostic', 0, null, 'no_baseline'],
+    ]);
+    expect(body).toHaveLength(3);
+    // The default read is still the latest run alone, and headline cohorts stay core.
     const latestRun = await get(tenant, route(tenant, '/prompts'));
     expect(latestRun.body.map((item) => [item.prompt_id, item.audit_id])).toEqual([
       [newer, second],
     ]);
+    // Every cohort is the per-prompt read's own; it takes no cohort or named run.
+    const narrowed: Record<string, string>[] = [{ cohort: 'core' }, { audit_id: first }];
+    for (const query of narrowed) {
+      expect(
+        (await get(tenant, route(tenant, '/prompts'), { latest: 'prompt', ...query })).status,
+      ).toBe(422);
+    }
   });
 });
 
@@ -825,6 +853,47 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
     });
     return auditId;
   }
+
+  it("reads a brand-question prompt's history in its own cohort", async () => {
+    const tenant = await fixtures.tenant();
+    const promptId = await trackedPrompt(
+      db,
+      await promptSet(db, tenant.projectId),
+      'is acme any good',
+    );
+    await db
+      .updateTable('prompts')
+      .set({ cohort: 'brand_diagnostic' })
+      .where('id', '=', promptId)
+      .execute();
+    const auditId = await fixtures.audit(tenant, {
+      completedAt: new Date('2026-03-02T00:00:00Z'),
+      configuration: frozen(),
+    });
+    await fixtures.execution(tenant, {
+      auditId,
+      promptIndex: 0,
+      promptText: 'is acme any good',
+      cohort: 'brand_diagnostic',
+      analysis: { brandMentioned: true },
+    });
+    await fixtures.promptScore(tenant, auditId, {
+      promptIndex: 0,
+      promptText: 'is acme any good',
+      composite: 50,
+      promptId,
+      cohort: 'brand_diagnostic',
+    });
+
+    const { status, body } = await get(tenant, history(tenant, promptId));
+
+    expect(status).toBe(200);
+    expect([
+      body.cohort,
+      (body.points as Row[]).map((point) => [point.audit_id, point.mention_rate]),
+      record(body.latest).audit_id,
+    ]).toEqual(['brand_diagnostic', [[auditId, 1]], auditId]);
+  });
 
   it('reads mention and owned citation rates per run, keeping unavailable apart from zero', async () => {
     const tenant = await fixtures.tenant();

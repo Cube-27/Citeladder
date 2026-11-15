@@ -88,7 +88,7 @@ describe('PromptTable pagination', () => {
                   {
                     visibilityRate: 0.5,
                     ownedCitationRate: 0.25,
-                    change: null,
+                    change: { kind: 'first' },
                     position: 2,
                     answer: ANSWER,
                     mentions: 4,
@@ -104,7 +104,7 @@ describe('PromptTable pagination', () => {
                   {
                     visibilityRate: 0,
                     ownedCitationRate: 0,
-                    change: null,
+                    change: { kind: 'not_compared' },
                     position: null,
                     answer: ANSWER,
                     mentions: 0,
@@ -142,6 +142,10 @@ describe('PromptTable pagination', () => {
     expect(cells[4]!.textContent).toBe('#2');
     // Measured, and no brand named: zero, not the "not measured" mark.
     expect(within(unnamedRow!).getAllByRole('cell')[2]!.textContent).toBe('None');
+    // No change is never a zero: a first measurement has nothing to compare, and
+    // a pair measured differently is not compared.
+    expect(cells[5]!.textContent).toBe('Not applicable');
+    expect(within(unnamedRow!).getAllByRole('cell')[5]!.textContent).toBe('Unknown');
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {

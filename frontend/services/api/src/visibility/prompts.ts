@@ -35,7 +35,6 @@ import {
   type BrandCount,
 } from './brand-identities.ts';
 import { round2 } from './metrics.ts';
-import { latestPromptRuns } from './prompt-latest.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
 import { marketOf, type RunScope } from './runs.ts';
 import {
@@ -43,8 +42,8 @@ import {
   authorizeRunSet,
   latestBrandRunId,
   selectedCohorts,
-  validateCohort,
   validateEngineAndRange,
+  validatePromptCohort,
 } from './selection.ts';
 
 const visibility = policy.visibility;
@@ -57,7 +56,7 @@ type Outcome = NonNullable<PromptMetricItem['outcomes']>[number];
  * An item with its creation instant as sortable UTC text, and every brand its
  * answers named (the item carries only the leading few, once marks resolve).
  */
-type PromptRow = { item: PromptMetricItem; createdAt: string; named: BrandCount[] };
+export type PromptRow = { item: PromptMetricItem; createdAt: string; named: BrandCount[] };
 
 export type PromptQuery = {
   auditId: string | null;
@@ -68,8 +67,6 @@ export type PromptQuery = {
   logicalEngine: string | null;
   baselineId: string | null;
   cohort: string;
-  /** `prompt` reads each tracked prompt's own latest run instead of the latest run. */
-  latest?: 'run' | 'prompt';
 };
 
 export async function getPromptMetrics(
@@ -78,11 +75,19 @@ export async function getPromptMetrics(
   query: PromptQuery,
 ): Promise<PromptMetricItem[]> {
   validateEngineAndRange({ logicalEngine: query.logicalEngine, fromAt: null, toAt: null });
-  validateCohort(query.cohort);
-  let rows: PromptRow[];
-  if (query.latest === 'prompt') rows = await latestRows(db, scope, query);
-  else if (query.auditIds?.length) rows = await periodRows(db, scope, query, query.auditIds);
-  else rows = await runRows(db, scope, query);
+  validatePromptCohort(query.cohort);
+  const rows = query.auditIds?.length
+    ? await periodRows(db, scope, query, query.auditIds)
+    : await runRows(db, scope, query);
+  return promptItems(db, scope, rows);
+}
+
+/** The rows' items with their Actions and named brands attached. */
+export async function promptItems(
+  db: Database,
+  scope: RunScope,
+  rows: readonly PromptRow[],
+): Promise<PromptMetricItem[]> {
   const items = rows.map((row) => row.item);
   await Promise.all([attachActions(db, scope, items), attachBrands(db, scope, rows)]);
   return items;
@@ -637,18 +642,11 @@ async function setRows(
   return enrichedRows(db, scope, query, [...new Set(auditIds)]);
 }
 
-/** Each tracked prompt's row from the run that last measured it. */
-async function latestRows(db: Database, scope: RunScope, query: PromptQuery) {
-  const latest = await latestPromptRuns(db, scope, query);
-  const rows = await enrichedRows(db, scope, query, [...new Set(latest.values())]);
-  return rows.filter(({ item }) => item.prompt_id && latest.get(item.prompt_id) === item.audit_id);
-}
-
 /** The runs' rows, each enriched from its own run; the runs are already scoped. */
-async function enrichedRows(
+export async function enrichedRows(
   db: Database,
   scope: RunScope,
-  query: PromptQuery,
+  query: Pick<PromptQuery, 'cohort' | 'logicalEngine' | 'promptId'>,
   ids: readonly string[],
 ): Promise<PromptRow[]> {
   if (!ids.length) return [];

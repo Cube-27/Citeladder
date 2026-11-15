@@ -50,6 +50,7 @@ import { getVisibilityFanout } from '../visibility/fanout.ts';
 import { getMarketVisibility } from '../visibility/markets.ts';
 import { getPerception, getPerceptionQuotes } from '../visibility/perception.ts';
 import { getPromptHistory } from '../visibility/prompt-history.ts';
+import { getLatestPromptMetrics } from '../visibility/prompt-latest.ts';
 import { getPromptMetrics } from '../visibility/prompts.ts';
 import {
   AnalysisNotFoundError,
@@ -323,24 +324,32 @@ export const visibilityRoutes = [
         baseline_audit_ids: BASELINE_RUNS,
         engine: { scalar: { kind: 'str' } },
         baseline_id: { scalar: { kind: 'uuid' } },
-        cohort: COHORT,
+        // Omitted reads core; a per-prompt latest read takes none.
+        cohort: { scalar: COHORT.scalar },
         // `prompt` reads each tracked prompt's own latest run: the prompt library.
         latest: { scalar: { kind: 'literal', values: ['run', 'prompt'] }, default: 'run' },
       },
     },
     response: z.array(promptMetricItemSchema),
     async handle({ c, db }, { path, query }) {
-      const workspace = c.get('workspace');
+      const scope = marketScope(c.get('workspace').workspaceId, path.project_id, query.market);
+      const runs = {
+        auditId: query.audit_id,
+        auditIds: query.audit_ids,
+        baselineAuditIds: query.baseline_audit_ids,
+        baselineId: query.baseline_id,
+      };
       return selectionErrors(() =>
-        getPromptMetrics(db, marketScope(workspace.workspaceId, path.project_id, query.market), {
-          auditId: query.audit_id,
-          auditIds: query.audit_ids,
-          baselineAuditIds: query.baseline_audit_ids,
-          logicalEngine: query.engine,
-          baselineId: query.baseline_id,
-          cohort: query.cohort,
-          latest: query.latest,
-        }),
+        query.latest === 'prompt'
+          ? getLatestPromptMetrics(db, scope, {
+              logicalEngine: query.engine,
+              narrowed: query.cohort != null || Object.values(runs).some((value) => value != null),
+            })
+          : getPromptMetrics(db, scope, {
+              ...runs,
+              logicalEngine: query.engine,
+              cohort: query.cohort ?? 'core',
+            }),
       );
     },
   }),
