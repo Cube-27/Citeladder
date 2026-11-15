@@ -15,9 +15,10 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
-import { GoogleGlyph } from '@/components/ui/google-glyph';
+import { GoogleMark } from '@/components/ui/google-glyph';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
+import { ItemList } from '@/components/ui/list-row';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatTimeZoneNote } from '@/lib/format';
 import {
@@ -97,19 +98,6 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
   return null;
 }
 
-/** Google's own mark beside its title; on a chip in dark, where the card is dark. */
-function FamilyMark({ family }: Readonly<{ family: GrantFamily }>) {
-  if (family !== 'google') return null;
-  return (
-    <span
-      aria-hidden
-      className="rounded-control [[data-theme=dark]_&]:bg-surface [[data-theme=dark]_&]:border-rule grid shrink-0 place-items-center [[data-theme=dark]_&]:border [[data-theme=dark]_&]:p-1"
-    >
-      <GoogleGlyph className="size-6" />
-    </span>
-  );
-}
-
 function GrantHeader({
   family,
   grant,
@@ -122,7 +110,7 @@ function GrantHeader({
   return (
     <SectionHeader actions={actions}>
       <SectionTitleLine>
-        <FamilyMark family={family} />
+        {family === 'google' ? <GoogleMark /> : null}
         <SectionTitle>{meta.title}</SectionTitle>
         {badge.variant === 'status' ? (
           <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
@@ -186,7 +174,7 @@ function ReconnectButton({
   const meta = FAMILY_META[family];
   const noteId = useId();
   return (
-    <span className="inline-flex items-center gap-1">
+    <Inline gap="tight">
       <Button
         aria-describedby={noteId}
         onClick={() =>
@@ -199,7 +187,7 @@ function ReconnectButton({
         {meta.reconnectNote}
       </span>
       <InfoHint label="About reconnecting">{meta.reconnectNote}</InfoHint>
-    </span>
+    </Inline>
   );
 }
 
@@ -292,12 +280,11 @@ function ConnectedCard({
       <SectionContent data-settings-wide="">
         <Stack gap="compact">
           <GrantAlert family={family} status={grant.status} />
-          {/* Rows lay out by the card's width, not the window's. */}
-          <ul className="@container">
+          <ItemList>
             {grant.connections.map((connection) => (
               <ConnectionRow key={connection.id} connection={connection} grant={grant} />
             ))}
-          </ul>
+          </ItemList>
           {datesShown ? (
             <p className={textRole('caption', 'text-ink-2')}>{formatTimeZoneNote(timeZone)}</p>
           ) : null}

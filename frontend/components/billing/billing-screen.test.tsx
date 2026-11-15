@@ -221,7 +221,8 @@ const SUBSCRIBER_CATALOG = {
 };
 const entitlementHandler = () =>
   http.get('/api/v1/billing/entitlement', () => HttpResponse.json(entitlementValue as never));
-const usageHandler = () => http.get('/api/v1/billing/usage', () => HttpResponse.json(USAGE));
+const usageHandler = (usage: object = USAGE) =>
+  http.get('/api/v1/billing/usage', () => HttpResponse.json(usage));
 const invoicesHandler = () =>
   http.get('/api/v1/billing/invoices', () => HttpResponse.json({ invoices: [] }));
 
@@ -428,41 +429,36 @@ describe('BillingScreen', () => {
 
   it('lists the limits in a table instead of empty meters when nothing is used', async () => {
     entitlementValue = resolvedEntitlement();
-    const [prompts] = USAGE.items;
-    const idle = {
+    const idle = (prompts: object = { resets_at: '2026-12-01T00:00:00Z' }) => ({
       ...USAGE,
       items: [
-        { ...prompts, allowance: 50200, consumed: 0, remaining: 50200 },
-        { ...prompts, key: 'ai_credits', allowance: 0, consumed: 0, remaining: 0 },
-        {
-          ...prompts,
-          key: 'project_slots',
-          limit_state: 'unlimited',
-          allowance: null,
-          consumed: 0,
-        },
+        { ...USAGE.items[0], allowance: 50200, consumed: 0, remaining: 50200, ...prompts },
+        { ...USAGE.items[0], key: 'ai_credits', allowance: 0, consumed: 0, remaining: 0 },
+        { ...USAGE.items[0], key: 'project_slots', limit_state: 'unlimited', consumed: 0 },
       ],
-    };
-    mswServer.use(
-      catalogHandler(),
-      entitlementHandler(),
-      http.get('/api/v1/billing/usage', () => HttpResponse.json(idle)),
-    );
-
-    renderWithProviders(<BillingScreen />);
+    });
+    mswServer.use(catalogHandler(), entitlementHandler(), usageHandler(idle()));
+    const view = renderWithProviders(<BillingScreen />);
 
     const table = await screen.findByRole('table', { name: 'Usage limits' });
     expect(screen.getByText('Nothing used yet this period.')).toBeVisible();
-    const rows = within(table)
-      .getAllByRole('row')
-      .map((row) => row.textContent);
-    expect(rows).toEqual([
+    const rows = within(table).getAllByRole('row');
+    expect(rows.map((row) => row.textContent?.replace(/Resets .+\./u, ''))).toEqual([
       'QuotaLimit',
       'Prompts50,200',
       'ProjectsUnlimited',
       'AI creditsNot included',
     ]);
+    // The reset date stays with its quota rather than leaving with the meter.
+    expect(rows[1]).toHaveTextContent(/Resets .+\./u);
     expect(screen.queryByRole('progressbar')).toBeNull();
+
+    // A held reservation is usage, so it keeps the meters.
+    view.unmount();
+    mswServer.use(usageHandler(idle({ reserved: 3, remaining: 50197 })));
+    renderWithProviders(<BillingScreen />);
+    expect(await screen.findByRole('progressbar', { name: 'Prompts' })).toBeInTheDocument();
+    expect(screen.queryByRole('table', { name: 'Usage limits' })).toBeNull();
   });
 
   it('requires the cancellation dialog before mutating', async () => {

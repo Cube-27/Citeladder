@@ -7,10 +7,11 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { UsageMeter, usageLabel } from '@/components/billing/usage-meter';
+import { ExpiryLine, UsageMeter, usageLabel } from '@/components/billing/usage-meter';
 import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { Stack } from '@/components/ui/layout';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
 import { formatCount } from '@/lib/format';
@@ -45,12 +46,13 @@ function ordered(items: readonly UsageItem[]): UsageItem[] {
 type UsageRead = ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.usage>>>>;
 
 /**
- * Every quota measured, and none used: a measured zero, never an unresolved
- * allowance or an unread count, which keep their meters and their words.
+ * Every quota measured, and none used or held: a measured zero, never an
+ * unresolved allowance, an unread count or a reservation, which keep their meters.
  */
 function nothingUsed(items: readonly UsageItem[]): boolean {
   return (
-    items.length > 0 && items.every((item) => item.limit_state !== 'unknown' && item.consumed === 0)
+    items.length > 0 &&
+    items.every((item) => item.limit_state !== 'unknown' && item.consumed === 0 && !item.reserved)
   );
 }
 
@@ -134,14 +136,27 @@ function QuotaTable({ items }: Readonly<{ items: readonly UsageItem[] }>) {
   return (
     <DataTable label="Usage limits" columns={QUOTA_COLUMNS}>
       {items.map((item) => (
-        <TableRow key={item.key}>
-          <TableCell>{usageLabel(item).label}</TableCell>
-          <TableCell numeric>
-            <QuotaLimit item={item} />
-          </TableCell>
-        </TableRow>
+        <QuotaRow key={item.key} item={item} />
       ))}
     </DataTable>
+  );
+}
+
+/** The quota's name over its reset or expiry, and its limit. */
+function QuotaRow({ item }: Readonly<{ item: UsageItem }>) {
+  const { label, unit } = usageLabel(item);
+  return (
+    <TableRow>
+      <TableCell>
+        <Stack gap="tight">
+          <span>{label}</span>
+          <ExpiryLine item={item} unit={unit} />
+        </Stack>
+      </TableCell>
+      <TableCell numeric>
+        <QuotaLimit item={item} />
+      </TableCell>
+    </TableRow>
   );
 }
 

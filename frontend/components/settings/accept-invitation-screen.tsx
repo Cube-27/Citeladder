@@ -7,6 +7,7 @@ import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { FlowBlock, FlowPage } from '@/components/templates/flow-page';
 import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -125,7 +126,7 @@ function InvitationDeadEnd({
   useDocumentTitle(heading);
   return (
     // The flow page's card is the frame, so the state draws none of its own.
-    <div data-section="card" className="flex min-w-0 flex-col items-center gap-2">
+    <Stack gap="item" data-section="card" className="min-w-0 justify-items-center">
       <StateBlock
         kind="empty"
         icon={Link2Off}
@@ -145,6 +146,6 @@ function InvitationDeadEnd({
           {`Reference: ${reference}`}
         </p>
       ) : null}
-    </div>
+    </Stack>
   );
 }

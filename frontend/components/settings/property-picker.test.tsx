@@ -128,11 +128,21 @@ describe('PropertyPicker', () => {
     expect(await screen.findByText('sc-domain:example.com')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Change Search Console property' })).toBeNull();
   });
-  it('flags an unselected connection instead of showing an empty ref', () => {
+  it('says the selection is unknown, not missing, when the mappings read fails', async () => {
+    mswServer.use(
+      http.get(`/api/v1/integrations/${CONN}/mappings`, () =>
+        HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 }),
+      ),
+    );
+    renderPicker(connection());
+    expect(await screen.findByText('Property unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('No property selected')).toBeNull();
+  });
+  it('flags an unselected connection instead of showing an empty ref', async () => {
     renderPicker(connection());
 
     // The state that made syncs fail silently must be visible, not blank.
-    expect(screen.getByText('No property selected')).toBeInTheDocument();
+    expect(await screen.findByText('No property selected')).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Select Search Console property' }),
     ).toBeInTheDocument();

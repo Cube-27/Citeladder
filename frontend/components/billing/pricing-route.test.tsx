@@ -67,6 +67,18 @@ describe('app pricing continuation', () => {
     expect(screen.queryByText(/^Workspace:/u)).toBeNull();
   });
 
+  it('keeps the public pricing link in the masthead when the workspace read fails', async () => {
+    mswServer.use(
+      http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
+    );
+    renderWithProviders(<PricingRoute />, {
+      projectSelection: { workspaces: [], activeWorkspace: null, isError: true },
+    });
+    expect(await screen.findByText("Couldn't load the workspace")).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'View public pricing' })).toHaveLength(1);
+  });
+
   it('waits for confirmation, refreshes the catalog, and scopes the mutation to the selected workspace', async () => {
     const writes: Array<{ workspace: string | null; key: string | null }> = [];
     let reads = 0;

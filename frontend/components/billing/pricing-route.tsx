@@ -428,11 +428,11 @@ export default function PricingRoute() {
 
   return (
     <SettingsPage
-      // With nothing chosen, the page's empty state carries this action instead.
+      // The "nothing chosen" state carries this action; anything else keeps it here.
       actions={
-        selection ? (
+        selection || isError ? (
           <MastheadPrimary>
-            <Button asChild variant={offered === false ? 'primary' : 'secondary'}>
+            <Button asChild variant={!selection || offered === false ? 'primary' : 'secondary'}>
               <a href={websitePricing}>View public pricing</a>
             </Button>
           </MastheadPrimary>

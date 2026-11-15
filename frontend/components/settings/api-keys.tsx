@@ -370,7 +370,7 @@ export function ApiKeys() {
               value={API_BASE_URL}
               iconOnly
               variant="quiet"
-              className="-my-2 align-middle"
+              className="align-middle"
               copiedLabel="Copied the API address"
             />{' '}
             from your own code.

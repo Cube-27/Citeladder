@@ -1,5 +1,5 @@
 import { renderWithProviders as render } from '@/test/render';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -79,16 +79,11 @@ describe('AcceptInvitationScreen', () => {
 
     // The title says what happened; the code is reference text, never the headline.
     await screen.findByRole('heading', { level: 1, name: "This invitation can't be used" });
-    const block = document.body;
     expect(screen.queryByRole('heading', { name: 'Joining workspace' })).toBeNull();
-    expect(
-      within(block).getByText(/Ask the person who invited you for a new link\./u),
-    ).toBeVisible();
-    expect(
-      within(block).getByText('Reference: workspace_invitation_invalid · req-1'),
-    ).toBeInTheDocument();
-    expect(within(block).queryByText('invitation_invalid')).toBeNull();
-    expect(within(block).getByRole('button', { name: 'Go to your workspace' })).toBeVisible();
+    expect(screen.getByText(/Ask the person who invited you for a new link\./u)).toBeVisible();
+    expect(screen.getByText('Reference: workspace_invitation_invalid · req-1')).toBeInTheDocument();
+    expect(screen.queryByText('invitation_invalid')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Go to your workspace' })).toBeVisible();
     expect(selectWorkspace).not.toHaveBeenCalled();
   });
 });

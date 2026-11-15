@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -98,6 +99,35 @@ function PropertyOptions({
   ));
 }
 
+/** The provider read's loading, failure or empty answer above the options. */
+function DiscoveryState({
+  pending,
+  error,
+  properties,
+  noun,
+}: Readonly<{
+  pending: boolean;
+  error: Error | null;
+  properties: readonly IntegrationProperty[] | undefined;
+  noun: string;
+}>) {
+  if (pending) return <StateBlock kind="loading" label={`Loading ${noun}s…`} />;
+  if (error)
+    return (
+      <Notice
+        kind="mutation"
+        notice={mutationNoticeForError(error, { action: 'load your properties from the provider' })}
+      />
+    );
+  if (properties?.length !== 0) return null;
+  return (
+    <Notice tone="info">
+      This account has no {noun} available. Verify the property in the provider&rsquo;s own console
+      first, then reopen this dialog.
+    </Notice>
+  );
+}
+
 /**
  * The chosen property's name, or a visible "none selected". The mapping is
  * this project's; the connection is the workspace's.
@@ -106,12 +136,11 @@ export function SelectedPropertyMark({
   connection,
 }: Readonly<{ connection: IntegrationConnection }>) {
   const { activeProject } = useProjectContext();
-  const mapping = useActiveMapping(
-    connection.workspace_id,
-    connection.id,
-    activeProject?.id ?? null,
-  );
-  const selected = mapping?.property_ref ?? '';
+  const mappings = useQuery(integrationsQueries.mappings(connection.workspace_id, connection.id));
+  // Unread is unknown, never "none selected".
+  if (mappings.isPending) return null;
+  if (mappings.isError) return <Absence state="unavailable" label="Property unavailable" />;
+  const selected = activeMappingFor(mappings.data, activeProject?.id ?? null)?.property_ref ?? '';
   const provider = connection.provider;
   if (!selected)
     return (
@@ -218,25 +247,12 @@ export function PropertyPicker({
               one.
             </Notice>
           ) : null}
-
-          {discovery.isPending ? <StateBlock kind="loading" label={`Loading ${noun}s…`} /> : null}
-
-          {discovery.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(discovery.error, {
-                action: 'load your properties from the provider',
-              })}
-            />
-          ) : null}
-
-          {discovery.data?.length === 0 ? (
-            <Notice tone="info">
-              This account has no {noun} available. Verify the property in the provider&rsquo;s own
-              console first, then reopen this dialog.
-            </Notice>
-          ) : null}
-
+          <DiscoveryState
+            pending={discovery.isPending}
+            error={discovery.error}
+            properties={discovery.data}
+            noun={noun}
+          />
           <Stack gap="tight">
             <PropertyOptions
               properties={discovery.data ?? []}

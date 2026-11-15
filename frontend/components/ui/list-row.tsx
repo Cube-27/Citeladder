@@ -1,5 +1,5 @@
 import { Check, ChevronRight } from 'lucide-react';
-import type { FormEvent, ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, FormEvent, ReactNode } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
@@ -231,6 +231,60 @@ export function TreeItemForm({
       >
         {children}
       </form>
+    </li>
+  );
+}
+
+/** A card's list of `ItemRow`s, which lay out by its width rather than the window's. */
+export function ItemList({ children }: Readonly<{ children: ReactNode }>) {
+  return <ul className="@container">{children}</ul>;
+}
+
+/**
+ * A two-line item in a list its card frames (a data source and its
+ * property): a tile, the title over one caption line, the item's state, then
+ * its actions. At least 56 tall, 12 down, a hairline between items. Below a
+ * 640px list the state and actions drop under the text, left-aligned.
+ */
+export function ItemRow({
+  media,
+  title,
+  meta,
+  state,
+  actions,
+  ...props
+}: Readonly<
+  Omit<ComponentPropsWithoutRef<'li'>, 'className' | 'children' | 'title'> & {
+    media: ReactNode;
+    title: ReactNode;
+    meta: ReactNode;
+    state: ReactNode;
+    actions: ReactNode;
+  }
+>) {
+  return (
+    <li
+      {...props}
+      className="border-rule flex min-h-14 flex-col gap-2 border-b py-3 last:border-b-0 @[640px]:flex-row @[640px]:items-center @[640px]:gap-3"
+    >
+      <div className="flex min-w-0 items-center gap-3 @[640px]:flex-[1_1_16rem]">
+        {media}
+        <div className="grid min-w-0">
+          <p className={textRole('label', 'text-ink truncate')}>{title}</p>
+          <div className={textRole('caption', 'text-ink-2 flex min-w-0 flex-wrap gap-x-1')}>
+            {meta}
+          </div>
+        </div>
+      </div>
+      <div
+        className={textRole(
+          'caption',
+          'text-ink-2 flex min-w-0 items-center gap-2 @[640px]:max-w-[40%] @[640px]:flex-[0_1_auto]',
+        )}
+      >
+        {state}
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
     </li>
   );
 }

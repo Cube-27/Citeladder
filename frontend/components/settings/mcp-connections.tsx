@@ -1,4 +1,9 @@
-import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
@@ -131,43 +136,61 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
           ))}
         </DataTable>
       )}
-      <Dialog
-        open={pending !== null}
-        onOpenChange={(open) => {
-          if (!open) setPending(null);
-        }}
-        title={
-          adminView
-            ? `Remove ${pending?.client_name ?? 'this connection'}'s access to this workspace?`
-            : `Revoke ${pending?.client_name ?? 'this connection'}?`
-        }
-        footer={
-          <Button
-            variant="danger"
-            pending={revoke.isPending}
-            onClick={() => {
-              if (pending) revoke.mutate(pending.id, { onSuccess: () => setPending(null) });
-            }}
-          >
-            {adminView ? 'Remove access' : 'Revoke'}
-          </Button>
-        }
-      >
-        <Stack gap="compact">
-          <p className={textRole('body', 'text-ink-2')}>
-            {adminView
-              ? 'The assistant stops reading or changing this workspace at once. Its access to other workspaces is unchanged.'
-              : 'The assistant stops reading or changing CiteLadder at once. Connect it again to restore access.'}
-          </p>
-          {revoke.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(revoke.error, { action: 'revoke the connection' })}
-            />
-          ) : null}
-        </Stack>
-      </Dialog>
+      <RevokeDialog
+        adminView={adminView}
+        pending={pending}
+        revoke={revoke}
+        onClose={() => setPending(null)}
+      />
     </Section>
+  );
+}
+
+function RevokeDialog({
+  adminView,
+  pending,
+  revoke,
+  onClose,
+}: Readonly<{
+  adminView: boolean;
+  pending: McpConnection | null;
+  revoke: UseMutationResult<void, Error, string>;
+  onClose: () => void;
+}>) {
+  const name = pending?.client_name ?? 'this connection';
+  return (
+    <Dialog
+      open={pending !== null}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+      title={adminView ? `Remove ${name}'s access to this workspace?` : `Revoke ${name}?`}
+      footer={
+        <Button
+          variant="danger"
+          pending={revoke.isPending}
+          onClick={() => {
+            if (pending) revoke.mutate(pending.id, { onSuccess: onClose });
+          }}
+        >
+          {adminView ? 'Remove access' : 'Revoke'}
+        </Button>
+      }
+    >
+      <Stack gap="compact">
+        <p className={textRole('body', 'text-ink-2')}>
+          {adminView
+            ? 'The assistant stops reading or changing this workspace at once. Its access to other workspaces is unchanged.'
+            : 'The assistant stops reading or changing CiteLadder at once. Connect it again to restore access.'}
+        </p>
+        {revoke.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(revoke.error, { action: 'revoke the connection' })}
+          />
+        ) : null}
+      </Stack>
+    </Dialog>
   );
 }
 

@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { PlugZap, type LucideIcon } from 'lucide-react';
+import { PlugZap } from 'lucide-react';
 import { useEffect, useId, useState, type ReactNode } from 'react';
 
 import { BackfillHistory } from '@/components/settings/backfill-progress';
@@ -24,9 +24,10 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatShortDate, formatTableTimestamp } from '@/lib/format';
 import { DisplayTime } from '@/components/ui/display-time';
 import { isSyncInFlight, pollSyncRun, SYNC_RUN_STATES } from '@/lib/integrations/status';
-import { IconTile } from '@/components/ui/icon';
+import { Icon, IconTile } from '@/components/ui/icon';
+import { Inline } from '@/components/ui/layout';
+import { ItemRow } from '@/components/ui/list-row';
 import { Tooltip } from '@/components/ui/tooltip';
-import { textRole } from '@/components/ui/typography';
 
 type ConnectionMutation = {
   isPending: boolean;
@@ -134,7 +135,7 @@ function ConnectionActions({
   const canRun = useWorkspaceCapability('run');
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-2">
+    <>
       <PropertyPicker connection={connection} disabled={busy} />
       {canManage ? (
         <Button
@@ -144,7 +145,7 @@ function ConnectionActions({
           disabled={busy}
           aria-label={`Test ${label}`}
         >
-          <PlugZap className="size-4" aria-hidden />
+          <Icon icon={PlugZap} />
           {testPending ? 'Testing…' : 'Test'}
         </Button>
       ) : null}
@@ -169,7 +170,7 @@ function ConnectionActions({
           Remove
         </Button>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -280,7 +281,7 @@ function ConnectionStatus({
 function ConnectionRowView({
   connection,
   grant,
-  propertyRef,
+  hasProperty,
   testMutation,
   syncMutation,
   removeMutation,
@@ -292,7 +293,7 @@ function ConnectionRowView({
 }: Readonly<{
   connection: IntegrationConnection;
   grant: GrantModel;
-  propertyRef: string;
+  hasProperty: boolean;
   testMutation: ConnectionMutation;
   syncMutation: ConnectionMutation;
   removeMutation: ConnectionMutation;
@@ -302,9 +303,8 @@ function ConnectionRowView({
   runInFlight: boolean;
   busy: boolean;
 }>) {
-  const { label, Icon } = PROVIDER_META[connection.provider];
+  const { label, Icon: SourceIcon } = PROVIDER_META[connection.provider];
   const actionError = syncMutation.error ?? removeMutation.error;
-  const hasProperty = propertyRef !== '';
   const grantConnected = grant.status === 'connected';
   // Until a property is chosen the row's only state is that it has none.
   const status =
@@ -319,68 +319,59 @@ function ConnectionRowView({
     ) : null;
 
   return (
-    <li
-      className="border-rule flex min-h-14 flex-col gap-2 border-b py-3 last:border-b-0 @[640px]:flex-row @[640px]:items-center @[640px]:gap-3"
+    <ItemRow
       data-testid={`connection-row-${connection.provider}`}
-    >
-      <ConnectionText connection={connection} label={label} Icon={Icon} />
-      <div
-        className={textRole(
-          'caption',
-          'text-ink-2 flex min-w-0 items-center gap-2 @[640px]:max-w-[40%] @[640px]:flex-[0_1_auto]',
-        )}
-      >
-        <SelectedPropertyMark connection={connection} />
-        {status}
-      </div>
-      <ConnectionActions
-        connection={connection}
-        label={label}
-        busy={busy}
-        hasProperty={hasProperty}
-        syncDisabled={busy || runInFlight || !hasProperty || !grantConnected}
-        testPending={testMutation.isPending}
-        syncPending={syncMutation.isPending}
-        removePending={removeMutation.isPending}
-        onTest={testMutation.mutate}
-        onSync={syncMutation.mutate}
-        onRemove={removeMutation.mutate}
-      />
-    </li>
+      media={<IconTile icon={SourceIcon} />}
+      title={label}
+      meta={<SyncLine connection={connection} />}
+      state={
+        <>
+          <SelectedPropertyMark connection={connection} />
+          {status}
+        </>
+      }
+      actions={
+        <ConnectionActions
+          connection={connection}
+          label={label}
+          busy={busy}
+          hasProperty={hasProperty}
+          syncDisabled={busy || runInFlight || !hasProperty || !grantConnected}
+          testPending={testMutation.isPending}
+          syncPending={syncMutation.isPending}
+          removePending={removeMutation.isPending}
+          onTest={testMutation.mutate}
+          onSync={syncMutation.mutate}
+          onRemove={removeMutation.mutate}
+        />
+      }
+    />
   );
 }
 
-/** The tile, the source's name and its sync line: when it last synced and how much history it holds. */
-function ConnectionText({
-  connection,
-  label,
-  Icon,
-}: Readonly<{ connection: IntegrationConnection; label: string; Icon: LucideIcon }>) {
+/**
+ * When the source last synced and how much history it holds. The connection
+ * is the workspace's, so its sync is too; the card's foot names the zone.
+ */
+function SyncLine({ connection }: Readonly<{ connection: IntegrationConnection }>) {
   const timeZone = useDisplayTimeZone();
   const lastSynced = connection.last_synced_at;
   return (
-    <div className="flex min-w-0 items-center gap-3 @[640px]:flex-[1_1_16rem]">
-      <IconTile icon={Icon} />
-      <div className="grid min-w-0">
-        <p className={textRole('label', 'text-ink truncate')}>{label}</p>
-        {/* The connection is the workspace's, so its sync is too; the card's foot names the zone. */}
-        <div className={textRole('caption', 'text-ink-2 flex min-w-0 flex-wrap gap-x-1')}>
-          <span className="whitespace-nowrap">
-            Last synced{' '}
-            {lastSynced ? (
-              <time dateTime={lastSynced}>{formatTableTimestamp(lastSynced, timeZone)}</time>
-            ) : (
-              'never'
-            )}{' '}
-            ·
-          </span>
-          <span className="flex min-w-0 gap-1">
-            <span className="shrink-0">History</span>
-            <BackfillHistory workspaceId={connection.workspace_id} connectionId={connection.id} />
-          </span>
-        </div>
-      </div>
-    </div>
+    <>
+      <span className="whitespace-nowrap">
+        Last synced{' '}
+        {lastSynced ? (
+          <time dateTime={lastSynced}>{formatTableTimestamp(lastSynced, timeZone)}</time>
+        ) : (
+          'never'
+        )}{' '}
+        ·
+      </span>
+      <Inline as="span" gap="tight">
+        <span className="shrink-0">History</span>
+        <BackfillHistory workspaceId={connection.workspace_id} connectionId={connection.id} />
+      </Inline>
+    </>
   );
 }
 
@@ -460,7 +451,7 @@ export function ConnectionRow({
       connection={connection}
       grant={grant}
       // The active mapping, never the connection's account_ref (see `useActiveMapping`).
-      propertyRef={mapping?.property_ref ?? ''}
+      hasProperty={Boolean(mapping?.property_ref)}
       testMutation={connectionAction(testMutation, () => testMutation.mutate())}
       syncMutation={connectionAction(syncMutation, startSync)}
       removeMutation={connectionAction(removeMutation, removeMapping)}
