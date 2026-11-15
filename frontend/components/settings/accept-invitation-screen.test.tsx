@@ -74,11 +74,17 @@ describe('AcceptInvitationScreen', () => {
     );
     renderInvitation();
 
-    const alert = await screen.findByRole('alert');
-    expect(within(alert).getByText("This invitation can't be used")).toBeInTheDocument();
-    expect(within(alert).getByText('workspace_invitation_invalid · req-1')).toBeInTheDocument();
-    expect(within(alert).queryByText('invitation_invalid')).toBeNull();
-    expect(within(alert).getByRole('button', { name: 'Go to your workspace' })).toBeVisible();
+    // The title says what happened; the code is reference text, never the headline.
+    const block = await screen.findByRole('region', { name: "This invitation can't be used" });
+    expect(screen.queryByRole('heading', { name: 'Joining workspace' })).toBeNull();
+    expect(
+      within(block).getByText(/Ask the person who invited you for a new link\./u),
+    ).toBeVisible();
+    expect(
+      within(block).getByText('Reference: workspace_invitation_invalid · req-1'),
+    ).toBeInTheDocument();
+    expect(within(block).queryByText('invitation_invalid')).toBeNull();
+    expect(within(block).getByRole('button', { name: 'Go to your workspace' })).toBeVisible();
     expect(selectWorkspace).not.toHaveBeenCalled();
   });
 });

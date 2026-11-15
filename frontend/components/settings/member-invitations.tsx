@@ -231,6 +231,7 @@ function invitationsState(
 const INVITATION_COLUMNS: readonly DataTableColumn[] = [
   { key: 'invitee', label: 'Invitee', kind: 'identity' },
   { key: 'role', label: 'Workspace role', kind: 'status' },
-  { key: 'expires', label: 'Link expires', kind: 'date', width: 'metric' },
-  { key: 'access', label: 'Access', kind: 'actions', width: 'name' },
+  { key: 'expires', label: 'Link expires', kind: 'date' },
+  // Two buttons: the row-actions width, under a visually hidden head.
+  { key: 'actions', label: 'Actions', kind: 'actions', width: 'rowActions', hideLabel: true },
 ];

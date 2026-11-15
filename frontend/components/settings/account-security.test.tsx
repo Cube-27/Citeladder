@@ -1,4 +1,4 @@
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
 import { renderWithProviders } from '@/test/render';
@@ -31,11 +31,17 @@ beforeEach(() => {
 
 it('disconnects integrations only after the person confirms what it revokes', async () => {
   renderWithProviders(<AccountSecurity />);
+  // Grouped by subject: the password sits in the Sign-in card, not a card of its own.
   expect(
-    ['Sign-in', 'Password', 'Sessions'].map(
+    ['Sign-in', 'Sessions'].map(
       (name) => screen.getByRole('region', { name }).querySelector('h2')?.textContent,
     ),
-  ).toEqual(['Sign-in', 'Password', 'Sessions']);
+  ).toEqual(['Sign-in', 'Sessions']);
+  expect(
+    within(screen.getByRole('region', { name: 'Sign-in' })).getByRole('heading', {
+      name: 'Password',
+    }),
+  ).toBeVisible();
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Sign out and disconnect' }));
   const dialog = await screen.findByRole('dialog');

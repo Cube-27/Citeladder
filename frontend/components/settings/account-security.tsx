@@ -14,6 +14,7 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
+import { textRole } from '@/components/ui/typography';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
 
@@ -36,28 +37,32 @@ function SecurityIdentity({
   );
 }
 
-function SignInSection({
+function SignInMethods({
   security,
 }: Readonly<{ security: UseQueryResult<Awaited<ReturnType<typeof authApi.security>>> }>) {
   return (
-    <Section aria-labelledby="settings-sign-in-title">
-      <SectionHeader>
-        <SectionTitle id="settings-sign-in-title">Sign-in</SectionTitle>
-        <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
-      </SectionHeader>
-      <Stack gap="item">
-        {security.isPending && <StateBlock kind="loading" label="Loading sign-in methods…" />}
-        {security.isError && (
-          <Notice
-            kind="read"
-            title="Couldn't load your sign-in methods"
-            fallback="Account security could not be loaded."
-            {...readErrorProps(security)}
-          />
-        )}
-        <SecurityIdentity data={security.data} />
-      </Stack>
-    </Section>
+    <>
+      {security.isPending && <StateBlock kind="loading" label="Loading sign-in methods…" />}
+      {security.isError && (
+        <Notice
+          kind="read"
+          title="Couldn't load your sign-in methods"
+          fallback="Account security could not be loaded."
+          {...readErrorProps(security)}
+        />
+      )}
+      <SecurityIdentity data={security.data} />
+    </>
+  );
+}
+
+/** A group head inside a card: `subheading`, with its caption. */
+function GroupHead({ title, caption }: Readonly<{ title: string; caption: string }>) {
+  return (
+    <div className="grid gap-1">
+      <h3 className={textRole('subheading')}>{title}</h3>
+      <p className={textRole('caption')}>{caption}</p>
+    </div>
   );
 }
 
@@ -104,17 +109,15 @@ export default function AccountSecurity() {
   const canLinkGoogle = hasPassword && !security.data?.methods.includes('google');
   return (
     <>
-      <SignInSection security={security} />
-      <Section aria-labelledby="settings-password-title">
+      {/* One card for how you sign in: the methods, the password and Google. */}
+      <Section aria-labelledby="settings-sign-in-title">
         <SectionHeader>
-          <SectionTitle id="settings-password-title">Password</SectionTitle>
-          <SectionDescription>
-            {canLinkGoogle
-              ? 'Changing it signs you out everywhere. To connect Google, enter your current password, then choose Connect Google.'
-              : 'Changing it signs you out everywhere.'}
-          </SectionDescription>
+          <SectionTitle id="settings-sign-in-title">Sign-in</SectionTitle>
+          <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
         </SectionHeader>
         <Stack gap="item">
+          <SignInMethods security={security} />
+          <GroupHead title="Password" caption="Changing it signs you out everywhere." />
           {hasPassword ? (
             <Stack
               as="form"
@@ -147,14 +150,6 @@ export default function AccountSecurity() {
                 }}
               />
               <Inline className="flex-wrap">
-                {canLinkGoogle && (
-                  <ActionButton
-                    action="connectGoogle"
-                    type="button"
-                    disabled={!current || link.isPending}
-                    onClick={() => link.mutate()}
-                  />
-                )}
                 <Button type="submit" variant="primary" disabled={mutation.isPending}>
                   Change password and sign out
                 </Button>
@@ -171,6 +166,22 @@ export default function AccountSecurity() {
               </Button>
             </Inline>
           )}
+          {canLinkGoogle ? (
+            <>
+              <GroupHead
+                title="Google sign-in"
+                caption="Enter your current password above, then connect Google."
+              />
+              <Inline>
+                <ActionButton
+                  action="connectGoogle"
+                  type="button"
+                  disabled={!current || link.isPending}
+                  onClick={() => link.mutate()}
+                />
+              </Inline>
+            </>
+          ) : null}
           {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
           <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
         </Stack>
