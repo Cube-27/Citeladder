@@ -121,8 +121,13 @@ describe('GET /projects/{project_id}/ai-traffic', () => {
     expect((await referrals(own, own.projectId, { range: '30d' })).body.sources).toEqual([]);
     const exact = await referrals(own, own.projectId, { from: start, to: end });
     expect(exact.body.sources).toEqual([{ ai_source: 'chatgpt', sessions: 11, share: null }]);
-    // With neither, the latest persisted snapshot serves the landing view.
-    expect((await referrals(own, own.projectId)).body.window_end).toBe(end);
+    // With neither, the latest persisted snapshot serves; a sync's own one-day
+    // window ending on the same date loses to the longest window.
+    await fixtures.referralSnapshot(own, { windowStart: end, windowEnd: end, sessions: 2 });
+    expect((await referrals(own, own.projectId)).body).toMatchObject({
+      window_start: start,
+      window_end: end,
+    });
   });
 
   it('rejects a malformed query with 422 and accepts the widest window', async () => {

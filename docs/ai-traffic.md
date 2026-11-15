@@ -306,7 +306,12 @@ Visibility run, rather than empty rows.
 
 The referrals read reports the persisted snapshot's window; with no snapshot both
 `window_start` and `window_end` are null, and Overview offers Connect GA4 rather
-than reporting GA4 as synced.
+than reporting GA4 as synced. Referrals opens on the last 30 days; "Latest synced
+window" stays an option. A read with no range or window serves the snapshot with
+the newest end date and, on a tie, the longest window: a sync writes its own
+window and the preset family on one end date, so a shortest-first tie-break
+served a one-day window. Source: owner decision of 15 November 2026, "Default to
+last 30 days".
 
 `ai_traffic_insights_refresh` writes one snapshot per preset window through the
 existing analytics queue. Every pattern needs referral evidence, so only projects

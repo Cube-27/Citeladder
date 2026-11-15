@@ -9,6 +9,7 @@ import type { TabRowProps } from '@/components/ui/tabs';
 import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { GRANULARITY_OPTIONS } from '@/lib/format';
 import {
+  DEFAULT_RANGE,
   RANGE_OPTIONS,
   rangeToParams,
   type AiReferralsGranularity,
@@ -19,7 +20,7 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 
 const rangeCodec = stringUrlCodec<AiReferralsRange>(
   RANGE_OPTIONS.map((option) => option.value),
-  'latest',
+  DEFAULT_RANGE,
 );
 const granularityCodec = stringUrlCodec<AiReferralsGranularity>(
   GRANULARITY_OPTIONS.map((option) => option.value),
@@ -89,7 +90,7 @@ function referralsControls({
         id: 'range',
         label: 'Reporting range',
         value: range,
-        defaultValue: 'latest',
+        defaultValue: DEFAULT_RANGE,
         groups: [{ options: RANGE_OPTIONS }],
         onChange: onChangeRange,
       }),

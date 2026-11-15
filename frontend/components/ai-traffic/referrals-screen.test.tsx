@@ -77,11 +77,18 @@ describe('AiReferralsScreen', () => {
     expect(screen.getByRole('button', { name: /^All filters/ })).toBeVisible();
   });
 
-  it('renders persisted referral measurement by source', async () => {
-    mswServer.use(http.get(endpoint, () => HttpResponse.json(dashboard)));
+  it('opens on the last 30 days and renders persisted referral measurement by source', async () => {
+    const ranges: (string | null)[] = [];
+    mswServer.use(
+      http.get(endpoint, ({ request }) => {
+        ranges.push(new URL(request.url).searchParams.get('range'));
+        return HttpResponse.json(dashboard);
+      }),
+    );
     renderWithProviders(<AiReferralsScreen />, { projectSelection: { activeProject } });
 
     expect(await screen.findByRole('heading', { name: 'AI-referred sessions' })).toBeVisible();
+    expect(ranges).toEqual(['30d']);
     expect(screen.getByRole('heading', { name: 'Share of GA4 sessions' })).toBeInTheDocument();
     await userEvent.setup().click(screen.getByRole('tab', { name: 'Sources' }));
     expect(screen.getByText('AI referral sources')).toBeInTheDocument();

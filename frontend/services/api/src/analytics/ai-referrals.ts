@@ -122,7 +122,9 @@ export async function readAiReferrals(
       .where('window_start', '=', sql<Date>`${query.fromDate}::date`)
       .where('window_end', '=', sql<Date>`${query.toDate}::date`);
   } else {
-    snapshots = snapshots.orderBy('window_end', 'desc').orderBy('window_start', 'desc');
+    // A sync writes its own window and the preset family on one end date; on a
+    // tie the longest window wins, never a one-day sync window.
+    snapshots = snapshots.orderBy('window_end', 'desc').orderBy('window_start', 'asc');
   }
   const snapshot = await snapshots.limit(1).executeTakeFirst();
   const versions = {

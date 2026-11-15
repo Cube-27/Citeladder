@@ -6,7 +6,7 @@ import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { QueryState } from '@/components/ui/query-state';
 import { readErrorProps } from '@/components/ui/read-error';
-import { rangeLabel, type AiReferralsRange } from '@/lib/ai-traffic/options';
+import { DEFAULT_RANGE, rangeLabel, type AiReferralsRange } from '@/lib/ai-traffic/options';
 import { isAiReferralsEmpty } from '@/lib/ai-traffic/series';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 
@@ -61,7 +61,8 @@ function AiReferralsDataRegion({
   }
 
   const data = query.data ?? null;
-  if (!data || (isAiReferralsEmpty(data) && range === 'latest')) return <AiReferralsEmptyState />;
+  const emptyMeansUnsynced = range === 'latest' || range === DEFAULT_RANGE;
+  if (!data || (isAiReferralsEmpty(data) && emptyMeansUnsynced)) return <AiReferralsEmptyState />;
   if (isAiReferralsEmpty(data)) return <AiReferralsNoSnapshot range={range} />;
 
   return <AiReferralsDashboard data={data} fetching={query.isFetching} />;
