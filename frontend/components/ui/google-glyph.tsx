@@ -29,7 +29,7 @@ export function GoogleMark() {
   return (
     <span
       aria-hidden
-      className="rounded-control [[data-theme=dark]_&]:bg-surface [[data-theme=dark]_&]:border-rule grid shrink-0 place-items-center [[data-theme=dark]_&]:border [[data-theme=dark]_&]:p-1"
+      className="rounded-control [[data-theme=dark]_&]:bg-surface grid shrink-0 place-items-center [[data-theme=dark]_&]:p-1"
     >
       <GoogleGlyph className="size-6" />
     </span>

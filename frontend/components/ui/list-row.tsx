@@ -237,7 +237,7 @@ export function TreeItemForm({
 
 /** A card's list of `ItemRow`s, which lay out by its width rather than the window's. */
 export function ItemList({ children }: Readonly<{ children: ReactNode }>) {
-  return <ul className="@container">{children}</ul>;
+  return <ul className="divide-rule @container divide-y">{children}</ul>;
 }
 
 /**
@@ -265,7 +265,7 @@ export function ItemRow({
   return (
     <li
       {...props}
-      className="border-rule flex min-h-14 flex-col gap-2 border-b py-3 last:border-b-0 @[640px]:flex-row @[640px]:items-center @[640px]:gap-3"
+      className="flex min-h-14 flex-col gap-2 py-3 @[640px]:flex-row @[640px]:items-center @[640px]:gap-3"
     >
       <div className="flex min-w-0 items-center gap-3 @[640px]:flex-[1_1_16rem]">
         {media}
@@ -279,7 +279,7 @@ export function ItemRow({
       <div
         className={textRole(
           'caption',
-          'text-ink-2 flex min-w-0 items-center gap-2 @[640px]:max-w-[40%] @[640px]:flex-[0_1_auto]',
+          'text-ink-2 flex min-w-0 items-center gap-2 @[640px]:max-w-[40%]',
         )}
       >
         {state}
