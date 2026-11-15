@@ -121,16 +121,29 @@ describe('Workspace panel', () => {
     await waitFor(() => expect(revoke).toHaveBeenCalled());
   });
 
-  it('keeps the address and shows the refusal in the invite dialog', async () => {
-    vi.spyOn(workspacesApi, 'inviteMember').mockRejectedValue(
-      new ApiError('This person is already a member', 409, '', undefined, { code: 'conflict' }),
-    );
+  it('flags a missing or invalid address, then keeps the address and shows the refusal', async () => {
+    const invite = vi
+      .spyOn(workspacesApi, 'inviteMember')
+      .mockRejectedValue(
+        new ApiError('This person is already a member', 409, '', undefined, { code: 'conflict' }),
+      );
     const user = userEvent.setup();
     renderPanel();
 
     await user.click(await screen.findByRole('button', { name: 'Invite' }));
     const dialog = await screen.findByRole('dialog', { name: 'Invite member' });
-    await user.type(within(dialog).getByLabelText('Email'), 'alex@example.test{Enter}');
+    const email = within(dialog).getByLabelText('Email');
+    await user.click(within(dialog).getByRole('button', { name: 'Send invitation' }));
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('Enter an email address.');
+    expect(email).toHaveAttribute('aria-invalid', 'true');
+    expect(email).toHaveFocus();
+
+    await user.type(email, 'alex{Enter}');
+    expect(within(dialog).getByRole('alert')).toHaveTextContent('Enter a valid email address.');
+    expect(invite).not.toHaveBeenCalled();
+
+    await user.clear(email);
+    await user.type(email, 'alex@example.test{Enter}');
 
     expect(await within(dialog).findByText('This person is already a member')).toBeVisible();
     expect(within(dialog).getByLabelText('Email')).toHaveValue('alex@example.test');

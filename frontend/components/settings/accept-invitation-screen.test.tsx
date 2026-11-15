@@ -63,7 +63,10 @@ describe('AcceptInvitationScreen', () => {
     renderInvitation();
 
     expect(acceptInvitation).not.toHaveBeenCalled();
-    expect(screen.getByText(/missing its invitation token/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'This invitation link is incomplete' }),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Go to your workspace' })).toBeVisible();
   });
 
   it('reports a refused invitation in a sentence, with its code only as the reference', async () => {
@@ -75,7 +78,8 @@ describe('AcceptInvitationScreen', () => {
     renderInvitation();
 
     // The title says what happened; the code is reference text, never the headline.
-    const block = await screen.findByRole('region', { name: "This invitation can't be used" });
+    await screen.findByRole('heading', { level: 1, name: "This invitation can't be used" });
+    const block = document.body;
     expect(screen.queryByRole('heading', { name: 'Joining workspace' })).toBeNull();
     expect(
       within(block).getByText(/Ask the person who invited you for a new link\./u),
