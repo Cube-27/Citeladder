@@ -38,6 +38,7 @@ type PromptLibraryDialogsProps = {
   builderOpen: boolean;
   setBuilderOpen: (open: boolean) => void;
   builderStep: BuilderStep;
+  builderOffering: string | null;
   hasCompetitors: boolean;
   topics: Topic[];
   selectedTopicId: string | null;
@@ -73,6 +74,7 @@ export function PromptLibraryDialogs({
   builderOpen,
   setBuilderOpen,
   builderStep,
+  builderOffering,
   hasCompetitors,
   topics,
   selectedTopicId,
@@ -130,6 +132,7 @@ export function PromptLibraryDialogs({
         open={builderOpen}
         onOpenChange={setBuilderOpen}
         initialStep={builderStep}
+        initialOffering={builderOffering}
         projectId={projectId}
         workspaceId={workspaceId}
         topics={topics}

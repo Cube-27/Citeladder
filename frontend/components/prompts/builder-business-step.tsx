@@ -1,5 +1,10 @@
+import { ChevronDown } from 'lucide-react';
+import { useId, useState } from 'react';
+
+import { Absence } from '@/components/ui/absence';
 import { ChipInput, type ChipItem } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
@@ -12,16 +17,18 @@ import {
   type MapEntryDraft,
 } from '@/lib/prompts/builder-business';
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
+import { pluralCount } from '@/lib/format';
+import { cn } from '@/lib/utils';
 
 import type { BuilderBusiness } from './use-builder-business';
 import { StateBlock } from '@/components/ui/state-block';
-import { wellClasses } from '@/components/ui/slip';
 
 /** The bounds the API enforces on this step's saves and the run note, from the prompt-set list. */
 export type BusinessStepLimits = Pick<
   PromptFormLimits,
   'context_list_max_entries' | 'run_context_max_chars'
 >;
+type OfferingMap = BusinessDraft['maps'][number];
 const chips = (values: readonly string[]): ChipItem[] => values.map((value) => ({ value }));
 const values = (items: readonly ChipItem[]) => items.map((item) => item.value);
 const entryChips = (entries: readonly MapEntryDraft[]): ChipItem[] =>
@@ -39,14 +46,13 @@ function OfferingFacts({
   listMax,
   onChange,
 }: Readonly<{
-  map: BusinessDraft['maps'][number];
+  map: OfferingMap;
   disabled: boolean;
   listMax: number;
-  onChange: (map: BusinessDraft['maps'][number]) => void;
+  onChange: (map: OfferingMap) => void;
 }>) {
   return (
-    <Stack as="section" gap="workspace" className={wellClasses()}>
-      <h3 className={textRole('subheading')}>{map.offering}</h3>
+    <div className="grid gap-4 *:max-w-160">
       <ChipInput
         label="Who buys it"
         items={entryChips(map.audiences)}
@@ -71,7 +77,93 @@ function OfferingFacts({
         disabled={disabled}
         max={listMax}
       />
-    </Stack>
+    </div>
+  );
+}
+
+/** A collapsed row's summary of its offering's facts. */
+function offeringSummary(map: OfferingMap): string | null {
+  if (map.audiences.length + map.situations.length + map.attributes.length === 0) return null;
+  return [
+    pluralCount(map.audiences.length, 'buyer'),
+    pluralCount(map.situations.length, 'situation'),
+    pluralCount(map.attributes.length, 'attribute'),
+  ].join(' · ');
+}
+
+/** Scrolls the offering a link opened the builder on into view once it renders. */
+const scrollIntoView = (node: HTMLElement | null) => node?.scrollIntoView({ block: 'start' });
+
+/**
+ * Every offering's facts as one list: a row per offering with a summary,
+ * one row open at a time to its three lists.
+ */
+function OfferingList({
+  maps,
+  initialOffering,
+  disabled,
+  listMax,
+  onChange,
+}: Readonly<{
+  maps: readonly OfferingMap[];
+  initialOffering: string | null;
+  disabled: boolean;
+  listMax: number;
+  onChange: (index: number, map: OfferingMap) => void;
+}>) {
+  const [open, setOpen] = useState(initialOffering);
+  const baseId = useId();
+  if (maps.length === 0) return null;
+  return (
+    <section aria-labelledby={`${baseId}-title`} className="grid gap-2">
+      <h3 id={`${baseId}-title`} className={textRole('label')}>
+        Offering details
+      </h3>
+      <ul className="divide-rule grid divide-y">
+        {maps.map((map, index) => {
+          const expanded = open === map.offering;
+          const panelId = `${baseId}-${index}`;
+          const summary = offeringSummary(map);
+          return (
+            <li
+              key={map.offering}
+              ref={map.offering === initialOffering ? scrollIntoView : undefined}
+              className="grid scroll-mt-4"
+            >
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={panelId}
+                onClick={() => setOpen(expanded ? null : map.offering)}
+                className="hover:overlay-hover rounded-control flex min-h-10 w-full min-w-0 items-center gap-3 px-2 text-left"
+              >
+                <span className={textRole('label', 'text-ink shrink-0')}>{map.offering}</span>
+                <span className={textRole('caption', 'text-ink-2 min-w-0 flex-1 truncate')}>
+                  {summary ?? <Absence state="not_set" />}
+                </span>
+                <Icon
+                  icon={ChevronDown}
+                  className={cn(
+                    'text-ink-2 shrink-0 transition-transform',
+                    expanded && 'rotate-180',
+                  )}
+                />
+              </button>
+              <div id={panelId} hidden={!expanded} className="bg-well rounded-control mb-2 p-4">
+                {expanded ? (
+                  <OfferingFacts
+                    map={map}
+                    disabled={disabled}
+                    listMax={listMax}
+                    onChange={(next) => onChange(index, next)}
+                  />
+                ) : null}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -85,11 +177,14 @@ export function BuilderBusinessStep({
   runContext,
   onRunContextChange,
   limits,
+  initialOffering = null,
 }: Readonly<{
   business: BuilderBusiness;
   runContext: string;
   onRunContextChange: (value: string) => void;
   limits: BusinessStepLimits;
+  /** The offering a link opened the builder on: open and in view. */
+  initialOffering?: string | null;
 }>) {
   const listMax = limits.context_list_max_entries;
   const { draft, profile, map } = business;
@@ -126,17 +221,15 @@ export function BuilderBusinessStep({
         disabled={disabled}
         max={listMax}
       />
-      {draft.maps.map((offering, index) => (
-        <OfferingFacts
-          key={offering.offering}
-          map={offering}
-          disabled={disabled}
-          listMax={listMax}
-          onChange={(next) =>
-            set({ maps: draft.maps.map((item, i) => (i === index ? next : item)) })
-          }
-        />
-      ))}
+      <OfferingList
+        maps={draft.maps}
+        initialOffering={initialOffering}
+        disabled={disabled}
+        listMax={listMax}
+        onChange={(index, next) =>
+          set({ maps: draft.maps.map((item, i) => (i === index ? next : item)) })
+        }
+      />
       {showsServiceAreas(profile.business_context) ? (
         <ChipInput
           label="Service areas"

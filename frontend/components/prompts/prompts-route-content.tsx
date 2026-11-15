@@ -1,9 +1,15 @@
 import { useSearchParams } from 'react-router-dom';
 import { Suspense, useEffect, useState } from 'react';
 
-import { GENERATE_PROMPTS_PARAM, REVIEW_PROMPTS_PARAM } from '@/lib/prompts/routes';
+import {
+  GENERATE_PROMPTS_PARAM,
+  OFFERING_PROMPTS_PARAM,
+  REVIEW_PROMPTS_PARAM,
+} from '@/lib/prompts/routes';
 
 import { PromptLibrary } from './prompt-library';
+
+const BUILDER_PARAMS = [GENERATE_PROMPTS_PARAM, REVIEW_PROMPTS_PARAM, OFFERING_PROMPTS_PARAM];
 
 function PromptsRouteSurface() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -13,6 +19,7 @@ function PromptsRouteSurface() {
   // reload or back navigation does not reopen the builder.
   const [generateRequest, setGenerateRequest] = useState(0);
   const [reviewRequest, setReviewRequest] = useState(false);
+  const [offeringRequest, setOfferingRequest] = useState<string | null>(null);
   const [countedParams, setCountedParams] = useState<URLSearchParams | null>(null);
   const wantsReview = searchParams.get(REVIEW_PROMPTS_PARAM) === '1';
   if (
@@ -22,17 +29,22 @@ function PromptsRouteSurface() {
     setCountedParams(searchParams);
     setGenerateRequest((count) => count + 1);
     setReviewRequest(wantsReview);
+    setOfferingRequest(searchParams.get(OFFERING_PROMPTS_PARAM));
   }
   useEffect(() => {
-    if (!searchParams.has(GENERATE_PROMPTS_PARAM) && !searchParams.has(REVIEW_PROMPTS_PARAM))
-      return;
+    if (!BUILDER_PARAMS.some((param) => searchParams.has(param))) return;
     const next = new URLSearchParams(searchParams);
-    next.delete(GENERATE_PROMPTS_PARAM);
-    next.delete(REVIEW_PROMPTS_PARAM);
+    for (const param of BUILDER_PARAMS) next.delete(param);
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  return <PromptLibrary generateRequest={generateRequest} reviewRequest={reviewRequest} />;
+  return (
+    <PromptLibrary
+      generateRequest={generateRequest}
+      reviewRequest={reviewRequest}
+      offeringRequest={offeringRequest}
+    />
+  );
 }
 
 /** Shared /prompts route content: the prompt library, opened directly. */

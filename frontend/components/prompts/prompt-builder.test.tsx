@@ -152,6 +152,33 @@ describe('PromptBuilder', () => {
     expect(await screen.findByRole('button', { name: 'Suggest topics' })).toBeVisible();
   });
 
+  it('lists each offering as one row that opens in place, one at a time, by keyboard', async () => {
+    const user = userEvent.setup({ delay: null });
+    serve({});
+    renderBuilder('business');
+    await user.type(
+      await screen.findByRole('textbox', { name: 'Add to What you sell' }),
+      'Hitting mats{Enter}',
+    );
+    const net = screen.getByRole('button', { name: (name) => name.startsWith(OFFERING) });
+    const mats = screen.getByRole('button', { name: /^Hitting mats/ });
+    expect(net).toHaveTextContent(`${OFFERING}Not set`);
+    expect(screen.queryByRole('group', { name: 'Who buys it' })).not.toBeInTheDocument();
+
+    net.focus();
+    await user.keyboard('{Enter}');
+    expect(net).toHaveAttribute('aria-expanded', 'true');
+    expect(net).toHaveFocus();
+    await user.type(screen.getByRole('textbox', { name: 'Add to Who buys it' }), 'Parents{Enter}');
+    expect(net).toHaveTextContent('1 buyer · 0 situations · 0 attributes');
+
+    mats.focus();
+    await user.keyboard(' ');
+    expect(mats).toHaveAttribute('aria-expanded', 'true');
+    expect(net).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getAllByRole('textbox', { name: 'Add to Who buys it' })).toHaveLength(1);
+  });
+
   it('confirms reviewed topics as one plan, writing nothing before', async () => {
     const user = userEvent.setup({ delay: null });
     const sent: Sent = {};
