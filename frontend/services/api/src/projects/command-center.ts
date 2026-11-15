@@ -1,5 +1,5 @@
 /** Compose the overview from existing persisted owners; this read acquires nothing. */
-import { comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
+import { comparisonBasis, type ComparedAnswers } from '@citeladder/contracts/comparison-reason';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import { sql, type Selectable } from 'kysely';
 import type { z } from 'zod';
@@ -10,8 +10,13 @@ import { notFound } from '../errors.ts';
 import type { Audits } from '../generated/db-schema.ts';
 import { listOpportunities, readOpportunityOrder } from '../opportunities/reads.ts';
 import { currentSiteCrawl } from '../site-health/reads/crawl.ts';
-import { persistedBaseline } from '../visibility/comparison.ts';
-import { getRunVisibility, type VisibilityResponse } from '../visibility/dashboard.ts';
+import { persistedBaseline, type VisibilityComparison } from '../visibility/comparison.ts';
+import {
+  getRunComparison,
+  getRunVisibility,
+  type VisibilityResponse,
+} from '../visibility/dashboard.ts';
+import type { RankingRow } from '../visibility/metrics.ts';
 import { latestBrandRunId } from '../visibility/selection.ts';
 import { compareText } from '../text-order.ts';
 import type { ProjectScope } from './brand-profile.ts';
@@ -47,8 +52,9 @@ function state(
  * The selected run and the baseline its changes compare with: the one audit
  * finalization persisted for the run's core cohort across all engines
  * (`visibility/baselines.ts`), the same run Visibility compares with. Whole-run
- * changes are like for like only when that comparison is `comparable`; any
- * other status keeps its own name and leaves the changes unset.
+ * changes are like for like when that comparison is `comparable`; a
+ * `matched_subset` changes over the shared answers Visibility compares
+ * (`sharedChange`); any other status keeps its own name and leaves changes unset.
  */
 async function comparableAudits(db: Database, scope: ProjectScope, auditId: string | null) {
   const query = db
@@ -105,28 +111,59 @@ async function visibility(
   if (!audit) return null;
   return getRunVisibility(db, scope, audit.id, policy.visibility.core_cohort);
 }
-function metrics(
+/** One side of a change: a whole run, or the shared answers of a matched subset. */
+type ChangeSide = { visibility_rate?: number | null; rankings: RankingRow[] };
+type Change = { after: ChangeSide; before: ChangeSide } | null;
+async function sharedChange(
+  db: Database,
+  scope: ProjectScope,
+  audits: Awaited<ReturnType<typeof comparableAudits>>,
+): Promise<VisibilityComparison | null> {
+  if (audits?.comparisonStatus !== 'matched_subset') return null;
+  const comparison = await getRunComparison(db, scope, {
+    auditId: audits.selected.id,
+    cohort: policy.visibility.core_cohort,
+  });
+  return comparison.status === 'matched_subset' ? comparison : null;
+}
+function changeOf(
   current: VisibilityResponse | null,
   previous: VisibilityResponse | null,
-): View['state'] {
-  const brand = current?.rankings.find((row) => row.is_brand);
-  const prior = previous?.rankings.find((row) => row.is_brand);
-  // With no share of voice (nobody named) the sort order is alphabetical, not a rank.
-  const rankOf = (view: VisibilityResponse | null, row: typeof brand) =>
-    view && row?.share_of_voice != null ? view.rankings.indexOf(row) + 1 : null;
-  const rank = rankOf(current, brand);
-  const priorRank = rankOf(previous, prior);
+  shared: VisibilityComparison | null,
+): Change {
+  if (current && previous) return { after: current, before: previous };
+  if (!shared) return null;
+  return {
+    after: { visibility_rate: shared.current_values.visibility, rankings: shared.current_rankings },
+    before: { visibility_rate: shared.baseline_values.visibility, rankings: shared.rankings },
+  };
+}
+const answersOf = (shared: VisibilityComparison | null): ComparedAnswers | null =>
+  shared ? { matched: shared.matched_cells, total: shared.current_cells } : null;
+const brandOf = (side: ChangeSide | undefined) => side?.rankings.find((row) => row.is_brand);
+// With no share of voice (nobody named) the sort order is alphabetical, not a rank.
+const rankOf = (side: ChangeSide | undefined) => {
+  const row = brandOf(side);
+  return side && row?.share_of_voice != null ? side.rankings.indexOf(row) + 1 : null;
+};
+function metrics(current: VisibilityResponse | null, change: Change): View['state'] {
+  const brand = brandOf(current ?? undefined);
+  const after = brandOf(change?.after);
+  const before = brandOf(change?.before);
   return {
     // Visibility is the share of answers naming the brand, as on the Visibility page.
     visibility: {
       value: percent(current?.visibility_rate),
-      delta: delta(percent(current?.visibility_rate), percent(previous?.visibility_rate)),
+      delta: delta(percent(change?.after.visibility_rate), percent(change?.before.visibility_rate)),
     },
     share_of_voice: {
       value: percent(brand?.share_of_voice),
-      delta: delta(percent(brand?.share_of_voice), percent(prior?.share_of_voice)),
+      delta: delta(percent(after?.share_of_voice), percent(before?.share_of_voice)),
     },
-    brand_rank: { value: rank, delta: delta(rank, priorRank) },
+    brand_rank: {
+      value: rankOf(current ?? undefined),
+      delta: delta(rankOf(change?.after), rankOf(change?.before)),
+    },
   };
 }
 function movements(
@@ -307,14 +344,27 @@ async function resolvedActions(
 }
 function trackLimitations(
   audits: Awaited<ReturnType<typeof comparableAudits>>,
-  previous: VisibilityResponse | null,
+  change: Change,
+  answers: ComparedAnswers | null,
 ) {
   if (!audits) return ['No visibility audit has run yet.'];
-  if (previous) return [];
-  return [
-    comparisonDeclinedReason(audits.comparisonStatus, audits.skippedRuns) ??
-      'The earlier run could not be read.',
-  ];
+  const basis = comparisonBasis({
+    status: audits.comparisonStatus,
+    skippedRuns: audits.skippedRuns,
+    answers,
+  });
+  switch (basis.kind) {
+    case 'comparable':
+      return change ? [] : ['The earlier run could not be read.'];
+    case 'matched_subset':
+      return change ? [basis.note] : ['The comparison with an earlier run could not be read.'];
+    case 'declined':
+      return [basis.reason];
+    default: {
+      const unreachable: never = basis;
+      return unreachable;
+    }
+  }
 }
 async function measurement(
   db: Database,
@@ -363,6 +413,7 @@ export async function commandCenter(
     inFlight,
     measured,
     resolved,
+    shared,
   ] = await Promise.all([
     visibility(db, scope, audits?.selected ?? null),
     visibility(db, scope, audits?.previous ?? null),
@@ -409,12 +460,16 @@ export async function commandCenter(
     // Both depend only on the selected run and its baseline.
     measurement(db, scope, audits),
     resolvedActions(db, scope, audits),
+    sharedChange(db, scope, audits),
   ]);
+  const change = changeOf(current, previous, shared);
+  const answers = answersOf(shared);
+  const changeBrand = brandOf(change?.after);
+  const changeBaseline = brandOf(change?.before);
   const count = Number(counted.count);
   const times = [crawl?.completed_at, demand?.created_at].filter((at): at is Date => at != null);
   const analyzedAt = times.length ? new Date(Math.max(...times.map((at) => at.getTime()))) : null;
   const currentBrand = current?.rankings.find((row) => row.is_brand);
-  const priorBrand = previous?.rankings.find((row) => row.is_brand);
   return {
     project: {
       id: project.id,
@@ -475,14 +530,14 @@ export async function commandCenter(
     track: {
       citation_share: {
         value: percent(currentBrand?.citation_rate),
-        delta: delta(percent(currentBrand?.citation_rate), percent(priorBrand?.citation_rate)),
+        delta: delta(percent(changeBrand?.citation_rate), percent(changeBaseline?.citation_rate)),
       },
       engine_coverage: audits?.engines.length ?? 0,
       observed_at: audits ? instant(audits.selected) : null,
-      limitations: trackLimitations(audits, previous),
+      limitations: trackLimitations(audits, change, answers),
     },
-    measurement: measured,
-    state: metrics(current, previous),
+    measurement: measured && { ...measured, comparison_answers: answers },
+    state: metrics(current, change),
     movements: movements(current, previous),
     actions: opportunities.items,
     action_order_version: persistedOrder?.version ?? 0,

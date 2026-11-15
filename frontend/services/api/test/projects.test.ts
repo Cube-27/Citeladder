@@ -1195,6 +1195,55 @@ describe('project owner', () => {
     ).rejects.toMatchObject({ status: 404 });
   });
 
+  it('overview shows a matched-subset change from the answers both runs share, with its note', async () => {
+    const t = await measurements.tenant();
+    await db
+      .updateTable('projects')
+      .set({ benchmark_mode: 'consumer_like' })
+      .where('id', '=', t.projectId)
+      .execute();
+    await measurements.brand(t.projectId, 'Acme Corp');
+    const configuration = comparedConfiguration;
+    const score = { overall: 1 };
+    const run = async (at: string, mentioned: boolean[], requested: number) => {
+      const id = await measurements.audit(t, { completedAt: new Date(at), configuration });
+      for (const [promptIndex, brandMentioned] of mentioned.entries()) {
+        await measurements.execution(t, {
+          auditId: id,
+          promptIndex,
+          transportModel: 'test',
+          analysis: { brandMentioned, score },
+        });
+      }
+      const count = mentioned.filter(Boolean).length;
+      const completed = mentioned.length;
+      const metrics = {
+        ...mentionAggregate(count),
+        total_completed: completed,
+        brand_mention_rate: count / completed,
+        coverage: { requested, failed: requested - completed, not_run: 0 },
+      };
+      await measurements.metricSnapshot(t, id, {
+        metrics: { ...metrics, per_engine: { chatgpt: metrics } },
+      });
+      return id;
+    };
+    await run('2026-05-01T00:00:00Z', [false, false], 2);
+    // Prompt 2 failed in the earlier run's place, so only prompts 0 and 1 match.
+    await run('2026-05-03T00:00:00Z', [true, true, false], 4);
+
+    const view = await commandCenter(db, t, null);
+
+    expect(view.measurement).toMatchObject({
+      comparison_status: 'matched_subset',
+      comparable_audit_id: null,
+      comparison_answers: { matched: 2, total: 3 },
+    });
+    // The whole run's value, the shared answers' change: 0 of 2 named before, 2 of 2 now.
+    expect(view.state.visibility).toEqual({ value: 66.67, delta: 100 });
+    expect(view.track.limitations).toEqual(['2 of 3 answers comparable']);
+  });
+
   it('two runs finalizing together still name each other, in either commit order', async () => {
     const configuration = comparedConfiguration;
     for (const laterCommitsFirst of [true, false]) {

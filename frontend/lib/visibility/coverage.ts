@@ -1,5 +1,5 @@
 import type { Visibility } from '@citeladder/contracts';
-import { comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
+import { comparisonBasis, comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
 import { formatCount, pluralCount as plural } from '@/lib/format';
 
 /**
@@ -36,9 +36,12 @@ function answersLine(selected: Visibility): string {
 type Comparison = NonNullable<Visibility['comparison']>;
 
 function matchedLine(comparison: Comparison, since: string | null): string {
-  const shared = comparison.current_counts?.responses;
-  const scope = shared == null ? 'the answers' : `the ${plural(shared, 'answer')}`;
-  return `Change compares only ${scope} whose prompt and engine also ran on ${since ?? 'the earlier run'}; the settings differed.`;
+  const basis = comparisonBasis({
+    status: comparison.status,
+    answers: { matched: comparison.matched_cells, total: comparison.current_cells },
+  });
+  const note = basis.kind === 'matched_subset' ? basis.note : 'Only shared answers comparable';
+  return `${note} with ${since ? `the run on ${since}` : 'the earlier run'}; the change uses only those.`;
 }
 
 function noChangeLine(status: string, skippedRuns = 0): string {

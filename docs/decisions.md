@@ -582,11 +582,17 @@ figures and Visibility's comparison both read it, so they never name different
 baselines for the same run. Overview's private rule (same frozen key, analyzer,
 benchmark mode, engines and core prompts) is deleted. Comparison statuses stay
 distinct (`no_baseline`, `changed_context`, `partial_coverage`,
-`matched_subset`, `baseline_pending`, ...), and Overview shows changes only
-against a `comparable` baseline.
+`matched_subset`, `baseline_pending`, ...). Both screens show a change
+against a `comparable` baseline and a `matched_subset` change computed from
+the answers both runs share, with a note such as "8 of 12 answers comparable";
+every other status shows no change and says why. One function
+(`comparisonBasis` in `@citeladder/contracts/comparison-reason`) gives both
+screens that answer and its words.
 
 Source: owner, 2 November 2026, approving the read-projection work that
-included unifying the baseline rule: "ok proceed and include the two items".
+included unifying the baseline rule: "ok proceed and include the two items";
+and owner, 15 November 2026, on whether Overview should show the partial
+change: "Show partial change".
 [Visibility](visibility-prompt.md) owns the shipped behavior.
 
 ## Plain module names and redirects on the public website

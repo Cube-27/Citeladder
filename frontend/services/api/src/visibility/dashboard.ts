@@ -130,6 +130,35 @@ export async function getRunVisibility(
   return (await runView(db, scope, run, { auditId, logicalEngine: null, cohort })).response;
 }
 
+/**
+ * One run against the baseline finalization persisted for it, all engines, as
+ * Visibility compares it; Overview reads its matched-subset change from here.
+ */
+export async function getRunComparison(
+  db: Database,
+  scope: RunScope,
+  { auditId, cohort }: Readonly<{ auditId: string; cohort: string }>,
+): Promise<VisibilityComparison> {
+  validateCohort(cohort);
+  const run = await selectedRun(db, scope, auditId);
+  const runScope = { ...scope, marketId: run.marketId };
+  const view = await runView(db, runScope, run, { auditId, logicalEngine: null, cohort });
+  return compareSelection(
+    db,
+    runScope,
+    {
+      auditId: run.auditId,
+      workspaceId: runScope.workspaceId,
+      configuration: run.configuration,
+      completedAt: run.completedAt,
+      analyzerVersion: run.analyzerVersion,
+      scoringRuleVersion: run.scoringRuleVersion,
+      metrics: view.metrics,
+    },
+    { cohort, engine: null, baselineId: null },
+  );
+}
+
 type SelectedRun = Omit<MeasuredRun, 'completedAt'> & { completedAt: string | null };
 
 const brandRuns = (db: Database, scope: RunScope) =>

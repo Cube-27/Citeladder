@@ -94,11 +94,7 @@ describe('Overview library widgets', () => {
     ['no_baseline', 0, 'No earlier run to compare with yet.'],
     ['no_baseline', 2, 'The 2 earlier runs used different settings or scoring.'],
     ['changed_context', 0, 'The earlier run used different settings.'],
-    [
-      'matched_subset',
-      0,
-      'The earlier run used different settings; Visibility compares only the answers both runs share.',
-    ],
+    ['matched_subset', 0, 'Only some answers match the earlier run, so this is not compared.'],
     [
       'partial_coverage',
       0,
