@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ChevronRight } from 'lucide-react';
+import { useId } from 'react';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { CollectionPage } from '@/components/templates/collection-page';
@@ -100,10 +101,12 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
 
 /** A skill as a slip that starts a chat with it: the underlined title and a chevron say so at rest. */
 function SkillSlip({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
+  const detailId = useId();
   return (
     <ProjectLink
       href={agentHandoffHref({ skillId: skill.id })}
       aria-label={`Start a chat with ${skill.label}`}
+      aria-describedby={detailId}
       className={slipClasses('focus-ring w-full', { opens: true })}
     >
       <Stack gap="item">
@@ -113,8 +116,11 @@ function SkillSlip({ skill, output }: Readonly<{ skill: AgentSkill; output: stri
           </h3>
           <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
         </Inline>
-        <p className={textRole('body', 'text-ink-2')}>{skill.description}</p>
-        <OutputBadge label={output} />
+        {/* The link's name replaces its content, so what it does is its description. */}
+        <div id={detailId} className="contents">
+          <p className={textRole('body', 'text-ink-2')}>{skill.description}</p>
+          <OutputBadge label={output} />
+        </div>
       </Stack>
     </ProjectLink>
   );

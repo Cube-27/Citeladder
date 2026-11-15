@@ -27,7 +27,12 @@ import {
   type ActionStatus,
 } from '@/lib/api/actions';
 import { pluralCount } from '@/lib/format';
-import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
+import {
+  setUrlParams,
+  stringUrlCodec,
+  useUrlState,
+  type UrlCodec,
+} from '@/lib/navigation/url-state';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import {
   actionGroupSchema,
@@ -175,15 +180,13 @@ export function useActionFilters() {
     group: group === ALL ? undefined : group,
     // A step into one group, so Back returns to every group.
     showGroup: (next: ActionGroup) => setGroup(next, 'push'),
-    /** Every filter back to its default: the work queue, all groups and kinds. */
-    clear: () => {
-      setStatus(QUEUE);
-      setGroup(ALL);
-      setApproach(ALL);
-      setPriority(ALL);
-      setTarget(ALL);
-      setSource(ALL);
-    },
+    // Every filter back to its default in one write: a router navigation lands
+    // later, so a setter per filter would build on the stale address.
+    clear: () =>
+      setUrlParams(
+        { status: null, group: null, approach: null, priority: null, target: null, source: null },
+        'replace',
+      ),
   };
 }
 
