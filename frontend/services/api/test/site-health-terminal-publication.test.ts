@@ -765,11 +765,9 @@ describe('crawl lifecycle', () => {
     const seed = await running();
     await monitoredPage(seed, '/');
     // The fetch fails at discovery, so no analyze task is ever planned for these pages.
-    for (const [path, error_code] of [
-      ['/rate-limited', 'http_4xx'],
-      ['/policies/privacy-policy', 'robots_denied'],
-    ])
-      await failedTask(seed, { path, kind: 'discover', error_code });
+    const kind = 'discover';
+    await failedTask(seed, { path: '/rate-limited', kind, error_code: 'http_4xx' });
+    await failedTask(seed, { path: '/policies/privacy-policy', kind, error_code: 'robots_denied' });
     await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
     const snapshot = await db
       .selectFrom('site_health_snapshots')
