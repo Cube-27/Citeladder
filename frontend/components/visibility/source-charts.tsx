@@ -73,7 +73,8 @@ function UsagePlot({
       <Notice
         kind="read"
         error={query.error}
-        fallback="Could not load source usage."
+        title="Couldn't load source usage"
+        fallback="The request failed or timed out."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
@@ -212,7 +213,8 @@ function TypesMix({
       <Notice
         kind="read"
         error={query.error}
-        fallback="Could not load source types."
+        title="Couldn't load source types"
+        fallback="The request failed or timed out."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />

@@ -5,6 +5,7 @@ import type { VisibilityMarkets } from '@citeladder/contracts/visibility';
 
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { TitledSection } from '@/components/ui/section';
 import { Delta } from '@/components/ui/delta';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
@@ -16,22 +17,27 @@ import { readErrorProps } from '@/components/ui/notice';
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'market', label: 'Market' },
   // The metric names the KPI row uses: `mention_rate` here is the Visibility rate.
-  { key: 'mention', label: 'Visibility', width: 'figure', numeric: true },
-  { key: 'mention-change', label: 'Change', width: 'figure', numeric: true },
+  { key: 'mention', label: 'Visibility', width: 'figure', kind: 'number' },
+  { key: 'mention-change', label: 'Change', width: 'figure', kind: 'number' },
   {
     key: 'voice',
     label: 'Share of voice',
     hint: SHARE_OF_VOICE_HINT,
     width: 'metric',
-    numeric: true,
+    kind: 'number',
   },
-  { key: 'voice-change', label: 'Change', width: 'figure', numeric: true },
-  { key: 'net', label: 'Net sentiment', width: 'figure', numeric: true },
+  { key: 'voice-change', label: 'Change', width: 'figure', kind: 'number' },
+  { key: 'net', label: 'Net sentiment', width: 'figure', kind: 'number' },
 ];
 
 function marketsState(query: UseQueryResult<VisibilityMarkets>): DataTableState | undefined {
   if (query.isError)
-    return { kind: 'error', ...readErrorProps(query), fallback: 'Could not load the markets.' };
+    return {
+      kind: 'error',
+      ...readErrorProps(query),
+      title: "Couldn't load the markets",
+      fallback: 'The request failed or timed out.',
+    };
   if (query.isPending) return { kind: 'loading', label: 'Loading markets…' };
   return undefined;
 }
@@ -53,54 +59,58 @@ export function VisibilityByMarket({
 }>) {
   if (markets.length < 2) return null;
   return (
-    <DataTable
-      title="By market"
-      columns={COLUMNS}
-      footer="Each market's latest run, with the change since its previous comparable run."
-      state={marketsState(query)}
-    >
-      {(query.data?.markets ?? []).map((row) => (
-        <TableRow key={row.market.id ?? 'default'}>
-          <TableCell>
-            <Button
-              variant="quiet"
-              aria-current={row.market.id === market ? 'true' : undefined}
-              onClick={() => onSelectMarket(row.market.id)}
-            >
-              {row.market.label}
-            </Button>
-          </TableCell>
-          {row.state === 'measured' ? (
-            <>
-              <TableCell numeric>{measured(formatRate(row.mention_rate)) ?? <Absence />}</TableCell>
-              <TableCell numeric>
-                <Delta
-                  value={row.mention_rate_delta}
-                  unit=" pp"
-                  missingReason="No comparable earlier run"
-                />
-              </TableCell>
-              <TableCell numeric>
-                {measured(formatRate(row.share_of_voice)) ?? <Absence />}
-              </TableCell>
-              <TableCell numeric>
-                <Delta
-                  value={row.share_of_voice_delta}
-                  unit=" pp"
-                  missingReason="No comparable earlier run"
-                />
-              </TableCell>
-              <TableCell numeric>
-                {formatNet(row.net_sentiment) ?? <Absence reason="No classified mentions" />}
-              </TableCell>
-            </>
-          ) : (
-            <TableCell numeric colSpan={5}>
-              <Absence state={row.state === 'no_run' ? 'not_run' : 'pending'} />
+    <TitledSection title="By market">
+      <DataTable
+        label="By market"
+        columns={COLUMNS}
+        footer="Each market's latest run, with the change since its previous comparable run."
+        state={marketsState(query)}
+      >
+        {(query.data?.markets ?? []).map((row) => (
+          <TableRow key={row.market.id ?? 'default'}>
+            <TableCell>
+              <Button
+                variant="quiet"
+                aria-current={row.market.id === market ? 'true' : undefined}
+                onClick={() => onSelectMarket(row.market.id)}
+              >
+                {row.market.label}
+              </Button>
             </TableCell>
-          )}
-        </TableRow>
-      ))}
-    </DataTable>
+            {row.state === 'measured' ? (
+              <>
+                <TableCell numeric>
+                  {measured(formatRate(row.mention_rate)) ?? <Absence />}
+                </TableCell>
+                <TableCell numeric>
+                  <Delta
+                    value={row.mention_rate_delta}
+                    unit=" pp"
+                    missingReason="No comparable earlier run"
+                  />
+                </TableCell>
+                <TableCell numeric>
+                  {measured(formatRate(row.share_of_voice)) ?? <Absence />}
+                </TableCell>
+                <TableCell numeric>
+                  <Delta
+                    value={row.share_of_voice_delta}
+                    unit=" pp"
+                    missingReason="No comparable earlier run"
+                  />
+                </TableCell>
+                <TableCell numeric>
+                  {formatNet(row.net_sentiment) ?? <Absence reason="No classified mentions" />}
+                </TableCell>
+              </>
+            ) : (
+              <TableCell numeric colSpan={5}>
+                <Absence state={row.state === 'no_run' ? 'not_run' : 'pending'} />
+              </TableCell>
+            )}
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }

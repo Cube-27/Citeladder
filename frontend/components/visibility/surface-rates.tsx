@@ -2,9 +2,10 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import { Absence } from '@/components/ui/absence';
-import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses, SubsectionHeader } from '@/components/ui/workspace';
+import { Stack } from '@/components/ui/layout';
+import { SubsectionHeader } from '@/components/ui/workspace';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
+import { formatPercent } from '@/lib/format';
 import type { AioRate, SurfaceRates } from '@citeladder/contracts';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -38,11 +39,6 @@ const DENOMINATOR_COPY: Record<string, string> = {
   observations_with_ai_overview: 'searches that showed an overview',
 };
 
-/** A rate's value as a percentage to one decimal place. */
-function ratePercent(value: number): string {
-  return `${Math.round(value * 1000) / 10}%`;
-}
-
 function denominatorCopy(rate: AioRate): string {
   const scope = DENOMINATOR_COPY[rate.denominator_kind] ?? 'observations counted';
   return `${rate.numerator} of ${rate.denominator} ${scope}`;
@@ -61,7 +57,7 @@ function rateStat({
   return {
     key,
     label,
-    value: rate.value === null ? null : ratePercent(rate.value),
+    value: rate.value === null ? null : formatPercent(rate.value),
     missingLabel: 'Unavailable',
     sub: (
       <>
@@ -84,23 +80,17 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
         title="Competitors, when an overview appeared"
         description="Over the same denominator as your own conditional mention rate, so the two are comparable."
       />
-      <ul className={ledgerClasses()}>
+      <LedgerList label="Competitors, when an overview appeared">
         {rates.map((entry) => (
-          <Inline
-            as="li"
-            gap="compact"
+          <LedgerItem
             key={entry.name}
-            className={ledgerItemClasses('justify-between')}
-          >
-            <span className={textRole('body', 'text-ink-2 min-w-0 truncate')}>{entry.name}</span>
-            <Inline as="span" className="shrink-0">
-              {entry.rate.value === null ? (
+            title={entry.name}
+            meta={
+              entry.rate.value === null ? (
                 <Absence state="unavailable" className="type-body text-ink-2" />
               ) : (
                 <>
-                  <span className="type-body text-ink-2 tabular-nums">
-                    {ratePercent(entry.rate.value)}
-                  </span>
+                  <span className="type-data">{formatPercent(entry.rate.value)}</span>
                   {/* The denominator is stated once for the list above; the
                       numerator is not, and it is what separates one competitor
                       named in a single overview from one named in fifty. */}
@@ -108,11 +98,11 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
                     {`${entry.rate.numerator} of ${entry.rate.denominator}`}
                   </span>
                 </>
-              )}
-            </Inline>
-          </Inline>
+              )
+            }
+          />
         ))}
-      </ul>
+      </LedgerList>
     </Stack>
   );
 }
@@ -126,7 +116,8 @@ export function SurfaceRatesPanel({
       <Notice
         kind="read"
         error={query.error}
-        fallback="Could not load the AI Overview rates."
+        title="Couldn't load the AI Overview rates"
+        fallback="The request failed or timed out."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />

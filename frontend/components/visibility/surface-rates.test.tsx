@@ -63,9 +63,9 @@ describe('AI Overview rates', () => {
 
     // The worked example: 100 observations, 40 overviews, 10 naming the brand.
     // All three are true and none of them alone is "how visible are we".
-    expect(screen.getByText('40%')).toBeVisible();
-    expect(screen.getByText('25%')).toBeVisible();
-    expect(screen.getByText('10%')).toBeVisible();
+    expect(screen.getByText('40.0%')).toBeVisible();
+    expect(screen.getByText('25.0%')).toBeVisible();
+    expect(screen.getByText('10.0%')).toBeVisible();
   });
 
   it('states what each number divided by', () => {

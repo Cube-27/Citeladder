@@ -80,7 +80,8 @@ export function SourceUrlDetail({
             <Notice
               kind="read"
               error={query.error}
-              fallback="Could not load this source."
+              title="Couldn't load this source"
+              fallback="The request failed or timed out."
               onRetry={() => void query.refetch()}
               pending={query.isFetching}
             />

@@ -61,12 +61,12 @@ function nearMissColumns(
       key: 'read',
       label: 'Read in',
       width: 'figure',
-      numeric: true,
+      kind: 'number',
       hint: readHint(data, engineLabel),
     },
-    { key: 'cited', label: 'Cited in', width: 'figure', numeric: true },
-    { key: 'missed', label: 'Not cited in', width: 'figure', numeric: true },
-    { key: 'last', label: 'Last read', width: 'figure', numeric: true, desktopOnly: true },
+    { key: 'cited', label: 'Cited in', width: 'figure', kind: 'number' },
+    { key: 'missed', label: 'Not cited in', width: 'figure', kind: 'number' },
+    { key: 'last', label: 'Last read', width: 'figure', kind: 'date', desktopOnly: true },
   ];
 }
 
@@ -78,7 +78,8 @@ function nearMissState(
     return {
       kind: 'error',
       error: query.error,
-      fallback: 'Could not load your pages read but not cited. Try again.',
+      title: "Couldn't load your pages read but not cited",
+      fallback: 'The request failed or timed out.',
       onRetry: () => void query.refetch(),
       pending: query.isFetching,
     };
