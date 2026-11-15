@@ -15,11 +15,11 @@ describe('shouldRetryQuery', () => {
     expect(shouldRetryQuery(2, new Error('offline'))).toBe(false);
   });
 
-  it('retries 408 / 429 / 5xx', () => {
-    expect(shouldRetryQuery(0, new ApiError('timeout', 408, ''))).toBe(true);
-    expect(shouldRetryQuery(0, new ApiError('rate', 429, ''))).toBe(true);
-    expect(shouldRetryQuery(0, new ApiError('down', 500, ''))).toBe(true);
-    expect(shouldRetryQuery(0, new ApiError('down', 503, ''))).toBe(true);
+  it('retries 408 / 429 / 5xx once, so a server error surfaces quickly', () => {
+    for (const status of [408, 429, 500, 503]) {
+      expect(shouldRetryQuery(0, new ApiError('down', status, ''))).toBe(true);
+      expect(shouldRetryQuery(1, new ApiError('down', status, ''))).toBe(false);
+    }
   });
 
   it('does not retry ordinary 4xx', () => {
@@ -33,18 +33,13 @@ describe('shouldRetryQuery', () => {
     expect(shouldRetryQuery(0, new DOMException('Aborted', 'AbortError'))).toBe(false);
   });
 
-  it('caps retries at 2 regardless of error kind', () => {
-    expect(shouldRetryQuery(2, new ApiError('down', 503, ''))).toBe(false);
-  });
-
-  it('retries the A3 timeout surface (retryable network-class ApiError)', () => {
+  it('retries the A3 timeout surface once, since each attempt already waited the full timeout', () => {
     const timeout = new ApiError('timed out', 0, '', 'req-t', {
       code: 'request_timeout',
       retryable: true,
     });
     expect(shouldRetryQuery(0, timeout)).toBe(true);
-    expect(shouldRetryQuery(1, timeout)).toBe(true);
-    expect(shouldRetryQuery(2, timeout)).toBe(false);
+    expect(shouldRetryQuery(1, timeout)).toBe(false);
   });
 
   it('honors an explicit retryable classification over the status heuristic', () => {
@@ -64,10 +59,24 @@ describe('createAppQueryClient', () => {
     const client = createAppQueryClient();
     const queries = client.getDefaultOptions().queries;
     expect(queries?.retry).toBe(shouldRetryQuery);
+    expect(queries?.retryDelay).toBe(500);
     expect(queries?.staleTime).toBe(60_000);
     expect(queries?.gcTime).toBe(30 * 60_000);
     expect(queries?.refetchOnWindowFocus).toBe(false);
     expect(client.getDefaultOptions().mutations?.retry).toBe(false);
+  });
+});
+
+describe('a failing read on the app client', () => {
+  it('settles on the error after one quick retry instead of retrying silently', async () => {
+    const queryFn = vi.fn(async () => {
+      throw new ApiError('down', 500, '');
+    });
+    const app = createAppQueryClient();
+
+    await expect(app.fetchQuery({ queryKey: ['read'], queryFn })).rejects.toThrow('down');
+
+    expect(queryFn).toHaveBeenCalledTimes(2);
   });
 });
 
