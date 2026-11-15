@@ -6,6 +6,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
+import { Inline } from '@/components/ui/layout';
 import { TitledSection } from '@/components/ui/section';
 import type { Audit } from '@citeladder/contracts';
 import { marketLabel } from '@citeladder/contracts/markets';
@@ -101,7 +102,9 @@ export function RunsTable({
       title="All runs"
       // Mounted while idle (empty), so the first polling note is announced.
       actions={
-        <output className="type-caption flex items-center gap-2 empty:hidden">{status}</output>
+        <Inline as="output" className="type-caption">
+          {status}
+        </Inline>
       }
     >
       <DataTable
