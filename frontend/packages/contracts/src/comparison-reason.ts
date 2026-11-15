@@ -29,10 +29,11 @@ const DECLINED: Readonly<Record<string, string>> = {
 /** Why no change is shown for a status, or null for a comparable run. */
 export function comparisonDeclinedReason(status: string, skippedRuns = 0): string | null {
   if (status === 'comparable') return null;
-  if (status === 'no_baseline')
-    return skippedRuns
-      ? `The ${skippedRuns === 1 ? 'earlier run' : `${skippedRuns} earlier runs`} used different settings or scoring.`
-      : 'No earlier run to compare with yet.';
+  if (status === 'no_baseline') {
+    if (!skippedRuns) return 'No earlier run to compare with yet.';
+    const runs = skippedRuns === 1 ? 'earlier run' : `${skippedRuns} earlier runs`;
+    return `The ${runs} used different settings or scoring.`;
+  }
   return DECLINED[status] ?? 'The latest run cannot be compared with an earlier one.';
 }
 

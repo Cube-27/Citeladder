@@ -41,7 +41,8 @@ function matchedLine(comparison: Comparison, since: string | null): string {
     answers: { matched: comparison.matched_cells, total: comparison.current_cells },
   });
   const note = basis.kind === 'matched_subset' ? basis.note : 'Only shared answers comparable';
-  return `${note} with ${since ? `the run on ${since}` : 'the earlier run'}; the change uses only those.`;
+  const run = since ? `the run on ${since}` : 'the earlier run';
+  return `${note} with ${run}; the change uses only those.`;
 }
 
 function noChangeLine(status: string, skippedRuns = 0): string {

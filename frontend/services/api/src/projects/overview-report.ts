@@ -4,6 +4,7 @@
  * reading guide. Every section prints a missing value as missing; nothing here
  * computes a metric of its own, and no internal identifier reaches the page.
  */
+import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import type { OverviewWidgetKey } from '@citeladder/contracts/overview';
 
@@ -60,12 +61,20 @@ function target(action: Action): string {
   return label;
 }
 
+/** Whether the run shows changes, by the one basis the Overview screen uses. */
+function showsChange(view: View): boolean {
+  const measured = view.measurement;
+  if (!measured) return false;
+  const status = measured.comparison_status;
+  return comparisonBasis({ status, answers: measured.comparison_answers }).kind !== 'declined';
+}
+
 /**
- * A figure's note: what it measures, then its change. Without a comparable run
- * the cover's notice says so once, so a cell carries no change line of its own.
+ * A figure's note: what it measures, then its change. Without a change to show
+ * the cover's notice says why once, so a cell carries no change line of its own.
  */
 function note(view: View, meaning: string, change: string | null): string {
-  if (!view.measurement?.comparable_audit_id) return meaning;
+  if (!showsChange(view)) return meaning;
   return `${meaning} · ${change ?? NO_COMPARISON}`;
 }
 
@@ -273,10 +282,9 @@ export async function overviewReport(db: Database, scope: ProjectScope) {
         ]
       : [website, 'No completed measurement yet.'].filter(Boolean),
   });
-  if (measurement && !measurement.comparable_audit_id)
-    report.note(
-      'No comparison yet: changes appear once a second run uses the same prompts and engines.',
-    );
+  // The track's first limitation is the basis's note or reason, worded as on the Overview.
+  const limitation = view.track.limitations[0];
+  if (measurement && limitation) report.note(limitation);
   const context: ReportContext = {
     db,
     scope,
