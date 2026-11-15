@@ -8,14 +8,14 @@ import { cn } from '@/lib/utils';
  * The tag face: 24px tall, never wider than its container. In the app it is
  * `caption-strong` in `ink` at radius 4; a static tag is a `well` fill with no
  * edge, so it never looks operable; a tag you can operate (`OPERABLE_TAG`)
- * carries the solid control line and a draft the dashed one. The website
- * keeps its `caption`, radius 2 and `surface` face with a hairline.
+ * carries the soft control edge and shadow, a draft the dashed control line.
+ * The website keeps its `caption`, radius 2 and `surface` face with a hairline.
  */
 const TAG_FACE =
-  'type-caption type-caption-strong text-ink bg-well border-transparent [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:border-rule border inline-flex min-h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-1 rounded-mark [:root:not([data-public-surface])_&]:rounded-sm px-2 normal-nums whitespace-nowrap';
+  'type-caption type-caption-strong text-ink bg-well border-transparent [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:border-rule border inline-flex min-h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-1 rounded-mark px-2 normal-nums whitespace-nowrap';
 
-/** The solid control line: this tag can be operated (a link, a remove, an expander). */
-const OPERABLE_TAG = 'bg-surface border-control-line';
+/** The labelled control's soft edge: this tag can be operated (a link, a remove, an expander). */
+const OPERABLE_TAG = 'bg-surface border-control-edge shadow-control';
 
 /**
  * What a tag is for. A status is a `StatusMark`, never

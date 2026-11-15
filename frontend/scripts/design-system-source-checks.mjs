@@ -148,9 +148,11 @@ export function focusRoleViolations(source, label, ownsProductUi) {
  * The app has three shadows, one per elevation (brand direction 2.4):
  * `shadow-card` under a card at rest, `shadow-pop` under a menu, popover,
  * tooltip, toast or sticky bar, `shadow-sheet` under a dialog, drawer or the
- * command palette. The website's edge, xs, float and press shadows are its own.
+ * command palette. `shadow-control` sits under a labelled control's soft
+ * edge (a secondary button, an operable tag). The website's edge, xs, float
+ * and press shadows are its own.
  */
-const SHADOW_ROLES = new Set(['none', 'card', 'pop', 'sheet']);
+const SHADOW_ROLES = new Set(['none', 'card', 'pop', 'sheet', 'control']);
 
 export function shadowRoleViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || label === TOKEN_CSS || WEBSITE_ONLY_UI.has(label)) return [];
@@ -160,10 +162,12 @@ export function shadowRoleViolations(source, label, ownsProductUi) {
   const rawDeclaration =
     label.endsWith('.css') &&
     [...text.matchAll(/box-shadow\s*:([^;]+);/g)].some(
-      ([, value]) => !/^(?:none|var\(--shadow-(?:card|pop|sheet)\))$/.test(value.trim()),
+      ([, value]) => !/^(?:none|var\(--shadow-(?:card|pop|sheet|control)\))$/.test(value.trim()),
     );
   if ([...shadows].some(([, role]) => !SHADOW_ROLES.has(role)) || rawDeclaration) {
-    return [`${label}: elevation must use shadow-card, shadow-pop, shadow-sheet or none`];
+    return [
+      `${label}: elevation must use shadow-card, shadow-pop, shadow-sheet, shadow-control or none`,
+    ];
   }
   return [];
 }

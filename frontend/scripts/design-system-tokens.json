@@ -355,7 +355,15 @@
           "light": "{line-control}",
           "dark": "{line-control}"
         },
-        "usage": "Field and control boundaries (3:1) and the dashed edge of a draft. The website aliases its own role here; the app binds its value."
+        "usage": "Boundaries that are the control's only cue (3:1): text inputs, textareas, selects, comboboxes, checkboxes, radios, a switch's off track, and the dashed edge of a draft. The website aliases its own role here; the app binds its value."
+      },
+      {
+        "name": "control-edge",
+        "value": {
+          "light": "{line}",
+          "dark": "{line}"
+        },
+        "usage": "The soft edge of a control its visible words name: secondary and danger buttons, link-buttons, operable tags, menu triggers, pagers, with shadow-control under it. No 3:1 needed (WCAG 1.4.11). The website aliases its own role here; the app binds #d5d8df light and #393d47 dark."
       },
       {
         "name": "ink-2",
@@ -853,7 +861,7 @@
       {
         "name": "radius-mark",
         "value": "2px",
-        "usage": "The app's tags, checkboxes, rung marks and bar ends."
+        "usage": "The app's marks, tags, kbd chips, menu items, checkboxes and rung marks: the app binds 4px on its own scope (the website keeps 2px). The app has four radii (mark 4, control 6, card 8, overlay 12) plus full for avatars and switch thumbs."
       },
       {
         "name": "radius-control",
@@ -873,7 +881,7 @@
     ]
   },
   "shadow": {
-    "note": "The app has three shadows, one per elevation: card, pop and sheet (bound on the app's own scope); fields keep the faint shadow-edge. The website and docs draw their borderless edges with the ring inside shadow-xs and shadow-pop.",
+    "note": "The app has three shadows, one per elevation: card, pop and sheet (bound on the app's own scope); fields keep the faint shadow-edge and labelled controls shadow-control. The website and docs draw their borderless edges with the ring inside shadow-xs and shadow-pop.",
     "tokens": [
       {
         "name": "shadow-edge",
@@ -882,6 +890,14 @@
           "dark": "0 1px 2px rgba(0,0,0,0.40)"
         },
         "usage": "The faint smudge under a form control's soft line edge: inputs, textareas, search fields, select triggers, chip inputs, checkbox and radio boxes, the Agent composer. No ring of its own, so the 1px border stays the only edge; shadow-xs would double it."
+      },
+      {
+        "name": "shadow-control",
+        "value": {
+          "light": "0 1px 2px rgb(16 24 40 / 0.06)",
+          "dark": "0 1px 2px rgb(0 0 0 / 0.35)"
+        },
+        "usage": "The app's shadow under a labelled control's control-edge: secondary and danger buttons, link-buttons, operable tags. None on the website and docs."
       },
       {
         "name": "shadow-xs",

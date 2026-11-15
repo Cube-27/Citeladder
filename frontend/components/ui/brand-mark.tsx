@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 const PLACEMENT = {
   inline: { pixels: 16, box: 'size-4 rounded-mark text-eyebrow tracking-normal', image: 'size-4' },
   row: { pixels: 20, box: 'size-5 rounded-mark text-caption', image: 'size-5' },
-  header: { pixels: 24, box: 'bg-surface size-10 rounded-control text-body', image: 'size-6' },
+  header: { pixels: 24, box: 'bg-surface size-10 rounded-control text-label-lg', image: 'size-6' },
 } as const;
 
 export type BrandMarkPlacement = keyof typeof PLACEMENT;
@@ -73,7 +73,7 @@ export function BrandMark({
       ) : (
         <span
           className={cn(
-            'bg-ink text-on-ink grid place-items-center leading-none font-medium uppercase',
+            'bg-ink text-on-ink grid place-items-center font-medium uppercase',
             placement === 'header' ? 'size-full' : spec.image,
           )}
         >
