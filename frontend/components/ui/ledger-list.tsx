@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { ClampText } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -7,8 +8,9 @@ import { cn } from '@/lib/utils';
  * LedgerList — a list of peers on hairlines, for records too few or too
  * varied for a DataTable (observed patterns, audit schedules, the evidence
  * on a card): each item is a row with its title, the facts that describe it
- * at the row's end, an optional caption and a line of links. Rows are 8 above
- * and 8 below an inset hairline, the last hairline closing the list; every row
+ * at the row's end, an optional caption and a line of links. The title and
+ * caption stay on one line (the whole text in a tooltip). Rows are 8 above
+ * and 8 below an inset hairline between rows; every row
  * tints on hover as a reading aid, like a table row. A page passes content,
  * never geometry.
  */
@@ -50,15 +52,16 @@ export function LedgerItem({
     <li
       data-ledger-item=""
       className={cn(
-        'grid min-w-0 gap-1 px-[var(--table-cell-padding-x)] py-[var(--table-cell-padding-y)]',
+        // It bleeds 12 past the list, so its text starts on the card's padding.
+        '-mx-3 grid min-w-0 gap-1 px-3 py-2',
         'hover:overlay-hover transition-colors duration-[var(--motion-fast)]',
       )}
     >
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className={textRole('body', 'min-w-0 flex-1 break-words')}>{title}</div>
+        <ClampText className={textRole('body', 'flex-[1_1_15rem]')}>{title}</ClampText>
         {meta === undefined ? null : <div className="flex shrink-0 items-center gap-2">{meta}</div>}
       </div>
-      {caption === undefined ? null : <p className="type-caption min-w-0">{caption}</p>}
+      {caption === undefined ? null : <ClampText className="type-caption">{caption}</ClampText>}
       {links === undefined ? null : (
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{links}</div>
       )}

@@ -2,6 +2,7 @@ import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { useId } from 'react';
 
 import { Icon } from '@/components/ui/icon';
+import { MeterLabelRow } from '@/components/ui/meter';
 import { formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -10,11 +11,11 @@ const RUNGS = 10;
 /**
  * RungMeter — ten rungs for any 0 to 100 score, a usage quota or work in
  * progress (no rings, donuts or generic progress
- * bars). Rungs fill in `ink`, one at a time (a `steps()` fill), with the
- * value beside them in mono. Past `warnAt` (a ratio of `max`) the filled
- * rungs take the warning tone and its glyph, past `criticalAt` the negative
- * tone and its glyph; `data-meter-band` names the band. Without `value` the
- * work is live: one accent rung pulses.
+ * bars). Rungs fill in `ink` on a `well` track, the label above them and the
+ * value beside the label while both fit (else under it). Past `warnAt` (a
+ * ratio of `max`) the filled rungs take the warning tone and its glyph, past
+ * `criticalAt` the negative tone and its glyph; `data-meter-band` names the
+ * band. Without `value` the work is live: one ink rung pulses.
  *
  * `value: null` is unmeasured, never zero: empty rungs and "not measured".
  */
@@ -137,9 +138,10 @@ const BAND_INK = {
   critical: 'text-negative',
 } as const satisfies Record<MeterBand, string>;
 
+/** Rungs fill in ink on the `well` track; live work is one ink rung pulsing, never the accent. */
 function rungFill(index: number, { live, filled, band }: MeterReading) {
-  if (live) return index === 0 ? 'bg-accent animate-live-rung' : 'bg-rule';
-  if (index >= filled) return 'bg-rule';
+  if (live) return index === 0 ? 'bg-ink animate-live-rung' : 'bg-well';
+  if (index >= filled) return 'bg-well';
   return BAND_FILL[band];
 }
 
@@ -151,17 +153,17 @@ function MeterHead({
 }: Readonly<{ label?: string; labelId: string; shown: string | null; band: MeterBand }>) {
   if (!label && !shown) return null;
   return (
-    <div className="flex items-baseline justify-between gap-3">
+    <MeterLabelRow>
       {label ? (
-        // The name wraps rather than being cut: "Prompts" and "Prompt runs" must both read whole.
-        <span id={labelId} className="type-body min-w-0 break-words">
+        // The name never breaks inside a word; the value wraps under it first.
+        <span id={labelId} className="type-body">
           {label}
         </span>
       ) : null}
       {shown ? (
         <span
           className={cn(
-            'type-data inline-flex items-center gap-1 whitespace-nowrap',
+            'type-body inline-flex items-center gap-1 whitespace-nowrap tabular-nums',
             BAND_INK[band],
           )}
         >
@@ -171,7 +173,7 @@ function MeterHead({
           {shown}
         </span>
       ) : null}
-    </div>
+    </MeterLabelRow>
   );
 }
 
@@ -185,7 +187,7 @@ export function BusyRung({ active, label }: Readonly<{ active: boolean; label: s
   return (
     <div className="absolute inset-x-0 top-0 z-1 h-0.5">
       <progress className="sr-only" aria-label={label} aria-busy />
-      <span aria-hidden className="bg-accent animate-live-rung block h-full w-6" />
+      <span aria-hidden className="bg-ink animate-live-rung block h-full w-6" />
     </div>
   );
 }

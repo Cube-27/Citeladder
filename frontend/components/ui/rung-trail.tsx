@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 /**
  * The one state set every step takes: pending
  * (`rule` rung), running (the live ink rung), done (ink rung, check),
- * failed (crimson rung, cross), unavailable (hatched rung), unknown (hollow
+ * failed (crimson rung, cross), unavailable (`well` rung and its word), unknown (hollow
  * rung, question glyph; never read as unavailable), awaiting your decision
  * (dashed rung, with the decision buttons) and decided (solid ink rung).
  */
@@ -60,7 +60,7 @@ function rungFace(status: RungStatus) {
     case 'failed':
       return 'bg-negative';
     case 'unavailable':
-      return 'hatch';
+      return 'bg-well';
     case 'unknown':
       return 'border border-control-line';
     case 'awaiting':
@@ -194,6 +194,12 @@ function RungRow({
             )}
           >
             {step.detail}
+          </span>
+        ) : null}
+        {/* The faint rung says it with its word; the label already says it to screen readers. */}
+        {!step.detail && step.status === 'unavailable' ? (
+          <span aria-hidden className={textRole('caption')}>
+            {STATUS_WORD.unavailable}
           </span>
         ) : null}
         {step.actions ? <span className="flex flex-wrap gap-2 pt-2">{step.actions}</span> : null}
