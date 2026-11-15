@@ -5,6 +5,7 @@ import { CohortCompositionContext } from './cohort-composition-context';
 import { AppGrid } from '@/components/ui/app-grid';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
 import { Drawer } from '@/components/ui/drawer';
@@ -206,9 +207,7 @@ function WebFundamentalsCard({
               </Inline>
             ))}
           </ul>
-          <Button variant="secondary" onClick={onOpen} className="justify-self-start">
-            View evidence
-          </Button>
+          <ActionButton action="viewEvidence" onClick={onOpen} className="justify-self-start" />
         </Stack>
       </SectionContent>
     </Section>

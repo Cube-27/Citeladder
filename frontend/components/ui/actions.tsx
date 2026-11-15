@@ -34,7 +34,7 @@ export const ACTIONS = {
   revoke: { label: 'Revoke', variant: 'danger' },
 } as const satisfies Record<string, ActionPreset>;
 
-export type ActionName = keyof typeof ACTIONS;
+type ActionName = keyof typeof ACTIONS;
 
 type ActionButtonProps = Omit<ButtonProps, 'variant' | 'asChild' | 'children'> & {
   action: ActionName;

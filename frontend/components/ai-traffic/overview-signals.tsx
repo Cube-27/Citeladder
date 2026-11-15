@@ -9,6 +9,7 @@ import {
   words,
 } from '@/lib/ai-traffic/vocabulary';
 import { projectDestination } from '@/lib/navigation/project-destination';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -118,9 +119,7 @@ function crawlFigures(
           : CRAWL_EMPTY[crawl.connection],
         action:
           crawl.connection === 'not_connected' ? (
-            <Button variant="secondary" onClick={onConnect}>
-              Connect crawl logs
-            </Button>
+            <ActionButton action="connectCrawlLogs" onClick={onConnect} />
           ) : undefined,
       },
     ];
