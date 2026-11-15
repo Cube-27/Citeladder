@@ -30,9 +30,10 @@ export type ButtonSize = 'md' | 'lg';
 const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
-// The website keeps its 8px icon gap and 45% disabled face (it is not redesigned).
+// The app's one disabled look (well fill, no edge) is in globals.css, after
+// every variant. The website keeps its 8px icon gap and 45% disabled face.
 const BUTTON_BASE =
-  'focus-ring type-label relative inline-flex shrink-0 items-center justify-center gap-1 rounded-control whitespace-nowrap no-underline transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 [[data-public-surface]_&]:gap-2 [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
+  'focus-ring type-label relative inline-flex shrink-0 items-center justify-center gap-1 rounded-control whitespace-nowrap no-underline transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:gap-2 [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
 const BUTTON_SIZE: Record<ButtonSize, string> = {
   md: 'min-h-[var(--control-md)] px-3',

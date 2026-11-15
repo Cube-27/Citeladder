@@ -35,7 +35,7 @@ describe('Section', () => {
         <SectionContent>Body</SectionContent>
       </Section>,
     );
-    expect(screen.getByText('Visibility').tagName).toBe('H3');
+    expect(screen.getByText('Visibility').tagName).toBe('H2');
     expect(screen.getByText('Body')).toBeInTheDocument();
   });
 });

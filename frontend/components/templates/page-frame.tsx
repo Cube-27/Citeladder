@@ -100,7 +100,11 @@ export function PageSections({
   return (
     <div
       data-page-content=""
-      className={cn('flex min-w-0 flex-col gap-[var(--page-section-gap)]', className)}
+      data-rhythm-gap=""
+      className={cn(
+        'flex min-w-0 flex-col gap-[var(--page-section-gap)] *:[--rhythm-gap:var(--page-section-gap)]',
+        className,
+      )}
     >
       {children}
     </div>
