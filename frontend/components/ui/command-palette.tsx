@@ -1,18 +1,9 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Search, type LucideIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import {
-  useCallback,
-  useEffect,
-  useId,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Button, LABEL_FROM_SHELL } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
@@ -70,54 +61,6 @@ type Command = {
   run: () => void;
 };
 
-function subscribeToPlatform() {
-  return () => {};
-}
-
-function isMacPlatform() {
-  return /Mac/i.test(navigator.platform);
-}
-
-type CommandPaletteLaunch = { trigger: HTMLElement };
-
-export function CommandPaletteTrigger({
-  className,
-  onOpen,
-}: Readonly<{
-  className?: string;
-  /** Lets a transient presenter close before the persistent palette opens. */
-  onOpen?: (trigger: HTMLElement) => void;
-}>) {
-  const isMac = useSyncExternalStore(subscribeToPlatform, isMacPlatform, () => false);
-  return (
-    <Button
-      onClick={(event) => {
-        const trigger = event.currentTarget;
-        if (onOpen) onOpen(trigger);
-        else {
-          window.dispatchEvent(
-            new CustomEvent<CommandPaletteLaunch>(OPEN_COMMAND_PALETTE_EVENT, {
-              detail: { trigger },
-            }),
-          );
-        }
-      }}
-      aria-label="Search or jump to"
-      aria-keyshortcuts="Meta+K Control+K"
-      className={cn(
-        'text-ink-2 shell:justify-start min-w-0 text-left',
-        LABEL_FROM_SHELL,
-        className,
-      )}
-    >
-      <Search className="text-ink-2 size-4 shrink-0" aria-hidden />
-      {/* The visible word stays short beside the shortcut; the name says it all. */}
-      <span className="shell:inline hidden min-w-0 truncate">Search</span>
-      <Kbd className="shell:inline-flex hidden">{isMac ? '⌘K' : 'Ctrl K'}</Kbd>
-    </Button>
-  );
-}
-
 /**
  * Results keep ONE flat order for the keyboard cursor, but render grouped.
  * Rebuilding sections from that flat list (rather than grouping first and
@@ -134,17 +77,23 @@ function toSections(results: readonly Command[]) {
   return sections;
 }
 
+/** How the palette was first opened, by the launcher that loaded it. */
+export type PaletteLaunch = Readonly<{ returnTo: HTMLElement | null }>;
+
 export function CommandPalette({
   destinations,
+  launch,
 }: Readonly<{
   /** The shell's destinations by group; a managed plan may list fewer. */
   destinations: (options: { managed: boolean }) => readonly PaletteGroup[];
+  /** Mounts the palette open, returning focus to `returnTo` when it closes. */
+  launch?: PaletteLaunch;
 }>) {
   const router = useNavigate();
   const { projects, activeProjectId, activeWorkspaceId } = useProjectContext();
   const managed = useManagedPlan();
   const selectProject = useSelectProject();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(launch !== undefined);
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listboxId = useId();
@@ -154,7 +103,7 @@ export function CommandPalette({
   // Where focus goes when the palette closes. Radix restores focus to its own
   // Trigger, but the ⌘K path has no trigger, so without this the caller loses
   // their place in the page and focus falls back to <body>.
-  const returnFocusTo = useRef<HTMLElement | null>(null);
+  const returnFocusTo = useRef<HTMLElement | null>(launch?.returnTo ?? null);
 
   const restoreFocus = useCallback(() => {
     const target = returnFocusTo.current;
@@ -184,8 +133,8 @@ export function CommandPalette({
 
   useEffect(() => {
     const listener = (event: Event) => {
-      const detail = (event as CustomEvent<CommandPaletteLaunch>).detail;
-      if (detail?.trigger) openFromTrigger(detail.trigger);
+      const trigger: unknown = event instanceof CustomEvent ? event.detail?.trigger : null;
+      if (trigger instanceof HTMLElement) openFromTrigger(trigger);
     };
     window.addEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
     return () => window.removeEventListener(OPEN_COMMAND_PALETTE_EVENT, listener);
