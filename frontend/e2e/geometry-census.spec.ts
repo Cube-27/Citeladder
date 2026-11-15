@@ -198,12 +198,9 @@ function measure({ route }: { route: string }) {
     add('select.height', element, element.getBoundingClientRect().height);
   // Tabs and segmented switches are measured by their track: the tabs and
   // segments sit inside it.
-  for (const element of all('[role="tablist"]'))
-    add(
-      element.closest('[data-page-band="tabs"]') ? 'page-tab.height' : 'tab.height',
-      element,
-      element.getBoundingClientRect().height,
-    );
+  // The census routes carry only page tab rows (section rows are one control high).
+  for (const element of all('[data-page-band="tabs"] [role="tablist"]'))
+    add('page-tab.height', element, element.getBoundingClientRect().height);
   for (const element of all('[role="tab"]'))
     add('tab.padding-x', element, px(getComputedStyle(element).paddingLeft));
   for (const element of all('[role="tablist"]'))
@@ -621,7 +618,6 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'button.height', CONTROL_HEIGHT);
   expectOneValue(records, 'input.height', CONTROL_HEIGHT);
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);
-  expectOneValue(records, 'tab.height', CONTROL_HEIGHT);
   expectOneValue(records, 'page-tab.height', PAGE_TABS_HEIGHT);
   expectOneValue(records, 'segmented.height', CONTROL_HEIGHT);
   expectOneValue(records, 'nav-row.height', NAV_ROW_HEIGHT);

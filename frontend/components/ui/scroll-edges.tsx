@@ -141,6 +141,7 @@ export function ScrollFrame({
           <ScrollStep
             side={forward ? 'end' : 'start'}
             onStep={() => state.step(forward ? 1 : -1)}
+            className="min-h-[var(--control-md)]"
           />
         ) : null}
       </div>
@@ -162,7 +163,13 @@ function ScrollStep({
   side,
   disabled = false,
   onStep,
-}: Readonly<{ side: 'start' | 'end'; disabled?: boolean; onStep: () => void }>) {
+  className,
+}: Readonly<{
+  side: 'start' | 'end';
+  disabled?: boolean;
+  onStep: () => void;
+  className?: string;
+}>) {
   const Glyph = side === 'start' ? ChevronLeft : ChevronRight;
   return (
     <button
@@ -172,7 +179,10 @@ function ScrollStep({
       data-scroll-step={side}
       aria-label={side === 'start' ? 'Scroll back' : 'Scroll forward'}
       onClick={onStep}
-      className="text-ink-2 hover:text-ink hover:overlay-hover rounded-control grid min-h-6 min-w-6 shrink-0 place-items-center transition-colors duration-[var(--motion-fast)] disabled:opacity-60"
+      className={cn(
+        'text-ink-2 hover:text-ink hover:overlay-hover rounded-control grid min-h-6 min-w-6 shrink-0 place-items-center transition-colors duration-[var(--motion-fast)] disabled:opacity-60',
+        className,
+      )}
     >
       <Glyph className="size-4" aria-hidden />
     </button>

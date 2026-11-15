@@ -75,6 +75,7 @@ colors:
   brand-google-yellow: '#fbbc05' # dark '#fbbc05'
   chart-grid: '#ececec' # dark '#262626'
   chrome: '#f4f4f4' # dark '#0a0a0a'
+  control-edge: '#e5e5e5' # dark '#2a2a2a'
   control-line: '#858585' # dark '#747474'
   data-1: '#e8501a' # dark '#ff6a33'
   data-2: '#111111' # dark '#f4f4f4'
