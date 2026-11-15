@@ -1,9 +1,10 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { KeyRound } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { z } from 'zod';
 
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -16,18 +17,24 @@ import { Stack } from '@/components/ui/layout';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { TagGroup } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
-import type { ApiKey, ApiKeyCreated, ApiKeyScope } from '@citeladder/contracts/api-keys';
+import type {
+  ApiKey,
+  ApiKeyCreated,
+  ApiKeyList,
+  ApiKeyScope,
+} from '@citeladder/contracts/api-keys';
 import { apiKeyMutations, apiKeyQueries } from '@/lib/api/api-keys';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { endOfDayInZone, useDisplayTimeZone } from '@/lib/display-timezone';
 import { API_HOST_ORIGIN } from '@/lib/config/api-host';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
+import { TextLink } from '@/components/ui/text-link';
 
 const API_BASE_URL = `${API_HOST_ORIGIN}/v1`;
 
@@ -91,9 +98,7 @@ function KeyRow({
       </TableCell>
       <TableActionsCell>
         {apiKey.state === 'active' ? (
-          <Button variant="secondary" onClick={onRevoke}>
-            Revoke
-          </Button>
+          <ActionButton action="revoke" aria-label={`Revoke ${apiKey.name}`} onClick={onRevoke} />
         ) : null}
       </TableActionsCell>
     </TableRow>
@@ -101,11 +106,11 @@ function KeyRow({
 }
 
 const KEY_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'key', label: 'Key' },
-  { key: 'scopes', label: 'Access', width: 'name' },
-  { key: 'projects', label: 'Projects', width: 'status' },
-  { key: 'used', label: 'Last used', width: 'date' },
-  { key: 'revoke', label: 'Revoke', width: 'action', trailing: true, hideLabel: true },
+  { key: 'key', label: 'Key', kind: 'identity' },
+  { key: 'scopes', label: 'Access', kind: 'text', width: 'name' },
+  { key: 'projects', label: 'Projects', kind: 'text', width: 'status' },
+  { key: 'used', label: 'Last used', kind: 'date' },
+  { key: 'revoke', label: 'Revoke', kind: 'actions', width: 'action', hideLabel: true },
 ];
 
 function CreateKeyDialog({
@@ -271,11 +276,72 @@ function keysToolbar({
   return {
     status: `${live} of ${limit ?? 0} keys in use`,
     actions: (
-      <Button variant="primary" onClick={onCreate} disabled={limit !== null && live >= limit}>
+      <Button variant="secondary" onClick={onCreate} disabled={limit !== null && live >= limit}>
         Create key
       </Button>
     ),
   };
+}
+
+/** The plan note and the key table, or the read's loading or failure in their place. */
+function ApiKeysBody({
+  query,
+  workspaceId,
+  projectNames,
+  onCreate,
+  onRevoke,
+}: Readonly<{
+  query: UseQueryResult<ApiKeyList>;
+  workspaceId: string;
+  projectNames: ReadonlyMap<string, string>;
+  onCreate: () => void;
+  onRevoke: (key: ApiKey) => void;
+}>) {
+  if (query.isPending) return <StateBlock kind="loading" label="Loading API keys…" />;
+  if (query.isError)
+    return (
+      <StateBlock
+        kind="error"
+        title="Couldn't load API keys"
+        fallback="API keys could not be loaded."
+        {...readErrorProps(query)}
+      />
+    );
+  const { available, limit, keys } = query.data;
+  const live = keys.filter((key) => key.state === 'active').length;
+  return (
+    <Stack gap="workspace">
+      {available ? null : (
+        <Notice tone="info">
+          The REST API is included in paid plans.{' '}
+          <TextLink asChild>
+            <Link to={workspaceDestination('/billing', null, workspaceId)}>Choose a plan</Link>
+          </TextLink>
+        </Notice>
+      )}
+      {keys.length === 0 && !available ? null : (
+        <DataTable
+          label="API keys"
+          toolbar={available ? keysToolbar({ live, limit, onCreate }) : undefined}
+          columns={KEY_COLUMNS}
+          state={
+            keys.length === 0
+              ? { kind: 'empty', icon: KeyRound, heading: 'No API keys yet' }
+              : undefined
+          }
+        >
+          {keys.map((key) => (
+            <KeyRow
+              key={key.id}
+              apiKey={key}
+              projectNames={projectNames}
+              onRevoke={() => onRevoke(key)}
+            />
+          ))}
+        </DataTable>
+      )}
+    </Stack>
+  );
 }
 
 export function ApiKeys() {
@@ -285,71 +351,26 @@ export function ApiKeys() {
   const [pending, setPending] = useState<ApiKey | null>(null);
   const query = useQuery({ ...apiKeyQueries.list(workspaceId), enabled: workspaceId !== '' });
   const revoke = useMutation(apiKeyMutations.revoke(workspaceId));
-  if (query.isPending) return <StateBlock kind="loading" label="Loading API keys…" />;
-  if (query.isError)
-    return (
-      <Notice
-        kind="read"
-        error={query.error}
-        fallback="API keys could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
-  const { available, limit, keys } = query.data;
-  const live = keys.filter((key) => key.state === 'active').length;
   const projectNames = new Map(projects.map((project) => [project.id, project.name]));
 
   return (
-    <Stack gap="section">
-      <Stack as="section" gap="compact">
-        <EditorialSectionHeader
-          title="API keys"
-          description={`Call the REST API at ${API_BASE_URL} from your own code.`}
+    <>
+      <Section>
+        <SectionHeader>
+          <SectionTitle>API keys</SectionTitle>
+          <SectionDescription>{`Call the REST API at ${API_BASE_URL} from your own code.`}</SectionDescription>
+        </SectionHeader>
+        <ApiKeysBody
+          query={query}
+          workspaceId={workspaceId}
+          projectNames={projectNames}
+          onCreate={() => setCreating(true)}
+          onRevoke={(key) => {
+            revoke.reset();
+            setPending(key);
+          }}
         />
-        {available ? null : (
-          <Notice tone="info">
-            The REST API is included in paid plans.{' '}
-            <Link
-              to={workspaceDestination('/billing', null, workspaceId)}
-              className="underline underline-offset-2"
-            >
-              Choose a plan
-            </Link>
-          </Notice>
-        )}
-      </Stack>
-      {keys.length === 0 && !available ? null : (
-        <DataTable
-          title="Keys"
-          toolbar={
-            available ? keysToolbar({ live, limit, onCreate: () => setCreating(true) }) : undefined
-          }
-          columns={KEY_COLUMNS}
-          state={
-            keys.length === 0
-              ? {
-                  kind: 'empty',
-                  icon: KeyRound,
-                  headingLevel: 3,
-                  heading: 'No API keys yet',
-                }
-              : undefined
-          }
-        >
-          {keys.map((key) => (
-            <KeyRow
-              key={key.id}
-              apiKey={key}
-              projectNames={projectNames}
-              onRevoke={() => {
-                revoke.reset();
-                setPending(key);
-              }}
-            />
-          ))}
-        </DataTable>
-      )}
+      </Section>
       <CreateKeyDialog
         open={creating}
         workspaceId={workspaceId}
@@ -378,6 +399,6 @@ export function ApiKeys() {
           }
         }
       />
-    </Stack>
+    </>
   );
 }

@@ -122,7 +122,7 @@ function BusinessMapBody({
           gap="compact"
           className={wellClasses()}
         >
-          <h4 className={textRole('subheading')}>{map.offering}</h4>
+          <h3 className={textRole('subheading')}>{map.offering}</h3>
           <FactList
             layout="ruled"
             facts={[

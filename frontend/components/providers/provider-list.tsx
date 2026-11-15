@@ -7,7 +7,6 @@ import { buildEngineCards, buildProviderGroups, transportForEngine } from '@/lib
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 import { ProviderRow } from './provider-row';
-import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -36,8 +35,9 @@ export function ProviderList({
 
   if (catalogQuery.isError || connectionsQuery.isError) {
     return (
-      <Notice
-        kind="read"
+      <StateBlock
+        kind="error"
+        title="Couldn't load providers"
         error={catalogQuery.error ?? connectionsQuery.error}
         fallback="Could not load providers. Check your connection and try again."
         onRetry={() => {
@@ -49,7 +49,7 @@ export function ProviderList({
     );
   }
   if (catalogQuery.isLoading || connectionsQuery.isLoading) {
-    return <StateBlock kind="loading" />;
+    return <StateBlock kind="loading" label="Loading providers…" />;
   }
 
   const groups = buildProviderGroups(

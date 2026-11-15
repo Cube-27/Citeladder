@@ -1,5 +1,5 @@
 import { renderWithProviders as render } from '@/test/render';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -28,6 +28,8 @@ vi.mock('@/lib/api/workspaces', async (importOriginal) => {
   Object.assign(actual.workspacesApi, { acceptInvitation });
   return actual;
 });
+
+import { ApiError } from '@/lib/api/errors';
 
 import { AcceptInvitationScreen } from './accept-invitation-screen';
 
@@ -64,13 +66,19 @@ describe('AcceptInvitationScreen', () => {
     expect(screen.getByText(/missing its invitation token/i)).toBeInTheDocument();
   });
 
-  it('reports a refused invitation without saying which refusal it was', async () => {
-    acceptInvitation.mockRejectedValue(new Error('invitation_invalid'));
+  it('reports a refused invitation in a sentence, with its code only as the reference', async () => {
+    acceptInvitation.mockRejectedValue(
+      new ApiError('invitation_invalid', 400, '', 'req-1', {
+        code: 'workspace_invitation_invalid',
+      }),
+    );
     renderInvitation();
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /go to your workspace/i })).toBeInTheDocument(),
-    );
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByText("This invitation can't be used")).toBeInTheDocument();
+    expect(within(alert).getByText('workspace_invitation_invalid · req-1')).toBeInTheDocument();
+    expect(within(alert).queryByText('invitation_invalid')).toBeNull();
+    expect(within(alert).getByRole('button', { name: 'Go to your workspace' })).toBeVisible();
     expect(selectWorkspace).not.toHaveBeenCalled();
   });
 });

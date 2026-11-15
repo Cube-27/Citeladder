@@ -5,13 +5,14 @@ import { authFormPolicy, passwordHint } from '@/lib/config/auth';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { restartAt } from '@/lib/auth/account-transition';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { PasswordField } from '@/components/ui/password-field';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
 import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
@@ -41,18 +42,15 @@ function SignInSection({
   return (
     <Section aria-labelledby="settings-sign-in-title">
       <SectionHeader>
-        <SectionTitle id="settings-sign-in-title" level={2}>
-          Sign-in
-        </SectionTitle>
+        <SectionTitle id="settings-sign-in-title">Sign-in</SectionTitle>
         <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
       </SectionHeader>
       <Stack gap="item">
-        {security.isPending && (
-          <p className={textRole('body', 'text-ink-2')}>Loading account security…</p>
-        )}
+        {security.isPending && <StateBlock kind="loading" label="Loading sign-in methods…" />}
         {security.isError && (
           <Notice
             kind="read"
+            title="Couldn't load your sign-in methods"
             fallback="Account security could not be loaded."
             {...readErrorProps(security)}
           />
@@ -109,9 +107,7 @@ export default function AccountSecurity() {
       <SignInSection security={security} />
       <Section aria-labelledby="settings-password-title">
         <SectionHeader>
-          <SectionTitle id="settings-password-title" level={2}>
-            Password
-          </SectionTitle>
+          <SectionTitle id="settings-password-title">Password</SectionTitle>
           <SectionDescription>
             {canLinkGoogle
               ? 'Changing it signs you out everywhere. To connect Google, enter your current password, then choose Connect Google.'
@@ -123,7 +119,6 @@ export default function AccountSecurity() {
             <Stack
               as="form"
               gap="workspace"
-              className="max-w-md"
               onSubmit={(event) => {
                 event.preventDefault();
                 mutation.mutate('change-password');
@@ -152,30 +147,29 @@ export default function AccountSecurity() {
                 }}
               />
               <Inline className="flex-wrap">
+                {canLinkGoogle && (
+                  <ActionButton
+                    action="connectGoogle"
+                    type="button"
+                    disabled={!current || link.isPending}
+                    onClick={() => link.mutate()}
+                  />
+                )}
                 <Button type="submit" variant="primary" disabled={mutation.isPending}>
                   Change password and sign out
                 </Button>
-                {canLinkGoogle && (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={!current || link.isPending}
-                    onClick={() => link.mutate()}
-                  >
-                    Connect Google
-                  </Button>
-                )}
               </Inline>
             </Stack>
           ) : (
-            <Button
-              variant="primary"
-              className="w-fit"
-              disabled={!security.data || setup.isPending}
-              onClick={() => setup.mutate()}
-            >
-              Email password setup link
-            </Button>
+            <Inline>
+              <Button
+                variant="secondary"
+                disabled={!security.data || setup.isPending}
+                onClick={() => setup.mutate()}
+              >
+                Email password setup link
+              </Button>
+            </Inline>
           )}
           {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
           <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
@@ -183,9 +177,7 @@ export default function AccountSecurity() {
       </Section>
       <Section aria-labelledby="settings-sessions-title">
         <SectionHeader>
-          <SectionTitle id="settings-sessions-title" level={2}>
-            Sessions
-          </SectionTitle>
+          <SectionTitle id="settings-sessions-title">Sessions</SectionTitle>
           <SectionDescription>Sign out every device, including this one.</SectionDescription>
         </SectionHeader>
         <Stack gap="item">

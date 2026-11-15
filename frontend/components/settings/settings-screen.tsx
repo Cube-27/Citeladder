@@ -32,13 +32,7 @@ import { IdentityRow } from '@/components/ui/workspace';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
-import {
-  Section,
-  SectionHeader,
-  SectionTitle,
-  SectionDescription,
-  SectionStack,
-} from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
 import { Stack } from '@/components/ui/layout';
 
 const SETTINGS_TABS = [
@@ -108,9 +102,7 @@ function ProjectDeletionControls() {
     <>
       <Section aria-labelledby="settings-danger-zone-title">
         <SectionHeader>
-          <SectionTitle id="settings-danger-zone-title" level={2}>
-            Danger zone
-          </SectionTitle>
+          <SectionTitle id="settings-danger-zone-title">Danger zone</SectionTitle>
           <SectionDescription>
             Permanently delete the active project and everything inside it.
           </SectionDescription>
@@ -243,44 +235,39 @@ export function SettingsScreen() {
         }
       >
         <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
-          {/* One card per section, the danger zone last. */}
-          <SectionStack>
-            <Section aria-labelledby="settings-profile-title">
-              <SectionHeader>
-                <SectionTitle id="settings-profile-title" level={2}>
-                  Profile
-                </SectionTitle>
-                <SectionDescription>Your sign-in email and workspace role.</SectionDescription>
-              </SectionHeader>
-              <Stack gap="item">
-                <IdentityRow
-                  media={<Avatar name={user.email} placement="profile" />}
-                  title={<div className={textRole('body', 'truncate')}>{user.email}</div>}
-                  caption={
-                    activeWorkspace ? (
-                      <div className="type-body text-ink-2">
-                        {activeWorkspace.role === 'owner'
-                          ? `Owner of ${activeWorkspace.name}`
-                          : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
-                      </div>
-                    ) : null
-                  }
+          <Section aria-labelledby="settings-profile-title">
+            <SectionHeader>
+              <SectionTitle id="settings-profile-title">Profile</SectionTitle>
+              <SectionDescription>Your sign-in email and workspace role.</SectionDescription>
+            </SectionHeader>
+            <Stack gap="item">
+              <IdentityRow
+                media={<Avatar name={user.email} placement="profile" />}
+                title={<div className={textRole('body', 'truncate')}>{user.email}</div>}
+                caption={
+                  activeWorkspace ? (
+                    <div className="type-body text-ink-2">
+                      {activeWorkspace.role === 'owner'
+                        ? `Owner of ${activeWorkspace.name}`
+                        : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
+                    </div>
+                  ) : null
+                }
+              />
+              {createdLabel || updatedLabel ? (
+                <FactList
+                  layout="ruled"
+                  facts={[
+                    ...(createdLabel ? [{ label: 'Account created', value: createdLabel }] : []),
+                    ...(updatedLabel ? [{ label: 'Last updated', value: updatedLabel }] : []),
+                  ]}
                 />
-                {createdLabel || updatedLabel ? (
-                  <FactList
-                    layout="ruled"
-                    facts={[
-                      ...(createdLabel ? [{ label: 'Account created', value: createdLabel }] : []),
-                      ...(updatedLabel ? [{ label: 'Last updated', value: updatedLabel }] : []),
-                    ]}
-                  />
-                ) : null}
-              </Stack>
-            </Section>
-            <TimeZoneSetting />
-            <AccountSecurity />
-            <ProjectDeletionControls />
-          </SectionStack>
+              ) : null}
+            </Stack>
+          </Section>
+          <TimeZoneSetting />
+          <AccountSecurity />
+          <ProjectDeletionControls />
         </TabPanel>
 
         <TabPanel value="workspace" forceMount className="focus-ring data-[state=inactive]:hidden">

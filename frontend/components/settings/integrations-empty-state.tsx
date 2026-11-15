@@ -1,3 +1,4 @@
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { integrationsApi } from '@/lib/api/integrations';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
@@ -30,12 +31,10 @@ export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: 
               >
                 Connect Bing
               </Button>
-              <Button
-                variant="primary"
+              <ActionButton
+                action="connectGoogle"
                 onClick={() => hardNavigate(integrationsApi.oauthStartUrl('gsc', workspaceId))}
-              >
-                Connect Google
-              </Button>
+              />
             </>
           ) : undefined
         }

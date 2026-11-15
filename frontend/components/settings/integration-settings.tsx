@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
 import { CrawlLogConnections } from '@/components/ai-traffic/crawl-log-connections';
-import { Stack } from '@/components/ui/layout';
 import { GRANT_FAMILY, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
 import { IntegrationCardView } from '@/components/settings/integration-card-view';
 import { IntegrationsEmptyState } from '@/components/settings/integrations-empty-state';
@@ -15,6 +14,7 @@ import {
 import { oauthErrorMessage } from '@/components/integrations/data-sources';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { Notice } from '@/components/ui/notice';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 
 /** Display order of connection sub-rows inside a grant card (gsc before ga4). */
@@ -142,45 +142,49 @@ export function IntegrationSettings() {
   const connections = connectionsQuery.data ?? [];
   const grants = groupIntoGrants(connections);
 
-  if (!workspaceId) return <Notice tone="info">Loading your workspace…</Notice>;
+  if (!workspaceId) return <StateBlock kind="loading" label="Loading your workspace…" />;
 
+  const settled = !connectionsQuery.isLoading && !connectionsQuery.isError;
   return (
-    <Stack gap="workspace">
+    <>
       <CallbackNotice notice={notice} />
-
-      {connectionsQuery.isError ? (
-        <Notice
-          kind="read"
-          error={connectionsQuery.error}
-          fallback="Could not load integrations. Check your connection and try again."
-          onRetry={() => void connectionsQuery.refetch()}
-          pending={connectionsQuery.isFetching}
-        />
-      ) : null}
-
-      {connectionsQuery.isLoading ? (
-        <StateBlock kind="loading" label="Loading integrations…" />
-      ) : null}
-
-      {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length === 0 ? (
+      {settled ? null : (
+        <Section>
+          <SectionHeader>
+            <SectionTitle>Search and analytics</SectionTitle>
+            <SectionDescription>
+              Google Search Console, Analytics 4 and Bing Webmaster Tools.
+            </SectionDescription>
+          </SectionHeader>
+          {connectionsQuery.isError ? (
+            <StateBlock
+              kind="error"
+              title="Couldn't load integrations"
+              error={connectionsQuery.error}
+              fallback="Could not load integrations. Check your connection and try again."
+              onRetry={() => void connectionsQuery.refetch()}
+              pending={connectionsQuery.isFetching}
+            />
+          ) : (
+            <StateBlock kind="loading" label="Loading integrations…" />
+          )}
+        </Section>
+      )}
+      {settled && connections.length === 0 ? (
         <IntegrationsEmptyState workspaceId={workspaceId} />
       ) : null}
-
-      {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length > 0 ? (
-        // One column, one card per grant: a Google card holds two connections
-        // and a Bing card one, so side by side they never share a height.
-        <Stack gap="workspace">
-          {FAMILY_ORDER.map((family) => (
+      {/* One section per grant: a Google grant holds two connections, a Bing grant one. */}
+      {settled && connections.length > 0
+        ? FAMILY_ORDER.map((family) => (
             <IntegrationCardView
               workspaceId={workspaceId}
               key={family}
               family={family}
               grant={grants.find((grant) => grant.family === family) ?? null}
             />
-          ))}
-        </Stack>
-      ) : null}
+          ))
+        : null}
       <CrawlLogConnections />
-    </Stack>
+    </>
   );
 }

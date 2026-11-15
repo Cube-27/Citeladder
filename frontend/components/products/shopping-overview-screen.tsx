@@ -1,7 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
 import { ReportPage } from '@/components/templates/report-page';
+import { Button } from '@/components/ui/button';
 import { FilterBar } from '@/components/ui/filter-bar';
+import { ProjectLink } from '@/components/ui/project-link';
 import { AppGrid } from '@/components/ui/app-grid';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -446,6 +448,12 @@ export function ShoppingOverviewScreen() {
   });
   return (
     <ReportPage
+      actions={
+        // Shopping reads the catalog; what to do next lives on Products.
+        <Button asChild variant="secondary">
+          <ProjectLink href="/products">Open Products</ProjectLink>
+        </Button>
+      }
       filters={
         <FilterBar
           filters={[
