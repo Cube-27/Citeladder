@@ -71,6 +71,37 @@ describe('Focus that did not come from the keyboard', () => {
     expect(await screen.findByRole('tooltip')).toHaveTextContent('Switch to light theme');
   });
 
+  it('quiets a field an overlay focused or a press entered; a Tab into it rings', async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <input aria-label="Page field" />
+        <dialog open aria-label="Invite">
+          <input aria-label="Email" />
+          <button type="button">Send</button>
+        </dialog>
+      </>,
+    );
+    const email = screen.getByRole('textbox', { name: 'Email' });
+    const page = screen.getByRole('textbox', { name: 'Page field' });
+    const quiet = (field: HTMLElement) => field.hasAttribute('data-quiet-focus');
+
+    // Ctrl+K opens the palette, which focuses its field: a shortcut, not a Tab.
+    await user.keyboard('{Control>}k{/Control}');
+    act(() => email.focus());
+    expect(quiet(email)).toBe(true);
+
+    await user.tab();
+    await user.tab({ shift: true });
+    expect([email, quiet(email)]).toEqual([document.activeElement, false]);
+    await user.click(email);
+    expect(quiet(email)).toBe(true);
+
+    // A press into a page field keeps its ring; only an overlay's field is quiet.
+    await user.click(page);
+    expect([quiet(page), quiet(email)]).toEqual([false, false]);
+  });
+
   it('keeps the tooltip closed when the browser restores focus on returning to the tab', async () => {
     const user = userEvent.setup();
     render(<TwoButtons />);

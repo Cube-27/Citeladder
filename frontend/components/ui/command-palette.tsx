@@ -11,7 +11,7 @@ import {
   scopedNavigationDestination,
   useSelectProject,
 } from '@/lib/navigation/project-destination';
-import { SCRIM } from '@/components/ui/dialog';
+import { returnTargetFor, SCRIM } from '@/components/ui/dialog';
 import { pluralCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
@@ -108,9 +108,9 @@ export function CommandPalette({
   const restoreFocus = useCallback(() => {
     const target = returnFocusTo.current;
     returnFocusTo.current = null;
-    // The element may have unmounted while the palette was open — switching
-    // project re-renders the shell — so check it is still in the document.
-    if (target?.isConnected) target.focus();
+    // The element may have unmounted while the palette was open (switching
+    // project re-renders the shell), or be folded behind More.
+    returnTargetFor(target)?.focus();
   }, []);
 
   // Opening resets the palette. Done in the handler, not an effect — the reset
@@ -284,8 +284,9 @@ export function CommandPalette({
           )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
-          {/* The search row is the dialog's header; it draws the field's
-              focus ring (globals.css, `palette-field`). */}
+          {/* The search row is the dialog's header. It opens with the caret
+              only and draws the ring when Tab returns to the field
+              (globals.css, `palette-field`). */}
           <div className="palette-field border-rule text-ink-2 flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-4 shrink-0" aria-hidden />
             <input

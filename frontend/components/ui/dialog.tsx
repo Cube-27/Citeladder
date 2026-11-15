@@ -21,15 +21,37 @@ function opener(active: Element | null) {
   return (id && document.getElementById(id)) || active;
 }
 
+const FIELD =
+  'input:not([type=hidden], [type=checkbox], [type=radio], [type=button], [type=submit], [type=reset]), textarea, select';
+const CONTROL =
+  'input:not([type=hidden]), textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])';
+
+/**
+ * The body's first control when it is a text field: it takes focus on open
+ * with the caret only (input-modality.ts). Any other first control (a choice
+ * whose focus means something) leaves Radix's default.
+ */
+function leadingField(content: EventTarget | null): HTMLElement | null {
+  if (!(content instanceof HTMLElement)) return null;
+  const first = [
+    ...(content.querySelector('[data-dialog-body]')?.querySelectorAll<HTMLElement>(CONTROL) ?? []),
+  ].find((node) => !node.matches(':disabled'));
+  return first?.matches(FIELD) ? first : null;
+}
 const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
 
 /**
  * Where focus goes back to: the opener while it shows, else the visible
- * control that expands the region hiding it (the masthead's More
- * button for an action folded into its panel).
+ * control that folds or expands the region hiding it (the masthead's More
+ * button, named by `data-folded-by`, for an action folded behind it).
  */
-function returnTargetFor(node: HTMLElement | null) {
+export function returnTargetFor(node: HTMLElement | null) {
   if (!node?.isConnected || shown(node)) return node?.isConnected ? node : null;
+  const folder = node.closest<HTMLElement>('[data-folded-by]')?.dataset.foldedBy;
+  const more = folder
+    ? document.querySelector<HTMLElement>(`[data-folds="${CSS.escape(folder)}"]`)
+    : null;
+  if (more && shown(more)) return more;
   const controls = [...document.querySelectorAll<HTMLElement>('[aria-controls]')].filter(shown);
   for (let region = node.parentElement; region; region = region.parentElement) {
     const { id } = region;
@@ -104,8 +126,8 @@ function DialogHeader({
  * Header, body and footer are divided by hairlines. `tone="danger"` is a
  * confirmation: an `alertdialog`, 480px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.
- * Focus opens on the first tabbable element unless `initialFocusRef` is set,
- * and returns to the opener on close.
+ * Focus opens on `initialFocusRef`, else the body's first control when it is
+ * a text field, else the first tabbable element, and returns to the opener.
  */
 export function Dialog({
   open,
@@ -143,9 +165,10 @@ export function Dialog({
           role={danger ? 'alertdialog' : 'dialog'}
           {...(description ? {} : { 'aria-describedby': undefined })}
           onOpenAutoFocus={(event) => {
-            if (!initialFocusRef?.current) return;
+            const target = initialFocusRef?.current ?? leadingField(event.target);
+            if (!target) return;
             event.preventDefault();
-            initialFocusRef.current.focus();
+            target.focus();
           }}
           onCloseAutoFocus={returnFocus}
           className={cn(
@@ -171,7 +194,10 @@ export function Dialog({
             </DialogPrimitive.Close>
           )}
           {children == null ? null : (
-            <div className="text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain p-[var(--card-padding)]">
+            <div
+              data-dialog-body=""
+              className="text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain p-[var(--card-padding)]"
+            >
               {children}
             </div>
           )}

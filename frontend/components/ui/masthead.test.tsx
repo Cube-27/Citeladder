@@ -1,5 +1,6 @@
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
-import { describe, expect, it } from 'vite-plus/test';
+import { act, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { focusByKeyboard } from '@/test/keyboard-focus';
 import { emitResize } from '@/test/resize-observer';
@@ -7,6 +8,7 @@ import { emitResize } from '@/test/resize-observer';
 import { Button } from './button';
 import { Masthead } from './masthead';
 import { MastheadPrimary } from './masthead-actions';
+import { Menu, MenuContent, MenuItem, MenuTrigger } from './menu';
 
 function EmptyEnd() {
   return null;
@@ -31,6 +33,8 @@ describe('Masthead', () => {
   });
 
   it('keeps the primary action beside the title and folds the rest behind More', async () => {
+    const user = userEvent.setup();
+    let exported = 0;
     const { rerender } = render(
       <Masthead
         title="Website"
@@ -39,7 +43,7 @@ describe('Masthead', () => {
         actions={
           <>
             <Button>Crawl schedule</Button>
-            <Button>Export</Button>
+            <Button onClick={() => (exported += 1)}>Export</Button>
             <MastheadPrimary>
               <Button variant="primary">Run new crawl</Button>
             </MastheadPrimary>
@@ -48,25 +52,23 @@ describe('Masthead', () => {
       />,
     );
     const more = await screen.findByRole('button', { name: 'More' });
-    const group = document.getElementById(more.getAttribute('aria-controls') ?? '')!;
+    const menu = await openMore(user, more);
     expect(
-      within(group)
-        .getAllByRole('button')
-        .map((button) => button.textContent),
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
     ).toEqual(['Search', 'Crawl schedule', 'Export', 'Ask agent']);
-    const primary = screen.getByRole('button', { name: 'Run new crawl' });
-    expect(group).not.toContainElement(primary);
-    expect(more).toHaveAttribute('aria-expanded', 'false');
+    expect(menu.querySelector('button')).toBeNull();
+    expect(within(menu).queryByRole('menuitem', { name: 'Run new crawl' })).toBeNull();
 
-    fireEvent.click(more);
-    expect(more).toHaveAttribute('aria-expanded', 'true');
-    fireEvent.keyDown(within(group).getByRole('button', { name: 'Export' }), { key: 'Escape' });
-    expect(more).toHaveAttribute('aria-expanded', 'false');
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('menu')).toBeNull();
     expect(more).toHaveFocus();
 
-    fireEvent.click(more);
-    fireEvent.click(within(group).getByRole('button', { name: 'Export' }));
-    expect(more).toHaveAttribute('aria-expanded', 'false');
+    // An item presses the folded control and closes the menu.
+    await user.click(within(await openMore(user, more)).getByRole('menuitem', { name: 'Export' }));
+    expect(exported).toBe(1);
+    expect(screen.queryByRole('menu')).toBeNull();
 
     // One control has nothing to fold: it stays in the row. An end that drew
     // nothing (no "Ask agent" on an Agent page) is not counted.
@@ -74,4 +76,54 @@ describe('Masthead', () => {
     expect(await screen.findByRole('button', { name: 'Export' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
   });
+
+  it('offers a folded menu as a submenu and, in a row too full, the primary first', async () => {
+    const user = userEvent.setup();
+    let edited = 0;
+    render(
+      <Masthead
+        title="Overview"
+        search={<Button>Search</Button>}
+        actions={
+          <>
+            <Menu>
+              <MenuTrigger asChild>
+                <Button>Manage project</Button>
+              </MenuTrigger>
+              <MenuContent>
+                <MenuItem onSelect={() => (edited += 1)}>Edit active project</MenuItem>
+              </MenuContent>
+            </Menu>
+            <MastheadPrimary>
+              <Button variant="primary">Run Website crawl</Button>
+            </MastheadPrimary>
+          </>
+        }
+      />,
+    );
+    // The row lacks 120px however much folds, so the primary folds too.
+    const header = document.querySelector<HTMLElement>('[data-masthead]')!;
+    const end = document.querySelector<HTMLElement>('[data-masthead-end]')!;
+    vi.spyOn(end, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 520, 56));
+    vi.spyOn(header, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 56));
+    for (let step = 0; step < 2; step += 1) act(() => emitResize(header));
+
+    const menu = await openMore(user, await screen.findByRole('button', { name: 'More' }));
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Run Website crawl', 'Search', 'Manage project']);
+    const manage = within(menu).getByRole('menuitem', { name: 'Manage project' });
+    expect(manage).toHaveAttribute('aria-haspopup', 'menu');
+    act(() => manage.focus());
+    await user.keyboard('{ArrowRight}');
+    await user.click(await screen.findByRole('menuitem', { name: 'Edit active project' }));
+    expect(edited).toBe(1);
+  });
 });
+
+async function openMore(user: ReturnType<typeof userEvent.setup>, more: HTMLElement) {
+  await user.click(more);
+  return screen.findByRole('menu');
+}

@@ -1,19 +1,18 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useEffectEvent,
-  useId,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useId, useState, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { MoreHorizontal } from 'lucide-react';
 
 import { IconButton } from '@/components/ui/button';
-import { MENU_PANEL } from '@/components/ui/menu';
-import { cn } from '@/lib/utils';
+import {
+  Menu,
+  MenuContent,
+  MenuFold,
+  MenuItem,
+  MenuNested,
+  MenuSub,
+  MenuSubTrigger,
+  MenuTrigger,
+} from '@/components/ui/menu';
 
 /**
  * Where a masthead draws its one primary action: `undefined` outside a
@@ -33,106 +32,269 @@ export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>)
   return slot ? createPortal(children, slot) : null;
 }
 
-/** Popups a folded action opens are portaled outside the panel; pressing in them keeps it open. */
-const POPUP_LAYER = '[data-radix-popper-content-wrapper], [role="dialog"], [role="alertdialog"]';
+/** One row of More: a folded control it presses, or a folded menu it opens as a submenu. */
+type FoldedEntry = Readonly<{
+  key: string;
+  label: string;
+  icon: Element | null;
+  disabled: boolean;
+  reason: string | null;
+  run:
+    | Readonly<{ kind: 'press'; control: HTMLElement }>
+    | Readonly<{ kind: 'menu'; items: ReactNode }>;
+}>;
 
 /**
  * The masthead's controls other than the primary (search, secondary actions,
  * "Ask agent"). In a wide masthead they sit in the row. Below `rail`, two or
- * more, or one beside the primary, fold behind one button named "More" into
- * a panel under the masthead, rendered once
- * and kept mounted, so their dialogs and state survive it closing. Escape, a
- * press outside or a finished action closes it; Escape returns focus to the
- * button.
+ * more, or one beside the primary, fold behind one "More" menu; a row too
+ * full for its controls folds them at any width, then the primary too, as
+ * More's first item, so no label is ever cut. The controls stay mounted
+ * (hidden) so their dialogs and state survive; each More item presses its
+ * control, and a folded menu (Manage project) becomes a submenu.
  */
 export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>) {
-  const panelId = useId();
-  const [panel, setPanel] = useState<HTMLDivElement | null>(null);
-  const trigger = useRef<HTMLButtonElement>(null);
-  const [open, setOpen] = useState(false);
-  const secondary = useChildCount(panel);
-  const primary = useChildCount(useContext(MastheadPrimarySlot) ?? null);
-  // One secondary action alone stays in the row; beside another action or the primary, it folds.
-  const folds = secondary > 1 || (secondary === 1 && primary > 0);
-  const crowded = useCrowdedRow(
-    panel?.closest<HTMLElement>('[data-masthead]') ?? null,
-    secondary + primary,
-  );
-  const always = folds && crowded;
-  const close = useEffectEvent((event: Event) => {
-    if (!panel) return;
-    const outcome = overflowOutcome(event, panel, trigger.current);
-    if (outcome === 'stay') return;
-    setOpen(false);
-    if (outcome === 'refocus') trigger.current?.focus();
-  });
-  useEffect(() => {
-    if (!open) return;
-    const events = ['pointerdown', 'click', 'keydown'] as const;
-    for (const type of events) document.addEventListener(type, close);
-    return () => {
-      for (const type of events) document.removeEventListener(type, close);
-    };
-  }, [open]);
+  const [group, setGroup] = useState<HTMLDivElement | null>(null);
+  const [foldedSlot, setFoldedSlot] = useState<HTMLSpanElement | null>(null);
+  const [menus] = useState(() => new Map<string, ReactNode>());
+  const rowSlot = useContext(MastheadPrimarySlot) ?? null;
+  const fold = useFold({ group, rowSlot, foldedSlot });
+  // A folded control's overlay returns focus here (`returnTargetFor` in dialog.tsx).
+  const moreId = useId();
 
   return (
     <>
-      {folds ? (
-        <IconButton
-          ref={trigger}
-          icon={MoreHorizontal}
-          label="More"
-          variant="secondary"
-          aria-expanded={open}
-          aria-controls={panelId}
-          onClick={() => setOpen((current) => !current)}
-          className={always ? undefined : 'rail:hidden'}
+      {fold.more === 'none' ? null : (
+        <MoreMenu
+          id={moreId}
+          trigger={fold.more === 'always' ? undefined : 'rail:hidden'}
+          read={() => foldedEntries([foldedSlot, group], menus)}
         />
-      ) : null}
-      <div
-        ref={setPanel}
-        id={panelId}
-        data-masthead-overflow=""
-        data-open={open || undefined}
-        className={cn(
-          'flex min-w-0 items-center gap-2',
-          folds && MENU_PANEL,
-          folds &&
-            (always
-              ? 'absolute end-0 top-full hidden min-w-56 flex-col items-stretch data-open:flex'
-              : 'not-rail:absolute not-rail:end-0 not-rail:top-full not-rail:hidden not-rail:min-w-56 not-rail:flex-col not-rail:items-stretch not-rail:data-open:flex rail:contents'),
-        )}
-      >
-        {children}
-      </div>
+      )}
+      <span ref={setFoldedSlot} data-masthead-folded-primary="" data-folded-by={moreId} hidden />
+      <MastheadPrimarySlot.Provider value={fold.primary ? foldedSlot : rowSlot}>
+        <MenuFold.Provider value={menus}>
+          <div
+            ref={setGroup}
+            data-masthead-overflow=""
+            data-folded-by={moreId}
+            className={GROUP[fold.secondary]}
+          >
+            {children}
+          </div>
+        </MenuFold.Provider>
+      </MastheadPrimarySlot.Provider>
     </>
   );
 }
 
+/** Where the secondary controls are drawn: in the row, folded below `rail`, or folded. */
+const GROUP = {
+  row: 'contents',
+  belowRail: 'not-rail:hidden rail:contents',
+  folded: 'hidden',
+} as const;
+
 /**
- * Whether the masthead's one row overflows with every control in it (a wide
- * page's many actions). It stays folded until the row is as wide as it
- * needed, so folding never flips back and forth; new controls measure again.
+ * What has folded. One secondary action alone stays in the row; beside
+ * another action or the primary it folds below `rail`. A crowded row folds
+ * the secondary actions at any width, then the primary.
  */
-function useCrowdedRow(header: HTMLElement | null, controls: number) {
-  const [fold, setFold] = useState<Readonly<{ need: number; controls: number }> | null>(null);
-  const crowded = fold?.controls === controls;
+function useFold({
+  group,
+  rowSlot,
+  foldedSlot,
+}: Readonly<Record<'group' | 'rowSlot' | 'foldedSlot', HTMLElement | null>>) {
+  const secondary = useChildCount(group);
+  const primary = useChildCount(rowSlot) + useChildCount(foldedSlot);
+  const steps = Math.sign(secondary) + Math.sign(primary);
+  const stage = useFoldStage(
+    group?.closest<HTMLElement>('[data-masthead]') ?? null,
+    steps,
+    secondary * 10 + primary,
+  );
+  return foldOf({ secondary, primary, stage, steps });
+}
+
+function foldOf({
+  secondary,
+  primary,
+  stage,
+  steps,
+}: Readonly<Record<'secondary' | 'primary' | 'stage' | 'steps', number>>) {
+  const secondaryFolded = secondary > 0 && stage >= 1;
+  const primaryFolded = primary > 0 && stage >= steps;
+  const belowRail = secondary > 1 || (secondary === 1 && primary > 0);
+  const unfolded = belowRail ? 'belowRail' : null;
+  return {
+    primary: primaryFolded,
+    secondary: secondaryFolded ? 'folded' : (unfolded ?? 'row'),
+    more: secondaryFolded || primaryFolded ? 'always' : (unfolded ?? 'none'),
+  } as const;
+}
+
+/** The "More" menu, its rows read from the folded controls each time it opens. */
+function MoreMenu({
+  id,
+  trigger,
+  read,
+}: Readonly<{ id: string; trigger: string | undefined; read: () => FoldedEntry[] }>) {
+  const [entries, setEntries] = useState<readonly FoldedEntry[]>([]);
+  return (
+    <Menu
+      modal={false}
+      onOpenChange={(open) => {
+        if (open) setEntries(read());
+      }}
+    >
+      <MenuTrigger asChild>
+        <IconButton
+          data-folds={id}
+          icon={MoreHorizontal}
+          label="More"
+          variant="secondary"
+          className={trigger}
+        />
+      </MenuTrigger>
+      <MenuContent align="end">
+        {entries.map((entry) => (
+          <FoldedItem key={entry.key} entry={entry} />
+        ))}
+      </MenuContent>
+    </Menu>
+  );
+}
+
+function FoldedItem({ entry }: Readonly<{ entry: FoldedEntry }>) {
+  // An item without a glyph keeps the empty 16px lead, so every label aligns.
+  const icon = entry.icon ? <FoldedIcon glyph={entry.icon} /> : <span />;
+  if (entry.run.kind === 'menu') {
+    return (
+      <MenuSub>
+        <MenuSubTrigger icon={icon} disabled={entry.disabled}>
+          {entry.label}
+        </MenuSubTrigger>
+        <MenuNested.Provider value>{entry.run.items}</MenuNested.Provider>
+      </MenuSub>
+    );
+  }
+  const { control } = entry.run;
+  return (
+    <MenuItem
+      icon={icon}
+      disabled={entry.disabled}
+      className="data-[disabled]:text-ink-2"
+      onSelect={() => control.click()}
+    >
+      {entry.reason ? (
+        <span className="grid min-w-0">
+          <span>{entry.label}</span>
+          <span className="type-caption">{entry.reason}</span>
+        </span>
+      ) : (
+        entry.label
+      )}
+    </MenuItem>
+  );
+}
+
+/** The folded control's own 16px glyph, copied into its row. */
+function FoldedIcon({ glyph }: Readonly<{ glyph: Element }>) {
+  return <span className="contents" ref={(node) => node?.replaceChildren(glyph.cloneNode(true))} />;
+}
+
+const CONTROL = 'button, a[href], [data-menu-fold]';
+
+/** The folded controls in order (the folded primary first), read when More opens. */
+function foldedEntries(
+  boxes: readonly (HTMLElement | null)[],
+  menus: ReadonlyMap<string, ReactNode>,
+): FoldedEntry[] {
+  return boxes.flatMap((box) =>
+    box
+      ? [...box.querySelectorAll<HTMLElement>(CONTROL)]
+          .filter((node) => !node.parentElement?.closest(CONTROL))
+          .flatMap((node, index) =>
+            foldedEntry(node, menus, `${box.dataset.mastheadOverflow ?? 'p'}${index}`),
+          )
+      : [],
+  );
+}
+
+function foldedEntry(
+  node: HTMLElement,
+  menus: ReadonlyMap<string, ReactNode>,
+  key: string,
+): FoldedEntry[] {
+  const menuId = node.dataset.menuFold;
+  const control = menuId ? node.querySelector<HTMLElement>('button, a[href]') : node;
+  if (!control) return [];
+  const label = (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
+  if (!label) return [];
+  const items = menuId ? menus.get(menuId) : undefined;
+  return [
+    {
+      key,
+      label,
+      icon: leadGlyph(control),
+      ...availability(control),
+      run: items === undefined ? { kind: 'press', control } : { kind: 'menu', items },
+    },
+  ];
+}
+
+/** Whether the control is disabled and, if it says why (its description or title), why. */
+function availability(control: HTMLElement): Pick<FoldedEntry, 'disabled' | 'reason'> {
+  const disabled = control.matches(':disabled') || control.getAttribute('aria-disabled') === 'true';
+  if (!disabled) return { disabled, reason: null };
+  const described = control.getAttribute('aria-describedby');
+  const reason = described ? document.getElementById(described)?.textContent?.trim() : null;
+  return { disabled, reason: reason || control.getAttribute('title') };
+}
+
+/** The control's leading glyph: an icon before any text (never a trailing chevron). */
+function leadGlyph(control: HTMLElement): SVGElement | null {
+  const walker = document.createTreeWalker(control, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node instanceof SVGSVGElement) return node;
+    if (node.nodeType === Node.TEXT_NODE && node.textContent?.trim()) return null;
+  }
+  return null;
+}
+
+const UNFOLDED: readonly number[] = [];
+
+/**
+ * How much of the row has folded: 0 none, then the secondary controls, then
+ * the primary. It folds one step while the row overflows and unfolds a step
+ * only once the row is as wide as that step needed, so it never flips back
+ * and forth; a different set of controls measures again.
+ */
+function useFoldStage(header: HTMLElement | null, steps: number, controls: number) {
+  const [fold, setFold] = useState<Readonly<{ need: readonly number[]; controls: number }> | null>(
+    null,
+  );
+  const need = fold?.controls === controls ? fold.need : UNFOLDED;
+  const stage = need.length;
   useEffect(() => {
     if (!header) return;
     const measure = () => {
-      if (fold && crowded) {
-        if (header.clientWidth >= fold.need) setFold(null);
+      const last = need.at(-1);
+      if (last !== undefined && header.clientWidth >= last) {
+        setFold({ need: need.slice(0, -1), controls });
         return;
       }
       const deficit = rowDeficit(header);
-      if (deficit > 1) setFold({ need: header.clientWidth + deficit, controls });
+      if (deficit > 1 && stage < steps) {
+        setFold({ need: [...need, header.clientWidth + deficit], controls });
+      }
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(header);
     return () => observer.disconnect();
-  }, [header, controls, crowded, fold]);
-  return crowded;
+  }, [header, steps, controls, stage, need]);
+  return stage;
 }
 
 /** How many px the row lacks: the title squeezed under its minimum, plus controls past the edge. */
@@ -144,30 +306,6 @@ function rowDeficit(header: HTMLElement): number {
     header.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(header).paddingRight);
   const past = end ? Math.max(0, end.getBoundingClientRect().right - edge) : 0;
   return squeezed + past;
-}
-
-type OverflowOutcome = 'stay' | 'close' | 'refocus';
-
-/** What a document event does to the open panel: Escape inside it closes it and refocuses the button. */
-function overflowOutcome(
-  event: Event,
-  panel: HTMLElement,
-  button: HTMLElement | null,
-): OverflowOutcome {
-  const target = event.target;
-  if (!(target instanceof Element)) return 'stay';
-  const inside = panel.contains(target) || Boolean(button?.contains(target));
-  if (event instanceof KeyboardEvent) return event.key === 'Escape' && inside ? 'refocus' : 'stay';
-  if (event.type === 'click') return clickOutcome(target, panel);
-  return inside || target.closest(POPUP_LAYER) ? 'stay' : 'close';
-}
-
-/** A press that finishes an action closes the panel; one that opens a popup keeps it. */
-function clickOutcome(target: Element, panel: HTMLElement): OverflowOutcome {
-  const control = target.closest('button, a');
-  if (!control || !panel.contains(control)) return 'stay';
-  const opensPopup = control.hasAttribute('aria-haspopup') || control.hasAttribute('aria-expanded');
-  return opensPopup ? 'stay' : 'close';
 }
 
 /**

@@ -18,7 +18,7 @@ const BAR_LAYER =
   'before:bg-chrome before:border-rule before:absolute before:inset-y-0 before:-start-[var(--content-gutter)] before:-z-10 before:w-[calc(100cqw+2*var(--content-gutter))] before:border-b';
 
 /** A masthead control that keeps its text label wherever it is drawn (search, "Ask agent"). */
-export const MASTHEAD_LABELLED = 'min-w-0 justify-start';
+export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
 
 /**
  * Masthead: the head of every shell page, 56 tall on `chrome`, sticky with a
@@ -28,11 +28,12 @@ export const MASTHEAD_LABELLED = 'min-w-0 justify-start';
  * actions, its one primary action (`actions`, the primary inside
  * `MastheadPrimary`), then "Ask agent" (`end`), each with its text label.
  *
- * The title is one line from `rail` and up to two below it: a longer name is
- * cut with an ellipsis, and only then does it take keyboard focus and show
- * the full name in the tooltip. Its accessible name is always the full name.
- * Below `rail` the row is the menu button, the title, the primary and one
- * "More" menu holding the search, the secondary actions and "Ask agent".
+ * The title is one line: a longer name is cut with an ellipsis, and only then
+ * does it take keyboard focus and show the full name in the tooltip. Its
+ * accessible name is always the full name. Below `rail` the row is the menu
+ * button, the title, the primary and one "More" menu holding the search, the
+ * secondary actions and "Ask agent". A button label is never cut: a row too
+ * full folds its actions into More, the primary last.
  */
 export function Masthead({
   title,
@@ -78,19 +79,18 @@ export function Masthead({
             tabIndex={cut ? 0 : undefined}
             className={textRole(
               'title',
-              // It keeps 112px (below `rail`, its first words on two lines); a word longer
-              // than its share (a URL) is clipped. A row too full for it folds behind More.
-              cn(
-                'not-rail:w-0 not-rail:flex-1 not-rail:line-clamp-2 rail:truncate min-w-28 break-normal',
-                cut && 'focus-ring',
-              ),
+              // One line at every width, keeping 112px; a row too full for it folds behind More.
+              cn('not-rail:w-0 not-rail:flex-1 min-w-28 truncate', cut && 'focus-ring'),
             )}
           >
             {title}
           </h1>
         </Tooltip>
       </div>
-      <div data-masthead-end="" className="rail:shrink-0 flex min-w-0 items-center gap-2">
+      <div
+        data-masthead-end=""
+        className="flex shrink-0 items-center gap-2 [&_:is(button,a)]:shrink-0"
+      >
         {hasControls ? (
           <MastheadPrimarySlot value={primarySlot}>
             <MastheadOverflow>

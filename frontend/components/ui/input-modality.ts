@@ -18,12 +18,20 @@
  *
  * A shortcut (Ctrl, Alt or Meta held, as when switching tabs) is not keyboard
  * navigation and changes nothing.
+ *
+ * A text field the reader did not Tab into is `data-quiet-focus` until it
+ * blurs and draws no ring (globals.css): a field an overlay or an Edit action
+ * focuses on open, and a press into a dialog's field, show the caret only.
  */
 type InputModality = 'keyboard' | 'pointer';
 
 let modality: InputModality | null = null;
 /** True from a navigating key's press to its release: a focus now came from it. */
 let keyDown = false;
+/** True from a Tab's press to its release: the one key that moves focus into a field. */
+let tabDown = false;
+/** True from a press to its release: a field focused now was pressed into. */
+let pressed = false;
 /** True from the window losing focus until the reader's next key or press. */
 let away = false;
 let installed = false;
@@ -34,21 +42,53 @@ function set(next: InputModality) {
   document.documentElement.dataset.inputModality = next;
 }
 
+const TEXT_FIELD =
+  'input:not([type=button], [type=checkbox], [type=radio], [type=range], [type=reset], [type=submit]), textarea, select, [contenteditable]:not([contenteditable=false])';
+const OVERLAY = 'dialog, [role=dialog], [role=alertdialog]';
+
+function textField(target: EventTarget | null): HTMLElement | null {
+  return target instanceof HTMLElement && target.matches(TEXT_FIELD) ? target : null;
+}
+
 function onKeyDown(event: KeyboardEvent) {
   keyDown = !(event.ctrlKey || event.altKey || event.metaKey || event.key === 'Escape');
+  tabDown = keyDown && event.key === 'Tab';
+  // A trap with one stop (the palette's field) keeps focus where it is: Tab still rings it.
+  if (tabDown) delete textField(document.activeElement)?.dataset.quietFocus;
 }
 
 function onKeyUp() {
   keyDown = false;
+  tabDown = false;
 }
 
-function onFocusIn() {
+function onFocusIn(event: FocusEvent) {
   if (keyDown) set('keyboard');
+  const field = textField(event.target);
+  if (!field) return;
+  if (!tabDown && (!pressed || field.closest(OVERLAY))) field.dataset.quietFocus = '';
+  else delete field.dataset.quietFocus;
 }
 
-function onPointerDown() {
+function onFocusOut(event: FocusEvent) {
+  const field = textField(event.target);
+  if (field) delete field.dataset.quietFocus;
+}
+
+function onPointerDown(event: PointerEvent) {
   keyDown = false;
+  tabDown = false;
+  pressed = true;
   set('pointer');
+  // A press into a dialog's field that already has focus moves no focus.
+  const field = textField(event.target);
+  if (field && field === document.activeElement && field.closest(OVERLAY)) {
+    field.dataset.quietFocus = '';
+  }
+}
+
+function onPointerUp() {
+  pressed = false;
 }
 
 // An element's blur does not bubble, so a listener on the window (not in the
@@ -56,6 +96,8 @@ function onPointerDown() {
 function onWindowBlur() {
   away = true;
   keyDown = false;
+  tabDown = false;
+  pressed = false;
 }
 
 /** Starts tracking once, when this module first loads. */
@@ -68,6 +110,9 @@ function trackInputModality() {
   document.addEventListener('keyup', onKeyUp, true);
   document.addEventListener('focusin', onFocusIn, true);
   document.addEventListener('pointerdown', onPointerDown, true);
+  document.addEventListener('focusout', onFocusOut, true);
+  document.addEventListener('pointerup', onPointerUp, true);
+  document.addEventListener('pointercancel', onPointerUp, true);
   window.addEventListener('blur', onWindowBlur);
 }
 

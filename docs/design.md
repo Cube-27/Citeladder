@@ -227,7 +227,6 @@ spacing:
   container-thread: 1040px
   container-prose: 720px
   container-narrow: 560px
-  container-content: 1280px
   container-form: 640px
   container-flow: 480px
   control-sm: 28px
@@ -280,8 +279,8 @@ right and top to bottom. A control sits in the row of the thing it acts on:
 the filter bar when it scopes the page, a table's toolbar when it scopes one
 table, a section's head when it changes how that section draws.
 
-**Width.** Content caps at `container-content` (1280), left-aligned to the
-gutter; reading columns, forms and flows take `container-prose`,
+**Width.** Content fills the main column inside its gutter, so collapsing the
+sidebar grows it; reading columns, forms and flows take `container-prose`,
 `container-form` and `container-flow`. The template, not the page, picks.
 No page scrolls sideways down to 320px: a wide table scrolls inside its own
 frame with its first column pinned.

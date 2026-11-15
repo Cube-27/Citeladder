@@ -43,6 +43,27 @@ describe('Dialog', () => {
     );
   });
 
+  it('opens on a leading field with the caret only, never past a first choice', () => {
+    const { rerender } = render(
+      <Dialog open onOpenChange={() => {}} title="Invite member">
+        <input aria-label="Email" />
+        <input type="checkbox" aria-label="Admin" />
+      </Dialog>,
+    );
+    const email = screen.getByRole('textbox', { name: 'Email' });
+    expect([email, email.hasAttribute('data-quiet-focus')]).toEqual([document.activeElement, true]);
+
+    // A choice first (a range whose dates mean "Custom") keeps Radix's default.
+    rerender(<Dialog open={false} onOpenChange={() => {}} title="Invite member" />);
+    rerender(
+      <Dialog open onOpenChange={() => {}} title="Invite member">
+        <input type="checkbox" aria-label="Admin" />
+        <input aria-label="Email" />
+      </Dialog>,
+    );
+    expect(screen.getByRole('button', { name: 'Close dialog' })).toHaveFocus();
+  });
+
   it('restores focus to the control that opened it', async () => {
     const user = userEvent.setup();
 

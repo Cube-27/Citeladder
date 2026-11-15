@@ -224,8 +224,12 @@ for (const width of [1280, 390]) {
       );
       if (surface === 'panel') {
         // Below 900px the masthead folds "Ask agent" behind "More".
-        if (width < 900) await page.getByRole('button', { name: 'More', exact: true }).click();
-        await page.getByRole('button', { name: 'Ask agent' }).click();
+        if (width < 900) {
+          await page.getByRole('button', { name: 'More', exact: true }).click();
+          await page.getByRole('menuitem', { name: 'Ask agent' }).click();
+        } else {
+          await page.getByRole('button', { name: 'Ask agent' }).click();
+        }
         await page.getByLabel('Message the agent').fill('Discuss buyer needs');
         await page.getByRole('button', { name: 'Send', exact: true }).click();
       }
