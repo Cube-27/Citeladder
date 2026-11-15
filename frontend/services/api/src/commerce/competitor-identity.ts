@@ -68,12 +68,13 @@ export async function findOrCreateCandidate(
       .executeTakeFirst();
   const existing = await find(observedUrl);
   if (existing) return existing;
+  // Concurrent audit completions serialize new pending candidates on the
+  // owning project, identity lookup included, so two first sightings agree.
+  await lockCatalog(db, { workspaceId, projectId });
   // A product known under another target keeps its identity here, so the
   // Products read merges this target's record with it (one row per product).
   const known = await knownProduct(db, scope, observed.title, observedUrl);
   const url = known?.canonical_url ?? observedUrl;
-  // Concurrent audit completions serialize new pending candidates on the owning project.
-  await lockCatalog(db, { workspaceId, projectId });
   const raced = await find(url);
   if (raced) return raced;
   return db
