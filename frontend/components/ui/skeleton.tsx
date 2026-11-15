@@ -1,8 +1,12 @@
 import {
-  RowBlocks,
+  CardBlocks,
+  FigureBlocks,
+  ShapeBlocks,
   SkeletonBlock,
   SkeletonFrame,
+  TableBlocks,
   TEXT_WIDTHS,
+  type ChartHeight,
 } from '@/components/ui/skeleton-block';
 import { cn } from '@/lib/utils';
 
@@ -20,25 +24,17 @@ type SkeletonProps = Readonly<{
     | Readonly<{ variant: 'chart'; height?: ChartHeight }>
   );
 
-type ChartHeight = 'sm' | 'md' | 'lg';
-
-const CHART_HEIGHT: Record<ChartHeight, string> = {
-  sm: 'h-[var(--chart-height-sm)]',
-  md: 'h-[var(--chart-height-md)]',
-  lg: 'h-[var(--chart-height-lg)]',
-};
-
 /**
- * Skeleton — the shape of what is loading, made of `well` blocks (radius 6)
+ * Skeleton — the shape of what is loading, made of `well` blocks (radius 4)
  * on the real card: never lines. Each variant is shaped like what it stands
  * for, at its final size, so content arriving moves nothing by more than 8px.
  * A soft shimmer crosses the blocks; under reduced motion they are still.
  *
  *   `text`  — two or three blocks of unequal width.
  *   `table` — the real column count: a head row and `rows` rows (40).
- *   `stat`  — `count` stat cards: a label block over a value block.
+ *   `stat`  — `count` metric cards: a label block over a value block.
  *   `form`  — `fields` label and field blocks.
- *   `block` — a card body of `rows` list rows: a title block over a caption block.
+ *   `block` — a card body: a title block over `rows` text blocks.
  *   `chart` — one block at the chart's height.
  *
  * The blocks are drawing, not content: only the verb is announced, after a beat.
@@ -60,13 +56,13 @@ function SkeletonBody(props: SkeletonProps) {
     case 'table':
       return <TableBlocks columns={props.columns} rows={props.rows} head={props.head} />;
     case 'stat':
-      return <StatBlocks count={props.count} />;
+      return <FigureBlocks count={props.count ?? 4} />;
     case 'form':
       return <FormBlocks fields={props.fields} />;
     case 'block':
-      return <RowBlocks rows={props.rows} />;
+      return <CardBlocks lines={props.rows} />;
     case 'chart':
-      return <SkeletonBlock className={cn('w-full', CHART_HEIGHT[props.height ?? 'md'])} />;
+      return <ShapeBlocks shape={{ kind: 'chart', height: props.height }} />;
     case 'text':
     case undefined:
       return <TextBlocks lines={props.lines} />;
@@ -89,22 +85,6 @@ function TextBlocks({ lines = 3 }: Readonly<{ lines?: 1 | 2 | 3 }>) {
   );
 }
 
-function StatBlocks({ count = 4 }: Readonly<{ count?: number }>) {
-  return (
-    <span className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-4">
-      {range(count).map((index) => (
-        <span
-          key={index}
-          className="bg-surface border-rule rounded-card shadow-card grid gap-2 border p-4"
-        >
-          <SkeletonBlock className="h-4 w-1/2" />
-          <SkeletonBlock className="h-6 w-2/3" />
-        </span>
-      ))}
-    </span>
-  );
-}
-
 function FormBlocks({ fields = 3 }: Readonly<{ fields?: number }>) {
   return (
     <span className="grid gap-4">
@@ -112,33 +92,6 @@ function FormBlocks({ fields = 3 }: Readonly<{ fields?: number }>) {
         <span key={index} className="grid max-w-160 gap-1">
           <SkeletonBlock className="h-4 w-32" />
           <SkeletonBlock className="h-[var(--control-md)] w-full" />
-        </span>
-      ))}
-    </span>
-  );
-}
-
-/** A table's loading shape outside a DataTable: its head row and rows of cell blocks. */
-function TableBlocks({
-  columns,
-  rows = 5,
-  head = true,
-}: Readonly<{ columns: number; rows?: number; head?: boolean }>) {
-  const cells = range(Math.max(1, columns));
-  return (
-    <span className="grid">
-      {head ? (
-        <span className="bg-well flex h-[var(--table-header-height)] items-center gap-4 px-4">
-          {cells.map((cell) => (
-            <span key={cell} className="flex-1" />
-          ))}
-        </span>
-      ) : null}
-      {range(rows).map((row) => (
-        <span key={row} className="flex h-10 items-center gap-4 px-4">
-          {cells.map((cell) => (
-            <SkeletonBlock key={cell} className={cn('flex-1', cell === 0 && 'flex-[2]')} />
-          ))}
         </span>
       ))}
     </span>

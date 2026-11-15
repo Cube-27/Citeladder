@@ -13,12 +13,7 @@ import { useSearchCollection, type SearchCollection } from './search-intelligenc
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
 import { referringLists } from './search-intelligence-format';
-import {
-  NoAnalysisYet,
-  NotConnected,
-  ResearchEmpty,
-  UnavailableNotice,
-} from './search-intelligence-availability';
+import { NoAnalysisYet, NotConnected, UnavailableNotice } from './search-intelligence-availability';
 import { Icon } from '@/components/ui/icon';
 import { Section } from '@/components/ui/section';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -189,24 +184,21 @@ export function SearchIntelligencePage() {
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
         <KeywordResearchFrame>
-          <ResearchEmpty>
-            <StateBlock
-              kind="empty"
-              icon={Settings2}
-              heading="Add your website address"
-              description="Keyword Research needs the project’s homepage address."
-              action={<TextLink href="/projects">Edit the project</TextLink>}
-              headingLevel={2}
-            />
-          </ResearchEmpty>
+          <StateBlock
+            kind="empty"
+            icon={Settings2}
+            heading="Add your website address"
+            description="Keyword Research needs the project’s homepage address."
+            action={<TextLink href="/projects">Edit the project</TextLink>}
+          />
         </KeywordResearchFrame>
       </TabsRoot>
     );
-  // Before the first analysis every tab is empty and its state holds the one
-  // primary, so the masthead does not repeat it.
+  // Before the first analysis every tab is empty and its state holds the
+  // first-analysis action, so the masthead does not repeat it.
   const empty = !data.datasets.length;
   const firstRun = actions.analysis ? (
-    <Button variant="primary" onClick={actions.analysis}>
+    <Button onClick={actions.analysis}>
       <Icon icon={Play} />
       Review first analysis
     </Button>
@@ -434,7 +426,7 @@ function PageActions({
       Cost details
     </Button>
   );
-  // Before the first analysis each tab's empty state holds the primary.
+  // Before the first analysis each tab's empty state holds the action.
   if (!onReview || !hasDatasets) return costDetails;
   return (
     <>

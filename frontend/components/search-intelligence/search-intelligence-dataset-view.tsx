@@ -32,7 +32,6 @@ import {
   searchIntelligenceColumns,
 } from './search-intelligence-rows-table';
 import { StateBlock } from '@/components/ui/state-block';
-import { ResearchEmpty } from './search-intelligence-availability';
 
 /**
  * One saved dataset's rows. The table's own toolbar keeps only the search,
@@ -236,15 +235,12 @@ function EmptyDataset({ dataset }: Readonly<{ dataset: SearchIntelligenceDataset
       : ''
   }`;
   return (
-    <ResearchEmpty>
-      <StateBlock
-        kind="empty"
-        icon={SearchX}
-        heading={emptyDatasetHeading(dataset)}
-        description={`0 saved rows for ${scope}. Requests can incur charges even when no results are returned, so check the website and market before reviewing another analysis.`}
-        headingLevel={2}
-      />
-    </ResearchEmpty>
+    <StateBlock
+      kind="empty"
+      icon={SearchX}
+      heading={emptyDatasetHeading(dataset)}
+      description={`0 saved rows for ${scope}. Requests can incur charges even when no results are returned, so check the website and market before reviewing another analysis.`}
+    />
   );
 }
 

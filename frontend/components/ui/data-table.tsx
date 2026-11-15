@@ -245,11 +245,15 @@ function ReplacingState({
   level,
 }: Readonly<{ state: ComponentProps<typeof StateBlock>; level: 1 | 2 | 3 }>) {
   return (
-    <div className="p-4">
-      <StateHeadingLevelContext value={level}>
+    <StateHeadingLevelContext value={level}>
+      {state.kind === 'empty' && state.inline ? (
+        <div className="p-4">
+          <StateBlock {...state} />
+        </div>
+      ) : (
         <StateBlock {...state} />
-      </StateHeadingLevelContext>
-    </div>
+      )}
+    </StateHeadingLevelContext>
   );
 }
 

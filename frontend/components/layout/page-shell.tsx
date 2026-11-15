@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { PageFrame, PageSections } from '@/components/templates/page-frame';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { TabRow, type TabRowProps } from '@/components/ui/tabs';
-import { StateBlock } from '@/components/ui/state-block';
+import { ShapeBlocks, SkeletonFrame } from '@/components/ui/skeleton-block';
 
 /**
  * The screens not yet moved onto a template (components/templates) draw
@@ -54,13 +54,18 @@ export const RESERVED_CONTROLS: FilterBarProps = {};
 
 /**
  * RouteLoadingScreen — the frame a route shows before its own page can draw:
- * the masthead (its title comes from the path) and one loading block where
- * the content begins.
+ * the masthead (its title comes from the path) and the Report shape where the
+ * content begins: a row of three figures over one chart-height card.
  */
 export function RouteLoadingScreen({ label }: Readonly<{ label?: string }>) {
   return (
     <ListScreen>
-      <StateBlock kind="loading" label={label} />
+      <SkeletonFrame label={label ?? 'Loading…'} variant="report" className="grid gap-4">
+        <ShapeBlocks shape={{ kind: 'figures', count: 3 }} />
+        <div data-state-frame="" className="h-60">
+          <ShapeBlocks shape={{ kind: 'card' }} />
+        </div>
+      </SkeletonFrame>
     </ListScreen>
   );
 }
