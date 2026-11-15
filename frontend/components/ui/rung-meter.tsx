@@ -9,9 +9,8 @@ import { cn } from '@/lib/utils';
 const RUNGS = 10;
 
 /**
- * RungMeter — ten rungs for any 0 to 100 score, a usage quota or work in
- * progress (no rings, donuts or generic progress
- * bars). Rungs fill in `ink` on a `well` track, the label above them and the
+ * RungMeter — ten rungs for usage against a limit or work in progress; a 0
+ * to 100 score is a `ScoreRing`, never rungs. Rungs fill in `ink` on a `well` track, the label above them and the
  * value beside the label while both fit (else under it). Past `warnAt` (a
  * ratio of `max`) the filled rungs take the warning tone and its glyph, past
  * `criticalAt` the negative tone and its glyph; `data-meter-band` names the

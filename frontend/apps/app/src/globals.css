@@ -2316,11 +2316,64 @@ label {
 /* r3 a2 figures */
 /* FigureStrip (`figureRows`): a wrapping row of figures 16 apart, each as wide
    as its row's share, so the strip is never wider than its container. On the
-   ground each figure is a stat card; inside a card the figures are cells 16
-   apart with no edge and no divider. */
+   ground each figure is a metric card; inside a card the figures are cells 16
+   apart with no edge and no divider. A card is at most three lines (label,
+   value, basis): 88 tall, 108 with a basis, 96 for a score's ring. */
 [data-figure-cell] {
   --row: 1;
   flex: 0 0 calc((100% - (var(--row) - 1) * 16px) / var(--row));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+}
+[data-figure-cell] > dt {
+  grid-row: 1;
+  grid-column: -2;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: manual;
+}
+[data-figure-cell][data-label-lines='2'] > dt {
+  min-height: calc(2 * var(--text-body-sm--line-height));
+}
+[data-figure-cell] > [data-figure-value] {
+  grid-row: 2;
+  grid-column: -2;
+  margin-top: 4px;
+}
+[data-figure-cell] > [data-figure-basis] {
+  grid-row: 3;
+  grid-column: -2;
+  margin-top: 4px;
+}
+/* An absent value is its word at body size on the value's 32px line. */
+[data-figure-value] [data-absence] {
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+  font-weight: 400;
+}
+[data-figure-cell]:is([data-figure-kind='icon'], [data-figure-kind='score']) {
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 12px;
+}
+[data-figure-lead-slot] {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+/* A score card centres its label and basis lines on the ring. */
+[data-figure-kind='score'] {
+  grid-template-rows: 1fr auto auto 1fr;
+  align-content: stretch;
+}
+[data-figure-kind='score'] > [data-figure-lead-slot] {
+  grid-row: 1 / -1;
+}
+[data-figure-kind='score'] > dt {
+  grid-row: 2;
+}
+[data-figure-kind='score'] > [data-figure-basis] {
+  grid-row: 3;
 }
 [data-row-size='2'] {
   --row: 2;
@@ -2365,8 +2418,10 @@ label {
   box-shadow: inset 0 0 0 2px var(--color-ink);
 }
 [data-icon-tile] {
-  width: 32px;
-  height: 32px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-control);
   background: var(--color-well);
 }

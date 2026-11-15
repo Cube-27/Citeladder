@@ -108,8 +108,8 @@ const FIGURE_CELL_PADDING_Y = 16;
 const FIGURE_STRIP_HEIGHT_SPREAD = 0;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
-/** A row's kind mark (an IconTile) is a control-sized square. */
-const ICON_TILE_SIZE = 32;
+/** A metric card's icon tile is a 40px square, centred on the label and value lines. */
+const ICON_TILE_SIZE = 40;
 /** A ControlRow and an IdentityRow hold their parts 8 apart (compact-gap). */
 const ROW_PART_GAP = 8;
 /** A ruled fact list pads each fact 8 above and below. */
