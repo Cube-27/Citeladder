@@ -14,6 +14,7 @@ import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
+import { comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
 import { DisplayTime } from '@/components/ui/display-time';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
@@ -333,22 +334,26 @@ export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
         {data.movements.length ? (
           <MovementChart movements={data.movements} />
         ) : (
-          <NoMovement comparable={Boolean(data.measurement?.comparable_audit_id)} />
+          <NoMovement measurement={data.measurement} />
         )}
       </SectionContent>
     </Section>
   );
 }
 
-function NoMovement({ comparable }: Readonly<{ comparable: boolean }>) {
-  if (comparable)
+function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['measurement'] }>) {
+  if (measurement?.comparable_audit_id)
     return <StateBlock kind="empty" inline icon={TrendingUp} message="No movement to show" />;
   return (
     <StateBlock
       kind="empty"
       inline
       icon={TrendingUp}
-      message="No comparable measurement yet"
+      message={
+        measurement
+          ? (comparisonDeclinedReason(measurement.comparison_status) ?? 'No movement to show')
+          : 'No measured run yet.'
+      }
       action={<LaunchAuditButton variant="secondary" />}
     />
   );

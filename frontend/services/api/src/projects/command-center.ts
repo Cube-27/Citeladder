@@ -1,4 +1,5 @@
 /** Compose the overview from existing persisted owners; this read acquires nothing. */
+import { comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import { sql, type Selectable } from 'kysely';
 import type { z } from 'zod';
@@ -91,6 +92,7 @@ async function comparableAudits(db: Database, scope: ProjectScope, auditId: stri
     selected,
     previous,
     comparisonStatus,
+    skippedRuns: baseline?.skipped_runs ?? 0,
     engines: engines.map((row) => row.logical_engine).sort(compareText),
     historical: selected.id !== latestId,
   };
@@ -308,7 +310,11 @@ function trackLimitations(
   previous: VisibilityResponse | null,
 ) {
   if (!audits) return ['No visibility audit has run yet.'];
-  return previous ? [] : ['No comparable prior audit is available.'];
+  if (previous) return [];
+  return [
+    comparisonDeclinedReason(audits.comparisonStatus, audits.skippedRuns) ??
+      'The earlier run could not be read.',
+  ];
 }
 async function measurement(
   db: Database,

@@ -1167,19 +1167,27 @@ describe('project owner', () => {
       baseline_audit_id: baseline,
     });
     expect(overview.state.visibility).toEqual({ value: 100, delta: 100 });
-    // A finalized run whose baseline is not persisted yet is pending, not baseline-less.
+    expect(overview.track.limitations).toEqual([]);
+    // A finalized run whose baseline is not persisted yet is pending, not baseline-less,
+    // and the Overview says so in the words Visibility uses.
     const pending = await raw('2026-04-04T00:00:00Z', 2);
-    expect((await commandCenter(db, t, null)).measurement).toMatchObject({
+    const pendingView = await commandCenter(db, t, null);
+    expect(pendingView.measurement).toMatchObject({
       audit_id: pending,
       comparable_audit_id: null,
       comparison_status: 'baseline_pending',
     });
+    expect(pendingView.track.limitations).toEqual([
+      'The comparison with an earlier run is still being prepared.',
+    ]);
     expect((await visibilityOf(pending)).comparison).toMatchObject({ status: 'baseline_pending' });
     // The first run has nothing before it.
-    expect((await commandCenter(db, t, baseline)).measurement).toMatchObject({
+    const first = await commandCenter(db, t, baseline);
+    expect(first.measurement).toMatchObject({
       comparable_audit_id: null,
       comparison_status: 'no_baseline',
     });
+    expect(first.track.limitations).toEqual(['No earlier run to compare with yet.']);
     // Another workspace reads none of it.
     const outsider = await measurements.tenant();
     await expect(

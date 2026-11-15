@@ -72,7 +72,7 @@ describe('coverageSummary change line', () => {
 
   it('explains a missing change with the number of skipped runs', () => {
     const skipped = coverageSummary(
-      selected({ comparison: { status: 'no_comparison', skipped_runs: 4 } }),
+      selected({ comparison: { status: 'no_baseline', skipped_runs: 4 } }),
       date,
     ).change;
     expect(skipped).toContain('4');
