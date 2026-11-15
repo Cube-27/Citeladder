@@ -9,6 +9,7 @@ import { DataTable, type DataTableColumn, type DataTableState } from '@/componen
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
+import { StateBlock } from '@/components/ui/state-block';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -70,7 +71,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'actions', label: 'Actions', kind: 'actions', width: 'name', hideLabel: true },
 ];
 
-/** What the list shows instead of rows: the read's loading, error or empty. */
+/** What the list shows instead of rows: the read's loading or error. */
 function connectionsState(
   query: UseQueryResult<McpConnection[]>,
   adminView: boolean,
@@ -85,16 +86,7 @@ function connectionsState(
       ...readErrorProps(query),
       fallback: 'Connections could not be loaded.',
     };
-  if (query.data.length > 0) return undefined;
-  return {
-    kind: 'empty',
-    icon: ICONS.agent,
-    headingLevel: 3,
-    heading: adminView ? 'No connection can read this workspace' : 'No assistant connected yet',
-    description: adminView
-      ? undefined
-      : 'Connect one with the button above; it appears here once you approve it.',
-  };
+  return undefined;
 }
 
 function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
@@ -103,6 +95,9 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
   const query = useQuery(mcpConnectionQueries.list(workspaceId));
   const revoke = useMutation(mcpConnectionMutations.revoke(workspaceId));
   const title = adminView ? 'Connections that can read this workspace' : 'Your connections';
+  const empty = query.isSuccess && query.data.length === 0;
+  // The workspace's list shows only what it holds; a failed read still says so.
+  if (adminView && (query.isPending || empty)) return null;
   return (
     <Section aria-label={title}>
       {/* The list's title is its card's head, not a heading between blocks. */}
@@ -114,19 +109,28 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
             : 'Assistants you approved, and what each can read. Revoke one to cut it off at once.'}
         </SectionDescription>
       </SectionHeader>
-      <DataTable label={title} columns={COLUMNS} state={connectionsState(query, adminView)}>
-        {query.data?.map((connection) => (
-          <ConnectionRow
-            key={connection.id}
-            connection={connection}
-            adminView={adminView}
-            onRevoke={() => {
-              revoke.reset();
-              setPending(connection);
-            }}
-          />
-        ))}
-      </DataTable>
+      {empty ? (
+        <StateBlock
+          kind="empty"
+          icon={ICONS.agent}
+          heading="No connections yet"
+          description="An assistant appears here once you approve its connection."
+        />
+      ) : (
+        <DataTable label={title} columns={COLUMNS} state={connectionsState(query, adminView)}>
+          {query.data?.map((connection) => (
+            <ConnectionRow
+              key={connection.id}
+              connection={connection}
+              adminView={adminView}
+              onRevoke={() => {
+                revoke.reset();
+                setPending(connection);
+              }}
+            />
+          ))}
+        </DataTable>
+      )}
       <Dialog
         open={pending !== null}
         onOpenChange={(open) => {

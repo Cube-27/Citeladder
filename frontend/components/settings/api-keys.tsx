@@ -28,6 +28,7 @@ import type {
 import { apiKeyMutations, apiKeyQueries } from '@/lib/api/api-keys';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { endOfDayInZone, useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatCount } from '@/lib/format';
 import { API_HOST_ORIGIN } from '@/lib/config/api-host';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -268,20 +269,26 @@ function CreateKeyDialog({
   );
 }
 
+const liveKeys = (keys: readonly ApiKey[]) => keys.filter((key) => key.state === 'active').length;
+
 /** Keys in use against the plan's limit, and the create action while under it. */
-function keysToolbar({
-  live,
-  limit,
+function KeysHeadActions({
+  list,
   onCreate,
-}: Readonly<{ live: number; limit: number | null; onCreate: () => void }>) {
-  return {
-    status: `${live} of ${limit ?? 0} keys in use`,
-    actions: (
-      <Button variant="secondary" onClick={onCreate} disabled={limit !== null && live >= limit}>
+}: Readonly<{ list: ApiKeyList | undefined; onCreate: () => void }>) {
+  if (!list?.available) return null;
+  const live = liveKeys(list.keys);
+  const limit = list.limit ?? 0;
+  return (
+    <>
+      <span className={textRole('caption', 'text-ink-2')}>
+        {`${formatCount(live)} of ${formatCount(limit)} keys in use`}
+      </span>
+      <Button onClick={onCreate} disabled={live >= limit}>
         Create key
       </Button>
-    ),
-  };
+    </>
+  );
 }
 
 /** The plan note and the key table, or the read's loading or failure in their place. */
@@ -289,13 +296,11 @@ function ApiKeysBody({
   query,
   workspaceId,
   projectNames,
-  onCreate,
   onRevoke,
 }: Readonly<{
   query: UseQueryResult<ApiKeyList>;
   workspaceId: string;
   projectNames: ReadonlyMap<string, string>;
-  onCreate: () => void;
   onRevoke: (key: ApiKey) => void;
 }>) {
   if (query.isPending) return <StateBlock kind="loading" label="Loading API keys…" />;
@@ -308,8 +313,7 @@ function ApiKeysBody({
         {...readErrorProps(query)}
       />
     );
-  const { available, limit, keys } = query.data;
-  const live = keys.filter((key) => key.state === 'active').length;
+  const { available, keys } = query.data;
   return (
     <Stack gap="workspace">
       {available ? null : (
@@ -320,22 +324,16 @@ function ApiKeysBody({
           </TextLink>
         </Notice>
       )}
-      {keys.length === 0 && !available ? null : (
-        <DataTable
-          label="API keys"
-          toolbar={available ? keysToolbar({ live, limit, onCreate }) : undefined}
-          columns={KEY_COLUMNS}
-          state={
-            keys.length === 0
-              ? {
-                  kind: 'empty',
-                  icon: KeyRound,
-                  heading: 'No API keys yet',
-                  description: 'Create a key to call the REST API from your own code.',
-                }
-              : undefined
-          }
-        >
+      {keys.length === 0 && available ? (
+        <StateBlock
+          kind="empty"
+          icon={KeyRound}
+          heading="No API keys yet"
+          description="Create a key to call the REST API from your own code."
+        />
+      ) : null}
+      {keys.length === 0 ? null : (
+        <DataTable label="API keys" columns={KEY_COLUMNS}>
           {keys.map((key) => (
             <KeyRow
               key={key.id}
@@ -362,15 +360,26 @@ export function ApiKeys() {
   return (
     <>
       <Section>
-        <SectionHeader>
+        <SectionHeader
+          actions={<KeysHeadActions list={query.data} onCreate={() => setCreating(true)} />}
+        >
           <SectionTitle>API keys</SectionTitle>
-          <SectionDescription>{`Call the REST API at ${API_BASE_URL} from your own code.`}</SectionDescription>
+          <SectionDescription>
+            Call the REST API at <code className="font-mono break-words">{API_BASE_URL}</code>{' '}
+            <CopyButton
+              value={API_BASE_URL}
+              iconOnly
+              variant="quiet"
+              className="-my-2 align-middle"
+              copiedLabel="Copied the API address"
+            />{' '}
+            from your own code.
+          </SectionDescription>
         </SectionHeader>
         <ApiKeysBody
           query={query}
           workspaceId={workspaceId}
           projectNames={projectNames}
-          onCreate={() => setCreating(true)}
           onRevoke={(key) => {
             revoke.reset();
             setPending(key);
