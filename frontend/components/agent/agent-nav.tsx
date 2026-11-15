@@ -7,10 +7,10 @@ import { AGENT_NAV_ITEMS, NEW_CHAT_ITEM } from '@/components/layout/nav-items';
 import { DestinationRows, useDestinations } from '@/components/layout/sidebar-nav';
 import { RailFlyout, RailLink } from '@/components/layout/sidebar-rail';
 import { Button } from '@/components/ui/button';
-import { HistoryNotice, HistoryRow, HistoryRows } from '@/components/ui/history-list';
+import { HistoryList, HistoryNotice, HistoryRow, HistoryRows } from '@/components/ui/history-list';
 import { MenuItem, MenuLinkItem } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
-import { SidebarNavGroup, SidebarScrollList } from '@/components/ui/sidebar';
+import { RailFlyoutSlot, SidebarNavGroup, SidebarScrollList } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { InlineFigure } from '@/components/ui/typography';
 import { CHAT_ORIGIN_LABELS } from '@/lib/agent/handoff';
@@ -106,8 +106,16 @@ function ChatSection() {
   const pathname = useLocation().pathname ?? '';
   const notice = chatListNotice(list);
   return (
-    <section aria-label="Chats" className="flex min-w-0 flex-col gap-2">
-      <ChatSearch list={list} />
+    <HistoryList
+      search={<ChatSearch list={list} />}
+      more={
+        list.more ? (
+          <Button variant="quiet" disabled={list.more.busy} onClick={list.more.load}>
+            Show more chats
+          </Button>
+        ) : null
+      }
+    >
       {notice ? <HistoryNotice>{notice}</HistoryNotice> : null}
       {list.rows.length > 0 ? (
         <HistoryRows label="Chats">
@@ -126,12 +134,7 @@ function ChatSection() {
           })}
         </HistoryRows>
       ) : null}
-      {list.more ? (
-        <Button variant="quiet" disabled={list.more.busy} onClick={list.more.load}>
-          Show more chats
-        </Button>
-      ) : null}
-    </section>
+    </HistoryList>
   );
 }
 
@@ -168,10 +171,14 @@ function ChatsFlyout() {
   const current = pathname.startsWith('/agent/chats/');
   return (
     <RailFlyout label="Chats" icon={MessagesSquare} current={current}>
-      <div className="px-1 pb-1">
+      <RailFlyoutSlot>
         <ChatSearch list={list} onKeyDown={keepTyping} />
-      </div>
-      {notice ? <p className="type-caption px-2 py-1">{notice}</p> : null}
+      </RailFlyoutSlot>
+      {notice ? (
+        <RailFlyoutSlot>
+          <HistoryNotice>{notice}</HistoryNotice>
+        </RailFlyoutSlot>
+      ) : null}
       {list.rows.map((chat) => {
         const href = `/agent/chats/${chat.id}`;
         return (

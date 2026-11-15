@@ -241,6 +241,11 @@ export function sidebarModeSegmentClasses(current: boolean) {
   );
 }
 
+/** A rail flyout's non-item content (the chats' search, a sentence), inset like its rows. */
+export function RailFlyoutSlot({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="px-2 py-1">{children}</div>;
+}
+
 /** The rail's buttons, top to bottom in one column on the centre axis. */
 export function SidebarRailList({
   label,
