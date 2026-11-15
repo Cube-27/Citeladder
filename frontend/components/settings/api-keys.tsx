@@ -365,7 +365,8 @@ export function ApiKeys() {
         >
           <SectionTitle>API keys</SectionTitle>
           <SectionDescription>
-            Call the REST API at <code className="font-mono break-words">{API_BASE_URL}</code>{' '}
+            Call the REST API at{' '}
+            <code className={textRole('code', 'break-words')}>{API_BASE_URL}</code>{' '}
             <CopyButton
               value={API_BASE_URL}
               iconOnly

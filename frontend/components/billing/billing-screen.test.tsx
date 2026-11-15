@@ -450,7 +450,7 @@ describe('BillingScreen', () => {
       'AI creditsNot included',
     ]);
     // The reset date stays with its quota rather than leaving with the meter.
-    expect(rows[1]).toHaveTextContent(/Resets .+\./u);
+    expect(rows[1]?.textContent).toMatch(/Resets .+\./u);
     expect(screen.queryByRole('progressbar')).toBeNull();
 
     // A held reservation is usage, so it keeps the meters.
