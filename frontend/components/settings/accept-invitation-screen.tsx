@@ -63,10 +63,20 @@ export function AcceptInvitationScreen() {
     );
   }
 
-  if (accept.isError)
-    return <RefusedInvitation error={accept.error} onLeave={() => router('/projects')} />;
-  // The title says what is happening; nothing else competes with it.
-  return accept.isSuccess ? (
+  // The outcome replaces "Checking" in place, so a live region announces it.
+  return (
+    <div aria-live="polite">
+      {accept.isError ? (
+        <RefusedInvitation error={accept.error} onLeave={() => router('/projects')} />
+      ) : (
+        <InvitationProgress joined={accept.isSuccess} />
+      )}
+    </div>
+  );
+}
+
+function InvitationProgress({ joined }: Readonly<{ joined: boolean }>) {
+  return joined ? (
     <FlowBlock title="You have joined" sub="Taking you to the workspace now." />
   ) : (
     <FlowBlock

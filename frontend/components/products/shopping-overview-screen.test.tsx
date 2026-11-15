@@ -115,9 +115,11 @@ describe('Shopping overview', () => {
 
     const ranking = await screen.findByRole('region', { name: 'Ranking' });
     expect(rowCells(ranking, 'Acme')).toEqual(['AcmeYour brand', '66.7%', '50.0%', '1.5', '60.0%']);
+    const shareHead = { name: /share of shelf/i };
+    expect(within(ranking).getByRole('columnheader', shareHead)).toBeInTheDocument();
 
     fireEvent.click(within(ranking).getByRole('radio', { name: 'Products' }));
-    expect(within(ranking).queryByText('Share of Shelf')).not.toBeInTheDocument();
+    expect(within(ranking).queryByRole('columnheader', shareHead)).not.toBeInTheDocument();
     expect(rowCells(ranking, 'Rival Pacer')).toEqual([
       'Rival PacerRival · Competitor',
       '66.7%',

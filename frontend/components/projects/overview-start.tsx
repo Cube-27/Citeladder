@@ -12,7 +12,7 @@ import { pluralCount } from '@/lib/format';
 import { PROMPTS_HREF } from '@/lib/prompts/routes';
 
 /** Whether a loop stage has evidence yet. */
-const reached = (stage: CommandCenter['loop']['connected']) =>
+export const reached = (stage: CommandCenter['loop']['connected']) =>
   stage.state === 'observed' || stage.state === 'partial';
 
 /** The Overview shows its start card until a run is measured and prompts are tracked. */

@@ -123,6 +123,14 @@ export function selfServeCheckoutComingSoon(catalog: BillingCatalog): boolean {
   return selfServePlans.length > 0 && selfServePlans.every((plan) => !plan.checkout_available);
 }
 
+/** No new plan can be bought: closed only when neither mode sells; managed alone still does. */
+export function newPlanCheckoutClosed(catalog: BillingCatalog): boolean {
+  return (
+    selfServeCheckoutComingSoon(catalog) &&
+    !catalog.plans.some((plan) => plan.funded_checkout_available)
+  );
+}
+
 export type ProviderMarketingState = {
   key: string;
   label: string;

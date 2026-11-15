@@ -84,7 +84,7 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
       id="company-facts"
       title="Company facts"
       // The industry is the project's own data ("General" included), shown as written.
-      description={facts.industry.trim() || undefined}
+      description={facts.industry.trim() || <Absence state="not_set" label="Industry not set" />}
       link={{ href: '/agent/context', label: 'Edit in Agent context' }}
     >
       <FigureStrip
@@ -146,7 +146,7 @@ export function DashboardActions({
 
 /** A free-text fact on one line, with the whole text behind a tooltip. */
 function FactSummary({ value }: Readonly<{ value: string }>) {
-  if (!value.trim()) return <Absence state="none" />;
+  if (!value.trim()) return <Absence state="not_set" />;
   return (
     // A value, so the primary ink under its grey label, not grey on grey.
     <ClampText className={textRole('body')}>{value}</ClampText>

@@ -420,22 +420,12 @@ export function OverviewSections({
         </Section>
       </>
     );
-  const yours = overview.brands.find((row) => row.owned);
   return (
     <>
-      {/* The page's question first: how your brand stands on the shelf. */}
+      {/* The page's question first: how you stand on the chosen category's shelf. */}
+      {shelf}
       <FigureStrip
         segments={[
-          {
-            key: 'visibility',
-            label: 'Your visibility',
-            value: shelfPercent(yours?.visibility ?? null),
-          },
-          {
-            key: 'share',
-            label: 'Your share of shelf',
-            value: shelfPercent(yours?.share_of_shelf ?? null),
-          },
           {
             key: 'answers',
             label: 'Answers',
@@ -449,7 +439,6 @@ export function OverviewSections({
           },
         ]}
       />
-      {shelf}
       <RankingTable overview={overview} scope={scope} />
       <AppGrid layout="halves">
         <ProductList

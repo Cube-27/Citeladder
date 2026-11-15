@@ -22,11 +22,7 @@ import {
   type BillingCatalog,
   type BillingEntitlement,
 } from '@/lib/api/billing';
-import {
-  catalogItemName,
-  catalogPlanByKey,
-  selfServeCheckoutComingSoon,
-} from '@/lib/billing/catalog';
+import { catalogItemName, catalogPlanByKey, newPlanCheckoutClosed } from '@/lib/billing/catalog';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
@@ -146,10 +142,7 @@ function planStep({
     );
     return { label: 'Change plan', href: '#change-plan', closed };
   }
-  const closed =
-    selfServeCheckoutComingSoon(catalog) &&
-    !catalog.plans.some((plan) => plan.funded_checkout_available);
-  return { label: 'Choose a plan', href: '#choose-plan', closed };
+  return { label: 'Choose a plan', href: '#choose-plan', closed: newPlanCheckoutClosed(catalog) };
 }
 
 /**
