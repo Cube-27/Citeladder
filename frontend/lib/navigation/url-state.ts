@@ -113,7 +113,7 @@ function getServerSnapshot(): string {
  * fallback is for tests and for the marketing bundle, neither of which has one.
  */
 type UrlStateRouter = {
-  navigate: (to: string, options?: { replace?: boolean }) => unknown;
+  navigate: (to: string, options?: { replace?: boolean; preventScrollReset?: boolean }) => unknown;
   subscribe: (listener: () => void) => () => void;
 };
 
@@ -137,7 +137,11 @@ function commitUrl(href: string, history: UrlHistory): void {
   )
     return;
   if (activeRouter) {
-    activeRouter.navigate(href, { replace: history === 'replace' });
+    // A tab or filter write on the same screen keeps the reader's position.
+    activeRouter.navigate(href, {
+      replace: history === 'replace',
+      preventScrollReset: next.pathname === current.pathname,
+    });
     return;
   }
   window.history[history === 'push' ? 'pushState' : 'replaceState'](window.history.state, '', href);

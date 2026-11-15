@@ -1,6 +1,7 @@
 import { Suspense, type ReactNode } from 'react';
-import { Outlet, ScrollRestoration } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 
+import { AppScrollRestoration } from '@/components/layout/app-scroll-restoration';
 import { AppShell } from '@/components/layout/app-shell';
 import { OnboardingGate } from '@/components/layout/onboarding-gate';
 import { ShellFallback } from '@/components/layout/shell-fallback';
@@ -58,10 +59,7 @@ function sessionFallback(content: ReactNode) {
 export function ApplicationRouteLayout() {
   return (
     <ToastProvider>
-      {/* The document scrolls, so a new screen starts at the top; returning to
-          a screen restores where it was. A tab or filter change keeps the
-          position because the key is the path alone. */}
-      <ScrollRestoration getKey={(location) => location.pathname} />
+      <AppScrollRestoration />
       <AppShell>
         <OnboardingGate>
           <Outlet />
