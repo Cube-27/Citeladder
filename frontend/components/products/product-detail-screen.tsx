@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 
 import { RecordPage } from '@/components/templates/record-page';
 import { AppGrid } from '@/components/ui/app-grid';
+import { ClampText } from '@/components/ui/clamp-text';
 import { FilterBar } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
@@ -45,7 +46,7 @@ import { SetupCompetitors } from './setup-competitors';
 import { SetupPrompts } from './setup-prompts';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 /** The KPIs, in the plan's order; merchants have their own section below. */
@@ -257,9 +258,9 @@ function ProductIdentity({
             variant="external"
             href={product.url}
             text="caption"
-            className="max-w-full min-w-0 break-all"
+            className="flex max-w-full min-w-0"
           >
-            {product.url}
+            <ClampText>{product.url}</ClampText>
           </TextLink>
         ) : null}
       </Stack>
@@ -304,11 +305,12 @@ function ProductSetup({
   const discovery = useCompetitorDiscovery(projectId);
   const target = { kind: 'product', id: detail.product.holder_id } as const;
   return (
-    <Section aria-labelledby="product-setup">
+    // A titled group: its Actions, competitors and prompts are cards of their own.
+    <Section variant="group" aria-labelledby="product-setup">
       <SectionHeader>
         <SectionTitle id="product-setup">Setup</SectionTitle>
       </SectionHeader>
-      <SectionContent>
+      <SectionStack>
         <ProductActions detail={detail} />
         <SetupCompetitors
           projectId={projectId}
@@ -324,7 +326,7 @@ function ProductSetup({
           query={queries.buyerPrompts}
           level={3}
         />
-      </SectionContent>
+      </SectionStack>
     </Section>
   );
 }

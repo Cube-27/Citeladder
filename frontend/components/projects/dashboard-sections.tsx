@@ -4,13 +4,13 @@ import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
-import { Tag, TagGroup } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { ReorderList } from '@/components/ui/reorder-list';
-import { ArrowLink, TextLink } from '@/components/ui/text-link';
+import { TextLink } from '@/components/ui/text-link';
+import { StatusMark } from '@/components/ui/status-mark';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { formatCount, pluralCount } from '@/lib/format';
@@ -29,7 +29,6 @@ import {
 } from './dashboard-primitives';
 import { ClampText } from '@/components/ui/clamp-text';
 import { StateBlock } from '@/components/ui/state-block';
-import { SectionDescription } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 import { WidgetFrame } from './widget-frame';
 
@@ -84,8 +83,9 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
     <WidgetFrame
       id="company-facts"
       title="Company facts"
-      description={<SectionDescription>{facts.industry || 'Industry not set'}</SectionDescription>}
-      actions={<ArrowLink href="/agent/context">Edit in Agent context</ArrowLink>}
+      // The industry is the project's own data ("General" included), shown as written.
+      description={facts.industry.trim() || <Absence state="not_set" label="Industry not set" />}
+      link={{ href: '/agent/context', label: 'Edit in Agent context' }}
     >
       <FigureStrip
         segments={[
@@ -102,7 +102,7 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
           {
             key: 'offerings',
             label: 'Offerings & competitors',
-            value: offerings.length ? <TagGroup labels={offerings} /> : <Absence state="not_set" />,
+            value: <FactSummary value={offerings.join(', ')} />,
             sub: pluralCount(facts.competitors.length, 'tracked competitor'),
           },
         ]}
@@ -117,6 +117,7 @@ export function DashboardActions({
   downloading,
   onDownload,
   layoutMenu,
+  launch = true,
 }: Readonly<{
   activeProject: Project;
   onEditProject?: (project: Project) => void;
@@ -124,6 +125,8 @@ export function DashboardActions({
   onDownload: () => void;
   /** The layout menu, for members who can edit the Overview. */
   layoutMenu?: ReactNode;
+  /** False while the Overview's start card holds Launch run, so it shows once. */
+  launch?: boolean;
 }>) {
   return (
     // A fragment: the identity band owns the gap between route actions.
@@ -132,21 +135,21 @@ export function DashboardActions({
       {layoutMenu}
       <PdfButton downloading={downloading} onDownload={onDownload} />
       {/* The one primary: the run the Overview's figures come from. */}
-      <MastheadPrimary>
-        <LaunchAuditButton />
-      </MastheadPrimary>
+      {launch ? (
+        <MastheadPrimary>
+          <LaunchAuditButton />
+        </MastheadPrimary>
+      ) : null}
     </>
   );
 }
 
-/** A free-text fact, cut at two lines with the whole text behind a tooltip. */
+/** A free-text fact on one line, with the whole text behind a tooltip. */
 function FactSummary({ value }: Readonly<{ value: string }>) {
   if (!value.trim()) return <Absence state="not_set" />;
   return (
     // A value, so the primary ink under its grey label, not grey on grey.
-    <ClampText lines={2} className={textRole('body')}>
-      {value}
-    </ClampText>
+    <ClampText className={textRole('body')}>{value}</ClampText>
   );
 }
 
@@ -227,7 +230,14 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
     <WidgetFrame
       id="project-state"
       title="Project state"
-      actions={<Tag>{data.measurement ? 'Citations measured' : 'Not run'}</Tag>}
+      fill="figure"
+      status={
+        data.measurement ? (
+          <StatusMark tone="positive">Citations measured</StatusMark>
+        ) : (
+          <StatusMark>Not run</StatusMark>
+        )
+      }
     >
       <FigureStrip
         segments={[
@@ -271,8 +281,9 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
     <WidgetFrame
       id="citation-share-track"
       title="Owned citation rate"
-      description={<SectionDescription>Answers that link to a page you own</SectionDescription>}
-      actions={<ArrowLink href="/visibility?tab=trends">Open Trends</ArrowLink>}
+      description="Answers that link to a page you own"
+      link={{ href: '/visibility?tab=trends', label: 'Open Trends' }}
+      fill="figure"
     >
       <FigureStrip
         segments={[
@@ -361,12 +372,8 @@ export function RankedActionsCard({
     <WidgetFrame
       id="ranked-actions"
       title="Ranked actions"
-      description={
-        actions.length ? (
-          <SectionDescription>Shared order · drag or use the arrow controls.</SectionDescription>
-        ) : undefined
-      }
-      actions={<ArrowLink href="/agent/actions">View all</ArrowLink>}
+      description={actions.length ? 'Shared order · drag or use the arrow controls.' : undefined}
+      link={{ href: '/agent/actions', label: 'View all' }}
     >
       {actions.length ? (
         <ReorderList items={actions.map(actionItem)} pending={pending} onMove={onMove} />
@@ -385,7 +392,7 @@ export function RankedActionsCard({
 /** What has been resolved since the comparable run. */
 export function ProgressProofCard({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <WidgetFrame id="progress-proof" title="Progress and report proof">
+    <WidgetFrame id="progress-proof" title="Progress and report proof" fill="figure">
       <FigureStrip
         segments={[
           {

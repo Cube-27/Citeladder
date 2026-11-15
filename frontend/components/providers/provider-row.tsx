@@ -1,7 +1,6 @@
 import { useId, useState } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
-import { Tag } from '@/components/ui/tag';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -50,7 +49,14 @@ function StatusBadge({
       </StatusMark>
     );
   }
-  return <Tag>{isConfigured(connection) ? 'Not verified' : 'Not connected'}</Tag>;
+  // A stored key nobody verified needs attention; no key is neutral (not started).
+  return isConfigured(connection) ? (
+    <StatusMark variant="status" value="warning">
+      Not verified
+    </StatusMark>
+  ) : (
+    <StatusMark>Not connected</StatusMark>
+  );
 }
 
 /** "ChatGPT API · gpt-6.1-terra" for an API; the bare surface name for a consumer app. */

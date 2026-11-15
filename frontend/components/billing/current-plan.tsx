@@ -1,7 +1,10 @@
 import { SubscriptionDetail } from '@/components/billing/billing-account-details';
 import { Tag } from '@/components/ui/tag';
 import { BillingPlan } from '@/components/ui/billing-plan';
+import { X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
@@ -225,6 +228,7 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
             disabled={cancellation.pending}
             onClick={() => cancellation.setOpen(false)}
           >
+            <Icon icon={X} />
             Keep plan
           </Button>
           <Button

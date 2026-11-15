@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ConnectStrip } from '@/components/mcp/connect-strip';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -32,12 +33,12 @@ function ConnectionRow({
             {connection.client_name}{' '}
             <span className={textRole('caption')}>· name not verified</span>
           </p>
-          <p className={textRole('body', 'text-ink-2')}>
+          <ClampText className={textRole('body', 'text-ink-2')}>
             {connection.requires_consent
               ? 'Reconnect to choose workspaces.'
               : `Reads ${workspaces || 'no workspace you can still access'}.`}
-          </p>
-          <p className={textRole('caption')}>
+          </ClampText>
+          <p className={textRole('caption', 'truncate')}>
             {connection.access === 'read_and_change' ? 'Read and change · ' : 'Read · '}
             {adminView && connection.user_email ? `Connected by ${connection.user_email} · ` : null}
             Connected <DisplayTime value={connection.created_at} dateOnly /> ·{' '}
@@ -66,7 +67,7 @@ function ConnectionRow({
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'connection', label: 'Connection', kind: 'identity' },
-  { key: 'access', label: 'Access', kind: 'actions', width: 'name', hideLabel: true },
+  { key: 'actions', label: 'Actions', kind: 'actions', width: 'name', hideLabel: true },
 ];
 
 /** What the list shows instead of rows: the read's loading, error or empty. */
@@ -101,13 +102,19 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
   const [pending, setPending] = useState<McpConnection | null>(null);
   const query = useQuery(mcpConnectionQueries.list(workspaceId));
   const revoke = useMutation(mcpConnectionMutations.revoke(workspaceId));
+  const title = adminView ? 'Connections that can read this workspace' : 'Your connections';
   return (
-    <>
-      <DataTable
-        title={adminView ? 'Connections that can read this workspace' : 'Your connections'}
-        columns={COLUMNS}
-        state={connectionsState(query, adminView)}
-      >
+    <Section aria-label={title}>
+      {/* The list's title is its card's head, not a heading between blocks. */}
+      <SectionHeader>
+        <SectionTitle>{title}</SectionTitle>
+        <SectionDescription>
+          {adminView
+            ? 'Every member’s assistant that can read this workspace. Remove one to cut it off.'
+            : 'Assistants you approved, and what each can read. Revoke one to cut it off at once.'}
+        </SectionDescription>
+      </SectionHeader>
+      <DataTable label={title} columns={COLUMNS} state={connectionsState(query, adminView)}>
         {query.data?.map((connection) => (
           <ConnectionRow
             key={connection.id}
@@ -156,7 +163,7 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
           ) : null}
         </Stack>
       </Dialog>
-    </>
+    </Section>
   );
 }
 
@@ -174,21 +181,11 @@ export function McpConnections() {
         </SectionHeader>
         <ConnectStrip surface="app" />
       </Section>
-      {/* Your approvals and the workspace's are peers in one section. */}
-      <Section>
-        <SectionHeader>
-          <SectionTitle>Connections</SectionTitle>
-          <SectionDescription>
-            Assistants you approved, and what each can read. Revoke one to cut it off at once.
-          </SectionDescription>
-        </SectionHeader>
-        <Stack gap="workspace">
-          <ConnectionList />
-          {mayManage && activeWorkspaceId ? (
-            <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
-          ) : null}
-        </Stack>
-      </Section>
+      {/* Your approvals and the workspace's: one card each. */}
+      <ConnectionList />
+      {mayManage && activeWorkspaceId ? (
+        <ConnectionList key={activeWorkspaceId} workspaceId={activeWorkspaceId} />
+      ) : null}
     </>
   );
 }

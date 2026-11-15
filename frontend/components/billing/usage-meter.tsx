@@ -1,7 +1,8 @@
 import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 import type { UsageItem } from '@/lib/api/billing';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
+import { MeterLabelRow } from '@/components/ui/meter';
 import { RungMeter } from '@/components/ui/rung-meter';
 import { InlineFigure, textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
@@ -23,10 +24,10 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   if (item.limit_state === 'unknown') {
     return (
       <Stack gap="tight">
-        <Inline gap="compact" className="justify-between">
+        <MeterLabelRow>
           <span className={textRole('body', 'text-ink-2')}>{label}</span>
-          <span className={textRole('body', 'text-ink-2')}>Not available</span>
-        </Inline>
+          <Absence state="unavailable" label="Not available" />
+        </MeterLabelRow>
         <p className="type-caption">This allowance could not be resolved, so no usage is shown.</p>
       </Stack>
     );
@@ -35,7 +36,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   if (item.limit_state === 'unlimited') {
     return (
       <Stack gap="tight">
-        <Inline gap="compact" className="justify-between">
+        <MeterLabelRow>
           <span className={textRole('body', 'text-ink-2')}>{label}</span>
           {/* Unlimited says nothing about consumption: an unread count is
               the missing mark, never a zero. */}
@@ -48,11 +49,11 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
               </>
             )}
           </span>
-        </Inline>
-        <Inline gap="compact" className="justify-between">
-          <span className="type-caption whitespace-nowrap">Unlimited</span>
+        </MeterLabelRow>
+        <MeterLabelRow>
+          <span className="type-caption">Unlimited</span>
           <ExpiryLine item={item} unit={unit} />
-        </Inline>
+        </MeterLabelRow>
       </Stack>
     );
   }
@@ -66,10 +67,10 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   // empty "0 / 0" bar would read like an exhausted allowance.
   if (allowance === 0 && consumed === 0) {
     return (
-      <Inline gap="compact" className="justify-between">
+      <MeterLabelRow>
         <span className={textRole('body', 'text-ink-2')}>{label}</span>
-        <span className="type-caption">Not included</span>
-      </Inline>
+        <Absence state="not_applicable" label="Not included" />
+      </MeterLabelRow>
     );
   }
 
@@ -83,8 +84,8 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         warnAt={USAGE_METER_WARNING_RATIO}
         criticalAt={USAGE_METER_CRITICAL_RATIO}
       />
-      <Inline gap="compact" className="justify-between">
-        <span className="type-caption whitespace-nowrap">
+      <MeterLabelRow>
+        <span className="type-caption">
           <InlineFigure>{formatCount(remaining)}</InlineFigure> remaining
           {item.reserved ? (
             <>
@@ -94,7 +95,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
           ) : null}
         </span>
         <ExpiryLine item={item} unit={unit} />
-      </Inline>
+      </MeterLabelRow>
     </Stack>
   );
 }
@@ -106,7 +107,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
 function ExpiryLine({ item, unit }: Readonly<{ item: UsageItem; unit: string }>) {
   if (item.resets_at) {
     return (
-      <p className="type-caption text-right">
+      <p className="type-caption">
         Resets <DisplayTime value={item.resets_at} dateOnly />.
       </p>
     );
@@ -114,7 +115,7 @@ function ExpiryLine({ item, unit }: Readonly<{ item: UsageItem; unit: string }>)
   if (!item.earliest_expiry) return null;
   // Only a consumable balance is forfeited; a slot allowance simply ends.
   return (
-    <p className="type-caption text-right">
+    <p className="type-caption">
       {item.capability_type === 'counter.consumable' ? `Unused ${unit} expire` : 'Ends'}{' '}
       <DisplayTime value={item.earliest_expiry} dateOnly />.
     </p>

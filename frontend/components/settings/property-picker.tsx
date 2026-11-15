@@ -124,13 +124,14 @@ function SelectedProperty({
           {provider === 'ga4' ? <InlineFigure>{selected}</InlineFigure> : selected}
         </Tag>
       ) : (
+        // The mapping is this project's; the connection is the workspace's.
         <StatusMark variant="status" value="warning">
-          No {noun} selected
+          This project: no {noun} selected
         </StatusMark>
       )}
       {canChoose ? (
         <Button
-          variant="quiet"
+          variant="secondary"
           onClick={onChoose}
           disabled={disabled}
           data-testid={`select-property-${provider}`}

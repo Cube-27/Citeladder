@@ -19,7 +19,7 @@ import type {
   CredentialMode,
   SelfServePlanKey,
 } from '@/lib/api/billing';
-import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
+import { newPlanCheckoutClosed } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { websiteHref } from '@/lib/config/app-link';
 import { contactSalesHref } from '@/lib/config/contact';
@@ -83,11 +83,7 @@ export function ChoosePlan({
 >): ReactNode {
   const [chosen, setChosen] = useState<SelfServePlanKey | null>(null);
   const [mode, setMode] = useState<CredentialMode>('byok');
-  // Closed only when neither mode can be bought; managed alone still sells.
-  if (
-    selfServeCheckoutComingSoon(catalog) &&
-    !catalog.plans.some((plan) => plan.funded_checkout_available)
-  )
+  if (newPlanCheckoutClosed(catalog))
     return (
       <Section id="choose-plan" aria-labelledby="choose-plan-title">
         <SectionHeader>

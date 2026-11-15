@@ -2,11 +2,11 @@ import { useState, type ReactNode } from 'react';
 
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
 import { StatusMark, type StatusValue } from '@/components/ui/status-mark';
-import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
+import { OpenRow } from '@/components/ui/list-row';
+import { StateBlock } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
 import { Value } from '@/components/ui/value';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { formatCount, pluralCount } from '@/lib/format';
@@ -46,7 +46,7 @@ function ProductSection({
         {empty === null ? (
           <LedgerList>{children}</LedgerList>
         ) : (
-          <p className={textRole('body', 'text-ink-2')}>{empty}</p>
+          <StateBlock kind="empty" inline message={empty} />
         )}
       </SectionContent>
     </Section>
@@ -241,27 +241,25 @@ export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>)
         }
         empty={detail.answers.length ? null : 'No answer named it in this window.'}
       >
+        {/* The row opens its stored answer; its chevron says so at rest. */}
         {detail.answers.map((row) => (
-          <LedgerItem
-            key={row.task_id}
-            title={row.prompt_text}
-            caption={
-              <>
-                {engines.label(row.engine)} · <DisplayTime value={row.completed_at} dateOnly />
-                {row.rank === null ? null : ` · #${row.rank}`}
-              </>
-            }
-            meta={
-              <StatusMark variant="status" value={OUTCOMES[row.outcome].tone}>
-                {OUTCOMES[row.outcome].label}
-              </StatusMark>
-            }
-            links={
-              <Button variant="secondary" onClick={() => setOpen(row)}>
-                Open answer
-              </Button>
-            }
-          />
+          <li key={row.task_id}>
+            <OpenRow
+              title={row.prompt_text}
+              caption={
+                <>
+                  {engines.label(row.engine)} · <DisplayTime value={row.completed_at} dateOnly />
+                  {row.rank === null ? null : ` · #${row.rank}`}
+                </>
+              }
+              meta={
+                <StatusMark variant="status" value={OUTCOMES[row.outcome].tone}>
+                  {OUTCOMES[row.outcome].label}
+                </StatusMark>
+              }
+              onOpen={() => setOpen(row)}
+            />
+          </li>
         ))}
       </ProductSection>
       <ExecutionEvidenceDrawer

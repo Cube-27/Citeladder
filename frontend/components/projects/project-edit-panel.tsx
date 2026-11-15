@@ -176,6 +176,7 @@ export function ProjectEditPanel({
       footer={
         <>
           <Button variant="quiet" onClick={() => onOpenChange(false)} disabled={save.isPending}>
+            <Icon icon={X} />
             Cancel
           </Button>
           <Button variant="primary" onClick={submit} disabled={save.isPending}>

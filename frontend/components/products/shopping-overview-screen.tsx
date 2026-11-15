@@ -1,10 +1,12 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { ShoppingBag } from 'lucide-react';
 
 import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { ProjectLink } from '@/components/ui/project-link';
 import { AppGrid } from '@/components/ui/app-grid';
+import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
@@ -53,8 +55,9 @@ const rankingCodec = stringUrlCodec<Ranking>(
 );
 type Overview = CommerceShoppingOverview;
 
-/** One row in place of rows: what is absent. */
-const emptyRow = (message: string) => ({ kind: 'empty', inline: true, message }) as const;
+/** A card's empty state in place of its table: what belongs here and why it is empty. */
+const emptyTable = (heading: string, description: string) =>
+  ({ kind: 'empty', icon: ShoppingBag, heading, description }) as const;
 
 const VISIBILITY: DataTableColumn = {
   key: 'visibility',
@@ -79,12 +82,11 @@ const METRIC_COLUMNS: readonly DataTableColumn[] = [
 ];
 const SHARE_COLUMN: DataTableColumn = {
   key: 'share_of_shelf',
-  label: 'Share of Shelf',
+  label: 'Share of shelf',
   hint: 'Its products’ share of every product recommendation in the answers.',
   kind: 'number',
+  width: 'metric',
 };
-
-const UNMEASURED = 'No answer was measured in this window yet.';
 
 /** A rate or mean as a narrow cell's Value: unavailable when nothing in scope measured it. */
 function Measured({
@@ -121,7 +123,9 @@ function RankingTable({
   const [ranking, setRanking] = useUrlState('ranking', rankingCodec);
   const brands = ranking === 'brands';
   const count = brands ? overview.brands.length : overview.products.length;
-  const emptyMessage = brands ? 'No brand yet.' : 'No product yet.';
+  const empty = brands
+    ? emptyTable('No brand ranked yet', 'No answer in this window named a brand.')
+    : emptyTable('No product ranked yet', 'No answer in this window named a product.');
   return (
     <DataTable
       title="Ranking"
@@ -143,16 +147,17 @@ function RankingTable({
       ]}
       rowCount={count}
       rowLines={2}
-      state={count ? undefined : emptyRow(emptyMessage)}
+      state={count ? undefined : empty}
     >
       {brands
         ? overview.brands.map((row) => (
             <TableRow key={row.brand} highlight={row.owned}>
               <TableCell>
+                {/* Only your brand is marked; every other row is a competitor. */}
                 <TableCellLines
                   title
                   primary={row.brand}
-                  secondary={row.owned ? 'Your brand' : 'Competitor'}
+                  secondary={row.owned ? 'Your brand' : undefined}
                 />
               </TableCell>
               <MetricCells row={row} />
@@ -182,7 +187,7 @@ function ProductList({
 }: Readonly<{
   title: string;
   description: string;
-  empty: string;
+  empty: Readonly<{ heading: string; description: string }>;
   rows: readonly CommerceOverviewProduct[];
   scope: ProductScopeFilters;
 }>) {
@@ -202,7 +207,7 @@ function ProductList({
       ]}
       rowCount={rows.length}
       rowLines={2}
-      state={rows.length ? undefined : emptyRow(empty)}
+      state={rows.length ? undefined : emptyTable(empty.heading, empty.description)}
     >
       {rows.map((row) => (
         <TableRow key={row.holder_id}>
@@ -232,11 +237,17 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
         { key: 'products', label: 'Products', kind: 'number' },
       ]}
       rowCount={rows.length}
-      state={rows.length ? undefined : emptyRow('No answer named a merchant.')}
+      state={
+        rows.length
+          ? undefined
+          : emptyTable('No merchant yet', 'No answer in this window named a merchant.')
+      }
     >
       {rows.map((row) => (
         <TableRow key={row.domain}>
-          <TableCell>{row.domain}</TableCell>
+          <TableCell>
+            <ClampText>{row.domain}</ClampText>
+          </TableCell>
           <TableCell>
             <Value value={formatCount(row.answers)} />
           </TableCell>
@@ -265,22 +276,25 @@ function fanoutCoverage(fanout: Overview['fanout']) {
 
 function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
   const empty = fanout.answers
-    ? 'No answer exposed its search queries.'
-    : 'No answer named a product.';
+    ? emptyTable('No fan-out queries yet', 'No answer exposed its search queries.')
+    : emptyTable('No fan-out queries yet', 'No answer in this window named a product.');
   return (
     <DataTable
       title="Top fan-out queries"
-      description={fanoutCoverage(fanout)}
+      // A coverage sentence only when there are answers to cover.
+      description={fanout.answers ? fanoutCoverage(fanout) : undefined}
       columns={[
         { key: 'query', label: 'Query', kind: 'identity' },
         { key: 'answers', label: 'Answers', kind: 'number' },
       ]}
       rowCount={fanout.queries.length}
-      state={fanout.queries.length ? undefined : emptyRow(empty)}
+      state={fanout.queries.length ? undefined : empty}
     >
       {fanout.queries.map((row) => (
         <TableRow key={row.query}>
-          <TableCell>{row.query}</TableCell>
+          <TableCell>
+            <ClampText>{row.query}</ClampText>
+          </TableCell>
           <TableCell>
             <Value value={formatCount(row.answers)} />
           </TableCell>
@@ -383,9 +397,33 @@ export function OverviewSections({
     );
   const overview = query.data;
   const scope: ProductScopeFilters = { window: windowDays, engine: null, promptSet: null };
-  const measured = overview.executions > 0;
+  const shelf = overview.category ? (
+    <CategoryShelf shelf={overview.category_shelf} categoryId={overview.category} />
+  ) : null;
+  // No answer in the window: one empty state for the page, never a ranking of zeros.
+  if (overview.executions === 0)
+    return (
+      <>
+        {shelf}
+        <Section aria-label="Shopping answers">
+          <StateBlock
+            kind="empty"
+            icon={ShoppingBag}
+            heading={`No shopping answers in the last ${overview.window_days} days`}
+            description="Rankings, merchants and fan-out queries appear once a Commerce run measures your shopping prompts."
+            action={
+              <Button asChild variant="primary">
+                <ProjectLink href="/products">Open Products</ProjectLink>
+              </Button>
+            }
+          />
+        </Section>
+      </>
+    );
   return (
     <>
+      {/* The page's question first: how you stand on the chosen category's shelf. */}
+      {shelf}
       <FigureStrip
         segments={[
           {
@@ -401,24 +439,26 @@ export function OverviewSections({
           },
         ]}
       />
-      {overview.category ? (
-        <CategoryShelf shelf={overview.category_shelf} categoryId={overview.category} />
-      ) : null}
       <RankingTable overview={overview} scope={scope} />
       <AppGrid layout="halves">
-        {/* With no answer measured in the window, a ranking of zeros would read as observed. */}
         <ProductList
           title="Most visible"
           description="Your products named in the most answers."
-          empty={measured ? 'No product was named in an answer yet.' : UNMEASURED}
-          rows={measured ? overview.most_visible : []}
+          empty={{
+            heading: 'No product named yet',
+            description: 'No answer in this window named one of your products.',
+          }}
+          rows={overview.most_visible}
           scope={scope}
         />
         <ProductList
           title="Least visible"
           description="Your products named in the fewest answers."
-          empty={measured ? 'Every product is listed under Most visible.' : UNMEASURED}
-          rows={measured ? overview.least_visible : []}
+          empty={{
+            heading: 'Nothing else to list',
+            description: 'Every product is listed under Most visible.',
+          }}
+          rows={overview.least_visible}
           scope={scope}
         />
       </AppGrid>
@@ -453,10 +493,13 @@ export function ShoppingOverviewScreen() {
   return (
     <ReportPage
       actions={
-        // Shopping reads the catalog; what to do next lives on Products.
-        <Button asChild variant="secondary">
-          <ProjectLink href="/products">Open Products</ProjectLink>
-        </Button>
+        // Shopping reads the catalog; what to do next lives on Products. With
+        // no answers the empty state holds this link, so it shows once.
+        query.data?.executions === 0 ? null : (
+          <Button asChild variant="secondary">
+            <ProjectLink href="/products">Open Products</ProjectLink>
+          </Button>
+        )
       }
       filters={
         <FilterBar

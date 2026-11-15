@@ -61,6 +61,7 @@ export function PlanRow({
         plan.contact_only ? (
           <TextLink
             variant="external"
+            className="whitespace-nowrap"
             href={contactSalesHref(
               plan.contact_url,
               new URL(websiteHref('/contact'), 'https://citeladder.com').href,

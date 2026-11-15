@@ -34,6 +34,7 @@ import { formatDisplayTimestamp } from '@/lib/format';
 import { Notice } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
 import { Stack } from '@/components/ui/layout';
+import { StateBlock } from '@/components/ui/state-block';
 
 const SETTINGS_TABS = [
   { id: 'account', label: 'Account' },
@@ -102,7 +103,8 @@ function ProjectDeletionControls() {
     <>
       <Section aria-labelledby="settings-danger-zone-title">
         <SectionHeader>
-          <SectionTitle id="settings-danger-zone-title">Danger zone</SectionTitle>
+          {/* Its own card: Settings has no project-scoped tab, so it stays under Account. */}
+          <SectionTitle id="settings-danger-zone-title">Delete project</SectionTitle>
           <SectionDescription>
             Permanently delete the active project and everything inside it.
           </SectionDescription>
@@ -146,7 +148,7 @@ function ProjectDeletionControls() {
               ) : null}
             </>
           ) : (
-            <p className="type-body text-ink-2">No project selected.</p>
+            <StateBlock kind="empty" inline message="No project is selected." />
           )}
         </Stack>
       </Section>

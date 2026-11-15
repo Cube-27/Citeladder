@@ -16,7 +16,7 @@ import { ROLE_OPTIONS, roleLabel } from './member-roles';
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'member', label: 'Member', kind: 'identity' },
   { key: 'role', label: 'Workspace role', kind: 'status', width: 'category' },
-  { key: 'access', label: 'Access', kind: 'actions', width: 'name' },
+  { key: 'actions', label: 'Actions', kind: 'actions', width: 'rowActions', hideLabel: true },
 ];
 
 /** What the roster shows instead of rows, if anything. */

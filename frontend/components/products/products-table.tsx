@@ -42,19 +42,25 @@ const SORTABLE: Partial<Record<ProductColumnKey, CommerceProductSort>> = {
 };
 
 /**
- * Each metric column's width role; the product name takes a quarter of the
- * table. A sortable head carries its glyph beside the mono overline, so it
- * takes the wider role and its label is never cut.
+ * Each metric column's width role; the product name takes what is left. The
+ * four ranking figures are the priority columns and fit beside the pinned name
+ * at 982; prices and merchants come last and are what scrolls.
  */
 const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
-  visibility: 'status',
+  visibility: 'shortMetric',
   appearances: 'shortMetric',
-  win_rate: 'status',
-  position: 'status',
+  win_rate: 'shortMetric',
+  position: 'shortMetric',
   mentioned_price: 'figure',
   catalog_price: 'figure',
-  merchants: 'name',
+  merchants: 'category',
 };
+
+const LOW_PRIORITY: ReadonlySet<ProductColumnKey> = new Set([
+  'mentioned_price',
+  'catalog_price',
+  'merchants',
+]);
 
 /**
  * A metric as the Value atom prints it, its note beneath. Nothing in scope to
@@ -84,7 +90,7 @@ export function MissingValue({
 }: Readonly<{ cell: Extract<ProductCell, { kind: 'missing' }>; narrow: boolean }>) {
   switch (cell.state) {
     case 'none':
-      return <span className="text-ink-2">None</span>;
+      return <Absence state="none" />;
     case 'not_applicable':
       return <Absence state="not_applicable" />;
     case 'unknown':
@@ -116,7 +122,10 @@ export function ProductName({
       {row.name}
     </TextLink>
   );
-  return <TableCellLines title primary={name} secondary={holderCaption(row)} />;
+  // "Your product" is said once, by the My catalog view and the row's accent
+  // mark; a row names its kind only when it differs.
+  const caption = row.kind === 'owned' ? row.brand : holderCaption(row);
+  return <TableCellLines title primary={name} secondary={caption || undefined} />;
 }
 
 /**
@@ -165,7 +174,6 @@ export function ProductsTable({
       key: 'product',
       label: 'Product',
       kind: 'identity',
-      width: 'lead',
       sort: { active: sort === 'name', descending: false, onSort: () => onSort('name') },
     },
     ...shown.map((column): DataTableColumn => {
@@ -176,6 +184,7 @@ export function ProductsTable({
         hint: column.hint,
         width: COLUMN_WIDTHS[column.key],
         kind: column.key === 'merchants' ? 'text' : 'number',
+        ...(LOW_PRIORITY.has(column.key) ? { priority: 'low' } : {}),
         ...(sortKey
           ? {
               sort: {
@@ -195,6 +204,7 @@ export function ProductsTable({
             width: 'name',
             kind: 'actions',
             hideLabel: true,
+            priority: 'low',
           } satisfies DataTableColumn,
         ]
       : []),
@@ -216,7 +226,6 @@ export function ProductsTable({
       rowCount={rows.length}
       pageSize={pageSize}
       rowLines={2}
-      minWidth="xl"
       busy={{ active: query.isFetching && !query.isPending, label: 'Updating products' }}
       selection={{
         all,

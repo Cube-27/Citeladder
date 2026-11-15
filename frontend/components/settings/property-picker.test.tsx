@@ -122,7 +122,9 @@ describe('PropertyPicker', () => {
     renderWithProviders(<PropertyPicker connection={connection()} />);
 
     // The state that made syncs fail silently must be visible, not blank.
-    expect(screen.getByText('No Search Console property selected')).toBeInTheDocument();
+    expect(
+      screen.getByText('This project: no Search Console property selected'),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Select Search Console property' }),
     ).toBeInTheDocument();
@@ -272,7 +274,9 @@ describe('PropertyPicker', () => {
       <PropertyPicker connection={connection({ account_ref: 'sc-domain:example.com' })} />,
     );
 
-    expect(await screen.findByText('No Search Console property selected')).toBeInTheDocument();
+    expect(
+      await screen.findByText('This project: no Search Console property selected'),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Select Search Console property' }),
     ).toBeInTheDocument();
@@ -287,7 +291,9 @@ describe('PropertyPicker', () => {
     mockProperties();
     renderWithProviders(<PropertyPicker connection={connection()} />);
 
-    expect(await screen.findByText('No Search Console property selected')).toBeInTheDocument();
+    expect(
+      await screen.findByText('This project: no Search Console property selected'),
+    ).toBeInTheDocument();
     await ue.click(screen.getByRole('button', { name: 'Select Search Console property' }));
     const foreign = await screen.findByText('Another site');
     expect(foreign.closest('button')).toBeDisabled();

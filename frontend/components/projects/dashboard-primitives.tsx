@@ -1,5 +1,6 @@
 import { AppGrid } from '@/components/ui/app-grid';
 import { ChartFrame } from '@/components/ui/chart-frame';
+import { ClampText } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Delta } from '@/components/ui/delta';
 import type { DataTone } from '@/components/ui/data-tone';
@@ -106,10 +107,9 @@ export function ActionFacts({ action }: Readonly<{ action: Opportunity }>) {
       <StatusMark variant="priority" value={severityPriority(action.severity)}>
         {severityLabel(action.severity)}
       </StatusMark>
-      <span className={textRole('caption', 'min-w-0 truncate')}>
-        {action.target_label ? readableUrl(action.target_label) : 'Project-wide'} ·{' '}
-        {pluralCount(action.evidence_summary.count, 'evidence item')}
-      </span>
+      <ClampText className={textRole('caption', 'min-w-0 flex-1')}>
+        {`${action.target_label ? readableUrl(action.target_label) : 'Project-wide'} · ${pluralCount(action.evidence_summary.count, 'evidence item')}`}
+      </ClampText>
     </Inline>
   );
 }
@@ -122,13 +122,13 @@ export function actionItem(action: Opportunity): ReorderItem {
     // The severity mark carries the priority; the score is not repeated.
     content: (
       <Stack gap="tight">
+        {/* The Action's own title, from its source; cut to one line with all of it in the tooltip. */}
         <TextLink
           text="body"
-          className="min-w-0 truncate"
-          title={action.title}
+          className="flex min-w-0"
           href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
         >
-          {action.title}
+          <ClampText>{action.title}</ClampText>
         </TextLink>
         <ActionFacts action={action} />
       </Stack>

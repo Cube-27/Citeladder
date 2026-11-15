@@ -15,7 +15,6 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { RadioGroup } from '@/components/ui/radio-group';
-import { TagGroup } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -89,7 +88,7 @@ function KeyRow({
         </div>
       </TableCell>
       <TableCell>
-        <TagGroup labels={apiKey.scopes} />
+        <ClampText>{apiKey.scopes.join(', ')}</ClampText>
       </TableCell>
       <TableCell>
         <ClampText lines={1}>{projects}</ClampText>
@@ -111,7 +110,7 @@ const KEY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'scopes', label: 'Access', kind: 'text', width: 'name' },
   { key: 'projects', label: 'Projects', kind: 'text', width: 'status' },
   { key: 'used', label: 'Last used', kind: 'date' },
-  { key: 'revoke', label: 'Revoke', kind: 'actions', width: 'action', hideLabel: true },
+  { key: 'revoke', label: 'Actions', kind: 'actions', width: 'action', hideLabel: true },
 ];
 
 function CreateKeyDialog({
@@ -186,7 +185,8 @@ function CreateKeyDialog({
       {created ? (
         <Stack gap="compact">
           <Notice tone="warning">You won’t see this key again. Store it somewhere safe now.</Notice>
-          <code className="type-caption break-all">{created.secret}</code>
+          {/* The secret is shown once, whole, so it may wrap anywhere to stay readable. */}
+          <code className="type-code break-all">{created.secret}</code>
           <div>
             <CopyButton value={created.secret}>Copy key</CopyButton>
           </div>
@@ -327,7 +327,12 @@ function ApiKeysBody({
           columns={KEY_COLUMNS}
           state={
             keys.length === 0
-              ? { kind: 'empty', icon: KeyRound, heading: 'No API keys yet' }
+              ? {
+                  kind: 'empty',
+                  icon: KeyRound,
+                  heading: 'No API keys yet',
+                  description: 'Create a key to call the REST API from your own code.',
+                }
               : undefined
           }
         >

@@ -22,7 +22,7 @@ import {
   type BillingCatalog,
   type BillingEntitlement,
 } from '@/lib/api/billing';
-import { catalogItemName, catalogPlanByKey } from '@/lib/billing/catalog';
+import { catalogItemName, catalogPlanByKey, newPlanCheckoutClosed } from '@/lib/billing/catalog';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
@@ -112,12 +112,14 @@ function isSubscribed(entitlement: BillingEntitlement | null): boolean {
   return status !== undefined && SUBSCRIBED_STATUSES.has(status);
 }
 
+type PlanStep = Readonly<{ label: string; href: string; closed: boolean }>;
+
 /**
- * The page's one next step, in the masthead: changing the plan a workspace
- * has, or choosing one it lacks. None while a quote is under review, since
- * its own confirm is then the step.
+ * The page's next step: changing the plan a workspace has, or choosing one it
+ * lacks; `closed` when checkout cannot complete it. None while a quote is
+ * under review, since its own confirm is then the step.
  */
-function NextStep({
+function planStep({
   catalog,
   entitlement,
   canManage,
@@ -127,23 +129,45 @@ function NextStep({
   entitlement: BillingEntitlement | null;
   canManage: boolean;
   reviewing: boolean;
-}>) {
+}>): PlanStep | null {
   if (!canManage || !catalog || reviewing) return null;
   const subscription = entitlement?.subscription ?? null;
   if (subscription?.status === 'pending') return null;
   const currentPlan = currentPlanOf(catalog, entitlement);
   if (isSubscribed(entitlement) && currentPlan) {
-    if (changeOptions(catalog, currentPlan).length === 0) return null;
-    return (
-      <Button asChild variant="primary">
-        <a href="#change-plan">Change plan</a>
-      </Button>
+    const options = changeOptions(catalog, currentPlan);
+    if (options.length === 0) return null;
+    const closed = options.every(
+      (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
     );
+    return { label: 'Change plan', href: '#change-plan', closed };
   }
+  return { label: 'Choose a plan', href: '#choose-plan', closed: newPlanCheckoutClosed(catalog) };
+}
+
+/**
+ * The step in the masthead: the view's primary while checkout is open; while
+ * it is closed, a disabled secondary with the reason beside it (2.8 Disabled).
+ */
+function NextStep({ step }: Readonly<{ step: PlanStep | null }>) {
+  if (!step) return null;
+  if (step.closed)
+    return (
+      <>
+        <Button variant="secondary" disabled aria-describedby="plan-step-reason">
+          {step.label}
+        </Button>
+        <span id="plan-step-reason" className="type-caption">
+          Checkout is not open yet
+        </span>
+      </>
+    );
   return (
-    <Button asChild variant="primary">
-      <a href="#choose-plan">Choose a plan</a>
-    </Button>
+    <MastheadPrimary>
+      <Button asChild variant="primary">
+        <a href={step.href}>{step.label}</a>
+      </Button>
+    </MastheadPrimary>
   );
 }
 
@@ -206,14 +230,14 @@ export function BillingScreen() {
   return (
     <SettingsPage
       actions={
-        <MastheadPrimary>
-          <NextStep
-            catalog={catalog}
-            entitlement={entitlement}
-            canManage={canManage}
-            reviewing={checkout.prepared?.status === 'pending'}
-          />
-        </MastheadPrimary>
+        <NextStep
+          step={planStep({
+            catalog,
+            entitlement,
+            canManage,
+            reviewing: checkout.prepared?.status === 'pending',
+          })}
+        />
       }
     >
       <CheckoutStatus checkout={checkout} />

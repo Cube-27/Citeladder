@@ -5,7 +5,6 @@ import { comparisonDeclinedReason } from '@citeladder/contracts/comparison-reaso
 import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contracts/overview';
 
 import { Delta } from '@/components/ui/delta';
-import { ArrowLink } from '@/components/ui/text-link';
 import { StepChart } from '@/components/ui/step-chart';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
@@ -37,17 +36,21 @@ import { WidgetFrame } from './widget-frame';
 function WidgetCard({
   id,
   href,
+  fill,
   children,
-}: Readonly<{ id: OverviewWidgetKey; href: string; children: ReactNode }>) {
+}: Readonly<{
+  id: OverviewWidgetKey;
+  href: string;
+  /** `figure` for a number widget, which centres its figures. */
+  fill?: 'figure';
+  children: ReactNode;
+}>) {
   return (
     <WidgetFrame
       id={`widget-${id}`}
       title={overviewWidgetTitles[id]}
-      actions={
-        <ArrowLink href={href}>
-          <span className="sr-only">{overviewWidgetTitles[id]}: </span>Open
-        </ArrowLink>
-      }
+      fill={fill}
+      link={{ href, label: 'Open', name: overviewWidgetTitles[id] }}
     >
       {children}
     </WidgetFrame>
@@ -244,7 +247,7 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
       </WidgetCard>
     );
   return (
-    <WidgetCard id="perception" href="/visibility?tab=perception">
+    <WidgetCard id="perception" href="/visibility?tab=perception" fill="figure">
       <Loaded
         query={perception}
         waitsOn={visibility}
@@ -283,7 +286,7 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
 export function AiTrafficWidget({ project }: Readonly<{ project: Project }>) {
   const query = useTrafficOverview(project);
   return (
-    <WidgetCard id="ai_traffic" href="/ai-traffic">
+    <WidgetCard id="ai_traffic" href="/ai-traffic" fill="figure">
       <Loaded query={query} subject="AI Traffic" fallback="AI Traffic could not be loaded.">
         {({ crawl, referrals }) => {
           const visits = referrals.referral_volume.at(-1)?.value ?? null;
@@ -313,7 +316,7 @@ export function AiTrafficWidget({ project }: Readonly<{ project: Project }>) {
 export function SearchConsoleWidget({ project }: Readonly<{ project: Project }>) {
   const query = useSearchPerformance(project);
   return (
-    <WidgetCard id="search_console" href="/performance">
+    <WidgetCard id="search_console" href="/performance" fill="figure">
       <Loaded query={query} subject="Search Console" fallback="Search Console could not be loaded.">
         {({ selected }) =>
           selected.evidence_state === 'not_run' ? (

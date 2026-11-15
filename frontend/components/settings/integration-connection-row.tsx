@@ -295,7 +295,8 @@ function ConnectionRowView({
         label={`${label} sync status`}
         facts={[
           {
-            label: 'Last synced',
+            // The connection is the workspace's, so its sync is too.
+            label: 'Connection last synced',
             value: (
               <span className="truncate">
                 <DisplayTime value={connection.last_synced_at} fallback="Never" />

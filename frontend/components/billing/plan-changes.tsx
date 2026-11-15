@@ -1,6 +1,9 @@
 import { useState } from 'react';
 
+import { X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
@@ -138,6 +141,7 @@ export function PlanChanges({
           footer={
             <>
               <Button variant="quiet" onClick={() => setDowngradeTo(null)}>
+                <Icon icon={X} />
                 Keep {currentPlan.name}
               </Button>
               <Button

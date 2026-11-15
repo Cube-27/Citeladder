@@ -3,7 +3,10 @@ import { useMutation } from '@tanstack/react-query';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
+import { X } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { CsvImportFileInput } from '@/components/ui/csv-import';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -392,6 +395,7 @@ export function AddProductsDialog({
     footer = (
       <>
         <Button variant="quiet" onClick={() => close(false)}>
+          <Icon icon={X} />
           Cancel
         </Button>
         <Button variant="primary" disabled={!ready || busy} onClick={() => void submit()}>

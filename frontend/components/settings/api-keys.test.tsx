@@ -111,7 +111,7 @@ it('lists a key by name, prefix, scopes and projects without its ID', async () =
   expect(row).toHaveTextContent(
     'CI exportcl_live_Ab12Cd34… · Active · Created by ana@example.test · Created Oct 1, 2026',
   );
-  expect(row).toHaveTextContent('readaudits:runAcmeNot used yet');
+  expect(row).toHaveTextContent('read, audits:runAcmeNot used yet');
   expect(row?.textContent).not.toContain(KEY);
   expect(screen.getByText('1 of 10 keys in use')).toBeInTheDocument();
 });
