@@ -36,7 +36,7 @@ vi.mock('@/lib/project/project-context', () => ({
 
 import { DataSourceSetup } from './data-source-setup';
 
-function connection(id: string, provider: 'gsc' | 'ga4', grantStatus = 'connected') {
+function connection(id: string, provider: 'gsc' | 'ga4' | 'bing', grantStatus = 'connected') {
   return {
     id,
     workspace_id: WS,

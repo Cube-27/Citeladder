@@ -6,10 +6,10 @@ import { useParams } from 'react-router-dom';
 import { RecordPage } from '@/components/templates/record-page';
 import { AppGrid } from '@/components/ui/app-grid';
 import { ClampText } from '@/components/ui/clamp-text';
-import { Card } from '@/components/ui/card';
 import { FilterControls } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
+import { Inline, Stack } from '@/components/ui/layout';
 import { ProductImage } from '@/components/ui/product-image';
 import { TextLink } from '@/components/ui/text-link';
 import { InlineFigure, textRole } from '@/components/ui/typography';
@@ -257,42 +257,46 @@ function ProductIdentity({
 }>) {
   const { product } = detail;
   const card = (notices: ReactNode, actions: ReactNode) => (
-    <Card aria-label="Product">
-      <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
-        {product.image_url ? <ProductImage src={product.image_url} /> : null}
-        <div className="flex min-w-0 flex-[1_1_20rem] flex-col">
-          <span className="type-caption text-ink-2">
-            {holderCaption(product)} · From{' '}
-            <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
-            {detail.executions === 1 ? ' answer' : ' answers'} in the last{' '}
-            <InlineFigure>{detail.window_days}</InlineFigure> days
-          </span>
-          {product.description ? (
-            <ClampText lines={2} className={textRole('body', 'text-ink mt-1 max-w-[72ch]')}>
-              {product.description}
-            </ClampText>
-          ) : null}
-          {product.url ? (
-            <TextLink
-              variant="external"
-              href={product.url}
-              text="caption"
-              className="mt-2 flex max-w-full min-w-0"
-            >
-              {/* Cut from the start: the path's end names the product. */}
-              <ClampText tooltip={product.url} className="text-left [direction:rtl]">
-                <bdi dir="ltr">{urlTail(product.url)}</bdi>
-              </ClampText>
-            </TextLink>
-          ) : null}
-        </div>
-        <div className="flex flex-wrap items-start gap-2 max-sm:basis-full">
-          <FilterControls filters={filters} align="end" />
-          {actions}
-        </div>
-      </div>
-      {notices ? <div className="mt-[var(--card-padding)]">{notices}</div> : null}
-    </Card>
+    <Section aria-label="Product">
+      <Stack gap="workspace">
+        <Inline gap="compact" className="flex-wrap items-start">
+          {product.image_url ? <ProductImage src={product.image_url} /> : null}
+          <Stack gap="item" className="min-w-0 flex-[1_1_20rem]">
+            <Stack gap="tight" className="min-w-0">
+              <span className="type-caption text-ink-2">
+                {holderCaption(product)} · From{' '}
+                <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
+                {detail.executions === 1 ? ' answer' : ' answers'} in the last{' '}
+                <InlineFigure>{detail.window_days}</InlineFigure> days
+              </span>
+              {product.description ? (
+                <ClampText lines={2} className={textRole('body', 'text-ink max-w-[72ch]')}>
+                  {product.description}
+                </ClampText>
+              ) : null}
+            </Stack>
+            {product.url ? (
+              <TextLink
+                variant="external"
+                href={product.url}
+                text="caption"
+                className="flex max-w-full min-w-0"
+              >
+                {/* Cut from the start: the path's end names the product. */}
+                <ClampText tooltip={product.url} className="text-left [direction:rtl]">
+                  <bdi dir="ltr">{urlTail(product.url)}</bdi>
+                </ClampText>
+              </TextLink>
+            ) : null}
+          </Stack>
+          <Inline gap="item" className="flex-wrap items-start max-sm:basis-full">
+            <FilterControls filters={filters} align="end" />
+            {actions}
+          </Inline>
+        </Inline>
+        {notices}
+      </Stack>
+    </Section>
   );
   if (product.catalog)
     return (

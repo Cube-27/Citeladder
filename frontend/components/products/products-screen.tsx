@@ -125,6 +125,32 @@ function narrowed(filters: ProductFilters): boolean {
   );
 }
 
+/** Nothing in the catalog and nothing listed: one state replaces the counts and the toolbar. */
+function noProducts({
+  total,
+  listed,
+  filters,
+}: Readonly<{ total: number | undefined; listed: number | undefined; filters: ProductFilters }>) {
+  return total === 0 && listed === 0 && filters.source === 'catalog' && !narrowed(filters);
+}
+
+function NoProducts({ header }: Readonly<{ header: ReturnType<typeof useCatalogHeader> }>) {
+  return (
+    <CollectionPage actions={header.actions}>
+      {header.notices}
+      <StateBlock
+        kind="empty"
+        icon={PackageOpen}
+        heading="No products yet"
+        description="Add your products so CiteLadder can track how AI answers mention and price them."
+        action={
+          header.addProducts ? <Button onClick={header.addProducts}>Add products</Button> : null
+        }
+      />
+    </CollectionPage>
+  );
+}
+
 /**
  * Commerce's Products collection (commerce improvement PR 3): every product
  * holder with its metrics over the chosen window, narrowed by the filter bar
@@ -180,27 +206,8 @@ function ProductsContent({
       csv.rows,
     );
   };
-  // Nothing in the catalog and nothing listed: one state replaces the counts and the toolbar.
-  const noProducts =
-    catalog.data?.product_total === 0 &&
-    filters.source === 'catalog' &&
-    !narrowed(filters) &&
-    page.data?.items.length === 0;
-  if (noProducts)
-    return (
-      <CollectionPage actions={header.actions}>
-        {header.notices}
-        <StateBlock
-          kind="empty"
-          icon={PackageOpen}
-          heading="No products yet"
-          description="Add your products so CiteLadder can track how AI answers mention and price them."
-          action={
-            header.addProducts ? <Button onClick={header.addProducts}>Add products</Button> : null
-          }
-        />
-      </CollectionPage>
-    );
+  if (noProducts({ total: catalog.data?.product_total, listed: page.data?.items.length, filters }))
+    return <NoProducts header={header} />;
   return (
     <CollectionPage
       actions={header.actions}

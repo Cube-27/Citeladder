@@ -231,15 +231,24 @@ export function useCatalogHeader({
     notices: (
       <>
         <CatalogNotices refreshError={discover.error ?? dashboard.error} onRefresh={refresh} />
-        {projection?.applicability === 'unknown' && !projection.in_flight && !projection.failed ? (
-          <Notice tone="warning" title="Business model unconfirmed">
-            Website pages become catalog products once your business model is confirmed as one that
-            sells products.
-          </Notice>
-        ) : null}
+        <BusinessModelNotice projection={projection} />
       </>
     ),
   };
+}
+
+/** A projection waiting on the business model says so in a sentence, not a figure. */
+function BusinessModelNotice({
+  projection,
+}: Readonly<{ projection: CommerceProjection | undefined }>) {
+  if (projection?.applicability !== 'unknown' || projection.in_flight || projection.failed)
+    return null;
+  return (
+    <Notice tone="warning" title="Business model unconfirmed">
+      Website pages become catalog products once your business model is confirmed as one that sells
+      products.
+    </Notice>
+  );
 }
 
 /** Whatever the last catalog-wide action has to report, above the counts. */

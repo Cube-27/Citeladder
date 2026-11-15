@@ -362,13 +362,8 @@ export function DataSourceSetup({
     );
 
   const rows = setupRows(providers, sources.steps);
-  if (
-    unconnected &&
-    !sources.error &&
-    !oauth.error &&
-    !oauth.connected &&
-    rows.every((row) => row.kind === 'connect')
-  )
+  const settled = !sources.error && !oauth.error && !oauth.connected;
+  if (unconnected && settled && rows.every((row) => row.kind === 'connect'))
     return (
       <UnconnectedState
         {...unconnected}
@@ -377,7 +372,40 @@ export function DataSourceSetup({
         startConnect={startConnect}
       />
     );
+  return (
+    <SetupCard
+      required={required}
+      title={title}
+      rows={rows}
+      sources={sources}
+      oauth={oauth}
+      canManage={canManage}
+      projectId={activeProject.id}
+      startConnect={startConnect}
+    />
+  );
+}
 
+/** The setup card: what the callback reported, then each source's next step. */
+function SetupCard({
+  required,
+  title,
+  rows,
+  sources,
+  oauth,
+  canManage,
+  projectId,
+  startConnect,
+}: Readonly<{
+  required: readonly IntegrationProvider[];
+  title: string;
+  rows: readonly Row[];
+  sources: ReturnType<typeof useDataSources>;
+  oauth: ReturnType<typeof useOAuthReturn>;
+  canManage: boolean;
+  projectId: string;
+  startConnect: (family: GrantFamily) => void;
+}>) {
   return (
     // At the prose width, so a row's Connect button sits close to its text.
     <Section
@@ -420,7 +448,7 @@ export function DataSourceSetup({
                   key={row.provider}
                   provider={row.provider}
                   step={row.step}
-                  projectId={activeProject.id}
+                  projectId={projectId}
                   canManage={canManage}
                   autoStart={oauth.connected === GRANT_FAMILY[row.provider]}
                   startConnect={startConnect}
