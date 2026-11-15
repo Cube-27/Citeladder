@@ -522,11 +522,14 @@ describe('BillingScreen', () => {
     ).toBeNull();
   });
 
-  it('surfaces a catalog failure without falling back to a price', async () => {
+  it('surfaces a catalog failure without falling back to a price, and recovers with Retry', async () => {
     entitlementValue = resolvedEntitlement();
+    let available = false;
     mswServer.use(
       http.get('/api/v1/billing/workspace-catalog', () =>
-        HttpResponse.json({ error: { message: 'catalog unavailable' } }, { status: 400 }),
+        available
+          ? HttpResponse.json(CATALOG)
+          : HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 }),
       ),
       entitlementHandler(),
       usageHandler(),
@@ -534,10 +537,14 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />);
 
-    expect(await screen.findByText(/Could not load the plan catalog/i)).toBeInTheDocument();
+    const retry = await screen.findByRole('button', { name: 'Retry' });
     expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
     // No component-owned fallback price may appear when the catalog is gone.
     expect(document.body.textContent).not.toMatch(/\$\d/);
+
+    available = true;
+    await userEvent.click(retry);
+    expect(await screen.findAllByRole('button', { name: /Choose/ })).not.toHaveLength(0);
   });
 
   it('shows only paid receipts and downloads the server-issued PDF', async () => {
