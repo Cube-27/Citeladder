@@ -389,8 +389,6 @@ export function OverviewSections({
             label: 'Product recommendations',
             value: formatCount(overview.slots),
           },
-          { key: 'brands', label: 'Brands', value: formatCount(overview.brands.length) },
-          { key: 'products', label: 'Products', value: formatCount(overview.products.length) },
         ]}
       />
       {overview.category ? <CategoryShelf shelf={overview.category_shelf} /> : null}

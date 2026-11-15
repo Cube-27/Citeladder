@@ -12,7 +12,7 @@ import { ScrollEdgeFades, useScrollEdges } from '@/components/ui/scroll-edges';
 import { cn } from '@/lib/utils';
 
 /**
- * Tabs and Segmented (brand direction 3.1): text on a hairline. The strip is
+ * Tabs and Segmented: text on a hairline. The strip is
  * one row with a 1px `rule` under it that scrolls sideways inside itself
  * (its scrollbar hidden) when its items overflow; each item is `body` in
  * `ink-2`, and the current one is `ink` at `label` weight with the 2px
@@ -51,7 +51,7 @@ function StripFrame({
 /**
  * One item: the label, and the current item's accent rung on the hairline.
  * The item stops 1px short so the strip, hairline included, is one control
- * high (brand direction 2.2).
+ * high.
  */
 function tabFace(selected: boolean, className?: string) {
   return cn(
@@ -66,8 +66,8 @@ function tabFace(selected: boolean, className?: string) {
 
 /**
  * The website's segmented track and segment, kept for its product screens
- * (components/marketing/screens) and the shell's mode switch until it is
- * retired. The app's tabs and switches use `tabFace` above.
+ * (components/marketing/screens). The app's tabs and switches use `tabFace`
+ * above.
  */
 export const TAB_TRACK =
   'scroll-shade-x inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';

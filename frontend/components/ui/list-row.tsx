@@ -150,7 +150,7 @@ export function TreeItem({
     <li
       data-tree-item=""
       className={cn(
-        'text-ink flex min-h-[var(--nav-item-height)] min-w-0 items-center gap-2 ps-3 pe-0.5',
+        'text-ink flex min-h-[var(--control-md)] min-w-0 items-center gap-2 ps-3 pe-0.5',
         nested && 'ms-3',
         listRowClasses(),
       )}
@@ -192,10 +192,7 @@ export function TreeCheckOption({
 }>) {
   return (
     <li
-      className={cn(
-        'flex min-h-[var(--nav-item-height)] min-w-0 items-center gap-2',
-        treeIndent(depth),
-      )}
+      className={cn('flex min-h-[var(--control-md)] min-w-0 items-center gap-2', treeIndent(depth))}
     >
       <Checkbox
         label={label}

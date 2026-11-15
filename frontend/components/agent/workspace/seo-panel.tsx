@@ -34,7 +34,7 @@ function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
 
 /**
  * The SEO tab (E5): the page's SEO fields as the latest revision holds them,
- * and Site Health's page-local checks as they judged the page when it was
+ * and Website's page-local checks as they judged the page when it was
  * fetched. Editing the page does not rerun the checks, and the tab says so.
  */
 export function SeoPanel({

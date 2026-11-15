@@ -146,7 +146,7 @@ export function focusRoleViolations(source, label, ownsProductUi) {
 
 /**
  * The app has one shadow, `shadow-sheet`, under anything that floats; nothing
- * at rest has a shadow (brand direction 2.4). The website's edge, xs, float,
+ * at rest has a shadow. The website's edge, xs, float,
  * pop and press shadows are its own.
  */
 const SHADOW_ROLES = new Set(['none', 'sheet']);

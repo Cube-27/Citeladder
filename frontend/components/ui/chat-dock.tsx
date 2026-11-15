@@ -15,8 +15,8 @@ import { cn } from '@/lib/utils';
 /**
  * The chat template: a thread that scrolls in its own region and a composer
  * docked under that region, so only the thread moves while a reply streams.
- * A chat route gets it from `ListScreen fill` with a `ComposerDock` as its
- * `dock`; the panel uses `DockedThread` (give that `Drawer` the `dock` body).
+ * A chat route gets it from `ThreadPage` with a `ComposerDock` as its dock;
+ * the panel uses `DockedThread` (give that `Drawer` the `dock` body).
  *
  * `DockedThread` is the panel's column: the thread's parts 16 apart in a
  * region that scrolls (`scrollRef`, named by `label`), the dock under it.
@@ -164,7 +164,7 @@ export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: Rea
           'flex max-w-[min(80%,var(--container-prose))] min-w-0 flex-col gap-2 px-4 py-3',
         )}
       >
-        <p className={textRole('body', 'text-ink-2 text-ink whitespace-pre-wrap')}>{text}</p>
+        <p className={textRole('body', 'text-ink whitespace-pre-wrap')}>{text}</p>
         {footer}
       </div>
     </div>
@@ -172,7 +172,7 @@ export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: Rea
 }
 
 /**
- * The agent's turn (brand direction 3.2 Turn), with no bubble: the logo mark,
+ * The agent's turn, with no bubble: the logo mark,
  * "Agent", the time and any `meta` (the skill it used) on one line, then the
  * reply's parts 12 apart on a dashed rail, because the model wrote them.
  * `inProgress` marks the reply still being written.
@@ -265,12 +265,7 @@ export function PastedTextChip({
       </Pressable>
       {onRemove ? <RemoveControl label={label} onRemove={onRemove} /> : null}
       <Dialog open={open} onOpenChange={setOpen} title="Pasted text" width="wide">
-        <pre
-          className={textRole(
-            'body',
-            'text-ink-2 text-ink font-mono break-words whitespace-pre-wrap',
-          )}
-        >
+        <pre className={textRole('body', 'text-ink font-mono break-words whitespace-pre-wrap')}>
           {text}
         </pre>
       </Dialog>

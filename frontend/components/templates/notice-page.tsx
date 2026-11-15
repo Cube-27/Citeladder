@@ -2,7 +2,7 @@ import { CircleAlert, Info, TriangleAlert, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
-import { Spinner } from '@/components/ui/spinner';
+import { StateBlock } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -10,7 +10,7 @@ import { PageFrame } from './page-frame';
 
 /**
  * What a full-page notice says: a gate, a dead end, a failure, or the
- * workspace still loading (the live rung, shown only after 300ms).
+ * workspace still loading (the StateBlock loader, its heading the status).
  */
 type NoticeTone = 'info' | 'warning' | 'negative' | 'loading';
 
@@ -52,22 +52,15 @@ function NoticeBlock({
   actions,
   level,
 }: NoticeContent & Readonly<{ level: 1 | 2 }>) {
+  // One loader for a wait that passes through several owners: it hands over without a blank beat.
+  if (tone === 'loading') return <StateBlock kind="loading" label={heading} />;
   const Heading = level === 1 ? 'h1' : 'h2';
   return (
     <section
       data-notice-tone={tone}
-      aria-busy={tone === 'loading' || undefined}
-      className={cn(
-        'max-w-flow flex w-full flex-col gap-[var(--card-padding)]',
-        tone === 'loading' && 'loading-delayed',
-      )}
+      className="max-w-flow flex w-full flex-col gap-[var(--card-padding)]"
     >
-      {tone === 'loading' ? (
-        // The heading names what is loading, so the rung carries no label of its own.
-        <Spinner />
-      ) : (
-        <Icon icon={icon ?? TONE_GLYPH[tone]} className={cn('size-5', TONE_INK[tone])} />
-      )}
+      <Icon icon={icon ?? TONE_GLYPH[tone]} className={cn('size-5', TONE_INK[tone])} />
       <Heading className={textRole('display', 'text-balance')}>{heading}</Heading>
       {children ? <div className={textRole('body', 'flex flex-col gap-2')}>{children}</div> : null}
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
@@ -76,7 +69,7 @@ function NoticeBlock({
 }
 
 /**
- * Notice page inside the shell (brand direction 3.4): the masthead named for
+ * Notice page inside the shell: the masthead named for
  * the page, then the full-page Notice where the content begins. Not found, a
  * screen that failed, a workspace with no projects, the workspace loading.
  */

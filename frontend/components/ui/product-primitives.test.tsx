@@ -41,6 +41,16 @@ describe('SectionHeader actions', () => {
   });
 });
 
+/** The text a screen reader reads: every text node outside an aria-hidden subtree. */
+function spokenText(root: Element) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let text = '';
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.parentElement?.closest('[aria-hidden="true"]')) text += node.textContent ?? '';
+  }
+  return text;
+}
+
 describe('Delta', () => {
   it('says the rounded direction in words, tones it by policy and never fakes a zero', () => {
     const { container, rerender } = render(
@@ -48,6 +58,8 @@ describe('Delta', () => {
     );
     const fall = screen.getByText('1.2 pp').closest('[data-direction]');
     expect(fall?.textContent).toBe('↓down -1.2 ppvs last week');
+    // The arrow and the sign are drawn; a screen reader hears the word alone.
+    expect(fall ? spokenText(fall) : null).toBe('down 1.2 ppvs last week');
     // A falling rank is an improvement under lower-is-better.
     expect(fall).toHaveAttribute('data-outcome', 'improved');
 
@@ -91,7 +103,7 @@ describe('FigureStrip', () => {
     // A score is a rung meter carrying its number, never a ring.
     expect(within(group).getByRole('progressbar', { name: 'Crawl score' })).toHaveAttribute(
       'aria-valuetext',
-      '72',
+      '72 out of 100',
     );
     expect(within(group).queryByRole('img')).not.toBeInTheDocument();
     const toggle = within(group).getByRole('button', { name: 'View 3 orphaned pages' });

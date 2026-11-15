@@ -10,7 +10,7 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  * `check:policy` guards the inputs (tokens, classes). It cannot see a 28px
  * button beside a 32px tab, a toolbar rebinding a token, or an error block
  * that is 88px on one route and 152px on the next — and those are what made
- * the app look inconsistent (brand direction 2.2 and 2.4). So this
+ * the app look inconsistent. So this
  * walks every product route at the owner's viewport (982×900, DPR 1) and at
  * 1280×900 (light: dark rebinds only colours and shadows), measures every visible control, tag, tab,
  * band, section, slip and state block, and asserts ONE value per role — the same
@@ -51,7 +51,7 @@ const ROUTES = [
 
 /** One control height for the product: control-md, 32 in the app. */
 const CONTROL_HEIGHT = 32;
-/** Tags and status marks in running content (cells, facts): 24 (brand direction 2.2). */
+/** Tags and status marks in running content (cells, facts): 24. */
 const TAG_HEIGHT = 24;
 /** Text controls have one horizontal padding; icon-only controls are square, with none. */
 const TEXT_CONTROL_PADDING_X = 12;
@@ -63,7 +63,7 @@ const TAB_GAP = 16;
 const SIDEBAR_IDENT_HEIGHT = 44;
 /**
  * The masthead and the sidebar's switcher cell end on one 48px line from the
- * top of the window, the hairline under both (brand direction 2.3).
+ * top of the window, the hairline under both.
  */
 const MASTHEAD_HEIGHT = 48;
 /** Sidebar destination rows are 28: links, not controls, and their labels never wrap. */
@@ -71,9 +71,9 @@ const NAV_ROW_HEIGHT = 28;
 /** Masthead, page tabs and filter bar stack flush; the body starts 24 below them. */
 const BAND_GAP = 0;
 const BODY_TOP_GAP = 24;
-/** The content band's sections stand 32 apart (brand direction 2.2). */
+/** The content band's sections stand 32 apart. */
 const CONTENT_GAP = 32;
-/** Neighbouring slips sit on the grid, one grid gap apart (brand direction 2.2). */
+/** Neighbouring slips sit on the grid, one grid gap apart. */
 const SLIP_GAP = 24;
 /**
  * One slip recipe (2.4): padding 16 on the slip, radius 4 and a 1px hairline
@@ -101,8 +101,8 @@ const TABLE_CELL_PADDING_Y = 8;
 /** A DataTable's title-and-toolbar row is one control high; the card's 16 insets it. */
 const DATA_TABLE_HEADER_HEIGHT = 32;
 /** A FigureStrip cell is padded 16 (2.2); a strip's cells share one height. */
-const STAT_SEGMENT_PADDING_Y = 16;
-const STAT_ROW_HEIGHT_SPREAD = 0;
+const FIGURE_CELL_PADDING_Y = 16;
+const FIGURE_STRIP_HEIGHT_SPREAD = 0;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
 /** A row's kind mark (an IconTile) is a control-sized square. */
@@ -323,16 +323,16 @@ function measure({ route }: { route: string }) {
   // A DataTable's title-and-toolbar row, whatever it holds.
   for (const element of all('[data-data-table-header]'))
     add('data-table-header.height', element, element.getBoundingClientRect().height);
-  // A StatRow: every segment's padding, and the segments of one row at one
+  // A FigureStrip: every cell's padding, and the cells of one strip at one
   // height (the spread between the tallest and the shortest).
   for (const element of all('[data-figure-cell]'))
-    add('stat-segment.padding-y', element, px(getComputedStyle(element).paddingTop));
+    add('figure-cell.padding-y', element, px(getComputedStyle(element).paddingTop));
   for (const row of all('dl[data-figure-strip]')) {
     const heights = Array.from(row.children)
       .filter(visible)
-      .map((segment) => segment.getBoundingClientRect().height);
+      .map((cell) => cell.getBoundingClientRect().height);
     if (heights.length > 1)
-      add('stat-row.height-spread', row, Math.max(...heights) - Math.min(...heights));
+      add('figure-strip.height-spread', row, Math.max(...heights) - Math.min(...heights));
   }
   // The Icon atom: one glyph size beside any text, in both axes.
   for (const element of all('svg[data-icon]')) {
@@ -511,7 +511,7 @@ async function expectOneGeometry(page: Page) {
   await stubAuthedShell(page, [[/\/api\/v1\/audits(\?.*)?$/, RUNS]]);
   records.push(...(await census(page, '/runs', { label: '/runs (rows)' })));
 
-  // One run's detail, so a StatRow (the run's progress figures) is measured.
+  // One run's detail, so a FigureStrip (the run's progress figures) is measured.
   const [run] = RUNS;
   if (!run) throw new Error('the runs fixture has a first run');
   await stubAuthedShell(page, [
@@ -595,8 +595,8 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'table-row.height.two-lines', TABLE_ROW_HEIGHT_TWO_LINES);
   expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
   expectOneValue(records, 'data-table-header.height', DATA_TABLE_HEADER_HEIGHT);
-  expectOneValue(records, 'stat-segment.padding-y', STAT_SEGMENT_PADDING_Y);
-  expectOneValue(records, 'stat-row.height-spread', STAT_ROW_HEIGHT_SPREAD);
+  expectOneValue(records, 'figure-cell.padding-y', FIGURE_CELL_PADDING_Y);
+  expectOneValue(records, 'figure-strip.height-spread', FIGURE_STRIP_HEIGHT_SPREAD);
   expectOneValue(records, 'icon.size', ICON_SIZE);
   expectOneValue(records, 'icon-tile.size', ICON_TILE_SIZE);
   expectOneValue(records, 'row-part.gap', ROW_PART_GAP);

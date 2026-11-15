@@ -106,6 +106,40 @@ describe('StepChart', () => {
     ]);
   });
 
+  it('dates a value older than the last point, and keys every line when one has nothing to label', () => {
+    const { container, rerender } = render(
+      <StepChart
+        label="Share"
+        name="You"
+        data={[
+          { label: '1 Jun 2026', axisLabel: 'Jun', value: 10 },
+          { label: '1 Jul 2026', axisLabel: 'Jul', value: null },
+        ]}
+        series={[{ label: 'Globex', values: [80, 90] }]}
+      />,
+    );
+    const labels = () =>
+      [...container.querySelectorAll('[data-end-labels] text')].map((node) => node.textContent);
+    expect(labels()).toEqual(['Globex 90', 'You 10 · as of Jun']);
+    expect(container.querySelector('ul[aria-hidden]')).toBeNull();
+
+    rerender(
+      <StepChart
+        label="Share"
+        name="You"
+        data={[
+          { label: '1 Jun 2026', axisLabel: 'Jun', value: 10 },
+          { label: '1 Jul 2026', axisLabel: 'Jul', value: null },
+        ]}
+        series={[{ label: 'Globex', values: [null, null] }]}
+      />,
+    );
+    expect(labels()).toEqual([]);
+    expect(container.querySelector('ul[aria-hidden]')).toHaveTextContent(
+      'You10 · as of JunGlobexNot measured',
+    );
+  });
+
   it('draws your line in the accent unless the chart has no "you"', () => {
     const data = [
       { label: 'Jun', value: 1 },

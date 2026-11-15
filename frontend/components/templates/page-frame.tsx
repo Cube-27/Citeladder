@@ -18,7 +18,7 @@ export type PageBack = Readonly<{
   projectId?: string | null;
 }>;
 
-/** The slots every shell template shares (brand direction 2.3, top to bottom). */
+/** The slots every shell template shares (top to bottom). */
 export type PageFrameSlots = Readonly<{
   /** The record's name or a screen's own title; else the route's manifest title. */
   title?: string;

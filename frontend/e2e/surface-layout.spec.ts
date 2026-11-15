@@ -263,7 +263,7 @@ test('invalid field edges survive keyboard focus in both themes', async ({ page 
       };
     });
     // The danger edge survives focus inside the one focus treatment every
-    // field shares (brand direction 2.8): the 2px ink ring 2px outside it,
+    // field shares: the 2px ink ring 2px outside it,
     // never crimson and never a halo.
     expect(focused.edge).toBe(edge);
     expect(focused).toMatchObject({ outline: 'solid', width: '2px', offset: '2px' });

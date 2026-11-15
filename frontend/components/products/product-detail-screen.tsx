@@ -193,6 +193,7 @@ function HolderDetail({
       title={data.product.name}
       back={back}
       filters={bar}
+      busy={detail.isFetching}
       identity={<ProductIdentity detail={data} scope={projectScope} />}
     >
       <ProductKpis detail={data} />

@@ -73,8 +73,8 @@ function DialogHeader({
  * file) grows or shrinks it downward and nothing above moves: `surface`,
  * `radius-lg`, the floating face (1px `line` border, `shadow-sheet`), `modal-padding` (16 in the app) padding and gaps, `container-narrow` wide.
  * The title is the section title (500, 22/28), the description
- * `ink-secondary`, the footer right-aligned (Cancel first, then the action).
- * Header, body and footer are divided by hairlines (brand direction 2.4). `tone="danger"` is a
+ * `ink-2`, the footer right-aligned (Cancel first, then the action).
+ * Header, body and footer are divided by hairlines. `tone="danger"` is a
  * confirmation: an `alertdialog`, 440px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.
  * Focus opens on the first tabbable element unless `initialFocusRef` is set,

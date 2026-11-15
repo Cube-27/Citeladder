@@ -7,14 +7,9 @@ import { cn } from '@/lib/utils';
 import { slipClasses } from '@/components/ui/slip';
 
 /**
- * StatRow — the one KPI row: up to four Stats in one Card, separated by
- * 32px of space, never by rules.
- *
- *   - one row of up to four from the desktop breakpoint (982px included),
- *     balanced across rows beyond that (five → 3 + 2, six → 3 + 3), stacked
- *     below desktop; never 2 × 2, never 2 + 1;
- *   - the Stats of a row share one height, so a sub-line under one value and
- *     not its neighbour never staggers the row.
+ * The Stats of a KpiRow, separated by 32px of space, never by rules; the
+ * Stats of a row share one height, so a sub-line under one value and not its
+ * neighbour never staggers the row.
  *
  * A Stat's anatomy, in order: the mono eyebrow label (with an optional leading
  * icon and a trailing marker), an optional caption naming the value's period,
@@ -26,7 +21,7 @@ import { slipClasses } from '@/components/ui/slip';
  *
  * `value: null` is the missing state — the muted dash with `missingLabel`
  * (default "Not measured") as its accessible name. A string or number is the
- * measured value; any other node (a `Badge`, an `UnavailableValue`) renders
+ * measured value; any other node (a `Badge`, an `Absence`) renders
  * as given. A value always takes the foreground ink: colour means a state, so
  * it goes on the delta beside a figure, never on the figure itself.
  *
@@ -94,15 +89,13 @@ function StatGrid({
   label,
   testId,
   columns,
-  kpi,
-}: StatGroupProps & Readonly<{ columns: Columns; kpi: boolean }>) {
+}: StatGroupProps & Readonly<{ columns: Columns }>) {
   return (
     <dl // NOSONAR -- a <fieldset> would add form-group semantics and its own border, padding and min-width to a grid of figures
       role={label ? 'group' : undefined}
       aria-label={label}
       data-testid={testId}
-      data-stat-row={kpi ? undefined : ''}
-      data-kpi-row={kpi ? '' : undefined}
+      data-kpi-row=""
       className={cn('grid min-w-0 grid-cols-1 gap-x-8 gap-y-6', DESKTOP_COLUMNS[columns])}
     >
       {segments.map((segment) => (
@@ -117,7 +110,7 @@ function StatGrid({
  * Stats as a single strip, one row from the desktop breakpoint
  * for up to six (never 2 × 2 or 2 + 1), stacked below. A page's headline
  * figures are a KpiRow; a group of figures inside a card that also holds
- * other content is a `StatRow`. A record's page passes its summary as `lead`:
+ * other content is a `FigureStrip`. A record's page passes its summary as `lead`:
  * it opens the same card above a hairline, so the record and its figures are
  * one box, not two.
  */
@@ -130,7 +123,7 @@ export function KpiRow({ lead, ...props }: StatGroupProps & Readonly<{ lead?: Re
           {lead}
         </div>
       ) : null}
-      <StatGrid {...props} columns={columns} kpi />
+      <StatGrid {...props} columns={columns} />
     </div>
   );
 }

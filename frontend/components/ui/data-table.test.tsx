@@ -194,13 +194,18 @@ describe('DataTable', () => {
   });
 
   it('fades the edge that hides columns only while the table scrolls sideways', () => {
-    const { container } = render(
-      <DataTable label="Wide" columns={[{ key: 'url', label: 'URL' }]} pinFirstColumn={false}>
+    const table = (pinFirstColumn?: boolean) => (
+      <DataTable
+        label="Wide"
+        columns={[{ key: 'url', label: 'URL' }]}
+        pinFirstColumn={pinFirstColumn}
+      >
         <TableRow>
           <TableCell>/pricing</TableCell>
         </TableRow>
-      </DataTable>,
+      </DataTable>
     );
+    const { container, rerender } = render(table(false));
     const frame = container.querySelector<HTMLElement>('.table-frame')!;
     const fades = () =>
       [...container.querySelectorAll('[data-scroll-edge]')].map((fade) =>
@@ -221,6 +226,13 @@ describe('DataTable', () => {
     expect(fades()).toEqual(['start', 'end']);
     layout(900, 500);
     expect(fades()).toEqual(['start']);
+
+    // Pinned by default: the first column covers the leading edge, so only the far edge fades.
+    rerender(table());
+    layout(900, 200);
+    expect(fades()).toEqual(['end']);
+    layout(900, 500);
+    expect(fades()).toEqual([]);
   });
 
   it('never lets the fixed columns squeeze the identity column below its minimum', () => {

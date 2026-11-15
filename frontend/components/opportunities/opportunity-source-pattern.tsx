@@ -91,7 +91,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
       {action ? (
         <Stack gap="tight" className={wellClasses()}>
           <span className="type-caption">Suggested next action</span>
-          <p className="type-body text-ink-2 text-ink">{action}</p>
+          <p className="type-body text-ink">{action}</p>
         </Stack>
       ) : null}
     </Stack>

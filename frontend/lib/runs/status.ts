@@ -15,7 +15,7 @@ import type {
 import type { ClassificationValue, RunStatusValue, StatusValue } from '@/components/ui/status-mark';
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
-import { availabilityLabel, formatDisplayDate, formatDisplayTimestamp } from '@/lib/format';
+import { formatDisplayDate } from '@/lib/format';
 
 /**
  * Every audit status: its label, its run-status badge, and whether the run is
@@ -145,12 +145,6 @@ export function classificationBadgeValue(
     default:
       return 'third-party';
   }
-}
-
-/** Short, stable date/time label for a timestamp (falls back to the raw value). */
-export function formatDateTime(timestamp: string | null, timeZone = 'UTC'): string {
-  if (!timestamp) return availabilityLabel('unknown');
-  return formatDisplayTimestamp(timestamp, timeZone);
 }
 
 /**

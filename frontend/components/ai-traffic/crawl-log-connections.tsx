@@ -247,8 +247,6 @@ function SourceDiagnostics({
   /** Reopen a Google Cloud source's setup commands and subscription check. */
   onSetup: (id: string) => void;
 }>) {
-  // The sources sit in the Crawl logs card under its header, so the table is
-  // nested in that card rather than a card of its own.
   return (
     <DataTable label="Crawl log source diagnostics" columns={SOURCE_COLUMNS} minWidth="lg">
       {items.map((s) => (

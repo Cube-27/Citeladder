@@ -36,7 +36,7 @@ export const CHART_FILL: Record<ChartTone, string> = {
   5: 'bg-data-rival-2 fill-data-rival-2',
 };
 
-/** Axis text inside a chart's SVG: 12px mono figures in `ink-muted`. */
+/** Axis text inside a chart's SVG: 12px mono figures in `ink-2`. */
 export const CHART_AXIS_TEXT = 'fill-ink-2 text-caption font-mono tabular-nums';
 
 /** The plot's focusable box, read with the arrow keys; the focus ring follows its corners. */

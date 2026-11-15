@@ -10,7 +10,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
- * The four buttons (brand direction 3.1). Actions are ink, never the accent:
+ * The four buttons. Actions are ink, never the accent:
  * `primary` is the one ink-filled action a view is for, `secondary` a
  * `surface` button with the control line, `quiet` no edge (`ink-2`, `ink`
  * on hover) for toolbars, rows and navigation, `danger` a crimson label and
@@ -21,7 +21,7 @@ export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'dang
 
 /**
  * Heights 32 (default) and 44 (flow pages); below 900px or under a coarse
- * pointer every control is 44 (brand direction 2.2). Controls in one row
+ * pointer every control is 44. Controls in one row
  * share one size.
  */
 export type ButtonSize = 'md' | 'lg';

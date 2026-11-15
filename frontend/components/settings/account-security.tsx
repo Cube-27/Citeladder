@@ -39,9 +39,11 @@ function SignInSection({
   security,
 }: Readonly<{ security: UseQueryResult<Awaited<ReturnType<typeof authApi.security>>> }>) {
   return (
-    <Section>
+    <Section aria-labelledby="settings-sign-in-title">
       <SectionHeader>
-        <SectionTitle level={2}>Sign-in</SectionTitle>
+        <SectionTitle id="settings-sign-in-title" level={2}>
+          Sign-in
+        </SectionTitle>
         <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
       </SectionHeader>
       <Stack gap="item">
@@ -105,9 +107,11 @@ export default function AccountSecurity() {
   return (
     <>
       <SignInSection security={security} />
-      <Section>
+      <Section aria-labelledby="settings-password-title">
         <SectionHeader>
-          <SectionTitle level={2}>Password</SectionTitle>
+          <SectionTitle id="settings-password-title" level={2}>
+            Password
+          </SectionTitle>
           <SectionDescription>
             {canLinkGoogle
               ? 'Changing it signs you out everywhere. To connect Google, enter your current password, then choose Connect Google.'
@@ -177,9 +181,11 @@ export default function AccountSecurity() {
           <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
         </Stack>
       </Section>
-      <Section>
+      <Section aria-labelledby="settings-sessions-title">
         <SectionHeader>
-          <SectionTitle level={2}>Sessions</SectionTitle>
+          <SectionTitle id="settings-sessions-title" level={2}>
+            Sessions
+          </SectionTitle>
           <SectionDescription>Sign out every device, including this one.</SectionDescription>
         </SectionHeader>
         <Stack gap="item">

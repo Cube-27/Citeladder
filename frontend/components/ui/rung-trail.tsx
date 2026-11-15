@@ -7,7 +7,7 @@ import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * The one state set every step takes (brand direction 3.2 and 5): pending
+ * The one state set every step takes: pending
  * (`rule` rung), running (the live accent rung), done (ink rung, check),
  * failed (crimson rung, cross), unavailable (hatched rung), unknown (hollow
  * rung, question glyph; never read as unavailable), awaiting your decision
@@ -81,7 +81,7 @@ function StepGlyph({ status }: Readonly<{ status: RungStatus }>) {
 }
 
 /**
- * RungTrail — one rail with a rung per step (brand direction 3.2): agent
+ * RungTrail — one rail with a rung per step: agent
  * activity, onboarding research, crawl and audit progress, readiness. The
  * vertical form lists steps down a rail with each step's label, detail and
  * time; the horizontal form lays a flow's steps across one rail. Every label
@@ -190,7 +190,7 @@ function RungRow({
           <span
             className={textRole(
               'caption',
-              cn('truncate', step.status === 'failed' && 'text-negative'),
+              cn('break-words', step.status === 'failed' && 'text-negative'),
             )}
           >
             {step.detail}

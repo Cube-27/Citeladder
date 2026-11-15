@@ -196,7 +196,6 @@ export function DomainTable({
       label="Cited domains"
       columns={domainColumns(sort, onSort, retrieval, engines.label)}
       minWidth="xl"
-      pinFirstColumn
       rowCount={rows.length}
       {...frame}
     >
@@ -367,7 +366,6 @@ export function UrlTable({
       label="Cited URLs"
       columns={urlColumns(sort, onSort, retrieval, engines.label)}
       minWidth="xl"
-      pinFirstColumn
       rowCount={rows.length}
       {...frame}
     >

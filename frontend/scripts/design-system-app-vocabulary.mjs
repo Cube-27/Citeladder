@@ -6,7 +6,7 @@ import {
 import { WEBSITE_ONLY_UI } from './design-system-website-only.mjs';
 
 /**
- * The app's colour, radius and type names (brand direction 2): the website's
+ * The app's colour, radius and type names: the website's
  * names alias them on its own surfaces only. Shared rules in globals.css that
  * the website also renders are exempt; app code uses the app's names.
  */
@@ -51,7 +51,7 @@ export function appVocabularyViolations(source, label, ownsProductUi) {
   const violations = [];
   if (RETIRED_COLOUR.test(text))
     violations.push(
-      `${label}: the app's colours are ground, surface, well, raised, rule, rule-ink, control-line, ink, ink-2 and their roles (brand direction 2.5)`,
+      `${label}: the app's colours are ground, surface, well, raised, rule, rule-ink, control-line, ink, ink-2 and their roles`,
     );
   // The website's segmented track and its link and mark sizes are kept, by name, in two shared atoms.
   if (

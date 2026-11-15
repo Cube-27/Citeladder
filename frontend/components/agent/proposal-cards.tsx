@@ -116,7 +116,7 @@ function DeclarationProposal({
   );
 }
 
-/** The declaration dialog, opened with the proposal; contextual links are declared in Site Health. */
+/** The declaration dialog, opened with the proposal; contextual links are declared on the Website page. */
 function DeclareButton({
   workspaceId,
   proposal,

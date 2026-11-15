@@ -257,7 +257,7 @@ function PageKindPages({
                     <ClampText lines={1}>{page.url}</ClampText>
                   </TextLink>
                 ) : (
-                  <ClampText lines={1} className="type-body text-ink-2 text-ink">
+                  <ClampText lines={1} className="type-body text-ink">
                     {page.url}
                   </ClampText>
                 )}

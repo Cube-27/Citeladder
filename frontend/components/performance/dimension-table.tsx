@@ -292,7 +292,6 @@ export function DimensionTable({
       label={tab.header}
       columns={columns}
       minWidth={comparing ? 'md' : 'sm'}
-      pinFirstColumn
       reserveRows
       {...table}
     >

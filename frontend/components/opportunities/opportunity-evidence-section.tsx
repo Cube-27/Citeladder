@@ -70,7 +70,7 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
       <Label>Evidence</Label>
       {promptText ? (
         <blockquote className={wellClasses()}>
-          <p className="type-body text-ink-2 text-ink">“{promptText}”</p>
+          <p className="type-body text-ink">“{promptText}”</p>
         </blockquote>
       ) : null}
       {url ? (

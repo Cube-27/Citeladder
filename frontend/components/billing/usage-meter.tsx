@@ -1,4 +1,4 @@
-import { USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
+import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 import type { UsageItem } from '@/lib/api/billing';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -81,6 +81,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
         max={allowance}
         valueLabel={`${formatCount(consumed)} of ${formatCount(allowance)} ${unit}`}
         warnAt={USAGE_METER_WARNING_RATIO}
+        criticalAt={USAGE_METER_CRITICAL_RATIO}
       />
       <Inline gap="compact" className="justify-between">
         <span className="type-caption whitespace-nowrap">

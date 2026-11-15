@@ -19,7 +19,7 @@ import { useDebounced } from '@/lib/use-debounced';
  * History: every chat in the project, newest activity first, searchable and
  * paged, a running chat marked with the live rung; a cut title shows in full
  * on hover and focus. The Thread template shows it beside the thread or in a
- * drawer (brand direction 4).
+ * drawer.
  */
 export function ChatHistory() {
   const { workspaceId, projectId } = useProjectScope();

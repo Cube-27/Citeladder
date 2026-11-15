@@ -104,6 +104,18 @@ describe('RunsTable', () => {
     );
   });
 
+  it('returns to the first page when the sort changes', async () => {
+    const user = userEvent.setup();
+    const rows = Array.from({ length: 25 }, (_, i) => audit(i + 1, { failed_count: i }));
+    renderTable(rows);
+    await user.click(screen.getByRole('button', { name: /next/i }));
+
+    await user.click(screen.getByRole('button', { name: /Failed/ }));
+
+    // The most failures lead the first page, not the eleventh of the new order.
+    expect(runLinks()[0]).toHaveAttribute('href', `/runs/${rows[24]!.id}`);
+  });
+
   it('keeps the column headers and states the absence when the filter leaves no runs', () => {
     renderTable([]);
 

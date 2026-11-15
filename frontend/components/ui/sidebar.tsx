@@ -6,7 +6,7 @@ import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
- * The Sidebar organism's parts (brand direction 3.2 and 4): the project
+ * The Sidebar organism's parts: the project
  * switcher in a cell as tall as the masthead and ruled under it, then one
  * scrolling list of destination groups hung on a 1px rail, then the foot
  * (Integrations, the account button and the collapse toggle). The sidebar is
@@ -76,7 +76,7 @@ export function SidebarNavGroup({
  * the label 4 apart. Hover is the hover overlay; the current row is `ink` and
  * carries the 2px accent rung over the rail, painted over the row so
  * selecting a row moves nothing. Every label fits on one line at the default
- * width (brand direction 4); one that cannot (a narrowed sidebar, larger text
+ * width; one that cannot (a narrowed sidebar, larger text
  * spacing, WCAG 1.4.12) wraps and the row grows, so no label is cut.
  */
 export function sidebarNavRowClasses(active: boolean) {

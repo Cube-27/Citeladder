@@ -40,7 +40,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { Section } from '@/components/ui/section';
+import { Section, SectionTitle } from '@/components/ui/section';
 
 const ACTIONS = '/agent/actions';
 const BACK: PageBack = { href: ACTIONS, label: 'Back to Actions' };
@@ -239,7 +239,10 @@ function Identity({ action }: Readonly<{ action: ActionDetail }>) {
   });
   if (sources.length) facts.push({ label: 'Source', value: sources.join(', ') });
   return (
-    <Section aria-label="Details">
+    <Section aria-labelledby="action-details">
+      <SectionTitle id="action-details" level={2} className="sr-only">
+        Details
+      </SectionTitle>
       <Stack gap="workspace">
         <p className={textRole('data', 'break-all')}>{readableUrl(action.target_label)}</p>
         <FactList layout="ruled" facts={facts} />

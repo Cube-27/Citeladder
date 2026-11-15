@@ -5,7 +5,7 @@ import { availabilityLabel, type DataAvailabilityState } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
- * How each absence is drawn (brand direction 3.1, law 1: hatched is absent,
+ * How each absence is drawn (hatched is absent,
  * no line is not applicable). A real zero is never an absence: it is a Value.
  *   - hatched: not measured, unavailable, not connected, and the workflow
  *     answers (not run, being prepared, not set, unknown): a hatched tag with
@@ -80,8 +80,8 @@ function AbsenceFace({
 }
 
 /**
- * Absence — a missing value that says which kind it is (brand direction 3.1,
- * the absence tag). It must never become blank: an empty cell and a
+ * Absence — a missing value that says which kind it is (the
+ * absence tag). It must never become blank: an empty cell and a
  * measured zero look identical, and those are opposite findings. A `reason`
  * (or a narrow square) hangs its explanation off a real button, so it is
  * reachable by keyboard.

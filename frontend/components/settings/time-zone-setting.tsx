@@ -53,9 +53,11 @@ export function TimeZoneSetting() {
   };
 
   return (
-    <Section>
+    <Section aria-labelledby="settings-timezone-title">
       <SectionHeader>
-        <SectionTitle level={2}>Display timezone</SectionTitle>
+        <SectionTitle id="settings-timezone-title" level={2}>
+          Display timezone
+        </SectionTitle>
         <SectionDescription>{`Timestamps currently display in ${displayZone}.`}</SectionDescription>
       </SectionHeader>
       <Stack gap="item">

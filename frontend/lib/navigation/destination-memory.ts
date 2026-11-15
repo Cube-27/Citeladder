@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 /**
  * The last screen a reader used under each sidebar destination, per project,
  * for this browser session (owner, 2026-11-15): a destination's row returns
@@ -8,13 +10,13 @@
  */
 const STORAGE_KEY = 'citeladder:destination-routes';
 
-type Memory = Partial<Record<string, string>>;
+const memorySchema = z.record(z.string(), z.string());
 
-function read(): Memory {
+function read(): z.infer<typeof memorySchema> {
   try {
     const raw = window.sessionStorage.getItem(STORAGE_KEY);
-    const parsed: unknown = raw ? JSON.parse(raw) : {};
-    return typeof parsed === 'object' && parsed !== null ? (parsed as Memory) : {};
+    const parsed = memorySchema.safeParse(raw ? JSON.parse(raw) : {});
+    return parsed.success ? parsed.data : {};
   } catch {
     return {};
   }
@@ -44,5 +46,5 @@ export function rememberedDestinationRoute(
   if (!projectId) return null;
   const href = read()[slot(destination, projectId)];
   // Only in-app paths; anything else in storage is ignored.
-  return typeof href === 'string' && href.startsWith('/') && !href.startsWith('//') ? href : null;
+  return href?.startsWith('/') && !href.startsWith('//') ? href : null;
 }

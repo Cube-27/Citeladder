@@ -39,7 +39,7 @@ type PaletteGroup = Readonly<{
 /**
  * CommandPalette — ⌘K / Ctrl+K navigation for the authed shell: the
  * sidebar's groups in the same order with the same labels, the workspace and
- * account pages, then "Switch project" (brand direction 4).
+ * account pages, then "Switch project".
  *
  * Keyboard-first velocity is the point: every nav destination and every
  * project in the workspace is reachable without leaving the home row. The

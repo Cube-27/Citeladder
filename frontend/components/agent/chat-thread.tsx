@@ -97,7 +97,11 @@ export function ReplyComposer({
       submissionDisabled={runActive}
       onStop={thread.stop}
       stopping={thread.stopping}
-      onRetry={turn.failure && !turn.failure.startNewChat ? turn.retrySubmission : undefined}
+      onRetry={
+        turn.failure && !turn.failure.startNewChat && turn.draft.trim() === turn.failedMessage
+          ? turn.retrySubmission
+          : undefined
+      }
       placeholder={placeholder}
       commands={turn.commands}
       skill={skill}

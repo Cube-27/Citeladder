@@ -58,11 +58,11 @@ describe('ScoreSection', () => {
 
     expect(screen.getByRole('progressbar', { name: 'Web Fundamentals score' })).toHaveAttribute(
       'aria-valuetext',
-      '73',
+      '73 out of 100',
     );
     expect(screen.getByRole('progressbar', { name: 'AEO Readiness score' })).toHaveAttribute(
       'aria-valuetext',
-      '61',
+      '61 out of 100',
     );
     expect(screen.getByRole('progressbar', { name: 'AEO Checklist Completion' })).toHaveAttribute(
       'aria-valuetext',

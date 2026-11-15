@@ -342,8 +342,8 @@ describe('UrlDetail', () => {
 
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
     const scores = [
-      ['Web Fundamentals score', '46'],
-      ['AEO Readiness score', '64'],
+      ['Web Fundamentals score', '46 out of 100'],
+      ['AEO Readiness score', '64 out of 100'],
     ] as const;
     for (const [name, value] of scores)
       expect(screen.getByRole('progressbar', { name })).toHaveAttribute('aria-valuetext', value);

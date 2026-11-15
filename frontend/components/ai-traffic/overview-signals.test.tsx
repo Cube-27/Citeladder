@@ -80,6 +80,21 @@ it('keeps unavailable, missing, awaiting, incomplete and measured zero distinct'
   expect(screen.queryByText(/No matching requests were observed/)).not.toBeInTheDocument();
 });
 
+it('keeps failed verification requests and unavailable active bots visible', () => {
+  const view = renderWithProviders(
+    figures({ crawl: { ...crawl, failed_verification_requests: 3 } }),
+  );
+  expect(
+    within(figure('Recognized automated requests')).getByText(
+      'No matching requests were observed in the available logs. Coverage is incomplete. 3 failed verification requests are shown separately.',
+    ),
+  ).toBeVisible();
+  view.rerender(figures({ crawl: { ...crawl, requests: 12, pages: 4, active_bots: null } }));
+  expect(within(figure('Path-level pages')).getByText('Active bots unavailable')).toBeVisible();
+  view.rerender(figures({ crawl: { ...crawl, requests: 12, pages: 4, active_bots: 2 } }));
+  expect(within(figure('Path-level pages')).getByText('Requested by 2 active bots')).toBeVisible();
+});
+
 it('shows a measured zero as 0 and a window with no completed run as not available yet', () => {
   const { unmount } = renderWithProviders(figures({ citations: { ...citations, count: 0 } }));
   expect(within(figure('Tracked citations')).getByText('0')).toBeVisible();
@@ -107,9 +122,7 @@ it('shows a measured zero as 0 and a window with no completed run as not availab
 
 it('offers Connect GA4 until a referral snapshot exists, then says it synced', () => {
   const view = renderWithProviders(figures({}));
-  expect(
-    within(figure('AI referral sessions, latest day')).getByText(/not connected/i),
-  ).toBeVisible();
+  expect(within(figure('AI referral sessions, latest day')).getByText('Not synced')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Connect GA4' })).toBeVisible();
   expect(screen.queryByText(/GA4 · Synced/)).not.toBeInTheDocument();
 

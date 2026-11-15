@@ -156,13 +156,23 @@ describe('An Action page', () => {
     );
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['Overview', 'Evidence', 'What to do', 'Measure with', 'Avoid', 'Findings', 'Chats']);
+    ).toEqual([
+      'Details',
+      'Overview',
+      'Evidence',
+      'What to do',
+      'Measure with',
+      'Avoid',
+      'Findings',
+      'Chats',
+    ]);
 
     const overview = screen.getByRole('region', { name: 'Overview' });
     expect(within(overview).getByText(MESSAGE)).toBeVisible();
     expect(within(overview).getByText('Missing structured data on owned page')).toBeVisible();
 
     const details = within(screen.getByRole('region', { name: 'Details' }));
+    expect(details.getByRole('heading', { level: 2 })).toHaveTextContent('Details');
     expect(details.getAllByRole('term').map((term) => term.textContent)).toEqual([
       'Status',
       'Priority',
@@ -322,6 +332,7 @@ describe('A content-gap Action', () => {
     renderDetail();
 
     const why = await screen.findByRole('region', { name: 'Why this matters' });
+    expect(within(why).getByRole('heading', { level: 2 })).toHaveTextContent('Why this matters');
     expect(await within(why).findByText('Pricing comparison')).toBeVisible();
     const counts = within(within(why).getByLabelText('Counts'));
     expect(counts.getAllByRole('definition').map((value) => value.textContent)).toEqual([

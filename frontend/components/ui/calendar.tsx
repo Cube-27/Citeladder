@@ -165,7 +165,7 @@ export function Calendar({
                       disabled={disabled}
                       onClick={() => onSelect(iso)}
                       className={cn(
-                        'type-body text-ink-2 text-ink inline-flex size-[var(--control-md)] items-center justify-center rounded-control tabular-nums transition-colors',
+                        'type-body text-ink inline-flex size-[var(--control-md)] items-center justify-center rounded-control tabular-nums transition-colors',
                         isSelected
                           ? 'bg-ink text-on-ink enabled:hover:bg-ink-hover enabled:active:bg-ink-hover'
                           : 'enabled:hover:overlay-hover enabled:active:overlay-pressed',

@@ -42,7 +42,7 @@ function draftSheetClasses(state: DraftState, className?: string) {
 }
 
 /**
- * DraftSheet (brand direction 3.2): something written for a person to decide
+ * DraftSheet: something written for a person to decide
  * on (a proposal, a suggestion, a candidate) on a dashed `control-line` edge
  * under a mono overline, its sans content, then its decision actions. When a
  * person accepts it the edge sets solid; the actions stay so the sheet keeps

@@ -88,10 +88,12 @@ export function RunsTable({
   const sorted = sortAudits(audits, sort);
   const { page, setPage, pageCount, from, to } = useTablePage(sorted.length, PAGE_SIZE);
   const pagedAudits = sorted.slice(from - 1, to);
-  const onSort = (key: SortKey) =>
+  const onSort = (key: SortKey) => {
     setSort((current) =>
       current.key === key ? { key, descending: !current.descending } : { key, descending: true },
     );
+    setPage(1);
+  };
 
   return (
     <DataTable

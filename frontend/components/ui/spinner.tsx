@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 /**
- * Spinner — the live rung (brand direction 2.7): one accent rung, the logo's
+ * Spinner — the live rung: one accent rung, the logo's
  * bar, pulsing its opacity every 1.2s while work is live. It is the only
  * "working" mark: no arcs, shimmers or bounces. Reduced motion holds it still.
  * Inside a busy button it stands beside the button's verb.

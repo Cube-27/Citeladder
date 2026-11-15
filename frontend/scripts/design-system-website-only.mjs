@@ -22,9 +22,9 @@ export const WEBSITE_ONLY_UI = new Set(
 export function websiteOnlyImportViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || WEBSITE_ONLY_UI.has(label)) return [];
   const names = Object.keys(WEBSITE_ONLY_OWNERS).join('|');
-  const imported = [...source.matchAll(new RegExp(`from '@/components/ui/(${names})'`, 'g'))];
-  const owners = WEBSITE_ONLY_OWNERS;
-  return imported.map(
-    ([, name]) => `${label}: ui/${name} is the website's; the app uses ${owners[name]}`,
+  const imports = new RegExp(`from ['"]@/components/ui/(${names})['"]`, 'g');
+  return [...source.matchAll(imports)].map(
+    ([, name]) =>
+      `${label}: ui/${name} is the website's; the app uses ${WEBSITE_ONLY_OWNERS[name]}`,
   );
 }

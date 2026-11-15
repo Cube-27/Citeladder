@@ -7,7 +7,7 @@ import { SidebarResizeHandle } from '@/components/ui/sidebar-resize-handle';
 import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
 
 /**
- * The signed-in frame (brand direction 2.3): the sidebar column beside the
+ * The signed-in frame: the sidebar column beside the
  * main column, both on the ground.
  *
  * From `rail:` (900px) the sidebar is a labelled column, 200 wide below

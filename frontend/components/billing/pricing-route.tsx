@@ -8,7 +8,7 @@ import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
 import { SettingsPage } from '@/components/templates/settings-page';
 import { Button } from '@/components/ui/button';
-import { Notice as NoticeBox } from '@/components/ui/notice';
+import { Notice } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 import { Stack } from '@/components/ui/layout';
@@ -291,7 +291,7 @@ function QuoteConfirmation({
  * raised inside the checkout hook become its notice, so repeating them here
  * printed the same message twice.
  */
-function Notice({
+function BillingErrorNotice({
   error,
   fallback,
   shown,
@@ -299,7 +299,7 @@ function Notice({
   if (!error) return null;
   const message = billingErrorMessage(error, fallback);
   if (message === shown) return null;
-  return <NoticeBox tone="negative">{message}</NoticeBox>;
+  return <Notice tone="negative">{message}</Notice>;
 }
 
 function PricingState({
@@ -324,7 +324,7 @@ function PricingState({
   return (
     <>
       {workspaceError ? (
-        <NoticeBox
+        <Notice
           tone="negative"
           action={
             <Button variant="secondary" onClick={retryWorkspace}>
@@ -333,16 +333,16 @@ function PricingState({
           }
         >
           The billing workspace could not be loaded.
-        </NoticeBox>
+        </Notice>
       ) : null}
       <p className={textRole('body')}>
         {workspaceName ? `Workspace: ${workspaceName}` : 'Loading workspace…'}
       </p>
       {!canBuy && workspaceName ? (
-        <NoticeBox tone="info">Ask a workspace Owner or Admin to make this purchase.</NoticeBox>
+        <Notice tone="info">Ask a workspace Owner or Admin to make this purchase.</Notice>
       ) : null}
       {catalogError ? (
-        <NoticeBox
+        <Notice
           tone="negative"
           action={
             <Button variant="secondary" onClick={retryCatalog}>
@@ -351,13 +351,13 @@ function PricingState({
           }
         >
           The plan catalog could not be loaded.
-        </NoticeBox>
+        </Notice>
       ) : null}
       {selection && offered === false ? (
-        <NoticeBox tone="warning">
+        <Notice tone="warning">
           This selection is no longer in the current catalog. Choose again on the public pricing
           page.
-        </NoticeBox>
+        </Notice>
       ) : null}
       {!selection ? (
         <StateBlock
@@ -459,8 +459,16 @@ export default function PricingRoute() {
         onConfirm={() => void confirm.mutate()}
       />
       <CheckoutStatus checkout={checkout} />
-      <Notice error={purchase.error} fallback="Quote unavailable." shown={checkout.notice} />
-      <Notice error={confirm.error} fallback="Checkout unavailable." shown={checkout.notice} />
+      <BillingErrorNotice
+        error={purchase.error}
+        fallback="Quote unavailable."
+        shown={checkout.notice}
+      />
+      <BillingErrorNotice
+        error={confirm.error}
+        fallback="Checkout unavailable."
+        shown={checkout.notice}
+      />
     </SettingsPage>
   );
 }

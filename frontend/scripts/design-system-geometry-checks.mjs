@@ -185,7 +185,7 @@ export function tsxGeometryFindings(source, label) {
  * and so do the auth and onboarding flows for breakpoints.
  */
 // Templates (components/templates) own page geometry from tokens, as atoms and
-// organisms do theirs; pages compose them and set none (brand direction 3).
+// organisms do theirs; pages compose them and set none.
 const LAYERING_OWNERS = new Set(['ui', 'layout', 'templates', 'marketing']);
 const FLOW_FOLDERS = new Set(['auth', 'onboarding']);
 const LAYER_SPACING = /^-?(?:p[xytrblse]?|m[xytrblse]?|gap(?:-[xy])?|space-[xy])-(?:\d|px\b|\[|\()/;

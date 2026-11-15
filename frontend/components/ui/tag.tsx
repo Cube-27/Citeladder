@@ -5,7 +5,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { cn } from '@/lib/utils';
 
 /**
- * The tag face (brand direction 3.1): 24px tall, radius 2, the `caption`
+ * The tag face: 24px tall, radius 2, the `caption`
  * role in `ink`, never wider than its container. In the app a static tag is
  * a `well` fill with no edge, so it never looks operable; a tag you can
  * operate (`OPERABLE_TAG`) carries the solid control line and a draft the
@@ -18,9 +18,9 @@ const TAG_FACE =
 const OPERABLE_TAG = 'bg-surface border-control-line';
 
 /**
- * What a tag is for (brand direction 3.1). A status is a `StatusMark`, never
+ * What a tag is for. A status is a `StatusMark`, never
  * a Tag; tags are never coloured.
- *   - `category` (default): a topic, engine or kind, with its hairline edge.
+ *   - `category` (default): a topic, engine or kind, on the well.
  *   - `draft`: model-written and not yet accepted (law 1), dashed.
  *   - `removable`: an active filter or context chip, with a remove button
  *     named "Remove …".

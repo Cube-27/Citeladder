@@ -20,7 +20,7 @@ import { UserMenuTrigger } from './user-menu';
 import { useRouteAnnouncement } from './use-route-announcement';
 
 /**
- * AppShell — the signed-in application chrome (brand direction 4): one
+ * AppShell — the signed-in application chrome: one
  * sidebar (the project switcher, the destinations in the order of the
  * product loop, Integrations and the account at its foot) beside the page.
  * Below 900px the masthead's menu button opens the same sidebar in a left

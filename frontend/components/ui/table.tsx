@@ -374,7 +374,7 @@ export function TableCellLines({
   );
 }
 
-/** The word on your own row, the rare accent-coloured word (brand direction 2.5). */
+/** The word on your own row, the rare accent-coloured word. */
 export function YouTag() {
   return <span className="type-label text-accent-text shrink-0">You</span>;
 }

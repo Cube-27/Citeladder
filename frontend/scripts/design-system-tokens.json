@@ -323,7 +323,7 @@
           "light": "{paper}",
           "dark": "{paper}"
         },
-        "usage": "The app's page. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The app's page. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "well",
@@ -331,7 +331,7 @@
           "light": "{surface-sunken}",
           "dark": "{surface-sunken}"
         },
-        "usage": "Sunken material: an answer passage, code, a user's chat turn; the hatch's base. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "Sunken material: an answer passage, code, a user's chat turn; the hatch's base. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "raised",
@@ -339,7 +339,7 @@
           "light": "{surface}",
           "dark": "{surface}"
         },
-        "usage": "Sheets: menus, popovers, tooltips, dialogs, drawers, toasts. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "Sheets: menus, popovers, tooltips, dialogs, drawers, toasts. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "rule",
@@ -347,7 +347,7 @@
           "light": "{line}",
           "dark": "{line}"
         },
-        "usage": "Hairlines between rows and figure cells, under the masthead; the hatch's lines. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "Hairlines between rows and figure cells, under the masthead; the hatch's lines. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "rule-ink",
@@ -355,7 +355,7 @@
           "light": "{ink}",
           "dark": "{ink}"
         },
-        "usage": "The ink rule a section and a table hang from. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The ink rule a section and a table hang from. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "control-line",
@@ -363,7 +363,7 @@
           "light": "{line-control}",
           "dark": "{line-control}"
         },
-        "usage": "Field and control boundaries (3:1) and the dashed edge of a draft. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "Field and control boundaries (3:1) and the dashed edge of a draft. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "ink-2",
@@ -371,7 +371,7 @@
           "light": "{ink-secondary}",
           "dark": "{ink-secondary}"
         },
-        "usage": "Supporting text: the second and last ink step. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "Supporting text: the second and last ink step. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "accent-text",
@@ -379,7 +379,7 @@
           "light": "{accent-ink}",
           "dark": "{accent-ink}"
         },
-        "usage": "The rare accent-coloured word, such as \"You\". The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The rare accent-coloured word, such as \"You\". The website aliases its own role here; the app binds its value."
       },
       {
         "name": "accent-wash",
@@ -387,7 +387,7 @@
           "light": "{accent-soft}",
           "dark": "{accent-soft}"
         },
-        "usage": "The highlighter behind your brand in a quoted answer; text selection. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The highlighter behind your brand in a quoted answer; text selection. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "positive-wash",
@@ -395,7 +395,7 @@
           "light": "{positive-soft}",
           "dark": "{positive-soft}"
         },
-        "usage": "The positive notice and validation wash. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The positive notice and validation wash. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "negative-wash",
@@ -403,7 +403,7 @@
           "light": "{negative-soft}",
           "dark": "{negative-soft}"
         },
-        "usage": "The negative notice and validation wash. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The negative notice and validation wash. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "warning-wash",
@@ -411,7 +411,7 @@
           "light": "{warning-soft}",
           "dark": "{warning-soft}"
         },
-        "usage": "The warning notice and validation wash. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The warning notice and validation wash. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "info-wash",
@@ -419,7 +419,7 @@
           "light": "{info-soft}",
           "dark": "{info-soft}"
         },
-        "usage": "The info notice and validation wash. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The info notice and validation wash. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "data-you",
@@ -443,7 +443,7 @@
           "light": "#2f6f9f",
           "dark": "#2f6f9f"
         },
-        "usage": "The second rival series; cool hues only for rivals. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The second rival series; cool hues only for rivals. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "data-rival-3",
@@ -451,7 +451,7 @@
           "light": "#4b3a8a",
           "dark": "#4b3a8a"
         },
-        "usage": "The third rival series. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The third rival series. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "data-rival-4",
@@ -459,7 +459,7 @@
           "light": "#1f7d73",
           "dark": "#1f7d73"
         },
-        "usage": "The fourth rival series; a fifth and later are data-other. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+        "usage": "The fourth rival series; a fifth and later are data-other. The website aliases its own role here; the app binds its value."
       }
     ]
   },

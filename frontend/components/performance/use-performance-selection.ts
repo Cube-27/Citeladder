@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import type { PerformanceGranularity } from '@/lib/api/performance';
 import {
   setUrlParams,
@@ -22,7 +24,7 @@ import {
  * Everything the reader has CHOSEN on the Performance surface: the range and
  * its comparison, the chart's bucket size, the open breakdown, and which
  * metrics are drawn. All of it lives in the URL like every other view, so a
- * view can be linked and Back returns to the previous one (brand direction 4).
+ * view can be linked and Back returns to the previous one.
  *
  * One owner for the whole selection, because these move together: Reset
  * returns all of them to the landing state at once.
@@ -49,9 +51,14 @@ const dimensionCodec = stringUrlCodec<SearchConsoleDimension>(
   'query',
 );
 
+const calendarDate = z.iso.date();
+
 /** A calendar date the reader picked (`2026-11-14`); anything else is no date. */
 const dateCodec: UrlCodec<string> = {
-  parse: (raw) => (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : ''),
+  parse: (raw) => {
+    const parsed = calendarDate.safeParse(raw);
+    return parsed.success ? parsed.data : '';
+  },
   serialize: (value) => value || null,
 };
 

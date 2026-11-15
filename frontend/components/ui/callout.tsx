@@ -9,9 +9,9 @@ export type CalloutTone = 'neutral' | 'info' | 'positive' | 'warning' | 'negativ
 /**
  * Each tone's fill, icon and the word a screen reader hears first. Text on a
  * status tint is that status colour (the pair its token names); neutral is
- * the contextual inset (`surface-sunken` inside a container, a bordered
- * `surface` box on the page ground, where sunken would not show) with an
- * `ink` title and `ink-secondary` body. Every tone keeps a 1px border, so a
+ * the contextual inset (`surface-inset`: the well inside a container, a
+ * bordered `surface` box on the page ground, where the well would not show)
+ * with an `ink` title and `ink-2` body. Every tone keeps a 1px border, so a
  * neutral and a status callout are the same size.
  */
 const TONE: Record<CalloutTone, { box: string; title: string; icon: LucideIcon; word: string }> = {

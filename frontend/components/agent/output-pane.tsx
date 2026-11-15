@@ -27,7 +27,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 type PaneTab = 'output' | 'sources' | 'history';
 
 /**
- * The one document view (brand direction 3.2, DraftSheet): one of the chat's
+ * The one document view (DraftSheet): one of the chat's
  * documents, on a dashed edge while the Agent's revision is current and solid
  * once a person saved theirs, shown inline in the thread after the reply that
  * wrote it. Edits and restores are refused by

@@ -5,7 +5,7 @@ import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * Section — the default grouping on every page (brand direction 2.4, law 5:
+ * Section — the default grouping on every page (law 5:
  * rules, not boxes). No box: a 1px ink rule on top, the head, then the body
  * on the page ground. A section may hold slips and wells, never another
  * section's box. It sets no display of its own, so a sticky child keeps its

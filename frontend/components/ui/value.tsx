@@ -41,7 +41,7 @@ export type ValueProps = Readonly<{
 }>;
 
 /**
- * Value — the single way to print a measured value (brand direction 3.1):
+ * Value — the single way to print a measured value:
  * mono numerals at the role's size with the unit, or its Absence. Loading is
  * its own state, the live rung, never "not measured". Every state takes the
  * same line box, so nothing moves when the value arrives or reloads. Zero is

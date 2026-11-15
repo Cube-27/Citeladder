@@ -21,7 +21,6 @@ import {
   ledgerClasses,
   ledgerItemClasses,
 } from '@/components/ui/workspace';
-import { cn } from '@/lib/utils';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -261,7 +260,7 @@ function CheckRow({ check }: Readonly<{ check: ReadinessCheck }>) {
         <span className={textRole('body')}>{check.title}</span>
         <StatusMark tone={CHECK_TONES[state]}>{state}</StatusMark>
       </Inline>
-      <p className={textRole('body', cn('text-ink-2', check.remediation ? 'text-ink' : undefined))}>
+      <p className={textRole('body', check.remediation ? 'text-ink' : 'text-ink-2')}>
         {check.remediation || 'No remediation guidance is recorded for this check.'}
       </p>
       <p className="type-caption tabular-nums">

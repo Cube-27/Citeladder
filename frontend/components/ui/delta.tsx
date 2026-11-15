@@ -2,7 +2,7 @@ import { Absence } from '@/components/ui/absence';
 import { cn } from '@/lib/utils';
 
 /**
- * Delta — a change (brand direction 3.1): `data-sm` at 500, an arrow glyph,
+ * Delta — a change: `data-sm` at 500, an arrow glyph,
  * the signed number and its unit, in the tone its meaning takes, with an
  * optional basis ("vs 7 Nov") in `ink-2`.
  *
@@ -10,7 +10,8 @@ import { cn } from '@/lib/utils';
  * `positive`, `lower-is-better` (rank, latency, errors) paints it
  * `negative`, and `neutral` stays `ink-2` because the movement is a fact,
  * not a verdict. A displayed zero is flat: `→ 0` in `ink-2`. The arrow, the
- * sign and the hidden word carry the direction without colour.
+ * sign and the hidden word carry the direction without colour; only the word
+ * is spoken.
  *
  * The direction is decided from the value the reader SEES, after rounding, so
  * a movement of +0.04 never claims a direction it does not show.
@@ -97,7 +98,9 @@ export function Delta({
       </span>
       <span className="sr-only">{`${TREND[direction].word} `}</span>
       <span>
-        <span className="[[data-public-surface]_&]:hidden">{SIGN[direction]}</span>
+        <span aria-hidden className="[[data-public-surface]_&]:hidden">
+          {SIGN[direction]}
+        </span>
         {magnitude.toFixed(direction === 'flat' ? 0 : precision)}
         {unit}
       </span>

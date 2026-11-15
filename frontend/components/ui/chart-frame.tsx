@@ -11,7 +11,7 @@ import { SHEET_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
-/** The plot heights a chart may take (brand direction 3.3): 160, 240 and 320. */
+/** The plot heights a chart may take: 160, 240 and 320. */
 const FRAME_HEIGHT = {
   sm: 'min-h-[var(--chart-height-sm)]',
   md: 'min-h-[var(--chart-height-md)]',
@@ -22,7 +22,7 @@ export type FrameHeight = keyof typeof FRAME_HEIGHT;
 
 /**
  * ChartFrame — the box every chart and every state standing in for it share
- * (brand direction 3.2 and 3.3): the height role as a floor, so loading, a
+ *: the height role as a floor, so loading, a
  * read error or an empty selection hold the plot's footprint, and the text
  * summary assistive technology reads instead of the drawing.
  */

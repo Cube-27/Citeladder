@@ -101,7 +101,6 @@ export function PromptTable({
       // The measured columns take their full width; narrower than that the
       // table scrolls in its frame with the prompt pinned and readable.
       minWidth={measured ? 'lg' : 'sm'}
-      pinFirstColumn
       columns={promptColumns(measured, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}

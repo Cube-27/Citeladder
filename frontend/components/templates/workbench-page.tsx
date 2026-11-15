@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { PageFrame, type PageFrameSlots } from './page-frame';
 
 /**
- * Workbench (brand direction 3.4): the masthead, then the editor workspace
+ * Workbench: the masthead, then the editor workspace
  * filling the window below it, so the window never scrolls and each pane
  * scrolls in itself. The workbench organisms (`components/ui/editor-workspace`)
  * draw the panes: the editor beside a side rail of tabs with the chat docked

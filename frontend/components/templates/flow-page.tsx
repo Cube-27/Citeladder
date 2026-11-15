@@ -28,7 +28,7 @@ function FlowLogo() {
 }
 
 /**
- * Flow (brand direction 3.4): a page with no shell. Sign-in, sign-up, the
+ * Flow: a page with no shell. Sign-in, sign-up, the
  * mailbox screens, the workspace chooser, workspace and project setup and an
  * invitation. A bar as tall as the masthead holds the logo, the horizontal
  * rung trail when the flow has steps, and a way out (`barEnd`, the account

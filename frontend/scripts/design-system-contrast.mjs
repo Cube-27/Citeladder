@@ -83,7 +83,7 @@ const CONTRAST_PAIRS = [
 ];
 
 /*
- * The app's palette (brand direction 2.5), held on the app's scopes only:
+ * The app's palette, held on the app's scopes only:
  * text roles 4.5:1 on ground, surface, well and raised and under the hover
  * and pressed tints; status inks on every fill and their own wash; marks and
  * boundaries 3:1. The absence word is checked against the hatch's line too.
@@ -114,7 +114,7 @@ const APP_PAIRS = [
       color('accent'),
       color('control-line'),
       color('rule-ink'),
-      ...APP_SERIES.slice(2),
+      ...APP_SERIES,
       color('data-other'),
     ],
     surfaces: APP_FILLS,
@@ -284,11 +284,11 @@ function contrastViolations(palette, { name: scope, website }, cssLabel) {
   ).flatMap((row) => rowViolations(palette, { scope, cssLabel }, row));
 }
 
-function separationViolations(palette, scope, cssLabel) {
+function separationViolations(palette, { name: scope, website }, cssLabel) {
   const base = palette.get(color('surface'));
   const violations = [];
   for (const { name, pairs, appOnly } of SEPARATED_SETS) {
-    if (appOnly && !scope.includes(':not(')) continue;
+    if (appOnly && website) continue;
     for (const [firstToken, secondToken] of pairs) {
       const first = opaque(palette, firstToken, base);
       const second = opaque(palette, secondToken, base);
@@ -329,7 +329,7 @@ export function paletteViolations(source, cssLabel = TOKEN_CSS) {
     const palette = resolvePalette(source, scope.layers);
     violations.push(
       ...contrastViolations(palette, scope, cssLabel),
-      ...separationViolations(palette, scope.name, cssLabel),
+      ...separationViolations(palette, scope, cssLabel),
     );
   }
   return violations;

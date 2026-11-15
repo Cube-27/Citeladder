@@ -204,11 +204,11 @@ describe('OverviewPanel', () => {
 
     expect(screen.getByRole('progressbar', { name: 'Web Fundamentals score' })).toHaveAttribute(
       'aria-valuetext',
-      '81',
+      '81 out of 100',
     );
     expect(screen.getByRole('progressbar', { name: 'AEO Readiness score' })).toHaveAttribute(
       'aria-valuetext',
-      '62',
+      '62 out of 100',
     );
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
@@ -220,9 +220,9 @@ describe('OverviewPanel', () => {
     );
     expect(screen.getByRole('progressbar', { name: 'Crawl Coverage score' })).toHaveAttribute(
       'aria-valuetext',
-      '40',
+      '40 out of 100',
     );
-    // A score is a rung meter, never a ring.
+    // Scores are rung progress bars, never the thin-bar Meter.
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
     expect(overviewRequests).toBe(0);
@@ -260,7 +260,7 @@ describe('OverviewPanel', () => {
     // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
     expect(
       await screen.findByRole('progressbar', { name: 'Crawl Coverage score' }),
-    ).toHaveAttribute('aria-valuetext', '20');
+    ).toHaveAttribute('aria-valuetext', '20 out of 100');
   });
 
   it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {

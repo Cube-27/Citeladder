@@ -117,9 +117,10 @@ function MeasurementTrail({ history }: Readonly<{ history: PromptHistory }>) {
       const visibility = point.mention_rate;
       const owned = point.owned_citation_rate;
       const measured = visibility !== null;
-      const ownedPercent = owned === null ? null : owned * 100;
+      const ownedRate =
+        owned === null ? 'Owned not measured' : `Owned ${formatWholePercent(owned * 100)}`;
       const rates = measured
-        ? `Visibility ${formatWholePercent(visibility * 100)} · Owned ${formatWholePercent(ownedPercent)}`
+        ? `Visibility ${formatWholePercent(visibility * 100)} · ${ownedRate}`
         : 'No successful answer: a gap in the line';
       return {
         id: point.audit_id,

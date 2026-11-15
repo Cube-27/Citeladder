@@ -31,7 +31,7 @@ function group(
   return { group: id, title, paletteTitle, items: navItems(`sidebar:${id}`) };
 }
 
-/** The sidebar's destinations in the order of the product loop (brand direction 4). */
+/** The sidebar's destinations in the order of the product loop. */
 export const NAV_GROUPS: readonly NavGroup[] = [
   group('overview', null, 'Overview'),
   group('analyze', 'Analyze'),

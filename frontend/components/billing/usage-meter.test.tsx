@@ -127,6 +127,21 @@ describe('UsageMeter', () => {
     expect(screen.getByText(line('2 of 0 prompts'))).toBeVisible();
   });
 
+  it.each([
+    [79, 'normal'],
+    [80, 'warning'],
+    [94, 'warning'],
+    [95, 'critical'],
+    [150, 'critical'],
+  ])('bands %i of 100 used as %s', (consumed, band) => {
+    render(<UsageMeter item={item({ allowance: 100, consumed, remaining: 0 })} />);
+
+    expect(screen.getByRole('progressbar').closest('[data-meter-band]')).toHaveAttribute(
+      'data-meter-band',
+      band,
+    );
+  });
+
   it('never overfills the bar past full', () => {
     // Over-consumption is possible (a reservation settling high); the bar must
     // clamp rather than overflow its track.

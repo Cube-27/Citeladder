@@ -24,7 +24,7 @@ export type CheckboxProps = AccessibleCheckbox & {
 };
 
 /**
- * The 16px box (brand direction 3.1): `surface` with the control line,
+ * The 16px box: `surface` with the control line,
  * radius 2; checked and indeterminate are an `ink` fill with an `on-ink`
  * check or dash. It is drawn centred in a 24×24 target (`CHECK_TARGET`), so
  * the target is never under 24. Shared with the table's row checkbox.

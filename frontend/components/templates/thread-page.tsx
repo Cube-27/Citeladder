@@ -7,7 +7,7 @@ import { Drawer } from '@/components/ui/drawer';
 import { PageFrame, type PageFrameSlots } from './page-frame';
 
 /**
- * Thread (brand direction 3.4 and 4): the masthead, then a 720px thread
+ * Thread: the masthead, then a 720px thread
  * column that scrolls in its own region with the composer docked under it,
  * so the window, the masthead and the composer never move as the thread
  * grows. `history` (the Agent's chats) is a left pane once the main column

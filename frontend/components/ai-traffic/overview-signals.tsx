@@ -38,7 +38,7 @@ const PURPOSE_COLUMNS: readonly DataTableColumn[] = [
 const PURPOSE_PAGE_SIZE = 10;
 
 /**
- * The Overview's key figures in one strip (brand direction 3.2): what the
+ * The Overview's key figures in one strip: what the
  * crawl logs observed, the referral sessions GA4 reported and the citations
  * AI Visibility tracked. A figure that cannot be read says which absence it
  * is and carries the one step that fixes it. The notes that qualify the
@@ -103,6 +103,9 @@ function crawlFigures(
     crawl.connection === 'connected'
       ? coverageLabel(crawl.coverage)
       : connectionLabel(crawl.connection);
+  const failed = crawl.failed_verification_requests ?? 0;
+  const failedNote =
+    failed > 0 ? `${formatCount(failed)} failed verification requests are shown separately.` : null;
   if (crawl.requests === null)
     return [
       {
@@ -110,7 +113,9 @@ function crawlFigures(
         label: 'Recognized automated requests',
         value: null,
         missingLabel: status,
-        sub: CRAWL_EMPTY[crawl.connection],
+        sub: failedNote
+          ? `${CRAWL_EMPTY[crawl.connection]} ${failedNote}`
+          : CRAWL_EMPTY[crawl.connection],
         action:
           crawl.connection === 'not_connected' ? (
             <Button variant="secondary" onClick={onConnect}>
@@ -119,7 +124,6 @@ function crawlFigures(
           ) : undefined,
       },
     ];
-  const failed = crawl.failed_verification_requests ?? 0;
   return [
     {
       key: 'requests',
@@ -134,7 +138,7 @@ function crawlFigures(
       missingLabel: 'Unavailable',
       sub:
         crawl.active_bots === null
-          ? undefined
+          ? 'Active bots unavailable'
           : `Requested by ${formatCount(crawl.active_bots)} active bots`,
     },
     {
@@ -142,10 +146,9 @@ function crawlFigures(
       label: 'Error share',
       value: crawl.error_share === null ? null : errorShare(crawl.error_share),
       missingLabel: 'Unavailable',
-      sub:
-        failed > 0
-          ? `Within the selected requests; ${formatCount(failed)} failed verification requests are shown separately.`
-          : 'Within the selected requests.',
+      sub: failedNote
+        ? `Within the selected requests. ${failedNote}`
+        : 'Within the selected requests.',
     },
   ];
 }
@@ -159,7 +162,7 @@ function referralFigure(referrals: Overview['referrals']): FigureSegment {
     key: 'referrals',
     label: 'AI referral sessions, latest day',
     value: latest?.value == null ? null : formatCount(latest.value),
-    missingLabel: synced ? 'Unavailable' : 'Not connected',
+    missingLabel: synced ? 'Unavailable' : 'Not synced',
     sub: (
       <>
         {referrals.referral_volume.length

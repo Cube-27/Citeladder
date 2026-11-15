@@ -210,7 +210,7 @@ function IssueCard({
         </Inline>
         <h3 className={textRole('subheading')}>{issue.issue_title}</h3>
         {issue.remediation ? (
-          <p className="type-body text-ink-2 text-ink whitespace-pre-line">{issue.remediation}</p>
+          <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
         ) : null}
         <IssueEvidence occurrence={issue} />
         {scores.length > 0 ? (
@@ -262,9 +262,7 @@ function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] 
                 </Inline>
                 <IssueEvidence occurrence={issue} />
                 {issue.remediation ? (
-                  <p className="type-body text-ink-2 text-ink whitespace-pre-line">
-                    {issue.remediation}
-                  </p>
+                  <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
                 ) : null}
               </Stack>
             ))}

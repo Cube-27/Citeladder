@@ -36,7 +36,7 @@ export type { DataTableColumn, DataTableSelection };
 export type DataTableState = Exclude<StateBlockProps, { inline: true }>;
 
 /**
- * The one-line empty state (`QueryState` `inline`): one table row saying what
+ * The one-line empty state (`StateBlock` `inline`): one table row saying what
  * is absent, for a small table whose block empty state would be taller than
  * its rows ever are.
  */
@@ -45,7 +45,7 @@ type DataTableInlineEmpty = Extract<StateBlockProps, { inline: true }>;
 export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'className'>;
 
 /**
- * DataTable — the record table organism (brand direction 3.2): a header, an
+ * DataTable — the record table organism: a header, an
  * ink rule, overline column heads, 36px rows on hairlines with mono
  * right-aligned figures, a first column fixed while the table scrolls
  * sideways, sort marks, your row marked with the accent rung and "You", the

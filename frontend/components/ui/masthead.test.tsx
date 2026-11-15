@@ -16,7 +16,7 @@ describe('Masthead', () => {
     const heading = screen.getByRole('heading', { level: 1, name: TITLE });
     expect(heading).not.toHaveAttribute('tabindex');
 
-    // One line: the title is cut along its width, never wrapped to a second row.
+    // A title longer than its box is cut (one line from `rail`, two below it).
     Object.defineProperty(heading, 'clientWidth', { configurable: true, value: 320 });
     Object.defineProperty(heading, 'scrollWidth', { configurable: true, value: 640 });
     act(() => emitResize(heading));

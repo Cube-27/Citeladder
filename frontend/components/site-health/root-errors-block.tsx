@@ -47,9 +47,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
                 {error.target}
               </span>
               {error.error_code ? (
-                <span className="type-body text-ink-2 text-negative tabular-nums">
-                  {error.error_code}
-                </span>
+                <span className="type-body text-negative tabular-nums">{error.error_code}</span>
               ) : null}
               <span className="type-body text-ink-2 tabular-nums">
                 {error.status_code !== null ? (

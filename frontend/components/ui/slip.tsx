@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 /**
- * The three boxes of the app (brand direction 2.4). Nothing at rest has a
+ * The three boxes of the app. Nothing at rest has a
  * shadow, a slip never nests in a slip, and a section is not a box at all.
  *
  *   Slip  — one actionable object (an Action in a queue, an integration, a

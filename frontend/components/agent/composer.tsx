@@ -56,7 +56,7 @@ export function Composer({
   /** While a turn runs, the send button stops it instead. */
   onStop?: () => void;
   stopping?: boolean;
-  /** The last send failed: Retry replaces Send until it succeeds or the person types. */
+  /** A failed send the draft still holds: Retry replaces Send; an edited draft sends. */
   onRetry?: () => void;
 }>) {
   const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
@@ -111,11 +111,11 @@ export function Composer({
 }
 
 /**
- * The composer's four statuses (brand direction 3.2 Composer): `ready` sends,
+ * The composer's four statuses: `ready` sends,
  * `submitted` is sending, `streaming` is a running turn that Stop ends, and
  * `error` is a failed send that Retry sends again.
  */
-export type ComposerStatus = 'ready' | 'submitted' | 'streaming' | 'error';
+type ComposerStatus = 'ready' | 'submitted' | 'streaming' | 'error';
 
 function composerStatus({
   pending,

@@ -2,7 +2,7 @@ import type { TrendScale } from '@/components/ui/trend-geometry';
 import { cn } from '@/lib/utils';
 
 /**
- * Series ink by role (brand direction 2.5): you are the accent, rivals one to
+ * Series ink by role: you are the accent, rivals one to
  * four take ink and the cool hues in rank order, and a merged remainder is
  * `data-other`. The accent is never a rival's colour.
  */
@@ -249,7 +249,7 @@ export function stepPath(points: readonly (readonly [number, number] | null)[]):
 /**
  * A series' marker shape. Square for every line while end labels name them;
  * once a key replaces the labels each line takes its own shape, so no series
- * is told apart by colour alone (brand direction 3.3).
+ * is told apart by colour alone.
  */
 export const MARKER_SHAPES = ['square', 'diamond', 'triangle', 'circle'] as const;
 export type MarkerShape = (typeof MARKER_SHAPES)[number];

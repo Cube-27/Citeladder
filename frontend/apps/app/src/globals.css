@@ -23,7 +23,7 @@
    `sm:`/`md:`/`lg:`/`xl:` (640, 768, 1024, 1280) and `2xl:` (1440) are the
    website's.
 
-   The shell's navigation (brand direction 2.3): from `rail:` (900px) the
+   The shell's navigation: from `rail:` (900px) the
    sidebar column shows, labelled, unless the reader collapsed it to the 48px
    rail (`data-sidebar-state="collapsed"`); below it the masthead's menu
    button opens the same sidebar in a left drawer. `labelled:` is where the
@@ -53,7 +53,7 @@
   }
 }
 /* The Thread template's History pane shows beside the thread from a 1100px
-   main column (brand direction 4); below it History opens as a drawer. */
+   main column; below it History opens as a drawer. */
 @custom-variant column-history {
   @container main (min-width: 1100px) {
     @slot;
@@ -134,7 +134,7 @@
   --color-data-other: #c2c2c2;
   --color-scrim: rgb(17 17 17 / 32%);
   --color-chart-grid: #ececec;
-  /* The app's roles (brand direction 2.5: paper and ink with one mark). On
+  /* The app's roles (paper and ink with one mark). On
      the website and docs each aliases the website role it stands for, so a
      shared atom drawn with them looks as it always did there; the app binds
      its own values in `:root:not([data-public-surface])` below. App code
@@ -169,8 +169,8 @@
 
   /* Type. Each role owns size, leading, weight and tracking; on the website
      and docs the display roles (display-*, title, title-sm, stat) pair with
-     `font-display`. The app sets no display face: its page title, auth
-     card titles and other titles and figures set these sizes in the sans face at 500. The mono roles
+     `font-display`, in the app as well: the display face names places (see
+     the Type block below). The mono roles
      (eyebrow, data, code) pair with `font-mono`, the rest are the sans face, never above 500.
      Sizes and leading are rem, the system's px ÷ 16, so they follow the
      reader's text size; spacing stays px. */
@@ -253,7 +253,7 @@
   --text-code: 0.8125rem;
   --text-code--line-height: 1.375rem;
   --text-code--font-weight: 400;
-  /* The app's roles beyond the shared names (brand direction 2.1). Eight
+  /* The app's roles beyond the shared names. Eight
      sizes only: 12, 13, 14, 16, 20, 24, 28, 40. The app rebinds `title`
      and `heading` to its own values below; its `body` role reads
      `body-sm`, which is 14/20 everywhere. */
@@ -300,7 +300,7 @@
   --radius-lg: 8px;
   --radius-xl: 8px;
   --radius-full: 9999px;
-  /* The app's three radii by role (brand direction 2.4): `mark` 2 (tags,
+  /* The app's three radii by role: `mark` 2 (tags,
      checkboxes, rung marks, bar ends), `control` 4 (controls, fields,
      slips, wells), `sheet` 8 (floating layers), and `full`. On the
      website `control` is its 6px control radius, so a shared control keeps
@@ -322,7 +322,7 @@
   --container-thread: 1040px;
   --container-prose: 720px;
   --container-narrow: 560px;
-  /* The app's columns (brand direction 2.3): content caps at 1280, reading
+  /* The app's columns: content caps at 1280, reading
      at 720 (`prose`), forms at 640. */
   --container-content: 1280px;
   --container-form: 640px;
@@ -359,7 +359,7 @@
   --ease-card: ease-in-out;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
-  /* The app's one "working" mark (brand direction 2.7): a single accent
+  /* The app's one "working" mark: a single accent
      rung pulsing its opacity every 1.2s. Rung meters fill one rung at a
      time (`steps()`), never on a curve. */
   --motion-pulse: 1200ms;
@@ -391,7 +391,7 @@
   --shadow-press:
     inset 0 1px 0 rgb(255 255 255 / 35%), inset 0 -2px 0 rgb(0 0 0 / 20%),
     0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px -6px rgb(17 17 17 / 35%);
-  /* The app's one shadow (brand direction 2.4): under a sheet, anything that
+  /* The app's one shadow: under a sheet, anything that
      floats. Nothing at rest has a shadow. */
   --shadow-sheet: 0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%);
 
@@ -519,7 +519,7 @@
   --shadow-sheet: 0 1px 2px rgb(0 0 0 / 40%), 0 16px 40px -8px rgb(0 0 0 / 60%);
 }
 
-/* The app's dark (brand direction 2.5): designed, not inverted. The ground
+/* The app's dark: designed, not inverted. The ground
    is a warm near-black, sheets are lighter than the ground, wells darker,
    and section rules step down to `ink-2` so they do not glare. It rebinds
    every literal the app's light block below sets: that block follows the
@@ -578,7 +578,7 @@
   box-shadow: var(--shadow-sheet);
 }
 
-/* The line language (brand direction 2.4, law 1): solid is observed, dashed
+/* The line language: solid is observed, dashed
    is drafted, hatched is absent, no line is not applicable. `hatch` fills a
    box with 45deg 1px `control-line` lines at a 6px pitch on `well`. `edge-draft`
    draws a dashed `control-line` edge; with `data-draft="false"` (a person
@@ -636,7 +636,7 @@
   }
 }
 
-/* The app's system (brand direction 2): paper and ink with one mark, a
+/* The app's system: paper and ink with one mark, a
    compact even density tuned for a 982x800 window. The app's document is
    the one without `data-public-surface`; the website and docs keep the
    system's values above. */
@@ -1017,7 +1017,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   background: var(--color-surface);
 }
 
-/* Type (brand direction 2.1). Three faces, three jobs: the mono face is
+/* Type. Three faces, three jobs: the mono face is
    measured (numbers, dates, URLs, ids, counts, changes, column heads), the
    sans face is said (labels, prose, descriptions), the display face names
    places (page, dialog and flow titles). Each role owns face, size, leading,
@@ -1408,8 +1408,8 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: 400;
   }
 
-  /* Lucide icons draw at one stroke: 1.75 on the website, 1.5 in the app
-     (brand direction 2.6), at every size. */
+  /* Lucide icons draw at one stroke: 1.75 on the website, 1.5 in the app,
+     at every size. */
   .lucide {
     stroke-width: 1.75;
   }
@@ -1516,7 +1516,7 @@ a.focus-ring:active .type-caption {
   border: 0;
 }
 
-/* The app's tables (brand direction 3.2 DataTable): an ink rule on top and no
+/* The app's tables: an ink rule on top and no
    box, overline heads on a hairline over the ground they sit on, mono
    figures, and your row marked by the accent rung on its first cell. */
 
@@ -1930,7 +1930,7 @@ samp {
   }
 }
 
-/* The live rung: one accent rung pulsing its opacity (brand direction 2.7). */
+/* The live rung: one accent rung pulsing its opacity. */
 @keyframes live-rung {
   50% {
     opacity: 0.35;
@@ -1944,7 +1944,7 @@ samp {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Every motion goes; state changes become instant (brand direction 2.7). */
+  /* Every motion goes; state changes become instant. */
   *,
   ::before,
   ::after {

@@ -26,7 +26,7 @@ export type Fact = Readonly<{ label: ReactNode; value: ReactNode; key?: string }
 export type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns';
 
 const LIST = {
-  // In the app a ruled list closes on hairlines on both sides (brand direction 7).
+  // In the app a ruled list closes on hairlines on both sides.
   ruled: 'divide-rule border-rule grid divide-y [:root:not([data-public-surface])_&]:border-y',
   inline: 'flex flex-wrap items-center gap-x-6 gap-y-3',
   spread: 'grid gap-2',
@@ -54,10 +54,10 @@ const DETAIL = {
   inline: textRole('body', 'text-ink-2'),
   // A spread row's value is a right-aligned amount or count (a quote line),
   // so its digits take the figure face and line up with the total under it.
-  spread: textRole('body', 'text-ink-2 text-ink font-mono'),
+  spread: textRole('body', 'text-ink font-mono'),
   columns: textRole(
     'caption',
-    'flex min-h-[var(--badge-height-sm)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
+    'flex min-h-[var(--tag-height)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
   ),
 } as const;
 

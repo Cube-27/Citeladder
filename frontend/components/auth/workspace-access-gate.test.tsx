@@ -103,10 +103,7 @@ it.each([false, true])(
     const { rerender } = renderWithProviders(
       <WorkspaceAccessGate>Private report</WorkspaceAccessGate>,
     );
-    // Only the loading notice speaks: no access verdict before the read answers.
-    expect(screen.getAllByRole('heading').map((heading) => heading.textContent)).toEqual([
-      'Loading your workspace…',
-    ]);
+    expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Account security' })).not.toBeInTheDocument();
     expect(screen.queryByText('Private report')).not.toBeInTheDocument();

@@ -54,7 +54,7 @@ function columnsFor(count: number): Columns {
 
 /**
  * FigureStrip — key figures side by side under one ink rule, divided by
- * hairlines (brand direction 3.2): four across from 720px of column width,
+ * hairlines: four across from 720px of column width,
  * two across below. Each figure is the Figure anatomy: overline label, the
  * value at `figure` (or its Absence), the change, the basis. A 0–100 score
  * is a RungMeter, never a ring. A record page passes its summary as `lead`,
@@ -162,7 +162,11 @@ function FigureBody({ segment }: FigurePart) {
           <Value text="figure" value={scoreText(segment.score)} />
           <RungMeter
             value={segment.score.value}
-            valueLabel={scoreText(segment.score)}
+            valueLabel={
+              segment.score.unit
+                ? scoreText(segment.score)
+                : `${scoreText(segment.score)} out of 100`
+            }
             label={segment.score.label}
             headless
           />

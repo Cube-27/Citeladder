@@ -18,7 +18,7 @@ const BAR_LAYER =
   'before:bg-ground before:border-rule before:absolute before:inset-y-0 before:-start-[var(--content-gutter)] before:-z-10 before:w-[calc(100cqw+2*var(--content-gutter))] before:border-b';
 
 /**
- * Masthead (brand direction 2.3): the head of every shell page, 48 tall and
+ * Masthead: the head of every shell page, 48 tall and
  * sticky with a hairline under it. From the left: the menu button below
  * 900px and a record page's back link (`lead`), the page title in `title`
  * type; at the right the search trigger, the page's secondary actions and its

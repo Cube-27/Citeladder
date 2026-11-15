@@ -52,7 +52,7 @@ function SignalCell({ present, label }: Readonly<{ present: boolean; label: stri
     <TableCell>
       <Inline
         as="span"
-        className={cn('type-body text-ink-2 inline-flex', present ? 'text-positive' : 'text-ink-2')}
+        className={cn('type-body inline-flex', present ? 'text-positive' : 'text-ink-2')}
       >
         <Icon icon={present ? Check : Minus} />
         <span className="sr-only">{label}: </span>

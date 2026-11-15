@@ -218,7 +218,6 @@ export function ProductsTable({
       pageSize={pageSize}
       rowLines={2}
       minWidth="xl"
-      pinFirstColumn
       busy={{ active: query.isFetching && !query.isPending, label: 'Updating products' }}
       selection={{
         all,

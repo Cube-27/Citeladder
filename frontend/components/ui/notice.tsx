@@ -80,7 +80,7 @@ export function readErrorProps(read: RetryableRead) {
 }
 
 /**
- * Notice — one inline message (brand direction 3.2): the tone's glyph, a
+ * Notice — one inline message: the tone's glyph, a
  * sentence and at most one action, on the tone's wash with the control
  * radius. Failures of a write (`kind="mutation"`) and of a read
  * (`kind="read"`) are notices too, so a failure renders one way everywhere;

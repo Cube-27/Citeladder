@@ -1,7 +1,7 @@
 import type { AgentMessage } from '@/lib/api/agent';
 
 /**
- * One saved reply as an ordered list of typed parts (brand direction 3.2
+ * One saved reply as an ordered list of typed parts (a
  * Turn): the steps it took, the text it wrote, the evidence it cited, the web
  * pages it read, then what it proposed and wrote. A Turn renders the list in
  * order through one switch, so a new part is a new kind, never a new slot.

@@ -31,6 +31,11 @@ beforeEach(() => {
 
 it('disconnects integrations only after the person confirms what it revokes', async () => {
   renderWithProviders(<AccountSecurity />);
+  expect(
+    ['Sign-in', 'Password', 'Sessions'].map(
+      (name) => screen.getByRole('region', { name }).querySelector('h2')?.textContent,
+    ),
+  ).toEqual(['Sign-in', 'Password', 'Sessions']);
   const user = userEvent.setup();
   await user.click(await screen.findByRole('button', { name: 'Sign out and disconnect' }));
   const dialog = await screen.findByRole('dialog');

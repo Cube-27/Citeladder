@@ -14,7 +14,7 @@ type HeadingLevel = keyof typeof HEADING_TAG;
 
 /**
  * The heading level a block state takes when its caller names none: 2 on a
- * page, 3 inside a Section, Slip or DataTable whose own title is the h2 rung.
+ * page, 3 inside a Card, Section or DataTable whose own title is the h2 rung.
  */
 export const StateHeadingLevelContext = createContext<HeadingLevel>(2);
 
@@ -56,7 +56,6 @@ type FilteredEmpty = Readonly<{
 type NotMeasuredCopy = Readonly<{
   /** One sentence: what measures this and when it appears. */
   description: string;
-  icon?: LucideIcon;
   /** One primary control. */
   action?: ReactNode;
 }>;
@@ -155,7 +154,7 @@ export function screenState<T, M extends T>(
 
 /**
  * StateBlock — the loading, empty, filtered-empty, not-measured and error
- * states of a read in one footprint (brand direction 3.2), so a read that
+ * states of a read in one footprint, so a read that
  * goes loading → error → retry → empty never moves the page. The loader is
  * the live rung, shown only after a beat; a failed read replaces it with a
  * Notice and never sits on a placeholder. Callers choose the state, never
@@ -232,8 +231,8 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
     case 'not_measured':
       return (
         <EmptyBody
-          mark={<Absence state="not_measured" />}
-          icon={props.icon}
+          // The heading says it in words; the hatched tag only draws it.
+          mark={<Absence state="not_measured" aria-hidden />}
           heading="Not measured yet"
           description={props.description}
           action={props.action}

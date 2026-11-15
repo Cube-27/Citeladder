@@ -13,7 +13,7 @@ type ControlProps = {
 
 /**
  * Field — one frame for Input, Textarea, Select, Combobox, DateField and
- * SearchField (brand direction 3.1): the label above in the `label` role,
+ * SearchField: the label above in the `label` role,
  * 8px to the control, and one line of help or error below in `caption`.
  * Never help and error together: the error replaces the help, in crimson
  * with its glyph, linked to the control. An optional counter ("48/200") sits

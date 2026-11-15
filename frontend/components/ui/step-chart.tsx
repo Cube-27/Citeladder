@@ -72,8 +72,8 @@ const MARKER_LIMIT = 40;
 const defaultFormat = (value: number) => `${Math.round(value * 100) / 100}`;
 
 /**
- * The chart's keys: the series key when end labels would collide, and the
- * event ticks' key beside end labels or a single line.
+ * The chart's keys: the series key when end labels cannot name every line,
+ * and the event ticks' key beside end labels or a single line.
  */
 function StepChartKeys({
   keyed,
@@ -92,12 +92,14 @@ function StepChartKeys({
 }
 
 /**
- * StepChart — a time series as steps (brand direction 3.3): each measurement
+ * StepChart — a time series as steps: each measurement
  * holds until the next, with a square marker per point up to 40. Your line
  * is the accent at 2px with filled markers; rivals take ink and the cool hues
  * at 1.5px with hollow markers. A missing period breaks the line and shows a
  * hatched band with its word; nothing is interpolated. Lines are named at
- * their right end, and a key appears only when those labels would collide.
+ * their right end with their latest value (dated when it is older than the
+ * last point), and a key replaces the labels when they would collide or a
+ * line has no value to label.
  * At most four gridlines; events are ink ticks on the time axis. The tooltip
  * is a sheet, read with the pointer or the arrow keys, and a summary and a
  * table carry every value to assistive technology.
@@ -162,8 +164,14 @@ export function StepChart({
   const shown = (value: number | null | undefined) =>
     value === null || value === undefined ? availabilityLabel('not_measured') : format(value);
   const latestOf = (line: Pick<Line, 'values'>) => line.values[lastMeasured(line.values)] ?? null;
+  const latestText = (line: Pick<Line, 'values'>) => {
+    const at = lastMeasured(line.values);
+    const asOf = at >= 0 && at < data.length - 1 ? data[at] : undefined;
+    const value = shown(line.values[at]);
+    return asOf ? `${value} · as of ${asOf.axisLabel ?? asOf.label}` : value;
+  };
   const labelText = (line: Pick<Line, 'name' | 'values'>) =>
-    toned.length === 1 ? shown(latestOf(line)) : `${line.name} ${shown(latestOf(line))}`;
+    toned.length === 1 ? latestText(line) : `${line.name} ${latestText(line)}`;
   const gutter = Math.min(
     Math.round(width * 0.35),
     Math.max(...toned.map((line) => labelText(line).length)) * LABEL_CHAR_WIDTH + 16,
@@ -181,15 +189,13 @@ export function StepChart({
       tickWidth: (ticks) => Math.max(...ticks.map((tick) => yFormat(tick).length)),
     });
   const labelled = scaleFor(gutter);
-  const endLabels = placeEndLabels(
-    toned.flatMap((line) => {
-      const latest = latestOf(line);
-      return latest === null
-        ? []
-        : [{ key: line.name, text: labelText(line), tone: line.tone, y: labelled.y(latest) }];
-    }),
-    labelled.right,
-  );
+  const ends = toned.flatMap((line) => {
+    const latest = latestOf(line);
+    return latest === null
+      ? []
+      : [{ key: line.name, text: labelText(line), tone: line.tone, y: labelled.y(latest) }];
+  });
+  const endLabels = ends.length === toned.length ? placeEndLabels(ends, labelled.right) : null;
   const scale = endLabels ? labelled : scaleFor(24);
   const keyed = !endLabels && toned.length > 1;
   const lines: Line[] = toned.map((line, index) => ({
@@ -218,7 +224,7 @@ export function StepChart({
             name: line.name,
             tone: line.tone,
             shape: line.shape,
-            value: shown(latestOf(line)),
+            value: latestText(line),
           }))}
         />
         {/* A focusable group: the arrow keys read the points one by one. */}

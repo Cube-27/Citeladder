@@ -106,9 +106,11 @@ function ProjectDeletionControls() {
   if (!hasCapability(PROJECT_DELETION_CAPABILITY) || !mayDelete) return null;
   return (
     <>
-      <Section>
+      <Section aria-labelledby="settings-danger-zone-title">
         <SectionHeader>
-          <SectionTitle level={2}>Danger zone</SectionTitle>
+          <SectionTitle id="settings-danger-zone-title" level={2}>
+            Danger zone
+          </SectionTitle>
           <SectionDescription>
             Permanently delete the active project and everything inside it.
           </SectionDescription>
@@ -243,9 +245,11 @@ export function SettingsScreen() {
         <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
           {/* One card per section, the danger zone last. */}
           <SectionStack>
-            <Section>
+            <Section aria-labelledby="settings-profile-title">
               <SectionHeader>
-                <SectionTitle level={2}>Profile</SectionTitle>
+                <SectionTitle id="settings-profile-title" level={2}>
+                  Profile
+                </SectionTitle>
                 <SectionDescription>Your sign-in email and workspace role.</SectionDescription>
               </SectionHeader>
               <Stack gap="item">

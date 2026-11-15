@@ -91,7 +91,7 @@ function EvidencePromptHeader({
           />
         </Inline>
       </Inline>
-      <p className={textRole('body', 'text-ink-2 text-ink')}>{displayPrompt}</p>
+      <p className={textRole('body', 'text-ink')}>{displayPrompt}</p>
     </Stack>
   );
 }

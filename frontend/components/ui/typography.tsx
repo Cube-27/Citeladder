@@ -3,7 +3,7 @@ import type { ComponentPropsWithoutRef } from 'react';
 import { cn } from '@/lib/utils';
 
 /**
- * The closed set of product text roles (brand direction 2.1).
+ * The closed set of product text roles.
  *
  * A call site names the *job* the text does and gets face, size, leading,
  * weight and tracking from it. The recipes live once, as `.type-*` classes

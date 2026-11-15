@@ -127,6 +127,26 @@ test('a website stage holds the website palettes only, since the app has none', 
   assert.ok(!violations.some((violation) => violation.includes('data-public-surface')));
 });
 
+test("the app's series holds 3:1 in the app's palettes and is not measured on the website", () => {
+  const violations = paletteViolations(css({ light: { '--color-data-you': '#eeeeee' } }));
+  assert.deepEqual(
+    violations,
+    ['ground', 'surface', 'well', 'raised'].map(
+      (fill) =>
+        `apps/app/src/globals.css: :root:not([data-public-surface]) --color-data-you on --color-${fill} is 1.16:1; needs 3:1`,
+    ),
+  );
+});
+
+test("you and the rivals must part in the app's palettes only", () => {
+  const violations = paletteViolations(css({ light: { '--color-data-rival-3': '#2f6f9f' } }));
+  assert.deepEqual(violations, [
+    'apps/app/src/globals.css: :root:not([data-public-surface]) you and the rivals ' +
+      '--color-data-rival-2 / --color-data-rival-3 are too close ' +
+      '(ΔL* 0.0, deuteranopia ΔE 0.0, protanopia ΔE 0.0)',
+  ]);
+});
+
 test('a translucent soft is composited onto the surface before measuring', () => {
   const violations = paletteViolations(
     css({ light: { '--color-positive-soft': 'rgb(0 0 0 / 90%)' } }),

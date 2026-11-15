@@ -3,12 +3,13 @@ import type { ReactNode } from 'react';
 import { PageFrame, PageSections, type PageBack, type PageFrameSlots } from './page-frame';
 
 /**
- * Record (brand direction 3.4): the masthead with the back link and the
+ * Record: the masthead with the back link and the
  * record's own name, the identity strip (its facts and status), the
  * sections, with an optional aside beside them from a split-width column,
  * and an optional action bar that stays at the window's foot.
  */
 export function RecordPage({
+  busy,
   identity,
   aside,
   actionBar,
@@ -17,6 +18,8 @@ export function RecordPage({
 }: Omit<PageFrameSlots, 'back'> &
   Readonly<{
     back: PageBack;
+    /** True while the record refetches: marks the body `aria-busy`. */
+    busy?: boolean;
     /** The record's FactList and StatusMark, full width above the sections. */
     identity?: ReactNode;
     /** Supporting context beside the sections. */
@@ -27,17 +30,19 @@ export function RecordPage({
   }>) {
   return (
     <PageFrame {...slots}>
-      <PageSections>
-        {identity}
-        {aside ? (
-          <div className="column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] grid min-w-0 items-start gap-[var(--workspace-gap)]">
-            <PageSections>{children}</PageSections>
-            <aside className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">{aside}</aside>
-          </div>
-        ) : (
-          children
-        )}
-      </PageSections>
+      <div aria-busy={busy} className="flex min-w-0 flex-col">
+        <PageSections>
+          {identity}
+          {aside ? (
+            <div className="column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] grid min-w-0 items-start gap-[var(--workspace-gap)]">
+              <PageSections>{children}</PageSections>
+              <aside className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">{aside}</aside>
+            </div>
+          ) : (
+            children
+          )}
+        </PageSections>
+      </div>
       {actionBar ? (
         <div
           data-page-band="action-bar"

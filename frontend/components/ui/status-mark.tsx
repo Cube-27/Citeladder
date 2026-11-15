@@ -25,7 +25,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 
 /**
- * The tones a status may take (brand direction 2.5): semantic hues appear
+ * The tones a status may take: semantic hues appear
  * only in status marks, changes, notices and validation, and never alone.
  * `you` is the accent: only a citation's own-domain classification.
  */
