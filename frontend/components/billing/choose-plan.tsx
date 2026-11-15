@@ -5,8 +5,14 @@ import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { PlanRow } from '@/components/billing/plan-row';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { SegmentedControl } from '@/components/ui/tabs';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
   BillingCatalog,
   BillingCustomerDetails,
@@ -83,12 +89,11 @@ export function ChoosePlan({
     !catalog.plans.some((plan) => plan.funded_checkout_available)
   )
     return (
-      <Stack as="section" gap="workspace" aria-labelledby="choose-plan-title">
-        <EditorialSectionHeader
-          headingId="choose-plan-title"
-          title="Choose a plan"
-          description="Self-serve plans are not open yet."
-        />
+      <Section id="choose-plan" aria-labelledby="choose-plan-title">
+        <SectionHeader>
+          <SectionTitle id="choose-plan-title">Choose a plan</SectionTitle>
+          <SectionDescription>Self-serve plans are not open yet.</SectionDescription>
+        </SectionHeader>
         <Notice tone="info">
           To start a plan now, contact us and we will set it up for this workspace.{' '}
           <ExternalHttpLink
@@ -100,42 +105,46 @@ export function ChoosePlan({
             Contact us
           </ExternalHttpLink>
         </Notice>
-      </Stack>
+      </Section>
     );
   return (
-    <Stack as="section" gap="workspace" aria-labelledby="choose-plan-title">
-      <EditorialSectionHeader
-        headingId="choose-plan-title"
-        title="Choose a plan"
-        description={`Your billing country sets the currency and tax; you review the exact quote before paying. ${MODE_NOTE[mode]}`}
-      />
-      <SegmentedControl
-        value={mode}
-        onChange={setMode}
-        options={MODES}
-        ariaLabel="Provider keys"
-        className="w-fit"
-      />
-      <BillingCountryInput country={country} setCountry={setCountry} />
-      <BillingDetailsForm country={country} details={details} setDetails={setDetails} />
-      <Stack gap="compact">
-        {catalog.plans.map((plan) => (
-          <PlanRow
-            key={plan.key}
-            plan={plan}
-            mode={mode}
-            currencyMinorUnits={catalog.currency_minor_units}
-            country={country}
-            billingDetails={details}
-            pending={pending && chosen === plan.key}
-            locked={!canManage || pending}
-            onCheckout={(key, billingDetails) => {
-              setChosen(key);
-              subscribe(key, billingDetails, mode);
-            }}
-          />
-        ))}
+    <Section id="choose-plan" aria-labelledby="choose-plan-title">
+      <SectionHeader>
+        <SectionTitle id="choose-plan-title">Choose a plan</SectionTitle>
+        <SectionDescription>
+          Your billing country sets the currency and tax; you review the exact quote before paying.{' '}
+          {MODE_NOTE[mode]}
+        </SectionDescription>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="workspace">
+        <SegmentedControl
+          value={mode}
+          onChange={setMode}
+          options={MODES}
+          ariaLabel="Provider keys"
+          className="w-fit"
+        />
+        <BillingCountryInput country={country} setCountry={setCountry} />
+        <BillingDetailsForm country={country} details={details} setDetails={setDetails} />
+        <Stack gap="compact">
+          {catalog.plans.map((plan) => (
+            <PlanRow
+              key={plan.key}
+              plan={plan}
+              mode={mode}
+              currencyMinorUnits={catalog.currency_minor_units}
+              country={country}
+              billingDetails={details}
+              pending={pending && chosen === plan.key}
+              locked={!canManage || pending}
+              onCheckout={(key, billingDetails) => {
+                setChosen(key);
+                subscribe(key, billingDetails, mode);
+              }}
+            />
+          ))}
+        </Stack>
       </Stack>
-    </Stack>
+    </Section>
   );
 }

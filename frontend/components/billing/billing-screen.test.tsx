@@ -276,7 +276,8 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />);
 
-    expect(await screen.findByText(/entitlement could not be resolved/i)).toBeInTheDocument();
+    expect(await screen.findByText("Couldn't load billing")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
     expect(screen.queryByRole('heading', { name: 'Choose a plan' })).not.toBeInTheDocument();
   });
 
@@ -662,10 +663,11 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />);
     const upgrade = await screen.findByRole('button', { name: 'Upgrade to Growth' });
-    // Changing the plan is part of the Plan card, not a card of its own.
-    const plan = screen.getByRole('region', { name: 'Current plan' });
-    expect(within(plan).getByRole('heading', { name: 'Change plan' })).toBeVisible();
-    expect(within(plan).getByRole('button', { name: 'Upgrade to Growth' })).toBe(upgrade);
+    // Changing the plan is its own section, with the plan and before its usage.
+    const section = screen.getByRole('region', { name: 'Change plan' });
+    expect(within(section).getByRole('button', { name: 'Upgrade to Growth' })).toBe(upgrade);
+    const usage = screen.getByRole('region', { name: 'Usage' });
+    expect(section.compareDocumentPosition(usage)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
     await userEvent.click(upgrade);
 
     const review = await screen.findByRole('region', { name: 'Review your upgrade' });

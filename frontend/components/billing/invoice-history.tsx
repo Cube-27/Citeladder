@@ -7,6 +7,13 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
@@ -16,11 +23,11 @@ import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/noti
 import { Value } from '@/components/ui/value';
 
 const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'document', label: 'Document' },
-  { key: 'paid', label: 'Date', width: 'status', numeric: true },
-  { key: 'tax', label: 'GST', width: 'category' },
-  { key: 'amount', label: 'Amount', width: 'figure', numeric: true },
-  { key: 'download', label: 'Download', width: 'name', trailing: true, hideLabel: true },
+  { key: 'document', label: 'Document', kind: 'identity' },
+  { key: 'paid', label: 'Date', kind: 'date', width: 'status' },
+  { key: 'amount', label: 'Amount', kind: 'number' },
+  { key: 'tax', label: 'GST', kind: 'text', width: 'category' },
+  { key: 'download', label: 'Download', kind: 'actions', width: 'name', hideLabel: true },
 ];
 
 const TREATMENT_LABEL: Record<BillingInvoice['tax_treatment'], string> = {
@@ -50,9 +57,14 @@ type InvoicesRead = RetryableRead & Readonly<{ isError: boolean; isLoading: bool
 
 function invoicesState(read: InvoicesRead, count: number): DataTableState | undefined {
   if (read.isError) {
-    return { kind: 'error', ...readErrorProps(read), fallback: 'Receipts could not be loaded.' };
+    return {
+      kind: 'error',
+      title: "Couldn't load invoices",
+      ...readErrorProps(read),
+      fallback: 'Receipts could not be loaded.',
+    };
   }
-  if (read.isLoading) return { kind: 'loading', label: 'Loading billing documents…' };
+  if (read.isLoading) return { kind: 'loading', label: 'Loading invoices…' };
   if (count > 0) return undefined;
   return {
     kind: 'empty',
@@ -94,49 +106,52 @@ export function InvoiceHistory({
   };
 
   return (
-    <Stack gap="compact">
-      {downloadError ? (
-        <Notice tone="negative">Receipt download failed. Please retry.</Notice>
-      ) : null}
-      <DataTable
-        title="Invoices"
-        description="Invoices with their receipts, and any credit notes."
-        columns={COLUMNS}
-        minWidth="lg"
-        state={invoicesState(read, invoices.length)}
-      >
-        {invoices.map((invoice) => (
-          <TableRow key={invoice.invoice_id}>
-            <TableCell>
-              <ClampText lines={1} className={textRole('emphasis')}>
-                {invoice.status === 'credited'
-                  ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
-                  : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
-              </ClampText>
-            </TableCell>
-            {/* The date alone, aligned as every date column is; the
-                  document names whether it was paid or credited. */}
-            <TableCell numeric>
-              <DisplayTime value={invoice.paid_at} dateOnly />
-            </TableCell>
-            <TableCell>
-              <ClampText lines={1}>{taxBreakdown(invoice)}</ClampText>
-            </TableCell>
-            <TableCell numeric>
-              <Value value={formatMoney(invoice.amount_paid, 2)} />
-            </TableCell>
-            <TableActionsCell>
-              <Button
-                variant="secondary"
-                disabled={downloading === invoice.invoice_id}
-                onClick={() => void download(invoice)}
-              >
-                {downloadLabel(invoice, downloading)}
-              </Button>
-            </TableActionsCell>
-          </TableRow>
-        ))}
-      </DataTable>
-    </Stack>
+    <Section aria-labelledby="invoices-title">
+      <SectionHeader>
+        <SectionTitle id="invoices-title">Invoices</SectionTitle>
+        <SectionDescription>Invoices with their receipts, and any credit notes.</SectionDescription>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="compact">
+        {downloadError ? (
+          <Notice tone="negative">Receipt download failed. Please retry.</Notice>
+        ) : null}
+        <DataTable
+          label="Invoices"
+          columns={COLUMNS}
+          minWidth="lg"
+          state={invoicesState(read, invoices.length)}
+        >
+          {invoices.map((invoice) => (
+            <TableRow key={invoice.invoice_id}>
+              <TableCell>
+                <ClampText lines={1} className={textRole('emphasis')}>
+                  {invoice.status === 'credited'
+                    ? `Credit note ${invoice.invoice_number} · Against ${invoice.original_invoice_number ?? ''}`
+                    : `Invoice ${invoice.invoice_number} · Receipt ${invoice.receipt_number}`}
+                </ClampText>
+              </TableCell>
+              <TableCell>
+                <DisplayTime value={invoice.paid_at} dateOnly />
+              </TableCell>
+              <TableCell>
+                <Value value={formatMoney(invoice.amount_paid, 2)} />
+              </TableCell>
+              <TableCell>
+                <ClampText lines={1}>{taxBreakdown(invoice)}</ClampText>
+              </TableCell>
+              <TableActionsCell>
+                <Button
+                  variant="secondary"
+                  disabled={downloading === invoice.invoice_id}
+                  onClick={() => void download(invoice)}
+                >
+                  {downloadLabel(invoice, downloading)}
+                </Button>
+              </TableActionsCell>
+            </TableRow>
+          ))}
+        </DataTable>
+      </Stack>
+    </Section>
   );
 }
