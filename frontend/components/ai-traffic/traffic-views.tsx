@@ -14,19 +14,17 @@ import {
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { coverageLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
 import { formatCount, formatMean, formatWindowDate } from '@/lib/format';
-import { useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
-import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { CalendarX, SearchX, Unplug } from 'lucide-react';
+import { CalendarX, SearchX } from 'lucide-react';
 import { TabPanel } from '@/components/ui/tabs';
 import { Absence } from '@/components/ui/absence';
-import { ActionButton } from '@/components/ui/actions';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { TableRow, TableCell, TableCellLines, TableTime } from '@/components/ui/table';
 import { CrawlLogConnections } from './crawl-log-connections';
 import { InsightStrip } from './insight-strip';
-import { OverviewFigures, RequestsByPurpose } from './overview-signals';
-import { useSourceStep } from '@/components/integrations/data-sources';
+import { OverviewFigures, RequestsByPurpose, overviewMeasured } from './overview-signals';
+import { trafficNarrowed } from './traffic-controls';
+import type { SourceStep } from '@/components/integrations/data-sources';
 import { CrawlerPages } from './crawler-pages';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
@@ -63,15 +61,16 @@ export function TrafficOverview({
   workspaceId,
   range,
   crawlAvailable,
+  ga4,
 }: Readonly<{
   data: z.infer<typeof aiTrafficOverviewSchema>;
   projectId: string;
   workspaceId: string;
   range: string;
   crawlAvailable: boolean;
+  ga4: SourceStep | null;
 }>) {
   const [connectOpen, setConnectOpen] = useState(false);
-  const ga4 = useSourceStep(workspaceId, projectId, 'ga4');
   const crawlConnected = data.crawl.connection !== 'not_connected';
   return (
     <TabPanel value="overview">
@@ -85,7 +84,9 @@ export function TrafficOverview({
           ga4={ga4}
           onConnectCrawl={() => setConnectOpen(true)}
         />
-        <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />
+        {overviewMeasured(data) ? (
+          <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />
+        ) : null}
         {data.crawl.series.length ? <RequestsByPurpose series={data.crawl.series} /> : null}
         {crawlAvailable ? (
           <CrawlLogConnections
@@ -101,62 +102,29 @@ export function TrafficOverview({
     </TabPanel>
   );
 }
+/** A crawl-log table, and how to clear its narrowing. */
+type CrawlTableScope = TrafficTableScope & Readonly<{ onClearFilters: () => void }>;
+
 /**
- * Absence in a filtered table is an observation within the available logs,
- * not proof of no traffic. With no crawl log source at all, the empty state
- * says so and carries Connect crawl logs itself, at the top of its region.
+ * An empty narrowed table is "none match", with Clear filters. Unnarrowed,
+ * absence is an observation within the available logs, not proof of no
+ * traffic. (With no crawl log source the screen shows its setup state instead.)
  */
 function noMatches(
-  setup: CrawlSetup,
+  { filters, onClearFilters }: CrawlTableScope,
   copy: Readonly<{ heading: string; description: string }>,
 ): DataTableState {
-  if (setup.unconnected)
-    return {
-      kind: 'empty',
-      icon: Unplug,
-      heading: 'Crawl logs are not connected',
-      description: 'Connect your CDN or server logs to see which AI crawlers request your pages.',
-      action: (
-        <ActionButton
-          action="connectCrawlLogs"
-          onClick={setup.connect}
-          disabled={!setup.canManage}
-        />
-      ),
-    };
+  if (trafficNarrowed(filters)) return { kind: 'filtered', onClear: onClearFilters };
   return { kind: 'empty', icon: SearchX, ...copy };
 }
 
-type CrawlSetup = ReturnType<typeof useCrawlSetup>;
-
-/**
- * Whether the project has no crawl log source yet, and the connect dialog
- * for an empty table's own button. A project with sources keeps the crawl
- * log section (diagnostics and Connect) under an empty table.
- */
-function useCrawlSetup({ workspaceId, projectId }: Omit<TrafficTableScope, 'filters'>) {
-  const sources = useCrawlSources(projectId, workspaceId);
-  const canManage = useWorkspaceCapability('manage_credentials');
-  const [open, setOpen] = useState(false);
-  const unconnected = sources.data?.items.length === 0;
-  return {
-    unconnected,
-    canManage,
-    connect: () => setOpen(true),
-    section: (empty: boolean) => {
-      if (unconnected)
-        return <CrawlLogConnections open={open} onOpenChange={setOpen} headerWhenEmpty={false} />;
-      return empty ? <CrawlLogConnections /> : null;
-    },
-  };
-}
 /** A drawer opened from a row reads the table's window, not its narrowing. */
 function windowFilters(filters: TrafficFilters): TrafficFilters {
   return { range: filters.range, verification: filters.verification };
 }
-export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTableScope) {
+export function TrafficCrawlers(scope: CrawlTableScope) {
+  const { workspaceId, projectId, filters } = scope;
   const [botId, setBotId] = useState<string | null>(null);
-  const setup = useCrawlSetup({ workspaceId, projectId });
   const { page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
@@ -167,7 +135,7 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
     loading: 'Loading crawlers…',
     subject: 'the crawlers',
     empty: () =>
-      noMatches(setup, {
+      noMatches(scope, {
         heading: 'No matching requests were observed',
         description:
           'Check coverage on Overview before interpreting absence in the available logs.',
@@ -222,7 +190,7 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
             </TableRow>
           ))}
         </DataTable>
-        {setup.section(page?.items.length === 0)}
+        {page?.items.length === 0 ? <CrawlLogConnections /> : null}
       </SectionStack>
       <CrawlerPages
         botId={botId}
@@ -252,10 +220,10 @@ function catalogState(
   if (catalog.isPending) return { kind: 'loading', label: 'Loading the crawler catalog…' };
   return undefined;
 }
-export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTableScope) {
+export function TrafficActivity(scope: CrawlTableScope) {
+  const { workspaceId, projectId, filters } = scope;
   // The screen's controls read the same entry, so this adds no request.
   const catalog = useQuery(aiTrafficQueries.catalog({ workspaceId, projectId }));
-  const setup = useCrawlSetup({ workspaceId, projectId });
   const { page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
@@ -266,7 +234,7 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
     loading: 'Loading request activity…',
     subject: 'the request activity',
     empty: () =>
-      noMatches(setup, {
+      noMatches(scope, {
         heading: 'No matching requests',
         description: 'Nothing in the available retained logs matches these filters.',
       }),
@@ -316,7 +284,7 @@ export function TrafficActivity({ workspaceId, projectId, filters }: TrafficTabl
             </TableRow>
           ))}
         </DataTable>
-        {setup.section(page?.items.length === 0)}
+        {page?.items.length === 0 ? <CrawlLogConnections /> : null}
       </SectionStack>
     </TabPanel>
   );

@@ -125,12 +125,10 @@ it('keeps failed verification requests and unavailable active bots visible', () 
   expect(within(figure('Path-level pages')).getByText('Requested by 2 active bots')).toBeVisible();
 });
 
-it('shows a measured zero as 0 and a window with no completed run as not available yet', () => {
+it('shows a measured zero as 0 and a window with no completed run as not run yet', () => {
   const { unmount } = renderWithProviders(figures({ citations: { ...citations, count: 0 } }));
   expect(within(figure('Tracked citations')).getByText('0')).toBeVisible();
-  expect(
-    within(figure('Tracked citations')).queryByText(/not available yet/i),
-  ).not.toBeInTheDocument();
+  expect(within(figure('Tracked citations')).queryByText('Not run yet')).not.toBeInTheDocument();
   unmount();
 
   renderWithProviders(
@@ -146,18 +144,22 @@ it('shows a measured zero as 0 and a window with no completed run as not availab
   );
   const cell = within(figure('Tracked citations'));
   expect(cell.getByText(/No AI Visibility run completed in this window\./)).toBeVisible();
-  expect(cell.getByText(/not available yet/i)).toBeVisible();
+  expect(cell.getByText('Not run yet')).toBeVisible();
   expect(cell.queryByText('0')).not.toBeInTheDocument();
 });
 
-it("offers GA4's own next step until a referral snapshot exists, then says it synced", () => {
+it("offers GA4's own next step once, under the figures, until a referral snapshot exists", () => {
   const view = renderWithProviders(figures({}));
-  expect(within(figure('AI referral sessions')).getByText('Not synced')).toBeVisible();
-  expect(screen.getByRole('link', { name: 'Connect GA4' })).toBeVisible();
+  // The figure says only its absence; the step sits once under the strip.
+  const referral = within(figure('AI referral sessions'));
+  expect(referral.getByText('Not connected')).toBeVisible();
+  expect(referral.queryByRole('link')).not.toBeInTheDocument();
+  expect(screen.getAllByRole('link', { name: 'Connect GA4' })).toHaveLength(1);
   expect(screen.queryByText(/GA4 · Synced/)).not.toBeInTheDocument();
 
   // A connected GA4 with no snapshot yet is never told to connect, nor is an unknown one.
   view.rerender(figures({}, true, { kind: 'choose', connection: ga4Connection }));
+  expect(within(figure('AI referral sessions')).getByText('Not set')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Choose GA4 property' })).toBeVisible();
   expect(screen.queryByRole('link', { name: 'Connect GA4' })).not.toBeInTheDocument();
   view.rerender(figures({}, true, null));

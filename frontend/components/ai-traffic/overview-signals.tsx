@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react';
 import type { z } from 'zod';
 import type { aiTrafficOverviewSchema, crawlSummarySchema } from '@citeladder/contracts/ai-traffic';
-import { formatCount, formatPercent, formatWindowDate } from '@/lib/format';
+import {
+  availabilityLabel,
+  formatCount,
+  formatPercent,
+  formatWindowDate,
+  type DataAvailabilityState,
+} from '@/lib/format';
 import {
   citationGapLabel,
   connectionLabel,
@@ -9,7 +15,11 @@ import {
   words,
 } from '@/lib/ai-traffic/vocabulary';
 import type { SourceStep } from '@/components/integrations/data-sources';
-import { ACTIONS } from '@/components/ui/actions';
+import { ActionButton } from '@/components/ui/actions';
+import { Button } from '@/components/ui/button';
+import { Stack } from '@/components/ui/layout';
+import { ProjectLink } from '@/components/ui/project-link';
+import { StateBlock } from '@/components/ui/state-block';
 import { InfoHint } from '@/components/ui/info-hint';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -59,6 +69,10 @@ export function OverviewFigures({
   crawlAvailable: boolean;
   onConnectCrawl?: () => void;
 }>) {
+  const ga4Step = referralSetup(ga4);
+  const ga4Missing = data.referrals.window_end === null && ga4Step.action !== null;
+  const crawlMissing =
+    crawlAvailable && data.crawl.connection === 'not_connected' && onConnectCrawl !== undefined;
   return (
     <Section variant="group">
       <SectionHeader>
@@ -66,16 +80,58 @@ export function OverviewFigures({
         <CrawlNotes crawl={data.crawl} available={crawlAvailable} />
       </SectionHeader>
       <SectionContent>
-        <FigureStrip
-          label="AI Traffic key figures"
-          segments={[
-            referralFigure(data.referrals, ga4),
-            ...crawlFigures(data.crawl, crawlAvailable, onConnectCrawl),
-            citationFigure(data.citations, projectId),
-          ]}
-        />
+        <Stack gap="compact">
+          <FigureStrip
+            label="AI Traffic key figures"
+            segments={[
+              referralFigure(data.referrals, ga4),
+              ...crawlFigures(data.crawl, crawlAvailable),
+              citationFigure(data.citations),
+            ]}
+          />
+          {/* Each missing source's one next step, once, under the figures it would fill. */}
+          {ga4Missing ? (
+            <StateBlock
+              kind="empty"
+              inline
+              message={ga4Step.note}
+              action={
+                <Button asChild>
+                  <ProjectLink href="/ai-traffic?tab=referrals" projectId={projectId}>
+                    {ga4Step.action}
+                  </ProjectLink>
+                </Button>
+              }
+            />
+          ) : null}
+          {crawlMissing ? (
+            <StateBlock
+              kind="empty"
+              inline
+              message={CRAWL_EMPTY.not_connected}
+              action={<ActionButton action="connectCrawlLogs" onClick={onConnectCrawl} />}
+            />
+          ) : null}
+        </Stack>
       </SectionContent>
     </Section>
+  );
+}
+
+/**
+ * Whether any key figure is measured or on its way (a source connected). Until
+ * one is, and GA4 is not connected either, the Overview is its setup state.
+ */
+export function overviewStarted(data: Overview): boolean {
+  return data.crawl.connection !== 'not_connected' || overviewMeasured(data);
+}
+
+/** Whether any key figure holds a measurement; patterns read across them only then. */
+export function overviewMeasured(data: Overview): boolean {
+  return (
+    data.referrals.window_end !== null ||
+    data.crawl.requests !== null ||
+    data.citations.state === 'measured'
   );
 }
 
@@ -88,18 +144,14 @@ const CRAWL_EMPTY = {
   connected: 'No matching requests were observed in the available logs. Coverage is incomplete.',
 } as const;
 
-function crawlFigures(
-  crawl: CrawlSummary,
-  available: boolean,
-  onConnect: (() => void) | undefined,
-): FigureSegment[] {
+function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] {
   if (!available)
     return [
       {
         key: 'requests',
         label: CRAWL_REQUESTS,
         value: null,
-        missingLabel: 'Unavailable',
+        missingLabel: availabilityLabel('unavailable'),
         marker: (
           <WhyAbsent label={CRAWL_REQUESTS}>
             Crawl log collection is not available for this workspace yet. AI referrals and tracked
@@ -116,7 +168,7 @@ function crawlFigures(
   const failedNote =
     failed > 0 ? `${formatCount(failed)} failed verification requests are shown separately.` : null;
   if (crawl.requests === null)
-    return [noRequestsFigure({ connection: crawl.connection, status, failedNote, onConnect })];
+    return [noRequestsFigure({ connection: crawl.connection, status, failedNote })];
   return [
     {
       key: 'requests',
@@ -146,18 +198,26 @@ function crawlFigures(
   ];
 }
 
-/** No crawler requests in the window: why behind the hint, and connecting when not connected. */
+/**
+ * No crawler requests in the window. Not connected is its own word, with the
+ * connect step under the strip; otherwise why waits behind the hint.
+ */
 function noRequestsFigure({
   connection,
   status,
   failedNote,
-  onConnect,
 }: Readonly<{
   connection: CrawlSummary['connection'];
   status: string;
   failedNote: string | null;
-  onConnect: (() => void) | undefined;
 }>): FigureSegment {
+  if (connection === 'not_connected')
+    return {
+      key: 'requests',
+      label: CRAWL_REQUESTS,
+      value: null,
+      missingLabel: availabilityLabel('not_connected'),
+    };
   return {
     key: 'requests',
     label: CRAWL_REQUESTS,
@@ -168,10 +228,6 @@ function noRequestsFigure({
         {failedNote ? `${CRAWL_EMPTY[connection]} ${failedNote}` : CRAWL_EMPTY[connection]}
       </WhyAbsent>
     ),
-    action:
-      connection === 'not_connected' && onConnect
-        ? { label: ACTIONS.connectCrawlLogs.label, onSelect: onConnect }
-        : undefined,
   };
 }
 
@@ -183,13 +239,15 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
   const unsynced = referralSetup(ga4);
   const reported = referrals.referral_volume.length > 0;
   const label = 'AI referral sessions';
+  // A step under the strip already says why; only GA4's own wait needs the hint.
+  const hinted = !reported && (synced || unsynced.action === null);
   return {
     key: 'referrals',
     label,
     caption: 'Latest day',
     value: latest?.value == null ? null : formatCount(latest.value),
-    missingLabel: synced ? 'Unavailable' : 'Not synced',
-    marker: reported ? undefined : <WhyAbsent label={label}>{unsynced.note}</WhyAbsent>,
+    missingLabel: availabilityLabel(synced ? 'unavailable' : unsyncedKind(ga4)),
+    marker: hinted ? <WhyAbsent label={label}>{unsynced.note}</WhyAbsent> : undefined,
     sub:
       reported || referrals.window_end !== null ? (
         <>
@@ -203,12 +261,23 @@ function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null
           )}
         </>
       ) : undefined,
-    // The referrals view connects and sets up GA4 in place.
-    action:
-      synced || unsynced.action === null
-        ? undefined
-        : { label: unsynced.action, href: '/ai-traffic?tab=referrals' },
   };
+}
+
+/** Which absence a referral figure is before GA4 has synced, by GA4's step. */
+function unsyncedKind(ga4: SourceStep | null): DataAvailabilityState {
+  if (ga4 === null) return 'not_run';
+  switch (ga4.kind) {
+    case 'connect':
+    case 'reconnect':
+      return 'not_connected';
+    case 'choose':
+      return 'not_set';
+    case 'ready':
+      return 'not_run';
+    default:
+      return ga4 satisfies never;
+  }
 }
 
 /** Why a figure has no value: a sentence is not a figure's job, so it waits behind the hint. */
@@ -243,15 +312,14 @@ function referralSetup(ga4: SourceStep | null): { note: string; action: string |
   }
 }
 
-function citationFigure(citations: Overview['citations'], projectId: string): FigureSegment {
+function citationFigure(citations: Overview['citations']): FigureSegment {
   const measured = citations.state === 'measured';
   return {
     key: 'citations',
     label: 'Tracked citations',
     value: measured ? formatCount(citations.count) : null,
-    missingLabel: 'Not available yet',
+    missingLabel: availabilityLabel('not_run'),
     sub: measured ? citations.label : `${citations.label} · ${citationGapLabel(citations.reason)}`,
-    action: { label: 'Open AI Visibility', href: '/visibility', projectId },
   };
 }
 

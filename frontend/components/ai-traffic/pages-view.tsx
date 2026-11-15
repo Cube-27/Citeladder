@@ -197,17 +197,17 @@ function TrafficErrors({ page }: Readonly<{ page: PageRow }>) {
 const CELLS: Readonly<Record<string, (row: PageRow) => ReactNode>> = {
   crawl: (r) => (
     <TableCell numeric>
-      <TrafficLeg compact leg={r.crawl} unit="requests" />
+      <TrafficLeg leg={r.crawl} unit="requests" />
     </TableCell>
   ),
   referrals: (r) => (
     <TableCell numeric>
-      <TrafficLeg compact leg={r.referrals} unit="sessions" />
+      <TrafficLeg leg={r.referrals} unit="sessions" />
     </TableCell>
   ),
   citations: (r) => (
     <TableCell numeric>
-      <TrafficLeg compact leg={r.citations} unit="citations" />
+      <TrafficLeg leg={r.citations} unit="citations" />
     </TableCell>
   ),
   'key-events': (r) => (
@@ -221,7 +221,7 @@ const CELLS: Readonly<Record<string, (row: PageRow) => ReactNode>> = {
   ),
   findings: (r) => (
     <TableCell numeric>
-      <TrafficLeg compact leg={r.findings} unit="findings" />
+      <TrafficLeg leg={r.findings} unit="findings" />
     </TableCell>
   ),
   'last-crawl': (r) => (

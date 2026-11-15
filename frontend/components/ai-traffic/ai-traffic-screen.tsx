@@ -12,8 +12,12 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { TabsRoot, TabPanel, TabRow, type TabRowProps } from '@/components/ui/tabs';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { AiReferralsScreen } from './referrals-screen';
-import { TrafficExport, trafficFilters } from './traffic-controls';
+import { clearTrafficFilters, TrafficExport, trafficFilters } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
+import { overviewStarted } from './overview-signals';
+import { TrafficSetupState } from './traffic-setup';
+import { useSourceStep, type SourceStep } from '@/components/integrations/data-sources';
+import { Stack } from '@/components/ui/layout';
 import { TrafficPages } from './pages-view';
 import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -97,25 +101,38 @@ function TrafficDataView({
   crawlAvailable,
 }: Readonly<{ tab: TrafficDataTab; tabs: TabRowProps; crawlAvailable: boolean }>) {
   const model = useTrafficData(tab);
-  const { summary } = model;
+  const { summary, workspaceId, projectId } = model;
+  const ga4 = useSourceStep(workspaceId, projectId, 'ga4');
+  const sources = useCrawlSources(projectId, workspaceId);
+  const idle = trafficIdle({ tab, ga4, sources: sources.data, overview: summary.data });
   // Every narrowing in All filters after the tabs; Export, on the tabs that
-  // list rows, ends that tab's filter bar, so the masthead is the same on every tab.
+  // list rows, ends that tab's filter bar, so the masthead is the same on every
+  // tab. A view that has never had anything to show offers neither.
   const frame = {
     tabs: <TabRow {...tabs} />,
-    filters: (
+    filters: idle ? undefined : (
       <FilterBar
         filters={trafficFilters({ model, crawlAvailable })}
         actions={tab === 'overview' ? undefined : <TrafficExport model={model} />}
       />
     ),
   };
+  if (idle)
+    return (
+      <ReportPage {...frame}>
+        <TrafficSetupState ga4Missing={ga4?.kind === 'connect'} crawlAvailable={crawlAvailable} />
+      </ReportPage>
+    );
   // First load keeps the identity, tab and control bands; only the work waits.
   // The table tabs draw their own loading, error and empty states inside the
   // table, in the footprint of a page of rows.
   if (tab === 'overview' && summary.isLoading)
     return (
       <ReportPage {...frame}>
-        <StateBlock kind="loading" label="Loading AI Traffic…" />
+        <Stack gap="workspace" className="min-w-0">
+          <StateBlock kind="loading" label="Loading AI Traffic…" shape={{ kind: 'figures' }} />
+          <StateBlock kind="loading" label="Loading AI Traffic…" />
+        </Stack>
       </ReportPage>
     );
   // A failed read with nothing to show is the region's state, in the same
@@ -133,22 +150,57 @@ function TrafficDataView({
     );
   return (
     <ReportPage {...frame}>
-      <TrafficTabContent tab={tab} model={model} crawlAvailable={crawlAvailable} />
+      <TrafficTabContent tab={tab} model={model} crawlAvailable={crawlAvailable} ga4={ga4} />
     </ReportPage>
   );
+}
+
+/**
+ * Whether the view has never had anything to show, so it is its setup state
+ * alone: the Overview while nothing is connected or measured, a crawl-log
+ * view while the project has no crawl log source. Pages also lists crawled
+ * and cited paths, so it keeps its table.
+ */
+function trafficIdle({
+  tab,
+  ga4,
+  sources,
+  overview,
+}: Readonly<{
+  tab: TrafficDataTab;
+  ga4: SourceStep | null;
+  sources: Readonly<{ items: readonly unknown[] }> | undefined;
+  overview: ReturnType<typeof useTrafficData>['summary']['data'];
+}>): boolean {
+  switch (tab) {
+    case 'overview':
+      return ga4?.kind === 'connect' && overview !== undefined && !overviewStarted(overview);
+    case 'crawlers':
+    case 'activity':
+      return sources?.items.length === 0;
+    case 'pages':
+      return false;
+    default: {
+      const exhaustive: never = tab;
+      return exhaustive;
+    }
+  }
 }
 
 function TrafficTabContent({
   tab,
   model,
   crawlAvailable,
+  ga4,
 }: Readonly<{
   tab: TrafficDataTab;
   model: ReturnType<typeof useTrafficData>;
   crawlAvailable: boolean;
+  ga4: SourceStep | null;
 }>) {
   const { projectId, workspaceId, summary, filters } = model;
   const scope = { workspaceId, projectId, filters };
+  const crawlScope = { ...scope, onClearFilters: () => clearTrafficFilters(model) };
   return (
     <>
       <TrafficStatus model={model} />
@@ -159,10 +211,11 @@ function TrafficTabContent({
           workspaceId={workspaceId}
           range={model.selection.range}
           crawlAvailable={crawlAvailable}
+          ga4={ga4}
         />
       ) : null}
-      {tab === 'crawlers' ? <TrafficCrawlers {...scope} /> : null}
-      {tab === 'activity' ? <TrafficActivity {...scope} /> : null}
+      {tab === 'crawlers' ? <TrafficCrawlers {...crawlScope} /> : null}
+      {tab === 'activity' ? <TrafficActivity {...crawlScope} /> : null}
       {tab === 'pages' ? (
         <TabPanel value="pages">
           <TrafficPages {...scope} sort={model.selection.sort} onSort={model.selection.setSort} />
