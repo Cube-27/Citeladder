@@ -3,7 +3,6 @@ import { Database, Unplug } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Section } from '@/components/ui/section';
 import { TextLink } from '@/components/ui/text-link';
 import type { CredentialMode } from '@/lib/api/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -35,28 +34,17 @@ const TAB_EMPTY: Readonly<Record<ResearchTab, { heading: string; shows: string }
   },
 };
 
-/**
- * The card a Keyword Research region's state sits in, its headline the
- * card's h2: the same layout as Search Demand's states.
- */
-export function ResearchEmpty({ children }: Readonly<{ children: ReactNode }>) {
-  return <Section>{children}</Section>;
-}
-
 /** No saved analysis yet: what this tab shows, and the analysis that fills it. */
 export function NoAnalysisYet({ tab, action }: Readonly<{ tab: ResearchTab; action: ReactNode }>) {
   const copy = TAB_EMPTY[tab];
   return (
-    <ResearchEmpty>
-      <StateBlock
-        kind="empty"
-        icon={Database}
-        heading={copy.heading}
-        description={`${copy.shows} Run the first analysis; you see the exact cost before anything is fetched.`}
-        action={action}
-        headingLevel={2}
-      />
-    </ResearchEmpty>
+    <StateBlock
+      kind="empty"
+      icon={Database}
+      heading={copy.heading}
+      description={`${copy.shows} Run the first analysis; you see the exact cost before anything is fetched.`}
+      action={action}
+    />
   );
 }
 
@@ -74,9 +62,8 @@ export function NotConnected({ funded, tab }: Readonly<{ funded: boolean; tab: R
       icon={Unplug}
       heading="Connect DataForSEO"
       description={`${shows} Add your DataForSEO login once to run analyses.`}
-      headingLevel={2}
       action={
-        <Button asChild variant="primary">
+        <Button asChild>
           <ProjectLink href={PROVIDER_SETTINGS}>Open provider settings</ProjectLink>
         </Button>
       }
@@ -89,7 +76,6 @@ export function NotConnected({ funded, tab }: Readonly<{ funded: boolean; tab: R
         icon={Unplug}
         heading="Connect DataForSEO"
         description={`${shows} Ask a workspace Owner or Admin to add a DataForSEO login.`}
-        headingLevel={2}
       />
     );
   if (funded)
@@ -99,10 +85,9 @@ export function NotConnected({ funded, tab }: Readonly<{ funded: boolean; tab: R
         icon={Unplug}
         heading="Keyword Research is unavailable"
         description={`${shows} Research is temporarily unavailable on your plan. Try again later.`}
-        headingLevel={2}
       />
     );
-  return <ResearchEmpty>{state}</ResearchEmpty>;
+  return state;
 }
 
 /** Why saved results cannot be refreshed: a missing connection, or managed research being down. */

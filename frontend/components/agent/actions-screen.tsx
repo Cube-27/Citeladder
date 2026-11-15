@@ -254,19 +254,17 @@ function emptyActions(page: ActionsPage, onClear: () => void): DataTableState {
   if (anyActions)
     return {
       kind: 'filtered',
-      headingLevel: 3,
       heading: 'No Actions match these filters',
       onClear,
     };
   return {
     kind: 'empty',
     icon: ICONS.opportunities,
-    headingLevel: 3,
     heading: 'No current Actions',
     description:
       'Actions are the work found on your pages, your products and the sites that cite rivals. None are listed now: no crawl, visibility run or Search Console sync has current work to show.',
     action: (
-      <Button asChild variant="secondary">
+      <Button asChild>
         <ProjectLink href="/site">
           <Icon icon={ICONS.site} />
           Open Website

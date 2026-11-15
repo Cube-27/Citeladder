@@ -48,7 +48,7 @@ export function DataTableBody({
         <tr data-table-state="">
           <TableCell
             colSpan={colSpan}
-            className="h-[max(var(--state-block-height),calc(var(--data-table-rows)*var(--data-table-row)))] align-top"
+            className="h-[calc(var(--data-table-rows)*var(--data-table-row))] align-top"
             style={stateFootprint(pageSize ?? 0, rowLines)}
           >
             <InFrame>

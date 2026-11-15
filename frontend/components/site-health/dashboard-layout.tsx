@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 import { InventorySection } from '@/components/site-health/inventory-section';
 import { ScoreSection } from '@/components/site-health/score-section';
 import { PageKindScores } from '@/components/site-health/page-kind-scores';
@@ -111,6 +113,7 @@ function FirstCrawl({
 }: Readonly<{
   start?: Readonly<{ onStart: () => void; pending: boolean; allowed: boolean }>;
 }>) {
+  const noteId = useId();
   return (
     <div data-testid="site-health-empty">
       {start ? (
@@ -126,7 +129,16 @@ function FirstCrawl({
               pending={start.pending}
               pendingLabel="Starting…"
               disabled={!start.allowed}
+              aria-describedby={start.allowed ? undefined : noteId}
             />
+          }
+          actionNote={
+            start.allowed
+              ? undefined
+              : {
+                  id: noteId,
+                  text: "Your plan's crawl limits couldn't be checked. Reload to try again.",
+                }
           }
         />
       ) : (

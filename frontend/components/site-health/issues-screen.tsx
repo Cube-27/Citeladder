@@ -129,7 +129,7 @@ function IssuesLoadedRegion({
           heading="No Website crawl yet"
           description="Issue types appear here once a Website crawl finishes. Run one from Website."
           action={
-            <Button variant="secondary" asChild>
+            <Button asChild>
               <ProjectLink href="/site">Go to Website</ProjectLink>
             </Button>
           }

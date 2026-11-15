@@ -426,9 +426,6 @@
   --modal-padding: 24px;
   /* A FilterBar filter trigger: one width whatever its value says. */
   --filter-width: 224px;
-  /* The one footprint a read's loading, error and empty states share
-     (StateBlock), so a read changing state never moves the page. */
-  --state-block-height: 200px;
   --chart-height-sm: 160px;
   --chart-height-md: 240px;
   --chart-height-lg: 320px;
@@ -2192,6 +2189,37 @@ label {
 [data-pinned='2'] .table-frame thead tr > :nth-child(2) {
   z-index: 20;
   background-color: var(--color-well);
+}
+
+/* A StateBlock on the page is a card, padded 24. Inside a container (a card,
+   section, slip, table or dialog) it draws no second frame: padding 16, and
+   the gaps under the icon tile and above the actions step down to 8 and 12. */
+:root:not([data-public-surface]) [data-state-frame] {
+  --state-title-gap: 16px;
+  --state-action-gap: 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 24px;
+}
+:root:not([data-public-surface])
+  :where(
+    .surface-card,
+    .surface-slip,
+    .surface-well,
+    [data-section='card'],
+    [role='dialog'],
+    [data-data-table]
+  )
+  [data-state-frame] {
+  --state-title-gap: 8px;
+  --state-action-gap: 12px;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 16px;
 }
 
 /* Skeleton blocks: a soft shimmer crosses them; under reduced motion they are still. */

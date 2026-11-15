@@ -13,7 +13,6 @@ import { SearchIntelligenceCompetitors } from './search-intelligence-competitors
 import { SearchValue } from './search-intelligence-value';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
-import { ResearchEmpty } from './search-intelligence-availability';
 
 /**
  * A metric is read from one dataset's summary; no dataset means it was never
@@ -65,15 +64,12 @@ export function SearchIntelligenceOverview({
   );
   if (!footprint && !backlinks)
     return (
-      <ResearchEmpty>
-        <StateBlock
-          kind="empty"
-          icon={Database}
-          heading="See where you rank and where competitors outrank you"
-          description="Your organic keywords, estimated traffic and backlinks appear here. Include your website's footprint in a new analysis; you see the exact cost before anything is fetched."
-          headingLevel={2}
-        />
-      </ResearchEmpty>
+      <StateBlock
+        kind="empty"
+        icon={Database}
+        heading="See where you rank and where competitors outrank you"
+        description="Your organic keywords, estimated traffic and backlinks appear here. Include your website's footprint in a new analysis; you see the exact cost before anything is fetched."
+      />
     );
   const share = footprint?.summary.top_10_percentage;
   return (

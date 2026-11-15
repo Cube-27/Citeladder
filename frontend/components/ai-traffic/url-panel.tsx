@@ -7,7 +7,7 @@ import { Drawer } from '@/components/ui/drawer';
 import { PanelRightOpen } from 'lucide-react';
 import { Absence } from '@/components/ui/absence';
 import { Pressable } from '@/components/ui/pressable';
-import { formatCount, type DataAvailabilityState } from '@/lib/format';
+import { formatCount } from '@/lib/format';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
@@ -32,7 +32,7 @@ export function TrafficLeg({
   if (compact) return <CompactTrafficLeg leg={leg} unit={unit} />;
   return (
     <span>
-      {leg.value === null ? <Absence state={legAbsence(leg)} /> : leg.value} {unit} ·{' '}
+      {leg.value === null ? <LegAbsence leg={leg} /> : leg.value} {unit} ·{' '}
       {legStateLabel(leg.state)}
       {leg.coverage ? ' · ' + coverageLabel(leg.coverage) : ''}
       {leg.reason ? ' · ' + reasonLabel(leg.reason) : ''}
@@ -41,7 +41,7 @@ export function TrafficLeg({
 }
 function CompactTrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) {
   const detail = trafficLegExplanation(leg, unit);
-  if (leg.value === null) return <Absence state={legAbsence(leg)} narrow reason={detail} />;
+  if (leg.value === null) return <LegAbsence leg={leg} narrow reason={detail} />;
   const qualified =
     !['value', 'zero'].includes(leg.state) ||
     Boolean(leg.reason) ||
@@ -66,10 +66,22 @@ function CompactTrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) 
     <span className="tabular-nums">{value}</span>
   );
 }
-/** A leg with no value, as the absence it is. */
-function legAbsence(leg: Leg): DataAvailabilityState {
-  if (leg.state === 'not_connected') return 'not_connected';
-  return leg.state === 'unknown' ? 'unknown' : 'unavailable';
+/** A leg with no value, as the absence it is; an unknown leg keeps its own word. */
+function LegAbsence({
+  leg,
+  narrow,
+  reason,
+}: Readonly<{ leg: Leg; narrow?: boolean; reason?: string }>) {
+  if (leg.state === 'not_connected')
+    return <Absence state="not_connected" narrow={narrow} reason={reason} />;
+  return (
+    <Absence
+      state="unavailable"
+      label={leg.state === 'unknown' ? 'Unknown' : undefined}
+      narrow={narrow}
+      reason={reason}
+    />
+  );
 }
 export function UrlPanel({
   urlHash,

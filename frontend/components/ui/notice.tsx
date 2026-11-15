@@ -2,8 +2,10 @@ import type { ReactNode } from 'react';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { CopyButton } from '@/components/ui/copy-button';
 import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
+import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
@@ -84,7 +86,7 @@ export function readErrorProps(read: RetryableRead) {
  * sentence and at most one action, on the tone's wash with the control
  * radius. Failures of a write (`kind="mutation"`) and of a read
  * (`kind="read"`) are notices too, so a failure renders one way everywhere;
- * both name the support reference when the API sent one. Negative and
+ * both offer to copy the support reference when the API sent one. Negative and
  * warning notices are alerts, the rest a polite status.
  */
 export function Notice(props: NoticeProps) {
@@ -148,12 +150,6 @@ function MessageNoticeView({
 }
 
 function MutationFailureNotice({ notice, onRetry, recovery, className }: MutationFailure) {
-  const correlation = [
-    notice.code ? `code ${notice.code}` : null,
-    notice.requestId ? `ref ${notice.requestId}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
   let action: ReactNode = recovery ?? null;
   if (action === null && notice.retryable && onRetry)
     action = (
@@ -164,10 +160,14 @@ function MutationFailureNotice({ notice, onRetry, recovery, className }: Mutatio
   else if (action === null && isPlanLimit(notice.code))
     action = <TextLink href={PLANS_HREF}>See plans</TextLink>;
   return (
-    <MessageNoticeView tone="negative" className={className} action={action}>
+    <MessageNoticeView
+      tone="negative"
+      className={className}
+      action={withReference(action, notice.requestId)}
+    >
       <span className="block">{notice.message}</span>
-      {correlation ? (
-        <span className={textRole('caption', 'block')}>Support: {correlation}</span>
+      {notice.code ? (
+        <span className={textRole('caption', 'block')}>Support: code {notice.code}</span>
       ) : null}
     </MessageNoticeView>
   );
@@ -176,7 +176,7 @@ function MutationFailureNotice({ notice, onRetry, recovery, className }: Mutatio
 /**
  * The headline names what failed ("Couldn't load runs"); a server's words
  * never are. A sentence a person can act on follows it, and a server failure's status
- * text joins the reference in `data-sm` (2.9).
+ * text is secondary text (2.9).
  */
 function ReadFailureNotice({
   error,
@@ -189,7 +189,7 @@ function ReadFailureNotice({
   const detail = humanizeApiError(error, fallback);
   const accessFailure = detail.status === 401 || detail.status === 403;
   const retryable = detail.retryable !== false && !accessFailure;
-  const { sentence, code } = failureLines(detail, [title, fallback]);
+  const { sentence, status } = failureLines(detail, [title, fallback]);
   const action = retryable ? (
     <Button variant="secondary" onClick={onRetry} pending={pending} pendingLabel="Retrying…">
       Retry
@@ -199,23 +199,41 @@ function ReadFailureNotice({
   if (accessFailure) next = 'Check your workspace access, then try again.';
   else if (retryable && !sentence) next = 'Retry in a moment.';
   return (
-    <MessageNoticeView tone="negative" title={title} action={action} className={className}>
+    <MessageNoticeView
+      tone="negative"
+      title={title}
+      action={withReference(action, detail.requestId)}
+      className={className}
+    >
       {sentence ? <p>{sentence}</p> : null}
       {next ? <p>{next}</p> : null}
-      {code ? <p className={textRole('caption', 'text-ink-2')}>{code}</p> : null}
+      {status ? <p className={textRole('caption', 'text-ink-2')}>{status}</p> : null}
     </MessageNoticeView>
   );
 }
 
 /**
  * Where a failure's own words go: a person's sentence under the headline, or,
- * for a server fault, beside the reference as secondary text: a status text
- * ("Internal Server Error") is never the sentence. Words repeating the headline drop.
+ * for a server fault, secondary text: a status text ("Internal Server Error")
+ * is never the sentence. Words repeating the headline drop.
  */
 function failureLines(detail: ReturnType<typeof humanizeApiError>, shown: readonly string[]) {
   const said = shown.includes(detail.message) ? null : detail.message;
   const serverFault = detail.status !== undefined && detail.status >= 500;
-  const reference = detail.requestId ? `Reference ${detail.requestId}` : null;
-  const code = [serverFault ? said : null, reference].filter(Boolean).join(' · ');
-  return { sentence: serverFault ? null : said, code: code || null };
+  return { sentence: serverFault ? null : said, status: serverFault ? said : null };
+}
+
+/** The failure's actions, then the support reference as a quiet copy control. */
+function withReference(action: ReactNode, requestId: string | undefined): ReactNode {
+  if (!requestId) return action;
+  return (
+    <>
+      {action}
+      <Tooltip content={<span className="whitespace-nowrap">{requestId}</span>}>
+        <CopyButton variant="quiet" value={requestId}>
+          Copy reference
+        </CopyButton>
+      </Tooltip>
+    </>
+  );
 }

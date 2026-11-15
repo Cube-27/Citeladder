@@ -191,8 +191,12 @@ describe('Shopping overview', () => {
       `/products/${CATEGORY}`,
     );
     // No answer in the window: one empty state with its next step, not a table of zeros.
-    const empty = screen.getByRole('region', { name: 'Shopping answers' });
-    expect(empty).toHaveTextContent('No shopping answers in the last 30 days');
+    // Directly under the page, its heading is the h2 rung below the masthead h1.
+    const heading = screen.getByRole('heading', {
+      level: 2,
+      name: 'No shopping answers in the last 30 days',
+    });
+    const empty = heading.closest<HTMLElement>('[data-state-block]')!;
     expect(within(empty).getByRole('link', { name: 'Open Products' })).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Open Products' })).toHaveLength(1);
     expect(screen.queryByRole('region', { name: 'Ranking' })).not.toBeInTheDocument();

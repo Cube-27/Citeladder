@@ -128,7 +128,7 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
         description="Suggests the contextual links each crawled page is missing, with the passage to link from."
         action={
           canRun ? (
-            <Button variant="primary" pending={read.analyze.isPending} onClick={read.startAnalysis}>
+            <Button pending={read.analyze.isPending} onClick={read.startAnalysis}>
               Analyze internal links
             </Button>
           ) : undefined
@@ -296,7 +296,7 @@ function LinksTable({
 function LinkActionStatus({ status }: Readonly<{ status: string | null }>) {
   if (status === null) return <NoAction />;
   if (status in ACTION_STATUS_LABEL) return <ActionStatusBadge status={status as ActionStatus} />;
-  return <Absence state="unknown" label="Unknown status" />;
+  return <Absence state="unavailable" label="Unknown status" />;
 }
 
 /**

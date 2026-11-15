@@ -61,7 +61,12 @@ function businessModelField(profile: BrandProfile, suggested: boolean): MapField
   return {
     label: 'Business model',
     items: choice ? [{ value: choice.label, suggested }] : [],
-    absent: <Absence state={saved == null || saved === '' ? 'not_set' : 'unknown'} />,
+    absent:
+      saved == null || saved === '' ? (
+        <Absence state="not_set" />
+      ) : (
+        <Absence state="unavailable" label="Unknown" />
+      ),
   };
 }
 

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { ApiError } from '@/lib/api/errors';
 
+import { Card } from './card';
 import { StateBlock, screenState } from './state-block';
 
 type Coverage = Readonly<{ crawled_pages: number | null }>;
@@ -57,7 +58,7 @@ describe('screenState with StateBlock', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent("Couldn't load crawl coverage");
     expect(alert).toHaveTextContent('Service unavailable');
-    expect(alert).toHaveTextContent('Service unavailable · Reference request-7');
+    expect(screen.getByRole('button', { name: 'Copy reference' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
     expect(await screen.findByText('12 pages crawled')).toBeVisible();
@@ -105,6 +106,34 @@ describe('StateBlock empty states', () => {
     );
     expect(screen.getByRole('heading', { level: 2, name: 'No prompts yet' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add prompt' })).toBeInTheDocument();
+  });
+
+  it("keeps the page's level inside a Card that renders no title of its own", () => {
+    render(
+      <Card>
+        <StateBlock kind="empty" heading="No sources yet" />
+      </Card>,
+    );
+    expect(screen.getByRole('heading', { level: 2, name: 'No sources yet' })).toBeInTheDocument();
+  });
+
+  it("names a disabled action's reason as visible text the control is described by", () => {
+    render(
+      <StateBlock
+        kind="empty"
+        heading="Run your first site crawl"
+        action={
+          <button type="button" disabled aria-describedby="crawl-note">
+            Run new crawl
+          </button>
+        }
+        actionNote={{ id: 'crawl-note', text: "Your role can't start a crawl." }}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Run new crawl' })).toHaveAccessibleDescription(
+      "Your role can't start a crawl.",
+    );
+    expect(screen.getByText("Your role can't start a crawl.")).toBeVisible();
   });
 
   it('offers to clear the filters when a filtered read matches nothing', async () => {

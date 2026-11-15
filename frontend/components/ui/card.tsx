@@ -1,7 +1,6 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
-import { StateHeadingLevelContext } from '@/components/ui/state-block';
 
 /**
  * Card — the resting container: a `surface` box on the page ground that
@@ -27,8 +26,8 @@ export function Card({
 }: Readonly<ComponentPropsWithoutRef<'section'>>) {
   return (
     <section {...props} className={cn(cardClasses(), className)}>
-      {/* Under the card's h3 title, a block empty state's heading is an h3. */}
-      <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
+      {/* The card renders no title of its own, so a state inside keeps its parent's heading level. */}
+      {children}
     </section>
   );
 }

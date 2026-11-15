@@ -21,12 +21,15 @@ describe('Notice kind="read"', () => {
       />,
     );
 
-    // The subject leads, then what to do; the status text and reference come last.
+    // Words first: the subject, what to do, the status text; the reference is a copy control.
     expect(screen.getByRole('alert')).toHaveTextContent(
-      "Error: Couldn't load the dataRetry in a moment.Temporarily unavailable · Reference request-123",
+      "Error: Couldn't load the dataRetry in a moment.Temporarily unavailableRetryCopy reference",
     );
+    expect(screen.queryByText(/request-123/u)).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: 'Copy reference' }));
+    expect(await navigator.clipboard.readText()).toBe('request-123');
   });
 
   it('does not offer blind retry for an access failure', () => {

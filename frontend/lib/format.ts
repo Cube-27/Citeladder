@@ -18,32 +18,23 @@ import type { snapshotGranularitySchema } from '@citeladder/contracts/analytics'
 /** Snapshot bucket granularity — mirrors the backend contract vocabulary. */
 type BucketGranularity = z.infer<typeof snapshotGranularitySchema>;
 
-export type DataAvailabilityState =
-  | 'not_measured'
-  | 'not_run'
-  | 'pending'
-  | 'not_set'
-  | 'unavailable'
-  | 'not_applicable'
-  | 'not_connected'
-  | 'excluded'
-  | 'unknown'
-  | 'none';
-
-const availabilityLabels: Readonly<Record<DataAvailabilityState, string>> = {
+/**
+ * The one list of absence kinds and their words (DAT-02), rendered by
+ * `Absence`. A value is missing in exactly one of these ways.
+ */
+const availabilityLabels = {
   not_measured: 'Not measured',
-  not_run: 'Not run',
-  pending: 'Being prepared',
-  not_set: 'Not set',
-  unavailable: 'Unavailable',
-  not_applicable: 'Not applicable',
   not_connected: 'Not connected',
-  excluded: 'Excluded',
-  unknown: 'Unknown',
+  not_set: 'Not set',
+  not_run: 'Not run yet',
   none: 'None',
-};
+  not_applicable: 'Not applicable',
+  unavailable: 'Unavailable',
+} as const satisfies Record<string, string>;
 
-/** Human-readable product vocabulary for explicit missing-data states. */
+export type DataAvailabilityState = keyof typeof availabilityLabels;
+
+/** The word for a kind of absence. */
 export function availabilityLabel(state: DataAvailabilityState): string {
   return availabilityLabels[state];
 }

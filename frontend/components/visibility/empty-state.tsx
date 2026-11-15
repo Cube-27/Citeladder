@@ -25,7 +25,7 @@ export function VisibilityEmptyState({ activeRun }: Readonly<{ activeRun: Active
         heading="A run is in progress"
         description={`${AUDIT_STATES[activeRun.status].label}. Results appear here when it finishes.`}
         action={
-          <Button asChild variant="secondary">
+          <Button asChild>
             <ProjectLink href={`/runs/${activeRun.id}`}>
               <Icon icon={Activity} />
               Watch live progress

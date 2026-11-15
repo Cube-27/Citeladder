@@ -12,7 +12,6 @@ import { SearchIntelligenceHistory } from './search-intelligence-history';
 import { SearchValue } from './search-intelligence-value';
 import type { SearchCollection } from './search-intelligence-collection-state';
 import { StateBlock } from '@/components/ui/state-block';
-import { ResearchEmpty } from './search-intelligence-availability';
 
 /**
  * A tab's saved collection: the result the page's control strip chose (the
@@ -98,15 +97,12 @@ function CollectionResult({ collection }: Readonly<{ collection: SearchCollectio
   const { dataset, title } = collection;
   if (!dataset)
     return (
-      <ResearchEmpty>
-        <StateBlock
-          kind="empty"
-          icon={Database}
-          heading={`No saved ${title.toLowerCase()}`}
-          description="Choose it in a new analysis, then review the cost before anything is fetched."
-          headingLevel={2}
-        />
-      </ResearchEmpty>
+      <StateBlock
+        kind="empty"
+        icon={Database}
+        heading={`No saved ${title.toLowerCase()}`}
+        description="Choose it in a new analysis, then review the cost before anything is fetched."
+      />
     );
   return (
     <SearchIntelligenceDatasetView

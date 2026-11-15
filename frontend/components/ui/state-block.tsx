@@ -3,15 +3,16 @@ import { CircleDashed, Inbox, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
-import { RowBlocks, SkeletonFrame } from '@/components/ui/skeleton-block';
+import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 const HEADING_TAG = { 1: 'h1', 2: 'h2', 3: 'h3' } as const;
 
-/** The list rows a loading block draws: three 56px rows sit inside the 200px footprint. */
-const LOADING_ROWS = 3;
 type HeadingLevel = keyof typeof HEADING_TAG;
+
+/** Why the block's action is disabled: visible caption text the control names in `aria-describedby`. */
+type ActionNote = Readonly<{ id: string; text: string }>;
 
 /**
  * The heading level a block state takes when its caller names none: 2 on a
@@ -26,8 +27,12 @@ type BlockEmpty = Readonly<{
   heading: string;
   /** One sentence: what is missing and what to do about it. */
   description?: string;
-  /** One primary control; a second only when both are equal choices. */
+  /**
+   * The main action, a Button with no variant of its own (the block draws it
+   * secondary), then at most one supporting `quiet` Button or `TextLink`.
+   */
   action?: ReactNode;
+  actionNote?: ActionNote;
   headingLevel?: HeadingLevel;
 }>;
 
@@ -57,7 +62,7 @@ type FilteredEmpty = Readonly<{
 type NotMeasuredCopy = Readonly<{
   /** One sentence: what measures this and when it appears. */
   description: string;
-  /** One primary control. */
+  /** The main action, a Button with no variant of its own. */
   action?: ReactNode;
 }>;
 
@@ -72,6 +77,8 @@ export type StateBlockProps =
       kind: 'loading';
       /** What is loading, announced to assistive technology. */
       label?: string;
+      /** The shape of the page part that loads; a card body by default. */
+      shape?: LoadingShape;
     }>
   | Readonly<{
       kind: 'error';
@@ -158,27 +165,30 @@ export function screenState<T, M extends T>(
 
 /**
  * StateBlock — the loading, empty, filtered-empty, not-measured and error
- * states of a read in one footprint, so a read that goes loading → error →
- * retry → empty never moves the page. Loading is a card body of `well` row
- * blocks (a region of another shape draws its own `Skeleton`); empty is one block with an icon
- * tile, a headline, one sentence and the one next step; a failed read is a
- * Notice that names what failed, with one Retry. Callers choose the state,
- * never the geometry.
+ * states of a read. Its height is its content: it starts at the page's gap
+ * and never centres in leftover height. On the page it is a card; inside a
+ * card, section, table or dialog it draws no second frame and steps down to
+ * compact spacing (globals.css, `[data-state-frame]`). Loading takes the
+ * shape of what loads; empty is one centred group (icon tile, headline,
+ * sentence, actions); a failed read is a Notice that names what failed, with
+ * one Retry. Callers choose the state, never the geometry or the button look.
  */
 export function StateBlock(props: StateBlockProps) {
   if (props.kind === 'empty' && props.inline) return <InlineEmptyView {...props} />;
+  const framed = props.kind !== 'error' && !(props.kind === 'loading' && isFigures(props.shape));
   return (
     <div
       data-state-block={props.kind}
-      className={cn(
-        'state-block grid min-h-[var(--state-block-height)] min-w-0',
-        props.kind === 'error' || props.kind === 'loading' ? 'content-start' : 'content-center',
-      )}
+      data-state-frame={framed ? '' : undefined}
+      className="state-block min-w-0"
     >
       <BlockBody {...props} />
     </div>
   );
 }
+
+/** Metric cards are their own frames, so a figures row draws no card around them. */
+const isFigures = (shape: LoadingShape | undefined) => shape?.kind === 'figures';
 
 function InlineEmptyView({ message, icon: Glyph, action, compact = false }: InlineEmpty) {
   return (
@@ -207,11 +217,7 @@ function FilteredBody({
     <EmptyBody
       heading={heading ?? 'Nothing matches these filters'}
       description="Change or clear the filters to see every row."
-      action={
-        <Button variant="secondary" onClick={onClear}>
-          Clear filters
-        </Button>
-      }
+      action={<Button onClick={onClear}>Clear filters</Button>}
       headingLevel={headingLevel ?? containerLevel}
     />
   );
@@ -220,12 +226,14 @@ function FilteredBody({
 function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
   const containerLevel = useContext(StateHeadingLevelContext);
   switch (props.kind) {
-    case 'loading':
+    case 'loading': {
+      const shape = props.shape ?? { kind: 'card' };
       return (
-        <SkeletonFrame label={props.label ?? 'Loading…'} variant="block">
-          <RowBlocks rows={LOADING_ROWS} />
+        <SkeletonFrame label={props.label ?? 'Loading…'} variant={shape.kind}>
+          <ShapeBlocks shape={shape} />
         </SkeletonFrame>
       );
+    }
     case 'error':
       return (
         <Notice
@@ -254,6 +262,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
           heading={props.heading}
           description={props.description}
           action={props.action}
+          actionNote={props.actionNote}
           headingLevel={props.headingLevel ?? containerLevel}
         />
       );
@@ -272,33 +281,43 @@ function EmptyBody({
   heading,
   description,
   action,
+  actionNote,
   headingLevel,
 }: Readonly<{
   icon?: LucideIcon;
   heading: string;
   description?: string;
   action?: ReactNode;
+  actionNote?: ActionNote;
   headingLevel: HeadingLevel;
 }>) {
   const Heading = HEADING_TAG[headingLevel];
-  // One group: the tile 8 over the headline, the sentence 4 under it; the
-  // action stands 16 below the group.
+  // The gaps under the tile and above the actions step down inside a container (globals.css).
   return (
-    <div className="flex flex-col items-start gap-4">
-      <div className="flex flex-col items-start gap-1">
-        <span
-          aria-hidden
-          data-icon-tile=""
-          className="bg-well rounded-control text-ink-2 mb-1 grid size-8 place-items-center"
-        >
-          <Glyph className="size-4" />
-        </span>
-        <Heading className={textRole('heading')}>{heading}</Heading>
-        {description ? (
-          <p className={textRole('body', 'text-ink-2 max-w-[72ch]')}>{description}</p>
-        ) : null}
-      </div>
-      {action ? <div className="flex items-center gap-2">{action}</div> : null}
+    <div className="flex flex-col items-center text-center">
+      <span
+        aria-hidden
+        data-icon-tile=""
+        className="bg-well rounded-control text-ink-2 grid size-8 place-items-center"
+      >
+        <Glyph className="size-4" />
+      </span>
+      <Heading className={textRole('heading', 'mt-[var(--state-title-gap,16px)]')}>
+        {heading}
+      </Heading>
+      {description ? (
+        <p className={textRole('body', 'text-ink-2 mt-1 max-w-[500px]')}>{description}</p>
+      ) : null}
+      {action ? (
+        <div className="mt-[var(--state-action-gap,16px)] flex flex-wrap items-center justify-center gap-2">
+          {action}
+        </div>
+      ) : null}
+      {actionNote ? (
+        <p id={actionNote.id} className={textRole('caption', 'text-ink-2 mt-2')}>
+          {actionNote.text}
+        </p>
+      ) : null}
     </div>
   );
 }

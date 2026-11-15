@@ -406,19 +406,17 @@ export function OverviewSections({
     return (
       <>
         {shelf}
-        <Section aria-label="Shopping answers">
-          <StateBlock
-            kind="empty"
-            icon={ShoppingBag}
-            heading={`No shopping answers in the last ${overview.window_days} days`}
-            description="Rankings, merchants and fan-out queries appear once a Commerce run measures your shopping prompts."
-            action={
-              <Button asChild variant="primary">
-                <ProjectLink href="/products">Open Products</ProjectLink>
-              </Button>
-            }
-          />
-        </Section>
+        <StateBlock
+          kind="empty"
+          icon={ShoppingBag}
+          heading={`No shopping answers in the last ${overview.window_days} days`}
+          description="Rankings, merchants and fan-out queries appear once a Commerce run measures your shopping prompts."
+          action={
+            <Button asChild>
+              <ProjectLink href="/products">Open Products</ProjectLink>
+            </Button>
+          }
+        />
       </>
     );
   return (

@@ -200,7 +200,7 @@ describe('PromptTable pagination', () => {
     );
     expect(
       within(unnamedRow!).getAllByRole('cell')[5]!.querySelector('[data-absence]'),
-    ).toHaveAttribute('data-absence', 'unknown');
+    ).toHaveAttribute('data-absence', 'unavailable');
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {

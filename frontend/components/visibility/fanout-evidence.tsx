@@ -141,7 +141,7 @@ function FanoutEmpty({
       }
       action={
         isFiltered ? undefined : (
-          <Button asChild variant="secondary">
+          <Button asChild>
             <ProjectLink href="/runs">
               <Icon icon={ArrowRight} />
               View Runs

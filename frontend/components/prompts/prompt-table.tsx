@@ -382,7 +382,7 @@ function ChangeValue({ change }: Readonly<{ change?: PromptChange }>) {
         <Absence state="not_applicable" reason="First measurement: nothing earlier to compare." />
       );
     case 'not_compared':
-      return <Absence state="unknown" reason={NOT_COMPARED[change.reason]} />;
+      return <Absence state="unavailable" label="Unknown" reason={NOT_COMPARED[change.reason]} />;
     default: {
       const unhandled: never = change;
       return unhandled;
