@@ -1,6 +1,13 @@
 import * as MenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronRight } from 'lucide-react';
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useId,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from 'react';
 
 import { cn } from '@/lib/utils';
 import { POP_FACE } from '@/components/ui/slip';
@@ -43,8 +50,39 @@ export function menuItemClasses({
  * Put the destructive item last, after a separator. A submenu (`MenuSub`)
  * holds one choice's options, as in All filters; never nest a second level.
  */
-export const Menu = MenuPrimitive.Root;
-export const MenuTrigger = MenuPrimitive.Trigger;
+export function Menu({ children, ...props }: Readonly<MenuPrimitive.DropdownMenuProps>) {
+  const nested = useContext(MenuNested);
+  const fold = useContext(MenuFold);
+  const id = useId();
+  useEffect(() => {
+    if (!fold) return;
+    fold.set(id, children);
+    return () => {
+      fold.delete(id);
+    };
+  }, [fold, id, children]);
+  if (nested) return children;
+  const root = <MenuPrimitive.Root {...props}>{children}</MenuPrimitive.Root>;
+  return fold ? (
+    <span data-menu-fold={id} className="contents">
+      {root}
+    </span>
+  ) : (
+    root
+  );
+}
+
+/**
+ * Where a menu folded behind the masthead's More registers its items
+ * (`masthead-actions.tsx`), so More can offer it as one submenu.
+ */
+export const MenuFold = createContext<Map<string, ReactNode> | null>(null);
+/** True inside More's submenu: a folded menu's trigger is More's row, its content the submenu. */
+export const MenuNested = createContext(false);
+
+export function MenuTrigger(props: Readonly<MenuPrimitive.DropdownMenuTriggerProps>) {
+  return useContext(MenuNested) ? null : <MenuPrimitive.Trigger {...props} />;
+}
 export const MenuRadioGroup = MenuPrimitive.RadioGroup;
 export const MenuSub = MenuPrimitive.Sub;
 
@@ -57,6 +95,7 @@ export const MenuSub = MenuPrimitive.Sub;
  */
 export function MenuSubTrigger({
   value,
+  icon,
   className,
   children,
   ...props
@@ -66,6 +105,8 @@ export function MenuSubTrigger({
     children: string;
     /** The current choice, printed after the label. */
     value?: string;
+    /** A 16px glyph in the lead column. */
+    icon?: ReactNode;
   }
 >) {
   return (
@@ -76,6 +117,7 @@ export function MenuSubTrigger({
       aria-label={value ? `${children}: ${value}` : undefined}
       {...props}
     >
+      {icon ? <Lead>{icon}</Lead> : null}
       <span className="shrink-0">{children}</span>
       {value ? (
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
@@ -126,6 +168,7 @@ export function MenuContent({
     width?: 'trigger';
   }
 >) {
+  if (useContext(MenuNested)) return <MenuSubContent>{children}</MenuSubContent>;
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Content
