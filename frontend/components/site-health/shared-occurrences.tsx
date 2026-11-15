@@ -51,11 +51,7 @@ export function SharedOccurrences({
   return (
     <Stack as="li" gap="workspace" className={ledgerItemClasses()}>
       <div className={insetClasses()}>
-        <EvidenceLine
-          lead={sharedEvidenceLead(entry.ruleId)}
-          facts={entry.facts}
-          text="itemTitle"
-        />
+        <EvidenceLine lead={sharedEvidenceLead(entry.ruleId)} facts={entry.facts} text="body" />
         <span className="type-caption tabular-nums">{sharedPagesLabel(scope)}</span>
         <AskAgentLink
           appearance="text"
@@ -105,13 +101,13 @@ export function AffectedPageLink({
 }>) {
   return (
     <TextLink
-      text="itemTitle"
+      text="body"
       className="block min-w-0"
       href={`/site/crawls/${crawlId}/pages/${siteUrlId}`}
     >
       <Stack as="span" gap="tight" className="min-w-0">
         <Inline as="span" className="items-baseline justify-between">
-          <span className={textRole('itemTitle', 'min-w-0 [overflow-wrap:anywhere]')}>
+          <span className={textRole('body', 'min-w-0 [overflow-wrap:anywhere]')}>
             {pageDisplayTitle(title, url)}
           </span>
           {pageKind ? (

@@ -12,19 +12,16 @@ import {
 } from './performance-chrome';
 import { Ga4SummaryRow, MetricCards } from './metric-cards';
 import { PerformanceBreakdowns } from './performance-breakdowns';
-import { PerformanceChart, type ChartSeries } from './performance-chart';
+import { METRIC_MARKS, PerformanceChart, type ChartSeries } from './performance-chart';
 import { ReadinessLadder, useProjectReadiness } from './readiness-ladder';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
 import { usePerformanceSelection } from './use-performance-selection';
 import { usePerformanceSync } from './use-performance-sync';
 import { useRangeProjection } from './use-range-projection';
-import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
+import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
+import { ReportPage } from '@/components/templates/report-page';
 import { Stack } from '@/components/ui/layout';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import type { ChartTone } from '@/components/ui/chart';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
+import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { StatusLine } from '@/components/ui/status-line';
 import { formatCount, formatWindowDate } from '@/lib/format';
 import { ChartNoAxesColumn } from 'lucide-react';
@@ -48,6 +45,8 @@ import {
   type PerformanceMetricKey,
   type RangeSelection,
 } from '@/lib/performance/performance';
+import { readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * The Performance surface: one resolved range, its optional comparison, four
@@ -60,15 +59,6 @@ import {
  * browser. What the screen displays is always the window actually covered.
  */
 
-// Each metric's chart position (its colour and texture), shared by the card
-// keys and the chart lines: `data-1` to `data-3`, then Position in `data-other`.
-const METRIC_TONES: Record<PerformanceMetricKey, ChartTone> = {
-  clicks: 1,
-  impressions: 2,
-  ctr: 3,
-  position: 4,
-};
-
 /** The drawn lines: one per selected metric, each with its comparison peer. */
 function chartSeries(
   selected: PerformanceDashboard['selected'],
@@ -78,7 +68,7 @@ function chartSeries(
   return METRIC_CARDS.filter((card) => active.has(card.key)).map((card) => ({
     key: card.key,
     label: card.label,
-    tone: METRIC_TONES[card.key],
+    mark: METRIC_MARKS[card.key],
     selected: toChartPoints(selected.series[card.key]),
     comparison: comparison ? toChartPoints(comparison.series[card.key]) : null,
   }));
@@ -152,7 +142,7 @@ function PerformanceEmptyState({
   if (failed) return null;
   if (projecting) {
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={ChartNoAxesColumn}
         heading="Building this performance range"
@@ -163,7 +153,7 @@ function PerformanceEmptyState({
   // Before any import the setup card above says what to do.
   if (data.coverage.covered_days === 0 && data.selected.snapshot_id === null) return null;
   return (
-    <QueryState
+    <StateBlock
       kind="empty"
       icon={ChartNoAxesColumn}
       heading="No performance evidence here"
@@ -194,26 +184,24 @@ function SearchConsoleWorkspace({
   refreshing: boolean;
 }>) {
   if (!available) return null;
+  // The figure strip opens the group with its ink rule; the plot it drives
+  // sits right under it.
   return (
-    <Card className="overflow-hidden">
-      <CardHeader>
-        <MetricCards
-          data-testid="metric-card-strip"
-          className="min-w-0"
-          selected={selected}
-          comparison={comparison}
-          compareLabel={compareLabel}
-          selectedLabel={selectedLabel}
-          active={activeMetrics}
-          onToggle={onToggleMetric}
-          tones={METRIC_TONES}
-          loading={refreshing}
-        />
-      </CardHeader>
-      <CardContent>
-        <PerformanceChart series={series} />
-      </CardContent>
-    </Card>
+    <Stack gap="workspace" className="min-w-0">
+      <MetricCards
+        data-testid="metric-card-strip"
+        className="min-w-0"
+        selected={selected}
+        comparison={comparison}
+        compareLabel={compareLabel}
+        selectedLabel={selectedLabel}
+        active={activeMetrics}
+        onToggle={onToggleMetric}
+        marks={METRIC_MARKS}
+        loading={refreshing}
+      />
+      <PerformanceChart series={series} />
+    </Stack>
   );
 }
 
@@ -255,6 +243,7 @@ function performanceControls({
   granularity,
   onGranularityChange,
   windowLabel,
+  latestDate,
 }: Readonly<{
   selection: RangeSelection;
   onSelectRange: (selection: RangeSelection) => void;
@@ -265,6 +254,7 @@ function performanceControls({
   granularity: PerformanceGranularity;
   onGranularityChange: (next: PerformanceGranularity) => void;
   windowLabel: string;
+  latestDate: string | null;
 }>): FilterBarProps {
   return {
     view: (
@@ -278,7 +268,7 @@ function performanceControls({
       />
     ),
     filters: hasChart ? [granularityFilter(granularity, onGranularityChange)] : undefined,
-    status: <PerformanceWindowCaption label={windowLabel} />,
+    status: <PerformanceWindowCaption label={windowLabel} latestDate={latestDate} />,
   };
 }
 
@@ -288,9 +278,9 @@ function performanceControls({
  */
 function PerformanceLoading() {
   return (
-    <ListScreen controls={RESERVED_CONTROLS}>
-      <QueryState kind="loading" label="Loading performance…" />
-    </ListScreen>
+    <ReportPage filters={<FilterBar {...RESERVED_CONTROLS} />}>
+      <StateBlock kind="loading" label="Loading performance…" />
+    </ReportPage>
   );
 }
 
@@ -337,13 +327,14 @@ export function PerformanceScreen() {
   // when the real one arrives.
   if (dashboard.isError)
     return (
-      <ListScreen>
-        <QueryState
+      <ReportPage>
+        <StateBlock
           kind="error"
           {...readErrorProps(dashboard)}
           fallback="Could not load performance data. Check your connection and try again."
+          title="Could not load performance data"
         />
-      </ListScreen>
+      </ReportPage>
     );
   // Only the dashboard controls the screen's first paint. Connections feeds
   // one toolbar button and readiness one advisory ladder — both render into
@@ -372,27 +363,28 @@ export function PerformanceScreen() {
   const coverage = performanceCoverage(data, hasEvidence);
 
   return (
-    <ListScreen
+    <ReportPage
       actions={
-        <PerformanceActions
-          latestDate={data.coverage.latest_date}
-          noConnections={answeredNoConnections(connections)}
-          sync={sync}
+        <PerformanceActions noConnections={answeredNoConnections(connections)} sync={sync} />
+      }
+      filters={
+        <FilterBar
+          {...performanceControls({
+            selection,
+            onSelectRange: setSelection,
+            onOpenDialog: (tab) => {
+              setDialogTab(tab);
+              setDialogOpen(true);
+            },
+            onReset: resetFilters,
+            hasChart: evidence.hasSearchConsoleTotals,
+            granularity,
+            onGranularityChange: setGranularity,
+            windowLabel: selectedLabel,
+            latestDate: data.coverage.latest_date,
+          })}
         />
       }
-      controls={performanceControls({
-        selection,
-        onSelectRange: setSelection,
-        onOpenDialog: (tab) => {
-          setDialogTab(tab);
-          setDialogOpen(true);
-        },
-        onReset: resetFilters,
-        hasChart: evidence.hasSearchConsoleTotals,
-        granularity,
-        onGranularityChange: setGranularity,
-        windowLabel: selectedLabel,
-      })}
     >
       <Stack gap="workspace">
         <DataSourceSetup
@@ -487,6 +479,6 @@ export function PerformanceScreen() {
           )}
         />
       </Stack>
-    </ListScreen>
+    </ReportPage>
   );
 }

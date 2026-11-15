@@ -71,7 +71,7 @@ export function PlanRow({
           </Button>
         ) : (
           <Button
-            variant="primary"
+            variant="secondary"
             disabled={!canCheckout || locked}
             onClick={() => selection.ok && onCheckout(selection.catalog_key, billingDetails)}
           >
@@ -82,8 +82,8 @@ export function PlanRow({
       }
     >
       <Inline>
-        <span className={textRole('itemTitle')}>{plan.name}</span>
-        <span className={textRole('label', 'tabular-nums')}>{priceLabel}</span>
+        <span className={textRole('body')}>{plan.name}</span>
+        <span className={textRole('body', 'text-ink-2 tabular-nums')}>{priceLabel}</span>
       </Inline>
       {plan.description ? <p className="type-caption">{plan.description}</p> : null}
       {!selection.ok && !plan.contact_only && selection.reason ? (

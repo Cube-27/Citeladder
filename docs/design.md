@@ -2,29 +2,61 @@
 version: alpha
 name: CiteLadder
 description: >-
-  Monochrome with one accent. A compact, technical product app and an
-  editorial website on one set of tokens, in light and dark.
+  Paper and ink with one mark. A compact, technical product app and an
+  editorial website on one token file, in light and dark.
 ---
 
 # CiteLadder Design System
 
 The design system's reference, in the [DESIGN.md](https://github.com/google-labs-code/design.md)
 format: tokens, then the rules for using them. It states what holds today. The
-token blocks are generated from
-the product's CSS and checked by `pnpm check:policy`; never edit them by hand.
+token blocks are generated from the product's CSS
+(`node frontend/scripts/audit-design-tokens.mjs --write`) and checked by
+`pnpm check:policy`; never edit them by hand.
+
+**Two surfaces, one token file.** [`globals.css`](../frontend/apps/app/src/globals.css)
+serves the app, the website and the docs. The generated blocks list the
+system's values, which the website and docs render. The app binds its own
+values in `:root:not([data-public-surface])` and its dark twin, so the app
+rules below hold only there. On the app, the website's role names (`paper`,
+`line`, `ink-secondary`, `data-1`, the `-soft` fills) alias the app's roles
+so a shared rule still renders in the app's palette, but app code never uses
+them, never imports a website-only atom, and a change to a shared atom leaves
+`components/marketing` and `components/content` as they were. The policy
+checks in `frontend/scripts/design-system-*.mjs` enforce the first two.
 
 ## Overview
 
-CiteLadder looks like a precise instrument: black and white, one accent, dense
-where people work and calm where they read.
+CiteLadder looks like a working paper that measures itself: how a thing is
+drawn says how far to trust it, the ladder is the unit of progress, and the
+one colour marks you.
 
-- **The app** is compact and technical, closer to a code tool than a marketing
-  dashboard. Every page has the same anatomy, so a person learns it once.
+- **The app** is compact and even, tuned for a 982×800 window. Every route
+  uses one template from `components/templates/`, so a person learns one
+  anatomy and nothing varies by page except the content.
 - **The website and docs** are editorial: large display headings, generous
   reading measure, depth from pictures rather than from boxes and shadows.
-- **Both** follow the reader's system theme (light or dark) and meet WCAG 2.1
+- **Both** follow the reader's system theme (light or dark) and meet WCAG
   AA. Meaning is never carried by colour alone, and all motion stops under
   `prefers-reduced-motion`.
+
+**The line language (app).** How a thing is drawn is a finding, so these
+are contracts, never decoration:
+
+- **Solid** is observed: a persisted measurement or a decision a person made.
+- **Dashed** (`edge-draft`, the `draft` Tag, DraftSheet) is drafted: written
+  by a model and not yet accepted. Accepting it sets the ink: the dashed edge
+  turns solid over 200ms.
+- **Hatched** (`hatch`: 45° 1px `control-line` lines on `well`) is absent.
+- **No line** is not applicable.
+- A real zero is a printed `0` in full ink: a measurement, never greyed.
+
+**The accent means "you, here".** It marks _you_ (your brand: your row, your
+series, the word "You") and _here_ (the current navigation item, tab and
+step, as a 2px `--mark-width` accent mark with `aria-current` or
+`aria-selected`), and the live rung. It is never an action, a status, a
+priority, a link, the focus ring or decoration; a screen with no "you" and no
+"here" in view shows no accent.
 
 ## Colors
 
@@ -35,19 +67,30 @@ colors:
   accent: '#e8501a' # dark '#ff6a33'
   accent-ink: '#b53a0c' # dark '#ff9466'
   accent-soft: '#ffe6da' # dark '#3b1a0c'
+  accent-text: '#b53a0c' # dark '#ff9466'
+  accent-wash: '#ffe6da' # dark '#3b1a0c'
   brand-google-blue: '#4285f4' # dark '#4285f4'
   brand-google-green: '#34a853' # dark '#34a853'
   brand-google-red: '#ea4335' # dark '#ea4335'
   brand-google-yellow: '#fbbc05' # dark '#fbbc05'
   chart-grid: '#ececec' # dark '#262626'
+  control-line: '#858585' # dark '#747474'
   data-1: '#e8501a' # dark '#ff6a33'
   data-2: '#111111' # dark '#f4f4f4'
   data-3: '#7a7a7a' # dark '#8c8c8c'
   data-other: '#c2c2c2' # dark '#4a4a4a'
+  data-rival-1: '#111111' # dark '#f4f4f4'
+  data-rival-2: '#2f6f9f' # dark '#2f6f9f'
+  data-rival-3: '#4b3a8a' # dark '#4b3a8a'
+  data-rival-4: '#1f7d73' # dark '#1f7d73'
+  data-you: '#e8501a' # dark '#ff6a33'
   focus: '#111111' # dark '#f4f4f4'
+  ground: '#f4f4f4' # dark '#0a0a0a'
   info: '#1f5fbf' # dark '#7fb0ff'
   info-soft: '#e3edfc' # dark '#14243d'
+  info-wash: '#e3edfc' # dark '#14243d'
   ink: '#111111' # dark '#f4f4f4'
+  ink-2: '#525252' # dark '#a6a6a6'
   ink-hover: '#2a2a2a' # dark '#d6d6d6'
   ink-muted: '#525252' # dark '#a6a6a6'
   ink-secondary: '#525252' # dark '#a6a6a6'
@@ -56,11 +99,16 @@ colors:
   line-strong: '#d4d4d4' # dark '#3a3a3a'
   negative: '#c4122f' # dark '#ff7387'
   negative-soft: '#ffe2e6' # dark '#3d0e16'
+  negative-wash: '#ffe2e6' # dark '#3d0e16'
   on-accent: '#111111' # dark '#111111'
   on-ink: '#ffffff' # dark '#111111'
   paper: '#f4f4f4' # dark '#0a0a0a'
   positive: '#0b6e69' # dark '#4fd1c5'
   positive-soft: '#d6f2ef' # dark '#0e2e2b'
+  positive-wash: '#d6f2ef' # dark '#0e2e2b'
+  raised: '#ffffff' # dark '#151515'
+  rule: '#e5e5e5' # dark '#2a2a2a'
+  rule-ink: '#111111' # dark '#f4f4f4'
   scrim: 'rgb(17 17 17 / 32%)' # dark 'rgb(0 0 0 / 64%)'
   sidebar: '#f4f4f4' # dark '#0a0a0a'
   stage-lilac: '#dfd6f7' # dark '#231b3d'
@@ -74,45 +122,40 @@ colors:
   surface-sunken: '#ececec' # dark '#1e1e1e'
   warning: '#8a5000' # dark '#f5b84a'
   warning-soft: '#fff0d1' # dark '#3a2a0a'
+  warning-wash: '#fff0d1' # dark '#3a2a0a'
+  well: '#ececec' # dark '#1e1e1e'
 ```
 
 <!-- generated:tokens:end -->
 
-- **Ink** carries every primary action, heading and figure. **Ink secondary**
-  is the one grey for supporting text; `ink-muted` is its alias, so there is
-  never a third grey.
-- **The app rebinds a few values**: its ink is 10% lower in
-  contrast (`#1c1c1c`, dark `#e8e8e8`), and its fills are a ladder with the
-  sidebar on its own step. Light: paper `#fcfcfc`, sidebar `#fafafa`, surface
-  `#ffffff`, sunken `#f4f4f5`, ink-secondary `#61616b`. Dark: sidebar
-  `#0a0a0a`, paper `#111111`, surface `#1c1c1c`, sunken `#141414` (a well
-  inside the card), line `rgb(255 255 255 / 8%)`, line-strong
-  `rgb(255 255 255 / 14%)`, state-hover `rgb(244 244 244 / 4%)`, chart-grid
-  `#2b2b2b`, ink-secondary `#9a9a9a`. The secondary ink is the lightest grey
-  that holds 4.5:1 under every state overlay on every app fill. The website
-  and docs keep the values above.
-- **Accent** (Flare) is a mark, never a fill for actions: the logo's bars, the
-  own-brand chart series, the current nav item's 2px bar, a dot, a link's ink
-  (`accent-ink`). The primary button is ink, not accent.
-- **Three fills, never deeper:** `paper` is the ground, `surface` the container
-  (card, panel, table, every floating surface), `surface-sunken` the inset,
-  used only inside a container. The app's sidebar sits on its own `sidebar`
-  step beside the ground, and its selected row lifts to `surface`.
-- **Reading text is ink:** words someone reads as the content (their own
-  chat message, a prompt, a fact, a remediation, a quoted passage) take the
-  primary ink at the body size; descriptions, captions, metadata and labels
-  stay secondary.
-- **States are ink overlays** over whatever fill is beneath: `state-hover`,
-  `state-pressed`, `state-selected`, so the three always look different.
-- **Edges:** `line` for every container edge and divider, `line-strong` for a
-  rule on the sunken fill, `line-control` (3:1) only for marks with nothing
-  inside them.
-- **Status:** `positive`, `negative`, `warning`, `info`, each with a `-soft`
-  fill. Red is reserved for errors and destructive actions.
-- **Data:** `data-1` is the own brand (accent), `data-2` ink, `data-3` grey,
-  `data-other` the rest.
-- **Website and docs:** `paper` is white in light. The `stage-*` tints
-  are for editorial illustrations only, never a page fill, panel or card.
+- **App roles.** Fills: `ground` (the page), `surface` (slips, fields),
+  `well` (sunken material, the hatch's base, the selected state) and
+  `raised` (sheets). Lines: `rule` (hairlines), `rule-ink` (a section's
+  top rule), `control-line` (3:1: anything you can operate, dashed draft
+  edges and hatch lines). Text: `ink` for what is read first (and the
+  primary button's fill, labelled `on-ink`), `ink-2` for what supports it;
+  there is no third grey. Neutrals are slightly warm. Dark is designed, not
+  inverted: a warm near-black ground, sheets lighter than it, wells darker.
+- **States are ink overlays:** hover `state-hover` (6%), pressed
+  `state-pressed` (10%); selected is the `well` tint plus a mark that is
+  not colour (the checked control, a check glyph).
+- **Status:** `positive`, `negative` (crimson, far from the accent's hue),
+  `warning` (ochre) and `info`, each with a `-wash`. They appear only in a
+  StatusMark, a Delta, a Notice or a validation message, always beside a glyph
+  and a word, and never as a large fill.
+- **Data:** `data-you` is the accent; `data-rival-1` to `-4` are ink then
+  cool hues, in rank order (never orange, red, amber or green); `data-other`
+  is the grouped rest.
+- **Contrast is checked, not assumed.**
+  [`design-system-contrast.mjs`](../frontend/scripts/design-system-contrast.mjs)
+  holds text at 4.5:1 on every fill and under the hover and pressed tints,
+  marks, boundaries and series at 3:1, and you and the rivals apart without
+  full colour vision, in the website's and the app's palettes, both themes.
+- **Website and docs:** `paper` is the ground, `surface` the container,
+  `surface-sunken` the inset; `line`, `line-strong` and `line-control`
+  the edges; `data-1` (accent), `data-2` (ink) and `data-3` the series.
+  The `stage-*` tints are for editorial illustrations only, never a page
+  fill, panel or card.
 
 ## Typography
 
@@ -120,19 +163,23 @@ colors:
 
 ```yaml
 typography:
-  type-badge: { fontSize: 12px, lineHeight: 16px }
   type-body: { fontSize: 14px, lineHeight: 20px }
   type-caption: { fontSize: 12px, lineHeight: 16px }
-  type-code: { fontSize: 12px, lineHeight: 20px }
   type-control: { fontSize: 14px, lineHeight: 20px }
+  type-data: { fontSize: 13px, lineHeight: 20px }
+  type-data-sm: { fontSize: 12px, lineHeight: 16px }
   type-delta: { fontSize: 12px, lineHeight: 16px }
+  type-display: { fontSize: 28px, lineHeight: 36px }
   type-eyebrow: { fontSize: 12px, lineHeight: 16px }
   type-figure: { fontSize: 24px, lineHeight: 32px }
-  type-figure-sm: { fontSize: 14px, lineHeight: 20px }
-  type-item-title: { fontSize: 14px, lineHeight: 20px }
+  type-figure-xl: { fontSize: 40px, lineHeight: 44px }
+  type-heading: { fontSize: 16px, lineHeight: 24px }
   type-label: { fontSize: 14px, lineHeight: 20px }
+  type-overline: { fontSize: 12px, lineHeight: 16px }
   type-page-title: { fontSize: 20px, lineHeight: 28px }
-  type-section-title: { fontSize: 16px, lineHeight: 24px }
+  type-prose: { fontSize: 16px, lineHeight: 26px }
+  type-subheading: { fontSize: 14px, lineHeight: 20px }
+  type-title: { fontSize: 22px, lineHeight: 28px }
   cl-body: { fontSize: 16px, lineHeight: 26px }
   cl-fcard-title: { fontSize: 22px, lineHeight: 28px }
   cl-lead: { fontSize: 18px, lineHeight: 30px }
@@ -144,25 +191,26 @@ typography:
 
 <!-- generated:type:end -->
 
-- **Faces by role:** the sans face sets everything; the mono face sets data,
-  code and short labels, never a sentence; the display face sets only the
-  website's and docs' headings from 32px, at 400. The app uses no display face.
-- **Three text styles:**
-  - _Heading_, 500 in ink: page, section, card, dialog and drawer titles, a
-    metric's figure, buttons, the selected tab, segment or nav item.
-  - _Primary_, 400 in ink: row and item titles, names, values, table cells,
-    form labels.
-  - _Secondary_, 400 in ink secondary: descriptions, value labels, column
-    heads, captions, counts, hints, inactive tabs and nav.
-- **Nothing is heavier than 500.**
-- **App sizes:** 14 body and controls, 16 section and card titles, 12
-  captions, badges and code, 20 for the page title and 24 only for a
-  metric's figure.
-- **Website sizes:** 12 · 14 · 16 · 18 · 20 · 24 · 32 · 48, and normally no
-  more than three on a page. Nothing below 12px; prose holds to 65ch.
+- **Mono is measured, sans is said, display names places.** The mono face
+  sets what the system measured or recorded: numbers, dates, URLs, ids,
+  counts, changes, column heads, absence words; never a sentence. The sans
+  face sets labels, prose and descriptions. In the app the display face sets
+  only page, dialog and flow titles (`title`, `display`); on the website it
+  sets headings from 32px at 400.
+- **The app's roles** are the closed set in
+  [`typography.tsx`](../frontend/components/ui/typography.tsx) (`textRole`),
+  with their recipes in `globals.css`; a call site names the job, never a
+  size. The app binds `title` to 20/28 at 600, not the block's website
+  value. The website's `type-page-title`, `-control`, `-eyebrow` and
+  `-delta` are website-only.
+- **App sizes:** 12, 13, 14, 16, 20, 24, 28 and 40 only, each with one line
+  height; 12 is the floor. Weights 400, 500 and 600. Emphasis inside text is
+  500, never colour. At most one `figure-xl` per page.
+- **Website sizes:** 12 · 14 · 16 · 18 · 20 · 24 · 32 · 48, normally no more
+  than three on a page, nothing heavier than 500. Prose holds to 65ch.
 - **Sizes are rem.** Type tokens are declared in rem (the px here ÷ 16), so
   they follow the reader's text size; spacing stays px, and controls take
-  `control-md` as a minimum height so larger text grows them.
+  their height as a minimum so larger text grows them.
 
 ## Layout
 
@@ -175,73 +223,91 @@ spacing:
   container-thread: 1040px
   container-prose: 720px
   container-narrow: 560px
+  container-content: 1280px
+  container-form: 640px
+  container-flow: 480px
   control-sm: 28px
   control-md: 32px
   control-lg: 48px
+  control-coarse: 32px
   nav-height: 64px
   sidebar-width: 248px
-  nav-item-height: 32px
-  menu-item-height: 32px
-  badge-height-sm: 22px
-  tab-height: 32px
   table-row-height: 44px
   table-header-height: 32px
 ```
 
 <!-- generated:controls:end -->
 
-Everything sits on a 4px grid. The app's spacing is a set of named
-relationships, so a page passes a role and never a number:
+The block lists the system's values. The app binds its own: controls 32
+(`control-md`) and 44 (`control-lg`, flow pages); below 900px or under a
+coarse pointer every primary target is 44 and table rows grow from 36 to 44.
+Tags are 24 and live in running content (cells, facts, sheets), never in a
+row of controls. Navigation rows are 28: links, not controls.
 
-| Role        | App value | Between                                                            |
-| ----------- | --------- | ------------------------------------------------------------------ |
-| `tight`     | 4         | the parts of one fact: a title and its meta, a label and its value |
-| `item`      | 8         | atoms in one row: a badge and its text, buttons, filter controls   |
-| `workspace` | 12        | blocks in one pane, and card to card                               |
-| inset       | 16        | a card's, dialog's or drawer's padding                             |
-| `section`   | 16        | the page-title rule to the control row                             |
-| band        | 8         | the control row to the content                                     |
+The app's spacing is one scale (2, 4, 8, 12, 16, 24, 32, 48, 64) used as
+roles, so a page passes a role and never a number:
 
-**Page anatomy.** Order is by likelihood of use: the most likely action comes
-first, left to right and top to bottom.
+| Value | Between                                                                     |
+| ----- | --------------------------------------------------------------------------- |
+| 4     | an icon and its label, a label and its control, a field and its help        |
+| 8     | controls that act together (`compact-gap`)                                  |
+| 12    | control and cell padding across; a section's ink rule and its head          |
+| 16    | inside a slip, sheet or figure cell; form rows; a section head and its body |
+| 24    | the gutter from 900px (16 below); the grid gap; the chrome and the content  |
+| 32    | sections (`page-section-gap`)                                               |
+| 48    | blocks on a flow page                                                       |
 
-1. **Header:** the title, its actions on the same row.
-2. **Tabs.**
-3. **Control row:** the view (one segmented control), search, **All filters**,
-   then at the row's end the count or a live note, then one action (Export,
-   Columns). Two or more filters share All filters; a lone filter is its own
-   trigger ("Page kind: All page kinds"). A row of filters alone, with no
-   view, search or action, joins the tab row right after the tabs, its live
-   note at the far end; with no tabs it follows the header's title.
-4. **Content.**
+The space inside a group is at most half the space to the next group. The
+rhythm belongs to Section, the template and the grid: a page never sets a
+vertical gap.
 
-A control sits in the row of the thing it acts on: the page's control row when
-it scopes the whole page, a table's toolbar when it scopes one table, a card's
-header when it changes how that card draws.
+**Page anatomy**, identical on every shell page:
 
-**Page width.** A page is full width. Settings, Billing, Issues, Skills, Context,
-Actions, Runs and New chat sit in one centred column at `container-thread`
-under the full-width header, and the data-source setup card at
-`container-prose`, so a row's action is never far from its text.
+1. **Masthead** (48, sticky, a hairline under it): the menu button below
+   900px, the back link on a record, the page title, then search, secondary
+   actions, at most one primary action and Ask agent.
+2. **Page tabs** (40, optional).
+3. **Filter bar** (48, optional): view, search, **All filters**, then at the
+   row's end the count or a live note and one action (Export, Columns).
+4. **Sections**, 24 below the chrome and 32 apart.
 
-**Breakpoints.** Components change at one breakpoint, 981px. The shell has
-two more: below 900px the navigation is a drawer behind the header's menu
-button, from 900px an icon rail, from 1280px the labelled sidebar. Metric
-cards stay in one row from 981px; the control row wraps in its one order.
-In the main column, app grids and card radio groups measure the column
-instead of the viewport, at the widths those breakpoints give it with the
-default sidebar, so a wider sidebar stacks them.
+Order is by likelihood of use: the most likely action comes first, left to
+right and top to bottom. A control sits in the row of the thing it acts on:
+the filter bar when it scopes the page, a table's toolbar when it scopes one
+table, a section's head when it changes how that section draws.
+
+**Width.** Content caps at `container-content` (1280), left-aligned to the
+gutter; reading columns, forms and flows take `container-prose`,
+`container-form` and `container-flow`. The template, not the page, picks.
+No page scrolls sideways down to 320px: a wide table scrolls inside its own
+frame with its first column pinned.
+
+**Breakpoints.** From `rail:` (900px) the sidebar is a labelled column, 200
+wide below `shell:` (1280px) and 224 from it. The reader may drag its edge
+or collapse it to the 48px rail; both choices persist per browser
+([`lib/sidebar-width.ts`](../frontend/lib/sidebar-width.ts)). Below 900px
+the sidebar is a left drawer behind the masthead's menu button. A
+component's internals stop stacking at `desktop:` (981px). In the main column
+grids measure the column instead of the viewport (`column-split`,
+`column-wide`), so a wider sidebar stacks them.
 
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
 and empty states keep their footprint; a pending button keeps its label's box.
 
 ## Elevation & Depth
 
-- **The app is flat.** Nothing at rest has a shadow: a card is `surface` with
-  a `line` edge. Hierarchy comes from the three fills and the 1px edges.
-- **Floating surfaces** (menus, select lists, popovers, dialogs, drawers,
-  toasts, the command palette, chart tips) share one face: `surface`, a `line`
-  edge and `shadow-float`.
+- **The app has four containers and no others.** A **Section** is no box: a
+  1px `rule-ink` rule on top, its head 12 below, then the body on the
+  ground; it is the default grouping. A **Slip** (`surface`, a `rule`
+  hairline, radius 4) is one object you can act on. A **Well** (`well`,
+  radius 4, no edge) holds quoted or raw material. A **Sheet** (`raised`, a
+  hairline, radius 8, `shadow-sheet`) is anything that floats; a modal sheet
+  also sits on the `scrim`.
+- **Boxes are at most two deep** and a slip never holds a slip. To separate a
+  group, add the missing divider; never wrap a section in a box.
+- **`shadow-sheet` is the app's only shadow**, and nothing at rest has one.
+  Every sheet keeps two separation cues in each theme: the hairline and the
+  shadow in light, the lighter `raised` fill and the hairline in dark.
 - **The website and docs are flat.** Panels are one flat neutral fill
   with no border or shadow; a product image's screen is edged by a `line`
   hairline ring. Buttons have no sheen, press shadow or press nudge.
@@ -254,18 +320,23 @@ and empty states keep their footprint; a pending button keeps its label's box.
 rounded:
   2xs: 2px
   xs: 2px
+  mark: 2px
   sm: 4px
   md: 6px
+  control: 6px
   lg: 8px
   xl: 8px
+  sheet: 8px
   full: 9999px
 ```
 
 <!-- generated:radii:end -->
 
-- **The app's corners are slight:** 2 to 8, and nothing rounder than 8.
-- **Full round** only for avatars, status dots, switch tracks and count pills.
-  A chip, citation pill, meter or progress track takes a small radius.
+- **The app's radii:** `rounded-mark` 2 (tags, checkboxes, rung marks),
+  `rounded-control` 4 (controls, fields, slips, wells; the app binds it to 4,
+  not the block's 6), `rounded-sheet` 8 (sheets) and `rounded-full` (avatars,
+  switch tracks, dots). Sections and tables have square corners. The
+  `2xs` to `xl` names are the website's.
 - **The website** keeps 2 to 8 for controls and chips; its surfaces are 4 for
   an inner card or popup, 12 for a card and 16 for a product-image panel.
 
@@ -274,46 +345,78 @@ rounded:
 Atoms have one form, defined once and composed everywhere; a page never sets
 its own spacing, size or radius on them.
 
-- **Buttons:** primary is ink-filled, one per view; secondary and danger wear
-  a field's soft edge. Controls are 32px tall (28 compact).
-- **Fields** (input, search, select, textarea, checkbox and radio): a 1px
-  `line` edge with a faint smudge, `line-strong` on hover, a 2px `focus` edge
-  in a 3px halo when focused, `negative` when invalid.
-- **Cards:** `surface` with a `line` edge and a 16 inset. A card header closes
-  with a hairline across the full width.
-- **Tabs, segments and chips** show a count after the label in brackets, in
-  the secondary style: "All signals (107)". Never mono.
+- **Buttons:** a look follows the kind of action, never the page. Primary
+  (ink fill) is the one action a view exists for, and lives only in the
+  masthead's primary slot or last in a sheet or form footer. Every other
+  action is secondary (`surface`, `control-line`), quiet (no edge), danger,
+  or a link. Controls in one row share one height.
+- **Fields** (input, search, select, textarea): `surface`, a 1px
+  `control-line` edge, radius 4, label above and help below. Focused, a
+  field takes the same ring as everything else and nothing more. Invalid, its
+  edge is `negative` and the error sentence below carries a glyph and is
+  linked by `aria-describedby`; focus keeps that crimson edge inside the ring.
+  Website fields instead thicken their edge to a 2px `focus` line in a 3px
+  halo.
+- **Tag** (24, radius 2): a solid `control-line` edge means you can operate
+  it (a record link, a removable filter); a static tag has a `well` fill and
+  no edge; a draft tag is dashed.
+- **StatusMark** is the only way to show a status, priority or severity: a
+  glyph and a word, with an optional tone.
+- **Tabs and segments** are text on a hairline; the current one carries the
+  accent mark. A count follows the label in brackets, in the mono face:
+  "All signals (107)".
 - **All filters:** one menu listing each filter with its value; options open in
   a submenu. The button counts the filters changed from their defaults. It
-  appears only for two or more filters.
-- **Tables** sort from their column headers. A row tints on hover only when
-  pressing it does something. In its own card a table runs full-bleed.
-- **Selectable lists** run full-bleed with no gap between rows; the selected
-  row is a full-width overlay with the 2px accent bar.
-- **Badges:** a status in its tone. A priority (High, Medium, Low) is an order,
-  not a state: a bar glyph and its word, accent for High, neutral otherwise.
+  appears only for two or more filters; a lone filter is its own trigger.
+- **Tables** (DataTable): a column is declared once with its kind, which sets
+  the head's and the cells' alignment, face, format and truncation together.
+  Heads are overlines, numerals mono and right-aligned, rows sit on hairlines
+  and tint on hover only when pressing them does something. Your row carries
+  the accent mark.
+- **FigureStrip:** key figures side by side under one ink rule, divided by
+  hairlines, every cell one height.
+- **Progress is rungs:** RungMark for your citation standing, RungMeter for a
+  0 to 100 score or a quota, RungTrail for steps. No rings, donuts, smooth
+  curves or generic progress bars.
+- **The live rung** (Spinner) is the only "working" mark: one rung pulsing
+  its opacity, shown only after 300ms and held still under reduced motion.
+  No shimmer, arcs or a lone spinner on an empty page.
+- **Notice** is the one inline message (glyph, sentence, optional action);
+  **StateBlock** holds a read's loading, empty and error states in one
+  footprint, names the failed subject with one Retry, and appears once per
+  region.
 - **Links** in a list, table or card underline on hover and focus; a link
   inside a sentence keeps its underline.
-- **Charts** are hidden from assistive tech and carry a written description. A
-  missing point is a gap, never a zero.
-- **Focus** is always visible: 2px of `focus`, offset 2px.
+- **Charts** draw time series as steps, your series in the accent and last.
+  A missing period is a gap with a hatched band, never a zero and never
+  interpolated. Charts carry a written description for assistive tech.
+- **Focus** is one ring on every interactive element, fields included, in
+  both themes: 2px solid `focus` (ink), 2px out. Never removed, never the
+  accent. After a pointer press only text fields keep it
+  (`input-modality.ts`); inside a clipped row it is drawn 2px in.
+- **Targets** are at least 24×24 everywhere.
 
 **Data states.** Use the state actually known; never punctuation alone or a
-fabricated zero. An observed zero stays `0`.
+fabricated zero. An observed zero is a Value: `0` in full ink.
 
 | Label              | Meaning                                        |
 | ------------------ | ---------------------------------------------- |
 | **Not measured**   | No measurement exists                          |
 | **Not run**        | The workflow has not started                   |
 | **Not set**        | A user-configurable fact is missing            |
+| **Not connected**  | The source that would supply it is not set up  |
 | **Unavailable**    | The evidence or provider cannot supply a value |
 | **Not applicable** | The field does not apply                       |
+| **Excluded**       | Deliberately left out (a de-duplicated alias)  |
 | **Unknown**        | The system cannot determine the state          |
 
-A missing value in a table is a muted en dash with the state as its accessible
-name, never a blank cell. A state shared by a section or column is said once,
-on its header. An empty table or chart tells first use, no results, loading
-and error apart.
+**Value** prints every measured value, and **Absence** every missing one, in
+the same line box. An absence is a hatched tag with its mono word (in a
+narrow cell a 16px hatched square, the word in a tooltip and for screen
+readers); not applicable is a plain `n/a` in `ink-2`, with no hatch;
+excluded is a tag with the word struck through. A stale value is `ink-2`
+with its "as of" date; a conflicting one carries a `≠` in the warning tone.
+A state shared by a section or column is said once, on its header.
 
 ## Do's and Don'ts
 
@@ -322,9 +425,10 @@ and error apart.
   themes), then use it.
 - **Do** keep every state distinct: unknown, unavailable, zero and not
   applicable are different findings.
-- **Don't** use the accent for buttons, fills or text emphasis.
-- **Don't** put a shadow on anything at rest in the app, or nest a fill deeper
-  than the sunken inset.
-- **Don't** set a size, weight, colour or radius the tokens don't have.
+- **Don't** use the accent for actions, links, focus, status or emphasis.
+- **Don't** put a shadow on anything at rest in the app, or nest boxes more
+  than two deep.
+- **Don't** set a size, weight, colour or radius the tokens don't have, or
+  use a website role name in app code.
 - **Don't** change factual copy, data, feature claims or confirmation steps as
   part of visual work.

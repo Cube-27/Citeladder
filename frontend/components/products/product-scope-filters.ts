@@ -1,10 +1,13 @@
-import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { choiceFilter, rangeFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import {
   PRODUCT_DEFAULT_WINDOW,
   PRODUCT_WINDOW_DAYS,
   type ProductWindowDays,
 } from '@/lib/config/commerce';
+import { formatCount } from '@/lib/format';
+import { nestedCategories } from '@/lib/products/category-tree';
 import type { useEngineCatalog } from '@/lib/providers/engines';
+import type { CommerceCatalog } from '@citeladder/contracts/commerce-suite';
 
 const EVERY = '__all__';
 
@@ -13,14 +16,10 @@ export function windowFilter(
   value: ProductWindowDays,
   onChange: (value: ProductWindowDays) => void,
 ): FilterDefinition {
-  return choiceFilter({
-    id: 'window',
-    label: 'Window',
+  return rangeFilter({
     value,
     defaultValue: PRODUCT_DEFAULT_WINDOW,
-    groups: [
-      { options: PRODUCT_WINDOW_DAYS.map((days) => ({ value: days, label: `Last ${days} days` })) },
-    ],
+    options: PRODUCT_WINDOW_DAYS.map((days) => ({ value: days, label: `Last ${days} days` })),
     onChange,
   });
 }
@@ -94,18 +93,37 @@ export function productScopeFilters({
   ];
 }
 
-/** The catalog category a page narrows to. */
+/**
+ * The catalog category a page narrows to. A nested category names its
+ * parents ("Coffee › Single Origin"); every option carries its product count,
+ * and a parent's count includes its children's.
+ */
 export function categoryFilter(
   value: string | null,
-  categories: readonly { id: string; name: string }[],
+  catalog: Pick<CommerceCatalog, 'categories' | 'product_total'> | undefined,
   onChange: (value: string | null) => void,
 ): FilterDefinition {
+  const categories = catalog?.categories ?? [];
+  const names = new Map(categories.map((row) => [row.id, row.name]));
+  const parents = new Map(categories.map((row) => [row.id, row.parent_id]));
+  const path = (id: string) => {
+    const chain: string[] = [];
+    let at: string | null | undefined = id;
+    while (at && names.has(at) && !chain.includes(at)) {
+      chain.unshift(at);
+      at = parents.get(at);
+    }
+    return chain.map((row) => names.get(row)).join(' › ');
+  };
   return everyFilter({
     id: 'category',
     label: 'Category',
-    allLabel: 'All categories',
+    allLabel: catalog ? `All categories · ${formatCount(catalog.product_total)}` : 'All categories',
     value,
-    options: categories.map((row) => ({ value: row.id, label: row.name })),
+    options: nestedCategories(categories).map(({ category }) => ({
+      value: category.id,
+      label: `${path(category.id)} · ${formatCount(category.product_count)}`,
+    })),
     onChange,
   });
 }

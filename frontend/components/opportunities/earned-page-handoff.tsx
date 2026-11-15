@@ -1,7 +1,6 @@
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
 import { OnPageEntities } from '@/components/ui/on-page-entities';
-import { panelClasses } from '@/components/ui/panel';
 import { TextLink } from '@/components/ui/text-link';
 import { Limitations } from '@/components/ui/passage';
 import { Label, textRole } from '@/components/ui/typography';
@@ -10,6 +9,7 @@ import { promptHistoryHref } from '@/lib/prompts/history';
 import { BrandOnPage } from '@/components/visibility/brand-on-page';
 import { brandVerdict, onPageCompetitors, readingSentence } from '@/lib/visibility/source-pages';
 import { urlTypeLabel } from '@/lib/visibility/vocabulary';
+import { wellClasses } from '@/components/ui/slip';
 
 type Handoff = OpportunityDetail['content_handoff'];
 
@@ -30,17 +30,17 @@ export function EarnedPageHandoff({ detail }: Readonly<{ detail: OpportunityDeta
   return (
     <Stack as="section">
       <Label>Action handoff</Label>
-      <Stack className={panelClasses()}>
-        <p className={textRole('body')}>
+      <Stack className={wellClasses()}>
+        <p className={textRole('body', 'text-ink-2')}>
           Get listed on this page. Competitors are on it and you are not.
         </p>
         <Inline className="flex-wrap">
-          {handoff.canonical_domain ? <Badge>{handoff.canonical_domain}</Badge> : null}
-          {format ? <Badge>{format}</Badge> : null}
+          {handoff.canonical_domain ? <Tag>{handoff.canonical_domain}</Tag> : null}
+          {format ? <Tag>{format}</Tag> : null}
         </Inline>
         {handoff.ask ? (
           <Stack gap="tight">
-            <p className={textRole('label')}>What to ask for</p>
+            <p className={textRole('body', 'text-ink-2')}>What to ask for</p>
             <p className={textRole('body', 'text-ink')}>{handoff.ask}</p>
           </Stack>
         ) : null}
@@ -75,10 +75,10 @@ function Prompts({ prompts }: Readonly<{ prompts?: Handoff['affected_prompts'] }
   if (!prompts?.length) return null;
   return (
     <Stack gap="tight">
-      <p className={textRole('label')}>Prompts that cite this page</p>
+      <p className={textRole('body', 'text-ink-2')}>Prompts that cite this page</p>
       <Stack as="ul" gap="tight">
         {prompts.map((prompt) => (
-          <li key={prompt.prompt_id} className={textRole('body')}>
+          <li key={prompt.prompt_id} className={textRole('body', 'text-ink-2')}>
             <TextLink href={promptHistoryHref(prompt.prompt_id)} text="body">
               {prompt.text}
             </TextLink>
@@ -104,10 +104,10 @@ function NamedInAnswers({ names }: Readonly<{ names?: string[] }>) {
   if (!names?.length) return null;
   return (
     <Stack>
-      <p className={textRole('label')}>Named in the answers, not on the page</p>
+      <p className={textRole('body', 'text-ink-2')}>Named in the answers, not on the page</p>
       <Inline className="flex-wrap">
         {names.map((name) => (
-          <Badge key={name}>{name}</Badge>
+          <Tag key={name}>{name}</Tag>
         ))}
       </Inline>
       <p className="type-caption">
@@ -124,7 +124,7 @@ function Coverage({ handoff }: Readonly<{ handoff: Handoff }>) {
   if (!sentence && !frequency) return null;
   return (
     <Stack gap="tight">
-      <p className={textRole('label')}>Coverage</p>
+      <p className={textRole('body', 'text-ink-2')}>Coverage</p>
       {sentence ? <p className={textRole('caption')}>{sentence}</p> : null}
       {frequency ? (
         <p className={textRole('caption')}>

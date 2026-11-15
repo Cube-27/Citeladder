@@ -15,15 +15,13 @@ import {
   useBrandProfileForm,
   type BrandProfileForm,
 } from '@/components/knowledge-base/use-brand-profile-form';
-import { ListScreen } from '@/components/layout/page-shell';
+import { SettingsPage } from '@/components/templates/settings-page';
+import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
-import { TabPanel, TabsRoot } from '@/components/ui/tabs';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { BrandProfile, Project } from '@citeladder/contracts';
@@ -31,6 +29,8 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 const CONTEXT_TABS = [
   // Short labels: six tabs share one row on the owner's 982px desktop.
@@ -101,12 +101,13 @@ function ContextWorkspace({
 
   return (
     <TabsRoot value={activeTab} onValueChange={setTab}>
-      <ListScreen
-        narrow
-        tabs={{
-          items: tabs.map((tab) => ({ value: tab.id, label: tab.label })),
-          ariaLabel: 'Context sections',
-        }}
+      <SettingsPage
+        tabs={
+          <TabRow
+            items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+            ariaLabel="Context sections"
+          />
+        }
         actions={
           <SaveAction
             kind={saveKind === 'profile' && !profile.data ? null : saveKind}
@@ -125,14 +126,16 @@ function ContextWorkspace({
           }
           instructions={<AgentInstructionsCard instructions={instructions} />}
         />
-      </ListScreen>
+      </SettingsPage>
     </TabsRoot>
   );
 }
 
 /**
- * One save button in the identity band for every tab, so switching tabs never
- * moves the band: a tab with nothing to save keeps the button's box, hidden.
+ * One save button in the masthead for every tab, so switching tabs never
+ * moves it: a tab with nothing to save keeps the button's box, hidden. It
+ * reads "Save" so it fits the masthead at 390; its name says what it saves.
+ * It waits for a change, so a blank profile never offers an empty save.
  */
 function SaveAction({
   kind,
@@ -145,9 +148,14 @@ function SaveAction({
 }>) {
   if (kind === 'instructions' && instructions.mayEdit)
     return (
-      <Button variant="primary" onClick={instructions.save} disabled={!instructions.canSave}>
+      <Button
+        variant="primary"
+        onClick={instructions.save}
+        disabled={!instructions.canSave}
+        aria-label="Save instructions"
+      >
         <Icon icon={Save} />
-        Save instructions
+        Save
       </Button>
     );
   const hidden = kind !== 'profile';
@@ -157,10 +165,11 @@ function SaveAction({
       className={hidden ? 'invisible' : undefined}
       aria-hidden={hidden || undefined}
       onClick={form.save}
-      disabled={hidden || form.saving}
+      disabled={hidden || form.saving || !form.dirty}
+      aria-label={form.saving ? 'Saving brand knowledge' : 'Save brand knowledge'}
     >
       <Icon icon={Save} />
-      {form.saving ? 'Saving…' : 'Save brand knowledge'}
+      {form.saving ? 'Saving…' : 'Save'}
     </Button>
   );
 }
@@ -232,6 +241,12 @@ function ProfileTab({
   return (
     <Stack gap="workspace">
       <ProfileSaveNotices form={form} />
+      {form.empty && !form.dirty ? (
+        <Notice tone="info">
+          No company facts yet. The agent and prompt generation read them before any evidence. Start
+          with what you sell, then save.
+        </Notice>
+      ) : null}
       {children}
     </Stack>
   );
@@ -239,9 +254,9 @@ function ProfileTab({
 
 /** The profile's loading or read error, in the one query-state footprint. */
 function ProfileState({ profile }: Readonly<{ profile: ProfileRead }>) {
-  if (profile.isPending) return <QueryState kind="loading" label="Loading company facts…" />;
+  if (profile.isPending) return <StateBlock kind="loading" label="Loading company facts…" />;
   return (
-    <QueryState
+    <StateBlock
       kind="error"
       {...readErrorProps(profile)}
       fallback="Company facts could not be loaded."
@@ -263,16 +278,16 @@ function BrandFactsTab({
   projectId: string;
 }>) {
   const mayEdit = useWorkspaceCapability('write');
-  if (facts.isPending) return <QueryState kind="loading" label="Loading brand facts…" />;
+  if (facts.isPending) return <StateBlock kind="loading" label="Loading brand facts…" />;
   return (
-    <Card aria-labelledby="brand-facts">
-      <CardHeader>
-        <CardTitle id="brand-facts">Brand facts</CardTitle>
-        <CardDescription>
+    <Section aria-labelledby="brand-facts">
+      <SectionHeader>
+        <SectionTitle id="brand-facts">Brand facts</SectionTitle>
+        <SectionDescription>
           Statements of record that AI answers about you are checked against. Runs check the facts
           confirmed when they start.
-        </CardDescription>
-      </CardHeader>
+        </SectionDescription>
+      </SectionHeader>
       {facts.data?.enabled ? (
         <BrandFactsPanel
           workspaceId={workspaceId}
@@ -281,12 +296,12 @@ function BrandFactsTab({
           mayEdit={mayEdit}
         />
       ) : (
-        <QueryState
+        <StateBlock
           kind="error"
           {...readErrorProps(facts)}
           fallback="Brand facts could not be loaded."
         />
       )}
-    </Card>
+    </Section>
   );
 }

@@ -223,7 +223,7 @@ for (const width of [1280, 390]) {
         fixtureProjectPath(surface === 'page' ? `/agent/chats/${CHAT}` : '/projects'),
       );
       if (surface === 'panel') {
-        await page.getByRole('button', { name: 'Open agent' }).click();
+        await page.getByRole('button', { name: 'Ask agent' }).click();
         await page.getByLabel('Message the agent').fill('Discuss buyer needs');
         await page.getByRole('button', { name: 'Send', exact: true }).click();
       }

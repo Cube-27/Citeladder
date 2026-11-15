@@ -2,15 +2,17 @@ import { useState, type MouseEvent } from 'react';
 import { ChevronRight, MoreHorizontal, Search } from 'lucide-react';
 
 import { ProjectLink } from '@/components/ui/project-link';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
 import { InfoHint } from '@/components/ui/info-hint';
+import { Inline } from '@/components/ui/layout';
 import { Menu, MenuContent, MenuItem, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
@@ -32,11 +34,11 @@ import { formatCount } from '@/lib/format';
  * overflow menu in the narrow action column.
  */
 const COLUMNS: readonly DataTableColumn[] = [
-  // The index role fits '#', not a word; the figure role fits 'Position' on
-  // one line where 'Avg. position' wrapped the header row to two.
-  { key: 'rank', label: '#', width: 'index', numeric: true },
+  // The identity leads, so it is the column that stays put while the
+  // figures scroll; its rank in the whole snapshot follows the signal.
   { key: 'target', label: 'Query or page' },
   { key: 'signal', label: 'Signal', width: 'category' },
+  { key: 'rank', label: 'Priority', width: 'short', numeric: true },
   { key: 'impressions', label: 'Impressions', width: 'figure', numeric: true },
   { key: 'clicks', label: 'Clicks', width: 'figure', numeric: true },
   { key: 'ctr', label: 'CTR', width: 'figure', numeric: true },
@@ -48,11 +50,11 @@ const COLUMNS: readonly DataTableColumn[] = [
 export function SignalChip({ signalType }: Readonly<{ signalType: string }>) {
   const meta = signalTypeMeta(signalType);
   return meta.tone === 'neutral' ? (
-    <Badge>{meta.label}</Badge>
+    <Tag>{meta.label}</Tag>
   ) : (
-    <Badge variant="status" value={meta.tone}>
+    <StatusMark variant="status" value={meta.tone}>
       {meta.label}
-    </Badge>
+    </StatusMark>
   );
 }
 
@@ -71,16 +73,19 @@ export function SignalLegend({
   // One line per type: joined into a sentence, each definition ran into the
   // next type's label.
   return (
-    <InfoHint label="Signal types">
-      {types.map((type) => {
-        const meta = signalTypeMeta(type);
-        return (
-          <span key={type} className="block">
-            {`${meta.label}: ${signalDefinition(type, policy)} `}
-          </span>
-        );
-      })}
-    </InfoHint>
+    <Inline as="span" gap="tight">
+      Signal types
+      <InfoHint label="Signal types">
+        {types.map((type) => {
+          const meta = signalTypeMeta(type);
+          return (
+            <span key={type} className="block">
+              {`${meta.label}: ${signalDefinition(type, policy)} `}
+            </span>
+          );
+        })}
+      </InfoHint>
+    </Inline>
   );
 }
 
@@ -117,7 +122,7 @@ export function DemandSignalTable({
     <DataTable
       label="Search demand signals"
       columns={COLUMNS}
-      minWidth="md"
+      minWidth="lg"
       rowLines={2}
       rowCount={pageRows.length}
       pageSize={pageCount > 1 ? pageSize : undefined}
@@ -170,7 +175,6 @@ function SignalRow({
       }}
       className="focus-ring cursor-pointer"
     >
-      <TableCell numeric>{rank}</TableCell>
       <TableCell>
         {/* Always two lines, so every row is one height, and the second
             always says whether the row is about a query or a page. */}
@@ -184,6 +188,7 @@ function SignalRow({
       <TableCell className="whitespace-nowrap">
         <SignalChip signalType={signal.signal_type} />
       </TableCell>
+      <TableCell numeric>{rank}</TableCell>
       <TableCell numeric>
         <Count value={numericMetric(signal, 'impressions')} />
       </TableCell>
@@ -254,11 +259,11 @@ function SignalActions({
 }
 
 function Count({ value }: Readonly<{ value: number | null }>) {
-  return value === null ? <UnavailableValue state="not_measured" /> : formatCount(value);
+  return value === null ? <Absence state="not_measured" /> : formatCount(value);
 }
 
 function Position({ value }: Readonly<{ value: number | null }>) {
-  return value === null ? <UnavailableValue state="not_measured" /> : value.toFixed(1);
+  return value === null ? <Absence state="not_measured" /> : value.toFixed(1);
 }
 
 /** The persisted CTR, else clicks over impressions; never a guessed zero. */
@@ -268,6 +273,6 @@ function Ctr({ signal }: Readonly<{ signal: DemandSignal }>) {
   const impressions = numericMetric(signal, 'impressions');
   const clicks = numericMetric(signal, 'clicks');
   if (impressions === null || clicks === null || impressions === 0)
-    return <UnavailableValue state="not_measured" />;
+    return <Absence state="not_measured" />;
   return `${((clicks / impressions) * 100).toFixed(1)}%`;
 }

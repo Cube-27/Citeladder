@@ -14,14 +14,17 @@ test('the first-load indicator keeps pulsing until the workspace answers', async
   });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto(fixtureProjectPath('/projects'));
-  const indicator = page.getByRole('status', { name: 'Loading your workspace…' });
+  // The loading StateBlock holds the page's place and names the wait.
+  const indicator = page
+    .locator('[data-state-block="loading"]')
+    .getByRole('status', { name: 'Loading your workspace…' });
   try {
     await expect(indicator).toBeVisible();
-    // The skeleton's bars pulse their opacity; a still bar would read as stuck.
-    const bar = indicator.locator('.animate-skeleton-pulse').first();
-    const initial = await bar.evaluate((element) => getComputedStyle(element).opacity);
+    // Its live rung pulses its opacity; a still rung would read as stuck.
+    const rung = indicator.locator('[data-live-rung] .animate-live-rung');
+    const initial = await rung.evaluate((element) => getComputedStyle(element).opacity);
     await expect
-      .poll(() => bar.evaluate((element) => getComputedStyle(element).opacity))
+      .poll(() => rung.evaluate((element) => getComputedStyle(element).opacity))
       .not.toBe(initial);
   } finally {
     release();

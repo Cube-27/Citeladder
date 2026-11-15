@@ -9,7 +9,8 @@ import { openFilterOptions } from '@/test/all-filters';
 import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { downloadCsv } from '@/lib/csv/download';
-import { ListScreen } from '@/components/layout/page-shell';
+import { ReportPage } from '@/components/templates/report-page';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { InternalLinksPanel } from './internal-links-panel';
 import { useInternalLinksBands } from './internal-links-panel-bands';
 
@@ -86,9 +87,12 @@ function LinksTab({ canAnalyze }: Readonly<{ canAnalyze?: boolean }>) {
     canAnalyze,
   });
   return (
-    <ListScreen actions={links.actions} controls={links.controls}>
+    <ReportPage
+      actions={links.actions}
+      filters={links.controls ? <FilterBar {...links.controls} /> : undefined}
+    >
       <InternalLinksPanel read={links.read} workspaceId={project.workspace_id} />
-    </ListScreen>
+    </ReportPage>
   );
 }
 
@@ -292,10 +296,9 @@ describe('Internal links', () => {
     );
     renderPanel();
     expect(await screen.findByText('Anchor 0')).toBeInTheDocument();
-    // No Action yet reads as the missing mark, named for assistive technology only.
+    // No Action yet reads as an absence, never a blank cell.
     const firstRow = screen.getByRole('row', { name: /Anchor 0/ });
-    expect(within(firstRow).getByText('No Action yet')).toHaveClass('sr-only');
-    expect(within(firstRow).getByText('–')).toBeVisible();
+    expect(within(firstRow).getByText('No Action yet')).toHaveAttribute('data-absence', 'not_set');
     // One export, at the end of the control row; the header keeps the tab's primary action.
     const header = screen.getByRole('banner');
     expect(within(header).getByRole('button', { name: 'Analyze again' })).toBeInTheDocument();

@@ -131,7 +131,7 @@ export function seriesCeiling(series: ReturnType<typeof toChartSeries>): number 
  *
  * Never a placeholder glyph: an em dash in a numeric cell says nothing about
  * WHY the number is missing, and the product has a vocabulary for that. The
- * caller renders `UnavailableValue` instead, which names the state.
+ * caller renders `Absence` instead, which names the state.
  */
 
 /** A ratio as a percentage. */

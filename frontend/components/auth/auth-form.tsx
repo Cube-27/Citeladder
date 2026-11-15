@@ -1,16 +1,15 @@
 import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
+import { FlowBlock } from '@/components/templates/flow-page';
 import {
   AuthButton,
-  AuthSignInCard,
   AuthDivider,
   AuthForm,
   AuthHumanCheck,
   AuthLegal,
   AuthLinkRow,
 } from '@/components/ui/auth-shell';
-import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { type BrandGlyph, Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
@@ -22,6 +21,7 @@ import { ApiError } from '@/lib/api/errors';
 import { websiteHref } from '@/lib/config/app-link';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import type { Turnstile } from '@/lib/turnstile/use-turnstile';
+import { Notice } from '@/components/ui/notice';
 
 type InputProps = ComponentProps<typeof Input>;
 
@@ -182,13 +182,13 @@ function GoogleEntry({
         <Icon icon={GoogleGlyph} />
         <span>{pending ? 'Starting Google sign-in…' : 'Continue with Google'}</span>
       </AuthButton>
-      {notice ? <Callout tone="negative">{notice}</Callout> : null}
+      {notice ? <Notice tone="negative">{notice}</Notice> : null}
     </>
   );
 }
 
 /**
- * Sign-in, sign-up and the mailbox screens on the AuthSignInCard: the title and
+ * Sign-in, sign-up and the mailbox screens as one Flow block: the title and
  * line, the form's one alert, Continue with Google and the "or" rule (when the
  * form authenticates), the fields, the Turnstile slot (when challenged) and
  * the submit, the agreement line, and the switch under the card.
@@ -242,7 +242,7 @@ export function AuthFormShell({
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
 
   return (
-    <AuthSignInCard
+    <FlowBlock
       title={title}
       sub={description}
       after={
@@ -256,7 +256,7 @@ export function AuthFormShell({
         ) : undefined
       }
     >
-      {error ? <Callout tone="negative">{error}</Callout> : null}
+      {error ? <Notice tone="negative">{error}</Notice> : null}
 
       {consent.terms ? (
         <>
@@ -283,7 +283,7 @@ export function AuthFormShell({
       ) : null}
 
       {consent.terms ? <TermsNotice id={consent.noticeId} signup={consent.terms.signup} /> : null}
-    </AuthSignInCard>
+    </FlowBlock>
   );
 }
 

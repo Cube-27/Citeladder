@@ -1,5 +1,5 @@
 import { Pencil, RotateCcw } from 'lucide-react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 
 import { ActionChip } from '@/components/agent/action-chip';
 import { ActivityChain } from '@/components/agent/activity-chain';
@@ -10,11 +10,11 @@ import { ProposalCards } from '@/components/agent/proposal-cards';
 import { skillLabel } from '@/components/agent/skill-picker';
 import { threadItems } from '@/components/agent/thread-items';
 import { TurnFailure } from '@/components/agent/turn-failure';
+import { turnParts } from '@/components/agent/turn-parts';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { cardClasses } from '@/components/ui/card';
 import { AgentThread, AgentTurn, PastedTextChip, UserTurn } from '@/components/ui/chat-dock';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Disclosure } from '@/components/ui/disclosure';
@@ -31,7 +31,6 @@ import { isPageReading, isRunActive, runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentOutput } from '@/lib/api/agent';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown, MarkdownText } from '@/lib/markdown/markdown';
-import { cn } from '@/lib/utils';
 
 /**
  * Messages and the chat's documents in conversational order (each document
@@ -74,11 +73,8 @@ export function Conversation({
   const documents = (outputs: readonly AgentOutput[] | undefined) =>
     renderOutput
       ? outputs?.map((placed) => (
-          <div
-            key={placed.id}
-            id={documentAnchor(placed.id)}
-            className={cn(cardClasses(), 'min-w-0')}
-          >
+          // The rendered document draws its own face (the DraftSheet).
+          <div key={placed.id} id={documentAnchor(placed.id)} className="min-w-0">
             {renderOutput(placed)}
           </div>
         ))
@@ -101,13 +97,17 @@ export function Conversation({
                 message={item.message}
                 skill={skillLabel(skills, item.message.skill_id)}
                 actions={detail.actions}
+                after={
+                  <>
+                    <ProposalCards
+                      workspaceId={workspaceId}
+                      proposals={item.message.proposals}
+                      actions={detail.actions}
+                    />
+                    {documents(byMessage.get(item.message.id))}
+                  </>
+                }
               />
-              <ProposalCards
-                workspaceId={workspaceId}
-                proposals={item.message.proposals}
-                actions={detail.actions}
-              />
-              {documents(byMessage.get(item.message.id))}
             </Stack>
           ) : (
             <Stack
@@ -194,12 +194,12 @@ function DocumentList({ outputs }: Readonly<{ outputs: readonly AgentOutput[] }>
   if (outputs.length < 2) return null;
   return (
     <Stack as="nav" gap="tight" aria-label="Documents">
-      <span className={textRole('label')}>Documents</span>
+      <span className={textRole('body', 'text-ink-2')}>Documents</span>
       <Stack as="ol" gap="tight" className={treeBranchClasses()}>
         {outputs.map((output) => (
           <li key={output.id}>
             <Pressable
-              className={textRole('caption', 'hover:text-accent-ink w-auto')}
+              className={textRole('caption', 'hover:text-accent-text w-auto')}
               onClick={() =>
                 document
                   .getElementById(documentAnchor(output.id))
@@ -244,7 +244,7 @@ function TurnActions({
         <Icon icon={RotateCcw} />
         {ended ? 'Try again' : 'Regenerate'}
       </Button>
-      <Button variant="ghost" onClick={() => onEdit(request)}>
+      <Button variant="quiet" onClick={() => onEdit(request)}>
         <Icon icon={Pencil} />
         {hasDraft ? 'Replace draft with last request' : 'Edit last request'}
       </Button>
@@ -269,7 +269,14 @@ function MessageBubble({
   message,
   skill,
   actions,
-}: Readonly<{ message: AgentMessage; skill: string | null; actions: AgentChatDetail['actions'] }>) {
+  after,
+}: Readonly<{
+  message: AgentMessage;
+  skill: string | null;
+  actions: AgentChatDetail['actions'];
+  /** What the reply proposed and wrote: drawn last, after its sources. */
+  after?: ReactNode;
+}>) {
   const knownHosts = useAgentLinkHosts(message.web_sources);
   if (message.role === 'user')
     return (
@@ -318,21 +325,40 @@ function MessageBubble({
       time={<MessageTime value={message.created_at} />}
       meta={skill ? `Skill: ${skill}` : undefined}
     >
-      {/* Where the live status line sat: the text stays put when this replaces it. */}
-      <ActivityChain rows={activityRows(message.steps)} />
-      <ContentMarkdown
-        markdown={message.content}
-        density="compact"
-        knownHosts={knownHosts}
-        chips={chips}
-      />
-      <Inline className="flex-wrap">
-        <EvidenceChips refs={message.evidence_refs} />
-        <CopyButton value={message.content} variant="ghost">
-          Copy reply
-        </CopyButton>
-      </Inline>
-      <WebSources sources={message.web_sources} />
+      {turnParts(message).map((part) => {
+        switch (part.kind) {
+          case 'steps':
+            // Where the live status line sat: the text stays put when this replaces it.
+            return <ActivityChain key="steps" rows={activityRows(part.steps)} />;
+          case 'text':
+            return (
+              <ContentMarkdown
+                key="text"
+                markdown={part.markdown}
+                density="compact"
+                knownHosts={knownHosts}
+                chips={chips}
+              />
+            );
+          case 'evidence':
+            return (
+              <Inline key="evidence" className="flex-wrap">
+                <EvidenceChips refs={part.refs} />
+                <CopyButton value={message.content} variant="quiet">
+                  Copy reply
+                </CopyButton>
+              </Inline>
+            );
+          case 'sources':
+            return <WebSources key="sources" sources={part.sources} />;
+          case 'outputs':
+            return after ? <Fragment key="outputs">{after}</Fragment> : null;
+          default: {
+            const unknown: never = part;
+            return unknown;
+          }
+        }
+      })}
     </AgentTurn>
   );
 }
@@ -424,7 +450,7 @@ function FollowUps({
         <Inline as="nav" aria-label="Next steps" className="flex-wrap">
           <span className={textRole('caption')}>Next, in a new chat:</span>
           {next.map(({ workflow, prompt }) => (
-            <Button key={workflow.id} asChild variant="ghost">
+            <Button key={workflow.id} asChild variant="quiet">
               <ProjectLink
                 href={agentHandoffHref({
                   actionId,

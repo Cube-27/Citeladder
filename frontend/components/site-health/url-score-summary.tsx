@@ -1,4 +1,4 @@
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { PageDetail } from '@citeladder/contracts';
 import { ICONS } from '@/lib/icons';
 import { AuditScores } from './overview-metrics';
@@ -26,7 +26,7 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
           title: 'AEO checklist completion',
           value:
             detail.aeo_measurement_coverage === null ? null : detail.aeo_measurement_coverage * 100,
-          valueUnit: 'plain-percent',
+          valueUnit: 'percent',
           icon: ICONS.reports,
           unavailable: scoreUnavailableState(
             detail.aeo_measurement_state,
@@ -49,5 +49,5 @@ function scoreUnavailableState(state: string, reason?: string) {
   if (reason === 'unsupported_purpose_checklist') {
     return <span className="type-caption">No AEO checklist for this page kind</span>;
   }
-  return <UnavailableValue state="not_measured" />;
+  return <Absence state="not_measured" />;
 }

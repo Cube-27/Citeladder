@@ -5,7 +5,6 @@ import { formatMoney } from '@/lib/billing/catalog';
 import { DisplayTime } from '@/components/ui/display-time';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
@@ -13,10 +12,12 @@ import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { saveBlob } from '@/lib/download';
+import { Notice } from '@/components/ui/notice';
+import { Value } from '@/components/ui/value';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'document', label: 'Document' },
-  { key: 'paid', label: 'Date', width: 'date', numeric: true },
+  { key: 'paid', label: 'Date', width: 'status', numeric: true },
   { key: 'tax', label: 'GST', width: 'category' },
   { key: 'amount', label: 'Amount', width: 'figure', numeric: true },
   { key: 'download', label: 'Download', width: 'name', trailing: true, hideLabel: true },
@@ -91,15 +92,16 @@ export function InvoiceHistory({
 
   return (
     <Stack gap="compact">
-      {error ? <Callout tone="negative">Receipts could not be loaded.</Callout> : null}
+      {error ? <Notice tone="negative">Receipts could not be loaded.</Notice> : null}
       {downloadError ? (
-        <Callout tone="negative">Receipt download failed. Please retry.</Callout>
+        <Notice tone="negative">Receipt download failed. Please retry.</Notice>
       ) : null}
       {error ? null : (
         <DataTable
           title="Invoices"
           description="Invoices with their receipts, and any credit notes."
           columns={COLUMNS}
+          minWidth="lg"
           state={invoicesState(loading, invoices.length)}
         >
           {invoices.map((invoice) => (
@@ -119,7 +121,9 @@ export function InvoiceHistory({
               <TableCell>
                 <ClampText lines={1}>{taxBreakdown(invoice)}</ClampText>
               </TableCell>
-              <TableCell numeric>{formatMoney(invoice.amount_paid, 2)}</TableCell>
+              <TableCell numeric>
+                <Value value={formatMoney(invoice.amount_paid, 2)} />
+              </TableCell>
               <TableActionsCell>
                 <Button
                   variant="secondary"

@@ -1,5 +1,4 @@
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
-import { ChevronRight } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -14,27 +13,18 @@ import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { ActionEvidence, DeveloperTicketButton } from '@/components/agent/developer-ticket';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { DetailScreen, type PageBack } from '@/components/layout/page-shell';
+import { ActionSection } from '@/components/agent/action-section';
+import { RecordPage } from '@/components/templates/record-page';
+import type { PageBack } from '@/components/templates/page-frame';
 import { ProjectLink } from '@/components/ui/project-link';
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
-import { Callout } from '@/components/ui/callout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FloatingBar } from '@/components/ui/floating-bar';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { FactList, type Fact } from '@/components/ui/facts';
-import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import {
-  EditorialSectionHeader,
-  ledgerClasses,
-  ledgerItemClasses,
-} from '@/components/ui/workspace';
+import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { actionHandoffHref } from '@/lib/agent/handoff';
 import {
   approachLabel,
@@ -48,17 +38,20 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { readableUrl, shortUrlTitle } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionTitle } from '@/components/ui/section';
 
 const ACTIONS = '/agent/actions';
 const BACK: PageBack = { href: ACTIONS, label: 'Back to Actions' };
 
 /**
- * One Action (AS7): a single centered column at the thread width, named in
- * the one-line header by a short title (a URL's host and last segment), read
- * top to bottom (overview with Prepare developer ticket, details, dated
- * evidence, why, what to do, how it is measured, the findings and the chats),
- * with its three actions in a bar floating at the
- * bottom: Dismiss, Mark implemented, and Work with the agent.
+ * One Action (AS7) on the Record template: titled by its work and target
+ * ("Earn a placement: host/…/last-segment"), its full target and facts in the
+ * identity strip, the sections read top to bottom (overview with Prepare
+ * developer ticket, dated evidence, why, what to do, how it is measured)
+ * beside its findings and chats, and its three decisions in the sticky action
+ * bar: Dismiss, Mark implemented, and Work with the agent.
  */
 export function ActionDetailScreen() {
   const { actionId = '' } = useParams();
@@ -70,27 +63,27 @@ export function ActionDetailScreen() {
 
   if (query.isError)
     return (
-      <DetailScreen back={BACK}>
-        <QueryState
+      <RecordPage back={BACK}>
+        <StateBlock
           kind="error"
           {...readErrorProps(query)}
           fallback="This Action could not be loaded."
         />
-      </DetailScreen>
+      </RecordPage>
     );
   if (!query.data)
     return (
-      <DetailScreen back={BACK}>
-        <QueryState kind="loading" />
-      </DetailScreen>
+      <RecordPage back={BACK}>
+        <StateBlock kind="loading" />
+      </RecordPage>
     );
   if (query.data.project_id !== projectId)
     return (
-      <DetailScreen back={BACK}>
-        <Callout tone="negative">
+      <RecordPage back={BACK}>
+        <Notice tone="negative">
           This Action belongs to another project. Choose an Action from the current project.
-        </Callout>
-      </DetailScreen>
+        </Notice>
+      </RecordPage>
     );
   // Keyed so a mutation's state (and its Retry) never outlives its Action.
   return <ActionDetailView key={query.data.id} action={query.data} workspaceId={workspaceId} />;
@@ -107,30 +100,44 @@ function ActionDetailView({
   const update = useMutation(actionsMutations.updateStatus(workspaceId));
   const gaps = contentGapMembers(action);
   return (
-    <DetailScreen
-      column
-      title={shortUrlTitle(action.target_label)}
+    <RecordPage
+      title={actionTitle(action)}
       back={{ ...BACK, projectId: action.project_id }}
+      identity={<Identity action={action} />}
+      aside={
+        <>
+          <Findings action={action} onOpenEvidence={setEvidenceId} />
+          <LinkedChats action={action} workspaceId={workspaceId} />
+        </>
+      }
+      actionBar={
+        <ActionBar
+          action={action}
+          workspaceId={workspaceId}
+          dismissing={update.isPending}
+          onStatus={(status) => update.mutate({ actionId: action.id, status })}
+          onDeclared={() => setDeclared(true)}
+        />
+      }
     >
-      <Breadcrumb label={readableUrl(action.target_label)} />
       {update.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(update.error, { action: 'update this Action' })}
           onRetry={() => update.variables && update.mutate(update.variables)}
         />
       ) : null}
       <Overview action={action} />
-      <Details action={action} />
       <AffectedPages action={action} />
       <ActionEvidence action={action} />
       {action.declaration ? (
-        <Section title="Implementation" id="action-implementation">
+        <ActionSection title="Implementation" id="action-implementation">
           <DeclarationStatus
             declaration={action.declaration}
             workspaceId={workspaceId}
             focusOnMount={declared}
           />
-        </Section>
+        </ActionSection>
       ) : null}
       {gaps.length > 0 ? <ContentGapWhy members={gaps} /> : null}
       <WhatToDo action={action} />
@@ -140,15 +147,6 @@ function ActionDetailView({
         items={(action.diagnosis.measure_with ?? []).map(measurementLegLabel).filter(isText)}
       />
       <TextList title="Avoid" id="action-avoid" items={action.diagnosis.donts ?? []} />
-      <Findings action={action} onOpenEvidence={setEvidenceId} />
-      <LinkedChats action={action} workspaceId={workspaceId} />
-      <ActionBar
-        action={action}
-        workspaceId={workspaceId}
-        dismissing={update.isPending}
-        onStatus={(status) => update.mutate({ actionId: action.id, status })}
-        onDeclared={() => setDeclared(true)}
-      />
       <EvidenceDrawer
         opportunityId={evidenceId}
         projectId={action.project_id}
@@ -157,48 +155,19 @@ function ActionDetailView({
           if (!open) setEvidenceId(null);
         }}
       />
-    </DetailScreen>
+    </RecordPage>
   );
 }
 
 /**
- * Where the Action sits: Actions, then this Action by its full target (the
- * header names it short), kept to one row like every long URL in the app,
- * with the whole target in its tooltip.
+ * The record's name: the work, then its target cut to host and last segment
+ * ("Earn a placement: thecoffeecompass.net/…/best-coffee-subscriptions-2026").
+ * The identity strip gives the target in full.
  */
-function Breadcrumb({ label }: Readonly<{ label: string }>) {
-  return (
-    <nav aria-label="Breadcrumb">
-      <Inline as="ol" gap="tight">
-        <Inline as="li" gap="tight" className="shrink-0">
-          <TextLink href={ACTIONS} text="caption">
-            Actions
-          </TextLink>
-          <Icon icon={ChevronRight} className="text-ink-muted" />
-        </Inline>
-        <li className="min-w-0">
-          <span aria-current="page" title={label} className={textRole('caption', 'block truncate')}>
-            {label}
-          </span>
-        </li>
-      </Inline>
-    </nav>
-  );
-}
-
-/** A headed section of the column; its heading names it for assistive technology. */
-function Section({
-  title,
-  id,
-  actions,
-  children,
-}: Readonly<{ title: string; id: string; actions?: ReactNode; children: ReactNode }>) {
-  return (
-    <Stack as="section" aria-labelledby={id}>
-      <EditorialSectionHeader title={title} headingId={id} actions={actions} />
-      {children}
-    </Stack>
-  );
+function actionTitle(action: ActionDetail): string {
+  const target = shortUrlTitle(action.target_label);
+  const work = approachLabel(action.diagnosis.approach ?? action.approach);
+  return work ? `${work}: ${target}` : target;
 }
 
 /** Each distinct instruction of the Action's findings, in priority order. */
@@ -221,37 +190,32 @@ function actionPrompt(action: ActionDetail): string {
 function Overview({ action }: Readonly<{ action: ActionDetail }>) {
   const happened = [...new Set(action.members.map((member) => member.title))];
   return (
-    <Section
-      title="Overview"
-      id="action-overview"
-      actions={
-        <Inline gap="compact" className="flex-wrap">
-          <DeveloperTicketButton action={action} />
-          <CopyButton value={actionPrompt(action)}>Copy as prompt</CopyButton>
-        </Inline>
-      }
-    >
-      <p className={textRole('body', 'text-ink')}>{action.handoff.message}</p>
+    <ActionSection title="Overview" id="action-overview">
+      <p className={textRole('body')}>{action.handoff.message}</p>
       {happened.length > 0 ? (
         <Stack as="ul" gap="tight" className="list-inside list-disc">
           {happened.map((item) => (
-            <li key={item} className={textRole('body', 'text-ink')}>
+            <li key={item} className={textRole('body')}>
               {item}
             </li>
           ))}
         </Stack>
       ) : (
-        <QueryState kind="empty" inline message="No current finding targets this Action." />
+        <StateBlock kind="empty" inline message="No current finding targets this Action." />
       )}
       {action.evidence_cleared_at ? (
-        <Callout tone="info">No current evidence targets this Action. Its chats are kept.</Callout>
+        <Notice tone="info">No current evidence targets this Action. Its chats are kept.</Notice>
       ) : null}
-    </Section>
+      <Inline gap="compact" className="flex-wrap">
+        <DeveloperTicketButton action={action} />
+        <CopyButton value={actionPrompt(action)}>Copy as prompt</CopyButton>
+      </Inline>
+    </ActionSection>
   );
 }
 
-/** The Action's facts, one ruled row each. */
-function Details({ action }: Readonly<{ action: ActionDetail }>) {
+/** The identity strip: the full target, wrapping, over the Action's facts, one ruled row each. */
+function Identity({ action }: Readonly<{ action: ActionDetail }>) {
   const approach = approachLabel(action.diagnosis.approach ?? action.approach);
   const sources = action.families.map(familyLabel).filter(isText);
   const target = targetKindLabel(action.target_kind) ?? 'Target';
@@ -275,14 +239,15 @@ function Details({ action }: Readonly<{ action: ActionDetail }>) {
   });
   if (sources.length) facts.push({ label: 'Source', value: sources.join(', ') });
   return (
-    <Card aria-labelledby="action-details">
-      <CardHeader>
-        <CardTitle id="action-details">Details</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Section aria-labelledby="action-details">
+      <SectionTitle id="action-details" level={2} className="sr-only">
+        Details
+      </SectionTitle>
+      <Stack gap="workspace">
+        <p className={textRole('data', 'break-all')}>{readableUrl(action.target_label)}</p>
         <FactList layout="ruled" facts={facts} />
-      </CardContent>
-    </Card>
+      </Stack>
+    </Section>
   );
 }
 
@@ -290,15 +255,15 @@ function WhatToDo({ action }: Readonly<{ action: ActionDetail }>) {
   const todo = steps(action);
   if (todo.length === 0) return null;
   return (
-    <Section title="What to do" id="action-todo">
+    <ActionSection title="What to do" id="action-todo">
       <Stack as="ol" gap="tight" className="list-inside list-decimal">
         {todo.map((step) => (
-          <li key={step} className={textRole('body', 'text-ink')}>
+          <li key={step} className={textRole('body')}>
             {step}
           </li>
         ))}
       </Stack>
-    </Section>
+    </ActionSection>
   );
 }
 
@@ -309,15 +274,15 @@ function TextList({
 }: Readonly<{ title: string; id: string; items: readonly string[] }>) {
   if (items.length === 0) return null;
   return (
-    <Section title={title} id={id}>
+    <ActionSection title={title} id={id}>
       <Stack as="ul" gap="tight" className="list-inside list-disc">
         {items.map((item) => (
-          <li key={item} className={textRole('body', 'text-ink')}>
+          <li key={item} className={textRole('body')}>
             {item}
           </li>
         ))}
       </Stack>
-    </Section>
+    </ActionSection>
   );
 }
 
@@ -328,38 +293,33 @@ function Findings({
 }: Readonly<{ action: ActionDetail; onOpenEvidence: (id: string) => void }>) {
   if (action.members.length === 0) return null;
   return (
-    <Section title="Findings" id="action-findings">
-      <Card>
-        <CardContent>
-          <ul className={ledgerClasses()}>
-            {action.members.map((member) => (
-              <Inline
-                as="li"
-                key={member.id}
-                gap="compact"
-                className={ledgerItemClasses('flex-wrap items-start')}
-              >
-                <span className={textRole('itemTitle', 'min-w-0 flex-1')}>{member.title}</span>
-                <Button variant="ghost" onClick={() => onOpenEvidence(member.id)}>
-                  View evidence
-                </Button>
-              </Inline>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
-    </Section>
+    <ActionSection title="Findings" id="action-findings">
+      <ul className={ledgerClasses()}>
+        {action.members.map((member) => (
+          <Inline
+            as="li"
+            key={member.id}
+            gap="compact"
+            className={ledgerItemClasses('flex-wrap items-start')}
+          >
+            <span className={textRole('body', 'min-w-0 flex-1')}>{member.title}</span>
+            <Button variant="quiet" onClick={() => onOpenEvidence(member.id)}>
+              View evidence
+            </Button>
+          </Inline>
+        ))}
+      </ul>
+    </ActionSection>
   );
 }
 
 const isText = (value: string | null): value is string => Boolean(value);
 
 /**
- * The page's three actions, floating at the bottom of the column while it
- * scrolls and resting after its last section: Dismiss (Reopen once
- * dismissed), Mark implemented while the Action can be declared, and Work
- * with the agent, the page's primary action. A declared Action keeps only
- * the Agent. An Agent output is declared from its chat, which names the
+ * The page's three decisions in the record's sticky action bar: Dismiss
+ * (Reopen once dismissed), Mark implemented while the Action can be declared,
+ * and Work with the agent, the page's primary action. A declared Action keeps
+ * only the Agent. An Agent output is declared from its chat, which names the
  * exact revision shipped; here Mark implemented declares work done outside
  * CiteLadder.
  */
@@ -394,7 +354,7 @@ function ActionBar({
       />
     );
   return (
-    <FloatingBar label="Work on this Action">
+    <Inline as="fieldset" aria-label="Work on this Action" className="flex-wrap justify-end">
       {undeclared ? (
         <Button
           variant="secondary"
@@ -408,7 +368,7 @@ function ActionBar({
       <Button asChild variant="primary">
         <ProjectLink href={actionHandoffHref(action)}>Work with the agent</ProjectLink>
       </Button>
-    </FloatingBar>
+    </Inline>
   );
 }
 
@@ -422,36 +382,30 @@ function LinkedChats({
   );
   const rows = chats.data?.pages.flatMap((page) => page.items) ?? [];
   return (
-    <Section title="Chats" id="action-chats">
+    <ActionSection title="Chats" id="action-chats">
       {chats.isError ? (
-        <ReadError {...readErrorProps(chats)} fallback="Linked chats could not be loaded." />
+        <Notice
+          kind="read"
+          {...readErrorProps(chats)}
+          fallback="Linked chats could not be loaded."
+        />
       ) : null}
       {chats.isSuccess && rows.length === 0 ? (
-        <QueryState kind="empty" inline message="No chats have worked on this Action yet." />
+        <StateBlock kind="empty" inline message="No chats have worked on this Action yet." />
       ) : null}
       {rows.length > 0 ? (
-        // One list in one card: a card per chat stacked boxes for a single row
-        // of text each.
-        <Card>
-          <CardContent>
-            <ul className={ledgerClasses()}>
-              {rows.map((chat) => (
-                <Stack as="li" gap="tight" key={chat.id} className={ledgerItemClasses()}>
-                  <TextLink
-                    href={`/agent/chats/${chat.id}`}
-                    text="itemTitle"
-                    className="justify-self-start"
-                  >
-                    {chat.title}
-                  </TextLink>
-                  {chat.output_kind ? (
-                    <span className={textRole('caption')}>{kindLabel(chat.output_kind)}</span>
-                  ) : null}
-                </Stack>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+        <ul className={ledgerClasses()}>
+          {rows.map((chat) => (
+            <Stack as="li" gap="tight" key={chat.id} className={ledgerItemClasses()}>
+              <TextLink href={`/agent/chats/${chat.id}`} text="body" className="justify-self-start">
+                {chat.title}
+              </TextLink>
+              {chat.output_kind ? (
+                <span className={textRole('caption')}>{kindLabel(chat.output_kind)}</span>
+              ) : null}
+            </Stack>
+          ))}
+        </ul>
       ) : null}
       {chats.hasNextPage ? (
         <Button
@@ -463,6 +417,6 @@ function LinkedChats({
           Show more chats
         </Button>
       ) : null}
-    </Section>
+    </ActionSection>
   );
 }

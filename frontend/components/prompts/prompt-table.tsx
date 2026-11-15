@@ -10,7 +10,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { Switch } from '@/components/ui/switch';
-import { MissingValue, UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
 import type { NamedBrand, Prompt, PromptStatus } from '@citeladder/contracts';
 import { ICONS } from '@/lib/icons';
@@ -74,8 +74,11 @@ export function PromptTable({
   actions,
   measurements,
   setNames,
+  commerceSetIds,
 }: Readonly<{
   prompts: Prompt[];
+  /** Sets whose prompts Commerce measures as a shelf: they have no per-prompt figures. */
+  commerceSetIds?: ReadonlySet<string>;
   /** Each prompt set's name by id: the library lists every set's prompts. */
   setNames?: ReadonlyMap<string, string>;
   /**
@@ -95,10 +98,9 @@ export function PromptTable({
   return (
     <DataTable
       label="Prompts"
-      // Every column fits the page from the owner's 982px desktop up; below
-      // that the table scrolls with the prompt pinned.
-      minWidth={measured ? 'md' : 'sm'}
-      pinFirstColumn
+      // The measured columns take their full width; narrower than that the
+      // table scrolls in its frame with the prompt pinned and readable.
+      minWidth={measured ? 'lg' : 'sm'}
       columns={promptColumns(measured, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
@@ -139,7 +141,10 @@ export function PromptTable({
               secondary={rowCaption(prompt, setNames?.get(prompt.prompt_set_id))}
             />
           </TableCell>
-          {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
+          {measured && commerceSetIds?.has(prompt.prompt_set_id) ? <ShelfMeasuredCells /> : null}
+          {measured && !commerceSetIds?.has(prompt.prompt_set_id) ? (
+            <MeasuredCells measurement={measurements?.get(prompt.id)} />
+          ) : null}
           {actions ? (
             <PromptRowControls
               prompt={prompt}
@@ -276,11 +281,7 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
   return (
     <>
       <TableCell numeric>
-        {measurement ? (
-          formatRate(measurement.visibilityRate)
-        ) : (
-          <UnavailableValue state="not_measured" />
-        )}
+        {measurement ? formatRate(measurement.visibilityRate) : <Absence state="not_measured" />}
       </TableCell>
       <TableCell>
         {measurement ? (
@@ -290,19 +291,15 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
             answers="this prompt's answers"
           />
         ) : (
-          <UnavailableValue state="not_measured" />
+          <Absence state="not_measured" />
         )}
       </TableCell>
       <TableCell numeric>
-        {measurement ? (
-          formatRate(measurement.ownedCitationRate)
-        ) : (
-          <UnavailableValue state="not_measured" />
-        )}
+        {measurement ? formatRate(measurement.ownedCitationRate) : <Absence state="not_measured" />}
       </TableCell>
       <TableCell numeric>
         {measurement?.position == null ? (
-          <UnavailableValue state="not_measured" />
+          <Absence state="not_measured" />
         ) : (
           <span
             title={`Average of ${formatPositionExact(measurement.position)} across this prompt's answers`}
@@ -318,6 +315,28 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
   );
 }
 
+/**
+ * A Commerce prompt is measured as part of the shopping shelf, never on its
+ * own: its figures do not apply here (a known gap, not a missing run).
+ */
+function ShelfMeasuredCells() {
+  return (
+    <>
+      <TableCell numeric>
+        <Absence
+          state="not_applicable"
+          reason="Commerce prompts are measured together as the shopping shelf, not one prompt at a time. See Shopping."
+        />
+      </TableCell>
+      {MEASURED_COLUMNS.slice(1).map((column) => (
+        <TableCell key={column.key} numeric={column.numeric}>
+          <Absence state="not_applicable" />
+        </TableCell>
+      ))}
+    </>
+  );
+}
+
 const NOT_COMPARED = {
   changed_context:
     'Not comparable with its previous measurement: the run settings or prompt changed.',
@@ -326,19 +345,16 @@ const NOT_COMPARED = {
 
 /** The change since the prompt's previous measurement, or why there is none. */
 function ChangeValue({ change }: Readonly<{ change?: PromptChange }>) {
-  if (change === undefined) return <UnavailableValue state="not_measured" />;
+  if (change === undefined) return <Absence state="not_measured" />;
   switch (change.kind) {
     case 'delta':
       return <Delta value={change.points} unit=" pp" />;
     case 'first':
       return (
-        <MissingValue
-          state="not_applicable"
-          reason="First measurement: nothing earlier to compare."
-        />
+        <Absence state="not_applicable" reason="First measurement: nothing earlier to compare." />
       );
     case 'not_compared':
-      return <MissingValue state="unknown" reason={NOT_COMPARED[change.reason]} />;
+      return <Absence state="unknown" reason={NOT_COMPARED[change.reason]} />;
     default: {
       const unhandled: never = change;
       return unhandled;

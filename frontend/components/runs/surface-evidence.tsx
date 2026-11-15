@@ -1,13 +1,10 @@
 import { Check, Link2, Minus, Users } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
-import { QueryState } from '@/components/ui/query-state';
-import { StatRow } from '@/components/ui/stat-row';
 import { ClampText, TableCell, TableRow, TableRowHeader } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -19,6 +16,9 @@ import {
 } from '@/components/ui/workspace';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@citeladder/contracts';
 import { cn } from '@/lib/utils';
+import { StateBlock } from '@/components/ui/state-block';
+import { wellClasses } from '@/components/ui/slip';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
  * What one Google AI Overview actually showed.
@@ -52,7 +52,7 @@ function SignalCell({ present, label }: Readonly<{ present: boolean; label: stri
     <TableCell>
       <Inline
         as="span"
-        className={cn('type-body inline-flex', present ? 'text-positive' : 'text-ink-muted')}
+        className={cn('type-body inline-flex', present ? 'text-positive' : 'text-ink-2')}
       >
         <Icon icon={present ? Check : Minus} />
         <span className="sr-only">{label}: </span>
@@ -68,7 +68,7 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
       <TableRowHeader>
         <Inline as="span">
           <ClampText>{entity.name}</ClampText>
-          {entity.kind === 'brand' ? <Badge>Your brand</Badge> : null}
+          {entity.kind === 'brand' ? <Tag>Your brand</Tag> : null}
         </Inline>
       </TableRowHeader>
       <SignalCell present={entity.mentioned} label="Named in the answer" />
@@ -78,7 +78,7 @@ function EntityRow({ entity }: Readonly<{ entity: SurfaceEntity }>) {
         {/* Null is "never named", which is not last place, so it says so
             rather than taking a number one position behind everyone else. */}
         {entity.mention_order === null ? (
-          <span className="text-ink-muted">Not named</span>
+          <span className="text-ink-2">Not named</span>
         ) : (
           `#${entity.mention_order}`
         )}
@@ -148,7 +148,7 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
         }
       />
       {links.length === 0 ? (
-        <QueryState
+        <StateBlock
           kind="empty"
           headingLevel={3}
           icon={Link2}
@@ -170,11 +170,11 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
                 className={ledgerItemClasses()}
               >
                 {href ? (
-                  <TextLink variant="external" text="itemTitle" href={href} className="max-w-full">
+                  <TextLink variant="external" text="body" href={href} className="max-w-full">
                     <span className="truncate">{title}</span>
                   </TextLink>
                 ) : (
-                  <p className={textRole('itemTitle', 'truncate')}>{title}</p>
+                  <p className={textRole('body', 'truncate')}>{title}</p>
                 )}
                 <p className="type-caption truncate">{link.domain}</p>
               </Stack>
@@ -213,7 +213,7 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
   return (
     <Stack as="section" gap="workspace" className="min-w-0">
       <SubsectionHeader title="AI Overview details" description={presenceCaption(evidence)} />
-      <StatRow
+      <FigureStrip
         segments={[
           { key: 'overview', label: 'Overview', value: presenceLabel(evidence) },
           {
@@ -241,7 +241,7 @@ export function SurfaceEvidence({ evidence }: Readonly<{ evidence: SearchSurface
           <InlineLinks links={evidence.links} />
         </>
       ) : (
-        <div className={panelClasses('type-body min-w-0')}>
+        <div className={wellClasses('type-body text-ink-2 min-w-0')}>
           {evidence.aio_present === false
             ? 'There was nothing to compose: no overview appeared, so no brand could appear in one.'
             : 'No presence can be reported for a search that was never retrieved. This is a gap in our measurement, not an absence of the brand.'}

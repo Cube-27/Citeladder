@@ -4,9 +4,9 @@ import { Suspense, useEffect, useState, type ReactNode } from 'react';
 
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { UserMenuTrigger } from '@/components/layout/user-menu';
-import { AuthActions, AuthCard, AuthShell } from '@/components/ui/auth-shell';
+import { FlowBlock, FlowPage } from '@/components/templates/flow-page';
+import { AuthActions } from '@/components/ui/auth-shell';
 import { Button } from '@/components/ui/button';
-import { QueryState } from '@/components/ui/query-state';
 import { refetchBilling } from '@/lib/api/billing';
 import { capabilityRemaining } from '@/lib/billing/entitlement-capability';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
@@ -19,6 +19,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { OnboardingScreen } from './onboarding-screen';
 import { WorkspaceSetup } from './workspace-setup';
 import { PLANS_HREF } from '@/lib/billing/plan-limit';
+import { StateBlock } from '@/components/ui/state-block';
 
 export function OnboardingPageClient() {
   return (
@@ -125,7 +126,7 @@ function ProjectSetupLoading({
     return () => window.clearTimeout(timer);
   }, [attempt]);
 
-  if (!stalled) return <QueryState kind="loading" label="Loading your workspace…" />;
+  if (!stalled) return <StateBlock kind="loading" label="Loading your workspace…" />;
   return (
     <ProjectSetupBlocked
       title="Your workspace is taking longer to load"
@@ -156,8 +157,8 @@ function ProjectSetupBlocked({
   plans?: boolean;
 }>) {
   return (
-    <AuthShell mainLabel="Project setup" barEnd={<UserMenuTrigger presenter="compact" />}>
-      <AuthCard title={title} sub={children}>
+    <FlowPage label="Project setup" barEnd={<UserMenuTrigger presenter="compact" />}>
+      <FlowBlock title={title} sub={children}>
         <AuthActions>
           {onRetry && (
             <Button variant="primary" onClick={onRetry}>
@@ -173,7 +174,7 @@ function ProjectSetupBlocked({
             <Link to={projectsHref}>Back to projects</Link>
           </Button>
         </AuthActions>
-      </AuthCard>
-    </AuthShell>
+      </FlowBlock>
+    </FlowPage>
   );
 }

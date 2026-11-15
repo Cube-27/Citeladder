@@ -1,7 +1,7 @@
 import { MessageSquarePlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { QueryState } from '@/components/ui/query-state';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Shown when the active project's prompt set has no prompts. Onboarding creates
@@ -18,7 +18,7 @@ export function PromptEmptyState({
 }>) {
   if (!add) {
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={MessageSquarePlus}
         heading="No prompts tracked yet"
@@ -28,7 +28,7 @@ export function PromptEmptyState({
   }
   const { onGenerate, onAdd } = add;
   return (
-    <QueryState
+    <StateBlock
       kind="empty"
       icon={MessageSquarePlus}
       heading="Choose the questions you want to track"

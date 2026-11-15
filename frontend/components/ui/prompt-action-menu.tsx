@@ -52,7 +52,7 @@ export function PromptMenuLink({
     <MenuLinkItem>
       <ProjectLink href={href} aria-label={accessibleName}>
         <span className="min-w-0 flex-1 truncate">{label}</span>
-        {detail ? <span className="text-ink-muted shrink-0 ps-4">{detail}</span> : null}
+        {detail ? <span className="text-ink-2 shrink-0 ps-4">{detail}</span> : null}
       </ProjectLink>
     </MenuLinkItem>
   );

@@ -27,7 +27,7 @@ function PageSummary({
         {page.title || page.url}
       </TextLink>
       {page.description || page.excerpt ? (
-        <p className="type-body">{page.description || page.excerpt}</p>
+        <p className="type-body text-ink-2">{page.description || page.excerpt}</p>
       ) : null}
     </Stack>
   );

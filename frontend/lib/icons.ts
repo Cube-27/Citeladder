@@ -57,7 +57,7 @@ import {
  *   it by the icon's size, so a per-call-site number makes weight drift, and
  *   the stylesheet overrides the prop anyway. A deliberate outlier uses
  *   inline `style={{ strokeWidth: n }}`.
- * - Colour stays `currentColor`, so `text-ink-muted` and `text-accent-ink` paint
+ * - Colour stays `currentColor`, so `text-ink-2` and `text-accent-text` paint
  *   the glyph. Never hard-code a stroke colour.
  */
 export const ICONS = {

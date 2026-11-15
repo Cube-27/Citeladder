@@ -1,7 +1,7 @@
 import type { ReactNode, RefObject } from 'react';
 
-import { CARD_FACE } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { SLIP_FACE } from '@/components/ui/slip';
 
 /**
  * The editor workspace (the Agent's page workspace, E1): a document beside
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  */
 const FILL = 'h-[calc(100dvh-var(--route-chrome-height))] min-h-0';
 // `surface-card` marks a container, so a panel inside it takes the inset fill.
-const COLUMN = cn('surface-card', CARD_FACE, 'flex min-h-0 min-w-0 flex-col overflow-hidden');
+const COLUMN = cn('surface-card', SLIP_FACE, 'flex min-h-0 min-w-0 flex-col overflow-hidden');
 
 export function EditorWorkspace({ page, rail }: Readonly<{ page: ReactNode; rail: ReactNode }>) {
   return (
@@ -57,7 +57,7 @@ export function EditorPane({
   return (
     <section aria-label={label} className={cn(COLUMN, 'flex-1')}>
       {head ? (
-        <div className="border-line grid gap-2 border-b px-[var(--card-padding)] py-3">{head}</div>
+        <div className="border-rule grid gap-2 border-b px-[var(--card-padding)] py-3">{head}</div>
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">{children}</div>
     </section>
@@ -89,7 +89,7 @@ export function EditorRail({
         <div
           className={cn(
             'flex min-h-0 flex-col',
-            panel ? 'border-line max-h-[50%] shrink-0 border-t' : 'flex-1',
+            panel ? 'border-rule max-h-[50%] shrink-0 border-t' : 'flex-1',
           )}
         >
           {dock}

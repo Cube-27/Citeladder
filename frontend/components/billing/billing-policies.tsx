@@ -4,10 +4,9 @@ import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 import { contactSalesHref } from '@/lib/config/contact';
 
 import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * A website page in a new tab. The origin may be unset in development (a
@@ -55,31 +54,32 @@ export function BillingSupport({
   const email = contact?.email || PARENT_COMPANY.email;
   const url = contactSalesHref(contact?.contact_url, websiteHref('/contact'));
   return (
-    <Stack
-      as="section"
-      gap="compact"
-      className={cardClasses()}
-      aria-labelledby="billing-support-title"
-    >
-      <EditorialSectionHeader title="Billing help" headingId="billing-support-title" />
-      <p className={textRole('body')}>
-        Questions about a charge, a refund or cancelling? Email{' '}
-        <TextLink asChild text="inherit">
-          <a href={`mailto:${email}`}>{email}</a>
-        </TextLink>
-        {contact?.phone ? `, call ${contact.phone}` : ''} or use the{' '}
-        <TextLink asChild variant="external" text="inherit">
-          <a href={url} target="_blank" rel="noreferrer">
-            contact form
-          </a>
-        </TextLink>
-        {'. '}Include your workspace name and the invoice number; never send card details.
-      </p>
-      <p className={textRole('caption')}>
-        <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> ·{' '}
-        <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink> ·{' '}
-        <PolicyLink path="/terms">Terms of Service</PolicyLink>
-      </p>
-    </Stack>
+    <Section aria-labelledby="billing-support-title">
+      <SectionHeader>
+        <SectionTitle id="billing-support-title" level={2}>
+          Billing help
+        </SectionTitle>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="compact">
+        <p className={textRole('body')}>
+          Questions about a charge, a refund or cancelling? Email{' '}
+          <TextLink asChild text="inherit">
+            <a href={`mailto:${email}`}>{email}</a>
+          </TextLink>
+          {contact?.phone ? `, call ${contact.phone}` : ''} or use the{' '}
+          <TextLink asChild variant="external" text="inherit">
+            <a href={url} target="_blank" rel="noreferrer">
+              contact form
+            </a>
+          </TextLink>
+          {'. '}Include your workspace name and the invoice number; never send card details.
+        </p>
+        <p className={textRole('caption')}>
+          <PolicyLink path="/refund-policy">Refund Policy</PolicyLink> ·{' '}
+          <PolicyLink path="/cancellation-policy">Cancellation Policy</PolicyLink> ·{' '}
+          <PolicyLink path="/terms">Terms of Service</PolicyLink>
+        </p>
+      </Stack>
+    </Section>
   );
 }

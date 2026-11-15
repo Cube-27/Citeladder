@@ -36,10 +36,10 @@ export function FieldGroup({
             {label}
           </span>
           {count ? (
-            <span className="text-caption text-ink-muted font-mono whitespace-nowrap">{count}</span>
+            <span className="text-caption text-ink-2 font-mono whitespace-nowrap">{count}</span>
           ) : null}
         </div>
-        {help ? <p className="text-body-sm text-ink-secondary">{help}</p> : null}
+        {help ? <p className="text-body-sm text-ink-2">{help}</p> : null}
       </div>
       {children}
       {note ? <p className="text-caption text-warning">{note}</p> : null}
@@ -116,9 +116,9 @@ export function ChecklistField<K extends string>({
   return (
     <FieldGroup label={label} help={help} count={count} note={note}>
       {items.length === 0 ? (
-        <p className="text-body-sm text-ink-secondary">{empty}</p>
+        <p className="text-body-sm text-ink-2">{empty}</p>
       ) : (
-        <ul className="bg-surface border-line divide-line divide-y rounded-md border">
+        <ul className="bg-surface border-rule divide-rule rounded-control divide-y border">
           {items.map((item) =>
             editor && item.id === editingId ? (
               <EditRow
@@ -182,7 +182,7 @@ function CheckRow({
         }
       />
       {item.meta ? (
-        <span className="text-caption text-ink-muted shrink-0 font-mono">{item.meta}</span>
+        <span className="text-caption text-ink-2 shrink-0 font-mono">{item.meta}</span>
       ) : null}
       {onEdit ? <IconButton icon={Pencil} label={onEdit.label} onClick={onEdit.start} /> : null}
       {item.extra}
@@ -235,7 +235,7 @@ function EditRow<K extends string>({
       <Button variant="primary" onClick={save} disabled={!complete}>
         Save
       </Button>
-      <Button variant="ghost" onClick={cancel}>
+      <Button variant="quiet" onClick={cancel}>
         Cancel
       </Button>
     </li>

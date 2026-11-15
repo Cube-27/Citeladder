@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 
-import type { Step, StepStatus } from '@/components/ui/step-list';
+import type { TrailStep, RungStatus } from '@/components/ui/rung-trail';
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
 
 /** How long each revealed step holds before the next one completes. */
 const STEP_REVEAL_MS = 360;
 
 /** Where one step sits relative to the reveal's cursor. */
-function statusAt(index: number, done: number): StepStatus {
+function statusAt(index: number, done: number): RungStatus {
   if (index < done) return 'done';
   return index === done ? 'running' : 'pending';
 }
 
-function announcementFor(current: Step | undefined, done: number): string {
+function announcementFor(current: TrailStep | undefined, done: number): string {
   if (!current) return `${done} steps complete`;
   return `${current.label}. ${current.detail ?? ''}`;
 }
@@ -24,9 +24,9 @@ function announcementFor(current: Step | undefined, done: number): string {
  * hears politely. A failed step is never hidden by the reveal.
  */
 export function useStaggeredSteps(
-  steps: readonly Step[],
+  steps: readonly TrailStep[],
   stagger: boolean,
-): Readonly<{ steps: readonly Step[]; done: number; announcement: string }> {
+): Readonly<{ steps: readonly TrailStep[]; done: number; announcement: string }> {
   const target = steps.filter((step) => step.status === 'done').length;
   const [shownDone, setShownDone] = useState(stagger ? 0 : target);
   const reduceMotion = useReducedMotion();
@@ -48,7 +48,7 @@ export function useStaggeredSteps(
 
   const shown = useMemo(() => {
     if (!animate || shownDone >= target) return steps;
-    return steps.map((step, index): Step => {
+    return steps.map((step, index): TrailStep => {
       if (step.status === 'failed') return step;
       return { ...step, status: statusAt(index, shownDone) };
     });

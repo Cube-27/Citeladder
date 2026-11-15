@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
 import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { projectDestination } from '@/lib/navigation/project-destination';
-import { Callout } from '@/components/ui/callout';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { TrafficUrlButton } from './url-panel';
 import { patternLabel } from '@/lib/ai-traffic/vocabulary';
+import { formatWindowDate } from '@/lib/format';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /** Nothing observed is a measured absence only when both sources were complete. */
 function nothingObservedLine(coverage: Readonly<{ crawl: string; ga4_complete: boolean }>) {
@@ -31,34 +31,35 @@ export function InsightStrip({
   // loading line would pull the Overview content up under the reader.
   const nothingObserved = data !== undefined && !data.patterns.length && !data.coverage.notice;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Observed patterns</CardTitle>
-      </CardHeader>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Observed patterns</SectionTitle>
+      </SectionHeader>
       <Stack>
         {query.isError ? (
-          <ReadError {...readErrorProps(query)} fallback="Could not read insights" />
+          <Notice kind="read" {...readErrorProps(query)} fallback="Could not read insights" />
         ) : null}
         {query.isLoading ? (
-          <p className="type-body text-ink-secondary">Loading persisted insights…</p>
+          <p className="type-body text-ink-2">Loading persisted insights…</p>
         ) : null}
         {nothingObserved ? (
-          <p className="type-body text-ink-secondary">{nothingObservedLine(data.coverage)}</p>
+          <p className="type-body text-ink-2">{nothingObservedLine(data.coverage)}</p>
         ) : null}
-        {data?.coverage.notice ? <Callout tone="info">{data.coverage.notice}</Callout> : null}
+        {data?.coverage.notice ? <Notice tone="info">{data.coverage.notice}</Notice> : null}
         {data ? (
           <p className="type-caption">
-            {data.window_start} – {data.window_end} · Co-occurrence only. AI apps can strip
-            referrers.
+            {formatWindowDate(data.window_start)} – {formatWindowDate(data.window_end)} ·
+            Co-occurrence only. AI apps can strip referrers.
           </p>
         ) : null}
         {data?.patterns.length ? (
           <ul className={ledgerClasses()}>
             {data.patterns.map((r) => (
               <Stack as="li" key={r.pattern} className={ledgerItemClasses()}>
-                <p className="type-body text-ink">{r.copy}</p>
+                <p className="type-body">{r.copy}</p>
                 <Inline gap="meta">
                   <TextLink
+                    className="inline-flex min-h-6 items-center"
                     aria-label={`Inspect pages: ${patternLabel(r.pattern)}`}
                     href={projectDestination(
                       '/ai-traffic',
@@ -92,6 +93,6 @@ export function InsightStrip({
           </ul>
         ) : null}
       </Stack>
-    </Card>
+    </Section>
   );
 }

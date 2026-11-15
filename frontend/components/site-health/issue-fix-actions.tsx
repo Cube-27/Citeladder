@@ -3,14 +3,13 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import type { IssueFixProgress } from '@citeladder/contracts';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { ApiError } from '@/lib/api/errors';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
+import { Notice } from '@/components/ui/notice';
 
 /** The project whose crawl the issue is in: Re-run all refreshes its reads once it lands. */
 export type IssueFixScope = Readonly<{ workspaceId: string; projectId: string }>;
@@ -52,9 +51,11 @@ export function IssueFixActions({
   const [notice, setNotice] = useState<Notice | null>(null);
   if (query.isError && !query.data)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load how many pages are fixed."
+        title="Could not load how many pages are fixed"
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
@@ -66,7 +67,7 @@ export function IssueFixActions({
   return (
     <Stack gap="tight" className="min-w-0">
       <Inline className="flex-wrap">
-        <span className={textRole('itemTitle', 'tabular-nums')}>{fixedLabel(progress)}</span>
+        <span className={textRole('body', 'tabular-nums')}>{fixedLabel(progress)}</span>
         {awaiting > 0 ? (
           <span className="type-caption tabular-nums">
             {formatCount(awaiting)} awaiting a re-audit
@@ -96,7 +97,7 @@ export function IssueFixActions({
       {canRun || rerunCount === null ? (
         <span className="type-caption">{rerunCaption(rerunCount)}</span>
       ) : null}
-      {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
+      {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
     </Stack>
   );
 }

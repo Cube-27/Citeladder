@@ -71,7 +71,7 @@ describe('the grounded brief behind an earned action', () => {
       />,
     );
 
-    expect(screen.getByText('Globex', { selector: '[data-badge-tone]' })).toBeVisible();
+    expect(screen.getByText('Globex', { selector: '[data-status-tone] span' })).toBeVisible();
     const quote = screen.getByRole('blockquote');
     expect(quote).toHaveTextContent('Globex leads the field for small teams.');
     expect(within(quote).getByText('Globex', { selector: 'mark' })).toBeVisible();
@@ -109,7 +109,9 @@ describe('the grounded brief behind an earned action', () => {
 
     const onPage = screen.getByText('Found on this page').parentElement!;
     const inAnswers = screen.getByText('Named in the answers, not on the page').parentElement!;
-    expect(within(onPage).getByText('Globex', { selector: '[data-badge-tone]' })).toBeVisible();
+    expect(
+      within(onPage).getByText('Globex', { selector: '[data-status-tone] span' }),
+    ).toBeVisible();
     expect(within(onPage).queryByText('Initech')).toBeNull();
     expect(within(inAnswers).getByText('Initech')).toBeVisible();
   });

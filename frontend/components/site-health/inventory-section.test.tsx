@@ -53,15 +53,12 @@ describe('InventorySection', () => {
     await user.click(await screen.findByRole('button', { name: 'Next page' }));
 
     const table = screen.getByRole('region', { name: 'Pages' });
-    const ordinal = (title: string) =>
-      within(table).getByText(title).closest('tr')?.querySelector('td')?.textContent;
-    expect(ordinal('Homepage')).toBe('1');
+    // The rows of the page being left stay drawn while the next one loads.
+    expect(within(table).getByText('Homepage')).toBeInTheDocument();
     expect(table).toHaveAttribute('aria-busy', 'true');
     expect(within(table).getByRole('button', { name: 'Previous page' })).toBeInTheDocument();
     expect(await within(table).findByText('Pricing')).toBeInTheDocument();
     expect(within(table).queryByText('Homepage')).not.toBeInTheDocument();
-    // The "#" column runs on from the page before rather than restarting.
-    expect(ordinal('Pricing')).toBe('11');
   });
 
   it('keeps the current tab’s rows on screen while another tab’s first page loads', async () => {

@@ -26,7 +26,8 @@ export type Fact = Readonly<{ label: ReactNode; value: ReactNode; key?: string }
 export type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns';
 
 const LIST = {
-  ruled: 'divide-line grid divide-y',
+  // In the app a ruled list closes on hairlines on both sides.
+  ruled: 'divide-rule border-rule grid divide-y [:root:not([data-public-surface])_&]:border-y',
   inline: 'flex flex-wrap items-center gap-x-6 gap-y-3',
   spread: 'grid gap-2',
   columns: 'grid gap-3 desktop:grid-flow-col desktop:auto-cols-fr',
@@ -42,21 +43,21 @@ const ROW = {
 } as const;
 
 const TERM = {
-  ruled: 'text-body-sm text-ink-secondary',
-  inline: textRole('label'),
-  spread: textRole('body', 'text-ink-muted'),
-  columns: textRole('label'),
+  ruled: 'text-body-sm text-ink-2',
+  inline: textRole('body', 'text-ink-2'),
+  spread: textRole('body', 'text-ink-2'),
+  columns: textRole('body', 'text-ink-2'),
 } as const;
 
 const DETAIL = {
   ruled: 'text-body-sm text-ink min-w-0 tabular-nums [overflow-wrap:anywhere]',
-  inline: textRole('body'),
+  inline: textRole('body', 'text-ink-2'),
   // A spread row's value is a right-aligned amount or count (a quote line),
   // so its digits take the figure face and line up with the total under it.
   spread: textRole('body', 'text-ink font-mono'),
   columns: textRole(
     'caption',
-    'flex min-h-[var(--badge-height-sm)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
+    'flex min-h-[var(--tag-height)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
   ),
 } as const;
 
@@ -87,7 +88,7 @@ export function FactList({
         </div>
       ))}
       {total && layout === 'spread' ? (
-        <div className={cn(ROW.spread, 'border-line border-t pt-2')}>
+        <div className={cn(ROW.spread, 'border-rule border-t pt-2')}>
           <dt className={textRole('emphasis')}>{total.label}</dt>
           <dd className={textRole('emphasis', 'font-mono')}>{total.value}</dd>
         </div>
@@ -122,8 +123,8 @@ export function ValueLedger({
           className="flex min-h-[var(--control-md)] items-center justify-between gap-2"
         >
           {/* The row's name is read first (primary ink); its value supports it. */}
-          <span className={textRole('itemTitle', 'min-w-0 truncate')}>{item.label}</span>
-          <span className={textRole('label', 'shrink-0 font-mono')}>{item.value}</span>
+          <span className={textRole('body', 'min-w-0 truncate')}>{item.label}</span>
+          <span className={textRole('body', 'text-ink-2 shrink-0 font-mono')}>{item.value}</span>
         </li>
       ))}
       {padding.map((slot) => (

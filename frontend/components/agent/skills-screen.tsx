@@ -1,20 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
-import { ListScreen } from '@/components/layout/page-shell';
+import { CollectionPage } from '@/components/templates/collection-page';
 import { ProjectLink } from '@/components/ui/project-link';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card';
-import { QueryState } from '@/components/ui/query-state';
 import { textRole } from '@/components/ui/typography';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { StateBlock } from '@/components/ui/state-block';
+import { slipClasses } from '@/components/ui/slip';
 
 /**
  * The skills the agent can apply: name, one sentence and what each produces.
@@ -27,7 +27,7 @@ export function SkillsScreen() {
   let body;
   if (query.isError)
     body = (
-      <QueryState
+      <StateBlock
         kind="error"
         error={query.error}
         fallback="Skills could not be loaded."
@@ -35,20 +35,17 @@ export function SkillsScreen() {
         pending={query.isFetching}
       />
     );
-  else if (!query.data) body = <QueryState kind="loading" />;
+  else if (!query.data) body = <StateBlock kind="loading" />;
   else body = <SkillGroups skills={query.data.skills} />;
 
   return (
-    <ListScreen narrow>
-      <Stack gap="section">
-        {/* The template has no description slot, so the route's intro is the body's first child. */}
-        <p className={textRole('body')}>
-          The agent picks a skill when a task needs one, or choose one here or type / in the
-          composer.
-        </p>
-        {body}
-      </Stack>
-    </ListScreen>
+    <CollectionPage>
+      {/* The template has no description slot, so the route's intro is the body's first child. */}
+      <p className={textRole('body', 'text-ink-2')}>
+        The agent picks a skill when a task needs one, or choose one here or type / in the composer.
+      </p>
+      {body}
+    </CollectionPage>
   );
 }
 
@@ -58,7 +55,7 @@ export function SkillsScreen() {
  * no badge rather than a placeholder.
  */
 function OutputBadge({ label }: Readonly<{ label: string | undefined }>) {
-  return label ? <Badge>{`Output: ${label}`}</Badge> : <span />;
+  return label ? <Tag>{`Output: ${label}`}</Tag> : <span />;
 }
 
 function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
@@ -69,23 +66,25 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
     groups.set(label, [...(groups.get(label) ?? []), skill]);
   }
   return (
-    <Stack gap="section">
+    <>
       {[...groups].map(([group, rows]) => (
-        <Stack as="section" key={group} aria-label={group}>
-          <EditorialSectionHeader
-            title={group}
-            description={`${rows.length} ${rows.length === 1 ? 'skill' : 'skills'}`}
-          />
+        <Section key={group} aria-label={group}>
+          <SectionHeader>
+            <SectionTitle level={2}>{group}</SectionTitle>
+            <SectionDescription>
+              {rows.length} {rows.length === 1 ? 'skill' : 'skills'}
+            </SectionDescription>
+          </SectionHeader>
           <AppGrid as="ul" layout="halves">
             {rows.map((skill) => (
-              <Stack as="li" key={skill.id} className={cardClasses()}>
+              <Stack as="li" key={skill.id} className={slipClasses()}>
                 <Stack gap="tight">
-                  <h3 className={textRole('itemTitle')}>{skill.label}</h3>
-                  <p className={textRole('body')}>{skill.description}</p>
+                  <h3 className={textRole('subheading')}>{skill.label}</h3>
+                  <p className={textRole('body', 'text-ink-2')}>{skill.description}</p>
                 </Stack>
                 <Inline className="flex-wrap justify-between self-end">
                   <OutputBadge label={outputKind(skill.output_kind)?.label} />
-                  <Button asChild variant="ghost">
+                  <Button asChild variant="quiet">
                     <ProjectLink
                       href={agentHandoffHref({ skillId: skill.id })}
                       aria-label={`Start a chat with ${skill.label}`}
@@ -97,8 +96,8 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
               </Stack>
             ))}
           </AppGrid>
-        </Stack>
+        </Section>
       ))}
-    </Stack>
+    </>
   );
 }

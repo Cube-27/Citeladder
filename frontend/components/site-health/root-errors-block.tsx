@@ -1,5 +1,5 @@
 import { Inline, Stack } from '@/components/ui/layout';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { RootError } from '@citeladder/contracts';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
@@ -18,7 +18,7 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
   const keyOccurrences = new Map<string, number>();
   return (
     <Stack gap="item" data-testid="root-errors-block">
-      <p className={textRole('body')}>
+      <p className={textRole('body', 'text-ink-2')}>
         The start URL could not be fetched — the crawl never reached any page. Each row is one
         network call the crawler made.
       </p>
@@ -42,25 +42,27 @@ export function RootErrorsBlock({ errors }: Readonly<{ errors: RootError[] }>) {
               data-testid="root-error-row"
               className={ledgerItemClasses()}
             >
-              <span className={textRole('itemTitle', 'tabular-nums')}>{error.method}</span>
-              <span className="type-body min-w-0 flex-1 truncate tabular-nums">{error.target}</span>
+              <span className={textRole('body', 'tabular-nums')}>{error.method}</span>
+              <span className="type-body text-ink-2 min-w-0 flex-1 truncate tabular-nums">
+                {error.target}
+              </span>
               {error.error_code ? (
                 <span className="type-body text-negative tabular-nums">{error.error_code}</span>
               ) : null}
-              <span className="type-body tabular-nums">
+              <span className="type-body text-ink-2 tabular-nums">
                 {error.status_code !== null ? (
                   `HTTP ${error.status_code}`
                 ) : (
-                  <UnavailableValue state="not_measured" />
+                  <Absence state="not_measured" />
                 )}
               </span>
-              <span className="type-body tabular-nums">
+              <span className="type-body text-ink-2 tabular-nums">
                 {/* B6: 0 ms is an unmeasured hop (DNS failure never reached the
                   wire), not an instant response — show the placeholder. */}
                 {error.latency_ms !== null && error.latency_ms > 0 ? (
                   `${error.latency_ms} ms`
                 ) : (
-                  <UnavailableValue state="not_measured" />
+                  <Absence state="not_measured" />
                 )}
               </span>
             </Inline>

@@ -109,7 +109,7 @@ export function Select<T extends string>({
         className={cn(
           'focus-input',
           FIELD_BOX,
-          'data-[placeholder]:text-ink-muted data-[state=open]:border-focus flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-45',
+          'data-[placeholder]:text-ink-2 data-[state=open]:border-focus flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60',
           className,
         )}
       >
@@ -126,7 +126,7 @@ export function Select<T extends string>({
           ))}
         </span>
         <SelectPrimitive.Icon asChild>
-          <ChevronDown className="text-ink-muted size-4 shrink-0" aria-hidden />
+          <ChevronDown className="text-ink-2 size-4 shrink-0" aria-hidden />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
@@ -139,7 +139,7 @@ export function Select<T extends string>({
             'max-h-[min(18.5rem,var(--radix-select-content-available-height))] min-w-[max(15rem,var(--radix-select-trigger-width))]',
           )}
         >
-          <SelectPrimitive.ScrollUpButton className="text-ink-muted flex h-[var(--menu-item-height)] items-center justify-center">
+          <SelectPrimitive.ScrollUpButton className="text-ink-2 flex h-[var(--control-md)] items-center justify-center">
             <ChevronUp className="size-4" aria-hidden />
           </SelectPrimitive.ScrollUpButton>
           <SelectPrimitive.Viewport>
@@ -158,11 +158,11 @@ export function Select<T extends string>({
                     <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                   </span>
                   {option.description ? (
-                    <span className="text-ink-muted text-caption">{option.description}</span>
+                    <span className="type-caption">{option.description}</span>
                   ) : null}
                 </span>
                 {option.detail ? (
-                  <span id={`${detailId}-${index}`} className="text-ink-muted ms-auto font-mono">
+                  <span id={`${detailId}-${index}`} className="type-data-sm text-ink-2 ms-auto">
                     {option.detail}
                   </span>
                 ) : null}
@@ -172,7 +172,7 @@ export function Select<T extends string>({
               </SelectPrimitive.Item>
             ))}
           </SelectPrimitive.Viewport>
-          <SelectPrimitive.ScrollDownButton className="text-ink-muted flex h-[var(--menu-item-height)] items-center justify-center">
+          <SelectPrimitive.ScrollDownButton className="text-ink-2 flex h-[var(--control-md)] items-center justify-center">
             <ChevronDown className="size-4" aria-hidden />
           </SelectPrimitive.ScrollDownButton>
         </SelectPrimitive.Content>

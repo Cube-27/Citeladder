@@ -3,7 +3,7 @@ import { LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
-import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/app-shell';
+import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/sidebar';
 import {
   Menu,
   MenuContent,
@@ -21,7 +21,7 @@ import { scopedNavigationDestination } from '@/lib/navigation/project-destinatio
 import { useProjectContext } from '@/lib/project/project-context';
 import { Avatar } from '@/components/ui/avatar';
 
-import { USER_MENU_ITEMS } from './nav-items';
+import { ACCOUNT_MENU_ITEMS } from './nav-items';
 
 type UserMenuState = {
   email: string;
@@ -48,7 +48,7 @@ function UserMenuContent({ presenter }: Readonly<{ presenter: UserMenuPresenter 
     <MenuContent align={sidebar ? 'start' : 'end'} side={sidebar ? 'top' : 'bottom'}>
       <MenuLabel>{email}</MenuLabel>
       <MenuSeparator />
-      {USER_MENU_ITEMS.map(({ label, href, icon: Icon, scope }) => (
+      {ACCOUNT_MENU_ITEMS.map(({ label, href, icon: Icon, scope }) => (
         <MenuLinkItem key={href}>
           <Link to={scopedNavigationDestination(href, scope, activeProjectId, activeWorkspaceId)}>
             <Icon className="size-4 shrink-0" aria-hidden />
@@ -106,7 +106,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
       ) : (
         <MenuTrigger
           aria-label={label}
-          className="focus-ring not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed flex size-[var(--control-md)] shrink-0 items-center justify-center rounded-md transition-colors"
+          className="focus-ring not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed rounded-control flex size-[var(--control-md)] shrink-0 items-center justify-center transition-colors"
         >
           <Avatar name={email} />
         </MenuTrigger>

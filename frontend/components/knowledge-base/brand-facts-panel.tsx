@@ -8,20 +8,21 @@ import {
   type FactTopic,
 } from '@citeladder/contracts/fact-checking';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
-import { QueryState } from '@/components/ui/query-state';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { panelClasses } from '@/components/ui/panel';
 import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 import { TOPIC_LABELS } from '@/lib/visibility/accuracy';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { wellClasses } from '@/components/ui/slip';
 
 const TOPIC_OPTIONS = factTopicSchema.options.map((topic) => ({
   value: topic,
@@ -66,15 +67,19 @@ export function BrandFactsPanel({
     <Stack gap="workspace">
       {mayEdit ? <AddFact pending={create.isPending} onAdd={addFact} /> : null}
       {create.isError ? (
-        <MutationNotice notice={mutationNoticeForError(create.error, { action: 'add the fact' })} />
+        <Notice
+          kind="mutation"
+          notice={mutationNoticeForError(create.error, { action: 'add the fact' })}
+        />
       ) : null}
       {change.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(change.error, { action: 'update the fact' })}
         />
       ) : null}
       {!active.length ? (
-        <QueryState
+        <StateBlock
           kind="empty"
           inline
           message="No facts yet. Add pricing, plans, integrations or other facts to check."
@@ -93,7 +98,7 @@ export function BrandFactsPanel({
         </Stack>
       )}
       {retired.length ? (
-        <p className={textRole('caption', 'text-ink-muted')}>
+        <p className={textRole('caption', 'text-ink-2')}>
           {retired.length} retired {retired.length === 1 ? 'fact is' : 'facts are'} kept for earlier
           runs and no longer checked.
         </p>
@@ -122,7 +127,7 @@ function AddFact({
     <Stack
       as="form"
       gap="compact"
-      className={panelClasses()}
+      className={wellClasses()}
       onSubmit={(event) => {
         event.preventDefault();
         if (pending || !draft.statement.trim()) return;
@@ -186,17 +191,17 @@ function FactRow({
 }>) {
   const [editing, setEditing] = useState<string | null>(null);
   return (
-    <Stack as="li" gap="compact" className={panelClasses('min-w-0')}>
+    <Stack as="li" gap="compact" className={wellClasses('min-w-0')}>
       <Inline as="span" className="flex-wrap">
-        <Badge>{TOPIC_LABELS[fact.topic]}</Badge>
+        <Tag>{TOPIC_LABELS[fact.topic]}</Tag>
         {fact.status === 'confirmed' ? (
-          <Badge variant="status" value="success">
+          <StatusMark variant="status" value="success">
             Confirmed
-          </Badge>
+          </StatusMark>
         ) : (
-          <Badge variant="status" value="warning">
+          <StatusMark variant="status" value="warning">
             Draft · not used until confirmed
-          </Badge>
+          </StatusMark>
         )}
       </Inline>
       {editing === null ? (
@@ -211,10 +216,7 @@ function FactRow({
         />
       )}
       {fact.source_url ? (
-        <span
-          className={textRole('caption', 'text-ink-muted block truncate')}
-          title={fact.source_url}
-        >
+        <span className={textRole('caption', 'text-ink-2 block truncate')} title={fact.source_url}>
           {fact.source_url}
         </span>
       ) : null}
@@ -235,7 +237,7 @@ function FactRow({
                 Edit
               </Button>
               <Button
-                variant="ghost"
+                variant="quiet"
                 disabled={pending}
                 onClick={() => void onChange({ status: 'retired' }).catch(() => undefined)}
               >
@@ -257,7 +259,7 @@ function FactRow({
               >
                 Save
               </Button>
-              <Button variant="ghost" onClick={() => setEditing(null)}>
+              <Button variant="quiet" onClick={() => setEditing(null)}>
                 Cancel
               </Button>
             </>

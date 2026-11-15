@@ -343,7 +343,7 @@ describe('Declaration status', () => {
     );
     // Each check's own row; a family's failing pages are a list inside it.
     const rows = [...screen.getByRole('list', { name: 'Checks' }).children];
-    const check = 'Every affected page passes the Site Health check';
+    const check = 'Every affected page passes the Website check';
     const subject = 'Missing viewport meta tag';
     const read = 'Read Sep 25, 2026';
     expect(rows.map((item) => item.textContent)).toEqual([

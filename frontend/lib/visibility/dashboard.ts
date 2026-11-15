@@ -214,8 +214,8 @@ export const PLACEHOLDER = availabilityLabel('not_measured');
  * A formatted value, or `null` where the formatter had nothing to format.
  *
  * The formatters answer in WORDS, and the COMPONENT that renders them decides
- * to draw the shared mark instead — `UnavailableValue` and `MetricValue` both
- * do, pairing it with those words as its accessible name. Keeping the mark out
+ * to draw the shared mark instead — `Value` and `Absence` both do, pairing
+ * it with those words as its accessible name. Keeping the mark out
  * of the string is what makes that possible: a bare dash in a formatter's
  * output reaches the screen with nothing to announce it.
  */

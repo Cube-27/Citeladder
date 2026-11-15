@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom';
 import type { z } from 'zod';
 import type { crawlLogAvailabilitySchema } from '@citeladder/contracts/ai-traffic';
-import { Callout } from '@/components/ui/callout';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
+import { Notice } from '@/components/ui/notice';
 
 /**
  * Why crawl log collection is unavailable: the plan lacks AI crawler logs (an
@@ -14,14 +14,14 @@ export function CrawlLogAvailabilityNotice({
 }: Readonly<{ availability: z.infer<typeof crawlLogAvailabilitySchema>; workspaceId: string }>) {
   if (availability === 'disabled')
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         Collection is paused by CiteLadder. Sources keep their settings and reports stay readable;
         new log batches are refused until collection resumes.
-      </Callout>
+      </Notice>
     );
   if (availability === 'not_in_plan')
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         AI crawler logs are included in paid plans. They show which AI crawlers fetch your pages,
         straight from your CDN or server logs.{' '}
         <Link
@@ -30,7 +30,7 @@ export function CrawlLogAvailabilityNotice({
         >
           Choose a plan
         </Link>
-      </Callout>
+      </Notice>
     );
   return null;
 }

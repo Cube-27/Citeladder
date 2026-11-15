@@ -76,21 +76,21 @@ const PRIORITY_ICON = {
   low: SignalLow,
 } as const satisfies Record<keyof typeof priorityTone, LucideIcon>;
 
-export type StatusValue = keyof typeof statusTone;
-export type PriorityValue = keyof typeof priorityTone;
-export type SentimentValue = keyof typeof sentimentTone;
-export type ClassificationValue = keyof typeof classificationTone;
-export type RunStatusValue = keyof typeof runStatusTone;
+type StatusValue = keyof typeof statusTone;
+type PriorityValue = keyof typeof priorityTone;
+type SentimentValue = keyof typeof sentimentTone;
+type ClassificationValue = keyof typeof classificationTone;
+type RunStatusValue = keyof typeof runStatusTone;
 
 /**
  * The badge face: 22px, 8px padding, `radius-xs`, 12/16 medium. Centred on
  * the line it sits in: a badge that leads with an icon would otherwise take
  * the icon's bottom edge as its baseline and stretch a 40px table row. It
- * sets its own family and tracking, so a badge inside a figure (a StatRow
+ * sets its own family and tracking, so a badge inside a figure (a Stat's
  * value) never inherits the figure's tight tracking.
  */
 const BADGE_FACE =
-  'inline-flex min-h-[var(--badge-height-sm)] max-w-full shrink-0 items-center gap-1 rounded-xs px-2 align-middle font-sans text-caption tracking-normal whitespace-nowrap';
+  'inline-flex min-h-5.5 max-w-full shrink-0 items-center gap-1 rounded-xs px-2 align-middle font-sans text-caption tracking-normal whitespace-nowrap';
 
 export type BadgeProps = {
   children: ReactNode;

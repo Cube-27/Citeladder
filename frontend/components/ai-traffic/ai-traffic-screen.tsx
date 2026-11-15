@@ -7,19 +7,17 @@ import {
   useTrafficData,
   type TrafficDataTab,
 } from '@/lib/ai-traffic/use-traffic-data';
-import { ListScreen } from '@/components/layout/page-shell';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { TabsRoot, TabPanel, type TabRowProps } from '@/components/ui/tabs';
-import { MutationNotice } from '@/components/ui/mutation-notice';
+import { ReportPage } from '@/components/templates/report-page';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TabsRoot, TabPanel, TabRow, type TabRowProps } from '@/components/ui/tabs';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { readErrorProps } from '@/components/ui/read-error';
 import { AiReferralsScreen } from './referrals-screen';
 import { TrafficExport, trafficFilters } from './traffic-controls';
 import { TrafficOverview, TrafficCrawlers, TrafficActivity } from './traffic-views';
 import { TrafficPages } from './pages-view';
 import { CrawlLogAvailabilityNotice } from './crawl-log-availability';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 type TrafficTab = (typeof TRAFFIC_TABS)[number]['value'];
 /** Absent or unknown means "not chosen", so the default can follow crawl availability. */
@@ -68,9 +66,9 @@ export function AiTrafficScreen() {
           if (next) setTab(next);
         }}
       >
-        <ListScreen tabs={tabs}>
-          <QueryState kind="loading" label="Loading AI Traffic…" />
-        </ListScreen>
+        <ReportPage tabs={<TabRow {...tabs} />}>
+          <StateBlock kind="loading" label="Loading AI Traffic…" />
+        </ReportPage>
       </TabsRoot>
     );
   return (
@@ -102,33 +100,36 @@ function TrafficDataView({
   const { summary } = model;
   // Every narrowing in All filters after the tabs; Export, on the tabs that
   // list rows, is a header action.
-  const controls: FilterBarProps = { filters: trafficFilters({ model, crawlAvailable }) };
-  const actions = tab === 'overview' ? undefined : <TrafficExport model={model} />;
+  const frame = {
+    tabs: <TabRow {...tabs} />,
+    filters: <FilterBar filters={trafficFilters({ model, crawlAvailable })} />,
+    actions: tab === 'overview' ? undefined : <TrafficExport model={model} />,
+  };
   // First load keeps the identity, tab and control bands; only the work waits.
   // The table tabs draw their own loading, error and empty states inside the
   // table, in the footprint of a page of rows.
   if (tab === 'overview' && summary.isLoading)
     return (
-      <ListScreen tabs={tabs} controls={controls} actions={actions}>
-        <QueryState kind="loading" label="Loading AI Traffic…" />
-      </ListScreen>
+      <ReportPage {...frame}>
+        <StateBlock kind="loading" label="Loading AI Traffic…" />
+      </ReportPage>
     );
   // A failed read with nothing to show is the region's state, in the same
   // footprint its loading state took.
   if (tab === 'overview' && summary.isError)
     return (
-      <ListScreen tabs={tabs} controls={controls} actions={actions}>
-        <QueryState
+      <ReportPage {...frame}>
+        <StateBlock
           kind="error"
           {...readErrorProps(summary)}
-          fallback="Could not read AI Traffic"
+          fallback="Could not read AI Traffic. Check your connection and try again."
         />
-      </ListScreen>
+      </ReportPage>
     );
   return (
-    <ListScreen tabs={tabs} controls={controls} actions={actions}>
+    <ReportPage {...frame}>
       <TrafficTabContent tab={tab} model={model} crawlAvailable={crawlAvailable} />
-    </ListScreen>
+    </ReportPage>
   );
 }
 
@@ -144,7 +145,7 @@ function TrafficTabContent({
   const { projectId, workspaceId, summary, filters } = model;
   const scope = { workspaceId, projectId, filters };
   return (
-    <Stack gap="workspace">
+    <>
       <TrafficStatus model={model} />
       {tab === 'overview' && summary.data ? (
         <TrafficOverview
@@ -162,13 +163,14 @@ function TrafficTabContent({
           <TrafficPages {...scope} sort={model.selection.sort} onSort={model.selection.setSort} />
         </TabPanel>
       ) : null}
-    </Stack>
+    </>
   );
 }
 function TrafficStatus({ model }: Readonly<{ model: ReturnType<typeof useTrafficData> }>) {
   const { exporting } = model;
   return exporting.isError ? (
-    <MutationNotice
+    <Notice
+      kind="mutation"
       notice={mutationNoticeForError(exporting.error, { action: 'export AI traffic' })}
       onRetry={() => exporting.mutate()}
     />

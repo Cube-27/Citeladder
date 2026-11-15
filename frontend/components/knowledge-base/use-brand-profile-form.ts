@@ -113,10 +113,20 @@ export function useBrandProfileForm({
       },
     );
 
+  const dirty =
+    Object.keys(changed(DRAFT_FIELDS, draft, savedDraft)).length > 0 ||
+    Object.keys(identityUpdate(identity, savedIdentity)).length > 0 ||
+    edits.pendingOffering.trim() !== '';
   return {
     draft,
     identity,
     pendingOffering: edits.pendingOffering,
+    /** The reader changed something since the last save. */
+    dirty,
+    /** The persisted profile holds no company facts yet. */
+    empty:
+      Object.values(savedDraft).every((value) => value.length === 0) &&
+      Object.values(savedIdentity).every((value) => !value),
     saving: save.isPending,
     error: save.error,
     notice,

@@ -1,30 +1,31 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { AgentPanelHost, AgentPanelTrigger } from '@/components/agent/agent-panel-host';
-import { AppShellFrame, NavDrawer, SidebarFrame } from '@/components/ui/app-shell';
+import { AppShellFrame, NavDrawer } from '@/components/ui/app-shell';
 import { CommandPalette, CommandPaletteTrigger } from '@/components/ui/command-palette';
+import { SidebarCollapseToggle, SidebarFrame } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AgentPanelProvider } from '@/lib/agent/panel-context';
 import { resolveTitle } from '@/lib/navigation/app-routes';
 import { useProjectContext } from '@/lib/project/project-context';
+import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 
-import { ModeSwitch } from './mode-switch';
 import { resolveCommandGroups } from './nav-items';
 import { PageTitleContext } from './page-title-context';
 import { ProjectSwitcher } from './project-switcher';
 import { ShellContext } from './shell-context';
-import { SidebarNav } from './sidebar-nav';
+import { SidebarFootNav, SidebarNav, useDestinationMemory } from './sidebar-nav';
 import { UserMenuTrigger } from './user-menu';
 import { useRouteAnnouncement } from './use-route-announcement';
 
 /**
- * AppShell — the authenticated application chrome: the system's AppSidebar
- * (project switcher, Dashboard | Agent, destinations, account; no logo)
- * on its own `sidebar` fill beside the page on `paper`. From 900px to 1280px the sidebar
- * is the icon rail; below 900px the page header's menu button
- * opens the same sidebar, labelled, in a left drawer that closes when the
- * route changes (owner, 2026-11-06). There is no top bar.
+ * AppShell — the signed-in application chrome: one
+ * sidebar (the project switcher, the destinations in the order of the
+ * product loop, Integrations and the account at its foot) beside the page.
+ * Below 900px the masthead's menu button opens the same sidebar in a left
+ * drawer that closes when the route changes. The masthead's search, "Ask
+ * agent" and menu button come from here through `ShellContext`.
  */
 export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   const [titleOverride, setTitleOverride] = useState<string>();
@@ -35,8 +36,10 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
     title: titleOverride ?? resolveTitle(pathname),
     projectName: activeProject?.name ?? null,
   });
+  useDestinationMemory();
+  useCollapseShortcut();
   // The drawer is open for the location it was opened on, so any navigation
-  // (a destination, the project switcher, the mode switch) closes it.
+  // (a destination, the project switcher) closes it.
   const [drawerLocation, setDrawerLocation] = useState<string | null>(null);
   const drawerOpen = drawerLocation === location.key;
   const shell = useMemo(
@@ -69,19 +72,43 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
+const COLLAPSE_SHORTCUT = 'Ctrl \\';
+
 function AppSidebar() {
+  const collapsed = useSidebarCollapsed();
   return (
     <SidebarFrame
       ident={<ProjectSwitcher />}
-      controls={
+      nav={<SidebarNav />}
+      foot={
         <>
-          <ModeSwitch />
-          {/* The search is in the top bar from 900px; below it, in the drawer. */}
-          <CommandPaletteTrigger className="hidden [[data-nav-drawer]_&]:flex" />
+          <SidebarFootNav />
+          <div className="labelled:flex-row flex flex-col items-center gap-1">
+            <div className="min-w-0 flex-1 self-stretch">
+              <UserMenuTrigger presenter="sidebar" />
+            </div>
+            <SidebarCollapseToggle
+              collapsed={collapsed}
+              onToggle={() => setSidebarCollapsed(!collapsed)}
+              shortcut={COLLAPSE_SHORTCUT}
+            />
+          </div>
         </>
       }
-      nav={<SidebarNav />}
-      foot={<UserMenuTrigger presenter="sidebar" />}
     />
   );
+}
+
+/** ⌘ or Ctrl with backslash collapses the sidebar to its rail, or opens it again. */
+function useCollapseShortcut() {
+  const collapsed = useSidebarCollapsed();
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (!(event.metaKey || event.ctrlKey) || event.key !== '\\') return;
+      event.preventDefault();
+      setSidebarCollapsed(!collapsed);
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [collapsed]);
 }

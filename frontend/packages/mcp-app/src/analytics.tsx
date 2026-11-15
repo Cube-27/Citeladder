@@ -15,7 +15,7 @@ import {
   TableHead,
   TableCell,
 } from '@/components/ui/table';
-import { TrendChart } from '@/components/ui/trend-chart';
+import { StepChart } from '@/components/ui/step-chart';
 import { Label, Metric, textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { appPolicy } from './config';
@@ -43,7 +43,7 @@ function Overview({
   if (!parsed.success) {
     const missing = notYetMeasuredMessage(data);
     return (
-      <p role={missing ? undefined : 'alert'} className={textRole('body')}>
+      <p role={missing ? undefined : 'alert'} className={textRole('body', 'text-ink-2')}>
         {missing ?? 'Visibility evidence is unavailable. Retry or reconnect.'}
       </p>
     );
@@ -138,7 +138,7 @@ function Trends({
   const parsed = visibilityTrendListSchema.safeParse(data.points);
   if (!parsed.success)
     return (
-      <p role="alert" className={textRole('body')}>
+      <p role="alert" className={textRole('body', 'text-ink-2')}>
         Visibility history is unavailable. Retry or reconnect.
       </p>
     );
@@ -176,7 +176,7 @@ function Trends({
           onValueChange={(competitor) => selectCompetitor(competitor || null)}
         />
       </div>
-      <TrendChart
+      <StepChart
         label="Observed visibility history"
         yMax={1}
         yFormat={rate}
@@ -216,7 +216,7 @@ function Trends({
               </TableCell>
               <TableCell>
                 <Button
-                  variant="ghost"
+                  variant="quiet"
                   disabled={!point.audit_id}
                   onClick={() =>
                     void select({
@@ -238,7 +238,9 @@ function Trends({
           ))}
         </TableBody>
       </Table>
-      {!points.length && <p className={textRole('body')}>No measured runs in this window.</p>}
+      {!points.length && (
+        <p className={textRole('body', 'text-ink-2')}>No measured runs in this window.</p>
+      )}
       <p className={textRole('caption')}>
         Gaps and changed comparison identities break the line. Sources drill-down selects one
         concrete audit from this window.
@@ -329,7 +331,7 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
   };
   return (
     <main className="space-y-4 p-4">
-      <h1 className={textRole('pageTitle')}>CiteLadder analytics</h1>
+      <h1 className={textRole('title')}>CiteLadder analytics</h1>
       <div className="flex flex-wrap gap-3">
         <Select
           ariaLabel="Project and workspace"
@@ -349,16 +351,16 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
           Refresh connection
         </Button>
         {state.projectCursor && (
-          <Button variant="ghost" onClick={() => void controller.loadProjects(state.projectCursor)}>
+          <Button variant="quiet" onClick={() => void controller.loadProjects(state.projectCursor)}>
             More projects
           </Button>
         )}
       </div>
       {state.error && (
-        <div role="alert" className={textRole('body')}>
+        <div role="alert" className={textRole('body', 'text-ink-2')}>
           {state.error}
           <Button
-            variant="ghost"
+            variant="quiet"
             onClick={() =>
               selection ? void controller.select(selection) : void controller.loadProjects()
             }
@@ -367,9 +369,11 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
           </Button>
         </div>
       )}
-      {state.busy && <output className={textRole('body')}>Loading persisted evidence…</output>}
+      {state.busy && (
+        <output className={textRole('body', 'text-ink-2')}>Loading persisted evidence…</output>
+      )}
       {!selection && (
-        <p className={textRole('body')}>
+        <p className={textRole('body', 'text-ink-2')}>
           Connect your account and select a project. If you have no projects, complete onboarding in
           CiteLadder.
         </p>
@@ -461,7 +465,7 @@ export function Analytics({ controller }: Readonly<{ controller: Controller }>) 
           </a>
         </Button>
       )}
-      <Button asChild variant="ghost">
+      <Button asChild variant="quiet">
         <a
           href={state.result?.links.onboarding ?? 'https://app.citeladder.com/onboarding'}
           target="_blank"

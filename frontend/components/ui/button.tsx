@@ -10,44 +10,63 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
- * The system's four buttons (Button README): `primary` is the one ink action a
- * view is for, `secondary` (surface with a control's soft edge: a 1px `line`
- * border and the `shadow-edge` smudge, like a field) everything else, `ghost`
- * toolbars, nav and rows, `danger` destructive confirmations. Buttons are
- * black, white or clear; never coloured. Hover, pressed and open are the
- * state overlays, so a toggled or open button never looks hovered.
+ * The four buttons. Actions are ink, never the accent:
+ * `primary` is the one ink-filled action a view is for, `secondary` a
+ * `surface` button with the control line, `quiet` no edge (`ink-2`, `ink`
+ * on hover) for toolbars, rows and navigation, `danger` a crimson label and
+ * line (filled only in a confirm dialog, `danger-confirm`). Hover is the 6%
+ * ink tint, pressed and open the 10% tint; nothing moves.
  */
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
+export type ButtonVariant = 'primary' | 'secondary' | 'quiet' | 'danger' | 'danger-confirm';
+
+/**
+ * Heights 32 (default) and 44 (flow pages); below 900px or under a coarse
+ * pointer every control is 44. Controls in one row
+ * share one size.
+ */
+export type ButtonSize = 'md' | 'lg';
 
 /** Hover, unless the button is toggled on or its menu is open. */
 const HOVER_OVERLAY =
-  'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed';
+  'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
+// The website keeps its 8px icon gap and 45% disabled face (it is not redesigned).
 const BUTTON_BASE =
-  'focus-ring relative inline-flex min-h-[var(--control-md)] shrink-0 items-center justify-center gap-2 rounded-md px-3 text-body-sm font-medium whitespace-nowrap no-underline transition-[background-color,color,box-shadow,transform] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed disabled:opacity-45 aria-disabled:cursor-not-allowed aria-disabled:opacity-45';
+  'focus-ring type-label relative inline-flex shrink-0 items-center justify-center gap-1 rounded-control whitespace-nowrap no-underline transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:opacity-60 [[data-public-surface]_&]:gap-2 [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
+
+const BUTTON_SIZE: Record<ButtonSize, string> = {
+  md: 'min-h-[var(--control-md)] px-3',
+  lg: 'min-h-[var(--control-lg)] px-4',
+};
 
 const BUTTON_VARIANT: Record<ButtonVariant, string> = {
   primary:
-    'button-key bg-ink text-on-ink shadow-press not-disabled:hover:bg-ink-hover not-disabled:active:translate-y-px not-disabled:active:shadow-edge aria-disabled:hover:bg-ink',
-  secondary: cn(
-    'bg-surface text-ink border-line shadow-edge border not-disabled:active:translate-y-px',
+    'bg-ink text-on-ink border border-ink not-disabled:hover:bg-ink-hover aria-disabled:hover:bg-ink pointer-coarse:min-h-[var(--control-coarse)]',
+  secondary: cn('bg-surface text-ink border-control-line border', HOVER_OVERLAY),
+  quiet: cn(
+    'bg-transparent text-ink-2 border border-transparent not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
     HOVER_OVERLAY,
   ),
-  ghost: cn(
-    'bg-transparent text-ink-secondary not-disabled:hover:text-ink aria-pressed:text-ink data-[state=open]:text-ink',
-    HOVER_OVERLAY,
-  ),
-  danger:
-    'bg-surface text-negative border-line shadow-edge border not-disabled:hover:bg-negative-soft not-disabled:active:translate-y-px',
+  danger: cn('bg-surface text-negative border-negative border', HOVER_OVERLAY),
+  'danger-confirm':
+    'bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90 pointer-coarse:min-h-[var(--control-coarse)]',
 };
 
+/** A masthead button whose word shows only from `shell`: below it, a square icon control. */
+export const LABEL_FROM_SHELL = 'w-[var(--control-md)] justify-center px-0 shell:w-auto shell:px-3';
+
 /** The button face for an element that is not a `Button` (a link styled as one). */
-export function buttonClasses(variant: ButtonVariant = 'secondary', className?: string) {
-  return cn(BUTTON_BASE, BUTTON_VARIANT[variant], className);
+export function buttonClasses(
+  variant: ButtonVariant = 'secondary',
+  className?: string,
+  size: ButtonSize = 'md',
+) {
+  return cn(BUTTON_BASE, BUTTON_SIZE[size], BUTTON_VARIANT[variant], className);
 }
 
 export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
   variant?: ButtonVariant;
+  size?: ButtonSize;
   /** Render the child element as the button (Radix Slot) instead of a <button>. */
   asChild?: boolean;
   pending?: boolean;
@@ -58,6 +77,7 @@ export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
 function SlottedButton({
   className,
   variant = 'secondary',
+  size = 'md',
   pending = false,
   ref,
   children,
@@ -73,7 +93,7 @@ function SlottedButton({
       {...props}
       data-button-variant={variant}
       aria-busy={pending || undefined}
-      className={buttonClasses(variant, className)}
+      className={buttonClasses(variant, className, size)}
     >
       {children}
     </Slot>
@@ -83,6 +103,7 @@ function SlottedButton({
 function NativeButton({
   className,
   variant = 'secondary',
+  size = 'md',
   pending = false,
   pendingLabel,
   type,
@@ -99,12 +120,11 @@ function NativeButton({
       data-button-variant={variant}
       aria-busy={pending || undefined}
       disabled={props.disabled || pending}
-      className={buttonClasses(variant, className)}
+      className={buttonClasses(variant, className, size)}
     >
-      {/* Pending never resizes the button: the label keeps its box (hidden)
-          and the spinner takes its place inside it, so nothing beside the
-          button moves when it is pressed. The pending label is what
-          assistive technology hears. */}
+      {/* Busy keeps the button's width: the label keeps its box (hidden) and
+          the live rung with the pending verb takes its place inside it. The
+          pending label is what assistive technology hears. */}
       <span
         aria-hidden={pending || undefined}
         className={cn('inline-flex items-center gap-2', pending && 'invisible')}
@@ -112,9 +132,13 @@ function NativeButton({
         {children}
       </span>
       {pending ? (
-        <span className="absolute inset-0 inline-flex items-center justify-center">
+        <span className="absolute inset-0 inline-flex items-center justify-center gap-1 overflow-hidden px-2">
           <Spinner />
-          <span className="sr-only">{pendingLabel ?? children}</span>
+          {pendingLabel ? (
+            <span className="truncate">{pendingLabel}</span>
+          ) : (
+            <span className="sr-only">{children}</span>
+          )}
         </span>
       ) : null}
     </button>
@@ -122,8 +146,9 @@ function NativeButton({
 }
 
 /**
- * One form: at least `control-md` tall (taller only when the reader's text
- * size grows its label), 12px padding, the 16px icon before the label.
+ * One form per size: the size's control height (taller only when the reader's
+ * text size grows its label), the control radius, the 16px icon 4px before
+ * the label.
  */
 export function Button(props: Readonly<ButtonProps>) {
   return props.asChild ? <SlottedButton {...props} /> : <NativeButton {...props} />;
@@ -134,10 +159,10 @@ type IconButtonProps = Omit<ButtonProps, 'variant' | 'children' | 'asChild' | 'a
   /** The accessible name and the tooltip: what pressing it does. */
   label: string;
   /**
-   * `ghost` (default) in toolbars and rows; `secondary` alone on paper;
+   * `quiet` (default) in toolbars and rows; `secondary` alone on the ground;
    * `primary` only for a form's one submit (the composer's Send).
    */
-  variant?: Extract<ButtonVariant, 'ghost' | 'secondary' | 'primary'>;
+  variant?: Extract<ButtonVariant, 'quiet' | 'secondary' | 'primary'>;
   /** A shortcut shown in the tooltip. */
   shortcut?: string;
   tooltipSide?: 'top' | 'right' | 'bottom' | 'left';
@@ -177,7 +202,8 @@ function IconLinkTarget({
 }
 
 /**
- * IconButton — the square icon-only control: 36px, no padding, the 16px
+ * IconButton — the square icon-only control for universal actions (close,
+ * more, copy, sort, collapse): square at the control height, quiet by default, the 16px
  * glyph, and a required `label` that is both its accessible name and its
  * tooltip (shown after 300ms on hover, at once on keyboard focus).
  */
@@ -185,7 +211,7 @@ export function IconButton({
   icon,
   label,
   href,
-  variant = 'ghost',
+  variant = 'quiet',
   shortcut,
   tooltipSide = 'top',
   tooltip = true,

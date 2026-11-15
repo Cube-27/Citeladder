@@ -7,12 +7,12 @@ import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/market
 import { Button, IconButton } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { projectMutations } from '@/lib/api/projects';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
+import { Notice } from '@/components/ui/notice';
 
 /**
  * Additional measurement markets. Each one is measured as its own run and
@@ -44,8 +44,8 @@ export function ProjectMarkets({
   const failed = add.error ?? remove.error;
   return (
     <Stack as="section" gap="compact" aria-label="Additional markets">
-      <p className={textRole('label')}>Additional markets</p>
-      <p className="type-caption text-ink-muted">
+      <p className={textRole('body', 'text-ink-2')}>Additional markets</p>
+      <p className="type-caption text-ink-2">
         Measure the same prompts from other countries. Each market runs and reports separately.
       </p>
       {extra.length ? (
@@ -54,7 +54,7 @@ export function ProjectMarkets({
             <Inline
               as="li"
               key={market.id}
-              className={ledgerItemClasses('type-body justify-between')}
+              className={ledgerItemClasses('type-body text-ink-2 justify-between')}
             >
               <span>{market.label}</span>
               <IconButton
@@ -89,7 +89,8 @@ export function ProjectMarkets({
         </Button>
       </Stack>
       {failed ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(failed, {
             action: add.error ? 'add the market' : 'remove the market',
           })}

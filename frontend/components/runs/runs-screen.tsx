@@ -1,24 +1,22 @@
 import { useQuery } from '@tanstack/react-query';
 import { Play } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useMemo } from 'react';
 
 import { AuditSchedules } from '@/components/runs/audit-schedules';
-import { LaunchDialog } from '@/components/runs/launch-dialog';
+import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { RunsTable } from '@/components/runs/runs-table';
-import { ListScreen } from '@/components/layout/page-shell';
-import { Button } from '@/components/ui/button';
-import { Dot } from '@/components/ui/icon';
-import { Inline } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps, type RetryableRead } from '@/components/ui/read-error';
+import { CollectionPage } from '@/components/templates/collection-page';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { Spinner } from '@/components/ui/spinner';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { runsQueries } from '@/lib/api/runs';
 import type { Audit } from '@citeladder/contracts';
-import { useProjectHref } from '@/lib/navigation/project-destination';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { AUDIT_STATES, pollAudits } from '@/lib/runs/status';
+import { readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 type StatusFilter = 'all' | 'completed' | 'running' | 'failed';
 
@@ -45,13 +43,15 @@ const STATUS_FILTERS: {
   },
 ];
 
-/** Active-project run list, status filtering, launch, and schedule management. */
+const statusCodec = stringUrlCodec<StatusFilter>(
+  STATUS_FILTERS.map((filter) => filter.id),
+  'all',
+);
+
+/** Active-project run list, status filtering (kept in the URL), launch, and schedule management. */
 export function RunsScreen() {
   const { workspaceId, projectId, project } = useProjectScope();
-  const router = useNavigate();
-  const projectHref = useProjectHref();
-  const [launchOpen, setLaunchOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useUrlState('status', statusCodec);
 
   const runsQuery = useQuery({
     ...runsQueries.list({ workspaceId, projectId }),
@@ -74,58 +74,47 @@ export function RunsScreen() {
   // The page keeps its action and status filters while the first load lands.
   // Launching is offered only to a role that may run audits.
   const canRun = useWorkspaceCapability('run');
-  const actions = canRun ? (
-    <Button variant="primary" onClick={() => setLaunchOpen(true)}>
-      Launch audit
-    </Button>
-  ) : undefined;
+  const actions = <LaunchAuditButton showIcon={false} />;
   // The status choice is the row's view: the one shared segmented control,
   // each choice with the number of runs it keeps (2026-11-03 app review).
-  const controls = {
-    view: (
-      <SegmentedControl
-        ariaLabel="Filter by status"
-        value={statusFilter}
-        onChange={setStatusFilter}
-        options={STATUS_FILTERS.map((filter) => ({
-          value: filter.id,
-          label: filter.label,
-          count: audits.filter(filter.match).length,
-        }))}
-      />
-    ),
-  };
+  const filters = (
+    <FilterBar
+      view={
+        <SegmentedControl
+          ariaLabel="Filter by status"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={STATUS_FILTERS.map((filter) => ({
+            value: filter.id,
+            label: filter.label,
+            count: audits.filter(filter.match).length,
+          }))}
+        />
+      }
+    />
+  );
 
   if (runsQuery.isLoading) {
     return (
-      <ListScreen narrow actions={actions} controls={controls}>
-        <QueryState kind="loading" label="Loading runs…" />
-      </ListScreen>
+      <CollectionPage actions={actions} filters={filters}>
+        <StateBlock kind="loading" label="Loading runs…" />
+      </CollectionPage>
     );
   }
 
   return (
-    <ListScreen narrow actions={actions} controls={controls}>
+    <CollectionPage actions={actions} filters={filters}>
       <RunsContent
         read={runsQuery}
         audits={audits}
         filteredAudits={filteredAudits}
         statusFilter={statusFilter}
         anyActive={anyActive}
-        onLaunch={canRun ? () => setLaunchOpen(true) : undefined}
+        canRun={canRun}
       />
 
       <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
-
-      {canRun ? (
-        <LaunchDialog
-          open={launchOpen}
-          onOpenChange={setLaunchOpen}
-          projectId={projectId}
-          onLaunched={(audit) => router(projectHref(`/runs/${audit.id}`))}
-        />
-      ) : null}
-    </ListScreen>
+    </CollectionPage>
   );
 }
 
@@ -135,7 +124,7 @@ function RunsContent({
   filteredAudits,
   statusFilter,
   anyActive,
-  onLaunch,
+  canRun,
 }: Readonly<{
   /** The runs read: its failure, and the retry of exactly that read. */
   read: RetryableRead;
@@ -143,12 +132,12 @@ function RunsContent({
   filteredAudits: Audit[];
   statusFilter: StatusFilter;
   anyActive: boolean;
-  /** Opens the launch dialog; omitted for a role that may not run audits. */
-  onLaunch?: () => void;
+  /** Whether this role may launch an audit. */
+  canRun: boolean;
 }>) {
   if (read.error) {
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         {...readErrorProps(read)}
         fallback="Could not load runs. Check your connection and try again."
@@ -157,21 +146,20 @@ function RunsContent({
   }
   if (audits.length === 0) {
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={Play}
         heading="No runs yet"
         description={
-          onLaunch
+          canRun
             ? 'Launch your first audit to measure how AI engines answer questions about your brand.'
             : 'No audit has measured how AI engines answer questions about this brand yet.'
         }
         action={
-          onLaunch ? (
-            <Button variant="primary" onClick={onLaunch}>
-              Launch your first audit
-            </Button>
-          ) : undefined
+          // The masthead holds the page's one primary; this is its echo.
+          <LaunchAuditButton variant="secondary" showIcon={false}>
+            Launch your first audit
+          </LaunchAuditButton>
         }
       />
     );
@@ -186,10 +174,7 @@ function RunsContent({
       emptyHeading={`No ${filterLabel} runs`}
       status={
         anyActive ? (
-          <Inline as="span" className="type-caption inline-flex tabular-nums">
-            <Dot className="bg-info animate-pulse" />
-            {'polling every 3s while a run is active'}
-          </Inline>
+          <Spinner label="Updating every 3 seconds while a run is active" showLabel />
         ) : null
       }
     />

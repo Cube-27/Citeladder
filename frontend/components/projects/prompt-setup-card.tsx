@@ -1,8 +1,14 @@
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline } from '@/components/ui/layout';
 import { PROMPTS_GENERATE_HREF, PROMPTS_HREF } from '@/lib/prompts/routes';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /**
  * Shown on Overview while the project tracks no active prompts. Onboarding
@@ -11,14 +17,16 @@ import { PROMPTS_GENERATE_HREF, PROMPTS_HREF } from '@/lib/prompts/routes';
  */
 export function PromptSetupCard() {
   return (
-    <Card aria-labelledby="prompt-setup-heading">
-      <CardHeader>
-        <CardTitle id="prompt-setup-heading">Choose the questions you want to track</CardTitle>
-        <CardDescription>
+    <Section aria-labelledby="prompt-setup-heading">
+      <SectionHeader>
+        <SectionTitle id="prompt-setup-heading">
+          Choose the questions you want to track
+        </SectionTitle>
+        <SectionDescription>
           Generate buyer questions from your confirmed offerings, or add your own.
-        </CardDescription>
-      </CardHeader>
-      <Inline as={CardContent} className="flex-wrap">
+        </SectionDescription>
+      </SectionHeader>
+      <Inline as={SectionContent} className="flex-wrap">
         <Button asChild variant="primary">
           <ProjectLink href={PROMPTS_GENERATE_HREF}>Generate prompts</ProjectLink>
         </Button>
@@ -26,6 +34,6 @@ export function PromptSetupCard() {
           <ProjectLink href={PROMPTS_HREF}>Add or import prompts</ProjectLink>
         </Button>
       </Inline>
-    </Card>
+    </Section>
   );
 }

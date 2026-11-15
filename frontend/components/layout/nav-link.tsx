@@ -1,12 +1,12 @@
 import { lazy } from 'react';
 import { Link } from 'react-router-dom';
 
+import { LazyIsland } from '@/components/ui/lazy-island';
 import {
   SidebarNavRowContent,
   SidebarRowTooltip,
   sidebarNavRowClasses,
-} from '@/components/ui/app-shell';
-import { LazyIsland } from '@/components/ui/lazy-island';
+} from '@/components/ui/sidebar';
 
 import type { NavItem } from './nav-items';
 
@@ -21,7 +21,7 @@ const OpenActionCount = lazy(() =>
   import('./open-action-count').then(({ OpenActionCount }) => ({ default: OpenActionCount })),
 );
 
-/** One shell destination row, shared by Dashboard and Agent navigation. */
+/** One sidebar destination row. */
 export function NavLink({
   item,
   active,
@@ -47,7 +47,6 @@ export function NavLink({
         <SidebarNavRowContent
           icon={item.icon}
           label={item.label}
-          active={active}
           count={
             item.badge === 'open-actions' ? (
               // Chrome: a count that cannot load or render is reported and

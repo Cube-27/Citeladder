@@ -1,20 +1,20 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
+import { FlowStep, StepColumns, StepFindings } from '@/components/templates/flow-page';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
-import { OnboardingStep, StepColumns, StepFindings } from '@/components/ui/onboarding-shell';
-import { StepList, type Step } from '@/components/ui/step-list';
+import { RungTrail, type TrailStep } from '@/components/ui/rung-trail';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
 import { hasConfirmedIcp, IcpAudience, IcpCategory } from './icp-confirmation';
 import { ReviewStep } from './review-step';
 import { useStaggeredSteps } from './use-staggered-steps';
+import { Notice } from '@/components/ui/notice';
 
 const MARKET_OPTIONS = [{ value: 'GLOBAL', label: 'Global' }, ...MARKET_COUNTRIES];
 
@@ -36,7 +36,7 @@ export function BrandStage({
   actions: StageActions;
 }>) {
   return (
-    <OnboardingStep
+    <FlowStep
       titleId={STAGE_HEADING_ID}
       title={isAdditional ? 'Add a project' : "Let's get started"}
       help="We'll review your website, suggest comparable brands, and prepare balanced questions."
@@ -97,7 +97,7 @@ export function BrandStage({
           </Field>
         </StepColumns>
       </form>
-    </OnboardingStep>
+    </FlowStep>
   );
 }
 
@@ -133,7 +133,7 @@ export function DiscoveryStage({
     </Button>
   );
   return (
-    <OnboardingStep
+    <FlowStep
       titleId={STAGE_HEADING_ID}
       title="Finding what to track"
       help={`We're reading ${brandName || 'your website'} and learning what you offer.`}
@@ -151,12 +151,12 @@ export function DiscoveryStage({
         {found.length > 0 ? <StepFindings title="Found so far" items={found} /> : null}
       </StepColumns>
       {warnings.map((warning) => (
-        <Callout key={warning} tone="warning" action={warning === rerunWarning ? rerun : undefined}>
+        <Notice key={warning} tone="warning" action={warning === rerunWarning ? rerun : undefined}>
           {warningMessage(warning)}
-        </Callout>
+        </Notice>
       ))}
       {failed ? (
-        <Callout
+        <Notice
           tone="negative"
           action={
             SITE_FAILURES.has(errorCode) ? (
@@ -172,10 +172,10 @@ export function DiscoveryStage({
           }
         >
           {failureMessage(errorCode)}
-        </Callout>
+        </Notice>
       ) : null}
       {discovery.error ? (
-        <Callout
+        <Notice
           tone="warning"
           action={
             <Button variant="secondary" onClick={discovery.retry}>
@@ -184,9 +184,9 @@ export function DiscoveryStage({
           }
         >
           {onboardingErrorMessage(discovery.error)}
-        </Callout>
+        </Notice>
       ) : null}
-    </OnboardingStep>
+    </FlowStep>
   );
 }
 
@@ -194,7 +194,7 @@ export function CreationStage({
   committedProjectId,
 }: Readonly<{ committedProjectId: string | null }>) {
   const projectCommitted = committedProjectId !== null;
-  const steps: Step[] = [
+  const steps: TrailStep[] = [
     {
       id: 'save',
       label: 'Saving your project',
@@ -213,13 +213,13 @@ export function CreationStage({
 
   return (
     <div aria-busy="true">
-      <OnboardingStep
+      <FlowStep
         titleId={STAGE_HEADING_ID}
         title="Creating your project"
         help="We're saving your confirmed details and will open the project as soon as it is committed."
       >
         <StageSteps label="Project creation progress" steps={steps} />
-      </OnboardingStep>
+      </FlowStep>
     </div>
   );
 }
@@ -232,7 +232,7 @@ function StageSteps({
   label,
   steps,
   stagger = false,
-}: Readonly<{ label: string; steps: readonly Step[]; stagger?: boolean }>) {
+}: Readonly<{ label: string; steps: readonly TrailStep[]; stagger?: boolean }>) {
   const shown = useStaggeredSteps(steps, stagger);
   return (
     <>
@@ -245,7 +245,7 @@ function StageSteps({
         value={shown.done}
         max={Math.max(steps.length, 1)}
       />
-      <StepList label={label} steps={shown.steps} />
+      <RungTrail label={label} steps={shown.steps} />
       <span className="sr-only" aria-live="polite">
         {shown.announcement}
       </span>
@@ -274,7 +274,7 @@ export function ReviewStage({
     toggle,
   } = flow;
   return (
-    <OnboardingStep
+    <FlowStep
       titleId={STAGE_HEADING_ID}
       title="Does this look right?"
       help="Confirm what we found before we create your project."
@@ -283,7 +283,7 @@ export function ReviewStage({
     >
       <ReviewNotices failed={complete.isError}>
         {catalog.isError ? (
-          <Callout
+          <Notice
             tone="warning"
             action={
               <Button variant="secondary" onClick={() => catalog.refetch()}>
@@ -292,10 +292,10 @@ export function ReviewStage({
             }
           >
             We could not load the competitor limit.
-          </Callout>
+          </Notice>
         ) : null}
         {complete.isError ? (
-          <Callout tone="warning">{onboardingErrorMessage(complete.error)}</Callout>
+          <Notice tone="warning">{onboardingErrorMessage(complete.error)}</Notice>
         ) : null}
         <CompletionStateAlert failed={completionFailed} />
       </ReviewNotices>
@@ -340,7 +340,7 @@ export function ReviewStage({
           </Stack>
         ) : null}
       </StepColumns>
-    </OnboardingStep>
+    </FlowStep>
   );
 }
 
@@ -384,9 +384,9 @@ function withoutTrailingSlashes(value: string): string {
 function CompletionStateAlert({ failed }: Readonly<{ failed: boolean }>) {
   if (failed) {
     return (
-      <Callout tone="negative">
+      <Notice tone="negative">
         Project creation did not finish. Go back, confirm the website again, and retry.
-      </Callout>
+      </Notice>
     );
   }
   return null;
@@ -419,8 +419,7 @@ function warningMessage(code: string): string {
       'Sources disagreed about this business. Review the suggested positioning carefully.',
     insufficient_evidence:
       'Too little evidence was found to confirm this business. Review the suggested positioning carefully.',
-    site_health_deferred:
-      'The project is ready; its Site Health review will need to be started later.',
+    site_health_deferred: 'The project is ready; its Website review will need to be started later.',
   };
   return (
     messages[code] ??

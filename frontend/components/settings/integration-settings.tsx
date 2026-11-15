@@ -2,11 +2,8 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 
-import { Callout } from '@/components/ui/callout';
 import { CrawlLogConnections } from '@/components/ai-traffic/crawl-log-connections';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { GRANT_FAMILY, type GrantFamily, type GrantModel } from '@/components/settings/grant-model';
 import { IntegrationCardView } from '@/components/settings/integration-card-view';
 import { IntegrationsEmptyState } from '@/components/settings/integrations-empty-state';
@@ -17,6 +14,8 @@ import {
 } from '@/lib/api/integrations';
 import { oauthErrorMessage } from '@/components/integrations/data-sources';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /** Display order of connection sub-rows inside a grant card (gsc before ga4). */
 const PROVIDER_ORDER: Record<IntegrationConnection['provider'], number> = {
@@ -72,33 +71,33 @@ function CallbackNotice({
         : null;
     if (family === 'google') {
       return (
-        <Callout tone="positive">
+        <Notice tone="positive">
           <strong>Google connected.</strong> Search Console and Analytics 4 are now linked through
           one Google connection. Select a property for each below to start importing — nothing syncs
           until a property is chosen.
-        </Callout>
+        </Notice>
       );
     }
     if (family === 'microsoft') {
       return (
-        <Callout tone="positive">
+        <Notice tone="positive">
           <strong>Bing connected.</strong> Bing Webmaster Tools is now linked. Select a property
           below to start importing — nothing syncs until a property is chosen.
-        </Callout>
+        </Notice>
       );
     }
     return (
-      <Callout tone="positive">
+      <Notice tone="positive">
         <strong>Integration connected.</strong> Select a property below to start importing — nothing
         syncs until a property is chosen.
-      </Callout>
+      </Notice>
     );
   }
   if (notice.error) {
     return (
-      <Callout tone="negative">
+      <Notice tone="negative">
         <strong>Connection failed.</strong> {oauthErrorMessage(notice.error)}
-      </Callout>
+      </Notice>
     );
   }
   return null;
@@ -143,14 +142,15 @@ export function IntegrationSettings() {
   const connections = connectionsQuery.data ?? [];
   const grants = groupIntoGrants(connections);
 
-  if (!workspaceId) return <Callout tone="info">Loading your workspace…</Callout>;
+  if (!workspaceId) return <Notice tone="info">Loading your workspace…</Notice>;
 
   return (
     <Stack gap="workspace">
       <CallbackNotice notice={notice} />
 
       {connectionsQuery.isError ? (
-        <ReadError
+        <Notice
+          kind="read"
           error={connectionsQuery.error}
           fallback="Could not load integrations. Check your connection and try again."
           onRetry={() => void connectionsQuery.refetch()}
@@ -159,7 +159,7 @@ export function IntegrationSettings() {
       ) : null}
 
       {connectionsQuery.isLoading ? (
-        <QueryState kind="loading" label="Loading integrations…" />
+        <StateBlock kind="loading" label="Loading integrations…" />
       ) : null}
 
       {!connectionsQuery.isLoading && !connectionsQuery.isError && connections.length === 0 ? (

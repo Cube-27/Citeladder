@@ -1,6 +1,5 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { Label, textRole } from '@/components/ui/typography';
 import type { SourcePattern } from '@citeladder/contracts';
 import {
@@ -9,6 +8,7 @@ import {
   sourceClassBadgeValue,
   sourceClassLabel,
 } from '@/lib/opportunities/source-pattern';
+import { wellClasses } from '@/components/ui/slip';
 
 /**
  * Observed source pattern for a visibility opportunity.
@@ -40,13 +40,13 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
       {classCounts.length > 0 ? (
         <Inline className="flex-wrap">
           {classCounts.map(({ sourceClass, count }) => (
-            <Badge
+            <StatusMark
               key={sourceClass}
               variant="classification"
               value={sourceClassBadgeValue(sourceClass)}
             >
               {sourceClassLabel(sourceClass)} · {count}
-            </Badge>
+            </StatusMark>
           ))}
         </Inline>
       ) : null}
@@ -56,7 +56,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
           <span className="type-caption">Sources matched to a tracked competitor</span>
           {competitorSourceDomains.map(([competitor, domains]) => (
             <Inline key={competitor} gap="compact" className="items-start justify-between">
-              <span className={textRole('body', 'shrink-0')}>{competitor}</span>
+              <span className={textRole('body', 'text-ink-2 shrink-0')}>{competitor}</span>
               <span className="type-caption text-right break-all tabular-nums">
                 {domains.join(', ')}
               </span>
@@ -72,7 +72,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
               as="li"
               gap="tight"
               key={citation.url || citation.domain}
-              className={panelClasses()}
+              className={wellClasses()}
             >
               <span className="type-caption text-ink">{citation.title || citation.domain}</span>
               <span className="type-caption break-all tabular-nums">{citation.domain}</span>
@@ -89,7 +89,7 @@ export function OpportunitySourcePattern({ pattern }: Readonly<{ pattern: Source
       ) : null}
 
       {action ? (
-        <Stack gap="tight" className={panelClasses()}>
+        <Stack gap="tight" className={wellClasses()}>
           <span className="type-caption">Suggested next action</span>
           <p className="type-body text-ink">{action}</p>
         </Stack>

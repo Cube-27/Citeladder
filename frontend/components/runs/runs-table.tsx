@@ -1,14 +1,15 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Play } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import type { Audit } from '@citeladder/contracts';
 import { marketLabel } from '@citeladder/contracts/markets';
-import { AUDIT_STATES, formatDateTime } from '@/lib/runs/status';
+import { formatCount, formatDisplayTime } from '@/lib/format';
+import { AUDIT_STATES, runTitle } from '@/lib/runs/status';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 
 /** A launch's per-market runs arrive together; later rows point back to the first. */
@@ -18,28 +19,57 @@ const sameLaunch = (audit: Audit, previous: Audit | undefined) =>
 /** Rows per page on the runs table (client-side; the list arrives whole). */
 const PAGE_SIZE = 10;
 
-const MARKET_COLUMN: DataTableColumn = { key: 'market', label: 'Market', width: 'name' };
+type SortKey = 'created' | 'requested' | 'completed' | 'failed';
+type Sort = Readonly<{ key: SortKey; descending: boolean }>;
 
-function runsColumns(showMarket: boolean): DataTableColumn[] {
+const SORT_VALUE: Record<SortKey, (audit: Audit) => number> = {
+  created: (audit) => Date.parse(audit.created_at),
+  requested: (audit) => audit.requested_count,
+  completed: (audit) => audit.completed_count,
+  failed: (audit) => audit.failed_count,
+};
+
+function sortAudits(audits: readonly Audit[], sort: Sort): Audit[] {
+  const value = SORT_VALUE[sort.key];
+  const direction = sort.descending ? -1 : 1;
+  return [...audits].sort((a, b) => (value(a) - value(b)) * direction);
+}
+
+function runsColumns(sort: Sort, onSort: (key: SortKey) => void): DataTableColumn[] {
+  const sortable = (key: SortKey) => ({
+    active: sort.key === key,
+    descending: sort.descending,
+    onSort: () => onSort(key),
+  });
   return [
+    { key: 'run', label: 'Run', sort: sortable('created') },
     { key: 'status', label: 'Status', width: 'status' },
-    { key: 'scope', label: 'Scope' },
-    ...(showMarket ? [MARKET_COLUMN] : []),
-    { key: 'requested', label: 'Requested', width: 'figure', numeric: true },
-    { key: 'completed', label: 'Completed', width: 'figure', numeric: true },
-    { key: 'failed', label: 'Failed', width: 'figure', numeric: true },
-    { key: 'created', label: 'Created', width: 'date', numeric: true },
-    { key: 'actions', label: 'Actions', width: 'action', hideLabel: true },
+    {
+      key: 'requested',
+      label: 'Requested',
+      width: 'figure',
+      numeric: true,
+      sort: sortable('requested'),
+    },
+    {
+      key: 'completed',
+      label: 'Completed',
+      width: 'figure',
+      numeric: true,
+      sort: sortable('completed'),
+    },
+    { key: 'failed', label: 'Failed', width: 'figure', numeric: true, sort: sortable('failed') },
   ];
 }
 
 /**
  * Runs (audits) list table (F10), on the shared `DataTable`.
  *
- * One row per audit: a run-status badge, the requested/completed/failed
- * counts, and the created timestamp (cut to one line, in full on hover). Each row links to the run detail page.
- * A status filter that matches nothing keeps the header and the page's
- * footprint and states the absence inside the table.
+ * One row per audit, named by its own title (scope and day) that links to
+ * the run; the caption gives the time, the market when it is not the
+ * project's default, or that the row belongs to the launch above. Every
+ * column but the status sorts; newest first by default. A status filter that
+ * matches nothing keeps the header and states the absence inside the table.
  */
 export function RunsTable({
   audits,
@@ -54,58 +84,73 @@ export function RunsTable({
   emptyHeading: string;
 }>) {
   const timeZone = useDisplayTimeZone();
-  const { page, setPage, pageCount, from, to } = useTablePage(audits.length, PAGE_SIZE);
-  const pagedAudits = audits.slice(from - 1, to);
-  // Markets only earn a column once a project measures more than its default.
-  const showMarket = audits.some((audit) => audit.market.id !== null);
+  const [sort, setSort] = useState<Sort>({ key: 'created', descending: true });
+  const sorted = sortAudits(audits, sort);
+  const { page, setPage, pageCount, from, to } = useTablePage(sorted.length, PAGE_SIZE);
+  const pagedAudits = sorted.slice(from - 1, to);
+  const onSort = (key: SortKey) => {
+    setSort((current) =>
+      current.key === key ? { key, descending: !current.descending } : { key, descending: true },
+    );
+    setPage(1);
+  };
 
   return (
     <DataTable
       title="All runs"
       toolbar={{ status }}
-      columns={runsColumns(showMarket)}
+      columns={runsColumns(sort, onSort)}
+      minWidth="md"
       pageSize={PAGE_SIZE}
       rowCount={pagedAudits.length}
+      rowLines={3}
       state={
         audits.length === 0
           ? { kind: 'empty', headingLevel: 3, icon: Play, heading: emptyHeading }
           : undefined
       }
       pager={{
-        range: { from, to, total: audits.length, noun: 'runs' },
+        range: { from, to, total: sorted.length, noun: 'runs' },
         ...pageNumberControls(page, pageCount, setPage),
       }}
     >
       {pagedAudits.map((audit, index) => (
         <TableRow key={audit.id}>
           <TableCell>
-            <Badge variant="run-status" value={AUDIT_STATES[audit.status].badge}>
+            <TableCellLines
+              title
+              primary={<TextLink href={`/runs/${audit.id}`}>{runTitle(audit, timeZone)}</TextLink>}
+              secondary={runCaption({
+                audit,
+                timeZone,
+                launchAbove: sort.key === 'created' && sameLaunch(audit, pagedAudits[index - 1]),
+              })}
+            />
+          </TableCell>
+          <TableCell>
+            <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
               {AUDIT_STATES[audit.status].label}
-            </Badge>
+            </StatusMark>
           </TableCell>
-          <TableCell>
-            {/* A scope is a category, not a state: one neutral tag for both. */}
-            <Badge>{audit.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}</Badge>
-          </TableCell>
-          {showMarket ? <TableCell>{marketLabel(audit.market)}</TableCell> : null}
-          <TableCell numeric>{audit.requested_count}</TableCell>
-          <TableCell numeric>{audit.completed_count}</TableCell>
-          <TableCell numeric>{audit.failed_count}</TableCell>
-          <TableCell numeric className="text-ink-secondary">
-            {/* One line, cut before the View link; the full time is its tooltip. */}
-            <ClampText lines={1}>
-              {sameLaunch(audit, pagedAudits[index - 1])
-                ? 'Same launch'
-                : formatDateTime(audit.created_at, timeZone)}
-            </ClampText>
-          </TableCell>
-          <TableCell>
-            <TextLink href={`/runs/${audit.id}`} text="itemTitle">
-              View
-            </TextLink>
-          </TableCell>
+          <TableCell numeric>{formatCount(audit.requested_count)}</TableCell>
+          <TableCell numeric>{formatCount(audit.completed_count)}</TableCell>
+          <TableCell numeric>{formatCount(audit.failed_count)}</TableCell>
         </TableRow>
       ))}
     </DataTable>
   );
+}
+
+/** The time it was created, its market when not the default, or its place in the launch above. */
+function runCaption({
+  audit,
+  timeZone,
+  launchAbove,
+}: Readonly<{ audit: Audit; timeZone: string; launchAbove: boolean }>): string {
+  const parts = [
+    formatDisplayTime(audit.created_at, timeZone),
+    audit.market.id === null ? '' : marketLabel(audit.market),
+    launchAbove ? 'Same launch as above' : '',
+  ];
+  return parts.filter(Boolean).join(' · ');
 }

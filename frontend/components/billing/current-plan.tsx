@@ -1,17 +1,16 @@
 import type { ReactNode } from 'react';
 
 import { SubscriptionDetail } from '@/components/billing/billing-account-details';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { BillingPlan } from '@/components/ui/billing-plan';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import type { BillingEntitlement, CatalogPlan } from '@/lib/api/billing';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { SubscriptionStatus } from '@citeladder/contracts/billing';
+import { Notice } from '@/components/ui/notice';
 
 /** Subscriptions a customer can still cancel; any other state has nothing left to cancel. */
 const CANCELLABLE_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
@@ -75,18 +74,18 @@ function ScheduledChange({
   if (!change) return null;
   if (change.state === 'provider_rejected') {
     return (
-      <Callout tone="warning">
+      <Notice tone="warning">
         The change to {planName(change.catalog_key)} was not accepted by the payment provider. Your
         current plan continues unchanged.
-      </Callout>
+      </Notice>
     );
   }
   return (
-    <Callout tone="info">
+    <Notice tone="info">
       {change.direction === 'downgrade' ? 'Downgrade' : 'Change'} to {planName(change.catalog_key)}{' '}
       scheduled for <DisplayTime value={change.effective_at} dateOnly />. Your current plan and its
       allowances continue until then.
-    </Callout>
+    </Notice>
   );
 }
 
@@ -113,7 +112,7 @@ export function CurrentPlan({
       name={currentPlan?.name ?? subscription?.catalog_key ?? 'No active plan'}
       // The kind of access is a classification, not a state: neutral. The
       // unresolved case is a fault, and the warning below says so.
-      badge={<Badge>{accessLabel(entitlement)}</Badge>}
+      badge={<Tag>{accessLabel(entitlement)}</Tag>}
       detail={
         <SubscriptionDetail
           subscription={subscription}
@@ -171,7 +170,8 @@ function ResumeNotice({
         </p>
       ) : null}
       {cancellation.resumeError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(cancellation.resumeError, { action: 'resume the plan' })}
           onRetry={cancellation.resume}
         />
@@ -192,24 +192,24 @@ function PlanNotices({
   );
   return (
     <>
-      {notice ? <Callout tone={notice.tone}>{notice.text}</Callout> : null}
+      {notice ? <Notice tone={notice.tone}>{notice.text}</Notice> : null}
       {subscription ? <ScheduledChange subscription={subscription} planName={planName} /> : null}
       {override ? (
-        <Callout tone="info">
+        <Notice tone="info">
           This access is read-only here and expires with its grant. It is not a paid subscription
           and includes no funded AI credits.
-        </Callout>
+        </Notice>
       ) : null}
       {entitlement?.trial_grant ? (
-        <Callout tone="info">
+        <Notice tone="info">
           Temporary access ends <DisplayTime value={entitlement.trial_grant.deadline} dateOnly />.
           No card is on file, nothing renews, and access returns to free at expiry.
-        </Callout>
+        </Notice>
       ) : null}
       {entitlement === null ? (
-        <Callout tone="warning">
+        <Notice tone="warning">
           Your entitlement could not be resolved. No paid capability is active until it does.
-        </Callout>
+        </Notice>
       ) : null}
     </>
   );
@@ -239,13 +239,14 @@ function CancelDialog({ cancellation }: Readonly<{ cancellation: BillingCancella
         </>
       }
     >
-      <p className={textRole('body')}>
+      <p className={textRole('body', 'text-ink-2')}>
         Your paid access runs to the end of the current period and the plan does not renew.
         Cancelling does not refund the rest of the period, and completed audits and evidence are not
         deleted when a plan ends.
       </p>
       {cancellation.error ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(cancellation.error, {
             action: 'schedule the cancellation',
           })}

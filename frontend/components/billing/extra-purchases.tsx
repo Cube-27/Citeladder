@@ -64,7 +64,7 @@ function ExtraRow({
             width="quantity"
           />
           <Button
-            variant="primary"
+            variant="secondary"
             disabled={!purchasable || disabled}
             onClick={() => onBuy(kind, entry.key, quantity)}
           >
@@ -73,7 +73,7 @@ function ExtraRow({
         </>
       }
     >
-      <span className={textRole('itemTitle')}>{entry.name}</span>
+      <span className={textRole('body')}>{entry.name}</span>
       {entry.description ? <p className="type-caption">{entry.description}</p> : null}
       <span className={textRole('caption')}>
         {entry.unit_price
@@ -97,7 +97,7 @@ function ActiveExtras({ entitlement }: Readonly<{ entitlement: BillingEntitlemen
   if (grants.length === 0) return null;
   return (
     <Stack gap="compact">
-      <h3 className={textRole('itemTitle')}>Active purchases</h3>
+      <h3 className={textRole('subheading')}>Active purchases</h3>
       <Stack as="ul" gap="tight">
         {grants.map((grant) => (
           <li key={grant.grant_id} className={textRole('caption')}>

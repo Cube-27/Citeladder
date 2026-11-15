@@ -197,7 +197,7 @@ it('charts the prompt over time with declared work marked, and hands off to its 
       .slice(1)
       .map((cell) => cell.textContent);
   expect(cells(/ChatGPT API/)).toEqual(['2', '0', '1', '0', '0', '1']);
-  const unmeasured = '–Not measured';
+  const unmeasured = 'Not measured';
   expect(cells(/Gemini API/)).toEqual(['0', '1', unmeasured, unmeasured, unmeasured, unmeasured]);
   expect(screen.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
     'href',
@@ -206,7 +206,11 @@ it('charts the prompt over time with declared work marked, and hands off to its 
 });
 
 it('reads the market from the address and keeps a run without answers unavailable', async () => {
-  getPromptHistory.mockResolvedValue(history(null));
+  const base = history(null);
+  getPromptHistory.mockResolvedValue({
+    ...base,
+    points: base.points.map((p, i) => (i === 0 ? { ...p, owned_citation_rate: null } : p)),
+  });
   // The market lives in the address bar, which URL state reads directly.
   window.history.replaceState(null, '', `/prompts/${PROMPT}?market=${RUN(7)}`);
   renderScreen(`/prompts/${PROMPT}?market=${RUN(7)}`);
@@ -220,4 +224,7 @@ it('reads the market from the address and keeps a run without answers unavailabl
     { market: RUN(7) },
     expect.anything(),
   );
+  const trail = within(screen.getByRole('list', { name: 'Runs that measured this prompt' }));
+  expect(trail.getByText('Visibility 50% · Owned not measured')).toBeVisible();
+  expect(trail.getByText('Visibility 100% · Owned 50%')).toBeVisible();
 });

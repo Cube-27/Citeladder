@@ -1,20 +1,26 @@
 import { useState, type ReactNode } from 'react';
 
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
-import { Badge, type StatusValue } from '@/components/ui/badge';
+import { StatusMark, type StatusValue } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { Measured } from '@/components/products/measured';
+import { Value } from '@/components/ui/value';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { formatCount, pluralCount } from '@/lib/format';
 import { formatPosition, formatRate, holderCaption } from '@/lib/products/product-columns';
 import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';
 import { useEngineCatalog } from '@/lib/providers/engines';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 type Answer = CommerceProductDetail['answers'][number];
 
@@ -25,26 +31,26 @@ const OUTCOMES: Record<Answer['outcome'], { label: string; tone: StatusValue }> 
 };
 
 /** One titled card holding a ledger, or a sentence when the ledger is empty. */
-function Section({
+function ProductSection({
   title,
   description,
   empty,
   children,
 }: Readonly<{ title: string; description: string; empty: string | null; children: ReactNode }>) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>{title}</SectionTitle>
+        <SectionDescription>{description}</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         {empty === null ? (
           <ul className={ledgerClasses()}>{children}</ul>
         ) : (
-          <p className={textRole('body')}>{empty}</p>
+          <p className={textRole('body', 'text-ink-2')}>{empty}</p>
         )}
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -56,7 +62,7 @@ function Row({
   return (
     <Inline as="li" gap="compact" className={ledgerItemClasses('flex-wrap')}>
       <Stack gap="tight" className="min-w-0 flex-1">
-        <span className={textRole('emphasis', 'truncate')}>{primary}</span>
+        <span className={textRole('emphasis', 'relative block min-w-0 truncate')}>{primary}</span>
         {secondary ? <span className="type-caption">{secondary}</span> : null}
       </Stack>
       {end}
@@ -70,7 +76,7 @@ export function CompetingProducts({
 }: Readonly<{ detail: CommerceProductDetail; scope: ProductScopeFilters }>) {
   const rows = detail.competing;
   return (
-    <Section
+    <ProductSection
       title="Competing products"
       description="Products named in the same answers, by answers shared."
       empty={rows.length ? null : 'No other product was named in its answers.'}
@@ -90,18 +96,22 @@ export function CompetingProducts({
           ].join(' · ')}
           end={
             <span className="type-caption tabular-nums">
-              Position <Measured value={row.position} format={formatPosition} />
+              Position{' '}
+              <Value
+                value={row.position === null ? null : formatPosition(row.position)}
+                absent="unavailable"
+              />
             </span>
           }
         />
       ))}
-    </Section>
+    </ProductSection>
   );
 }
 
 export function Merchants({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
-    <Section
+    <ProductSection
       title="Merchants"
       description="Where the answers send shoppers to buy it."
       empty={detail.merchants.length ? null : 'No answer named a merchant for it.'}
@@ -115,7 +125,7 @@ export function Merchants({ detail }: Readonly<{ detail: CommerceProductDetail }
           }
         />
       ))}
-    </Section>
+    </ProductSection>
   );
 }
 
@@ -124,7 +134,7 @@ export function SeenIn({
   scope,
 }: Readonly<{ detail: CommerceProductDetail; scope: ProductScopeFilters }>) {
   return (
-    <Section
+    <ProductSection
       title="Seen in"
       description="The categories and products whose shopping prompts named it."
       empty={detail.seen_in.length ? null : 'No shopping prompt’s answer named it.'}
@@ -143,13 +153,13 @@ export function SeenIn({
           }
         />
       ))}
-    </Section>
+    </ProductSection>
   );
 }
 
 export function Sources({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
-    <Section
+    <ProductSection
       title="Sources"
       description="Pages cited by the answers that named it."
       empty={detail.sources.length ? null : 'The answers that named it cited no pages.'}
@@ -168,13 +178,13 @@ export function Sources({ detail }: Readonly<{ detail: CommerceProductDetail }>)
           }
         />
       ))}
-    </Section>
+    </ProductSection>
   );
 }
 
 export function FanOutQueries({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
-    <Section
+    <ProductSection
       title="Fan-out queries"
       description="What the engines searched for while writing the answers that named it."
       empty={
@@ -192,13 +202,13 @@ export function FanOutQueries({ detail }: Readonly<{ detail: CommerceProductDeta
           }
         />
       ))}
-    </Section>
+    </ProductSection>
   );
 }
 
 export function PromptMetrics({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
-    <Section
+    <ProductSection
       title="Prompts"
       description="Each prompt that named it or targets it, over that prompt's answers."
       empty={detail.prompts.length ? null : 'No prompt named it in this window.'}
@@ -209,15 +219,26 @@ export function PromptMetrics({ detail }: Readonly<{ detail: CommerceProductDeta
           primary={row.text}
           secondary={
             <>
-              Visibility <Measured value={row.visibility} format={formatRate} /> (
-              {formatCount(row.appearances)} of {pluralCount(row.executions, 'answer')}) · Win rate{' '}
-              <Measured value={row.win_rate} format={formatRate} /> · Position{' '}
-              <Measured value={row.position} format={formatPosition} />
+              Visibility{' '}
+              <Value
+                value={row.visibility === null ? null : formatRate(row.visibility)}
+                absent="unavailable"
+              />{' '}
+              ({formatCount(row.appearances)} of {pluralCount(row.executions, 'answer')}) · Win rate{' '}
+              <Value
+                value={row.win_rate === null ? null : formatRate(row.win_rate)}
+                absent="unavailable"
+              />{' '}
+              · Position{' '}
+              <Value
+                value={row.position === null ? null : formatPosition(row.position)}
+                absent="unavailable"
+              />
             </>
           }
         />
       ))}
-    </Section>
+    </ProductSection>
   );
 }
 
@@ -228,7 +249,7 @@ export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>)
   const more = detail.answer_total - detail.answers.length;
   return (
     <>
-      <Section
+      <ProductSection
         title="Answers"
         description={
           more > 0
@@ -249,17 +270,17 @@ export function Answers({ detail }: Readonly<{ detail: CommerceProductDetail }>)
             }
             end={
               <Inline gap="compact">
-                <Badge variant="status" value={OUTCOMES[row.outcome].tone}>
+                <StatusMark variant="status" value={OUTCOMES[row.outcome].tone}>
                   {OUTCOMES[row.outcome].label}
-                </Badge>
-                <Button variant="ghost" onClick={() => setOpen(row)}>
+                </StatusMark>
+                <Button variant="quiet" onClick={() => setOpen(row)}>
                   Open answer
                 </Button>
               </Inline>
             }
           />
         ))}
-      </Section>
+      </ProductSection>
       <ExecutionEvidenceDrawer
         execution={open ? { id: open.task_id, prompt_text: open.prompt_text } : null}
         open={open !== null}

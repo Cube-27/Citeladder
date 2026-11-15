@@ -6,15 +6,11 @@ import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contra
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
-import { StatRow } from '@/components/ui/stat-row';
-import { TrendChart } from '@/components/ui/trend-chart';
+import { StepChart } from '@/components/ui/step-chart';
 import { textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { ValueLedger } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
 import type { Project } from '@citeladder/contracts';
@@ -34,6 +30,10 @@ import { formatRate } from '@/lib/visibility/dashboard';
 import { formatNet, formatShare } from '@/lib/visibility/perception';
 import { hostOf, pathOf } from '@/lib/visibility/sources';
 import { toChartPoints } from '@/lib/visibility/trends';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /** Every library widget has the same floor, so loading, empty and error states never resize it. */
 function WidgetCard({
@@ -42,22 +42,22 @@ function WidgetCard({
   children,
 }: Readonly<{ id: OverviewWidgetKey; href: string; children: ReactNode }>) {
   return (
-    <Card aria-labelledby={`widget-${id}`} className="flex h-full min-h-64 flex-col">
-      <CardHeader
+    <Section aria-labelledby={`widget-${id}`} className="flex h-full min-h-64 flex-col">
+      <SectionHeader
         actions={
-          <Button asChild variant="ghost">
+          <Button asChild variant="quiet">
             <ProjectLink href={href}>
               Open <Icon icon={ArrowRight} />
             </ProjectLink>
           </Button>
         }
       >
-        <CardTitle id={`widget-${id}`}>{overviewWidgetTitles[id]}</CardTitle>
-      </CardHeader>
-      <Stack as={CardContent} gap="compact" className="flex-1 content-start">
+        <SectionTitle id={`widget-${id}`}>{overviewWidgetTitles[id]}</SectionTitle>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="compact" className="flex-1 content-start">
         {children}
       </Stack>
-    </Card>
+    </Section>
   );
 }
 
@@ -82,22 +82,23 @@ function Loaded<T>({
   if (isMetricsPending(failed.error)) return metricsPending;
   if (failed.isError)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={failed.error}
         fallback={fallback}
         onRetry={() => void failed.refetch()}
         pending={failed.isFetching}
       />
     );
-  if (query.data === undefined) return <QueryState kind="loading" />;
+  if (query.data === undefined) return <StateBlock kind="loading" />;
   return children(query.data);
 }
 
-const unavailable = <UnavailableValue state="unavailable" />;
+const unavailable = <Absence state="unavailable" />;
 /** The latest projection is `null`: no run has been measured yet. */
-const noMeasuredRun = <QueryState kind="empty" inline message="No measured run yet." />;
+const noMeasuredRun = <StateBlock kind="empty" inline message="No measured run yet." />;
 const metricsPending = (
-  <QueryState kind="empty" inline message="Results are still being prepared." />
+  <StateBlock kind="empty" inline message="Results are still being prepared." />
 );
 
 const DIFFERENT_SETTINGS = 'The earlier run used different settings, so sources are not compared.';
@@ -122,7 +123,7 @@ function notCompared(status: string, skippedRuns = 0) {
     message = skippedRuns
       ? 'No earlier run used the same settings and scoring to compare with.'
       : 'No earlier run to compare with yet.';
-  return <QueryState kind="empty" inline message={message} />;
+  return <StateBlock kind="empty" inline message={message} />;
 }
 
 const valueOr = (value: string | null) => value ?? unavailable;
@@ -140,7 +141,7 @@ export function VisibilityTrendWidget({ project }: Readonly<{ project: Project }
       <Loaded query={query} fallback="Visibility trends could not be loaded.">
         {(points) =>
           points.length ? (
-            <TrendChart
+            <StepChart
               data={toChartPoints(points, 'brand_mention_rate')}
               label="Visibility by run"
               height="sm"
@@ -149,7 +150,7 @@ export function VisibilityTrendWidget({ project }: Readonly<{ project: Project }
               legend={false}
             />
           ) : (
-            <QueryState kind="empty" inline message="No completed runs yet." />
+            <StateBlock kind="empty" inline message="No completed runs yet." />
           )
         }
       </Loaded>
@@ -173,7 +174,7 @@ export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) 
               }))}
             />
           ) : (
-            <QueryState kind="empty" inline message="No brands measured in the latest run." />
+            <StateBlock kind="empty" inline message="No brands measured in the latest run." />
           );
         }}
       </Loaded>
@@ -207,7 +208,7 @@ export function TopMoversWidget({ project }: Readonly<{ project: Project }>) {
               }))}
             />
           ) : (
-            <QueryState kind="empty" inline message="No source changed its citation share." />
+            <StateBlock kind="empty" inline message="No source changed its citation share." />
           );
         }}
       </Loaded>
@@ -263,7 +264,7 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
         {(data) => {
           const score = data.brand?.score ?? null;
           return (
-            <StatRow
+            <FigureStrip
               segments={[
                 {
                   key: 'net',
@@ -297,7 +298,7 @@ export function AiTrafficWidget({ project }: Readonly<{ project: Project }>) {
         {({ crawl, referrals }) => {
           const visits = referrals.referral_volume.at(-1)?.value ?? null;
           return (
-            <StatRow
+            <FigureStrip
               segments={[
                 {
                   key: 'requests',
@@ -326,13 +327,13 @@ export function SearchConsoleWidget({ project }: Readonly<{ project: Project }>)
       <Loaded query={query} fallback="Search Console could not be loaded.">
         {({ selected }) =>
           selected.evidence_state === 'not_run' ? (
-            <QueryState
+            <StateBlock
               kind="empty"
               inline
               message="Connect Search Console to see clicks and impressions."
             />
           ) : (
-            <StatRow
+            <FigureStrip
               segments={[
                 { key: 'clicks', label: 'Clicks', value: valueOr(count(selected.totals.clicks)) },
                 {

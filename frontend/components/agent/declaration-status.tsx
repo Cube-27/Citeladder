@@ -3,12 +3,12 @@ import { useEffect, useRef } from 'react';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { VerificationObservations } from '@/components/opportunities/verification-observations';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import {
@@ -26,6 +26,7 @@ import { pluralCount, readableUrl } from '@/lib/format';
 import { siteHealthMutations } from '@/lib/api/site-health-queries';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
 
 /**
  * Where a user starts the reading a leg is waiting for; nothing runs by
@@ -46,21 +47,21 @@ const LEG_OWNER: Record<MeasurementLeg['leg'], { href: string; label: string } |
 function Measurement({ declaration }: Readonly<{ declaration: ActionDeclaration }>) {
   if (declaration.resolved_before_snapshot_id)
     return (
-      <p className={textRole('body')}>
+      <p className={textRole('body', 'text-ink-2')}>
         These findings were already resolved before this went live, so the outcome is not credited
         to this change and nothing is measured.
       </p>
     );
   if (declaration.checks.length === 0)
     return (
-      <p className={textRole('body')}>
+      <p className={textRole('body', 'text-ink-2')}>
         No automatic check applies to these findings, so CiteLadder records the work but cannot
         verify it.
       </p>
     );
   return (
     <>
-      <p className={textRole('body')} aria-live="polite">
+      <p className={textRole('body', 'text-ink-2')} aria-live="polite">
         {IMPLEMENTATION_STATE_LABEL[declaration.state]}
       </p>
       <Stack as="ul" gap="compact" aria-label="Checks">
@@ -100,12 +101,12 @@ export function DeclarationStatus({
   );
   return (
     <Stack gap="compact">
-      <p className={textRole('body')}>
+      <p className={textRole('body', 'text-ink-2')}>
         Went live on <DisplayTime value={declaration.declared_implemented_at} dateOnly />
         {revisionNote(declaration.output_revision_id, shownRevision)}
       </p>
       <Deployment declaration={declaration} />
-      <h3 ref={heading} tabIndex={-1} className={textRole('itemTitle', 'focus-ring w-fit')}>
+      <h3 ref={heading} tabIndex={-1} className={textRole('subheading', 'focus-ring w-fit')}>
         Measurement
       </h3>
       <Measurement declaration={declaration} />
@@ -143,13 +144,13 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
   return (
     <Stack as="li" gap="tight">
       <Inline as="span" className="flex-wrap">
-        <span className={textRole('itemTitle')}>{checkKindLabel(check.kind)}</span>
+        <span className={textRole('body')}>{checkKindLabel(check.kind)}</span>
         {tone ? (
-          <Badge variant="status" value={tone}>
+          <StatusMark variant="status" value={tone}>
             {checkStateLabel(check)}
-          </Badge>
+          </StatusMark>
         ) : (
-          <Badge>{checkStateLabel(check)}</Badge>
+          <Tag>{checkStateLabel(check)}</Tag>
         )}
       </Inline>
       {subject ? <CheckSubject subject={subject} promptId={check.prompt_id} /> : null}
@@ -269,7 +270,7 @@ function LegRow({
   const waiting = leg.state !== 'observed';
   return (
     <Stack as="li" gap="tight">
-      <span className={textRole('itemTitle')}>{measurementLegLabel(leg.leg)}</span>
+      <span className={textRole('body')}>{measurementLegLabel(leg.leg)}</span>
       <span className={textRole('caption')}>
         <LegWait leg={leg} />
         {waiting && owner ? (
@@ -297,7 +298,7 @@ function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
       <output className={textRole('caption')}>
         Crawl started. The checks update when it finishes.{' '}
         <ProjectLink href="/site" className="underline underline-offset-2">
-          Open Site Health
+          Open Website
         </ProjectLink>
       </output>
     );
@@ -314,7 +315,8 @@ function RunCrawl({ workspaceId }: Readonly<{ workspaceId: string }>) {
         </Button>
       </div>
       {start.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(start.error, { action: 'start a crawl' })}
           onRetry={() => start.mutate({ project_id: activeProjectId })}
         />

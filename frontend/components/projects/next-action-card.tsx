@@ -2,9 +2,8 @@ import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { ProjectLink } from '@/components/ui/project-link';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardEyebrow, CardHeader, CardTitle } from '@/components/ui/card';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -12,6 +11,13 @@ import { textRole } from '@/components/ui/typography';
 import { pluralCount, readableUrl } from '@/lib/format';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import type { CommandCenter } from '@citeladder/contracts';
+import {
+  Section,
+  SectionContent,
+  SectionEyebrow,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 const RECOMMENDED = 'Action recommended';
 
@@ -32,7 +38,7 @@ const NEXT_ACTION_COPY: Record<
   },
   crawl: {
     status: RECOMMENDED,
-    link: 'Open Site Health',
+    link: 'Open Website',
     reason: 'A crawl finds the page issues behind later Actions.',
   },
   configure_prompts: {
@@ -66,9 +72,9 @@ function nextActionEvidence(data: CommandCenter): ReactNode {
       if (!action) return null;
       return (
         <Inline>
-          <Badge variant="priority" value={severityPriority(action.severity)}>
+          <StatusMark variant="priority" value={severityPriority(action.severity)}>
             {severityLabel(action.severity)}
-          </Badge>
+          </StatusMark>
           <span className={textRole('caption', 'min-w-0 truncate')}>
             {action.target_label ? readableUrl(action.target_label) : 'Project-wide'} ·{' '}
             {pluralCount(action.evidence_summary.count, 'evidence item')}
@@ -112,14 +118,16 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
       ? 'Open Actions'
       : copy.link;
   return (
-    <Card aria-labelledby="next-action" className="text-ink h-full">
-      <CardHeader actions={<span className={textRole('label')}>{copy.status}</span>}>
-        <CardEyebrow>Next action</CardEyebrow>
-        <CardTitle id="next-action">{data.next_action.title}</CardTitle>
-      </CardHeader>
+    <Section aria-labelledby="next-action" className="text-ink h-full">
+      <SectionHeader
+        actions={<span className={textRole('body', 'text-ink-2')}>{copy.status}</span>}
+      >
+        <SectionEyebrow>Next action</SectionEyebrow>
+        <SectionTitle id="next-action">{data.next_action.title}</SectionTitle>
+      </SectionHeader>
       {/* The reason, its evidence and the button are blocks: 12 apart. */}
-      <Stack as={CardContent} gap="workspace">
-        {copy.reason ? <p className={textRole('body')}>{copy.reason}</p> : null}
+      <Stack as={SectionContent} gap="workspace">
+        {copy.reason ? <p className={textRole('body', 'text-ink-2')}>{copy.reason}</p> : null}
         {nextActionEvidence(data)}
         <div>
           <Button asChild variant="primary">
@@ -130,6 +138,6 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
           </Button>
         </div>
       </Stack>
-    </Card>
+    </Section>
   );
 }

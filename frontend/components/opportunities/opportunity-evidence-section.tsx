@@ -1,13 +1,13 @@
 import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { OpportunitySourcePattern } from '@/components/opportunities/opportunity-source-pattern';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Label } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@citeladder/contracts';
 import { observedSourcePattern } from '@/lib/opportunities/source-pattern';
 import { formatCount } from '@/lib/format';
 import { keywordGapEvidenceSchema } from '@citeladder/contracts';
+import { wellClasses } from '@/components/ui/slip';
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
@@ -33,7 +33,7 @@ function KeywordGapEvidence({ evidence }: Readonly<{ evidence: Record<string, un
           value={formatCount(volume)}
         />
       )}
-      <Stack as="ul" gap="tight" className="type-body">
+      <Stack as="ul" gap="tight" className="type-body text-ink-2">
         {competitors.map((item) => (
           <li key={item.row_id}>
             {item.name} ranks
@@ -69,12 +69,12 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
     <Stack as="section">
       <Label>Evidence</Label>
       {promptText ? (
-        <blockquote className={panelClasses()}>
+        <blockquote className={wellClasses()}>
           <p className="type-body text-ink">“{promptText}”</p>
         </blockquote>
       ) : null}
       {url ? (
-        <p className={panelClasses('type-caption text-ink break-all tabular-nums')}>{url}</p>
+        <p className={wellClasses('type-caption text-ink break-all tabular-nums')}>{url}</p>
       ) : null}
       {theme ? <OpportunityKvRow label="Topic" value={theme} /> : null}
       {competitors.length > 0 ? (
@@ -82,9 +82,9 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
           <span className="type-caption">Competitors mentioned</span>
           <Inline className="flex-wrap">
             {competitors.map((name) => (
-              <Badge key={name} variant="classification" value="competitor">
+              <StatusMark key={name} variant="classification" value="competitor">
                 {name}
-              </Badge>
+              </StatusMark>
             ))}
           </Inline>
         </Stack>

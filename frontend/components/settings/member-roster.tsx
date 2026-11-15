@@ -1,7 +1,7 @@
 import { SearchX, Trash2 } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button, IconButton } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
@@ -127,12 +127,12 @@ function MemberRow({
         <Inline>
           <Avatar name={member.email} />
           <ClampText lines={1}>{member.email}</ClampText>
-          {member.is_self ? <Badge>You</Badge> : null}
+          {member.is_self ? <Tag>You</Tag> : null}
         </Inline>
       </TableCell>
       <TableCell className="whitespace-nowrap">
         {inert ? (
-          <Badge>{roleLabel(member.role)}</Badge>
+          <Tag>{roleLabel(member.role)}</Tag>
         ) : (
           <Select
             value={member.role as AssignableWorkspaceRole}

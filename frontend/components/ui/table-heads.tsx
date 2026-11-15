@@ -28,7 +28,10 @@ export function HintedTableHead({
   return (
     <TableHead numeric={numeric} desktopOnly={desktopOnly} className="whitespace-normal">
       <Tooltip content={hint}>
-        <button type="button" className="focus-ring cursor-default rounded-xs">
+        <button
+          type="button"
+          className="focus-ring rounded-mark inline-flex min-h-6 cursor-default items-center"
+        >
           {label}
         </button>
       </Tooltip>
@@ -91,14 +94,14 @@ export function SortableTableHead({
       type="button"
       onClick={onSort}
       className={cn(
-        'focus-ring inline-flex w-full flex-col gap-0.5 rounded-xs transition-colors',
+        'focus-ring inline-flex min-h-6 w-full flex-col justify-center gap-0.5 rounded-mark transition-colors',
         align.column,
         !active && 'hover:text-ink',
       )}
     >
       <span className={cn('inline-flex w-full items-center gap-1', align.row)}>
         <span className="truncate">{label}</span>
-        <Icon className={cn('size-3 shrink-0', !active && 'text-ink-muted')} aria-hidden />
+        <Icon className={cn('size-3 shrink-0', !active && 'text-ink-2')} aria-hidden />
       </span>
       {sublabel ? (
         <span className={textRole('caption', 'max-w-full truncate')} title={sublabel}>

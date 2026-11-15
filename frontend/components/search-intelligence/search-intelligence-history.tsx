@@ -2,16 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { AppGrid } from '@/components/ui/app-grid';
 import { formatChartCount } from '@/components/ui/chart';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { TrendChart, type TrendPoint } from '@/components/ui/trend-chart';
+import { StepChart, type TrendPoint } from '@/components/ui/step-chart';
 import { textRole } from '@/components/ui/typography';
 import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /** One month of saved history; a null value is an unobserved month and draws as a gap. */
 type HistoryRow = {
@@ -29,7 +29,14 @@ export function SearchIntelligenceHistory({
     searchIntelligenceQueries.datasetHistory({ workspaceId, projectId }, dataset.id),
   );
   if (query.isError)
-    return <ReadError {...readErrorProps(query)} fallback="Saved history could not be loaded." />;
+    return (
+      <Notice
+        kind="read"
+        {...readErrorProps(query)}
+        fallback="Saved history could not be loaded."
+        title="Saved history could not be loaded"
+      />
+    );
   if (query.isPending) return <Skeleton variant="chart" />;
   const rows = query.data.rows;
   const observations = rows
@@ -45,7 +52,7 @@ export function SearchIntelligenceHistory({
   const last = observations.at(-1);
   if (!first || !last || observations.length < 2)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         inline
         message="History needs at least two saved observations to show a trend."
@@ -66,8 +73,8 @@ export function SearchIntelligenceHistory({
         summary. Missing observations are gaps.
       </p>
       <Stack gap="compact" className="min-w-0 content-start">
-        <h3 className={textRole('itemTitle', 'min-h-6')}>Total backlinks</h3>
-        <TrendChart
+        <h3 className={textRole('subheading', 'min-h-6')}>Total backlinks</h3>
+        <StepChart
           label="Saved monthly backlink totals"
           name="Backlinks"
           data={points((row) => row.backlinks)}
@@ -76,8 +83,8 @@ export function SearchIntelligenceHistory({
         />
       </Stack>
       <Stack gap="compact" className="min-w-0 content-start">
-        <h3 className={textRole('itemTitle', 'min-h-6')}>Monthly changes</h3>
-        <TrendChart
+        <h3 className={textRole('subheading', 'min-h-6')}>Monthly changes</h3>
+        <StepChart
           label="Saved monthly new and lost backlinks"
           name="New backlinks"
           data={points((row) => row.new)}

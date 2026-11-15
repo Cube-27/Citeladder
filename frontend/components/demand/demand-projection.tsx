@@ -9,10 +9,8 @@ import {
 import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { ListScreen } from '@/components/layout/page-shell';
-import { QueryState } from '@/components/ui/query-state';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
+import { CollectionPage } from '@/components/templates/collection-page';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
 import { DemandLatentDemand } from '@/components/demand/demand-latent-demand';
@@ -44,6 +42,8 @@ import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navig
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 const DEMAND_TAB_CODEC = stringUrlCodec(
   FILTER_TABS.map(({ tab }) => tab),
@@ -104,7 +104,8 @@ function RecomputeStatus({ mutation }: Readonly<{ mutation: RecomputeMutation }>
 function RecomputeFailure({ mutation }: Readonly<{ mutation: RecomputeMutation }>) {
   if (!mutation.isError) return null;
   return (
-    <MutationNotice
+    <Notice
+      kind="mutation"
       notice={mutationNoticeForError(mutation.error, {
         action: 'queue the search demand recompute',
       })}
@@ -180,7 +181,7 @@ function SearchDemandView({
   // An empty feed has two different causes, and they need different words:
   // nothing was detected at all, or the filter hid everything that was.
   let signalsFeed: ReactNode = (
-    <QueryState
+    <StateBlock
       kind="empty"
       icon={Search}
       heading="No signals match your filter"
@@ -208,7 +209,7 @@ function SearchDemandView({
     );
   } else if (snapshot.signals.length === 0) {
     signalsFeed = (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={Sparkles}
         heading="No qualifying search gaps observed"
@@ -218,7 +219,7 @@ function SearchDemandView({
   }
 
   return (
-    <ListScreen
+    <CollectionPage
       actions={
         // Recomputing is a run; a role without it reads the snapshot as is.
         canRun ? (
@@ -237,45 +238,49 @@ function SearchDemandView({
           />
         ) : undefined
       }
-      controls={{
-        // Which signals the table lists is the row's view; it leads.
-        view: (
-          <DemandSignalFilters
-            snapshot={snapshot}
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            tabCounts={tabCounts}
-          />
-        ),
-        search: (
-          <SearchField
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-            placeholder="Filter queries or pages…"
-            aria-label="Filter queries or pages"
-          />
-        ),
-        // What the table holds, and over which window, closes the row.
-        status: (
-          <>
-            <span>
-              <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
-              {snapshot.signals.length === 1 ? ' signal observed' : ' signals observed'}
-            </span>
-            <Inline as="span" gap="tight">
-              <Icon icon={Calendar} />
-              {windowLabel}
-            </Inline>
-            <DemandLatentDemand snapshot={snapshot} />
-          </>
-        ),
-      }}
+      // Which signals the table lists is the page's sub-view: its tabs band.
+      tabs={
+        <DemandSignalFilters
+          snapshot={snapshot}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          tabCounts={tabCounts}
+        />
+      }
+      filters={
+        <FilterBar
+          search={
+            <SearchField
+              value={searchQuery}
+              onValueChange={setSearchQuery}
+              placeholder="Filter queries or pages…"
+              aria-label="Filter queries or pages"
+            />
+          }
+          // What the table holds, and over which window, closes the row.
+          status={
+            <>
+              <span>
+                <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
+                {snapshot.signals.length === 1 ? ' signal observed' : ' signals observed'}
+              </span>
+              <Inline as="span" gap="tight">
+                <Icon icon={Calendar} />
+                <span className="type-data-sm">{windowLabel}</span>
+              </Inline>
+              <DemandLatentDemand snapshot={snapshot} />
+            </>
+          }
+        />
+      }
     >
       <>
         {refreshError ? (
-          <ReadError
+          <Notice
+            kind="read"
             error={refreshError}
             fallback="Search demand could not be refreshed."
+            title="Search demand could not be refreshed"
             onRetry={onRetry ?? (() => undefined)}
             pending={Boolean(retrying)}
           />
@@ -284,7 +289,7 @@ function SearchDemandView({
         {/* What the figures mean, then the table the control row narrows.
             A queued recompute rides this line and the header button. */}
         <Stack>
-          <Inline as="p" gap="meta">
+          <Inline as="p" gap="meta" className="type-caption">
             <SignalLegend signals={snapshot.signals} policy={snapshot.detector_policy} />
             <DemandDataCaveats snapshot={snapshot} />
             <RecomputeStatus mutation={recomputeMutation} />
@@ -301,7 +306,7 @@ function SearchDemandView({
           }}
         />
       </>
-    </ListScreen>
+    </CollectionPage>
   );
 }
 
@@ -334,19 +339,20 @@ export function DemandProjection() {
       />
     );
   }
-  return <ListScreen>{demandFallback(latest)}</ListScreen>;
+  return <CollectionPage>{demandFallback(latest)}</CollectionPage>;
 }
 
 /** Every non-loaded state of `/demand`, in the order it is decided. */
 function demandFallback(latest: UseQueryResult<DemandSnapshot | null, Error>) {
-  if (latest.isLoading) return <QueryState kind="loading" label="Loading search demand…" />;
+  if (latest.isLoading) return <StateBlock kind="loading" label="Loading search demand…" />;
   if (latest.data === null) return <SearchConsoleSetup />;
   if (latest.isError)
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         {...readErrorProps(latest)}
         fallback="Search demand could not be loaded. Check your connection and try again."
+        title="Search demand could not be loaded"
       />
     );
   if (latest.data === undefined) return null;
@@ -360,7 +366,7 @@ function SearchConsoleSetup() {
       required={['gsc']}
       title="Connect Search Console"
       whenReady={
-        <QueryState
+        <StateBlock
           kind="empty"
           icon={Search}
           heading="Search Demand appears after the next Search Console import"

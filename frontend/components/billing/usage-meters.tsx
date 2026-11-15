@@ -1,15 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { AppGrid } from '@/components/ui/app-grid';
-import { Callout } from '@/components/ui/callout';
-import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 import { UsageMeter } from '@/components/billing/usage-meter';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
-import { cardClasses } from '@/components/ui/card';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Preferred display order. Rows the backend sends that are not listed here
@@ -48,15 +52,19 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   const usageQuery = useQuery({ ...billingQueries.usage(workspaceId), enabled });
 
   return (
-    <Stack gap="compact" className={cardClasses()}>
-      <EditorialSectionHeader
-        title="Usage"
-        description="Measured against the allowances your active grants provide."
-      />
-      <Stack gap="workspace">
+    <Section aria-labelledby="usage-title">
+      <SectionHeader>
+        <SectionTitle id="usage-title" level={2}>
+          Usage
+        </SectionTitle>
+        <SectionDescription>
+          Measured against the allowances your active grants provide.
+        </SectionDescription>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="workspace">
         <UsageBody enabled={enabled} query={usageQuery} />
       </Stack>
-    </Stack>
+    </Section>
   );
 }
 
@@ -68,11 +76,12 @@ function UsageBody({
   query: ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.usage>>>>;
 }>) {
   if (!enabled || query.isLoading) {
-    return <QueryState kind="loading" label="Loading usage…" />;
+    return <StateBlock kind="loading" label="Loading usage…" />;
   }
   if (query.isError || !query.data) {
     return (
-      <ReadError
+      <Notice
+        kind="read"
         {...readErrorProps(query)}
         fallback="Could not load usage. Check your connection and retry."
       />
@@ -80,16 +89,16 @@ function UsageBody({
   }
   if (query.data.status !== 'resolved') {
     return (
-      <Callout tone="warning">
+      <Notice tone="warning">
         Your entitlement could not be resolved, so usage is unavailable. Contact support if this
         persists.
-      </Callout>
+      </Notice>
     );
   }
   const items = ordered(query.data.items);
   if (items.length === 0) {
     return (
-      <QueryState kind="empty" inline message="No measurable allowances on this account yet." />
+      <StateBlock kind="empty" inline message="No measurable allowances on this account yet." />
     );
   }
   return (

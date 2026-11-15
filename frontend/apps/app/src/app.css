@@ -39,6 +39,7 @@
 @source '../../../components/settings';
 @source '../../../components/search-intelligence';
 @source '../../../components/site-health';
+@source '../../../components/templates';
 @source '../../../components/ui';
 @source '../../../components/visibility';
 @source '../../../lib';

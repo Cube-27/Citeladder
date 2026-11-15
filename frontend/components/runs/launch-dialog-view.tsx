@@ -7,8 +7,6 @@ import { Field } from '@/components/ui/field';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { ReadError, readErrorProps, type RetryableRead } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import type { LogicalEngine, Prompt, PromptSet } from '@citeladder/contracts';
@@ -22,7 +20,8 @@ import {
   type RepetitionLimits,
 } from '@/lib/runs/launch';
 import { textRole } from '@/components/ui/typography';
-import { panelClasses } from '@/components/ui/panel';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { wellClasses } from '@/components/ui/slip';
 
 /** The prompt-set list read, kept apart from the list it yields. */
 type PromptSetsRead = RetryableRead & Readonly<{ status: 'pending' | 'error' | 'success' }>;
@@ -68,13 +67,14 @@ function PromptSetField({
     <Field label="Prompt set" required>
       {(props) => {
         if (locked) {
-          return <p className={textRole('body')}>{label}</p>;
+          return <p className={textRole('body', 'text-ink-2')}>{label}</p>;
         }
         // A failed list is not an empty one: "add prompts first" would send a
         // reader with many prompt sets off to recreate them.
         if (promptSetsRead.status === 'error') {
           return (
-            <ReadError
+            <Notice
+              kind="read"
               {...readErrorProps(promptSetsRead)}
               fallback="Could not load this project's prompt sets."
             />
@@ -82,7 +82,9 @@ function PromptSetField({
         }
         if (promptSetsRead.status === 'success' && !promptSets.length) {
           return (
-            <p className="type-body">No prompt set yet. Add prompts on the Prompts screen first.</p>
+            <p className="type-body text-ink-2">
+              No prompt set yet. Add prompts on the Prompts screen first.
+            </p>
           );
         }
         return (
@@ -156,9 +158,9 @@ function InlineProviderSetup({
 }: Readonly<{ connecting: LogicalEngine | 'any'; onClose: () => void }>) {
   const engine = connecting === 'any' ? null : connecting;
   return (
-    <Stack as="section" gap="item" aria-label="Connect a provider" className={panelClasses()}>
+    <Stack as="section" gap="item" aria-label="Connect a provider" className={wellClasses()}>
       <Inline className="justify-between">
-        <p className={textRole('label')}>Connect a provider</p>
+        <p className={textRole('body', 'text-ink-2')}>Connect a provider</p>
         <IconButton icon={X} label="Close provider setup" onClick={onClose} />
       </Inline>
       <div className="max-h-80 overflow-y-auto overscroll-contain">
@@ -185,10 +187,10 @@ function MarketsField({
   if (markets.length < 2) return null;
   return (
     <Stack as="fieldset" gap="item">
-      <legend className={textRole('label')}>
-        Markets <span className="text-ink-muted">*</span>
+      <legend className={textRole('body', 'text-ink-2')}>
+        Markets <span className="text-ink-2">*</span>
       </legend>
-      <p className="type-caption text-ink-muted">
+      <p className="type-caption text-ink-2">
         Each market runs separately. An engine that cannot measure a market is skipped there.
       </p>
       <Inline className="flex-wrap">
@@ -284,7 +286,7 @@ export function LaunchDialogView({
       width="wide"
       footer={
         <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="quiet" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button variant="primary" onClick={onLaunch} disabled={!selectionReady || launchPending}>
@@ -294,7 +296,7 @@ export function LaunchDialogView({
       }
     >
       <Stack gap="workspace">
-        {launchNotice ? <MutationNotice notice={launchNotice} onRetry={onLaunch} /> : null}
+        {launchNotice ? <Notice kind="mutation" notice={launchNotice} onRetry={onLaunch} /> : null}
         <PromptSetField
           promptSets={promptSets}
           promptSetsRead={promptSetsRead}
@@ -305,12 +307,12 @@ export function LaunchDialogView({
         />
         <BatchField batches={batches} batchIndex={batchIndex} setBatchIndex={setBatchIndex} />
         <Stack as="fieldset" gap="item">
-          <legend className={textRole('label')}>
-            Engines <span className="text-ink-muted">*</span>
+          <legend className={textRole('body', 'text-ink-2')}>
+            Engines <span className="text-ink-2">*</span>
           </legend>
           {noEngines ? (
             <Stack gap="item">
-              <p className="type-body">
+              <p className="type-body text-ink-2">
                 {unverifiedEngines.length
                   ? `A key is stored for ${unverifiedEngines.map(catalog.label).join(', ')}, but it has not passed a connection test yet. Test it to launch an audit with it.`
                   : 'No configured engines. Connect a provider to launch an audit.'}
@@ -327,7 +329,9 @@ export function LaunchDialogView({
           ) : null}
           {[true, false].map((consumer) => (
             <Stack key={String(consumer)} gap="item">
-              <p className={textRole('label')}>{consumer ? 'Consumer experiences' : 'APIs'}</p>
+              <p className={textRole('body', 'text-ink-2')}>
+                {consumer ? 'Consumer experiences' : 'APIs'}
+              </p>
               <Inline className="flex-wrap">
                 {catalog.order
                   .filter((engine) => catalog.isObserved(engine) === consumer)
@@ -381,12 +385,12 @@ export function LaunchDialogView({
           )}
         </Field>
         {estimate ? (
-          <Stack gap="tight" className={panelClasses('type-caption')}>
+          <Stack gap="tight" className={wellClasses('type-caption')}>
             <span className={textRole('emphasis', 'text-ink')}>
               {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
               planned
             </span>
-            <span className="text-ink-muted">
+            <span className="text-ink-2">
               Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s · cost{' '}
               {estimate.cost_status}
               {estimate.estimated_total_cost_microusd !== null
@@ -395,7 +399,7 @@ export function LaunchDialogView({
             </span>
           </Stack>
         ) : null}
-        <p className="type-caption text-ink-muted">
+        <p className="type-caption text-ink-2">
           Answers that mention you or a competitor are also classified for sentiment. No credits are
           used.
         </p>

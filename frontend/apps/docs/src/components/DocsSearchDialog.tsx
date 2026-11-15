@@ -174,7 +174,7 @@ export function DocsSearchDialog() {
             </output>
             {failed && (
               <Button
-                variant="ghost"
+                variant="quiet"
                 onClick={() => {
                   setFailed(false);
                   setAttempt((value) => value + 1);

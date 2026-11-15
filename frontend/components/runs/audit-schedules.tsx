@@ -2,15 +2,10 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import { mainPromptSet } from '@/lib/prompts/prompt-sets';
 import { toggleMarket } from '@/lib/runs/launch';
@@ -31,6 +26,9 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { schedulePauseReason } from '@/lib/runs/status';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -67,15 +65,16 @@ function WorkspaceSchedules({
   const canWrite = useWorkspaceCapability('write');
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Scheduled audits</CardTitle>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Scheduled audits</SectionTitle>
         <p className="type-caption">Runs use the selected prompt set and your connected engines.</p>
-      </CardHeader>
-      <CardContent>
+      </SectionHeader>
+      <SectionContent>
         <Stack>
           {schedulesQuery.isError ? (
-            <ReadError
+            <Notice
+              kind="read"
               {...readErrorProps(schedulesQuery)}
               fallback="Could not load scheduled audits."
             />
@@ -94,7 +93,7 @@ function WorkspaceSchedules({
             </ul>
           ) : null}
           {schedulesQuery.isSuccess && schedulesQuery.data.length === 0 ? (
-            <QueryState kind="empty" inline message="No scheduled audits yet." />
+            <StateBlock kind="empty" inline message="No scheduled audits yet." />
           ) : null}
           {/* Scheduling is offered only to a role that may write schedules. */}
           {canWrite ? (
@@ -107,8 +106,8 @@ function WorkspaceSchedules({
             }}
           />
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -150,7 +149,7 @@ function ScheduleForm({
   return (
     <>
       {promptSets.length === 0 ? (
-        <Callout tone="info">Add prompts before scheduling an audit.</Callout>
+        <Notice tone="info">Add prompts before scheduling an audit.</Notice>
       ) : (
         <Stack className="desktop:grid-cols-3">
           <Stack gap="item" className={textRole('label')}>
@@ -221,14 +220,16 @@ function ScheduleForm({
           </Stack>
           <MarketChecklist markets={markets} marketIds={marketIds} onToggle={setMarketIds} />
           <div className="flex items-end">
-            <Button variant="primary" onClick={createSchedule} disabled={!canCreate}>
+            {/* The masthead's Launch audit is the page's one primary. */}
+            <Button variant="secondary" onClick={createSchedule} disabled={!canCreate}>
               {createMutation.isPending ? 'Scheduling…' : 'Schedule audit'}
             </Button>
           </div>
         </Stack>
       )}
       {createMutation.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(createMutation.error, {
             action: 'schedule the audit',
           })}
@@ -304,23 +305,24 @@ function ScheduleRow({
   /** Resumes a paused schedule; omitted for a role that may not. */
   onResume?: () => void;
 }>) {
+  const catalog = useEngineCatalog();
   return (
-    <Inline as="li" className={ledgerItemClasses('type-body flex-wrap justify-between')}>
+    <Inline as="li" className={ledgerItemClasses('type-body text-ink-2 flex-wrap justify-between')}>
       <span className={textRole('emphasis', 'text-ink')}>{CADENCE_LABELS[schedule.cadence]}</span>
       {schedule.enabled ? (
-        <span className="text-ink-secondary">
-          {schedule.engines.join(', ')} · next{' '}
+        <span className="text-ink-2">
+          {schedule.engines.map(catalog.label).join(', ')} · next{' '}
           {schedule.next_run_at ? (
             <DisplayTime value={schedule.next_run_at} />
           ) : (
-            <UnavailableValue state="not_set" />
+            <Absence state="not_set" />
           )}
           {' · '}
           {schedule.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}
           {marketSummary(schedule, markets)}
         </span>
       ) : (
-        <Inline as="span" className="text-ink-secondary flex-wrap">
+        <Inline as="span" className="text-ink-2 flex-wrap">
           {pauseLabel(schedule)}
           {/* A one-time schedule that ran is finished, not paused; resuming would run it again. */}
           {finishedOnce(schedule) || !onResume ? null : (
@@ -337,7 +339,8 @@ function ScheduleRow({
 function ResumeNotice({ error, onRetry }: Readonly<{ error: Error | null; onRetry: () => void }>) {
   if (!error) return null;
   return (
-    <MutationNotice
+    <Notice
+      kind="mutation"
       notice={mutationNoticeForError(error, { action: 'resume the schedule' })}
       onRetry={onRetry}
     />

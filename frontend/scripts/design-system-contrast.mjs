@@ -82,6 +82,47 @@ const CONTRAST_PAIRS = [
   },
 ];
 
+/*
+ * The app's palette, held on the app's scopes only:
+ * text roles 4.5:1 on ground, surface, well and raised and under the hover
+ * and pressed tints; status inks on every fill and their own wash; marks and
+ * boundaries 3:1. The absence word is checked against the hatch's line too.
+ */
+const APP_FILLS = ['ground', 'surface', 'well', 'raised'].map(color);
+const APP_WASHES = ['accent', ...STATUSES].map((role) => color(`${role}-wash`));
+const APP_SERIES = ['data-you', 'data-rival-1', 'data-rival-2', 'data-rival-3', 'data-rival-4'].map(
+  color,
+);
+const APP_PAIRS = [
+  { inks: ['ink', 'ink-2'].map(color), surfaces: APP_FILLS, minimum: 4.5 },
+  {
+    inks: ['ink', 'ink-2'].map(color),
+    surfaces: ['state-hover', 'state-pressed'].map(color),
+    over: APP_FILLS,
+    minimum: 4.5,
+  },
+  { inks: [color('ink')], surfaces: APP_WASHES, minimum: 4.5 },
+  ...STATUSES.map((status) => ({
+    inks: [color(status)],
+    surfaces: [...APP_FILLS, color(`${status}-wash`)],
+    minimum: 4.5,
+  })),
+  { inks: [color('accent-text')], surfaces: [...APP_FILLS, color('accent-wash')], minimum: 4.5 },
+  { inks: [color('ink-2')], surfaces: [color('rule')], minimum: 4.5 },
+  {
+    inks: [
+      color('accent'),
+      color('control-line'),
+      color('rule-ink'),
+      ...APP_SERIES,
+      color('data-other'),
+    ],
+    surfaces: APP_FILLS,
+    minimum: 3,
+  },
+].map((row) => ({ ...row, appOnly: true }));
+CONTRAST_PAIRS.push(...APP_PAIRS);
+
 /**
  * Every ink and every surface token the contrast matrix reads, so a fixture
  * can bind a complete palette without restating the matrix row by row.
@@ -106,6 +147,7 @@ const pairsOf = (tokens) =>
 const SEPARATED_SETS = [
   { name: 'positive and negative', pairs: [[color('positive'), color('negative')]] },
   { name: 'named chart series', pairs: pairsOf(SERIES) },
+  { name: 'you and the rivals', pairs: pairsOf(APP_SERIES), appOnly: true },
 ];
 
 function escapeRegExp(value) {
@@ -237,15 +279,16 @@ function rowViolations(palette, { scope, cssLabel }, row) {
 }
 
 function contrastViolations(palette, { name: scope, website }, cssLabel) {
-  return CONTRAST_PAIRS.filter((row) => website || !row.websiteOnly).flatMap((row) =>
-    rowViolations(palette, { scope, cssLabel }, row),
-  );
+  return CONTRAST_PAIRS.filter(
+    (row) => (website || !row.websiteOnly) && (!website || !row.appOnly),
+  ).flatMap((row) => rowViolations(palette, { scope, cssLabel }, row));
 }
 
-function separationViolations(palette, scope, cssLabel) {
+function separationViolations(palette, { name: scope, website }, cssLabel) {
   const base = palette.get(color('surface'));
   const violations = [];
-  for (const { name, pairs } of SEPARATED_SETS) {
+  for (const { name, pairs, appOnly } of SEPARATED_SETS) {
+    if (appOnly && website) continue;
     for (const [firstToken, secondToken] of pairs) {
       const first = opaque(palette, firstToken, base);
       const second = opaque(palette, secondToken, base);
@@ -286,7 +329,7 @@ export function paletteViolations(source, cssLabel = TOKEN_CSS) {
     const palette = resolvePalette(source, scope.layers);
     violations.push(
       ...contrastViolations(palette, scope, cssLabel),
-      ...separationViolations(palette, scope.name, cssLabel),
+      ...separationViolations(palette, scope, cssLabel),
     );
   }
   return violations;

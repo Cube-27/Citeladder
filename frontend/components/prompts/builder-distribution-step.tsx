@@ -6,7 +6,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { RadioGroup } from '@/components/ui/radio-group';
 import { textRole } from '@/components/ui/typography';
 import type { PromptFormLimits, SeedQueries, Topic } from '@citeladder/contracts';
@@ -16,6 +15,7 @@ import {
   type RunSettings,
   type SeedChoice,
 } from '@/lib/prompts/builder-run';
+import { StateBlock } from '@/components/ui/state-block';
 
 const INTENT_LABELS = {
   informational: 'Informational',
@@ -31,7 +31,7 @@ const SOURCE_LABELS: Record<SeedChoice, string> = {
 function Section({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
   return (
     <Stack as="fieldset" gap="compact" className="min-w-0">
-      <legend className={textRole('label')}>{title}</legend>
+      <legend className={textRole('body', 'text-ink-2')}>{title}</legend>
       {children}
     </Stack>
   );
@@ -84,7 +84,7 @@ function PersonaChoices({
 }>) {
   if (!choices.length)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         inline
         icon={Users}
@@ -134,7 +134,7 @@ function SeedList({
   const queries = seeds.sources.find((item) => item.source === source)?.queries ?? [];
   if (!queries.length)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         inline
         icon={Search}
@@ -154,7 +154,7 @@ function SeedList({
         if (!own.length) return [];
         return [
           <Stack key={topic.id} as="fieldset" gap="tight">
-            <legend className={textRole('label')}>{topic.name}</legend>
+            <legend className={textRole('body', 'text-ink-2')}>{topic.name}</legend>
             {own.map((query) => (
               <Checkbox
                 key={query.id}

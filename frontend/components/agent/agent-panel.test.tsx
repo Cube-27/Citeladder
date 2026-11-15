@@ -160,7 +160,7 @@ describe('AgentPanel', () => {
     const user = userEvent.setup();
     renderShell('/site');
 
-    await user.click(await screen.findByRole('button', { name: 'Open agent' }));
+    await user.click(await screen.findByRole('button', { name: 'Ask agent' }));
     const panel = await screen.findByRole('dialog', { name: 'Agent' });
     expect(within(panel).getByLabelText('Message the agent')).toHaveValue(
       'Fix the missing meta description.',
@@ -195,7 +195,7 @@ describe('AgentPanel', () => {
     const user = userEvent.setup();
     renderShell('/site');
 
-    await user.click(await screen.findByRole('button', { name: 'Open agent' }));
+    await user.click(await screen.findByRole('button', { name: 'Ask agent' }));
     const message = within(await screen.findByRole('dialog', { name: 'Agent' })).getByLabelText(
       'Message the agent',
     );
@@ -210,7 +210,7 @@ describe('AgentPanel', () => {
     renderShell(`/agent/chats/${CHAT}`);
 
     expect(await screen.findByText(`Workspace chat ${CHAT}`)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Open agent' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Ask agent' })).not.toBeInTheDocument();
   });
 
   it('follows the drawer thread in its own region until the reader scrolls up', async () => {
@@ -224,7 +224,7 @@ describe('AgentPanel', () => {
     );
     const user = userEvent.setup();
     const { queryClient } = renderShell('/site');
-    await user.click(await screen.findByRole('button', { name: 'Open agent' }));
+    await user.click(await screen.findByRole('button', { name: 'Ask agent' }));
     const panel = await screen.findByRole('dialog', { name: 'Agent' });
     await user.click(within(panel).getByRole('button', { name: 'Send' }));
     await within(panel).findByLabelText('Reply to the agent');

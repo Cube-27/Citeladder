@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { EmptyHeadingLevelContext } from '@/components/ui/empty-state';
 import { cn } from '@/lib/utils';
+import { StateHeadingLevelContext } from '@/components/ui/state-block';
 
 /**
  * Card — the resting container: a `surface` box on the page ground that
@@ -15,17 +15,10 @@ import { cn } from '@/lib/utils';
  * of its own: a flex column would re-flow every card and put an overflow
  * boundary between a sticky child and its scroll container.
  */
-export const CARD_FACE = 'bg-surface text-ink border-line rounded-lg border';
+const CARD_FACE = 'bg-surface text-ink border-rule rounded-sheet border';
 
 /** The card, for a semantic element that is not a `section` (a list item, a link). */
-export const cardClasses = () => cn('surface-card p-[var(--card-padding)]', CARD_FACE);
-
-/**
- * A floating surface: a menu, popover, select list, dialog, drawer,
- * toast or tip is the same container lifted by `shadow-float`. Its 1px `line`
- * border is its edge in both themes; the shadow carries depth only.
- */
-export const FLOAT_FACE = 'bg-surface text-ink border-line border shadow-float';
+const cardClasses = () => cn('surface-card p-[var(--card-padding)]', CARD_FACE);
 
 export function Card({
   children,
@@ -35,7 +28,7 @@ export function Card({
   return (
     <section {...props} className={cn(cardClasses(), className)}>
       {/* Under the card's h3 title, a block empty state's heading is an h3. */}
-      <EmptyHeadingLevelContext value={3}>{children}</EmptyHeadingLevelContext>
+      <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
     </section>
   );
 }
@@ -51,7 +44,7 @@ export function Card({
  * margin across the rule.
  */
 const HEADER_RULE =
-  'not-last:-mx-[var(--card-padding)] not-last:mb-[var(--card-padding)] not-last:border-b not-last:border-line not-last:px-[var(--card-padding)] not-last:pb-[var(--card-padding)]';
+  'not-last:-mx-[var(--card-padding)] not-last:mb-[var(--card-padding)] not-last:border-b not-last:border-rule not-last:px-[var(--card-padding)] not-last:pb-[var(--card-padding)]';
 
 export function CardHeader({
   children,
@@ -89,50 +82,8 @@ export function CardEyebrow({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={cn('type-eyebrow', className)}>
+    <span {...props} className={cn('type-overline', className)}>
       {children}
     </span>
-  );
-}
-
-/** CardTitle — 16/24 at 500 in `ink`. */
-export function CardTitle({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'h3'>>) {
-  return (
-    <h3
-      {...props}
-      className={cn('text-label-lg text-ink font-medium tracking-[-0.01em]', className)}
-    >
-      {children}
-    </h3>
-  );
-}
-
-/** CardDescription — one or two sentences under the title, in `ink-secondary`. */
-export function CardDescription({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'p'>>) {
-  return (
-    <p {...props} className={cn('text-body-sm text-ink-secondary', className)}>
-      {children}
-    </p>
-  );
-}
-
-/** The card's body: no padding of its own, since the card carries the inset. */
-export function CardContent({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'div'> & { children: ReactNode }>) {
-  return (
-    <div {...props} className={className}>
-      {children}
-    </div>
   );
 }

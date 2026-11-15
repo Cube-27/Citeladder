@@ -10,9 +10,9 @@ type Variant = 'primary' | 'dark' | 'nav' | 'ghost' | 'soft';
 type VisualProps = Readonly<{ variant?: Variant; size?: 'lg' | 'marketing'; className?: string }>;
 
 /** `dark` and `nav` are marketing-only skins over the shared secondary. */
-const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'ghost'> = {
+const SHARED_VARIANT: Record<Variant, 'primary' | 'secondary' | 'quiet'> = {
   primary: 'primary',
-  ghost: 'ghost',
+  ghost: 'quiet',
   dark: 'secondary',
   nav: 'secondary',
   soft: 'secondary',

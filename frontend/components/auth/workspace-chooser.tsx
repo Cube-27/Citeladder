@@ -5,17 +5,18 @@ import { Link, useNavigate } from 'react-router-dom';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { roleLabel } from '@/components/settings/member-roles';
-import { AuthCard, AuthRow, AuthRowList, AuthRowTile, AuthShell } from '@/components/ui/auth-shell';
-import { Badge } from '@/components/ui/badge';
+import { FlowBlock, FlowPage } from '@/components/templates/flow-page';
+import { AuthRow, AuthRowList, AuthRowTile } from '@/components/ui/auth-shell';
+import { StatusMark } from '@/components/ui/status-mark';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Callout } from '@/components/ui/callout';
 import { DisplayTime } from '@/components/ui/display-time';
-import { QueryState } from '@/components/ui/query-state';
 import type { Workspace } from '@citeladder/contracts';
 import { workspaceQueries } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { ownsWorkspace, soleOwnedWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Where a signed-in person goes next: their own workspace (or setting one up
@@ -41,11 +42,11 @@ export function WorkspaceChooser() {
   if (status === 'error')
     return (
       <ChooserFrame>
-        <Callout tone="negative">Your workspaces could not be loaded. Reload to try again.</Callout>
+        <Notice tone="negative">Your workspaces could not be loaded. Reload to try again.</Notice>
       </ChooserFrame>
     );
   if (workspaces.length === 0 || only)
-    return <QueryState kind="loading" label="Loading your workspaces…" />;
+    return <StateBlock kind="loading" label="Loading your workspaces…" />;
 
   const enter = (workspace: Workspace) => {
     setActiveWorkspaceId(workspace.id);
@@ -78,11 +79,11 @@ export function WorkspaceChooser() {
 
 function ChooserFrame({ children }: Readonly<{ children?: ReactNode }>) {
   return (
-    <AuthShell mainLabel="Choose a workspace" barEnd={<UserMenuTrigger presenter="compact" />}>
-      <AuthCard title="Choose a workspace" sub="You can switch between workspaces at any time.">
+    <FlowPage label="Choose a workspace" barEnd={<UserMenuTrigger presenter="compact" />}>
+      <FlowBlock title="Choose a workspace" sub="You can switch between workspaces at any time.">
         {children}
-      </AuthCard>
-    </AuthShell>
+      </FlowBlock>
+    </FlowPage>
   );
 }
 
@@ -95,27 +96,27 @@ function AccessBadge({ workspaceId }: Readonly<{ workspaceId: string }>) {
       return null;
     case 'trial_active':
       return (
-        <Badge variant="status" value="info">
+        <StatusMark variant="status" value="info">
           Trial until <DisplayTime value={data.expires_at} dateOnly />
-        </Badge>
+        </StatusMark>
       );
     case 'trial_expired':
       return (
-        <Badge variant="status" value="warning">
+        <StatusMark variant="status" value="warning">
           Trial ended
-        </Badge>
+        </StatusMark>
       );
     case 'subscription_lapsed':
       return (
-        <Badge variant="status" value="warning">
+        <StatusMark variant="status" value="warning">
           Plan ended
-        </Badge>
+        </StatusMark>
       );
     case 'access_unresolved':
       return (
-        <Badge variant="status" value="danger">
+        <StatusMark variant="status" value="danger">
           Access unavailable
-        </Badge>
+        </StatusMark>
       );
     default: {
       const _exhaustive: never = data.status;

@@ -4,8 +4,8 @@ import * as ToastPrimitive from '@radix-ui/react-toast';
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { FLOAT_FACE } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { SHEET_FACE } from '@/components/ui/slip';
 
 type ToastTone = 'neutral' | 'positive' | 'negative';
 
@@ -29,7 +29,7 @@ const TOAST_DURATION_MS = 6000;
 const MAX_TOASTS = 3;
 
 const TONE_ICON = {
-  neutral: { Icon: Info, className: 'text-ink-secondary', word: 'Notice' },
+  neutral: { Icon: Info, className: 'text-ink-2', word: 'Notice' },
   positive: { Icon: CheckCircle2, className: 'text-positive', word: 'Success' },
   negative: { Icon: AlertCircle, className: 'text-negative', word: 'Error' },
 } as const;
@@ -37,7 +37,7 @@ const TONE_ICON = {
 /**
  * Toast — a brief message about something that just happened, bottom-right,
  * newest at the bottom: the floating face (`surface`, 1px `line` border,
- * `shadow-float`), `radius-lg`, 400px. The tone
+ * `shadow-sheet`), `radius-lg`, 400px. The tone
  * shows only in the 16px icon plus a screen-reader word; negative toasts are
  * announced assertively and stay until dismissed, as does a toast with an action.
  */
@@ -72,8 +72,8 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   setMessages((current) => current.filter((item) => item.id !== message.id));
               }}
               className={cn(
-                FLOAT_FACE,
-                'toast-panel flex w-100 max-w-full items-start gap-3 rounded-lg py-3 ps-4 pe-3',
+                SHEET_FACE,
+                'toast-panel flex w-100 max-w-full items-start gap-3 rounded-sheet py-3 ps-4 pe-3',
               )}
             >
               <span className={cn('inline-flex h-5 shrink-0 items-center', className)}>
@@ -85,7 +85,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   {message.title}
                 </ToastPrimitive.Title>
                 {message.description ? (
-                  <ToastPrimitive.Description className="text-body-sm text-ink-secondary mt-0.5">
+                  <ToastPrimitive.Description className="text-body-sm text-ink-2 mt-0.5">
                     {message.description}
                   </ToastPrimitive.Description>
                 ) : null}
@@ -98,7 +98,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                 ) : null}
               </div>
               <ToastPrimitive.Close
-                className="focus-ring text-ink-secondary not-disabled:hover:overlay-hover not-disabled:hover:text-ink -m-1 grid size-[var(--control-sm)] shrink-0 place-items-center rounded-sm"
+                className="focus-ring text-ink-2 not-disabled:hover:overlay-hover not-disabled:hover:text-ink rounded-control -m-1 grid size-[var(--control-sm)] shrink-0 place-items-center"
                 aria-label="Dismiss notification"
               >
                 <X className="size-4" aria-hidden />

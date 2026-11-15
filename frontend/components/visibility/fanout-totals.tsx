@@ -63,7 +63,7 @@ export function FanoutCounts({
   const scope = selectionWide ? 'across the selected run set' : 'in the searches shown below';
   return (
     <span
-      className={textRole('label', 'text-ink-secondary whitespace-nowrap')}
+      className={textRole('body', 'text-ink-2 whitespace-nowrap')}
       aria-label={`${distinct} distinct searches and ${occurrences} total occurrences ${scope}`}
       title={scope}
     >
@@ -82,7 +82,7 @@ export function SearchScopeNote({
   if (!search || matched == null) return null;
   const noun = matched === 1 ? 'search' : 'searches';
   return (
-    <span className={textRole('label', 'text-ink-secondary')}>
+    <span className={textRole('body', 'text-ink-2')}>
       {matched === 0
         ? 'No searches match in this run set'
         : `${matched} matching ${noun} in this run set`}

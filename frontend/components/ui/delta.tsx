@@ -1,24 +1,23 @@
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { cn } from '@/lib/utils';
 
 /**
- * Delta — a change on its own, in the voice of a Stat's change line: an
- * arrow, the magnitude and a word for screen readers, in the mono `data`
- * style. No sign as well as the arrow.
+ * Delta — a change: `data-sm` at 500, an arrow glyph,
+ * the signed number and its unit, in the tone its meaning takes, with an
+ * optional basis ("vs 7 Nov") in `ink-2`.
  *
- * Colour follows meaning, not direction, and the policy decides it:
- * `higher-is-better` paints a rise `positive`, `lower-is-better` (rank,
- * latency, errors) paints it `negative`, and `neutral` stays `ink-secondary`
- * because the movement is a fact, not a verdict. A displayed zero is flat
- * (→, `ink-secondary`). The arrow and the hidden word carry the direction
- * without colour.
+ * Colour follows meaning, not direction: `higher-is-better` paints a rise
+ * `positive`, `lower-is-better` (rank, latency, errors) paints it
+ * `negative`, and `neutral` stays `ink-2` because the movement is a fact,
+ * not a verdict. A displayed zero is flat: `→ 0` in `ink-2`. The arrow, the
+ * sign and the hidden word carry the direction without colour; only the word
+ * is spoken.
  *
  * The direction is decided from the value the reader SEES, after rounding, so
  * a movement of +0.04 never claims a direction it does not show.
  *
- * A missing change (null, undefined or non-finite) is not zero: it renders the
- * availability vocabulary (`MissingValue`: the muted dash, "Not measured" as
- * its accessible name, and the optional reason on hover/focus).
+ * A change that cannot be compared (null, undefined or non-finite) is not
+ * zero: it is an Absence, with the optional reason on hover and focus.
  */
 export type DeltaPolicy = 'higher-is-better' | 'lower-is-better' | 'neutral';
 
@@ -42,8 +41,8 @@ function outcomeOf(direction: Direction, policy: DeltaPolicy): Outcome {
 const OUTCOME_INK: Record<Outcome, string> = {
   improved: 'text-positive',
   worsened: 'text-negative',
-  changed: 'text-ink-secondary',
-  unchanged: 'text-ink-secondary',
+  changed: 'text-ink-2',
+  unchanged: 'text-ink-2',
 };
 
 function roundedChange(value: number, precision: number) {
@@ -54,7 +53,11 @@ function roundedChange(value: number, precision: number) {
   return { direction, magnitude: Math.abs(rounded) };
 }
 
-const DELTA_FACE = 'type-delta inline-flex items-baseline gap-1 whitespace-nowrap';
+// The website's product screens keep their unsigned 400 change line.
+const DELTA_FACE =
+  'type-data-sm inline-flex items-baseline gap-1 font-medium whitespace-nowrap [[data-public-surface]_&]:font-normal';
+
+const SIGN = { up: '+', down: '-', flat: '' } as const satisfies Record<Direction, string>;
 
 export function Delta({
   value,
@@ -75,16 +78,12 @@ export function Delta({
   unit?: string;
   /** Why there is no change, e.g. "No comparable run" — shown on hover/focus. */
   missingReason?: string;
-  /** The period the change covers, e.g. "vs last week", in `ink-muted`. */
+  /** The basis the change is measured against, e.g. "vs 7 Nov", in `ink-2`. */
   context?: string;
   className?: string;
 }>) {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
-    return (
-      <span className={cn(DELTA_FACE, 'text-ink-muted', className)}>
-        <MissingValue reason={missingReason} />
-      </span>
-    );
+    return <Absence state="not_measured" reason={missingReason} className={className} />;
   }
   const { direction, magnitude } = roundedChange(value, precision);
   const outcome = outcomeOf(direction, policy);
@@ -99,10 +98,13 @@ export function Delta({
       </span>
       <span className="sr-only">{`${TREND[direction].word} `}</span>
       <span>
-        {magnitude.toFixed(precision)}
+        <span aria-hidden className="[[data-public-surface]_&]:hidden">
+          {SIGN[direction]}
+        </span>
+        {magnitude.toFixed(direction === 'flat' ? 0 : precision)}
         {unit}
       </span>
-      {context ? <span className="text-ink-muted ms-0.5">{context}</span> : null}
+      {context ? <span className="text-ink-2 ms-0.5 font-normal">{context}</span> : null}
     </span>
   );
 }

@@ -5,47 +5,47 @@ import { cn } from '@/lib/utils';
 /**
  * The closed set of product text roles.
  *
- * A call site names the *job* the text does and gets size, leading, weight,
- * tracking and ink from that job. The recipes live once, as `.type-*` classes
- * in `apps/app/src/globals.css`; this map only names them, so retuning a role
- * is one CSS edit and no call site changes.
+ * A call site names the *job* the text does and gets face, size, leading,
+ * weight and tracking from it. The recipes live once, as `.type-*` classes
+ * in `apps/app/src/globals.css`; this map only names them.
  *
- * Size carries the hierarchy, then ink, and weight last. Every role is
- * one of three text styles:
- * - heading: 500 in `ink`. Page, section, card, dialog and drawer titles, a
- *   metric's figure, buttons and the selected tab or nav item.
- * - primary: 400 in `ink`. What is read first in a row or a sentence: row and
- *   item titles, names, values, table cells, prose.
- * - secondary: 400 in the app's one grey. What supports it: descriptions,
- *   labels, column heads, captions, meta, counts, inactive tabs and nav.
- * `ink-muted` is an alias of `ink-secondary`, so there are two inks. The sizes below are the `.type-*` recipes in globals.css
- * (size/leading in px).
+ * Mono is measured, sans is said, display names places. Ink has two steps:
+ * `ink` for what is read first (every role's default) and `ink-2` for what
+ * supports it (caption and overline default to it; pass `text-ink-2` for a
+ * supporting sentence at body size). Sizes are 12, 13, 14, 16, 20, 24, 28
+ * and 40 only.
  */
 const TEXT_ROLES = {
-  /** The route `h1`. 20/28, −0.01em, ink, display face at its one weight. One per page. */
-  pageTitle: 'type-page-title',
-  /** A section, card, drawer or dialog heading. 16/24, heading (500, ink). */
-  sectionTitle: 'type-section-title',
-  /** The title of a row, list item or insight. 14/20, primary (400, ink); 500 when set on an `h2`–`h6`. */
-  itemTitle: 'type-item-title',
-  /** Sentences: descriptions and supporting copy. 14/20, secondary (400, grey). */
+  /** Flow headings, the new-chat greeting, full-page notices. Display 28/36 500. */
+  display: 'type-display',
+  /** The masthead's page title; dialog and drawer titles. Display 20/28 600. One per view. */
+  title: 'type-title',
+  /** A section title. Sans 16/24 600. */
+  heading: 'type-heading',
+  /** Slip titles, table group heads, field-group legends. Sans 14/20 600. */
+  subheading: 'type-subheading',
+  /** Default interface text and table text cells. Sans 14/20 400. */
   body: 'type-body',
-  /** Navigation, tabs, links, list rows. 14/20, 400; ink and the selected 500 come from state. */
-  control: 'type-control',
-  /** Names a value: metric, fact and group labels. 14/20, secondary (400, grey). */
+  /** Buttons, tabs, navigation, field labels, the selected item. Sans 14/20 500. */
   label: 'type-label',
-  /** Timestamps, counts, help, footnotes. 12/16, secondary (400, grey). */
+  /** Reading text: Agent replies, documents, long explanations. Sans 16/26, 60–80ch. */
+  prose: 'type-prose',
+  /** Help text and metadata sentences. Sans 12/16, `ink-2`. */
   caption: 'type-caption',
-  /** A metric value. 24/32, heading (500, ink), tabular digits. */
+  /** Column heads, navigation group heads, key-figure labels, DRAFT. Mono 12/16 500 caps. */
+  overline: 'type-overline',
+  /** At most one hero figure per page. Mono 40/44 500. */
+  figureXl: 'type-figure-xl',
+  /** A key figure. Mono 24/32 500. */
   figure: 'type-figure',
-  /** A value inside a dense row or cell. 14/20, primary (400, ink), tabular digits. */
-  figureSm: 'type-figure-sm',
-  /** A change indicator. 12/16, 400, mono; the caller supplies the tone. */
-  delta: 'type-delta',
-  /** Badges, chips, segment labels, counts, key hints. 12/16, 400; the tone supplies the ink. */
-  badge: 'type-badge',
-  /** A value or name inside grey text that owns its size: primary (400, ink). */
+  /** Table numerals, dates, URLs, ids, code. Mono 13/20. */
+  data: 'type-data',
+  /** Changes, citation markers, counts, key hints, absence words. Mono 12/16. */
+  dataSm: 'type-data-sm',
+  /** Emphasis inside text: weight 500, never colour. */
   emphasis: 'type-emphasis',
+  /** The website's product screens only (components/marketing/screens); the app uses `title`. */
+  pageTitle: 'type-page-title',
 } as const;
 
 export type TextRole = keyof typeof TEXT_ROLES;
@@ -55,14 +55,14 @@ export function textRole(role: TextRole, className?: string) {
   return cn(TEXT_ROLES[role], className);
 }
 
-/** A label naming a value — the `label` role. */
+/** A supporting label naming a value: `body` in `ink-2`. */
 export function Label({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={textRole('label', className)}>
+    <span {...props} className={textRole('body', cn('text-ink-2', className))}>
       {children}
     </span>
   );
@@ -70,14 +70,14 @@ export function Label({
 
 /**
  * CodeToken — a literal the reader copies or types (a URL, a key prefix, a
- * command) set inline on the well tint: the `emphasis` role, 8 across and 4
- * down, the small radius, cut to one line. One form; the token owns its box.
+ * command): the `data` role in a well, 8 across and 4 down, the control
+ * radius, cut to one line. One form; the token owns its box.
  */
 export function CodeToken({ children }: Readonly<{ children: string }>) {
   return (
     <code
       data-code-token=""
-      className={textRole('emphasis', 'bg-surface-sunken min-w-0 truncate rounded-xs px-2 py-1')}
+      className={textRole('data', 'bg-well min-w-0 truncate rounded-control px-2 py-1')}
     >
       {children}
     </code>
@@ -85,10 +85,9 @@ export function CodeToken({ children }: Readonly<{ children: string }>) {
 }
 
 /**
- * InlineFigure — a number inside a line that owns its size and ink (a tab or
- * chip count, a summary line's total, an ID, "30 / 210"): the surrounding
- * role is kept and only the digits take the figure face. Feature screens use
- * this instead of setting the face themselves.
+ * InlineFigure — a number inside a line that keeps the line's size and ink
+ * (a tab or chip count, a total, an ID, "30 / 210"): only the digits take the
+ * mono face, so numerals are tabular by construction (law 2).
  */
 export function InlineFigure({
   children,
@@ -96,13 +95,13 @@ export function InlineFigure({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={cn('font-mono', className)}>
+    <span {...props} className={cn('font-mono tabular-nums', className)}>
       {children}
     </span>
   );
 }
 
-/** Primary numeral in the figure face — the `figure` role. */
+/** A key figure's numeral — the `figure` role. */
 export function Metric({
   children,
   className,

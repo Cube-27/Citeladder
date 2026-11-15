@@ -20,7 +20,7 @@ function SourceLink({
   return (
     <Inline gap="compact" className="items-start justify-between">
       <span className="type-caption shrink-0">{label}</span>
-      <TextLink href={href} text="itemTitle">
+      <TextLink href={href} text="body">
         {linkText}
       </TextLink>
     </Inline>

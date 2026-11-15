@@ -2,8 +2,6 @@ import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -18,13 +16,14 @@ import {
   MenuRadioItem,
   MenuSeparator,
 } from '@/components/ui/menu';
-import { QueryState } from '@/components/ui/query-state';
 import { Select } from '@/components/ui/select';
 import { ControlCount } from '@/components/ui/tabs';
 import type { Topic } from '@citeladder/contracts';
 import { orderTopicsForRail } from '@/lib/prompts/topic-tree';
 
 import type { useTopicMutations } from './use-topic-mutations';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 type TopicMutations = ReturnType<typeof useTopicMutations>;
 
@@ -160,7 +159,7 @@ export function AddTopicDialog({
           void submit();
         }}
       >
-        {error ? <MutationNotice notice={error} /> : null}
+        {error ? <Notice kind="mutation" notice={error} /> : null}
         <Field label="Topic name" required>
           {(props) => (
             <Input
@@ -223,7 +222,7 @@ export function TopicDialogs({
   const createFailed = mutations.create.isError;
   return (
     <>
-      {loadError ? <Callout tone="negative">{TOPICS_LOAD_ERROR}</Callout> : null}
+      {loadError ? <Notice tone="negative">{TOPICS_LOAD_ERROR}</Notice> : null}
       <AddTopicDialog
         open={dialog === 'add'}
         onOpenChange={(open) => onDialogChange(open ? 'add' : null)}
@@ -291,8 +290,8 @@ export function ManageTopicsDialog({
         </>
       }
     >
-      {loadError ? <Callout tone="negative">{TOPICS_LOAD_ERROR}</Callout> : null}
-      {!loadError && actionError ? <MutationNotice notice={actionError} /> : null}
+      {loadError ? <Notice tone="negative">{TOPICS_LOAD_ERROR}</Notice> : null}
+      {!loadError && actionError ? <Notice kind="mutation" notice={actionError} /> : null}
       {ordered.length ? (
         <TreeList label="Topics">
           {ordered.map(({ topic, nested, label }) => (
@@ -307,7 +306,7 @@ export function ManageTopicsDialog({
           ))}
         </TreeList>
       ) : (
-        <QueryState kind="empty" inline message="No topics yet." />
+        <StateBlock kind="empty" inline message="No topics yet." />
       )}
     </Dialog>
   );

@@ -21,7 +21,7 @@ export function Passage({
 }>) {
   const at = highlight ? children.indexOf(highlight) : -1;
   return (
-    <blockquote className="bg-surface-sunken rounded-md px-4 pt-4 pb-3">
+    <blockquote className="bg-well rounded-control px-4 pt-4 pb-3">
       <p className="text-body-sm text-ink leading-6">
         “
         {highlight && at >= 0 ? (
@@ -53,7 +53,7 @@ export function Limitations({
   return (
     <div className={cn('grid gap-1', className)}>
       {items.map((item) => (
-        <p key={item} className="text-caption text-ink-muted">
+        <p key={item} className="text-caption text-ink-2">
           {item}
         </p>
       ))}

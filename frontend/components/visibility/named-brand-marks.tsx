@@ -19,7 +19,7 @@ export function NamedBrandMarks({
   answers,
 }: Readonly<{ brands: readonly NamedBrand[]; total: number; answers: string }>) {
   // Measured, and no brand was named: a finding, never the "not measured" mark.
-  if (!brands.length) return <span className="text-ink-muted">None</span>;
+  if (!brands.length) return <span className="text-ink-2">None</span>;
   const overflow = total - brands.length;
   return (
     <Inline as="span" gap="tight">
@@ -41,7 +41,7 @@ export function NamedBrandMarks({
         </Tooltip>
       ))}
       {overflow > 0 ? (
-        <span className={textRole('caption', 'text-ink-secondary tabular-nums')}>
+        <span className={textRole('caption', 'text-ink-2 tabular-nums')}>
           +{overflow}
           <span className="sr-only"> more</span>
         </span>

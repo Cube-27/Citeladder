@@ -11,8 +11,6 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { newIdempotencyKey } from '@/lib/agent/idempotency';
 import { contentGapCheckPreview, measurementLegLabel } from '@/lib/agent/vocabulary';
@@ -26,6 +24,7 @@ import {
   localDay,
 } from '@/lib/opportunities/declaration-date';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
 
 type Declarable = Pick<
   ActionDetail,
@@ -179,14 +178,15 @@ export function MarkImplementedButton({
           </Field>
           <MeasurementPreview action={action} />
           {recommendationIds ? (
-            <p className={textRole('body')}>
+            <p className={textRole('body', 'text-ink-2')}>
               Only these {recommendationIds.length} selected links will be measured, together with
               the page&apos;s other findings. Include every link you want to declare now; this page
               Action can be declared once.
             </p>
           ) : null}
           {declare.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(declare.error, {
                 action: 'declare this Action implemented',
               })}
@@ -208,7 +208,8 @@ export function MarkActionImplemented({
   const action = useQuery(actionsQueries.detail(workspaceId, actionId));
   if (action.isError)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={action.error}
         fallback="The Action could not be loaded to declare it."
         onRetry={() => void action.refetch()}
@@ -224,13 +225,13 @@ function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
   if (action.members.length === 0) return null;
   return (
     <Stack gap="compact">
-      <p className={textRole('label')}>What CiteLadder will check</p>
+      <p className={textRole('body', 'text-ink-2')}>What CiteLadder will check</p>
       <Stack as="ul" gap="compact">
         {action.members.map((member) => {
           const leg = action.member_measurement[member.id] ?? null;
           return (
             <Stack as="li" gap="tight" key={member.id}>
-              <span className={textRole('itemTitle')}>{member.title}</span>
+              <span className={textRole('body')}>{member.title}</span>
               {leg && member.content_gap_evidence ? (
                 <span className={textRole('caption', 'break-words')}>
                   {contentGapCheckPreview(member.content_gap_evidence)}
@@ -384,7 +385,8 @@ function TargetChoice({
         </Button>
       </Inline>
       {choose.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(choose.error, {
             action: 'choose where this document belongs',
           })}
@@ -410,7 +412,8 @@ function AttachedDeclaration({
   const action = useQuery(actionsQueries.detail(workspaceId, actionId));
   if (action.isError)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={action.error}
         fallback="The Action's implementation state could not be loaded."
         onRetry={() => void action.refetch()}

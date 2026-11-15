@@ -10,7 +10,7 @@ import type {
   FactTopic,
 } from '@citeladder/contracts/fact-checking';
 
-import type { SentimentValue } from '@/components/ui/badge';
+import type { SentimentValue } from '@/components/ui/status-mark';
 
 export const TOPIC_LABELS: Record<FactTopic, string> = {
   pricing: 'Pricing',

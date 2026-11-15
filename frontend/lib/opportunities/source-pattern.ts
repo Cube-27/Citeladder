@@ -1,5 +1,5 @@
 import { sourceClassSchema, type SourceClass, type SourcePattern } from '@citeladder/contracts';
-import type { ClassificationValue } from '@/components/ui/badge';
+import type { ClassificationValue } from '@/components/ui/status-mark';
 
 /**
  * Display copy for the `source_pattern` block (`sourcePatternSchema`) the

@@ -5,19 +5,18 @@ import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 /**
- * The field box every text control shares (Input, SearchField, Select's
- * trigger, ChipInput, Textarea, the composer): `surface` with the soft 1px
- * `line` edge and the faint `shadow-edge` smudge under it (no dark
- * edge), `radius-md`, at least `control-md`
- * tall so a larger reader text size grows it instead of clipping.
- * Hover steps the edge to `line-strong`; focus
- * thickens it to a 2px `focus` line inside a 3px `line` halo, and an invalid
- * field turns it `negative` (globals.css `.focus-input`/`.focus-frame`, which
- * win over hover).
+ * The field frame every text control shares (Input, SearchField, Select's
+ * trigger, ChipInput, Textarea, the composer): `surface` with the 1px
+ * `control-line` edge (3:1), the control radius, at least `control-md`
+ * tall so a larger reader text size grows it instead of clipping. Focus is
+ * the shared 2px ink outline; an invalid field turns its line crimson
+ * (globals.css `.focus-input`/`.focus-frame`). The website keeps its soft
+ * hairline edge.
  */
-export const FIELD_EDGE = 'bg-surface shadow-edge border border-line hover:border-line-strong';
+export const FIELD_EDGE =
+  'bg-surface border border-control-line [[data-public-surface]_&]:border-rule [[data-public-surface]_&]:shadow-edge [[data-public-surface]_&]:hover:border-control-line';
 
-export const FIELD_BOX = `${FIELD_EDGE} min-h-[var(--control-md)] w-full rounded-md px-3 text-body-sm text-ink transition-[border-color,box-shadow] duration-[var(--motion-fast)]`;
+export const FIELD_BOX = `${FIELD_EDGE} type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[border-color,outline-color] duration-[var(--motion-fast)]`;
 
 /**
  * A field fills its column (`fill`) unless its role is narrower: `quantity`
@@ -30,9 +29,9 @@ const inputWidths = {
 } as const;
 
 /**
- * Input — the single-line text field. One form: 36px. Leading and trailing
+ * Input — the single-line text field. One form: 32px. Leading and trailing
  * content (a mono affix such as "https://", an icon, the end button) sits
- * inside the same box.
+ * inside the same frame.
  */
 export function Input({
   className,
@@ -67,7 +66,7 @@ export function Input({
         className={cn(
           'focus-input',
           FIELD_BOX,
-          'placeholder:text-ink-muted disabled:cursor-not-allowed disabled:opacity-45',
+          'placeholder:text-ink-2 disabled:cursor-not-allowed disabled:opacity-60',
           inputWidths[width],
           containerClassName,
           className,
@@ -82,26 +81,26 @@ export function Input({
       className={cn(
         'focus-frame flex items-center gap-2',
         FIELD_BOX,
-        props.disabled && 'cursor-not-allowed opacity-45',
+        props.disabled && 'cursor-not-allowed opacity-60',
         endContentFlush && 'pe-1',
         containerClassName,
       )}
     >
       {startContent ? (
-        <span className="text-ink-muted text-caption flex shrink-0 items-center font-mono whitespace-nowrap">
+        <span className="type-data-sm text-ink-2 flex shrink-0 items-center whitespace-nowrap">
           {startContent}
         </span>
       ) : null}
       <input
         ref={ref}
         className={cn(
-          'placeholder:text-ink-muted min-w-0 flex-1 self-stretch bg-transparent text-body-sm text-ink disabled:cursor-not-allowed',
+          'placeholder:text-ink-2 type-body min-w-0 flex-1 self-stretch bg-transparent disabled:cursor-not-allowed',
           className,
         )}
         {...props}
       />
       {endContent ? (
-        <span className="text-ink-muted text-caption flex shrink-0 items-center font-mono whitespace-nowrap">
+        <span className="type-data-sm text-ink-2 flex shrink-0 items-center whitespace-nowrap">
           {endContent}
         </span>
       ) : null}
@@ -111,8 +110,8 @@ export function Input({
 
 /**
  * FieldEndButton — the one icon target at a field's end (clear a search,
- * reveal a password): SearchField's clear face, a 24px `radius-xs` square
- * (the WCAG 2.5.8 minimum target) with the 16px glyph, `ink-muted` until hovered, its focus ring 1px out.
+ * reveal a password): SearchField's clear face, a 24px square (the minimum
+ * target) with the 16px glyph, `ink-2` until hovered, its focus ring 1px out.
  * Pass it as an `Input`'s `endContent`. `label` is its accessible name.
  */
 export function FieldEndButton({
@@ -130,7 +129,7 @@ export function FieldEndButton({
     <button
       type="button"
       data-field-end-target=""
-      className="focus-ring text-ink-muted enabled:hover:overlay-hover enabled:hover:text-ink grid size-6 shrink-0 place-items-center rounded-xs transition-colors focus-visible:outline-offset-1"
+      className="focus-ring text-ink-2 enabled:hover:overlay-hover enabled:hover:text-ink rounded-mark grid size-[var(--target-min)] shrink-0 place-items-center transition-colors focus-visible:outline-offset-1"
       disabled={disabled}
       onClick={onClick}
       aria-label={label}

@@ -4,7 +4,7 @@
  * An unmapped token renders as nothing (or a neutral fallback where a label is
  * structurally required), never as the raw backend identifier.
  */
-import type { PriorityValue } from '@/components/ui/badge';
+import type { PriorityValue } from '@/components/ui/status-mark';
 import type { ActionGroup, ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
 import type { ActionTargetKind } from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
@@ -78,7 +78,7 @@ const FAMILY_LABEL: Record<string, string> = {
   sources: 'Sources',
   search_console: 'Search Console',
   search_intelligence: 'Keyword Research',
-  site_health: 'Site Health',
+  site_health: 'Website',
   link_graph: 'Link graph',
   site_changes: 'Site changes',
   commerce: 'Commerce',
@@ -120,14 +120,14 @@ export function measurementLegLabel(leg: string): string | null {
 
 /** What one expected check asks, before its subject. */
 const CHECK_KIND_LABEL: Record<string, string> = {
-  site_rule: 'Site Health check passes',
+  site_rule: 'Website check passes',
   contextual_link: 'Internal link is on the page',
   visibility_metric: 'Prompt score rises',
   traffic_metric: 'Search Console clicks rise',
   keyword_presence: 'You appear for the search',
   owned_url_cited: 'An AI answer cites your page',
   product_metric: 'The product metric clears in later answers',
-  issue_family: 'Every affected page passes the Site Health check',
+  issue_family: 'Every affected page passes the Website check',
 };
 
 export function checkKindLabel(kind: string): string {

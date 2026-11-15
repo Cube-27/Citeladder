@@ -106,8 +106,8 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     renderScreen();
     await user.click(await screen.findByRole('tab', { name: 'Overview' }));
     expect(
-      await screen.findByRole('img', { name: 'Web Fundamentals score: 80 out of 100' }),
-    ).toBeInTheDocument();
+      await screen.findByRole('progressbar', { name: 'Web Fundamentals score' }),
+    ).toHaveAttribute('aria-valuetext', '80 out of 100');
 
     const start = screen.getByRole('button', { name: 'Run new crawl' });
     await waitFor(() => expect(start).toBeEnabled());
@@ -187,12 +187,15 @@ describe('SiteHealthScreen — loading failures', () => {
 
     renderScreen();
 
+    // A failed first read says so in place of the panel; the tabs stay usable.
     expect(await screen.findByText('Dashboard unavailable')).toBeVisible();
-    expect(screen.queryByRole('tablist', { name: 'Website analysis' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
     available = true;
     await user.click(screen.getByRole('button', { name: 'Retry' }));
 
-    expect(await screen.findByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
+    expect(screen.queryByText('Dashboard unavailable')).not.toBeInTheDocument();
     expect(reads).toBe(2);
   });
 
@@ -265,7 +268,8 @@ describe('SiteHealthScreen — loading failures', () => {
     renderScreen();
 
     expect(await screen.findByText('Access unavailable')).toBeVisible();
-    expect(screen.queryByRole('tablist', { name: 'Website analysis' })).not.toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
   });
 
   it('shows a recoverable warning when entitlement resolution fails closed', async () => {
@@ -278,8 +282,9 @@ describe('SiteHealthScreen — loading failures', () => {
 
     renderScreen();
 
-    expect(await screen.findByText(/Site Health access could not be resolved/)).toBeVisible();
-    expect(screen.queryByRole('tablist', { name: 'Website analysis' })).not.toBeInTheDocument();
+    expect(await screen.findByText(/Website access could not be resolved/)).toBeVisible();
+    expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Run new crawl' })).not.toBeInTheDocument();
   });
 });
 
@@ -305,7 +310,7 @@ function finishedDashboard() {
 }
 
 function loadingRegions() {
-  return document.querySelectorAll('[data-query-state="loading"]');
+  return document.querySelectorAll('[data-state-block="loading"]');
 }
 
 describe('SiteHealthScreen — loading frames', () => {
@@ -341,8 +346,8 @@ describe('SiteHealthScreen — loading frames', () => {
 
     snapshot.release();
     expect(
-      await screen.findByRole('img', { name: 'Web Fundamentals score: 80 out of 100' }),
-    ).toBeInTheDocument();
+      await screen.findByRole('progressbar', { name: 'Web Fundamentals score' }),
+    ).toHaveAttribute('aria-valuetext', '80 out of 100');
     expect(loadingRegions()).toHaveLength(0);
   });
 
@@ -363,8 +368,8 @@ describe('SiteHealthScreen — loading frames', () => {
 
     const { queryClient } = renderScreen();
     expect(
-      await screen.findByRole('img', { name: 'Web Fundamentals score: 80 out of 100' }),
-    ).toBeInTheDocument();
+      await screen.findByRole('progressbar', { name: 'Web Fundamentals score' }),
+    ).toHaveAttribute('aria-valuetext', '80 out of 100');
 
     refresh = held();
     void queryClient.invalidateQueries({ queryKey: queryKeys.siteHealth.all });
@@ -372,9 +377,10 @@ describe('SiteHealthScreen — loading frames', () => {
       expect(queryClient.isFetching({ queryKey: queryKeys.siteHealth.all })).toBeGreaterThan(0),
     );
 
-    expect(
-      screen.getByRole('img', { name: 'Web Fundamentals score: 80 out of 100' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Web Fundamentals score' })).toHaveAttribute(
+      'aria-valuetext',
+      '80 out of 100',
+    );
     expect(screen.getByRole('tablist', { name: 'Website analysis' })).toBeVisible();
     expect(loadingRegions()).toHaveLength(0);
     refresh.release();

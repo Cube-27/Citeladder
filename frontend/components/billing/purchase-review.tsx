@@ -2,13 +2,13 @@ import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type { BillingCatalog } from '@/lib/api/billing';
 import { catalogPlanByKey, formatMoney } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
+import { slipClasses } from '@/components/ui/slip';
 
 type Checkout = ReturnType<typeof useSubscriptionCheckout>;
 
@@ -44,7 +44,7 @@ export function PurchaseReview({
     <Stack
       as="section"
       gap="compact"
-      className={cardClasses()}
+      className={slipClasses()}
       aria-labelledby="purchase-review-title"
     >
       <EditorialSectionHeader
@@ -63,7 +63,7 @@ export function PurchaseReview({
         currencyMinorUnits={catalog.currency_minor_units}
       />
       {upgradedPlan?.base_price ? (
-        <p className={textRole('body')}>
+        <p className={textRole('body', 'text-ink-2')}>
           After this charge, your subscription renews at{' '}
           {formatMoney(upgradedPlan.base_price, catalog.currency_minor_units)} a month before tax
           {renewsOn ? (

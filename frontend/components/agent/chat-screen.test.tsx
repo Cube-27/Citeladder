@@ -315,13 +315,50 @@ describe('ChatScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Send' }));
     await screen.findByRole('alert');
     expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Shorten it.');
-    await user.type(screen.getByLabelText('Reply to the agent'), ' Next draft.');
     await user.click(screen.getByRole('button', { name: 'Retry send' }));
 
     await vi.waitFor(() => expect(keys).toHaveLength(2));
     expect(keys[0]).toBeTruthy();
     expect(keys[1]).toBe(keys[0]);
-    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('Shorten it. Next draft.');
+    expect(screen.getByLabelText('Reply to the agent')).toHaveValue('');
+  });
+
+  it('sends an edited draft after a failed send instead of retrying the old message', async () => {
+    const bodies: unknown[] = [];
+    mswServer.use(
+      http.get('/api/v1/agent/skills', () => HttpResponse.json(skills)),
+      http.get(`/api/v1/agent/chats/${CHAT}`, () =>
+        HttpResponse.json(detail(revision(REV1, 1, 'agent', 'Old title tag.'))),
+      ),
+      http.post(`/api/v1/agent/chats/${CHAT}/messages`, async ({ request }) => {
+        bodies.push(await request.json());
+        if (bodies.length === 1)
+          return HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 503 });
+        return HttpResponse.json(
+          {
+            chat_id: CHAT,
+            run: { ...detail(revision(REV1, 1, 'agent', '')).latest_run, status: 'queued' },
+          },
+          { status: 202 },
+        );
+      }),
+    );
+    const user = userEvent.setup();
+    renderChat();
+
+    await user.type(await screen.findByLabelText('Reply to the agent'), 'Shorten it.');
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+    expect(await screen.findByRole('button', { name: 'Retry send' })).toBeEnabled();
+    await user.type(screen.getByLabelText('Reply to the agent'), ' Next draft.');
+    expect(screen.queryByRole('button', { name: 'Retry send' })).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Send' }));
+
+    await vi.waitFor(() =>
+      expect(bodies).toEqual([
+        expect.objectContaining({ message: 'Shorten it.' }),
+        expect.objectContaining({ message: 'Shorten it. Next draft.' }),
+      ]),
+    );
   });
 
   it('exports the revision as Markdown', async () => {

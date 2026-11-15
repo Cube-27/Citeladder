@@ -145,7 +145,7 @@ describe('ChatScreen running turn', () => {
       within(within(live).getByRole('list', { name: 'Agent activity' }))
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['Reading Site Health', 'Reading search performance']);
+    ).toEqual(['Reading Website, Running', 'Reading search performance, Running']);
     read();
     // The same line says what comes next, and the next text is added under the first.
     await vi.waitFor(() => expect(status).toHaveTextContent('Deciding the next step…'));
@@ -240,7 +240,7 @@ describe('ChatScreen running turn', () => {
       within(steps)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['Read Site Health no data yet']);
+    ).toEqual(['Read Website, Unavailableno data yet']);
   });
 
   it('refuses edits while a turn is running and offers Stop', async () => {

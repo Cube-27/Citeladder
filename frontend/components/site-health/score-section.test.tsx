@@ -56,14 +56,17 @@ describe('ScoreSection', () => {
 
     render(<ScoreSection crawl={null} dashboard={dashboard} />);
 
-    expect(
-      screen.getByRole('img', { name: 'Web Fundamentals score: 73 out of 100' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: 'AEO Readiness score: 61 out of 100' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: 'AEO Checklist Completion: 70 out of 100' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Web Fundamentals score' })).toHaveAttribute(
+      'aria-valuetext',
+      '73 out of 100',
+    );
+    expect(screen.getByRole('progressbar', { name: 'AEO Readiness score' })).toHaveAttribute(
+      'aria-valuetext',
+      '61 out of 100',
+    );
+    expect(screen.getByRole('progressbar', { name: 'AEO Checklist Completion' })).toHaveAttribute(
+      'aria-valuetext',
+      '70%',
+    );
   });
 });

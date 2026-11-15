@@ -1,0 +1,77 @@
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+
+import { SidebarTextTooltip } from '@/components/ui/sidebar';
+import { Spinner } from '@/components/ui/spinner';
+import { textRole } from '@/components/ui/typography';
+import { cn } from '@/lib/utils';
+
+/**
+ * A History list (the Agent's chats): its search, then its rows or the
+ * sentence standing in for them, then "Show more", 8 apart.
+ */
+export function HistoryList({
+  search,
+  more,
+  children,
+}: Readonly<{ search: ReactNode; more?: ReactNode; children: ReactNode }>) {
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      {search}
+      {children}
+      {more}
+    </div>
+  );
+}
+
+/** A sentence standing in for the rows (none yet, none match, a failed read). */
+export function HistoryNotice({ children }: Readonly<{ children: ReactNode }>) {
+  return <p className={textRole('caption')}>{children}</p>;
+}
+
+export function HistoryRows({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <ul aria-label={label} className="flex flex-col">
+      {children}
+    </ul>
+  );
+}
+
+/**
+ * One row: its title in `label` type with the live rung after it while the
+ * record works, over a caption line; the current row is `ink` and carries the
+ * accent rung. A cut line shows in full on hover and focus.
+ */
+export function HistoryRow({
+  href,
+  active,
+  title,
+  meta,
+  working = false,
+}: Readonly<{ href: string; active: boolean; title: string; meta: ReactNode; working?: boolean }>) {
+  return (
+    <li>
+      <SidebarTextTooltip>
+        <Link
+          to={href}
+          aria-current={active ? 'page' : undefined}
+          className={cn(
+            'focus-ring rounded-control relative flex min-w-0 flex-col gap-0.5 px-3 py-2 transition-colors',
+            'before:rounded-mark before:absolute before:inset-y-2 before:start-0 before:w-[var(--mark-width)]',
+            active ? 'text-ink before:bg-accent' : 'text-ink-2 hover:overlay-hover hover:text-ink',
+          )}
+        >
+          <span className="flex min-w-0 items-center gap-2">
+            <span data-sidebar-text="title" className="type-label min-w-0 flex-1 truncate">
+              {title}
+            </span>
+            {working ? <Spinner label="Working" /> : null}
+          </span>
+          <span data-sidebar-text="meta" className={textRole('caption', 'truncate')}>
+            {meta}
+          </span>
+        </Link>
+      </SidebarTextTooltip>
+    </li>
+  );
+}

@@ -2,11 +2,11 @@ import { Users } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText, TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Pressable } from '@/components/ui/pressable';
 import { Tooltip } from '@/components/ui/tooltip';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { RankingRow } from '@citeladder/contracts';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import {
@@ -17,7 +17,6 @@ import {
 } from '@/lib/visibility/dashboard';
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
-import { TAG_FACE } from '@/components/ui/tag';
 
 /**
  * Where you stand against the brands you track.
@@ -140,7 +139,7 @@ function BrandName({
         }
         // The name truncates inside its own box before the "You" tag beside it,
         // never running under it.
-        className="hover:text-accent-ink w-auto min-w-0 overflow-hidden"
+        className="inline-flex min-h-6 w-auto min-w-0 items-center overflow-hidden hover:underline"
         onClick={(event) => {
           event.stopPropagation();
           onSelect(selected ? null : row.name);
@@ -173,7 +172,7 @@ function PositionValue({
   rank,
   rankedCount,
 }: Readonly<{ row: RankingRow; rank: number | null; rankedCount: number }>) {
-  if (rank == null) return <MissingValue />;
+  if (rank == null) return <Absence />;
   const mean =
     row.avg_position == null
       ? ''
@@ -218,6 +217,7 @@ export function RankingRowsTable({
     <DataTable
       title="Brand and competitors"
       columns={rankingColumns({ anyPosition, anyChange })}
+      minWidth="md"
       state={
         ordered.length
           ? undefined
@@ -247,12 +247,9 @@ export function RankingRowsTable({
               <Inline as="span">
                 <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
                 <BrandName row={row} selected={selected} onSelect={onSelect} />
-                {row.is_brand ? <span className={textRole('label', TAG_FACE)}>You</span> : null}
+                {row.is_brand ? <YouTag /> : null}
               </Inline>
-              <ClampText
-                lines={1}
-                className={textRole('caption', 'text-ink-secondary desktop:hidden')}
-              >
+              <ClampText lines={1} className={textRole('caption', 'text-ink-2 desktop:hidden')}>
                 {formatRate(row.share_of_voice)} share of voice · {formatRate(row.citation_rate)}{' '}
                 owned citation rate
               </ClampText>
@@ -260,9 +257,7 @@ export function RankingRowsTable({
             {/* The rate is the column. Printing its fraction under every
                   row turned a scannable column of percentages into two
                   stacked numbers per cell. */}
-            <TableCell numeric>
-              {measured(formatRate(row.mention_rate)) ?? <MissingValue />}
-            </TableCell>
+            <TableCell numeric>{measured(formatRate(row.mention_rate)) ?? <Absence />}</TableCell>
             {anyPosition ? (
               <TableCell numeric>
                 <PositionValue
@@ -278,10 +273,10 @@ export function RankingRowsTable({
               </TableCell>
             ) : null}
             <TableCell numeric desktopOnly>
-              {measured(formatRate(row.share_of_voice)) ?? <MissingValue />}
+              {measured(formatRate(row.share_of_voice)) ?? <Absence />}
             </TableCell>
             <TableCell numeric desktopOnly>
-              {measured(formatRate(row.citation_rate)) ?? <MissingValue />}
+              {measured(formatRate(row.citation_rate)) ?? <Absence />}
             </TableCell>
           </TableRow>
         );

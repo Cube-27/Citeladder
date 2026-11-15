@@ -39,13 +39,13 @@ export type TextLinkTone = 'ink' | 'prose' | 'muted';
 
 const TONE: Record<TextLinkTone, string> = {
   ink: 'text-ink',
-  prose: 'text-accent-ink',
-  muted: 'text-ink-secondary hover:text-ink',
+  prose: 'text-accent-text',
+  muted: 'text-ink-2 hover:text-ink',
 };
 
 const UNDERLINE = {
   prose: 'decoration-current hover:decoration-2',
-  sentence: 'decoration-line-control hover:decoration-current',
+  sentence: 'decoration-control-line hover:decoration-current',
   standing: 'decoration-transparent hover:decoration-current focus-visible:decoration-current',
 } as const;
 
@@ -56,7 +56,7 @@ function underline(tone: TextLinkTone, text: TextLinkText) {
 
 function textLinkClasses({ tone, text }: Readonly<{ tone: TextLinkTone; text: TextLinkText }>) {
   const recipe = cn(
-    'focus-ring rounded-2xs underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
+    'focus-ring rounded-mark underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
     TONE[tone],
     underline(tone, text),
   );
@@ -123,7 +123,7 @@ function withGlyphs(variant: TextLinkVariant, children: ReactNode): ReactNode[] 
 export function TextLink({
   variant = 'internal',
   tone = 'ink',
-  text = 'control',
+  text = 'body',
   href,
   projectId,
   asChild = false,
@@ -188,7 +188,7 @@ export function ArrowLink({
       />
     </>
   );
-  const classes = 'text-ink inline-flex items-center gap-2 rounded-xs text-label-lg no-underline';
+  const classes = 'text-ink inline-flex items-center gap-2 rounded-mark text-label-lg no-underline';
   if (!href) return <span className={classes}>{content}</span>;
   return (
     <ProjectLink href={href} projectId={projectId} className={cn(classes, 'group focus-ring')}>

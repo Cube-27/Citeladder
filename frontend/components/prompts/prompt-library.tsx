@@ -1,13 +1,12 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react';
 
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { promptsMutations } from '@/lib/api/prompts';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import { mutationNoticeForError, type MutationNotice } from '@/lib/api/mutation-notice';
 import { topicsQueries } from '@/lib/api/topics';
 import type { Prompt, PromptStatus, Topic } from '@citeladder/contracts';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   emptyFilters,
   filterPrompts,
@@ -29,7 +28,8 @@ import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { usePromptEvidence, type PromptAnswerRef } from './prompt-evidence';
 import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
-import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
+import { CollectionPage } from '@/components/templates/collection-page';
+import { FilterBar } from '@/components/ui/filter-bar';
 
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
 import { type TopicDialog, TopicDialogs, topicFilter } from './topic-controls';
@@ -38,6 +38,8 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import type { BuilderStep } from './prompt-builder';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 function mutationFailure(
   create: { isError: boolean; error: unknown },
@@ -59,6 +61,8 @@ function awaitingFirstLoad(
 ): boolean {
   return state.promptsLoading || (state.hasPrompts && !state.figuresRead);
 }
+
+const promptStatusCodec = stringUrlCodec<PromptStatus>(['active', 'archived'], 'active');
 
 /**
  * Prompt library client (F7). Owns the active prompt set (via F5 project
@@ -86,6 +90,7 @@ export function PromptLibrary({
     promptSet,
     prompts,
     setNames,
+    commerceSetIds,
     limits,
     isLoading,
     error,
@@ -96,7 +101,7 @@ export function PromptLibrary({
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<PromptFilters>(emptyFilters);
-  const [statusFilter, setStatusFilter] = useState<PromptStatus>('active');
+  const [statusFilter, setStatusFilter] = useUrlState('status', promptStatusCodec);
   const [selectedTopicId, setSelectedTopicId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Prompt | undefined>(undefined);
@@ -263,6 +268,7 @@ export function PromptLibrary({
       actions={edits?.rows}
       measurements={measurements}
       setNames={setNames}
+      commerceSetIds={commerceSetIds}
     />
   );
   // A failed read with nothing to show takes the empty state's slot; a failed
@@ -270,7 +276,7 @@ export function PromptLibrary({
   const failedEmpty = Boolean(error) && !hasPrompts;
   if (failedEmpty) {
     libraryBody = (
-      <QueryState
+      <StateBlock
         kind="error"
         error={error}
         fallback="Could not load prompts. Check your connection and try again."
@@ -287,14 +293,14 @@ export function PromptLibrary({
   const figuresRead = measurements !== undefined;
   if (awaitingFirstLoad({ promptsLoading: isLoading, hasPrompts, figuresRead })) {
     return (
-      <ListScreen controls={RESERVED_CONTROLS}>
-        <QueryState kind="loading" />
-      </ListScreen>
+      <CollectionPage filters={<FilterBar />}>
+        <StateBlock kind="loading" />
+      </CollectionPage>
     );
   }
 
   return (
-    <ListScreen
+    <CollectionPage
       actions={
         <PromptActions
           onImport={() => setImportOpen(true)}
@@ -303,24 +309,29 @@ export function PromptLibrary({
           hasActivePrompts={statusCounts.active > 0}
         />
       }
-      controls={promptFilterControls({
-        status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
-        search,
-        onSearchChange: setSearch,
-        filters,
-        onFiltersChange: setFilters,
-        personas,
-        topic: topicFilter({
-          topics,
-          selectedTopicId,
-          onSelect: setSelectedTopicId,
-          manage: edits?.topics,
-        }),
-      })}
+      filters={
+        <FilterBar
+          {...promptFilterControls({
+            status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
+            search,
+            onSearchChange: setSearch,
+            filters,
+            onFiltersChange: setFilters,
+            personas,
+            topic: topicFilter({
+              topics,
+              selectedTopicId,
+              onSelect: setSelectedTopicId,
+              manage: edits?.topics,
+            }),
+          })}
+        />
+      }
     >
       <>
         {error && !failedEmpty ? (
-          <ReadError
+          <Notice
+            kind="read"
             error={error}
             fallback="Could not load prompts. Check your connection and try again."
             onRetry={retry}
@@ -388,6 +399,6 @@ export function PromptLibrary({
           limits={limits}
         />
       </>
-    </ListScreen>
+    </CollectionPage>
   );
 }

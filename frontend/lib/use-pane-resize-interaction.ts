@@ -1,16 +1,26 @@
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type PointerEvent,
+} from 'react';
 
 type Bounds = { min: number; max: number };
 
 const KEY_STEP = 16;
 const KEY_STEP_LARGE = 48;
+/** A press that moves less than this is a click, not a drag. */
+const CLICK_SLOP = 3;
 
 /**
  * Pointer and keyboard mechanics for the sidebar's resize separator.
  *
  * Keys: ← / → move 16px (Shift: 48px), Home → minimum, End → maximum.
- * Double-click restores the default. A cancelled pointer restores the width
- * the drag started from.
+ * A click that does not drag steps to the next preset width, wrapping to the
+ * minimum (WCAG 2.5.7); a double-click restores the default. A cancelled
+ * pointer restores the width the drag started from.
  */
 export function usePaneResizeInteraction({
   width,
@@ -18,6 +28,7 @@ export function usePaneResizeInteraction({
   onResize,
   onCommit,
   defaultWidth,
+  presets,
   onBoundsChange,
 }: {
   width: number;
@@ -25,6 +36,8 @@ export function usePaneResizeInteraction({
   onResize: (width: number) => void;
   onCommit: (width: number) => void;
   defaultWidth: number;
+  /** The widths a click steps through, in ascending order. */
+  presets: readonly number[];
   onBoundsChange?: (bounds: Bounds) => void;
 }) {
   const widthRef = useRef(width);
@@ -32,6 +45,7 @@ export function usePaneResizeInteraction({
     widthRef.current = width;
   }, [width]);
   const dragRef = useRef<{ pointerId?: number; startX: number; startWidth: number } | null>(null);
+  const movedRef = useRef(false);
   const [dragging, setDragging] = useState(false);
 
   const apply = (next: number) => {
@@ -52,6 +66,7 @@ export function usePaneResizeInteraction({
 
   const beginDrag = (clientX: number, pointerId?: number) => {
     dragRef.current = { pointerId, startX: clientX, startWidth: widthRef.current };
+    movedRef.current = false;
     // The drag starts from the width on screen, whoever owned it until now.
     onResize(widthRef.current);
     setDragging(true);
@@ -61,6 +76,7 @@ export function usePaneResizeInteraction({
   const dragTo = (clientX: number, pointerId?: number) => {
     const drag = dragRef.current;
     if (!drag || (pointerId !== undefined && drag.pointerId !== pointerId)) return;
+    if (Math.abs(clientX - drag.startX) >= CLICK_SLOP) movedRef.current = true;
     apply(drag.startWidth + clientX - drag.startX);
   };
   const endDrag = () => {
@@ -80,6 +96,11 @@ export function usePaneResizeInteraction({
     restoreDocument();
   };
   const commitAt = (next: number) => onCommit(apply(next));
+  const stepPreset = () => {
+    const { min, max } = bounds();
+    const next = presets.find((preset) => preset > widthRef.current && preset <= max);
+    commitAt(next ?? min);
+  };
 
   const onPointerDown = (event: PointerEvent<HTMLElement>) => {
     if (event.button !== 0 || dragRef.current) return;
@@ -123,6 +144,10 @@ export function usePaneResizeInteraction({
     onPointerCancel: cancelPointer,
     onLostPointerCapture: (event: PointerEvent<HTMLElement>) => {
       if (dragRef.current?.pointerId === event.pointerId) cancelDrag();
+    },
+    onClick: (event: MouseEvent<HTMLElement>) => {
+      if (event.detail > 1 || movedRef.current) return;
+      stepPreset();
     },
     onDoubleClick: () => commitAt(defaultWidth),
     onKeyDown,

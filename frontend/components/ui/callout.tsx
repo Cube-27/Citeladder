@@ -9,27 +9,27 @@ export type CalloutTone = 'neutral' | 'info' | 'positive' | 'warning' | 'negativ
 /**
  * Each tone's fill, icon and the word a screen reader hears first. Text on a
  * status tint is that status colour (the pair its token names); neutral is
- * the contextual inset (`surface-sunken` inside a container, a bordered
- * `surface` box on the page ground, where sunken would not show) with an
- * `ink` title and `ink-secondary` body. Every tone keeps a 1px border, so a
+ * the contextual inset (`surface-inset`: the well inside a container, a
+ * bordered `surface` box on the page ground, where the well would not show)
+ * with an `ink` title and `ink-2` body. Every tone keeps a 1px border, so a
  * neutral and a status callout are the same size.
  */
 const TONE: Record<CalloutTone, { box: string; title: string; icon: LucideIcon; word: string }> = {
   neutral: {
-    box: 'surface-inset text-ink-secondary',
+    box: 'surface-inset text-ink-2',
     title: 'text-ink',
     icon: Info,
     word: 'Note',
   },
-  info: { box: 'bg-info-soft text-info', title: '', icon: Info, word: 'Info' },
+  info: { box: 'bg-info-wash text-info', title: '', icon: Info, word: 'Info' },
   positive: {
-    box: 'bg-positive-soft text-positive',
+    box: 'bg-positive-wash text-positive',
     title: '',
     icon: CheckCircle2,
     word: 'Success',
   },
-  warning: { box: 'bg-warning-soft text-warning', title: '', icon: AlertTriangle, word: 'Warning' },
-  negative: { box: 'bg-negative-soft text-negative', title: '', icon: XCircle, word: 'Error' },
+  warning: { box: 'bg-warning-wash text-warning', title: '', icon: AlertTriangle, word: 'Warning' },
+  negative: { box: 'bg-negative-wash text-negative', title: '', icon: XCircle, word: 'Error' },
 };
 
 /**
@@ -70,7 +70,7 @@ export function Callout({
       role={urgent ? 'alert' : undefined}
       data-callout-tone={tone}
       className={cn(
-        'flex items-start gap-2 rounded-md border border-transparent px-4 py-3 text-body-sm',
+        'flex items-start gap-2 rounded-control border border-transparent px-4 py-3 text-body-sm',
         style.box,
         className,
       )}

@@ -1,13 +1,14 @@
 import type { ComponentProps, ReactNode } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { textRole } from '@/components/ui/typography';
 import {
   count,
@@ -53,7 +54,7 @@ function OpenSource({ onOpen, children }: Readonly<{ onOpen: () => void; childre
   return (
     <Pressable
       onClick={onOpen}
-      className="hover:text-accent-ink flex max-w-full min-w-0 items-center transition-colors"
+      className="flex max-w-full min-w-0 items-center transition-colors hover:underline"
     >
       {children}
     </Pressable>
@@ -70,8 +71,8 @@ function TypeChip({
   // A type nobody has established is "not measured", not a blank: the page has
   // simply not been read and its address did not settle the question. The
   // column header carries that explanation for the whole column.
-  if (!label) return <MissingValue />;
-  const chip = <Badge>{label}</Badge>;
+  if (!label) return <Absence />;
+  const chip = <Tag>{label}</Tag>;
   const basis = pageFormatBasis(method);
   if (!basis) return chip;
   // The tooltip serves a pointer; the hidden text gives keyboard and screen
@@ -195,7 +196,6 @@ export function DomainTable({
       label="Cited domains"
       columns={domainColumns(sort, onSort, retrieval, engines.label)}
       minWidth="xl"
-      pinFirstColumn
       rowCount={rows.length}
       {...frame}
     >
@@ -242,11 +242,11 @@ function PageStandingCell({
   return (
     <Inline as="span" gap="meta">
       {tone ? (
-        <Badge variant="status" value={tone}>
+        <StatusMark variant="status" value={tone}>
           {label}
-        </Badge>
+        </StatusMark>
       ) : (
-        <ClampText lines={1} className={textRole('caption', 'text-ink-secondary')}>
+        <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
           {label}
         </ClampText>
       )}
@@ -366,7 +366,6 @@ export function UrlTable({
       label="Cited URLs"
       columns={urlColumns(sort, onSort, retrieval, engines.label)}
       minWidth="xl"
-      pinFirstColumn
       rowCount={rows.length}
       {...frame}
     >

@@ -1,19 +1,25 @@
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { StatRow } from '@/components/ui/stat-row';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { PromptMetricItem } from '@citeladder/contracts';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, pluralCount } from '@/lib/format';
 import { ANSWER_STATES, competitorGaps, type CompetitorGap } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
  * Mentions and citations for one prompt in the latest run that measured it:
@@ -27,21 +33,21 @@ export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricIt
   const gaps = competitorGaps(outcomes);
   return (
     <>
-      <Card>
-        <CardHeader actions={actionId ? <ActionHandoff actionId={actionId} /> : null}>
-          <CardTitle>Mentions and citations</CardTitle>
-          <CardDescription>
+      <Section>
+        <SectionHeader actions={actionId ? <ActionHandoff actionId={actionId} /> : null}>
+          <SectionTitle>Mentions and citations</SectionTitle>
+          <SectionDescription>
             {latest
               ? `Latest run that measured this prompt, ${formatDisplayDate(latest.created_at, timeZone)}.`
               : 'No run has measured this prompt in this market yet.'}
-          </CardDescription>
-        </CardHeader>
+          </SectionDescription>
+        </SectionHeader>
         {latest ? (
-          <CardContent>
+          <SectionContent>
             <LatestRun latest={latest} />
-          </CardContent>
+          </SectionContent>
         ) : null}
-      </Card>
+      </Section>
       {outcomes.length ? <EngineTable outcomes={outcomes} /> : null}
       {gaps.length ? <CompetitorGapTable gaps={gaps} /> : null}
     </>
@@ -73,11 +79,13 @@ function LatestRun({ latest }: Readonly<{ latest: PromptMetricItem }>) {
           {pluralCount(outcomes.length, 'engine')}
           {counts.failed ? `; ${counts.failed} failed` : ''}
           {counts.not_run ? `; ${counts.not_run} not run` : ''}.{' '}
-          <TextLink href={`/runs/${latest.audit_id}`}>Read the answers</TextLink>
+          <TextLink href={`/runs/${latest.audit_id}`} text="inherit">
+            Read the answers
+          </TextLink>
         </p>
       ) : null}
       {states ? (
-        <StatRow
+        <FigureStrip
           label="Answers by state"
           segments={ANSWER_STATES.map((state) => ({
             key: state.key,
@@ -87,7 +95,7 @@ function LatestRun({ latest }: Readonly<{ latest: PromptMetricItem }>) {
           }))}
         />
       ) : (
-        <QueryState
+        <StateBlock
           kind="empty"
           inline
           message="No answer succeeded for this prompt in that run, so mentions and citations are unavailable rather than zero."
@@ -95,7 +103,7 @@ function LatestRun({ latest }: Readonly<{ latest: PromptMetricItem }>) {
       )}
       {/* Only a measured, empty gap list is "none"; absent outcomes are unavailable. */}
       {states && latest.outcomes && competitorGaps(latest.outcomes).length === 0 ? (
-        <QueryState
+        <StateBlock
           kind="empty"
           inline
           message="No answer named a tracked competitor while leaving you out."
@@ -161,15 +169,13 @@ function EngineTable({ outcomes }: Readonly<{ outcomes: readonly Outcome[] }>) {
           </TableCell>
           <TableCell numeric>{outcome.counts.responses}</TableCell>
           {/* An engine whose every answer failed keeps its row, read as failed. */}
-          <TableCell numeric>
-            {outcome.counts.failed ?? <UnavailableValue state="not_measured" />}
-          </TableCell>
+          <TableCell numeric>{outcome.counts.failed ?? <Absence state="not_measured" />}</TableCell>
           {ANSWER_STATES.map((state) => (
             <TableCell key={state.key} numeric>
               {outcome.answer_states ? (
                 outcome.answer_states[state.key]
               ) : (
-                <UnavailableValue state="not_measured" />
+                <Absence state="not_measured" />
               )}
             </TableCell>
           ))}

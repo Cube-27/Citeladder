@@ -1,14 +1,14 @@
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Stack } from '@/components/ui/layout';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
+import { Notice } from '@/components/ui/notice';
 
 export function CheckoutStatus({
   checkout,
 }: Readonly<{ checkout: ReturnType<typeof useSubscriptionCheckout> }>) {
   if (!checkout.notice && !checkout.testMode) return null;
   return (
-    <Callout tone="info">
+    <Notice tone="info">
       <Stack gap="compact" className="justify-items-start">
         {checkout.testMode ? <p>Test mode — no real money is charged.</p> : null}
         {checkout.notice ? <output>{checkout.notice}</output> : null}
@@ -16,6 +16,6 @@ export function CheckoutStatus({
           Refresh payment status
         </Button>
       </Stack>
-    </Callout>
+    </Notice>
   );
 }

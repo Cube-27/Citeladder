@@ -1,46 +1,7 @@
 import { ProjectLink } from '@/components/ui/project-link';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Inline } from '@/components/ui/layout';
-import { DisplayTime } from '@/components/ui/display-time';
-import { groupEvidence, type DatedEvidence } from '@/lib/agent/evidence';
-
-const BASIS_LABEL: Record<DatedEvidence['basis'], string> = {
-  observed: 'Observed',
-  inferred: 'Inferred',
-};
-
-/**
- * The records behind an Action, one chip each: what it is, whether CiteLadder
- * observed it or a rule inferred it, and the date its persisted record carries.
- */
-export function DatedEvidenceChips({
-  records,
-  label,
-}: Readonly<{ records: readonly DatedEvidence[]; label: string }>) {
-  return (
-    <Inline as="ul" aria-label={label} className="flex-wrap">
-      {records.map((item) => {
-        const chip = (
-          <Badge>
-            {item.label} · {BASIS_LABEL[item.basis]} ·{' '}
-            <DisplayTime value={item.at} dateOnly fallback="date not recorded" />
-          </Badge>
-        );
-        return (
-          <li key={item.key} className="min-w-0">
-            {item.href ? (
-              <ProjectLink href={item.href} className="underline-offset-2 hover:underline">
-                {chip}
-              </ProjectLink>
-            ) : (
-              chip
-            )}
-          </li>
-        );
-      })}
-    </Inline>
-  );
-}
+import { groupEvidence } from '@/lib/agent/evidence';
 
 /**
  * The records a reply or revision cites, grouped by kind. Each group links to
@@ -60,10 +21,10 @@ export function EvidenceChips({
           <li key={group.label}>
             {group.href ? (
               <ProjectLink href={group.href} className="underline-offset-2 hover:underline">
-                <Badge>{text}</Badge>
+                <Tag>{text}</Tag>
               </ProjectLink>
             ) : (
-              <Badge>{text}</Badge>
+              <Tag>{text}</Tag>
             )}
           </li>
         );

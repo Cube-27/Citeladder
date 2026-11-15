@@ -2,9 +2,10 @@ import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/con
 import type { UsageItem } from '@/lib/api/billing';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Meter, type MeterTone } from '@/components/ui/meter';
+import { RungMeter } from '@/components/ui/rung-meter';
 import { InlineFigure, textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { formatCount } from '@/lib/format';
+import { Absence } from '@/components/ui/absence';
 
 /**
  * One usage counter.
@@ -16,13 +17,6 @@ import { UnavailableValue } from '@/components/ui/unavailable-value';
  * missing allowance is never drawn as an empty meter — that reads as "none
  * left" when it means "we don't know".
  */
-/** Two thresholds, three bands — the bar's only colour decision. */
-function usageTone(ratio: number): MeterTone {
-  if (ratio >= USAGE_METER_CRITICAL_RATIO) return 'negative';
-  if (ratio >= USAGE_METER_WARNING_RATIO) return 'warning';
-  return 'ink';
-}
-
 export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const { label, unit } = usageLabel(item);
 
@@ -30,8 +24,8 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
     return (
       <Stack gap="tight">
         <Inline gap="compact" className="justify-between">
-          <span className={textRole('label')}>{label}</span>
-          <span className={textRole('label')}>Not available</span>
+          <span className={textRole('body', 'text-ink-2')}>{label}</span>
+          <span className={textRole('body', 'text-ink-2')}>Not available</span>
         </Inline>
         <p className="type-caption">This allowance could not be resolved, so no usage is shown.</p>
       </Stack>
@@ -42,15 +36,15 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
     return (
       <Stack gap="tight">
         <Inline gap="compact" className="justify-between">
-          <span className={textRole('label')}>{label}</span>
+          <span className={textRole('body', 'text-ink-2')}>{label}</span>
           {/* Unlimited says nothing about consumption: an unread count is
               the missing mark, never a zero. */}
-          <span className={textRole('label')}>
+          <span className={textRole('body', 'text-ink-2')}>
             {item.consumed === null ? (
-              <UnavailableValue state="not_measured" />
+              <Absence state="not_measured" />
             ) : (
               <>
-                <InlineFigure>{item.consumed}</InlineFigure> {unit}
+                <InlineFigure>{formatCount(item.consumed)}</InlineFigure> {unit}
               </>
             )}
           </span>
@@ -67,14 +61,13 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
   const allowance = item.allowance ?? 0;
   const consumed = item.consumed ?? 0;
   const remaining = item.remaining ?? 0;
-  const ratio = allowance > 0 ? consumed / allowance : 0;
 
   // A real zero limit with nothing used: the plan does not include it. An
   // empty "0 / 0" bar would read like an exhausted allowance.
   if (allowance === 0 && consumed === 0) {
     return (
       <Inline gap="compact" className="justify-between">
-        <span className={textRole('label')}>{label}</span>
+        <span className={textRole('body', 'text-ink-2')}>{label}</span>
         <span className="type-caption">Not included</span>
       </Inline>
     );
@@ -82,17 +75,23 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
 
   return (
     <Stack gap="tight">
-      <Meter
+      <RungMeter
         label={label}
         value={consumed}
         max={allowance}
-        valueLabel={`${consumed} / ${allowance} ${unit}`}
-        tone={usageTone(ratio)}
+        valueLabel={`${formatCount(consumed)} of ${formatCount(allowance)} ${unit}`}
+        warnAt={USAGE_METER_WARNING_RATIO}
+        criticalAt={USAGE_METER_CRITICAL_RATIO}
       />
       <Inline gap="compact" className="justify-between">
         <span className="type-caption whitespace-nowrap">
-          {remaining} remaining
-          {item.reserved ? ` · ${item.reserved} reserved` : ''}
+          <InlineFigure>{formatCount(remaining)}</InlineFigure> remaining
+          {item.reserved ? (
+            <>
+              {' · '}
+              <InlineFigure>{formatCount(item.reserved)}</InlineFigure> reserved
+            </>
+          ) : null}
         </span>
         <ExpiryLine item={item} unit={unit} />
       </Inline>
@@ -132,7 +131,7 @@ const USAGE_LABELS: Readonly<Record<string, { label: string; unit: string }>> = 
   ai_credits: { label: 'AI credits', unit: 'credits' },
   api_keys: { label: 'API keys', unit: 'keys' },
   market_slots: { label: 'Extra markets', unit: 'markets' },
-  site_health_page_fetches_per_period: { label: 'Site Health page fetches', unit: 'fetches' },
+  site_health_page_fetches_per_period: { label: 'Website page fetches', unit: 'fetches' },
 };
 
 /** A key this map does not name still renders: `new_counter` → `New counter`. */

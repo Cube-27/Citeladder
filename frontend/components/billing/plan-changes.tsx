@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { ControlRow } from '@/components/ui/control-row';
 import { Dialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
 import type {
@@ -20,6 +19,7 @@ import {
   planChangeDirection,
   type PlanChangeDirection,
 } from '@/lib/billing/catalog';
+import { Notice } from '@/components/ui/notice';
 
 export type PlanChangeControls = {
   /** Prepares the prorated upgrade quote for review; nothing is charged yet. */
@@ -86,7 +86,7 @@ export function PlanChanges({
             controls={
               option.direction === 'upgrade' ? (
                 <Button
-                  variant="primary"
+                  variant="secondary"
                   disabled={held || !option.plan.checkout_available}
                   onClick={() => controls.upgrade(option.key)}
                 >
@@ -99,7 +99,7 @@ export function PlanChanges({
               )
             }
           >
-            <span className={textRole('itemTitle')}>{option.plan.name}</span>
+            <span className={textRole('body')}>{option.plan.name}</span>
             {option.plan.base_price ? (
               <span className={textRole('caption')}>
                 {formatMoney(option.plan.base_price, catalog.currency_minor_units)} / month before
@@ -115,7 +115,8 @@ export function PlanChanges({
         <p className="type-caption">Upgrades are unavailable while checkout is closed.</p>
       ) : null}
       {controls.downgradeError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(controls.downgradeError, {
             action: 'schedule the downgrade',
           })}
@@ -145,7 +146,7 @@ export function PlanChanges({
           </>
         }
       >
-        <p className={textRole('body')}>
+        <p className={textRole('body', 'text-ink-2')}>
           You keep {currentPlan.name} and its allowances until the end of the current period. The
           current period is not refunded.
         </p>

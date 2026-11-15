@@ -1,21 +1,15 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
-import { cardClasses } from '@/components/ui/card';
-import { ComparisonValue, MetricValue } from '@/components/ui/metric-value';
+import { Value } from '@/components/ui/value';
 import { ScoreRing } from '@/components/ui/score-ring';
-import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { slipClasses } from '@/components/ui/slip';
 
 /**
- * StatRow — the one KPI row: up to four Stats in one Card, separated by
- * 32px of space, never by rules.
- *
- *   - one row of up to four from the desktop breakpoint (982px included),
- *     balanced across rows beyond that (five → 3 + 2, six → 3 + 3), stacked
- *     below desktop; never 2 × 2, never 2 + 1;
- *   - the Stats of a row share one height, so a sub-line under one value and
- *     not its neighbour never staggers the row.
+ * The Stats of a KpiRow, separated by 32px of space, never by rules; the
+ * Stats of a row share one height, so a sub-line under one value and not its
+ * neighbour never staggers the row.
  *
  * A Stat's anatomy, in order: the mono eyebrow label (with an optional leading
  * icon and a trailing marker), an optional caption naming the value's period,
@@ -27,7 +21,7 @@ import { cn } from '@/lib/utils';
  *
  * `value: null` is the missing state — the muted dash with `missingLabel`
  * (default "Not measured") as its accessible name. A string or number is the
- * measured value; any other node (a `Badge`, an `UnavailableValue`) renders
+ * measured value; any other node (a `Badge`, an `Absence`) renders
  * as given. A value always takes the foreground ink: colour means a state, so
  * it goes on the delta beside a figure, never on the figure itself.
  *
@@ -44,12 +38,12 @@ type StatAction =
   | { onSelect?: undefined; actionLabel?: undefined; selected?: undefined }
   | { onSelect: () => void; actionLabel: string; selected?: boolean };
 
-export type StatSegment = Readonly<
+type StatSegment = Readonly<
   {
     key: string;
     label: ReactNode;
     icon?: LucideIcon;
-    /** Accessible name of the missing state. Defaults to "Not measured". */
+    /** The missing state's word. Defaults to "Not measured". */
     missingLabel?: string;
     loading?: boolean;
     /** A small mark at the end of the label row (series key, info hint). */
@@ -71,9 +65,6 @@ export type StatSegment = Readonly<
     StatAction
 >;
 
-/** At most four Stats a StatRow row; more are balanced across rows. */
-const MAX_PER_ROW = 4;
-
 const DESKTOP_COLUMNS = {
   1: 'desktop:grid-cols-1',
   2: 'desktop:grid-cols-2',
@@ -84,12 +75,6 @@ const DESKTOP_COLUMNS = {
 } as const;
 
 type Columns = keyof typeof DESKTOP_COLUMNS;
-
-function balancedColumns(count: number): Columns {
-  const rowCount = Math.ceil(count / MAX_PER_ROW);
-  const perRow = Math.ceil(count / Math.max(1, rowCount));
-  return Math.max(1, Math.min(MAX_PER_ROW, perRow)) as Columns;
-}
 
 type StatGroupProps = Readonly<{
   segments: readonly StatSegment[];
@@ -104,15 +89,13 @@ function StatGrid({
   label,
   testId,
   columns,
-  kpi,
-}: StatGroupProps & Readonly<{ columns: Columns; kpi: boolean }>) {
+}: StatGroupProps & Readonly<{ columns: Columns }>) {
   return (
     <dl // NOSONAR -- a <fieldset> would add form-group semantics and its own border, padding and min-width to a grid of figures
       role={label ? 'group' : undefined}
       aria-label={label}
       data-testid={testId}
-      data-stat-row={kpi ? undefined : ''}
-      data-kpi-row={kpi ? '' : undefined}
+      data-kpi-row=""
       className={cn('grid min-w-0 grid-cols-1 gap-x-8 gap-y-6', DESKTOP_COLUMNS[columns])}
     >
       {segments.map((segment) => (
@@ -122,29 +105,25 @@ function StatGrid({
   );
 }
 
-export function StatRow(props: StatGroupProps) {
-  return <StatGrid {...props} columns={balancedColumns(props.segments.length)} kpi={false} />;
-}
-
 /**
  * KpiRow — the row of numbers that opens a report page: one Card holding the
  * Stats as a single strip, one row from the desktop breakpoint
  * for up to six (never 2 × 2 or 2 + 1), stacked below. A page's headline
  * figures are a KpiRow; a group of figures inside a card that also holds
- * other content is a `StatRow`. A record's page passes its summary as `lead`:
+ * other content is a `FigureStrip`. A record's page passes its summary as `lead`:
  * it opens the same card above a hairline, so the record and its figures are
  * one box, not two.
  */
 export function KpiRow({ lead, ...props }: StatGroupProps & Readonly<{ lead?: ReactNode }>) {
   const columns = Math.max(1, Math.min(6, props.segments.length)) as Columns;
   return (
-    <div className={cardClasses()}>
+    <div className={slipClasses()}>
       {lead ? (
-        <div className="border-line -mx-[var(--card-padding)] mb-[var(--card-padding)] border-b px-[var(--card-padding)] pb-[var(--card-padding)]">
+        <div className="border-rule -mx-[var(--card-padding)] mb-[var(--card-padding)] border-b px-[var(--card-padding)] pb-[var(--card-padding)]">
           {lead}
         </div>
       ) : null}
-      <StatGrid {...props} columns={columns} kpi />
+      <StatGrid {...props} columns={columns} />
     </div>
   );
 }
@@ -169,7 +148,7 @@ function Stat({ segment }: Readonly<{ segment: StatSegment }>) {
         // Every Stat carries the inset a pressable one's fill needs, so its
         // label never touches the selected fill's edge; the matching negative
         // margin keeps the figures on the row's grid.
-        '-m-3 grid min-w-0 content-start gap-x-4 gap-y-1 rounded-md p-3',
+        '-m-3 grid min-w-0 content-start gap-x-4 gap-y-1 rounded-control p-3',
         // A score: the label and its foot on the left, the ringed number on
         // the right, so the Stat is only the ring's height.
         segment.score && 'grid-cols-[minmax(0,1fr)_auto] content-center',
@@ -198,7 +177,7 @@ type StatPart = Readonly<{ segment: StatSegment }>;
 function StatLabel({ segment }: StatPart) {
   const Icon = segment.icon;
   return (
-    <dt className="type-eyebrow flex min-w-0 items-center justify-between gap-2">
+    <dt className="type-overline flex min-w-0 items-center justify-between gap-2">
       <span className="flex min-w-0 items-center gap-2">
         {Icon ? <Icon className="size-4 shrink-0" aria-hidden /> : null}
         <span className="line-clamp-2 min-w-0">{segment.label}</span>
@@ -230,16 +209,14 @@ function StatBody({ segment }: StatPart) {
           <ScoreRing value={segment.score.value} label={segment.score.label} tone="auto" />
         </dd>
         {segment.caption ? (
-          <dd className="text-caption text-ink-muted min-w-0">{segment.caption}</dd>
+          <dd className="text-caption text-ink-2 min-w-0">{segment.caption}</dd>
         ) : null}
       </>
     );
   }
   return (
     <dd className="grid min-w-0 gap-1">
-      {segment.caption ? (
-        <span className="text-caption text-ink-muted">{segment.caption}</span>
-      ) : null}
+      {segment.caption ? <span className="text-caption text-ink-2">{segment.caption}</span> : null}
       <StatValue segment={segment} />
     </dd>
   );
@@ -250,13 +227,13 @@ function StatFoot({ segment }: StatPart) {
   return (
     <>
       {segment.delta ? <dd className="min-w-0">{segment.delta}</dd> : null}
-      {segment.sub ? <dd className="text-caption text-ink-muted min-w-0">{segment.sub}</dd> : null}
+      {segment.sub ? <dd className="text-caption text-ink-2 min-w-0">{segment.sub}</dd> : null}
       {segment.comparison ? (
-        <dd data-stat-comparison="" className="text-caption text-ink-muted grid min-w-0 pt-1">
+        <dd data-stat-comparison="" className="text-caption text-ink-2 grid min-w-0 pt-1">
           <span>{segment.comparison.label}</span>
-          <ComparisonValue
+          <Value
             value={segment.comparison.value}
-            label={segment.missingLabel ?? availabilityLabel('not_measured')}
+            absentLabel={segment.missingLabel}
             loading={segment.loading ?? false}
           />
         </dd>
@@ -272,9 +249,10 @@ function StatValue({ segment }: StatPart) {
   const { value } = segment;
   if (segment.loading || value == null || typeof value === 'string' || typeof value === 'number') {
     return (
-      <MetricValue
+      <Value
+        text="figure"
         value={value == null ? null : String(value)}
-        label={segment.missingLabel ?? availabilityLabel('not_measured')}
+        absentLabel={segment.missingLabel}
         loading={segment.loading ?? false}
         className="min-w-0 [overflow-wrap:anywhere]"
       />

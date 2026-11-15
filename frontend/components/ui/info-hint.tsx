@@ -37,7 +37,7 @@ export function InfoHint({ label, children }: Readonly<{ label: string; children
         onFocus={() => {
           if (focusFromKeyboard()) setOpen(true);
         }}
-        className="focus-ring text-ink-muted hover:text-ink -m-2 inline-flex size-8 items-center justify-center align-middle"
+        className="focus-ring text-ink-2 hover:text-ink -m-2 inline-flex size-8 items-center justify-center align-middle"
       >
         <Info className="size-3" aria-hidden />
       </PopoverPrimitive.Trigger>
@@ -52,7 +52,7 @@ export function InfoHint({ label, children }: Readonly<{ label: string; children
           // Focus stays on the button; returning it there on close would reopen the tip.
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="tooltip-panel bg-ink text-on-ink z-modal text-caption inline-flex max-w-72 items-center gap-2 rounded-sm px-2 py-1"
+          className="tooltip-panel bg-ink text-on-ink z-modal text-caption rounded-control inline-flex max-w-72 items-center gap-2 px-2 py-1"
         >
           {children}
         </PopoverPrimitive.Content>

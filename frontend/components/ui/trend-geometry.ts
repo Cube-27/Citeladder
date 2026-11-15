@@ -33,13 +33,14 @@ function domainOf(
   lines: readonly (readonly (number | null)[])[],
   yMin: number | undefined,
   yMax: number | undefined,
+  tickCount: number,
 ) {
   const values = lines.flatMap((values) =>
     values.filter((value): value is number => value !== null),
   );
   const low = yMin ?? Math.min(0, ...values);
   const high = yMax ?? Math.max(1, ...values);
-  const ticks = chartTicks(low, high, 5);
+  const ticks = chartTicks(low, high, tickCount);
   const top = yMax ?? ticks.at(-1) ?? high;
   return { ticks: ticks.filter((tick) => tick <= top + 1e-9), bottom: ticks[0] ?? low, top };
 }
@@ -72,6 +73,8 @@ export function trendScale({
   yMin,
   yMax,
   tickWidth,
+  padRight = PAD_RIGHT,
+  tickCount = 5,
 }: Readonly<{
   width: number;
   height: number;
@@ -81,10 +84,14 @@ export function trendScale({
   yMax?: number;
   /** The widest tick label, in characters, which sizes the left gutter. */
   tickWidth: (ticks: readonly number[]) => number;
+  /** Room right of the plot, for end labels. */
+  padRight?: number;
+  /** About how many gridlines the y axis takes. */
+  tickCount?: number;
 }>): TrendScale {
-  const { ticks, bottom, top } = domainOf(lines, yMin, yMax);
+  const { ticks, bottom, top } = domainOf(lines, yMin, yMax, tickCount);
   const padLeft = Math.round(tickWidth(ticks) * 7.4) + 14;
-  const plotWidth = Math.max(1, width - padLeft - PAD_RIGHT);
+  const plotWidth = Math.max(1, width - padLeft - padRight);
   const plotHeight = Math.max(1, height - PAD_TOP - PAD_BOTTOM);
   const fractions = timeFractions(timestamps) ?? evenFractions(timestamps.length);
   // A plot too narrow for both insets keeps the full width.
@@ -97,7 +104,7 @@ export function trendScale({
     padTop: PAD_TOP,
     plotWidth,
     plotHeight,
-    right: width - PAD_RIGHT,
+    right: width - padRight,
     ticks,
     x: (index) => xs[index] ?? xAt(0),
     xAt,

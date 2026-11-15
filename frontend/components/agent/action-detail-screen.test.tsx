@@ -139,32 +139,40 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('An Action page', () => {
-  it('reads as one column from the breadcrumb to the chats', async () => {
+  it('names the Action by its work and target and reads from its facts to the chats', async () => {
     serve(action);
     const user = userEvent.setup();
     renderDetail();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'acme.test/pricing' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Fix a technical issue: acme.test/pricing',
+      }),
     ).toBeVisible();
-    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
-    expect(within(trail).getByRole('link', { name: 'Actions' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Back to Actions' })).toHaveAttribute(
       'href',
       `/agent/actions?project=${PROJECT}`,
     );
-    expect(within(trail).getByText('https://acme.test/pricing')).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual(['Overview', 'Evidence', 'What to do', 'Measure with', 'Avoid', 'Findings', 'Chats']);
+    ).toEqual([
+      'Details',
+      'Overview',
+      'Evidence',
+      'What to do',
+      'Measure with',
+      'Avoid',
+      'Findings',
+      'Chats',
+    ]);
 
     const overview = screen.getByRole('region', { name: 'Overview' });
     expect(within(overview).getByText(MESSAGE)).toBeVisible();
     expect(within(overview).getByText('Missing structured data on owned page')).toBeVisible();
 
     const details = within(screen.getByRole('region', { name: 'Details' }));
+    expect(details.getByRole('heading', { level: 2 })).toHaveTextContent('Details');
     expect(details.getAllByRole('term').map((term) => term.textContent)).toEqual([
       'Status',
       'Priority',
@@ -177,7 +185,7 @@ describe('An Action page', () => {
       'High',
       'Fix a technical issue',
       'PageOpen the page (opens in a new tab)',
-      'Site Health',
+      'Website',
     ]);
 
     expect(
@@ -191,24 +199,26 @@ describe('An Action page', () => {
     );
   });
 
-  it('names a long page short in the header and shows its full address in the breadcrumb', async () => {
+  it('names a long page short in the header and shows its full address in the identity strip', async () => {
     const stored =
       'https://www.bestandless.com.au/Categories/Women/Women%2527s-Clothing/Women%2527s-Dresses/WR3458_PAISLEY';
     serve({ ...action, target_label: stored, target_url: stored });
     renderDetail();
 
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'bestandless.com.au/…/WR3458_PAISLEY' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: 'Fix a technical issue: bestandless.com.au/…/WR3458_PAISLEY',
+      }),
     ).toBeVisible();
-    const trail = screen.getByRole('navigation', { name: 'Breadcrumb' });
     expect(
-      within(trail).getByText(
+      within(screen.getByRole('region', { name: 'Details' })).getByText(
         "https://www.bestandless.com.au/Categories/Women/Women's-Clothing/Women's-Dresses/WR3458_PAISLEY",
       ),
-    ).toHaveAttribute('aria-current', 'page');
+    ).toBeVisible();
   });
 
-  it('floats Dismiss, Mark implemented and Work with the agent at the foot of the page', async () => {
+  it('offers Dismiss, Mark implemented and Work with the agent in the action bar', async () => {
     const patches = serve(action);
     const user = userEvent.setup();
     renderDetail();
@@ -322,6 +332,7 @@ describe('A content-gap Action', () => {
     renderDetail();
 
     const why = await screen.findByRole('region', { name: 'Why this matters' });
+    expect(within(why).getByRole('heading', { level: 2 })).toHaveTextContent('Why this matters');
     expect(await within(why).findByText('Pricing comparison')).toBeVisible();
     const counts = within(within(why).getByLabelText('Counts'));
     expect(counts.getAllByRole('definition').map((value) => value.textContent)).toEqual([
@@ -426,9 +437,9 @@ describe('A content-gap Action', () => {
     renderDetail();
 
     const evidence = await screen.findByRole('list', { name: 'Evidence records' });
-    expect(within(evidence).getByRole('listitem').textContent).toBe(
-      'Missing structured data on owned page · Inferred · Nov 10, 2026',
-    );
+    const record = within(evidence).getByRole('listitem');
+    expect(record).toHaveTextContent('Missing structured data on owned page');
+    expect(within(record).getByText(/^Inferred ·/)).toHaveTextContent('Inferred · Nov 10, 2026');
 
     const overview = screen.getByRole('region', { name: 'Overview' });
     await user.click(within(overview).getByRole('button', { name: 'Prepare developer ticket' }));

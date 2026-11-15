@@ -4,8 +4,8 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
+import { wellClasses } from '@/components/ui/slip';
 
 type BillingDetailsFormProps = Readonly<{
   country: string;
@@ -26,8 +26,8 @@ export function BillingDetailsForm({ country, details, setDetails }: BillingDeta
   const india = country.trim().toUpperCase() === 'IN';
 
   return (
-    <Stack as="fieldset" gap="compact" className={panelClasses()}>
-      <legend className={textRole('label')}>Billing details</legend>
+    <Stack as="fieldset" gap="compact" className={wellClasses()}>
+      <legend className={textRole('body', 'text-ink-2')}>Billing details</legend>
       <Stack gap="compact" className="desktop:grid-cols-2">
         {addressFields.map(([key, label, autoComplete]) => (
           <Field key={key} label={label}>
@@ -68,7 +68,7 @@ export function BillingDetailsForm({ country, details, setDetails }: BillingDeta
         </>
       ) : (
         <Checkbox
-          className="text-ink-secondary items-start"
+          className="text-ink-2 items-start"
           label="I confirm this purchase qualifies as an export of service."
           checked={details.export_eligibility_attested}
           onCheckedChange={(checked) => update('export_eligibility_attested', checked === true)}

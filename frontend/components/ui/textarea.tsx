@@ -11,16 +11,15 @@ import { FIELD_EDGE } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 /**
- * Textarea — the multi-line field. It looks like Input: `surface` with the
- * soft xs ring, `radius-md`, 8/12px padding, 14/20 text, at least two
- * control heights tall, resizing vertically only. Focus and error come from
- * the shared `.focus-input` rule.
+ * Textarea — the multi-line field in the shared field frame (`FIELD_EDGE`):
+ * 8/12px padding, `body` text, at least two control heights tall, resizing
+ * vertically only. Focus and error come from the shared `.focus-input` rule.
  */
 const textareaClasses =
-  'text-ink placeholder:text-ink-muted block w-full rounded-md border text-body-sm disabled:cursor-not-allowed disabled:opacity-45';
+  'text-ink placeholder:text-ink-2 type-body block w-full rounded-control border disabled:cursor-not-allowed disabled:opacity-60';
 
 const fieldClasses = cn(
-  'focus-input min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]',
+  'focus-input min-h-[calc(var(--control-md)*2)] resize-y px-3 py-2 transition-[border-color,outline-color] duration-[var(--motion-fast)]',
   FIELD_EDGE,
 );
 

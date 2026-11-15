@@ -120,5 +120,9 @@ describe('RunDetailScreen', () => {
 
     expect(await screen.findByRole('button', { name: 'Export CSV' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Cancel run' })).toBeNull();
+    // The page is titled by the run itself, not by its collection.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'Commerce audit · Aug 1, 2026',
+    );
   });
 });

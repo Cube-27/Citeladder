@@ -40,7 +40,7 @@ function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: nu
           </li>
         ))}
         {value.length > CHANGE_EVIDENCE_LIMIT ? (
-          <li className="text-ink-muted">
+          <li className="text-ink-2">
             {value.length - CHANGE_EVIDENCE_LIMIT} more items not shown
           </li>
         ) : null}
@@ -109,7 +109,7 @@ function ChangeRecord({ value, depth }: Readonly<{ value: object; depth: number 
     <dl className={treeBranchClasses()}>
       {fields.slice(0, CHANGE_EVIDENCE_LIMIT).map(([key, item]) => (
         <div key={key}>
-          <dt className="text-ink-muted inline">{boundedText(changeFieldLabel(key))}: </dt>
+          <dt className="text-ink-2 inline">{boundedText(changeFieldLabel(key))}: </dt>
           <dd className="inline [overflow-wrap:anywhere]">
             {key === 'shingles' && Array.isArray(item) ? (
               `${item.length} text fingerprints`
@@ -122,7 +122,7 @@ function ChangeRecord({ value, depth }: Readonly<{ value: object; depth: number 
       {fields.length > CHANGE_EVIDENCE_LIMIT ? (
         <div>
           <dt className="sr-only">Additional evidence</dt>
-          <dd className="text-ink-muted">
+          <dd className="text-ink-2">
             {fields.length - CHANGE_EVIDENCE_LIMIT} more fields not shown
           </dd>
         </div>
@@ -135,7 +135,7 @@ function EvidenceValue({ heading, value }: Readonly<{ heading: string; value: un
   return (
     <Stack as="section" aria-label={heading}>
       <EditorialSectionHeader title={heading} />
-      <div className={textRole('body', '[overflow-wrap:anywhere]')}>
+      <div className={textRole('body', 'text-ink-2 [overflow-wrap:anywhere]')}>
         <ChangeValue value={value} />
       </div>
     </Stack>
@@ -174,7 +174,7 @@ function EvidenceSources({
       {row.implementation_event_id ? (
         <Inline>
           <span className={textRole('caption')}>Matches a declared implementation</span>
-          <CopyButton variant="ghost" value={row.implementation_event_id}>
+          <CopyButton variant="quiet" value={row.implementation_event_id}>
             Copy event ID
           </CopyButton>
         </Inline>

@@ -63,7 +63,8 @@ describe('AppShell resizable sidebar', () => {
     const handle = screen.getByRole('separator', { name: 'Resize sidebar' });
     expect(sidebarWidth()).toBe('');
 
-    fireEvent.pointerDown(handle, { button: 0, pointerId: 4, clientX: 248 });
+    // Below 1280px the default is the compact 200.
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 4, clientX: 200 });
     fireEvent.pointerMove(handle, { pointerId: 4, clientX: 308 });
     expect(sidebarWidth()).toBe('308px');
     expect(window.localStorage.getItem(SIDEBAR_WIDTH_KEY)).toBeNull();
@@ -74,7 +75,7 @@ describe('AppShell resizable sidebar', () => {
     expect(document.body.style.userSelect).toBe('');
   });
 
-  it('resizes from the keyboard within its bounds and resets on Home and double-click', async () => {
+  it('resizes from the keyboard within its bounds, down to the compact width, and resets on double-click', async () => {
     const user = userEvent.setup();
     // 40% of a 1000px window is 400, below the 480 ceiling.
     window.innerWidth = 1000;
@@ -83,24 +84,65 @@ describe('AppShell resizable sidebar', () => {
 
     handle.focus();
     await user.keyboard('{ArrowRight}{ArrowRight}');
-    expect(handle).toHaveAttribute('aria-valuenow', '280');
-    expect(sidebarWidth()).toBe('280px');
+    expect(handle).toHaveAttribute('aria-valuenow', '232');
+    expect(sidebarWidth()).toBe('232px');
 
     await user.keyboard('{End}');
     expect(handle).toHaveAttribute('aria-valuenow', '400');
     expect(handle).toHaveAttribute('aria-valuemax', '400');
 
     await user.keyboard('{Home}');
-    expect(handle).toHaveAttribute('aria-valuenow', '248');
+    expect(handle).toHaveAttribute('aria-valuenow', '200');
+    expect(handle).toHaveAttribute('aria-valuemin', '200');
     expect(window.localStorage.getItem(SIDEBAR_WIDTH_KEY)).toBeNull();
 
     await user.keyboard('{ArrowLeft}');
-    expect(handle).toHaveAttribute('aria-valuenow', '248');
+    expect(handle).toHaveAttribute('aria-valuenow', '200');
 
     await user.keyboard('{ArrowRight}');
     await user.dblClick(handle);
-    expect(handle).toHaveAttribute('aria-valuenow', '248');
+    expect(handle).toHaveAttribute('aria-valuenow', '200');
     expect(sidebarWidth()).toBe('');
+  });
+
+  it('steps through preset widths on a click that does not drag, wrapping to the compact width', async () => {
+    const user = userEvent.setup();
+    // 40% of a 1000px window is 400, so the 480 preset is out of reach.
+    window.innerWidth = 1000;
+    renderShell();
+    const handle = screen.getByRole('separator', { name: 'Resize sidebar' });
+
+    const widths = [];
+    for (let step = 0; step < 4; step += 1) {
+      await user.click(handle);
+      widths.push(handle.getAttribute('aria-valuenow'));
+    }
+    expect(widths).toEqual(['224', '288', '360', '200']);
+
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 5, clientX: 200 });
+    fireEvent.pointerMove(handle, { pointerId: 5, clientX: 250 });
+    fireEvent.pointerUp(handle, { pointerId: 5 });
+    fireEvent.click(handle, { detail: 1 });
+    expect(handle).toHaveAttribute('aria-valuenow', '250');
+  });
+
+  it('collapses to the rail and back from its toggle and the keyboard, and keeps the choice', async () => {
+    const user = userEvent.setup();
+    const { unmount } = renderShell();
+    const frame = () => screen.getByRole('main').parentElement;
+    expect(frame()).toHaveAttribute('data-sidebar-state', 'expanded');
+
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    expect(frame()).toHaveAttribute('data-sidebar-state', 'collapsed');
+    // The rail keeps its width: there is nothing to drag.
+    expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).not.toBeInTheDocument();
+    unmount();
+
+    renderShell();
+    expect(frame()).toHaveAttribute('data-sidebar-state', 'collapsed');
+    await user.keyboard('{Control>}\\{/Control}');
+    expect(frame()).toHaveAttribute('data-sidebar-state', 'expanded');
+    expect(screen.getByRole('button', { name: 'Collapse sidebar' })).toBeVisible();
   });
 
   it('shows the whole account email in a tooltip when the sidebar cuts it', async () => {

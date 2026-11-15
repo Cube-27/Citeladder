@@ -7,19 +7,15 @@ import {
 import { ShieldCheck } from 'lucide-react';
 
 import { AppGrid } from '@/components/ui/app-grid';
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { BusyBar } from '@/components/ui/progress-bar';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
+import { BusyRung } from '@/components/ui/rung-meter';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatRow } from '@/components/ui/stat-row';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import {
   accuracyCoverageLine,
@@ -32,6 +28,16 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatShare } from '@/lib/visibility/perception';
 import { useAccuracy } from '@/lib/visibility/use-accuracy';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
  * What answers claimed about the brand, checked against its confirmed facts.
@@ -45,7 +51,8 @@ export function VisibilityAccuracy({
   const query = useAccuracy(filters, queries);
   if (query.error)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load fact checks. Check your connection and try again."
         onRetry={() => void query.refetch()}
@@ -63,7 +70,7 @@ export function VisibilityAccuracy({
     );
   return (
     <div className="relative">
-      <BusyBar active={query.isFetching} label="Updating fact checks" />
+      <BusyRung active={query.isFetching} label="Updating fact checks" />
       <AccuracyView data={query.data} />
     </div>
   );
@@ -107,7 +114,7 @@ function AccuracyState({
   // One state box at the shared footprint: the coverage it read is part of
   // the same sentence, not a caption that grows the box.
   return (
-    <QueryState
+    <StateBlock
       kind="empty"
       headingLevel={3}
       icon={ShieldCheck}
@@ -122,16 +129,16 @@ function AccuracyState({
 }
 
 function CoverageNote({ coverage }: Readonly<{ coverage: AccuracyCoverage }>) {
-  return <p className={textRole('caption', 'text-ink-muted')}>{accuracyCoverageLine(coverage)}</p>;
+  return <p className={textRole('caption', 'text-ink-2')}>{accuracyCoverageLine(coverage)}</p>;
 }
 
 function Headline({ data }: Readonly<{ data: AccuracyResponse }>) {
   const { coverage } = data.score;
   return (
-    <Card>
-      <CardContent>
+    <Section>
+      <SectionContent>
         <Stack gap="item">
-          <StatRow
+          <FigureStrip
             label="Fact checks"
             segments={[
               {
@@ -171,8 +178,8 @@ function Headline({ data }: Readonly<{ data: AccuracyResponse }>) {
           />
           <CoverageNote coverage={coverage} />
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -187,43 +194,43 @@ function ClaimLink({ claim }: Readonly<{ claim: AccuracyClaim }>) {
 function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
   const { label: engineLabel } = useEngineCatalog();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Contradicted claims</CardTitle>
-        <CardDescription>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Contradicted claims</SectionTitle>
+        <SectionDescription>
           What answers said about you that a confirmed fact contradicts, quoted exactly.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         {!claims.length ? (
-          <QueryState kind="empty" inline message="No contradicted claims in these answers." />
+          <StateBlock kind="empty" inline message="No contradicted claims in these answers." />
         ) : (
           <Stack as="ul">
             {claims.map((claim) => (
               <Stack as="li" gap="tight" key={`${claim.execution_id}:${claim.quote}`}>
                 <ClaimLink claim={claim} />
                 {claim.facts.map((fact) => (
-                  <span key={fact.statement} className="type-caption text-ink-secondary">
+                  <span key={fact.statement} className="type-caption text-ink-2">
                     Your fact: {fact.statement}
                   </span>
                 ))}
-                <Inline as="span" className={textRole('caption', 'text-ink-muted flex-wrap')}>
+                <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
                   {/* The badge takes the claim's own verdict tone; a claim
                       without a verdict yet is neutral, not negative. */}
-                  <Badge
+                  <StatusMark
                     variant="sentiment"
                     value={claim.verdict ? VERDICT_TONE[claim.verdict] : 'neutral'}
                   >
                     {TOPIC_LABELS[claim.topic]}
-                  </Badge>
+                  </StatusMark>
                   {engineLabel(claim.logical_engine)} · {claim.prompt}
                 </Inline>
               </Stack>
             ))}
           </Stack>
         )}
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -256,7 +263,7 @@ function BreakdownTable({
           <TableCell numeric>{row.score.coverage.claims}</TableCell>
           <TableCell numeric>{row.score.coverage.supported}</TableCell>
           <TableCell numeric>{row.score.coverage.contradicted}</TableCell>
-          <TableCell numeric>{formatShare(row.score.accuracy) ?? <MissingValue />}</TableCell>
+          <TableCell numeric>{formatShare(row.score.accuracy) ?? <Absence />}</TableCell>
         </TableRow>
       ))}
     </DataTable>

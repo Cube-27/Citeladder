@@ -4,11 +4,7 @@
 // default costs a full environment per file and buys nothing here.
 import { afterEach, describe, expect, it } from 'vite-plus/test';
 
-import {
-  PENDING_PRICING_INTENT_MAX_AGE_MS,
-  USAGE_METER_CRITICAL_RATIO,
-  USAGE_METER_WARNING_RATIO,
-} from './billing';
+import { PENDING_PRICING_INTENT_MAX_AGE_MS, USAGE_METER_WARNING_RATIO } from './billing';
 import { getLogoDevPublishable } from './env';
 import { publicOrigins } from './public-origins';
 import {
@@ -44,9 +40,8 @@ afterEach(() => {
 });
 
 describe('billing config', () => {
-  it('orders the usage-meter bands below one', () => {
-    expect(USAGE_METER_WARNING_RATIO).toBeLessThan(USAGE_METER_CRITICAL_RATIO);
-    expect(USAGE_METER_CRITICAL_RATIO).toBeLessThan(1);
+  it('places the usage-meter warning inside the allowance', () => {
+    expect(USAGE_METER_WARNING_RATIO).toBeLessThan(1);
     expect(USAGE_METER_WARNING_RATIO).toBeGreaterThan(0);
   });
 

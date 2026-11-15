@@ -87,8 +87,10 @@ describe('A finished reply’s activity', () => {
     );
     const summary = await screen.findByText('Loaded the method · read connected data');
     expect(
-      Array.from(summary.parentElement?.querySelectorAll('li') ?? [], (item) => item.textContent),
-    ).toEqual(['Loaded the method', 'Read connected data']);
+      within(screen.getByRole('list', { name: 'Agent activity', hidden: true }))
+        .getAllByRole('listitem', { hidden: true })
+        .map((item) => item.textContent),
+    ).toEqual(['Loaded the method, Done', 'Read connected data, Done']);
     // Above the reply, where the running turn's status line was, so the text does not move.
     expect(
       summary.compareDocumentPosition(screen.getByText('Here are the edits.')) &
@@ -142,16 +144,18 @@ describe('A finished reply’s activity', () => {
         canSend
       />,
     );
-    const summary = await screen.findByText(
-      'Searched the web · read Actions and page · edited Document 1',
-    );
     expect(
-      Array.from(summary.parentElement?.querySelectorAll('li') ?? [], (item) => item.textContent),
+      await screen.findByText('Searched the web · read Actions and page · edited Document 1'),
+    ).toBeVisible();
+    expect(
+      within(screen.getByRole('list', { name: 'Agent activity', hidden: true }))
+        .getAllByRole('listitem', { hidden: true })
+        .map((item) => item.textContent),
     ).toEqual([
-      'Searched the web acme pricing',
-      'Read Actions',
-      'Read page https://acme.example/returns',
-      'Edited Document 1 Pricing page edits',
+      'Searched the web, Doneacme pricing',
+      'Read Actions, Done',
+      'Read page, Donehttps://acme.example/returns',
+      'Edited Document 1, DonePricing page edits',
     ]);
     const sources = screen.getByRole('region', { name: 'Web sources' });
     expect(within(sources).getByRole('link', { name: /Acme pricing/u })).toHaveAttribute(
@@ -315,7 +319,7 @@ describe('An unanswered turn', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent(`Error: Failed at`);
-    expect(within(alert).getByText('10:01 AM')).toBeVisible();
+    expect(within(alert).getByText('Sep 25, 2026, 10:01 AM UTC')).toBeVisible();
     expect(alert).toHaveTextContent(PROVIDER_ERROR);
     expect(screen.queryByRole('article', { name: 'Agent reply' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Copy reply' })).not.toBeInTheDocument();
@@ -348,7 +352,7 @@ describe('An unanswered turn', () => {
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Error: Failed 2 times, last at');
-    expect(within(alert).getByText('10:05 AM')).toBeVisible();
+    expect(within(alert).getByText('Sep 25, 2026, 10:05 AM UTC')).toBeVisible();
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     expect(screen.getAllByText('Improve our pricing page snippet.')).toHaveLength(1);
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
@@ -387,7 +391,7 @@ describe('An unanswered turn', () => {
     );
 
     expect(await screen.findByRole('status')).toHaveTextContent(
-      `Note: Did not finish at 10:01 AMSep 25, 2026, 10:01 AM UTC${PROVIDER_ERROR}`,
+      `Note: Did not finish at Sep 25, 2026, 10:01 AM UTC${PROVIDER_ERROR}`,
     );
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     const reply = screen.getByRole('article', { name: 'Agent reply' });
@@ -402,14 +406,11 @@ describe('A reply’s time', () => {
     document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=; Path=/; Max-Age=0`;
   });
 
-  it.each([
-    ['today', '2026-09-25T18:00:00Z', '10:01 AM'],
-    ['on another day', '2026-10-02T12:00:00Z', 'Sep 25, 10:01 AM'],
-    ['in another year', '2027-01-04T12:00:00Z', 'Sep 25, 2026, 10:01 AM'],
-  ])('is short %s and reads in full', async (_when, now, short) => {
+  // One date-time format everywhere (DAT-04): the year and zone show even today.
+  it('reads in full today', async () => {
     document.cookie = `${DISPLAY_TIME_ZONE_COOKIE}=UTC; Path=/`;
     vi.useFakeTimers({ toFake: ['Date'] });
-    vi.setSystemTime(new Date(now));
+    vi.setSystemTime(new Date('2026-09-25T18:00:00Z'));
     renderChat(
       chatWith({ status: 'succeeded' }, [
         { role: 'user', at: '2026-09-25T10:00:00Z' },
@@ -421,8 +422,7 @@ describe('A reply’s time', () => {
       'time',
     );
     expect(time).toHaveAttribute('datetime', '2026-09-25T10:01:00Z');
-    expect(time).toHaveTextContent(`${short}Sep 25, 2026, 10:01 AM UTC`);
-    expect(within(time!).getByText('Sep 25, 2026, 10:01 AM UTC')).toHaveClass('sr-only');
+    expect(time?.textContent).toBe('Sep 25, 2026, 10:01 AM UTC');
   });
 });
 

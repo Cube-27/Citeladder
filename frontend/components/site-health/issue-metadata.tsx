@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { Inline } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import type { SiteIssue } from '@citeladder/contracts';
@@ -22,15 +23,15 @@ export function IssueMetadata({
   children?: ReactNode;
 }>) {
   return (
-    <Inline as="span" className={textRole('label', 'flex-wrap')}>
+    <Inline as="span" className={textRole('body', 'text-ink-2 flex-wrap')}>
       {issue.finding_class === 'defect' ? (
-        <Badge variant="status" value={severityBadgeValue(issue.severity)}>
+        <StatusMark variant="status" value={severityBadgeValue(issue.severity)}>
           {severityLabel(issue.severity)}
-        </Badge>
+        </StatusMark>
       ) : (
-        <Badge>Advisory</Badge>
+        <Tag>Advisory</Tag>
       )}
-      <span className="text-ink-secondary">{dimensionLabel(issue.dimension)}</span>
+      <span className="text-ink-2">{dimensionLabel(issue.dimension)}</span>
       {children}
     </Inline>
   );

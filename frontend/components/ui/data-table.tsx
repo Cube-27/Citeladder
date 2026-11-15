@@ -1,18 +1,16 @@
 import { useId, useRef, type ComponentProps, type CSSProperties, type ReactNode } from 'react';
 
-import { BusyBar } from '@/components/ui/progress-bar';
-import { cardClasses } from '@/components/ui/card';
+import { BusyRung } from '@/components/ui/rung-meter';
 import {
+  columnsMinWidth,
   DataTableColumns,
   useFlexibleColumnCheck,
   type DataTableColumn,
   type DataTableSelection,
 } from '@/components/ui/data-table-columns';
-import { EmptyHeadingLevelContext, EmptyState } from '@/components/ui/empty-state';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
-import { QueryState, type QueryStateProps } from '@/components/ui/query-state';
 import { ScrollEdgeFades, useScrollEdges } from '@/components/ui/scroll-edges';
 import {
   Table,
@@ -26,24 +24,32 @@ import {
 } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
+import {
+  StateBlock,
+  type StateBlockProps,
+  StateHeadingLevelContext,
+} from '@/components/ui/state-block';
 
 export type { DataTableColumn, DataTableSelection };
 
 /** A table read's state when it has no rows to show: loading, error or empty. */
-export type DataTableState = Exclude<QueryStateProps, { inline: true }>;
+export type DataTableState = Exclude<StateBlockProps, { inline: true }>;
 
 /**
- * The one-line empty state (`QueryState` `inline`): one table row saying what
+ * The one-line empty state (`StateBlock` `inline`): one table row saying what
  * is absent, for a small table whose block empty state would be taller than
  * its rows ever are.
  */
-type DataTableInlineEmpty = Extract<QueryStateProps, { inline: true }>;
+type DataTableInlineEmpty = Extract<StateBlockProps, { inline: true }>;
 
 export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'className'>;
 
 /**
- * DataTable — the record table organism: a header, the rows, the pager and
- * the read's states, in one card with one geometry.
+ * DataTable — the record table organism: a header, an
+ * ink rule, overline column heads, 36px rows on hairlines with mono
+ * right-aligned figures, a first column fixed while the table scrolls
+ * sideways, sort marks, your row marked with the accent rung and "You", the
+ * pager and the read's states, with one geometry.
  *
  *   header — the table's title and its toolbar (`FilterBar`: search, filters,
  *            status, actions) on one row, 49px with the hairline that closes
@@ -76,10 +82,6 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
  *   overflow — while a wide table scrolls sideways, a fade at each edge that
  *            hides columns says so; it overlays the frame and moves nothing.
  *
- * Inside a box that already frames it (a card holding other content, a
- * dialog's preview of parsed rows) the table is `nested`: the same header,
- * rows and pager without a card of its own.
- *
  * The page passes data, columns and rows; it sets no geometry.
  */
 export function DataTable({
@@ -95,9 +97,8 @@ export function DataTable({
   pager,
   busy,
   minWidth,
-  pinFirstColumn = false,
+  pinFirstColumn = true,
   selection,
-  nested = false,
   footer,
   label,
   reserveRows = false,
@@ -128,8 +129,6 @@ export function DataTable({
    */
   pinFirstColumn?: boolean;
   selection?: DataTableSelection;
-  /** Inside a box that already frames it: no card of its own. */
-  nested?: boolean;
   /** A note under the table (e.g. a truncation notice). */
   footer?: ReactNode;
   /** The table's accessible name when it has no visible title. */
@@ -144,7 +143,6 @@ export function DataTable({
   const headingId = useId();
   const colSpan = columns.length + (selection ? 1 : 0);
   const paging = pagingLayout(pager, pageSize, reserveRows);
-  const fit = FITS[nested ? 'nested' : 'card'];
   // The region and the table share one name: the visible title, else `label`.
   const naming = title
     ? { ariaLabelledBy: headingId, ariaLabel: undefined }
@@ -156,9 +154,9 @@ export function DataTable({
       aria-label={naming.ariaLabel}
       aria-busy={busy?.active || undefined}
       data-data-table=""
-      className={cn(fit, 'relative grid min-w-0 content-start gap-[var(--workspace-gap)]')}
+      className="relative grid min-w-0 content-start gap-[var(--workspace-gap)]"
     >
-      {busy ? <BusyBar active={busy.active} label={busy.label} /> : null}
+      {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
       <DataTableHeader
         title={title}
         headingId={headingId}
@@ -166,10 +164,9 @@ export function DataTable({
         description={description}
       />
       <DataTableFrame
-        minWidth={minWidth}
+        minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
         naming={naming}
         pinFirstColumn={pinFirstColumn}
-        fullBleed={!nested}
       >
         <DataTableColumns columns={columns} selection={selection} />
         <TableTextLinesContext value={(pager || pageSize !== undefined) && rowLines === 1 ? 1 : 2}>
@@ -192,41 +189,55 @@ export function DataTable({
 }
 
 /**
+ * The table's minimum width at the narrow and desktop layouts: the page's
+ * `minWidth` floor, raised until no column (the identity column above all)
+ * is squeezed below its role.
+ */
+function tableMinWidth({
+  columns,
+  selection,
+  minWidth,
+}: Readonly<{
+  columns: readonly DataTableColumn[];
+  selection: boolean;
+  minWidth: TableMinWidth | undefined;
+}>): CSSProperties {
+  const floor = minWidth ? `var(--table-min-width-${minWidth})` : undefined;
+  return {
+    '--data-table-min': columnsMinWidth({ columns, selection, floor, desktop: false }),
+    '--data-table-min-desktop': columnsMinWidth({ columns, selection, floor, desktop: true }),
+  } as CSSProperties;
+}
+
+/**
  * The table in its scrolling frame, with the overflow fades laid over the
  * frame's edges. The box is isolated, so the fades never paint over the
  * page's sticky header. A pinned first column keeps the leading edge clear.
- *
- * In its own card the rows are full-bleed: the frame runs to the card's
- * edges and the outer cells take the card's 16 inset, so a cell's text
- * starts on the same line as the title above it and the row rules meet the
- * card's border.
  */
 function DataTableFrame({
   minWidth,
   naming,
   pinFirstColumn,
-  fullBleed,
   children,
 }: Readonly<{
-  minWidth?: TableMinWidth;
+  minWidth: CSSProperties;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinFirstColumn: boolean;
-  fullBleed: boolean;
   children: ReactNode;
 }>) {
   const frame = useRef<HTMLDivElement>(null);
   const edges = useScrollEdges(frame);
   return (
-    <div
-      data-data-table-frame=""
-      className={cn('relative isolate min-w-0', fullBleed && FULL_BLEED_FRAME)}
-    >
+    <div data-data-table-frame="" className="relative isolate min-w-0" style={minWidth}>
       <Table
         fixed
-        minWidth={minWidth}
         {...naming}
         wrapperRef={frame}
-        className={cn(pinFirstColumn && PINNED_FIRST_COLUMN)}
+        wrapperClassName="@container"
+        className={cn(
+          'desktop:min-w-[var(--data-table-min-desktop)] min-w-[var(--data-table-min)]',
+          pinFirstColumn && PINNED_FIRST_COLUMN,
+        )}
       >
         {children}
       </Table>
@@ -289,21 +300,9 @@ function pagingLayout(
   return reserveRows || hasMorePages(pager) ? { pager, pageSize } : {};
 }
 
-/**
- * The system's TableCard: the header (title, toolbar, description) in the
- * card's 16 inset, the table 12 below it with full-bleed rows, and the pager
- * and footnote 12 below the table. Inside a box that already frames it, there
- * is no card of its own and the table keeps that box's inset.
- */
-const FITS = { card: cardClasses(), nested: undefined } as const;
-
-/** The frame out to the card's edges, its outer cells back on the card's inset. */
-const FULL_BLEED_FRAME =
-  '-mx-[var(--card-padding)] [&_:is(th,td):first-child]:ps-[var(--card-padding)] [&_:is(th,td):last-child]:pe-[var(--card-padding)]';
-
 /** The first column stays in view while a wide table scrolls in its frame. */
 const PINNED_FIRST_COLUMN =
-  '[&_tr>:first-child]:sticky [&_tr>:first-child]:left-0 [&_tbody_tr>:first-child]:z-10 [&_tbody_tr>:first-child]:bg-surface [&_thead_tr>:first-child]:z-20';
+  '[&_tr>:first-child]:sticky [&_tr>:first-child]:left-0 [&_tbody_tr>:first-child]:z-10 [&_tbody_tr>:first-child]:bg-[var(--table-ground)] [&_thead_tr>:first-child]:z-20';
 
 /**
  * The title row (the title at the card-title size, then the toolbar 8 along),
@@ -326,7 +325,7 @@ function DataTableHeader({
       {title || toolbar ? (
         <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center gap-2">
           {title ? (
-            <h3 id={headingId} className={textRole('sectionTitle', 'min-w-0 truncate')}>
+            <h3 id={headingId} className={textRole('heading', 'min-w-0 truncate')}>
               {title}
             </h3>
           ) : null}
@@ -374,12 +373,16 @@ function DataTableBody({
             className="h-[calc(var(--data-table-rows)*var(--data-table-row))] align-top"
             style={stateFootprint(pageSize ?? 1, rowLines)}
           >
-            <EmptyState
-              variant="compact"
-              icon={state.icon}
-              title={state.message}
-              primary={state.action}
-            />
+            <InFrame>
+              <StateBlock
+                kind="empty"
+                inline
+                compact
+                icon={state.icon}
+                message={state.message}
+                action={state.action}
+              />
+            </InFrame>
           </TableCell>
         </tr>
       </TableBody>
@@ -391,13 +394,15 @@ function DataTableBody({
         <tr data-table-state="">
           <TableCell
             colSpan={colSpan}
-            className="h-[max(var(--query-state-height),calc(var(--data-table-rows)*var(--data-table-row)))] align-top"
+            className="h-[max(var(--state-block-height),calc(var(--data-table-rows)*var(--data-table-row)))] align-top"
             style={stateFootprint(pageSize ?? 0, rowLines)}
           >
             {/* Under the table's h3 title, a block empty state's heading is an h3. */}
-            <EmptyHeadingLevelContext value={3}>
-              <QueryState {...state} />
-            </EmptyHeadingLevelContext>
+            <StateHeadingLevelContext value={3}>
+              <InFrame>
+                <StateBlock {...state} />
+              </InFrame>
+            </StateHeadingLevelContext>
           </TableCell>
         </tr>
       </TableBody>
@@ -413,6 +418,18 @@ function DataTableBody({
         spacer={rowLines === 1 ? null : <TableCellLines primary={BLANK} secondary={BLANK} />}
       />
     </TableBody>
+  );
+}
+
+/**
+ * A state spans the visible frame, not the scroll width of a wide table, and
+ * stays in view while the frame scrolls, so its text is never cut (STA-03).
+ */
+function InFrame({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="sticky start-[var(--table-cell-padding-x)] w-[calc(100cqi-2*var(--table-cell-padding-x))]">
+      {children}
+    </div>
   );
 }
 

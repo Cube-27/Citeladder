@@ -3,12 +3,10 @@ import { useState } from 'react';
 
 import { ConnectStrip } from '@/components/mcp/connect-strip';
 import { Button } from '@/components/ui/button';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Dialog } from '@/components/ui/dialog';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
-import { readErrorProps } from '@/components/ui/read-error';
 import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -17,6 +15,7 @@ import type { McpConnection } from '@citeladder/contracts/mcp';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { mcpConnectionMutations, mcpConnectionQueries } from '@/lib/api/mcp-connections';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 
 function ConnectionRow({
   connection,
@@ -28,11 +27,11 @@ function ConnectionRow({
     <TableRow>
       <TableCell>
         <div className="grid min-w-0">
-          <p className={textRole('itemTitle')}>
+          <p className={textRole('body')}>
             {connection.client_name}{' '}
             <span className={textRole('caption')}>· name not verified</span>
           </p>
-          <p className={textRole('body')}>
+          <p className={textRole('body', 'text-ink-2')}>
             {connection.requires_consent
               ? 'Reconnect to choose workspaces.'
               : `Reads ${workspaces || 'no workspace you can still access'}.`}
@@ -133,13 +132,14 @@ function ConnectionList({ workspaceId }: Readonly<{ workspaceId?: string }>) {
         }
       >
         <Stack gap="compact">
-          <p className={textRole('body')}>
+          <p className={textRole('body', 'text-ink-2')}>
             {adminView
               ? 'The assistant stops reading or changing this workspace at once. Its access to other workspaces is unchanged.'
               : 'The assistant stops reading or changing CiteLadder at once. Connect it again to restore access.'}
           </p>
           {revoke.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(revoke.error, { action: 'revoke the connection' })}
             />
           ) : null}

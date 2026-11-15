@@ -25,7 +25,7 @@ import type {
   SiteHealthEntitlement,
 } from '@citeladder/contracts';
 import type { PagesSort } from '@/lib/api/site-health';
-import type { RunStatusValue, StatusValue } from '@/components/ui/badge';
+import type { RunStatusValue, StatusValue } from '@/components/ui/status-mark';
 import type { InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 import { CRAWL_POLL_MS } from '@/lib/config/operational';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';

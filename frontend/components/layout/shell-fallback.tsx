@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
+import { NoticeScreen } from '@/components/templates/notice-page';
 import { AppShellPlaceholder } from '@/components/ui/app-shell';
-import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 
 import { RouteLoadingScreen } from './page-shell';
 import { hasPageTitle } from '@/lib/navigation/app-routes';
@@ -34,28 +33,12 @@ export function ShellFallback({ children }: Readonly<{ children?: ReactNode }>) 
 
 const WORKSPACE_LOADING = 'Loading your workspace…';
 
-/** A shell page's loading frame; a path the shell has no page for keeps the box alone. */
+/** A shell page's loading frame; a path the shell has no page for shows the loading notice. */
 function DestinationLoading() {
   const { pathname } = useLocation();
   return hasPageTitle(pathname ?? '') ? (
     <RouteLoadingScreen label={WORKSPACE_LOADING} />
   ) : (
-    <QueryState kind="loading" label={WORKSPACE_LOADING} />
-  );
-}
-
-/**
- * GateScreen — a page the app shows instead of the workspace, in the
- * fallback frame, before the shell can open: a workspace whose access ended.
- * One narrow column (`container-narrow`), its parts 16 apart, centred in the
- * page. The caller passes the content; the page owns every number.
- */
-export function GateScreen({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <ShellFallback>
-      <Stack as="main" id="main" gap="workspace" className="max-w-narrow mx-auto w-full">
-        {children}
-      </Stack>
-    </ShellFallback>
+    <NoticeScreen tone="loading" heading={WORKSPACE_LOADING} />
   );
 }

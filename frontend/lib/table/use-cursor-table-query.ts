@@ -1,9 +1,8 @@
-import { useState } from 'react';
 import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 
 import type { DataTablePager, DataTableState } from '@/components/ui/data-table';
-import { readErrorProps } from '@/components/ui/read-error';
 import { cursorControls, pageRange, useCursorTable } from './use-cursor-table';
+import { readErrorProps } from '@/components/ui/notice';
 
 /** A keyset page as the API returns it. */
 type CursorPage = Readonly<{ items: readonly unknown[]; next_cursor: string | null }>;
@@ -108,7 +107,6 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
     },
   });
   const page = query.data;
-  const rowOffset = useShownRowOffset((cursor.page - 1) * pageSize, query);
   let state: DataTableState | undefined;
   if (query.isPending) state = { kind: 'loading', label: loading };
   else if (query.isError) state = { kind: 'error', ...readErrorProps(query), fallback: error };
@@ -140,21 +138,7 @@ export function useCursorTableQuery<TPage extends CursorPage, TKey extends Query
           }
         : undefined,
   };
-  return { query, page, cursor, table, rowOffset };
-}
-
-/**
- * The rows before the shown page, for a running "#" column. Retained rows
- * keep the offset of the page they came from until the next page lands.
- */
-function useShownRowOffset(
-  offset: number,
-  query: Readonly<{ data: CursorPage | undefined; isPlaceholderData: boolean }>,
-): number {
-  const [shown, setShown] = useState(offset);
-  const landed = query.data !== undefined && !query.isPlaceholderData;
-  if (landed && shown !== offset) setShown(offset);
-  return shown;
+  return { query, page, cursor, table };
 }
 
 /**

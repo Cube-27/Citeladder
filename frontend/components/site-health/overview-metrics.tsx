@@ -1,21 +1,17 @@
 import type { ReactNode } from 'react';
 
-import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@citeladder/contracts';
+import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
-/** One Site Health score as a `KpiRow` segment: the score ring and where to act. */
+/** One Site Health score as a FigureStrip figure: the rung meter and where to act. */
 export type AuditMetric = {
   title: string;
   value: number | null;
-  /**
-   * `percent` is a share drawn as a ring, as the Overview and Pages strips
-   * show it; `plain-percent` is the same share as a plain figure, which the
-   * page detail keeps.
-   */
-  valueUnit?: 'score' | 'percent' | 'plain-percent';
+  /** `percent` is a share drawn as rungs; its number reads as a percentage. */
+  valueUnit?: 'score' | 'percent';
   href?: string;
   icon: typeof ICONS.site;
   unavailable?: ReactNode;
@@ -28,7 +24,7 @@ function auditSegment({
   href,
   icon,
   unavailable,
-}: AuditMetric): StatSegment {
+}: AuditMetric): FigureSegment {
   const base = {
     key: title,
     label: title,
@@ -36,22 +32,23 @@ function auditSegment({
     action: href ? <TextLink href={href}>View details</TextLink> : undefined,
   };
   if (value === null) {
-    return { ...base, value: unavailable ?? <UnavailableValue state="not_measured" /> };
+    return { ...base, value: unavailable ?? <Absence state="not_measured" /> };
   }
-  if (valueUnit === 'plain-percent') return { ...base, value: `${Math.round(value)}%` };
-  // The ring names itself "<label>: <n> out of 100".
   return {
     ...base,
-    score: { value, label: valueUnit === 'percent' ? title : `${title} score` },
+    score:
+      valueUnit === 'percent'
+        ? { value, label: title, unit: '%' }
+        : { value, label: `${title} score` },
   };
 }
 
-/** The Site Health scores, as one `KpiRow`. */
+/** The Site Health scores, as one FigureStrip. */
 export function AuditScores({
   metrics,
   testId,
 }: Readonly<{ metrics: readonly AuditMetric[]; testId?: string }>) {
-  return <KpiRow segments={metrics.map(auditSegment)} testId={testId} />;
+  return <FigureStrip segments={metrics.map(auditSegment)} testId={testId} />;
 }
 
 type Summary = SiteHealthDashboard['score_summary'];

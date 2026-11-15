@@ -5,15 +5,13 @@ import { Conversation } from '@/components/agent/conversation';
 import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useCancelRun, useFollowUp, type FollowUp } from '@/components/agent/use-chat-turns';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { AgentThread } from '@/components/ui/chat-dock';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { latestOutput } from '@/lib/agent/documents';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { isPageReading, isRunActive } from '@/lib/agent/run-state';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import type { AgentChatDetail, AgentOutput } from '@/lib/api/agent';
+import { Notice } from '@/components/ui/notice';
 
 /**
  * One chat's conversation and reply composer, shared by the full Agent screen
@@ -64,8 +62,8 @@ export function ChatConversation({
       {/* Notices keep the thread's reading column instead of the page's full width. */}
       {!access.canSend || turn.failure ? (
         <AgentThread>
-          {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
-          <FollowUpFailure turn={turn} actionId={detail.chat.action_id} canSend={access.canSend} />
+          {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}
+          <FollowUpFailure turn={turn} actionId={detail.chat.action_id} />
         </AgentThread>
       ) : null}
     </>
@@ -99,6 +97,11 @@ export function ReplyComposer({
       submissionDisabled={runActive}
       onStop={thread.stop}
       stopping={thread.stopping}
+      onRetry={
+        turn.failure && !turn.failure.startNewChat && turn.draft.trim() === turn.failedMessage
+          ? turn.retrySubmission
+          : undefined
+      }
       placeholder={placeholder}
       commands={turn.commands}
       skill={skill}
@@ -109,11 +112,11 @@ export function ReplyComposer({
 function FollowUpFailure({
   turn,
   actionId,
-  canSend,
-}: Readonly<{ turn: FollowUp; actionId: string | null; canSend: boolean }>) {
+}: Readonly<{ turn: FollowUp; actionId: string | null }>) {
   if (!turn.failure) return null;
   return (
-    <MutationNotice
+    <Notice
+      kind="mutation"
       notice={turn.failure}
       recovery={
         turn.failure.startNewChat ? (
@@ -123,15 +126,7 @@ function FollowUpFailure({
           >
             Start a new chat
           </ProjectLink>
-        ) : (
-          <Button
-            variant="secondary"
-            onClick={turn.retrySubmission}
-            disabled={turn.pending || !canSend}
-          >
-            Retry send
-          </Button>
-        )
+        ) : null
       }
     />
   );

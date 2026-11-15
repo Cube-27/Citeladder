@@ -2,8 +2,6 @@ import { Download } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { CsvImportFileInput, CsvImportPreview, useCsvImportFile } from '@/components/ui/csv-import';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -11,7 +9,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { PromptImportRowRequest } from '@citeladder/contracts/prompt-requests';
 import { downloadCsv } from '@/lib/csv/download';
 import {
@@ -22,6 +20,7 @@ import {
   type ParsedCsv,
   type PromptCsvLimits,
 } from '@/lib/prompts/csv';
+import { Notice } from '@/components/ui/notice';
 
 /**
  * CSV import dialog (F7). The file is parsed + validated in the browser and the
@@ -99,7 +98,7 @@ export function CsvImportDialog({
       width="wide"
       footer={
         <>
-          <Button variant="ghost" onClick={() => handleOpenChange(false)}>
+          <Button variant="quiet" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button
@@ -115,7 +114,7 @@ export function CsvImportDialog({
       }
     >
       <Stack gap="workspace">
-        {error ? <MutationNotice notice={error} /> : null}
+        {error ? <Notice kind="mutation" notice={error} /> : null}
 
         <Stack gap="compact">
           <CsvImportFileInput inputRef={inputRef} onSelect={(file) => void selectFile(file)} />
@@ -125,10 +124,10 @@ export function CsvImportDialog({
           </Button>
         </Stack>
 
-        {readError ? <Callout tone="negative">{readError}</Callout> : null}
+        {readError ? <Notice tone="negative">{readError}</Notice> : null}
 
         {parsed && parsed.errors.length > 0 ? (
-          <Callout tone="negative">{parsed.errors.join(' ')}</Callout>
+          <Notice tone="negative">{parsed.errors.join(' ')}</Notice>
         ) : null}
 
         {parsed ? <ParsedRows parsed={parsed} fileName={fileName} /> : null}
@@ -146,16 +145,16 @@ function ParsedRows({
   const errorCount = parsed.rows.filter((row) => row.errors.length > 0).length;
   return (
     <CsvImportPreview errorCount={errorCount} fileName={fileName} rowCount={parsed.rows.length}>
-      <DataTable nested label="Parsed rows" columns={PREVIEW_COLUMNS}>
+      <DataTable label="Parsed rows" columns={PREVIEW_COLUMNS}>
         {parsed.rows.map((row) => {
           const invalid = row.errors.length > 0;
           return (
             <TableRow key={row.line} className={invalid ? 'opacity-60' : undefined}>
-              <TableCell numeric className="text-ink-muted">
+              <TableCell numeric className="text-ink-2">
                 {row.line}
               </TableCell>
-              <TableCell>{row.input.topic || <UnavailableValue state="not_set" />}</TableCell>
-              <TableCell>{row.input.text || <UnavailableValue state="not_set" />}</TableCell>
+              <TableCell>{row.input.topic || <Absence state="not_set" />}</TableCell>
+              <TableCell>{row.input.text || <Absence state="not_set" />}</TableCell>
               <TableCell>
                 <RowStatus errors={row.errors} />
               </TableCell>

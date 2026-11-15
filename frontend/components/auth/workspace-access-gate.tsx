@@ -17,13 +17,14 @@ import { contactSalesHref } from '@/lib/config/contact';
 import { websiteHref } from '@/lib/config/app-link';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { QueryState } from '@/components/ui/query-state';
-import { GateScreen, ShellFallback } from '@/components/layout/shell-fallback';
+import { ShellFallback } from '@/components/layout/shell-fallback';
+import { NoticeScreen } from '@/components/templates/notice-page';
 import { Dialog } from '@/components/ui/dialog';
 import AccountSecurity from '@/components/settings/account-security';
-import { SettingsSections } from '@/components/ui/settings-section';
 import { RestorePlan } from '@/components/billing/restore-plan';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { SectionStack } from '@/components/ui/section';
 
 function accessAllowed(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
   return Boolean(
@@ -141,7 +142,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
   if (failure) {
     return (
       <ShellFallback>
-        <QueryState
+        <StateBlock
           kind="error"
           title="Couldn't load workspace access"
           error={failure.error}
@@ -199,47 +200,56 @@ function AccessEnded({
   // react-doctor-disable-next-line react-doctor/query-mutation-missing-invalidation
   const leave = useMutation({ mutationFn: () => signOut(client) });
   return (
-    <GateScreen>
-      <h1>{title}</h1>
-      <Callout tone="info">
-        {canRestore
-          ? 'Your data is retained. Choose a plan to continue, contact support, or switch to another workspace.'
-          : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
-      </Callout>
-      {activeWorkspaceId && canRestore ? <RestorePlan workspaceId={activeWorkspaceId} /> : null}
-      <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
-      <Button className="w-fit" variant="primary" onClick={onRetry}>
-        Retry
-      </Button>
-      {workspaces
-        .filter((workspace) => workspace.id !== activeWorkspaceId)
-        .map((workspace) => (
-          <Link key={workspace.id} reloadDocument to={`/projects?workspace=${workspace.id}`}>
-            {workspace.name}
-          </Link>
-        ))}
-      <Button className="w-fit" variant="secondary" onClick={() => setSecurityOpen(true)}>
-        Account security
-      </Button>
-      <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">
-        <SettingsSections>
-          <AccountSecurity />
-        </SettingsSections>
-      </Dialog>
-      <Button
-        className="w-fit"
-        variant="secondary"
-        onClick={() => leave.mutate()}
-        pending={leave.isPending}
-        pendingLabel="Signing out…"
+    <ShellFallback>
+      <NoticeScreen
+        tone="warning"
+        heading={title}
+        actions={
+          <>
+            <Button variant="primary" onClick={onRetry}>
+              Retry
+            </Button>
+            <Button asChild variant="secondary">
+              <a href={contactSalesHref(undefined, websiteHref('/contact'))}>Contact support</a>
+            </Button>
+            <Button variant="secondary" onClick={() => setSecurityOpen(true)}>
+              Account security
+            </Button>
+            <Button
+              variant="secondary"
+              onClick={() => leave.mutate()}
+              pending={leave.isPending}
+              pendingLabel="Signing out…"
+            >
+              Sign out
+            </Button>
+          </>
+        }
       >
-        Sign out
-      </Button>
-      {leave.isError ? (
-        <Callout tone="negative">
-          Sign out failed. Your session is still active; please try again.
-        </Callout>
-      ) : null}
-    </GateScreen>
+        <p>
+          {canRestore
+            ? 'Your data is retained. Choose a plan to continue, contact support, or switch to another workspace.'
+            : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
+        </p>
+        {activeWorkspaceId && canRestore ? <RestorePlan workspaceId={activeWorkspaceId} /> : null}
+        {workspaces
+          .filter((workspace) => workspace.id !== activeWorkspaceId)
+          .map((workspace) => (
+            <Link key={workspace.id} reloadDocument to={`/projects?workspace=${workspace.id}`}>
+              {workspace.name}
+            </Link>
+          ))}
+        {leave.isError ? (
+          <Notice tone="negative">
+            Sign out failed. Your session is still active; please try again.
+          </Notice>
+        ) : null}
+      </NoticeScreen>
+      <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">
+        <SectionStack>
+          <AccountSecurity />
+        </SectionStack>
+      </Dialog>
+    </ShellFallback>
   );
 }

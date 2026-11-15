@@ -5,16 +5,17 @@ import {
   APP_ROUTES,
   hasPageTitle,
   isWorkspaceOnlyRoute,
-  navigationMode,
+  isAgentPath,
   projectSwitchPathname,
   resolveTitle,
 } from './app-routes';
 
 describe('app route manifest', () => {
   it('titles a page by its own route, else by the section it sits below', () => {
-    expect(resolveTitle('/runs/1f0c')).toBe('Run detail');
+    expect(resolveTitle('/runs/1f0c')).toBe('Run');
     expect(resolveTitle('/site/crawls/c1/pages/p1')).toBe('Page detail');
-    expect(resolveTitle('/agent/chats/c1')).toBe('Agent');
+    expect(resolveTitle('/agent/chats/c1')).toBe('Chat');
+    expect(resolveTitle('/products/overview')).toBe('Shopping');
     expect(resolveTitle('/settings/unknown')).toBe('Settings');
     expect(resolveTitle('/nowhere')).toBe('CiteLadder');
   });
@@ -49,9 +50,10 @@ describe('app route manifest', () => {
     expect(new Set(marked)).toEqual(CREDENTIAL_LINK_PATHS);
   });
 
-  it('puts every Agent path, known or not, in Agent mode', () => {
-    expect(navigationMode('/agent/skills')).toBe('agent');
-    expect(navigationMode('/agent/unknown')).toBe('agent');
-    expect(navigationMode('/prompts')).toBe('dashboard');
+  it("tells the Agent's own pages, known or not, from every other page", () => {
+    expect(isAgentPath('/agent')).toBe(true);
+    expect(isAgentPath('/agent/unknown')).toBe(true);
+    expect(isAgentPath('/agents-report')).toBe(false);
+    expect(isAgentPath('/prompts')).toBe(false);
   });
 });

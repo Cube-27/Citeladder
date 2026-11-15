@@ -4,12 +4,12 @@ import { PageKindScores } from '@/components/site-health/page-kind-scores';
 import { SiteFactsPanel } from '@/components/site-health/site-facts-panel';
 import { StatusStrip } from '@/components/site-health/status-strip';
 import { Button } from '@/components/ui/button';
-import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
 import type { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import type { SiteHealthEntitlement } from '@citeladder/contracts';
 import { ICONS } from '@/lib/icons';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * The canonical Site Health dashboard layout.
@@ -114,7 +114,7 @@ function FirstCrawl({
   return (
     <div data-testid="site-health-empty">
       {start ? (
-        <QueryState
+        <StateBlock
           kind="empty"
           icon={ICONS.siteHealth}
           heading="Run your first site crawl"
@@ -130,7 +130,7 @@ function FirstCrawl({
           }
         />
       ) : (
-        <QueryState
+        <StateBlock
           kind="empty"
           icon={ICONS.siteHealth}
           heading="No site crawl yet"

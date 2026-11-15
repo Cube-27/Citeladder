@@ -215,7 +215,7 @@ describe('developerTicket', () => {
           '',
           'Deployed on 2026-11-09, recorded by dev@acme.test (v2.4.1).',
           '',
-          '- Site Health check passes: Met',
+          '- Website check passes: Met',
           '',
         ].join('\n'),
       ),

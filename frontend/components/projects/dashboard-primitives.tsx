@@ -1,14 +1,15 @@
 import { AppGrid } from '@/components/ui/app-grid';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Delta } from '@/components/ui/delta';
 import type { DataTone } from '@/components/ui/data-tone';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MeterRow } from '@/components/ui/meter';
 import type { ReorderItem } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { CommandCenter, Opportunity } from '@citeladder/contracts';
 import { readableUrl } from '@/lib/format';
+import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatWholePercent } from '@/lib/visibility/dashboard';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
@@ -35,17 +36,23 @@ export { formatPosition as rankFigure } from '@/lib/visibility/dashboard';
  * caller owns the empty case.
  */
 export function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movements'] }>) {
+  const engines = useEngineCatalog();
   return (
     <AppGrid layout="halves">
       {movements.map((row) => (
         <Stack key={row.label} gap="compact" className="min-w-0 content-start">
           <Inline className="justify-between">
-            <span className={textRole('label', 'capitalize')}>{row.label}</span>
+            <span className={textRole('label')}>{engines.label(row.label)}</span>
             <Delta value={row.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
           </Inline>
-          <MovementMeter engine={row.label} period="Previous" value={row.previous} tone="neutral" />
           <MovementMeter
-            engine={row.label}
+            engine={engines.label(row.label)}
+            period="Previous"
+            value={row.previous}
+            tone="neutral"
+          />
+          <MovementMeter
+            engine={engines.label(row.label)}
             period="Current"
             value={row.current}
             tone={{ series: 1 }}
@@ -70,7 +77,7 @@ function MovementMeter({
   return (
     <MeterRow
       name={period}
-      figure={value === null ? <MissingValue /> : percentFigure(value)}
+      figure={value === null ? <Absence /> : percentFigure(value)}
       value={value}
       label={`${engine} ${period.toLowerCase()} mention rate`}
       tone={tone}
@@ -89,7 +96,7 @@ export function actionItem(action: Opportunity): ReorderItem {
       <Stack gap="tight">
         <Inline>
           <TextLink
-            text="itemTitle"
+            text="body"
             className="min-w-0 truncate"
             title={action.title}
             href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
@@ -97,9 +104,9 @@ export function actionItem(action: Opportunity): ReorderItem {
             {action.title}
           </TextLink>
           {/* The one priority mapping the evidence drawer uses. */}
-          <Badge variant="priority" value={severityPriority(action.severity)}>
+          <StatusMark variant="priority" value={severityPriority(action.severity)}>
             {severityLabel(action.severity)}
-          </Badge>
+          </StatusMark>
         </Inline>
         <p className="type-caption truncate">
           {action.target_label ? readableUrl(action.target_label) : 'Project-wide'} ·{' '}

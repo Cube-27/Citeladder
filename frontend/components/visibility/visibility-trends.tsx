@@ -1,16 +1,12 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 import { FilterChoice } from '@/components/ui/filter-bar';
-import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
 import { InfoHint } from '@/components/ui/info-hint';
-import { ReadError } from '@/components/ui/read-error';
-import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
-import { TrendChart } from '@/components/ui/trend-chart';
+import { StepChart } from '@/components/ui/step-chart';
 import { textRole } from '@/components/ui/typography';
 import { RankingRowsTable } from '@/components/visibility/ranking-rows';
 import { EngineComparison } from '@/components/visibility/engine-comparison';
@@ -29,6 +25,9 @@ import { coverageSummary } from '@/lib/visibility/coverage';
 import { formatDisplayDate } from '@/lib/format';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { Notice } from '@/components/ui/notice';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 /** The headline mean place in answers, named apart from the table's Rank. */
 const AVERAGE_POSITION = 'Average position in answers';
@@ -138,9 +137,9 @@ function PooledSelectionNote({ selected }: Readonly<{ selected: Visibility }>) {
   const pooled = selected.source_audit_ids?.length ?? 0;
   if (Object.keys(groups).length < 2 || pooled >= total) return null;
   return (
-    <Callout tone="info">
+    <Notice tone="info">
       {`Pooled the ${pooled} of ${total} runs in this period that share one measurement setup. The other ${total - pooled} used a different set of models or prompts, so their answers are not comparable with these and are not counted here — open them individually from the measurement menu.`}
-    </Callout>
+    </Notice>
   );
 }
 
@@ -186,7 +185,7 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
   // Runs measured before competitor offsets were persisted have none, and the
   // tile is omitted rather than shown empty.
   const position = brand?.avg_position ?? selected.avg_position ?? null;
-  const segments: StatSegment[] = definitions.map((item) => {
+  const segments: FigureSegment[] = definitions.map((item) => {
     const change = comparison?.deltas[item.key];
     return {
       key: item.key,
@@ -212,7 +211,7 @@ function HeadlineMetrics({ selected }: Readonly<{ selected: Visibility }>) {
       value: formatPosition(position),
     });
   }
-  return <KpiRow segments={segments} />;
+  return <FigureStrip segments={segments} />;
 }
 
 function MeasurementHistory({
@@ -235,8 +234,8 @@ function MeasurementHistory({
   const metricLabel =
     VISIBILITY_METRICS.find((item) => item.value === metric)?.label ?? 'Visibility';
   return (
-    <Card>
-      <CardHeader
+    <Section>
+      <SectionHeader
         actions={
           <>
             {/* Beside the metric picker, not inside the key: a control in
@@ -256,9 +255,9 @@ function MeasurementHistory({
           </>
         }
       >
-        <CardTitle>Over time</CardTitle>
-      </CardHeader>
-      <CardContent>
+        <SectionTitle>Over time</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
         <MeasurementHistoryBody
           query={query}
           metric={metric}
@@ -267,8 +266,8 @@ function MeasurementHistory({
           brandName={brandName}
           timeZone={timeZone}
         />
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -290,7 +289,8 @@ function MeasurementHistoryBody({
   Readonly<{ query: UseQueryResult<VisibilityTrendPoint[], unknown> }>) {
   if (query.isError)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load history."
         onRetry={() => void query.refetch()}
@@ -332,15 +332,13 @@ function HistoryLineChart({
   const primaryLabel = focused ?? 'You';
   return (
     <Stack gap="compact" aria-busy={busy}>
-      <TrendChart
+      <StepChart
         label={`${metricLabel} over time`}
         name={primaryLabel}
         data={chartPoints}
         series={competitors}
         yMax={100}
         yFormat={(value) => `${Math.round(value)}%`}
-        compact
-        directLabels
       />
     </Stack>
   );

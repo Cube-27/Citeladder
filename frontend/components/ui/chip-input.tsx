@@ -4,7 +4,7 @@ import { useId, useState, type ReactNode } from 'react';
 import { Icon } from '@/components/ui/icon';
 import { FIELD_EDGE } from '@/components/ui/input';
 import { Tag } from '@/components/ui/tag';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { cn } from '@/lib/utils';
 
 /** One chip: a value, and whether it is still an unconfirmed suggestion. */
@@ -13,7 +13,7 @@ export type ChipItem = Readonly<{ value: string; suggested?: boolean }>;
 const sameValue = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
 
 const CHIP_BUTTON =
-  'focus-ring text-ink-secondary hover:overlay-hover hover:text-ink grid size-5 shrink-0 place-items-center rounded-xs transition-colors disabled:cursor-not-allowed';
+  'focus-ring text-ink-2 hover:overlay-hover hover:text-ink grid size-5 shrink-0 place-items-center rounded-mark transition-colors disabled:cursor-not-allowed';
 
 /**
  * One value as a 24px `surface-sunken` chip with a 20px remove button. A
@@ -32,13 +32,11 @@ function Chip({
   onConfirm: () => void;
 }>) {
   return (
-    <li className="bg-surface-sunken text-ink text-body-sm inline-flex min-h-6 max-w-full items-center gap-1 rounded-xs ps-2 pe-0.5 whitespace-nowrap">
+    <li className="bg-well text-ink text-body-sm rounded-mark inline-flex min-h-6 max-w-full items-center gap-1 ps-2 pe-0.5 whitespace-nowrap">
       <span className="min-w-0 truncate" title={item.value}>
         {item.value}
       </span>
-      {item.suggested ? (
-        <span className="text-caption text-ink-muted shrink-0">Suggested</span>
-      ) : null}
+      {item.suggested ? <span className="text-caption text-ink-2 shrink-0">Suggested</span> : null}
       {item.suggested ? (
         <button
           type="button"
@@ -117,7 +115,7 @@ export function ChipInput({
           box's empty space lands in it. */}
       <div
         className={cn(
-          'focus-frame flex min-h-[var(--control-md)] w-full cursor-text flex-wrap items-center gap-1 rounded-md p-1 transition-[border-color,box-shadow]',
+          'focus-frame flex min-h-[var(--control-md)] w-full cursor-text flex-wrap items-center gap-1 rounded-control p-1 transition-[border-color,box-shadow]',
           FIELD_EDGE,
           disabled && 'cursor-not-allowed opacity-45',
         )}
@@ -154,7 +152,7 @@ export function ChipInput({
               onChange(items.slice(0, -1));
             }
           }}
-          className="text-ink placeholder:text-ink-muted text-body-sm min-h-6 min-w-36 flex-1 bg-transparent px-2 disabled:cursor-not-allowed"
+          className="text-ink placeholder:text-ink-2 text-body-sm min-h-6 min-w-36 flex-1 bg-transparent px-2 disabled:cursor-not-allowed"
         />
       </div>
       <ChipInputNote hintId={`${id}-hint`} hint={hint} count={items.length} max={max} />
@@ -173,7 +171,7 @@ function ChipInputNote({
   return (
     <div className="flex items-start justify-between gap-3">
       {hint ? (
-        <p id={hintId} className="text-caption text-ink-muted">
+        <p id={hintId} className="text-caption text-ink-2">
           {hint}
         </p>
       ) : (
@@ -183,7 +181,7 @@ function ChipInputNote({
         <span
           className={cn(
             'ms-auto shrink-0 font-mono text-caption',
-            count >= max ? 'text-ink' : 'text-ink-muted',
+            count >= max ? 'text-ink' : 'text-ink-2',
           )}
         >
           {`${count}/${max}`}
@@ -209,7 +207,7 @@ export function ChipList({
   label?: string;
   items: readonly StaticChip[];
 }>) {
-  if (!items.length) return <UnavailableValue state="not_set" />;
+  if (!items.length) return <Absence state="not_set" />;
   return (
     <ul aria-label={label} className="flex min-w-0 flex-wrap items-center gap-2">
       {items.map((item) => (
@@ -219,7 +217,7 @@ export function ChipList({
             <span className="min-w-0 truncate" title={item.value}>
               {item.value}
             </span>
-            {item.suggested ? <span className="text-ink-muted shrink-0">Suggested</span> : null}
+            {item.suggested ? <span className="text-ink-2 shrink-0">Suggested</span> : null}
           </Tag>
         </li>
       ))}

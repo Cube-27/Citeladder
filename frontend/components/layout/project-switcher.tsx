@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Building2, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/app-shell';
+import { SidebarIdentButton, SidebarTextTooltip } from '@/components/ui/sidebar';
 import {
   Menu,
   MenuContent,
@@ -109,7 +109,7 @@ export function ProjectSwitcher() {
         <MenuSeparator />
         {projects.length === 0 ? (
           <MenuItem disabled>
-            <span className="text-ink-muted min-w-0 flex-1 truncate">
+            <span className="text-ink-2 min-w-0 flex-1 truncate">
               No projects in {activeWorkspace?.name ?? 'this workspace'}
             </span>
           </MenuItem>

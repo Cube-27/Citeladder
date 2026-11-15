@@ -29,7 +29,7 @@ function Branch({
       {nodes.map((node) => (
         <Stack as="li" gap="tight" key={node.heading.from}>
           <Pressable
-            className={textRole('control', 'hover:text-accent-ink w-auto text-start')}
+            className={textRole('body', 'hover:text-accent-text w-auto text-start')}
             onClick={() => onJump(node.heading.from)}
           >
             {node.heading.text}
@@ -52,7 +52,8 @@ export function OutlinePanel({
   onJump,
 }: Readonly<{ body: string; onJump: (from: number) => void }>) {
   const tree = nest(pageOutline(body));
-  if (tree.length === 0) return <p className={textRole('body')}>This page has no headings yet.</p>;
+  if (tree.length === 0)
+    return <p className={textRole('body', 'text-ink-2')}>This page has no headings yet.</p>;
   return (
     <nav aria-label="Page outline">
       <Branch nodes={tree} nested={false} onJump={onJump} />

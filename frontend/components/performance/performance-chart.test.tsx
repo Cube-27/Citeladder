@@ -2,7 +2,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vite-plus/test';
 
-import { PerformanceChart, type ChartSeries } from './performance-chart';
+import { METRIC_MARKS, PerformanceChart, type ChartSeries } from './performance-chart';
 
 const day = (index: number, date: string | null, value: number | null) => ({
   index,
@@ -13,7 +13,7 @@ const day = (index: number, date: string | null, value: number | null) => ({
 const clicks: ChartSeries = {
   key: 'clicks',
   label: 'Clicks',
-  tone: 1,
+  mark: METRIC_MARKS.clicks,
   selected: [day(1, '2026-07-01', 12), day(2, '2026-07-02', null), day(3, '2026-07-03', 30)],
   comparison: [day(1, '2026-06-01', 10), day(2, '2026-06-02', 14), day(3, '2026-06-03', null)],
 };
@@ -21,7 +21,7 @@ const clicks: ChartSeries = {
 const position: ChartSeries = {
   key: 'position',
   label: 'Average position',
-  tone: 4,
+  mark: METRIC_MARKS.position,
   selected: [day(1, '2026-07-01', 8.4), day(2, '2026-07-02', 7.25), day(3, '2026-07-03', 6)],
   comparison: null,
 };
@@ -71,9 +71,11 @@ describe('PerformanceChart', () => {
   it('breaks a line at an unmeasured bucket instead of joining across it', () => {
     const { container } = render(<PerformanceChart series={[{ ...clicks, comparison: null }]} />);
     const path = container.querySelector('[data-performance-line="selected"] path');
-    // Day 2 is missing, so the pen lifts: two separate runs, each a lone dot.
+    // Day 2 is missing, so the pen lifts: two separate runs, each a lone marker.
     expect(path?.getAttribute('d')?.split('M').length).toBe(3);
-    expect(container.querySelectorAll('[data-performance-line="selected"] circle')).toHaveLength(2);
+    expect(
+      container.querySelectorAll('[data-performance-line="selected"] [data-marker-shape="square"]'),
+    ).toHaveLength(2);
   });
 
   it('states which absence it is when nothing can be plotted', () => {

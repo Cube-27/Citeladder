@@ -1,17 +1,16 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
 import { agentMutations, agentQueries } from '@/lib/api/agent';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * The project's Agent instructions and their draft. The draft follows the
@@ -78,17 +77,17 @@ export function AgentInstructionsCard({
 }: Readonly<{ instructions: AgentInstructions }>) {
   const { query, draft, mayEdit, saveError } = instructions;
   return (
-    <Card aria-labelledby="agent-instructions">
-      <CardHeader>
-        <CardTitle id="agent-instructions">Agent instructions</CardTitle>
-        <CardDescription>
+    <Section aria-labelledby="agent-instructions">
+      <SectionHeader>
+        <SectionTitle id="agent-instructions">Agent instructions</SectionTitle>
+        <SectionDescription>
           Audience, voice and standing requirements the agent follows in every chat for this
           project.
-        </CardDescription>
-      </CardHeader>
-      {query.isPending ? <QueryState kind="loading" label="Loading agent instructions…" /> : null}
+        </SectionDescription>
+      </SectionHeader>
+      {query.isPending ? <StateBlock kind="loading" label="Loading agent instructions…" /> : null}
       {query.isError ? (
-        <QueryState
+        <StateBlock
           kind="error"
           {...readErrorProps(query)}
           fallback="Agent instructions could not be loaded."
@@ -108,7 +107,8 @@ export function AgentInstructionsCard({
             placeholder="For example: Write for Australian parents. Plain, warm tone. Never promise delivery dates."
           />
           {saveError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(saveError, { action: 'save the instructions' })}
               onRetry={instructions.retry}
             />
@@ -124,6 +124,6 @@ export function AgentInstructionsCard({
           </span>
         </Stack>
       ) : null}
-    </Card>
+    </Section>
   );
 }

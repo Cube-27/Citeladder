@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
+import { Inbox, Search } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
@@ -9,14 +9,12 @@ import { Inline } from '@/components/ui/layout';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { SearchField } from '@/components/ui/search-field';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import {
-  EvidenceEmpty,
-  EvidenceError,
-  EvidenceFilteredEmpty,
-  EvidenceSkeleton,
-  TruncationNotice,
-  type EvidenceTabProps,
-} from '@/components/visibility/evidence-states';
+import type { UseQueryResult } from '@tanstack/react-query';
+import type { VisibilityEvidenceResponse } from '@citeladder/contracts';
+import { Button } from '@/components/ui/button';
+import { ProjectLink } from '@/components/ui/project-link';
+import { StateBlock } from '@/components/ui/state-block';
+import { readErrorProps } from '@/components/ui/notice';
 import { retainPreviousDataForScope } from '@/lib/api/query-client';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -110,19 +108,43 @@ function useFanoutGroupFilter(): FilterDefinition {
  * under the group rather than invented as rows.
  */
 /** No searches at all, or none under the current filters. */
+/** What the fanout tab reads: the evidence query and whether filters narrowed it. */
+type EvidenceTabProps = Readonly<{
+  query: UseQueryResult<VisibilityEvidenceResponse, unknown>;
+  isFiltered: boolean;
+  onClearFilters?: () => void;
+  limit: number;
+}>;
+
 function FanoutEmpty({
   isFiltered,
   onClearFilters,
 }: Readonly<Pick<EvidenceTabProps, 'isFiltered' | 'onClearFilters'>>) {
-  return isFiltered ? (
-    <EvidenceFilteredEmpty
-      body="No answers match the selected run, model, prompt and period. Widen the period or clear a filter."
-      onClear={onClearFilters}
-    />
-  ) : (
-    <EvidenceEmpty
-      heading="No searches recorded yet"
-      body="Once a run answers your prompts, the searches each engine ran first appear here."
+  if (isFiltered && onClearFilters)
+    return (
+      <StateBlock
+        kind="filtered"
+        heading="No answers match the selected run, model, prompt and period"
+        onClear={onClearFilters}
+      />
+    );
+  return (
+    <StateBlock
+      kind="empty"
+      icon={Inbox}
+      heading={isFiltered ? 'No answers match these filters' : 'No searches recorded yet'}
+      description={
+        isFiltered
+          ? 'Widen the period or choose another run, model or prompt.'
+          : 'Once a run answers your prompts, the searches each engine ran first appear here.'
+      }
+      action={
+        isFiltered ? undefined : (
+          <Button asChild variant="quiet">
+            <ProjectLink href="/runs">View Runs</ProjectLink>
+          </Button>
+        )
+      }
     />
   );
 }
@@ -170,8 +192,16 @@ export function FanoutEvidence({
 
   // Pending, not merely loading: a read still waiting on its scope fetches
   // nothing and has no items, which is not "no searches recorded".
-  if (query.isPending) return <EvidenceSkeleton />;
-  if (query.isError) return <EvidenceError onRetry={() => query.refetch()} />;
+  if (query.isPending) return <StateBlock kind="loading" label="Loading evidence…" />;
+  if (query.isError)
+    return (
+      <StateBlock
+        kind="error"
+        title="Couldn't load this evidence"
+        fallback="The request failed or timed out. Your filters are unchanged."
+        {...readErrorProps(query)}
+      />
+    );
   if (items.length === 0) {
     return <FanoutEmpty isFiltered={isFiltered} onClearFilters={onClearFilters} />;
   }
@@ -216,7 +246,11 @@ export function FanoutEvidence({
             }
           : undefined
       }
-      footer={query.data?.truncated ? <TruncationNotice limit={limit} /> : null}
+      footer={
+        query.data?.truncated
+          ? `Showing the newest ${limit} executions; narrow the filters to see the rest.`
+          : null
+      }
     >
       {paged.map((group) => (
         <SearchGroupRows key={group.key} group={group} />
@@ -338,8 +372,8 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
     <>
       {group.label ? (
         <TableRow>
-          <TableCell colSpan={3} className="bg-surface-sunken">
-            <ClampText className={textRole('itemTitle')}>{group.label}</ClampText>
+          <TableCell colSpan={3} className="bg-well">
+            <ClampText className={textRole('body')}>{group.label}</ClampText>
           </TableCell>
         </TableRow>
       ) : null}
@@ -347,7 +381,7 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
         <TableRow key={`${group.key}-${row.query}`}>
           <TableCell nested={Boolean(group.label)}>
             <Inline as="span" className="items-start">
-              <Icon icon={Search} className="text-ink-muted" />
+              <Icon icon={Search} className="text-ink-2" />
               <ClampText>{row.query}</ClampText>
             </Inline>
           </TableCell>
@@ -357,7 +391,7 @@ function SearchGroupRows({ group }: Readonly<{ group: SearchGroup }>) {
       ))}
       {note ? (
         <TableRow>
-          <TableCell colSpan={3} className={textRole('caption', 'text-ink-secondary')}>
+          <TableCell colSpan={3} className={textRole('caption', 'text-ink-2')}>
             {note}
           </TableCell>
         </TableRow>

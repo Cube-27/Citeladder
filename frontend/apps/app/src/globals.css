@@ -14,41 +14,49 @@
  */
 @import "./ui-motion.css";
 
-/* The product's two layout variants. `shell:` is the system's one shell
-   breakpoint (1280px): from it the sidebar shows its labels, the main gutter
-   is 32, AppGrid and KPI rows take their full columns and the FilterBar is one
-   row; below it the sidebar is a 61px icon rail. `desktop:` (981px) is the
+/* The product's two layout variants. `shell:` is the system's wide
+   breakpoint (1280px): from it the labelled sidebar is 224 wide (200 below
+   it), AppGrid and KPI rows take their full columns and the FilterBar is one
+   row. `desktop:` (981px) is the
    width at which a component's own internals (a form's two columns, a
    table's secondary columns, a list beside its detail) stop stacking.
    `sm:`/`md:`/`lg:`/`xl:` (640, 768, 1024, 1280) and `2xl:` (1440) are the
    website's.
 
-   The shell's navigation has two more states (owner, 2026-11-06): from
-   `rail:` (900px) the sidebar column shows, as the icon rail below `shell:`;
-   below it a menu button opens the same sidebar in a left drawer. `labelled:`
-   is where the sidebar shows its labels: from `shell:`, and always inside
-   that drawer (`data-nav-drawer`). `rail:` is declared first so a `shell:`
-   rule for the same property follows it in the stylesheet and wins. */
+   The shell's navigation: from `rail:` (900px) the
+   sidebar column shows, labelled, unless the reader collapsed it to the 48px
+   rail (`data-sidebar-state="collapsed"`); below it the masthead's menu
+   button opens the same sidebar in a left drawer. `labelled:` is where the
+   sidebar shows its labels: an expanded sidebar, and always inside that
+   drawer (`data-nav-drawer`). `rail:` is declared first so a `shell:` rule
+   for the same property follows it in the stylesheet and wins. */
 @custom-variant rail (@media (min-width: 900px));
 @custom-variant shell (@media (min-width: 1280px));
 @custom-variant desktop (@media (min-width: 981px));
-@custom-variant labelled (@media (min-width: 1280px), &:where([data-nav-drawer] *));
+@custom-variant labelled (&:where([data-sidebar-state="expanded"] *), &:where([data-nav-drawer] *));
 
 /* Grids in the app's main column switch on the column, not the viewport,
    so a wider sidebar stacks them. `column-split:` is `desktop:`
-   (981 less the 56px rail, two 16px gutters and a thin scrollbar),
-   `column-wide:` is `shell:` (1280 less the 248px sidebar, two 24px gutters
-   and a thin scrollbar). Outside that column (drawers, dialogs, setup) they
+   (981 less the 200px labelled sidebar, two 24px gutters and a scrollbar),
+   `column-wide:` is `shell:` (1280 less a dragged-wider sidebar, two 24px
+   gutters and a thin scrollbar). Outside that column (drawers, dialogs, setup) they
    keep the viewport breakpoints. */
 @custom-variant outside-main-column (&:where(:not([data-main-column] *)));
 @custom-variant column-split {
-  @container main (min-width: 880px) {
+  @container main (min-width: 704px) {
     @slot;
   }
   @media (min-width: 981px) {
     @variant outside-main-column {
       @slot;
     }
+  }
+}
+/* The Thread template's History pane shows beside the thread from a 1100px
+   main column; below it History opens as a drawer. */
+@custom-variant column-history {
+  @container main (min-width: 1100px) {
+    @slot;
   }
 }
 @custom-variant column-wide {
@@ -126,6 +134,31 @@
   --color-data-other: #c2c2c2;
   --color-scrim: rgb(17 17 17 / 32%);
   --color-chart-grid: #ececec;
+  /* The app's roles (paper and ink with one mark). On
+     the website and docs each aliases the website role it stands for, so a
+     shared atom drawn with them looks as it always did there; the app binds
+     its own values in `:root:not([data-public-surface])` below. App code
+     uses only these names (scripts/design-system-source-checks.mjs). */
+  --color-ground: var(--color-paper);
+  --color-well: var(--color-surface-sunken);
+  --color-raised: var(--color-surface);
+  --color-rule: var(--color-line);
+  --color-rule-ink: var(--color-ink);
+  --color-control-line: var(--color-line-control);
+  --color-ink-2: var(--color-ink-secondary);
+  --color-accent-text: var(--color-accent-ink);
+  --color-accent-wash: var(--color-accent-soft);
+  --color-positive-wash: var(--color-positive-soft);
+  --color-negative-wash: var(--color-negative-soft);
+  --color-warning-wash: var(--color-warning-soft);
+  --color-info-wash: var(--color-info-soft);
+  /* Data: you are the accent, rivals one to four in rank order (ink, then
+     cool hues only), a fifth and later are `data-other`. */
+  --color-data-you: var(--color-accent);
+  --color-data-rival-1: var(--color-ink);
+  --color-data-rival-2: #2f6f9f;
+  --color-data-rival-3: #4b3a8a;
+  --color-data-rival-4: #1f7d73;
   /* Real third-party marks drawn in code (the Google sign-in button, the
      engine logos). They are identity, never state or decoration, and appear
      only inside those marks. */
@@ -136,8 +169,8 @@
 
   /* Type. Each role owns size, leading, weight and tracking; on the website
      and docs the display roles (display-*, title, title-sm, stat) pair with
-     `font-display`. The app sets no display face: its page title, auth
-     card titles and other titles and figures set these sizes in the sans face at 500. The mono roles
+     `font-display`, in the app as well: the display face names places (see
+     the Type block below). The mono roles
      (eyebrow, data, code) pair with `font-mono`, the rest are the sans face, never above 500.
      Sizes and leading are rem, the system's px ÷ 16, so they follow the
      reader's text size; spacing stays px. */
@@ -220,6 +253,35 @@
   --text-code: 0.8125rem;
   --text-code--line-height: 1.375rem;
   --text-code--font-weight: 400;
+  /* The app's roles beyond the shared names. Eight
+     sizes only: 12, 13, 14, 16, 20, 24, 28, 40. The app rebinds `title`
+     and `heading` to its own values below; its `body` role reads
+     `body-sm`, which is 14/20 everywhere. */
+  --text-display: 1.75rem;
+  --text-display--line-height: 2.25rem;
+  --text-display--font-weight: 500;
+  --text-display--letter-spacing: -0.01em;
+  --text-subheading: 0.875rem;
+  --text-subheading--line-height: 1.25rem;
+  --text-subheading--font-weight: 600;
+  --text-prose: 1rem;
+  --text-prose--line-height: 1.625rem;
+  --text-prose--font-weight: 400;
+  --text-overline: 0.75rem;
+  --text-overline--line-height: 1rem;
+  --text-overline--font-weight: 500;
+  --text-overline--letter-spacing: 0.06em;
+  --text-figure-xl: 2.5rem;
+  --text-figure-xl--line-height: 2.75rem;
+  --text-figure-xl--font-weight: 500;
+  --text-figure-xl--letter-spacing: -0.02em;
+  --text-figure: 1.5rem;
+  --text-figure--line-height: 2rem;
+  --text-figure--font-weight: 500;
+  --text-figure--letter-spacing: -0.01em;
+  --text-data-sm: 0.75rem;
+  --text-data-sm--line-height: 1rem;
+  --text-data-sm--font-weight: 400;
 
   /* Spacing is Tailwind's 4px step, so `p-N` is the system's `space-N`. The
      system's steps are 1 2 3 4 5 6 8 10 12 16 24 32 (4 to 128px). */
@@ -238,6 +300,14 @@
   --radius-lg: 8px;
   --radius-xl: 8px;
   --radius-full: 9999px;
+  /* The app's three radii by role: `mark` 2 (tags,
+     checkboxes, rung marks, bar ends), `control` 4 (controls, fields,
+     slips, wells), `sheet` 8 (floating layers), and `full`. On the
+     website `control` is its 6px control radius, so a shared control keeps
+     its face there; the app binds 4px below. App code uses only these. */
+  --radius-mark: 2px;
+  --radius-control: var(--radius-md);
+  --radius-sheet: 8px;
 
   /* Shadows are declared in :root below (they change with the theme) and
      applied by the `shadow-*` utilities after this block. */
@@ -252,6 +322,12 @@
   --container-thread: 1040px;
   --container-prose: 720px;
   --container-narrow: 560px;
+  /* The app's columns: content caps at 1280, reading
+     at 720 (`prose`), forms at 640. */
+  --container-content: 1280px;
+  --container-form: 640px;
+  /* The Flow template's one column (sign-in, setup, the workspace chooser). */
+  --container-flow: 480px;
 
   --breakpoint-2xl: 1440px;
 
@@ -283,12 +359,12 @@
   --ease-card: ease-in-out;
   --default-transition-duration: var(--motion-fast);
   --default-transition-timing-function: var(--ease-standard);
-  /* Loops that say "working": the Spinner turns in 800ms, a Skeleton pulses
-     in 1.6s and a busy ProgressBar slides in 1.4s. Reduced motion slows the
-     spinner and the bar (below) and holds the skeleton still. */
-  --animate-spinner: spinner-turn 800ms linear infinite;
-  --animate-skeleton-pulse: skeleton-pulse 1.6s ease-in-out infinite;
-  --animate-progress-busy: progress-busy 1.4s ease-in-out infinite;
+  /* The app's one "working" mark: a single accent
+     rung pulsing its opacity every 1.2s. Rung meters fill one rung at a
+     time (`steps()`), never on a curve. */
+  --motion-pulse: 1200ms;
+  --motion-loader-delay: 300ms;
+  --animate-live-rung: live-rung var(--motion-pulse) ease-in-out infinite;
   --z-index-sticky: 20;
   --z-index-overlay: 40;
   --z-index-modal: 50;
@@ -315,6 +391,9 @@
   --shadow-press:
     inset 0 1px 0 rgb(255 255 255 / 35%), inset 0 -2px 0 rgb(0 0 0 / 20%),
     0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px -6px rgb(17 17 17 / 35%);
+  /* The app's one shadow: under a sheet, anything that
+     floats. Nothing at rest has a shadow. */
+  --shadow-sheet: 0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%);
 
   /* Controls. Every interactive row in one view uses one height: 32,
      28 compact, 48 for website calls to action. `row-app` is the app's
@@ -322,6 +401,11 @@
   --control-sm: 28px;
   --control-md: 32px;
   --control-lg: 48px;
+  /* A primary target under a coarse pointer (the app binds 44); a tag; the
+     smallest target anywhere (WCAG 2.5.8). */
+  --control-coarse: var(--control-md);
+  --tag-height: 24px;
+  --target-min: 24px;
   --row-app: 40px;
   --nav-height: 64px;
   /* The labelled sidebar's default and narrowest width; the reader may drag
@@ -335,7 +419,6 @@
   /* Component geometry the components read. Each derives from a system token. */
   /* What sticks under the app's top bar starts below it. */
   --sticky-header-offset: var(--page-header-band);
-  --nav-item-height: var(--control-md);
   /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
   --content-max-width: var(--container-app);
@@ -348,24 +431,14 @@
   --compact-gap: 12px;
   --card-padding: 24px;
   --modal-padding: 24px;
-  /* DateField's calendar trigger: the field's height less its 2px border
-     inset on each side. */
-  --field-end-target: calc(var(--control-md) - 4px);
   /* A FilterBar filter trigger: one width whatever its value says. */
   --filter-width: 224px;
-  --menu-item-height: var(--control-md);
-  --badge-height-sm: 22px;
-  --textarea-min-height: 112px;
-  /* The one footprint a read's loading, error and first-use empty states
-     share (QueryState), so a read changing state never moves the page: the
-     block EmptyState's height (48 + 40 icon + 16 + title + line + 48). */
-  --query-state-height: 200px;
+  /* The one footprint a read's loading, error and empty states share
+     (StateBlock), so a read changing state never moves the page. */
+  --state-block-height: 200px;
   --chart-height-sm: 160px;
   --chart-height-md: 240px;
   --chart-height-lg: 320px;
-  --tab-height: var(--control-md);
-  --tab-pad-x: 12px;
-  --tab-gap: 4px;
   --table-row-height: 44px;
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
@@ -374,9 +447,13 @@
      holding a 24px title line is still `table-row-height` tall. */
   --table-cell-padding-bottom: calc(var(--table-cell-padding-y) - 1px);
   --table-min-width-sm: 36rem;
-  --table-min-width-md: 48rem;
+  /* Under the 734px main column of the 982px window (200 sidebar, two 24 gutters). */
+  --table-min-width-md: 44rem;
   --table-min-width-lg: 64rem;
   --table-min-width-xl: 76rem;
+  /* A table's identity column never narrows past this (about 20 characters
+     of row name); below it the table scrolls with that column pinned. */
+  --table-identity-min: 10rem;
   /* The app shell's top bar: the sidebar's project switcher cell and
      the PageHeader are one sticky 56px bar at the top of the window, the
      `row-app` title row with space-2 above and below and a 1px `line` rule
@@ -393,7 +470,6 @@
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;
   --marketing-nav-offset: calc(var(--nav-height) + 8px + env(safe-area-inset-top, 0px));
-  --value-placeholder: var(--color-ink-muted);
 }
 
 /* Dark. The same roles with the system's dark values; no token is added or
@@ -440,26 +516,45 @@
   --shadow-press:
     inset 0 1px 0 rgb(255 255 255 / 60%), inset 0 -2px 0 rgb(0 0 0 / 20%),
     0 1px 2px rgb(0 0 0 / 60%), 0 8px 24px -6px rgb(0 0 0 / 60%);
+  --shadow-sheet: 0 1px 2px rgb(0 0 0 / 40%), 0 16px 40px -8px rgb(0 0 0 / 60%);
 }
 
-/* The app's dark: a clear ladder of fills, the sidebar darkest,
-   then the page, the card one step lighter and the inset a well inside it;
-   edges and hover are translucent white over whatever fill is beneath; the
-   primary ink 10% lower in contrast. It rebinds every colour the app's light
-   block below sets: that block follows the system's dark at the same
-   specificity, so it would otherwise win in the app's dark. The website and
-   docs keep the system's dark above. */
+/* The app's dark: designed, not inverted. The ground
+   is a warm near-black, sheets are lighter than the ground, wells darker,
+   and section rules step down to `ink-2` so they do not glare. It rebinds
+   every literal the app's light block below sets: that block follows the
+   system's dark at the same specificity, so it would otherwise win here.
+   The website and docs keep the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-paper: #111111;
-  --color-sidebar: #0a0a0a;
-  --color-surface: #1c1c1c;
-  --color-surface-sunken: #141414;
-  --color-state-hover: rgb(244 244 244 / 4%);
-  --color-line: rgb(255 255 255 / 8%);
-  --color-line-strong: rgb(255 255 255 / 14%);
-  --color-chart-grid: #2b2b2b;
-  --color-ink: #e8e8e8;
-  --color-ink-secondary: #9a9a9a;
+  --color-ground: #141311;
+  --color-surface: #1d1b18;
+  --color-well: #0c0b0a;
+  --color-raised: #262420;
+  --color-rule: #322f2a;
+  --color-rule-ink: #a8a399;
+  --color-control-line: #7f7a70;
+  --color-ink: #ebe8e1;
+  --color-ink-2: #a8a399;
+  --color-ink-hover: #d4d0c7;
+  --color-on-ink: #141311;
+  --color-accent: #ff6a33;
+  --color-accent-text: #ff8a5c;
+  --color-accent-wash: #43210f;
+  --color-positive: #7fd07a;
+  --color-positive-wash: #16301a;
+  --color-negative: #ff7fa6;
+  --color-negative-wash: #3e1323;
+  --color-warning: #e8b84a;
+  --color-warning-wash: #392b0c;
+  --color-info: #8fb1ff;
+  --color-info-wash: #17264a;
+  --color-data-rival-2: #6fb3e0;
+  --color-data-rival-3: #8a73d9;
+  --color-data-rival-4: #4fc4b5;
+  --color-data-other: #8f8a80;
+  --color-state-hover: rgb(235 232 225 / 6%);
+  --color-state-pressed: rgb(235 232 225 / 10%);
+  --color-scrim: rgb(0 0 0 / 60%);
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -478,6 +573,42 @@
 }
 @utility shadow-press {
   box-shadow: var(--shadow-press);
+}
+@utility shadow-sheet {
+  box-shadow: var(--shadow-sheet);
+}
+
+/* The line language: solid is observed, dashed
+   is drafted, hatched is absent, no line is not applicable. `hatch` fills a
+   box with 45deg 1px `control-line` lines at a 6px pitch on `well`. `edge-draft`
+   draws a dashed `control-line` edge; with `data-draft="false"` (a person
+   accepted it) a solid edge fades in over it in 200ms: the ink sets. */
+@utility hatch {
+  background-color: var(--color-well);
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--color-control-line) 0 1px,
+    transparent 1px var(--hatch-pitch, 6px)
+  );
+}
+@layer utilities {
+  .edge-draft {
+    position: relative;
+    border: 1px dashed var(--color-control-line);
+  }
+  .edge-draft::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border: 1px solid var(--color-control-line);
+    border-radius: inherit;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--motion-slow) var(--ease-standard);
+  }
+  .edge-draft[data-draft='false']::after {
+    opacity: 1;
+  }
 }
 
 /* State layers: the state's ink overlay painted as a background image,
@@ -505,43 +636,155 @@
   }
 }
 
-/* Below the shell breakpoint the sidebar is the rail and the main gutter
-   narrows to space-6. */
-@media (max-width: 1279px) {
-  :root {
-    --content-gutter: 24px;
-  }
-}
-
-/* The app's density: compact and technical, like GitHub or
-   Claude Code, not airy. The app's document is the one without
-   `data-public-surface`; the website and docs keep the system's spacing
-   (controls are 32 everywhere). One value per role still holds inside the
-   app: table and fact rows `row-app` (40), card and dialog padding 16,
-   header → controls 16, the controls band's rows 8 apart, peers 12 apart. */
+/* The app's system: paper and ink with one mark, a
+   compact even density tuned for a 982x800 window. The app's document is
+   the one without `data-public-surface`; the website and docs keep the
+   system's values above. */
 :root:not([data-public-surface]) {
-  /* The app's primary ink, 10% lower in contrast than the system's. */
-  --color-ink: #1c1c1c;
-  /* The app's light fills and secondary ink: a near-white page, the
-     sidebar one step off it, white cards and selected sidebar rows, and one
-     inset. The secondary ink is the lightest grey that still holds 4.5:1
-     under every state overlay on every one of those fills. */
-  --color-paper: #fcfcfc;
-  --color-sidebar: #fafafa;
-  --color-surface-sunken: #f4f4f5;
-  --color-ink-secondary: #61616b;
+  --table-ground: var(--color-ground);
+  --color-ground: #f6f4ef;
+  --color-surface: #fffdf9;
+  --color-well: #ece8e0;
+  --color-raised: #fffdf9;
+  --color-rule: #ddd8cd;
+  --color-rule-ink: #1b1a17;
+  --color-control-line: #837e73;
+  --color-ink: #1b1a17;
+  --color-ink-2: #59554c;
+  /* The primary button's hover: its ink fill one step lighter. */
+  --color-ink-hover: #3a3832;
+  --color-on-ink: #f6f4ef;
+  --color-accent: #e8501a;
+  --color-accent-text: #ad3a0c;
+  --color-accent-wash: #fde4d6;
+  /* Darker than the direction's #2a6b2e so it parts from the crimson by
+     lightness for red-green colour vision (scripts/design-system-contrast.mjs). */
+  --color-positive: #1a4d24;
+  --color-positive-wash: #dcefd9;
+  --color-negative: #a8134b;
+  --color-negative-wash: #fbe1ea;
+  --color-warning: #775000;
+  --color-warning-wash: #f7eac4;
+  --color-info: #2850b0;
+  --color-info-wash: #e2e9fa;
+  --color-data-rival-2: #2f6f9f;
+  --color-data-rival-3: #4b3a8a;
+  --color-data-rival-4: #1f7d73;
+  --color-data-other: #878277;
+  /* Hover is a 6% ink tint, pressed 10%; selected is the well. */
+  --color-state-hover: rgb(27 26 23 / 6%);
+  --color-state-pressed: rgb(27 26 23 / 10%);
+  --color-state-selected: var(--color-well);
+  --color-scrim: rgb(27 26 23 / 40%);
+  --color-sidebar: var(--color-ground);
+  --color-chart-grid: var(--color-rule);
+  /* The website's role names, held to the app's roles so a shared rule that
+     still names one renders in the app's palette. App code never uses them. */
+  --color-paper: var(--color-ground);
+  --color-surface-sunken: var(--color-well);
+  --color-line: var(--color-rule);
+  --color-line-strong: var(--color-control-line);
+  --color-line-control: var(--color-control-line);
+  --color-ink-secondary: var(--color-ink-2);
+  --color-accent-ink: var(--color-accent-text);
+  --color-accent-soft: var(--color-accent-wash);
+  --color-positive-soft: var(--color-positive-wash);
+  --color-negative-soft: var(--color-negative-wash);
+  --color-warning-soft: var(--color-warning-wash);
+  --color-info-soft: var(--color-info-wash);
+  --color-data-1: var(--color-data-you);
+  --color-data-2: var(--color-data-rival-1);
+  --color-data-3: var(--color-data-rival-2);
+
+  /* Type (2.1): the app's title and heading. */
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.75rem;
+  --text-title--font-weight: 600;
+  --text-heading--font-weight: 600;
+
+  /* Shape (2.4). */
+  --radius-control: 4px;
+  --shadow-sheet: 0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%);
+  /* The accent mark ("you, here") and the hatch (absent: 45deg, 1px lines). */
+  --mark-width: 2px;
+  --hatch-pitch: 6px;
+
+  /* Density (2.2): controls 28 dense, 32 default, 44 on flow pages; below
+     900px or under a coarse pointer every control is 44 (block below); tags
+     24; every target at least 24. Table header 32, body rows 36. */
+  --control-lg: 44px;
+  --control-coarse: 44px;
+  --table-row-height: 36px;
+
+  /* Anatomy (2.3): masthead 48, page tabs 40, filter bar 48, then 24 to the
+     first content; sidebar 224 from 1280, 200 from 900, a 48 rail when
+     collapsed. Content caps at 1280 with a 24 gutter (16 below 900). */
+  --masthead-height: 48px;
+  --page-tabs-height: 40px;
+  --filter-bar-height: 48px;
+  --sidebar-width: 224px;
+  --sidebar-width-compact: 200px;
+  --sidebar-rail-width: 48px;
+  /* The Agent's History beside a thread, once the main column reaches 1100. */
+  --history-pane-width: 240px;
+  /* The Workbench's side rail beside its editor. */
+  --workbench-rail-width: 320px;
+  /* What a Thread page leaves for its own scrolling region: the masthead (as
+     drawn: below `rail` its actions take a second row, `Masthead`), the 24
+     above the first content and the main column's foot. */
+  --route-chrome-height: calc(
+    var(--masthead-block-size, var(--masthead-height)) + var(--page-top-gap) +
+      var(--page-section-gap)
+  );
+  --content-max-width: var(--container-content);
   --content-gutter: 24px;
-  --page-section-gap: 16px;
-  --workspace-gap: 12px;
+
+  /* Spacing roles (2.2), on the one scale 2 4 8 12 16 24 32 48 64: peers in a
+     control group 8, a slip's padding and form rows 16, the grid gap and the
+     first section's offset 24, sections 32, flow blocks 48. */
   --compact-gap: 8px;
   --card-padding: 16px;
   --modal-padding: 16px;
-  --table-row-height: var(--row-app);
+  --workspace-gap: 24px;
+  --page-top-gap: 24px;
+  --page-section-gap: 32px;
+  --flow-gap: 48px;
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 899px) {
   :root:not([data-public-surface]) {
     --content-gutter: 16px;
+  }
+}
+
+/* Primary targets are 44 below 900px as well as under a coarse pointer (2.2):
+   navigation rows, masthead and row actions, page tabs, sheet buttons. */
+@media (max-width: 899px), (pointer: coarse) {
+  :root:not([data-public-surface]) {
+    --control-sm: 44px;
+    --control-md: 44px;
+    --table-row-height: 44px;
+  }
+}
+
+/* Below `rail` a masthead that draws page actions gives them their own row,
+   ending on the edge (`Masthead`). */
+@media (max-width: 899px) {
+  [data-masthead]:has([data-masthead-overflow] > *, [data-masthead-primary] > *) {
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding-bottom: calc(var(--spacing) * 2);
+    & > [data-masthead-end] {
+      flex-basis: 100%;
+      justify-content: flex-end;
+    }
+  }
+}
+
+/* Below the shell breakpoint the website's main gutter narrows to space-6. */
+@media (max-width: 1279px) {
+  :root[data-public-surface] {
+    --content-gutter: 24px;
   }
 }
 
@@ -655,10 +898,6 @@
   --color-site-band-mist: #7f949e;
 }
 
-[data-public-surface] .button-key {
-  background-image: none;
-}
-
 /* A secondary (outline) button's edge is the control line, at least 3:1 on
    paper and on the neutral panel in both themes. Drawn app screens keep the app's. */
 [data-public-surface]
@@ -677,7 +916,7 @@
   text-transform: none;
 }
 
-[data-public-surface] :is(.button-key, [data-button-variant], .focus-ring):active {
+[data-public-surface] :is([data-button-variant], .focus-ring):active {
   translate: none;
 }
 
@@ -742,6 +981,11 @@ html {
   scrollbar-width: thin;
 }
 
+/* In-page focus and anchors clear the app's sticky masthead. */
+html:not([data-public-surface]) {
+  scroll-padding-top: calc(var(--masthead-block-size, var(--masthead-height)) + var(--page-top-gap));
+}
+
 /* Radix scroll locks add a scrollbar-width margin. The root's stable gutter
    already reserves that space, so suppress the second compensation for menus,
    selects, date pickers, and dialogs while retaining their scroll/focus lock. */
@@ -773,19 +1017,130 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   background: var(--color-surface);
 }
 
-/* The product type roles, each one of the system's styles (docs/design.md):
-   page title display-md, section title, card title heading, default text
-   body-sm, controls label, footnotes caption, numbers stat. They sit in the
-   components layer so a status utility still overrides the ink where the
-   value's meaning is its colour.
-
-   Three text styles, never more: heading (500, ink) for page, section,
-   card, dialog and drawer titles, buttons, the selected tab or nav item and
-   a metric's figure; primary (400, ink) for what is read first in a row or
-   sentence (titles, names, values, cells, prose); secondary (400, the app's
-   one grey) for what supports it (descriptions, labels, column heads, meta,
-   counts). Every role below is one of the three. */
+/* Type. Three faces, three jobs: the mono face is
+   measured (numbers, dates, URLs, ids, counts, changes, column heads), the
+   sans face is said (labels, prose, descriptions), the display face names
+   places (page, dialog and flow titles). Each role owns face, size, leading,
+   weight and tracking; ink is `ink` except caption and overline, which
+   support (`ink-2`). A colour utility at the call site still wins, since
+   these sit in the components layer. Emphasis inside text is weight 500. */
 @layer components {
+  .type-display,
+  .type-title {
+    font-family: var(--font-display);
+    color: var(--color-ink);
+  }
+  .type-display {
+    font-size: var(--text-display);
+    line-height: var(--text-display--line-height);
+    font-weight: var(--text-display--font-weight);
+    letter-spacing: var(--text-display--letter-spacing);
+  }
+  .type-title {
+    font-size: var(--text-title);
+    line-height: var(--text-title--line-height);
+    font-weight: var(--text-title--font-weight);
+    letter-spacing: 0;
+  }
+  .type-heading,
+  .type-subheading,
+  .type-body,
+  .type-label,
+  .type-prose,
+  .type-caption {
+    font-family: var(--font-sans);
+    letter-spacing: 0;
+    color: var(--color-ink);
+  }
+  .type-heading {
+    font-size: var(--text-heading);
+    line-height: var(--text-heading--line-height);
+    font-weight: var(--text-heading--font-weight);
+  }
+  .type-subheading {
+    font-size: var(--text-subheading);
+    line-height: var(--text-subheading--line-height);
+    font-weight: var(--text-subheading--font-weight);
+  }
+  /* 14/20 on every surface (the website's `body` is its 16px reading size). */
+  .type-body {
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+    font-weight: 400;
+  }
+  .type-label {
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: var(--text-label--font-weight);
+  }
+  .type-prose {
+    font-size: var(--text-prose);
+    line-height: var(--text-prose--line-height);
+    font-weight: var(--text-prose--font-weight);
+  }
+  .type-caption {
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-weight: var(--text-caption--font-weight);
+    color: var(--color-ink-2);
+  }
+  .type-overline,
+  .type-figure-xl,
+  .type-figure,
+  .type-data,
+  .type-data-sm {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  .type-overline {
+    font-size: var(--text-overline);
+    line-height: var(--text-overline--line-height);
+    font-weight: var(--text-overline--font-weight);
+    letter-spacing: var(--text-overline--letter-spacing);
+    text-transform: uppercase;
+    color: var(--color-ink-2);
+  }
+  .type-figure-xl {
+    font-size: var(--text-figure-xl);
+    line-height: var(--text-figure-xl--line-height);
+    font-weight: var(--text-figure-xl--font-weight);
+    letter-spacing: var(--text-figure-xl--letter-spacing);
+    color: var(--color-ink);
+  }
+  .type-figure {
+    font-size: var(--text-figure);
+    line-height: var(--text-figure--line-height);
+    font-weight: var(--text-figure--font-weight);
+    letter-spacing: var(--text-figure--letter-spacing);
+    color: var(--color-ink);
+  }
+  .type-data {
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
+    font-weight: var(--text-data--font-weight);
+    letter-spacing: 0;
+    color: var(--color-ink);
+  }
+  /* Changes, citation markers, counts, key hints, absence words; a change
+     sets 500 itself. Its tone is the caller's. */
+  .type-data-sm {
+    font-size: var(--text-data-sm);
+    line-height: var(--text-data-sm--line-height);
+    font-weight: var(--text-data-sm--font-weight);
+    letter-spacing: 0;
+  }
+  .type-emphasis {
+    font-weight: 500;
+  }
+  .type-control-file::file-selector-button {
+    font-family: var(--font-sans);
+    font-size: var(--text-label);
+    line-height: var(--text-label--line-height);
+    font-weight: var(--text-label--font-weight);
+  }
+
+  /* The website's own roles, kept for its product screens (components/
+     marketing/screens) and docs: the app never uses them. */
   .type-page-title {
     font-family: var(--font-sans);
     font-size: var(--text-page-title);
@@ -794,91 +1149,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: var(--text-page-title--letter-spacing);
     color: var(--color-ink);
   }
-  /* The app sets two families, the sans and mono faces: every title and
-     number, the page title included, is the sans face, never above 500. The app's sizes are 12, 14 and 16; only the page title
-     (20) and a metric's figure (24) are larger. */
-  .type-section-title {
-    font-family: var(--font-sans);
-    font-size: var(--text-heading);
-    line-height: var(--text-heading--line-height);
-    font-weight: 500;
-    letter-spacing: 0;
-    color: var(--color-ink);
-  }
-  .type-item-title {
-    font-family: var(--font-sans);
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: 400;
-    letter-spacing: 0;
-    color: var(--color-ink);
-  }
-  /* The same size set as a heading (a table's, a settings section's, a card
-     in a grid) is a heading, so it takes the heading weight; in a row, a
-     cell or a list it stays 400. */
-  :is(h1, h2, h3, h4, h5, h6).type-item-title {
-    font-weight: 500;
-  }
-  .type-body {
-    font-family: var(--font-sans);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
-    font-weight: 400;
-    letter-spacing: 0;
-    color: var(--color-ink-secondary);
-  }
-  /* Navigation, tabs, links and list rows: the ink belongs to the control's
-     state, and only a selected item steps up to 500 (its primitive sets it).
-     A button is 500 at rest (button.tsx); so is the file input's button. */
-  .type-control,
-  .type-control-file::file-selector-button {
+  .type-control {
     font-family: var(--font-sans);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
     font-weight: 400;
     letter-spacing: 0;
   }
-  .type-control-file::file-selector-button {
-    font-weight: 500;
-  }
-  .type-label {
-    font-family: var(--font-sans);
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: 400;
-    letter-spacing: 0;
-    color: var(--color-ink-secondary);
-  }
-  .type-caption {
-    font-family: var(--font-sans);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
-    font-weight: 400;
-    letter-spacing: 0;
-    color: var(--color-ink-muted);
-  }
-  /* The number in a Stat or a ScoreRing's centre: the sans face at 500 at
-     24/32, digits of one width. */
-  .type-figure {
-    font-family: var(--font-sans);
-    font-size: var(--text-display-sm);
-    line-height: var(--text-display-sm--line-height);
-    font-weight: 500;
-    letter-spacing: var(--text-display-sm--letter-spacing);
-    font-variant-numeric: tabular-nums;
-    color: var(--color-ink);
-  }
-  /* A number inside a row: the body size with digits of one width. */
-  .type-figure-sm {
-    font-family: var(--font-sans);
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: 400;
-    letter-spacing: 0;
-    font-variant-numeric: tabular-nums;
-    color: var(--color-ink);
-  }
-  /* A change indicator: mono at the caption size; the caller's tone is the ink. */
   .type-delta {
     font-family: var(--font-mono);
     font-size: var(--text-caption);
@@ -886,31 +1163,24 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: 400;
     letter-spacing: 0;
   }
-  /* A block of code or a copyable command: mono at the caption size. */
-  .type-code {
+  .type-eyebrow {
     font-family: var(--font-mono);
-    font-size: var(--text-caption);
-    line-height: var(--text-body-sm--line-height);
+    font-size: var(--text-eyebrow);
+    line-height: var(--text-eyebrow--line-height);
     font-weight: 400;
-    letter-spacing: 0;
+    letter-spacing: var(--text-eyebrow--letter-spacing);
+    text-transform: uppercase;
+    color: var(--color-ink-muted);
   }
-  /* Badges, chips, counts and key hints: the caption size; the badge's tone
-     supplies the ink. */
-  .type-badge {
-    font-family: var(--font-sans);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
-    font-weight: 400;
-    letter-spacing: 0;
-  }
+
   /* Rendered Markdown (Agent output, evidence answers): reading text in the
      primary ink, headings in the title and heading roles, code on
      `surface-sunken` in the mono face. Generated headings start at h2 (see
      markdown.tsx). */
   .prose-content {
     font-family: var(--font-sans);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
+    font-size: var(--text-prose);
+    line-height: var(--text-prose--line-height);
     font-weight: 400;
     color: var(--color-ink);
   }
@@ -933,42 +1203,43 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .prose-content li + li { margin-top: 0.5rem; }
   .prose-content strong { font-weight: 500; color: var(--color-ink); }
   .prose-content a {
-    color: var(--color-accent-ink);
+    color: var(--color-ink);
     text-decoration: underline;
+    text-decoration-color: var(--color-control-line);
     text-underline-offset: 2px;
   }
-  .prose-content a:hover { color: var(--color-ink); }
+  .prose-content a:hover { text-decoration-color: currentColor; }
   .prose-content blockquote {
     padding: 0.75rem 1rem;
-    border-radius: var(--radius-md);
-    background: var(--color-surface-sunken);
-    color: var(--color-ink-secondary);
+    border-radius: var(--radius-control);
+    background: var(--color-well);
+    color: var(--color-ink-2);
   }
   .prose-content code {
     font-family: var(--font-mono);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
+    font-size: var(--text-data-sm);
+    line-height: var(--text-data-sm--line-height);
     padding: 0.125rem 0.25rem;
-    border-radius: var(--radius-xs);
-    background: var(--color-surface-sunken);
+    border-radius: var(--radius-mark);
+    background: var(--color-well);
   }
   .prose-content pre {
     max-width: 100%;
     white-space: pre-wrap;
     padding: 1rem;
-    border-radius: var(--radius-md);
-    background: var(--color-surface-sunken);
+    border-radius: var(--radius-control);
+    background: var(--color-well);
     font-family: var(--font-mono);
-    font-size: var(--text-caption);
-    line-height: var(--text-body-sm--line-height);
+    font-size: var(--text-data);
+    line-height: var(--text-data--line-height);
   }
   .prose-content pre code { padding: 0; background: transparent; font-size: inherit; line-height: inherit; }
   .prose-content .prose-table-frame {
     max-width: 100%;
     overflow-x: auto;
     margin: 0 0 1rem;
-    border: 1px solid var(--color-line);
-    border-radius: var(--radius-md);
+    border: 1px solid var(--color-rule);
+    border-radius: var(--radius-control);
   }
   .prose-content .prose-table-frame table { margin: 0; }
   /* A table keeps readable columns and scrolls inside its frame; it never
@@ -982,19 +1253,22 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     line-height: var(--text-body-sm--line-height);
   }
   .prose-content th {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     text-align: left;
-    font-size: var(--text-label);
-    line-height: var(--text-label--line-height);
-    font-weight: 400;
-    color: var(--color-ink-muted);
-    background: var(--color-surface-sunken);
-    border-bottom: 1px solid var(--color-line-strong);
+    font-family: var(--font-mono);
+    font-size: var(--text-overline);
+    line-height: var(--text-overline--line-height);
+    font-weight: var(--text-overline--font-weight);
+    letter-spacing: var(--text-overline--letter-spacing);
+    text-transform: uppercase;
+    color: var(--color-ink-2);
+    border-top: 1px solid var(--color-rule-ink);
+    border-bottom: 1px solid var(--color-rule);
   }
   .prose-content td {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
     color: var(--color-ink);
-    border-bottom: 1px solid var(--color-line);
+    border-bottom: 1px solid var(--color-rule);
   }
   .prose-content tr:last-child td { border-bottom: 0; }
   .prose-content :is(th, td) {
@@ -1011,30 +1285,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .prose-compact pre { padding: 0.75rem; }
   .prose-compact :is(th, td) { padding: 0.5rem 0.75rem; }
 
-  /* Modifier: a value or name inside text that owns its size. The primary
-     ink sets it apart from the grey around it; the weight stays 400. */
-  .type-emphasis {
-    font-weight: 400;
-    color: var(--color-ink);
-  }
 
-  /* The eyebrow: uppercase mono, one to three words above a heading or stat. */
-  .type-eyebrow {
-    font-family: var(--font-mono);
-    font-size: var(--text-eyebrow);
-    line-height: var(--text-eyebrow--line-height);
-    font-weight: 400;
-    letter-spacing: var(--text-eyebrow--letter-spacing);
-    text-transform: uppercase;
-    color: var(--color-ink-muted);
-  }
-
-  /* The highlighter: the phrase an engine said about a brand. */
+  /* The highlighter: your brand's phrase in a quoted answer. */
   .cl-mark {
-    background: var(--color-accent-soft);
+    background: var(--color-accent-wash);
     color: var(--color-ink);
     padding: 0 0.2em;
-    border-radius: var(--radius-xs);
+    border-radius: var(--radius-mark);
     box-decoration-break: clone;
   }
 }
@@ -1151,9 +1408,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: 400;
   }
 
-  /* Lucide icons draw at one stroke, 1.75, at every size. */
+  /* Lucide icons draw at one stroke: 1.75 on the website, 1.5 in the app,
+     at every size. */
   .lucide {
     stroke-width: 1.75;
+  }
+  :root:not([data-public-surface]) .lucide {
+    stroke-width: 1.5;
   }
 
   /* The pointer affordance, declared once for the whole app. Keyed on ROLE as
@@ -1192,10 +1453,11 @@ a.focus-ring:active .type-caption {
   color: var(--color-ink);
 }
 
-/* Keyboard focus is a solid 2px `focus` ring (ink) with a 2px offset. A field
-   instead thickens its edge to a 2px `focus` line (its border plus a 1px
-   ring, `negative` when invalid) inside a 3px `line` halo, so focus reads
-   apart from the 1px `line` rest and the `line-strong` hover. */
+/* Keyboard focus is a solid 2px `focus` ring (ink) with a 2px offset, on
+   every interactive element, fields included, in both themes (brand
+   direction 2.8): never removed, never the accent. On the website a field
+   instead thickens its edge to a 2px `focus` line inside a 3px `line`
+   halo (the rule after the app's). */
 :focus-visible,
 .focus-ring:focus-visible {
   outline: 2px solid var(--color-focus);
@@ -1221,8 +1483,18 @@ a.focus-ring:active .type-caption {
   outline-offset: -2px;
 }
 
+/* A field's ring is the same ink ring; an invalid field keeps its crimson
+   edge inside it, so focus never hides the error. A framed field rings its
+   frame, the one boundary around the input and its end target. */
 .focus-input:focus-visible,
 .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+:where([data-public-surface]) .focus-input:focus-visible,
+:where([data-public-surface])
+  .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
   border-color: var(--field-focus-edge, var(--color-focus));
   outline: none;
   box-shadow:
@@ -1237,35 +1509,92 @@ a.focus-ring:active .type-caption {
    so an inset placed there (`.surface-inset`: a neutral callout, an inline
    empty state) becomes a bordered container instead. */
 .table-frame {
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-rule);
 }
 
-:where(.surface-card, .surface-panel, [role='dialog']) .table-frame {
+:where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .table-frame {
   border: 0;
 }
 
+/* The app's tables: an ink rule on top and no
+   box, overline heads on a hairline over the ground they sit on, mono
+   figures, and your row marked by the accent rung on its first cell. */
+
+:root:not([data-public-surface]) :where(.surface-slip) {
+  --table-ground: var(--color-surface);
+}
+
+:root:not([data-public-surface]) :where(.surface-well) {
+  --table-ground: var(--color-well);
+}
+
+:root:not([data-public-surface]) :where([role='dialog']) {
+  --table-ground: var(--color-raised);
+}
+
+:root:not([data-public-surface]) .table-frame {
+  border: 0;
+  border-top: 1px solid var(--color-rule-ink);
+  border-bottom: 1px solid var(--color-rule);
+  border-radius: 0;
+  background: transparent;
+}
+
+:root:not([data-public-surface]) .table-frame thead th {
+  font-family: var(--font-mono);
+  font-size: var(--text-overline);
+  line-height: var(--text-overline--line-height);
+  font-weight: var(--text-overline--font-weight);
+  letter-spacing: var(--text-overline--letter-spacing);
+  text-transform: uppercase;
+  color: var(--color-ink-2);
+  background: var(--table-ground);
+  box-shadow: inset 0 -1px 0 var(--color-rule);
+}
+
+/* A head that is a button (sortable, hinted) keeps the overline: the reset
+   gives buttons their own text-transform and tracking. */
+:root:not([data-public-surface]) .table-frame thead th button {
+  text-transform: inherit;
+  letter-spacing: inherit;
+}
+
+:root:not([data-public-surface]) .table-frame thead th[aria-sort] {
+  color: var(--color-ink);
+}
+
+:root:not([data-public-surface]) .table-frame td.tabular-nums {
+  font-family: var(--font-mono);
+  font-size: var(--text-data);
+  line-height: var(--text-data--line-height);
+}
+
+:root:not([data-public-surface]) .table-frame tr[data-you] > :first-child {
+  box-shadow: inset var(--mark-width) 0 0 var(--color-accent);
+}
+
 .surface-inset {
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-rule);
   background: var(--color-surface);
 }
 
-:where(.surface-card, .surface-panel, [role='dialog']) .surface-inset {
+:where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .surface-inset {
   border-color: transparent;
-  background: var(--color-surface-sunken);
+  background: var(--color-well);
 }
 
 /* A Panel that lands inside a container is a sunken inset, so it takes the
    inset's 12 down and 16 across rather than a container's 16 all round. */
-:where(.surface-card, .surface-panel, [role='dialog']) .surface-panel.surface-inset {
+:where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .surface-panel.surface-inset {
   padding-block: calc(var(--spacing) * 3);
 }
 
 /* A card composed inside a dialog or drawer (settings sections in the
    account-security dialog, a framed table in an evidence drawer) steps down
    to the inset too, so an overlay never shows a box drawn inside a box. */
-:where(.surface-card, .surface-panel, [role='dialog']) .surface-card {
+:where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .surface-card {
   border-color: transparent;
-  background: var(--color-surface-sunken);
+  background: var(--color-well);
 }
 
 /* Sideways overflow cues. Each overlays or paints behind the region, so it
@@ -1311,24 +1640,9 @@ a.focus-ring:active .type-caption {
         scroll,
       var(--scroll-shade-ground);
   }
-  :where(.surface-card, .surface-panel, [role='dialog']) .scroll-shade-x {
+  :where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .scroll-shade-x {
     --scroll-shade-ground: color-mix(in srgb, var(--color-ink) 8%, var(--color-surface));
   }
-}
-
-/* Inside a card a query state shares the card's surface and its padding
-   (the container already insets it), but keeps its reserved height. */
-:where(.surface-card, .surface-panel, [role='dialog'], .table-frame) .query-state {
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  padding: 0;
-}
-
-/* The primary button is a raised key: a faint light-to-shade sheen over
-   its ink fill, under the press shadow; pressed, it drops to the edge shadow. */
-.button-key {
-  background-image: linear-gradient(rgb(255 255 255 / 14%), rgb(0 0 0 / 8%));
 }
 
 /* The website's shared buttons (a form's submit, a callout action) take the
@@ -1443,7 +1757,7 @@ a.focus-ring:active .type-caption {
 }
 
 ::selection {
-  background: var(--color-accent-soft);
+  background: var(--color-accent-wash);
   color: var(--color-ink);
 }
 
@@ -1455,7 +1769,7 @@ input:is(:autofill, :-webkit-autofill) {
   box-shadow: inset 0 0 0 100vmax var(--color-surface);
   caret-color: var(--color-ink);
 }
-input.focus-input:is(:autofill, :-webkit-autofill):focus-visible {
+:where([data-public-surface]) input.focus-input:is(:autofill, :-webkit-autofill):focus-visible {
   box-shadow:
     0 0 0 1px var(--field-focus-edge, var(--color-focus)),
     0 0 0 4px var(--color-line),
@@ -1467,14 +1781,12 @@ input.focus-input:is(:autofill, :-webkit-autofill):focus-visible {
 .focus-frame:has([aria-invalid='true']) {
   --field-focus-edge: var(--color-negative);
   border: 1px solid var(--color-negative);
-  outline-color: var(--color-negative);
 }
 @media (forced-colors: active) {
   .focus-input[aria-invalid='true'],
   .focus-ring[aria-invalid='true'],
   .focus-frame:has([aria-invalid='true']) {
     border-color: Mark;
-    outline-color: Mark;
   }
 }
 
@@ -1488,7 +1800,8 @@ input.focus-input:is(:autofill, :-webkit-autofill):focus-visible {
 
 .loading-delayed {
   opacity: 0;
-  animation: citeladder-loading-appear var(--motion-fast) var(--ease-standard) 300ms forwards;
+  animation: citeladder-loading-appear var(--motion-fast) var(--ease-standard)
+    var(--motion-loader-delay) forwards;
 }
 
 /* Box shadows disappear in forced colours; retain a system-colour boundary. */
@@ -1508,15 +1821,6 @@ kbd,
 samp {
   font-family: var(--font-mono);
   font-synthesis: none;
-}
-
-.value-placeholder {
-  color: var(--value-placeholder);
-  font-family: var(--font-sans);
-  font-size: var(--text-caption);
-  font-weight: 400;
-  line-height: var(--text-caption--line-height);
-  letter-spacing: 0;
 }
 
 .menu-panel {
@@ -1626,100 +1930,28 @@ samp {
   }
 }
 
-/* Skeleton bars pulse their opacity (never a shimmer); reduced motion holds
-   them still through the global rule below. */
-@keyframes spinner-turn {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes skeleton-pulse {
+/* The live rung: one accent rung pulsing its opacity. */
+@keyframes live-rung {
   50% {
-    opacity: 0.5;
+    opacity: 0.35;
   }
 }
 
-/* ProgressBar's busy state: a 36% segment slides across the track. */
-@keyframes progress-busy {
-  from {
-    transform: translateX(-100%);
-  }
-  to {
-    transform: translateX(280%);
-  }
-}
-
-/* Live-activity marker: the dot holds still and a ring expands out of it. */
+/* A live-activity dot: it pulses its opacity like the live rung, never a ping. */
 .activity-dot {
-  position: relative;
   border-radius: var(--radius-full);
-}
-
-.activity-dot::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: inherit;
-  animation: activity-ping calc(var(--motion-slow) * 9) var(--ease-standard) infinite;
-}
-
-@keyframes activity-ping {
-  from {
-    opacity: 0.55;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(2.6);
-  }
-}
-
-/* Shimmer: a working line's words with a lighter band passing over them. The
-   words stay legible in every frame; reduced motion holds the band still. */
-.text-shimmer {
-  background: linear-gradient(
-      90deg,
-      var(--color-ink-secondary) 40%,
-      var(--color-ink) 50%,
-      var(--color-ink-secondary) 60%
-    )
-    100% 0 / 250% 100%;
-  background-clip: text;
-  color: transparent;
-  animation: text-shimmer calc(var(--motion-slow) * 10) linear infinite;
-}
-
-@keyframes text-shimmer {
-  to {
-    background-position: 0 0;
-  }
+  animation: live-rung var(--motion-pulse) ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* Everything but the two "still working" marks below, which slow down
-     instead of stopping. */
-  :not(.animate-spinner, .animate-progress-busy),
+  /* Every motion goes; state changes become instant. */
+  *,
   ::before,
   ::after {
     scroll-behavior: auto !important;
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
-  }
-  .activity-dot::after {
-    display: none;
-  }
-  /* "Still working" must keep moving, at half speed. These rules sit outside
-     Tailwind's layers, so they win over the utilities' own timing. */
-  .animate-spinner {
-    animation-duration: 1600ms;
-    animation-iteration-count: infinite;
-  }
-  .animate-progress-busy {
-    animation-duration: 2800ms;
-    animation-iteration-count: infinite;
   }
 }
 

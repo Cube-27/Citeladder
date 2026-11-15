@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 
-import { ActivitySteps } from '@/components/agent/activity-chain';
+import { activitySteps } from '@/components/agent/activity-chain';
 import { LiveReply } from '@/components/agent/live-reply';
-import { Callout } from '@/components/ui/callout';
 import { AgentTurn } from '@/components/ui/chat-dock';
-import { ChainOfThoughtLive } from '@/components/ui/chain-of-thought';
+import { FoldedTrail } from '@/components/ui/rung-trail';
 import { Inline } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
@@ -13,6 +12,7 @@ import { runErrorCopy } from '@/lib/agent/vocabulary';
 import { isPageReading, runOutcome } from '@/lib/agent/run-state';
 import { useLiveTurn, type LiveTurn } from '@/lib/agent/live-turns';
 import type { AgentChatDetail, AgentRun } from '@/lib/api/agent';
+import { Notice } from '@/components/ui/notice';
 
 /**
  * The running turn, or how an unanswered one ended. Its live events are
@@ -29,9 +29,9 @@ export function LiveActivity({ detail }: Readonly<{ detail: AgentChatDetail }>) 
       return <RunningTurn run={outcome.run} queued={outcome.queued} live={live} />;
     // Every ended turn now answers with its own reply; older ones may not have.
     case 'stopped_at_limit':
-      return answered ? null : <Callout tone="warning">{runErrorCopy('stopped_at_limit')}</Callout>;
+      return answered ? null : <Notice tone="warning">{runErrorCopy('stopped_at_limit')}</Notice>;
     case 'failed':
-      return answered ? null : <Callout tone="negative">{runErrorCopy(outcome.code)}</Callout>;
+      return answered ? null : <Notice tone="negative">{runErrorCopy(outcome.code)}</Notice>;
     default:
       return null;
   }
@@ -40,7 +40,7 @@ export function LiveActivity({ detail }: Readonly<{ detail: AgentChatDetail }>) 
 function ReadingPage() {
   return (
     <Inline as="span" gap="compact" className={textRole('caption')}>
-      <Spinner className="text-ink-muted" />
+      <Spinner className="text-ink-2" />
       <output aria-live="polite">Reading your page…</output>
     </Inline>
   );
@@ -67,13 +67,12 @@ function RunningTurn({
   const seconds = useElapsedSeconds(live?.startedAt ?? Date.parse(run.created_at));
   return (
     <AgentTurn inProgress>
-      <ChainOfThoughtLive status={status} seconds={seconds} label="Agent activity">
-        {rows.length > 0 ? (
-          <ActivitySteps rows={rows} />
-        ) : (
-          <li className={textRole('caption')}>Nothing read yet.</li>
-        )}
-      </ChainOfThoughtLive>
+      <FoldedTrail
+        live={{ status, seconds }}
+        label="Agent activity"
+        steps={activitySteps(rows)}
+        empty="Nothing read yet."
+      />
       <LiveReply live={live} />
     </AgentTurn>
   );

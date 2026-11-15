@@ -1,24 +1,24 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Dot } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ProgressBar } from '@/components/ui/progress-bar';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { StatRow } from '@/components/ui/stat-row';
+import { Spinner } from '@/components/ui/spinner';
+import { RungMeter } from '@/components/ui/rung-meter';
 import { humanizeApiError } from '@/lib/api/errors';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@citeladder/contracts';
 import { saveBlob } from '@/lib/download';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, formatDisplayTime } from '@/lib/format';
+import { formatCount, formatDisplayTimestamp } from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
+import { Notice } from '@/components/ui/notice';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 type ExportFormat = 'csv' | 'md';
 
@@ -110,24 +110,24 @@ export function RunActions({
 
 function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: boolean }>) {
   const engines = useEngineCatalog();
+  const timeZone = useDisplayTimeZone();
   return (
     <Inline className="flex-wrap">
-      <Badge variant="run-status" value={AUDIT_STATES[audit.status].badge}>
+      {/* A date is recorded, not a figure: it reads in the status line. */}
+      <span className="type-data text-ink-2">
+        Created {formatDisplayTimestamp(audit.created_at, timeZone)}
+      </span>
+      <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
         {AUDIT_STATES[audit.status].label}
-      </Badge>
-      <Badge>{marketLabel(audit.market)}</Badge>
+      </StatusMark>
+      <Tag>{marketLabel(audit.market)}</Tag>
       <MeasurementContext provenance={audit.model_provenance} />
       {audit.not_applicable_engines.length ? (
-        <Badge>
+        <Tag>
           Not available in this market: {audit.not_applicable_engines.map(engines.label).join(', ')}
-        </Badge>
+        </Tag>
       ) : null}
-      {polling ? (
-        <Inline as="span" className="type-caption inline-flex tabular-nums" aria-live="polite">
-          <Dot className="activity-dot bg-info" />
-          {'Updating…'}
-        </Inline>
-      ) : null}
+      {polling ? <Spinner label="Updating…" showLabel /> : null}
     </Inline>
   );
 }
@@ -142,25 +142,18 @@ function RunProgress({
 }>) {
   const percent = requested > 0 ? Math.min(100, Math.round((finished / requested) * 100)) : 0;
 
-  return <ProgressBar label="Progress" value={percent} />;
+  return <RungMeter label="Progress" value={percent} />;
 }
 
-function ProgressMetrics({ audit }: Readonly<{ audit: Audit }>) {
-  const timeZone = useDisplayTimeZone();
+function ProgressMetrics({ audit, lead }: Readonly<{ audit: Audit; lead: ReactNode }>) {
   return (
-    <StatRow
+    <FigureStrip
+      label="Run figures"
+      lead={lead}
       segments={[
-        { key: 'requested', label: 'Requested', value: audit.requested_count },
-        { key: 'completed', label: 'Completed', value: audit.completed_count },
-        { key: 'failed', label: 'Failed', value: audit.failed_count },
-        // A date is not a figure: the day holds the figure's one line and the
-        // time, with its zone, is the line under it.
-        {
-          key: 'created',
-          label: 'Created',
-          value: formatDisplayDate(audit.created_at, timeZone),
-          sub: formatDisplayTime(audit.created_at, timeZone),
-        },
+        { key: 'requested', label: 'Requested', value: formatCount(audit.requested_count) },
+        { key: 'completed', label: 'Completed', value: formatCount(audit.completed_count) },
+        { key: 'failed', label: 'Failed', value: formatCount(audit.failed_count) },
       ]}
     />
   );
@@ -181,9 +174,11 @@ function ProgressNotices({
 }>) {
   return (
     <>
-      {errorMessage ? <p className="type-body text-negative">{errorMessage}</p> : null}
-      {cancelNotice ? <MutationNotice notice={cancelNotice} onRetry={onCancelRetry} /> : null}
-      {rerunNotice ? <MutationNotice notice={rerunNotice} onRetry={onRerunRetry} /> : null}
+      {errorMessage ? <Notice tone="negative">{errorMessage}</Notice> : null}
+      {cancelNotice ? (
+        <Notice kind="mutation" notice={cancelNotice} onRetry={onCancelRetry} />
+      ) : null}
+      {rerunNotice ? <Notice kind="mutation" notice={rerunNotice} onRetry={onRerunRetry} /> : null}
     </>
   );
 }
@@ -199,6 +194,7 @@ function ProgressNotices({
  */
 export function ProgressPanel({
   audit,
+  title,
   exportError,
   cancelNotice,
   onCancelRetry,
@@ -206,6 +202,8 @@ export function ProgressPanel({
   onRerunRetry,
 }: Readonly<{
   audit: Audit;
+  /** The run's name, read in full where the masthead cuts it. */
+  title?: string;
   /** A failed export from `useRunExport`. */
   exportError?: string | null;
   /** The A4 mutation notice for a failed cancel (verbatim 4xx, transient retry). */
@@ -218,29 +216,32 @@ export function ProgressPanel({
   const polling = AUDIT_STATES[audit.status].active;
 
   return (
-    <Card>
-      <CardContent>
-        <Stack gap="workspace">
-          <ProgressStatus audit={audit} polling={polling} />
-
-          {polling && audit.requested_count > 0 ? (
-            <RunProgress
-              requested={audit.requested_count}
-              finished={audit.completed_count + audit.failed_count}
-            />
-          ) : null}
-
-          <ProgressMetrics audit={audit} />
-
-          <ProgressNotices
-            errorMessage={exportError ?? audit.error_message}
-            cancelNotice={cancelNotice}
-            onCancelRetry={onCancelRetry}
-            rerunNotice={rerunNotice}
-            onRerunRetry={onRerunRetry}
-          />
-        </Stack>
-      </CardContent>
-    </Card>
+    <Stack gap="workspace">
+      <ProgressMetrics
+        audit={audit}
+        lead={
+          <Stack>
+            {title ? (
+              // Below the shell width the masthead cuts the title; it reads here in full.
+              <p className="type-heading desktop:hidden">{title}</p>
+            ) : null}
+            <ProgressStatus audit={audit} polling={polling} />
+            {polling && audit.requested_count > 0 ? (
+              <RunProgress
+                requested={audit.requested_count}
+                finished={audit.completed_count + audit.failed_count}
+              />
+            ) : null}
+          </Stack>
+        }
+      />
+      <ProgressNotices
+        errorMessage={exportError ?? audit.error_message}
+        cancelNotice={cancelNotice}
+        onCancelRetry={onCancelRetry}
+        rerunNotice={rerunNotice}
+        onRerunRetry={onRerunRetry}
+      />
+    </Stack>
   );
 }

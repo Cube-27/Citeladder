@@ -194,13 +194,18 @@ describe('DataTable', () => {
   });
 
   it('fades the edge that hides columns only while the table scrolls sideways', () => {
-    const { container } = render(
-      <DataTable label="Wide" columns={[{ key: 'url', label: 'URL' }]}>
+    const table = (pinFirstColumn?: boolean) => (
+      <DataTable
+        label="Wide"
+        columns={[{ key: 'url', label: 'URL' }]}
+        pinFirstColumn={pinFirstColumn}
+      >
         <TableRow>
           <TableCell>/pricing</TableCell>
         </TableRow>
-      </DataTable>,
+      </DataTable>
     );
+    const { container, rerender } = render(table(false));
     const frame = container.querySelector<HTMLElement>('.table-frame')!;
     const fades = () =>
       [...container.querySelectorAll('[data-scroll-edge]')].map((fade) =>
@@ -221,6 +226,53 @@ describe('DataTable', () => {
     expect(fades()).toEqual(['start', 'end']);
     layout(900, 500);
     expect(fades()).toEqual(['start']);
+
+    // Pinned by default: the first column covers the leading edge, so only the far edge fades.
+    rerender(table());
+    layout(900, 200);
+    expect(fades()).toEqual(['end']);
+    layout(900, 500);
+    expect(fades()).toEqual([]);
+  });
+
+  it('never lets the fixed columns squeeze the identity column below its minimum', () => {
+    const minWidths = (props: Pick<DataTableProps, 'columns' | 'minWidth'>) => {
+      const { container, unmount } = render(<DataTable label="Keys" {...props} />);
+      const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
+      const result = [
+        frame.style.getPropertyValue('--data-table-min'),
+        frame.style.getPropertyValue('--data-table-min-desktop'),
+      ];
+      unmount();
+      return result;
+    };
+    // The API keys table: the key's name beside 168 steps of fixed columns, one desktop-only.
+    expect(
+      minWidths({
+        columns: [
+          { key: 'name', label: 'Key' },
+          { key: 'scopes', label: 'Access', width: 'name' },
+          { key: 'projects', label: 'Projects', width: 'status', desktopOnly: true },
+          { key: 'used', label: 'Last used', width: 'date' },
+          { key: 'revoke', label: 'Revoke', width: 'action' },
+        ],
+      }),
+    ).toEqual([
+      'max(calc((calc(var(--spacing) * 136) + 1 * var(--table-identity-min)) / 1))',
+      'max(calc((calc(var(--spacing) * 168) + 1 * var(--table-identity-min)) / 1))',
+    ]);
+    // A quarter-width lead holds the minimum too, over the page's own floor.
+    expect(
+      minWidths({
+        columns: [
+          { key: 'dimension', label: 'Query', width: 'lead' },
+          { key: 'clicks', label: 'Clicks', width: 'figure', numeric: true },
+        ],
+        minWidth: 'sm',
+      })[0],
+    ).toBe(
+      'max(calc((calc(var(--spacing) * 28) + 0 * var(--table-identity-min)) / 0.75), calc(var(--table-identity-min) / 0.25), var(--table-min-width-sm))',
+    );
   });
 
   it('warns in development when no column can absorb the width', () => {

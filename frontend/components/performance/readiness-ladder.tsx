@@ -1,12 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { Circle, CircleCheck } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { panelClasses } from '@/components/ui/panel';
-import { Spinner } from '@/components/ui/spinner';
+import { Stack } from '@/components/ui/layout';
+import { RungTrail, type RungStatus } from '@/components/ui/rung-trail';
 import { textRole } from '@/components/ui/typography';
 import {
   performanceQueries,
@@ -16,7 +12,8 @@ import {
 import { pollReadiness } from '@/lib/performance/status';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { formatWindowDate } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { Notice } from '@/components/ui/notice';
+import { wellClasses } from '@/components/ui/slip';
 
 /**
  * Where a freshly connected project's data actually is.
@@ -61,13 +58,6 @@ function stageIndex(stage: ProjectReadinessStage): number {
   return index;
 }
 
-/** A rung's mark, at the one glyph size: reached, in flight, or still ahead. */
-function StepMark({ state }: Readonly<{ state: 'done' | 'active' | 'pending' }>) {
-  if (state === 'done') return <Icon icon={CircleCheck} className="text-positive" />;
-  if (state === 'active') return <Spinner className="text-info" />;
-  return <Icon icon={Circle} className="text-line" />;
-}
-
 /**
  * The project's readiness, as ONE query.
  *
@@ -86,9 +76,9 @@ export function useProjectReadiness() {
 }
 
 /** Where one rung sits relative to the furthest stage reached. */
-function ladderStepState(index: number, reached: number): 'done' | 'active' | 'pending' {
+function ladderStepState(index: number, reached: number): RungStatus {
   if (index < reached) return 'done';
-  return index === reached ? 'active' : 'pending';
+  return index === reached ? 'running' : 'pending';
 }
 
 export function ReadinessLadder({
@@ -103,7 +93,8 @@ export function ReadinessLadder({
 
   if (data.stage === 'import_failed') {
     return (
-      <MutationNotice
+      <Notice
+        kind="mutation"
         notice={{ message: EXPLANATION.import_failed, retryable: false }}
         recovery={
           sync ? (
@@ -121,27 +112,19 @@ export function ReadinessLadder({
     <Stack
       as="section"
       gap="compact"
-      className={panelClasses()}
+      className={wellClasses()}
       aria-label="Data readiness"
       data-testid="readiness-ladder"
     >
-      <Inline as="ol" gap="meta">
-        {LADDER.map((step, index) => {
-          const state = ladderStepState(index, reached);
-          return (
-            <Inline as="li" key={step.stage} aria-current={state === 'active' ? 'step' : undefined}>
-              <StepMark state={state} />
-              <span
-                className={cn(
-                  textRole('label', state === 'pending' ? 'text-ink-muted' : 'text-ink'),
-                )}
-              >
-                {step.label}
-              </span>
-            </Inline>
-          );
-        })}
-      </Inline>
+      <RungTrail
+        orientation="horizontal"
+        label="Readiness stages"
+        steps={LADDER.map((step, index) => ({
+          id: step.stage,
+          label: step.label,
+          status: ladderStepState(index, reached),
+        }))}
+      />
       <p className={textRole('caption')}>
         {EXPLANATION[data.stage]}
         {data.imported_through

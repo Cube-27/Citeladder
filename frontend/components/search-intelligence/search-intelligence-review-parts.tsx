@@ -8,13 +8,11 @@ import {
 } from '@/lib/config/search-intelligence';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { Select } from '@/components/ui/select';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
@@ -32,6 +30,8 @@ import {
   reviewCompetitors,
   selectionKey,
 } from './search-intelligence-review-selection';
+import { Notice } from '@/components/ui/notice';
+import { wellClasses } from '@/components/ui/slip';
 
 export type Advanced = {
   researchScope: ResearchScope;
@@ -121,8 +121,8 @@ function DatasetGroup({
   onDepth: (option: SearchDatasetSelectionRequest, text: string) => void;
 }>) {
   return (
-    <fieldset className={panelClasses()}>
-      <legend className={textRole('label')}>{legend}</legend>
+    <fieldset className={wellClasses()}>
+      <legend className={textRole('body', 'text-ink-2')}>{legend}</legend>
       <Stack gap="compact">
         {options.map((option) => {
           const checked = isSelected(option);
@@ -306,10 +306,10 @@ export function HistoryScopeNotice({
 }: Readonly<{ scope: ResearchScope; selections: SearchDatasetSelectionRequest[] }>) {
   if (!historyScopeConflict(selections, scope)) return null;
   return (
-    <Callout tone="negative">
+    <Notice tone="negative">
       Backlink history covers the whole domain. Deselect it or set the research scope to Domain +
       subdomains.
-    </Callout>
+    </Notice>
   );
 }
 
@@ -328,23 +328,23 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
   return (
     <Stack gap="workspace">
       <Stack as="section" gap="compact">
-        <h3 className={textRole('sectionTitle')}>What will be fetched</h3>
+        <h3 className={textRole('heading')}>What will be fetched</h3>
         {/* The three figures share one row, never 2 × 2. */}
-        <Stack as="dl" gap="compact" className="type-body grid-cols-3">
+        <Stack as="dl" gap="compact" className="type-body text-ink-2 grid-cols-3">
           <div>
-            <dt className="type-label">Requests</dt>
+            <dt className="type-body text-ink-2">Requests</dt>
             <dd className="type-figure">{review.planned_calls}</dd>
           </div>
           <div>
-            <dt className="type-label">Results, at most</dt>
+            <dt className="type-body text-ink-2">Results, at most</dt>
             <dd className="type-figure">{formatCount(review.planned_rows)}</dd>
           </div>
           <div>
-            <dt className="type-label">Estimated cost</dt>
+            <dt className="type-body text-ink-2">Estimated cost</dt>
             <dd className="type-figure">{runEstimate(review)}</dd>
           </div>
           <div className="col-span-full">
-            <dt className="type-label">Scope</dt>
+            <dt className="type-body text-ink-2">Scope</dt>
             <dd>{searchScopeLabel(typeof scope === 'string' ? scope : undefined)}</dd>
           </div>
         </Stack>
@@ -357,8 +357,8 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
       </Stack>
       {review.call_plan.length ? (
         <Stack as="section" gap="compact">
-          <h3 className={textRole('sectionTitle')}>Requests</h3>
-          <ul className={ledgerClasses('type-body')}>
+          <h3 className={textRole('heading')}>Requests</h3>
+          <ul className={ledgerClasses('type-body text-ink-2')}>
             {review.call_plan.map((call) => {
               const target = hostOf(call.target),
                 comparison = hostOf(call.comparison);
@@ -375,7 +375,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
                     {comparison ? ` vs ${comparison}` : ''}
                   </span>
                   {call.estimated_cost_usd === undefined ? null : (
-                    <span className="text-ink-muted">
+                    <span className="text-ink-2">
                       ${estimateUsd(String(call.estimated_cost_usd))}
                     </span>
                   )}
@@ -386,7 +386,7 @@ export function ReviewSummary({ review }: Readonly<{ review: SearchIntelligenceR
         </Stack>
       ) : null}
       {review.reused_datasets.length ? (
-        <p className="type-body">
+        <p className="type-body text-ink-2">
           {pluralCount(review.reused_datasets.length, 'recent result')} will be reused at no cost.
         </p>
       ) : null}

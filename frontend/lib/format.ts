@@ -25,6 +25,8 @@ export type DataAvailabilityState =
   | 'not_set'
   | 'unavailable'
   | 'not_applicable'
+  | 'not_connected'
+  | 'excluded'
   | 'unknown';
 
 const availabilityLabels: Readonly<Record<DataAvailabilityState, string>> = {
@@ -34,6 +36,8 @@ const availabilityLabels: Readonly<Record<DataAvailabilityState, string>> = {
   not_set: 'Not set',
   unavailable: 'Unavailable',
   not_applicable: 'Not applicable',
+  not_connected: 'Not connected',
+  excluded: 'Excluded',
   unknown: 'Unknown',
 };
 

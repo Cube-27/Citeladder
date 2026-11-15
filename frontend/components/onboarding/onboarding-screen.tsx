@@ -2,8 +2,8 @@ import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
+import { FlowPage, StepBack } from '@/components/templates/flow-page';
 import { Button } from '@/components/ui/button';
-import { OnboardingShell, StepBack } from '@/components/ui/onboarding-shell';
 import { TextLink } from '@/components/ui/text-link';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -59,8 +59,8 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
   const exitHref = flow.isAdditional ? projectsHref : undefined;
 
   return (
-    <OnboardingShell
-      mainLabel="Project setup"
+    <FlowPage
+      label="Project setup"
       steps={STEPS}
       current={flow.step}
       barEnd={
@@ -75,7 +75,7 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
       }
     >
       {onboardingStage(flow, flow.isCompleting ? undefined : stageActions(flow, projectsHref))}
-    </OnboardingShell>
+    </FlowPage>
   );
 }
 
@@ -140,7 +140,7 @@ function stageActions(
       back:
         // Same rule as the exit above: cancelling has to lead somewhere.
         flow.isAdditional && projectsHref ? (
-          <Button asChild variant="ghost">
+          <Button asChild variant="quiet">
             <Link to={projectsHref}>Cancel</Link>
           </Button>
         ) : undefined,

@@ -1,12 +1,12 @@
 import type { ComponentProps } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText, mutedWhenMissing, TableCell, TableRow } from '@/components/ui/table';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { TextLink } from '@/components/ui/text-link';
 import type { PagesSort } from '@/lib/api/site-health';
 import type { PageSummary } from '@citeladder/contracts';
@@ -63,7 +63,6 @@ function pagesColumns(
 ): DataTableColumn[] {
   const byUrl = sort === 'url';
   return [
-    { key: 'index', label: '#', width: 'index', numeric: true },
     {
       key: 'page',
       label: 'Page',
@@ -75,7 +74,7 @@ function pagesColumns(
           }
         : undefined,
     },
-    { key: 'type', label: 'Type', width: 'status' },
+    { key: 'type', label: 'Type', width: 'category' },
     { key: 'issues', label: 'Issues', width: 'figure', numeric: true },
     { key: 'web', label: 'Web Fundamentals', width: 'figure', numeric: true },
     { key: 'aeo', label: 'AEO Readiness', width: 'figure', numeric: true },
@@ -93,12 +92,9 @@ export function PagesTable({
   pager,
   pageSize,
   busy,
-  rowOffset = 0,
 }: Readonly<{
   pages: PageSummary[];
   crawlId: string;
-  /** Rows on the pages before this one, so "#" runs on across keyset pages. */
-  rowOffset?: number;
   sort?: PagesSort;
   /** Omitted where the table is read-only; the Page header then renders plain. */
   onSortChange?: (sort: PagesSort) => void;
@@ -119,7 +115,7 @@ export function PagesTable({
     <DataTable
       label="Pages"
       columns={pagesColumns(sort, onSortChange)}
-      minWidth="md"
+      minWidth="lg"
       toolbar={toolbar}
       state={state}
       pager={pager}
@@ -130,7 +126,7 @@ export function PagesTable({
       // the sections below the table.
       reserveRows
     >
-      {pages.map((page, index) => {
+      {pages.map((page) => {
         const title = pageDisplayTitle(page.title, page.display_url);
         return (
           <TableRow
@@ -146,9 +142,6 @@ export function PagesTable({
             }}
             className="focus-ring cursor-pointer"
           >
-            <TableCell numeric className="type-caption tabular-nums">
-              {rowOffset + index + 1}
-            </TableCell>
             {/* A URL is one unbreakable token: every line is clamped to the
                 column and carries the full value in a tooltip when cut. */}
             <TableCell>
@@ -165,13 +158,13 @@ export function PagesTable({
                     </TextLink>
                   </ClampText>
                   {page.analysis_status === 'completed' ? null : (
-                    <Badge variant="status" value={pageStatusBadgeValue(page.analysis_status)}>
+                    <StatusMark variant="status" value={pageStatusBadgeValue(page.analysis_status)}>
                       {statusLabel(page.analysis_status)}
-                    </Badge>
+                    </StatusMark>
                   )}
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
                 </Inline>
-                <ClampText lines={1} className="type-caption tabular-nums">
+                <ClampText lines={1} className="type-data-sm text-ink-2">
                   {page.display_url}
                 </ClampText>
                 <LinkedFromLine page={page} />
@@ -196,10 +189,7 @@ export function PagesTable({
               />
             </TableCell>
             <TableCell>
-              <TableTime
-                value={page.last_audited}
-                fallback={<UnavailableValue state="not_measured" />}
-              />
+              <TableTime value={page.last_audited} fallback={<Absence state="not_measured" />} />
             </TableCell>
           </TableRow>
         );
@@ -214,7 +204,7 @@ export function PagesTable({
  * this is where those words become the mark that the rest of the table uses.
  */
 function Measured({ value }: Readonly<{ value: string }>) {
-  return value === PLACEHOLDER ? <UnavailableValue state="not_measured" /> : <>{value}</>;
+  return value === PLACEHOLDER ? <Absence state="not_measured" /> : <>{value}</>;
 }
 
 /**
@@ -229,5 +219,5 @@ function MeasurementValue({ score, state }: Readonly<{ score: number | null; sta
 function measurementStateValue(state: string) {
   if (state === 'limited_evidence') return 'Limited evidence';
   if (state === 'excluded') return 'Excluded';
-  return <UnavailableValue state="not_measured" />;
+  return <Absence state="not_measured" />;
 }

@@ -28,7 +28,7 @@ export function BackfillProgress({
 
   return (
     <Inline className="flex-wrap">
-      <span className={textRole('label')}>History</span>
+      <span className={textRole('body', 'text-ink-2')}>History</span>
       <span className="type-caption tabular-nums">{progressLabel(progress)}</span>
     </Inline>
   );
@@ -45,9 +45,9 @@ export function BackfillHistory({
 }: Readonly<{ workspaceId: string; connectionId: string }>) {
   const progressQuery = useBackfillProgressQuery(workspaceId, connectionId);
   const progress = progressQuery.data;
-  if (progressQuery.isError) return <span className="text-ink-muted">Unavailable</span>;
-  if (!progress) return <span className="text-ink-muted">Loading…</span>;
-  if (progress.state === 'not_started') return <span className="text-ink-muted">Not started</span>;
+  if (progressQuery.isError) return <span className="text-ink-2">Unavailable</span>;
+  if (!progress) return <span className="text-ink-2">Loading…</span>;
+  if (progress.state === 'not_started') return <span className="text-ink-2">Not started</span>;
   return <span className="truncate">{progressLabel(progress)}</span>;
 }
 

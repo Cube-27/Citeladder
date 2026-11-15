@@ -4,7 +4,7 @@ import { SearchX } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import {
   performanceQueries,
@@ -292,7 +292,6 @@ export function DimensionTable({
       label={tab.header}
       columns={columns}
       minWidth={comparing ? 'md' : 'sm'}
-      pinFirstColumn
       reserveRows
       {...table}
     >
@@ -311,7 +310,7 @@ export function DimensionTable({
           {displayedMetrics.flatMap((metric) => {
             const selectedCell = (
               <TableCell key={metric.key} numeric>
-                {measured(formatMetric(metric.key, row.metrics[metric.key])) ?? <MissingValue />}
+                {measured(formatMetric(metric.key, row.metrics[metric.key])) ?? <Absence />}
               </TableCell>
             );
             if (!comparing) return [selectedCell];
@@ -324,8 +323,8 @@ export function DimensionTable({
             );
             return [
               selectedCell,
-              <TableCell key={`${metric.key}-comparison`} numeric className="text-ink-muted">
-                {measured(formatMetric(metric.key, comparisonValue)) ?? <MissingValue />}
+              <TableCell key={`${metric.key}-comparison`} numeric className="text-ink-2">
+                {measured(formatMetric(metric.key, comparisonValue)) ?? <Absence />}
               </TableCell>,
               <TableCell key={`${metric.key}-difference`} numeric>
                 <Delta {...metricDelta(metric.key, difference)} />

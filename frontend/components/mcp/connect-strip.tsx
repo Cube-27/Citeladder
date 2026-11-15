@@ -2,7 +2,6 @@ import { ChevronDown, ExternalLink } from 'lucide-react';
 import { useEffect, useRef, useState, type PointerEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { cardClasses } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
@@ -10,6 +9,7 @@ import { Menu, MenuContent, MenuLinkItem, MenuTrigger } from '@/components/ui/me
 import { CodeToken, textRole } from '@/components/ui/typography';
 import { MCP_CLIENT_LINKS, MCP_SERVER_URL, type McpClientLink } from '@/lib/config/mcp-clients';
 import { cn } from '@/lib/utils';
+import { slipClasses } from '@/components/ui/slip';
 
 /** Hover intent: long enough to cross from the button into the portalled menu. */
 const HOVER_CLOSE_DELAY_MS = 160;
@@ -88,7 +88,7 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
       as="section"
       gap="compact"
       aria-label="Connect CiteLadder to an AI assistant"
-      className={cn(cardClasses(), 'w-fit max-w-full flex-wrap', className)}
+      className={cn(slipClasses(), 'w-fit max-w-full flex-wrap', className)}
     >
       <Menu open={menu.open} onOpenChange={menu.setOpen} modal={false}>
         {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}
@@ -152,9 +152,9 @@ export function ConnectStrip({ className }: Readonly<{ className?: string }>) {
         </MenuContent>
       </Menu>
       <Inline>
-        <span className={textRole('label', 'shrink-0')}>MCP URL</span>
+        <span className={textRole('body', 'text-ink-2 shrink-0')}>MCP URL</span>
         <CodeToken>{MCP_SERVER_URL}</CodeToken>
-        <CopyButton value={MCP_SERVER_URL} variant="ghost" copiedLabel="MCP URL copied">
+        <CopyButton value={MCP_SERVER_URL} variant="quiet" copiedLabel="MCP URL copied">
           Copy
         </CopyButton>
       </Inline>

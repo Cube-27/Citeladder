@@ -2,7 +2,6 @@ import type { z } from 'zod';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
 import { OnPageEntities } from '@/components/ui/on-page-entities';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,6 +15,13 @@ import {
   standingSentence,
 } from '@/lib/visibility/source-pages';
 import { pageFormatBasis, urlTypeLabel } from '@/lib/visibility/vocabulary';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 type Page = z.infer<typeof visibilitySourceUrlSchema>['page'];
 
@@ -37,12 +43,12 @@ export function SourceUrlPageCard({
   const standing = page?.standing ?? 'untracked';
   const brand = brandVerdict(page?.entities);
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>On this page</CardTitle>
-        <CardDescription>{standingSentence(standing)}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>On this page</SectionTitle>
+        <SectionDescription>{standingSentence(standing)}</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <Stack gap="workspace">
           {standing === 'gap' ? <GetListed url={url} actionId={page?.action_id ?? null} /> : null}
           <OnPageEntities
@@ -54,8 +60,8 @@ export function SourceUrlPageCard({
           ) : null}
           {page ? <PageFacts page={page} /> : null}
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 

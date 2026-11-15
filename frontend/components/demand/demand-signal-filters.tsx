@@ -1,4 +1,5 @@
 import { InfoHint } from '@/components/ui/info-hint';
+import { Inline } from '@/components/ui/layout';
 import { SegmentedControl, type SegmentedOption } from '@/components/ui/tabs';
 import type { DemandDetectorState } from '@citeladder/contracts';
 import type { DemandSnapshot } from '@/lib/api/demand';
@@ -125,6 +126,9 @@ export function DemandDataCaveats({ snapshot }: Readonly<{ snapshot: DemandSnaps
     new Set(snapshot.signals.flatMap((signal) => signal.limitations).filter(Boolean)),
   );
   return limitations.length > 0 ? (
-    <InfoHint label="Data caveats">{limitations.join(' ')}</InfoHint>
+    <Inline as="span" gap="tight">
+      Data caveats
+      <InfoHint label="Data caveats">{limitations.join(' ')}</InfoHint>
+    </Inline>
   ) : null;
 }

@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { integrationsApi } from '@/lib/api/integrations';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * Settings → Integrations when the workspace has no connections yet. It is the
@@ -19,8 +19,8 @@ export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: 
   // Connecting is a credential action, offered only to a role that may take it.
   const canManage = useWorkspaceCapability('manage_credentials');
   return (
-    <Card data-testid="integrations-empty-state">
-      <CardHeader
+    <Section data-testid="integrations-empty-state">
+      <SectionHeader
         actions={
           canManage ? (
             <>
@@ -40,13 +40,13 @@ export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: 
           ) : undefined
         }
       >
-        <CardTitle>No integrations connected</CardTitle>
-        <CardDescription>
+        <SectionTitle>No integrations connected</SectionTitle>
+        <SectionDescription>
           {canManage
             ? 'One Google consent connects Search Console and Analytics 4. Bing Webmaster Tools needs its own sign-in.'
             : 'A workspace Owner or Admin can connect Google Search Console, Analytics 4 and Bing Webmaster Tools.'}
-        </CardDescription>
-      </CardHeader>
-    </Card>
+        </SectionDescription>
+      </SectionHeader>
+    </Section>
   );
 }

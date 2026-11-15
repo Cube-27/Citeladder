@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Settings2 } from 'lucide-react';
 
-import { ListScreen, RESERVED_CONTROLS } from '@/components/layout/page-shell';
+import type { ReactNode } from 'react';
+
+import { RESERVED_CONTROLS } from '@/components/layout/page-shell';
+import { ReportPage } from '@/components/templates/report-page';
+import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { SearchIntelligenceCitationMatcher } from '@/components/search-intelligence/search-intelligence-citation-matcher';
 import { SearchIntelligenceCollection } from './search-intelligence-collection';
 import { useSearchCollection, type SearchCollection } from './search-intelligence-collection-state';
@@ -12,14 +16,13 @@ import { referringLists } from './search-intelligence-format';
 import { NotConnected, UnavailableNotice } from './search-intelligence-availability';
 import { CostDetails, RunNotice } from './search-intelligence-runs';
 import { Button } from '@/components/ui/button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Drawer } from '@/components/ui/drawer';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { savedViewFilters, scopeControls } from './search-intelligence-scope';
 import { Stack } from '@/components/ui/layout';
-import { TabPanel, TabsRoot } from '@/components/ui/tabs';
+import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import {
   searchIntelligenceMutations,
   searchIntelligenceQueries,
@@ -33,6 +36,8 @@ import { pollSearchRun } from '@/lib/search-intelligence/status';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 const TABS = [
   { value: 'overview', label: 'Overview' },
@@ -145,49 +150,46 @@ export function SearchIntelligencePage() {
   if (readiness.isPending)
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
-        <ListScreen
-          tabs={SEARCH_INTELLIGENCE_TABS}
-          controls={tab === 'overview' ? undefined : RESERVED_CONTROLS}
-        >
-          <QueryState kind="loading" label="Loading Keyword Research…" />
-        </ListScreen>
+        <KeywordResearchFrame controls={tab === 'overview' ? undefined : RESERVED_CONTROLS}>
+          <StateBlock kind="loading" label="Loading Keyword Research…" />
+        </KeywordResearchFrame>
       </TabsRoot>
     );
   // A failed read keeps the tab row, so the page does not lose its place.
   if (readiness.isError)
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
-        <ListScreen tabs={SEARCH_INTELLIGENCE_TABS}>
-          <QueryState
+        <KeywordResearchFrame>
+          <StateBlock
             kind="error"
             {...readErrorProps(readiness)}
             fallback="Keyword Research could not be loaded."
+            title="Keyword Research could not be loaded"
           />
-        </ListScreen>
+        </KeywordResearchFrame>
       </TabsRoot>
     );
   const data = readiness.data;
-  const tabs = SEARCH_INTELLIGENCE_TABS;
   if (!data.connected && !data.datasets.length)
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
-        <ListScreen tabs={tabs}>
+        <KeywordResearchFrame>
           <NotConnected funded={data.credential_mode === 'funded'} />
-        </ListScreen>
+        </KeywordResearchFrame>
       </TabsRoot>
     );
   if (!data.owned_targets.length)
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
-        <ListScreen tabs={tabs}>
-          <QueryState
+        <KeywordResearchFrame>
+          <StateBlock
             kind="empty"
             icon={Settings2}
             heading="Add your website address"
             description="Keyword Research needs the project’s homepage address."
             action={<TextLink href="/projects">Edit the project</TextLink>}
           />
-        </ListScreen>
+        </KeywordResearchFrame>
       </TabsRoot>
     );
   const firstRun = actions.analysis ? (
@@ -197,8 +199,7 @@ export function SearchIntelligencePage() {
   ) : undefined;
   return (
     <TabsRoot value={tab} onValueChange={setTab}>
-      <ListScreen
-        tabs={tabs}
+      <KeywordResearchFrame
         actions={
           <PageActions
             hasDatasets={Boolean(data.datasets.length)}
@@ -297,8 +298,29 @@ export function SearchIntelligencePage() {
             busy={reviewMutation.isPending || confirmMutation.isPending}
           />
         </Stack>
-      </ListScreen>
+      </KeywordResearchFrame>
     </TabsRoot>
+  );
+}
+
+/**
+ * Keyword Research is a Report: it reads saved datasets (figures, then the
+ * competitive footprint and each dataset's table), with no editor to work in.
+ * Every state keeps the tab row, so the page never loses its place.
+ */
+function KeywordResearchFrame({
+  actions,
+  controls,
+  children,
+}: Readonly<{ actions?: ReactNode; controls?: FilterBarProps; children: ReactNode }>) {
+  return (
+    <ReportPage
+      actions={actions}
+      tabs={<TabRow {...SEARCH_INTELLIGENCE_TABS} />}
+      filters={controls ? <FilterBar {...controls} /> : undefined}
+    >
+      {children}
+    </ReportPage>
   );
 }
 
@@ -347,7 +369,7 @@ function PageActions({
   onCost: () => void;
 }>) {
   const costDetails = (
-    <Button variant="ghost" onClick={onCost}>
+    <Button variant="quiet" onClick={onCost}>
       Cost details
     </Button>
   );
@@ -360,14 +382,18 @@ function PageActions({
           <Button variant="secondary" onClick={() => onReview('refresh')}>
             Refresh
           </Button>
-          <Button variant="primary" onClick={() => onReview('analysis')}>
-            New analysis
-          </Button>
+          <MastheadPrimary>
+            <Button variant="primary" onClick={() => onReview('analysis')}>
+              New analysis
+            </Button>
+          </MastheadPrimary>
         </>
       ) : (
-        <Button variant="primary" onClick={() => onReview('analysis')}>
-          Review first analysis
-        </Button>
+        <MastheadPrimary>
+          <Button variant="primary" onClick={() => onReview('analysis')}>
+            Review first analysis
+          </Button>
+        </MastheadPrimary>
       )}
     </>
   );
@@ -453,7 +479,7 @@ function CollectionAction({
         </Button>
       ) : null}
       {expandable && onExpand ? (
-        <Button variant="ghost" onClick={onExpand}>
+        <Button variant="quiet" onClick={onExpand}>
           Review depth
         </Button>
       ) : null}

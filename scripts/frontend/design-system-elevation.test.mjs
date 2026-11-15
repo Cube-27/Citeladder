@@ -18,7 +18,7 @@ test('elevation policy admits only roles and diagnoses radius family drift separ
   }
   assert.deepEqual(
     shadowRoleViolations(
-      '<div className="shadow-none shadow-xs shadow-float shadow-pop shadow-press" />',
+      '<div className="shadow-none shadow-sheet" />',
       label,
       true,
     ),
@@ -32,17 +32,19 @@ test('elevation policy admits only roles and diagnoses radius family drift separ
     ).length,
     1,
   );
+  // The website's shadows are not the app's: nothing at rest has one.
+  assert.equal(shadowRoleViolations('<div className="shadow-float" />', label, true).length, 1);
   assert.deepEqual(
     shadowRoleViolations(
-      '.surface { box-shadow: var(--shadow-pop); }',
+      '.surface { box-shadow: var(--shadow-sheet); }',
       'apps/app/src/example.css',
       true,
     ),
     [],
   );
-  assert.deepEqual(radiusRoleAdvisories('<Button className="rounded-lg" />', label, true), [
-    'components/ui/example.tsx:1: review Button radius; its family is rounded-md',
+  assert.deepEqual(radiusRoleAdvisories('<Button className="rounded-sheet" />', label, true), [
+    'components/ui/example.tsx:1: review Button radius; its family is rounded-control',
   ]);
-  assert.deepEqual(radiusRoleAdvisories('<Button className="rounded-md" />', label, true), []);
-  assert.deepEqual(radiusRoleAdvisories('<Card className="rounded-lg" />', label, true), []);
+  assert.deepEqual(radiusRoleAdvisories('<Button className="rounded-control" />', label, true), []);
+  assert.deepEqual(radiusRoleAdvisories('<Dialog className="rounded-sheet" />', label, true), []);
 });

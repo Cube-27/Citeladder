@@ -3,7 +3,6 @@ import { Pencil, Sparkles } from 'lucide-react';
 import { useState, type FormEvent, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -22,6 +21,7 @@ import {
 import { agentMutations, type AgentDocumentRef, type AgentRevision } from '@/lib/api/agent';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
+import { Notice } from '@/components/ui/notice';
 
 /** Outputs with at least this many titled sections get a contents list. */
 const CONTENTS_MIN_SECTIONS = 3;
@@ -59,13 +59,13 @@ export function OutputCanvas({
     <Stack gap="workspace">
       {titled.length >= CONTENTS_MIN_SECTIONS ? (
         <Stack as="nav" gap="tight" aria-label="Contents">
-          <span className={textRole('label')}>Contents</span>
+          <span className={textRole('body', 'text-ink-2')}>Contents</span>
           <Stack as="ol" gap="tight" className={treeBranchClasses()}>
             {sections.map((section, index) =>
               section.heading === null ? null : (
                 <li key={section.start}>
                   <Pressable
-                    className={textRole('caption', 'hover:text-accent-ink w-auto')}
+                    className={textRole('caption', 'hover:text-accent-text w-auto')}
                     onClick={() =>
                       document
                         .getElementById(sectionId(revision.id, index))
@@ -163,7 +163,7 @@ function SectionBlock({
         // Quiet until the section is hovered or focused; always shown on touch.
         <Inline className="flex-wrap transition-opacity [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-focus-within:opacity-100 [@media(hover:hover)]:group-hover:opacity-100">
           <Button
-            variant="ghost"
+            variant="quiet"
             disabled={!canSend}
             aria-expanded={mode === 'revise'}
             aria-label={`Ask the agent to revise ${name}`}
@@ -172,7 +172,7 @@ function SectionBlock({
             <Icon icon={Sparkles} />
             Revise
           </Button>
-          <Button variant="ghost" aria-label={`Edit ${name}`} onClick={() => onMode('edit')}>
+          <Button variant="quiet" aria-label={`Edit ${name}`} onClick={() => onMode('edit')}>
             <Icon icon={Pencil} />
             Edit
           </Button>
@@ -214,7 +214,7 @@ function ReviseForm({
       <Button type="submit" variant="primary" disabled={!instruction.trim()}>
         Ask agent
       </Button>
-      <Button type="button" variant="ghost" onClick={onCancel}>
+      <Button type="button" variant="quiet" onClick={onCancel}>
         Cancel
       </Button>
     </Inline>
@@ -276,10 +276,10 @@ function SectionEditor({
         onChange={(event) => setText(event.target.value)}
       />
       {save.isError ? (
-        <MutationNotice notice={agentWriteFailure(save.error, 'save the section')} />
+        <Notice kind="mutation" notice={agentWriteFailure(save.error, 'save the section')} />
       ) : null}
       <Inline className="justify-end">
-        <Button type="button" variant="ghost" onClick={done} disabled={save.isPending}>
+        <Button type="button" variant="quiet" onClick={done} disabled={save.isPending}>
           Cancel
         </Button>
         <Button

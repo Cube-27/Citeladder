@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import type { CrawlRobotsChoice, CrawlRobotsHandling } from '@citeladder/contracts';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
@@ -13,7 +13,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 export function RobotsExcludedBadge() {
   return (
     <Tooltip content="robots.txt excludes this page. It was fetched because the crawl ignored robots.txt.">
-      <Badge tone="warning">Robots.txt excluded</Badge>
+      <StatusMark tone="warning">Robots.txt excluded</StatusMark>
     </Tooltip>
   );
 }

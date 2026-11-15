@@ -1,6 +1,6 @@
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { mutedWhenMissing, TableCell, TableRow } from '@/components/ui/table';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { ICONS } from '@/lib/icons';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
@@ -64,7 +64,7 @@ export function PageKindScores({
             <TableCell className="whitespace-nowrap">
               <PageKindBadge pageKind={row.page_kind} />
             </TableCell>
-            <TableCell numeric className="text-ink-secondary">
+            <TableCell numeric className="text-ink-2">
               {row.analyzed_count}
             </TableCell>
             <TableCell numeric className={mutedWhenMissing(row.web_fundamentals_score)}>
@@ -83,7 +83,7 @@ export function PageKindScores({
             </TableCell>
             <TableCell numeric>
               {row.aeo_measurement_coverage === null ? (
-                <UnavailableValue state="not_measured" />
+                <Absence state="not_measured" />
               ) : (
                 `${Math.round(row.aeo_measurement_coverage * 100)}%`
               )}
@@ -120,5 +120,5 @@ function MeasurementValue({
   }
   if (state === 'limited_evidence') return 'Limited evidence';
   if (state === 'excluded') return 'Excluded';
-  return <UnavailableValue state="not_measured" />;
+  return <Absence state="not_measured" />;
 }

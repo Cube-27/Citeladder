@@ -6,7 +6,6 @@ import { ApiError } from '@/lib/api/errors';
 
 import { Avatar } from './avatar';
 import { Button } from './button';
-import { Card, CardHeader, CardTitle } from './card';
 import { ChartSwatch } from './chart';
 import { Delta } from './delta';
 import { choiceFilter } from './all-filters';
@@ -14,9 +13,9 @@ import { FilterBar, FilterTrigger } from './filter-bar';
 import { DataTable } from './data-table';
 import { Meter } from './meter';
 import { Pager, pageNumberControls } from './pager';
-import { QueryState } from './query-state';
+import { StateBlock } from './state-block';
 import { SearchField } from './search-field';
-import { StatRow } from './stat-row';
+import { FigureStrip } from './figure-strip';
 import { Table, TableCell, TableHeader, TableRow } from './table';
 import { SortableTableHead } from './table-heads';
 import { SegmentedControl } from './tabs';
@@ -25,15 +24,16 @@ import { renderWithProviders } from '@/test/render';
 
 import { ArrowLink, TextLink } from './text-link';
 import { TooltipProvider } from './tooltip';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
-describe('CardHeader actions', () => {
+describe('SectionHeader actions', () => {
   it('keeps the actions in the header beside the title', () => {
     render(
-      <Card aria-label="Issues">
-        <CardHeader actions={<Button>Export</Button>}>
-          <CardTitle>Issues</CardTitle>
-        </CardHeader>
-      </Card>,
+      <Section aria-label="Issues">
+        <SectionHeader actions={<Button>Export</Button>}>
+          <SectionTitle>Issues</SectionTitle>
+        </SectionHeader>
+      </Section>,
     );
     const header = screen.getByRole('heading', { name: 'Issues' }).closest('header');
     expect(header).not.toBeNull();
@@ -41,19 +41,31 @@ describe('CardHeader actions', () => {
   });
 });
 
+/** The text a screen reader reads: every text node outside an aria-hidden subtree. */
+function spokenText(root: Element) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let text = '';
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.parentElement?.closest('[aria-hidden="true"]')) text += node.textContent ?? '';
+  }
+  return text;
+}
+
 describe('Delta', () => {
   it('says the rounded direction in words, tones it by policy and never fakes a zero', () => {
     const { container, rerender } = render(
       <Delta value={-1.24} unit=" pp" policy="lower-is-better" context="vs last week" />,
     );
     const fall = screen.getByText('1.2 pp').closest('[data-direction]');
-    expect(fall?.textContent).toBe('↓down 1.2 ppvs last week');
+    expect(fall?.textContent).toBe('↓down -1.2 ppvs last week');
+    // The arrow and the sign are drawn; a screen reader hears the word alone.
+    expect(fall ? spokenText(fall) : null).toBe('down 1.2 ppvs last week');
     // A falling rank is an improvement under lower-is-better.
     expect(fall).toHaveAttribute('data-outcome', 'improved');
 
-    // +0.04 rounds to a displayed 0.0: flat, spoken as no change.
+    // +0.04 rounds to a displayed 0.0: flat, a printed 0, spoken as no change.
     rerender(<Delta value={0.04} />);
-    expect(container.textContent).toBe('→no change 0.0');
+    expect(container.textContent).toBe('→no change 0');
 
     rerender(
       <TooltipProvider>
@@ -64,11 +76,11 @@ describe('Delta', () => {
   });
 });
 
-describe('StatRow', () => {
-  it('names a missing value, draws a score as a ring and makes a pressable stat a toggle', () => {
+describe('FigureStrip', () => {
+  it('names a missing value, draws a score as rungs and makes a pressable figure a toggle', () => {
     const onSelect = vi.fn();
     render(
-      <StatRow
+      <FigureStrip
         label="Delivery"
         segments={[
           { key: 'ttfb', label: 'TTFB', value: null },
@@ -85,12 +97,15 @@ describe('StatRow', () => {
       />,
     );
     const group = screen.getByRole('group', { name: 'Delivery' });
-    expect(within(group).getByText('TTFB').closest('[data-stat-segment]')).toHaveTextContent(
+    expect(within(group).getByText('TTFB').closest('[data-figure-cell]')).toHaveTextContent(
       'Not measured',
     );
-    // A score is its ring: one image named with the number, no bar.
-    expect(within(group).getByRole('img', { name: 'Crawl score: 72 out of 100' })).toBeVisible();
-    expect(within(group).queryByRole('meter')).not.toBeInTheDocument();
+    // A score is a rung meter carrying its number, never a ring.
+    expect(within(group).getByRole('progressbar', { name: 'Crawl score' })).toHaveAttribute(
+      'aria-valuetext',
+      '72 out of 100',
+    );
+    expect(within(group).queryByRole('img')).not.toBeInTheDocument();
     const toggle = within(group).getByRole('button', { name: 'View 3 orphaned pages' });
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(toggle);
@@ -99,7 +114,7 @@ describe('StatRow', () => {
 
   it('puts a comparison window under the value, its absence named like the value', () => {
     render(
-      <StatRow
+      <FigureStrip
         label="Search Console metrics"
         segments={[
           {
@@ -120,9 +135,9 @@ describe('StatRow', () => {
     );
     const group = screen.getByRole('group', { name: 'Search Console metrics' });
     const [clicks, ctr] = within(group).getAllByText('Previous 28 days');
-    expect(clicks?.closest('[data-stat-comparison]')).toHaveTextContent('Previous 28 days980');
-    expect(ctr?.closest('[data-stat-comparison]')).toHaveTextContent(
-      'Previous 28 days–Not measured',
+    expect(clicks?.closest('[data-figure-comparison]')).toHaveTextContent('Previous 28 days980');
+    expect(ctr?.closest('[data-figure-comparison]')).toHaveTextContent(
+      'Previous 28 daysNot measured',
     );
   });
 });
@@ -414,10 +429,10 @@ describe('Pager', () => {
   });
 });
 
-describe('QueryState', () => {
+describe('StateBlock', () => {
   it('states an inline absence as one line with its one action', () => {
     render(
-      <QueryState kind="empty" inline message="No rules yet." action={<Button>Add rule</Button>} />,
+      <StateBlock kind="empty" inline message="No rules yet." action={<Button>Add rule</Button>} />,
     );
     expect(screen.getByText('No rules yet.')).toBeInTheDocument();
     expect(screen.queryByRole('heading')).toBeNull();
@@ -426,12 +441,12 @@ describe('QueryState', () => {
 
   it('announces loading only after the delay, then reports a failed read with its retry', async () => {
     const onRetry = vi.fn();
-    const { rerender } = render(<QueryState kind="loading" label="Loading issues…" />);
+    const { rerender } = render(<StateBlock kind="loading" label="Loading issues…" />);
     expect(screen.queryByRole('status')).toBeNull();
     expect(await screen.findByRole('status', { name: 'Loading issues…' })).toBeInTheDocument();
 
     rerender(
-      <QueryState
+      <StateBlock
         kind="error"
         error={new ApiError('Temporarily unavailable', 503, '')}
         fallback="Issues could not be loaded."
@@ -444,23 +459,23 @@ describe('QueryState', () => {
   });
 
   it('keeps a shown spinner when the next owner of the same wait takes over', async () => {
-    const { rerender } = render(<QueryState key="shell" kind="loading" label="Loading shell…" />);
+    const { rerender } = render(<StateBlock key="shell" kind="loading" label="Loading shell…" />);
     expect(await screen.findByRole('status', { name: 'Loading shell…' })).toBeInTheDocument();
 
     // A different owner's box (a fresh mount) continues the visible wait at once.
-    rerender(<QueryState key="page" kind="loading" label="Loading page…" />);
+    rerender(<StateBlock key="page" kind="loading" label="Loading page…" />);
     expect(screen.getByRole('status', { name: 'Loading page…' })).toBeInTheDocument();
 
     // A wait that starts with nothing showing is still held back.
     rerender(<p>Loaded</p>);
-    rerender(<QueryState key="section" kind="loading" label="Loading section…" />);
+    rerender(<StateBlock key="section" kind="loading" label="Loading section…" />);
     expect(screen.queryByRole('status')).toBeNull();
     expect(await screen.findByRole('status', { name: 'Loading section…' })).toBeInTheDocument();
   });
 
   it('states a first-use absence with its heading and one action', () => {
     render(
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={Inbox}
         heading="No issues yet"
@@ -476,12 +491,12 @@ describe('QueryState', () => {
   it('heads an empty state inside a card one rung under the page, unless told otherwise', () => {
     render(
       <>
-        <Card>
-          <QueryState kind="empty" icon={Inbox} heading="No mentions yet" />
-        </Card>
-        <Card>
-          <QueryState kind="empty" icon={Inbox} heading="No sources yet" headingLevel={2} />
-        </Card>
+        <Section>
+          <StateBlock kind="empty" icon={Inbox} heading="No mentions yet" />
+        </Section>
+        <Section>
+          <StateBlock kind="empty" icon={Inbox} heading="No sources yet" headingLevel={2} />
+        </Section>
       </>,
     );
     expect(screen.getByRole('heading', { name: 'No mentions yet' }).tagName).toBe('H3');
@@ -490,7 +505,7 @@ describe('QueryState', () => {
 
   it('says a compact absence in one line with its action and no heading', () => {
     render(
-      <QueryState
+      <StateBlock
         kind="empty"
         inline
         compact

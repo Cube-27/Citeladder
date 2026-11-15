@@ -9,7 +9,6 @@ import type { usePerformanceSync } from './use-performance-sync';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
 import type { StatusMessage } from '@/components/ui/status-line';
-import { QueryState } from '@/components/ui/query-state';
 import type { useRangeProjection } from './use-range-projection';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { SegmentedAction, SegmentedControl } from '@/components/ui/tabs';
@@ -21,6 +20,7 @@ import {
   GRANULARITY_OPTIONS,
   QUICK_RANGE_OPTIONS,
 } from '@/lib/performance/performance';
+import { StateBlock } from '@/components/ui/state-block';
 
 /** The three ranges that live on the track; everything else is behind More. */
 type QuickRange = (typeof QUICK_RANGE_OPTIONS)[number]['value'];
@@ -58,12 +58,23 @@ function quickRangeValue(selection: RangeSelection, comparing: boolean): QuickRa
 }
 
 /**
- * The resolved window, as the control band's caption: it describes what the
- * range controls selected, so it reads as a note beside them, not as one more
- * filter.
+ * The control band's caption: the resolved window, a note beside the range
+ * controls rather than one more filter, and how far the imported history
+ * reaches. Both are status, not actions, so they never fold behind the
+ * masthead's More actions.
  */
-export function PerformanceWindowCaption({ label }: Readonly<{ label: string }>) {
-  return <span data-testid="performance-window">{label}</span>;
+export function PerformanceWindowCaption({
+  label,
+  latestDate,
+}: Readonly<{ label: string; latestDate: string | null }>) {
+  return (
+    <>
+      <span data-testid="performance-window">{label}</span>
+      <span>
+        {latestDate ? `Data through ${formatWindowDate(latestDate)}` : 'No imported history'}
+      </span>
+    </>
+  );
 }
 
 /** The dashboard's range controls, leading its control row as its view: the quick windows, More, and Reset. */
@@ -118,7 +129,7 @@ export function PerformanceToolbar({
       {/* Reset belongs to the comparison: it is what returns "Compare" to
           "More". With no comparison active there is nothing it would undo. */}
       {comparing ? (
-        <Button variant="ghost" onClick={onReset} data-testid="reset-filters-button">
+        <Button variant="quiet" onClick={onReset} data-testid="reset-filters-button">
           <Icon icon={RotateCcw} />
           Reset filters
         </Button>
@@ -133,37 +144,28 @@ export function PerformanceToolbar({
  * of the filter row.
  */
 export function PerformanceActions({
-  latestDate,
   noConnections,
   sync,
 }: Readonly<{
-  latestDate: string | null;
   /** The connections read answered with none; unknown is not none. */
   noConnections: boolean;
   sync: ReturnType<typeof usePerformanceSync>;
 }>) {
   // Syncing is a run; a role without it reads the imported history only.
   const canRun = useWorkspaceCapability('run');
-  return (
-    <>
-      <span className="type-caption">
-        {latestDate ? `Data through ${formatWindowDate(latestDate)}` : 'No imported history'}
-      </span>
-      {canRun ? (
-        <Button
-          variant="secondary"
-          onClick={sync.start}
-          disabled={noConnections}
-          pending={sync.syncing || sync.mutation.isPending}
-          pendingLabel="Syncing…"
-          data-testid="sync-now-button"
-        >
-          <Icon icon={RefreshCw} />
-          Sync now
-        </Button>
-      ) : null}
-    </>
-  );
+  return canRun ? (
+    <Button
+      variant="secondary"
+      onClick={sync.start}
+      disabled={noConnections}
+      pending={sync.syncing || sync.mutation.isPending}
+      pendingLabel="Syncing…"
+      data-testid="sync-now-button"
+    >
+      <Icon icon={RefreshCw} />
+      Sync now
+    </Button>
+  ) : null;
 }
 
 /**
@@ -213,7 +215,7 @@ export function ProjectionFailure({
 }: Readonly<{ failure: ReturnType<typeof useRangeProjection>['failure'] }>) {
   if (!failure) return null;
   return (
-    <QueryState
+    <StateBlock
       kind="error"
       title="Couldn't build this range"
       error={failure.error}

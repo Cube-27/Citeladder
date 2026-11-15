@@ -1,6 +1,6 @@
 import { useRef, useState, type ComponentProps, type ReactNode, type RefObject } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
 
@@ -107,7 +107,7 @@ export function CsvImportFileInput({
 }>) {
   return (
     <label className="grid gap-2">
-      <span className="type-label">{label}</span>
+      <span className="type-body text-ink-2">{label}</span>
       <input
         ref={inputRef}
         type="file"
@@ -118,7 +118,7 @@ export function CsvImportFileInput({
           onSelect(file);
           event.currentTarget.value = '';
         }}
-        className="focus-ring border-line bg-surface shadow-edge text-ink file:bg-surface-sunken file:text-ink type-body type-control-file block w-full rounded-md border px-2 py-2 file:me-2 file:rounded-md file:border-0 file:px-2 file:py-1"
+        className="focus-ring border-rule bg-surface text-ink file:bg-well file:text-ink type-body type-control-file rounded-control file:rounded-control block w-full border px-2 py-2 file:me-2 file:border-0 file:px-2 file:py-1"
       />
     </label>
   );
@@ -138,19 +138,19 @@ export function CsvImportPreview({
 }>) {
   return (
     <div className="grid gap-2">
-      <div className="type-body flex items-center gap-3">
+      <div className="type-body text-ink-2 flex items-center gap-3">
         <span>
           Parsed <span className="text-ink">{rowCount}</span> row
           {rowCount === 1 ? '' : 's'}
           {fileName ? ` from ${fileName}` : ''}.
         </span>
         {errorCount > 0 ? (
-          <Badge variant="status" value="danger">
+          <StatusMark variant="status" value="danger">
             {errorCount} skipped
-          </Badge>
+          </StatusMark>
         ) : null}
       </div>
-      <div className="border-line max-h-85 overflow-auto rounded-md border">{children}</div>
+      <div className="border-rule rounded-control max-h-85 overflow-auto border">{children}</div>
     </div>
   );
 }

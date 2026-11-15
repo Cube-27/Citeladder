@@ -2,22 +2,21 @@ import { useMutation } from '@tanstack/react-query';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
-import { ListScreen } from '@/components/layout/page-shell';
+import { UserMenuTrigger } from '@/components/layout/user-menu';
+import { FlowBlock, FlowPage } from '@/components/templates/flow-page';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';
+import { Notice } from '@/components/ui/notice';
 
-/** `/invitations/accept`: the acceptance in the shell's list template. */
+/** `/invitations/accept`: the acceptance as a Flow page, before the shell opens. */
 export function AcceptInvitationPage() {
   return (
-    <ListScreen>
+    <FlowPage label="Invitation" barEnd={<UserMenuTrigger presenter="compact" />}>
       <AcceptInvitationScreen />
-    </ListScreen>
+    </FlowPage>
   );
 }
 
@@ -53,44 +52,40 @@ export function AcceptInvitationScreen() {
 
   if (!token) {
     return (
-      <Stack gap="workspace">
-        <EditorialSectionHeader
-          title="Invitation"
-          description="This link is missing its invitation token."
-        />
-        <Callout tone="negative">
+      <FlowBlock title="Invitation" sub="This link is missing its invitation token.">
+        <Notice tone="negative">
           Open the invitation link exactly as it was sent to you, or ask for a new one.
-        </Callout>
-      </Stack>
+        </Notice>
+      </FlowBlock>
     );
   }
 
   return (
-    <Stack gap="workspace">
-      <EditorialSectionHeader
-        title="Joining workspace"
-        description="Invitations are single-use and expire, and they only work for the address they were sent to."
-      />
+    <FlowBlock
+      title="Joining workspace"
+      sub="Invitations are single-use and expire, and they only work for the address they were sent to."
+    >
       {accept.isError ? (
         <Stack gap="compact">
-          <MutationNotice
+          <Notice
+            kind="mutation"
             notice={mutationNoticeForError(accept.error, {
               action: 'accept this invitation',
             })}
           />
           <div>
-            <Button type="button" variant="ghost" onClick={() => router('/projects')}>
+            <Button type="button" variant="quiet" onClick={() => router('/projects')}>
               Go to your workspace
             </Button>
           </div>
         </Stack>
       ) : (
-        <Callout tone="info">
+        <Notice tone="info">
           {accept.isSuccess
             ? 'You have joined. Taking you there now.'
             : 'Checking your invitation.'}
-        </Callout>
+        </Notice>
       )}
-    </Stack>
+    </FlowBlock>
   );
 }

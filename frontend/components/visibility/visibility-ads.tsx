@@ -1,17 +1,13 @@
 import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
 import { Megaphone } from 'lucide-react';
 
-import { BusyBar } from '@/components/ui/progress-bar';
+import { BusyRung } from '@/components/ui/rung-meter';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatRow } from '@/components/ui/stat-row';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { Inline, Stack } from '@/components/ui/layout';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayShortDate, formatPercent, measured, pluralCount } from '@/lib/format';
@@ -27,6 +23,16 @@ import { mergedAdPages, useAds } from '@/lib/visibility/use-ads';
 import { AdOwnershipChip } from '@/components/visibility/ad-ownership-chip';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
  * Paid ads shown in ChatGPT Search answers. Ads are reported apart from
@@ -40,7 +46,8 @@ export function VisibilityAds({
   const [firstPage, ...laterPages] = query.data?.pages ?? [];
   if (query.error)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load ads. Check your connection and try again."
         onRetry={() => void query.refetch()}
@@ -52,7 +59,7 @@ export function VisibilityAds({
   if (!firstPage) return <AdsLoading />;
   return (
     <div className="relative">
-      <BusyBar active={query.isFetching && !query.isFetchingNextPage} label="Updating ads" />
+      <BusyRung active={query.isFetching && !query.isFetchingNextPage} label="Updating ads" />
       <AdsView
         data={mergedAdPages([firstPage, ...laterPages])}
         onShowMore={query.hasNextPage ? () => void query.fetchNextPage() : undefined}
@@ -88,7 +95,7 @@ export function AdsView({
 }
 
 function CoverageNote() {
-  return <p className={textRole('caption', 'text-ink-muted')}>{ADS_COVERAGE_NOTE}</p>;
+  return <p className={textRole('caption', 'text-ink-2')}>{ADS_COVERAGE_NOTE}</p>;
 }
 
 /** A read with no ads to show, with each engine's applicability named. */
@@ -107,7 +114,7 @@ function AdsState({
     .map((engine) => `${engineLabel(engine.engine)}: ${AD_APPLICABILITY[engine.applicability]}`)
     .join(' · ');
   return (
-    <QueryState
+    <StateBlock
       kind="empty"
       headingLevel={3}
       icon={Megaphone}
@@ -121,7 +128,7 @@ function EngineApplicability({ engines }: Readonly<{ engines: VisibilityAdsRespo
   const { label: engineLabel } = useEngineCatalog();
   if (!engines.length) return null;
   return (
-    <Inline as="ul" gap="meta" className={textRole('caption', 'text-ink-muted')}>
+    <Inline as="ul" gap="meta" className={textRole('caption', 'text-ink-2')}>
       {engines.map((engine) => (
         <li key={engine.engine}>
           {engineLabel(engine.engine)}: {AD_APPLICABILITY[engine.applicability]}
@@ -133,10 +140,10 @@ function EngineApplicability({ engines }: Readonly<{ engines: VisibilityAdsRespo
 
 function Headline({ data }: Readonly<{ data: VisibilityAdsResponse }>) {
   return (
-    <Card>
-      <CardContent>
+    <Section>
+      <SectionContent>
         <Stack gap="item">
-          <StatRow
+          <FigureStrip
             label="Ads in ChatGPT answers"
             segments={[
               {
@@ -167,8 +174,8 @@ function Headline({ data }: Readonly<{ data: VisibilityAdsResponse }>) {
           <EngineApplicability engines={data.engines} />
           <CoverageNote />
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -196,7 +203,7 @@ function AdvertiserTable({
                 <ClampText lines={1}>{advertiser.name}</ClampText>
                 <AdOwnershipChip ownership={advertiser.ownership} />
               </Inline>
-              <ClampText lines={1} className={textRole('caption', 'text-ink-muted')}>
+              <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
                 {advertiser.domain}
               </ClampText>
             </span>
@@ -254,7 +261,7 @@ function PromptTable({ prompts }: Readonly<{ prompts: VisibilityAdsResponse['pro
           <TableRow key={row.prompt}>
             <TableCell>{row.prompt}</TableCell>
             <TableCell numeric>{row.ads_seen}</TableCell>
-            <TableCell>{row.top_advertiser?.name ?? <MissingValue />}</TableCell>
+            <TableCell>{row.top_advertiser?.name ?? <Absence />}</TableCell>
             <TableCell>
               {withCompetitorAd
                 ? `${beside.brand_mentioned} of ${withCompetitorAd} answers`
@@ -277,19 +284,19 @@ function CreativeList({
   loadingMore: boolean;
 }>) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Ad creatives</CardTitle>
-        <CardDescription>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Ad creatives</SectionTitle>
+        <SectionDescription>
           {creatives.items.length < creatives.total
             ? `The ${creatives.items.length} most frequent of ${creatives.total} creatives, as text.`
             : 'The ads as text, with where they lead.'}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <Stack>
           {!creatives.items.length ? (
-            <QueryState kind="empty" inline message="No ads in these answers." />
+            <StateBlock kind="empty" inline message="No ads in these answers." />
           ) : (
             <Stack as="ul">
               {creatives.items.map((creative) => (
@@ -303,11 +310,9 @@ function CreativeList({
                     <AdOwnershipChip ownership={creative.ownership} />
                   </Inline>
                   {creative.snippet ? (
-                    <span className={textRole('body', 'text-ink-secondary')}>
-                      {creative.snippet}
-                    </span>
+                    <span className={textRole('body', 'text-ink-2')}>{creative.snippet}</span>
                   ) : null}
-                  <span className={textRole('caption', 'text-ink-muted')}>
+                  <span className={textRole('caption', 'text-ink-2')}>
                     {creative.advertiser_name} · {landingLabel(creative.landing_url)} ·{' '}
                     {pluralCount(creative.appearances, 'appearance')}
                   </span>
@@ -326,7 +331,7 @@ function CreativeList({
             </Button>
           ) : null}
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }

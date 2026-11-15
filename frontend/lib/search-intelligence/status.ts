@@ -5,7 +5,7 @@
  * and cost history name a run's status from this record.
  */
 import type { SearchRunStatus } from '@citeladder/contracts';
-import type { RunStatusValue } from '@/components/ui/badge';
+import type { RunStatusValue } from '@/components/ui/status-mark';
 import { SEARCH_INTELLIGENCE_RUN_POLL_MS } from '@/lib/config/operational';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
 

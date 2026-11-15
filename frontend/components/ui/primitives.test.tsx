@@ -4,20 +4,18 @@ import { createRef } from 'react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { Button } from './button';
-import { Callout } from './callout';
-import { Card, CardContent, CardHeader, CardTitle } from './card';
 import { Citation } from './citation';
-import { EmptyState } from './empty-state';
 import { EngineMark } from './engine-mark';
 import { Field } from './field';
 import { Input } from './input';
 import { Kbd } from './kbd';
-import { BusyBar, ProgressBar } from './progress-bar';
+import { BusyRung, RungMeter } from '@/components/ui/rung-meter';
 import { Rungs } from './rungs';
 import { ScoreRing } from './score-ring';
 import { Skeleton } from './skeleton';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './table';
 import { TrendChart } from './trend-chart';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 describe('Button', () => {
   it('defaults to a non-submitting button', () => {
@@ -27,15 +25,15 @@ describe('Button', () => {
   });
 });
 
-describe('Card', () => {
+describe('Section', () => {
   it('renders semantic header/title/content slots', () => {
     render(
-      <Card data-testid="card">
-        <CardHeader>
-          <CardTitle>Visibility</CardTitle>
-        </CardHeader>
-        <CardContent>Body</CardContent>
-      </Card>,
+      <Section data-testid="card">
+        <SectionHeader>
+          <SectionTitle>Visibility</SectionTitle>
+        </SectionHeader>
+        <SectionContent>Body</SectionContent>
+      </Section>,
     );
     expect(screen.getByText('Visibility').tagName).toBe('H3');
     expect(screen.getByText('Body')).toBeInTheDocument();
@@ -100,46 +98,6 @@ describe('Input + Field', () => {
   });
 });
 
-describe('Callout', () => {
-  it('announces negative and warning callouts as alerts and the rest as status, with the tone word', () => {
-    const { rerender } = render(
-      <Callout tone="negative" title="Crawl failed">
-        The site returned 503.
-      </Callout>,
-    );
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'Error: Crawl failedThe site returned 503.',
-    );
-
-    rerender(<Callout tone="positive">Saved</Callout>);
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('Saved');
-  });
-
-  it('renders nothing without a title or body', () => {
-    const { container } = render(<Callout tone="info" />);
-    expect(container).toBeEmptyDOMElement();
-    render(<Callout tone="info">Data refreshes nightly</Callout>);
-    expect(screen.getByRole('status')).toHaveTextContent('Data refreshes nightly');
-  });
-});
-
-describe('EmptyState', () => {
-  it('names the empty view with a heading at the requested level and offers its actions', () => {
-    render(
-      <EmptyState
-        title="No prompts yet"
-        description="Add a prompt to start measuring."
-        headingLevel={2}
-        primary={<Button variant="primary">Add prompt</Button>}
-      />,
-    );
-    expect(screen.getByRole('heading', { level: 2, name: 'No prompts yet' })).toBeInTheDocument();
-    expect(screen.getByText('Add a prompt to start measuring.')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Add prompt' })).toBeInTheDocument();
-  });
-});
-
 describe('Skeleton', () => {
   it('announces one busy status by its label while the bars stay hidden', () => {
     render(<Skeleton variant="row" rows={3} label="Loading prompts" />);
@@ -149,26 +107,26 @@ describe('Skeleton', () => {
   });
 });
 
-describe('ProgressBar', () => {
+describe('RungMeter', () => {
   it('reports its value in the product units and goes busy without one', () => {
     const { rerender } = render(
-      <ProgressBar label="Running prompts" value={48} max={120} valueLabel="48 of 120 prompts" />,
+      <RungMeter label="Running prompts" value={48} max={120} valueLabel="48 of 120 prompts" />,
     );
     const bar = screen.getByRole('progressbar', { name: 'Running prompts' });
     expect(bar).toHaveAttribute('value', '48');
     expect(bar).toHaveAttribute('max', '120');
     expect(screen.getByText('48 of 120 prompts')).toBeInTheDocument();
 
-    rerender(<ProgressBar label="Running prompts" />);
+    rerender(<RungMeter label="Running prompts" />);
     const busy = screen.getByRole('progressbar', { name: 'Running prompts' });
     expect(busy).toHaveAttribute('aria-busy', 'true');
     expect(busy).not.toHaveAttribute('value');
   });
 
   it('shows a background refresh only while active', () => {
-    const { rerender } = render(<BusyBar active={false} label="Updating usage" />);
+    const { rerender } = render(<BusyRung active={false} label="Updating usage" />);
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
-    rerender(<BusyBar active label="Updating usage" />);
+    rerender(<BusyRung active label="Updating usage" />);
     expect(screen.getByRole('progressbar', { name: 'Updating usage' })).toBeInTheDocument();
   });
 });

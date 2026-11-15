@@ -8,13 +8,12 @@ import { cn } from '@/lib/utils';
 /**
  * Meter — a labelled value against a maximum on a thin bar: plan usage,
  * credits, a brand's share of answers. The label (14/20 `ink`) sits left and
- * the value (14/20 `ink-secondary`, tabular) right, over a 6px `chart-grid`
+ * the value (14/20 `ink-2`, tabular) right, over a 6px `rule`
  * track; `hint` says the consequence under it.
  *
  * `tone` is `ink` by default; `accent` only for your own brand's share;
  * `warning` from about 90% of a limit and `negative` when a limit is hit.
- * A score out of 100 is a `ScoreRing` (its number alone in a table), and
- * work in progress a `ProgressBar`.
+ * A score out of 100 and work in progress are a `RungMeter`.
  *
  * `value: null` is an unmeasured value, never zero: an empty track, no
  * `aria-valuenow`, and "Not measured" as the spoken value.
@@ -23,7 +22,7 @@ export type MeterTone = 'ink' | 'accent' | 'warning' | 'negative';
 
 const METER_FILL = {
   ink: 'bg-ink',
-  accent: 'bg-data-1',
+  accent: 'bg-data-you',
   warning: 'bg-warning',
   negative: 'bg-negative',
 } as const satisfies Record<MeterTone, string>;
@@ -60,7 +59,7 @@ function MeterTrack({
       aria-valuemax={max}
       aria-valuenow={value === null ? undefined : Math.min(max, Math.max(0, value))}
       aria-valuetext={valueText}
-      className="bg-chart-grid rounded-2xs block h-1.5 w-full overflow-hidden"
+      className="bg-rule rounded-mark block h-1.5 w-full overflow-hidden"
     >
       {percent === null ? null : (
         <span className={cn('block h-full', fill)} style={{ width: `${percent}%` }} />
@@ -96,9 +95,7 @@ export function Meter({
         <span id={labelId} className="text-body-sm text-ink truncate">
           {label}
         </span>
-        <span className="text-body-sm text-ink-secondary whitespace-nowrap tabular-nums">
-          {shown}
-        </span>
+        <span className="text-body-sm text-ink-2 whitespace-nowrap tabular-nums">{shown}</span>
       </div>
       <MeterTrack
         value={value}
@@ -107,7 +104,7 @@ export function Meter({
         labelledBy={labelId}
         valueText={shown}
       />
-      {hint ? <p className="text-caption text-ink-muted">{hint}</p> : null}
+      {hint ? <p className="text-caption text-ink-2">{hint}</p> : null}
     </div>
   );
 }
@@ -136,7 +133,7 @@ export function MeterRow({
   const percent = percentOf(value, max);
   return (
     <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_auto] items-center gap-3">
-      <span className="text-caption text-ink-secondary">{name}</span>
+      <span className="text-caption text-ink-2">{name}</span>
       <MeterTrack
         value={value}
         max={max}

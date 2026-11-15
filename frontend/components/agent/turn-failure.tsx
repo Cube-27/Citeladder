@@ -2,8 +2,8 @@ import { AlertTriangle } from 'lucide-react';
 
 import { MessageTime } from '@/components/agent/message-time';
 import type { FailureOutcome } from '@/components/agent/thread-items';
-import { Callout, type CalloutTone } from '@/components/ui/callout';
 import type { AgentMessage } from '@/lib/api/agent';
+import { Notice, type NoticeTone } from '@/components/ui/notice';
 
 const FAILURE_VERB: Record<FailureOutcome, string> = {
   failed: 'Failed',
@@ -11,11 +11,11 @@ const FAILURE_VERB: Record<FailureOutcome, string> = {
   cancelled: 'Stopped',
   unknown: 'Did not finish',
 };
-const FAILURE_TONE: Record<FailureOutcome, CalloutTone> = {
+const FAILURE_TONE: Record<FailureOutcome, NoticeTone> = {
   failed: 'negative',
   stopped_at_limit: 'warning',
   cancelled: 'warning',
-  unknown: 'neutral',
+  unknown: 'info',
 };
 
 /**
@@ -33,7 +33,7 @@ export function TurnFailure({
   const time = <MessageTime value={latest.created_at} />;
   const verb = FAILURE_VERB[outcome];
   return (
-    <Callout
+    <Notice
       tone={FAILURE_TONE[outcome]}
       icon={outcome === 'unknown' ? AlertTriangle : undefined}
       title={
@@ -49,6 +49,6 @@ export function TurnFailure({
       }
     >
       {latest.content}
-    </Callout>
+    </Notice>
   );
 }

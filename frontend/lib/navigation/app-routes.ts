@@ -1,8 +1,8 @@
 /**
  * The app's route manifest: every destination the browser can open, declared
- * once. The router, the sidebar, the command palette, the user menu, page
- * titles, the workspace-only test, the project-switch landing and the mode
- * homes all derive from it, so adding or renaming a screen is one edit here.
+ * once. The router, the sidebar, the command palette, the account menu, page
+ * titles, the workspace-only test and the project-switch landing all derive
+ * from it, so adding or renaming a screen is one edit here.
  *
  * Data only: no React at runtime and no static domain import. Each screen is a
  * `() => import()` so the shell's boot download carries none of them.
@@ -10,7 +10,6 @@
 import type { ComponentType } from 'react';
 
 import type { IconName } from '@/lib/icons';
-import type { NavigationMode } from '@/lib/navigation/mode-memory';
 
 /**
  * Who a destination belongs to: `public` needs no session; `workspace` manages
@@ -19,18 +18,14 @@ import type { NavigationMode } from '@/lib/navigation/mode-memory';
  */
 type RouteScope = 'public' | 'workspace' | 'project';
 
-type DashboardGroup = 'overview' | 'analyze' | 'commerce' | 'act' | 'track' | 'setup';
-type PaletteGroup = 'Overview' | 'Analyze' | 'Commerce' | 'Track' | 'Agent' | 'Settings';
+/** The sidebar's groups, in the order of the product loop; `foot` sits above the account. */
+export type SidebarGroup = 'overview' | 'analyze' | 'commerce' | 'act' | 'track' | 'foot';
 
 /**
- * Where a nav entry is listed: a Dashboard sidebar group, Agent mode's fixed
- * destinations, a command-palette group, or the user menu.
+ * Where a nav entry is listed: a sidebar group (the command palette lists the
+ * same groups in the same order), the account menu, or the palette alone.
  */
-type NavPlacement =
-  | `dashboard:${DashboardGroup}`
-  | 'agent'
-  | `palette:${PaletteGroup}`
-  | 'user-menu';
+type NavPlacement = `sidebar:${SidebarGroup}` | 'account' | 'palette';
 
 /** One way into a destination. A route may have several (a settings tab). */
 type NavEntry = {
@@ -55,11 +50,8 @@ export type AppRouteRecord = {
   /** The page header and document title; null where the route draws its own. */
   title: string | null;
   scope: RouteScope;
-  /** Drawn inside the application shell (sidebar, header). */
+  /** Drawn inside the application shell (sidebar, masthead). */
   shell: boolean;
-  mode: NavigationMode;
-  /** The destination its mode opens on. */
-  modeHome?: true;
   screen: Screen;
   /**
    * For a path naming one project's record: the section a project switch
@@ -84,9 +76,9 @@ type RouteInput<P extends string> = Partial<Omit<AppRouteRecord, 'path' | 'scree
   screen: Screen;
 };
 
-/** A destination; unless it says otherwise, a project page in the shell's Dashboard mode. */
+/** A destination; unless it says otherwise, a project page inside the shell. */
 function page<const P extends string>(input: RouteInput<P>): AppRouteRecord & { path: P } {
-  return { title: null, scope: 'project', shell: true, mode: 'dashboard', ...input };
+  return { title: null, scope: 'project', shell: true, ...input };
 }
 
 /** A page outside the shell: public (no session) or a signed-in flow step. */
@@ -99,10 +91,9 @@ function flow<const P extends string>(
   return page({ path, scope, shell: false, screen, ...extra });
 }
 
-/** A nav entry listed in a Dashboard group and the matching palette group. */
-function listed(label: string, icon: IconName, group: 'analyze' | 'commerce' | 'track'): NavEntry {
-  const palette = ({ analyze: 'Analyze', commerce: 'Commerce', track: 'Track' } as const)[group];
-  return { label, icon, placements: [`dashboard:${group}`, `palette:${palette}`] };
+/** A nav entry listed in one sidebar group (and so in the palette's). */
+function listed(label: string, icon: IconName, group: SidebarGroup): NavEntry {
+  return { label, icon, placements: [`sidebar:${group}`] };
 }
 
 /** Every screen's loader, named once; a route refers to its screen by name. */
@@ -170,19 +161,12 @@ export const APP_ROUTES = [
   flow('/workspaces', 'workspace', screens.workspaces),
   flow('/onboarding', 'workspace', screens.onboarding),
 
-  // The application shell, in the order of the product loop.
+  // The application shell, in the order of the product loop (the sidebar's).
   page({
     path: '/projects',
     title: 'Overview',
-    modeHome: true,
     screen: screens.projects,
-    nav: [
-      {
-        label: 'Overview',
-        icon: 'overview',
-        placements: ['dashboard:overview', 'palette:Overview'],
-      },
-    ],
+    nav: [listed('Overview', 'overview', 'overview')],
   }),
   page({
     path: '/site',
@@ -197,22 +181,10 @@ export const APP_ROUTES = [
     screen: screens.pageDetail,
   }),
   page({
-    path: '/demand',
-    title: 'Search Demand',
-    screen: screens.demand,
-    nav: [listed('Search Demand', 'demand', 'analyze')],
-  }),
-  page({
     path: '/issues',
     title: 'Issues',
     screen: screens.issues,
     nav: [listed('Issues', 'issues', 'analyze')],
-  }),
-  page({
-    path: '/search-intelligence',
-    title: 'Keyword Research',
-    screen: screens.keywords,
-    nav: [listed('Keyword Research', 'searchIntelligence', 'analyze')],
   }),
   page({
     path: '/performance',
@@ -220,13 +192,25 @@ export const APP_ROUTES = [
     screen: screens.performance,
     nav: [listed('Performance', 'performance', 'analyze')],
   }),
-  // Commerce: the Shopping overview, then the Products table. The overview is
-  // declared before `/products/:targetId`, which would otherwise match it.
+  page({
+    path: '/demand',
+    title: 'Search Demand',
+    screen: screens.demand,
+    nav: [listed('Search Demand', 'demand', 'analyze')],
+  }),
+  page({
+    path: '/search-intelligence',
+    title: 'Keyword Research',
+    screen: screens.keywords,
+    nav: [listed('Keyword Research', 'searchIntelligence', 'analyze')],
+  }),
+  // Commerce: Shopping, then the Products table. Shopping is declared before
+  // `/products/:targetId`, which would otherwise match it.
   page({
     path: '/products/overview',
-    title: 'Shopping overview',
+    title: 'Shopping',
     screen: screens.shoppingOverview,
-    nav: [listed('Overview', 'reports', 'commerce')],
+    nav: [listed('Shopping', 'reports', 'commerce')],
   }),
   page({
     path: '/products',
@@ -236,61 +220,52 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/products/:targetId',
-    title: 'Commerce Suite',
+    title: 'Product',
     collection: '/products',
     screen: screens.product,
   }),
   page({
-    path: '/agent',
-    title: 'New chat',
-    mode: 'agent',
-    modeHome: true,
-    screen: screens.newChat,
-    // Agent mode draws New chat above its fixed destinations itself.
-    nav: [{ label: 'New chat', icon: 'newChat', placements: ['palette:Agent'] }],
-  }),
-  page({
-    path: '/agent/chats/:chatId',
-    title: 'Agent',
-    mode: 'agent',
-    collection: '/agent',
-    screen: screens.chat,
-  }),
-  page({
     path: '/agent/actions',
     title: 'Actions',
-    mode: 'agent',
     screen: screens.actions,
-    // Listed once in the palette, under Agent.
     nav: [
       {
         label: 'Actions',
         icon: 'opportunities',
         badge: 'open-actions',
-        placements: ['dashboard:act', 'agent', 'palette:Agent'],
+        placements: ['sidebar:act'],
       },
     ],
   }),
   page({
     path: '/agent/actions/:actionId',
-    title: 'Actions',
-    mode: 'agent',
+    title: 'Action',
     collection: '/agent/actions',
     screen: screens.action,
   }),
   page({
+    path: '/agent',
+    title: 'New chat',
+    screen: screens.newChat,
+    nav: [listed('Agent', 'agent', 'act')],
+  }),
+  page({
+    path: '/agent/chats/:chatId',
+    title: 'Chat',
+    collection: '/agent',
+    screen: screens.chat,
+  }),
+  page({
     path: '/agent/skills',
     title: 'Skills',
-    mode: 'agent',
     screen: screens.skills,
-    nav: [{ label: 'Skills', icon: 'skills', placements: ['agent', 'palette:Agent'] }],
+    nav: [listed('Skills', 'skills', 'act')],
   }),
   page({
     path: '/agent/context',
     title: 'Context',
-    mode: 'agent',
     screen: screens.context,
-    nav: [{ label: 'Context', icon: 'context', placements: ['agent', 'palette:Agent'] }],
+    nav: [listed('Context', 'context', 'act')],
   }),
   page({
     path: '/prompts',
@@ -300,7 +275,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/prompts/:promptId',
-    title: 'Prompts',
+    title: 'Prompt',
     collection: '/prompts',
     screen: screens.prompt,
   }),
@@ -318,7 +293,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/runs/:runId',
-    title: 'Run detail',
+    title: 'Run',
     collection: '/runs',
     screen: screens.run,
   }),
@@ -336,26 +311,26 @@ export const APP_ROUTES = [
     scope: 'workspace',
     screen: screens.settings,
     nav: [
-      { label: 'Settings', icon: 'settings', placements: ['palette:Settings', 'user-menu'] },
       {
         label: 'Integrations',
         icon: 'setup',
         search: 'tab=integrations',
-        placements: ['dashboard:setup', 'palette:Settings'],
+        placements: ['sidebar:foot'],
       },
+      { label: 'Settings', icon: 'settings', placements: ['account'] },
       {
         label: 'Providers',
         icon: 'settings',
         search: 'tab=providers',
         hiddenWhenManaged: true,
-        placements: ['palette:Settings'],
+        placements: ['palette'],
       },
       {
         label: 'Connect AI assistants',
         icon: 'connect',
         search: 'tab=connections',
         listedLast: true,
-        placements: ['user-menu'],
+        placements: ['account'],
       },
     ],
   }),
@@ -364,7 +339,7 @@ export const APP_ROUTES = [
     title: 'Billing',
     scope: 'workspace',
     screen: screens.billing,
-    nav: [{ label: 'Billing', icon: 'billing', placements: ['palette:Settings', 'user-menu'] }],
+    nav: [{ label: 'Billing', icon: 'billing', placements: ['account'] }],
   }),
   page({
     path: '/pricing',
@@ -372,12 +347,8 @@ export const APP_ROUTES = [
     scope: 'workspace',
     screen: screens.pricing,
   }),
-  page({
-    path: '/invitations/accept',
-    scope: 'workspace',
-    ...credential,
-    screen: screens.invitation,
-  }),
+  // An invitation is a Flow page: it opens before the shell, as setup does.
+  flow('/invitations/accept', 'workspace', screens.invitation, credential),
 ];
 
 export type AppRoutePath = (typeof APP_ROUTES)[number]['path'];
@@ -434,9 +405,12 @@ export function hasPageTitle(pathname: string): boolean {
   return Boolean(route?.shell && route.title);
 }
 
-/** The shell mode a pathname is in; anything unknown is Dashboard. */
-export function navigationMode(pathname: string): NavigationMode {
-  return sectionRoute(pathname)?.mode ?? 'dashboard';
+/** The Overview, where `/` and a workspace switch land. */
+export const HOME_PATH = '/projects' satisfies AppRoutePath;
+
+/** Whether the path is one of the Agent's own pages, known or not (they have no "Ask agent"). */
+export function isAgentPath(pathname: string): boolean {
+  return pathname === '/agent' || pathname.startsWith('/agent/');
 }
 
 /**
@@ -459,17 +433,6 @@ export function isWorkspaceOnlyRoute(pathname: string | null): boolean {
 export function projectSwitchPathname(pathname: string): string {
   return findAppRoute(pathname)?.collection ?? pathname;
 }
-
-function modeHome(mode: NavigationMode): string {
-  const home = ROUTES.find((route) => route.mode === mode && route.modeHome);
-  if (!home) throw new Error(`No home route for ${mode} mode`);
-  return home.path;
-}
-
-export const MODE_HOMES: Readonly<Record<NavigationMode, string>> = {
-  dashboard: modeHome('dashboard'),
-  agent: modeHome('agent'),
-};
 
 /** A nav entry with its full address and the scope its link carries. */
 export type NavDestination = Pick<NavEntry, 'label' | 'icon' | 'badge' | 'hiddenWhenManaged'> & {

@@ -1,14 +1,11 @@
-import { SearchX, TriangleAlert } from 'lucide-react';
+import { SearchX } from 'lucide-react';
 import { useEffect } from 'react';
 import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
-import { ListScreen } from '@/components/layout/page-shell';
-import { ProjectLink } from '@/components/ui/project-link';
 import { ShellFallback } from '@/components/layout/shell-fallback';
+import { NoticePage, NoticeScreen } from '@/components/templates/notice-page';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { QueryState } from '@/components/ui/query-state';
-import { textRole } from '@/components/ui/typography';
+import { ProjectLink } from '@/components/ui/project-link';
 import { isChunkLoadError, reportClientError } from '@/lib/client-errors';
 
 /**
@@ -32,6 +29,14 @@ function OverviewLink({ variant }: Readonly<{ variant?: 'secondary' }>) {
   );
 }
 
+function ReloadButton() {
+  return (
+    <Button variant="primary" onClick={() => window.location.reload()}>
+      Reload page
+    </Button>
+  );
+}
+
 /**
  * A screen that failed to render, shown inside the shell so navigation and
  * sign-out stay available. Reloading also recovers a route chunk replaced by a
@@ -40,37 +45,34 @@ function OverviewLink({ variant }: Readonly<{ variant?: 'secondary' }>) {
 export function ScreenError() {
   useReportedRouteError('render');
   return (
-    <ListScreen title="Something went wrong">
-      <QueryState
-        kind="empty"
-        icon={TriangleAlert}
-        heading="This page could not be opened"
-        description="Reload to try again, or go back to Overview."
-        action={
-          <>
-            <Button variant="primary" onClick={() => window.location.reload()}>
-              Reload page
-            </Button>
-            <OverviewLink variant="secondary" />
-          </>
-        }
-      />
-    </ListScreen>
+    <NoticePage
+      title="Something went wrong"
+      tone="negative"
+      heading="This page could not be opened"
+      actions={
+        <>
+          <ReloadButton />
+          <OverviewLink variant="secondary" />
+        </>
+      }
+    >
+      Reload to try again, or go back to Overview.
+    </NoticePage>
   );
 }
 
 /** An application URL that matches no screen. */
 export function NotFoundScreen() {
   return (
-    <ListScreen title="Page not found">
-      <QueryState
-        kind="empty"
-        icon={SearchX}
-        heading="There is no page at this address"
-        description="Check the link, or go back to Overview."
-        action={<OverviewLink />}
-      />
-    </ListScreen>
+    <NoticePage
+      title="Page not found"
+      tone="info"
+      icon={SearchX}
+      heading="There is no page at this address"
+      actions={<OverviewLink />}
+    >
+      Check the link, or go back to Overview.
+    </NoticePage>
   );
 }
 
@@ -79,17 +81,13 @@ export function RouteError() {
   useReportedRouteError('route');
   return (
     <ShellFallback>
-      <main id="main" className="grid min-h-[60vh] place-items-center p-[var(--page-section-gap)]">
-        <Callout tone="warning" className="max-w-lg">
-          <div className="grid gap-4">
-            <h1 className={textRole('sectionTitle')}>This page could not be opened</h1>
-            <p>Reload this page to try again.</p>
-            <Button variant="primary" className="w-fit" onClick={() => window.location.reload()}>
-              Reload page
-            </Button>
-          </div>
-        </Callout>
-      </main>
+      <NoticeScreen
+        tone="warning"
+        heading="This page could not be opened"
+        actions={<ReloadButton />}
+      >
+        Reload this page to try again.
+      </NoticeScreen>
     </ShellFallback>
   );
 }

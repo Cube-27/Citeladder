@@ -1,4 +1,4 @@
-import { ArrowUp, Square } from 'lucide-react';
+import { ArrowUp, RotateCcw, Square } from 'lucide-react';
 
 import { IconButton } from '@/components/ui/button';
 import { ComposerFrame, PastedTextChip, RemovableChip } from '@/components/ui/chat-dock';
@@ -34,6 +34,7 @@ export function Composer({
   commands,
   onStop,
   stopping = false,
+  onRetry,
 }: Readonly<{
   id: string;
   label: string;
@@ -55,6 +56,8 @@ export function Composer({
   /** While a turn runs, the send button stops it instead. */
   onStop?: () => void;
   stopping?: boolean;
+  /** A failed send the draft still holds: Retry replaces Send; an edited draft sends. */
+  onRetry?: () => void;
 }>) {
   const canSend = !disabled && !submissionDisabled && !pending && value.trim().length > 0;
   const menuDisabled = disabled || submissionDisabled;
@@ -94,31 +97,94 @@ export function Composer({
         />
       }
       submit={
-        onStop ? (
-          // Pending keeps each button's box, so the control row never reflows.
-          <IconButton
-            type="button"
-            variant="secondary"
-            icon={Square}
-            label="Stop"
-            pending={stopping}
-            pendingLabel="Stopping…"
-            onClick={onStop}
-          />
-        ) : (
-          <IconButton
-            type="submit"
-            variant="primary"
-            icon={ArrowUp}
-            label="Send"
-            disabled={!canSend}
-            pending={pending}
-            pendingLabel="Sending…"
-          />
-        )
+        <SubmitControl
+          status={composerStatus({ pending, onStop, onRetry })}
+          canSend={canSend}
+          disabled={disabled}
+          stopping={stopping}
+          onStop={onStop}
+          onRetry={onRetry}
+        />
       }
     />
   );
+}
+
+/**
+ * The composer's four statuses: `ready` sends,
+ * `submitted` is sending, `streaming` is a running turn that Stop ends, and
+ * `error` is a failed send that Retry sends again.
+ */
+type ComposerStatus = 'ready' | 'submitted' | 'streaming' | 'error';
+
+function composerStatus({
+  pending,
+  onStop,
+  onRetry,
+}: Readonly<{ pending: boolean; onStop?: () => void; onRetry?: () => void }>): ComposerStatus {
+  if (onStop) return 'streaming';
+  if (pending) return 'submitted';
+  return onRetry ? 'error' : 'ready';
+}
+
+/** One control in one box per status, so the control row never reflows. */
+function SubmitControl({
+  status,
+  canSend,
+  disabled,
+  stopping,
+  onStop,
+  onRetry,
+}: Readonly<{
+  status: ComposerStatus;
+  canSend: boolean;
+  disabled: boolean;
+  stopping: boolean;
+  onStop?: () => void;
+  onRetry?: () => void;
+}>) {
+  switch (status) {
+    case 'streaming':
+      return (
+        <IconButton
+          type="button"
+          variant="secondary"
+          icon={Square}
+          label="Stop"
+          pending={stopping}
+          pendingLabel="Stopping…"
+          onClick={onStop}
+        />
+      );
+    case 'error':
+      return (
+        <IconButton
+          type="button"
+          variant="primary"
+          icon={RotateCcw}
+          label="Retry send"
+          disabled={disabled}
+          onClick={onRetry}
+        />
+      );
+    case 'submitted':
+    case 'ready':
+      return (
+        <IconButton
+          type="submit"
+          variant="primary"
+          icon={ArrowUp}
+          label="Send"
+          disabled={!canSend}
+          pending={status === 'submitted'}
+          pendingLabel="Sending…"
+        />
+      );
+    default: {
+      const unknown: never = status;
+      return unknown;
+    }
+  }
 }
 
 type LeadChip = Readonly<{ label: string; onRemove: () => void }> | undefined;

@@ -40,6 +40,46 @@ function renderTable(prompts: Prompt[]) {
 }
 
 describe('PromptTable pagination', () => {
+  it('says a Commerce prompt has no per-prompt figures while a brand prompt shows its own', () => {
+    const COMMERCE_SET = '44444444-4444-4444-8444-444444444444';
+    const brandPrompt = makePrompt(1);
+    const shelfPrompt = makePrompt(2, { prompt_set_id: COMMERCE_SET });
+    render(
+      <MemoryRouter>
+        <TooltipProvider>
+          <PromptTable
+            prompts={[brandPrompt, shelfPrompt]}
+            commerceSetIds={new Set([COMMERCE_SET])}
+            measurements={
+              new Map([
+                [
+                  brandPrompt.id,
+                  {
+                    visibilityRate: 0.5,
+                    ownedCitationRate: 0.25,
+                    change: { kind: 'first' },
+                    position: 2,
+                    answer: ANSWER,
+                    mentions: 0,
+                    brands: [],
+                  },
+                ],
+              ])
+            }
+          />
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+
+    const [, brandRow, shelfRow] = screen.getAllByRole('row');
+    expect(within(brandRow!).getAllByRole('cell')[1]!.textContent).toBe('50%');
+    // Not "not measured": no run will ever measure it one prompt at a time.
+    const shelfCells = within(shelfRow!).getAllByRole('cell');
+    expect(shelfCells[1]).toHaveTextContent('Not applicable');
+    expect(shelfCells[3]).toHaveTextContent('Not applicable');
+    expect(within(shelfRow!).queryByText('Not measured')).toBeNull();
+  });
+
   it('shows each question without tags, captioning only a prompt that audits skip', () => {
     renderTable([
       makePrompt(1, { branded: true, buyer_stage: 'consideration', topic_id: TOPIC_ID }),
@@ -144,8 +184,13 @@ describe('PromptTable pagination', () => {
     expect(within(unnamedRow!).getAllByRole('cell')[2]!.textContent).toBe('None');
     // No change is never a zero: a first measurement has nothing to compare, and
     // a pair measured differently is not compared.
-    expect(cells[5]!.textContent).toBe('Not applicable');
-    expect(within(unnamedRow!).getAllByRole('cell')[5]!.textContent).toBe('Unknown');
+    expect(cells[5]!.querySelector('[data-absence]')).toHaveAttribute(
+      'data-absence',
+      'not_applicable',
+    );
+    expect(
+      within(unnamedRow!).getAllByRole('cell')[5]!.querySelector('[data-absence]'),
+    ).toHaveAttribute('data-absence', 'unknown');
   });
 
   it('pages through rows with the page indicator and ghost buttons', async () => {

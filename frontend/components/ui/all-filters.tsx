@@ -113,6 +113,31 @@ export function choiceFilter<T extends string>({
 }
 
 /**
+ * The one date-window filter: every reporting window reads "Period" in the
+ * bar, so a reader learns one control for products, visibility and traffic.
+ */
+export function rangeFilter<T extends string>({
+  value,
+  defaultValue,
+  options,
+  onChange,
+}: Readonly<{
+  value: T;
+  defaultValue: T;
+  options: readonly FilterOption<T>[];
+  onChange: (value: T) => void;
+}>): FilterDefinition {
+  return choiceFilter({
+    id: 'range',
+    label: 'Period',
+    value,
+    defaultValue,
+    groups: [{ options }],
+    onChange,
+  });
+}
+
+/**
  * A multi-select filter for All filters: a check per option, any number on,
  * none on meaning unfiltered. The submenu stays open while the reader picks.
  */
@@ -399,9 +424,7 @@ export function ChoiceOptions({ filter }: Readonly<{ filter: ChoiceFilter }>) {
           </Fragment>
         ))}
       </MenuRadioGroup>
-      {groups.length === 0 ? (
-        <p className="text-body-sm text-ink-muted px-2 py-2">No matches</p>
-      ) : null}
+      {groups.length === 0 ? <p className="text-body-sm text-ink-2 px-2 py-2">No matches</p> : null}
     </>
   );
 }

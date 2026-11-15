@@ -2,17 +2,17 @@ import * as MenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronRight } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { FLOAT_FACE } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { SHEET_FACE } from '@/components/ui/slip';
 
 /**
  * The floating panel menus and listboxes share: the floating face (`surface`,
- * a 1px `line` border, `shadow-float`), `radius-lg`, a 4px inset,
+ * a 1px `line` border, `shadow-sheet`), `radius-lg`, a 4px inset,
  * entering in 200ms ease-out.
  */
 export const MENU_PANEL = cn(
-  FLOAT_FACE,
-  'menu-panel z-modal focus-ring overflow-hidden rounded-lg p-1',
+  SHEET_FACE,
+  'menu-panel z-modal focus-ring overflow-hidden rounded-sheet p-1',
 );
 
 /**
@@ -28,10 +28,10 @@ export function menuItemClasses({
   className,
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
-    'focus-ring relative flex min-h-8 w-full shrink-0 cursor-pointer items-center gap-2 rounded-sm px-2 text-left text-body-sm transition-colors select-none',
-    'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-45',
+    'focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-control px-2 text-left transition-colors select-none',
+    'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
     danger
-      ? 'text-negative data-[highlighted]:bg-negative-soft hover:bg-negative-soft data-[disabled]:hover:bg-transparent [&_svg]:text-negative'
+      ? 'text-negative data-[highlighted]:bg-negative-wash hover:bg-negative-wash data-[disabled]:hover:bg-transparent [&_svg]:text-negative'
       : // A selected option (a listbox's value) keeps the selected overlay
         // and takes no hover, so the two states never look alike.
         'text-ink aria-selected:overlay-selected not-aria-selected:data-[highlighted]:overlay-hover not-aria-selected:not-data-[disabled]:hover:overlay-hover',
@@ -81,12 +81,9 @@ export function MenuSubTrigger({
     >
       <span className="shrink-0">{children}</span>
       {value ? (
-        <span className="text-ink-muted ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
+        <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
-      <ChevronRight
-        className={cn('text-ink-muted size-4 shrink-0', !value && 'ms-auto')}
-        aria-hidden
-      />
+      <ChevronRight className={cn('text-ink-2 size-4 shrink-0', !value && 'ms-auto')} aria-hidden />
     </MenuPrimitive.SubTrigger>
   );
 }
@@ -154,7 +151,7 @@ export function MenuContent({
 /** The lead column: a 16px icon slot, kept empty when the item has none. */
 function Lead({ children }: Readonly<{ children?: ReactNode }>) {
   return (
-    <span className="text-ink-secondary flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+    <span className="text-ink-2 flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
       {children}
     </span>
   );
@@ -192,11 +189,9 @@ export function MenuItem({
       {icon ? <Lead>{icon}</Lead> : null}
       <span className={cn('min-w-0 truncate', value ? 'shrink-0' : 'flex-1')}>{children}</span>
       {value ? (
-        <span className="text-ink-muted ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
+        <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
-      {shortcut ? (
-        <span className="text-ink-muted text-caption ms-4 font-mono">{shortcut}</span>
-      ) : null}
+      {shortcut ? <span className="type-data-sm text-ink-2 ms-4">{shortcut}</span> : null}
       {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
     </MenuPrimitive.Item>
   );
@@ -259,7 +254,7 @@ export function MenuRadioItem({
 export function MenuSeparator(
   props: Readonly<Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.Separator>, 'className'>>,
 ) {
-  return <MenuPrimitive.Separator {...props} className="bg-line -mx-1 my-1 h-px shrink-0" />;
+  return <MenuPrimitive.Separator {...props} className="bg-rule -mx-1 my-1 h-px shrink-0" />;
 }
 
 /**
@@ -282,7 +277,7 @@ export function MenuControlRow({
 /** A small group label: 12/16 medium `ink-muted`. */
 export function MenuLabel({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <MenuPrimitive.Label className="text-ink-muted text-caption px-2 pt-2 pb-1">
+    <MenuPrimitive.Label className="text-ink-2 text-caption px-2 pt-2 pb-1">
       {children}
     </MenuPrimitive.Label>
   );

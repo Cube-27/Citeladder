@@ -1,29 +1,64 @@
 import { ClipboardList } from 'lucide-react';
 import { useState } from 'react';
 
-import { DatedEvidenceChips } from '@/components/agent/evidence-chips';
+import { ActionSection } from '@/components/agent/action-section';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
+import { Inline } from '@/components/ui/layout';
+import { DisplayTime } from '@/components/ui/display-time';
+import { textRole } from '@/components/ui/typography';
+import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { ProjectLink } from '@/components/ui/project-link';
 import { Textarea } from '@/components/ui/textarea';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
-import { actionEvidence } from '@/lib/agent/evidence';
+import { actionEvidence, type DatedEvidence } from '@/lib/agent/evidence';
 import { developerTicket } from '@/lib/agent/handoff';
 import type { ActionDetail } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
 
-/** The Action's records, each dated and marked observed or inferred. */
+const BASIS_LABEL: Record<DatedEvidence['basis'], string> = {
+  observed: 'Observed',
+  inferred: 'Inferred',
+};
+
+/**
+ * The Action's records, one ruled row each: what it is (a link to the screen
+ * that shows it), whether CiteLadder observed it or a rule inferred it, and
+ * the date its persisted record carries.
+ */
 export function ActionEvidence({ action }: Readonly<{ action: ActionDetail }>) {
   const records = actionEvidence(action);
   if (records.length === 0) return null;
   return (
-    <Stack as="section" aria-labelledby="action-evidence">
-      <EditorialSectionHeader title="Evidence" headingId="action-evidence" />
-      <DatedEvidenceChips records={records} label="Evidence records" />
-    </Stack>
+    <ActionSection title="Evidence" id="action-evidence">
+      <ul aria-label="Evidence records" className={ledgerClasses()}>
+        {records.map((item) => (
+          <Inline
+            as="li"
+            gap="meta"
+            key={item.key}
+            className={ledgerItemClasses('items-baseline justify-between')}
+          >
+            {item.href ? (
+              <ProjectLink
+                href={item.href}
+                className={textRole('body', 'underline underline-offset-2')}
+              >
+                {item.label}
+              </ProjectLink>
+            ) : (
+              <span className={textRole('body')}>{item.label}</span>
+            )}
+            <span className={textRole('dataSm', 'text-ink-2')}>
+              {BASIS_LABEL[item.basis]} ·{' '}
+              <DisplayTime value={item.at} dateOnly fallback="date not recorded" />
+            </span>
+          </Inline>
+        ))}
+      </ul>
+    </ActionSection>
   );
 }
 

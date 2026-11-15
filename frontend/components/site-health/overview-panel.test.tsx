@@ -28,7 +28,7 @@ afterAll(() => mswServer.close());
 /** One figure of the Overview's score row: its label, value, sub-line and link. */
 function stat(label: string) {
   const term = within(screen.getByTestId('overview-metrics')).getByText(label);
-  return term.closest('[data-stat-segment]');
+  return term.closest('[data-figure-cell]');
 }
 
 /** A terminal overview snapshot; each test overrides only what it is about. */
@@ -202,23 +202,27 @@ describe('OverviewPanel', () => {
       />,
     );
 
-    expect(
-      screen.getByRole('img', { name: 'Web Fundamentals score: 81 out of 100' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: 'AEO Readiness score: 62 out of 100' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Web Fundamentals score' })).toHaveAttribute(
+      'aria-valuetext',
+      '81 out of 100',
+    );
+    expect(screen.getByRole('progressbar', { name: 'AEO Readiness score' })).toHaveAttribute(
+      'aria-valuetext',
+      '62 out of 100',
+    );
     expect(
       screen.queryByRole('heading', { name: 'Classification completeness' }),
     ).not.toBeInTheDocument();
-    // The two completion shares are rings too, each with its link.
-    expect(
-      screen.getByRole('img', { name: 'AEO Checklist Completion: 50 out of 100' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('img', { name: 'Crawl Coverage score: 40 out of 100' }),
-    ).toBeInTheDocument();
-    // A score is a ring, never a segmented bar.
+    // The two completion shares are rung meters too, each with its link.
+    expect(screen.getByRole('progressbar', { name: 'AEO Checklist Completion' })).toHaveAttribute(
+      'aria-valuetext',
+      '50%',
+    );
+    expect(screen.getByRole('progressbar', { name: 'Crawl Coverage score' })).toHaveAttribute(
+      'aria-valuetext',
+      '40 out of 100',
+    );
+    // Scores are rung progress bars, never the thin-bar Meter.
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Loading Overview details')).not.toBeInTheDocument();
     expect(overviewRequests).toBe(0);
@@ -255,8 +259,8 @@ describe('OverviewPanel', () => {
 
     // 20 analyzed of 100 found is 20% coverage, not 100% of the 20 selected.
     expect(
-      await screen.findByRole('img', { name: 'Crawl Coverage score: 20 out of 100' }),
-    ).toBeInTheDocument();
+      await screen.findByRole('progressbar', { name: 'Crawl Coverage score' }),
+    ).toHaveAttribute('aria-valuetext', '20 out of 100');
   });
 
   it('keeps an unknown crawl that found nothing from reading as a percentage', async () => {

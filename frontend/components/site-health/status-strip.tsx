@@ -1,13 +1,9 @@
 import type { ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { Dot } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { InlineFigure, textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Spinner } from '@/components/ui/spinner';
+import { Absence } from '@/components/ui/absence';
 import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
 import { formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
@@ -21,6 +17,8 @@ import {
   isDiscoveryTerminal,
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Always-mounted status row of the canonical Site Health screen.
@@ -101,11 +99,11 @@ function StripContent({
 }>) {
   if (startPending) {
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         {crawl
           ? 'Starting a fresh crawl — current results stay visible until the new run completes.'
           : 'Starting crawl — pages will appear below as they are found.'}
-      </Callout>
+      </Notice>
     );
   }
 
@@ -118,7 +116,7 @@ function StripContent({
     // Direct component callers retain an empty-state fallback. The canonical
     // layout owns the actionable first-crawl placeholder.
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={ICONS.siteHealth}
         heading="No crawl yet"
@@ -163,7 +161,8 @@ function TerminalNotice({ crawl, onRerun }: Readonly<{ crawl: SiteCrawl; onRerun
   // A failed crawl is recovered by running it again, offered on the notice.
   if (failure)
     return (
-      <MutationNotice
+      <Notice
+        kind="mutation"
         notice={{ message, retryable: false }}
         recovery={
           onRerun ? (
@@ -175,9 +174,9 @@ function TerminalNotice({ crawl, onRerun }: Readonly<{ crawl: SiteCrawl; onRerun
       />
     );
   return (
-    <Callout tone="info">
+    <Notice tone="info">
       <RunNotice crawl={crawl} message={message} />
-    </Callout>
+    </Notice>
   );
 }
 
@@ -206,9 +205,10 @@ function RunNotice({ crawl, message }: Readonly<{ crawl: SiteCrawl; message: str
 }
 
 /**
- * The shared one-row shell: status badge + live narration on the left, the
- * inline counters on the right, wrapping on narrow screens. Extra content
- * (Free upsell, count-fetch warnings) stacks compactly underneath.
+ * The crawl's one status line: its status mark, the live rung while work
+ * goes on, the narration, then the counts as mono figures, wrapping on
+ * narrow screens. Extra content (the sample note, a count-fetch warning)
+ * stacks under it.
  */
 function ProgressRow({
   crawl,
@@ -227,29 +227,25 @@ function ProgressRow({
   return (
     <Stack>
       <Inline gap="meta" className="justify-between">
-        <Inline gap="compact">
+        <Inline gap="item" className="min-w-0">
           <CrawlStatusBadge crawl={crawl} />
-          <Inline as="span" className="type-body">
-            {active ? <Dot data-testid="activity-pulse" className="activity-dot bg-info" /> : null}
-            {/* The live region is the TEXT, not the row: announcing the whole
-                  row would re-read every counter on each poll. */}
-            <span className="truncate" aria-live="polite">
-              {narration}
+          {active ? (
+            <span data-testid="activity-pulse" className="inline-flex">
+              <Spinner />
             </span>
-          </Inline>
+          ) : null}
+          {/* The live region is the TEXT, not the row: announcing the whole
+                row would re-read every counter on each poll. */}
+          <span className="type-body min-w-0" aria-live="polite">
+            {narration}
+          </span>
         </Inline>
         <Inline as="dl" gap="meta">
           {counts.map((count) => (
-            <Inline key={count.label} className="type-body">
-              <dt className="type-label">{count.label}</dt>
-              <dd>
-                {count.value === null ? (
-                  <UnavailableValue state="not_measured" />
-                ) : (
-                  <InlineFigure className={textRole('emphasis', count.className)}>
-                    {formatCount(count.value)}
-                  </InlineFigure>
-                )}
+            <Inline key={count.label} gap="item">
+              <dt className="type-body text-ink-2">{count.label}</dt>
+              <dd className={count.className ? `type-data ${count.className}` : 'type-data'}>
+                {count.value === null ? <Absence state="not_measured" /> : formatCount(count.value)}
               </dd>
             </Inline>
           ))}
@@ -297,7 +293,7 @@ function DiscoveryStrip({
   return (
     <ProgressRow crawl={crawl} narration={narration} counts={counts} active={!cancelPending}>
       {sampleMode ? (
-        <p className="type-body">
+        <p className="type-body text-ink-2">
           We&apos;ll automatically analyze a {entitlement.sample_url_limit}-page sample of your
           site. Choosing which pages to monitor needs a monitored-URL allowance.
         </p>
@@ -334,10 +330,10 @@ function AnalysisStrip({
       counts={analysisCounts(crawl, selected)}
     >
       {selectedError ? (
-        <Callout tone="warning">
+        <Notice tone="warning">
           Could not load the monitored-page count — progress totals may be approximate until it
           refreshes.
-        </Callout>
+        </Notice>
       ) : null}
     </ProgressRow>
   );

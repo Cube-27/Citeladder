@@ -203,6 +203,8 @@ export function useFollowUp(workspaceId: string, detail: AgentChatDetail) {
     commands,
     pending: mutation.isPending || commands.resolving,
     failure: mutation.isError ? agentWriteFailure(mutation.error, 'send the message') : null,
+    /** The message whose send failed, which Retry sends again. */
+    failedMessage: mutation.isError ? (mutation.variables?.message ?? null) : null,
     retrySubmission: () => {
       if (mutation.variables) submit(mutation.variables);
     },

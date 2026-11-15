@@ -6,8 +6,6 @@ import { useState } from 'react';
 import { Avatar } from '@/components/ui/avatar';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { IntegrationSettings } from '@/components/settings/integration-settings';
 import { WorkspacePanel } from '@/components/settings/workspace-panel';
@@ -17,8 +15,8 @@ import { ProviderSettings } from '@/components/settings/provider-settings';
 import { TimeZoneSetting } from '@/components/settings/time-zone-setting';
 import { roleLabel } from '@/components/settings/member-roles';
 import AccountSecurity from '@/components/settings/account-security';
-import { TabPanel, TabsRoot } from '@/components/ui/tabs';
-import { ListScreen } from '@/components/layout/page-shell';
+import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
+import { SettingsPage } from '@/components/templates/settings-page';
 import { projectMutations } from '@/lib/api/projects';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useSessionUser } from '@/lib/auth/session-guard';
@@ -30,10 +28,18 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
 import { FactList } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
-import { SettingsSection, SettingsSections } from '@/components/ui/settings-section';
 import { IdentityRow } from '@/components/ui/workspace';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayTimestamp } from '@/lib/format';
+import { Notice } from '@/components/ui/notice';
+import {
+  Section,
+  SectionHeader,
+  SectionTitle,
+  SectionDescription,
+  SectionStack,
+} from '@/components/ui/section';
+import { Stack } from '@/components/ui/layout';
 
 const SETTINGS_TABS = [
   { id: 'account', label: 'Account' },
@@ -100,50 +106,58 @@ function ProjectDeletionControls() {
   if (!hasCapability(PROJECT_DELETION_CAPABILITY) || !mayDelete) return null;
   return (
     <>
-      <SettingsSection
-        title="Danger zone"
-        description="Permanently delete the active project and everything inside it."
-      >
-        {activeProject ? (
-          <>
-            <IdentityRow
-              media={
-                <BrandMark
-                  name={activeProject.brand_name}
-                  logoUrl={activeProject.brand?.logo_url}
-                  websiteUrl={activeProject.website_url}
-                  placement="header"
-                />
-              }
-              title={<div className={textRole('itemTitle', 'truncate')}>{activeProject.name}</div>}
-              caption={<p className="type-caption">Brand: {activeProject.brand_name}</p>}
-              actions={
-                <Button
-                  variant="danger"
-                  onClick={() => setConfirmOpen(true)}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Icon icon={Trash2} />
-                  Delete project
-                </Button>
-              }
-            />
-            <Callout tone="negative">
-              Deleting a project removes all of its prompts, topics, audits, visibility history, and
-              generated content. This cannot be undone.
-            </Callout>
-            {deleteMutation.isError ? (
-              <MutationNotice
-                notice={mutationNoticeForError(deleteMutation.error, {
-                  action: 'delete the project',
-                })}
+      <Section aria-labelledby="settings-danger-zone-title">
+        <SectionHeader>
+          <SectionTitle id="settings-danger-zone-title" level={2}>
+            Danger zone
+          </SectionTitle>
+          <SectionDescription>
+            Permanently delete the active project and everything inside it.
+          </SectionDescription>
+        </SectionHeader>
+        <Stack gap="item">
+          {activeProject ? (
+            <>
+              <IdentityRow
+                media={
+                  <BrandMark
+                    name={activeProject.brand_name}
+                    logoUrl={activeProject.brand?.logo_url}
+                    websiteUrl={activeProject.website_url}
+                    placement="header"
+                  />
+                }
+                title={<div className={textRole('body', 'truncate')}>{activeProject.name}</div>}
+                caption={<p className="type-caption">Brand: {activeProject.brand_name}</p>}
+                actions={
+                  <Button
+                    variant="danger"
+                    onClick={() => setConfirmOpen(true)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    <Icon icon={Trash2} />
+                    Delete project
+                  </Button>
+                }
               />
-            ) : null}
-          </>
-        ) : (
-          <p className="type-body">No project selected.</p>
-        )}
-      </SettingsSection>
+              <Notice tone="negative" standing>
+                Deleting a project removes all of its prompts, topics, audits, visibility history,
+                and generated content. This cannot be undone.
+              </Notice>
+              {deleteMutation.isError ? (
+                <Notice
+                  kind="mutation"
+                  notice={mutationNoticeForError(deleteMutation.error, {
+                    action: 'delete the project',
+                  })}
+                />
+              ) : null}
+            </>
+          ) : (
+            <p className="type-body text-ink-2">No project selected.</p>
+          )}
+        </Stack>
+      </Section>
       <Dialog
         open={confirmOpen}
         onOpenChange={(open) => {
@@ -170,7 +184,7 @@ function ProjectDeletionControls() {
           </>
         }
       >
-        <p className={textRole('body')}>
+        <p className={textRole('body', 'text-ink-2')}>
           This permanently deletes the project and all of its prompts, topics, audits, visibility
           history, and generated content. This cannot be undone.
         </p>
@@ -220,44 +234,53 @@ export function SettingsScreen() {
 
   return (
     <TabsRoot value={activeTab} onValueChange={setActiveTab}>
-      <ListScreen
-        narrow
-        tabs={{
-          items: tabs.map((tab) => ({ value: tab.id, label: tab.label })),
-          ariaLabel: 'Settings sections',
-        }}
+      <SettingsPage
+        tabs={
+          <TabRow
+            items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
+            ariaLabel="Settings sections"
+          />
+        }
       >
         <TabPanel value="account" forceMount className="focus-ring data-[state=inactive]:hidden">
           {/* One card per section, the danger zone last. */}
-          <SettingsSections>
-            <SettingsSection title="Profile" description="Your sign-in email and workspace role.">
-              <IdentityRow
-                media={<Avatar name={user.email} placement="profile" />}
-                title={<div className={textRole('itemTitle', 'truncate')}>{user.email}</div>}
-                caption={
-                  activeWorkspace ? (
-                    <div className="type-body">
-                      {activeWorkspace.role === 'owner'
-                        ? `Owner of ${activeWorkspace.name}`
-                        : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
-                    </div>
-                  ) : null
-                }
-              />
-              {createdLabel || updatedLabel ? (
-                <FactList
-                  layout="ruled"
-                  facts={[
-                    ...(createdLabel ? [{ label: 'Account created', value: createdLabel }] : []),
-                    ...(updatedLabel ? [{ label: 'Last updated', value: updatedLabel }] : []),
-                  ]}
+          <SectionStack>
+            <Section aria-labelledby="settings-profile-title">
+              <SectionHeader>
+                <SectionTitle id="settings-profile-title" level={2}>
+                  Profile
+                </SectionTitle>
+                <SectionDescription>Your sign-in email and workspace role.</SectionDescription>
+              </SectionHeader>
+              <Stack gap="item">
+                <IdentityRow
+                  media={<Avatar name={user.email} placement="profile" />}
+                  title={<div className={textRole('body', 'truncate')}>{user.email}</div>}
+                  caption={
+                    activeWorkspace ? (
+                      <div className="type-body text-ink-2">
+                        {activeWorkspace.role === 'owner'
+                          ? `Owner of ${activeWorkspace.name}`
+                          : `${roleLabel(activeWorkspace.role)} in ${activeWorkspace.name}`}
+                      </div>
+                    ) : null
+                  }
                 />
-              ) : null}
-            </SettingsSection>
+                {createdLabel || updatedLabel ? (
+                  <FactList
+                    layout="ruled"
+                    facts={[
+                      ...(createdLabel ? [{ label: 'Account created', value: createdLabel }] : []),
+                      ...(updatedLabel ? [{ label: 'Last updated', value: updatedLabel }] : []),
+                    ]}
+                  />
+                ) : null}
+              </Stack>
+            </Section>
             <TimeZoneSetting />
             <AccountSecurity />
             <ProjectDeletionControls />
-          </SettingsSections>
+          </SectionStack>
         </TabPanel>
 
         <TabPanel value="workspace" forceMount className="focus-ring data-[state=inactive]:hidden">
@@ -282,7 +305,7 @@ export function SettingsScreen() {
         <TabPanel value="api-keys" className="focus-ring">
           <ApiKeys />
         </TabPanel>
-      </ListScreen>
+      </SettingsPage>
     </TabsRoot>
   );
 }

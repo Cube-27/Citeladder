@@ -25,13 +25,13 @@ const OUTCOME_FILL: Record<OutcomeTone, string> = {
   warning: 'bg-warning',
   danger: 'bg-negative',
   info: 'bg-info',
-  neutral: 'bg-line-control',
+  neutral: 'bg-control-line',
 };
 
 const SERIES_FILL: Record<SeriesIndex, string> = {
-  1: 'bg-data-1',
-  2: 'bg-data-2',
-  3: 'bg-data-3',
+  1: 'bg-data-you',
+  2: 'bg-data-rival-1',
+  3: 'bg-data-rival-2',
   4: 'bg-data-other',
   5: 'bg-data-other',
   6: 'bg-data-other',

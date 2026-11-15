@@ -685,7 +685,7 @@ describe('AI Traffic state and navigation', () => {
     expect(within(panel).getByText(/Unavailable AI referral sessions · Flagged/)).toBeVisible();
     expect(within(panel).getByText(/Unavailable tracked citations · Not connected/)).toBeVisible();
     expect(
-      within(panel).getByText(/open Site Health findings · Unavailable · Coverage is incomplete/),
+      within(panel).getByText(/open Website findings · Unavailable · Coverage is incomplete/),
     ).toBeVisible();
     mswServer.use(
       http.get(
@@ -743,7 +743,7 @@ describe('AI Traffic state and navigation', () => {
     await user.click(screen.getByRole('tab', { name: 'Overview' }));
     expect(await screen.findByText(/not available for this workspace yet/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Connect crawl logs' })).not.toBeInTheDocument();
-    expect(await openFilterRow(user, 'Reporting range', 'Last 90 days')).toBeVisible();
+    expect(await openFilterRow(user, 'Period', 'Last 90 days')).toBeVisible();
     expect(screen.queryByRole('menuitem', { name: /^Verification/ })).not.toBeInTheDocument();
   });
 });

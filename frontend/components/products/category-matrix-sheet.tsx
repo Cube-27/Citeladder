@@ -1,10 +1,9 @@
 import { useMutation } from '@tanstack/react-query';
 
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { commerceMutations } from '@/lib/api/commerce';
@@ -14,6 +13,7 @@ import { buyerStageLabels } from '@/lib/prompts/forms';
 import { useGenerateBuyerPrompts } from '@/lib/products/use-generate-buyer-prompts';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
 import type { BuyerPrompt } from '@citeladder/contracts/commerce-suite';
+import { Notice } from '@/components/ui/notice';
 
 /** What a category's matrix covers: contexts × stages of non-branded prompts, plus branded ones. */
 function matrixCoverage(rows: readonly BuyerPrompt[]) {
@@ -68,16 +68,16 @@ export function CategoryMatrixSheet({
         {row.enabled ? 'Disable' : 'Approve'}
       </Button>
     ) : (
-      <Badge>{row.enabled ? 'Approved' : 'Not approved'}</Badge>
+      <Tag>{row.enabled ? 'Approved' : 'Not approved'}</Tag>
     );
   const list = (title: string, items: readonly BuyerPrompt[]) =>
     items.length ? (
       <Stack>
-        <h3 className={textRole('itemTitle')}>{title}</h3>
+        <h3 className={textRole('subheading')}>{title}</h3>
         <ul className={ledgerClasses()}>
           {items.map((row) => (
             <Inline as="li" key={row.id} gap="compact" className={ledgerItemClasses('flex-wrap')}>
-              <span className="text-ink-secondary min-w-0 flex-1">
+              <span className="text-ink-2 min-w-0 flex-1">
                 {row.text}
                 {row.context ? (
                   <span className="text-ink-tertiary">
@@ -114,16 +114,18 @@ export function CategoryMatrixSheet({
     >
       <Stack>
         {generate.isError ? (
-          <MutationNotice
+          <Notice
+            kind="mutation"
             notice={mutationNoticeForError(generate.error, { action: 'generate shopping prompts' })}
           />
         ) : null}
         {decide.isError ? (
-          <MutationNotice
+          <Notice
+            kind="mutation"
             notice={mutationNoticeForError(decide.error, { action: 'update the shopping prompt' })}
           />
         ) : null}
-        <p aria-label="Matrix coverage" className={textRole('body')}>
+        <p aria-label="Matrix coverage" className={textRole('body', 'text-ink-2')}>
           {coverage.contexts.length
             ? `${pluralCount(coverage.contexts.length, 'context')} × ${pluralCount(coverage.stages.length, 'stage')} (${coverage.filledCells} of ${coverage.contexts.length * coverage.stages.length} filled) · ${coverage.branded.length} branded`
             : 'No matrix yet for this category.'}

@@ -5,19 +5,18 @@ import { EarnedPageHandoff } from '@/components/opportunities/earned-page-handof
 import { OpportunityEvidenceSection } from '@/components/opportunities/opportunity-evidence-section';
 import { OpportunitySummarySection } from '@/components/opportunities/opportunity-summary-section';
 import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
-import { Badge } from '@/components/ui/badge';
-import { Callout } from '@/components/ui/callout';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { Label, textRole } from '@/components/ui/typography';
 import { opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail } from '@citeladder/contracts';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
-import { panelClasses } from '@/components/ui/panel';
 import { Limitations } from '@/components/ui/passage';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { wellClasses } from '@/components/ui/slip';
 
 /** One Action member's evidence, backed by the persisted detail projection. */
 export function EvidenceDrawer({
@@ -41,7 +40,8 @@ export function EvidenceDrawer({
   let body: ReactNode;
   if (detailQuery.isError) {
     body = (
-      <ReadError
+      <Notice
+        kind="read"
         error={detailQuery.error}
         fallback="Could not load this opportunity."
         onRetry={() => void detailQuery.refetch()}
@@ -50,13 +50,13 @@ export function EvidenceDrawer({
     );
   } else if (detailQuery.data && !detail) {
     body = (
-      <Callout tone="negative">
+      <Notice tone="negative">
         This opportunity is unavailable in the selected project. Close this detail and choose a
         recommendation from the current project.
-      </Callout>
+      </Notice>
     );
   } else if (detailQuery.isLoading || !detail) {
-    body = <QueryState kind="loading" />;
+    body = <StateBlock kind="loading" />;
   } else {
     body = <OpportunityDetailBody detail={detail} />;
   }
@@ -73,11 +73,11 @@ function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail 
   return (
     <Stack gap="workspace">
       <Stack>
-        <h2 className={textRole('sectionTitle')}>{detail.title}</h2>
+        <h2 className={textRole('heading')}>{detail.title}</h2>
         <Inline className="flex-wrap">
-          <Badge variant="priority" value={severityPriority(detail.severity)}>
+          <StatusMark variant="priority" value={severityPriority(detail.severity)}>
             {severityLabel(detail.severity)} impact
-          </Badge>
+          </StatusMark>
           <OpportunityTypeBadge type={detail.opportunity_type} />
         </Inline>
       </Stack>
@@ -85,7 +85,7 @@ function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail 
       {detail.remediation ? (
         <Stack as="section">
           <Label>Recommended improvements</Label>
-          <div className={panelClasses()}>
+          <div className={wellClasses()}>
             <p className="type-body text-ink whitespace-pre-line">{detail.remediation}</p>
           </div>
         </Stack>
@@ -111,8 +111,10 @@ function ActionHandoff({ detail }: Readonly<{ detail: OpportunityDetail }>) {
   return (
     <Stack as="section">
       <Label>Action handoff</Label>
-      <Stack className={panelClasses()}>
-        <p className={textRole('body')}>Create or improve content the brand controls.</p>
+      <Stack className={wellClasses()}>
+        <p className={textRole('body', 'text-ink-2')}>
+          Create or improve content the brand controls.
+        </p>
         <Limitations items={detail.content_handoff.limitations} />
       </Stack>
     </Stack>

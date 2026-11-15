@@ -3,11 +3,9 @@ import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueFixActions, type IssueFixScope } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
-import { ReadError } from '@/components/ui/read-error';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Dialog } from '@/components/ui/dialog';
-import { QueryState } from '@/components/ui/query-state';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,6 +23,8 @@ import {
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { groupOccurrences, loadedPageCount } from '@/lib/site-health/occurrence-groups';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * The issue a dialog describes: its catalog row, or — for an issue the address
@@ -122,7 +122,7 @@ export function IssueDetailDialog({
       {issue.remediation ? (
         <Stack gap="tight" className="min-w-0">
           <span className="type-caption">How to fix</span>
-          <p className={textRole('itemTitle', 'whitespace-pre-line')}>{issue.remediation}</p>
+          <p className={textRole('body', 'whitespace-pre-line')}>{issue.remediation}</p>
         </Stack>
       ) : null}
       <Inline className="flex-wrap">
@@ -133,7 +133,7 @@ export function IssueDetailDialog({
       </Inline>
       <IssueFixActions scope={scope} crawlId={crawlId} groupId={issue.group_id} />
       <Stack as="section" gap="workspace" aria-busy={detailQuery.isFetching || undefined}>
-        <h3 className={textRole('sectionTitle')}>Affected pages</h3>
+        <h3 className={textRole('heading')}>Affected pages</h3>
         <OccurrenceList
           issue={issue}
           detail={detail}
@@ -165,14 +165,16 @@ export function PendingIssueDialog({
       title="Issue"
     >
       {detailQuery.isError ? (
-        <ReadError
+        <Notice
+          kind="read"
           error={detailQuery.error}
           fallback="Could not load this issue."
+          title="Could not load this issue"
           onRetry={() => void detailQuery.refetch()}
           pending={detailQuery.isFetching}
         />
       ) : (
-        <QueryState kind="loading" label="Loading the issue…" />
+        <StateBlock kind="loading" label="Loading the issue…" />
       )}
     </Dialog>
   );
@@ -209,9 +211,11 @@ function OccurrenceList({
 }>) {
   if (query.isError)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load affected URLs."
+        title="Could not load affected URLs"
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
@@ -233,7 +237,7 @@ function OccurrenceList({
     );
   }
   if (detail.occurrences.length === 0)
-    return <QueryState kind="empty" inline message="No affected URLs found." />;
+    return <StateBlock kind="empty" inline message="No affected URLs found." />;
   // A site-level finding has one occurrence, on the homepage; the pages it
   // found are in that occurrence's evidence.
   const first = detail.occurrences[0];
@@ -315,7 +319,7 @@ function SiteLevelList({
             key={row.pageKind}
             className={ledgerItemClasses('flex-wrap justify-between')}
           >
-            <span className={textRole('itemTitle')}>{pageKindLabel(row.pageKind)}</span>
+            <span className={textRole('body')}>{pageKindLabel(row.pageKind)}</span>
             <span className="type-caption tabular-nums">
               {row.pageCount} {row.pageCount === 1 ? 'page' : 'pages'}
             </span>
@@ -328,7 +332,7 @@ function SiteLevelList({
     return <LinkTargetList evidence={evidence} crawlId={crawlId} />;
   if (evidence.pages.length === 0)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         inline
         message={
@@ -349,7 +353,7 @@ function SiteLevelList({
               key={section.pathPrefix}
               className={ledgerItemClasses('flex-wrap justify-between')}
             >
-              <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
+              <span className={textRole('body', '[overflow-wrap:anywhere]')}>
                 {section.pathPrefix}
               </span>
               <span className="type-caption tabular-nums">{pageCountLabel(section.pageCount)}</span>
@@ -397,7 +401,7 @@ function LinkTargetList({
 }>) {
   if (evidence.targets.length === 0)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         inline
         message={
@@ -414,7 +418,7 @@ function LinkTargetList({
         const hidden = target.pageCount - target.pages.length;
         return (
           <Stack as="li" gap="tight" key={target.url} className={ledgerItemClasses()}>
-            <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>
+            <span className={textRole('body', '[overflow-wrap:anywhere]')}>
               {sitePath(target.url, origin)} → {linkOutcomeLabel(target.outcome, origin)}
             </span>
             <span className="type-caption tabular-nums">

@@ -1,5 +1,4 @@
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { TextLink } from '@/components/ui/text-link';
@@ -8,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { agentHandoffHref } from '@/lib/agent/handoff';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /** The workflow that fetches a page into a page document and opens its workspace. */
 const PAGE_WORKFLOW = 'optimize_page';
@@ -21,8 +27,8 @@ const PAGE_WORKFLOW = 'optimize_page';
 export function ProductActions({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   const { actions, product } = detail;
   return (
-    <Card>
-      <CardHeader
+    <Section>
+      <SectionHeader
         actions={
           product.url ? (
             <Button asChild variant="secondary">
@@ -35,10 +41,12 @@ export function ProductActions({ detail }: Readonly<{ detail: CommerceProductDet
           ) : null
         }
       >
-        <CardTitle>Actions</CardTitle>
-        <CardDescription>Open work that can raise its visibility in AI answers.</CardDescription>
-      </CardHeader>
-      <CardContent>
+        <SectionTitle>Actions</SectionTitle>
+        <SectionDescription>
+          Open work that can raise its visibility in AI answers.
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         {actions.length ? (
           <ul className={ledgerClasses()}>
             {actions.map((action) => (
@@ -56,7 +64,7 @@ export function ProductActions({ detail }: Readonly<{ detail: CommerceProductDet
                   {action.title}
                 </TextLink>
                 <ActionStatusBadge status={action.status} />
-                <Button asChild variant="ghost">
+                <Button asChild variant="quiet">
                   <ProjectLink href={agentHandoffHref({ actionId: action.id })}>
                     Work with the agent
                   </ProjectLink>
@@ -65,12 +73,12 @@ export function ProductActions({ detail }: Readonly<{ detail: CommerceProductDet
             ))}
           </ul>
         ) : (
-          <p className={textRole('body')}>
+          <p className={textRole('body', 'text-ink-2')}>
             No open Actions for this product. Audits that measure it open Actions when its answers
             show something to fix.
           </p>
         )}
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }

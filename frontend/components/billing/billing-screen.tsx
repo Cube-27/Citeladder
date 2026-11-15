@@ -10,9 +10,7 @@ import { PlanChanges, type PlanChangeControls } from '@/components/billing/plan-
 import { ChoosePlan, subscribeWith, type NewSubscription } from '@/components/billing/choose-plan';
 import { PurchaseReview } from '@/components/billing/purchase-review';
 import { UsageMeters } from '@/components/billing/usage-meters';
-import { QueryState } from '@/components/ui/query-state';
-import { ListScreen } from '@/components/layout/page-shell';
-import { Callout } from '@/components/ui/callout';
+import { SettingsPage } from '@/components/templates/settings-page';
 import {
   billingMutations,
   billingQueries,
@@ -26,6 +24,8 @@ import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Subscription states in which the workspace HAS a plan to change, cancel or
@@ -119,19 +119,19 @@ export function BillingScreen() {
 
   if (entitlementLoading || entitlementQuery.isLoading) {
     return (
-      <ListScreen narrow>
-        <QueryState kind="loading" label="Loading billing…" />
-      </ListScreen>
+      <SettingsPage>
+        <StateBlock kind="loading" label="Loading billing…" />
+      </SettingsPage>
     );
   }
   if (entitlementQuery.isError) {
     return (
-      <ListScreen narrow>
-        <Callout tone="negative">
+      <SettingsPage>
+        <Notice tone="negative">
           Your entitlement could not be resolved, so no billing change is offered. No paid
           capability is active until it does; reload the page or contact support.
-        </Callout>
-      </ListScreen>
+        </Notice>
+      </SettingsPage>
     );
   }
   const entitlement = entitlementQuery.data ?? null;
@@ -139,12 +139,12 @@ export function BillingScreen() {
   const { buyExtra, subscribe } = purchaseActions(checkout, country);
 
   return (
-    <ListScreen narrow>
+    <SettingsPage>
       <CheckoutStatus checkout={checkout} />
       {canManage ? null : (
-        <Callout tone="info">
+        <Notice tone="info">
           Only a workspace Owner or Admin can change this workspace’s plan or buy add-ons.
-        </Callout>
+        </Notice>
       )}
       {/* Three cards (owner, 2026-11-10): the plan with everything that
           changes it, then usage, then invoices. A prepared purchase is
@@ -183,7 +183,7 @@ export function BillingScreen() {
         error={invoiceQuery.isError}
       />
       <BillingSupport contact={catalog?.support_contact ?? null} />
-    </ListScreen>
+    </SettingsPage>
   );
 }
 
@@ -210,12 +210,12 @@ function PlanSection({
 }>) {
   if (catalogError) {
     return (
-      <Callout tone="negative">
+      <Notice tone="negative">
         Could not load the plan catalog. Check your connection and retry.
-      </Callout>
+      </Notice>
     );
   }
-  if (catalogLoading || !catalog) return <QueryState kind="loading" label="Loading plans…" />;
+  if (catalogLoading || !catalog) return <StateBlock kind="loading" label="Loading plans…" />;
   const subscription = entitlement?.subscription ?? null;
   const currentPlan = subscription ? catalogPlanByKey(catalog, subscription.catalog_key) : null;
   if (subscription && currentPlan && SUBSCRIBED_STATUSES.has(subscription.status)) {

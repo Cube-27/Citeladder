@@ -3,12 +3,12 @@ import { redirect, type RouteObject } from 'react-router-dom';
 
 import { RouteLoadingScreen } from '@/components/layout/page-shell';
 import { ShellFallback } from '@/components/layout/shell-fallback';
-import { QueryState } from '@/components/ui/query-state';
-import { APP_ROUTES, MODE_HOMES, type AppRouteRecord } from '@/lib/navigation/app-routes';
+import { APP_ROUTES, HOME_PATH, type AppRouteRecord } from '@/lib/navigation/app-routes';
 import { registerRouteChunk } from '@/lib/navigation/route-chunks';
 import { bootstrapPrivateRoutes } from '@/lib/project/bootstrap-loader';
 import { NotFoundScreen, RouteError, ScreenError } from './route-error';
 import { ApplicationRouteLayout, PrivateRouteLayout } from './private-routes';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Begin the route download at matching time, alongside session bootstrap, or
@@ -30,7 +30,7 @@ function manifestRoute(route: AppRouteRecord): RouteObject {
       return null;
     },
     element: (
-      <Suspense fallback={route.shell ? <RouteLoadingScreen /> : <QueryState kind="loading" />}>
+      <Suspense fallback={route.shell ? <RouteLoadingScreen /> : <StateBlock kind="loading" />}>
         <Screen />
       </Suspense>
     ),
@@ -40,7 +40,7 @@ function manifestRoute(route: AppRouteRecord): RouteObject {
 const routes: readonly AppRouteRecord[] = APP_ROUTES;
 
 export const appRoutes: RouteObject[] = [
-  { path: '/', loader: () => redirect(MODE_HOMES.dashboard) },
+  { path: '/', loader: () => redirect(HOME_PATH) },
   ...routes
     .filter((route) => route.scope === 'public')
     .map((route) => ({ ...manifestRoute(route), ErrorBoundary: RouteError })),

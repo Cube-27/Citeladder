@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Passage } from '@/components/ui/passage';
 import { textRole } from '@/components/ui/typography';
 
@@ -30,12 +30,12 @@ export function OnPageEntities({
   if (!quoted.length) return null;
   return (
     <div className="grid gap-2">
-      <p className={textRole('label')}>{heading}</p>
+      <p className={textRole('body', 'text-ink-2')}>{heading}</p>
       <div className="flex flex-wrap gap-2">
         {quoted.map((entity) => (
-          <Badge key={entity.entity_name} variant="classification" value="competitor">
+          <StatusMark key={entity.entity_name} variant="classification" value="competitor">
             {entity.entity_name}
-          </Badge>
+          </StatusMark>
         ))}
       </div>
       {quoted.map((entity) =>

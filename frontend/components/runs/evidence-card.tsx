@@ -2,9 +2,8 @@ import { CheckCircle2, Quote, Search, XCircle } from 'lucide-react';
 
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
-import { Badge } from '@/components/ui/badge';
-import { QueryState } from '@/components/ui/query-state';
-import { StatRow } from '@/components/ui/stat-row';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
 import { productTransportLabel } from '@/lib/providers/catalog';
@@ -17,7 +16,6 @@ import type { Highlight } from '@/lib/markdown/highlight';
 import { claimHighlights, EvidenceClaims } from '@/components/runs/evidence-claims';
 import { EvidencePerception, perceptionHighlights } from '@/components/runs/evidence-perception';
 import { EvidenceAds } from '@/components/runs/evidence-ads';
-import { panelClasses } from '@/components/ui/panel';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import {
@@ -26,6 +24,9 @@ import {
   MetaFooter,
   SubsectionHeader,
 } from '@/components/ui/workspace';
+import { StateBlock } from '@/components/ui/state-block';
+import { wellClasses } from '@/components/ui/slip';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 function safeCitationUrl(value: string): string | null {
   try {
@@ -42,13 +43,13 @@ function Outcome({
   passed,
 }: Readonly<{ label: string; detail: string; passed: boolean }>) {
   return (
-    <Inline className={panelClasses('items-start')}>
+    <Inline className={wellClasses('items-start')}>
       <Icon
         icon={passed ? CheckCircle2 : XCircle}
-        className={passed ? 'text-positive' : 'text-ink-muted'}
+        className={passed ? 'text-positive' : 'text-ink-2'}
       />
       <div className="min-w-0">
-        <p className={textRole('itemTitle')}>{label}</p>
+        <p className={textRole('body')}>{label}</p>
         <p className="type-caption">{detail}</p>
       </div>
     </Inline>
@@ -78,12 +79,12 @@ function EvidencePromptHeader({
   return (
     <Stack as="section" gap="item" className="min-w-0">
       <Inline className="flex-wrap justify-between">
-        <Badge>Prompt #{promptBadgeNumber}</Badge>
+        <Tag>Prompt #{promptBadgeNumber}</Tag>
         <Inline className="flex-wrap">
-          <Badge>
+          <Tag>
             {engines.label(evidence.logical_engine)}
             {transport ? ` · ${transport}` : ''}
-          </Badge>
+          </Tag>
           <MeasurementContext
             retrieval={evidence.retrieval_enabled}
             model={engines.modelLabel(evidence.logical_engine, evidence.transport_model)}
@@ -97,7 +98,7 @@ function EvidencePromptHeader({
 
 function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   return (
-    <StatRow
+    <FigureStrip
       segments={[
         {
           key: 'brand',
@@ -202,7 +203,7 @@ function EvidenceAnswer({
   return (
     <Stack as="section" gap="item">
       <Label>{isSearchSurface ? 'AI Overview' : 'Engine response'}</Label>
-      <div className={panelClasses('min-w-0 overflow-hidden')}>
+      <div className={wellClasses('min-w-0 overflow-hidden')}>
         <EvidenceAnswerBody
           text={trimmed}
           measuredAbsence={measuredAbsence}
@@ -235,9 +236,11 @@ function EvidenceAnswerBody({
     );
   }
   if (measuredAbsence) {
-    return <span className="type-body">No AI Overview was shown for this search.</span>;
+    return <span className="type-body text-ink-2">No AI Overview was shown for this search.</span>;
   }
-  return <span className="type-body">No answer text was captured for this execution.</span>;
+  return (
+    <span className="type-body text-ink-2">No answer text was captured for this execution.</span>
+  );
 }
 
 function brandOutcomeDetail(evidence: ExecutionEvidence): string {
@@ -292,26 +295,26 @@ function CitationItem({
 
   return (
     <Inline as="li" gap="compact" className={ledgerItemClasses('items-start')}>
-      <span className={textRole('label', 'shrink-0 tabular-nums')}>{ordinal}</span>
+      <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>{ordinal}</span>
       <div className="min-w-0 flex-1">
         <Inline gap="compact" className="items-start justify-between">
           <Stack gap="tight" className="min-w-0">
             {href ? (
-              <TextLink variant="external" text="itemTitle" href={href} className="max-w-full">
+              <TextLink variant="external" text="body" href={href} className="max-w-full">
                 <span className="truncate">{title}</span>
               </TextLink>
             ) : (
-              <p className={textRole('itemTitle', 'truncate')}>{title || 'Untitled source'}</p>
+              <p className={textRole('body', 'truncate')}>{title || 'Untitled source'}</p>
             )}
             <p className="type-caption truncate">{citation.domain}</p>
           </Stack>
-          <Badge
+          <StatusMark
             className="shrink-0"
             variant="classification"
             value={classificationBadgeValue(citation.classification)}
           >
             {classificationLabel(citation.classification)}
-          </Badge>
+          </StatusMark>
         </Inline>
       </div>
     </Inline>
@@ -332,7 +335,7 @@ function EvidenceCitationsList({
         }
       />
       {citations.length === 0 ? (
-        <QueryState
+        <StateBlock
           kind="empty"
           headingLevel={3}
           icon={Quote}

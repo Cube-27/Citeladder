@@ -3,12 +3,9 @@ import { ArrowLeft, ArrowRight, Check, Sparkles } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Drawer } from '@/components/ui/drawer';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import { topicsQueries } from '@/lib/api/topics';
@@ -28,6 +25,8 @@ import { BuilderTopicsStep } from './builder-topics-step';
 import { GenerateErrorAlert, GenerateResultAlert } from './generation-alerts';
 import { useBuilderBusiness, type BuilderBusiness } from './use-builder-business';
 import { useBuilderTopics, type BuilderTopics } from './use-builder-topics';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 export type BuilderStep = 'business' | 'topics' | 'distribution' | 'review';
 
@@ -111,9 +110,9 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
   const runNotices = (
     <>
       {isGenerating ? (
-        <Callout tone="info">
+        <Notice tone="info">
           Writing and quality-checking questions can take a minute or two. Keep this open.
-        </Callout>
+        </Notice>
       ) : null}
       {generateError ? <GenerateErrorAlert error={generateError} /> : null}
     </>
@@ -209,19 +208,19 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
 /** The seed-query read before it has data: loading, or failed with a retry. */
 function SeedsReadState({ read }: Readonly<{ read: UseQueryResult<SeedQueries> }>) {
   return read.isError ? (
-    <QueryState
+    <StateBlock
       kind="error"
       {...readErrorProps(read)}
       fallback="Your search data could not be loaded."
     />
   ) : (
-    <QueryState kind="loading" label="Loading your search data" />
+    <StateBlock kind="loading" label="Loading your search data" />
   );
 }
 
 /** Why the distribution settings cannot make a run, if they cannot. */
 function RunProblem({ built }: Readonly<{ built: ReturnType<typeof runRequest> }>) {
-  return built.ok ? null : <Callout tone="warning">{built.problem}</Callout>;
+  return built.ok ? null : <Notice tone="warning">{built.problem}</Notice>;
 }
 
 /** Edits from earlier steps that this run will not see until they are saved. */
@@ -236,9 +235,9 @@ function UnsavedNotice({
   if (!unsaved.length) return null;
   const sentence = unsaved.join(' and ');
   return (
-    <Callout tone="warning">
+    <Notice tone="warning">
       {sentence.charAt(0).toUpperCase() + sentence.slice(1)}, so this run will not use them.
-    </Callout>
+    </Notice>
   );
 }
 
@@ -263,7 +262,7 @@ function BuilderFooter({
   onClose: () => void;
 }>) {
   const back = (to: BuilderStep) => (
-    <Button variant="ghost" onClick={() => setStep(to)}>
+    <Button variant="quiet" onClick={() => setStep(to)}>
       <Icon icon={ArrowLeft} />
       Back
     </Button>
@@ -280,7 +279,7 @@ function BuilderFooter({
     case 'business':
       return (
         <Inline className="justify-end">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="quiet" onClick={onClose}>
             Cancel
           </Button>
           <Button
@@ -340,7 +339,7 @@ function BuilderFooter({
     case 'review':
       return (
         <Inline className="justify-end">
-          <Button variant="ghost" onClick={onClose}>
+          <Button variant="quiet" onClick={onClose}>
             Close
           </Button>
           <Button variant="secondary" onClick={() => setStep('distribution')}>

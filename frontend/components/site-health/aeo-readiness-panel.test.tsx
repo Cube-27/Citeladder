@@ -183,14 +183,20 @@ describe('AEO Readiness', () => {
         .map((head) => head.textContent),
     ).toEqual(['Dimension', 'Score', 'Coverage', 'State']);
     // Two bands, two tones: "Nearly there" no longer reads as "Needs work".
-    expect(within(table).getByText('Needs work')).toHaveAttribute('data-badge-tone', 'warning');
+    expect(within(table).getByText('Needs work').closest('[data-status-tone]')).toHaveAttribute(
+      'data-status-tone',
+      'warning',
+    );
     const nearly = within(table).getByText('Nearly there');
-    expect(nearly).toHaveAttribute('data-badge-tone', 'info');
+    expect(nearly.closest('[data-status-tone]')).toHaveAttribute('data-status-tone', 'info');
 
     await userEvent.click(nearly);
     const drawer = await screen.findByRole('dialog', { name: 'Structure evidence' });
     // A check's state is a status badge, not a bare caption.
-    expect(within(drawer).getByText('Passing')).toHaveAttribute('data-badge-tone', 'positive');
+    expect(within(drawer).getByText('Passing').closest('[data-status-tone]')).toHaveAttribute(
+      'data-status-tone',
+      'positive',
+    );
   });
 
   it('opens a pillar from the keyboard through its named row button', async () => {

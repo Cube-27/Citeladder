@@ -1,17 +1,17 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { SettingsSection } from '@/components/ui/settings-section';
 import { textRole } from '@/components/ui/typography';
 import {
   saveTimeZonePreference,
   useDisplayTimeZone,
   useTimeZonePreference,
 } from '@/lib/display-timezone';
+import { Notice } from '@/components/ui/notice';
+import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
 
 type Choice = 'auto' | 'UTC' | 'custom';
 
@@ -53,40 +53,45 @@ export function TimeZoneSetting() {
   };
 
   return (
-    <SettingsSection
-      title="Display timezone"
-      description={`Timestamps currently display in ${displayZone}.`}
-    >
-      <Select
-        value={choice}
-        onValueChange={choose}
-        options={CHOICES}
-        ariaLabel="Display timezone preference"
-        className="max-w-sm"
-      />
-      {choice === 'custom' ? (
-        <Stack gap="tight">
-          <label htmlFor="named-display-timezone" className={textRole('label')}>
-            IANA timezone
-          </label>
-          <Inline className="flex-wrap">
-            <Input
-              id="named-display-timezone"
-              value={namedZone}
-              onChange={(event) => {
-                setEdit({ choice: 'custom', namedZone: event.target.value });
-              }}
-              placeholder="Asia/Kolkata"
-              className="min-w-56 flex-1"
-              aria-invalid={Boolean(error)}
-            />
-            <Button variant="primary" onClick={saveNamedZone}>
-              Save timezone
-            </Button>
-          </Inline>
-        </Stack>
-      ) : null}
-      {error ? <Callout tone="negative">{error}</Callout> : null}
-    </SettingsSection>
+    <Section aria-labelledby="settings-timezone-title">
+      <SectionHeader>
+        <SectionTitle id="settings-timezone-title" level={2}>
+          Display timezone
+        </SectionTitle>
+        <SectionDescription>{`Timestamps currently display in ${displayZone}.`}</SectionDescription>
+      </SectionHeader>
+      <Stack gap="item">
+        <Select
+          value={choice}
+          onValueChange={choose}
+          options={CHOICES}
+          ariaLabel="Display timezone preference"
+          className="max-w-sm"
+        />
+        {choice === 'custom' ? (
+          <Stack gap="tight">
+            <label htmlFor="named-display-timezone" className={textRole('body', 'text-ink-2')}>
+              IANA timezone
+            </label>
+            <Inline className="flex-wrap">
+              <Input
+                id="named-display-timezone"
+                value={namedZone}
+                onChange={(event) => {
+                  setEdit({ choice: 'custom', namedZone: event.target.value });
+                }}
+                placeholder="Asia/Kolkata"
+                className="min-w-56 flex-1"
+                aria-invalid={Boolean(error)}
+              />
+              <Button variant="primary" onClick={saveNamedZone}>
+                Save timezone
+              </Button>
+            </Inline>
+          </Stack>
+        ) : null}
+        {error ? <Notice tone="negative">{error}</Notice> : null}
+      </Stack>
+    </Section>
   );
 }

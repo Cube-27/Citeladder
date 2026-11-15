@@ -1,4 +1,4 @@
-import type { TrendEvent, TrendPoint } from '@/components/ui/trend-chart';
+import type { TrendEvent, TrendPoint } from '@/components/ui/step-chart';
 
 /** Every value, and every drawn marker, for a reader who cannot see the plot. */
 export function TrendTable({

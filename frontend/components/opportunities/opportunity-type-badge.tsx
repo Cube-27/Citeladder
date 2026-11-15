@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import type { OpportunityType } from '@citeladder/contracts';
 
 const TYPE_LABEL: Record<OpportunityType, string> = {
@@ -10,5 +10,5 @@ const TYPE_LABEL: Record<OpportunityType, string> = {
 };
 
 export function OpportunityTypeBadge({ type }: Readonly<{ type: OpportunityType }>) {
-  return <Badge>{TYPE_LABEL[type]}</Badge>;
+  return <Tag>{TYPE_LABEL[type]}</Tag>;
 }

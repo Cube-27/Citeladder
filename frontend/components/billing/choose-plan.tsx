@@ -3,7 +3,6 @@ import { useState, type ReactNode } from 'react';
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
 import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { PlanRow } from '@/components/billing/plan-row';
-import { Callout } from '@/components/ui/callout';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -18,6 +17,7 @@ import { selfServeCheckoutComingSoon } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { websiteHref } from '@/lib/config/app-link';
 import { contactSalesHref } from '@/lib/config/contact';
+import { Notice } from '@/components/ui/notice';
 
 export type NewSubscription = {
   country: string;
@@ -89,7 +89,7 @@ export function ChoosePlan({
           title="Choose a plan"
           description="Self-serve plans are not open yet."
         />
-        <Callout tone="info">
+        <Notice tone="info">
           To start a plan now, contact us and we will set it up for this workspace.{' '}
           <ExternalHttpLink
             href={contactSalesHref(
@@ -99,7 +99,7 @@ export function ChoosePlan({
           >
             Contact us
           </ExternalHttpLink>
-        </Callout>
+        </Notice>
       </Stack>
     );
   return (

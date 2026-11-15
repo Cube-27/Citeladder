@@ -248,7 +248,8 @@ describe('DashboardScreen', () => {
       'href',
       'https://acme.com/',
     );
-    expect(screen.getByText(/^Tracked .*· chatgpt, gemini$/u)).toBeVisible();
+    // Engines by the names the catalogue gives them, never their stored keys.
+    expect(screen.getByText(/^Tracked .*· ChatGPT API, Gemini API$/u)).toBeVisible();
     // The names and whole-percent precision AI Visibility uses for the same run.
     const state = within(screen.getByRole('region', { name: 'Project state' }));
     expect(state.getByText('Visibility')).toBeVisible();
@@ -262,7 +263,7 @@ describe('DashboardScreen', () => {
     const rankChange = state
       .getAllByText('vs previous')
       .map((context) => context.closest('[data-outcome]'))
-      .find((delta) => delta?.textContent === '↓down 1vs previous');
+      .find((delta) => delta?.textContent === '↓down -1vs previous');
     expect(rankChange).toHaveAttribute('data-outcome', 'improved');
     expect(
       within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('33%'),

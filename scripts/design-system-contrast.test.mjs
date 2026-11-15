@@ -14,7 +14,7 @@ import {
  * the labels on fills and the marks the separation check measures are set
  * explicitly.
  */
-function palette({ ink, paper, positive, negative, series }) {
+function palette({ ink, paper, positive, negative, series, appSeries }) {
   const { inks, surfaces } = contrastRoles();
   return {
     ...Object.fromEntries(surfaces.map((token) => [token, paper])),
@@ -26,6 +26,12 @@ function palette({ ink, paper, positive, negative, series }) {
     '--color-positive': positive,
     '--color-negative': negative,
     ...Object.fromEntries(series.map((value, index) => [`--color-data-${index + 1}`, value])),
+    ...Object.fromEntries(
+      ['you', 'rival-1', 'rival-2', 'rival-3', 'rival-4'].map((name, index) => [
+        `--color-data-${name}`,
+        appSeries[index],
+      ]),
+    ),
   };
 }
 
@@ -35,6 +41,7 @@ const LIGHT = palette({
   positive: '#000000',
   negative: '#5e5e5e',
   series: ['#000000', '#595959', '#949494'],
+  appSeries: ['#e8501a', '#000000', '#2f6f9f', '#4b3a8a', '#1f7d73'],
 });
 const DARK = palette({
   ink: '#ffffff',
@@ -42,6 +49,7 @@ const DARK = palette({
   positive: '#ffffff',
   negative: '#949494',
   series: ['#ffffff', '#a0a0a0', '#5f5f5f'],
+  appSeries: ['#ff6a33', '#ffffff', '#6fb3e0', '#8a73d9', '#4fc4b5'],
 });
 
 const block = (selector, values) =>
@@ -117,6 +125,26 @@ test('a website stage holds the website palettes only, since the app has none', 
     ),
   );
   assert.ok(!violations.some((violation) => violation.includes('data-public-surface')));
+});
+
+test("the app's series holds 3:1 in the app's palettes and is not measured on the website", () => {
+  const violations = paletteViolations(css({ light: { '--color-data-you': '#eeeeee' } }));
+  assert.deepEqual(
+    violations,
+    ['ground', 'surface', 'well', 'raised'].map(
+      (fill) =>
+        `apps/app/src/globals.css: :root:not([data-public-surface]) --color-data-you on --color-${fill} is 1.16:1; needs 3:1`,
+    ),
+  );
+});
+
+test("you and the rivals must part in the app's palettes only", () => {
+  const violations = paletteViolations(css({ light: { '--color-data-rival-3': '#2f6f9f' } }));
+  assert.deepEqual(violations, [
+    'apps/app/src/globals.css: :root:not([data-public-surface]) you and the rivals ' +
+      '--color-data-rival-2 / --color-data-rival-3 are too close ' +
+      '(ΔL* 0.0, deuteranopia ΔE 0.0, protanopia ΔE 0.0)',
+  ]);
 });
 
 test('a translucent soft is composited onto the surface before measuring', () => {

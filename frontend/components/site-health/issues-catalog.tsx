@@ -1,8 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { ListScreen } from '@/components/layout/page-shell';
-import { Inline, Stack } from '@/components/ui/layout';
+import { CollectionPage } from '@/components/templates/collection-page';
+import { Inline } from '@/components/ui/layout';
 import {
   IssueDetailDialog,
   PendingIssueDialog,
@@ -123,56 +123,49 @@ export function IssuesCatalog({
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
   return (
-    <ListScreen narrow>
-      <Stack gap="workspace" className="min-w-0">
-        {notice}
-        <IssuesSummary
-          query={priorityQuery}
-          fixes={fixesQuery.data?.items}
-          onOpen={catalog.selectIssue}
-        />
-        <DataTable
-          label="Issues"
-          // Keeps the Issue column readable beside the fixed severity and pages
-          // columns; narrower screens scroll the table instead.
-          minWidth="sm"
-          columns={issueColumns(filters.sort, (sort) => updateFilters({ sort }))}
-          toolbar={{
-            view: (
-              <SectionControl
-                value={filters.section}
-                summary={summary}
-                onChange={(section) => updateFilters({ section })}
-              />
-            ),
-            search: (
-              <IssueSearch
-                key={filters.query}
-                query={filters.query}
-                onApply={(query) => updateFilters({ query })}
-              />
-            ),
-            filters: catalogFilters(filters, rows, updateFilters),
-            status: summary ? (
-              <IssueCount summary={summary} findingView={filters.finding_class} />
-            ) : null,
-          }}
-          state={tableState(issuesQuery)}
-          rowCount={rows.length}
-          pageSize={ISSUE_PAGE_LIMIT}
-          pager={pager}
-          busy={{ active: issuesQuery.isFetching, label: 'Updating issues' }}
-        >
-          {rows.map((issue, index) => (
-            <IssueRow
-              key={issue.group_id}
-              issue={issue}
-              index={index}
-              onOpen={catalog.selectIssue}
+    <CollectionPage>
+      {notice}
+      <IssuesSummary
+        query={priorityQuery}
+        fixes={fixesQuery.data?.items}
+        onOpen={catalog.selectIssue}
+      />
+      <DataTable
+        label="Issues"
+        // Keeps the Issue column readable beside the fixed severity and pages
+        // columns; narrower screens scroll the table instead.
+        minWidth="sm"
+        columns={issueColumns(filters.sort, (sort) => updateFilters({ sort }))}
+        toolbar={{
+          view: (
+            <SectionControl
+              value={filters.section}
+              summary={summary}
+              onChange={(section) => updateFilters({ section })}
             />
-          ))}
-        </DataTable>
-      </Stack>
+          ),
+          search: (
+            <IssueSearch
+              key={filters.query}
+              query={filters.query}
+              onApply={(query) => updateFilters({ query })}
+            />
+          ),
+          filters: catalogFilters(filters, rows, updateFilters),
+          status: summary ? (
+            <IssueCount summary={summary} findingView={filters.finding_class} />
+          ) : null,
+        }}
+        state={tableState(issuesQuery)}
+        rowCount={rows.length}
+        pageSize={ISSUE_PAGE_LIMIT}
+        pager={pager}
+        busy={{ active: issuesQuery.isFetching, label: 'Updating issues' }}
+      >
+        {rows.map((issue) => (
+          <IssueRow key={issue.group_id} issue={issue} onOpen={catalog.selectIssue} />
+        ))}
+      </DataTable>
       {selectedGroupId !== null && open === null ? (
         <PendingIssueDialog detailQuery={detailQuery} onClose={() => catalog.selectIssue(null)} />
       ) : null}
@@ -191,7 +184,7 @@ export function IssuesCatalog({
           onClose={() => catalog.selectIssue(null)}
         />
       ) : null}
-    </ListScreen>
+    </CollectionPage>
   );
 }
 
@@ -202,6 +195,7 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
       kind: 'error',
       error: query.error,
       fallback: 'Could not load issues for this crawl.',
+      title: 'Could not load issues for this crawl',
       onRetry: () => void query.refetch(),
       pending: query.isFetching,
     } satisfies DataTableState;
@@ -215,10 +209,9 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
   return undefined;
 }
 
-/** Ordinal, the issue, its severity, its pages; severity and pages order the list. */
+/** The issue, its severity, its pages; severity and pages order the list. */
 function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataTableColumn[] {
   return [
-    { key: 'index', label: '#', width: 'index', numeric: true },
     { key: 'issue', label: 'Issue' },
     {
       key: 'severity',
@@ -239,15 +232,11 @@ function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataT
 /** One issue: the whole row opens its detail, the title is the keyboard's way in. */
 function IssueRow({
   issue,
-  index,
   onOpen,
-}: Readonly<{ issue: SiteIssue; index: number; onOpen: (groupId: string) => void }>) {
+}: Readonly<{ issue: SiteIssue; onOpen: (groupId: string) => void }>) {
   const title = issueTitle(issue);
   return (
     <TableRow onClick={() => onOpen(issue.group_id)} className="cursor-pointer">
-      <TableCell numeric className="type-caption tabular-nums">
-        {index + 1}
-      </TableCell>
       <TableCell>
         <Inline gap="tight">
           <Pressable
@@ -256,7 +245,7 @@ function IssueRow({
               event.stopPropagation();
               onOpen(issue.group_id);
             }}
-            className="min-w-0"
+            className="min-h-6 min-w-0"
           >
             <ClampText lines={1} className={textRole('emphasis')}>
               {title}

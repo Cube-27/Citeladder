@@ -7,8 +7,6 @@ import { Drawer } from '@/components/ui/drawer';
 import { Pressable } from '@/components/ui/pressable';
 import { MISSING_MARK } from '@/lib/format';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { QueryState } from '@/components/ui/query-state';
 import { Stack } from '@/components/ui/layout';
 import { Tooltip } from '@/components/ui/tooltip';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -17,6 +15,8 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { aiSourceLabel } from '@/lib/ai-traffic/series';
 import { coverageLabel, legStateLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 export function TrafficLeg({
   leg,
@@ -88,9 +88,9 @@ export function UrlPanel({
       title={page?.display_path ?? 'Path-level AI Traffic'}
       description="Persisted observations; requests, sessions and citations are separate units."
     >
-      {query.isLoading ? <QueryState kind="loading" label="Loading URL evidence…" /> : null}
+      {query.isLoading ? <StateBlock kind="loading" label="Loading URL evidence…" /> : null}
       {query.isError ? (
-        <QueryState
+        <StateBlock
           kind="error"
           error={query.error}
           fallback="Could not read URL evidence"
@@ -113,9 +113,9 @@ function UrlEvidence({
   const page = data.page;
   if (!page)
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         No joinable evidence is available for this path in the selected window.
-      </Callout>
+      </Notice>
     );
   const link = (tab: string) =>
     projectDestination('/ai-traffic', new URLSearchParams({ tab }), projectId);
@@ -137,8 +137,8 @@ function UrlEvidence({
         <Link to={projectDestination('/visibility', null, projectId)}>Visibility</Link>
       </p>
       <p>
-        <TrafficLeg leg={page.findings} unit="open Site Health findings" />{' '}
-        <Link to={projectDestination('/site', null, projectId)}>Site Health</Link>
+        <TrafficLeg leg={page.findings} unit="open Website findings" />{' '}
+        <Link to={projectDestination('/site', null, projectId)}>Website</Link>
       </p>
       <p className="type-caption">First and last observations in this window</p>
       {data.crawls.map((r) => (
@@ -156,12 +156,12 @@ function UrlEvidence({
         <p key={r.citation_id}>Tracked citation: {r.date}</p>
       ))}
       {data.provenance.bounded ? (
-        <Callout tone="info">The timeline reached its display bound.</Callout>
+        <Notice tone="info">The timeline reached its display bound.</Notice>
       ) : null}
       <p className="type-caption">
         Timeline uses saved crawler rollups, GA4 metric rows and tracked citations.
         {data.provenance.crawl_id ? (
-          <Link to={projectDestination('/site', null, projectId)}>View Site Health inventory</Link>
+          <Link to={projectDestination('/site', null, projectId)}>View Website pages</Link>
         ) : (
           ' Inventory unavailable'
         )}
@@ -185,7 +185,7 @@ export function TrafficUrlButton({
   return (
     <>
       <Button
-        variant="ghost"
+        variant="quiet"
         onClick={() => setOpen(true)}
         aria-label={label}
         className="max-w-full"

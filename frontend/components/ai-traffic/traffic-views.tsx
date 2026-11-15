@@ -13,24 +13,20 @@ import {
 } from '@/lib/api/ai-traffic';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { coverageLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
-import { MISSING_MARK } from '@/lib/format';
+import { MISSING_MARK, formatCount, formatWindowDate } from '@/lib/format';
 import { CalendarX, SearchX } from 'lucide-react';
 import { TabPanel } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { TableTime } from '@/components/ui/display-time';
-import { readErrorProps } from '@/components/ui/read-error';
 import { TableRow, TableCell, TableCellLines } from '@/components/ui/table';
 import { CrawlLogConnections } from './crawl-log-connections';
 import { InsightStrip } from './insight-strip';
-import {
-  CitationSignal,
-  CrawlSignalPanel,
-  ReferralSignal,
-  RequestsByPurpose,
-} from './overview-signals';
+import { OverviewFigures, RequestsByPurpose } from './overview-signals';
 import { CrawlerPages } from './crawler-pages';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { readErrorProps } from '@/components/ui/notice';
+import { SectionStack } from '@/components/ui/section';
 
 const CRAWLER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'crawler', label: 'Crawler', width: 'name' },
@@ -74,17 +70,14 @@ export function TrafficOverview({
   const crawlConnected = data.crawl.connection !== 'not_connected';
   return (
     <TabPanel value="overview">
-      <Stack gap="workspace">
+      <SectionStack>
         <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />
-        <Stack gap="workspace" className="desktop:grid-cols-3">
-          <CrawlSignalPanel
-            data={data.crawl}
-            available={crawlAvailable}
-            onConnect={() => setConnectOpen(true)}
-          />
-          <ReferralSignal data={data.referrals} />
-          <CitationSignal data={data.citations} projectId={projectId} />
-        </Stack>
+        <OverviewFigures
+          data={data}
+          projectId={projectId}
+          crawlAvailable={crawlAvailable}
+          onConnectCrawl={() => setConnectOpen(true)}
+        />
         {data.crawl.series.length ? <RequestsByPurpose series={data.crawl.series} /> : null}
         {crawlAvailable ? (
           <CrawlLogConnections
@@ -96,7 +89,7 @@ export function TrafficOverview({
         {crawlConnected ? (
           <CoverageTable projectId={projectId} workspaceId={workspaceId} range={range} />
         ) : null}
-      </Stack>
+      </SectionStack>
     </TabPanel>
   );
 }
@@ -143,10 +136,10 @@ export function TrafficCrawlers({ workspaceId, projectId, filters }: TrafficTabl
             <TableRow key={b.bot_id}>
               <TableCell>{b.label}</TableCell>
               <TableCell>{words(b.purpose)}</TableCell>
-              <TableCell numeric>{b.requests}</TableCell>
+              <TableCell numeric>{formatCount(b.requests)}</TableCell>
               <TableCell numeric>
                 <Button
-                  variant="ghost"
+                  variant="quiet"
                   onClick={() => setBotId(b.bot_id)}
                   aria-label={`View paths requested by ${b.label}`}
                 >
@@ -325,7 +318,7 @@ function CoverageTable({
       {data?.items.map((r) => (
         <TableRow key={r.source_id + r.reporting_date + r.reporting_timezone}>
           <TableCell>
-            <CellLines lines={[r.reporting_date, r.reporting_timezone]} />
+            <CellLines lines={[formatWindowDate(r.reporting_date), r.reporting_timezone]} />
           </TableCell>
           <TableCell>
             <SourceLines source={data.sources.find((s) => s.id === r.source_id)} />
@@ -334,7 +327,7 @@ function CoverageTable({
             <CellLines lines={[coverageLabel(r.coverage), reasonLabel(r.reason)]} />
           </TableCell>
           <TableCell numeric>
-            {r.batch_count} / {r.heartbeat_count}
+            {formatCount(r.batch_count)} / {formatCount(r.heartbeat_count)}
           </TableCell>
           <TableCell numeric>{r.max_gap_minutes.toFixed(1)} minutes</TableCell>
         </TableRow>

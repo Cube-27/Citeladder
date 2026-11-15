@@ -133,12 +133,14 @@ describe('Actions', () => {
     const row = screen.getByRole('link', { name: 'https://acme.test/pricing' });
     expect(row).toHaveAttribute('href', `/agent/actions/${ACTION}?project=${PROJECT}`);
     const cells = within(row.closest('tr')!);
-    // The band, never the raw score; priority is an order, not the error red.
-    expect(cells.getByText('High')).toHaveAttribute('data-badge-tone', 'accent');
+    // The band, never the raw score; priority is an order, never a hue.
+    expect(cells.getByText('High').closest('[data-status-tone]')).toHaveAttribute(
+      'data-status-tone',
+      'neutral',
+    );
     expect(screen.queryByText('82.5')).not.toBeInTheDocument();
-    expect(cells.getByText('Page · 1 finding in Site Health, Search Console')).toBeVisible();
+    expect(cells.getByText('Page · 1 finding in Website, Search Console')).toBeVisible();
     expect(cells.getByText('Improve the existing page')).toBeVisible();
-    expect(cells.getByText('Site Health, Search Console')).toBeVisible();
     // An Open row in the queue names no status; one in progress does.
     expect(cells.queryByText('Open')).not.toBeInTheDocument();
     const started = screen.getByRole('link', { name: 'acme.test/page-0' });
@@ -147,8 +149,12 @@ describe('Actions', () => {
       'Action',
       'Priority',
       'Action type',
-      'Source',
     ]);
+    // The server's order, marked on its column.
+    expect(screen.getByRole('columnheader', { name: 'Priority' })).toHaveAttribute(
+      'aria-sort',
+      'descending',
+    );
     // Five of the seven, then the way to the rest.
     expect(screen.queryByRole('link', { name: 'acme.test/page-4' })).toBeNull();
 
@@ -172,7 +178,7 @@ describe('Actions', () => {
       'tr',
     )!;
     expect(
-      within(row).getByText('Issue across pages · 179 pages · 1 finding in Site Health'),
+      within(row).getByText('Issue across pages · 179 pages · 1 finding in Website'),
     ).toBeVisible();
   });
 

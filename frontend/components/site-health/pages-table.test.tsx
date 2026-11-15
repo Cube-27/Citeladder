@@ -41,10 +41,9 @@ describe('PagesTable', () => {
     expect(screen.getByTestId('location')).toHaveTextContent(`/site/crawls/${CRAWL}/pages/${UUID}`);
   });
 
-  it('shows seven columns, the page title as the link to its detail', () => {
+  it('leads with the page, its title the link to its detail', () => {
     renderPages(<PagesTable pages={[page()]} crawlId={CRAWL} />);
     expect(screen.getAllByRole('columnheader').map((head) => head.textContent)).toEqual([
-      '#',
       'Page',
       'Type',
       'Issues',

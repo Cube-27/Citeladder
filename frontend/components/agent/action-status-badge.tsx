@@ -1,4 +1,5 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import {
   ACTION_STATUS_LABEL,
   ACTION_STATUS_TONE,
@@ -12,20 +13,20 @@ export function ActionStatusBadge({ status }: Readonly<{ status: ActionStatus }>
   const tone = ACTION_STATUS_TONE[status];
   const label = ACTION_STATUS_LABEL[status];
   return tone === 'neutral' ? (
-    <Badge>{label}</Badge>
+    <Tag>{label}</Tag>
   ) : (
-    <Badge variant="status" value={tone}>
+    <StatusMark variant="status" value={tone}>
       {label}
-    </Badge>
+    </StatusMark>
   );
 }
 
 /** An Action's priority as High, Medium or Low; an unscored Action says so. */
 export function ActionPriorityBadge({ band }: Readonly<{ band: ActionPriorityBand | null }>) {
-  if (band === null) return <Badge>Not scored</Badge>;
+  if (band === null) return <Tag>Not scored</Tag>;
   return (
-    <Badge variant="priority" value={PRIORITY_BAND_VALUE[band]}>
+    <StatusMark variant="priority" value={PRIORITY_BAND_VALUE[band]}>
       {PRIORITY_BAND_LABEL[band]}
-    </Badge>
+    </StatusMark>
   );
 }

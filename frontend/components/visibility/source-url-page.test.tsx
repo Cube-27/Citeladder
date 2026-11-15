@@ -50,7 +50,9 @@ describe('what a cited page means for you', () => {
 
     expect(screen.getByText('Competitors are listed on this page and you are not.')).toBeVisible();
     const listed = screen.getByText('Listed here').parentElement!;
-    expect(within(listed).getByText('Globex', { selector: '[data-badge-tone]' })).toBeVisible();
+    expect(
+      within(listed).getByText('Globex', { selector: '[data-status-tone] span' }),
+    ).toBeVisible();
     const quote = screen.getByRole('blockquote');
     expect(quote).toHaveTextContent('Globex leads the list for small teams.');
     expect(within(quote).getByText('Globex', { selector: 'mark' })).toBeVisible();

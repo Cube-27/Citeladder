@@ -4,8 +4,8 @@ import { numericMetric, signalDefinition } from '@/lib/demand/signals';
 import { availabilityLabel, formatCount } from '@/lib/format';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
+import { wellClasses } from '@/components/ui/slip';
 
 /**
  * The plain-language reading of one signal, for its evidence drawer.
@@ -22,7 +22,9 @@ export function SignalInsight({
   const detail = (DETAIL[signal.signal_type] ?? (() => null))(signal, policy);
   return (
     <Stack as="section" aria-label="Reading">
-      <p className={textRole('body')}>{detail ?? signalDefinition(signal.signal_type, policy)}</p>
+      <p className={textRole('body', 'text-ink-2')}>
+        {detail ?? signalDefinition(signal.signal_type, policy)}
+      </p>
       <QueryRelevanceEvidence signal={signal} />
     </Stack>
   );
@@ -93,8 +95,8 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
   if (!relevance) return null;
   if (relevance.state !== 'measured') {
     return (
-      <Stack gap="tight" className={panelClasses()}>
-        <span className={textRole('label')}>Query relevance unavailable</span>
+      <Stack gap="tight" className={wellClasses()}>
+        <span className={textRole('body', 'text-ink-2')}>Query relevance unavailable</span>
         <p className="type-caption">
           {relevance.reason === 'page_content_unavailable'
             ? 'The resolved page had no usable inspected content.'
@@ -107,10 +109,10 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
     new Set([...(relevance.absent_from_title ?? []), ...(relevance.absent_from_h1 ?? [])]),
   );
   return (
-    <section className={panelClasses()} aria-label="Query relevance">
+    <section className={wellClasses()} aria-label="Query relevance">
       <Stack>
         <Stack gap="tight">
-          <span className={textRole('label')}>Query relevance</span>
+          <span className={textRole('body', 'text-ink-2')}>Query relevance</span>
           <p className="type-caption">
             {relevance.statement ??
               'Query-term coverage measured against the currently inspected page.'}
@@ -118,19 +120,19 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
         </Stack>
         <AppGrid as="dl" layout="thirds" className="type-caption">
           <div>
-            <dt className="text-ink-muted">Title</dt>
+            <dt className="text-ink-2">Title</dt>
             <dd className={textRole('emphasis', 'tabular-nums')}>
               {coverageLabel(relevance.title_coverage)}
             </dd>
           </div>
           <div>
-            <dt className="text-ink-muted">H1</dt>
+            <dt className="text-ink-2">H1</dt>
             <dd className={textRole('emphasis', 'tabular-nums')}>
               {coverageLabel(relevance.h1_coverage)}
             </dd>
           </div>
           <div>
-            <dt className="text-ink-muted">Page text</dt>
+            <dt className="text-ink-2">Page text</dt>
             <dd className={textRole('emphasis', 'tabular-nums')}>
               {coverageLabel(relevance.primary_content_coverage)}
             </dd>
@@ -138,7 +140,7 @@ function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) 
         </AppGrid>
         {missing.length > 0 ? (
           <p className="type-caption">
-            <span className={textRole('label')}>Missing from title or H1:</span>{' '}
+            <span className={textRole('body', 'text-ink-2')}>Missing from title or H1:</span>{' '}
             {missing.join(', ')}
           </p>
         ) : null}

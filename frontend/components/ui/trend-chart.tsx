@@ -29,35 +29,8 @@ import { TrendTable } from '@/components/ui/trend-table';
 import { availabilityLabel } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
-export type TrendPoint = {
-  /** The point in full ("10 Sep 2026 · run 4"): the tooltip's title and the table's column. */
-  label: string;
-  /** The short form under the axis, when `label` is too long to sit there. */
-  axisLabel?: string;
-  /** Null is unavailable and draws a gap, never a drop to zero. */
-  value: number | null;
-  /** Measured under a changed method: marked across the plot, with its note. */
-  versionChange?: { note: string } | null;
-  /** When the point was measured; with every point stamped the x axis is real time. */
-  timestamp?: number;
-  /** Not comparable with the point before it: every line breaks here. */
-  breakBefore?: boolean;
-};
-
-/** A further line read against the first: a competitor, a second rate, "Other". */
-export type TrendSeries = {
-  label: string;
-  values: readonly (number | null)[];
-  /** The merged remainder, drawn dashed in `data-other` so it never reads as a brand. */
-  other?: boolean;
-};
-
-/**
- * Something that happened at a moment, marked across the plot: drawn only
- * when the x axis is real time and the moment falls inside it. A marker says
- * when, never what it caused.
- */
-export type TrendEvent = { key: string; timestamp: number; label: string };
+export type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-chart';
+import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-chart';
 
 type Line = { name: string; values: readonly (number | null)[]; tone: ChartTone };
 
@@ -223,7 +196,7 @@ export function TrendChart({
               />
             ))}
             {data[active]?.versionChange ? (
-              <p className="text-caption text-ink-muted">{data[active].versionChange.note}</p>
+              <p className="text-caption text-ink-2">{data[active].versionChange.note}</p>
             ) : null}
           </ChartTip>
         )}
@@ -292,7 +265,7 @@ function TrendPlot({
               y1={y}
               y2={y}
               shapeRendering="crispEdges"
-              className="stroke-chart-grid"
+              className="stroke-rule"
             />
             <text
               x={scale.padLeft - 10}
@@ -326,7 +299,7 @@ function TrendPlot({
           y2={bottom}
           strokeDasharray="3 3"
           shapeRendering="crispEdges"
-          className="stroke-line-control"
+          className="stroke-control-line"
         />
       )}
       {[...plotted].reverse().map(({ line, points, connectors }) => (
@@ -429,9 +402,9 @@ function TrendMarkers({
             y1={scale.padTop}
             y2={bottom}
             strokeDasharray="2 3"
-            className="stroke-line-control"
+            className="stroke-control-line"
           />
-          <rect x={x - 3} y={bottom - 3} width={6} height={6} className="fill-line-control" />
+          <rect x={x - 3} y={bottom - 3} width={6} height={6} className="fill-control-line" />
         </g>
       ))}
     </>

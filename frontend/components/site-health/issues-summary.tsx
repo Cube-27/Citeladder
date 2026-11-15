@@ -2,17 +2,17 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import { fixedLabel } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
-import { Card } from '@/components/ui/card';
 import { OpenRow } from '@/components/ui/list-row';
-import { DonutChart } from '@/components/ui/donut-chart';
+import { PartBar, type Part } from '@/components/ui/part-bar';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { InlineFigure, textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
 import { formatCount } from '@/lib/format';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section } from '@/components/ui/section';
 
 /**
  * The top of the Issues screen: how many issues the crawl has, how many are
@@ -32,43 +32,44 @@ export function IssuesSummary({
 }>) {
   if (query.isError && !query.data)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load the issue summary."
+        title="Could not load the issue summary"
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
     );
-  if (!query.data) return <QueryState kind="loading" label="Loading the issue summary…" />;
+  if (!query.data) return <StateBlock kind="loading" label="Loading the issue summary…" />;
   const { summary, items } = query.data;
   const total = summary.defect_issue_type_count;
   const high = severityCount(summary.severity_counts, 'high');
-  const slices = [
-    { name: 'High', value: high },
-    { name: 'Medium', value: severityCount(summary.severity_counts, 'medium') },
-    { name: 'Low', value: severityCount(summary.severity_counts, 'low') },
+  const slices: readonly Part[] = [
+    { label: 'High', value: high, status: 'negative' },
+    { label: 'Medium', value: severityCount(summary.severity_counts, 'medium'), status: 'warning' },
+    { label: 'Low', value: severityCount(summary.severity_counts, 'low'), status: 'info' },
   ];
   return (
-    <Card>
+    <Section>
       <Stack gap="workspace">
         <Inline gap="workspace" className="flex-wrap justify-between">
           <Stack gap="tight" className="min-w-0 flex-[1_1_20rem]">
-            <h2 className={textRole('pageTitle')}>{outstandingHeadline(total)}</h2>
-            <p className={textRole('body', 'text-ink-secondary')}>{attentionLine(high, summary)}</p>
+            <h2 className={textRole('heading')}>{outstandingHeadline(total)}</h2>
+            <p className={textRole('body', 'text-ink-2')}>{attentionLine(high, summary)}</p>
           </Stack>
           {total > 0 ? (
-            <DonutChart
-              // Wide enough for the donut's container to keep the legend beside it.
+            <PartBar
               className="flex-[0_1_28rem]"
-              slices={slices}
-              totalLabel={total === 1 ? 'Issue' : 'Issues'}
+              parts={slices}
+              totalLabel={total === 1 ? 'issue' : 'issues'}
               label="Issues by severity"
             />
           ) : null}
         </Inline>
         {items.length > 0 ? <FixFirst issues={items} fixes={fixes} onOpen={onOpen} /> : null}
       </Stack>
-    </Card>
+    </Section>
   );
 }
 
@@ -106,7 +107,7 @@ function FixFirst({
   const fixOf = new Map(fixes.map((fix) => [fix.group_id, fix]));
   return (
     <Stack as="section" gap="item" aria-labelledby="issues-fix-first">
-      <h3 id="issues-fix-first" className={textRole('sectionTitle')}>
+      <h3 id="issues-fix-first" className={textRole('heading')}>
         Fix these first
       </h3>
       <ol className={ledgerClasses()}>
