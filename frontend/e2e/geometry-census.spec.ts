@@ -93,9 +93,11 @@ const SECTION_RULE = 1;
 const SECTION_INSET_TOP = 16;
 /**
  * A state's height is its content. On the page an empty or loading state is
- * a card padded 24; inside a container it draws no frame of its own.
+ * a card padded 24; inside a container, and as a read error (its Notice is
+ * the box), it draws no frame of its own and has no padding.
  */
-const QUERY_STATE_PADDING = 24;
+const QUERY_STATE_PADDING = 0;
+const QUERY_STATE_FRAME_PADDING = 24;
 /**
  * A row of a title over its caption (`TableCellLines`): 8 + a body line (20)
  * + 4 + a caption line (16) + 8, the last row included.
@@ -333,9 +335,13 @@ function measure({ route }: { route: string }) {
     add('slip.inset-top', box, Math.min(...ink.map((rect) => rect.top)) - top);
     add('slip.inset-left', box, Math.min(...ink.map((rect) => rect.left)) - left);
   }
-  for (const element of all('[data-state-frame]')) {
-    if (getComputedStyle(element).borderTopWidth !== '0px')
-      add('query-state.padding', element, px(getComputedStyle(element).paddingTop));
+  for (const element of all('[data-state-block]:not([data-state-block-inline])')) {
+    const style = getComputedStyle(element);
+    // A frame-capable state inside a container draws no frame and pads 16 (compact).
+    if (element.matches('[data-state-frame]')) {
+      if (style.borderTopWidth !== '0px')
+        add('query-state.frame-padding', element, px(style.paddingTop));
+    } else if (!nestedState(element)) add('query-state.padding', element, px(style.paddingTop));
   }
   // A DataTable's title-and-toolbar row, whatever it holds; the caption under it is not part of it.
   for (const element of all('[data-data-table-header]'))
@@ -642,6 +648,9 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'slip.inset-top', SLIP_INSET);
   expectOneValue(records, 'slip.inset-left', SLIP_INSET);
   expectOneValue(records, 'query-state.padding', QUERY_STATE_PADDING);
+  // The census fixtures hold no page-level empty state, so this role may be absent.
+  const framePaddings = [...valuesOf(records, 'query-state.frame-padding').keys()];
+  expect.soft(framePaddings.filter((value) => value !== QUERY_STATE_FRAME_PADDING)).toEqual([]);
   expectOneValue(records, 'table-row.height.two-lines', TABLE_ROW_HEIGHT_TWO_LINES);
   expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
   expectOneValue(records, 'data-table-header.height', DATA_TABLE_HEADER_HEIGHT);
