@@ -70,7 +70,7 @@ function DemandEvidenceContent({
       onOpenChange={onOpenChange}
       title="Signal evidence"
       footer={
-        <div className="flex flex-wrap items-center justify-between gap-2">
+        <Inline className="flex-wrap justify-between">
           {signal.action_id ? (
             <ActionButton
               action="openAction"
@@ -87,7 +87,7 @@ function DemandEvidenceContent({
               Ask agent
             </ProjectLink>
           </Button>
-        </div>
+        </Inline>
       }
     >
       <Stack gap="workspace">

@@ -132,8 +132,6 @@ export function IssuesCatalog({
       />
       <DataTable
         label="Issues"
-        // Keeps the Issue column readable beside the fixed severity and pages
-        // columns; narrower screens scroll the table instead.
         columns={issueColumns(filters.sort, (sort) => updateFilters({ sort }))}
         toolbar={{
           view: (

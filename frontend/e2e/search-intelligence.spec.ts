@@ -195,7 +195,9 @@ for (const viewport of [
     await chooseSaved(page, 'Saved scope', 'Exact host');
     await chooseSaved(page, 'Saved market', 'United States · en');
     await page.getByRole('tab', { name: 'Competitors', exact: true }).click();
-    await page.getByRole('button', { name: 'Kmart: Keywords you both rank for' }).click();
+    await page
+      .getByRole('button', { name: 'No results Keywords you both rank for: Kmart' })
+      .click();
     await expect(
       page.getByText('The provider returned no data for this saved scope.'),
     ).toBeVisible();

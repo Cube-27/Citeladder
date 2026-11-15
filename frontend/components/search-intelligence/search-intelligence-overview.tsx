@@ -71,21 +71,23 @@ export function SearchIntelligenceOverview({
         <SectionHeader>
           <SectionTitle id="keyword-research-figures">Your search footprint</SectionTitle>
         </SectionHeader>
-        <SearchMetrics
-          metrics={[
-            ['Organic keywords', footprint, 'organic_keywords'],
-            ['Estimated monthly traffic', footprint, 'estimated_monthly_traffic'],
-            ['Top-10 keywords', footprint, 'top_10_keywords'],
-            ['Referring domains', backlinks, 'referring_domains'],
-            ['Backlinks', backlinks, 'backlinks'],
-          ]}
-        />
-        {footprint ? (
-          <p className={textRole('caption', 'pt-2')}>
-            Top-10 share of your ranking keywords: <SearchValue value={share} digits={1} />
-            {share == null ? '' : '%'}
-          </p>
-        ) : null}
+        <Stack gap="item">
+          <SearchMetrics
+            metrics={[
+              ['Organic keywords', footprint, 'organic_keywords'],
+              ['Estimated monthly traffic', footprint, 'estimated_monthly_traffic'],
+              ['Top-10 keywords', footprint, 'top_10_keywords'],
+              ['Referring domains', backlinks, 'referring_domains'],
+              ['Backlinks', backlinks, 'backlinks'],
+            ]}
+          />
+          {footprint ? (
+            <p className={textRole('caption')}>
+              Top-10 share of your ranking keywords: <SearchValue value={share} digits={1} />
+              {share == null ? '' : '%'}
+            </p>
+          ) : null}
+        </Stack>
       </Section>
       <SearchIntelligenceCompetitors
         datasets={datasets}

@@ -1,9 +1,8 @@
-import { RefreshCw, TriangleAlert } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Drawer } from '@/components/ui/drawer';
-import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { textRole } from '@/components/ui/typography';
@@ -73,25 +72,21 @@ export function RunNotice({
     run.error_detail ||
     `${run.completed_calls} of ${run.planned_calls} requests completed.`;
   // A stopped analysis is recovered by reviewing and running it again. The
-  // saved results below still stand, so it is one standing line under the
-  // controls, never a wash that outranks the figures.
+  // saved results below still stand, so it is a standing warning, not an alert.
   return (
-    <div data-run-notice="" className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-      <p className={textRole('body', 'flex min-w-0 flex-1 basis-80 items-start gap-2')}>
-        <span aria-hidden className="text-warning inline-flex h-5 shrink-0 items-center">
-          <Icon icon={TriangleAlert} className="my-0" />
-        </span>
-        <span className="min-w-0">
-          <span className="sr-only">Warning: </span>
-          {`Analysis ${SEARCH_RUN_STATES[run.status].label.toLowerCase()}. ${reason} Saved results remain available below.`}
-        </span>
-      </p>
-      {onReview ? (
-        <Button type="button" variant="secondary" onClick={onReview}>
-          Review again
-        </Button>
-      ) : null}
-    </div>
+    <Notice
+      tone="warning"
+      standing
+      action={
+        onReview ? (
+          <Button type="button" variant="secondary" onClick={onReview}>
+            Review again
+          </Button>
+        ) : undefined
+      }
+    >
+      {`Analysis ${SEARCH_RUN_STATES[run.status].label.toLowerCase()}. ${reason} Saved results remain available below.`}
+    </Notice>
   );
 }
 

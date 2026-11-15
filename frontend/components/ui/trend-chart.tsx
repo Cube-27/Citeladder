@@ -35,13 +35,13 @@ type Line = { name: string; values: readonly (number | null)[]; tone: ChartTone 
 
 const TIP_WIDTH = 216;
 
-/** A line's position tone, as the shared key and tooltip draw it. */
+/** A line's position tone in the shared key and tooltip: the hue `CHART_STROKE` plots it in. */
 const KEY_TONE: Record<ChartTone, SeriesTone> = {
   1: 'you',
   2: 'rival-1',
   3: 'rival-2',
   4: 'other',
-  5: 'rival-3',
+  5: 'rival-2',
 };
 const defaultFormat = (value: number) => `${Math.round(value * 100) / 100}`;
 
