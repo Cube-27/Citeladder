@@ -156,10 +156,9 @@ describe('account entry', () => {
 
     const pending = await screen.findByRole('button', { name: 'Signing in…' });
     expect(pending).toBe(signIn);
-    // Still in the tab order and focused, marked busy rather than disabled.
+    // Still in the tab order and focused, held rather than disabled.
     expect(pending).toBeEnabled();
     expect(pending).toHaveFocus();
-    expect(pending).toHaveAttribute('aria-busy', 'true');
     expect(held(pending)).toBe(true);
     await user.keyboard('{Enter}');
     await user.click(pending);

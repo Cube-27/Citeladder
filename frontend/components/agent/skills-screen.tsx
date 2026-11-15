@@ -7,7 +7,7 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Icon } from '@/components/ui/icon';
 import { Tag } from '@/components/ui/tag';
-import { Inline } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -104,16 +104,18 @@ function SkillSlip({ skill, output }: Readonly<{ skill: AgentSkill; output: stri
     <ProjectLink
       href={agentHandoffHref({ skillId: skill.id })}
       aria-label={`Start a chat with ${skill.label}`}
-      className={slipClasses('focus-ring flex w-full flex-col gap-3', { opens: true })}
+      className={slipClasses('focus-ring w-full', { opens: true })}
     >
-      <Inline className="justify-between">
-        <h3 className={textRole('subheading', 'underline decoration-1 underline-offset-3')}>
-          {skill.label}
-        </h3>
-        <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
-      </Inline>
-      <p className={textRole('body', 'text-ink-2 flex-1')}>{skill.description}</p>
-      <OutputBadge label={output} />
+      <Stack gap="item">
+        <Inline className="justify-between">
+          <h3 className={textRole('subheading', 'underline decoration-1 underline-offset-3')}>
+            {skill.label}
+          </h3>
+          <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
+        </Inline>
+        <p className={textRole('body', 'text-ink-2')}>{skill.description}</p>
+        <OutputBadge label={output} />
+      </Stack>
     </ProjectLink>
   );
 }

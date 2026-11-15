@@ -325,17 +325,15 @@ function AuthEmailForm({
 
       {consent.verification ? <AuthHumanCheck widget={consent.verification} /> : null}
 
-      {/* Slotted: Button derives `aria-busy` from `pending`, which also sets
-          `disabled`; the child's own attributes win over the slot's. */}
-      <AuthButton asChild variant="primary">
-        <button
-          type="submit"
-          aria-disabled={pending || consent.held || undefined}
-          aria-busy={pending || undefined}
-          aria-describedby={consent.terms ? consent.noticeId : undefined}
-        >
-          {pending ? pendingLabel : submitLabel}
-        </button>
+      {/* Not `pending`: Button's pending sets `disabled`, which drops focus to
+          the document. The changed label says it is working. */}
+      <AuthButton
+        type="submit"
+        variant="primary"
+        aria-disabled={pending || consent.held || undefined}
+        aria-describedby={consent.terms ? consent.noticeId : undefined}
+      >
+        {pending ? pendingLabel : submitLabel}
       </AuthButton>
     </AuthForm>
   );

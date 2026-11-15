@@ -404,8 +404,7 @@ function revealFirstInvalid(errors: FieldErrors<BrandStepValues>) {
     const ref: unknown = error?.ref;
     return ref instanceof HTMLElement ? [ref] : [];
   });
-  const [first] = fields.sort((a, b) =>
-    a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1,
-  );
+  fields.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+  const [first] = fields;
   first?.scrollIntoView?.({ block: 'center' });
 }

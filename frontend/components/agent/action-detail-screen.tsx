@@ -1,6 +1,6 @@
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
-import { MoreHorizontal, RotateCcw, XCircle } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import { MoreHorizontal, RotateCcw, XCircle, type LucideIcon } from 'lucide-react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import {
@@ -25,7 +25,7 @@ import { CopyButton } from '@/components/ui/copy-button';
 import { DraftSheet } from '@/components/ui/draft-sheet';
 import { FactList, type Fact } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { Menu, MenuContent, MenuItem, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { ProjectLink } from '@/components/ui/project-link';
 import { TextLink } from '@/components/ui/text-link';
@@ -371,18 +371,10 @@ function ActionBar({
       if (!dismissing) onStatus(dismissed ? 'open' : 'dismissed');
     },
   };
-  let declare: ReactNode = null;
-  if (declarable)
-    declare = linkRoute ? (
-      <ContextualLinkDeclarationRoute className={WIDE_ONLY} />
-    ) : (
-      <Button variant="secondary" className={WIDE_ONLY} onClick={markImplemented.start}>
-        <Icon icon={ACTIONS.markImplemented.icon} />
-        {ACTIONS.markImplemented.label}
-      </Button>
-    );
+  let declare: Declare = null;
+  if (declarable) declare = linkRoute ? 'links' : 'dialog';
   return (
-    <fieldset aria-label="Work on this Action" className="flex min-w-0 flex-1 items-center gap-2">
+    <Inline as="fieldset" aria-label="Work on this Action" className="flex-1">
       {/* Announced, not drawn: the status mark and this button's label show the change. */}
       <output className="sr-only">{changed ? STATUS_CHANGED[changed] : null}</output>
       <span className="me-auto" />
@@ -399,37 +391,9 @@ function ActionBar({
           {status.label}
         </Button>
       ) : null}
-      {declare}
+      <WideDeclare declare={declare} onStart={markImplemented.start} />
       {undeclared ? (
-        <Menu modal={false}>
-          <MenuTrigger asChild>
-            <Button variant="quiet" className="rail:hidden">
-              <Icon icon={MoreHorizontal} />
-              More
-            </Button>
-          </MenuTrigger>
-          <MenuContent align="end">
-            {declarable && linkRoute ? (
-              <MenuLinkItem>
-                <ProjectLink href={SELECT_IMPLEMENTED_LINKS.href}>
-                  <Icon icon={SELECT_IMPLEMENTED_LINKS.icon} />
-                  {SELECT_IMPLEMENTED_LINKS.label}
-                </ProjectLink>
-              </MenuLinkItem>
-            ) : null}
-            {declarable && !linkRoute ? (
-              <MenuItem
-                icon={<Icon icon={ACTIONS.markImplemented.icon} />}
-                onSelect={markImplemented.start}
-              >
-                {ACTIONS.markImplemented.label}
-              </MenuItem>
-            ) : null}
-            <MenuItem icon={<Icon icon={status.icon} />} onSelect={status.run}>
-              {status.label}
-            </MenuItem>
-          </MenuContent>
-        </Menu>
+        <BarMore declare={declare} onStart={markImplemented.start} status={status} />
       ) : null}
       {/* The named action, in its primary place: this bar is where it is decided. */}
       <ProjectLink href={actionHandoffHref(action)} className={buttonClasses('primary')}>
@@ -437,7 +401,60 @@ function ActionBar({
         {ACTIONS.workWithAgent.label}
       </ProjectLink>
       {markImplemented.dialog}
-    </fieldset>
+    </Inline>
+  );
+}
+
+/** How Mark implemented declares here: by picking links, by its dialog, or not at all. */
+type Declare = 'links' | 'dialog' | null;
+
+type BarStatus = Readonly<{ label: string; icon: LucideIcon; run: () => void }>;
+
+/** Mark implemented in the bar, from the rail breakpoint up. */
+function WideDeclare({ declare, onStart }: Readonly<{ declare: Declare; onStart: () => void }>) {
+  if (declare === 'links') return <ContextualLinkDeclarationRoute className={WIDE_ONLY} />;
+  if (declare === null) return null;
+  return (
+    <Button variant="secondary" className={WIDE_ONLY} onClick={onStart}>
+      <Icon icon={ACTIONS.markImplemented.icon} />
+      {ACTIONS.markImplemented.label}
+    </Button>
+  );
+}
+
+/** Below the rail breakpoint: Mark implemented and Dismiss (or Reopen), folded into More. */
+function BarMore({
+  declare,
+  onStart,
+  status,
+}: Readonly<{ declare: Declare; onStart: () => void; status: BarStatus }>) {
+  return (
+    <Menu modal={false}>
+      <MenuTrigger asChild>
+        <Button variant="quiet" className="rail:hidden">
+          <Icon icon={MoreHorizontal} />
+          More
+        </Button>
+      </MenuTrigger>
+      <MenuContent align="end">
+        {declare === 'links' ? (
+          <MenuLinkItem>
+            <ProjectLink href={SELECT_IMPLEMENTED_LINKS.href}>
+              <Icon icon={SELECT_IMPLEMENTED_LINKS.icon} />
+              {SELECT_IMPLEMENTED_LINKS.label}
+            </ProjectLink>
+          </MenuLinkItem>
+        ) : null}
+        {declare === 'dialog' ? (
+          <MenuItem icon={<Icon icon={ACTIONS.markImplemented.icon} />} onSelect={onStart}>
+            {ACTIONS.markImplemented.label}
+          </MenuItem>
+        ) : null}
+        <MenuItem icon={<Icon icon={status.icon} />} onSelect={status.run}>
+          {status.label}
+        </MenuItem>
+      </MenuContent>
+    </Menu>
   );
 }
 

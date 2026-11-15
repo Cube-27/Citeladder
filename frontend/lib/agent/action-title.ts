@@ -36,7 +36,7 @@ function pagePath(url: URL): string {
  * page by its host and tail ("thecoffeecompass.net/…/best-subscriptions");
  * a topic, query or issue by its label.
  */
-export function actionTarget(action: TitledAction): string {
+function actionTarget(action: TitledAction): string {
   const url = httpUrl(action.target_label);
   if (action.target_kind === 'page') {
     const page = url ?? httpUrl(action.target_url);
