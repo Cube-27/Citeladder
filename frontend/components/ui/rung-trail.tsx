@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils';
 
 /**
  * The one state set every step takes: pending
- * (`rule` rung), running (the live accent rung), done (ink rung, check),
+ * (`rule` rung), running (the live ink rung), done (ink rung, check),
  * failed (crimson rung, cross), unavailable (hatched rung), unknown (hollow
  * rung, question glyph; never read as unavailable), awaiting your decision
  * (dashed rung, with the decision buttons) and decided (solid ink rung).
@@ -53,7 +53,7 @@ function rungFace(status: RungStatus) {
     case 'pending':
       return 'bg-rule';
     case 'running':
-      return 'bg-accent animate-live-rung';
+      return 'bg-ink animate-live-rung';
     case 'done':
     case 'decided':
       return 'bg-ink';

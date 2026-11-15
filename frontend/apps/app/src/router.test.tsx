@@ -1,16 +1,20 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { useEffect, useState } from 'react';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 const bootstrap = vi.hoisted(() => vi.fn());
+const sessionRead = vi.hoisted(() => ({ fails: false }));
 // This file is about chunk download and shell persistence across a navigation.
 // The real bootstrap loader would issue the session and workspace reads, which
 // belong to `bootstrap-loader.test.ts`; here they would only make the route
 // wait on a request nothing answers. The session wait these tests care about is
 // modelled by the `PrivateRouteLayout` stub below.
 vi.mock('@/lib/project/bootstrap-loader', () => ({
-  bootstrapPrivateRoutes: () => null,
+  bootstrapPrivateRoutes: () => {
+    if (sessionRead.fails) throw new Error('session read failed');
+    return null;
+  },
 }));
 vi.mock('@/components/auth/auth-routes', () => ({
   LoginRoute: () => <h1>Sign in</h1>,
@@ -37,6 +41,7 @@ vi.mock('@/components/projects/projects-screen', () => ({
 beforeEach(() => {
   vi.resetModules();
   bootstrap.mockClear();
+  sessionRead.fails = false;
 });
 
 async function privateRouter() {
@@ -109,6 +114,25 @@ describe('application route recovery', () => {
     );
     expect(screen.queryByText(/private chunk URL failed/)).not.toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/issues');
+    router.dispose();
+  });
+
+  it('shows a failed session read as a page with its main region, a reload and a way to Overview', async () => {
+    sessionRead.fails = true;
+    const router = await privateRouter();
+    render(<RouterProvider router={router} />);
+
+    const main = await screen.findByRole('main');
+    expect(main).toHaveAttribute('id', 'main');
+    expect(
+      within(main).getByRole('heading', { level: 2, name: 'This page could not be opened' }),
+    ).toBeInTheDocument();
+    expect(within(main).getByRole('button', { name: 'Reload page' })).toBeInTheDocument();
+    expect(within(main).getByRole('link', { name: 'Go to Overview' })).toHaveAttribute(
+      'href',
+      '/projects',
+    );
+    expect(screen.queryByText(/session read failed/)).not.toBeInTheDocument();
     router.dispose();
   });
 

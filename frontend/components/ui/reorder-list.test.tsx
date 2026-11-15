@@ -47,13 +47,18 @@ describe('ReorderList', () => {
     expect(onMove.mock.calls).toEqual([[1, 2]]);
   });
 
-  it('moves a row with its named move controls', () => {
+  it('moves a row with move controls named by its rank, so rows with one name stay apart', () => {
     const moves: [number, number][] = [];
-    render(<ReorderList items={ITEMS} pending={false} onMove={(...move) => moves.push(move)} />);
+    const items = [...ITEMS, { key: 'Beta again', name: 'Beta', content: 'Beta again' }];
+    render(<ReorderList items={items} pending={false} onMove={(...move) => moves.push(move)} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Move Beta up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move 4, Beta, up' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move 2, Beta, up' }));
 
-    expect(moves).toEqual([[1, 0]]);
-    expect(screen.getByRole('button', { name: 'Move Alpha up' })).toBeDisabled();
+    expect(moves).toEqual([
+      [3, 2],
+      [1, 0],
+    ]);
+    expect(screen.getByRole('button', { name: 'Move 1, Alpha, up' })).toBeDisabled();
   });
 });

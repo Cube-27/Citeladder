@@ -130,10 +130,10 @@ vi.mock('@/lib/billing/entitlement-context', () => ({
   }),
   capabilityRemaining: () => 0,
 }));
-// The Launch audit dialog has its own suite; here only whether it opens matters.
+// The Launch run dialog has its own suite; here only whether it opens matters.
 vi.mock('@/components/runs/launch-dialog', () => ({
   LaunchDialog: ({ open }: { open: boolean }) =>
-    open ? <dialog open aria-label="Launch audit" /> : null,
+    open ? <dialog open aria-label="Launch run" /> : null,
 }));
 vi.mock('@tanstack/react-query', () => ({
   queryOptions: <T,>(options: T) => options,
@@ -339,10 +339,10 @@ describe('DashboardScreen', () => {
     expect(movement.getByText(reason)).toBeVisible();
     // A compact note, not a block empty state with a heading of its own.
     expect(screen.queryByRole('heading', { name: reason })).not.toBeInTheDocument();
-    // Its action opens the Launch audit dialog, where the run is confirmed.
-    expect(screen.queryByRole('dialog', { name: 'Launch audit' })).not.toBeInTheDocument();
-    await user.click(movement.getByRole('button', { name: 'Launch audit' }));
-    expect(screen.getByRole('dialog', { name: 'Launch audit' })).toBeInTheDocument();
+    // Its action opens the Launch run dialog, where the run is confirmed.
+    expect(screen.queryByRole('dialog', { name: 'Launch run' })).not.toBeInTheDocument();
+    await user.click(movement.getByRole('button', { name: 'Launch run' }));
+    expect(screen.getByRole('dialog', { name: 'Launch run' })).toBeInTheDocument();
   });
   it('shows a matched-subset change with its note, and says why per-engine movement is absent', () => {
     queryResult.data = {
@@ -375,7 +375,7 @@ describe('DashboardScreen', () => {
         '8 of 12 answers comparable; per-engine movement needs a fully comparable run.',
       ),
     ).toBeVisible();
-    expect(movement.queryByRole('button', { name: 'Launch audit' })).not.toBeInTheDocument();
+    expect(movement.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
   });
   it('says a comparable run produced no change, without offering another run', () => {
     queryResult.data = { ...commandCenter, movements: [] };
@@ -387,7 +387,7 @@ describe('DashboardScreen', () => {
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
     expect(movement.getByText('No movement to show')).toBeVisible();
     expect(movement.queryByText(/earlier run/)).not.toBeInTheDocument();
-    expect(movement.queryByRole('button', { name: 'Launch audit' })).not.toBeInTheDocument();
+    expect(movement.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
   });
   it("gives the next Action its reason and the Action's evidence", () => {
     queryResult.data = {

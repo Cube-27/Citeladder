@@ -1,6 +1,13 @@
 import { useEffect, useRef } from 'react';
 import { useLocation } from 'react-router-dom';
 
+/** "Sign in · CiteLadder": names the document after a screen outside the shell. */
+export function useDocumentTitle(title: string | undefined) {
+  useEffect(() => {
+    if (title) document.title = `${title} · CiteLadder`;
+  }, [title]);
+}
+
 /**
  * Names the document after the screen and project, and after an in-app move
  * to another screen puts focus on the main region, so a keyboard or

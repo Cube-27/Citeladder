@@ -178,7 +178,7 @@ describe('PromptLibrary first load', () => {
 
 describe('PromptLibrary by role', () => {
   it.each([
-    ['member', ['Add prompts', 'Launch audit'], ['Prompt', 'Enabled', 'Actions']],
+    ['member', ['Add prompts', 'Launch run'], ['Prompt', 'Enabled', 'Actions']],
     ['viewer', [], ['Prompt', 'Enabled']],
   ] as const)(
     'offers a %s exactly the controls its role may use',
@@ -200,7 +200,7 @@ describe('PromptLibrary by role', () => {
           .getAllByRole('columnheader')
           .map((head) => head.textContent),
       ).toEqual(headers);
-      const offered = ['Add prompts', 'Launch audit'].filter((name) =>
+      const offered = ['Add prompts', 'Launch run'].filter((name) =>
         screen.queryByRole('button', { name: new RegExp(name) }),
       );
       expect(offered).toEqual(pageActions);

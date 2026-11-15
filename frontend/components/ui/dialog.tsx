@@ -7,30 +7,56 @@ import { Button, IconButton } from './button';
 import { Icon } from './icon';
 import { SHEET_FACE } from '@/components/ui/slip';
 
+/** Every modal sheet's one scrim (dialog, drawer, command palette, navigation drawer). */
+export const SCRIM = 'bg-scrim z-overlay fixed inset-0';
+
+/**
+ * The element that opened an overlay. An item of a menu closes with its menu,
+ * so the menu's trigger stands in for it.
+ */
+function opener(active: Element | null) {
+  if (!(active instanceof HTMLElement) || active === document.body) return null;
+  if (active === document.documentElement) return null;
+  const id = active.closest('[role="menu"]')?.getAttribute('aria-labelledby');
+  return (id && document.getElementById(id)) || active;
+}
+
+const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
+
+/**
+ * Where focus goes back to: the opener while it shows, else the visible
+ * control that expands the region hiding it (the masthead's More actions
+ * button for an action folded into its panel).
+ */
+function returnTargetFor(node: HTMLElement | null) {
+  if (!node?.isConnected || shown(node)) return node?.isConnected ? node : null;
+  const controls = [...document.querySelectorAll<HTMLElement>('[aria-controls]')].filter(shown);
+  for (let region = node.parentElement; region; region = region.parentElement) {
+    const { id } = region;
+    const control = controls.find(
+      (c) => id && c.getAttribute('aria-controls')?.split(' ').includes(id),
+    );
+    if (control) return control;
+  }
+  return null;
+}
+
 /**
  * Remembers the element that opened an overlay, so closing returns focus to
- * it even when Radix's own trigger is not the opener.
+ * it even when Radix's own trigger is not the opener: a menu item's menu
+ * trigger, or the More actions button when the opener was folded away.
  */
 export function useReturnFocus(open: boolean) {
   const returnFocusRef = useRef<HTMLElement | null>(null);
   const wasOpenRef = useRef(false);
   useInsertionEffect(() => {
-    if (open && !wasOpenRef.current) {
-      const activeElement = document.activeElement;
-      returnFocusRef.current =
-        activeElement instanceof HTMLElement &&
-        activeElement !== document.body &&
-        activeElement !== document.documentElement &&
-        activeElement.isConnected
-          ? activeElement
-          : null;
-    }
+    if (open && !wasOpenRef.current) returnFocusRef.current = opener(document.activeElement);
     wasOpenRef.current = open;
   }, [open]);
   return (event: Event) => {
-    const returnTarget = returnFocusRef.current;
+    const returnTarget = returnTargetFor(returnFocusRef.current);
     returnFocusRef.current = null;
-    if (!returnTarget?.isConnected) return;
+    if (!returnTarget) return;
     event.preventDefault();
     returnTarget.focus();
   };
@@ -70,12 +96,13 @@ function DialogHeader({
 /**
  * Dialog — a modal panel for one short task, centred across the scrim with its
  * top edge fixed at 12vh, so content that changes inside it (a tab, a picked
- * file) grows or shrinks it downward and nothing above moves: `surface`,
- * `radius-lg`, the floating face (1px `line` border, `shadow-sheet`), `modal-padding` (16 in the app) padding and gaps, `container-narrow` wide.
+ * file) grows or shrinks it downward and nothing above moves: the sheet face
+ * (`raised`, hairline edge, `shadow-sheet`), 16 padding and gaps, 480 wide
+ * (640 `wide`; the overlay widths are 480, 560 and 640).
  * The title is the section title (500, 22/28), the description
  * `ink-2`, the footer right-aligned (Cancel first, then the action).
  * Header, body and footer are divided by hairlines. `tone="danger"` is a
- * confirmation: an `alertdialog`, 440px, a `negative` warning icon by the
+ * confirmation: an `alertdialog`, 480px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.
  * Focus opens on the first tabbable element unless `initialFocusRef` is set,
  * and returns to the opener on close.
@@ -99,7 +126,7 @@ export function Dialog({
   footer?: ReactNode;
   tone?: 'default' | 'danger';
   /**
-   * `wide` (720px) only for a side-by-side review the narrow panel cannot
+   * `wide` (640px) only for a side-by-side review the narrow panel cannot
    * hold (two calendar months, a CSV preview); a long form is a Drawer.
    */
   width?: 'narrow' | 'wide';
@@ -111,7 +138,7 @@ export function Dialog({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="dialog-overlay bg-scrim z-overlay fixed inset-0" />
+        <DialogPrimitive.Overlay className={cn('dialog-overlay', SCRIM)} />
         <DialogPrimitive.Content
           role={danger ? 'alertdialog' : 'dialog'}
           {...(description ? {} : { 'aria-describedby': undefined })}
@@ -124,8 +151,7 @@ export function Dialog({
           className={cn(
             SHEET_FACE,
             'dialog-panel z-modal fixed top-[12vh] left-1/2 flex max-h-[calc(88dvh-1.5rem)] w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden rounded-sheet',
-            danger && 'max-w-110',
-            !danger && (width === 'wide' ? 'max-w-180' : 'max-w-narrow'),
+            !danger && width === 'wide' ? 'max-w-form' : 'max-w-flow',
           )}
         >
           <DialogHeader

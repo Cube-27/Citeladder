@@ -3,15 +3,15 @@ import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { IconButton } from '@/components/ui/button';
-import { useReturnFocus } from '@/components/ui/dialog';
+import { SCRIM, useReturnFocus } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { SHEET_FACE } from '@/components/ui/slip';
 
 /**
  * Drawer — a sheet for editing or inspecting one item without leaving the
- * list behind it. It floats 8px from the viewport edges, `container-narrow`
- * wide, with `radius-lg` and the floating face (1px `line` border,
- * `shadow-sheet`) on the scrim. The header (eyebrow,
+ * list behind it. It floats 8px from the viewport edges, 560 wide (640
+ * `wide`), with the sheet face (`raised`, hairline edge, `shadow-sheet`)
+ * on the scrim. The header (eyebrow,
  * the section title at 500, 22/28, description) and the footer are fixed behind 1px
  * `line` rules; only the body scrolls, with `modal-padding` and 16px between
  * blocks. `footerStart` holds a delete or secondary action on the left,
@@ -58,9 +58,9 @@ export function Drawer({
   /** Runs after focus returns to the drawer's opener. */
   onAfterClose?: () => void;
   /**
-   * `narrow` (default, `container-narrow`) for one item's fields; `wide`
-   * (880px) for evidence that sets an answer beside its sources. The `left`
-   * navigation sheet is always 272px.
+   * `narrow` (default, 560) for one item's fields; `wide` (640) for evidence
+   * that sets an answer beside its sources. The `left` navigation sheet is
+   * always 272px.
    */
   width?: 'narrow' | 'wide';
 }>) {
@@ -80,7 +80,7 @@ export function Drawer({
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
       <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay className="drawer-overlay bg-scrim z-overlay fixed inset-0" />
+        <DialogPrimitive.Overlay className={cn('drawer-overlay', SCRIM)} />
         <DialogPrimitive.Content
           {...(description ? {} : { 'aria-describedby': undefined })}
           onCloseAutoFocus={(event) => {
@@ -92,7 +92,7 @@ export function Drawer({
             SHEET_FACE,
             'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-sheet',
             side === 'left' ? 'left-2 max-w-68' : 'right-2',
-            side === 'right' && (width === 'wide' ? 'max-w-220' : 'max-w-narrow'),
+            side === 'right' && (width === 'wide' ? 'max-w-form' : 'max-w-narrow'),
           )}
         >
           <DrawerHeader

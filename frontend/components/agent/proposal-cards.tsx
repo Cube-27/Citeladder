@@ -5,9 +5,8 @@ import {
   isDeclarable,
   MarkImplementedButton,
 } from '@/components/agent/action-declaration';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/actions';
 import { DraftSheet } from '@/components/ui/draft-sheet';
-import { ProjectLink } from '@/components/ui/project-link';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
@@ -72,11 +71,7 @@ function DeclarationProposal({
   const mayWrite = useWorkspaceCapability('write');
   const detail = useQuery(actionsQueries.detail(workspaceId, action.id));
   const label = action.target_label;
-  const open = (
-    <Button asChild variant="secondary">
-      <ProjectLink href={`/agent/actions/${action.id}`}>Open Action</ProjectLink>
-    </Button>
-  );
+  const open = <ActionButton action="openAction" href={`/agent/actions/${action.id}`} />;
   const declared = detail.data ? detail.data.declaration !== null : DECLARED.has(action.status);
   if (declared)
     return (

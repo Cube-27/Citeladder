@@ -3,7 +3,10 @@ import { useLocation } from 'react-router-dom';
 
 import { AgentPanelHost, AgentPanelTrigger } from '@/components/agent/agent-panel-host';
 import { AppShellFrame, NavDrawer } from '@/components/ui/app-shell';
-import { CommandPalette, CommandPaletteTrigger } from '@/components/ui/command-palette';
+import {
+  CommandPaletteHost,
+  CommandPaletteTrigger,
+} from '@/components/ui/command-palette-launcher';
 import { SidebarCollapseToggle, SidebarFrame } from '@/components/ui/sidebar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AgentPanelProvider } from '@/lib/agent/panel-context';
@@ -63,7 +66,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
             >
               <AppSidebar />
             </NavDrawer>
-            <CommandPalette destinations={resolveCommandGroups} />
+            <CommandPaletteHost destinations={resolveCommandGroups} />
             <AgentPanelHost />
           </TooltipProvider>
         </AgentPanelProvider>

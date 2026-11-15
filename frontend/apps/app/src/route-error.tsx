@@ -4,7 +4,7 @@ import { isRouteErrorResponse, useRouteError } from 'react-router-dom';
 
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { NoticePage, NoticeScreen } from '@/components/templates/notice-page';
-import { Button } from '@/components/ui/button';
+import { Button, buttonClasses } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
 import { isChunkLoadError, reportClientError } from '@/lib/client-errors';
 
@@ -37,6 +37,11 @@ function ReloadButton() {
   );
 }
 
+const COULD_NOT_OPEN = {
+  heading: 'This page could not be opened',
+  children: 'Reload to try again, or go back to Overview.',
+} as const;
+
 /**
  * A screen that failed to render, shown inside the shell so navigation and
  * sign-out stay available. Reloading also recovers a route chunk replaced by a
@@ -48,16 +53,14 @@ export function ScreenError() {
     <NoticePage
       title="Something went wrong"
       tone="negative"
-      heading="This page could not be opened"
+      {...COULD_NOT_OPEN}
       actions={
         <>
           <ReloadButton />
           <OverviewLink variant="secondary" />
         </>
       }
-    >
-      Reload to try again, or go back to Overview.
-    </NoticePage>
+    />
   );
 }
 
@@ -68,6 +71,7 @@ export function NotFoundScreen() {
       title="Page not found"
       tone="info"
       icon={SearchX}
+      overline="Not found"
       heading="There is no page at this address"
       actions={<OverviewLink />}
     >
@@ -76,7 +80,10 @@ export function NotFoundScreen() {
   );
 }
 
-/** A fresh document also recovers route chunks replaced by a deployment. */
+/**
+ * A signed-out route that failed to load. A fresh document also recovers
+ * route chunks replaced by a deployment.
+ */
 export function RouteError() {
   useReportedRouteError('route');
   return (
@@ -88,6 +95,34 @@ export function RouteError() {
       >
         Reload this page to try again.
       </NoticeScreen>
+    </ShellFallback>
+  );
+}
+
+/**
+ * The signed-in routes failed before the shell could open (the session or
+ * workspace read failed): the shell's frame with the page's masthead and the
+ * error where the content begins, never a bare page. Its navigation needs the
+ * session that failed, so the way out is a fresh load of Overview.
+ */
+export function ShellRouteError() {
+  useReportedRouteError('route');
+  return (
+    <ShellFallback>
+      <main id="main" className="min-w-0">
+        <NoticePage
+          tone="warning"
+          {...COULD_NOT_OPEN}
+          actions={
+            <>
+              <ReloadButton />
+              <a href="/projects" className={buttonClasses('secondary')}>
+                Go to Overview
+              </a>
+            </>
+          }
+        />
+      </main>
     </ShellFallback>
   );
 }

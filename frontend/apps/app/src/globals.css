@@ -526,28 +526,30 @@
    system's dark at the same specificity, so it would otherwise win here.
    The website and docs keep the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: #141311;
-  --color-surface: #1d1b18;
-  --color-well: #0c0b0a;
-  --color-raised: #262420;
-  --color-rule: #322f2a;
-  --color-rule-ink: #a8a399;
-  --color-control-line: #7f7a70;
+  --color-ground: #1b1a17;
+  --color-surface: #232220;
+  --color-well: #0e0d0c;
+  --color-raised: #2c2a27;
+  --color-rule: #3a3732;
+  --color-rule-ink: #b0aba1;
+  --color-control-line: #858076;
   --color-ink: #ebe8e1;
-  --color-ink-2: #a8a399;
+  --color-ink-2: #b0aba1;
   --color-ink-hover: #d4d0c7;
-  --color-on-ink: #141311;
+  --color-on-ink: #1b1a17;
   --color-accent: #ff6a33;
   --color-accent-text: #ff8a5c;
-  --color-accent-wash: #43210f;
+  /* Washes sit 1.05 to 1.2 from the ground and stay quiet: a notice is never
+     the loudest surface on a page. */
+  --color-accent-wash: #3a2114;
   --color-positive: #7fd07a;
-  --color-positive-wash: #16301a;
+  --color-positive-wash: #18281a;
   --color-negative: #ff7fa6;
-  --color-negative-wash: #3e1323;
+  --color-negative-wash: #33181f;
   --color-warning: #e8b84a;
-  --color-warning-wash: #392b0c;
+  --color-warning-wash: #2e2610;
   --color-info: #8fb1ff;
-  --color-info-wash: #17264a;
+  --color-info-wash: #1c2538;
   --color-data-rival-2: #6fb3e0;
   --color-data-rival-3: #8a73d9;
   --color-data-rival-4: #4fc4b5;
@@ -580,7 +582,7 @@
 
 /* The line language: solid is observed, dashed
    is drafted, hatched is absent, no line is not applicable. `hatch` fills a
-   box with 45deg 1px `control-line` lines at a 6px pitch on `well`. `edge-draft`
+   box with 45deg 1px `control-line` lines at an 8px pitch on `well`. `edge-draft`
    draws a dashed `control-line` edge; with `data-draft="false"` (a person
    accepted it) a solid edge fades in over it in 200ms: the ink sets. */
 @utility hatch {
@@ -588,7 +590,7 @@
   background-image: repeating-linear-gradient(
     -45deg,
     var(--color-control-line) 0 1px,
-    transparent 1px var(--hatch-pitch, 6px)
+    transparent 1px var(--hatch-pitch, 8px)
   );
 }
 @layer utilities {
@@ -707,13 +709,14 @@
   --shadow-sheet: 0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%);
   /* The accent mark ("you, here") and the hatch (absent: 45deg, 1px lines). */
   --mark-width: 2px;
-  --hatch-pitch: 6px;
+  --hatch-pitch: 8px;
 
-  /* Density (2.2): controls 28 dense, 32 default, 44 on flow pages; below
-     900px or under a coarse pointer every control is 44 (block below); tags
-     24; every target at least 24. Table header 32, body rows 36. */
+  /* Density (2.2): controls 32, and 44 on flow pages; below 900px or under a
+     coarse pointer every control is 44 (block below); tags 24; every target
+     at least 24. Navigation rows are links, 28. Table header 32, body rows 36. */
   --control-lg: 44px;
   --control-coarse: 44px;
+  --nav-row-height: 28px;
   --table-row-height: 36px;
 
   /* Anatomy (2.3): masthead 48, page tabs 40, filter bar 48, then 24 to the
@@ -763,6 +766,7 @@
   :root:not([data-public-surface]) {
     --control-sm: 44px;
     --control-md: 44px;
+    --nav-row-height: 44px;
     --table-row-height: 44px;
   }
 }
@@ -1700,11 +1704,85 @@ a.focus-ring:active .type-caption {
 }
 
 /* A palette's search row (the command palette, docs search): the input is
-   the dialog's only field and holds focus while it is open, so the caret is
-   the focus cue and the row's divider stays the soft `line` rule, never a
-   dark edge. */
+   the dialog's only field, so the row draws its focus edge instead of the
+   input: in the app a 2px `ink` edge along the row's foot (2.8). */
 .palette-field input:focus-visible {
   outline: none;
+}
+:root:not([data-public-surface]) .palette-field:has(input:focus-visible) {
+  box-shadow: inset 0 -2px var(--color-ink);
+}
+
+/* Rhythm (2.2) belongs to Section, the template and the grid, never a page.
+   A section that is not first in its container sits 32 below the block above
+   it. A container that already spaces its children (Stack, PageSections,
+   SectionStack, AppGrid) names its gap in `data-rhythm-gap`, so the section
+   adds only the difference. */
+@layer components {
+  /* Settings (3.4): from a 1100px main column each section is two columns
+     on the grid, its head and caption in the first four and its rows in the
+     next eight, capped at 640; below that the head stacks over the column. */
+  @container main (min-width: 1100px) {
+    [data-settings-sections] .surface-section:not(.surface-section .surface-section) {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: var(--workspace-gap);
+      align-items: start;
+    }
+    [data-settings-sections] .surface-section:not(.surface-section .surface-section) > * {
+      grid-column: 5 / span 8;
+      max-width: var(--container-form);
+    }
+    [data-settings-sections] .surface-section:not(.surface-section .surface-section) > header:first-child {
+      grid-column: 1 / span 4;
+      grid-row: 1 / span 16;
+      margin-block-end: 0;
+    }
+  }
+  .surface-section:not(:first-child) {
+    margin-block-start: var(--page-section-gap);
+  }
+  :is([data-rhythm-gap='section'], [data-app-grid]) > .surface-section:not(:first-child) {
+    margin-block-start: 0;
+  }
+  [data-rhythm-gap='workspace'] > .surface-section:not(:first-child) {
+    margin-block-start: calc(var(--page-section-gap) - var(--workspace-gap));
+  }
+  [data-rhythm-gap='compact'] > .surface-section:not(:first-child) {
+    margin-block-start: calc(var(--page-section-gap) - var(--compact-gap));
+  }
+  [data-rhythm-gap='item'] > .surface-section:not(:first-child) {
+    margin-block-start: calc(var(--page-section-gap) - 8px);
+  }
+  [data-rhythm-gap='tight'] > .surface-section:not(:first-child) {
+    margin-block-start: calc(var(--page-section-gap) - 4px);
+  }
+
+  /* The account button carries the location rung while the page is one of
+     the account's (Settings, Billing, Pricing). */
+  [data-sidebar-ident][aria-current='page'] {
+    position: relative;
+  }
+  [data-sidebar-ident][aria-current='page']::before {
+    content: '';
+    position: absolute;
+    inset-block: 8px;
+    inset-inline-start: 0;
+    width: var(--mark-width);
+    border-radius: var(--radius-mark);
+    background: var(--color-accent);
+  }
+}
+
+/* Disabled (2.8): one look for every variant, the static tag's grammar (no
+   solid edge, no ink fill) so it is never read as a secondary button. */
+:root:not([data-public-surface])
+  [data-button-variant]:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
+  background-color: var(--color-well);
+  background-image: none;
+  border-color: transparent;
+  color: color-mix(in srgb, var(--color-ink-2) 60%, transparent);
+  opacity: 1;
 }
 
 :disabled:focus-visible,

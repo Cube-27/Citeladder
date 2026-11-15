@@ -163,7 +163,7 @@ export function PromptActions({
   onImport: () => void;
   onAdd: () => void;
   onGenerate: () => void;
-  /** Launch audit measures active prompts, so it waits for at least one. */
+  /** Launch run measures active prompts, so it waits for at least one. */
   hasActivePrompts: boolean;
 }>) {
   // Each control is offered only to a role that may use it.

@@ -3,6 +3,7 @@ import { Info } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 
 import { focusFromKeyboard } from '@/components/ui/input-modality';
+import { TOOLTIP_SHEET } from '@/components/ui/tooltip';
 
 /**
  * A short explanation attached to a label, without spending a line on it.
@@ -14,8 +15,8 @@ import { focusFromKeyboard } from '@/components/ui/input-modality';
  *
  * A toggletip: a press or tap opens it and a second one closes it, as do Esc,
  * a press elsewhere and focus moving on; a keyboard reader's Tab opens it too.
- * Hover does not, so touch and mouse readers meet the same control. It looks
- * like a Tooltip and is portalled like one, since a dialog's or drawer's panel
+ * Hover does not, so touch and mouse readers meet the same control. It is the
+ * Tooltip's sheet and is portalled like one, since a dialog's or drawer's panel
  * would otherwise clip it. The button's name is the short label; assistive
  * technology hears the explanation as its description on reaching it, so the
  * portalled panel's place in the document does not matter. The button is the
@@ -52,7 +53,7 @@ export function InfoHint({ label, children }: Readonly<{ label: string; children
           // Focus stays on the button; returning it there on close would reopen the tip.
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => event.preventDefault()}
-          className="tooltip-panel bg-ink text-on-ink z-modal text-caption rounded-control inline-flex max-w-72 items-center gap-2 px-2 py-1"
+          className={TOOLTIP_SHEET}
         >
           {children}
         </PopoverPrimitive.Content>

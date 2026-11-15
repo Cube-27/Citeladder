@@ -98,7 +98,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                 ) : null}
               </div>
               <ToastPrimitive.Close
-                className="focus-ring text-ink-2 not-disabled:hover:overlay-hover not-disabled:hover:text-ink rounded-control -m-1 grid size-[var(--control-sm)] shrink-0 place-items-center"
+                className="focus-ring text-ink-2 not-disabled:hover:overlay-hover not-disabled:hover:text-ink rounded-control -m-1 grid size-[var(--control-md)] shrink-0 place-items-center"
                 aria-label="Dismiss notification"
               >
                 <X className="size-4" aria-hidden />

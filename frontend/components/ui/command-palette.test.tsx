@@ -44,7 +44,8 @@ vi.mock('@/lib/project/project-context', () => ({
   useProjectContext: () => projectContext,
 }));
 
-import { CommandPalette, CommandPaletteTrigger } from './command-palette';
+import { CommandPalette } from './command-palette';
+import { CommandPaletteHost, CommandPaletteTrigger } from './command-palette-launcher';
 
 function LocationDisplay() {
   const { pathname, search } = useLocation();
@@ -72,11 +73,12 @@ function renderPalette(ui: ReactElement) {
   return raw(ui, { wrapper: RouterTestWrapper });
 }
 
+/** The shell's wiring: the palette loads on its first open. */
 function Palette() {
   return (
     <>
       <CommandPaletteTrigger />
-      <CommandPalette destinations={resolveCommandGroups} />
+      <CommandPaletteHost destinations={resolveCommandGroups} />
     </>
   );
 }
@@ -144,6 +146,37 @@ describe('CommandPalette', () => {
 
     await user.keyboard('{Control>}k{/Control}');
     await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+  });
+
+  it('loads on the first Ctrl+K with focus in its field, and returns focus on close', async () => {
+    const user = userEvent.setup();
+    renderPalette(
+      <>
+        <button type="button">Before</button>
+        <Palette />
+      </>,
+    );
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Before' }));
+
+    await user.keyboard('{Control>}k{/Control}');
+    const dialog = await screen.findByRole('dialog', { name: 'Command palette' });
+    const field = within(dialog).getByRole('combobox', { name: 'Search commands' });
+    await waitFor(() => expect(field).toHaveFocus());
+    await user.keyboard('zzzzz');
+    expect(screen.getByRole('status')).toHaveTextContent('No matches for “zzzzz”');
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'Before' })).toHaveFocus();
+  });
+
+  it('loads from the search button and returns focus to it', async () => {
+    const user = await open();
+    expect(screen.getByRole('dialog', { name: 'Command palette' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(screen.getByRole('button', { name: /search or jump to/i })).toHaveFocus();
   });
 
   it('lists every nav destination and every project', async () => {
@@ -217,13 +250,19 @@ describe('CommandPalette', () => {
     expect(after[after.length - 1]).toHaveAttribute('aria-selected', 'true');
   });
 
-  it('reports no matches instead of an empty list', async () => {
+  it('reports and announces no matches instead of an empty list', async () => {
     const user = await open();
+    await user.keyboard('re');
+    const found = screen.getAllByRole('option').length;
+    expect(screen.getByRole('status')).toHaveTextContent(`${found} result`);
     await user.keyboard('zzzzz');
     expect(screen.queryAllByRole('option')).toHaveLength(0);
     expect(screen.getByRole('combobox')).toHaveAttribute('aria-expanded', 'false');
-    // The message is not an option, so it sits outside the listbox.
-    expect(screen.getByText(/no matches for/i)).toBeInTheDocument();
+    // Focus stays in the field, so the outcome is announced as a status.
+    expect(screen.getByRole('status')).toHaveTextContent('No matches for “rezzzzz”');
+    // One message the reader sees, one announced; it is not an option, so it
+    // sits outside the listbox.
+    expect(screen.getAllByText('No matches for “rezzzzz”')).toHaveLength(2);
     expect(within(screen.getByRole('listbox')).queryByText(/no matches for/i)).toBeNull();
   });
 

@@ -6,10 +6,12 @@ import { cn } from '@/lib/utils';
 
 /**
  * Section — the default grouping on every page (law 5:
- * rules, not boxes). No box: a 1px ink rule on top, the head, then the body
- * on the page ground. A section may hold slips and wells, never another
- * section's box. It sets no display of its own, so a sticky child keeps its
- * scroll container.
+ * rules, not boxes). No box: a 1px ink rule on top, 12 to the head, 16 to
+ * the body on the page ground. It owns the rhythm above it: when it is not
+ * first in its container it sits 32 below the block above (globals.css,
+ * `surface-section`), so a page sets no vertical gap. A section may hold
+ * slips and wells, never another section's box. It sets no display of its
+ * own, so a sticky child keeps its scroll container.
  */
 export function Section({
   children,
@@ -21,7 +23,7 @@ export function Section({
       {...props}
       className={cn('surface-section border-rule-ink min-w-0 border-t pt-3', className)}
     >
-      {/* Under the section's h3 title, a block state's heading is an h3. */}
+      {/* Under the section's h2 title, a block state's heading is an h3. */}
       <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
     </section>
   );
@@ -75,13 +77,13 @@ export function SectionEyebrow({
   );
 }
 
-/** SectionTitle — the `heading` role; an h3 under the page's h2 rungs unless `level` says 2. */
+/** SectionTitle — the `heading` role; an h2 under the page's h1, an h3 for a section nested in another. */
 export function SectionTitle({
   children,
   className,
-  level = 3,
+  level = 2,
   ...props
-}: Readonly<ComponentPropsWithoutRef<'h3'> & { level?: 2 | 3 }>) {
+}: Readonly<ComponentPropsWithoutRef<'h2'> & { level?: 2 | 3 }>) {
   const Heading = level === 2 ? 'h2' : 'h3';
   return (
     <Heading {...props} className={textRole('heading', className)}>
@@ -118,5 +120,9 @@ export function SectionContent({
 
 /** A page's sections, stacked at the section gap. */
 export function SectionStack({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">{children}</div>;
+  return (
+    <div data-rhythm-gap="section" className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
+      {children}
+    </div>
+  );
 }
