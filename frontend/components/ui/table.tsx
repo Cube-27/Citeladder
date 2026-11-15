@@ -80,7 +80,7 @@ export function Table({
       {...region}
       ref={wrapperRef}
       className={cn(
-        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto rounded-sheet',
+        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto rounded-card',
         wrapperClassName,
       )}
     >

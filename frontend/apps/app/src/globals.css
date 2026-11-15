@@ -136,7 +136,6 @@
   --color-well: var(--color-surface-sunken);
   --color-raised: var(--color-surface);
   --color-rule: var(--color-line);
-  --color-rule-ink: var(--color-ink);
   --color-control-line: var(--color-line-control);
   --color-ink-2: var(--color-ink-secondary);
   --color-accent-text: var(--color-accent-ink);
@@ -268,10 +267,10 @@
   --text-prose: 1rem;
   --text-prose--line-height: 1.625rem;
   --text-prose--font-weight: 400;
-  --text-overline: 0.75rem;
-  --text-overline--line-height: 1rem;
-  --text-overline--font-weight: 500;
-  --text-overline--letter-spacing: 0.06em;
+  --text-screen-label: 0.75rem;
+  --text-screen-label--line-height: 1rem;
+  --text-screen-label--font-weight: 500;
+  --text-screen-label--letter-spacing: 0.06em;
   --text-figure-xl: 2.5rem;
   --text-figure-xl--line-height: 2.75rem;
   --text-figure-xl--font-weight: 500;
@@ -288,28 +287,24 @@
      system's steps are 1 2 3 4 5 6 8 10 12 16 24 32 (4 to 128px). */
   --spacing: 4px;
 
-  /* Radius, only slightly rounded and never over 8. 2xs chart
-     bars, swatches and rungs; xs badges, favicons and checkboxes; sm tabs in
-     a track, menu items and chips; md buttons, inputs and code; lg app cards,
-     menus and dialogs; xl website cards, frames and the navbar; full only
-     avatars, status dots, switch tracks and count pills. */
+  /* The website's radius scale, only slightly rounded and never over 8. 2xs
+     chart bars and swatches; xs badges, favicons and checkboxes; sm tabs in
+     a track, menu items and chips; md buttons, inputs and code; lg cards,
+     menus and dialogs; full only avatars, status dots, switch tracks and
+     count pills. */
   --radius-*: initial;
   --radius-2xs: 2px;
   --radius-xs: 2px;
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 8px;
-  --radius-xl: 8px;
   --radius-full: 9999px;
-  /* The app's three radii by role: `mark` 2 (tags,
-     checkboxes, rung marks, bar ends), `control` 4 (controls, fields,
-     slips, wells), `sheet` 8 (floating layers), and `full`. On the
-     website `control` is its 6px control radius, so a shared control keeps
-     its face there; the app binds 4px below. App code uses only these. */
+  /* The app's radii by role (app code uses only these and `full`): `mark` 2
+     (tags, checkboxes, rung marks, bar ends), `control` 6 (controls, fields,
+     slips, wells), `card` 8 (a card and its small overlays) and `overlay` 12
+     (dialogs, drawers and flow cards). */
   --radius-mark: 2px;
   --radius-control: var(--radius-md);
-  --radius-sheet: 8px;
-  /* App-only: a card and its small overlays 8, dialogs, drawers and flow cards 12. */
   --radius-card: 8px;
   --radius-overlay: 12px;
 
@@ -378,25 +373,15 @@
 :root {
   color-scheme: light;
 
-  /* Depth is quiet. In the app nothing at rest has a shadow and an edge
-     is always a 1px `line` border: float is the drop under a floating
-     surface (menus, popovers, dialogs, drawers, toasts) and edge the faint
-     smudge under a control's soft edge; press is the primary
-     button. The website and docs draw their borderless edges with the ring
-     inside xs and pop. Never two shadows on nested surfaces. */
+  /* Depth. The app has three shadows, one per elevation (card, pop, sheet;
+     bound in its own block below); edge is the faint smudge under a field's
+     soft edge. The website and docs draw their borderless edges with the
+     ring inside xs and pop. Never two shadows on nested surfaces. */
   --shadow-edge: 0 1px 2px rgba(17, 17, 17, 0.05);
   --shadow-xs: 0 0 0 1px rgb(17 17 17 / 8%), 0 1px 2px rgb(17 17 17 / 6%);
-  --shadow-float: 0 2px 6px rgb(17 17 17 / 6%), 0 16px 40px -8px rgb(17 17 17 / 14%);
   --shadow-pop:
     0 0 0 1px rgb(17 17 17 / 8%), 0 2px 6px rgb(17 17 17 / 6%),
     0 16px 40px -8px rgb(17 17 17 / 14%);
-  /* press: a top highlight, a bottom inner shade, a tight drop and a
-     soft lift, so the primary button reads as a raised key. */
-  --shadow-press:
-    inset 0 1px 0 rgb(255 255 255 / 35%), inset 0 -2px 0 rgb(0 0 0 / 20%),
-    0 1px 2px rgb(0 0 0 / 40%), 0 8px 24px -6px rgb(17 17 17 / 35%);
-  /* The app's one shadow: under a sheet, anything that
-     floats. Nothing at rest has a shadow. */
   --shadow-sheet: 0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%);
 
   /* Controls. Every interactive row in one view uses one height: 32,
@@ -515,11 +500,7 @@
   --color-chart-grid: #262626;
   --shadow-edge: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-xs: 0 0 0 1px rgb(255 255 255 / 8%), 0 1px 2px rgb(0 0 0 / 50%);
-  --shadow-float: 0 16px 40px rgb(0 0 0 / 60%);
   --shadow-pop: 0 0 0 1px rgb(255 255 255 / 10%), 0 16px 40px rgb(0 0 0 / 60%);
-  --shadow-press:
-    inset 0 1px 0 rgb(255 255 255 / 60%), inset 0 -2px 0 rgb(0 0 0 / 20%),
-    0 1px 2px rgb(0 0 0 / 60%), 0 8px 24px -6px rgb(0 0 0 / 60%);
   --shadow-sheet: 0 1px 2px rgb(0 0 0 / 40%), 0 16px 40px -8px rgb(0 0 0 / 60%);
 }
 
@@ -538,7 +519,6 @@
   --color-well: #22252b;
   --color-raised: #1f2228;
   --color-rule: #2b2e36;
-  --color-rule-ink: #a5abb8;
   --color-control-line: #727886;
   --color-ink: #eceef2;
   --color-ink-2: #a5abb8;
@@ -582,14 +562,8 @@
 @utility shadow-xs {
   box-shadow: var(--shadow-xs);
 }
-@utility shadow-float {
-  box-shadow: var(--shadow-float);
-}
 @utility shadow-pop {
   box-shadow: var(--shadow-pop);
-}
-@utility shadow-press {
-  box-shadow: var(--shadow-press);
 }
 @utility shadow-sheet {
   box-shadow: var(--shadow-sheet);
@@ -659,7 +633,6 @@
   --color-well: #f1f2f5;
   --color-raised: #ffffff;
   --color-rule: #e4e6eb;
-  --color-rule-ink: #16181d;
   --color-control-line: #838995;
   --color-ink: #16181d;
   --color-ink-2: #565c69;
@@ -743,9 +716,8 @@
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05);
   --shadow-pop: 0 4px 12px rgb(16 24 40 / 0.1), 0 1px 2px rgb(16 24 40 / 0.06);
   --shadow-sheet: 0 16px 40px rgb(16 24 40 / 0.18);
-  /* The accent mark ("you, here") and the hatch (absent: 45deg, 1px lines). */
+  /* The accent mark ("you, here"). */
   --mark-width: 2px;
-  --hatch-pitch: 8px;
 
   /* Density (2.2): controls 32, and 44 on flow pages; below 900px or under a
      coarse pointer every control is 44 (block below); tags 24; every target
@@ -1086,12 +1058,9 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   background: var(--color-surface);
 }
 
-/* Type. Three faces, three jobs: the mono face is
-   measured (numbers, dates, URLs, ids, counts, changes, column heads), the
-   sans face is said (labels, prose, descriptions), the display face names
-   places (page, dialog and flow titles). Each role owns face, size, leading,
-   weight and tracking; ink is `ink` except caption and overline, which
-   support (`ink-2`). A colour utility at the call site still wins, since
+/* Type. Each role owns face, size, leading, weight and tracking; ink is
+   `ink` except caption and caption-strong, which support (`ink-2`). The
+   app's own bindings follow the shared roles below. A colour utility at the call site still wins, since
    these sit in the components layer. Emphasis inside text is weight 500. */
 @layer components {
   .type-display,
@@ -1153,21 +1122,10 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: var(--text-caption--font-weight);
     color: var(--color-ink-2);
   }
-  .type-overline,
   .type-figure-xl,
-  .type-figure,
-  .type-data,
-  .type-data-sm {
+  .type-figure {
     font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
-  }
-  .type-overline {
-    font-size: var(--text-overline);
-    line-height: var(--text-overline--line-height);
-    font-weight: var(--text-overline--font-weight);
-    letter-spacing: var(--text-overline--letter-spacing);
-    text-transform: uppercase;
-    color: var(--color-ink-2);
   }
   .type-figure-xl {
     font-size: var(--text-figure-xl);
@@ -1183,30 +1141,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: var(--text-figure--letter-spacing);
     color: var(--color-ink);
   }
-  .type-data {
-    font-size: var(--text-data);
-    line-height: var(--text-data--line-height);
-    font-weight: var(--text-data--font-weight);
-    letter-spacing: 0;
-    color: var(--color-ink);
-  }
-  /* Changes, citation markers, counts, key hints, absence words; a change
-     sets 500 itself. Its tone is the caller's. */
-  .type-data-sm {
-    font-size: var(--text-data-sm);
-    line-height: var(--text-data-sm--line-height);
-    font-weight: var(--text-data-sm--font-weight);
-    letter-spacing: 0;
-  }
   .type-emphasis {
     font-weight: 500;
   }
 
   /* The app's roles (2.1): the sans face speaks, numbers included (its
      tabular numerals); the mono face is only literal machine text (`code`);
-     nothing is uppercase or tracked. The website keeps its mono roles above.
-     `overline`, `data` and `data-sm` remain as aliases of `caption-strong`,
-     `body` and `caption` until their callers move. */
+     nothing is uppercase or tracked. The website keeps its mono roles. */
   :root:not([data-public-surface]) :is(.type-heading-lg, .type-caption-strong, .type-code) {
     letter-spacing: 0;
     color: var(--color-ink);
@@ -1217,7 +1158,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     line-height: var(--text-heading-lg--line-height);
     font-weight: var(--text-heading-lg--font-weight);
   }
-  :root:not([data-public-surface]) :is(.type-caption-strong, .type-overline) {
+  :root:not([data-public-surface]) .type-caption-strong {
     font-family: var(--font-sans);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
@@ -1229,16 +1170,6 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   :root:not([data-public-surface]) :is(.type-figure-xl, .type-figure) {
     font-family: var(--font-sans);
     letter-spacing: 0;
-  }
-  :root:not([data-public-surface]) .type-data {
-    font-family: var(--font-sans);
-    font-size: var(--text-body-sm);
-    line-height: var(--text-body-sm--line-height);
-  }
-  :root:not([data-public-surface]) .type-data-sm {
-    font-family: var(--font-sans);
-    font-size: var(--text-caption);
-    line-height: var(--text-caption--line-height);
   }
   :root:not([data-public-surface]) .type-code {
     font-family: var(--font-mono);
@@ -1285,6 +1216,25 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     letter-spacing: var(--text-eyebrow--letter-spacing);
     text-transform: uppercase;
     color: var(--color-ink-muted);
+  }
+  /* The product screens' card and key-figure labels. */
+  .type-screen-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-screen-label);
+    line-height: var(--text-screen-label--line-height);
+    font-weight: var(--text-screen-label--font-weight);
+    letter-spacing: var(--text-screen-label--letter-spacing);
+    text-transform: uppercase;
+    color: var(--color-ink-2);
+  }
+  /* Key caps on the website (Kbd); in the app `type-code` overrides it. */
+  .type-data-sm {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: var(--text-data-sm);
+    line-height: var(--text-data-sm--line-height);
+    font-weight: var(--text-data-sm--font-weight);
+    letter-spacing: 0;
   }
 
   /* Rendered Markdown (Agent output, evidence answers): reading text in the
@@ -1368,14 +1318,11 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .prose-content th {
     padding: 0.5rem 0.75rem;
     text-align: left;
-    font-family: var(--font-mono);
-    font-size: var(--text-overline);
-    line-height: var(--text-overline--line-height);
-    font-weight: var(--text-overline--font-weight);
-    letter-spacing: var(--text-overline--letter-spacing);
-    text-transform: uppercase;
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-weight: 500;
     color: var(--color-ink-2);
-    border-top: 1px solid var(--color-rule-ink);
     border-bottom: 1px solid var(--color-rule);
   }
   .prose-content td {

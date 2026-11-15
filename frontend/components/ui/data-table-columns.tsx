@@ -28,8 +28,8 @@ const COLUMN_WIDTH = {
   figure: { kind: 'steps', steps: 28 },
   /**
    * A short figure in a table that shares its row with another card, so its
-   * name column keeps room: a one-word header ("Rank", "Visibility" in the mono
-   * overline), or a short one that wraps to two lines ("Share of voice").
+   * name column keeps room: a one-word header ("Rank", "Visibility"), or a
+   * short one that wraps to two lines ("Share of voice").
    */
   short: { kind: 'steps', steps: 24 },
   /** As `short`, for a header of three words that wraps to two lines ("Owned citation rate"). */

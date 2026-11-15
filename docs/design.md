@@ -47,7 +47,7 @@ are contracts, never decoration:
 - **Dashed** (`edge-draft`, the `draft` Tag, DraftSheet) is drafted: written
   by a model and not yet accepted. Accepting it sets the ink: the dashed edge
   turns solid over 200ms.
-- **Hatched** (`hatch`: 45° 1px `control-line` lines on `well`) is absent.
+- **Absent** is the Absence word in `ink-2`; a chart's gap is a `well` band.
 - **No line** is not applicable.
 - A real zero is a printed `0` in full ink: a measurement, never greyed.
 
@@ -112,7 +112,6 @@ colors:
   positive-wash: '#d6f2ef' # dark '#0e2e2b'
   raised: '#ffffff' # dark '#151515'
   rule: '#e5e5e5' # dark '#2a2a2a'
-  rule-ink: '#111111' # dark '#f4f4f4'
   scrim: 'rgb(17 17 17 / 32%)' # dark 'rgb(0 0 0 / 64%)'
   sidebar: '#f4f4f4' # dark '#0a0a0a'
   stage-lilac: '#dfd6f7' # dark '#231b3d'
@@ -134,10 +133,10 @@ colors:
 <!-- generated:tokens:end -->
 
 - **App roles.** Fills: `ground` (the page), `surface` (slips, fields),
-  `well` (sunken material, the hatch's base, the selected state) and
-  `raised` (sheets). Lines: `rule` (hairlines), `rule-ink` (a section's
-  top rule), `control-line` (3:1: anything you can operate, dashed draft
-  edges and hatch lines). Text: `ink` for what is read first (and the
+  `well` (sunken material, a chart's gap band, the selected state) and
+  `raised` (sheets). Lines: `rule` (hairlines between rows inside a card
+  and on chrome edges), `control-line` (3:1: anything you can operate,
+  dashed draft edges). Text: `ink` for what is read first (and the
   primary button's fill, labelled `on-ink`), `ink-2` for what supports it;
   there is no third grey. Neutrals are slightly warm. Dark is designed, not
   inverted: a warm near-black ground, sheets lighter than it, wells darker.
@@ -171,7 +170,6 @@ typography:
   type-body: { fontSize: 14px, lineHeight: 20px }
   type-caption: { fontSize: 12px, lineHeight: 16px }
   type-control: { fontSize: 14px, lineHeight: 20px }
-  type-data: { fontSize: 13px, lineHeight: 20px }
   type-data-sm: { fontSize: 12px, lineHeight: 16px }
   type-delta: { fontSize: 12px, lineHeight: 16px }
   type-display: { fontSize: 28px, lineHeight: 36px }
@@ -180,9 +178,9 @@ typography:
   type-figure-xl: { fontSize: 40px, lineHeight: 44px }
   type-heading: { fontSize: 16px, lineHeight: 24px }
   type-label: { fontSize: 14px, lineHeight: 20px }
-  type-overline: { fontSize: 12px, lineHeight: 16px }
   type-page-title: { fontSize: 20px, lineHeight: 28px }
   type-prose: { fontSize: 16px, lineHeight: 26px }
+  type-screen-label: { fontSize: 12px, lineHeight: 16px }
   type-subheading: { fontSize: 14px, lineHeight: 20px }
   type-title: { fontSize: 22px, lineHeight: 28px }
   cl-body: { fontSize: 16px, lineHeight: 26px }
@@ -256,7 +254,7 @@ roles, so a page passes a role and never a number:
 | ----- | --------------------------------------------------------------------------- |
 | 4     | an icon and its label, a label and its control, a field and its help        |
 | 8     | controls that act together (`compact-gap`)                                  |
-| 12    | control and cell padding across; a section's ink rule and its head          |
+| 12    | control and cell padding across                                             |
 | 16    | inside a slip, sheet or figure cell; form rows; a section head and its body |
 | 24    | the gutter from 900px (16 below); the grid gap; the chrome and the content  |
 | 32    | sections (`page-section-gap`)                                               |
@@ -301,9 +299,9 @@ and empty states keep their footprint; a pending button keeps its label's box.
 
 ## Elevation & Depth
 
-- **The app has four containers and no others.** A **Section** is no box: a
-  1px `rule-ink` rule on top, its head 12 below, then the body on the
-  ground; it is the default grouping. A **Slip** (`surface`, a `rule`
+- **The app has four containers and no others.** A **Section** is a card
+  (`surface`, `rounded-card`, `shadow-card`) with an `h2` title; it is the
+  default grouping and never holds another card. A **Slip** (`surface`, a `rule`
   hairline, radius 4) is one object you can act on. A **Well** (`well`,
   radius 4, no edge) holds quoted or raw material. A **Sheet** (`raised`, a
   hairline, radius 8, `shadow-sheet`) is anything that floats; a modal sheet
@@ -330,8 +328,6 @@ rounded:
   md: 6px
   control: 6px
   lg: 8px
-  xl: 8px
-  sheet: 8px
   card: 8px
   overlay: 12px
   full: 9999px
@@ -340,10 +336,10 @@ rounded:
 <!-- generated:radii:end -->
 
 - **The app's radii:** `rounded-mark` 2 (tags, checkboxes, rung marks),
-  `rounded-control` 4 (controls, fields, slips, wells; the app binds it to 4,
-  not the block's 6), `rounded-sheet` 8 (sheets) and `rounded-full` (avatars,
-  switch tracks, dots). Sections and tables have square corners. The
-  `2xs` to `xl` names are the website's.
+  `rounded-control` 6 (controls, fields, slips, wells), `rounded-card` 8
+  (cards, tables and small overlays), `rounded-overlay` 12 (dialogs,
+  drawers, the command palette, flow cards) and `rounded-full` (avatars,
+  switch tracks, dots). The `2xs` to `lg` names are the website's.
 - **The website** keeps 2 to 8 for controls and chips; its surfaces are 4 for
   an inner card or popup, 12 for a card and 16 for a product-image panel.
 
@@ -377,11 +373,12 @@ its own spacing, size or radius on them.
   appears only for two or more filters; a lone filter is its own trigger.
 - **Tables** (DataTable): a column is declared once with its kind, which sets
   the head's and the cells' alignment, face, format and truncation together.
-  Heads are overlines, numerals mono and right-aligned, rows sit on hairlines
+  Heads are `caption-strong` in sentence case, numerals tabular and
+  right-aligned, rows sit on hairlines
   and tint on hover only when pressing them does something. Your row carries
   the accent mark.
-- **FigureStrip:** key figures side by side under one ink rule, divided by
-  hairlines, every cell one height.
+- **FigureStrip:** key figures as stat cards side by side, columns from the
+  count, every card one height and the values on one baseline.
 - **Progress is rungs:** RungMark for your citation standing, RungMeter for a
   0 to 100 score or a quota, RungTrail for steps. No rings, donuts, smooth
   curves or generic progress bars.
@@ -395,7 +392,7 @@ its own spacing, size or radius on them.
 - **Links** in a list, table or card underline on hover and focus; a link
   inside a sentence keeps its underline.
 - **Charts** draw time series as steps, your series in the accent and last.
-  A missing period is a gap with a hatched band, never a zero and never
+  A missing period is a gap with a `well` band, never a zero and never
   interpolated. Charts carry a written description for assistive tech.
 - **Focus** is one ring on every interactive element, fields included, in
   both themes: 2px solid `focus` (ink), 2px out. Never removed, never the
@@ -418,9 +415,8 @@ fabricated zero. An observed zero is a Value: `0` in full ink.
 | **Unknown**        | The system cannot determine the state          |
 
 **Value** prints every measured value, and **Absence** every missing one, in
-the same line box. An absence is a hatched tag with its mono word (in a
-narrow cell a 16px hatched square, the word in a tooltip and for screen
-readers); not applicable is a plain `n/a` in `ink-2`, with no hatch;
+the same line box. An absence is its word in `ink-2`, printed by Absence
+and nowhere else; not applicable is a plain `n/a` in `ink-2`;
 excluded is a tag with the word struck through. A stale value is `ink-2`
 with its "as of" date; a conflicting one carries a `≠` in the warning tone.
 A state shared by a section or column is said once, on its header.

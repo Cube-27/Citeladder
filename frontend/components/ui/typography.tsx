@@ -42,12 +42,6 @@ const TEXT_ROLES = {
   figure: 'type-figure',
   /** Code, ids, keys, raw snippets, keyboard hints. Mono 13/20. */
   code: 'type-code',
-  /** Alias of `captionStrong`, until its callers move. */
-  overline: 'type-caption-strong',
-  /** Alias: `body` with tabular numerals, until its callers move. */
-  data: 'type-data',
-  /** Alias: `caption` with tabular numerals, until its callers move. */
-  dataSm: 'type-data-sm',
   /** Emphasis inside text: weight 500, never colour. */
   emphasis: 'type-emphasis',
   /** The website's product screens only (components/marketing/screens); the app uses `title`. */

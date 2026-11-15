@@ -83,7 +83,7 @@ const LiveDocument = memo(function LiveDocument({
 }: Readonly<{ title: string | null; body: string; knownHosts: readonly string[] }>) {
   return (
     <section aria-label={title ? `Writing ${title}` : 'Writing the document'} className="min-w-0">
-      <DraftSheet as="div" state="draft" overline="Draft · writing">
+      <DraftSheet as="div" state="draft" marker="Draft · writing">
         {title ? <h2 className={textRole('heading')}>{title}</h2> : null}
         <ContentMarkdown markdown={body} knownHosts={knownHosts} />
       </DraftSheet>

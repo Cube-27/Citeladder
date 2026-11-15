@@ -68,7 +68,7 @@ function tabFace(selected: boolean, className?: string) {
  * above.
  */
 export const TAB_TRACK =
-  'inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+  'inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-control p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /** A segment of the website's track (see `TAB_TRACK`). */
 export function tabClasses(selected: boolean, className?: string) {

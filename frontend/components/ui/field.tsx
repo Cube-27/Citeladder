@@ -97,7 +97,7 @@ function FieldFoot({
       {count ? (
         <span
           className={cn(
-            'type-data-sm ms-auto shrink-0',
+            'type-caption ms-auto shrink-0 tabular-nums',
             count.used >= count.max ? 'text-ink' : 'text-ink-2',
           )}
         >

@@ -113,7 +113,7 @@ export function ComposerFrame({
   return (
     <form
       className={cn(
-        'focus-frame max-w-thread mx-auto grid w-full gap-1 rounded-sheet p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]',
+        'focus-frame max-w-thread mx-auto grid w-full gap-1 rounded-card p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]',
         FIELD_EDGE,
       )}
       onSubmit={(event: FormEvent) => {

@@ -87,7 +87,7 @@ function SuggestionRows({
               as="li"
               key={candidate.id}
               state="draft"
-              overline="Suggested competitor"
+              marker="Suggested competitor"
               actions={
                 onAdd ? (
                   <Button

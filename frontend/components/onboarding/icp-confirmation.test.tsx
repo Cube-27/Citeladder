@@ -83,7 +83,7 @@ describe('IcpConfirmation', () => {
       />,
     );
 
-    // Three suggestions plus the explicit escape hatch. Matched by exact name:
+    // Three suggestions plus the explicit way out. Matched by exact name:
     // a loose regex counted the escape chip too, because "None of these"
     // contains "one".
     for (const name of ['Product feed management platform', 'One', 'Two']) {
@@ -134,7 +134,7 @@ describe('IcpConfirmation', () => {
     );
   });
 
-  it('names the escape hatch for what it is when there is nothing to reject', () => {
+  it('names the way out for what it is when there is nothing to reject', () => {
     // With no suggestions on screen, "None of these" refers to an empty set.
     render(
       <IcpConfirmation

@@ -36,7 +36,7 @@ const twMerge = extendTailwindMerge({
             'display',
             'subheading',
             'prose',
-            'overline',
+            'screen-label',
             'figure-xl',
             'figure',
             'data-sm',

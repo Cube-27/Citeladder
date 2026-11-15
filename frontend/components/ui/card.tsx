@@ -15,7 +15,7 @@ import { StateHeadingLevelContext } from '@/components/ui/state-block';
  * of its own: a flex column would re-flow every card and put an overflow
  * boundary between a sticky child and its scroll container.
  */
-const CARD_FACE = 'bg-surface text-ink border-rule rounded-sheet border';
+const CARD_FACE = 'bg-surface text-ink border-rule rounded-card border';
 
 /** The card, for a semantic element that is not a `section` (a list item, a link). */
 const cardClasses = () => cn('surface-card p-[var(--card-padding)]', CARD_FACE);
@@ -82,7 +82,7 @@ export function CardEyebrow({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={cn('type-overline', className)}>
+    <span {...props} className={cn('type-screen-label', className)}>
       {children}
     </span>
   );

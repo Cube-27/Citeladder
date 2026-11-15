@@ -81,7 +81,7 @@ export function Value({
         {unit ? <span className="text-ink-2">{` ${unit}`}</span> : null}
       </span>
       {conflicting ? (
-        <span className="type-data-sm text-warning" title="Sources disagree">
+        <span className="type-caption text-warning" title="Sources disagree">
           <span aria-hidden>≠</span>
           <span className="sr-only">Sources disagree</span>
         </span>

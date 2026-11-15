@@ -280,7 +280,7 @@ export function CommandPalette({
           }}
           className={cn(
             SHEET_FACE,
-            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-sheet',
+            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-overlay',
           )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
@@ -337,7 +337,7 @@ export function CommandPalette({
                     aria-labelledby={headingId}
                     className="[&+&]:mt-2"
                   >
-                    <p id={headingId} className="type-overline text-ink-2 px-2 py-1">
+                    <p id={headingId} className="type-caption-strong px-2 py-1">
                       {section.group}
                     </p>
                     {section.rows.map(({ command, index }) => {
