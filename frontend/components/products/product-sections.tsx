@@ -119,6 +119,34 @@ export function Merchants({ detail }: Readonly<{ detail: CommerceProductDetail }
   );
 }
 
+export function SeenIn({
+  detail,
+  scope,
+}: Readonly<{ detail: CommerceProductDetail; scope: ProductScopeFilters }>) {
+  return (
+    <Section
+      title="Seen in"
+      description="The categories and products whose shopping prompts named it."
+      empty={detail.seen_in.length ? null : 'No shopping prompt’s answer named it.'}
+    >
+      {detail.seen_in.map((row) => (
+        <Row
+          key={row.target_id}
+          primary={
+            <TextLink href={productHref(row.target_id, scope)} text="inherit">
+              {row.name}
+            </TextLink>
+          }
+          secondary={row.target_kind === 'category' ? 'Category' : 'Product'}
+          end={
+            <span className="type-caption tabular-nums">{pluralCount(row.answers, 'answer')}</span>
+          }
+        />
+      ))}
+    </Section>
+  );
+}
+
 export function Sources({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
     <Section

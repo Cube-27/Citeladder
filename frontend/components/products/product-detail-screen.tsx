@@ -39,6 +39,7 @@ import {
   FanOutQueries,
   Merchants,
   PromptMetrics,
+  SeenIn,
   Sources,
 } from './product-sections';
 import { MetricValue } from './products-table';
@@ -194,6 +195,7 @@ function HolderDetail({
           <AppGrid layout="pair">
             <CompetingProducts detail={data} scope={filters} />
             <Merchants detail={data} />
+            <SeenIn detail={data} scope={filters} />
             <Sources detail={data} />
             <FanOutQueries detail={data} />
           </AppGrid>

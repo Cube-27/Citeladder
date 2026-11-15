@@ -330,6 +330,18 @@ export const commerceProductDetailSchema = z.strictObject({
   ),
   /** Merchant domains the answers send shoppers to for it, by executions. */
   merchants: z.array(z.strictObject({ domain: z.string(), count: z.number().int() })),
+  /**
+   * The buyer-prompt targets (categories and owned products) whose answers it
+   * appeared in, by executions; a competitor seen under several is one product.
+   */
+  seen_in: z.array(
+    z.strictObject({
+      target_kind: z.enum(['product', 'category']),
+      target_id: uuid,
+      name: z.string(),
+      answers: z.number().int(),
+    }),
+  ),
   /** Pages cited by the executions it appeared in, by executions. */
   sources: z.array(
     z.strictObject({

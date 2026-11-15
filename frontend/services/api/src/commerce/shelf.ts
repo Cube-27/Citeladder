@@ -3,11 +3,7 @@ import { z } from 'zod';
 import type { Insertable, Selectable } from 'kysely';
 import type { SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
-import type {
-  Audits,
-  CommerceCompetitorCandidates,
-  CommerceRecommendationObservations,
-} from '../generated/db-schema.ts';
+import type { Audits, CommerceRecommendationObservations } from '../generated/db-schema.ts';
 import { parseShoppingResults, type ShoppingResult } from '../search-surfaces/parsing.ts';
 import { record, strings } from '../db/json.ts';
 import type { AuditTask } from '../queue/audit-queue.ts';
@@ -17,7 +13,7 @@ import { auditPolicy } from '../audits/config.ts';
 import { createModelGateway, gatewaySettings } from '../models/gateway.ts';
 import { budget, spendBudget } from '../abuse/usage.ts';
 import { meterFor, type Meter } from '../billing/metering.ts';
-import { lockCatalog } from './catalog-store.ts';
+import { findOrCreateCandidate, type Candidate } from './competitor-identity.ts';
 import { loadRevision, type ShelfTargetRef } from './catalog-revisions.ts';
 import { ownedHosts } from './discovery-validation.ts';
 import {
@@ -97,7 +93,6 @@ function metered(
   };
 }
 
-type Candidate = Selectable<CommerceCompetitorCandidates>;
 /** The columns one shelf slot sets; the rest come from the pass. */
 type SlotFields = Omit<
   Insertable<CommerceRecommendationObservations>,
@@ -145,50 +140,6 @@ export type StoredAnswer = {
   capturedAt: Date;
 };
 
-async function findOrCreateCandidate(
-  db: Database,
-  { workspaceId, projectId }: PassContext,
-  target: ShelfTargetRef,
-  observed: { title: string; brand: string; evidence: Record<string, unknown> },
-  url: string,
-): Promise<Candidate> {
-  const find = () =>
-    db
-      .selectFrom('commerce_competitor_candidates')
-      .selectAll()
-      .where('workspace_id', '=', workspaceId)
-      .where('project_id', '=', projectId)
-      .where('target_kind', '=', target.target_kind)
-      .where('target_id', '=', target.target_id)
-      .where('canonical_url', '=', url)
-      .executeTakeFirst();
-  const existing = await find();
-  if (existing) return existing;
-  // Concurrent audit completions serialize new pending candidates on the owning project.
-  await lockCatalog(db, { workspaceId, projectId });
-  const raced = await find();
-  if (raced) return raced;
-  return db
-    .insertInto('commerce_competitor_candidates')
-    .values({
-      id: randomUUID(),
-      workspace_id: workspaceId,
-      project_id: projectId,
-      target_kind: target.target_kind,
-      target_id: target.target_id,
-      canonical_url: url,
-      product_name: boundedText(observed.title, 512),
-      brand_name: boundedText(observed.brand, 255),
-      state: 'pending',
-      source_kind: 'ai_observed',
-      evidence: JSON.stringify(observed.evidence),
-      attempt_id: null,
-      decision_at: null,
-      created_at: new Date(),
-    })
-    .returningAll()
-    .executeTakeFirstOrThrow();
-}
 /**
  * A recommendation matching neither catalog product nor approved competitor
  * may be a new AI-observed competitor of the answer's target; an answer no

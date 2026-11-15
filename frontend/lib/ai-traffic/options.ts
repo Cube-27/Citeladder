@@ -3,9 +3,9 @@
  * granularity driving the `/ai-traffic` screen.
  *
  * The range presets are OWNED here, mirroring the Performance surface's
- * server-resolved range contract (invariant 2): the default `latest` preset
- * sends NO bounds so the backend serves the project's freshest persisted
- * snapshot, and a bounded preset sends its `range` TOKEN for the server to
+ * server-resolved range contract (invariant 2): `latest` sends NO bounds so
+ * the backend serves the project's freshest persisted snapshot, and a bounded
+ * preset (the default is `30d`) sends its `range` TOKEN for the server to
  * resolve against persisted evidence. Neither mode derives a date from the
  * browser clock — see `rangeToParams`. This module also carries the
  * AI-referrals-specific granularity vocabulary (`day | week | month` — the backend
@@ -18,13 +18,15 @@ import type { AiReferralsRangeParams } from '@/lib/api/ai-traffic';
 import type { snapshotGranularitySchema } from '@citeladder/contracts/analytics';
 /**
  * Date-range presets. `latest` sends no bounds — the backend serves the
- * project's latest persisted snapshot at the requested granularity, so the
- * default landing always renders the freshest projection. A bounded preset
+ * project's latest persisted snapshot at the requested granularity. A bounded preset
  * sends its token and the backend resolves the newest persisted snapshot of
  * that length; when none exists the empty payload comes back, which the
  * screen surfaces honestly rather than recomputing.
  */
 export type AiReferralsRange = 'latest' | '30d' | '90d' | '1y';
+
+/** Every sync writes the 30-day preset, so an empty default means nothing synced yet. */
+export const DEFAULT_RANGE: AiReferralsRange = '30d';
 
 export const RANGE_OPTIONS: readonly { value: AiReferralsRange; label: string }[] = [
   { value: 'latest', label: 'Latest synced window' },

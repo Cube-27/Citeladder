@@ -124,9 +124,9 @@
     "commerce_categories": ["src/commerce/catalog-store.ts", "src/commerce/projection.ts"],
     "commerce_competitor_attempts": ["src/commerce/discovery.ts"],
     "commerce_competitor_candidates": [
+      "src/commerce/competitor-identity.ts",
       "src/commerce/decisions.ts",
-      "src/commerce/discovery.ts",
-      "src/commerce/shelf.ts"
+      "src/commerce/discovery.ts"
     ],
     "commerce_csv_imports": ["src/commerce/import.ts"],
     "commerce_match_passes": ["src/commerce/shelf.ts"],
