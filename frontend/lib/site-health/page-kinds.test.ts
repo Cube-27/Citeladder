@@ -32,6 +32,7 @@ describe('pageKindLabel (the single shared mapping)', () => {
 
   it('falls back to sentence-casing an unknown type instead of rendering blank', () => {
     expect(pageKindLabel('landing_page')).toBe('Landing page');
+    expect(pageKindLabel('constructor')).toBe('Constructor');
   });
 });
 

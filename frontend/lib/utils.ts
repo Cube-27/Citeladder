@@ -78,6 +78,6 @@ export function emailInitials(email: string) {
  * and Site Health status view-models so their labels stay byte-identical.
  */
 export function sentenceCaseStatus(status: string): string {
-  const words = status.split('_').join(' ');
+  const words = status.replaceAll('_', ' ');
   return words.charAt(0).toUpperCase() + words.slice(1);
 }

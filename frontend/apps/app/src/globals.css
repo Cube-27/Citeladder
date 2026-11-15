@@ -873,7 +873,6 @@
 }
 
 :root[data-public-surface] {
-  --shadow-press: none;
   --shadow-edge: none;
   --shadow-xs: 0 0 0 1px var(--color-line);
   --marketing-nav-offset: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
