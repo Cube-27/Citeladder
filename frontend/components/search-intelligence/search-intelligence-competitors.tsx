@@ -1,10 +1,7 @@
 import { Users } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { textRole } from '@/components/ui/typography';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import type {
@@ -39,86 +36,80 @@ export function SearchIntelligenceCompetitors({
   onOpen: (dataset: SearchIntelligenceDataset) => void;
 }>) {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Competitive footprint</SectionTitle>
-      </SectionHeader>
-      <DataTable
-        label="Competitive footprint"
-        columns={COMPETITOR_COLUMNS}
-        state={
-          competitors.length
-            ? undefined
-            : {
-                kind: 'empty',
-                icon: Users,
-                heading: 'No competitors saved for this project',
-                headingLevel: 3,
-              }
-        }
-      >
-        {competitors.map((competitor) => {
-          const footprint = datasets.find(
+    <DataTable
+      title="Competitive footprint"
+      columns={COMPETITOR_COLUMNS}
+      rowLines={2}
+      state={
+        competitors.length
+          ? undefined
+          : {
+              kind: 'empty',
+              icon: Users,
+              heading: 'No competitors saved for this project',
+              description:
+                'Each saved competitor’s organic keywords, traffic and keyword gaps appear here once an analysis includes it.',
+            }
+      }
+    >
+      {competitors.map((competitor) => {
+        const footprint = datasets.find(
+          (item) =>
+            item.dataset_kind === 'footprint' &&
+            matchesCompetitor(item.target_origin, competitor.registrable_domain),
+        );
+        const comparison = (kind: string) =>
+          datasets.find(
             (item) =>
-              item.dataset_kind === 'footprint' &&
-              matchesCompetitor(item.target_origin, competitor.registrable_domain),
+              item.dataset_kind === kind &&
+              matchesCompetitor(item.comparison_origin, competitor.registrable_domain),
           );
-          const comparison = (kind: string) =>
-            datasets.find(
-              (item) =>
-                item.dataset_kind === kind &&
-                matchesCompetitor(item.comparison_origin, competitor.registrable_domain),
-            );
-          return (
-            <TableRow key={competitor.identity}>
-              <TableCell>
-                <div className="grid max-w-sm min-w-0">
-                  <ClampText lines={1} className={textRole('body')}>
-                    {competitor.label}
-                  </ClampText>
-                  <ClampText lines={1} className={textRole('caption')}>
-                    {footprint?.target_hostname ?? competitor.hostname}
-                  </ClampText>
-                </div>
-              </TableCell>
-              <TableCell numeric>
-                <SearchValue
-                  value={footprint?.summary.organic_keywords}
-                  fetched={Boolean(footprint)}
-                />
-              </TableCell>
-              <TableCell numeric>
-                <SearchValue
-                  value={footprint?.summary.estimated_monthly_traffic}
-                  fetched={Boolean(footprint)}
-                />
-              </TableCell>
-              {COMPARISON_KINDS.map((kind) => {
-                const dataset = comparison(kind);
-                return (
-                  <TableCell numeric key={kind}>
-                    {dataset ? (
-                      <TextLink asChild text="body">
-                        <Pressable
-                          className="min-h-6 w-auto min-w-6 text-center"
-                          // The visible count leads the name, so a speech user can say it.
-                          aria-label={`${datasetCount(dataset)} ${SEARCH_DATASET_LABELS[kind]}: ${competitor.label}`}
-                          onClick={() => onOpen(dataset)}
-                        >
-                          {datasetCount(dataset)}
-                        </Pressable>
-                      </TextLink>
-                    ) : (
-                      <SearchValue value={null} fetched={false} />
-                    )}
-                  </TableCell>
-                );
-              })}
-            </TableRow>
-          );
-        })}
-      </DataTable>
-    </Section>
+        return (
+          <TableRow key={competitor.identity}>
+            <TableCell>
+              <TableCellLines
+                title
+                primary={competitor.label}
+                secondary={footprint?.target_hostname ?? competitor.hostname}
+              />
+            </TableCell>
+            <TableCell numeric>
+              <SearchValue
+                value={footprint?.summary.organic_keywords}
+                fetched={Boolean(footprint)}
+              />
+            </TableCell>
+            <TableCell numeric>
+              <SearchValue
+                value={footprint?.summary.estimated_monthly_traffic}
+                fetched={Boolean(footprint)}
+              />
+            </TableCell>
+            {COMPARISON_KINDS.map((kind) => {
+              const dataset = comparison(kind);
+              return (
+                <TableCell numeric key={kind}>
+                  {dataset ? (
+                    <TextLink asChild text="body">
+                      <Pressable
+                        className="min-h-6 w-auto min-w-6 text-center"
+                        // The visible count leads the name, so a speech user can say it.
+                        aria-label={`${datasetCount(dataset)} ${SEARCH_DATASET_LABELS[kind]}: ${competitor.label}`}
+                        onClick={() => onOpen(dataset)}
+                      >
+                        {datasetCount(dataset)}
+                      </Pressable>
+                    </TextLink>
+                  ) : (
+                    <SearchValue value={null} fetched={false} />
+                  )}
+                </TableCell>
+              );
+            })}
+          </TableRow>
+        );
+      })}
+    </DataTable>
   );
 }
 

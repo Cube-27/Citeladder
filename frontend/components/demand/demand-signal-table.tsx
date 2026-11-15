@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
 
-import { StatusMark } from '@/components/ui/status-mark';
+import { Icon } from '@/components/ui/icon';
 import { Tag } from '@/components/ui/tag';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline } from '@/components/ui/layout';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
+import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
@@ -37,18 +38,18 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'ctr', label: 'CTR', kind: 'number', width: 'control' },
   { key: 'position', label: 'Position', kind: 'number', width: 'control' },
   { key: 'rank', label: 'Rank', kind: 'number', width: 'index' },
+  { key: 'open', label: 'Inspect', kind: 'actions' },
 ];
 
-/** A signal type as a labelled chip; its meaning lives in the legend. */
+/** The table's columns, for the loading skeleton's shape. */
+export const SIGNAL_COLUMN_COUNT = COLUMNS.length;
+
+/**
+ * A signal type as a `category` tag: a kind of finding, not a status or a
+ * severity, so it has no glyph and no tone. Its meaning lives in the legend.
+ */
 export function SignalChip({ signalType }: Readonly<{ signalType: string }>) {
-  const meta = signalTypeMeta(signalType);
-  return meta.tone === 'neutral' ? (
-    <Tag>{meta.label}</Tag>
-  ) : (
-    <StatusMark variant="status" value={meta.tone}>
-      {meta.label}
-    </StatusMark>
-  );
+  return <Tag>{signalTypeMeta(signalType).label}</Tag>;
 }
 
 /**
@@ -95,10 +96,16 @@ export function DemandSignalTable({
   rows,
   filterKey,
   onInspect,
+  description,
+  onClearFilters,
 }: Readonly<{
   rows: readonly RankedSignal[];
   filterKey: string;
   onInspect: (signal: DemandSignal) => void;
+  /** The caption under the title: the legend, caveats and detector coverage. */
+  description: ReactNode;
+  /** Clears the tab and search when they hid every signal; the head stays. */
+  onClearFilters: () => void;
 }>) {
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   const { page, setPage, pageCount, from, to } = useTablePage(rows.length, pageSize);
@@ -113,9 +120,15 @@ export function DemandSignalTable({
   // height (a single page just ends).
   return (
     <DataTable
-      label="Search demand signals"
+      title="Search demand signals"
+      description={description}
       columns={COLUMNS}
       rowLines={2}
+      state={
+        rows.length === 0
+          ? { kind: 'filtered', heading: 'No signals match your filter', onClear: onClearFilters }
+          : undefined
+      }
       rowCount={pageRows.length}
       pageSize={pageCount > 1 ? pageSize : undefined}
       pager={{
@@ -190,6 +203,9 @@ function SignalRow({
         <Position value={numericMetric(signal, 'position')} />
       </TableCell>
       <TableCell numeric>{rank}</TableCell>
+      <TableActionsCell>
+        <Icon icon={ChevronRight} className="text-ink-2" />
+      </TableActionsCell>
     </TableRow>
   );
 }

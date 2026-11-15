@@ -8,8 +8,9 @@ import {
   searchIntelligenceQueries,
   type SearchIntelligenceDataset,
 } from '@/lib/api/search-intelligence';
-import { formatCount } from '@/lib/format';
+import { formatCount, formatWindowDate } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
@@ -21,13 +22,33 @@ type HistoryRow = {
   lost: number | null;
 };
 
+function useHistory(datasetId: string) {
+  const { workspaceId, projectId } = useProjectScope();
+  return useQuery(searchIntelligenceQueries.datasetHistory({ workspaceId, projectId }, datasetId));
+}
+
+/** The monthly backlink history, in its own card: a different capture from the summary above. */
 export function SearchIntelligenceHistory({
   dataset,
 }: Readonly<{ dataset: SearchIntelligenceDataset }>) {
-  const { workspaceId, projectId } = useProjectScope();
-  const query = useQuery(
-    searchIntelligenceQueries.datasetHistory({ workspaceId, projectId }, dataset.id),
+  const query = useHistory(dataset.id);
+  return (
+    <Section aria-labelledby="backlink-history">
+      <SectionHeader>
+        <SectionTitle id="backlink-history">Backlink history</SectionTitle>
+      </SectionHeader>
+      <HistoryBody dataset={dataset} query={query} />
+    </Section>
   );
+}
+
+function HistoryBody({
+  dataset,
+  query,
+}: Readonly<{
+  dataset: SearchIntelligenceDataset;
+  query: ReturnType<typeof useHistory>;
+}>) {
   if (query.isError)
     return (
       <Notice
@@ -66,11 +87,11 @@ export function SearchIntelligenceHistory({
       value: value(row),
     }));
   return (
-    <AppGrid as="section" layout="halves" aria-label="Saved backlink history">
+    <AppGrid layout="halves">
       <p className={textRole('caption', 'shell:col-span-2')}>
-        Monthly domain-level history for {dataset.target_domain}, {first.date} to {last.date}.
-        Coverage includes the provider’s historical link population and may differ from the live
-        summary. Missing observations are gaps.
+        Monthly domain-level history for {dataset.target_domain}, {formatWindowDate(first.date)} to{' '}
+        {formatWindowDate(last.date)}. Coverage includes the provider’s historical link population
+        and may differ from the live summary. Missing observations are gaps.
       </p>
       <Stack gap="compact" className="min-w-0 content-start">
         <h3 className={textRole('subheading', 'min-h-6')}>Total backlinks</h3>

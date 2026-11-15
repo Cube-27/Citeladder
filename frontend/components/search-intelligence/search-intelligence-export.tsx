@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { Download } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { downloadCsv } from '@/lib/csv/download';
 import {
   searchIntelligenceApi,
@@ -75,6 +78,7 @@ export function SearchIntelligenceExport({
   return (
     <>
       <Button variant="quiet" disabled={exporting} onClick={() => void exportSaved()}>
+        <Icon icon={Download} />
         {exporting ? 'Exporting…' : 'Export saved CSV'}
       </Button>
       {exportError ? <Notice tone="negative">{exportError}</Notice> : null}

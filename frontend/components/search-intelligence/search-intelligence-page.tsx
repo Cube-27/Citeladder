@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { Settings2 } from 'lucide-react';
+import { Layers, Play, Receipt, RefreshCw, Settings2 } from 'lucide-react';
 
 import type { ReactNode } from 'react';
 
@@ -13,7 +13,15 @@ import { useSearchCollection, type SearchCollection } from './search-intelligenc
 import { SearchIntelligenceReviewDrawer } from '@/components/search-intelligence/search-intelligence-review-drawer';
 import { SearchIntelligenceOverview } from '@/components/search-intelligence/search-intelligence-overview';
 import { referringLists } from './search-intelligence-format';
-import { NotConnected, UnavailableNotice } from './search-intelligence-availability';
+import {
+  NoAnalysisYet,
+  NotConnected,
+  ResearchEmpty,
+  UnavailableNotice,
+} from './search-intelligence-availability';
+import { Icon } from '@/components/ui/icon';
+import { Section } from '@/components/ui/section';
+import { Skeleton } from '@/components/ui/skeleton';
 import { CostDetails, RunNotice } from './search-intelligence-runs';
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
@@ -144,14 +152,19 @@ export function SearchIntelligencePage() {
     selected: comparison,
     onSelect: setComparison,
   });
-  // The first load draws the tab row and the control band the loaded page
-  // has, so the work starts on the same line before and after. The overview's
-  // filters join the tab row; a collection tab's view and action take a band.
+  // The first load draws the tab row, the control band and the shape of the
+  // tab's first card, so the work starts on the same line before and after.
   if (readiness.isPending)
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
-        <KeywordResearchFrame controls={tab === 'overview' ? undefined : RESERVED_CONTROLS}>
-          <StateBlock kind="loading" label="Loading Keyword Research…" />
+        <KeywordResearchFrame controls={RESERVED_CONTROLS}>
+          {tab === 'overview' ? (
+            <Skeleton variant="stat" count={5} label="Loading Keyword Research…" />
+          ) : (
+            <Section>
+              <Skeleton variant="table" columns={6} label="Loading Keyword Research…" />
+            </Section>
+          )}
         </KeywordResearchFrame>
       </TabsRoot>
     );
@@ -174,7 +187,7 @@ export function SearchIntelligencePage() {
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
         <KeywordResearchFrame>
-          <NotConnected funded={data.credential_mode === 'funded'} />
+          <NotConnected funded={data.credential_mode === 'funded'} tab={tab} />
         </KeywordResearchFrame>
       </TabsRoot>
     );
@@ -182,19 +195,25 @@ export function SearchIntelligencePage() {
     return (
       <TabsRoot value={tab} onValueChange={setTab}>
         <KeywordResearchFrame>
-          <StateBlock
-            kind="empty"
-            icon={Settings2}
-            heading="Add your website address"
-            description="Keyword Research needs the project’s homepage address."
-            action={<TextLink href="/projects">Edit the project</TextLink>}
-          />
+          <ResearchEmpty>
+            <StateBlock
+              kind="empty"
+              icon={Settings2}
+              heading="Add your website address"
+              description="Keyword Research needs the project’s homepage address."
+              action={<TextLink href="/projects">Edit the project</TextLink>}
+              headingLevel={2}
+            />
+          </ResearchEmpty>
         </KeywordResearchFrame>
       </TabsRoot>
     );
-  // The masthead holds the one primary; the empty state's step is secondary.
+  // Before the first analysis every tab is empty and its state holds the one
+  // primary, so the masthead does not repeat it.
+  const empty = !data.datasets.length;
   const firstRun = actions.analysis ? (
-    <Button variant="secondary" onClick={actions.analysis}>
+    <Button variant="primary" onClick={actions.analysis}>
+      <Icon icon={Play} />
       Review first analysis
     </Button>
   ) : undefined;
@@ -203,7 +222,7 @@ export function SearchIntelligencePage() {
       <KeywordResearchFrame
         actions={
           <PageActions
-            hasDatasets={Boolean(data.datasets.length)}
+            hasDatasets={!empty}
             onReview={actions.review}
             onCost={() => setCostOpen(true)}
           />
@@ -212,7 +231,8 @@ export function SearchIntelligencePage() {
           data,
           tab,
           datasets,
-          collection,
+          // Nothing saved: the bar keeps only its caption, no view or picker over nothing.
+          collection: empty ? null : collection,
           onSeed: actions.onSeed,
           onMatch: actions.onMatch,
           onExpand: actions.onExpand,
@@ -241,16 +261,23 @@ export function SearchIntelligencePage() {
             onReview={actions.analysis}
             cancelling={cancelMutation.isPending}
           />
-          <TabPanel value="overview" className="min-w-0">
-            <SearchIntelligenceOverview
-              datasets={datasets}
-              competitors={data.competitors}
-              ownedHostname={data.owned_targets[0]?.hostname ?? ''}
-              onOpen={openComparison}
-              firstRun={firstRun}
-            />
-          </TabPanel>
-          {TABS.filter((item) => item.value !== 'overview').map(({ value }) => (
+          {empty ? (
+            TABS.map(({ value }) => (
+              <TabPanel key={value} value={value} className="min-w-0">
+                <NoAnalysisYet tab={value} action={firstRun} />
+              </TabPanel>
+            ))
+          ) : (
+            <TabPanel value="overview" className="min-w-0">
+              <SearchIntelligenceOverview
+                datasets={datasets}
+                competitors={data.competitors}
+                ownedHostname={data.owned_targets[0]?.hostname ?? ''}
+                onOpen={openComparison}
+              />
+            </TabPanel>
+          )}
+          {TABS.filter((item) => item.value !== 'overview' && !empty).map(({ value }) => (
             <TabPanel key={value} value={value} className="min-w-0">
               {collection?.tab === value ? (
                 <SearchIntelligenceCollection
@@ -371,31 +398,24 @@ function PageActions({
 }>) {
   const costDetails = (
     <Button variant="quiet" onClick={onCost}>
+      <Icon icon={Receipt} />
       Cost details
     </Button>
   );
-  if (!onReview) return costDetails;
+  // Before the first analysis each tab's empty state holds the primary.
+  if (!onReview || !hasDatasets) return costDetails;
   return (
     <>
       {costDetails}
-      {hasDatasets ? (
-        <>
-          <Button variant="secondary" onClick={() => onReview('refresh')}>
-            Refresh
-          </Button>
-          <MastheadPrimary>
-            <Button variant="primary" onClick={() => onReview('analysis')}>
-              New analysis
-            </Button>
-          </MastheadPrimary>
-        </>
-      ) : (
-        <MastheadPrimary>
-          <Button variant="primary" onClick={() => onReview('analysis')}>
-            Review first analysis
-          </Button>
-        </MastheadPrimary>
-      )}
+      <Button variant="secondary" onClick={() => onReview('refresh')}>
+        <Icon icon={RefreshCw} />
+        Refresh
+      </Button>
+      <MastheadPrimary>
+        <Button variant="primary" onClick={() => onReview('analysis')}>
+          New analysis
+        </Button>
+      </MastheadPrimary>
     </>
   );
 }
@@ -481,6 +501,7 @@ function CollectionAction({
       ) : null}
       {expandable && onExpand ? (
         <Button variant="quiet" onClick={onExpand}>
+          <Icon icon={Layers} />
           Review depth
         </Button>
       ) : null}

@@ -42,9 +42,9 @@ async function findSignalRow(target: string) {
   return (await screen.findByText(target)).closest('tr')!;
 }
 
-/** A row's priority: its rank in the whole snapshot, the row's last cell. */
+/** A row's priority: its rank in the whole snapshot, the cell before the row's open chevron. */
 function rankOf(row: HTMLElement) {
-  return within(row).getAllByRole('cell').at(-1)!.textContent;
+  return within(row).getAllByRole('cell').at(-2)!.textContent;
 }
 
 // Mutable so a test can switch projects mid-render; `vi.hoisted` keeps it

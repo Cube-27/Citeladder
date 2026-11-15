@@ -141,7 +141,7 @@ export function CostDetails({
                 {
                   key: 'uncertain',
                   label: 'Requests with unknown outcome',
-                  value: run.uncertain_calls,
+                  value: formatCount(run.uncertain_calls),
                 },
               ]}
             />
