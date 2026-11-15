@@ -9,11 +9,14 @@ vi.mock('./prompt-library', () => ({
   PromptLibrary: ({
     generateRequest,
     reviewRequest,
+    offeringRequest,
   }: {
     generateRequest?: number;
     reviewRequest?: boolean;
+    offeringRequest?: string | null;
   }) => (
     <>
+      <p>offering: {offeringRequest ?? 'none'}</p>
       <p>generate requests: {generateRequest ?? 0}</p>
       <p>review mode: {String(Boolean(reviewRequest))}</p>
     </>
@@ -45,9 +48,10 @@ describe('PromptsRouteContent', () => {
     expect(screen.getByText('review mode: true')).toBeInTheDocument();
   });
   it('requests the Prompt Builder once when arriving with the generate parameter', async () => {
-    renderAt('/prompts?generate=1&project=p1');
+    renderAt('/prompts?generate=1&offering=Golf+practice+net&project=p1');
 
     expect(await screen.findByText('generate requests: 1')).toBeInTheDocument();
+    expect(screen.getByText('offering: Golf practice net')).toBeInTheDocument();
     // The request is consumed so a reload or back navigation does not reopen it.
     await waitFor(() =>
       expect(screen.getByTestId('location')).toHaveTextContent('/prompts?project=p1'),

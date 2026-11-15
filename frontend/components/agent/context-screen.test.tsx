@@ -146,11 +146,15 @@ describe('Context layout', () => {
     );
     renderContext();
     // A blank profile says what belongs here and offers no save until a change.
-    const save = await screen.findByRole('button', { name: 'Save brand knowledge' });
-    expect(save).toBeDisabled();
+    const idle = await screen.findByRole('button', { name: 'Save brand knowledge' });
+    expect(idle).toHaveAttribute('aria-disabled', 'true');
+    expect(idle).toHaveAccessibleDescription('No changes to save');
     expect(screen.getByText(/^No company facts yet/)).toBeVisible();
     await user.type(screen.getByLabelText('Description'), 'Coffee');
+    const save = screen.getByRole('button', { name: 'Save brand knowledge' });
     expect(save).toBeEnabled();
+    expect(save).not.toHaveAttribute('aria-disabled');
+    expect(save).not.toHaveAccessibleDescription('No changes to save');
     expect(screen.queryByText(/^No company facts yet/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Business map' }));
     expect(screen.queryByRole('button', { name: /^save/i })).not.toBeInTheDocument();
@@ -475,7 +479,7 @@ describe('Competitors', () => {
 });
 
 describe('Business map', () => {
-  it('shows the map read-only as chips, a group with suggestions as a draft, linked to the Prompt Builder', async () => {
+  it('shows the map read-only, offerings as one table, suggestions as a draft, linked to the Prompt Builder', async () => {
     const offering = 'Golf practice net';
     mswServer.use(
       http.get(`/api/v1/projects/${project.id}/business-map`, () =>
@@ -529,14 +533,24 @@ describe('Business map', () => {
     const map = screen.getByRole('region', { name: 'Business map' });
     expect(map).toHaveAttribute('data-draft', 'true');
     expect(map).toHaveTextContent('Suggested by discovery and not yet confirmed: Buyer roles.');
-    const offeringGroup = screen.getByRole('region', { name: offering });
-    expect(offeringGroup).toHaveAttribute('data-draft', 'true');
-    expect(offeringGroup).toHaveTextContent(
-      'Suggested by discovery and not yet confirmed: Situations and constraints.',
+    // Every offering is one row of one table; a wholly suggested list says so once.
+    const offerings = screen.getByRole('region', { name: 'Offerings' });
+    expect(offerings).toHaveAttribute('data-draft', 'true');
+    expect(offerings).toHaveTextContent('1 offering. Who buys each one');
+    const [, row] = within(within(offerings).getByRole('table')).getAllByRole('row');
+    if (!row) throw new Error('The offering renders as a row');
+    expect(
+      within(row)
+        .getAllByRole('cell')
+        .slice(1)
+        .map((cell) => cell.textContent),
+    ).toEqual(['Not set', 'Suggested: Small garden', 'Not set']);
+    expect(within(row).getByRole('link', { name: offering })).toHaveAttribute(
+      'href',
+      expect.stringContaining('/prompts?generate=1&offering=Golf+practice+net'),
     );
-    expect(offeringGroup).toHaveTextContent('Situations and constraintsSmall garden');
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Edit in Prompt Builder' })).toHaveAttribute(
+    expect(within(map).getByRole('link', { name: 'Edit in Prompt Builder' })).toHaveAttribute(
       'href',
       expect.stringContaining('/prompts?generate=1'),
     );

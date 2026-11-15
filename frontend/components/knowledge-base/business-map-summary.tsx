@@ -14,15 +14,13 @@ import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile } from '@citeladder/contracts';
-import {
-  businessDraft,
-  showsServiceAreas,
-  type MapEntryDraft,
-} from '@/lib/prompts/builder-business';
+import { businessDraft, showsServiceAreas } from '@/lib/prompts/builder-business';
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
 import { StateBlock, screenState } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+
+import { OfferingsTable } from './offerings-table';
 
 const fieldSourcesSchema = z.record(z.string(), z.unknown());
 
@@ -43,15 +41,6 @@ type MapField = Readonly<{ label: string; items: readonly ChipItem[]; absent?: R
 const listField = (label: string, values: readonly string[], suggested: boolean): MapField => ({
   label,
   items: values.map((value) => ({ value, suggested })),
-});
-
-/** A map's entries; each is a suggestion until a person confirms it. */
-const entryField = (label: string, entries: readonly MapEntryDraft[]): MapField => ({
-  label,
-  items: entries.map((entry) => ({
-    value: entry.value,
-    suggested: entry.review_state === 'suggested',
-  })),
 });
 
 /** The saved business model's label; a saved value this app does not recognize stays distinct from none. */
@@ -145,9 +134,9 @@ function MapGroup({
 }
 
 /**
- * The business facts that steer prompt generation, read-only, one card per
- * group: the business details, then each offering's map. The Prompt
- * Builder's first step owns editing them; the first card links there.
+ * The business facts that steer prompt generation, read-only: the business
+ * details, then every offering's map as one table. The Prompt Builder's
+ * first step owns editing them; both cards link there.
  */
 export function BusinessMapSummary({
   projectId,
@@ -194,17 +183,7 @@ export function BusinessMapSummary({
         fields={details}
         action={edit}
       />
-      {draft.maps.map((map) => (
-        <MapGroup
-          key={map.offering}
-          title={map.offering}
-          fields={[
-            entryField('Who buys it', map.audiences),
-            entryField('Situations and constraints', map.situations),
-            entryField('Attributes', map.attributes),
-          ]}
-        />
-      ))}
+      <OfferingsTable maps={draft.maps} action={edit} />
     </Stack>
   );
 }

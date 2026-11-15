@@ -113,10 +113,13 @@ function libraryBodyFor({
 export function PromptLibrary({
   generateRequest = 0,
   reviewRequest = false,
+  offeringRequest = null,
 }: Readonly<{
   /** Increments once per URL request to open the Prompt Builder. */
   generateRequest?: number;
   reviewRequest?: boolean;
+  /** The offering a URL request opens the business step on. */
+  offeringRequest?: string | null;
 }>) {
   const { workspaceId, projectId, project } = useProjectScope();
   const scope = { workspaceId, projectId };
@@ -144,6 +147,7 @@ export function PromptLibrary({
   const [importOpen, setImportOpen] = useState(false);
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderStep, setBuilderStep] = useState<BuilderStep>('business');
+  const [builderOffering, setBuilderOffering] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [topicDialog, setTopicDialog] = useState<TopicDialog | null>(null);
   const hasCompetitors = project.competitors.length > 0;
@@ -195,12 +199,13 @@ export function PromptLibrary({
   };
   // A fresh open clears the last run's outcome, but never a run still in
   // flight: resetting it would drop `isPending` and allow a second paid run.
-  const openBuilder = (step: BuilderStep) => {
+  const openBuilder = (step: BuilderStep, offering: string | null = null) => {
     if (!generateMutation.isPending) generateMutation.reset();
     setBuilderStep(step);
+    setBuilderOffering(offering);
     setBuilderOpen(true);
   };
-  const openFromUrl = useEffectEvent((step: BuilderStep) => openBuilder(step));
+  const openFromUrl = useEffectEvent((step: BuilderStep) => openBuilder(step, offeringRequest));
   useEffect(() => {
     if (generateRequest === 0 || !canWrite) return;
     // oxlint-disable-next-line react-hooks/set-state-in-effect -- open the builder for a URL request.
@@ -415,6 +420,7 @@ export function PromptLibrary({
           builderOpen={builderOpen}
           setBuilderOpen={setBuilderOpen}
           builderStep={builderStep}
+          builderOffering={builderOffering}
           hasCompetitors={hasCompetitors}
           topics={topics}
           selectedTopicId={selectedTopicId}

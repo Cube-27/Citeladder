@@ -42,6 +42,8 @@ type PromptBuilderProps = {
   onOpenChange: (open: boolean) => void;
   /** The step a fresh open starts on: `business` to build, `review` for waiting suggestions. */
   initialStep: BuilderStep;
+  /** The offering the business step opens on, scrolled into view. */
+  initialOffering?: string | null;
   projectId: string;
   workspaceId: string;
   topics: Topic[];
@@ -154,6 +156,7 @@ function BuilderSheet(props: Readonly<PromptBuilderProps>) {
             runContext={settings.runContext}
             onRunContextChange={(runContext) => setEdited({ ...settings, runContext })}
             limits={limits}
+            initialOffering={props.initialOffering ?? null}
           />
         </TabPanel>
         <TabPanel value="topics">

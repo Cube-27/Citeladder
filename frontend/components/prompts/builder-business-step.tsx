@@ -1,9 +1,12 @@
+import { useState } from 'react';
+
+import { Absence } from '@/components/ui/absence';
+import { AccordionItem, AccordionList } from '@/components/ui/accordion-list';
 import { ChipInput, type ChipItem } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { textRole } from '@/components/ui/typography';
 import type { PromptFormLimits } from '@citeladder/contracts';
 import {
   showsServiceAreas,
@@ -12,16 +15,17 @@ import {
   type MapEntryDraft,
 } from '@/lib/prompts/builder-business';
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
+import { formatCount, pluralCount } from '@/lib/format';
 
 import type { BuilderBusiness } from './use-builder-business';
 import { StateBlock } from '@/components/ui/state-block';
-import { wellClasses } from '@/components/ui/slip';
 
 /** The bounds the API enforces on this step's saves and the run note, from the prompt-set list. */
 export type BusinessStepLimits = Pick<
   PromptFormLimits,
   'context_list_max_entries' | 'run_context_max_chars'
 >;
+type OfferingMap = BusinessDraft['maps'][number];
 const chips = (values: readonly string[]): ChipItem[] => values.map((value) => ({ value }));
 const values = (items: readonly ChipItem[]) => items.map((item) => item.value);
 const entryChips = (entries: readonly MapEntryDraft[]): ChipItem[] =>
@@ -39,14 +43,13 @@ function OfferingFacts({
   listMax,
   onChange,
 }: Readonly<{
-  map: BusinessDraft['maps'][number];
+  map: OfferingMap;
   disabled: boolean;
   listMax: number;
-  onChange: (map: BusinessDraft['maps'][number]) => void;
+  onChange: (map: OfferingMap) => void;
 }>) {
   return (
-    <Stack as="section" gap="workspace" className={wellClasses()}>
-      <h3 className={textRole('subheading')}>{map.offering}</h3>
+    <>
       <ChipInput
         label="Who buys it"
         items={entryChips(map.audiences)}
@@ -71,7 +74,69 @@ function OfferingFacts({
         disabled={disabled}
         max={listMax}
       />
-    </Stack>
+    </>
+  );
+}
+
+/** A collapsed row's summary of its offering's facts; unreviewed entries are counted apart. */
+function offeringSummary(map: OfferingMap): string | null {
+  if (map.audiences.length + map.situations.length + map.attributes.length === 0) return null;
+  const suggested = [...map.audiences, ...map.situations, ...map.attributes].filter(
+    (entry) => entry.review_state === 'suggested',
+  ).length;
+  return [
+    pluralCount(map.audiences.length, 'buyer'),
+    pluralCount(map.situations.length, 'situation'),
+    pluralCount(map.attributes.length, 'attribute'),
+    ...(suggested > 0 ? [`${formatCount(suggested)} suggested`] : []),
+  ].join(' · ');
+}
+
+/** Scrolls the offering a link opened the builder on into view once it renders. */
+const scrollIntoView = (node: HTMLElement | null) => node?.scrollIntoView({ block: 'start' });
+
+/**
+ * Every offering's facts as one list: a row per offering with a summary,
+ * one row open at a time to its three lists.
+ */
+function OfferingList({
+  maps,
+  initialOffering,
+  disabled,
+  listMax,
+  onChange,
+}: Readonly<{
+  maps: readonly OfferingMap[];
+  initialOffering: string | null;
+  disabled: boolean;
+  listMax: number;
+  onChange: (index: number, map: OfferingMap) => void;
+}>) {
+  const [open, setOpen] = useState(initialOffering);
+  if (maps.length === 0) return null;
+  return (
+    <AccordionList label="Offering details">
+      {maps.map((map, index) => {
+        const expanded = open === map.offering;
+        return (
+          <AccordionItem
+            key={map.offering}
+            itemRef={map.offering === initialOffering ? scrollIntoView : undefined}
+            title={map.offering}
+            caption={offeringSummary(map) ?? <Absence state="not_set" />}
+            open={expanded}
+            onToggle={() => setOpen(expanded ? null : map.offering)}
+          >
+            <OfferingFacts
+              map={map}
+              disabled={disabled}
+              listMax={listMax}
+              onChange={(next) => onChange(index, next)}
+            />
+          </AccordionItem>
+        );
+      })}
+    </AccordionList>
   );
 }
 
@@ -85,11 +150,14 @@ export function BuilderBusinessStep({
   runContext,
   onRunContextChange,
   limits,
+  initialOffering = null,
 }: Readonly<{
   business: BuilderBusiness;
   runContext: string;
   onRunContextChange: (value: string) => void;
   limits: BusinessStepLimits;
+  /** The offering a link opened the builder on: open and in view. */
+  initialOffering?: string | null;
 }>) {
   const listMax = limits.context_list_max_entries;
   const { draft, profile, map } = business;
@@ -126,17 +194,15 @@ export function BuilderBusinessStep({
         disabled={disabled}
         max={listMax}
       />
-      {draft.maps.map((offering, index) => (
-        <OfferingFacts
-          key={offering.offering}
-          map={offering}
-          disabled={disabled}
-          listMax={listMax}
-          onChange={(next) =>
-            set({ maps: draft.maps.map((item, i) => (i === index ? next : item)) })
-          }
-        />
-      ))}
+      <OfferingList
+        maps={draft.maps}
+        initialOffering={initialOffering}
+        disabled={disabled}
+        listMax={listMax}
+        onChange={(index, next) =>
+          set({ maps: draft.maps.map((item, i) => (i === index ? next : item)) })
+        }
+      />
       {showsServiceAreas(profile.business_context) ? (
         <ChipInput
           label="Service areas"

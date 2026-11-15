@@ -1,6 +1,6 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 
 import { AgentInstructionsCard, useAgentInstructions } from '@/components/agent/agent-instructions';
 import { BrandFactsPanel } from '@/components/knowledge-base/brand-facts-panel';
@@ -21,6 +21,7 @@ import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
+import { Tooltip } from '@/components/ui/tooltip';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -159,13 +160,14 @@ function SaveAction({
       </Button>
     );
   const hidden = kind !== 'profile';
+  if (!hidden && !form.saving && !form.dirty) return <NothingToSave />;
   return (
     <Button
       variant="primary"
       className={hidden ? 'invisible' : undefined}
       aria-hidden={hidden || undefined}
       onClick={form.save}
-      disabled={hidden || form.saving || !form.dirty}
+      disabled={hidden || form.saving}
       aria-label={form.saving ? 'Saving brand knowledge' : 'Save brand knowledge'}
     >
       <Icon icon={Save} />
@@ -173,6 +175,34 @@ function SaveAction({
     </Button>
   );
 }
+
+/**
+ * Save with nothing to save: `aria-disabled` rather than disabled, so it stays
+ * focusable and its reason reaches a tooltip and `aria-describedby`.
+ */
+function NothingToSave() {
+  const reasonId = useId();
+  return (
+    <>
+      <Tooltip content={NO_CHANGES} describe={false}>
+        <Button
+          variant="primary"
+          aria-disabled="true"
+          aria-describedby={reasonId}
+          aria-label="Save brand knowledge"
+        >
+          <Icon icon={Save} />
+          Save
+        </Button>
+      </Tooltip>
+      <span id={reasonId} hidden>
+        {NO_CHANGES}
+      </span>
+    </>
+  );
+}
+
+const NO_CHANGES = 'No changes to save';
 
 function ContextPanels({
   project,
