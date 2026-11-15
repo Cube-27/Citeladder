@@ -46,10 +46,13 @@ export function availabilityLabel(state: DataAvailabilityState): string {
   return availabilityLabels[state];
 }
 
-/** A persisted fraction (0.125) as a percentage ("12.5%"); null is not measured. */
-export function formatPercent(fraction: number | null, decimals = 0): string {
+/**
+ * A persisted fraction (0.125) as a percentage ("12.5%"), always one decimal
+ * so "92.0%" and "10.0%" read as one format; null is not measured.
+ */
+export function formatPercent(fraction: number | null): string {
   if (fraction === null) return availabilityLabel('not_measured');
-  return `${(fraction * 100).toFixed(decimals)}%`;
+  return `${(fraction * 100).toFixed(1)}%`;
 }
 
 /**
@@ -220,4 +223,32 @@ export function shortUrlTitle(value: string): string {
   const last = segments.at(-1);
   if (last === undefined) return host;
   return `${host}${segments.length > 1 ? '/…' : ''}/${readableUrl(last)}`;
+}
+
+/** The scheme and host of an http(s) URL ("https://www.example.com"), else null. */
+function originOf(value: string): string | null {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url.origin : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The origin every URL in a column shares, so its cells can drop it and give
+ * the width to the path; null when they differ or any is not an http(s) URL.
+ */
+export function sharedOrigin(values: readonly string[]): string | null {
+  const [first, ...rest] = values.map(originOf);
+  if (first === undefined || first === null) return null;
+  return rest.every((origin) => origin === first) ? first : null;
+}
+
+/** A URL as its cell prints it: readable, without the column's shared origin. */
+export function urlCellText(value: string, origin: string | null): string {
+  const readable = readableUrl(value);
+  if (origin === null || !value.startsWith(origin)) return readable;
+  const path = readableUrl(value.slice(origin.length));
+  return path === '' ? '/' : path;
 }

@@ -329,7 +329,7 @@ export function SearchConsoleWidget({ project }: Readonly<{ project: Project }>)
                   key: 'ctr',
                   label: 'CTR',
                   value: valueOr(
-                    selected.totals.ctr === null ? null : formatPercent(selected.totals.ctr, 1),
+                    selected.totals.ctr === null ? null : formatPercent(selected.totals.ctr),
                   ),
                 },
               ]}

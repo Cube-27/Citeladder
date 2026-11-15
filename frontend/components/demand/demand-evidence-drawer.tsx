@@ -131,7 +131,7 @@ function DemandEvidenceContent({
                 label: 'CTR',
                 value:
                   typeof details.metrics.ctr === 'number'
-                    ? formatPercent(details.metrics.ctr, 1)
+                    ? formatPercent(details.metrics.ctr)
                     : null,
               },
               {
@@ -189,14 +189,14 @@ function DemandEvidenceContent({
               <div className="flex justify-between">
                 <span className="text-ink-2">Median CTR in this band</span>
                 <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
-                  {formatPercent(details.cohortMedianCtr, 1)}
+                  {formatPercent(details.cohortMedianCtr)}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-ink-2">This query’s CTR</span>
                 {numericMetric(signal, 'ctr') !== null ? (
                   <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
-                    {formatPercent(numericMetric(signal, 'ctr'), 1)}
+                    {formatPercent(numericMetric(signal, 'ctr'))}
                   </span>
                 ) : (
                   <Absence state="not_measured" />

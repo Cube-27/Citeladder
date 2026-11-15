@@ -263,7 +263,7 @@ describe('DashboardScreen', () => {
     const rankChange = state
       .getAllByText('vs previous')
       .map((context) => context.closest('[data-outcome]'))
-      .find((delta) => delta?.textContent === '↓down -1vs previous');
+      .find((delta) => delta?.textContent === 'down −1vs previous');
     expect(rankChange).toHaveAttribute('data-outcome', 'improved');
     expect(
       within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('33%'),

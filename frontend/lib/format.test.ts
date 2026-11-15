@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { readableUrl, shortUrlTitle } from './format';
+import { formatPercent, readableUrl, sharedOrigin, shortUrlTitle, urlCellText } from './format';
 
 describe('readableUrl', () => {
   it('decodes a doubly encoded path to what a reader expects', () => {
@@ -28,5 +28,24 @@ describe('shortUrlTitle', () => {
   it('only makes text that is not a web address readable', () => {
     expect(shortUrlTitle('best crm for small teams')).toBe('best crm for small teams');
     expect(shortUrlTitle('mailto:sales%40acme.test')).toBe('mailto:sales@acme.test');
+  });
+});
+
+describe('formatPercent', () => {
+  it('prints one decimal for every rate, so 92.0% sits beside 10.0%', () => {
+    expect([0.92, 0.1, 0.1234, 0].map(formatPercent)).toEqual(['92.0%', '10.0%', '12.3%', '0.0%']);
+    expect(formatPercent(null)).toBe('Not measured');
+  });
+});
+
+describe('URL cells', () => {
+  it('drops the origin a whole column shares and keeps it when the origins differ', () => {
+    const urls = ['https://www.shop.test/journal/a', 'https://www.shop.test/'];
+    const origin = sharedOrigin(urls);
+    expect(origin).toBe('https://www.shop.test');
+    expect(urls.map((url) => urlCellText(url, origin))).toEqual(['/journal/a', '/']);
+    expect(sharedOrigin([...urls, 'https://other.test/x'])).toBeNull();
+    expect(sharedOrigin(['/relative/path'])).toBeNull();
+    expect(urlCellText('https://other.test/Women%27s', origin)).toBe("https://other.test/Women's");
   });
 });

@@ -57,15 +57,15 @@ describe('Delta', () => {
       <Delta value={-1.24} unit=" pp" policy="lower-is-better" context="vs last week" />,
     );
     const fall = screen.getByText('1.2 pp').closest('[data-direction]');
-    expect(fall?.textContent).toBe('↓down -1.2 ppvs last week');
-    // The arrow and the sign are drawn; a screen reader hears the word alone.
+    expect(fall?.textContent).toBe('down −1.2 ppvs last week');
+    // The sign is drawn with no arrow; a screen reader hears the word alone.
     expect(fall ? spokenText(fall) : null).toBe('down 1.2 ppvs last week');
     // A falling rank is an improvement under lower-is-better.
     expect(fall).toHaveAttribute('data-outcome', 'improved');
 
     // +0.04 rounds to a displayed 0.0: flat, a printed 0, spoken as no change.
     rerender(<Delta value={0.04} />);
-    expect(container.textContent).toBe('→no change 0');
+    expect(container.textContent).toBe('no change 0');
 
     rerender(
       <TooltipProvider>

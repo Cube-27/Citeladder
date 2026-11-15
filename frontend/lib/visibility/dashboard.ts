@@ -9,7 +9,7 @@
  * (branded / non-branded) breakdown in `VisibilityResponse` yet, so no such
  * control is offered.
  */
-import { availabilityLabel, formatDisplayTimestamp } from '@/lib/format';
+import { availabilityLabel, formatDisplayTimestamp, formatPercent } from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import type {
   AuditStatus,
@@ -163,10 +163,10 @@ export function visibleEngines(
   });
 }
 
-/** Format a 0–1 rate as a whole-percent string, or the placeholder. */
+/** Format a 0–1 rate as a one-decimal percentage, or the placeholder. */
 export function formatRate(rate: number | null): string {
   if (rate === null || Number.isNaN(rate)) return PLACEHOLDER;
-  return `${Math.round(rate * 100)}%`;
+  return formatPercent(rate);
 }
 
 /**
