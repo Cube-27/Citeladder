@@ -63,7 +63,7 @@ export function useRunExport(audit: Audit | undefined) {
 }
 
 /**
- * The run's actions: exports, a Cancel enabled only while the backend still
+ * The run's actions: exports, a Cancel offered only while the backend still
  * accepts a cooperative cancel (i.e. not `reporting`/terminal), and a failure
  * rerun when something failed. Rendered in the route's identity band.
  */
@@ -94,8 +94,8 @@ export function RunActions({
       <Button variant="secondary" onClick={() => onExport('md')} disabled={exporting !== null}>
         {exporting === 'md' ? 'Exporting…' : 'Export MD'}
       </Button>
-      {onCancel ? (
-        <Button variant="danger" onClick={onCancel} disabled={!cancelable || cancelPending}>
+      {onCancel && (cancelable || cancelPending) ? (
+        <Button variant="danger" onClick={onCancel} disabled={cancelPending}>
           {cancelPending ? 'Cancelling…' : 'Cancel run'}
         </Button>
       ) : null}

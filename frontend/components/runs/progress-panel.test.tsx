@@ -11,10 +11,10 @@ import { ProgressPanel, RunActions } from './progress-panel';
 /**
  * `components/runs` shipped with no colocated tests. The run lifecycle surface
  * is the one place a user can stop work that costs money, so the assertions
- * that matter are about the Cancel affordance: it must be live while — and only
+ * that matter are about the Cancel affordance: it is offered while — and only
  * while — the backend says it would still accept a cooperative cancel
  * (`cancelable`). A reporting run is not cancelable (execution and analysis are
- * already done).
+ * already done), nor is a finished one.
  */
 const BASE_AUDIT: Audit = {
   id: '11111111-1111-4111-8111-111111111111',
@@ -73,10 +73,14 @@ describe('ProgressPanel', () => {
     expect(cancelButton()).toBeEnabled();
   });
 
-  it('disables Cancel once the run is reporting', () => {
-    renderPanel({ status: 'reporting', cancelable: false });
-    expect(cancelButton()).toBeDisabled();
-  });
+  it.each(['reporting', 'completed', 'failed'] as const)(
+    'offers no Cancel once the run is %s, which the backend would reject',
+    (status) => {
+      renderPanel({ status, cancelable: false, failed_count: 2 }, { onRerunFailures: vi.fn() });
+      expect(screen.queryByRole('button', { name: /Cancel run|Cancelling/ })).toBeNull();
+      expect(screen.getByRole('button', { name: 'Rerun failed' })).toBeEnabled();
+    },
+  );
 
   it('fires the cancel callback exactly once per click', async () => {
     const user = userEvent.setup();
