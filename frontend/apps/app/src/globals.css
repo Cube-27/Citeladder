@@ -1678,13 +1678,14 @@ a.focus-ring:active .type-caption {
 }
 
 /* A palette's search row (the command palette, docs search): the input is
-   the dialog's only field, so the row draws its focus edge instead of the
-   input: in the app a 2px `ink` edge along the row's foot (2.8). */
+   the dialog's only field, so the row carries its focus. In the app that is
+   the one standard ring, drawn inside because the dialog clips its edges. */
 .palette-field input:focus-visible {
   outline: none;
 }
 :root:not([data-public-surface]) .palette-field:has(input:focus-visible) {
-  box-shadow: inset 0 -2px var(--color-ink);
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 /* Rhythm (2.2) belongs to Section, the template and the grid, never a page.

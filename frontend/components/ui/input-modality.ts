@@ -7,8 +7,11 @@
  * fixes both once, for every surface:
  *
  *  - `<html data-input-modality="pointer">` after a press; the focus-ring
- *    rules in globals.css draw no ring under it, and the next key brings the
- *    ring back.
+ *    rules in globals.css draw no ring under it. Only focus that arrives while
+ *    a key is down brings the ring back: a key that moves no focus (Shift,
+ *    Page Down) changes nothing, and neither does a script focus (`<main>`
+ *    after navigation) or Escape returning focus to its trigger, which keep
+ *    the modality the reader was already in.
  *  - `focusFromKeyboard()` is true only when the last input was a key and the
  *    window has not lost focus since, so a Tooltip opens on focus for a
  *    keyboard reader's Tab and never for a restored focus.
@@ -19,6 +22,8 @@
 type InputModality = 'keyboard' | 'pointer';
 
 let modality: InputModality | null = null;
+/** True from a navigating key's press to its release: a focus now came from it. */
+let keyDown = false;
 /** True from the window losing focus until the reader's next key or press. */
 let away = false;
 let installed = false;
@@ -30,11 +35,19 @@ function set(next: InputModality) {
 }
 
 function onKeyDown(event: KeyboardEvent) {
-  if (event.ctrlKey || event.altKey || event.metaKey) return;
-  set('keyboard');
+  keyDown = !(event.ctrlKey || event.altKey || event.metaKey || event.key === 'Escape');
+}
+
+function onKeyUp() {
+  keyDown = false;
+}
+
+function onFocusIn() {
+  if (keyDown) set('keyboard');
 }
 
 function onPointerDown() {
+  keyDown = false;
   set('pointer');
 }
 
@@ -42,14 +55,18 @@ function onPointerDown() {
 // capture phase) hears only the window itself losing focus.
 function onWindowBlur() {
   away = true;
+  keyDown = false;
 }
 
 /** Starts tracking once, when this module first loads. */
 function trackInputModality() {
   if (installed || typeof window === 'undefined') return;
   installed = true;
-  // Capture, so a handler that stops propagation cannot hide an input.
+  // Capture, so a handler that stops propagation cannot hide an input, and the
+  // modality is current before React's own focus handlers (a Tooltip's) read it.
   document.addEventListener('keydown', onKeyDown, true);
+  document.addEventListener('keyup', onKeyUp, true);
+  document.addEventListener('focusin', onFocusIn, true);
   document.addEventListener('pointerdown', onPointerDown, true);
   window.addEventListener('blur', onWindowBlur);
 }

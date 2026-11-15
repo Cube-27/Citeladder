@@ -285,7 +285,7 @@ export function CommandPalette({
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
           {/* The search row is the dialog's header; it draws the field's
-              2px focus edge along its foot (globals.css, `palette-field`). */}
+              focus ring (globals.css, `palette-field`). */}
           <div className="palette-field border-rule text-ink-2 flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-4 shrink-0" aria-hidden />
             <input
