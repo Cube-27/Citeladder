@@ -1,8 +1,7 @@
 import {
   createContext,
-  Fragment,
   useContext,
-  useState,
+  useRef,
   type HTMLAttributes,
   type ReactNode,
   type Ref,
@@ -11,31 +10,30 @@ import {
 } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { ClampText, useCut } from '@/components/ui/clamp-text';
 import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
-import { Tooltip } from '@/components/ui/tooltip';
+import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, formatDisplayTime, readableUrl, urlCellText } from '@/lib/format';
+import { formatTableTimestamp, readableUrl, urlCellText } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
  * Table — the app's data table:
- *  - the header is a sticky band of overline column heads (`scope="col"`),
+ *  - the head is a `well` band of caption-strong column heads (`scope="col"`),
  *    `ink` while sorted
- *  - `table-row-height` rows (36 in the app) on inset hairlines, so a cell's
- *    padding is 8 above and 8 below; every row tints on hover as one piece,
- *    pinned cells included (the app's tint is on the cells, globals.css
- *    "r2 data"); `highlight` marks your own row (one row per table, never
- *    for emphasis); no zebra stripes, no column rules, no colour by status
- *  - text never runs past two lines: `ClampText` cuts it there and moves the
- *    rest into a tooltip, so a row is one line or two, never an outlier
+ *  - `table-row-height` rows (40 in the app) with `rule` lines between them;
+ *    every row tints on hover as one piece, pinned cells included
+ *    (globals.css "r3 data"); `highlight` marks your own row (one row per
+ *    table, never for emphasis); no zebra stripes, no column rules
+ *  - every cell is one line: `ClampText` cuts a long value with an ellipsis
+ *    and puts the whole of it in a tooltip, so no row is an outlier
  *  - numeric columns align right in tabular figures, under a right-aligned
  *    header, so digits line up place by place; text columns stay left
  *  - `fixed` takes column widths from the header cells, never from the rows
  *    shown, so paging, sorting and loading never move the columns
- * The wrapper scrolls, so the sticky header pins on vertical scroll. On the
- * page its boundary is the `table-frame` hairline ring (an outer shadow, so it
- * never changes the box); inside a Card the ring drops.
+ * The wrapper scrolls, so the sticky header pins on vertical scroll. On its
+ * own in the app it is a card; inside a container or a DataTable it is plain.
  */
 const tableHeadClasses = 'text-caption text-ink-2 whitespace-nowrap';
 const TABLE_MIN_WIDTH = {
@@ -228,75 +226,10 @@ function isPlainText(children: ReactNode) {
 }
 
 /**
- * How many lines a row's text may take before `ClampText` cuts it. Two by
- * default; a paged `DataTable` of one-line rows sets one, because its blank
- * rows and its pager's position assume every row is exactly one row tall — a
- * page whose long queries wrapped to two lines was taller than the next page,
- * so the pager and everything below it moved on every page turn.
- */
-export const TableTextLinesContext = createContext<1 | 2>(2);
-
-/**
- * The lines a `TableCellLines` title may take: one by default; up to two in a
- * `DataTable` of three-line rows (`rowLines={3}`), where a long title (a
- * prompt) wraps over its caption instead of being cut at one line. A title
- * that fits on one line keeps its row compact (owner, 2026-11-11): only a
- * wrapping title makes its row taller.
+ * The lines a `TableCellLines` title may take: one by default; two only in a
+ * `DataTable` of three-line rows (`rowLines={3}`).
  */
 export const TableTitleLinesContext = createContext<1 | 2>(1);
-
-function isCut(node: HTMLElement) {
-  return node.scrollHeight > node.clientHeight + 1 || node.scrollWidth > node.clientWidth + 1;
-}
-
-/**
- * Text cut at `lines` (two by default, one for a title or URL stacked over a
- * second line), with the whole text in a tooltip only when something was
- * actually cut. This is what holds every row to one or two lines.
- *
- * Measuring is lazy: the text is measured only as its tooltip is about to
- * open, so a table of hundreds of cells costs no layout reads at rest. The
- * tooltip is always mounted, so it opens and closes through the shared atom
- * and only one is ever open.
- *
- * `tooltip` overrides the tooltip content, e.g. a full URL behind a label.
- */
-export function ClampText({
-  children,
-  lines: requestedLines,
-  tooltip,
-  className,
-}: Readonly<{
-  children: ReactNode;
-  /** Defaults to the table's text lines (`TableTextLinesContext`). */
-  lines?: 1 | 2;
-  tooltip?: ReactNode;
-  className?: string;
-}>) {
-  const tableLines = useContext(TableTextLinesContext);
-  const lines = requestedLines ?? tableLines;
-  // The full text as plain text: styled children (a title role, a caption)
-  // would carry their own ink onto the inverse tooltip chip.
-  const [fullText, setFullText] = useState('');
-  const openWhenCut = (node: HTMLElement) => {
-    if (!isCut(node)) return false;
-    setFullText(node.textContent ?? '');
-    return true;
-  };
-  return (
-    <Tooltip content={tooltip ?? fullText} shouldOpen={openWhenCut}>
-      <span
-        className={cn(
-          'block min-w-0 break-words',
-          lines === 1 ? 'truncate' : 'line-clamp-2',
-          className,
-        )}
-      >
-        {children}
-      </span>
-    </Tooltip>
-  );
-}
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
@@ -435,37 +368,55 @@ export function TableRowHeader({
 }
 
 /**
- * A URL in a cell: mono, without the origin its column shares
- * (`sharedOrigin`), able to break only after a `/`, cut at the row's lines
- * with the whole address in the tooltip.
+ * A URL in a cell, on one line, without the origin its column shares
+ * (`sharedOrigin`). When it must cut, it keeps the start of the path and its
+ * tail and cuts the middle (`/blog/…/last-segment`), never down to the host
+ * alone; the whole address is in the tooltip.
  */
-export function UrlText({
-  url,
-  origin = null,
-  lines,
-}: Readonly<{ url: string; origin?: string | null; lines?: 1 | 2 }>) {
+export function UrlText({ url, origin = null }: Readonly<{ url: string; origin?: string | null }>) {
   const text = urlCellText(url, origin);
-  // Each part keyed by where it starts in the text, so a break follows every '/'.
-  const parts = text.split(/(?<=\/)/u).map((part, index, all) => ({
-    part,
-    at: all.slice(0, index).join('').length,
-  }));
+  const { head, tail } = splitUrlTail(text);
+  const ref = useRef<HTMLSpanElement>(null);
+  const cut = useCut(ref, anyPartCut);
   return (
-    <ClampText lines={lines} tooltip={readableUrl(url)} className="type-data">
-      {parts.map(({ part, at }) => (
-        <Fragment key={at}>
-          {part}
-          {at + part.length < text.length ? <wbr /> : null}
-        </Fragment>
-      ))}
-    </ClampText>
+    <Tooltip content={readableUrl(url)} shouldOpen={anyPartCut}>
+      <span
+        ref={ref}
+        // The tail never shrinks, so the cut falls in the middle of the path.
+        data-url-text=""
+        data-truncated={cut || undefined}
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a cut address is a tab stop so the whole of it (the tooltip) is reachable by keyboard.
+        tabIndex={cut ? 0 : undefined}
+        className="rounded-mark flex min-w-0 whitespace-nowrap"
+      >
+        {/* A head that cuts and a tail that stays: together the text once, read and copied whole. */}
+        {head ? <span className="min-w-0 truncate">{head}</span> : null}
+        <span className={cn('min-w-0', head ? 'shrink-0' : 'truncate')}>{tail}</span>
+      </span>
+    </Tooltip>
   );
 }
 
+function anyPartCut(node: HTMLElement) {
+  return [...node.querySelectorAll(':scope > span')].some(isTextCut);
+}
+
+/** The tail is the last path segment (with its query); the head is everything before it. */
+function splitUrlTail(text: string): { head: string; tail: string } {
+  const cut = text.replace(/\/$/u, '').lastIndexOf('/');
+  if (cut <= 0) return { head: '', tail: text };
+  const tail = text.slice(cut);
+  // A tail longer than half a typical cell keeps the head cut instead.
+  if (tail.length > URL_TAIL_MAX) return { head: '', tail: text };
+  return { head: text.slice(0, cut), tail };
+}
+
+/** Characters of a URL's last segment that stay whole while the head is cut. */
+const URL_TAIL_MAX = 32;
+
 /**
- * A date-time in a table's date column: the date over its time and zone. On
- * one line ("Nov 1, 2026, 05:03 PM GMT+5:30") it is wider than the column and
- * ran into the next one.
+ * A date-time in a table's date column, on one line without its zone: a
+ * DataTable with a `date` column states the zone once in its footer.
  */
 export function TableTime({
   value,
@@ -474,11 +425,8 @@ export function TableTime({
   const timeZone = useDisplayTimeZone();
   if (!value) return fallback;
   return (
-    <time dateTime={value} className="block min-w-0">
-      <TableCellLines
-        primary={<span className="type-data">{formatDisplayDate(value, timeZone)}</span>}
-        secondary={formatDisplayTime(value, timeZone)}
-      />
+    <time dateTime={value} className="block min-w-0 truncate tabular-nums">
+      {formatTableTimestamp(value, timeZone)}
     </time>
   );
 }

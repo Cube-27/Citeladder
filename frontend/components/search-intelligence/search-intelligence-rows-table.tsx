@@ -1,7 +1,8 @@
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { ClampText, TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import type { SearchIntelligenceRow } from '@/lib/api/search-intelligence';
 import { SEARCH_COLUMNS_BY_KIND, type SearchColumn } from '@/lib/config/search-intelligence';
 import { Absence } from '@/components/ui/absence';
@@ -23,7 +24,7 @@ function displayValue(row: SearchIntelligenceRow, column: SearchColumn, origin: 
   const result = row[column.field];
   if (column.numeric) return <SearchValue value={result} digits={column.precision ?? 0} />;
   if (URL_FIELDS.has(column.field) && typeof result === 'string' && result)
-    return <UrlText url={result} origin={origin} lines={1} />;
+    return <UrlText url={result} origin={origin} />;
   return cellText(result) ?? <Absence />;
 }
 

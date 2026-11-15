@@ -12,7 +12,8 @@ import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
-import { ClampText, TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 import { pluralCount } from '@/lib/format';
 

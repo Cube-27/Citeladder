@@ -21,7 +21,8 @@ import {
 import { InfoHint } from '@/components/ui/info-hint';
 import { Pressable } from '@/components/ui/pressable';
 import { SearchField } from '@/components/ui/search-field';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { ICONS } from '@/lib/icons';

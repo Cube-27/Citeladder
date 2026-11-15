@@ -1,6 +1,7 @@
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
-import { ClampText, TableCell } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import { textRole } from '@/components/ui/typography';
 import type { SortState, SourcesData } from '@/lib/visibility/sources';

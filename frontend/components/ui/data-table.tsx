@@ -1,4 +1,4 @@
-import { useId, type ComponentProps, type CSSProperties, type ReactNode } from 'react';
+import { useContext, useId, type ComponentProps, type CSSProperties, type ReactNode } from 'react';
 
 import { BusyRung } from '@/components/ui/rung-meter';
 import {
@@ -9,85 +9,58 @@ import {
   type DataTableColumn,
   type DataTableSelection,
 } from '@/components/ui/data-table-columns';
+import {
+  DataTableBody,
+  usePinnedPadding,
+  type DataTableInlineEmpty,
+  type DataTableState,
+  type RowLines,
+} from '@/components/ui/data-table-body';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
-import { ScrollFrame } from '@/components/ui/scroll-edges';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatTimeZoneNote } from '@/lib/format';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableCellLines,
-  TableFillerRows,
-  TableTextLinesContext,
-  TableTitleLinesContext,
-  type TableMinWidth,
-} from '@/components/ui/table';
-import { LiveVerb } from '@/components/ui/skeleton';
+  ScrollSteppers,
+  useScrollFrame,
+  type ScrollFrameState,
+} from '@/components/ui/scroll-edges';
+import { Table, TableTitleLinesContext, type TableMinWidth } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
-import {
-  StateBlock,
-  type StateBlockProps,
-  StateHeadingLevelContext,
-} from '@/components/ui/state-block';
+import { StateBlock, StateHeadingLevelContext } from '@/components/ui/state-block';
 
-export type { DataTableColumn, DataTableSelection };
-
-/** A table read's state when it has no rows to show: loading, error or empty. */
-export type DataTableState = Exclude<StateBlockProps, { inline: true }>;
-
-/**
- * The one-line empty state (`StateBlock` `inline`): one table row saying what
- * is absent, for a small table whose block empty state would be taller than
- * its rows ever are.
- */
-type DataTableInlineEmpty = Extract<StateBlockProps, { inline: true }>;
+export type { DataTableColumn, DataTableSelection, DataTableState };
 
 export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'className'>;
 
 /**
- * DataTable — the record table organism: a header, an
- * ink rule, overline column heads, 36px rows on hairlines with mono
- * right-aligned figures, a first column fixed while the table scrolls
- * sideways, sort marks, your row marked with the accent rung and "You", the
- * pager and the read's states, with one geometry.
+ * DataTable — the record table organism, a card: an optional header bar
+ * (title, toolbar), a head row on `well` (36), body rows of 40 (56 for two
+ * lines) with `rule` lines between rows only, and a footer bar with the Pager
+ * and the sideways steppers. The page passes data, columns and rows; it sets
+ * no geometry.
  *
- *   header — the table's title and its toolbar (`FilterBar`: search, filters,
- *            status, actions) on one row, 49px with the hairline that closes
- *            it — the page's control band, repeated in the card, flush with
- *            the card's top edge (the band's own 8px is the inset). A table's
- *            filters live here, never in a toolbar the page builds. A
- *            `description` is one caption line under that row, so the row
- *            itself keeps its height.
- *   rows   — `Table` laid out fixed from the columns' width roles, at the one
- *            36px row. A paged table passes `pageSize` and `rowCount`: while
- *            the rows run past one page, a short last page is padded with
- *            blank rows, so the pager never moves between pages. Every row
- *            of a paged table is exactly `rowLines` tall: its text is cut to
- *            that many lines (the rest in a tooltip), so a page of long
- *            values is no taller than a page of short ones. Rows of two
- *            lines (`rowLines={2}`, cells on `TableCellLines`) are padded
- *            with blanks. `rowLines={3}` lets a title wrap to two lines, and
- *            only a row whose title wraps grows; a title that fits keeps its
- *            row compact (owner, 2026-11-11). A fixed list with `pageSize` and no
- *            pager (top movers) always reserves its rows.
- *   pager  — the shared `Pager`, framed as the table's footer, drawn only
- *            while the rows run past one page: a table that fits on one page
- *            has no pager and no blank rows.
- *   state  — loading, read-error and empty render INSIDE the table body,
- *            under the same header row, in the footprint of a full page of
- *            rows while the table is paged (else the query-state height).
- *            An `inline` empty state is one row instead (else the page's
- *            footprint), so a small table never holds a tall empty block. A
- *            block empty state's heading is an h3, under the table's own.
- *   overflow — a wide table scrolls sideways in a `ScrollFrame`: the edge
- *            that hides columns fades and carries a stepper chevron, and the
- *            frame is a named tab stop that scrolls with the arrow keys.
- *   columns — each column's kind aligns and faces its head and every cell
- *            (`columnLayout`), whatever a page passes to the cells.
- *
- * The page passes data, columns and rows; it sets no geometry.
+ *   columns — each column declares its kind, which sets the head's and every
+ *            cell's alignment, face, minimum width and truncation together
+ *            (`columnLayout`). Priority columns come first and fit at 982;
+ *            `priority: 'low'` columns come last and are what scrolls.
+ *   pinned — the identity column (with the selection checkbox in the same
+ *            pinned block) stays in view while the table scrolls sideways,
+ *            and the scroller's scroll padding equals the pinned width, so a
+ *            focused cell is never under it.
+ *   rows   — every cell is one line, cut with an ellipsis and the full value
+ *            in a tooltip; `rowLines={2}` stacks a value over a caption
+ *            (`TableCellLines`). A paged table pads a short last page with
+ *            blank rows, so the pager never moves between pages.
+ *   states — loading keeps the head and draws a page of block rows; a filter
+ *            that empties a table keeps the head; an empty, not-measured or
+ *            failed read replaces the whole table, head included. A page
+ *            that knows from its data that nothing was measured passes the
+ *            not-measured state; the table never guesses it from its cells.
+ *   zone   — a table with a `date` column states its time zone once, in
+ *            the footer bar; its date-times carry none (`TableTime`).
  */
 export function DataTable({
   title,
@@ -108,7 +81,7 @@ export function DataTable({
   label,
   reserveRows = false,
 }: Readonly<{
-  /** The table's heading (an h3, the card title rung). */
+  /** The table's heading: an h2 on the page, an h3 inside a section. */
   title?: string;
   /** One caption line under the title row: what the figures are. */
   description?: ReactNode;
@@ -122,76 +95,161 @@ export function DataTable({
   pageSize?: number;
   /** Lines per row: 2 for a caption under the value, 3 for a two-line title over it. */
   rowLines?: RowLines;
-  /** What to show instead of rows; an `inline` empty state is one row. */
+  /** What to show instead of rows. */
   state?: DataTableState | DataTableInlineEmpty;
   pager?: DataTablePager;
   /** A background refetch while the current rows stay on screen. */
   busy?: Readonly<{ active: boolean; label: string }>;
   minWidth?: TableMinWidth;
-  /**
-   * Keep the first column (the row's identity) in view while a wide table
-   * scrolls sideways in its frame.
-   */
+  /** Keep the identity column (and the selection box) in view while the table scrolls sideways. */
   pinFirstColumn?: boolean;
   selection?: DataTableSelection;
-  /** A note under the table (e.g. a truncation notice). */
+  /** A note in the footer bar (a source, a period, the time zone). */
   footer?: ReactNode;
   /** The table's accessible name when it has no visible title. */
   label?: string;
   /**
    * One of several views of the same table (its tabs or filters): keep the
    * pager and a full page of rows even when this view fits on one page, so
-   * switching views never moves what follows (2026-11-03 app review).
+   * switching views never moves what follows.
    */
   reserveRows?: boolean;
 }>) {
   const headingId = useId();
-  const colSpan = columns.length + (selection ? 1 : 0);
+  const level = useContext(StateHeadingLevelContext);
+  const parts = dataTableParts({ title, label, headingId, columns, selection, pinFirstColumn });
   const paging = pagingLayout(pager, pageSize, reserveRows);
-  // The region and the table share one name: the visible title, else `label`.
-  const naming = title
-    ? { ariaLabelledBy: headingId, ariaLabel: undefined }
-    : { ariaLabelledBy: undefined, ariaLabel: label };
+  const scroll = useScrollFrame({ label: parts.regionLabel, start: !pinFirstColumn });
   useFlexibleColumnCheck({ columns, title, label });
+  const replacing = replacingState(state);
+  const steppers = <ScrollSteppers state={scroll} />;
+  const note = tableNote(footer, parts.zoned);
+  const footed = Boolean(paging.pager ?? note);
   return (
     <section
-      aria-labelledby={naming.ariaLabelledBy}
-      aria-label={naming.ariaLabel}
+      aria-labelledby={parts.naming.ariaLabelledBy}
+      aria-label={parts.naming.ariaLabel}
       aria-busy={busy?.active || undefined}
       data-data-table=""
-      className="relative grid min-w-0 content-start gap-[var(--workspace-gap)]"
+      className="relative grid min-w-0 content-start"
     >
       {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
       <DataTableHeader
         title={title}
         headingId={headingId}
+        level={level}
         toolbar={toolbar}
         description={description}
+        steppers={footed ? null : steppers}
       />
+      {replacing ? (
+        <ReplacingState state={replacing} level={title ? nextLevel(level) : level} />
+      ) : null}
       <DataTableFrame
+        hidden={replacing !== null}
+        scroll={scroll}
         minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
         layout={columnLayout(columns, Boolean(selection))}
-        naming={naming}
-        regionLabel={title ?? label ?? 'Table'}
-        pinFirstColumn={pinFirstColumn}
+        naming={parts.naming}
+        pinned={parts.pinned}
       >
         <DataTableColumns columns={columns} selection={selection} />
-        <TableTextLinesContext value={(pager || pageSize !== undefined) && rowLines === 1 ? 1 : 2}>
-          <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
-            <DataTableBody
-              colSpan={colSpan}
-              state={state}
-              pageSize={paging.pageSize}
-              rowCount={rowCount}
-              rowLines={rowLines}
-            >
-              {children}
-            </DataTableBody>
-          </TableTitleLinesContext>
-        </TableTextLinesContext>
+        <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
+          <DataTableBody
+            colSpan={parts.colSpan}
+            state={replacing ? undefined : state}
+            pageSize={paging.pageSize}
+            rowCount={rowCount}
+            rowLines={rowLines}
+          >
+            {state === undefined ? children : null}
+          </DataTableBody>
+        </TableTitleLinesContext>
       </DataTableFrame>
-      <DataTableFoot footer={footer} pager={paging.pager} />
+      <DataTableFoot
+        footer={note}
+        pager={replacing ? undefined : paging.pager}
+        steppers={footed ? steppers : null}
+      />
     </section>
+  );
+}
+
+/**
+ * What the table derives from its props alone: its cell count, its name (the
+ * visible title, else `label`, shared by the region and the table), how many
+ * leading columns stay pinned, and whether it shows date-times.
+ */
+function dataTableParts({
+  title,
+  label,
+  headingId,
+  columns,
+  selection,
+  pinFirstColumn,
+}: Readonly<{
+  title?: string;
+  label?: string;
+  headingId: string;
+  columns: readonly DataTableColumn[];
+  selection?: DataTableSelection;
+  pinFirstColumn: boolean;
+}>) {
+  const naming = title
+    ? { ariaLabelledBy: headingId, ariaLabel: undefined }
+    : { ariaLabelledBy: undefined, ariaLabel: label };
+  let pinned: 0 | 1 | 2 = 0;
+  if (pinFirstColumn) pinned = selection ? 2 : 1;
+  return {
+    colSpan: columns.length + (selection ? 1 : 0),
+    regionLabel: title ?? label ?? 'Table',
+    naming,
+    pinned,
+    zoned: columns.some((column) => column.kind === 'date'),
+  };
+}
+
+/** The footer's note, with the zone its date-times are in stated once. */
+function tableNote(footer: ReactNode, zoned: boolean): ReactNode {
+  if (!zoned) return footer;
+  return (
+    <>
+      {footer}
+      <TimeZoneNote />
+    </>
+  );
+}
+
+/** The zone the table's date-times are in, said once ("Times in GMT+5:30"). */
+function TimeZoneNote() {
+  const timeZone = useDisplayTimeZone();
+  return <span className="type-caption">{formatTimeZoneNote(timeZone)}</span>;
+}
+
+/** A state under the table's own title takes the next level. */
+const nextLevel = (level: 1 | 2 | 3) => (level === 1 ? 2 : 3);
+
+/**
+ * The state that takes the table's place, head included: an empty,
+ * not-measured or failed read. Loading and filtered-empty keep the head.
+ */
+function replacingState(
+  state: DataTableState | DataTableInlineEmpty | undefined,
+): ComponentProps<typeof StateBlock> | null {
+  if (state === undefined || state.kind === 'loading' || state.kind === 'filtered') return null;
+  return state;
+}
+
+function ReplacingState({
+  state,
+  level,
+}: Readonly<{ state: ComponentProps<typeof StateBlock>; level: 1 | 2 | 3 }>) {
+  return (
+    <div className="p-4">
+      <StateHeadingLevelContext value={level}>
+        <StateBlock {...state} />
+      </StateHeadingLevelContext>
+    </div>
   );
 }
 
@@ -217,65 +275,73 @@ function tableMinWidth({
 }
 
 /**
- * The table in its `ScrollFrame`. The box is isolated, so the cues never
- * paint over the page's sticky header. A pinned first column keeps the
- * leading edge clear. `layout` is the column map the cell rules read.
+ * The table in its scrolling frame. `layout` is the column map the cell
+ * rules read; `pinned` is how many leading columns stay in view (the
+ * identity column, and the selection box before it).
  */
 function DataTableFrame({
+  hidden,
+  scroll,
   minWidth,
   layout,
   naming,
-  regionLabel,
-  pinFirstColumn,
+  pinned,
   children,
 }: Readonly<{
+  hidden: boolean;
+  scroll: ScrollFrameState;
   minWidth: CSSProperties;
   layout: ReturnType<typeof columnLayout>;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
-  regionLabel: string;
-  pinFirstColumn: boolean;
+  pinned: 0 | 1 | 2;
   children: ReactNode;
 }>) {
+  usePinnedPadding(scroll.ref, pinned);
   return (
-    <div data-data-table-frame="" {...layout} className="isolate min-w-0" style={minWidth}>
-      <ScrollFrame label={regionLabel} start={!pinFirstColumn} stepper="head">
-        {(ref, region) => (
-          <Table
-            fixed
-            {...naming}
-            wrapperRef={ref}
-            region={region}
-            wrapperClassName="@container"
-            className={cn(
-              'desktop:min-w-[var(--data-table-min-desktop)] min-w-[var(--data-table-min)]',
-              pinFirstColumn && PINNED_FIRST_COLUMN,
-            )}
-          >
-            {children}
-          </Table>
-        )}
-      </ScrollFrame>
+    <div
+      data-data-table-frame=""
+      {...layout}
+      data-pinned={pinned || undefined}
+      hidden={hidden}
+      className="isolate min-w-0"
+      style={minWidth}
+    >
+      <div {...scroll.frame} className="relative min-w-0">
+        <Table
+          fixed
+          {...naming}
+          wrapperRef={scroll.ref}
+          region={scroll.region}
+          wrapperClassName="@container"
+          className="desktop:min-w-[var(--data-table-min-desktop)] min-w-[var(--data-table-min)]"
+        >
+          {children}
+        </Table>
+      </div>
     </div>
   );
 }
 
 /**
- * The foot: the note (source, period or row count) on the left, the Pager on
- * the right, one control tall; nothing when there is neither.
+ * The footer bar: the note (source, period, time zone) on the left, the
+ * steppers and the Pager on the right; nothing when there is neither.
  */
 function DataTableFoot({
   footer,
   pager,
-}: Readonly<{ footer: ReactNode; pager: DataTablePager | undefined }>) {
+  steppers,
+}: Readonly<{ footer: ReactNode; pager: DataTablePager | undefined; steppers: ReactNode }>) {
   if (!pager && !footer) return null;
   return (
-    <div className="flex min-h-[var(--control-md)] min-w-0 flex-wrap items-center justify-between gap-2">
+    <div
+      data-data-table-foot=""
+      className="flex min-h-12 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2"
+    >
       {footer ? <div className="type-caption grid min-w-0 gap-1">{footer}</div> : null}
-      {pager ? (
-        <div className="ms-auto min-w-0">
-          <Pager {...pager} />
-        </div>
-      ) : null}
+      <div className="ms-auto flex min-w-0 flex-wrap items-center gap-4">
+        {steppers}
+        {pager ? <Pager {...pager} /> : null}
+      </div>
     </div>
   );
 }
@@ -313,201 +379,53 @@ function pagingLayout(
   return reserveRows || hasMorePages(pager) ? { pager, pageSize } : {};
 }
 
-/** The first column stays in view while a wide table scrolls in its frame. */
-const PINNED_FIRST_COLUMN =
-  '[&_tr>:first-child]:sticky [&_tr>:first-child]:left-0 [&_tbody_tr>:first-child]:z-10 [&_tbody_tr>:first-child]:bg-[var(--table-ground)] [&_thead_tr>:first-child]:z-20';
-
 /**
- * The title row (the title at the card-title size, then the toolbar 8 along),
- * with the description bound 4 under it as one fact.
+ * The header bar: the title, then the toolbar on one row, the description
+ * one caption line under it, and the steppers when no footer bar exists.
  */
 function DataTableHeader({
   title,
   headingId,
+  level,
   toolbar,
   description,
+  steppers,
 }: Readonly<{
   title?: string;
   headingId: string;
+  level: 1 | 2 | 3;
   toolbar?: FilterBarProps;
   description?: ReactNode;
+  steppers: ReactNode;
 }>) {
-  if (!title && !toolbar && !description) return null;
+  if (!title && !toolbar && !description) {
+    return steppers ? <div className="flex justify-end px-4 pt-2">{steppers}</div> : null;
+  }
+  // The level a block in this place takes: h2 on the page, h3 inside a section.
+  const Heading = level === 3 ? 'h3' : 'h2';
   return (
-    <header className="grid min-w-0 gap-1">
-      {title || toolbar ? (
-        <div
-          data-data-table-header=""
-          className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
-        >
-          {title ? (
-            <h3 id={headingId} className={textRole('heading', 'min-w-0 truncate')}>
-              {title}
-            </h3>
-          ) : null}
-          {toolbar ? (
-            <div className="min-w-0 flex-1">
-              <FilterBar {...toolbar} />
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+    <header className="grid min-w-0 gap-1 px-4 py-3">
+      <div
+        data-data-table-header=""
+        className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
+      >
+        {title ? (
+          <Heading id={headingId} className={textRole('heading', 'min-w-0 shrink-0 truncate')}>
+            {title}
+          </Heading>
+        ) : null}
+        {toolbar ? (
+          <div className="min-w-0 flex-1">
+            <FilterBar {...toolbar} />
+          </div>
+        ) : null}
+        {steppers ? <div className={cn(!toolbar && 'rail:ms-auto')}>{steppers}</div> : null}
+      </div>
       {description ? (
-        <p data-data-table-description="" className="type-caption">
+        <p data-data-table-description="" className="type-caption max-w-[72ch]">
           {description}
         </p>
       ) : null}
     </header>
   );
 }
-
-/**
- * The rows, padded to a full page, or the read's state in the footprint of
- * that page (never shorter than the query-state height).
- */
-function DataTableBody({
-  colSpan,
-  state,
-  pageSize,
-  rowCount,
-  rowLines,
-  children,
-}: Readonly<{
-  colSpan: number;
-  state?: DataTableState | DataTableInlineEmpty;
-  pageSize?: number;
-  rowCount?: number;
-  rowLines: RowLines;
-  children?: ReactNode;
-}>) {
-  if (state?.kind === 'empty' && state.inline) {
-    return (
-      <TableBody>
-        <tr data-table-state="">
-          <TableCell
-            colSpan={colSpan}
-            className="h-[calc(var(--data-table-rows)*var(--data-table-row))] align-top"
-            style={stateFootprint(pageSize ?? 1, rowLines)}
-          >
-            <InFrame>
-              <StateBlock
-                kind="empty"
-                inline
-                compact
-                icon={state.icon}
-                message={state.message}
-                action={state.action}
-              />
-            </InFrame>
-          </TableCell>
-        </tr>
-      </TableBody>
-    );
-  }
-  if (state?.kind === 'loading') {
-    return (
-      <LoadingBody
-        colSpan={colSpan}
-        label={state.label ?? 'Loading…'}
-        rows={pageSize ?? LOADING_ROWS}
-        rowLines={rowLines}
-      />
-    );
-  }
-  if (state) {
-    return (
-      <TableBody>
-        <tr data-table-state="">
-          <TableCell
-            colSpan={colSpan}
-            className="h-[max(var(--state-block-height),calc(var(--data-table-rows)*var(--data-table-row)))] align-top"
-            style={stateFootprint(pageSize ?? 0, rowLines)}
-          >
-            {/* Under the table's h3 title, a block empty state's heading is an h3. */}
-            <StateHeadingLevelContext value={3}>
-              <InFrame>
-                <StateBlock {...state} />
-              </InFrame>
-            </StateHeadingLevelContext>
-          </TableCell>
-        </tr>
-      </TableBody>
-    );
-  }
-  const filler = pageSize === undefined || rowCount === undefined ? 0 : pageSize - rowCount;
-  return (
-    <TableBody>
-      {children}
-      <TableFillerRows count={filler} colSpan={colSpan} spacer={blankLines(rowLines)} />
-    </TableBody>
-  );
-}
-
-/**
- * The ruled blank: a page of blank rows under the real column heads, the
- * first carrying the live rung and its verb, so arriving rows move nothing.
- */
-function LoadingBody({
-  colSpan,
-  label,
-  rows,
-  rowLines,
-}: Readonly<{ colSpan: number; label: string; rows: number; rowLines: RowLines }>) {
-  return (
-    <TableBody aria-busy="true">
-      <tr data-table-state="" style={stateFootprint(1, rowLines)}>
-        <TableCell colSpan={colSpan} className="h-[var(--data-table-row)]">
-          <InFrame>
-            <LiveVerb label={label} />
-          </InFrame>
-        </TableCell>
-      </tr>
-      <TableFillerRows count={rows - 1} colSpan={colSpan} spacer={blankLines(rowLines)} />
-    </TableBody>
-  );
-}
-
-/** A blank row's lines: none for a one-line table, else a title over a caption. */
-function blankLines(rowLines: RowLines) {
-  return rowLines === 1 ? null : <TableCellLines primary={BLANK} secondary={BLANK} />;
-}
-
-/**
- * A state spans the visible frame, not the scroll width of a wide table, and
- * stays in view while the frame scrolls, so its text is never cut (STA-03).
- */
-function InFrame({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="sticky start-[var(--table-cell-padding-x)] w-[calc(100cqi-2*var(--table-cell-padding-x))]">
-      {children}
-    </div>
-  );
-}
-
-/**
- * A row's height by its lines, so a state holds exactly a page of rows: one
- * line sits on the row floor; two lines are a body line over a caption line
- * between the cell's padding (`TableCellLines`); three are a two-line title
- * over the caption.
- */
-const ROW_HEIGHT = {
-  1: 'var(--table-row-height)',
-  2: 'calc(2*var(--table-cell-padding-y)+var(--text-body-sm--line-height)+var(--spacing)+var(--text-caption--line-height))',
-  3: 'calc(2*var(--table-cell-padding-y)+2*var(--text-body-sm--line-height)+var(--spacing)+var(--text-caption--line-height))',
-} as const satisfies Record<RowLines, string>;
-
-type RowLines = 1 | 2 | 3;
-
-/** The custom properties a state cell's height reads: `rows` rows of `rowLines`. */
-function stateFootprint(rows: number, rowLines: RowLines) {
-  return {
-    '--data-table-rows': rows,
-    '--data-table-row': ROW_HEIGHT[rowLines],
-  } as CSSProperties;
-}
-
-/** Blank rows a loading table without a page size draws. */
-const LOADING_ROWS = 5;
-
-/** A non-breaking space: a blank line that still takes a line's height. */
-const BLANK = ' ';

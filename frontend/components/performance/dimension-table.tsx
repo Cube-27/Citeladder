@@ -5,7 +5,8 @@ import { SearchX } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { Absence } from '@/components/ui/absence';
-import { ClampText, TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
 import {
   performanceQueries,
@@ -295,7 +296,7 @@ export function DimensionTable({
         <TableRow key={row.dimension_key}>
           <TableCell>
             {dimension === 'page' ? (
-              <UrlText url={row.display_value} origin={origin} lines={1} />
+              <UrlText url={row.display_value} origin={origin} />
             ) : (
               <ClampText className={cn(dimension === 'day' && 'tabular-nums')}>
                 {formatDimensionValue(dimension, row.display_value)}

@@ -1,10 +1,12 @@
+import { createContext, useContext } from 'react';
+
 import type { TrendScale } from '@/components/ui/trend-geometry';
 import { cn } from '@/lib/utils';
 
 /**
- * Series ink by role: you are the accent, rivals one to
- * four take ink and the cool hues in rank order, and a merged remainder is
- * `data-other`. The accent is never a rival's colour.
+ * Series ink by identity: you are the accent, rivals one to four take ink and
+ * the cool hues, and a merged remainder (or a fifth rival) is `data-other`.
+ * The accent is never a rival's colour.
  */
 export type SeriesTone = 'you' | 'rival-1' | 'rival-2' | 'rival-3' | 'rival-4' | 'other';
 
@@ -38,6 +40,18 @@ const SERIES_TEXT: Record<SeriesTone, string> = {
 
 const RIVALS = ['rival-1', 'rival-2', 'rival-3', 'rival-4'] as const;
 
+/**
+ * Each rival's tone by who it is, for every chart on a page: the page lists
+ * its rivals once (`seriesTones`) and a chart or bar under it colours a series
+ * by its identity, so a rival keeps one colour across the page.
+ */
+export const SeriesTonesContext = createContext<ReadonlyMap<string, SeriesTone> | null>(null);
+
+/** Rival tones in the page's order of rivals; a fifth and later are Other. */
+export function seriesTones(identities: readonly string[]): ReadonlyMap<string, SeriesTone> {
+  return new Map(identities.map((identity, index) => [identity, RIVALS[index] ?? 'other']));
+}
+
 /** The tone of the line at `index`: the first is you unless the chart has no "you". */
 export function seriesTone(
   line: Readonly<{ other?: boolean }>,
@@ -49,12 +63,28 @@ export function seriesTone(
   return RIVALS[index] ?? 'rival-4';
 }
 
-/** Axis and label text inside a chart's SVG: mono `data-sm` in `ink-2`. */
-export const AXIS_TEXT = 'fill-ink-2 type-data-sm';
+/**
+ * Tones for a chart's series: you first when `firstIsYou`, the merged
+ * remainder Other, and every rival by its identity on the page
+ * (`SeriesTonesContext`), else by its place in the chart.
+ */
+export function useSeriesTones(
+  lines: readonly Readonly<{ identity: string; other?: boolean }>[],
+  firstIsYou: boolean,
+): SeriesTone[] {
+  const known = useContext(SeriesTonesContext);
+  return lines.map((line, index) => {
+    if (line.other || (firstIsYou && index === 0)) return seriesTone(line, index, firstIsYou);
+    return known?.get(line.identity) ?? seriesTone(line, index, firstIsYou);
+  });
+}
+
+/** Axis and label text inside a chart's SVG: `caption` in `ink-2`, tabular numerals. */
+export const AXIS_TEXT = 'fill-ink-2 type-caption tabular-nums';
 
 /** The vertical room one end label needs, so two labels never overprint. */
 const END_LABEL_GAP = 16;
-/** A `data-sm` mono glyph's advance. */
+/** A caption glyph's average advance, the estimate label widths use. */
 export const LABEL_CHAR_WIDTH = 7.3;
 
 export type EndLabel = Readonly<{
@@ -92,7 +122,7 @@ export function EndLabels({ labels }: Readonly<{ labels: readonly EndLabel[] }>)
           x={label.x}
           y={label.y}
           dominantBaseline="middle"
-          className={cn('type-data-sm', SERIES_TEXT[label.tone])}
+          className={cn('type-caption tabular-nums', SERIES_TEXT[label.tone])}
         >
           {label.text}
         </text>
@@ -127,33 +157,16 @@ export function gapBands(values: readonly (number | null)[], scale: TrendScale):
   return bands;
 }
 
-/** The hatch of an absent period: `control-line` lines at 45° on `well` (law 1), held at 3:1. */
-export function HatchPattern({ id }: Readonly<{ id: string }>) {
-  return (
-    <pattern
-      id={id}
-      width={6}
-      height={6}
-      patternUnits="userSpaceOnUse"
-      patternTransform="rotate(45)"
-    >
-      <rect width={6} height={6} className="fill-well" />
-      <line x1={0} y1={0} x2={0} y2={6} strokeWidth={1} className="stroke-control-line" />
-    </pattern>
-  );
-}
-
+/** A missing period: a `well` band with its word when the band has room for it. */
 export function GapBands({
   bands,
   top,
   bottom,
-  hatch,
   word,
 }: Readonly<{
   bands: readonly GapBand[];
   top: number;
   bottom: number;
-  hatch: string;
   word: string;
 }>) {
   return (
@@ -167,16 +180,15 @@ export function GapBands({
               y={top}
               width={width}
               height={bottom - top}
-              fill={`url(#${hatch})`}
+              rx={2}
+              className="fill-well"
             />
             {width >= word.length * LABEL_CHAR_WIDTH + 16 ? (
               <text
                 x={band.from + width / 2}
                 y={top + 14}
                 textAnchor="middle"
-                paintOrder="stroke"
-                strokeWidth={4}
-                className={cn(AXIS_TEXT, 'stroke-well')}
+                className={AXIS_TEXT}
               >
                 {word}
               </text>
@@ -216,7 +228,7 @@ export function EventTicks({
               x={event.x + 12}
               y={bottom - 12}
               dominantBaseline="middle"
-              className="fill-ink type-data-sm"
+              className="fill-ink type-caption"
             >
               {event.label.length > 28 ? `${event.label.slice(0, 27)}…` : event.label}
             </text>
@@ -228,33 +240,53 @@ export function EventTicks({
 }
 
 /**
- * A stepped path through the points: each measurement holds until the next,
- * so the line moves in steps, never on a curve. A null lifts the pen.
+ * The area under each run of your line, down to the plot's floor: the soft
+ * accent fill that marks your series. A null ends a run.
  */
-export function stepPath(points: readonly (readonly [number, number] | null)[]): string {
-  let path = '';
-  let pen = false;
+export function areaPath(
+  points: readonly (readonly [number, number] | null)[],
+  floor: number,
+): string {
+  const runs: (readonly [number, number])[][] = [[]];
   for (const point of points) {
-    if (!point) {
-      pen = false;
-      continue;
-    }
-    const [x, y] = point;
-    path += pen ? `H${x.toFixed(1)}V${y.toFixed(1)}` : `M${x.toFixed(1)} ${y.toFixed(1)}`;
-    pen = true;
+    if (point) runs.at(-1)?.push(point);
+    else if (runs.at(-1)?.length) runs.push([]);
   }
-  return path;
+  return runs
+    .filter((run) => run.length > 1)
+    .map((run) => {
+      const line = run.map(([x, y]) => `L${x.toFixed(1)} ${y.toFixed(1)}`).join('');
+      const first = run[0]?.[0] ?? 0;
+      const last = run.at(-1)?.[0] ?? 0;
+      return `M${first.toFixed(1)} ${floor.toFixed(1)}${line}L${last.toFixed(1)} ${floor.toFixed(1)}Z`;
+    })
+    .join('');
+}
+
+/** Your series' fill: the accent at 16% under the line, falling to nothing at the floor. */
+export function YouFill({ id, d }: Readonly<{ id: string; d: string }>) {
+  return (
+    <>
+      <defs>
+        <linearGradient id={id} x1={0} x2={0} y1={0} y2={1} className="text-data-you">
+          <stop offset="0%" stopColor="currentColor" stopOpacity={0.16} />
+          <stop offset="100%" stopColor="currentColor" stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path data-you-fill="" d={d} fill={`url(#${id})`} />
+    </>
+  );
 }
 
 /**
- * A series' marker shape. Square for every line while end labels name them;
- * once a key replaces the labels each line takes its own shape, so no series
+ * A series' marker shape. Round for every line while end labels name them;
+ * once a key replaces the labels each rival takes its own shape, so no series
  * is told apart by colour alone.
  */
-export const MARKER_SHAPES = ['square', 'diamond', 'triangle', 'circle'] as const;
+export const MARKER_SHAPES = ['circle', 'square', 'diamond', 'triangle'] as const;
 export type MarkerShape = (typeof MARKER_SHAPES)[number];
 
-/** One marker centred on (x, y), about 5px across. */
+/** One marker centred on (x, y), about 6px across. */
 export function MarkerMark({
   x,
   y,
@@ -298,17 +330,17 @@ export function MarkerMark({
   }
 }
 
-/** A line's markers, filled for you and hollow for everyone else. */
+/** A line's markers, filled for you and hollow (the card's fill) for everyone else. */
 export function Markers({
   points,
   tone,
-  shape = 'square',
+  shape = 'circle',
 }: Readonly<{
   points: readonly (readonly [number, number] | null)[];
   tone: SeriesTone;
   shape?: MarkerShape;
 }>) {
-  const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-ground');
+  const className = cn(SERIES_STROKE[tone], tone === 'you' ? SERIES_FILL[tone] : 'fill-surface');
   return points.map((point, index) =>
     point ? (
       // A marker's position is its identity on the line.

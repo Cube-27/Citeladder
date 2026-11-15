@@ -1,7 +1,8 @@
 import { ActionButton } from '@/components/ui/actions';
 import { Stack } from '@/components/ui/layout';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { ClampText, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { PromptMetricItem } from '@citeladder/contracts';

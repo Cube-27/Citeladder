@@ -9,7 +9,7 @@
  *     still separate from the best one by lightness (score bands).
  *   - series (`1` … `8`) — categorical identity in a chart; never a state.
  *
- * Accent is deliberately absent: it is the action colour, never data.
+ * The accent is only series 1, your brand: it is never a state.
  */
 type OutcomeTone = 'success' | 'success-soft' | 'warning' | 'danger' | 'info' | 'neutral';
 

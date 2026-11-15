@@ -4,6 +4,8 @@ import {
   Circle,
   CircleCheck,
   CircleDashed,
+  CircleDot,
+  CircleMinus,
   CirclePause,
   CircleX,
   Clock,
@@ -11,6 +13,8 @@ import {
   Globe,
   Info,
   Meh,
+  OctagonAlert,
+  OctagonX,
   Smile,
   TriangleAlert,
   Users,
@@ -19,6 +23,7 @@ import {
 
 import { Icon } from '@/components/ui/icon';
 import { Spinner } from '@/components/ui/spinner';
+import { ClampText } from '@/components/ui/clamp-text';
 import { cn } from '@/lib/utils';
 
 /**
@@ -28,13 +33,14 @@ import { cn } from '@/lib/utils';
  */
 export type StatusTone = 'neutral' | 'positive' | 'negative' | 'warning' | 'info' | 'you';
 
-const TONE_INK: Record<StatusTone, string> = {
-  neutral: 'text-ink-2',
-  positive: 'text-positive',
-  negative: 'text-negative',
-  warning: 'text-warning',
-  info: 'text-info',
-  you: 'text-ink',
+/** Each tone's chip: its wash as the fill and its text colour (neutral is the well and `ink-2`). */
+const TONE_CHIP: Record<StatusTone, string> = {
+  neutral: 'bg-well text-ink-2',
+  positive: 'bg-positive-wash text-positive',
+  negative: 'bg-negative-wash text-negative',
+  warning: 'bg-warning-wash text-warning',
+  info: 'bg-info-wash text-info',
+  you: 'bg-accent-wash text-ink',
 };
 
 /** What a mark draws before its word: a glyph, the live rung, the "you" rung or priority bars. */
@@ -78,16 +84,29 @@ const classificationMarks = {
   'third-party': mark('neutral', Globe),
 } as const satisfies Record<string, Mark>;
 
+/** Running and queued are info; partial and cancelled warning; failed negative. */
 const runStatusMarks = {
   draft: mark('neutral', CircleDashed),
-  queued: mark('neutral', Clock),
+  queued: mark('info', Clock),
   running: mark('info', 'live'),
   paused: mark('neutral', CirclePause),
   analyzing: mark('info', 'live'),
   completed: mark('positive'),
   partial: mark('warning'),
   failed: mark('negative'),
-  cancelled: mark('neutral', Ban),
+  cancelled: mark('warning', Ban),
+} as const satisfies Record<string, Mark>;
+
+/**
+ * Severity: High negative, Medium warning, Low neutral. Its glyphs belong to
+ * severity alone, so a severity never reads as a run's or a check's state.
+ */
+const severityMarks = {
+  critical: mark('negative', OctagonX),
+  high: mark('negative', OctagonAlert),
+  medium: mark('warning', CircleDot),
+  low: mark('neutral', CircleMinus),
+  info: mark('neutral', CircleMinus),
 } as const satisfies Record<string, Mark>;
 
 /**
@@ -106,12 +125,14 @@ export type PriorityValue = keyof typeof priorityMarks;
 export type SentimentValue = keyof typeof sentimentMarks;
 export type ClassificationValue = keyof typeof classificationMarks;
 export type RunStatusValue = keyof typeof runStatusMarks;
+type SeverityValue = keyof typeof severityMarks;
 
 export type StatusMarkProps = {
   children: ReactNode;
   className?: string;
 } & (
   | { variant: 'status'; value: StatusValue }
+  | { variant: 'severity'; value: SeverityValue }
   | { variant: 'sentiment'; value: SentimentValue }
   | { variant: 'classification'; value: ClassificationValue }
   | { variant: 'run-status'; value: RunStatusValue }
@@ -124,6 +145,8 @@ function markOf(props: StatusMarkProps): Mark {
   switch (props.variant) {
     case 'status':
       return statusMarks[props.value];
+    case 'severity':
+      return severityMarks[props.value];
     case 'sentiment':
       return sentimentMarks[props.value];
     case 'classification':
@@ -179,10 +202,11 @@ function PriorityBars({ filled }: Readonly<{ filled: 1 | 2 | 3 }>) {
 }
 
 /**
- * StatusMark — the only way to show a status, priority or severity (brand
- * direction 3.1): a 16px glyph and a word in the `caption` role, the tone's
- * ink on whatever is beneath (no fill, no box), centred on the line it sits
- * in. A running state draws the live rung.
+ * StatusMark — the only way to show a status, priority or severity: a chip
+ * 24 high with radius 4, the tone's wash as its fill, the tone's text
+ * colour, a glyph and a word, so a column of marks reads as a pattern and
+ * every mark still says its state. A running state draws the live rung. A
+ * word too long for its cell is cut, with the whole word in a tooltip.
  */
 export function StatusMark(props: Readonly<StatusMarkProps>) {
   const {
@@ -199,13 +223,13 @@ export function StatusMark(props: Readonly<StatusMarkProps>) {
       {...attributes}
       data-status-tone={tone}
       className={cn(
-        'type-caption inline-flex min-h-[var(--tag-height)] max-w-full shrink-0 items-center gap-1 align-middle whitespace-nowrap',
-        TONE_INK[tone],
+        'type-caption inline-flex font-medium h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-1 rounded-sm px-1 align-middle whitespace-nowrap',
+        TONE_CHIP[tone],
         className,
       )}
     >
       <MarkGlyph glyph={glyph} />
-      <span className="min-w-0 truncate">{children}</span>
+      <ClampText className="min-w-0 pe-1">{children}</ClampText>
     </span>
   );
 }

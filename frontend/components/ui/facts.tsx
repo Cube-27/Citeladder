@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { ClampText } from '@/components/ui/clamp-text';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { cn } from '@/lib/utils';
@@ -10,9 +11,11 @@ export type Fact = Readonly<{ label: ReactNode; value: ReactNode; key?: string }
 /**
  * How a list of facts lays out — a role, never a gap:
  *
- *   `ruled`  — the system's FactList, for detail panes: table-row-height rows divided by
- *              `line`, the labels in a fixed 160px `ink-secondary` column so
- *              every value starts at the same edge.
+ *   `ruled`  — the system's FactList, for detail panes: a grid inside a card,
+ *              rows ruled only when there are more than four, the labels in a
+ *              fixed 160px `ink-2` column so every value starts at the same
+ *              edge; values stay on one line (the whole value in a tooltip),
+ *              and in a narrow card the value moves under its label.
  *   `inline` — a record's summary facts on one wrapping line, each label
  *              beside its value (an Action's status, priority and target).
  *   `spread` — a short ledger read down the page, each label at the start and
@@ -26,8 +29,8 @@ export type Fact = Readonly<{ label: ReactNode; value: ReactNode; key?: string }
 export type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns';
 
 const LIST = {
-  // In the app a ruled list closes on hairlines on both sides.
-  ruled: 'divide-rule border-rule grid divide-y [:root:not([data-public-surface])_&]:border-y',
+  // In the app rows are ruled only past four (`data-ruled`); the website rules every row.
+  ruled: 'divide-rule grid divide-y [:root:not([data-public-surface])_&]:not-data-ruled:divide-y-0',
   inline: 'flex flex-wrap items-center gap-x-6 gap-y-3',
   spread: 'grid gap-2',
   columns: 'grid gap-3 desktop:grid-flow-col desktop:auto-cols-fr',
@@ -50,16 +53,31 @@ const TERM = {
 } as const;
 
 const DETAIL = {
-  ruled: 'text-body-sm text-ink min-w-0 tabular-nums [overflow-wrap:anywhere]',
+  ruled: 'text-body-sm text-ink min-w-0 tabular-nums',
   inline: textRole('body', 'text-ink-2'),
   // A spread row's value is a right-aligned amount or count (a quote line),
-  // so its digits take the figure face and line up with the total under it.
-  spread: textRole('body', 'text-ink font-mono'),
+  // so its tabular digits line up with the total under it.
+  spread: textRole('body', 'text-ink tabular-nums'),
   columns: textRole(
     'caption',
     'flex min-h-[var(--tag-height)] min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap tabular-nums',
   ),
 } as const;
+
+/** A ruled list draws lines between its rows only past this many (app). */
+const RULED_FROM = 4;
+
+/**
+ * Where a value stays on one line, cut with its whole text reachable. The
+ * website's ruled lists keep wrapping their values as before.
+ */
+const ONE_LINE: Record<FactLayout, string | null> = {
+  ruled:
+    '[[data-public-surface]_&]:overflow-visible [[data-public-surface]_&]:whitespace-normal [[data-public-surface]_&]:[overflow-wrap:anywhere]',
+  inline: null,
+  spread: null,
+  columns: 'min-w-0',
+};
 
 function factKey(fact: Fact, index: number) {
   if (fact.key) return fact.key;
@@ -80,17 +98,28 @@ export function FactList({
   label?: string;
 }>) {
   return (
-    <dl aria-label={label} data-fact-list={layout} className={LIST[layout]}>
+    <dl
+      aria-label={label}
+      data-fact-list={layout}
+      data-ruled={facts.length > RULED_FROM || undefined}
+      className={LIST[layout]}
+    >
       {facts.map((fact, index) => (
         <div key={factKey(fact, index)} className={ROW[layout]}>
           <dt className={TERM[layout]}>{fact.label}</dt>
-          <dd className={DETAIL[layout]}>{fact.value}</dd>
+          <dd className={DETAIL[layout]}>
+            {ONE_LINE[layout] ? (
+              <ClampText className={ONE_LINE[layout]}>{fact.value}</ClampText>
+            ) : (
+              fact.value
+            )}
+          </dd>
         </div>
       ))}
       {total && layout === 'spread' ? (
         <div className={cn(ROW.spread, 'border-rule border-t pt-2')}>
           <dt className={textRole('emphasis')}>{total.label}</dt>
-          <dd className={textRole('emphasis', 'font-mono')}>{total.value}</dd>
+          <dd className={textRole('emphasis', 'tabular-nums')}>{total.value}</dd>
         </div>
       ) : null}
     </dl>
@@ -123,8 +152,8 @@ export function ValueLedger({
           className="flex min-h-[var(--control-md)] items-center justify-between gap-2"
         >
           {/* The row's name is read first (primary ink); its value supports it. */}
-          <span className={textRole('body', 'min-w-0 truncate')}>{item.label}</span>
-          <span className={textRole('body', 'text-ink-2 shrink-0 font-mono')}>{item.value}</span>
+          <ClampText className={textRole('body', 'flex-1')}>{item.label}</ClampText>
+          <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>{item.value}</span>
         </li>
       ))}
       {padding.map((slot) => (

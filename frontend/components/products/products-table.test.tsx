@@ -174,25 +174,25 @@ describe('ProductsTable', () => {
       '$120.00',
       'runnerstore.com (2), shoes.example.eu (1)',
     ]);
-    // A competitor seen nowhere in scope: a real zero, no rank, and no catalog
-    // price to lack (not applicable, read as such by assistive technology).
+    // A competitor seen nowhere in scope: a real zero, no rank (a narrow cell's
+    // dash, its word for assistive technology), and no catalog price to lack.
     expect(cells('Zoom Glide')).toEqual([
       '0.0%',
       '0',
-      'Not measured',
-      'Not measured',
-      'Not measured',
-      'n/aNot applicable',
+      '–Not measured',
+      '–Not measured',
+      '–Not measured',
+      'Not applicable',
       'None',
     ]);
     // No answer in scope: visibility is unavailable; a missing catalog price is unknown.
     expect(cells('Acme Trail Climber')).toEqual([
-      'Not measured',
+      '–Not measured',
       '0',
-      'Not measured',
-      'Not measured',
-      'Not measured',
-      'Unknown',
+      '–Not measured',
+      '–Not measured',
+      '–Not measured',
+      '–Unknown',
       'None',
     ]);
   });

@@ -2,6 +2,7 @@ import { Info } from 'lucide-react';
 
 import { InfoHint } from '@/components/ui/info-hint';
 import { Spinner } from '@/components/ui/spinner';
+import { ClampText } from '@/components/ui/clamp-text';
 import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +40,7 @@ const TONE_ICON = {
  * pull it back up when they clear. This line keeps one control-height
  * footprint in every state: it shows the most important message, says how
  * many more there are behind a hint, and at rest shows the `resting` fact.
- * Long text truncates; the full sentence stays in the title and the DOM.
+ * Long text is cut on one line, the full sentence in a tooltip reachable by keyboard.
  * Like a StatusMark, the tone is its glyph and word, never the sentence's
  * colour; work in flight is the live rung.
  */
@@ -70,10 +71,10 @@ export function StatusLine({
       ) : (
         <ToneIcon className={cn('size-4 shrink-0', mark.ink)} aria-hidden />
       )}
-      <span className="min-w-0 truncate" title={text}>
+      <ClampText className="min-w-0" tooltip={text}>
         {first && mark.word ? <span className="sr-only">{`${mark.word}: `}</span> : null}
         {text}
-      </span>
+      </ClampText>
       {rest.length ? (
         <InfoHint label={`${rest.length} more ${rest.length === 1 ? 'notice' : 'notices'}`}>
           {rest.map((message) => message.text).join(' ')}

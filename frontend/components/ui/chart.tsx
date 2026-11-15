@@ -4,11 +4,10 @@ import { useEffect, useRef, useState } from 'react';
  * The chart kit every product chart draws with: plain SVG and the chart
  * tokens, no chart library.
  *
- * A series takes its colour from its POSITION, never from what it is:
- *   1 your brand (`data-1`), 2 the leader (`data-2`), 3 the next (`data-3`),
- *   4 an item flagged `other` (`data-other`, always textured — dashed as a
- *   line, hatched as an area — because it sits close to `data-3`), and
- *   5 a further named series (`data-3`, dotted).
+ * `TrendChart` and the sparkline (the website's product screens) take a
+ * series' colour from its position: 1 your brand, 2 the leader, 3 the next,
+ * 4 an item flagged `other` (dashed), 5 a further series (dotted). The app's
+ * `StepChart` colours rivals by identity (`SeriesTonesContext`).
  */
 export type ChartTone = 1 | 2 | 3 | 4 | 5;
 
@@ -53,9 +52,6 @@ export function chartPercent(value: number, total: number): string {
   if (!total) return '0%';
   return `${((value / total) * 100).toFixed(1)}%`;
 }
-
-/** Whole-number counts in the product's grouping: `1,240`. */
-export const formatChartCount = (value: number) => value.toLocaleString('en-US');
 
 /**
  * Round tick values covering `min`–`max` in about `count` steps of 1, 2, 2.5

@@ -78,8 +78,8 @@ it('says the crawler catalog failed inside the activity table instead of showing
       <TrafficActivity {...scope} />
     </TabsRoot>,
   );
-  const table = await screen.findByRole('table', { name: 'Retained automated request activity' });
-  // The failure is the table's state, in the space the rows hold.
+  const table = await screen.findByRole('region', { name: 'Retained automated request activity' });
+  // The failure is the table's state, in the table's place.
   expect(await within(table).findByRole('alert')).toHaveTextContent('Not Found');
   expect(within(table).queryByText('openai_oai_searchbot')).not.toBeInTheDocument();
 
@@ -129,9 +129,9 @@ it.each(['crawlers', 'activity'] as const)('offers crawl setup from empty %s', a
       {tab === 'crawlers' ? <TrafficCrawlers {...scope} /> : <TrafficActivity {...scope} />}
     </TabsRoot>,
   );
-  // The empty state sits inside the table, under its column headers.
-  const table = await screen.findByRole('table');
-  expect(await within(table).findByRole('heading', { name: /No matching requests/ })).toBeVisible();
+  // The empty state takes the table's place, column heads included.
+  expect(await screen.findByRole('heading', { name: /No matching requests/ })).toBeVisible();
+  expect(screen.queryByRole('columnheader')).toBeNull();
   await user.click(await screen.findByRole('button', { name: 'Connect crawl logs' }));
   expect(
     await within(screen.getByRole('dialog')).findByRole('radiogroup', {

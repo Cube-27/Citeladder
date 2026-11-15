@@ -8,11 +8,10 @@ import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
- * Pager — the one footer for a paged list or table: the rows-per-page select
- * (when offered) on the left; the range ("1–25 of 120", tabular, the total in
- * `ink-muted`) and the previous and next 36px secondary icon buttons on the
- * right. An arrow at either end disables rather than disappearing, so the
- * pager keeps its place.
+ * Pager — the one footer for a paged list or table: the range ("1–25 of
+ * 312", tabular), the previous and next secondary icon buttons, then the
+ * rows-per-page select when offered. An arrow at either end disables rather
+ * than disappearing, so the pager keeps its place.
  *
  * Two modes, one component — the difference is what the caller knows:
  *
@@ -86,15 +85,15 @@ function PagerSummary({
 }: Readonly<{ range?: PagerRange; page?: number; pageCount?: number }>) {
   // Tabular figures hold every digit to one width, so the range does not
   // change width as the reader pages.
-  const face = 'type-data text-ink pe-2 whitespace-nowrap';
+  const face = 'type-body text-ink pe-2 whitespace-nowrap tabular-nums';
   if (range) {
+    // "1–25 of 312"; with no persisted total, the range alone, and the Next
+    // button's state says whether another page exists.
     return (
       <output className={face}>
-        {range.from}–{range.to}
-        {range.total === undefined ? null : (
-          <span className="text-ink-2">{` of ${formatCount(range.total)}`}</span>
-        )}{' '}
-        <span className="type-body text-ink-2">{range.noun}</span>
+        {`${formatCount(range.from)}–${formatCount(range.to)}`}
+        {range.total === undefined ? null : ` of ${formatCount(range.total)}`}
+        <span className="sr-only">{` ${range.noun}`}</span>
       </output>
     );
   }
@@ -124,7 +123,7 @@ function PageSizeSelect({ pageSize, noun }: Readonly<{ pageSize: PagerPageSize; 
           value: String(size),
           label: String(size),
         }))}
-        className="w-20 font-mono"
+        className="w-20 tabular-nums"
       />
     </div>
   );
@@ -178,23 +177,14 @@ export function Pager({
   ...steps
 }: PagerProps) {
   if (hideWhenSinglePage && !steps.canPrev && !steps.canNext) return null;
+  // One presentation: the range, previous and next, then rows per page.
   return (
-    // Below 900px the pager stacks: rows per page over the range and its steps.
-    <div
-      className={cn(
-        'rail:flex-row rail:items-center rail:justify-between flex flex-col items-stretch gap-4',
-        className,
-      )}
-    >
-      {pageSize ? (
-        <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} />
-      ) : (
-        <span className="rail:block hidden" />
-      )}
-      <div className="rail:justify-start flex flex-wrap items-center justify-between gap-2">
+    <div className={cn('flex flex-wrap items-center gap-x-4 gap-y-2', className)}>
+      <div className="flex items-center gap-2">
         <PagerSummary range={range} page={page} pageCount={pageCount} />
         <PagerSteps {...steps} busy={busy} />
       </div>
+      {pageSize ? <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} /> : null}
     </div>
   );
 }

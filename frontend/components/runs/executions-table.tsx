@@ -8,13 +8,8 @@ import { ActionButton } from '@/components/ui/actions';
 import { TitledSection } from '@/components/ui/section';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
-import {
-  ClampText,
-  TableActionsCell,
-  TableCell,
-  TableCellLines,
-  TableRow,
-} from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import { formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';

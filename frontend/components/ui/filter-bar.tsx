@@ -53,33 +53,43 @@ export type FilterBarProps = Readonly<{
 /**
  * FilterBar — the control row at the top of every list and report page, in
  * one order on every page: the view, the search, All filters, then the count
- * and the action at the row's end. Every control is 32px and 8 apart, across
- * and between wrapped rows alike. The search grows to 360px. Below 900px the
- * bar stacks into one full-width column in the same order, so a wrapped row
- * never regroups its controls.
+ * and the action at the row's end. Every control is 32px and 8 apart. From
+ * 900px it is one row that never wraps: two or more filters already share All
+ * filters (with the count of active ones), the search gives up width first
+ * and the count truncates. Below 900px the bar stacks into one full-width
+ * column in the same order.
+ *
+ * `status` is a polite live region, so a filtered result count is announced.
  */
 export function FilterBar({ view, search, filters, status, actions }: FilterBarProps) {
   return (
     <fieldset
       data-filter-bar=""
       aria-label="Search and filters"
-      className="rail:flex-row rail:flex-wrap rail:items-center flex min-h-[var(--control-md)] w-full min-w-0 flex-col items-stretch gap-2"
+      className="rail:flex-row rail:flex-nowrap rail:items-center flex min-h-[var(--control-md)] w-full min-w-0 flex-col items-stretch gap-2"
     >
-      {view ? <div className="flex max-w-full min-w-0">{view}</div> : null}
+      {view ? <div className="flex max-w-full min-w-0 shrink-0">{view}</div> : null}
       {search ? (
-        <div className="shell:max-w-[360px] shell:flex-[1_1_240px] rail:flex-[1_1_12rem] min-w-0">
+        <div className="shell:max-w-[360px] rail:flex-[1_1_240px] rail:min-w-40 min-w-0">
           {search}
         </div>
       ) : null}
-      {filters ? <FilterControls filters={filters} /> : null}
+      {filters ? (
+        <div className="flex min-w-0 shrink-0">
+          <FilterControls filters={filters} />
+        </div>
+      ) : null}
       {status === undefined ? null : (
-        <output className="type-caption rail:ms-auto flex min-w-0 items-center gap-2 empty:hidden">
+        <output
+          aria-live="polite"
+          className="type-caption rail:ms-auto rail:shrink flex min-w-0 items-center gap-2 truncate empty:hidden"
+        >
           {status}
         </output>
       )}
       {actions ? (
         // At the row's end; after a shown count it keeps the 8 between them.
-        <div className="ms-auto flex max-w-full min-w-0 flex-wrap items-center justify-end gap-2 [output:not(:empty)+&]:ms-0">
+        <div className="ms-auto flex max-w-full min-w-0 shrink-0 items-center justify-end gap-2 [output:not(:empty)+&]:ms-0">
           {actions}
         </div>
       ) : null}

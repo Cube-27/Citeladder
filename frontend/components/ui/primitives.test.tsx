@@ -99,9 +99,13 @@ describe('Input + Field', () => {
 });
 
 describe('Skeleton', () => {
-  it('holds blank rows and announces one live status by its verb only after the delay', async () => {
-    const { container } = render(<Skeleton variant="row" rows={3} label="Loading prompts" />);
+  it('draws a table of blocks, never lines, and announces its verb only after the delay', async () => {
+    const { container } = render(
+      <Skeleton variant="table" columns={4} rows={3} label="Loading prompts" />,
+    );
     expect(container.firstElementChild).toHaveAttribute('aria-busy', 'true');
+    // Three rows of four cell blocks; the head row is a fill, not a ruled line.
+    expect(container.querySelectorAll('[data-skeleton-block]')).toHaveLength(12);
     expect(screen.queryByRole('status')).toBeNull();
     expect(await screen.findByRole('status', { name: 'Loading prompts' })).toBeVisible();
     expect(screen.getAllByRole('status')).toHaveLength(1);

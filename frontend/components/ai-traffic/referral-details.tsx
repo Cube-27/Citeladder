@@ -2,7 +2,8 @@ import { SearchX } from 'lucide-react';
 
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { formatCount, formatPercent } from '@/lib/format';
 import { aiSourceLabel } from '@/lib/ai-traffic/series';
 import { reasonLabel } from '@/lib/ai-traffic/vocabulary';

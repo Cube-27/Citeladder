@@ -1,6 +1,6 @@
 import { Fragment, useState, type KeyboardEvent } from 'react';
 
-import { CHART_AXIS_TEXT, CHART_PLOT_FRAME, useChartWidth } from '@/components/ui/chart';
+import { CHART_AXIS_TEXT, CHART_PLOT_FRAME, chartPath, useChartWidth } from '@/components/ui/chart';
 import { ChartTipSheet } from '@/components/ui/chart-frame';
 import {
   isolatedPoints,
@@ -8,7 +8,7 @@ import {
   trendScale,
   type TrendScale,
 } from '@/components/ui/trend-geometry';
-import { MarkerMark, SERIES_FILL, SERIES_STROKE, stepPath } from '@/components/ui/step-chart-parts';
+import { MarkerMark, SERIES_FILL, SERIES_STROKE } from '@/components/ui/step-chart-parts';
 import { formatShortDate } from '@/lib/format';
 import {
   computeTickIndices,
@@ -313,7 +313,7 @@ function PlotLinePath({
   return (
     <g data-performance-line={comparison ? 'comparison' : 'selected'}>
       <path
-        d={stepPath(points)}
+        d={chartPath(points)}
         fill="none"
         strokeWidth={1.5}
         strokeDasharray={comparison ? COMPARISON_DASH : undefined}

@@ -128,8 +128,8 @@ describe('Shopping overview', () => {
     expect(rowCells(ranking, 'Acme Merino Sock')).toEqual([
       'Acme Merino SockAcme · Your product',
       '0.0%',
-      'Unavailable',
-      'Unavailable',
+      '–Unavailable',
+      '–Unavailable',
     ]);
     // Every product opens its page in the overview's window, competitors included.
     expect(within(ranking).getByRole('link', { name: 'Acme Road Runner' })).toHaveAttribute(

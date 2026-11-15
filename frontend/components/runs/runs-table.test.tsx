@@ -116,10 +116,10 @@ describe('RunsTable', () => {
     expect(runLinks()[0]).toHaveAttribute('href', `/runs/${rows[24]!.id}`);
   });
 
-  it('keeps the column headers and states the absence when the filter leaves no runs', () => {
+  it('gives way to one empty state, head included, when there are no runs', () => {
     renderTable([]);
 
-    expect(screen.getByRole('columnheader', { name: 'Status' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader')).toBeNull();
     expect(screen.getByRole('heading', { level: 3, name: 'No failed runs' })).toBeVisible();
     expect(screen.queryByRole('link', { name: /audit/ })).toBeNull();
   });

@@ -1,12 +1,13 @@
-import { Check } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import type { FormEvent, ReactNode } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
-import { ClampText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 import { textRole } from '@/components/ui/typography';
+import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -34,8 +35,14 @@ function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> =
   );
 }
 
-/** A padded row's own geometry: 12 across, 8 down, its parts 12 apart. */
-const paddedRowClasses = 'focus-ring flex w-full items-center gap-3 px-3 py-2 text-start';
+/**
+ * A pressable row's own geometry: 12 across and 8 down, its parts 12 apart,
+ * at least one control tall (44 below 900px or under a coarse pointer). It
+ * bleeds 12 past its list on both sides, so its text starts on the card's
+ * own padding and only the hover fill reaches past it.
+ */
+const pressableRowClasses =
+  'focus-ring -mx-3 flex min-h-[var(--control-md)] w-[calc(100%+24px)] min-w-0 items-center gap-3 px-3 py-2 text-start';
 
 /**
  * One choice in a list where pressing the row IS the commit (a property to
@@ -66,27 +73,27 @@ export function OptionRow({
       aria-pressed={selected}
       className={cn(
         listRowClasses({ selected }),
-        paddedRowClasses,
+        pressableRowClasses,
         'disabled:pointer-events-none disabled:[&_.type-body]:text-ink-2',
       )}
     >
       <span className="min-w-0 flex-1">
-        <span className={textRole('body', 'block truncate')}>{title}</span>
-        {caption ? (
-          <span className="type-caption block truncate tabular-nums">{caption}</span>
-        ) : null}
+        <ClampText className={textRole('body')}>{title}</ClampText>
+        {caption ? <ClampText className="type-caption tabular-nums">{caption}</ClampText> : null}
       </span>
       {pending ? <Spinner className="text-ink-2" /> : null}
-      {selected && !pending ? <Icon icon={Check} className="text-accent" /> : null}
+      {/* Selected is a mark that is not colour: the check, in ink. */}
+      {selected && !pending ? <Icon icon={Check} className="text-ink" /> : null}
     </Pressable>
   );
 }
 
 /**
  * A ledger list's row that opens its item (an issue's detail): an optional
- * leading number, the title, the item's meta at the end of the same wrapping
- * line, and an optional caption under it. The row owns its padding (8 across,
- * 4 down), its gaps and the hover state; the caller passes the content.
+ * leading number, the title on one line, the item's meta after it (wrapping
+ * under the title when the row is narrow), an optional caption, and a
+ * trailing chevron that says at rest that the row opens. The whole row is the
+ * target; it owns its padding, gaps and hover state.
  */
 export function OpenRow({
   number,
@@ -102,20 +109,19 @@ export function OpenRow({
   onOpen: () => void;
 }>) {
   return (
-    <Pressable
-      onClick={onOpen}
-      className={cn(listRowClasses(), 'focus-ring grid min-w-0 gap-1 px-2 py-1 text-start')}
-    >
-      <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-        {number === undefined ? null : (
-          <span className="type-caption w-6 shrink-0 tabular-nums">{number}</span>
-        )}
-        {/* The title keeps 15rem before the meta wraps under it, so a narrow
-            row never stacks the title one word per line. */}
-        <span className={textRole('body', 'min-w-0 flex-[1_1_15rem]')}>{title}</span>
-        {meta}
+    <Pressable onClick={onOpen} className={cn(listRowClasses(), pressableRowClasses)}>
+      <span className="grid min-w-0 flex-1 gap-1">
+        <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          {number === undefined ? null : (
+            <span className="type-caption w-6 shrink-0 tabular-nums">{number}</span>
+          )}
+          {/* The title keeps 15rem before the meta wraps under it. */}
+          <ClampText className={textRole('body', 'text-ink flex-[1_1_15rem]')}>{title}</ClampText>
+          {meta}
+        </span>
+        {caption ? <ClampText className="type-caption">{caption}</ClampText> : null}
       </span>
-      {caption ? <span className="type-caption">{caption}</span> : null}
+      <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
     </Pressable>
   );
 }
@@ -157,11 +163,9 @@ export function TreeItem({
         listRowClasses(),
       )}
     >
-      <ClampText lines={1} className="type-body flex-1">
-        {label}
-      </ClampText>
+      <ClampText className="type-body flex-1">{label}</ClampText>
       {typeof count === 'number' ? (
-        <span className="type-caption shrink-0 font-mono">{count}</span>
+        <span className="type-caption shrink-0 tabular-nums">{formatCount(count)}</span>
       ) : null}
       {actions}
     </li>

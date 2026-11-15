@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import { PartBar } from './part-bar';
 import { Sparkline } from './sparkline';
+import { SeriesTonesContext, seriesTones } from './step-chart-parts';
 
 describe('PartBar', () => {
   it('names every part with its share and count, and gives you the accent', () => {
@@ -22,6 +23,24 @@ describe('PartBar', () => {
     expect(
       [...container.querySelectorAll('[data-part]')].map((part) => part.getAttribute('data-part')),
     ).toEqual(['you', 'rival-1', 'other']);
+  });
+
+  it('colours a rival part by who it is when the page names its rivals', () => {
+    const { container } = render(
+      <SeriesTonesContext value={seriesTones(['Globex', 'Initech'])}>
+        <PartBar
+          label="Share"
+          parts={[
+            { label: 'Your site', value: 60, you: true },
+            { label: 'Initech', value: 30 },
+            { label: 'Other', value: 10, other: true },
+          ]}
+        />
+      </SeriesTonesContext>,
+    );
+    expect(
+      [...container.querySelectorAll('[data-part]')].map((part) => part.getAttribute('data-part')),
+    ).toEqual(['you', 'rival-2', 'other']);
   });
 
   it('keeps the part of a declared total no segment covers as its own remainder', () => {

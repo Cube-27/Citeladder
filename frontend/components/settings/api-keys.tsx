@@ -18,7 +18,8 @@ import { RadioGroup } from '@/components/ui/radio-group';
 import { TagGroup } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { ClampText, TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
 import type {
   ApiKey,
   ApiKeyCreated,

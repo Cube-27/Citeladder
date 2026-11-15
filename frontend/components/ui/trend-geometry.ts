@@ -34,13 +34,17 @@ function domainOf(
   yMin: number | undefined,
   yMax: number | undefined,
   tickCount: number,
+  maxTicks: number,
 ) {
   const values = lines.flatMap((values) =>
     values.filter((value): value is number => value !== null),
   );
   const low = yMin ?? Math.min(0, ...values);
   const high = yMax ?? Math.max(1, ...values);
-  const ticks = chartTicks(low, high, tickCount);
+  let ticks = chartTicks(low, high, tickCount);
+  // Fewer, wider steps until the gridlines fit the cap.
+  for (let count = tickCount - 1; ticks.length > maxTicks && count >= 1; count -= 1)
+    ticks = chartTicks(low, high, count);
   const top = yMax ?? ticks.at(-1) ?? high;
   return { ticks: ticks.filter((tick) => tick <= top + 1e-9), bottom: ticks[0] ?? low, top };
 }
@@ -75,6 +79,7 @@ export function trendScale({
   tickWidth,
   padRight = PAD_RIGHT,
   tickCount = 5,
+  maxTicks = Number.POSITIVE_INFINITY,
 }: Readonly<{
   width: number;
   height: number;
@@ -88,8 +93,10 @@ export function trendScale({
   padRight?: number;
   /** About how many gridlines the y axis takes. */
   tickCount?: number;
+  /** The most gridlines the y axis may draw, its floor included. */
+  maxTicks?: number;
 }>): TrendScale {
-  const { ticks, bottom, top } = domainOf(lines, yMin, yMax, tickCount);
+  const { ticks, bottom, top } = domainOf(lines, yMin, yMax, tickCount, maxTicks);
   const padLeft = Math.round(tickWidth(ticks) * 7.4) + 14;
   const plotWidth = Math.max(1, width - padLeft - padRight);
   const plotHeight = Math.max(1, height - PAD_TOP - PAD_BOTTOM);

@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { StepChart } from './step-chart';
+import { SeriesTonesContext, areaPath, seriesTones } from './step-chart-parts';
 
 const rows = (name: string) =>
   within(screen.getByRole('table', { name }))
@@ -11,8 +12,10 @@ const rows = (name: string) =>
 
 /** The drawn runs of a line: each `M` lifts the pen after a gap or a break. */
 const runsOf = (container: HTMLElement, tone = 'you') =>
-  (container.querySelector(`[data-trend-line="${tone}"] path`)?.getAttribute('d')?.split('M')
-    .length ?? 1) - 1;
+  (container
+    .querySelector(`[data-trend-line="${tone}"] path[fill="none"]`)
+    ?.getAttribute('d')
+    ?.split('M').length ?? 1) - 1;
 
 describe('StepChart', () => {
   it('tabulates every line and value, naming a missing value rather than zero', () => {
@@ -40,7 +43,7 @@ describe('StepChart', () => {
     ).toBeInTheDocument();
   });
 
-  it('steps between measurements and shows a missing period as a hatched band, never a bridge', () => {
+  it('joins measurements with straight segments and shows a missing period as a band, never a bridge', () => {
     const { container } = render(
       <StepChart
         label="Mention rate"
@@ -53,11 +56,63 @@ describe('StepChart', () => {
         ]}
       />,
     );
-    const path = container.querySelector('[data-trend-line="you"] path')?.getAttribute('d') ?? '';
-    expect(path).toMatch(/H[\d.]+V[\d.]+/);
+    const path =
+      container.querySelector('[data-trend-line="you"] path[fill="none"]')?.getAttribute('d') ?? '';
+    expect(path).not.toMatch(/[HVC]/);
     expect(runsOf(container)).toBe(3);
+    expect(container.querySelector('[data-gap-bands]')).toHaveTextContent('Not measured');
     expect(container.querySelectorAll('[data-gap-bands] rect')).toHaveLength(1);
-    expect(container.querySelectorAll('[data-trend-line="you"] rect')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-trend-line="you"] circle')).toHaveLength(4);
+    // Only your line carries the soft fill, and only under runs of two or more points.
+    expect(container.querySelectorAll('[data-you-fill]')).toHaveLength(1);
+  });
+
+  it('fills the area under each run of two or more points, down to the floor', () => {
+    expect(areaPath([[0, 10], [10, 5], null, [20, 5]], 50)).toBe(
+      'M0.0 50.0L0.0 10.0L10.0 5.0L10.0 50.0Z',
+    );
+  });
+
+  it('colours a rival by who it is, so it keeps one colour across a page', () => {
+    const chart = (rival: string) => (
+      <SeriesTonesContext value={seriesTones(['Globex', 'Initech'])}>
+        <StepChart
+          label="Share"
+          name="You"
+          data={[
+            { label: 'Jun', value: 10 },
+            { label: 'Jul', value: 90 },
+          ]}
+          series={[{ label: rival, values: [20, 10] }]}
+        />
+      </SeriesTonesContext>
+    );
+    const { container, rerender } = render(chart('Initech'));
+    const tones = () =>
+      [...container.querySelectorAll('[data-trend-line]')].map((line) =>
+        line.getAttribute('data-trend-line'),
+      );
+    expect(tones()).toEqual(['rival-2', 'you']);
+    rerender(chart('Globex'));
+    expect(tones()).toEqual(['rival-1', 'you']);
+  });
+
+  it('prints a line with one measurement as a figure with its date, not as a chart', () => {
+    const { container } = render(
+      <StepChart
+        label="Share"
+        name="You"
+        data={[{ label: '1 Jun 2026', value: 10 }]}
+        series={[{ label: 'Globex', values: [null] }]}
+        yFormat={(value) => `${value}%`}
+      />,
+    );
+    expect(container.querySelector('svg')).toBeNull();
+    expect(
+      within(screen.getByRole('list', { name: 'Share' }))
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['You10%Measured 1 Jun 2026', 'GlobexNot measured']);
   });
 
   it('names lines at their end, and falls back to a key when the names would collide', () => {
@@ -82,8 +137,8 @@ describe('StepChart', () => {
         line.querySelector('[data-marker-shape]')?.getAttribute('data-marker-shape'),
       ]);
     expect(shapes()).toEqual([
-      ['rival-1', 'square'],
-      ['you', 'square'],
+      ['rival-1', 'circle'],
+      ['you', 'circle'],
     ]);
 
     rerender(
@@ -101,8 +156,8 @@ describe('StepChart', () => {
     expect(container.querySelector('ul[aria-hidden]')).toHaveTextContent('You50Globex51');
     // Keyed, each line takes its own shape so colour is not the only cue.
     expect(shapes()).toEqual([
-      ['rival-1', 'diamond'],
-      ['you', 'square'],
+      ['rival-1', 'square'],
+      ['you', 'circle'],
     ]);
   });
 
@@ -129,15 +184,13 @@ describe('StepChart', () => {
         name="You"
         data={[
           { label: '1 Jun 2026', axisLabel: 'Jun', value: 10 },
-          { label: '1 Jul 2026', axisLabel: 'Jul', value: null },
+          { label: '1 Jul 2026', axisLabel: 'Jul', value: 20 },
         ]}
         series={[{ label: 'Globex', values: [null, null] }]}
       />,
     );
     expect(labels()).toEqual([]);
-    expect(container.querySelector('ul[aria-hidden]')).toHaveTextContent(
-      'You10 · as of JunGlobexNot measured',
-    );
+    expect(container.querySelector('ul[aria-hidden]')).toHaveTextContent('You20GlobexNot measured');
   });
 
   it('draws your line in the accent unless the chart has no "you"', () => {

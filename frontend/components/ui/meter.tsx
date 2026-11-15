@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils';
 /**
  * Meter — a labelled value against a maximum on a thin bar: plan usage,
  * credits, a brand's share of answers. The label (14/20 `ink`) sits left and
- * the value (14/20 `ink-2`, tabular) right, over a 6px `rule`
- * track; `hint` says the consequence under it.
+ * the value (14/20 `ink-2`, tabular) beside it while both fit, else under it,
+ * over a 6px `well` track; `hint` says the consequence under it.
  *
  * `tone` is `ink` by default; `accent` only for your own brand's share;
  * `warning` from about 90% of a limit and `negative` when a limit is hit.
@@ -59,11 +59,24 @@ function MeterTrack({
       aria-valuemax={max}
       aria-valuenow={value === null ? undefined : Math.min(max, Math.max(0, value))}
       aria-valuetext={valueText}
-      className="bg-rule rounded-mark block h-1.5 w-full overflow-hidden"
+      className="bg-well [[data-public-surface]_&]:bg-rule rounded-mark block h-1.5 w-full overflow-hidden"
     >
       {percent === null ? null : (
         <span className={cn('block h-full', fill)} style={{ width: `${percent}%` }} />
       )}
+    </div>
+  );
+}
+
+/**
+ * The label and the value over the track. The label never shrinks below its
+ * longest word (its min-content width); the value sits beside it while both
+ * fit and wraps under it when they do not. The website keeps one row.
+ */
+export function MeterLabelRow({ children }: Readonly<{ children: ReactNode }>) {
+  return (
+    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 [[data-public-surface]_&]:flex-nowrap">
+      {children}
     </div>
   );
 }
@@ -91,12 +104,15 @@ export function Meter({
     valueLabel ?? (value === null ? availabilityLabel('not_measured') : `${value} / ${max}`);
   return (
     <div className="flex min-w-0 flex-col gap-2">
-      <div className="flex items-baseline justify-between gap-3">
-        <span id={labelId} className="text-body-sm text-ink min-w-0 break-words">
+      <MeterLabelRow>
+        <span
+          id={labelId}
+          className="text-body-sm text-ink [[data-public-surface]_&]:min-w-0 [[data-public-surface]_&]:break-words"
+        >
           {label}
         </span>
         <span className="text-body-sm text-ink-2 whitespace-nowrap tabular-nums">{shown}</span>
-      </div>
+      </MeterLabelRow>
       <MeterTrack
         value={value}
         max={max}
