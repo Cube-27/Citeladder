@@ -2361,6 +2361,13 @@ label {
   grid-row: 1 / span 2;
   align-self: center;
 }
+/* Loading: `well` blocks at radius 4 for text, a circle for a score's ring. */
+[data-figure-block='text'] {
+  border-radius: 4px;
+}
+[data-figure-block='ring'] {
+  border-radius: 50%;
+}
 /* A score card centres its label and basis lines on the ring. */
 [data-figure-kind='score'] {
   grid-template-rows: 1fr auto auto 1fr;

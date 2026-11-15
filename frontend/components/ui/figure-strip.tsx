@@ -26,7 +26,7 @@ type FigureAction =
   | { onSelect: () => void; actionLabel: string; selected?: boolean };
 
 /** The one text link at the end of a figure's basis line. */
-export type FigureLink = Readonly<
+type FigureLink = Readonly<
   { label: string } & (
     | { href: string; projectId?: string; onSelect?: undefined }
     | { onSelect: () => void; href?: undefined; projectId?: undefined }
@@ -208,8 +208,14 @@ function FigureCell({
 type FigurePart = Readonly<{ segment: FigureSegment }>;
 
 /** A loading block in the `well`, standing in for text or a ring. */
-function Block({ className }: Readonly<{ className: string }>) {
-  return <span aria-hidden className={cn('bg-well block rounded-[4px]', className)} />;
+function Block({ className, ring = false }: Readonly<{ className: string; ring?: boolean }>) {
+  return (
+    <span
+      aria-hidden
+      data-figure-block={ring ? 'ring' : 'text'}
+      className={cn('bg-well block', className)}
+    />
+  );
 }
 
 /** The label, wrapping between words but never cut, and its marker at the line's end. */
@@ -248,7 +254,7 @@ function FigureLead({ segment }: FigurePart) {
     return (
       <dd data-figure-lead-slot="">
         {segment.loading ? (
-          <Block className="size-16 rounded-full" />
+          <Block ring className="size-16" />
         ) : (
           <ScoreRing
             value={segment.score.value}

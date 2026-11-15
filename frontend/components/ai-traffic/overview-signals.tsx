@@ -116,25 +116,7 @@ function crawlFigures(
   const failedNote =
     failed > 0 ? `${formatCount(failed)} failed verification requests are shown separately.` : null;
   if (crawl.requests === null)
-    return [
-      {
-        key: 'requests',
-        label: CRAWL_REQUESTS,
-        value: null,
-        missingLabel: status,
-        marker: (
-          <WhyAbsent label={CRAWL_REQUESTS}>
-            {failedNote
-              ? `${CRAWL_EMPTY[crawl.connection]} ${failedNote}`
-              : CRAWL_EMPTY[crawl.connection]}
-          </WhyAbsent>
-        ),
-        action:
-          crawl.connection === 'not_connected' && onConnect
-            ? { label: ACTIONS.connectCrawlLogs.label, onSelect: onConnect }
-            : undefined,
-      },
-    ];
+    return [noRequestsFigure({ connection: crawl.connection, status, failedNote, onConnect })];
   return [
     {
       key: 'requests',
@@ -162,6 +144,35 @@ function crawlFigures(
         : 'Within the selected requests.',
     },
   ];
+}
+
+/** No crawler requests in the window: why behind the hint, and connecting when not connected. */
+function noRequestsFigure({
+  connection,
+  status,
+  failedNote,
+  onConnect,
+}: Readonly<{
+  connection: CrawlSummary['connection'];
+  status: string;
+  failedNote: string | null;
+  onConnect: (() => void) | undefined;
+}>): FigureSegment {
+  return {
+    key: 'requests',
+    label: CRAWL_REQUESTS,
+    value: null,
+    missingLabel: status,
+    marker: (
+      <WhyAbsent label={CRAWL_REQUESTS}>
+        {failedNote ? `${CRAWL_EMPTY[connection]} ${failedNote}` : CRAWL_EMPTY[connection]}
+      </WhyAbsent>
+    ),
+    action:
+      connection === 'not_connected' && onConnect
+        ? { label: ACTIONS.connectCrawlLogs.label, onSelect: onConnect }
+        : undefined,
+  };
 }
 
 function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null): FigureSegment {
