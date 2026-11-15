@@ -238,7 +238,8 @@ describe('PropertyPicker', () => {
 
     // A broken upstream must never read as "you own no properties".
     expect(await screen.findByText('grant rejected')).toBeInTheDocument();
-    expect(screen.getByText('Support: code grant_auth_failed · ref test')).toBeInTheDocument();
+    expect(screen.getByText('Support: code grant_auth_failed')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Copy reference' })).toBeInTheDocument();
     expect(screen.queryByText(/has no Search Console property available/)).toBeNull();
   });
 
