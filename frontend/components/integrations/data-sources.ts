@@ -85,12 +85,28 @@ export function useDataSources(
         : ({ kind: 'connect' } as SourceStep),
     ]),
   );
+  // A mapping that could not be read is unknown, never "no property chosen".
+  const failedMappings = mappingQueries.filter((query) => query.isError);
   return {
     loading,
-    error: connections.isError ? connections.error : null,
-    retry: () => void connections.refetch(),
+    error: connections.isError ? connections.error : (failedMappings[0]?.error ?? null),
+    retry: () => {
+      if (connections.isError) void connections.refetch();
+      for (const query of failedMappings) void query.refetch();
+    },
     steps,
   };
+}
+
+/** One source's step, or `null` while it is unknown (loading or unreadable). */
+export function useSourceStep(
+  workspaceId: string,
+  projectId: string,
+  provider: IntegrationProvider,
+): SourceStep | null {
+  const sources = useDataSources(workspaceId, projectId, [provider]);
+  if (sources.loading || sources.error) return null;
+  return sources.steps.get(provider) ?? null;
 }
 
 /** Messages for the OAuth callback's `error=` codes; never the raw code. */

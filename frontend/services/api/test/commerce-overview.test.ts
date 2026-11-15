@@ -174,13 +174,9 @@ describe('Shopping overview read', () => {
 
   it('lists the catalog’s most and least visible products without overlap', async () => {
     const { body } = await read(t);
-    expect(names(body.most_visible)).toEqual([
-      'Acme Road Runner',
-      'Acme Trail Climber',
-      'Acme Merino Sock',
-    ]);
-    // Every catalog product is already among the most visible.
-    expect(body.least_visible).toEqual([]);
+    // A product no answer named is never among the most visible.
+    expect(names(body.most_visible)).toEqual(['Acme Road Runner', 'Acme Trail Climber']);
+    expect(names(body.least_visible)).toEqual(['Acme Merino Sock']);
   });
 
   it('reads merchants and the fan-out of answers that held a product', async () => {

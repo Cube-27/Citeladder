@@ -21,6 +21,7 @@ import { TableRow, TableCell, TableCellLines, TableTime } from '@/components/ui/
 import { CrawlLogConnections } from './crawl-log-connections';
 import { InsightStrip } from './insight-strip';
 import { OverviewFigures, RequestsByPurpose } from './overview-signals';
+import { useSourceStep } from '@/components/integrations/data-sources';
 import { CrawlerPages } from './crawler-pages';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { readErrorProps } from '@/components/ui/notice';
@@ -65,6 +66,7 @@ export function TrafficOverview({
   crawlAvailable: boolean;
 }>) {
   const [connectOpen, setConnectOpen] = useState(false);
+  const ga4 = useSourceStep(workspaceId, projectId, 'ga4');
   const crawlConnected = data.crawl.connection !== 'not_connected';
   return (
     <TabPanel value="overview">
@@ -75,6 +77,7 @@ export function TrafficOverview({
           data={data}
           projectId={projectId}
           crawlAvailable={crawlAvailable}
+          ga4={ga4}
           onConnectCrawl={() => setConnectOpen(true)}
         />
         <InsightStrip projectId={projectId} workspaceId={workspaceId} range={range} />

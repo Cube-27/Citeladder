@@ -30,7 +30,6 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { PropertyChoice } from './property-choice';
 import { oauthErrorMessage, useDataSources, type SourceStep } from './data-sources';
 import { Notice } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
@@ -126,6 +125,27 @@ function RowFrame({
       {children}
     </Stack>
   );
+}
+
+/**
+ * The caller's "Connect …" title only while a required source is unconnected;
+ * a connected one names its own next step instead.
+ */
+function setupTitle(
+  required: readonly IntegrationProvider[],
+  steps: ReadonlyMap<IntegrationProvider, SourceStep>,
+  connectTitle: string,
+): string {
+  const pending = required.map((provider) => ({
+    provider,
+    step: steps.get(provider) ?? { kind: 'connect' as const },
+  }));
+  if (pending.some(({ step }) => step.kind === 'connect')) return connectTitle;
+  const reconnect = pending.find(({ step }) => step.kind === 'reconnect');
+  if (reconnect) return `Reconnect ${FAMILY_META[GRANT_FAMILY[reconnect.provider]].title}`;
+  const choose = pending.find(({ step }) => step.kind === 'choose');
+  if (choose) return `Choose the ${PROVIDER_META[choose.provider].noun}`;
+  return 'Data sources';
 }
 
 /** Google's Connect is the named action (3.1); Bing's has its own name. */
@@ -278,9 +298,10 @@ export function DataSourceSetup({
   const sources = useDataSources(activeWorkspaceId, activeProject?.id ?? null, providers);
   const oauth = useOAuthReturn();
 
-  if (!activeProject || !activeWorkspaceId) return null;
+  // Until the reads answer, no source is known to be missing: claim nothing.
+  if (!activeProject || !activeWorkspaceId || sources.loading) return null;
   const allReady = required.every((provider) => sources.steps.get(provider)?.kind === 'ready');
-  if (!sources.loading && !sources.error && allReady && !oauth.error) return whenReady;
+  if (!sources.error && allReady && !oauth.error) return whenReady;
 
   // The callback params were already stripped from the address on return.
   const startConnect = (family: GrantFamily) =>
@@ -299,7 +320,9 @@ export function DataSourceSetup({
       className="mx-auto w-full max-w-[var(--container-prose)]"
     >
       <SectionHeader>
-        <SectionTitle>{title}</SectionTitle>
+        <SectionTitle>
+          {sources.error ? 'Data sources' : setupTitle(required, sources.steps, title)}
+        </SectionTitle>
       </SectionHeader>
       <Stack gap="compact">
         {oauth.error ? <Notice tone="negative">{oauthErrorMessage(oauth.error)}</Notice> : null}
@@ -314,10 +337,8 @@ export function DataSourceSetup({
             fallback="Could not load your data sources. Check your connection and try again."
             onRetry={sources.retry}
           />
-        ) : null}
-        {sources.loading ? (
-          <StateBlock kind="loading" label="Loading data sources…" />
         ) : (
+          // A failed read knows no source's step, so no row is guessed from it.
           <ul className={ledgerClasses()}>
             {setupRows(providers, sources.steps).map((row) =>
               row.kind === 'connect' ? (

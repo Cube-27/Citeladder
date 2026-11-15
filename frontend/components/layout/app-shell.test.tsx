@@ -191,6 +191,19 @@ describe('AppShell navigation drawer', () => {
     expect(screen.getByRole('button', { name: 'Open navigation' })).toHaveFocus();
   });
 
+  it('opens one account menu from the drawer, not a second one for the hidden desktop sidebar', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole('button', { name: 'Open navigation' }));
+    const drawer = screen.getByRole('dialog', { name: 'Navigation' });
+    await user.click(
+      within(drawer).getByRole('button', { name: 'Account menu for test.user@example.test' }),
+    );
+
+    expect(await screen.findAllByRole('menu')).toHaveLength(1);
+  });
+
   it('closes once a destination is chosen', async () => {
     const user = userEvent.setup();
     renderShell();

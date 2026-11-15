@@ -92,6 +92,24 @@ describe('SiteHealthScreen — Website tab deep links', () => {
     expect(screen.queryByTestId('site-health-overview')).not.toBeInTheDocument();
   });
 
+  it('opens the earlier crawl the address names', async () => {
+    const earlier = '33333333-3333-4333-8333-333333333333';
+    setSearch(`crawl_id=${earlier}`);
+    const asked: (string | null)[] = [];
+    mockRoutes();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health`, ({ request }) => {
+        asked.push(new URL(request.url).searchParams.get('crawl_id'));
+        return HttpResponse.json(finishedDashboard());
+      }),
+    );
+
+    renderScreen();
+
+    expect(await screen.findByTestId('site-health-canonical')).toBeInTheDocument();
+    expect(asked[0]).toBe(earlier);
+  });
+
   it('keeps a tab the reader picked while a new crawl starts', async () => {
     const user = userEvent.setup();
     const started: unknown[] = [];

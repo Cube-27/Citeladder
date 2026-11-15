@@ -121,6 +121,10 @@ const commandCenter = {
   stale: false,
 };
 
+const promptSetsResult = vi.hoisted(() => ({
+  status: 'success',
+  data: { prompt_sets: [{ prompts: [{ enabled: true, status: 'active' }] }] },
+}));
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useEntitlement: () => ({
     entitlement: {
@@ -139,6 +143,8 @@ vi.mock('@tanstack/react-query', () => ({
   queryOptions: <T,>(options: T) => options,
   useQuery: (options: { queryKey: readonly unknown[] }) => {
     if (options.queryKey[0] === 'providers') return { data: providerCatalogFixture };
+    // Launch run reads whether there is an active prompt to measure.
+    if (options.queryKey[0] === 'prompts') return promptSetsResult;
     if (options.queryKey[1] === 'overview-layout') return layoutResult;
     return options.queryKey[0] === 'visibility' ? promptsResult : queryResult;
   },

@@ -29,8 +29,30 @@ describe('Focus that did not come from the keyboard', () => {
     // Ctrl+Tab switches browser tabs: not keyboard navigation of the page.
     await user.keyboard('{Control>}{Tab}{/Control}');
     expect(modality()).toBe('pointer');
+    await user.click(screen.getByRole('button', { name: 'Before' }));
     await user.keyboard('{Tab}');
     expect(modality()).toBe('keyboard');
+  });
+
+  it('rings only for focus a key moved: never for a key that moves none, a script focus or Escape', async () => {
+    const user = userEvent.setup();
+    render(<TwoButtons />);
+    const theme = screen.getByRole('button', { name: 'Switch to light theme' });
+
+    await user.click(screen.getByRole('button', { name: 'Before' }));
+    await user.keyboard('{Shift}{PageDown}');
+    expect(modality()).toBe('pointer');
+    act(() => theme.focus());
+    expect(modality()).toBe('pointer');
+    // A dialog closed with Escape hands focus back to its trigger.
+    act(() => {
+      fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+      screen.getByRole('button', { name: 'Before' }).focus();
+    });
+    expect(modality()).toBe('pointer');
+
+    await user.tab();
+    expect([modality(), theme]).toEqual(['keyboard', document.activeElement]);
   });
 
   it('opens a tooltip on a keyboard Tab, never on a script focus after a press', async () => {

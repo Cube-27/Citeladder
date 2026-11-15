@@ -9,6 +9,7 @@ import {
   words,
 } from '@/lib/ai-traffic/vocabulary';
 import { projectDestination } from '@/lib/navigation/project-destination';
+import type { SourceStep } from '@/components/integrations/data-sources';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -50,10 +51,13 @@ export function OverviewFigures({
   data,
   projectId,
   crawlAvailable,
+  ga4,
   onConnectCrawl,
 }: Readonly<{
   data: Overview;
   projectId: string;
+  /** GA4's connection step from the one owner; `null` while it is unknown. */
+  ga4: SourceStep | null;
   /** False when this workspace cannot collect crawl logs yet. */
   crawlAvailable: boolean;
   onConnectCrawl?: () => void;
@@ -69,7 +73,7 @@ export function OverviewFigures({
             label="AI Traffic key figures"
             segments={[
               ...crawlFigures(data.crawl, crawlAvailable, onConnectCrawl),
-              referralFigure(data.referrals),
+              referralFigure(data.referrals, ga4),
               citationFigure(data.citations, projectId),
             ]}
           />
@@ -153,11 +157,12 @@ function crawlFigures(
   ];
 }
 
-function referralFigure(referrals: Overview['referrals']): FigureSegment {
+function referralFigure(referrals: Overview['referrals'], ga4: SourceStep | null): FigureSegment {
   const latest = referrals.referral_volume.at(-1);
   // Only a persisted snapshot carries a window; without one nothing has synced.
   const synced = referrals.window_end !== null;
   const share = formatPercent(referrals.referral_share.at(-1)?.value ?? null);
+  const unsynced = referralSetup(ga4);
   return {
     key: 'referrals',
     label: 'AI referral sessions, latest day',
@@ -165,9 +170,7 @@ function referralFigure(referrals: Overview['referrals']): FigureSegment {
     missingLabel: synced ? 'Unavailable' : 'Not synced',
     sub: (
       <>
-        {referrals.referral_volume.length
-          ? `${share} of sessions · GA4 · Synced`
-          : 'Connect GA4 and sync a source/medium report to measure referral sessions.'}
+        {referrals.referral_volume.length ? `${share} of sessions · GA4 · Synced` : unsynced.note}
         {referrals.window_end === null ? null : (
           // A report day is a calendar date, not an instant: it reads the same in every zone.
           <>
@@ -177,13 +180,41 @@ function referralFigure(referrals: Overview['referrals']): FigureSegment {
         )}
       </>
     ),
-    action: synced ? undefined : (
-      <Button asChild variant="secondary">
-        {/* The referrals view connects GA4 in place. */}
-        <ProjectLink href="/ai-traffic?tab=referrals">Connect GA4</ProjectLink>
-      </Button>
-    ),
+    action:
+      synced || unsynced.action === null ? undefined : (
+        <Button asChild variant="secondary">
+          {/* The referrals view connects and sets up GA4 in place. */}
+          <ProjectLink href="/ai-traffic?tab=referrals">{unsynced.action}</ProjectLink>
+        </Button>
+      ),
   };
+}
+
+/** Before a referral snapshot exists: GA4's real step, never a guessed "not connected". */
+function referralSetup(ga4: SourceStep | null): { note: string; action: string | null } {
+  if (ga4 === null)
+    return { note: 'Referral sessions appear once GA4 imports a report.', action: null };
+  switch (ga4.kind) {
+    case 'connect':
+      return {
+        note: 'Connect GA4 and sync a source/medium report to measure referral sessions.',
+        action: 'Connect GA4',
+      };
+    case 'reconnect':
+      return { note: 'GA4 needs your consent again.', action: 'Reconnect GA4' };
+    case 'choose':
+      return {
+        note: 'GA4 is connected. Choose its property to import referral sessions.',
+        action: 'Choose GA4 property',
+      };
+    case 'ready':
+      return {
+        note: 'GA4 is connected. Referral sessions appear after its next import.',
+        action: null,
+      };
+    default:
+      return ga4 satisfies never;
+  }
 }
 
 function citationFigure(citations: Overview['citations'], projectId: string): FigureSegment {

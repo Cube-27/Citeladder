@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
-import { render, screen, waitFor } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider, useSearchParams } from 'react-router-dom';
+import { act, render, screen, waitFor } from '@testing-library/react';
+import {
+  createBrowserRouter,
+  createMemoryRouter,
+  Outlet,
+  RouterProvider,
+  useSearchParams,
+} from 'react-router-dom';
+
+import { AppScrollRestoration } from '@/components/layout/app-scroll-restoration';
 
 import {
   optionalStringUrlCodec,
@@ -137,6 +145,49 @@ describe('router registration', () => {
     // The scope the shell owns survives the filter write, rather than being
     // rebuilt later from a stale read.
     expect(screen.getByTestId('search')).toHaveTextContent('project=p1');
+  });
+
+  it('opens a new visit at the top, restores only on Back, and keeps position on a filter write', async () => {
+    window.history.replaceState(null, '', '/site');
+    let scrollY = 0;
+    Object.defineProperty(window, 'scrollY', { configurable: true, get: () => scrollY });
+    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(((_x: number, y: number) => {
+      scrollY = y;
+    }) as typeof window.scrollTo);
+    const router = createBrowserRouter([
+      {
+        element: (
+          <>
+            <AppScrollRestoration />
+            <Outlet />
+          </>
+        ),
+        children: [
+          { path: '/site', element: <p>site</p> },
+          { path: '/issues', element: <p>issues</p> },
+        ],
+      },
+    ]);
+    setUrlStateRouter(router);
+    render(<RouterProvider router={router} />);
+    const positions: number[] = [];
+
+    scrollY = 600;
+    await act(() => router.navigate('/issues'));
+    positions.push(scrollY);
+    await act(() => router.navigate('/site'));
+    positions.push(scrollY);
+    scrollY = 300;
+    await act(async () => setUrlParams({ tab: 'pages' }));
+    positions.push(scrollY);
+    // Back past the filter write, the fresh /site visit and /issues.
+    await act(() => router.navigate(-3));
+    positions.push(scrollY);
+
+    expect(positions).toEqual([0, 0, 300, 600]);
+    scrollTo.mockRestore();
+    Reflect.deleteProperty(window, 'scrollY');
+    router.dispose();
   });
 
   it('falls back to history when nothing has registered a router', () => {
