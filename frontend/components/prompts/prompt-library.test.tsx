@@ -176,6 +176,27 @@ describe('PromptLibrary first load', () => {
   });
 });
 
+describe('PromptLibrary never filled', () => {
+  it('offers Add prompts and no status, search or filters, with Launch run held', async () => {
+    const emptySet = makeSet([]);
+    mswServer.use(
+      http.get('/api/v1/prompt-sets', () => HttpResponse.json(makeSetList([emptySet]))),
+      http.get(`/api/v1/prompt-sets/${emptySet.id}/candidates`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${project.id}/topics`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${project.id}/visibility/prompts`, () => HttpResponse.json([])),
+    );
+    renderLibrary();
+
+    expect(await screen.findByRole('button', { name: 'Add prompts' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Launch run' })).toHaveAccessibleDescription(
+      'Add an active prompt to launch a run.',
+    );
+    expect(screen.queryByRole('textbox', { name: 'Search prompts' })).toBeNull();
+    expect(screen.queryByRole('radio', { name: /Active/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+  });
+});
+
 describe('PromptLibrary failed read', () => {
   it('names the failed prompts read once, without a second block for the topics', async () => {
     const empty = makeProject({ prompt_sets: [] });

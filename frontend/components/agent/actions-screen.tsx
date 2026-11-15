@@ -1,5 +1,5 @@
 import { Fragment, useState, type MouseEvent } from 'react';
-import { useQueries } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -19,6 +19,7 @@ import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { ACTION_GROUP_LABEL } from '@/lib/agent/vocabulary';
+import { ACTIONS_GROUP_PREVIEW_ROWS } from '@/lib/config/agent';
 import {
   actionsQueries,
   type Action,
@@ -45,10 +46,24 @@ export function ActionsScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const filters = useActionFilters();
   const scope = { workspaceId, projectId };
+  // The grouped list's first read (shared from cache); its status counts ignore
+  // every filter, so they say whether this project has ever had an Action.
+  const countsRead = useQuery({
+    ...actionsQueries.list(scope, {
+      ...filters.query,
+      group: actionGroupSchema.options[0],
+      limit: ACTIONS_GROUP_PREVIEW_ROWS,
+    }),
+    placeholderData: (previous: ActionsPage | undefined, previousQuery?: { queryKey: unknown }) =>
+      sameProject(previousQuery?.queryKey, workspaceId, projectId) ? previous : undefined,
+  });
+  const everHadActions = Object.values(countsRead.data?.status_counts ?? {}).some(
+    (count) => count > 0,
+  );
   return (
     <CollectionPage
       actions={<AnalyzePageButton />}
-      filters={<FilterBar filters={filters.definitions} />}
+      filters={everHadActions ? <FilterBar filters={filters.definitions} /> : undefined}
     >
       {filters.group ? (
         <GroupList {...scope} query={filters.query} group={filters.group} onClear={filters.clear} />

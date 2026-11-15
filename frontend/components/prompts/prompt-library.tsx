@@ -341,23 +341,26 @@ export function PromptLibrary({
   return (
     <CollectionPage
       actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
+      // A library that never held a prompt has nothing to sort, search or filter.
       filters={
-        <FilterBar
-          {...promptFilterControls({
-            status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
-            search,
-            onSearchChange: setSearch,
-            filters,
-            onFiltersChange: setFilters,
-            personas,
-            topic: topicFilter({
-              topics,
-              selectedTopicId,
-              onSelect: setSelectedTopicId,
-              manage: edits?.topics,
-            }),
-          })}
-        />
+        hasPrompts && (
+          <FilterBar
+            {...promptFilterControls({
+              status: { value: statusFilter, counts: statusCounts, onChange: setStatusFilter },
+              search,
+              onSearchChange: setSearch,
+              filters,
+              onFiltersChange: setFilters,
+              personas,
+              topic: topicFilter({
+                topics,
+                selectedTopicId,
+                onSelect: setSelectedTopicId,
+                manage: edits?.topics,
+              }),
+            })}
+          />
+        )
       }
     >
       <>
