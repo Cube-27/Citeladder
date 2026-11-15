@@ -110,7 +110,9 @@ export function OpenRow({
         {number === undefined ? null : (
           <span className="type-caption w-6 shrink-0 tabular-nums">{number}</span>
         )}
-        <span className={textRole('body', 'min-w-0 flex-1')}>{title}</span>
+        {/* The title keeps 15rem before the meta wraps under it, so a narrow
+            row never stacks the title one word per line. */}
+        <span className={textRole('body', 'min-w-0 flex-[1_1_15rem]')}>{title}</span>
         {meta}
       </span>
       {caption ? <span className="type-caption">{caption}</span> : null}
