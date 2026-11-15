@@ -93,6 +93,8 @@ const ROUTES = [
 
 /** One control height for the product: control-md, 32 in the app. */
 const CONTROL_HEIGHT = 32;
+/** A switch's round track: 20 (components/ui/switch.tsx). */
+const SWITCH_HEIGHT = 20;
 /** Tags and status marks in running content (cells, facts): 24. */
 const TAG_HEIGHT = 24;
 /** Text controls have one horizontal padding; icon-only controls are square, with none. */
@@ -202,6 +204,11 @@ function measure({ route }: { route: string }) {
     // A checkbox is its own 16px box, and a column header's sort or hint
     // button is the header's label, measured as `data-table-header.height`.
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
+    // A switch is its own 32×20 track (components/ui/switch.tsx), measured as `switch.height`.
+    if (element.getAttribute('role') === 'switch') {
+      add('switch.height', element, element.getBoundingClientRect().height);
+      continue;
+    }
     const style = getComputedStyle(element);
     if (Number.parseFloat(style.marginTop) < 0) continue;
     if (
@@ -664,6 +671,7 @@ async function expectOneGeometry(page: Page) {
   );
 
   expectOneValue(records, 'button.height', CONTROL_HEIGHT);
+  expectOneValue(records, 'switch.height', SWITCH_HEIGHT);
   expectOneValue(records, 'input.height', CONTROL_HEIGHT);
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);
   expectOneValue(records, 'page-tab.height', PAGE_TABS_HEIGHT);
