@@ -88,9 +88,10 @@ function executionsState({
 }
 
 export function RunDetailView(props: Readonly<RunDetailViewProps>) {
-  // One error per page: without the run there are no executions to show, so
-  // a failed run read stands alone rather than over a second failed table.
-  if (props.auditRead.error && !props.audit) return <AuditSection {...props} />;
+  // One error per page: a failed run read stands alone rather than over a
+  // second failed or loading table, but executions that did load stay shown.
+  if (props.auditRead.error && !props.audit && !props.executions)
+    return <AuditSection {...props} />;
   return (
     <>
       <AuditSection {...props} />

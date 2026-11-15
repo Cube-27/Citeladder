@@ -1,17 +1,11 @@
 import { screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { describe, expect, it } from 'vite-plus/test';
 
 import type { ActiveRun } from '@/lib/visibility/dashboard';
-import { renderWithProviders as render } from '@/test/render';
+import { renderWithProviders as render, selectionAs } from '@/test/render';
 
 import { ActiveRunBanner } from './active-run-banner';
 import { VisibilityEmptyState } from './empty-state';
-
-vi.mock('@/components/runs/launch-audit-button', () => ({
-  LaunchAuditButton: ({ children }: { children: React.ReactNode }) => (
-    <button type="button">{children}</button>
-  ),
-}));
 
 /**
  * The three "there is nothing to show yet" surfaces of the Visibility
@@ -31,6 +25,14 @@ describe('VisibilityEmptyState', () => {
     expect(screen.getByText(/Launch run, above,/)).toBeVisible();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'View runs' })).not.toBeInTheDocument();
+  });
+
+  it('does not point a viewer to a Launch run the masthead does not offer them', () => {
+    render(<VisibilityEmptyState />, { projectSelection: selectionAs('viewer') });
+
+    expect(screen.getByText('No completed runs yet')).toBeVisible();
+    expect(screen.getByText(/No run has measured/)).toBeVisible();
+    expect(screen.queryByText(/Launch run/)).not.toBeInTheDocument();
   });
 
   it('routes to Runs instead of inviting a duplicate when one is already running', () => {

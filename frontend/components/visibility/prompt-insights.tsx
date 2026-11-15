@@ -94,7 +94,8 @@ function SuggestionRows({
                     variant="secondary"
                     onClick={() => onAdd(candidate.id)}
                     disabled={adding}
-                    aria-label={`Add ${candidate.name} as a competitor`}
+                    // The visible words lead the name, so a voice command can use them.
+                    aria-label={`Add competitor ${candidate.name}`}
                   >
                     Add competitor
                   </Button>

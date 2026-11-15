@@ -96,51 +96,52 @@ export function ExecutionsTable({
           ...pageNumberControls(page, pageCount, setPage),
         }}
       >
-        {pageRows.map((execution) => (
-          <TableRow key={execution.id}>
-            <TableCell>
-              <ClampText>
-                {execution.prompt_text || `Prompt #${execution.prompt_index + 1}`}
-              </ClampText>
-            </TableCell>
-            <TableCell>
-              {/* The engine over the transport that reached it, each on its own line. */}
-              <TableCellLines
-                title
-                primary={engines.label(execution.logical_engine)}
-                secondary={productTransportLabel(execution.transport_provider)}
-              />
-            </TableCell>
-            <TableCell>
-              <Stack gap="tight" className="justify-items-start">
-                <StatusBadge execution={execution} />
-                {execution.status === 'failed' ? (
-                  <ClampText lines={1} className="type-caption max-w-full">
-                    {executionFailureReason(execution.error_code)}
-                  </ClampText>
-                ) : null}
-              </Stack>
-            </TableCell>
-            <TableCell numeric>
-              {execution.latency_ms == null ? (
-                <Absence state="not_measured" />
-              ) : (
-                `${formatCount(execution.latency_ms)} ms`
-              )}
-            </TableCell>
-            <TableActionsCell>
-              {execution.status === 'succeeded' ? (
-                <ActionButton
-                  action="viewEvidence"
-                  onClick={() => onSelectEvidence(execution)}
-                  aria-label={`View evidence for ${execution.prompt_text || `prompt ${execution.prompt_index + 1}`}, ${engines.label(execution.logical_engine)}`}
+        {pageRows.map((execution) => {
+          const prompt = execution.prompt_text || `Prompt #${execution.prompt_index + 1}`;
+          return (
+            <TableRow key={execution.id}>
+              <TableCell>
+                <ClampText>{prompt}</ClampText>
+              </TableCell>
+              <TableCell>
+                {/* The engine over the transport that reached it, each on its own line. */}
+                <TableCellLines
+                  title
+                  primary={engines.label(execution.logical_engine)}
+                  secondary={productTransportLabel(execution.transport_provider)}
                 />
-              ) : (
-                <Absence state="unavailable" />
-              )}
-            </TableActionsCell>
-          </TableRow>
-        ))}
+              </TableCell>
+              <TableCell>
+                <Stack gap="tight" className="justify-items-start">
+                  <StatusBadge execution={execution} />
+                  {execution.status === 'failed' ? (
+                    <ClampText lines={1} className="type-caption max-w-full">
+                      {executionFailureReason(execution.error_code)}
+                    </ClampText>
+                  ) : null}
+                </Stack>
+              </TableCell>
+              <TableCell numeric>
+                {execution.latency_ms == null ? (
+                  <Absence state="not_measured" />
+                ) : (
+                  `${formatCount(execution.latency_ms)} ms`
+                )}
+              </TableCell>
+              <TableActionsCell>
+                {execution.status === 'succeeded' ? (
+                  <ActionButton
+                    action="viewEvidence"
+                    onClick={() => onSelectEvidence(execution)}
+                    aria-label={`View evidence for ${prompt}, ${engines.label(execution.logical_engine)}`}
+                  />
+                ) : (
+                  <Absence state="unavailable" />
+                )}
+              </TableActionsCell>
+            </TableRow>
+          );
+        })}
       </DataTable>
     </TitledSection>
   );

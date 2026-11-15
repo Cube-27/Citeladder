@@ -161,4 +161,16 @@ describe('RunsTable', () => {
     // 25 runs over pages of 10 leaves five on the last page.
     expect(bodyRows()).toHaveLength(5);
   });
+
+  it('announces the polling note in a live region that was mounted while idle', () => {
+    const { rerender } = renderTable([audit(1)]);
+    const region = screen.getByRole('status');
+    expect(region).toBeEmptyDOMElement();
+
+    rerender(<RunsTable audits={[audit(1)]} status="Updating" emptyHeading="No failed runs" />);
+
+    // The same node now holds the note, so assistive tech hears the change.
+    expect(screen.getByRole('status')).toBe(region);
+    expect(region).toHaveTextContent('Updating');
+  });
 });

@@ -97,7 +97,13 @@ export function RunsTable({
   };
 
   return (
-    <TitledSection title="All runs" actions={status}>
+    <TitledSection
+      title="All runs"
+      // Mounted while idle (empty), so the first polling note is announced.
+      actions={
+        <output className="type-caption flex items-center gap-2 empty:hidden">{status}</output>
+      }
+    >
       <DataTable
         label="All runs"
         columns={runsColumns(sort, onSort)}

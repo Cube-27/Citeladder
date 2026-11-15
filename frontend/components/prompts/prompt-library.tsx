@@ -1,5 +1,13 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
 
 import { promptsMutations } from '@/lib/api/prompts';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
@@ -63,6 +71,34 @@ function awaitingFirstLoad(
 }
 
 const promptStatusCodec = stringUrlCodec<PromptStatus>(['active', 'archived'], 'active');
+
+/** The library's body: the failed first read, the empty library, or the table. */
+function libraryBodyFor({
+  failedEmpty,
+  hasPrompts,
+  read,
+  add,
+  table,
+}: Readonly<{
+  failedEmpty: boolean;
+  hasPrompts: boolean;
+  read: Pick<ReturnType<typeof usePromptSet>, 'error' | 'retry' | 'retrying'>;
+  add: ComponentProps<typeof PromptEmptyState>['add'];
+  table: ReactNode;
+}>): ReactNode {
+  if (failedEmpty)
+    return (
+      <StateBlock
+        kind="error"
+        error={read.error}
+        title="Couldn't load the prompts"
+        fallback="Check your connection and try again."
+        onRetry={read.retry}
+        pending={read.retrying}
+      />
+    );
+  return hasPrompts ? table : <PromptEmptyState add={add} />;
+}
 
 /**
  * Prompt library client (F7). Owns the active prompt set (via F5 project
@@ -262,32 +298,24 @@ export function PromptLibrary({
 
   // An empty library and a library filtered to nothing read differently: one
   // needs a way to add prompts, the other needs its filter loosened.
-  let libraryBody: ReactNode = (
-    <PromptTable
-      prompts={visible}
-      actions={edits?.rows}
-      measurements={measurements}
-      setNames={setNames}
-      commerceSetIds={commerceSetIds}
-    />
-  );
   // A failed read with nothing to show takes the empty state's slot; a failed
   // refresh keeps the prompts already shown and says so above them.
   const failedEmpty = Boolean(error) && !hasPrompts;
-  if (failedEmpty) {
-    libraryBody = (
-      <StateBlock
-        kind="error"
-        error={error}
-        title="Couldn't load the prompts"
-        fallback="Check your connection and try again."
-        onRetry={retry}
-        pending={retrying}
+  const libraryBody = libraryBodyFor({
+    failedEmpty,
+    hasPrompts,
+    read: { error, retry, retrying },
+    add: edits?.add,
+    table: (
+      <PromptTable
+        prompts={visible}
+        actions={edits?.rows}
+        measurements={measurements}
+        setNames={setNames}
+        commerceSetIds={commerceSetIds}
       />
-    );
-  } else if (!hasPrompts) {
-    libraryBody = <PromptEmptyState add={edits?.add} />;
-  }
+    ),
+  });
 
   // Status, search and filters share one control band once loaded; the first
   // load holds it so the table starts where the box stood.

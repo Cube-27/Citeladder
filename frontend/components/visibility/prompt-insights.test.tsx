@@ -50,7 +50,7 @@ describe('CompetitorSuggestions', () => {
     for (const key of [facts, suggestions]) queryClient.setQueryData(key, {});
     const stale = (key: readonly unknown[]) => queryClient.getQueryState(key)?.isInvalidated;
 
-    await user.click(screen.getByRole('button', { name: /^Add .+ as a competitor$/ }));
+    await user.click(screen.getByRole('button', { name: 'Add competitor Northstar' }));
 
     // The company facts and the suggestion list both re-read; the accepted
     // competitor leaves the list.

@@ -293,16 +293,18 @@ function CitationItem({
   return (
     <LedgerItem
       title={
-        <>
-          <span className="type-data text-ink-2 me-2">{ordinal}</span>
-          {href ? (
-            <TextLink variant="external" text="body" href={href}>
-              {title}
-            </TextLink>
-          ) : (
-            title || 'Untitled source'
-          )}
-        </>
+        <Inline as="span" className="items-baseline">
+          <span className="type-data text-ink-2">{ordinal}</span>
+          <span className="min-w-0 break-words">
+            {href ? (
+              <TextLink variant="external" text="body" href={href}>
+                {title}
+              </TextLink>
+            ) : (
+              title || 'Untitled source'
+            )}
+          </span>
+        </Inline>
       }
       meta={
         <StatusMark

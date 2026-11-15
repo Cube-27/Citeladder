@@ -148,4 +148,37 @@ describe('RunDetailScreen', () => {
     expect(screen.getAllByRole('button', { name: /Retry/ })).toHaveLength(1);
     expect(screen.queryByText("Couldn't load the executions")).toBeNull();
   });
+
+  it('keeps executions that loaded when only the run read failed', async () => {
+    const answered = {
+      id: '11111111-1111-4111-8111-000000000001',
+      prompt_index: 0,
+      logical_engine: 'gemini',
+      transport_provider: 'google',
+      status: 'succeeded',
+      prompt_text: 'Best trail running shoes',
+      error_code: '',
+      latency_ms: 1200,
+    };
+    mswServer.use(
+      http.get(`/api/v1/audits/${RUN}`, () =>
+        HttpResponse.json({ error: { message: 'down' } }, { status: 500 }),
+      ),
+      http.get(`/api/v1/audits/${RUN}/executions`, () => HttpResponse.json([answered])),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/runs/:runId" element={<RunDetailScreen />} />
+      </Routes>,
+      {
+        initialEntries: [`/runs/${RUN}`],
+        projectSelection: {
+          activeProject: makeProject({ id: '33333333-3333-4333-8333-333333333333' }),
+        },
+      },
+    );
+
+    expect(await screen.findByText("Couldn't load this run")).toBeVisible();
+    expect(await screen.findByText('Best trail running shoes')).toBeVisible();
+  });
 });
