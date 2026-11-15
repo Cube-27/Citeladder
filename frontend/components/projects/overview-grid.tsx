@@ -9,6 +9,26 @@ import { moveWidget, removeWidget, toggleWidth } from '@/lib/overview/layout';
 import { cn } from '@/lib/utils';
 
 /**
+ * The half widgets that would sit alone in their row (before a full widget,
+ * or last): they span the row, so the grid never ends a row in an empty cell.
+ * The saved layout keeps their size.
+ */
+export function loneHalves(widgets: readonly OverviewWidget[]): ReadonlySet<string> {
+  const lone = new Set<string>();
+  let open: string | null = null;
+  for (const widget of widgets) {
+    if (widget.size === 'full') {
+      if (open) lone.add(open);
+      open = null;
+    } else {
+      open = open ? null : widget.key;
+    }
+  }
+  if (open) lone.add(open);
+  return lone;
+}
+
+/**
  * The Overview's two-column grid. Half widgets share a row and its height;
  * full widgets span it. While editing, each widget carries its controls in an
  * overlay, so entering or leaving edit mode never moves a widget.
@@ -26,6 +46,7 @@ export function OverviewGrid({
   onChange: (widgets: OverviewWidget[]) => void;
   render: (widget: OverviewWidget) => ReactNode;
 }>) {
+  const lone = loneHalves(widgets);
   return (
     <AppGrid layout="halves">
       {widgets.map((widget, index) => (
@@ -33,7 +54,10 @@ export function OverviewGrid({
         <div
           key={widget.key}
           data-widget={widget.key}
-          className={cn('relative min-w-0', widget.size === 'full' && 'shell:col-span-2')}
+          className={cn(
+            'relative min-w-0',
+            (widget.size === 'full' || lone.has(widget.key)) && 'column-wide:col-span-2',
+          )}
         >
           {render(widget)}
           {editing ? (

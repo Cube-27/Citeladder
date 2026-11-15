@@ -250,12 +250,12 @@ describe('DashboardScreen', () => {
     );
     // Engines by the names the catalogue gives them, never their stored keys.
     expect(screen.getByText(/^Tracked .*· ChatGPT API, Gemini API$/u)).toBeVisible();
-    // The names and whole-percent precision AI Visibility uses for the same run.
+    // The names and one-decimal precision AI Visibility uses for the same run.
     const state = within(screen.getByRole('region', { name: 'Project state' }));
     expect(state.getByText('Visibility')).toBeVisible();
-    expect(state.getByText('73%')).toBeVisible();
+    expect(state.getByText('72.5%')).toBeVisible();
     expect(state.getByText('Share of voice')).toBeVisible();
-    expect(state.getByText('48%')).toBeVisible();
+    expect(state.getByText('48.1%')).toBeVisible();
     expect(state.getByText('Rank')).toBeVisible();
     expect(state.getByText('#2')).toBeVisible();
     expect(state.queryByText('Brand rank')).not.toBeInTheDocument();
@@ -266,21 +266,20 @@ describe('DashboardScreen', () => {
       .find((delta) => delta?.textContent === 'down −1vs previous');
     expect(rankChange).toHaveAttribute('data-outcome', 'improved');
     expect(
-      within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('33%'),
+      within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('32.5%'),
     ).toBeVisible();
-    expect(within(screen.getByRole('region', { name: 'Movement' })).getByText('68%')).toBeVisible();
-    // With no open actions the section is only its empty state, still linking to every action.
-    expect(screen.getByRole('heading', { name: 'No open actions' })).toBeVisible();
-    expect(screen.queryByRole('heading', { name: 'Ranked actions' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'View all' })).toHaveAttribute(
+    expect(within(screen.getByRole('region', { name: 'Movement' })).getByText('68.3%')).toBeVisible();
+    // With no open actions the widget keeps its place and title, still linking to every action.
+    const ranked = within(screen.getByRole('region', { name: 'Ranked actions' }));
+    expect(ranked.getByRole('heading', { name: 'No open actions' })).toBeVisible();
+    expect(ranked.getByRole('link', { name: 'View all' })).toHaveAttribute(
       'href',
       '/agent/actions?project=00000000-0000-4000-8000-000000000001',
     );
-    expect(
-      within(screen.getByRole('region', { name: 'Progress and report proof' })).getByText(
-        '2 actions resolved since the comparable run.',
-      ),
-    ).toBeVisible();
+    const proof = within(screen.getByRole('region', { name: 'Progress and report proof' }));
+    expect(proof.getByText('Resolved actions')).toBeVisible();
+    expect(proof.getByText('2')).toBeVisible();
+    expect(proof.getByText('Since the comparable run')).toBeVisible();
     expect(screen.getByText('Evidence-first analytics')).toBeVisible();
     expect(screen.getByText('Growth leaders')).toBeVisible();
     expect(screen.getByText('Analytics')).toBeVisible();
@@ -312,7 +311,7 @@ describe('DashboardScreen', () => {
       'href',
       '/agent/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
     );
-    expect(ranked.getByText('/pricing · 3 persisted evidence item(s)')).toBeVisible();
+    expect(ranked.getByText('/pricing · 3 evidence items')).toBeVisible();
     // The badge carries the priority; the score is not repeated beside it.
     expect(ranked.getByText('High')).toBeVisible();
     expect(ranked.queryByText('7.5')).not.toBeInTheDocument();
@@ -335,13 +334,14 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
-    const reason = 'The earlier run used different settings.';
+    const reason = 'The earlier run used different settings. Launch run to measure movement.';
     expect(movement.getByText(reason)).toBeVisible();
     // A compact note, not a block empty state with a heading of its own.
     expect(screen.queryByRole('heading', { name: reason })).not.toBeInTheDocument();
-    // Its action opens the Launch run dialog, where the run is confirmed.
+    // The note names the page's one Launch run, which opens the dialog where the run is confirmed.
+    expect(movement.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
     expect(screen.queryByRole('dialog', { name: 'Launch run' })).not.toBeInTheDocument();
-    await user.click(movement.getByRole('button', { name: 'Launch run' }));
+    await user.click(screen.getByRole('button', { name: 'Launch run' }));
     expect(screen.getByRole('dialog', { name: 'Launch run' })).toBeInTheDocument();
   });
   it('shows a matched-subset change with its note, and says why per-engine movement is absent', () => {
@@ -418,7 +418,7 @@ describe('DashboardScreen', () => {
     const next = within(screen.getByRole('region', { name: 'Publish a comparison page' }));
     expect(next.getByText('/pricing · 3 evidence items')).toBeVisible();
     expect(next.getByText('High')).toBeVisible();
-    expect(next.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
+    expect(next.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
       'href',
       '/agent/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
     );
@@ -468,10 +468,10 @@ describe('DashboardScreen', () => {
     const section = within(screen.getByRole('region', { name: "Where you're missing" }));
     const rows = section.getAllByRole('listitem');
     expect(rows.map((row) => row.textContent)).toEqual([
-      'crm for agenciesChatGPT API, Gemini API named Globex, InitechOpen the Action',
-      'best crmChatGPT API named GlobexNo Action yet',
+      'crm for agenciesOpen ActionChatGPT API, Gemini API named Globex, Initech',
+      'best crmNo Action yetChatGPT API named Globex',
     ]);
-    expect(section.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
+    expect(section.getByRole('link', { name: 'Open Action for crm for agencies' })).toHaveAttribute(
       'href',
       '/agent/actions/00000000-0000-4000-8000-0000000000b2?project=00000000-0000-4000-8000-000000000001',
     );
@@ -711,7 +711,7 @@ describe('DashboardScreen', () => {
         <DashboardScreen />
       </TooltipProvider>,
     );
-    expect(screen.getByText('0%')).toBeVisible();
+    expect(screen.getByText('0.0%')).toBeVisible();
     expect(screen.queryByText('Not measured')).not.toBeInTheDocument();
   });
 });

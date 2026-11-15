@@ -1,4 +1,5 @@
 import { AppGrid } from '@/components/ui/app-grid';
+import { ChartFrame } from '@/components/ui/chart-frame';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Delta } from '@/components/ui/delta';
 import type { DataTone } from '@/components/ui/data-tone';
@@ -8,9 +9,9 @@ import type { ReorderItem } from '@/components/ui/reorder-list';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { CommandCenter, Opportunity } from '@citeladder/contracts';
-import { readableUrl } from '@/lib/format';
+import { pluralCount, readableUrl } from '@/lib/format';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { formatWholePercent } from '@/lib/visibility/dashboard';
+import { formatRate } from '@/lib/visibility/dashboard';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
 
@@ -21,12 +22,13 @@ export const VS_PREVIOUS_RUN = {
 } as const;
 
 /**
- * The Command Center's rates arrive already in percent (0–100). They print as
- * whole percents (`formatWholePercent`), the precision AI Visibility uses for
- * the same metrics, so one run never reads 31.3% here and 31% there; a rank
- * prints as AI Visibility prints it (`formatPosition`, "#3").
+ * The Command Center's rates arrive already in percent (0–100). They print
+ * with AI Visibility's one decimal (`formatRate`), so one run never reads
+ * 31.3% here and 31% there; a rank prints as AI Visibility prints it
+ * (`formatPosition`, "#3").
  */
-export const percentFigure = formatWholePercent;
+export const percentFigure = (value: number | null) =>
+  formatRate(value === null ? null : value / 100);
 export { formatPosition as rankFigure } from '@/lib/visibility/dashboard';
 
 /**
@@ -37,29 +39,37 @@ export { formatPosition as rankFigure } from '@/lib/visibility/dashboard';
  */
 export function MovementChart({ movements }: Readonly<{ movements: CommandCenter['movements'] }>) {
   const engines = useEngineCatalog();
+  const summary = movements
+    .map(
+      (row) =>
+        `${engines.label(row.label)}: ${row.previous === null ? 'not measured' : percentFigure(row.previous)} to ${row.current === null ? 'not measured' : percentFigure(row.current)}`,
+    )
+    .join('; ');
   return (
-    <AppGrid layout="halves">
-      {movements.map((row) => (
-        <Stack key={row.label} gap="compact" className="min-w-0 content-start">
-          <Inline className="justify-between">
-            <span className={textRole('label')}>{engines.label(row.label)}</span>
-            <Delta value={row.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
-          </Inline>
-          <MovementMeter
-            engine={engines.label(row.label)}
-            period="Previous"
-            value={row.previous}
-            tone="neutral"
-          />
-          <MovementMeter
-            engine={engines.label(row.label)}
-            period="Current"
-            value={row.current}
-            tone={{ series: 1 }}
-          />
-        </Stack>
-      ))}
-    </AppGrid>
+    <ChartFrame summary={`Mention rate by engine, previous to current run. ${summary}.`}>
+      <AppGrid layout="halves">
+        {movements.map((row) => (
+          <Stack key={row.label} gap="compact" className="min-w-0 content-start">
+            <Inline className="justify-between">
+              <span className={textRole('label')}>{engines.label(row.label)}</span>
+              <Delta value={row.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
+            </Inline>
+            <MovementMeter
+              engine={engines.label(row.label)}
+              period="Previous"
+              value={row.previous}
+              tone="neutral"
+            />
+            <MovementMeter
+              engine={engines.label(row.label)}
+              period="Current"
+              value={row.current}
+              tone={{ series: 1 }}
+            />
+          </Stack>
+        ))}
+      </AppGrid>
+    </ChartFrame>
   );
 }
 
@@ -85,33 +95,42 @@ function MovementMeter({
   );
 }
 
+/**
+ * The facts under an Action wherever the Overview lists it: its priority, its
+ * target and how much evidence backs it, worded once.
+ */
+export function ActionFacts({ action }: Readonly<{ action: Opportunity }>) {
+  return (
+    <Inline>
+      {/* The one priority mapping the evidence drawer uses. */}
+      <StatusMark variant="priority" value={severityPriority(action.severity)}>
+        {severityLabel(action.severity)}
+      </StatusMark>
+      <span className={textRole('caption', 'min-w-0 truncate')}>
+        {action.target_label ? readableUrl(action.target_label) : 'Project-wide'} ·{' '}
+        {pluralCount(action.evidence_summary.count, 'evidence item')}
+      </span>
+    </Inline>
+  );
+}
+
 /** One ranked action, as a row of the shared reorderable list. */
 export function actionItem(action: Opportunity): ReorderItem {
   return {
     key: action.id,
     name: action.title,
-    // The severity badge carries the priority; the score is not repeated.
-    // The title truncates so the badge stays on its line.
+    // The severity mark carries the priority; the score is not repeated.
     content: (
       <Stack gap="tight">
-        <Inline>
-          <TextLink
-            text="body"
-            className="min-w-0 truncate"
-            title={action.title}
-            href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
-          >
-            {action.title}
-          </TextLink>
-          {/* The one priority mapping the evidence drawer uses. */}
-          <StatusMark variant="priority" value={severityPriority(action.severity)}>
-            {severityLabel(action.severity)}
-          </StatusMark>
-        </Inline>
-        <p className="type-caption truncate">
-          {action.target_label ? readableUrl(action.target_label) : 'Project-wide'} ·{' '}
-          {action.evidence_summary.count} persisted evidence item(s)
-        </p>
+        <TextLink
+          text="body"
+          className="min-w-0 truncate"
+          title={action.title}
+          href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
+        >
+          {action.title}
+        </TextLink>
+        <ActionFacts action={action} />
       </Stack>
     ),
   };

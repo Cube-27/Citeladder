@@ -59,28 +59,30 @@ export function ProjectsScreen() {
     );
   }
   if (projects.length === 0) {
+    // The page's one primary sits in the masthead; the empty state names it.
     return (
-      <ReportPage>
+      <ReportPage
+        actions={
+          mayCreate ? (
+            <Button
+              variant="primary"
+              disabled={!canAddProject}
+              onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
+            >
+              <Icon icon={Plus} />
+              Add project
+            </Button>
+          ) : undefined
+        }
+      >
         <StateBlock
           kind="empty"
           icon={FolderOpen}
           heading="No projects yet"
           description={
             mayCreate
-              ? 'Add a brand to start tracking how AI answers describe it.'
+              ? 'Add project to start tracking how AI answers describe your brand.'
               : 'Ask the workspace owner or an admin to add a project.'
-          }
-          action={
-            mayCreate ? (
-              <Button
-                variant="primary"
-                disabled={!canAddProject}
-                onClick={() => navigate(newProjectDestination(activeWorkspaceId))}
-              >
-                <Icon icon={Plus} />
-                Add project
-              </Button>
-            ) : undefined
           }
         />
       </ReportPage>
