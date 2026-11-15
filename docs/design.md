@@ -227,7 +227,6 @@ spacing:
   container-thread: 1040px
   container-prose: 720px
   container-narrow: 560px
-  container-content: 1280px
   container-form: 640px
   container-flow: 480px
   control-sm: 28px

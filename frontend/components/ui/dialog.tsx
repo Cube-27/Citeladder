@@ -21,8 +21,23 @@ function opener(active: Element | null) {
   return (id && document.getElementById(id)) || active;
 }
 
-const FIRST_FIELD =
-  'input:not([type=hidden], [type=checkbox], [type=radio], :disabled), textarea:not(:disabled), select:not(:disabled)';
+const FIELD =
+  'input:not([type=hidden], [type=checkbox], [type=radio], [type=button], [type=submit], [type=reset]), textarea, select';
+const CONTROL =
+  'input:not([type=hidden]), textarea, select, button, a[href], [tabindex]:not([tabindex="-1"])';
+
+/**
+ * The body's first control when it is a text field: it takes focus on open
+ * with the caret only (input-modality.ts). Any other first control (a choice
+ * whose focus means something) leaves Radix's default.
+ */
+function leadingField(content: EventTarget | null): HTMLElement | null {
+  if (!(content instanceof HTMLElement)) return null;
+  const first = [
+    ...(content.querySelector('[data-dialog-body]')?.querySelectorAll<HTMLElement>(CONTROL) ?? []),
+  ].find((node) => !node.matches(':disabled'));
+  return first?.matches(FIELD) ? first : null;
+}
 const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
 
 /**
@@ -106,8 +121,8 @@ function DialogHeader({
  * Header, body and footer are divided by hairlines. `tone="danger"` is a
  * confirmation: an `alertdialog`, 480px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.
- * Focus opens on `initialFocusRef`, else the first field, else the first
- * tabbable element, and returns to the opener on close.
+ * Focus opens on `initialFocusRef`, else the body's first control when it is
+ * a text field, else the first tabbable element, and returns to the opener.
  */
 export function Dialog({
   open,
@@ -145,12 +160,7 @@ export function Dialog({
           role={danger ? 'alertdialog' : 'dialog'}
           {...(description ? {} : { 'aria-describedby': undefined })}
           onOpenAutoFocus={(event) => {
-            // The first field takes focus (caret only, input-modality.ts), else Radix's first control.
-            const target =
-              initialFocusRef?.current ??
-              (event.target instanceof HTMLElement
-                ? event.target.querySelector<HTMLElement>(FIRST_FIELD)
-                : null);
+            const target = initialFocusRef?.current ?? leadingField(event.target);
             if (!target) return;
             event.preventDefault();
             target.focus();
@@ -179,7 +189,10 @@ export function Dialog({
             </DialogPrimitive.Close>
           )}
           {children == null ? null : (
-            <div className="text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain p-[var(--card-padding)]">
+            <div
+              data-dialog-body=""
+              className="text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain p-[var(--card-padding)]"
+            >
               {children}
             </div>
           )}

@@ -13,7 +13,6 @@ import {
   MenuSubTrigger,
   MenuTrigger,
 } from '@/components/ui/menu';
-import { cn } from '@/lib/utils';
 
 /**
  * Where a masthead draws its one primary action: `undefined` outside a
@@ -58,60 +57,95 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
   const [group, setGroup] = useState<HTMLDivElement | null>(null);
   const [foldedSlot, setFoldedSlot] = useState<HTMLSpanElement | null>(null);
   const [menus] = useState(() => new Map<string, ReactNode>());
-  const [entries, setEntries] = useState<readonly FoldedEntry[]>([]);
   const rowSlot = useContext(MastheadPrimarySlot) ?? null;
-  const secondary = useChildCount(group);
-  const primary = useChildCount(rowSlot) + useChildCount(foldedSlot);
-  const stage = useFoldStage(
-    group?.closest<HTMLElement>('[data-masthead]') ?? null,
-    (secondary > 0 ? 1 : 0) + (primary > 0 ? 1 : 0),
-    secondary * 10 + primary,
-  );
-  // One secondary action alone stays in the row; beside another action or the primary, it folds.
-  const belowRail = secondary > 1 || (secondary === 1 && primary > 0);
-  const secondaryFolded = secondary > 0 && stage >= 1;
-  const primaryFolded = primary > 0 && stage >= (secondary > 0 ? 2 : 1);
-  const always = secondaryFolded || primaryFolded;
+  const fold = useFold({ group, rowSlot, foldedSlot });
 
   return (
     <>
-      {belowRail || always ? (
-        <Menu
-          modal={false}
-          onOpenChange={(open) => {
-            if (open) setEntries(foldedEntries([foldedSlot, group], menus));
-          }}
-        >
-          <MenuTrigger asChild>
-            <IconButton
-              icon={MoreHorizontal}
-              label="More"
-              variant="secondary"
-              className={always ? undefined : 'rail:hidden'}
-            />
-          </MenuTrigger>
-          <MenuContent align="end">
-            {entries.map((entry) => (
-              <FoldedItem key={entry.key} entry={entry} />
-            ))}
-          </MenuContent>
-        </Menu>
-      ) : null}
+      {fold.more === 'none' ? null : (
+        <MoreMenu
+          trigger={fold.more === 'always' ? undefined : 'rail:hidden'}
+          read={() => foldedEntries([foldedSlot, group], menus)}
+        />
+      )}
       <span ref={setFoldedSlot} data-masthead-folded-primary="" hidden />
-      <MastheadPrimarySlot.Provider value={primaryFolded ? foldedSlot : rowSlot}>
+      <MastheadPrimarySlot.Provider value={fold.primary ? foldedSlot : rowSlot}>
         <MenuFold.Provider value={menus}>
-          <div
-            ref={setGroup}
-            data-masthead-overflow=""
-            className={cn(
-              secondaryFolded ? 'hidden' : belowRail ? 'not-rail:hidden rail:contents' : 'contents',
-            )}
-          >
+          <div ref={setGroup} data-masthead-overflow="" className={GROUP[fold.secondary]}>
             {children}
           </div>
         </MenuFold.Provider>
       </MastheadPrimarySlot.Provider>
     </>
+  );
+}
+
+/** Where the secondary controls are drawn: in the row, folded below `rail`, or folded. */
+const GROUP = {
+  row: 'contents',
+  belowRail: 'not-rail:hidden rail:contents',
+  folded: 'hidden',
+} as const;
+
+/**
+ * What has folded. One secondary action alone stays in the row; beside
+ * another action or the primary it folds below `rail`. A crowded row folds
+ * the secondary actions at any width, then the primary.
+ */
+function useFold({
+  group,
+  rowSlot,
+  foldedSlot,
+}: Readonly<Record<'group' | 'rowSlot' | 'foldedSlot', HTMLElement | null>>) {
+  const secondary = useChildCount(group);
+  const primary = useChildCount(rowSlot) + useChildCount(foldedSlot);
+  const steps = Math.sign(secondary) + Math.sign(primary);
+  const stage = useFoldStage(
+    group?.closest<HTMLElement>('[data-masthead]') ?? null,
+    steps,
+    secondary * 10 + primary,
+  );
+  return foldOf({ secondary, primary, stage, steps });
+}
+
+function foldOf({
+  secondary,
+  primary,
+  stage,
+  steps,
+}: Readonly<Record<'secondary' | 'primary' | 'stage' | 'steps', number>>) {
+  const secondaryFolded = secondary > 0 && stage >= 1;
+  const primaryFolded = primary > 0 && stage >= steps;
+  const belowRail = secondary > 1 || (secondary === 1 && primary > 0);
+  return {
+    primary: primaryFolded,
+    secondary: secondaryFolded ? 'folded' : belowRail ? 'belowRail' : 'row',
+    more: secondaryFolded || primaryFolded ? 'always' : belowRail ? 'belowRail' : 'none',
+  } as const;
+}
+
+/** The "More" menu, its rows read from the folded controls each time it opens. */
+function MoreMenu({
+  trigger,
+  read,
+}: Readonly<{ trigger: string | undefined; read: () => FoldedEntry[] }>) {
+  const [entries, setEntries] = useState<readonly FoldedEntry[]>([]);
+  return (
+    <Menu
+      modal={false}
+      onOpenChange={(open) => {
+        if (open) setEntries(read());
+      }}
+    >
+      <MenuTrigger asChild>
+        <IconButton icon={MoreHorizontal} label="More" variant="secondary" className={trigger} />
+      </MenuTrigger>
+      <MenuContent align="end">
+        {entries.map((entry) => (
+          <FoldedItem key={entry.key} entry={entry} />
+        ))}
+      </MenuContent>
+    </Menu>
   );
 }
 
@@ -181,23 +215,25 @@ function foldedEntry(
   if (!control) return [];
   const label = (control.getAttribute('aria-label') ?? control.textContent ?? '').trim();
   if (!label) return [];
-  const icon = leadGlyph(control);
-  const disabled = control.matches(':disabled') || control.getAttribute('aria-disabled') === 'true';
-  const described = control.getAttribute('aria-describedby');
-  const reason =
-    (described ? document.getElementById(described)?.textContent?.trim() : null) ??
-    control.getAttribute('title');
   const items = menuId ? menus.get(menuId) : undefined;
   return [
     {
       key,
       label,
-      icon,
-      disabled,
-      reason: disabled && reason ? reason : null,
+      icon: leadGlyph(control),
+      ...availability(control),
       run: items === undefined ? { kind: 'press', control } : { kind: 'menu', items },
     },
   ];
+}
+
+/** Whether the control is disabled and, if it says why (its description or title), why. */
+function availability(control: HTMLElement): Pick<FoldedEntry, 'disabled' | 'reason'> {
+  const disabled = control.matches(':disabled') || control.getAttribute('aria-disabled') === 'true';
+  if (!disabled) return { disabled, reason: null };
+  const described = control.getAttribute('aria-describedby');
+  const reason = described ? document.getElementById(described)?.textContent?.trim() : null;
+  return { disabled, reason: reason || control.getAttribute('title') };
 }
 
 /** The control's leading glyph: an icon before any text (never a trailing chevron). */
