@@ -98,7 +98,6 @@ export function RobotsHistory({
       <DataTable
         label="robots.txt observation sequence"
         columns={COLUMNS}
-        minWidth="md"
         toolbar={toolbar}
         {...table}
       >
@@ -145,10 +144,10 @@ function snapshotSummary(snapshot: Snapshot | undefined): string {
 }
 
 const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'observed', label: 'Observed', width: 'date' },
-  { key: 'status', label: 'Fetch status', width: 'status' },
-  { key: 'policy', label: 'Policy' },
-  { key: 'snapshot', label: 'robots.txt body', width: 'name' },
+  { key: 'observed', label: 'Observed', kind: 'date' },
+  { key: 'status', label: 'Fetch status', kind: 'status' },
+  { key: 'policy', label: 'Policy', kind: 'text' },
+  { key: 'snapshot', label: 'robots.txt body', kind: 'text', width: 'name' },
 ];
 
 function RobotsDiff({

@@ -3,6 +3,7 @@ import { Database } from 'lucide-react';
 import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { textRole } from '@/components/ui/typography';
 import type {
   SearchIntelligenceDataset,
@@ -66,32 +67,44 @@ export function SearchIntelligenceOverview({
   const share = footprint?.summary.top_10_percentage;
   return (
     <Stack gap="workspace" className="min-w-0">
-      <SearchMetrics
-        metrics={[
-          ['Organic keywords', footprint, 'organic_keywords'],
-          ['Estimated monthly traffic', footprint, 'estimated_monthly_traffic'],
-          ['Top-10 keywords', footprint, 'top_10_keywords'],
-          ['Referring domains', backlinks, 'referring_domains'],
-          ['Backlinks', backlinks, 'backlinks'],
-        ]}
-      />
+      <Section aria-labelledby="keyword-research-figures">
+        <SectionHeader>
+          <SectionTitle id="keyword-research-figures">Your search footprint</SectionTitle>
+        </SectionHeader>
+        <Stack gap="item">
+          <SearchMetrics
+            metrics={[
+              ['Organic keywords', footprint, 'organic_keywords'],
+              ['Estimated monthly traffic', footprint, 'estimated_monthly_traffic'],
+              ['Top-10 keywords', footprint, 'top_10_keywords'],
+              ['Referring domains', backlinks, 'referring_domains'],
+              ['Backlinks', backlinks, 'backlinks'],
+            ]}
+          />
+          {footprint ? (
+            <p className={textRole('caption')}>
+              Top-10 share of your ranking keywords: <SearchValue value={share} digits={1} />
+              {share == null ? '' : '%'}
+            </p>
+          ) : null}
+        </Stack>
+      </Section>
       <SearchIntelligenceCompetitors
         datasets={datasets}
         competitors={competitors}
         onOpen={onOpen}
       />
-      {footprint ? (
-        <p className={textRole('caption')}>
-          Top-10 share of your ranking keywords: <SearchValue value={share} digits={2} />
-          {share == null ? '' : '%'}
-        </p>
-      ) : null}
-      <SearchSummaryEvidence
-        datasets={[footprint, backlinks].filter((item) => item !== undefined)}
-      />
-      <p className={textRole('caption')}>
-        Provider estimates and observed rankings are separate from first-party Search Demand data.
-      </p>
+      <Section aria-label="Metric definitions and sources">
+        <Stack gap="item">
+          <SearchSummaryEvidence
+            datasets={[footprint, backlinks].filter((item) => item !== undefined)}
+          />
+          <p className={textRole('caption')}>
+            Provider estimates and observed rankings are separate from first-party Search Demand
+            data.
+          </p>
+        </Stack>
+      </Section>
     </Stack>
   );
 }

@@ -57,6 +57,11 @@ function IssuesDataRegion({
               ? 'Website is unavailable for this project.'
               : 'Could not load the latest Website crawl.'
           }
+          title={
+            accessDenied
+              ? 'Website is unavailable for this project'
+              : 'Could not load the latest Website crawl'
+          }
           onRetry={() => void dashboard.refetch()}
           pending={dashboard.isFetching}
         />

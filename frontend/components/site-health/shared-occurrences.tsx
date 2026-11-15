@@ -26,7 +26,7 @@ function sharedAskAgentPrompt(issue: SharedIssue, evidence: string, scope: Share
   const reach = scope.complete
     ? `${scope.pageCount} of the issue's ${scope.totalPageCount} affected pages`
     : `${scope.pageCount} of the ${scope.loadedPageCount} affected pages loaded so far; the issue affects ${scope.totalPageCount} pages`;
-  return `Analyze the Site Health issue "${issueTitle(issue)}" where the same evidence, ${evidence}, was found on several pages (${reach}). Check whether it comes from one shared template or component and propose the one fix that clears it on every page.`;
+  return `Analyze the Website issue "${issueTitle(issue)}" where the same evidence, ${evidence}, was found on several pages (${reach}). Check whether it comes from one shared template or component and propose the one fix that clears it on every page.`;
 }
 
 type SharedScope = Parameters<typeof sharedPagesLabel>[0];

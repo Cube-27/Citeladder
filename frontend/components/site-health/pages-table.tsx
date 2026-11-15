@@ -5,7 +5,15 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ClampText, mutedWhenMissing, TableCell, TableRow, TableTime } from '@/components/ui/table';
+import {
+  ClampText,
+  mutedWhenMissing,
+  TableCell,
+  TableRow,
+  TableTime,
+  UrlText,
+} from '@/components/ui/table';
+import { sharedOrigin } from '@/lib/format';
 import { Absence } from '@/components/ui/absence';
 import { TextLink } from '@/components/ui/text-link';
 import type { PagesSort } from '@/lib/api/site-health';
@@ -65,6 +73,7 @@ function pagesColumns(
     {
       key: 'page',
       label: 'Page',
+      kind: 'identity',
       sort: onSortChange
         ? {
             active: byUrl,
@@ -73,11 +82,13 @@ function pagesColumns(
           }
         : undefined,
     },
-    { key: 'type', label: 'Type', width: 'category' },
-    { key: 'issues', label: 'Issues', width: 'figure', numeric: true },
-    { key: 'web', label: 'Web Fundamentals', width: 'figure', numeric: true },
-    { key: 'aeo', label: 'AEO Readiness', width: 'figure', numeric: true },
-    { key: 'audited', label: 'Last Audit', width: 'date' },
+    // The priority columns fit the main column at 982; the last audit is the
+    // low-priority tail and scrolls in the frame when it does not.
+    { key: 'type', label: 'Type', kind: 'status' },
+    { key: 'issues', label: 'Issues', kind: 'number', width: 'short' },
+    { key: 'web', label: 'Web Fundamentals', kind: 'number', width: 'short' },
+    { key: 'aeo', label: 'AEO Readiness', kind: 'number', width: 'short' },
+    { key: 'audited', label: 'Last audit', kind: 'date', width: 'metric' },
   ];
 }
 
@@ -110,11 +121,11 @@ export function PagesTable({
     const page = pages.find((row) => row.site_url_id === siteUrlId);
     router(projectHref(`/site/crawls/${page?.crawl_id ?? crawlId}/pages/${siteUrlId}`));
   };
+  const origin = sharedOrigin(pages.map((page) => page.display_url));
   return (
     <DataTable
       label="Pages"
       columns={pagesColumns(sort, onSortChange)}
-      minWidth="lg"
       toolbar={toolbar}
       state={state}
       pager={pager}
@@ -163,9 +174,9 @@ export function PagesTable({
                   )}
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
                 </Inline>
-                <ClampText lines={1} className="type-data-sm text-ink-2">
-                  {page.display_url}
-                </ClampText>
+                <span className="type-data-sm text-ink-2 min-w-0">
+                  <UrlText url={page.display_url} origin={origin} lines={1} />
+                </span>
                 <LinkedFromLine page={page} />
               </Stack>
             </TableCell>

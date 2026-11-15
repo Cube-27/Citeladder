@@ -189,8 +189,8 @@ export function askAgentPrompt(
   const pages = count === 1 ? 'page' : 'pages';
   const scope = page ? ` on ${page}` : ` (${count} affected ${pages})`;
   return page
-    ? `Analyze the Site Health issue "${issueTitle(issue)}"${scope} and propose exact page edits from the selected evidence.`
-    : `Analyze the Site Health issue "${issueTitle(issue)}"${scope}, prioritize the work and propose a bounded implementation plan from the supplied sample; say how many pages it covers versus the total.`;
+    ? `Analyze the Website issue "${issueTitle(issue)}"${scope} and propose exact page edits from the selected evidence.`
+    : `Analyze the Website issue "${issueTitle(issue)}"${scope}, prioritize the work and propose a bounded implementation plan from the supplied sample; say how many pages it covers versus the total.`;
 }
 
 const OCCURRENCE_PLACEHOLDERS = ['first', 'second', 'third'] as const;
@@ -452,7 +452,7 @@ export function buildFixPrompt(
   const rating =
     issue.finding_class === 'defect' ? `${severityLabel(issue.severity)} severity` : 'advisory';
   const lines = [
-    `Fix this Site Health issue on my website: "${issueTitle(issue)}" (${dimensionLabel(issue.dimension)}, ${rating}).`,
+    `Fix this Website issue on my website: "${issueTitle(issue)}" (${dimensionLabel(issue.dimension)}, ${rating}).`,
   ];
   if (issue.description) lines.push('', 'The check passes when:', issue.description);
   if (issue.remediation) lines.push('', 'Recommended remediation:', issue.remediation);

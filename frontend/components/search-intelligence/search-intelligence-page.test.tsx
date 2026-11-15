@@ -247,9 +247,11 @@ it('offers a stopped analysis its recovery: review and run it again', async () =
     ...readiness,
     latest_run: { ...run, status: 'failed', error_code: 'acquisition_queue_terminal' },
   });
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    'The analysis stopped before every request finished.',
-  );
+  // A standing line under the controls, not an alert that outranks the figures.
+  expect(
+    await screen.findByText(/The analysis stopped before every request finished\./),
+  ).toBeVisible();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   await userEvent.click(screen.getByRole('button', { name: 'Review again' }));
   expect(await screen.findByRole('dialog', { name: 'Review analysis cost' })).toBeInTheDocument();
 });

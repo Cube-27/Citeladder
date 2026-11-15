@@ -1,5 +1,6 @@
 import { BingPanel } from './bing-panel';
 import { DimensionTable, useWarmDimensionTable } from './dimension-table';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import type { PerformanceDashboard, PerformanceDimension } from '@/lib/api/performance';
 import {
@@ -61,38 +62,43 @@ export function PerformanceBreakdowns({
   return (
     <>
       {hasSearchConsole ? (
-        <Tabs
-          value={dimension}
-          onValueChange={onDimensionChange}
-          items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
-          ariaLabel="Performance breakdowns"
-          spaced
-          // The tab row heads the table card, so it spans the full width
-          // rather than hugging six labels and leaving dead space to the right.
-          fill
-          onIntent={(next) => {
-            if (!unavailableDimensions.includes(next))
-              warm({ snapshotId, compareSnapshotId }, next);
-          }}
-        >
-          {DIMENSION_TABS.map((tab) => (
-            <TabPanel key={tab.value} value={tab.value} className="focus-ring">
-              {dimension === tab.value ? (
-                <DimensionTable
-                  projectId={projectId}
-                  dimension={tab.value}
-                  snapshotId={snapshotId}
-                  compareSnapshotId={compareSnapshotId}
-                  measuredRows={dimensionCounts[tab.value]}
-                  activeMetrics={activeMetrics}
-                  unavailable={unavailableDimensions.includes(tab.value)}
-                  selectedLabel={selectedLabel}
-                  compareLabel={compareLabel}
-                />
-              ) : null}
-            </TabPanel>
-          ))}
-        </Tabs>
+        <Section aria-labelledby="performance-breakdowns">
+          <SectionHeader>
+            <SectionTitle id="performance-breakdowns">Breakdowns</SectionTitle>
+          </SectionHeader>
+          <Tabs
+            value={dimension}
+            onValueChange={onDimensionChange}
+            items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
+            ariaLabel="Performance breakdowns"
+            spaced
+            // The tab row heads the table card, so it spans the full width
+            // rather than hugging six labels and leaving dead space to the right.
+            fill
+            onIntent={(next) => {
+              if (!unavailableDimensions.includes(next))
+                warm({ snapshotId, compareSnapshotId }, next);
+            }}
+          >
+            {DIMENSION_TABS.map((tab) => (
+              <TabPanel key={tab.value} value={tab.value} className="focus-ring">
+                {dimension === tab.value ? (
+                  <DimensionTable
+                    projectId={projectId}
+                    dimension={tab.value}
+                    snapshotId={snapshotId}
+                    compareSnapshotId={compareSnapshotId}
+                    measuredRows={dimensionCounts[tab.value]}
+                    activeMetrics={activeMetrics}
+                    unavailable={unavailableDimensions.includes(tab.value)}
+                    selectedLabel={selectedLabel}
+                    compareLabel={compareLabel}
+                  />
+                ) : null}
+              </TabPanel>
+            ))}
+          </Tabs>
+        </Section>
       ) : null}
 
       {/* Bing rides BELOW the Search Console tables, never among them, and

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { Check, type LucideIcon } from 'lucide-react';
 
 import { RungMeter } from '@/components/ui/rung-meter';
 import { Value } from '@/components/ui/value';
@@ -133,7 +133,10 @@ function FigureCell({ segment, span }: Readonly<{ segment: FigureSegment; span?:
         pressable &&
           cn(
             'relative transition-colors duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
-            segment.selected ? 'overlay-selected' : 'hover:overlay-hover',
+            // A chosen figure: the well tint, a 2px ink edge and a check (2.8).
+            segment.selected
+              ? 'overlay-selected before:bg-ink before:absolute before:inset-x-0 before:top-0 before:h-0.5'
+              : 'hover:overlay-hover',
           ),
       )}
     >
@@ -161,6 +164,7 @@ function FigureLabel({ segment }: FigurePart) {
   return (
     <dt className="type-overline flex min-w-0 items-center justify-between gap-2">
       <span className="flex min-w-0 items-center gap-1">
+        {segment.selected ? <Check className="size-4 shrink-0" aria-hidden /> : null}
         {Glyph ? <Glyph className="size-4 shrink-0" aria-hidden /> : null}
         <span className="line-clamp-2 min-w-0">{segment.label}</span>
       </span>

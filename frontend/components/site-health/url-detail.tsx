@@ -243,8 +243,8 @@ function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
 }
 
 const HISTORY_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'issue', label: 'Issue' },
-  { key: 'dimension', label: 'Dimension', width: 'name' },
-  { key: 'severity', label: 'Severity', width: 'status' },
-  { key: 'found', label: 'Last found', width: 'date', numeric: true },
+  { key: 'issue', label: 'Issue', kind: 'identity' },
+  { key: 'dimension', label: 'Dimension', kind: 'text', width: 'name' },
+  { key: 'severity', label: 'Severity', kind: 'status' },
+  { key: 'found', label: 'Last found', kind: 'date' },
 ];

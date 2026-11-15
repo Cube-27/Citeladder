@@ -187,11 +187,11 @@ function LinksBody({
 }
 
 const LINK_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'source', label: 'Source page' },
-  { key: 'target', label: 'Add link to' },
-  { key: 'anchor', label: 'Anchor text', width: 'name' },
-  { key: 'action', label: 'Action', width: 'status' },
-  { key: 'review', label: 'Review', width: 'action', hideLabel: true },
+  { key: 'source', label: 'Source page', kind: 'identity' },
+  { key: 'target', label: 'Add link to', kind: 'text' },
+  { key: 'anchor', label: 'Anchor text', kind: 'text', width: 'name' },
+  { key: 'action', label: 'Action', kind: 'status' },
+  { key: 'review', label: 'Review', kind: 'actions', width: 'action', hideLabel: true },
 ];
 
 /** Distinguish "nothing to compare" from "compared and nothing qualified". */

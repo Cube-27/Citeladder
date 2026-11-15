@@ -7,6 +7,7 @@ import type { PageDetail } from '@citeladder/contracts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { StateBlock } from '@/components/ui/state-block';
+import { formatPercent } from '@/lib/format';
 
 /**
  * Internal links — the crawl's persisted link-graph projection for this page.
@@ -40,7 +41,7 @@ export function InternalLinksCard({
     { label: 'Nofollow inbound', value: links.nofollow_inbound_count },
     {
       label: 'Internal authority',
-      value: `${(links.authority_share * 100).toFixed(2)}%`,
+      value: formatPercent(links.authority_share),
     },
     { label: 'Authority rank', value: links.authority_rank },
     { label: 'Generic anchor patterns', value: diagnosticCounts.generic },

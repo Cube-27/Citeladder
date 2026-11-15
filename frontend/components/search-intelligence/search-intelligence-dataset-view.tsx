@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { SearchX } from 'lucide-react';
 
 import { ProjectLink } from '@/components/ui/project-link';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { DataTable } from '@/components/ui/data-table';
 import { Drawer } from '@/components/ui/drawer';
@@ -29,7 +30,6 @@ import type { KeywordFilterValues } from './search-intelligence-collection-state
 import {
   SearchIntelligenceRows,
   searchIntelligenceColumns,
-  searchIntelligenceMinWidth,
 } from './search-intelligence-rows-table';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -128,7 +128,6 @@ export function SearchIntelligenceDatasetView({
               direction: order.sort === sort && order.direction === 'asc' ? 'desc' : 'asc',
             }),
         })}
-        minWidth={searchIntelligenceMinWidth(dataset.dataset_kind)}
         {...table}
         footer={datasetSummary(dataset)}
       >
@@ -186,9 +185,7 @@ function EvidenceDrawer({
       {selected ? (
         <Inline className="flex-wrap">
           {selected.action_id ? (
-            <Button variant="primary" asChild className="w-fit">
-              <ProjectLink href={`/agent/actions/${selected.action_id}`}>Open Action</ProjectLink>
-            </Button>
+            <ActionButton action="openAction" href={`/agent/actions/${selected.action_id}`} />
           ) : null}
           <Button variant="secondary" asChild className="w-fit">
             <ProjectLink href={agentHandoffHref(rowsHandoff(selected.dataset_id, [selected]))}>

@@ -6,7 +6,6 @@ import { ApiError } from '@/lib/api/errors';
 
 import { Avatar } from './avatar';
 import { Button } from './button';
-import { ChartSwatch } from './chart';
 import { Delta } from './delta';
 import { choiceFilter } from './all-filters';
 import { FilterBar, FilterTrigger } from './filter-bar';
@@ -516,21 +515,6 @@ describe('StateBlock', () => {
     expect(screen.getByText('No competitors tracked.')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Add competitor' })).toBeVisible();
     expect(screen.queryByRole('heading')).toBeNull();
-  });
-});
-
-describe('ChartSwatch', () => {
-  it('is decorative so the legend text alone names the series', () => {
-    render(
-      <p>
-        <ChartSwatch tone={2} />
-        Competitors
-      </p>,
-    );
-    expect(screen.getByText('Competitors').firstElementChild).toHaveAttribute(
-      'aria-hidden',
-      'true',
-    );
   });
 });
 

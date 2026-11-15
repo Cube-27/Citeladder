@@ -430,9 +430,9 @@ function CrawlActions({
   cancelPending: boolean;
   startPending: boolean;
   /**
-   * A tab's own primary action (Internal links' Analyze again). Run new
-   * crawl then steps down to secondary, so the header keeps one primary
-   * button.
+   * A tab's own primary action (Internal links' Analyze again), which takes
+   * the masthead's primary slot. Run new crawl is one named action with one
+   * look everywhere (`ACTIONS.runCrawl`).
    */
   tabActions: ReactNode;
   /** The crawl schedule, beside the crawl button. */
@@ -444,7 +444,6 @@ function CrawlActions({
     <StartCrawlControl
       siteUrl={crawl.root_url}
       robots={crawl.robots}
-      primary={!tabActions}
       pending={startPending}
       onStart={onStart}
     />

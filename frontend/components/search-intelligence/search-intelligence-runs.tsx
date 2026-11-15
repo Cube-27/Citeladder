@@ -71,22 +71,22 @@ export function RunNotice({
     STOP_REASONS[run.error_code] ||
     run.error_detail ||
     `${run.completed_calls} of ${run.planned_calls} requests completed.`;
-  // A stopped analysis is recovered by reviewing and running it again.
+  // A stopped analysis is recovered by reviewing and running it again. The
+  // saved results below still stand, so it is a standing warning, not an alert.
   return (
     <Notice
-      kind="mutation"
-      notice={{
-        message: `Analysis ${SEARCH_RUN_STATES[run.status].label.toLowerCase()}. ${reason} Saved results remain available below.`,
-        retryable: false,
-      }}
-      recovery={
+      tone="warning"
+      standing
+      action={
         onReview ? (
           <Button type="button" variant="secondary" onClick={onReview}>
             Review again
           </Button>
         ) : undefined
       }
-    />
+    >
+      {`Analysis ${SEARCH_RUN_STATES[run.status].label.toLowerCase()}. ${reason} Saved results remain available below.`}
+    </Notice>
   );
 }
 

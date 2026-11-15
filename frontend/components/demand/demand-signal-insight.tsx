@@ -1,7 +1,7 @@
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
 import { numericMetric, signalDefinition } from '@/lib/demand/signals';
-import { availabilityLabel, formatCount } from '@/lib/format';
+import { availabilityLabel, formatCount, formatPercent } from '@/lib/format';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -55,14 +55,14 @@ function ctrGapDetail(signal: DemandSignal): string | null {
   const median = numericMetric(signal, 'cohort_median_ctr');
   const ctr = numericMetric(signal, 'ctr');
   if (median === null || ctr === null) return null;
-  return `A ${(ctr * 100).toFixed(1)}% click-through rate against a ${(median * 100).toFixed(1)}% median for this position band. The ranking is fine; the result is not being clicked.`;
+  return `A ${formatPercent(ctr)} click-through rate against a ${formatPercent(median)} median for this position band. The ranking is fine; the result is not being clicked.`;
 }
 
 function emergingDetail(signal: DemandSignal, { trends }: DemandDetectorPolicy): string | null {
   const prior = numericMetric(signal, 'prior_impressions');
   const recent = numericMetric(signal, 'recent_impressions');
   if (prior === null || recent === null || prior <= 0) return null;
-  return `Impressions grew ${Math.round(((recent - prior) / prior) * 100)}% (+${formatCount(recent - prior)}) across the last two ${trends.window_days}-day windows.`;
+  return `Impressions grew ${formatPercent((recent - prior) / prior)} (+${formatCount(recent - prior)}) across the last two ${trends.window_days}-day windows.`;
 }
 
 type QueryRelevance = {
@@ -85,9 +85,7 @@ function queryRelevance(signal: DemandSignal): QueryRelevance | null {
 }
 
 function coverageLabel(value: number | undefined) {
-  return typeof value === 'number'
-    ? `${Math.round(value * 100)}%`
-    : availabilityLabel('not_measured');
+  return typeof value === 'number' ? formatPercent(value) : availabilityLabel('not_measured');
 }
 
 function QueryRelevanceEvidence({ signal }: Readonly<{ signal: DemandSignal }>) {

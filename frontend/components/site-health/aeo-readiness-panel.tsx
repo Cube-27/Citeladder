@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/workspace';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
+import { formatPercent } from '@/lib/format';
 
 function pageLabel(url: string) {
   try {
@@ -34,7 +35,7 @@ function pageLabel(url: string) {
 }
 
 function formatCoverage(coverage: number | null): string {
-  return coverage === null ? PLACEHOLDER : `${Math.round(coverage * 100)}%`;
+  return coverage === null ? PLACEHOLDER : formatPercent(coverage);
 }
 
 type DimensionState =
@@ -155,7 +156,7 @@ function ReadinessLedger({
   onOpen,
 }: Readonly<{ dimensions: ReadinessDimension[]; onOpen: (key: string) => void }>) {
   return (
-    <DataTable title="Readiness dimensions" columns={READINESS_COLUMNS} minWidth="md">
+    <DataTable title="Readiness dimensions" columns={READINESS_COLUMNS}>
       {dimensions.map((dimension) => {
         const state = dimensionState(dimension);
         const open = () => onOpen(dimension.key);
@@ -202,10 +203,10 @@ function ReadinessLedger({
 }
 
 const READINESS_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'dimension', label: 'Dimension' },
-  { key: 'score', label: 'Score', width: 'figure', numeric: true },
-  { key: 'coverage', label: 'Coverage', width: 'figure', numeric: true },
-  { key: 'state', label: 'State', width: 'status' },
+  { key: 'dimension', label: 'Dimension', kind: 'identity' },
+  { key: 'score', label: 'Score', kind: 'number' },
+  { key: 'coverage', label: 'Coverage', kind: 'number' },
+  { key: 'state', label: 'State', kind: 'status' },
 ];
 
 function DimensionDrawer({

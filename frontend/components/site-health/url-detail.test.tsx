@@ -633,7 +633,7 @@ describe('UrlDetail', () => {
     const page = handoffOf(screen.getByRole('link', { name: 'Ask agent about this page' }));
     expect(page.context).toEqual({ target_site_url_id: URL_ID, target_url: 'https://acme.com/' });
     expect(page.prompt).toBe(
-      'Review the 2 Site Health issues on https://acme.com/, worst first, and propose exact page edits for each.',
+      'Review the 2 Website issues on https://acme.com/, worst first, and propose exact page edits for each.',
     );
     const card = screen.getByRole('region', { name: 'WebSite schema is missing' });
     const issue = handoffOf(within(card).getByRole('link', { name: 'Ask agent' }));
@@ -649,7 +649,7 @@ describe('UrlDetail', () => {
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
 
     const page = handoffOf(screen.getByRole('link', { name: 'Ask agent about this page' }));
-    expect(page.prompt).toMatch(/^The Site Health audit of https:\/\/acme\.com\/ did not complete/);
+    expect(page.prompt).toMatch(/^The Website audit of https:\/\/acme\.com\/ did not complete/);
   });
 
   it('pages the issue cards two at a time and jumps to the one chosen in the list', async () => {

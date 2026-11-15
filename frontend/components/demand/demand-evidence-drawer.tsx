@@ -5,6 +5,7 @@ import { ArrowUpRight, ShieldCheck, Split } from 'lucide-react';
 import { SignalInsight } from '@/components/demand/demand-signal-insight';
 import { SignalChip } from '@/components/demand/demand-signal-table';
 import { Tag } from '@/components/ui/tag';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
 import { TextLink } from '@/components/ui/text-link';
@@ -69,7 +70,14 @@ function DemandEvidenceContent({
       onOpenChange={onOpenChange}
       title="Signal evidence"
       footer={
-        <div className="flex flex-wrap items-center justify-between">
+        <Inline className="flex-wrap justify-between">
+          {signal.action_id ? (
+            <ActionButton
+              action="openAction"
+              href={`/agent/actions/${signal.action_id}`}
+              aria-label={`Open the Action for ${details.target}`}
+            />
+          ) : null}
           <Button variant="secondary" asChild>
             <ProjectLink
               href={demandSignalHandoffHref(signal)}
@@ -79,7 +87,7 @@ function DemandEvidenceContent({
               Ask agent
             </ProjectLink>
           </Button>
-        </div>
+        </Inline>
       }
     >
       <Stack gap="workspace">
@@ -163,7 +171,7 @@ function DemandEvidenceContent({
                   <div className="type-caption flex items-center justify-between">
                     <span>{formatCount(page.impressions)} impressions</span>
                     <span className={textRole('emphasis', 'text-ink tabular-nums')}>
-                      {(page.share * 100).toFixed(0)}% query share
+                      {formatPercent(page.share)} query share
                     </span>
                   </div>
                 </Stack>

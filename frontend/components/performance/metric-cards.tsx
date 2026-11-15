@@ -1,6 +1,5 @@
 import { SeriesSwatch } from '@/components/ui/chart-frame';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Stack } from '@/components/ui/layout';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { availabilityLabel, formatCount } from '@/lib/format';
 import {
@@ -62,29 +61,27 @@ function metricComparison(
 }
 
 /**
- * The label row's end: the series key (shown only while the metric is plotted
- * — a key on an unplotted metric would point at a line that is not there) and
- * the metric's definition. `FigureStrip` raises it above the cell's stretched
- * toggle, so the definition stays reachable.
+ * The label row's end: the series key, shown only while the metric is
+ * plotted (a key on an unplotted metric would point at a line that is not
+ * there). The definitions sit in one hint beside the section's title, so no
+ * second target nests inside a card's toggle.
  */
-function MetricMarker({
-  metricKey,
-  label,
-  mark,
-  plotted,
-}: Readonly<{
-  metricKey: PerformanceMetricKey;
-  label: string;
-  mark: MetricMark;
-  plotted: boolean;
-}>) {
+function MetricMarker({ mark, plotted }: Readonly<{ mark: MetricMark; plotted: boolean }>) {
   return (
-    <>
-      <span className={plotted ? 'inline-flex' : 'invisible inline-flex'}>
-        <SeriesSwatch tone={mark.tone} shape={mark.shape} />
-      </span>
-      <InfoHint label={label}>{METRIC_HELP[metricKey]}</InfoHint>
-    </>
+    <span className={plotted ? 'inline-flex' : 'invisible inline-flex'}>
+      <SeriesSwatch tone={mark.tone} shape={mark.shape} />
+    </span>
+  );
+}
+
+/** What each Search Console metric means, in one hint for the strip. */
+export function MetricDefinitions() {
+  return (
+    <InfoHint label="What these metrics mean">
+      {METRIC_CARDS.map((card) => (
+        <span key={card.key} className="block">{`${card.label}: ${METRIC_HELP[card.key]}.`}</span>
+      ))}
+    </InfoHint>
   );
 }
 
@@ -132,14 +129,7 @@ export function MetricCards({
             comparison: comparison
               ? metricComparison(card.key, comparison, compareLabel)
               : undefined,
-            marker: (
-              <MetricMarker
-                metricKey={card.key}
-                label={card.label}
-                mark={marks[card.key]}
-                plotted={plotted}
-              />
-            ),
+            marker: <MetricMarker mark={marks[card.key]} plotted={plotted} />,
             onSelect: () => onToggle(card.key),
             actionLabel: `Plot ${card.label.toLowerCase()}`,
             selected: plotted,
@@ -189,30 +179,24 @@ export function Ga4SummaryRow({
 }>) {
   return (
     <div data-testid="ga4-summary" className="min-w-0">
-      <Stack gap="compact">
-        <FigureStrip
-          segments={GA4_SUMMARY_ENTRIES.map((entry) => {
-            const value = selected.totals[entry.key];
-            const comparisonValue = comparison ? comparison.totals[entry.key] : undefined;
-            return {
-              key: entry.key,
-              label: entry.label,
-              value: value === null || value === undefined ? null : formatCount(value),
-              missingLabel: NOT_MEASURED,
-              loading,
-              sub: comparison ? (
-                <span className="tabular-nums">
-                  {ga4ComparisonLabel(comparison, comparisonValue, compareLabel)}
-                </span>
-              ) : undefined,
-            };
-          })}
-        />
-        <p className="type-caption">
-          Google Analytics 4 · Property-wide organic and AI sessions · Key events as configured in
-          GA4
-        </p>
-      </Stack>
+      <FigureStrip
+        segments={GA4_SUMMARY_ENTRIES.map((entry) => {
+          const value = selected.totals[entry.key];
+          const comparisonValue = comparison ? comparison.totals[entry.key] : undefined;
+          return {
+            key: entry.key,
+            label: entry.label,
+            value: value === null || value === undefined ? null : formatCount(value),
+            missingLabel: NOT_MEASURED,
+            loading,
+            sub: comparison ? (
+              <span className="tabular-nums">
+                {ga4ComparisonLabel(comparison, comparisonValue, compareLabel)}
+              </span>
+            ) : undefined,
+          };
+        })}
+      />
     </div>
   );
 }

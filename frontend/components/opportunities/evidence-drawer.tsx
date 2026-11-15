@@ -44,6 +44,7 @@ export function EvidenceDrawer({
         kind="read"
         error={detailQuery.error}
         fallback="Could not load this opportunity."
+        title="Could not load this opportunity"
         onRetry={() => void detailQuery.refetch()}
         pending={detailQuery.isFetching}
       />

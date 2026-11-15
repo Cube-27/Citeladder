@@ -1,6 +1,7 @@
 import { Users } from 'lucide-react';
 
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { Pressable } from '@/components/ui/pressable';
@@ -37,88 +38,93 @@ export function SearchIntelligenceCompetitors({
   onOpen: (dataset: SearchIntelligenceDataset) => void;
 }>) {
   return (
-    <DataTable
-      title="Competitive footprint"
-      columns={COMPETITOR_COLUMNS}
-      minWidth="md"
-      state={
-        competitors.length
-          ? undefined
-          : {
-              kind: 'empty',
-              icon: Users,
-              heading: 'No competitors saved for this project',
-              headingLevel: 3,
-            }
-      }
-    >
-      {competitors.map((competitor) => {
-        const footprint = datasets.find(
-          (item) =>
-            item.dataset_kind === 'footprint' &&
-            matchesCompetitor(item.target_origin, competitor.registrable_domain),
-        );
-        const comparison = (kind: string) =>
-          datasets.find(
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Competitive footprint</SectionTitle>
+      </SectionHeader>
+      <DataTable
+        label="Competitive footprint"
+        columns={COMPETITOR_COLUMNS}
+        state={
+          competitors.length
+            ? undefined
+            : {
+                kind: 'empty',
+                icon: Users,
+                heading: 'No competitors saved for this project',
+                headingLevel: 3,
+              }
+        }
+      >
+        {competitors.map((competitor) => {
+          const footprint = datasets.find(
             (item) =>
-              item.dataset_kind === kind &&
-              matchesCompetitor(item.comparison_origin, competitor.registrable_domain),
+              item.dataset_kind === 'footprint' &&
+              matchesCompetitor(item.target_origin, competitor.registrable_domain),
           );
-        return (
-          <TableRow key={competitor.identity}>
-            <TableCell>
-              <div className="grid max-w-sm min-w-0">
-                <ClampText lines={1} className={textRole('body')}>
-                  {competitor.label}
-                </ClampText>
-                <ClampText lines={1} className={textRole('caption')}>
-                  {footprint?.target_hostname ?? competitor.hostname}
-                </ClampText>
-              </div>
-            </TableCell>
-            <TableCell numeric>
-              <SearchValue
-                value={footprint?.summary.organic_keywords}
-                fetched={Boolean(footprint)}
-              />
-            </TableCell>
-            <TableCell numeric>
-              <SearchValue
-                value={footprint?.summary.estimated_monthly_traffic}
-                fetched={Boolean(footprint)}
-              />
-            </TableCell>
-            {COMPARISON_KINDS.map((kind) => {
-              const dataset = comparison(kind);
-              return (
-                <TableCell numeric key={kind}>
-                  {dataset ? (
-                    <TextLink asChild text="body">
-                      <Pressable
-                        className="min-h-6 w-auto min-w-6 text-center"
-                        aria-label={`${competitor.label}: ${SEARCH_DATASET_LABELS[kind]}`}
-                        onClick={() => onOpen(dataset)}
-                      >
-                        {datasetCount(dataset)}
-                      </Pressable>
-                    </TextLink>
-                  ) : (
-                    <SearchValue value={null} fetched={false} />
-                  )}
-                </TableCell>
-              );
-            })}
-          </TableRow>
-        );
-      })}
-    </DataTable>
+          const comparison = (kind: string) =>
+            datasets.find(
+              (item) =>
+                item.dataset_kind === kind &&
+                matchesCompetitor(item.comparison_origin, competitor.registrable_domain),
+            );
+          return (
+            <TableRow key={competitor.identity}>
+              <TableCell>
+                <div className="grid max-w-sm min-w-0">
+                  <ClampText lines={1} className={textRole('body')}>
+                    {competitor.label}
+                  </ClampText>
+                  <ClampText lines={1} className={textRole('caption')}>
+                    {footprint?.target_hostname ?? competitor.hostname}
+                  </ClampText>
+                </div>
+              </TableCell>
+              <TableCell numeric>
+                <SearchValue
+                  value={footprint?.summary.organic_keywords}
+                  fetched={Boolean(footprint)}
+                />
+              </TableCell>
+              <TableCell numeric>
+                <SearchValue
+                  value={footprint?.summary.estimated_monthly_traffic}
+                  fetched={Boolean(footprint)}
+                />
+              </TableCell>
+              {COMPARISON_KINDS.map((kind) => {
+                const dataset = comparison(kind);
+                return (
+                  <TableCell numeric key={kind}>
+                    {dataset ? (
+                      <TextLink asChild text="body">
+                        <Pressable
+                          className="min-h-6 w-auto min-w-6 text-center"
+                          // The visible count leads the name, so a speech user can say it.
+                          aria-label={`${datasetCount(dataset)} ${SEARCH_DATASET_LABELS[kind]}: ${competitor.label}`}
+                          onClick={() => onOpen(dataset)}
+                        >
+                          {datasetCount(dataset)}
+                        </Pressable>
+                      </TextLink>
+                    ) : (
+                      <SearchValue value={null} fetched={false} />
+                    )}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
+          );
+        })}
+      </DataTable>
+    </Section>
   );
 }
 
 const COMPETITOR_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'competitor', label: 'Competitor' },
-  { key: 'organic', label: 'Organic keywords', width: 'figure', numeric: true },
-  { key: 'traffic', label: 'Est. monthly traffic', width: 'figure', numeric: true },
-  { key: 'missing', label: 'Missing keywords', width: 'figure', numeric: true },
-  { key: 'shared', label: 'Shared keywords', width: 'figure', numeric: true },
+  { key: 'competitor', label: 'Competitor', kind: 'identity' },
+  { key: 'organic', label: 'Organic keywords', kind: 'number' },
+  { key: 'traffic', label: 'Est. monthly traffic', kind: 'number' },
+  { key: 'missing', label: 'Missing keywords', kind: 'number' },
+  { key: 'shared', label: 'Shared keywords', kind: 'number' },
 ];

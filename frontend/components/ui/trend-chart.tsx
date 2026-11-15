@@ -7,15 +7,14 @@ import {
   CHART_PLOT_FRAME,
   CHART_FILL,
   CHART_STROKE,
-  ChartLegend,
-  ChartTip,
-  ChartTipRow,
   chartPath,
   chartTone,
   useChartWidth,
   type ChartHeight,
   type ChartTone,
 } from '@/components/ui/chart';
+import { ChartKey, ChartTipSheet } from '@/components/ui/chart-frame';
+import type { SeriesTone } from '@/components/ui/step-chart-parts';
 import {
   breakConnectors,
   isolatedPoints,
@@ -35,6 +34,15 @@ import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-c
 type Line = { name: string; values: readonly (number | null)[]; tone: ChartTone };
 
 const TIP_WIDTH = 216;
+
+/** A line's position tone in the shared key and tooltip: the hue `CHART_STROKE` plots it in. */
+const KEY_TONE: Record<ChartTone, SeriesTone> = {
+  1: 'you',
+  2: 'rival-1',
+  3: 'rival-2',
+  4: 'other',
+  5: 'rival-2',
+};
 const defaultFormat = (value: number) => `${Math.round(value * 100) / 100}`;
 
 /**
@@ -62,7 +70,6 @@ export function TrendChart({
   yFormat = defaultFormat,
   format = yFormat,
   legend = true,
-  compact = false,
   eventsLabel,
   directLabels = false,
 }: Readonly<{
@@ -84,8 +91,6 @@ export function TrendChart({
   /** A value in the legend, tooltip and table; defaults to `yFormat`. */
   format?: (value: number) => string;
   legend?: boolean;
-  /** Caption-size legend and hover card, where a long roster crowds the card. */
-  compact?: boolean;
   /** The legend's name for the event markers, e.g. "Marked implemented". */
   eventsLabel?: string;
   /**
@@ -138,13 +143,11 @@ export function TrendChart({
   return (
     <div className="flex min-w-0 flex-col gap-4">
       {legend ? (
-        <ChartLegend
-          line
-          compact={compact}
-          markerLabel={events.length ? eventsLabel : undefined}
+        <ChartKey
+          eventsLabel={events.length ? eventsLabel : undefined}
           entries={lines.map((line) => ({
             name: line.name,
-            tone: line.tone,
+            tone: KEY_TONE[line.tone],
             value: shown(line.values.at(-1)),
           }))}
         />
@@ -181,24 +184,17 @@ export function TrendChart({
           directLabels={directLabels && lines.length > 1}
         />
         {active === null ? null : (
-          <ChartTip
+          <ChartTipSheet
             title={data[active]?.label ?? ''}
             top={scale.padTop}
             left={tipLeft(scale.x(active), width)}
-          >
-            {lines.map((line) => (
-              <ChartTipRow
-                key={line.name}
-                tone={line.tone}
-                name={line.name}
-                value={shown(line.values[active])}
-                compact={compact}
-              />
-            ))}
-            {data[active]?.versionChange ? (
-              <p className="text-caption text-ink-2">{data[active].versionChange.note}</p>
-            ) : null}
-          </ChartTip>
+            rows={lines.map((line) => ({
+              name: line.name,
+              tone: KEY_TONE[line.tone],
+              value: shown(line.values[active]),
+            }))}
+            note={data[active]?.versionChange?.note}
+          />
         )}
       </div>
       <TrendTable

@@ -7,6 +7,7 @@ import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { SearchField } from '@/components/ui/search-field';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -74,9 +75,12 @@ export function InventorySection({
   }
 
   return (
-    <section className="grid min-w-0" data-testid="inventory-section">
+    <Section data-testid="inventory-section">
+      <SectionHeader>
+        <SectionTitle>{mode === 'discovering' ? 'Pages discovered so far' : 'Pages'}</SectionTitle>
+      </SectionHeader>
       {content}
-    </section>
+    </Section>
   );
 }
 
@@ -112,7 +116,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
   const origin = sharedOrigin(page?.items.map((row) => row.display_url) ?? []);
   return (
     <DataTable
-      title="Pages discovered so far"
+      label="Pages discovered so far"
       columns={DISCOVERED_COLUMNS}
       {...table}
       footer={
@@ -135,7 +139,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
 
 const DISCOVERED_COLUMNS: readonly DataTableColumn[] = [
   { key: 'url', label: 'Page URL', kind: 'url' },
-  { key: 'source', label: 'Source', width: 'name' },
+  { key: 'source', label: 'Source', kind: 'text', width: 'name' },
 ];
 
 /** The three server-backed page views (design mockup 713). */
