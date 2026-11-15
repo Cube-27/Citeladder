@@ -127,7 +127,7 @@ type CrawlSetup = ReturnType<typeof useCrawlSetup>;
  * for an empty table's own button. A project with sources keeps the crawl
  * log section (diagnostics and Connect) under an empty table.
  */
-export function useCrawlSetup({ workspaceId, projectId }: Omit<TrafficTableScope, 'filters'>) {
+function useCrawlSetup({ workspaceId, projectId }: Omit<TrafficTableScope, 'filters'>) {
   const sources = useCrawlSources(projectId, workspaceId);
   const [open, setOpen] = useState(false);
   const unconnected = sources.data?.items.length === 0;

@@ -682,8 +682,8 @@ describe('AI Traffic state and navigation', () => {
     ).toBe(project.id);
     expect(within(panel).getByText(/0 requests · Measured zero/)).toBeVisible();
     // An absent leg leads with its absence's word.
-    expect(panel).toHaveTextContent(/Unavailable AI referral sessions · Flagged/);
-    expect(panel).toHaveTextContent(/Not connected tracked citations · Not connected/);
+    expect(panel.textContent).toMatch(/Unavailable AI referral sessions · Flagged/);
+    expect(panel.textContent).toMatch(/Not connected tracked citations · Not connected/);
     expect(
       within(panel).getByText(/open Website findings · Unavailable · Coverage is incomplete/),
     ).toBeVisible();

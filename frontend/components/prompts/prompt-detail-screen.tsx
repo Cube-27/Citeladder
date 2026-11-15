@@ -199,7 +199,7 @@ type HistoryPoint = PromptHistory['points'][number];
  */
 function visibilityChange(points: readonly HistoryPoint[]) {
   const [previous, latest] = points.slice(-2);
-  if (!previous || !latest || latest.comparable_with_previous !== true) return null;
+  if (!previous || latest?.comparable_with_previous !== true) return null;
   if (previous.mention_rate === null || latest.mention_rate === null) return null;
   return { points: (latest.mention_rate - previous.mention_rate) * 100, since: previous };
 }

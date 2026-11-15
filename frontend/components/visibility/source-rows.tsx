@@ -58,12 +58,11 @@ export function OpenSource({
   children,
 }: Readonly<{ onOpen: () => void; children: ReactNode }>) {
   return (
-    <Pressable
-      onClick={onOpen}
-      className="flex max-w-full min-w-0 items-center justify-between gap-2"
-    >
-      <span className="min-w-0">{children}</span>
-      <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
+    <Pressable onClick={onOpen} className="block min-w-0">
+      <Inline as="span" className="justify-between">
+        <span className="min-w-0">{children}</span>
+        <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
+      </Inline>
     </Pressable>
   );
 }

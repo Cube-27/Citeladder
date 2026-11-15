@@ -236,6 +236,95 @@ function ChoiceChip({
   );
 }
 
+/** A disabled primary says why beside it: the one launch rule's reason. */
+function LaunchFooter({
+  blocker,
+  pending,
+  onLaunch,
+  onCancel,
+}: Readonly<{
+  blocker: string | null;
+  pending: boolean;
+  onLaunch: () => void;
+  onCancel: () => void;
+}>) {
+  const reasonId = useId();
+  return (
+    <>
+      {blocker ? (
+        <span id={reasonId} className="type-caption me-auto">
+          {blocker}
+        </span>
+      ) : null}
+      <Button variant="quiet" onClick={onCancel}>
+        <Icon icon={X} />
+        Cancel
+      </Button>
+      <Button
+        variant="primary"
+        onClick={onLaunch}
+        disabled={blocker !== null || pending}
+        aria-describedby={blocker ? reasonId : undefined}
+      >
+        {pending ? 'Launching…' : ACTIONS.launchRun.label}
+      </Button>
+    </>
+  );
+}
+
+function RepetitionsField({
+  repetitions,
+  setRepetitions,
+  limits,
+}: Readonly<{
+  repetitions: number;
+  setRepetitions: React.Dispatch<React.SetStateAction<number>>;
+  limits: RepetitionLimits | null;
+}>) {
+  return (
+    <Field
+      label="Repetitions"
+      hint={
+        limits
+          ? `How many times to run each prompt per engine (${limits.audit_repetitions_min}–${limits.audit_repetitions_max}).`
+          : 'How many times to run each prompt per engine.'
+      }
+    >
+      {(props) => (
+        <Input
+          {...props}
+          type="number"
+          min={limits?.audit_repetitions_min}
+          max={limits?.audit_repetitions_max}
+          value={repetitions}
+          onChange={(event) => setRepetitions(Number(event.target.value))}
+          onBlur={() => {
+            if (limits) setRepetitions((current) => clampRepetitions(current, limits));
+          }}
+        />
+      )}
+    </Field>
+  );
+}
+
+function EstimateNote({ estimate }: Readonly<{ estimate: Estimate }>) {
+  return (
+    <Stack gap="tight" className={wellClasses('type-caption')}>
+      <span className={textRole('emphasis', 'text-ink')}>
+        {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
+        planned
+      </span>
+      <span className="text-ink-2">
+        Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s · cost{' '}
+        {estimate.cost_status}
+        {estimate.estimated_total_cost_microusd !== null
+          ? ` · ~$${(estimate.estimated_total_cost_microusd / 1_000_000).toFixed(4)}`
+          : ' · unavailable'}
+      </span>
+    </Stack>
+  );
+}
+
 /** A prompt set names its size only when the server counted it. */
 function promptSetLabel(set: Readonly<{ name: string; prompt_count?: number | null }>): string {
   const count = typeof set.prompt_count === 'number' ? ` (${set.prompt_count})` : '';
@@ -304,7 +393,6 @@ export function LaunchDialogView({
   blocker: string | null;
 }>) {
   const catalog = useEngineCatalog();
-  const reasonId = useId();
   const noEngines = !configuredEngines.length;
   const selected = new Set(engines);
   return (
@@ -314,26 +402,12 @@ export function LaunchDialogView({
       title="Launch a run"
       width="wide"
       footer={
-        <>
-          {/* A disabled primary says why beside it: the one launch rule's reason. */}
-          {blocker ? (
-            <span id={reasonId} className="type-caption me-auto">
-              {blocker}
-            </span>
-          ) : null}
-          <Button variant="quiet" onClick={() => onOpenChange(false)}>
-            <Icon icon={X} />
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={onLaunch}
-            disabled={blocker !== null || launchPending}
-            aria-describedby={blocker ? reasonId : undefined}
-          >
-            {launchPending ? 'Launching…' : ACTIONS.launchRun.label}
-          </Button>
-        </>
+        <LaunchFooter
+          blocker={blocker}
+          pending={launchPending}
+          onLaunch={onLaunch}
+          onCancel={() => onOpenChange(false)}
+        />
       }
     >
       <Stack gap="workspace">
@@ -402,44 +476,12 @@ export function LaunchDialogView({
           ) : null}
         </Stack>
         <MarketsField markets={markets} marketIds={marketIds} setMarketIds={setMarketIds} />
-        <Field
-          label="Repetitions"
-          hint={
-            repetitionLimits
-              ? `How many times to run each prompt per engine (${repetitionLimits.audit_repetitions_min}–${repetitionLimits.audit_repetitions_max}).`
-              : 'How many times to run each prompt per engine.'
-          }
-        >
-          {(props) => (
-            <Input
-              {...props}
-              type="number"
-              min={repetitionLimits?.audit_repetitions_min}
-              max={repetitionLimits?.audit_repetitions_max}
-              value={repetitions}
-              onChange={(event) => setRepetitions(Number(event.target.value))}
-              onBlur={() => {
-                if (repetitionLimits)
-                  setRepetitions((current) => clampRepetitions(current, repetitionLimits));
-              }}
-            />
-          )}
-        </Field>
-        {estimate ? (
-          <Stack gap="tight" className={wellClasses('type-caption')}>
-            <span className={textRole('emphasis', 'text-ink')}>
-              {estimate.execution_count} {estimate.execution_count === 1 ? 'response' : 'responses'}{' '}
-              planned
-            </span>
-            <span className="text-ink-2">
-              Maximum wall-clock budget {estimate.maximum_wall_clock_seconds}s · cost{' '}
-              {estimate.cost_status}
-              {estimate.estimated_total_cost_microusd !== null
-                ? ` · ~$${(estimate.estimated_total_cost_microusd / 1_000_000).toFixed(4)}`
-                : ' · unavailable'}
-            </span>
-          </Stack>
-        ) : null}
+        <RepetitionsField
+          repetitions={repetitions}
+          setRepetitions={setRepetitions}
+          limits={repetitionLimits}
+        />
+        {estimate ? <EstimateNote estimate={estimate} /> : null}
         <p className="type-caption text-ink-2">
           Answers that mention you or a competitor are also classified for sentiment. No credits are
           used.

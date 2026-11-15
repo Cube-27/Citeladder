@@ -216,15 +216,11 @@ it('opens on where the prompt stands: the latest rates and their change', async 
   renderScreen();
 
   const figures = within(await screen.findByRole('group', { name: 'Latest measurement' }));
-  expect(figures.getByText('Visibility').closest('[data-figure-cell]')).toHaveTextContent(
-    /^Visibility100\.0%/,
-  );
-  expect(figures.getByText('Owned citation rate').closest('[data-figure-cell]')).toHaveTextContent(
-    /^Owned citation rate50\.0%/,
-  );
-  expect(figures.getByText('Measured runs').closest('[data-figure-cell]')).toHaveTextContent(
-    /^Measured runs3/,
-  );
+  const cell = (label: string) =>
+    figures.getByText(label).closest('[data-figure-cell]')?.textContent;
+  expect(cell('Visibility')).toMatch(/^Visibility100\.0%/);
+  expect(cell('Owned citation rate')).toMatch(/^Owned citation rate50\.0%/);
+  expect(cell('Measured runs')).toMatch(/^Measured runs3/);
 });
 
 it('says an archived prompt is archived and restores it', async () => {

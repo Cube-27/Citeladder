@@ -78,7 +78,7 @@ const ABSENT: Readonly<Record<string, (row: PageRow) => boolean>> = {
  * The columns a page of rows measures: a column in which every row is absent
  * is left out rather than drawn as a column of absences.
  */
-export function measuredPageColumns<C extends Pick<DataTableColumn, 'key'>>(
+function measuredPageColumns<C extends Pick<DataTableColumn, 'key'>>(
   columns: readonly C[],
   rows: readonly PageRow[],
 ): C[] {
