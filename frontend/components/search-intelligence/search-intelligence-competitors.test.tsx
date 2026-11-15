@@ -33,7 +33,7 @@ it('distinguishes empty comparisons from unfetched data and opens the saved www 
   // The footprint and shared-keyword comparison were never fetched: not a missing measurement.
   expect(screen.getAllByText('Not fetched')).toHaveLength(3);
   await userEvent.click(
-    screen.getByRole('button', { name: 'Rival: Keywords they rank for and you don’t' }),
+    screen.getByRole('button', { name: 'No results Keywords they rank for and you don’t: Rival' }),
   );
   expect(onOpen).toHaveBeenCalledWith(dataset);
 });

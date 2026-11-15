@@ -192,8 +192,9 @@ export function SearchIntelligencePage() {
         </KeywordResearchFrame>
       </TabsRoot>
     );
+  // The masthead holds the one primary; the empty state's step is secondary.
   const firstRun = actions.analysis ? (
-    <Button variant="primary" onClick={actions.analysis}>
+    <Button variant="secondary" onClick={actions.analysis}>
       Review first analysis
     </Button>
   ) : undefined;
