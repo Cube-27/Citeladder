@@ -92,10 +92,10 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
       import('@/lib/api/visibility-queries'),
     ]);
     // The library's three independent reads: its sets, its topic filter, and
-    // what the latest run measured for each prompt.
+    // what the run that last measured each prompt found.
     warmQuery(client, promptsQueries.sets(scope));
     warmQuery(client, topicsQueries.list(scope));
-    warmQuery(client, visibilityQueries.prompts(scope));
+    warmQuery(client, visibilityQueries.latestPerPrompt(scope));
   },
   '/visibility': async (client, scope) => {
     const [

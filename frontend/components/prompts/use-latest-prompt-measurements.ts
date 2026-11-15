@@ -4,23 +4,23 @@ import { useMemo } from 'react';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { ActiveProjectScope } from '@/lib/project/active-project-scope';
 
-import type { PromptMeasurement } from './prompt-table';
+import type { PromptMetricItem } from '@citeladder/contracts/visibility';
+
+import type { PromptChange, PromptMeasurement } from './prompt-table';
 
 type PromptScope = Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>;
 
-/**
- * The latest default-market run's prompt rows: one query shared by the prompt
- * table and Overview, so both read the same cache entry the same way.
- */
+/** The latest default-market run's prompt rows (Overview). */
 export function useLatestPromptMetrics(scope: PromptScope) {
   return useQuery(visibilityQueries.prompts(scope));
 }
 
 /**
- * What the project's latest run measured for each prompt.
+ * What the run that last measured each prompt found, so a run of other
+ * prompts never hides an earlier result.
  *
  * Keyed by the SOURCE prompt id, because that is what this table's rows are.
- * A prompt added since the last run simply has no entry, which reads as
+ * A prompt no run has measured simply has no entry, which reads as
  * "Not measured" rather than a fabricated zero.
  *
  * Undefined until the first read settles: whether a run exists decides the
@@ -30,7 +30,7 @@ export function useLatestPromptMetrics(scope: PromptScope) {
 export function useLatestPromptMeasurements(
   scope: PromptScope,
 ): ReadonlyMap<string, PromptMeasurement> | undefined {
-  const result = useLatestPromptMetrics(scope);
+  const result = useQuery(visibilityQueries.latestPerPrompt(scope));
   return useMemo(() => {
     if (result.isLoading) return undefined;
     const map = new Map<string, PromptMeasurement>();
@@ -43,7 +43,7 @@ export function useLatestPromptMeasurements(
       map.set(row.prompt_id, {
         visibilityRate: row.visibility_rate ?? null,
         ownedCitationRate: row.owned_citation_rate ?? null,
-        change: row.visibility_delta ?? null,
+        change: promptChange(row),
         position: row.avg_position ?? null,
         mentions: row.mentions,
         brands: row.brands,
@@ -52,4 +52,14 @@ export function useLatestPromptMeasurements(
     }
     return map;
   }, [result.data, result.isError, result.isLoading]);
+}
+
+/** A row's change since the prompt's previous measurement, or why there is none. */
+function promptChange(row: PromptMetricItem): PromptChange {
+  if (row.visibility_delta != null) return { kind: 'delta', points: row.visibility_delta };
+  if (row.comparison_status === 'no_baseline') return { kind: 'first' };
+  // Any other status without a delta is a pair that could not be compared.
+  const reason =
+    row.comparison_status === 'no_observations' ? 'no_observations' : 'changed_context';
+  return { kind: 'not_compared', reason };
 }

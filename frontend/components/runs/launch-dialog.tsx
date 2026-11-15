@@ -7,6 +7,7 @@ import { providerQueries, type providersApi } from '@/lib/api/providers';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import type { Audit, LogicalEngine, PromptSet } from '@citeladder/contracts';
+import { mainPromptSet } from '@/lib/prompts/prompt-sets';
 import { isConfigured, isVerified } from '@/lib/providers/catalog';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -86,7 +87,7 @@ function batchSelection(
   locked: boolean,
 ) {
   const effectivePromptSetId =
-    fixedPromptSetId ?? selectedPromptSetId ?? promptSets?.[0]?.id ?? null;
+    fixedPromptSetId ?? selectedPromptSetId ?? mainPromptSet(promptSets ?? [])?.id ?? null;
   const set = promptSets?.find((item) => item.id === effectivePromptSetId);
   const batches = locked ? [] : promptBatches(auditablePrompts(set));
   const selectedBatch = batchIndex === null ? undefined : batches[batchIndex];

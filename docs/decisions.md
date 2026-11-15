@@ -808,3 +808,17 @@ Safari 18.3, so no UI may depend on it alone.
 
 Source: owner, 13 November 2026, answering the modern-web audit: "Raise the
 minimum to Chrome 123, Firefox 132, Safari 17.5".
+
+## One prompt library across every prompt set
+
+The Prompts page is one library of every prompt in every prompt set of the
+project, Commerce's buyer-prompt set included.
+A run or an audit adds evidence to prompts already in the library, or adds new
+prompts; it never hides earlier prompts or their results. Manual adds,
+imports and Prompt Builder generation go to the main brand set (the project's
+oldest non-Commerce set), never the newest set, and the launch dialog and
+audit schedules default to that set. [Visibility and prompts](visibility-prompt.md)
+owns the library's behavior; Commerce keeps filing its prompts in its own set.
+
+Source: owner, 15 November 2026, answering "You described the page as a
+library of all prompts", choosing "All sets in one library".

@@ -82,8 +82,17 @@ export function PromptLibrary({
   const scope = { workspaceId, projectId };
   // A role that may not edit prompts reads the library with no edit controls.
   const canWrite = useWorkspaceCapability('write');
-  const { promptSet, prompts, limits, isLoading, error, ensurePromptSet, retry, retrying } =
-    usePromptSet();
+  const {
+    promptSet,
+    prompts,
+    setNames,
+    limits,
+    isLoading,
+    error,
+    ensurePromptSet,
+    retry,
+    retrying,
+  } = usePromptSet();
 
   const [search, setSearch] = useState('');
   const [filters, setFilters] = useState<PromptFilters>(emptyFilters);
@@ -249,7 +258,12 @@ export function PromptLibrary({
   // An empty library and a library filtered to nothing read differently: one
   // needs a way to add prompts, the other needs its filter loosened.
   let libraryBody: ReactNode = (
-    <PromptTable prompts={visible} actions={edits?.rows} measurements={measurements} />
+    <PromptTable
+      prompts={visible}
+      actions={edits?.rows}
+      measurements={measurements}
+      setNames={setNames}
+    />
   );
   // A failed read with nothing to show takes the empty state's slot; a failed
   // refresh keeps the prompts already shown and says so above them.

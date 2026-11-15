@@ -70,6 +70,7 @@ export const visibilityKeys = {
   /** One run's prompt rows; `null` reads the latest default-market run. */
   prompts: (scope: ProjectScope, auditId: string | null = null) =>
     visibility.read('prompts', scope, auditId ?? 'latest'),
+  latestPerPrompt: (scope: ProjectScope) => visibility.read('prompts', scope, 'latest-per-prompt'),
   promptHistory: (scope: ProjectScope, promptId: string, filters: ListFilters = {}) =>
     visibility.read('prompt-history', scope, promptId, filters),
   competitorSuggestions: (scope: ProjectScope) => visibility.read('competitor-suggestions', scope),

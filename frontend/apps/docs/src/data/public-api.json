@@ -5783,6 +5783,10 @@
           "name": {
             "type": "string"
           },
+          "kind": {
+            "type": "string",
+            "enum": ["brand", "commerce"]
+          },
           "description": {
             "type": "string"
           },
@@ -5804,7 +5808,7 @@
             "type": "string"
           }
         },
-        "required": ["id", "project_id", "name", "prompts", "created_at", "updated_at"],
+        "required": ["id", "project_id", "name", "kind", "prompts", "created_at", "updated_at"],
         "additionalProperties": false
       },
       "PromptStatus": {
@@ -10417,9 +10421,25 @@
             "in": "query",
             "required": false,
             "schema": {
-              "default": "core",
+              "anyOf": [
+                {
+                  "type": "string",
+                  "enum": ["core", "comparison", "all"]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "latest",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "run",
               "type": "string",
-              "enum": ["core", "comparison", "all"]
+              "enum": ["run", "prompt"]
             }
           }
         ],

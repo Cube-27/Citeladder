@@ -92,6 +92,19 @@ describe('prompt sets', () => {
     expect(listed.body.prompt_sets.map((set) => set.id).sort()).toEqual(
       [t.setId, created.body.id].sort(),
     );
+    // Commerce's own set is told apart from the brand sets the library adds to.
+    const commerce = await promptSet(db, t.projectId);
+    await db
+      .updateTable('prompt_sets')
+      .set({ name: 'Commerce Buyer Prompts' })
+      .where('id', '=', commerce)
+      .execute();
+    const kinds = await call<PromptSetList>(`/prompt-sets?project_id=${t.projectId}`);
+    expect(Object.fromEntries(kinds.body.prompt_sets.map((set) => [set.id, set.kind]))).toEqual({
+      [t.setId]: 'brand',
+      [created.body.id]: 'brand',
+      [commerce]: 'commerce',
+    });
     // The listed form bounds are the ones the write schemas enforce.
     const { persona_max_chars: personaMax } = listed.body.limits;
     const id = await prompt(db, t.setId, 'acme trail shoes');

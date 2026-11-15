@@ -32,6 +32,9 @@ const promptOrigin = promptSchema.shape.origin;
 const topicOrigin = topicSchema.shape.origin;
 const [QUALITY_OFF, QUALITY_UNAVAILABLE] = policy.prompts.candidate.quality_gates_reported;
 
+/** The set Commerce files its buyer prompts in, found by this name. */
+export const COMMERCE_SET_NAME = 'Commerce Buyer Prompts';
+
 /** No prompt is over the limit: rows just admitted under the plan's slots. */
 export const WITHIN_LIMIT: ReadonlySet<string> = new Set();
 
@@ -67,6 +70,7 @@ export function promptSetView(
     id: row.id,
     project_id: row.project_id,
     name: row.name,
+    kind: row.name === COMMERCE_SET_NAME ? 'commerce' : 'brand',
     description: row.description,
     prompts: prompts.map((prompt) => promptView(prompt, overLimit)),
     prompt_count: prompts.length,

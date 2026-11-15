@@ -23,10 +23,10 @@ import { bindingTokens } from '../prompts/binding.ts';
 import { insertPrompts } from '../prompts/insert.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { promptTextHash } from '../prompts/normalization.ts';
+import { COMMERCE_SET_NAME } from '../prompts/views.ts';
 import { buyerPrompts, commerceMissing, type CommerceScope } from './reads.ts';
 
 const P = policy.commerce.buyer_prompts;
-const COMMERCE_SET_NAME = 'Commerce Buyer Prompts';
 const stringField = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 const targetSchema = z.object({ kind: z.enum(['product', 'category']), id: z.uuid() });
 type Target = z.infer<typeof targetSchema>;

@@ -323,6 +323,8 @@ export const promptSetSchema = responseObject({
   id: uuid(),
   project_id: uuid(),
   name: z.string(),
+  // Commerce keeps its own set; every other set holds brand prompts.
+  kind: z.enum(['brand', 'commerce']),
   // B3 PromptSetResponse carries a description and a denormalized prompt_count.
   description: z.string().optional(),
   prompt_count: z.number().int().optional(),

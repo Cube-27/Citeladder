@@ -45,7 +45,21 @@ describe('AuditSchedules', () => {
     renderWithProviders(
       <RoutedSchedules
         projectId="11111111-1111-4111-8111-111111111111"
-        promptSets={[{ id: '22222222-2222-4222-8222-222222222222', name: 'Core prompts' } as never]}
+        // Commerce's newer set comes first; the schedule defaults to the main brand set.
+        promptSets={[
+          {
+            id: '66666666-6666-4666-8666-666666666666',
+            name: 'Commerce Buyer Prompts',
+            kind: 'commerce',
+            created_at: '2026-10-01T00:00:00Z',
+          } as never,
+          {
+            id: '22222222-2222-4222-8222-222222222222',
+            name: 'Core prompts',
+            kind: 'brand',
+            created_at: '2026-01-01T00:00:00Z',
+          } as never,
+        ]}
       />,
     );
 
@@ -76,7 +90,14 @@ describe('AuditSchedules', () => {
     const { queryClient } = renderWithProviders(
       <RoutedSchedules
         projectId="11111111-1111-4111-8111-111111111111"
-        promptSets={[{ id: '22222222-2222-4222-8222-222222222222', name: 'Core prompts' } as never]}
+        promptSets={[
+          {
+            id: '22222222-2222-4222-8222-222222222222',
+            name: 'Core prompts',
+            kind: 'brand',
+            created_at: '2026-01-01T00:00:00Z',
+          } as never,
+        ]}
       />,
     );
     expect(screen.getByRole('button', { name: 'Schedule audit' })).toBeEnabled();
@@ -163,7 +184,14 @@ describe('AuditSchedules', () => {
     renderWithProviders(
       <RoutedSchedules
         projectId="11111111-1111-4111-8111-111111111111"
-        promptSets={[{ id: '22222222-2222-4222-8222-222222222222', name: 'Core prompts' } as never]}
+        promptSets={[
+          {
+            id: '22222222-2222-4222-8222-222222222222',
+            name: 'Core prompts',
+            kind: 'brand',
+            created_at: '2026-01-01T00:00:00Z',
+          } as never,
+        ]}
       />,
       { projectSelection: selectionAs('viewer') },
     );

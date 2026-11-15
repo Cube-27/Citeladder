@@ -174,7 +174,7 @@
       "services/api/test/site-health-controls.test.ts": 888,
       "services/api/test/site-health-reads.test.ts": 1696,
       "services/api/test/site-health-terminal-publication.test.ts": 1059,
-      "services/api/test/visibility-reads.test.ts": 1578
+      "services/api/test/visibility-reads.test.ts": 1059
     }
   }
 }

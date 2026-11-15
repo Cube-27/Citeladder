@@ -376,6 +376,7 @@ export const visibilityApi = {
       baseline_id?: string;
       audit_ids?: string[];
       baseline_audit_ids?: string[];
+      latest?: 'run' | 'prompt';
     },
   ): Promise<PromptMetricItem[]> => {
     const path = withQuery(
