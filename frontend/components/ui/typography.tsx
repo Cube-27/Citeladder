@@ -9,38 +9,44 @@ import { cn } from '@/lib/utils';
  * weight and tracking from it. The recipes live once, as `.type-*` classes
  * in `apps/app/src/globals.css`; this map only names them.
  *
- * Mono is measured, sans is said, display names places. Ink has two steps:
- * `ink` for what is read first (every role's default) and `ink-2` for what
- * supports it (caption and overline default to it; pass `text-ink-2` for a
- * supporting sentence at body size). Sizes are 12, 13, 14, 16, 20, 24, 28
- * and 40 only.
+ * The sans face speaks (numbers too, in its tabular numerals), mono is only
+ * literal machine text, display names the page. Nothing is uppercase. Ink has
+ * two steps: `ink` for what is read first and `ink-2` for what supports it
+ * (caption and caption-strong default to it). Sizes are 12, 13, 14, 16, 24,
+ * 28 and 32 only.
  */
 const TEXT_ROLES = {
-  /** Flow headings, the new-chat greeting, full-page notices. Display 28/36 500. */
+  /** Flow headings, full-page notices. Display 28/36 500. */
   display: 'type-display',
-  /** The masthead's page title; dialog and drawer titles. Display 20/28 600. One per view. */
+  /** The masthead's page title. Display 24/32 600. One per view. */
   title: 'type-title',
-  /** A section title. Sans 16/24 600. */
+  /** The new-chat greeting. Sans 24/32 600. */
+  headingLg: 'type-heading-lg',
+  /** Card, section, dialog and drawer titles. Sans 16/24 600. */
   heading: 'type-heading',
-  /** Slip titles, table group heads, field-group legends. Sans 14/20 600. */
+  /** Group heads inside a card, widget titles, field-group legends. Sans 14/20 600. */
   subheading: 'type-subheading',
-  /** Default interface text and table text cells. Sans 14/20 400. */
+  /** Default interface text, table cells, stat labels. Sans 14/20 400. */
   body: 'type-body',
   /** Buttons, tabs, navigation, field labels, the selected item. Sans 14/20 500. */
   label: 'type-label',
-  /** Reading text: Agent replies, documents, long explanations. Sans 16/26, 60–80ch. */
+  /** Reading text: Agent replies, documents, long explanations. Sans 16/26. */
   prose: 'type-prose',
-  /** Help text and metadata sentences. Sans 12/16, `ink-2`. */
+  /** Help text, metadata, the basis under a figure. Sans 12/16, `ink-2`. */
   caption: 'type-caption',
-  /** Column heads, navigation group heads, key-figure labels, DRAFT. Mono 12/16 500 caps. */
-  overline: 'type-overline',
-  /** At most one hero figure per page. Mono 40/44 500. */
+  /** Column heads, group labels, tags, the "Draft" marker. Sans 12/16 500, sentence case, `ink-2`. */
+  captionStrong: 'type-caption-strong',
+  /** At most one hero figure per page. Sans 32/40 600, tabular. */
   figureXl: 'type-figure-xl',
-  /** A key figure. Mono 24/32 500. */
+  /** A stat card's figure. Sans 24/32 600, tabular. */
   figure: 'type-figure',
-  /** Table numerals, dates, URLs, ids, code. Mono 13/20. */
+  /** Code, ids, keys, raw snippets, keyboard hints. Mono 13/20. */
+  code: 'type-code',
+  /** Alias of `captionStrong`, until its callers move. */
+  overline: 'type-caption-strong',
+  /** Alias: `body` with tabular numerals, until its callers move. */
   data: 'type-data',
-  /** Changes, citation markers, counts, key hints, absence words. Mono 12/16. */
+  /** Alias: `caption` with tabular numerals, until its callers move. */
   dataSm: 'type-data-sm',
   /** Emphasis inside text: weight 500, never colour. */
   emphasis: 'type-emphasis',
@@ -70,14 +76,14 @@ export function Label({
 
 /**
  * CodeToken — a literal the reader copies or types (a URL, a key prefix, a
- * command): the `data` role in a well, 8 across and 4 down, the control
+ * command): the `code` role in a well, 8 across and 4 down, the control
  * radius, cut to one line. One form; the token owns its box.
  */
 export function CodeToken({ children }: Readonly<{ children: string }>) {
   return (
     <code
       data-code-token=""
-      className={textRole('data', 'bg-well min-w-0 truncate rounded-control px-2 py-1')}
+      className={textRole('code', 'bg-well min-w-0 truncate rounded-control px-2 py-1')}
     >
       {children}
     </code>
@@ -85,9 +91,8 @@ export function CodeToken({ children }: Readonly<{ children: string }>) {
 }
 
 /**
- * InlineFigure — a number inside a line that keeps the line's size and ink
- * (a tab or chip count, a total, an ID, "30 / 210"): only the digits take the
- * mono face, so numerals are tabular by construction (law 2).
+ * InlineFigure — a number inside a line that keeps the line's face, size and
+ * ink (a tab or chip count, a total, "30 / 210") in tabular numerals (law 2).
  */
 export function InlineFigure({
   children,
@@ -95,7 +100,7 @@ export function InlineFigure({
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={cn('font-mono tabular-nums', className)}>
+    <span {...props} className={cn('tabular-nums', className)}>
       {children}
     </span>
   );

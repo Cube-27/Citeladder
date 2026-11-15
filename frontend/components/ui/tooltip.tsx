@@ -10,6 +10,8 @@ import {
 } from 'react';
 
 import { focusFromKeyboard } from '@/components/ui/input-modality';
+import { POP_FACE } from '@/components/ui/slip';
+import { cn } from '@/lib/utils';
 
 /**
  * Tooltip — a short label that names an icon button or explains a number, on
@@ -25,9 +27,11 @@ import { focusFromKeyboard } from '@/components/ui/input-modality';
  */
 const Provided = createContext(false);
 
-/** The tooltip's sheet: `raised`, a hairline edge and the one shadow. Help hints share it. */
-export const TOOLTIP_SHEET =
-  'tooltip-panel bg-raised text-ink border-rule shadow-sheet z-modal type-caption rounded-sheet inline-flex max-w-72 items-center gap-2 border px-2 py-1';
+/** The tooltip's sheet: the pop face (`raised`, 1px `rule`, radius 8, `shadow-pop`). Help hints share it. */
+export const TOOLTIP_SHEET = cn(
+  POP_FACE,
+  'tooltip-panel z-modal type-caption inline-flex max-w-72 items-center gap-2 px-2 py-1',
+);
 
 /** True when a clamped or truncated element is not showing all of its text. */
 export function isTextCut(node: Element): boolean {
@@ -97,7 +101,7 @@ export function Tooltip({
       <TooltipPrimitive.Portal>
         <TooltipPrimitive.Content side={side} sideOffset={8} className={TOOLTIP_SHEET}>
           {content}
-          {shortcut ? <span className="type-data-sm text-ink-2">{shortcut}</span> : null}
+          {shortcut ? <span className="type-code text-ink-2">{shortcut}</span> : null}
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

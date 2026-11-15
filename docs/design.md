@@ -74,6 +74,7 @@ colors:
   brand-google-red: '#ea4335' # dark '#ea4335'
   brand-google-yellow: '#fbbc05' # dark '#fbbc05'
   chart-grid: '#ececec' # dark '#262626'
+  chrome: '#f4f4f4' # dark '#0a0a0a'
   control-line: '#858585' # dark '#747474'
   data-1: '#e8501a' # dark '#ff6a33'
   data-2: '#111111' # dark '#f4f4f4'
@@ -88,6 +89,7 @@ colors:
   ground: '#f4f4f4' # dark '#0a0a0a'
   info: '#1f5fbf' # dark '#7fb0ff'
   info-soft: '#e3edfc' # dark '#14243d'
+  info-swatch: '#1f5fbf' # dark '#7fb0ff'
   info-wash: '#e3edfc' # dark '#14243d'
   ink: '#111111' # dark '#f4f4f4'
   ink-2: '#525252' # dark '#a6a6a6'
@@ -99,12 +101,14 @@ colors:
   line-strong: '#d4d4d4' # dark '#3a3a3a'
   negative: '#c4122f' # dark '#ff7387'
   negative-soft: '#ffe2e6' # dark '#3d0e16'
+  negative-swatch: '#c4122f' # dark '#ff7387'
   negative-wash: '#ffe2e6' # dark '#3d0e16'
   on-accent: '#111111' # dark '#111111'
   on-ink: '#ffffff' # dark '#111111'
   paper: '#f4f4f4' # dark '#0a0a0a'
   positive: '#0b6e69' # dark '#4fd1c5'
   positive-soft: '#d6f2ef' # dark '#0e2e2b'
+  positive-swatch: '#0b6e69' # dark '#4fd1c5'
   positive-wash: '#d6f2ef' # dark '#0e2e2b'
   raised: '#ffffff' # dark '#151515'
   rule: '#e5e5e5' # dark '#2a2a2a'
@@ -122,6 +126,7 @@ colors:
   surface-sunken: '#ececec' # dark '#1e1e1e'
   warning: '#8a5000' # dark '#f5b84a'
   warning-soft: '#fff0d1' # dark '#3a2a0a'
+  warning-swatch: '#8a5000' # dark '#f5b84a'
   warning-wash: '#fff0d1' # dark '#3a2a0a'
   well: '#ececec' # dark '#1e1e1e'
 ```
@@ -327,6 +332,8 @@ rounded:
   lg: 8px
   xl: 8px
   sheet: 8px
+  card: 8px
+  overlay: 12px
   full: 9999px
 ```
 

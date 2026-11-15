@@ -52,7 +52,7 @@ export function PageFrame({
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   return (
-    <div className="flex min-w-0 flex-col">
+    <div className="flex min-w-0 flex-1 flex-col">
       <Masthead
         title={resolved}
         lead={
@@ -92,7 +92,7 @@ export function PageFrame({
   );
 }
 
-/** The body's sections, 32 apart, on the one left edge. */
+/** The body's cards, 16 apart (a titled group adds its own 32), on the one left edge. */
 export function PageSections({
   className,
   children,
@@ -100,8 +100,8 @@ export function PageSections({
   return (
     <div
       data-page-content=""
-      data-rhythm-gap="section"
-      className={cn('flex min-w-0 flex-col gap-[var(--page-section-gap)]', className)}
+      data-rhythm-gap="workspace"
+      className={cn('flex min-w-0 flex-col gap-[var(--workspace-gap)]', className)}
     >
       {children}
     </div>

@@ -12,12 +12,15 @@ it('reveals overflow labels from the keyboard and keeps the disclosure focused',
   await user.keyboard('{Enter}');
   expect(screen.getByText('Consulting')).toBeVisible();
   expect(screen.getByText('Training')).toBeVisible();
-  const collapse = screen.getByRole('button', { name: 'Show fewer tags' });
+  // The name holds the visible text (label in name, WCAG 2.5.3).
+  const collapse = screen.getByRole('button', { name: 'Show less' });
   expect(collapse).toHaveFocus();
   expect(collapse).toHaveAttribute('aria-expanded', 'true');
   await user.keyboard('{Enter}');
   expect(screen.queryByText('Consulting')).not.toBeInTheDocument();
-  expect(screen.getByRole('button', { name: 'Show 2 more tags' })).toHaveFocus();
+  const expand = screen.getByRole('button', { name: '+2 more tags' });
+  expect(expand).toHaveTextContent('+2');
+  expect(expand).toHaveFocus();
 });
 
 it('removes a tag from its named remove button', async () => {

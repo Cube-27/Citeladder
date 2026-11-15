@@ -5,7 +5,7 @@ import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { SHEET_FACE } from '@/components/ui/slip';
+import { POP_FACE } from '@/components/ui/slip';
 
 type ToastTone = 'neutral' | 'positive' | 'negative';
 
@@ -35,9 +35,10 @@ const TONE_ICON = {
 } as const;
 
 /**
- * Toast — a brief message about something that just happened, bottom-right,
- * newest at the bottom: the floating face (`surface`, 1px `line` border,
- * `shadow-sheet`), `radius-lg`, 400px. The tone
+ * Toast — a brief message about something that just happened, top-right under
+ * the masthead (clear of a composer docked at the foot), newest at the
+ * bottom: the pop face (`raised`, 1px `rule` edge, radius 8, `shadow-pop`),
+ * 400px. The tone
  * shows only in the 16px icon plus a screen-reader word; negative toasts are
  * announced assertively and stay until dismissed, as does a toast with an action.
  */
@@ -72,8 +73,8 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
                   setMessages((current) => current.filter((item) => item.id !== message.id));
               }}
               className={cn(
-                SHEET_FACE,
-                'toast-panel flex w-100 max-w-full items-start gap-3 rounded-sheet py-3 ps-4 pe-3',
+                POP_FACE,
+                'toast-panel flex w-100 max-w-full items-start gap-3 py-3 ps-4 pe-3',
               )}
             >
               <span className={cn('inline-flex h-5 shrink-0 items-center', className)}>
@@ -106,7 +107,7 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
             </ToastPrimitive.Root>
           );
         })}
-        <ToastPrimitive.Viewport className="focus-ring z-toast fixed right-4 bottom-4 flex max-w-[calc(100vw-2rem)] flex-col gap-2" />
+        <ToastPrimitive.Viewport className="focus-ring z-toast fixed top-[calc(var(--masthead-block-size,var(--masthead-height))+8px)] right-4 flex max-w-[calc(100vw-2rem)] flex-col gap-2" />
       </ToastPrimitive.Provider>
     </ToastContext>
   );

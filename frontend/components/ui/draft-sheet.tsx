@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Inline, Stack } from './layout';
+import { Tag as DraftTag } from './tag';
 import { textRole } from './typography';
 import { cn } from '@/lib/utils';
 
@@ -35,18 +36,18 @@ function draftAttribute(state: DraftState) {
 /** The draft face alone, for a container that lays out its own content. */
 function draftSheetClasses(state: DraftState, className?: string) {
   return cn(
-    'bg-surface rounded-control p-[var(--card-padding)]',
-    state === 'declined' ? 'bg-well' : 'edge-draft',
+    'rounded-card p-[var(--card-padding)]',
+    state === 'declined' ? 'bg-well' : 'bg-surface shadow-card edge-draft',
     className,
   );
 }
 
 /**
- * DraftSheet: something written for a person to decide
- * on (a proposal, a suggestion, a candidate) on a dashed `control-line` edge
- * under a mono overline, its sans content, then its decision actions. When a
- * person accepts it the edge sets solid; the actions stay so the sheet keeps
- * its size.
+ * DraftSheet: a card for something written for a person to decide on (a
+ * proposal, a suggestion, a candidate): a dashed `control-line` edge, a static
+ * "Draft" tag, its sans content, then its decision actions. When a person
+ * accepts it the edge sets solid over 200ms; the actions stay so the sheet
+ * keeps its size.
  */
 export function DraftSheet({
   title,
@@ -81,7 +82,9 @@ export function DraftSheet({
       className={draftSheetClasses(state, className)}
     >
       <Stack gap="item">
-        <p className="type-overline text-ink-2">{overline ?? OVERLINE[state]}</p>
+        <p className="flex">
+          <DraftTag>{overline ?? OVERLINE[state]}</DraftTag>
+        </p>
         {title ? <h3 className={textRole('subheading', 'min-w-0 break-words')}>{title}</h3> : null}
         {children}
         {actions ? <Inline className="flex-wrap">{actions}</Inline> : null}

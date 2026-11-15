@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
-import { SHEET_FACE } from '@/components/ui/slip';
+import { POP_FACE } from '@/components/ui/slip';
 
 /**
  * Shared editorial structures for authenticated analytical workspaces. A row
@@ -185,9 +185,5 @@ export function EditorialSectionHeader({
  * widget it sits on must be `relative`.
  */
 export function FloatingToolbar({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className={cn(SHEET_FACE, 'absolute end-3 top-3 z-10 flex gap-1 rounded-sheet p-1')}>
-      {children}
-    </div>
-  );
+  return <div className={cn(POP_FACE, 'absolute end-3 top-3 z-10 flex gap-1 p-1')}>{children}</div>;
 }

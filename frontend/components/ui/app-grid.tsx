@@ -4,11 +4,9 @@ import { cn } from '@/lib/utils';
 
 /**
  * AppGrid — the app's only grids, so a page picks a layout instead of
- * setting columns or gaps. Items are 24 apart, and rows of sections 32 (the
- * section gap), so a grid of sections keeps the page's rhythm; items in a row
- * stretch to one height. Sections side by side are divided by a hairline centred in the
- * gap that runs the height of the row; when they stack it goes and each
- * section's ink rule divides them.
+ * setting columns or gaps. Cards are 16 apart in both directions and the
+ * cards in one row share a height (they stretch); side by side they are
+ * separated by the gap and their own edges, never a rule.
  *
  * In the main column the breakpoints are the column's width, so a wider
  * sidebar stacks a grid (`column-split:`/`column-wide:` in globals.css); the
@@ -32,25 +30,15 @@ import { cn } from '@/lib/utils';
  * Grids never nest a second AppGrid and never set widths on their children.
  */
 const LAYOUT = {
-  quarters:
-    'column-split:grid-cols-4 column-split:[&>.surface-section:not(:nth-child(4n+1))]:before:block',
-  fifths:
-    'column-split:grid-cols-5 column-split:[&>.surface-section:not(:nth-child(5n+1))]:before:block',
-  pair: 'column-split:grid-cols-2 column-split:[&>.surface-section:nth-child(2n)]:before:block',
-  thirds:
-    'column-split:grid-cols-3 column-split:[&>.surface-section:not(:nth-child(3n+1))]:before:block',
-  'main-aside':
-    'column-wide:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] column-wide:[&>.surface-section:nth-child(2n)]:before:block',
-  halves: 'column-wide:grid-cols-2 column-wide:[&>.surface-section:nth-child(2n)]:before:block',
-  'table-chart':
-    'column-wide:grid-cols-[minmax(0,5fr)_minmax(0,4fr)] column-wide:[&>.surface-section:nth-child(2n)]:before:block',
-  'list-detail':
-    'column-split:grid-cols-[var(--pane-list-detail)] items-start column-split:[&>.surface-section:nth-child(2n)]:before:block',
+  quarters: 'column-split:grid-cols-4',
+  fifths: 'column-split:grid-cols-5',
+  pair: 'column-split:grid-cols-2',
+  thirds: 'column-split:grid-cols-3',
+  'main-aside': 'column-wide:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
+  halves: 'column-wide:grid-cols-2',
+  'table-chart': 'column-wide:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]',
+  'list-detail': 'column-split:grid-cols-[var(--pane-list-detail)] items-start',
 } as const;
-
-/** The divider a section beside another draws: hidden until its layout shows it. */
-const SECTION_DIVIDER =
-  "[&>.surface-section]:relative [&>.surface-section]:before:absolute [&>.surface-section]:before:inset-y-0 [&>.surface-section]:before:-start-3 [&>.surface-section]:before:hidden [&>.surface-section]:before:border-s [&>.surface-section]:before:border-rule [&>.surface-section]:before:content-['']";
 
 export type AppGridLayout = keyof typeof LAYOUT;
 
@@ -77,8 +65,7 @@ export function AppGrid({
       ...props,
       'data-app-grid': layout,
       className: cn(
-        'grid min-w-0 grid-cols-1 gap-[var(--workspace-gap)] *:min-w-0 has-[>.surface-section]:gap-y-[var(--page-section-gap)]',
-        SECTION_DIVIDER,
+        'grid min-w-0 grid-cols-1 gap-[var(--workspace-gap)] *:min-w-0',
         LAYOUT[layout],
         className,
       ),

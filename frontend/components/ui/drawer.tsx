@@ -10,7 +10,7 @@ import { SHEET_FACE } from '@/components/ui/slip';
 /**
  * Drawer — a sheet for editing or inspecting one item without leaving the
  * list behind it. It floats 8px from the viewport edges, 560 wide (640
- * `wide`), with the sheet face (`raised`, hairline edge, `shadow-sheet`)
+ * `wide`), with the sheet face (`raised`, 1px `rule` edge, radius 12, `shadow-sheet`)
  * on the scrim. The header (eyebrow,
  * the section title at 500, 22/28, description) and the footer are fixed behind 1px
  * `line` rules; only the body scrolls, with `modal-padding` and 16px between
@@ -90,7 +90,7 @@ export function Drawer({
           data-side={side}
           className={cn(
             SHEET_FACE,
-            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-sheet',
+            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden',
             side === 'left' ? 'left-2 max-w-68' : 'right-2',
             side === 'right' && (width === 'wide' ? 'max-w-form' : 'max-w-narrow'),
           )}
@@ -158,7 +158,7 @@ function DrawerHeader({
   return (
     <header className="border-rule flex items-start justify-between gap-4 border-b px-[var(--card-padding)] py-4">
       <div className="min-w-0">
-        {eyebrow ? <p className="type-overline mb-1">{eyebrow}</p> : null}
+        {eyebrow ? <p className="type-caption-strong mb-1">{eyebrow}</p> : null}
         <DialogPrimitive.Title className="type-heading truncate">{title}</DialogPrimitive.Title>
         {description ? (
           <DialogPrimitive.Description asChild>

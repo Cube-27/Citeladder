@@ -38,10 +38,17 @@ const COLOUR_PREFIX = `(?:bg|text|border(?:-[xytrblse])?|ring|outline|fill|strok
 const RETIRED_COLOUR = new RegExp(
   String.raw`(?<![\w-])(?:[\w-]+:)*${COLOUR_PREFIX}-(?:${RETIRED_COLOURS.join('|')})(?:\/[\w.]+)?(?![\w-])|var\(--color-(?:${RETIRED_COLOURS.join('|')})\)`,
 );
-const RETIRED_RADIUS =
-  /(?<![\w-])(?:[\w-]+:)*rounded(?:-[a-z]{1,2})?-(?:2xs|xs|sm|md|lg|xl)(?![\w-])|var\(--radius-(?:2xs|xs|sm|md|lg|xl)\)/;
+// `sm` (4) stays the app's: tags and checkboxes (brand direction 2.4).
+const RETIRED_RADII = '(?:2xs|xs|md|lg|xl)';
+const RETIRED_RADIUS_CLASS = new RegExp(
+  String.raw`(?<![\w-])(?:[\w-]+:)*rounded(?:-[a-z]{1,2})?-${RETIRED_RADII}(?![\w-])`,
+);
+const RETIRED_RADIUS_VAR = new RegExp(String.raw`var\(--radius-${RETIRED_RADII}\)`);
+const usesRetiredRadius = (text) =>
+  RETIRED_RADIUS_CLASS.test(text) || RETIRED_RADIUS_VAR.test(text);
+// `type-code` is the app's mono role for literal machine text (2.1).
 const RETIRED_TYPE =
-  /(?<![\w-])type-(?:page-title|section-title|item-title|control|eyebrow|delta|figure-sm|code|badge)(?![\w-])/;
+  /(?<![\w-])type-(?:page-title|section-title|item-title|control|eyebrow|delta|figure-sm|badge)(?![\w-])/;
 
 export function appVocabularyViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || WEBSITE_ONLY_UI.has(label) || label === TOKEN_CSS) return [];
@@ -55,10 +62,12 @@ export function appVocabularyViolations(source, label, ownsProductUi) {
     );
   // The website's segmented track and its link and mark sizes are kept, by name, in two shared atoms.
   if (
-    RETIRED_RADIUS.test(text) &&
+    usesRetiredRadius(text) &&
     !['components/ui/tabs.tsx', 'components/ui/text-link.tsx'].includes(label)
   )
-    violations.push(`${label}: the app's radii are rounded-mark, -control, -sheet and -full`);
+    violations.push(
+      `${label}: the app's radii are rounded-mark, -sm, -control, -card, -overlay, -sheet and -full`,
+    );
   if (RETIRED_TYPE.test(text) && label !== 'components/ui/typography.tsx')
     violations.push(
       `${label}: the website's type role; the app uses its own (components/ui/typography.tsx)`,

@@ -32,12 +32,12 @@ function FlowLogo() {
  * Flow: a page with no shell. Sign-in, sign-up, the
  * mailbox screens, the workspace chooser, workspace and project setup and an
  * invitation. A bar as tall as the masthead holds the logo and a way out
- * (`barEnd`, the account menu) with the theme switch. Under it one 480px
- * column, starting a fifth of the way down the window: a flow with steps
- * opens it with the horizontal rung trail, then the column hangs from an ink
- * rule with a mono overline naming the step ("Step 1 of 3 · Basics", or the
- * flow's `label`), then the heading and the form; its controls are 44 tall.
- * `footer` is one caption line at the foot.
+ * (`barEnd`, the account menu) with the theme switch. Under it, on the
+ * ground, one 480px card (radius 12), starting a fifth of the way down the
+ * window: a flow with steps opens it with the horizontal rung trail, then the
+ * step label in `caption-strong` ("Step 1 of 3 · Basics", or the flow's
+ * `label`), then the display heading and the form; its controls are 44 tall.
+ * One column, always. `footer` is one caption line at the foot.
  */
 export function FlowPage({
   label,
@@ -73,14 +73,14 @@ export function FlowPage({
       <main
         id="main"
         aria-label={label}
-        className="max-w-flow mx-auto flex w-full flex-1 flex-col gap-[var(--workspace-gap)] px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] [--control-md:var(--control-lg)]"
+        className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)] [--control-md:var(--control-lg)]"
       >
-        {steps ? <FlowRungTrail steps={steps} current={index} /> : null}
-        <div className="border-rule-ink flex flex-1 flex-col gap-4 border-t pt-3">
-          <p aria-hidden={steps ? true : undefined} className="type-overline">
+        <div className="bg-surface border-rule rounded-overlay shadow-card flex flex-col gap-4 border p-[var(--page-top-gap)]">
+          {steps ? <FlowRungTrail steps={steps} current={index} /> : null}
+          <p aria-hidden={steps ? true : undefined} className={textRole('captionStrong')}>
             {overline}
           </p>
-          <div className="flex flex-1 flex-col">{children}</div>
+          <div className="flex flex-col">{children}</div>
         </div>
       </main>
       {footer ? (
@@ -173,7 +173,7 @@ function FlowHead({
 /**
  * One flow screen's content: the heading and its line, then the body 24
  * below, then an optional line under it (`after`, the sign-in/sign-up
- * switch). No box: the column sits on the ground.
+ * switch), inside the flow's card.
  */
 export function FlowBlock({
   title,
@@ -194,8 +194,8 @@ export function FlowBlock({
   const generatedId = useId();
   const headingId = titleId ?? generatedId;
   return (
-    <div className="flex flex-col gap-[var(--workspace-gap)] pb-[var(--flow-gap)]">
-      <section aria-labelledby={headingId} className="flex flex-col gap-[var(--workspace-gap)]">
+    <div className="flex flex-col gap-[var(--page-top-gap)]">
+      <section aria-labelledby={headingId} className="flex flex-col gap-[var(--page-top-gap)]">
         <FlowHead id={headingId} title={title} sub={sub} icon={icon} />
         {children}
       </section>
@@ -233,13 +233,13 @@ export function FlowStep({
     <div className="flex flex-1 flex-col">
       <section
         aria-labelledby={headingId}
-        className="flex flex-1 flex-col gap-[var(--workspace-gap)] pb-[var(--flow-gap)]"
+        className="flex flex-1 flex-col gap-[var(--page-top-gap)] pb-[var(--page-top-gap)]"
       >
         <FlowHead id={headingId} title={title} sub={help} />
         <div className="flex min-w-0 flex-col gap-[var(--card-padding)]">{children}</div>
       </section>
       {back || next ? (
-        <footer className="bg-ground border-rule sticky bottom-0 z-10 flex items-center justify-between gap-2 border-t py-3">
+        <footer className="bg-surface border-rule sticky bottom-0 z-10 flex items-center justify-between gap-2 border-t pt-4">
           {back ?? <span />}
           <span className="flex justify-end">{next}</span>
         </footer>
