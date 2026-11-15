@@ -1,4 +1,5 @@
 import type { Visibility } from '@citeladder/contracts';
+import { comparisonBasis, comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
 import { formatCount, pluralCount as plural } from '@/lib/format';
 
 /**
@@ -32,39 +33,32 @@ function answersLine(selected: Visibility): string {
   return `${parts.join(', ')}.`;
 }
 
-/** Statuses whose change line is fixed: no change is shown, for this reason. */
-const NO_CHANGE: Record<string, string> = {
-  partial_coverage: 'the earlier or current measurement did not complete every answer.',
-  coverage_unavailable:
-    'the earlier or current measurement has no expected-answer count, so its coverage cannot be checked.',
-  no_observations: 'one of the measurements recorded no answers.',
-  changed_context: 'the chosen earlier run used different settings.',
-  identity_unavailable: "this run's settings could not be identified.",
-  baseline_pending: 'the comparison with an earlier run is still being prepared.',
-};
-
 type Comparison = NonNullable<Visibility['comparison']>;
 
 function matchedLine(comparison: Comparison, since: string | null): string {
-  const shared = comparison.current_counts?.responses;
-  const scope = shared == null ? 'the answers' : `the ${plural(shared, 'answer')}`;
-  return `Change compares only ${scope} whose prompt and engine also ran on ${since ?? 'the earlier run'}; the settings differed.`;
+  const basis = comparisonBasis({
+    status: comparison.status,
+    answers: { matched: comparison.matched_cells, total: comparison.current_cells },
+  });
+  const note = basis.kind === 'matched_subset' ? basis.note : 'Only shared answers comparable';
+  const run = since ? `the run on ${since}` : 'the earlier run';
+  return `${note} with ${run}; the change uses only those.`;
 }
 
-function noBaselineLine(skipped: number): string {
-  return skipped
-    ? `No change shown: the ${plural(skipped, 'earlier run')} used different settings or scoring.`
-    : 'No change shown: there is no earlier comparable run yet.';
+function noChangeLine(status: string, skippedRuns = 0): string {
+  const reason =
+    comparisonDeclinedReason(status, skippedRuns) ?? comparisonDeclinedReason('no_baseline');
+  return `No change shown. ${reason}`;
 }
 
 function changeLine(selected: Visibility, formatDate: (iso: string) => string): string {
   const comparison = selected.comparison;
-  if (!comparison) return noBaselineLine(0);
+  if (!comparison) return noChangeLine('no_baseline');
   const since = comparison.baseline_at ? formatDate(comparison.baseline_at) : null;
-  const fixed = NO_CHANGE[comparison.status];
-  if (fixed) return `No change shown: ${fixed}`;
   if (comparison.status === 'matched_subset') return matchedLine(comparison, since);
-  if (comparison.status !== 'comparable' || !since) return noBaselineLine(comparison.skipped_runs);
+  if (comparison.status !== 'comparable')
+    return noChangeLine(comparison.status, comparison.skipped_runs);
+  if (!since) return noChangeLine('no_baseline', comparison.skipped_runs);
   return selected.selection_mode === 'range'
     ? `Change compares this period with the previous one, from ${since}.`
     : `Change compares with the run on ${since}.`;

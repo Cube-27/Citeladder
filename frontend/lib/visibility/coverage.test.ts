@@ -61,18 +61,19 @@ describe('coverageSummary change line', () => {
     expect(range).not.toBe(run);
   });
 
-  it('says a matched subset compares only the shared answers', () => {
+  it('says a matched subset compares only the shared answers, in the Overview note', () => {
     const line = coverageSummary(
-      comparison({ status: 'matched_subset', current_counts: { responses: 6 } }),
+      comparison({ status: 'matched_subset', matched_cells: 6, current_cells: 9 }),
       date,
     ).change;
-    expect(line).toContain('6');
-    expect(line).toContain('D(2026-03-01)');
+    expect(line).toBe(
+      '6 of 9 answers comparable with the run on D(2026-03-01); the change uses only those.',
+    );
   });
 
   it('explains a missing change with the number of skipped runs', () => {
     const skipped = coverageSummary(
-      selected({ comparison: { status: 'no_comparison', skipped_runs: 4 } }),
+      selected({ comparison: { status: 'no_baseline', skipped_runs: 4 } }),
       date,
     ).change;
     expect(skipped).toContain('4');

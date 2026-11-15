@@ -204,9 +204,7 @@ describe('Overview PDF', () => {
 
     const text = await reportText(tenant);
     expect(text).toContain('ChatGPT API and Claude API');
-    expect(text).toContain(
-      'No comparison yet: changes appear once a second run uses the same prompts and engines.',
-    );
+    expect(text).toContain('No earlier run to compare with yet.');
     expect(text).toContain('Next action · High priority');
     expect(text).toContain('Page: https://acme.example/pricing');
     expect(text).toContain('Brand absent on high-value prompt');
@@ -276,6 +274,50 @@ describe('Overview PDF', () => {
     // Only the latest run's one answer, not both runs' answers pooled.
     expect(text).toContain('1 answer showed which pages the engine read.');
     expect(text).toContain('https://acme.example/pricing 1 0');
+  });
+
+  it('prints a matched-subset change with its comparable-answers note, as the Overview does', async () => {
+    const tenant = await consumerProject();
+    await fixtures.brand(tenant.projectId, 'Acme Corp');
+    const configuration = {
+      ...CONFIGURATION,
+      competitors: [],
+      engine_routes: { chatgpt: CONFIGURATION.engine_routes.chatgpt },
+    };
+    const run = async (at: string, mentioned: boolean[], requested: number) => {
+      const auditId = await fixtures.audit(tenant, { completedAt: new Date(at), configuration });
+      for (const [promptIndex, brandMentioned] of mentioned.entries())
+        await fixtures.execution(tenant, {
+          auditId,
+          promptIndex,
+          transportModel: 'test',
+          analysis: { brandMentioned, score: { overall: 1 } },
+        });
+      const count = mentioned.filter(Boolean).length;
+      const metrics = {
+        total_completed: mentioned.length,
+        brand_mention_count: count,
+        owned_citation_response_count: 0,
+        brand_mention_rate: count / mentioned.length,
+        owned_citation_rate: 0,
+        competitor_mention_rate: {},
+        competitor_citation_rate: {},
+        share_of_voice: { mention_counts: { 'Acme Corp': count } },
+        coverage: { requested, failed: requested - mentioned.length, not_run: 0 },
+      };
+      await fixtures.metricSnapshot(tenant, auditId, {
+        metrics: { ...metrics, per_engine: { chatgpt: metrics } },
+      });
+    };
+    await run('2026-09-01T00:00:00Z', [false, false], 2);
+    // Prompt 2 failed in the earlier run's place, so only prompts 0 and 1 match.
+    await run('2026-09-08T00:00:00Z', [true, true, false], 4);
+    await saveLayout(tenant, ['project_state']);
+
+    const text = await reportText(tenant);
+    expect(text).toContain('2 of 3 answers comparable');
+    expect(text).toContain('+100 pts vs previous run');
+    expect(text).not.toContain('No earlier run');
   });
 
   it('prints every library widget heading as not available before any measurement', async () => {

@@ -92,9 +92,9 @@ describe('Overview library widgets', () => {
 
   it.each([
     ['no_baseline', 0, 'No earlier run to compare with yet.'],
-    ['no_baseline', 2, 'No earlier run used the same settings and scoring to compare with.'],
-    ['changed_context', 0, 'The earlier run used different settings, so sources are not compared.'],
-    ['matched_subset', 0, 'The earlier run used different settings, so sources are not compared.'],
+    ['no_baseline', 2, 'The 2 earlier runs used different settings or scoring.'],
+    ['changed_context', 0, 'The earlier run used different settings.'],
+    ['matched_subset', 0, 'Only some answers match the earlier run, so this is not compared.'],
     [
       'partial_coverage',
       0,

@@ -24,7 +24,7 @@ import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -158,8 +158,7 @@ export function BillingScreen() {
       >
         <PlanSection
           catalog={catalog}
-          catalogLoading={catalogQuery.isLoading}
-          catalogError={catalogQuery.isError}
+          catalogRead={catalogQuery}
           entitlement={entitlement}
           canManage={canManage}
           checkout={checkout}
@@ -177,11 +176,7 @@ export function BillingScreen() {
         />
       ) : null}
       <UsageMeters />
-      <InvoiceHistory
-        invoices={invoiceQuery.data ?? []}
-        loading={invoiceQuery.isLoading}
-        error={invoiceQuery.isError}
-      />
+      <InvoiceHistory invoices={invoiceQuery.data ?? []} read={invoiceQuery} />
       <BillingSupport contact={catalog?.support_contact ?? null} />
     </SettingsPage>
   );
@@ -189,8 +184,7 @@ export function BillingScreen() {
 
 function PlanSection({
   catalog,
-  catalogLoading,
-  catalogError,
+  catalogRead,
   entitlement,
   canManage,
   checkout,
@@ -199,8 +193,7 @@ function PlanSection({
   newSubscription,
 }: Readonly<{
   catalog: BillingCatalog | null;
-  catalogLoading: boolean;
-  catalogError: boolean;
+  catalogRead: RetryableRead & Readonly<{ isError: boolean; isLoading: boolean }>;
   entitlement: BillingEntitlement | null;
   canManage: boolean;
   checkout: Checkout;
@@ -208,14 +201,17 @@ function PlanSection({
   onBuyExtra: ExtraPurchase;
   newSubscription: NewSubscription;
 }>) {
-  if (catalogError) {
+  if (catalogRead.isError) {
     return (
-      <Notice tone="negative">
-        Could not load the plan catalog. Check your connection and retry.
-      </Notice>
+      <StateBlock
+        kind="error"
+        {...readErrorProps(catalogRead)}
+        fallback="Could not load the plan catalog."
+      />
     );
   }
-  if (catalogLoading || !catalog) return <StateBlock kind="loading" label="Loading plans…" />;
+  if (catalogRead.isLoading || !catalog)
+    return <StateBlock kind="loading" label="Loading plans…" />;
   const subscription = entitlement?.subscription ?? null;
   const currentPlan = subscription ? catalogPlanByKey(catalog, subscription.catalog_key) : null;
   if (subscription && currentPlan && SUBSCRIBED_STATUSES.has(subscription.status)) {

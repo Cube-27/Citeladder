@@ -320,7 +320,7 @@ function measure({ route }: { route: string }) {
     if (!nestedState(element))
       add('query-state.padding', element, px(getComputedStyle(element).paddingTop));
   }
-  // A DataTable's title-and-toolbar row, whatever it holds.
+  // A DataTable's title-and-toolbar row, whatever it holds; the caption under it is not part of it.
   for (const element of all('[data-data-table-header]'))
     add('data-table-header.height', element, element.getBoundingClientRect().height);
   // A FigureStrip: every cell's padding, and the cells of one strip at one

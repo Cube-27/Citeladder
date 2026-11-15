@@ -2,6 +2,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { ArrowRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 
+import { comparisonDeclinedReason } from '@citeladder/contracts/comparison-reason';
 import { overviewWidgetTitles, type OverviewWidgetKey } from '@citeladder/contracts/overview';
 
 import { ProjectLink } from '@/components/ui/project-link';
@@ -101,28 +102,11 @@ const metricsPending = (
   <StateBlock kind="empty" inline message="Results are still being prepared." />
 );
 
-const DIFFERENT_SETTINGS = 'The earlier run used different settings, so sources are not compared.';
-
 /** Why the latest run has no source movement to rank, by its comparison status. */
-const NOT_COMPARED: Readonly<Record<string, string>> = {
-  changed_context: DIFFERENT_SETTINGS,
-  matched_subset: DIFFERENT_SETTINGS,
-  identity_unavailable: "This run's settings could not be identified, so it is not compared.",
-  partial_coverage:
-    'The latest or earlier run did not finish every answer, so shares would mislead.',
-  coverage_unavailable:
-    'The latest or earlier run has no expected-answer count, so its coverage cannot be checked.',
-  no_observations: 'The latest or earlier run recorded no answers to compare.',
-  invalid_baseline: 'The earlier run does not finish before the latest one starts.',
-  baseline_pending: 'The comparison with an earlier run is still being prepared.',
-};
-
 function notCompared(status: string, skippedRuns = 0) {
-  let message = NOT_COMPARED[status] ?? 'The latest run cannot be compared with an earlier one.';
-  if (status === 'no_baseline')
-    message = skippedRuns
-      ? 'No earlier run used the same settings and scoring to compare with.'
-      : 'No earlier run to compare with yet.';
+  const message =
+    comparisonDeclinedReason(status, skippedRuns) ??
+    'The latest run cannot be compared with an earlier one.';
   return <StateBlock kind="empty" inline message={message} />;
 }
 

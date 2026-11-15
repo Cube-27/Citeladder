@@ -117,10 +117,17 @@ async function run(pathname: string): Promise<string | null> {
   }
 }
 
-beforeAll(() => mswServer.listen({ onUnhandledFrame: 'bypass' }));
+beforeAll(async () => {
+  mswServer.listen({ onUnhandledFrame: 'bypass' });
+  // Route prefetches import these lazily; a first import still resolving after
+  // its test ended would send that test's reads into the next one's log.
+  await Promise.all([import('@/lib/api/projects'), import('@/lib/overview/widget-queries')]);
+});
 afterAll(() => mswServer.close());
+let client: ReturnType<typeof createAppQueryClient>;
 beforeEach(() => {
-  setAppQueryClient(createAppQueryClient());
+  client = createAppQueryClient();
+  setAppQueryClient(client);
   window.localStorage.clear();
   mswServer.use(
     http.get(`/api/v1/workspaces/${WORKSPACE}/access`, () =>
@@ -128,7 +135,10 @@ beforeEach(() => {
     ),
   );
 });
-afterEach(() => {
+afterEach(async () => {
+  // A read still retrying must not reach the next test's request log.
+  await client.cancelQueries();
+  client.clear();
   mswServer.resetHandlers();
   setAppQueryClient(undefined);
 });

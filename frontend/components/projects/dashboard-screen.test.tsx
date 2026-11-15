@@ -318,14 +318,14 @@ describe('DashboardScreen', () => {
     expect(ranked.queryByText('7.5')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'No open actions' })).not.toBeInTheDocument();
   });
-  it('notes a missing comparable run in one line of the movement card', async () => {
+  it('notes why no run is comparable in one line of the movement card', async () => {
     const user = userEvent.setup();
     queryResult.data = {
       ...commandCenter,
       measurement: {
         ...commandCenter.measurement,
         comparable_audit_id: null,
-        comparison_status: 'no_baseline',
+        comparison_status: 'changed_context',
       },
       movements: [],
     };
@@ -335,15 +335,47 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
-    expect(movement.getByText('No comparable measurement yet')).toBeVisible();
+    const reason = 'The earlier run used different settings.';
+    expect(movement.getByText(reason)).toBeVisible();
     // A compact note, not a block empty state with a heading of its own.
-    expect(
-      screen.queryByRole('heading', { name: 'No comparable measurement yet' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: reason })).not.toBeInTheDocument();
     // Its action opens the Launch audit dialog, where the run is confirmed.
     expect(screen.queryByRole('dialog', { name: 'Launch audit' })).not.toBeInTheDocument();
     await user.click(movement.getByRole('button', { name: 'Launch audit' }));
     expect(screen.getByRole('dialog', { name: 'Launch audit' })).toBeInTheDocument();
+  });
+  it('shows a matched-subset change with its note, and says why per-engine movement is absent', () => {
+    queryResult.data = {
+      ...commandCenter,
+      measurement: {
+        ...commandCenter.measurement,
+        comparable_audit_id: null,
+        comparison_status: 'matched_subset',
+        comparison_answers: { matched: 8, total: 12 },
+      },
+      track: {
+        ...commandCenter.track,
+        citation_share: { value: 83, delta: 25 },
+        limitations: ['8 of 12 answers comparable'],
+      },
+      movements: [],
+    };
+    renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    const state = within(screen.getByRole('region', { name: 'Project state' }));
+    expect(state.getByText('8 of 12 answers comparable')).toBeVisible();
+    const track = within(screen.getByRole('region', { name: 'Owned citation rate' }));
+    expect(track.getByText('8 of 12 answers comparable')).toBeVisible();
+    const movement = within(screen.getByRole('region', { name: 'Movement' }));
+    expect(
+      movement.getByText(
+        '8 of 12 answers comparable; per-engine movement needs a fully comparable run.',
+      ),
+    ).toBeVisible();
+    expect(movement.queryByRole('button', { name: 'Launch audit' })).not.toBeInTheDocument();
   });
   it('says a comparable run produced no change, without offering another run', () => {
     queryResult.data = { ...commandCenter, movements: [] };
@@ -354,7 +386,7 @@ describe('DashboardScreen', () => {
     );
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
     expect(movement.getByText('No movement to show')).toBeVisible();
-    expect(movement.queryByText('No comparable measurement yet')).not.toBeInTheDocument();
+    expect(movement.queryByText(/earlier run/)).not.toBeInTheDocument();
     expect(movement.queryByRole('button', { name: 'Launch audit' })).not.toBeInTheDocument();
   });
   it("gives the next Action its reason and the Action's evidence", () => {

@@ -14,6 +14,7 @@ import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
 import { pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
+import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { DisplayTime } from '@/components/ui/display-time';
 import { useEngineCatalog } from '@/lib/providers/engines';
 
@@ -231,6 +232,14 @@ function stateSegment({
 
 /** The metric names AI Visibility uses, so one run reads the same on both screens. */
 export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
+  const basis = data.measurement
+    ? comparisonBasis({
+        status: data.measurement.comparison_status,
+        answers: data.measurement.comparison_answers,
+      })
+    : null;
+  // A partial change names the answers it uses, once, under the first figure.
+  const note = basis?.kind === 'matched_subset' ? basis.note : undefined;
   return (
     <Section aria-labelledby="project-state" className="h-full">
       <SectionHeader actions={<Tag>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Tag>}>
@@ -239,12 +248,15 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
       <SectionContent>
         <FigureStrip
           segments={[
-            stateSegment({
-              key: 'visibility',
-              label: 'Visibility',
-              metric: data.state.visibility,
-              kind: 'rate',
-            }),
+            {
+              ...stateSegment({
+                key: 'visibility',
+                label: 'Visibility',
+                metric: data.state.visibility,
+                kind: 'rate',
+              }),
+              sub: note,
+            },
             stateSegment({
               key: 'share',
               label: 'Share of voice',
@@ -305,8 +317,8 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
                 observed && track.citation_share.delta !== null ? (
                   <Delta value={track.citation_share.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
                 ) : undefined,
-              sub:
-                observed && track.citation_share.delta !== null ? undefined : track.limitations[0],
+              // Why no change is shown, or which answers a partial change uses.
+              sub: track.limitations[0],
             },
           ]}
         />
@@ -333,22 +345,43 @@ export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
         {data.movements.length ? (
           <MovementChart movements={data.movements} />
         ) : (
-          <NoMovement comparable={Boolean(data.measurement?.comparable_audit_id)} />
+          <NoMovement measurement={data.measurement} />
         )}
       </SectionContent>
     </Section>
   );
 }
 
-function NoMovement({ comparable }: Readonly<{ comparable: boolean }>) {
-  if (comparable)
-    return <StateBlock kind="empty" inline icon={TrendingUp} message="No movement to show" />;
+function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['measurement'] }>) {
+  const note = (message: string) => (
+    <StateBlock kind="empty" inline icon={TrendingUp} message={message} />
+  );
+  if (!measurement) return declined('No measured run yet.');
+  const basis = comparisonBasis({
+    status: measurement.comparison_status,
+    answers: measurement.comparison_answers,
+  });
+  switch (basis.kind) {
+    case 'comparable':
+      return note('No movement to show');
+    case 'matched_subset':
+      return note(`${basis.note}; per-engine movement needs a fully comparable run.`);
+    case 'declined':
+      return declined(basis.reason);
+    default: {
+      const unreachable: never = basis;
+      return unreachable;
+    }
+  }
+}
+
+function declined(message: string) {
   return (
     <StateBlock
       kind="empty"
       inline
       icon={TrendingUp}
-      message="No comparable measurement yet"
+      message={message}
       action={<LaunchAuditButton variant="secondary" />}
     />
   );

@@ -522,11 +522,14 @@ describe('BillingScreen', () => {
     ).toBeNull();
   });
 
-  it('surfaces a catalog failure without falling back to a price', async () => {
+  it('surfaces a catalog failure without falling back to a price, and recovers with Retry', async () => {
     entitlementValue = resolvedEntitlement();
+    let available = false;
     mswServer.use(
       http.get('/api/v1/billing/workspace-catalog', () =>
-        HttpResponse.json({ error: { message: 'catalog unavailable' } }, { status: 400 }),
+        available
+          ? HttpResponse.json(CATALOG)
+          : HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 }),
       ),
       entitlementHandler(),
       usageHandler(),
@@ -534,10 +537,14 @@ describe('BillingScreen', () => {
 
     renderWithProviders(<BillingScreen />);
 
-    expect(await screen.findByText(/Could not load the plan catalog/i)).toBeInTheDocument();
+    const retry = await screen.findByRole('button', { name: 'Retry' });
     expect(screen.queryByRole('button', { name: /Choose/ })).toBeNull();
     // No component-owned fallback price may appear when the catalog is gone.
     expect(document.body.textContent).not.toMatch(/\$\d/);
+
+    available = true;
+    await userEvent.click(retry);
+    expect(await screen.findAllByRole('button', { name: /Choose/ })).not.toHaveLength(0);
   });
 
   it('shows only paid receipts and downloads the server-issued PDF', async () => {
@@ -606,6 +613,28 @@ describe('BillingScreen', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Download receipt' }));
     expect(await screen.findByText('Receipt download failed. Please retry.')).toBeInTheDocument();
   });
+  it('recovers a failed invoice read with Retry', async () => {
+    entitlementValue = resolvedEntitlement();
+    let invoiceReads = 0;
+    mswServer.use(
+      catalogHandler(),
+      entitlementHandler(),
+      usageHandler(),
+      http.get('/api/v1/billing/invoices', () => {
+        invoiceReads += 1;
+        return invoiceReads === 1
+          ? HttpResponse.json({ error: { message: 'unavailable' } }, { status: 503 })
+          : HttpResponse.json({ invoices: [] });
+      }),
+    );
+
+    renderWithProviders(<BillingScreen />);
+    await userEvent.click(await screen.findByRole('button', { name: 'Retry' }));
+
+    expect(await screen.findByText('No invoices have been issued yet')).toBeVisible();
+    expect(invoiceReads).toBe(2);
+  });
+
   it('quotes the prorated upgrade charge before any payment opens', async () => {
     entitlementValue = resolvedEntitlement(ACTIVE_STARTER);
     const changes: unknown[] = [];

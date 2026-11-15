@@ -93,6 +93,15 @@ export const INTERACTIVE_EXECUTION_REQUEST_TIMEOUT_MS = 255_000;
  */
 export const API_RETRY_BACKOFF_MS = 150;
 
+/**
+ * Query-level read retries (owner, 2026-11-15: failed reads surface sooner).
+ * A server error or timeout retries once after a short pause, so the inline
+ * error with Retry shows within about 2 to 3 s; a network blip gets one more try.
+ */
+export const QUERY_RETRY_DELAY_MS = 500;
+export const QUERY_SERVER_ERROR_RETRIES = 1;
+export const QUERY_NETWORK_ERROR_RETRIES = 2;
+
 // A blocking workspace precondition should not look frozen indefinitely.
 // This timer changes only the UI from passive loading to an explicit retry;
 // the API client's request timeout remains the network authority.
