@@ -72,9 +72,6 @@ export function PerformanceBreakdowns({
             items={DIMENSION_TABS.map((tab) => ({ value: tab.value, label: tab.label }))}
             ariaLabel="Performance breakdowns"
             spaced
-            // The tab row heads the table card, so it spans the full width
-            // rather than hugging six labels and leaving dead space to the right.
-            fill
             onIntent={(next) => {
               if (!unavailableDimensions.includes(next))
                 warm({ snapshotId, compareSnapshotId }, next);

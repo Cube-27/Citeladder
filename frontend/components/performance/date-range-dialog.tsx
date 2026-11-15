@@ -1,6 +1,9 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { formatWindowDate } from '@/lib/format';
 import { Dialog } from '@/components/ui/dialog';
 import { DateField } from '@/components/ui/date-field';
 import { Field } from '@/components/ui/field';
@@ -190,12 +193,13 @@ export function DateRangeDialog({
       width="wide"
       description={
         coverage.earliest && coverage.latest
-          ? `Imported history covers ${coverage.earliest} to ${coverage.latest}.`
+          ? `Imported history covers ${formatWindowDate(coverage.earliest)} to ${formatWindowDate(coverage.latest)}.`
           : 'No imported history yet.'
       }
       footer={
         <>
           <Button variant="quiet" onClick={() => onOpenChange(false)}>
+            <Icon icon={X} />
             Cancel
           </Button>
           <Button

@@ -8,7 +8,7 @@ import {
 import type { usePerformanceSync } from './use-performance-sync';
 import { Icon } from '@/components/ui/icon';
 import { Button } from '@/components/ui/button';
-import type { StatusMessage } from '@/components/ui/status-line';
+import { Notice } from '@/components/ui/notice';
 import type { useRangeProjection } from './use-range-projection';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { SegmentedAction, SegmentedControl } from '@/components/ui/tabs';
@@ -140,8 +140,8 @@ export function PerformanceToolbar({
 
 /**
  * Importing is an action on the project, not a narrowing of what is shown, so
- * it rides the identity band with every other route action rather than the end
- * of the filter row.
+ * it rides the masthead with every other route action rather than the end of
+ * the filter row. Before any history exists it is the empty state's own step.
  */
 export function PerformanceActions({
   noConnections,
@@ -226,10 +226,35 @@ export function ProjectionFailure({
   );
 }
 
+/** One thing the screen has to say; the list runs most important first. */
+type PerformanceMessage = Readonly<{
+  key: string;
+  tone: 'info' | 'warning';
+  text: string;
+  /** Work in flight. */
+  busy?: boolean;
+}>;
+
 /**
- * The screen's notices, most important first, for its one `StatusLine`:
- * they swap in place rather than stacking banners above the chart.
+ * The page's one notice: its most important message in full (it wraps, so
+ * nothing is cut), then any others after it in the same notice, never a
+ * stack of banners. Nothing at all when there is nothing to say.
  */
+export function PerformanceNotice({
+  messages,
+}: Readonly<{ messages: readonly PerformanceMessage[] }>) {
+  const [first, ...rest] = messages;
+  if (!first) return null;
+  return (
+    <div data-testid="performance-status" className="min-w-0">
+      <Notice tone={messages.some((message) => message.tone === 'warning') ? 'warning' : 'info'}>
+        {[first, ...rest].map((message) => message.text).join(' ')}
+      </Notice>
+    </div>
+  );
+}
+
+/** The screen's notices, most important first, for its one `PerformanceNotice`. */
 export function performanceNotices({
   sync,
   projecting,
@@ -248,8 +273,8 @@ export function performanceNotices({
   /** Some imported days of a mapped provider are missing, flagged or on a prior revision. */
   qualityFlagged: boolean;
   readinessFailed: boolean;
-}>): StatusMessage[] {
-  const messages: StatusMessage[] = [];
+}>): PerformanceMessage[] {
+  const messages: PerformanceMessage[] = [];
   if (sync.error) messages.push({ key: 'sync-error', tone: 'warning', text: sync.error });
   if (readinessFailed)
     messages.push({

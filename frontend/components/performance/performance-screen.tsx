@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 
 import { DateRangeDialog } from './date-range-dialog';
 import {
   granularityFilter,
   PerformanceActions,
+  PerformanceNotice,
   PerformanceToolbar,
   PerformanceWindowCaption,
   performanceNotices,
@@ -23,7 +24,7 @@ import { ReportPage } from '@/components/templates/report-page';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
-import { StatusLine } from '@/components/ui/status-line';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatCount, formatWindowDate } from '@/lib/format';
 import { ChartNoAxesColumn } from 'lucide-react';
 import { integrationsQueries } from '@/lib/api/integrations';
@@ -126,12 +127,31 @@ function hasQualityFlags(quality: PerformanceDashboard['coverage']['analytics_qu
   return Object.values(quality).some((days) => days.some((day) => day.flags.length > 0));
 }
 
-/** The status line at rest: the history the dashboard can draw from, or nothing before any rows. */
+/** The history the dashboard can draw from, or nothing before any rows. */
 function coverageSummary(coverage: PerformanceDashboard['coverage']): string | null {
   if (!coverage.earliest_date || !coverage.latest_date) return null;
   return `Imported history ${formatWindowDate(coverage.earliest_date)} – ${formatWindowDate(
     coverage.latest_date,
-  )} · ${formatCount(coverage.covered_days)} days`;
+  )} · ${formatCount(coverage.covered_days)} ${coverage.covered_days === 1 ? 'day' : 'days'}`;
+}
+
+/**
+ * Search Console is connected and nothing is imported yet: there is nothing
+ * to range over, so the page shows this and its one step, and no range
+ * controls.
+ */
+function FirstUseEmptyState({ action }: Readonly<{ action: ReactNode }>) {
+  return (
+    <Section>
+      <StateBlock
+        kind="empty"
+        icon={ChartNoAxesColumn}
+        heading="No Search Console history yet"
+        description="Performance charts the clicks and impressions Search Console reports. Sync to import your history."
+        action={action}
+      />
+    </Section>
+  );
 }
 
 function PerformanceEmptyState({
@@ -143,23 +163,27 @@ function PerformanceEmptyState({
   if (failed) return null;
   if (projecting) {
     return (
+      <Section>
+        <StateBlock
+          kind="empty"
+          icon={ChartNoAxesColumn}
+          heading="Building this performance range"
+          description="CiteLadder is preparing this view from the traffic evidence already imported."
+        />
+      </Section>
+    );
+  }
+  // Before any import the setup card or the first-use state says what to do.
+  if (data.coverage.covered_days === 0 && data.selected.snapshot_id === null) return null;
+  return (
+    <Section>
       <StateBlock
         kind="empty"
         icon={ChartNoAxesColumn}
-        heading="Building this performance range"
-        description="CiteLadder is preparing this view from the traffic evidence already imported."
+        heading="No performance evidence here"
+        description="Choose a range inside the imported history, or sync the missing dates."
       />
-    );
-  }
-  // Before any import the setup card above says what to do.
-  if (data.coverage.covered_days === 0 && data.selected.snapshot_id === null) return null;
-  return (
-    <StateBlock
-      kind="empty"
-      icon={ChartNoAxesColumn}
-      heading="No performance evidence here"
-      description="Choose a range inside the imported history, or sync the missing dates."
-    />
+    </Section>
   );
 }
 
@@ -173,6 +197,7 @@ function SearchConsoleWorkspace({
   onToggleMetric,
   series,
   refreshing,
+  coverage,
 }: Readonly<{
   available: boolean;
   selected: PerformanceDashboard['selected'];
@@ -183,14 +208,19 @@ function SearchConsoleWorkspace({
   onToggleMetric: (metric: PerformanceMetricKey) => void;
   series: ChartSeries[];
   refreshing: boolean;
+  /** The imported history the figures draw from. */
+  coverage: string | null;
 }>) {
   if (!available) return null;
-  // The strip and the plot it drives are one section: selecting a figure
-  // changes the lines directly beneath it.
+  // The strip and the charts it drives are one section: selecting a figure
+  // changes the charts directly beneath it.
   return (
     <Section aria-labelledby="performance-search-console">
       <SectionHeader actions={<MetricDefinitions />}>
         <SectionTitle id="performance-search-console">Google Search</SectionTitle>
+        {coverage ? (
+          <SectionDescription data-testid="performance-coverage">{coverage}</SectionDescription>
+        ) : null}
       </SectionHeader>
       <Stack gap="workspace" className="min-w-0">
         <MetricCards
@@ -288,12 +318,21 @@ function performanceControls({
 
 /**
  * The first load holds the control band the loaded page draws its range
- * toolbar in, so the work starts on the same line before and after.
+ * toolbar in, and the Google Search card in its loaded shape (its head, four
+ * figures, a chart), so the figures start on the same line before and after.
  */
 function PerformanceLoading() {
   return (
     <ReportPage filters={<FilterBar {...RESERVED_CONTROLS} />}>
-      <StateBlock kind="loading" label="Loading performance…" />
+      <Section aria-labelledby="performance-search-console-loading">
+        <SectionHeader>
+          <SectionTitle id="performance-search-console-loading">Google Search</SectionTitle>
+        </SectionHeader>
+        <Stack gap="workspace">
+          <Skeleton variant="stat" count={4} label="Loading performance" />
+          <Skeleton variant="chart" height="md" />
+        </Stack>
+      </Section>
     </ReportPage>
   );
 }
@@ -375,29 +414,34 @@ export function PerformanceScreen() {
   const evidence = evidenceAvailability(data, readiness.data);
   const hasEvidence = evidence.hasSearchConsoleBreakdowns || evidence.hasGa4 || evidence.hasBing;
   const coverage = performanceCoverage(data, hasEvidence);
+  const syncAction = (
+    <PerformanceActions noConnections={answeredNoConnections(connections)} sync={sync} />
+  );
 
   return (
     <ReportPage
-      actions={
-        <PerformanceActions noConnections={answeredNoConnections(connections)} sync={sync} />
-      }
+      // Before any history there is nothing to range over or re-sync: the
+      // empty state holds the one step, and no range controls are drawn.
+      actions={coverage.firstUse ? undefined : syncAction}
       filters={
-        <FilterBar
-          {...performanceControls({
-            selection,
-            onSelectRange: setSelection,
-            onOpenDialog: (tab) => {
-              setDialogTab(tab);
-              setDialogOpen(true);
-            },
-            onReset: resetFilters,
-            hasChart: evidence.hasSearchConsoleTotals,
-            granularity,
-            onGranularityChange: setGranularity,
-            windowLabel: selectedLabel,
-            latestDate: data.coverage.latest_date,
-          })}
-        />
+        coverage.firstUse ? undefined : (
+          <FilterBar
+            {...performanceControls({
+              selection,
+              onSelectRange: setSelection,
+              onOpenDialog: (tab) => {
+                setDialogTab(tab);
+                setDialogOpen(true);
+              },
+              onReset: resetFilters,
+              hasChart: evidence.hasSearchConsoleTotals,
+              granularity,
+              onGranularityChange: setGranularity,
+              windowLabel: selectedLabel,
+              latestDate: data.coverage.latest_date,
+            })}
+          />
+        )
       }
     >
       <Stack gap="workspace">
@@ -405,6 +449,7 @@ export function PerformanceScreen() {
           required={['gsc']}
           optional={['ga4', 'bing']}
           title="Connect Search Console"
+          whenReady={coverage.firstUse ? <FirstUseEmptyState action={syncAction} /> : null}
         />
         {readiness.isError ? null : (
           <ReadinessLadder
@@ -413,9 +458,7 @@ export function PerformanceScreen() {
           />
         )}
 
-        <StatusLine
-          testId="performance-status"
-          resting={coverageSummary(data.coverage)}
+        <PerformanceNotice
           messages={performanceNotices({
             sync,
             projecting: projection.projecting,
@@ -450,6 +493,7 @@ export function PerformanceScreen() {
               onToggleMetric={toggleMetric}
               series={series}
               refreshing={refreshing}
+              coverage={coverageSummary(data.coverage)}
             />
             <Ga4Workspace
               available={evidence.hasGa4}
