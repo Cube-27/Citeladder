@@ -4,11 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { CollectionPage } from '@/components/templates/collection-page';
 import { Inline } from '@/components/ui/layout';
 import {
-  IssueDetailDialog,
-  PendingIssueDialog,
+  IssueDetailDrawer,
+  PendingIssueDrawer,
   type IssueHead,
 } from '@/components/site-health/issue-detail-dialog';
-import { IssueMetadata } from '@/components/site-health/issue-metadata';
+import { IssueCategoryTag, IssueSeverityMark } from '@/components/site-health/issue-metadata';
 import { IssuesSummary } from '@/components/site-health/issues-summary';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
@@ -19,7 +19,7 @@ import {
   type DataTableState,
 } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Pressable } from '@/components/ui/pressable';
+import { TextLink } from '@/components/ui/text-link';
 import { SearchField } from '@/components/ui/search-field';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -46,7 +46,7 @@ import {
   type IssueFilters,
 } from '@/lib/site-health/issue-filters';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
-import { InlineFigure, textRole } from '@/components/ui/typography';
+import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 
 /**
@@ -165,10 +165,10 @@ export function IssuesCatalog({
         ))}
       </DataTable>
       {selectedGroupId !== null && open === null ? (
-        <PendingIssueDialog detailQuery={detailQuery} onClose={() => catalog.selectIssue(null)} />
+        <PendingIssueDrawer detailQuery={detailQuery} onClose={() => catalog.selectIssue(null)} />
       ) : null}
       {open ? (
-        <IssueDetailDialog
+        <IssueDetailDrawer
           issue={open}
           scope={{ workspaceId, projectId }}
           crawlId={crawlId}
@@ -202,12 +202,15 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
     return {
       kind: 'empty',
       icon: ICONS.issues,
-      heading: 'No issues match this view',
+      heading: 'No issue types match this view',
     } satisfies DataTableState;
   return undefined;
 }
 
-/** The issue, its severity, its pages; severity and pages order the list. */
+/**
+ * The issue, its severity, the pages it affects, then its category; severity
+ * and pages order the list. The category is the column that may scroll.
+ */
 function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataTableColumn[] {
   return [
     { key: 'issue', label: 'Issue', kind: 'identity' },
@@ -215,19 +218,21 @@ function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataT
       key: 'severity',
       label: 'Severity',
       kind: 'status',
-      width: 'statusLabel',
+      width: 'status',
       sort: { active: sort === 'severity', descending: true, onSort: () => onSort('severity') },
     },
     {
       key: 'pages',
-      label: 'Pages',
+      label: 'Pages affected',
       kind: 'number',
+      width: 'metric',
       sort: { active: sort === 'pages', descending: true, onSort: () => onSort('pages') },
     },
+    { key: 'category', label: 'Category', width: 'category', priority: 'low' },
   ];
 }
 
-/** One issue: the whole row opens its detail, the title is the keyboard's way in. */
+/** One issue: the whole row opens its detail; the underlined title is the keyboard's way in. */
 function IssueRow({
   issue,
   onOpen,
@@ -237,30 +242,34 @@ function IssueRow({
     <TableRow onClick={() => onOpen(issue.group_id)} className="cursor-pointer">
       <TableCell>
         <Inline gap="tight">
-          <Pressable
-            aria-haspopup="dialog"
-            onClick={(event) => {
-              event.stopPropagation();
-              onOpen(issue.group_id);
-            }}
-            className="min-h-6 min-w-0"
-          >
-            <ClampText lines={1} className={textRole('emphasis')}>
-              {title}
-            </ClampText>
-          </Pressable>
+          <TextLink asChild>
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpen(issue.group_id);
+              }}
+              className="min-h-6 min-w-0 text-start"
+            >
+              <ClampText>{title}</ClampText>
+            </button>
+          </TextLink>
           {issue.description ? (
             // The rule's description states the passing check, so it is
-            // offered as what the check looks for, never under the title.
+            // offered beside the title it explains, never under it.
             <InfoHint label={`What “${title}” checks`}>{issue.description}</InfoHint>
           ) : null}
         </Inline>
       </TableCell>
-      <TableCell className="whitespace-nowrap">
-        <IssueMetadata issue={issue} />
+      <TableCell>
+        <IssueSeverityMark issue={issue} />
       </TableCell>
       <TableCell numeric className="tabular-nums">
         {formatCount(issue.affected_url_count)}
+      </TableCell>
+      <TableCell>
+        <IssueCategoryTag issue={issue} />
       </TableCell>
     </TableRow>
   );
@@ -434,19 +443,24 @@ function IssueCount({
     <p className="type-caption whitespace-nowrap">
       <SummaryCount
         value={typeCount}
-        singular={defects ? 'issue' : 'advisory'}
-        plural={defects ? 'issues' : 'advisories'}
+        singular={defects ? 'issue type' : 'advisory type'}
+        plural={defects ? 'issue types' : 'advisory types'}
       />
       {defects && high > 0 ? (
         <>
           <span aria-hidden> · </span>
           <span>
-            <InlineFigure className={textRole('emphasis')}>{formatCount(high)}</InlineFigure> high
+            <span className={textRole('emphasis', 'tabular-nums')}>{formatCount(high)}</span> high
+            severity
           </span>
         </>
       ) : null}
       <span aria-hidden> · </span>
-      <SummaryCount value={summary.affected_url_count} singular="page" plural="pages" />
+      <SummaryCount
+        value={summary.affected_url_count}
+        singular="page affected"
+        plural="pages affected"
+      />
     </p>
   );
 }
@@ -458,7 +472,7 @@ function SummaryCount({
 }: Readonly<{ value: number; singular: string; plural: string }>) {
   return (
     <span>
-      <InlineFigure className={textRole('emphasis')}>{formatCount(value)}</InlineFigure>{' '}
+      <span className={textRole('emphasis', 'tabular-nums')}>{formatCount(value)}</span>{' '}
       {value === 1 ? singular : plural}
     </span>
   );

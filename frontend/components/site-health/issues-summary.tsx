@@ -2,22 +2,28 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import { fixedLabel } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
+import { AppGrid } from '@/components/ui/app-grid';
 import { OpenRow } from '@/components/ui/list-row';
 import { PartBar, type Part } from '@/components/ui/part-bar';
-import { Inline, Stack } from '@/components/ui/layout';
-import { InlineFigure, textRole } from '@/components/ui/typography';
+import { Skeleton } from '@/components/ui/skeleton';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
 import { formatCount } from '@/lib/format';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
 import { Notice } from '@/components/ui/notice';
-import { StateBlock } from '@/components/ui/state-block';
-import { Section } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /**
- * The top of the Issues screen: how many issues the crawl has, how many are
- * high severity, and the few to fix first. It reads the crawl's unfiltered
- * defects, so it never changes as the list below is searched or filtered.
+ * The top of the Issues screen: how many issue types the crawl has, how many
+ * are high severity, and the few to fix first. It reads the crawl's
+ * unfiltered defects, so it never changes as the list below is searched or
+ * filtered.
  */
 export function IssuesSummary({
   query,
@@ -41,8 +47,34 @@ export function IssuesSummary({
         pending={query.isFetching}
       />
     );
-  if (!query.data) return <StateBlock kind="loading" label="Loading the issue summary…" />;
+  if (!query.data) return <IssuesSummaryLoading />;
   const { summary, items } = query.data;
+  const severity = <SeverityCard summary={summary} />;
+  if (items.length === 0) return severity;
+  return (
+    <AppGrid layout="main-aside">
+      <FixFirst issues={items} fixes={fixes} onOpen={onOpen} />
+      {severity}
+    </AppGrid>
+  );
+}
+
+/** The loaded layout's two cards, as blocks, so the table below does not move. */
+export function IssuesSummaryLoading() {
+  return (
+    <AppGrid layout="main-aside">
+      <Section>
+        <Skeleton variant="block" rows={3} label="Loading the issue summary" />
+      </Section>
+      <Section>
+        <Skeleton variant="text" lines={3} label="Loading the issue summary" />
+      </Section>
+    </AppGrid>
+  );
+}
+
+/** Issue types by severity: the count, the high-severity count, the pages they reach. */
+function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary'] }>) {
   const total = summary.defect_issue_type_count;
   const high = severityCount(summary.severity_counts, 'high');
   const slices: readonly Part[] = [
@@ -51,41 +83,36 @@ export function IssuesSummary({
     { label: 'Low', value: severityCount(summary.severity_counts, 'low'), status: 'info' },
   ];
   return (
-    <Section>
-      <Stack gap="workspace">
-        <Inline gap="workspace" className="flex-wrap justify-between">
-          <Stack gap="tight" className="min-w-0 flex-[1_1_20rem]">
-            <h2 className={textRole('heading')}>{outstandingHeadline(total)}</h2>
-            <p className={textRole('body', 'text-ink-2')}>{attentionLine(high, summary)}</p>
-          </Stack>
-          {total > 0 ? (
-            <PartBar
-              className="flex-[0_1_28rem]"
-              parts={slices}
-              totalLabel={total === 1 ? 'issue' : 'issues'}
-              label="Issues by severity"
-            />
-          ) : null}
-        </Inline>
-        {items.length > 0 ? <FixFirst issues={items} fixes={fixes} onOpen={onOpen} /> : null}
-      </Stack>
+    <Section aria-labelledby="issues-by-severity">
+      <SectionHeader>
+        <SectionTitle id="issues-by-severity">{issueTypesLabel(total)}</SectionTitle>
+        <SectionDescription>{attentionLine(high, summary)}</SectionDescription>
+      </SectionHeader>
+      {total > 0 ? (
+        <SectionContent>
+          <PartBar
+            parts={slices}
+            totalLabel={total === 1 ? 'issue type' : 'issue types'}
+            label="Issue types by severity"
+          />
+        </SectionContent>
+      ) : null}
     </Section>
   );
 }
 
-function outstandingHeadline(total: number): string {
-  if (total === 0) return 'You have no outstanding issues';
-  return `You have ${formatCount(total)} outstanding ${total === 1 ? 'issue' : 'issues'}`;
+function issueTypesLabel(total: number): string {
+  if (total === 0) return 'No issue types to fix';
+  return `${formatCount(total)} ${total === 1 ? 'issue type' : 'issue types'}`;
 }
 
-/** How many need attention now, and the pages the issues reach. */
+/** How many are high severity, and how many pages the issue types reach. */
 function attentionLine(high: number, summary: SiteIssuesPage['summary']): string {
   const pages = summary.affected_url_count;
-  const reach = `They affect ${formatCount(pages)} ${pages === 1 ? 'page' : 'pages'}.`;
   if (summary.defect_issue_type_count === 0) return 'This crawl found nothing to fix.';
-  if (high === 0) return `None is high severity. ${reach}`;
-  const need = high === 1 ? '1 issue needs' : `${formatCount(high)} issues need`;
-  return `${need} attention first: they hold back how search and answer engines read your site. ${reach}`;
+  const reach = `${formatCount(pages)} ${pages === 1 ? 'page affected' : 'pages affected'}.`;
+  const severe = `${formatCount(high)} ${high === 1 ? 'high-severity issue type' : 'high-severity issue types'}`;
+  return `${severe}. ${reach}`;
 }
 
 /** The first sentence of a rule's fix, so a priority line stays one line of advice. */
@@ -106,10 +133,11 @@ function FixFirst({
 }>) {
   const fixOf = new Map(fixes.map((fix) => [fix.group_id, fix]));
   return (
-    <Stack as="section" gap="item" aria-labelledby="issues-fix-first">
-      <h3 id="issues-fix-first" className={textRole('heading')}>
-        Fix these first
-      </h3>
+    <Section aria-labelledby="issues-fix-first">
+      <SectionHeader>
+        <SectionTitle id="issues-fix-first">Fix these first</SectionTitle>
+        <SectionDescription>Top 3 by severity, then reach</SectionDescription>
+      </SectionHeader>
       <ol className={ledgerClasses()}>
         {issues.map((issue) => {
           const fix = fixOf.get(issue.group_id);
@@ -121,8 +149,8 @@ function FixFirst({
                 meta={
                   <IssueMetadata issue={issue}>
                     <span className="tabular-nums">
-                      <InlineFigure>{formatCount(issue.affected_url_count)}</InlineFigure>{' '}
-                      {issue.affected_url_count === 1 ? 'page' : 'pages'}
+                      {formatCount(issue.affected_url_count)}{' '}
+                      {issue.affected_url_count === 1 ? 'page affected' : 'pages affected'}
                     </span>
                     {fix && fix.fixed_url_count > 0 ? (
                       <span className="tabular-nums">{fixedLabel(fix)}</span>
@@ -135,6 +163,6 @@ function FixFirst({
           );
         })}
       </ol>
-    </Stack>
+    </Section>
   );
 }

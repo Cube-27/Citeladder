@@ -5,7 +5,7 @@ import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { CopyButton } from '@/components/ui/copy-button';
-import { Dialog } from '@/components/ui/dialog';
+import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pager } from '@/components/ui/pager';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,11 +23,13 @@ import {
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { groupOccurrences, loadedPageCount } from '@/lib/site-health/occurrence-groups';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
+import { formatCount } from '@/lib/format';
+import { ClampText } from '@/components/ui/clamp-text';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
- * The issue a dialog describes: its catalog row, or — for an issue the address
+ * The issue a drawer describes: its catalog row, or — for an issue the address
  * names that is not on the listed page — its detail, which carries the same
  * facts but no page types.
  */
@@ -50,7 +52,7 @@ export type IssueHead = Pick<
  * to act on it, how many of its pages are fixed (Mark fixed, Re-run all), and
  * the pages it was found on, each linking to its page.
  */
-export function IssueDetailDialog({
+export function IssueDetailDrawer({
   issue,
   scope,
   crawlId,
@@ -71,7 +73,7 @@ export function IssueDetailDialog({
   onClose: () => void;
 }>) {
   // The query keeps the previous issue's page while this one loads; those
-  // pages are not this issue's, so the dialog waits rather than caption them.
+  // pages are not this issue's, so the drawer waits rather than caption them.
   const loaded = detailQuery.isError ? undefined : detailQuery.data;
   const detail = loaded?.group_id === issue.group_id ? loaded : undefined;
   const handoff = {
@@ -82,17 +84,17 @@ export function IssueDetailDialog({
   useAgentPanelSeed(handoff);
   const pageKinds = issue.page_kinds ?? [];
   return (
-    <Dialog
+    <Drawer
       open
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      width="wide"
       title={issueTitle(issue)}
       description={
         <IssueMetadata issue={issue}>
           <span className="tabular-nums">
-            {issue.affected_url_count} {issue.affected_url_count === 1 ? 'page' : 'pages'} affected
+            {formatCount(issue.affected_url_count)}{' '}
+            {issue.affected_url_count === 1 ? 'page affected' : 'pages affected'}
           </span>
           {pageKinds.length > 0 ? <span>{pageKinds.map(pageKindLabel).join(', ')}</span> : null}
         </IssueMetadata>
@@ -142,7 +144,7 @@ export function IssueDetailDialog({
           firstPage={!canPrevious}
         />
       </Stack>
-    </Dialog>
+    </Drawer>
   );
 }
 
@@ -151,17 +153,16 @@ export function IssueDetailDialog({
  * or a stale link), before its own read has answered: loading, or why it
  * could not load, with a retry. Closing it clears the selection.
  */
-export function PendingIssueDialog({
+export function PendingIssueDrawer({
   detailQuery,
   onClose,
 }: Readonly<{ detailQuery: UseQueryResult<SiteIssueDetail>; onClose: () => void }>) {
   return (
-    <Dialog
+    <Drawer
       open
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      width="wide"
       title="Issue"
     >
       {detailQuery.isError ? (
@@ -176,7 +177,7 @@ export function PendingIssueDialog({
       ) : (
         <StateBlock kind="loading" label="Loading the issue…" />
       )}
-    </Dialog>
+    </Drawer>
   );
 }
 
@@ -192,8 +193,6 @@ export function askAgentPrompt(
     ? `Analyze the Website issue "${issueTitle(issue)}"${scope} and propose exact page edits from the selected evidence.`
     : `Analyze the Website issue "${issueTitle(issue)}"${scope}, prioritize the work and propose a bounded implementation plan from the supplied sample; say how many pages it covers versus the total.`;
 }
-
-const OCCURRENCE_PLACEHOLDERS = ['first', 'second', 'third'] as const;
 
 function OccurrenceList({
   issue,
@@ -225,16 +224,7 @@ function OccurrenceList({
   // true told the reader an issue affected nothing, a moment before showing
   // them the pages it affects.
   if (query.isPending || !detail) {
-    return (
-      <ul aria-busy="true" className={ledgerClasses()}>
-        {OCCURRENCE_PLACEHOLDERS.map((placeholder) => (
-          <Stack as="li" gap="item" key={placeholder} className={ledgerItemClasses()}>
-            <Skeleton />
-            <Skeleton />
-          </Stack>
-        ))}
-      </ul>
-    );
+    return <Skeleton variant="block" rows={3} label="Loading affected pages" />;
   }
   if (detail.occurrences.length === 0)
     return <StateBlock kind="empty" inline message="No affected URLs found." />;
@@ -353,9 +343,9 @@ function SiteLevelList({
               key={section.pathPrefix}
               className={ledgerItemClasses('flex-wrap justify-between')}
             >
-              <span className={textRole('body', '[overflow-wrap:anywhere]')}>
+              <ClampText className={textRole('body', 'min-w-0 flex-1')}>
                 {section.pathPrefix}
-              </span>
+              </ClampText>
               <span className="type-caption tabular-nums">{pageCountLabel(section.pageCount)}</span>
             </Inline>
           ))}
@@ -418,23 +408,27 @@ function LinkTargetList({
         const hidden = target.pageCount - target.pages.length;
         return (
           <Stack as="li" gap="tight" key={target.url} className={ledgerItemClasses()}>
-            <span className={textRole('body', '[overflow-wrap:anywhere]')}>
-              {sitePath(target.url, origin)} → {linkOutcomeLabel(target.outcome, origin)}
-            </span>
+            <ClampText className={textRole('body')}>
+              {`${sitePath(target.url, origin)} → ${linkOutcomeLabel(target.outcome, origin)}`}
+            </ClampText>
             <span className="type-caption tabular-nums">
               On {pageCountLabel(target.pageCount)}
               {hidden > 0 ? ', including:' : ':'}
             </span>
-            {target.pages.map((page) => (
-              <AffectedPageLink
-                key={page.siteUrlId}
-                crawlId={crawlId}
-                siteUrlId={page.siteUrlId}
-                title={page.title}
-                url={page.url}
-                pageKind={page.pageKind}
-              />
-            ))}
+            {/* Each page link is its own row, at least 24 high, so stacked targets never touch (WCAG 2.5.8). */}
+            <Stack as="ul" gap="item">
+              {target.pages.map((page) => (
+                <li key={page.siteUrlId} className="flex min-h-6 min-w-0 items-center">
+                  <AffectedPageLink
+                    crawlId={crawlId}
+                    siteUrlId={page.siteUrlId}
+                    title={page.title}
+                    url={page.url}
+                    pageKind={page.pageKind}
+                  />
+                </li>
+              ))}
+            </Stack>
           </Stack>
         );
       })}
