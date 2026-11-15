@@ -212,24 +212,25 @@ export function SidebarNavRowContent({
   );
 }
 
+const RAIL_BUTTON = cn(
+  'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-5',
+  'before:rounded-mark before:absolute before:inset-y-2.5 before:start-0 before:w-[var(--mark-width)]',
+  'data-[state=open]:overlay-pressed',
+);
+
 /**
  * A collapsed-rail button's face: 40 square, a 20px icon, radius 6. The
  * button of the group that holds the current page carries the tile and the
  * accent mark.
  */
 export function sidebarRailButtonClasses(current: boolean) {
-  return cn(
-    'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-5',
-    'before:rounded-mark before:absolute before:inset-y-2.5 before:start-0 before:w-[var(--mark-width)]',
-    'data-[state=open]:overlay-pressed',
-    current ? CURRENT_TILE : AT_REST,
-  );
+  return cn(RAIL_BUTTON, current ? CURRENT_TILE : AT_REST);
 }
 
 /**
  * The Dashboard | Agent switch, the Segmented look: a `well` track 32 tall
  * (44 in the drawer) with the current segment raised on `surface`. In the
- * rail it is two stacked rail buttons.
+ * rail it is two stacked rail buttons, the current one on the tile without the mark.
  */
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
@@ -238,7 +239,8 @@ export function sidebarModeTrackClasses(rail: boolean) {
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
-  if (rail) return sidebarRailButtonClasses(current);
+  // The rail's one accent mark is the current destination's; the mode takes the tile only.
+  if (rail) return cn(RAIL_BUTTON, current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST);
   return cn(
     'focus-ring type-label relative flex h-full w-full items-center justify-center gap-2 rounded-sm transition-colors [&_svg]:size-4',
     current ? 'bg-surface text-ink shadow-card' : AT_REST,

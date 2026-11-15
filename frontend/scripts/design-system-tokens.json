@@ -999,11 +999,6 @@
         "usage": "Centred section headers, auth cards, onboarding steps, empty states."
       },
       {
-        "name": "container-content",
-        "value": "1280px",
-        "usage": "The app's content cap, left-aligned to the gutter."
-      },
-      {
         "name": "container-form",
         "value": "640px",
         "usage": "The app's form column."

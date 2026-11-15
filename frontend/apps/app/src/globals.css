@@ -323,9 +323,8 @@
   --container-thread: 1040px;
   --container-prose: 720px;
   --container-narrow: 560px;
-  /* The app's columns: content caps at 1280, reading
-     at 720 (`prose`), forms at 640. */
-  --container-content: 1280px;
+  /* The app's measures: reading at 720 (`prose`), forms at 640; the page
+     itself fills the main column. */
   --container-form: 640px;
   /* The Flow template's one column (sign-in, setup, the workspace chooser). */
   --container-flow: 480px;
@@ -700,11 +699,12 @@
   --color-data-2: var(--color-data-rival-1);
   --color-data-3: var(--color-data-rival-2);
 
-  /* Type (2.1): seven sizes (12 13 14 16 24 28 32), one line height each;
-     weights 400, 500 and 600. Numbers are the sans face's tabular numerals. */
-  --text-title: 1.5rem;
-  --text-title--line-height: 2rem;
-  --text-title--font-weight: 600;
+  /* Type (2.1): eight sizes (12 13 14 16 20 24 28 32), one line height each;
+     weights 400, 500 and 600. Numbers are the sans face's tabular numerals.
+     The page title is the display face at 20/28 400. */
+  --text-title: 1.25rem;
+  --text-title--line-height: 1.75rem;
+  --text-title--font-weight: 400;
   --text-heading: 1rem;
   --text-heading--line-height: 1.5rem;
   --text-heading--font-weight: 600;
@@ -746,8 +746,8 @@
 
   /* Anatomy (2.3): masthead 56, page tabs 40, filter bar 48, then 24 to the
      first content; sidebar 224 from 1280, 200 from 900, a 56 rail of 40px
-     buttons when collapsed. Content caps at 1280 with a 24 gutter (16 below
-     900). The current navigation item sits on a 7% ink tile (2.8). */
+     buttons when collapsed. Content fills the main column inside a 24 gutter
+     (16 below 900). The current navigation item sits on a 7% ink tile (2.8). */
   --masthead-height: 56px;
   --page-tabs-height: 40px;
   --filter-bar-height: 48px;
@@ -765,7 +765,9 @@
     var(--masthead-block-size, var(--masthead-height)) + var(--page-top-gap) +
       var(--page-section-gap)
   );
-  --content-max-width: var(--container-content);
+  /* No page cap: the page fills the main column, so collapsing the sidebar
+     grows it. Measures (form, prose, Thread) live in the templates. */
+  --content-max-width: none;
   --content-gutter: 24px;
 
   /* Spacing roles (2.2), on the one scale 2 4 8 12 16 24 32 48 64: peers in a
@@ -819,19 +821,6 @@
 }
 [data-sidebar-scroll]:has(:focus-visible) {
   mask-image: none;
-}
-
-/* Below `rail` the masthead stays one row: the title keeps its first words
-   (it never breaks inside one) and a long primary action gives way first. */
-@media (max-width: 899px) {
-  [data-masthead] [data-masthead-primary] > * {
-    min-width: 0;
-    flex-shrink: 1;
-    overflow: hidden;
-  }
-  [data-masthead] [data-masthead-primary] button {
-    justify-content: flex-start;
-  }
 }
 
 /* The thread is up to 1040 wide; its running text keeps a 760px measure,
@@ -1581,6 +1570,14 @@ a.focus-ring:active .type-caption {
     0 0 0 4px var(--color-line);
 }
 
+/* A field the reader did not Tab into (an overlay or Edit action focused it
+   on open, or a press into a dialog's field) shows the caret only, its rest
+   edge unchanged (`data-quiet-focus`, components/ui/input-modality.ts). */
+:root:not([data-public-surface]) [data-quiet-focus]:focus-visible,
+:root:not([data-public-surface]) .focus-frame:has([data-quiet-focus]:focus-visible) {
+  outline: none;
+}
+
 /* Containers. A container is a card, a panel or a dialog or drawer:
    `surface` with one 1px `line` border. What sits inside one never draws a
    second edge (a table drops its frame) and an inset inside one is the
@@ -1687,12 +1684,13 @@ a.focus-ring:active .type-caption {
 }
 
 /* A palette's search row (the command palette, docs search): the input is
-   the dialog's only field, so the row carries its focus. In the app that is
-   the one standard ring, drawn inside because the dialog clips its edges. */
+   the dialog's only field, so the row carries its focus. The app's palette
+   opens with the caret only; Tab back into the field draws the one standard
+   ring, inside because the dialog clips its edges. */
 .palette-field input:focus-visible {
   outline: none;
 }
-:root:not([data-public-surface]) .palette-field:has(input:focus-visible) {
+:root:not([data-public-surface]) .palette-field:has(input:focus-visible:not([data-quiet-focus])) {
   outline: 2px solid var(--color-focus);
   outline-offset: -2px;
 }
