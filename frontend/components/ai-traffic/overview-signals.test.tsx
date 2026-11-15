@@ -46,11 +46,31 @@ const citations = {
 };
 type Overview = React.ComponentProps<typeof OverviewFigures>['data'];
 
-function figures(overrides: Partial<Overview>, crawlAvailable = true) {
+type Ga4Step = React.ComponentProps<typeof OverviewFigures>['ga4'];
+const ga4Connection = {
+  id: '77777777-7777-4777-8777-777777777777',
+  workspace_id: '66666666-6666-4666-8666-666666666666',
+  grant_id: '55555555-5555-4555-8555-555555555555',
+  provider: 'ga4' as const,
+  label: '',
+  account_ref: '',
+  grant_status: 'connected' as const,
+  granted_scopes: [],
+  last_synced_at: null,
+  created_at: '2026-07-20T00:00:00Z',
+  updated_at: '2026-07-20T00:00:00Z',
+};
+
+function figures(
+  overrides: Partial<Overview>,
+  crawlAvailable = true,
+  ga4: Ga4Step = { kind: 'connect' },
+) {
   return (
     <OverviewFigures
       projectId={projectId}
       crawlAvailable={crawlAvailable}
+      ga4={ga4}
       data={{ crawl, referrals, citations, ...overrides }}
     />
   );
@@ -120,11 +140,19 @@ it('shows a measured zero as 0 and a window with no completed run as not availab
   expect(cell.queryByText('0')).not.toBeInTheDocument();
 });
 
-it('offers Connect GA4 until a referral snapshot exists, then says it synced', () => {
+it('offers GA4\'s own next step until a referral snapshot exists, then says it synced', () => {
   const view = renderWithProviders(figures({}));
   expect(within(figure('AI referral sessions, latest day')).getByText('Not synced')).toBeVisible();
   expect(screen.getByRole('link', { name: 'Connect GA4' })).toBeVisible();
   expect(screen.queryByText(/GA4 · Synced/)).not.toBeInTheDocument();
+
+  // A connected GA4 with no snapshot yet is never told to connect, nor is an unknown one.
+  view.rerender(figures({}, true, { kind: 'choose', connection: ga4Connection }));
+  expect(screen.getByRole('link', { name: 'Choose GA4 property' })).toBeVisible();
+  expect(screen.queryByRole('link', { name: 'Connect GA4' })).not.toBeInTheDocument();
+  view.rerender(figures({}, true, null));
+  expect(screen.getByText('Referral sessions appear once GA4 imports a report.')).toBeVisible();
+  expect(screen.queryByRole('link', { name: /GA4/ })).not.toBeInTheDocument();
 
   // The report day keeps its calendar date in a display zone west of UTC.
   document.cookie = 'citeladder-display-timezone=America%2FNew_York; path=/';

@@ -93,6 +93,17 @@ export function useDataSources(
   };
 }
 
+/** One source's step, or `null` while it is unknown (loading or unreadable). */
+export function useSourceStep(
+  workspaceId: string,
+  projectId: string,
+  provider: IntegrationProvider,
+): SourceStep | null {
+  const sources = useDataSources(workspaceId, projectId, [provider]);
+  if (sources.loading || sources.error) return null;
+  return sources.steps.get(provider) ?? null;
+}
+
 /** Messages for the OAuth callback's `error=` codes; never the raw code. */
 const OAUTH_ERRORS: Record<string, string> = {
   oauth_exchange_failed: 'The consent screen was cancelled or did not finish. Try again.',
