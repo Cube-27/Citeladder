@@ -293,7 +293,12 @@ function measure({ route }: { route: string }) {
     add('slip.padding', box, px(boxStyle.paddingTop));
     add('slip.radius', box, px(boxStyle.borderTopLeftRadius));
     add('slip.border', box, px(boxStyle.borderTopWidth));
-    const next = box.nextElementSibling;
+    // A slip that is its list item's one child neighbours the next item's slip.
+    const item = box.parentElement;
+    const listed = item?.matches('li') && item.childElementCount === 1;
+    const next = listed
+      ? (item.nextElementSibling?.firstElementChild ?? null)
+      : box.nextElementSibling;
     if (
       next?.matches(boxes) &&
       visible(next) &&
@@ -481,6 +486,26 @@ const RUNS = [
   completed_at: '2026-01-01T00:10:00Z',
 }));
 
+/** The Owner and one member, so Settings draws the roster table with its search. */
+const MEMBERS = [
+  {
+    id: '66666666-6666-4666-8666-666666666661',
+    user_id: '22222222-2222-4222-8222-222222222222',
+    email: 'shell@example.com',
+    role: 'owner',
+    is_self: true,
+    created_at: '2026-01-01T00:00:00Z',
+  },
+  {
+    id: '66666666-6666-4666-8666-666666666662',
+    user_id: '66666666-6666-4666-8666-666666666663',
+    email: 'analyst@example.com',
+    role: 'member',
+    is_self: false,
+    created_at: '2026-01-02T00:00:00Z',
+  },
+];
+
 /** A Search Console connection, so Settings draws its integration slips. */
 const CONNECTIONS = [
   {
@@ -535,6 +560,17 @@ async function expectOneGeometry(page: Page) {
     ...(await census(page, '/settings?tab=integrations', {
       label: '/settings integrations (cards)',
     })),
+  );
+
+  // The member roster: a DataTable whose header row holds its search, so the
+  // header is measured now that list titles sit in their card's head.
+  const workspace = FIXTURE_PROJECT.workspace_id;
+  await stubAuthedShell(page, [
+    [new RegExp(String.raw`/api/v1/workspaces/${workspace}/members(\?.*)?$`), MEMBERS],
+    [new RegExp(String.raw`/api/v1/workspaces/${workspace}/invitations(\?.*)?$`), []],
+  ]);
+  records.push(
+    ...(await census(page, '/settings?tab=workspace', { label: '/settings workspace (roster)' })),
   );
 
   // Two skills in one group, so neighbouring slips are measured.
