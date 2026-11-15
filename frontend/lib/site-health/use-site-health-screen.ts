@@ -17,6 +17,7 @@ import {
   type ExportView,
 } from '@/lib/site-health/download';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { optionalStringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
 import {
   crawlPollInterval,
@@ -86,8 +87,10 @@ export function useSiteHealthScreen() {
   // from the same grants, and the route loader has already asked for it.
   const entitlementQuery = useQuery(billingQueries.workspaceEntitlement(workspaceId));
 
+  // An earlier crawl opens by URL (`?crawl_id=`); without one the screen reads the latest.
+  const [pinnedCrawlId, setPinnedCrawlId] = useUrlState('crawl_id', optionalStringUrlCodec);
   const dashboardQuery = useQuery({
-    ...siteHealthQueries.dashboard(requestScope),
+    ...siteHealthQueries.dashboard(requestScope, pinnedCrawlId ?? undefined),
     // Backed off by crawl age, and stops entirely on a crawl that has gone
     // silent — an active-forever crawl must not pin the tab to a 4s poll of
     // five queries indefinitely.
@@ -178,6 +181,8 @@ export function useSiteHealthScreen() {
   const cancelMutation = useMutation(siteHealthMutations.cancelCrawl(requestScope));
   const startCrawl = (input?: StartCrawlInput) => {
     const variables = input ?? { project_id: projectId };
+    // A new crawl is the one to watch, not the earlier one the address opened.
+    setPinnedCrawlId(null, 'replace');
     createAttemptRef.current += 1;
     const token = createAttemptRef.current;
     setStarting({ projectId: variables.project_id, crawlId: null, token });
