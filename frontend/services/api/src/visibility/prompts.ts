@@ -35,6 +35,7 @@ import {
   type BrandCount,
 } from './brand-identities.ts';
 import { round2 } from './metrics.ts';
+import { latestPromptRuns } from './prompt-latest.ts';
 import { runSetComparisonStatus } from './run-sets.ts';
 import { marketOf, type RunScope } from './runs.ts';
 import {
@@ -67,6 +68,8 @@ export type PromptQuery = {
   logicalEngine: string | null;
   baselineId: string | null;
   cohort: string;
+  /** `prompt` reads each tracked prompt's own latest run instead of the latest run. */
+  latest?: 'run' | 'prompt';
 };
 
 export async function getPromptMetrics(
@@ -76,9 +79,10 @@ export async function getPromptMetrics(
 ): Promise<PromptMetricItem[]> {
   validateEngineAndRange({ logicalEngine: query.logicalEngine, fromAt: null, toAt: null });
   validateCohort(query.cohort);
-  const rows = query.auditIds?.length
-    ? await periodRows(db, scope, query, query.auditIds)
-    : await runRows(db, scope, query);
+  let rows: PromptRow[];
+  if (query.latest === 'prompt') rows = await latestRows(db, scope, query);
+  else if (query.auditIds?.length) rows = await periodRows(db, scope, query, query.auditIds);
+  else rows = await runRows(db, scope, query);
   const items = rows.map((row) => row.item);
   await Promise.all([attachActions(db, scope, items), attachBrands(db, scope, rows)]);
   return items;
@@ -630,7 +634,23 @@ async function setRows(
   auditIds: readonly string[],
 ): Promise<PromptRow[]> {
   await authorizeRunSet(db, scope, auditIds);
-  const ids = [...new Set(auditIds)];
+  return enrichedRows(db, scope, query, [...new Set(auditIds)]);
+}
+
+/** Each tracked prompt's row from the run that last measured it. */
+async function latestRows(db: Database, scope: RunScope, query: PromptQuery) {
+  const latest = await latestPromptRuns(db, scope, query);
+  const rows = await enrichedRows(db, scope, query, [...new Set(latest.values())]);
+  return rows.filter(({ item }) => item.prompt_id && latest.get(item.prompt_id) === item.audit_id);
+}
+
+/** The runs' rows, each enriched from its own run; the runs are already scoped. */
+async function enrichedRows(
+  db: Database,
+  scope: RunScope,
+  query: PromptQuery,
+  ids: readonly string[],
+): Promise<PromptRow[]> {
   if (!ids.length) return [];
   const [audits, rows, data] = await Promise.all([
     db

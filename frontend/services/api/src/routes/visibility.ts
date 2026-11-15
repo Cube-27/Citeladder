@@ -324,6 +324,8 @@ export const visibilityRoutes = [
         engine: { scalar: { kind: 'str' } },
         baseline_id: { scalar: { kind: 'uuid' } },
         cohort: COHORT,
+        // `prompt` reads each tracked prompt's own latest run: the prompt library.
+        latest: { scalar: { kind: 'literal', values: ['run', 'prompt'] }, default: 'run' },
       },
     },
     response: z.array(promptMetricItemSchema),
@@ -337,6 +339,7 @@ export const visibilityRoutes = [
           logicalEngine: query.engine,
           baselineId: query.baseline_id,
           cohort: query.cohort,
+          latest: query.latest,
         }),
       );
     },

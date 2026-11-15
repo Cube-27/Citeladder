@@ -714,6 +714,66 @@ describe('GET /visibility/prompts', () => {
       ],
     });
   });
+  it("reads each tracked prompt's own latest run, so a later run of other prompts keeps earlier results", async () => {
+    const tenant = await fixtures.tenant();
+    const outsider = await fixtures.tenant();
+    const set = await promptSet(db, tenant.projectId);
+    const [older, newer] = [
+      await trackedPrompt(db, set, 'best crm'),
+      await trackedPrompt(db, set, 'cheap crm'),
+    ];
+    const run = async (owner: Tenant, day: string, prompts: [string, string][]) => {
+      const auditId = await fixtures.audit(owner, {
+        completedAt: new Date(`${day}T00:00:00Z`),
+        configuration: frozen(),
+      });
+      for (const [index, [promptId, promptText]] of prompts.entries()) {
+        await fixtures.execution(owner, {
+          auditId,
+          promptIndex: index,
+          promptText,
+          analysis: { brandMentioned: index === 0 },
+        });
+        await fixtures.promptScore(owner, auditId, {
+          promptIndex: index,
+          promptText,
+          composite: 50,
+          promptId,
+        });
+      }
+      return auditId;
+    };
+    const first = await run(tenant, '2026-03-02', [
+      [older, 'best crm'],
+      [newer, 'cheap crm'],
+    ]);
+    // The next batch measures only the newer prompt.
+    const second = await run(tenant, '2026-03-09', [[newer, 'cheap crm']]);
+    // Another workspace's later run never reaches this project's library.
+    const foreignSet = await promptSet(db, outsider.projectId);
+    await run(outsider, '2026-03-16', [
+      [await trackedPrompt(db, foreignSet, 'best crm'), 'best crm'],
+    ]);
+
+    const { status, body } = await get(tenant, route(tenant, '/prompts'), { latest: 'prompt' });
+
+    expect(status).toBe(200);
+    expect(
+      body
+        .map((item) => [item.prompt_id, item.audit_id, item.visibility_rate])
+        .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    ).toEqual(
+      [
+        [older, first, 1],
+        [newer, second, 1],
+      ].sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
+    );
+    // The default read is still the latest run alone.
+    const latestRun = await get(tenant, route(tenant, '/prompts'));
+    expect(latestRun.body.map((item) => [item.prompt_id, item.audit_id])).toEqual([
+      [newer, second],
+    ]);
+  });
 });
 
 describe('GET /visibility/prompts/{prompt_id}/history', () => {
