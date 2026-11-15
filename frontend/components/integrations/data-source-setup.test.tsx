@@ -168,6 +168,20 @@ describe('DataSourceSetup', () => {
     expect(screen.getByRole('button', { name: 'Reconnect Google' })).toBeInTheDocument();
   });
 
+  it('names a failed mapping read instead of guessing a step from it', async () => {
+    mswServer.use(
+      http.get('/api/v1/integrations', () => HttpResponse.json([connection(GSC, 'gsc')])),
+      http.get('/api/v1/integrations/:id/mappings', () =>
+        HttpResponse.json({ error: { message: 'down' } }, { status: 403 }),
+      ),
+    );
+    renderSetup();
+
+    expect(await screen.findByText("Couldn't load your data sources")).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Choose Search Console property' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Connect Search Console' })).toBeNull();
+  });
+
   it('asks a member to involve an admin instead of offering consent', async () => {
     canManage = false;
     serve([]);

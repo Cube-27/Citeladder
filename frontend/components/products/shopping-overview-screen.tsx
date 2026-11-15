@@ -84,6 +84,8 @@ const SHARE_COLUMN: DataTableColumn = {
   kind: 'number',
 };
 
+const UNMEASURED = 'No answer was measured in this window yet.';
+
 /** A rate or mean as a narrow cell's Value: unavailable when nothing in scope measured it. */
 function Measured({
   value,
@@ -381,6 +383,7 @@ export function OverviewSections({
     );
   const overview = query.data;
   const scope: ProductScopeFilters = { window: windowDays, engine: null, promptSet: null };
+  const measured = overview.executions > 0;
   return (
     <>
       <FigureStrip
@@ -403,18 +406,19 @@ export function OverviewSections({
       ) : null}
       <RankingTable overview={overview} scope={scope} />
       <AppGrid layout="halves">
+        {/* With no answer measured in the window, a ranking of zeros would read as observed. */}
         <ProductList
           title="Most visible"
           description="Your products named in the most answers."
-          empty="No product was named in an answer yet."
-          rows={overview.most_visible}
+          empty={measured ? 'No product was named in an answer yet.' : UNMEASURED}
+          rows={measured ? overview.most_visible : []}
           scope={scope}
         />
         <ProductList
           title="Least visible"
           description="Your products named in the fewest answers."
-          empty="Every product is listed under Most visible."
-          rows={overview.least_visible}
+          empty={measured ? 'Every product is listed under Most visible.' : UNMEASURED}
+          rows={measured ? overview.least_visible : []}
           scope={scope}
         />
       </AppGrid>

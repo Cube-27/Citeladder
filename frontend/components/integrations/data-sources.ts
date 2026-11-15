@@ -85,10 +85,15 @@ export function useDataSources(
         : ({ kind: 'connect' } as SourceStep),
     ]),
   );
+  // A mapping that could not be read is unknown, never "no property chosen".
+  const failedMappings = mappingQueries.filter((query) => query.isError);
   return {
     loading,
-    error: connections.isError ? connections.error : null,
-    retry: () => void connections.refetch(),
+    error: connections.isError ? connections.error : (failedMappings[0]?.error ?? null),
+    retry: () => {
+      if (connections.isError) void connections.refetch();
+      for (const query of failedMappings) void query.refetch();
+    },
     steps,
   };
 }

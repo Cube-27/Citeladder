@@ -320,7 +320,9 @@ export function DataSourceSetup({
       className="mx-auto w-full max-w-[var(--container-prose)]"
     >
       <SectionHeader>
-        <SectionTitle>{setupTitle(required, sources.steps, title)}</SectionTitle>
+        <SectionTitle>
+          {sources.error ? 'Data sources' : setupTitle(required, sources.steps, title)}
+        </SectionTitle>
       </SectionHeader>
       <Stack gap="compact">
         {oauth.error ? <Notice tone="negative">{oauthErrorMessage(oauth.error)}</Notice> : null}
@@ -335,31 +337,33 @@ export function DataSourceSetup({
             fallback="Could not load your data sources. Check your connection and try again."
             onRetry={sources.retry}
           />
-        ) : null}
-        <ul className={ledgerClasses()}>
-          {setupRows(providers, sources.steps).map((row) =>
-            row.kind === 'connect' ? (
-              <ConnectRow
-                key={`connect-${row.family}`}
-                family={row.family}
-                providers={row.providers}
-                required={row.providers.some((provider) => required.includes(provider))}
-                canManage={canManage}
-                startConnect={startConnect}
-              />
-            ) : (
-              <SourceRow
-                key={row.provider}
-                provider={row.provider}
-                step={row.step}
-                projectId={activeProject.id}
-                canManage={canManage}
-                autoStart={oauth.connected === GRANT_FAMILY[row.provider]}
-                startConnect={startConnect}
-              />
-            ),
-          )}
-        </ul>
+        ) : (
+          // A failed read knows no source's step, so no row is guessed from it.
+          <ul className={ledgerClasses()}>
+            {setupRows(providers, sources.steps).map((row) =>
+              row.kind === 'connect' ? (
+                <ConnectRow
+                  key={`connect-${row.family}`}
+                  family={row.family}
+                  providers={row.providers}
+                  required={row.providers.some((provider) => required.includes(provider))}
+                  canManage={canManage}
+                  startConnect={startConnect}
+                />
+              ) : (
+                <SourceRow
+                  key={row.provider}
+                  provider={row.provider}
+                  step={row.step}
+                  projectId={activeProject.id}
+                  canManage={canManage}
+                  autoStart={oauth.connected === GRANT_FAMILY[row.provider]}
+                  startConnect={startConnect}
+                />
+              ),
+            )}
+          </ul>
+        )}
       </Stack>
     </Section>
   );

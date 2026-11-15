@@ -190,6 +190,9 @@ describe('Shopping overview', () => {
     expect(table('Ranking')).toHaveTextContent('No brand yet.');
     expect(table('Top merchants')).toHaveTextContent('No answer named a merchant.');
     expect(table('Top fan-out queries')).toHaveTextContent('No answer named a product.');
+    // The extremes rank nothing measured, rather than listing zeros as observed.
+    expect(table('Least visible')).toHaveTextContent('No answer was measured in this window yet.');
+    expect(within(table('Least visible')).queryByText('Acme Merino Sock')).not.toBeInTheDocument();
   });
 
   it('reads the category shelf from its latest Commerce run', async () => {
