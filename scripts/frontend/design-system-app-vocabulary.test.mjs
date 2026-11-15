@@ -5,7 +5,8 @@ import { appVocabularyViolations } from '../../frontend/scripts/design-system-ap
 
 const COLOUR =
   "the app's colours are ground, surface, well, raised, rule, rule-ink, control-line, ink, ink-2 and their roles";
-const RADIUS = "the app's radii are rounded-mark, -control, -sheet and -full";
+const RADIUS =
+  "the app's radii are rounded-mark, -sm, -control, -card, -overlay, -sheet and -full";
 const TYPE = "the website's type role; the app uses its own (components/ui/typography.tsx)";
 
 test("app code uses the app's names; website variants, atoms and pages are exempt", () => {

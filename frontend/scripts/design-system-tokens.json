@@ -460,6 +460,46 @@
           "dark": "#1f7d73"
         },
         "usage": "The fourth rival series; a fifth and later are data-other. The website aliases its own role here; the app binds its value."
+      },
+      {
+        "name": "chrome",
+        "value": {
+          "light": "{paper}",
+          "dark": "{paper}"
+        },
+        "usage": "The app's chrome: the sidebar and the masthead, a step off the ground. The website has no chrome, so it aliases the ground; the app binds its value."
+      },
+      {
+        "name": "positive-swatch",
+        "value": {
+          "light": "{positive}",
+          "dark": "{positive}"
+        },
+        "usage": "A positive dot or bar segment (3:1 on every fill), always beside its word. The website aliases its text tone; the app binds its value."
+      },
+      {
+        "name": "negative-swatch",
+        "value": {
+          "light": "{negative}",
+          "dark": "{negative}"
+        },
+        "usage": "A negative dot or bar segment (3:1 on every fill), always beside its word. The website aliases its text tone; the app binds its value."
+      },
+      {
+        "name": "warning-swatch",
+        "value": {
+          "light": "{warning}",
+          "dark": "{warning}"
+        },
+        "usage": "A warning dot or bar segment (3:1 on every fill), always beside its word. The website aliases its text tone; the app binds its value."
+      },
+      {
+        "name": "info-swatch",
+        "value": {
+          "light": "{info}",
+          "dark": "{info}"
+        },
+        "usage": "An info dot or bar segment (3:1 on every fill), always beside its word. The website aliases its text tone; the app binds its value."
       }
     ]
   },
@@ -831,12 +871,22 @@
       {
         "name": "radius-control",
         "value": "var(--radius-md)",
-        "usage": "The app's controls, fields, slips and wells: 4px in the app, the website's 6px control radius on its own surfaces."
+        "usage": "The app's controls, fields and wells: 6px in the app and on the website's own surfaces."
       },
       {
         "name": "radius-sheet",
         "value": "8px",
         "usage": "The app's floating layers: menus, popovers, tooltips, dialogs, drawers, toasts."
+      },
+      {
+        "name": "radius-card",
+        "value": "8px",
+        "usage": "The app's cards (sections, slips, stat cards) and its small overlays: menus, popovers, tooltips, toasts."
+      },
+      {
+        "name": "radius-overlay",
+        "value": "12px",
+        "usage": "The app's modal overlays and flow cards: dialogs, drawers, the command palette, the Flow card."
       }
     ]
   },

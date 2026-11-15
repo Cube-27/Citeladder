@@ -556,7 +556,7 @@
   /* Washes sit 1.05 to 1.2 from the ground and stay quiet: a notice is never
      the loudest surface on a page. */
   --color-accent-wash: #3a2218;
-  --color-positive: #5fd08a;
+  --color-positive: #63e17b;
   --color-positive-wash: #15291d;
   --color-positive-swatch: #3fbf74;
   --color-negative: #ff7f96;
@@ -569,7 +569,7 @@
   --color-info-wash: #1a2540;
   --color-info-swatch: #6f9bff;
   --color-data-rival-2: #6fb3e8;
-  --color-data-rival-3: #a996ee;
+  --color-data-rival-3: #997bf0;
   --color-data-rival-4: #4fc4b5;
   --color-data-other: #8a909d;
   --color-state-hover: rgb(236 238 242 / 6%);
@@ -686,7 +686,10 @@
   --color-accent: #e8501a;
   --color-accent-text: #b83c0e;
   --color-accent-wash: #fdeae1;
-  --color-positive: #17713f;
+  /* Off the table's #17713f, and rival 3 off #6d55b8 (dark: #5fd08a, #a996ee):
+     those failed the colour-vision separation from negative and rival 2
+     (scripts/design-system-contrast.mjs). */
+  --color-positive: #186c3f;
   --color-positive-wash: #e3f4ea;
   --color-positive-swatch: #1c9450;
   --color-negative: #c22445;
@@ -699,7 +702,7 @@
   --color-info-wash: #e6edfc;
   --color-info-swatch: #3b73e6;
   --color-data-rival-2: #2f6fb0;
-  --color-data-rival-3: #6d55b8;
+  --color-data-rival-3: #5733a8;
   --color-data-rival-4: #17807a;
   --color-data-other: #838995;
   /* Hover 6%, pressed 10%, selected 7% ink over the fill beneath. */

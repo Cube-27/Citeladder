@@ -12,13 +12,13 @@ test('elevation policy admits only roles and diagnoses radius family drift separ
     '<div className="shadow-raised" />',
     '<div className="shadow-overlay" />',
     '<div className="shadow-[0_2px_4px_currentColor]" />',
-    '<div className="shadow-card" />',
   ]) {
     assert.equal(shadowRoleViolations(source, label, true).length, 1);
   }
+  // One shadow per elevation: card at rest, pop for small overlays, sheet for modals.
   assert.deepEqual(
     shadowRoleViolations(
-      '<div className="shadow-none shadow-sheet" />',
+      '<div className="shadow-none shadow-card hover:shadow-pop shadow-sheet" />',
       label,
       true,
     ),
@@ -46,5 +46,8 @@ test('elevation policy admits only roles and diagnoses radius family drift separ
     'components/ui/example.tsx:1: review Button radius; its family is rounded-control',
   ]);
   assert.deepEqual(radiusRoleAdvisories('<Button className="rounded-control" />', label, true), []);
-  assert.deepEqual(radiusRoleAdvisories('<Dialog className="rounded-sheet" />', label, true), []);
+  assert.deepEqual(radiusRoleAdvisories('<Dialog className="rounded-overlay" />', label, true), []);
+  assert.deepEqual(radiusRoleAdvisories('<Dialog className="rounded-sheet" />', label, true), [
+    'components/ui/example.tsx:1: review Dialog radius; its family is rounded-overlay',
+  ]);
 });

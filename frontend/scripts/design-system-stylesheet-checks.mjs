@@ -9,6 +9,8 @@ import { marketingCssFiles, readMarketingCss } from './marketing-css.mjs';
 const SHARED_GEOMETRY_ROLES = [
   'mark',
   'control',
+  'card',
+  'overlay',
   'sheet',
   '2xs',
   'xs',

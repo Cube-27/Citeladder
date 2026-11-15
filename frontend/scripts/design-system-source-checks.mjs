@@ -145,11 +145,12 @@ export function focusRoleViolations(source, label, ownsProductUi) {
 }
 
 /**
- * The app has one shadow, `shadow-sheet`, under anything that floats; nothing
- * at rest has a shadow. The website's edge, xs, float,
- * pop and press shadows are its own.
+ * The app has three shadows, one per elevation (brand direction 2.4):
+ * `shadow-card` under a card at rest, `shadow-pop` under a menu, popover,
+ * tooltip, toast or sticky bar, `shadow-sheet` under a dialog, drawer or the
+ * command palette. The website's edge, xs, float and press shadows are its own.
  */
-const SHADOW_ROLES = new Set(['none', 'sheet']);
+const SHADOW_ROLES = new Set(['none', 'card', 'pop', 'sheet']);
 
 export function shadowRoleViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || label === TOKEN_CSS || WEBSITE_ONLY_UI.has(label)) return [];
@@ -159,10 +160,10 @@ export function shadowRoleViolations(source, label, ownsProductUi) {
   const rawDeclaration =
     label.endsWith('.css') &&
     [...text.matchAll(/box-shadow\s*:([^;]+);/g)].some(
-      ([, value]) => !/^(?:none|var\(--shadow-sheet\))$/.test(value.trim()),
+      ([, value]) => !/^(?:none|var\(--shadow-(?:card|pop|sheet)\))$/.test(value.trim()),
     );
   if ([...shadows].some(([, role]) => !SHADOW_ROLES.has(role)) || rawDeclaration) {
-    return [`${label}: elevation must use shadow-sheet (anything that floats) or none`];
+    return [`${label}: elevation must use shadow-card, shadow-pop, shadow-sheet or none`];
   }
   return [];
 }
@@ -174,23 +175,26 @@ export const withoutWebsiteVariants = (text) =>
 /** Radius family mismatches are review advice because composition can be intentional. */
 export function radiusRoleAdvisories(source, label, ownsProductUi) {
   if (!ownsProductUi || !label.endsWith('.tsx')) return [];
-  // The app's radius per component family: controls and slips 4, sheets 8.
+  // The app's radius per component family: controls 6, cards and small
+  // overlays 8, modal overlays 12.
   const roles = {
     Button: 'control',
     Input: 'control',
     Textarea: 'control',
     Select: 'control',
-    Card: 'control',
+    Card: 'card',
     Panel: 'control',
-    Dialog: 'sheet',
-    Drawer: 'sheet',
-    DropdownContent: 'sheet',
+    Dialog: 'overlay',
+    Drawer: 'overlay',
+    DropdownContent: 'card',
   };
   return jsxClassData(source, label).flatMap(({ tag, classes, line }) => {
     const expected = roles[tag];
     if (!expected) return [];
     const mismatch = [
-      ...classes.matchAll(/(?<![\w-])rounded-(mark|control|sheet|2xs|xs|sm|md|lg|xl)(?![\w-])/g),
+      ...classes.matchAll(
+        /(?<![\w-])rounded-(mark|control|card|overlay|sheet|2xs|xs|sm|md|lg|xl)(?![\w-])/g,
+      ),
     ].some(([, size]) => size !== expected);
     return mismatch
       ? [`${label}:${line}: review ${tag} radius; its family is rounded-${expected}`]

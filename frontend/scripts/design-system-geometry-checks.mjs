@@ -3,8 +3,9 @@ import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './s
 
 /**
  * Radius is the system's scale and nothing else: the app's roles
- * `rounded-mark` (2: tags, checkboxes, rung marks), `-control` (4: controls,
- * fields, slips, wells) and `-sheet` (8: floating layers), the website's
+ * `rounded-mark` (2: rung marks, bar ends), `-control` (6: controls, fields,
+ * wells), `-card` (8: cards, menus, popovers, tooltips), `-overlay` (12:
+ * dialogs, drawers, flow cards) and `-sheet` (8), the website's
  * `-2xs`, `-xs`, `-sm`, `-md`, `-lg` and `-xl`, and `-full`. No arbitrary
  * value, not even a `var()`. Which names the app may use is
  * `appRadiusViolations` (design-system-source-checks.mjs).
@@ -20,7 +21,7 @@ export function rawRadiusViolations(source, label) {
     const raw = entry.classes.split(/\s+/).filter(isRawRadiusToken);
     if (raw.length) {
       violations.push(
-        `${label}:${entry.line}: ${raw.join(', ')} — radius must be rounded-mark, -control, -sheet or -full (the website: -2xs, -xs, -sm, -md, -lg, -xl)`,
+        `${label}:${entry.line}: ${raw.join(', ')} — radius must be rounded-mark, -control, -card, -overlay, -sheet or -full (the website: -2xs, -xs, -sm, -md, -lg, -xl)`,
       );
     }
   }
@@ -32,6 +33,8 @@ const RADIUS_SIDES = ['t', 'b', 'l', 'r', 's', 'e', 'tl', 'tr', 'bl', 'br', 'ss'
 const SYSTEM_RADII = new Set([
   'mark',
   'control',
+  'card',
+  'overlay',
   'sheet',
   '2xs',
   'xs',
