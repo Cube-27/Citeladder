@@ -23,7 +23,7 @@ import type {
 import { commerceQueries } from '@/lib/api/commerce';
 import type { ProductWindowDays } from '@/lib/config/commerce';
 import { categoryFilter, windowFilter } from './product-scope-filters';
-import { formatCount, pluralCount } from '@/lib/format';
+import { formatCount, formatMean, pluralCount } from '@/lib/format';
 import { formatPosition, formatRate } from '@/lib/products/product-columns';
 import { targetHref } from '@/lib/products/targets';
 import {
@@ -330,7 +330,8 @@ function CategoryShelf({
     {
       label: 'Average position',
       sub: 'Your mean rank in answers that ranked products.',
-      value: shelf?.average_shelf_position?.toFixed(2) ?? null,
+      value:
+        shelf?.average_shelf_position == null ? null : formatMean(shelf.average_shelf_position),
     },
     {
       label: 'First-position rate',

@@ -105,7 +105,7 @@ export function ChartKey({
             {entry.name}
           </span>
           {entry.value === undefined ? null : (
-            <span className="type-data-sm text-ink shrink-0">{entry.value}</span>
+            <span className="type-caption text-ink shrink-0 tabular-nums">{entry.value}</span>
           )}
         </li>
       ))}
@@ -138,16 +138,16 @@ export function ChartTipSheet({
       aria-hidden
       className={cn(
         SHEET_FACE,
-        'rounded-sheet pointer-events-none absolute z-20 flex w-54 flex-col gap-1 p-3',
+        'rounded-card pointer-events-none absolute z-20 flex w-54 flex-col gap-1 p-3',
       )}
       style={{ left, top }}
     >
-      <p className="type-data-sm text-ink-2">{title}</p>
+      <p className="type-caption tabular-nums">{title}</p>
       {rows.map((row) => (
         <div key={row.name} className={textRole('caption', 'flex items-center gap-2 text-ink')}>
           <SeriesSwatch tone={row.tone} />
           <span className="min-w-0 flex-1 truncate">{row.name}</span>
-          <span className="type-data-sm">{row.value}</span>
+          <span className="tabular-nums">{row.value}</span>
         </div>
       ))}
       {note ? <p className={textRole('caption')}>{note}</p> : null}

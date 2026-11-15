@@ -130,16 +130,19 @@ export function TagGroup({ labels }: Readonly<{ labels: readonly string[] }>) {
   const id = useId();
   const visible = expanded ? labels : labels.slice(0, 2);
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-1">
+    // Folded, the two tags give way so "+n" stays on their line; open, the tags wrap.
+    <div className={cn('flex min-w-0 items-center gap-1', expanded && 'flex-wrap')}>
       <span id={id} className="contents">
         {visible.map((label, index) => (
-          <Tag key={`${index}:${label}`}>{label}</Tag>
+          <Tag key={`${index}:${label}`} className={expanded ? undefined : 'shrink'}>
+            {label}
+          </Tag>
         ))}
       </span>
       {labels.length > 2 ? (
         <button
           type="button"
-          className={cn(TAG_FACE, OPERABLE_TAG, 'focus-ring hover:overlay-hover')}
+          className={cn(TAG_FACE, OPERABLE_TAG, 'focus-ring hover:overlay-hover shrink-0')}
           aria-expanded={expanded}
           aria-controls={id}
           aria-label={expanded ? undefined : `+${labels.length - 2} more tags`}

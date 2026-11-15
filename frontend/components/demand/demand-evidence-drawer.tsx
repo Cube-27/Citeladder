@@ -21,7 +21,7 @@ import {
   signalTargetKind,
 } from '@/lib/demand/signals';
 import { DisplayTime } from '@/components/ui/display-time';
-import { formatCount, formatPercent } from '@/lib/format';
+import { formatCount, formatMean, formatPercent } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -147,7 +147,7 @@ function DemandEvidenceContent({
                 label: 'Avg. position',
                 value:
                   typeof details.metrics.position === 'number'
-                    ? details.metrics.position.toFixed(1)
+                    ? formatMean(details.metrics.position)
                     : null,
               },
             ]}

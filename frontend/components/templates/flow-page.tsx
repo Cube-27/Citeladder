@@ -47,7 +47,7 @@ export function FlowPage({
   footer,
   children,
 }: Readonly<{
-  /** The main landmark's name and the overline of a one-screen flow ("Account access"). */
+  /** The main landmark's name and the kicker of a one-screen flow ("Account access"). */
   label: string;
   /** The flow's steps; leave out for a one-screen flow. */
   steps?: readonly [string, ...string[]];
@@ -58,7 +58,7 @@ export function FlowPage({
   children: ReactNode;
 }>) {
   const index = steps ? Math.max(0, Math.min(steps.length - 1, current)) : 0;
-  const overline = steps ? `Step ${index + 1} of ${steps.length} · ${steps[index]}` : label;
+  const kicker = steps ? `Step ${index + 1} of ${steps.length} · ${steps[index]}` : label;
   return (
     <div className="bg-ground text-ink flex min-h-dvh flex-col antialiased">
       <header className="flex min-h-[var(--masthead-height)] shrink-0 items-center justify-between gap-[var(--card-padding)] px-[var(--content-gutter)]">
@@ -78,7 +78,7 @@ export function FlowPage({
         <div className="bg-surface border-rule rounded-overlay shadow-card flex flex-col gap-4 border p-[var(--page-top-gap)]">
           {steps ? <FlowRungTrail steps={steps} current={index} /> : null}
           <p aria-hidden={steps ? true : undefined} className={textRole('captionStrong')}>
-            {overline}
+            {kicker}
           </p>
           <div className="flex flex-col">{children}</div>
         </div>

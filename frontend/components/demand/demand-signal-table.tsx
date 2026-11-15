@@ -21,7 +21,7 @@ import {
   signalTypeMeta,
   type RankedSignal,
 } from '@/lib/demand/signals';
-import { formatCount, formatPercent } from '@/lib/format';
+import { formatCount, formatMean, formatPercent } from '@/lib/format';
 
 /**
  * The row itself is the Inspect target, and the evidence drawer it opens
@@ -215,7 +215,7 @@ function Count({ value }: Readonly<{ value: number | null }>) {
 }
 
 function Position({ value }: Readonly<{ value: number | null }>) {
-  return value === null ? <Absence state="not_measured" narrow /> : value.toFixed(1);
+  return value === null ? <Absence state="not_measured" narrow /> : formatMean(value);
 }
 
 /** The persisted CTR, else clicks over impressions; never a guessed zero. */

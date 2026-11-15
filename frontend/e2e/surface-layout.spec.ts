@@ -41,7 +41,19 @@ const overview = {
     observed_at: evidence.observed_at,
     limitations: [],
   },
-  measurement: null,
+  // A measured run, so Overview draws its widgets rather than the start card.
+  measurement: {
+    audit_id: '33333333-3333-4333-8333-333333333333',
+    completed_at: evidence.observed_at,
+    benchmark_mode: 'consumer_like',
+    logical_engines: ['chatgpt', 'perplexity'],
+    comparable_audit_id: null,
+    comparison_status: 'no_baseline',
+    comparison_answers: null,
+    metric_snapshot_id: null,
+    analyzer_version: null,
+    scoring_rule_version: null,
+  },
   state: {
     visibility: { value: 72.5, delta: 4.2 },
     share_of_voice: { value: 48.1, delta: 3.1 },
@@ -145,7 +157,9 @@ test('long segments stay on one row and keyboard focus reveals the selected opti
           series: { clicks: [], impressions: [], ctr: [], position: [] },
         },
         comparison: null,
-        coverage: { earliest_date: null, latest_date: null, covered_days: 0 },
+        // Imported history, so the range controls draw (before any history the
+        // empty state holds the one step and there is no range to choose).
+        coverage: { earliest_date: '2026-01-01', latest_date: '2026-01-28', covered_days: 28 },
         dimension_counts: {
           query: 0,
           page: 0,

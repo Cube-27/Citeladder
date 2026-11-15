@@ -299,7 +299,7 @@
           "light": "#c2c2c2",
           "dark": "#4a4a4a"
         },
-        "usage": "The \"Other\" series and slice, always textured (dashed line, hatched area) and labelled, so it never reads as a fourth brand."
+        "usage": "The \"Other\" series and slice, always textured (a dashed line) and labelled, so it never reads as a fourth brand."
       },
       {
         "name": "scrim",
@@ -331,7 +331,7 @@
           "light": "{surface-sunken}",
           "dark": "{surface-sunken}"
         },
-        "usage": "Sunken material: an answer passage, code, a user's chat turn; the hatch's base. The website aliases its own role here; the app binds its value."
+        "usage": "Sunken material: an answer passage, code, a user's chat turn; a chart's gap band. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "raised",
@@ -347,15 +347,7 @@
           "light": "{line}",
           "dark": "{line}"
         },
-        "usage": "Hairlines between rows and figure cells, under the masthead; the hatch's lines. The website aliases its own role here; the app binds its value."
-      },
-      {
-        "name": "rule-ink",
-        "value": {
-          "light": "{ink}",
-          "dark": "{ink}"
-        },
-        "usage": "The ink rule a section and a table hang from. The website aliases its own role here; the app binds its value."
+        "usage": "Hairlines between rows inside a card and on chrome edges. The website aliases its own role here; the app binds its value."
       },
       {
         "name": "control-line",
@@ -724,13 +716,13 @@
             "usage": "Code blocks in docs, blog and product frames."
           },
           {
-            "name": "overline",
+            "name": "screen-label",
             "fontSize": "12px",
             "lineHeight": "16px",
             "fontWeight": 500,
             "letterSpacing": "0.06em",
             "sample": "VISIBILITY",
-            "usage": "The app's column heads, navigation group heads, key-figure labels and the DRAFT marker, uppercase."
+            "usage": "The website's product screens only: card eyebrows and key-figure labels, uppercase. The app never uses it."
           },
           {
             "name": "figure-xl",
@@ -756,7 +748,7 @@
             "lineHeight": "16px",
             "fontWeight": 400,
             "sample": "+3.2 pt",
-            "usage": "Changes (at 500), citation markers, counts, keyboard hints and absence words."
+            "usage": "The website's key caps (Kbd). In the app `code` overrides it."
           }
         ]
       }
@@ -854,11 +846,6 @@
         "usage": "App cards and panels, menus, dialogs, the inner well of a product frame."
       },
       {
-        "name": "radius-xl",
-        "value": "8px",
-        "usage": "Website cards, product frames, the floating navbar, pricing cards. The largest card radius; the website page's curved foot is its own value."
-      },
-      {
         "name": "radius-full",
         "value": "9999px",
         "usage": "Only avatars, status dots, switch tracks (and their thumb), count pills (footnote numbers, nav counts) and the radio circle. Never a pill-shaped button, chip, citation or bar."
@@ -874,11 +861,6 @@
         "usage": "The app's controls, fields and wells: 6px in the app and on the website's own surfaces."
       },
       {
-        "name": "radius-sheet",
-        "value": "8px",
-        "usage": "The app's floating layers: menus, popovers, tooltips, dialogs, drawers, toasts."
-      },
-      {
         "name": "radius-card",
         "value": "8px",
         "usage": "The app's cards (sections, slips, stat cards) and its small overlays: menus, popovers, tooltips, toasts."
@@ -891,7 +873,7 @@
     ]
   },
   "shadow": {
-    "note": "Depth is quiet. In the app nothing at rest has a shadow and every edge is a 1px line border: floating surfaces add shadow-float, fields and checkbox boxes shadow-edge, the primary button shadow-press. The website and docs draw their borderless edges with the ring inside shadow-xs and shadow-pop.",
+    "note": "The app has three shadows, one per elevation: card, pop and sheet (bound on the app's own scope); fields keep the faint shadow-edge. The website and docs draw their borderless edges with the ring inside shadow-xs and shadow-pop.",
     "tokens": [
       {
         "name": "shadow-edge",
@@ -910,28 +892,12 @@
         "usage": "Website and docs chips and pills whose ring is their edge, and the Switch thumb. Not an app edge."
       },
       {
-        "name": "shadow-float",
-        "value": {
-          "light": "0 2px 6px rgba(17,17,17,0.06), 0 16px 40px -8px rgba(17,17,17,0.14)",
-          "dark": "0 16px 40px rgba(0,0,0,0.6)"
-        },
-        "usage": "The app's floating surfaces: menus, popovers, select lists, dialogs, drawers, toasts, the command palette, chart tips and the floating toolbar, under their 1px line border. Drops only, no ring."
-      },
-      {
         "name": "shadow-pop",
         "value": {
           "light": "0 0 0 1px rgba(17,17,17,0.08), 0 2px 6px rgba(17,17,17,0.06), 0 16px 40px -8px rgba(17,17,17,0.14)",
           "dark": "0 0 0 1px rgba(255,255,255,0.10), 0 16px 40px rgba(0,0,0,0.6)"
         },
-        "usage": "The website and docs floating surfaces whose ring is their edge: the mega menu, popovers, the docs search dialog, a product image. The app uses shadow-float with a line border."
-      },
-      {
-        "name": "shadow-press",
-        "value": {
-          "light": "inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -2px 0 rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -6px rgba(17,17,17,0.35)",
-          "dark": "inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -2px 0 rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.6), 0 8px 24px -6px rgba(0,0,0,0.6)"
-        },
-        "usage": "The primary (ink) button, a raised key: a top highlight, a bottom inner shade, a tight drop and a soft lift."
+        "usage": "The website and docs floating surfaces whose ring is their edge: the mega menu, popovers, the docs search dialog, a product image. The app binds its own pop for menus and popovers."
       },
       {
         "name": "shadow-sheet",

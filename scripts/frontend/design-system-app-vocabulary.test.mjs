@@ -4,9 +4,8 @@ import { test } from 'node:test';
 import { appVocabularyViolations } from '../../frontend/scripts/design-system-app-vocabulary.mjs';
 
 const COLOUR =
-  "the app's colours are ground, surface, well, raised, rule, rule-ink, control-line, ink, ink-2 and their roles";
-const RADIUS =
-  "the app's radii are rounded-mark, -sm, -control, -card, -overlay, -sheet and -full";
+  "the app's colours are ground, surface, well, raised, rule, control-line, ink, ink-2 and their roles";
+const RADIUS = "the app's radii are rounded-mark, -sm, -control, -card, -overlay and -full";
 const TYPE = "the website's type role; the app uses its own (components/ui/typography.tsx)";
 
 test("app code uses the app's names; website variants, atoms and pages are exempt", () => {
@@ -38,6 +37,14 @@ test("app code uses the app's names; website variants, atoms and pages are exemp
       owns: true,
       expected: [],
     },
+    {
+      source: '<p className="border-t-rule-ink rounded-sheet type-overline" />',
+      label: app,
+      owns: true,
+      expected: [COLOUR, RADIUS, TYPE],
+    },
+    { source: '<span className="type-data" />', label: app, owns: true, expected: [TYPE] },
+    { source: '<kbd className="type-data-sm type-code" />', label: app, owns: true, expected: [] },
     {
       source: '<div className="[[data-public-surface]_&]:bg-paper" />',
       label: app,

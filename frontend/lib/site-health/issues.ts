@@ -16,21 +16,7 @@
  *     stable order (high → medium → low), never a client re-count.
  */
 import type { IssueSeverity, IssueDimension } from '@citeladder/contracts';
-import type { PriorityValue, StatusValue } from '@/components/ui/status-mark';
-
-/** Map an issue severity onto a status-badge value (shared palette, §8). */
-export function severityBadgeValue(severity: IssueSeverity): StatusValue {
-  switch (severity) {
-    case 'critical':
-    case 'high':
-      return 'danger';
-    case 'medium':
-      return 'warning';
-    default:
-      // low / info
-      return 'info';
-  }
-}
+import type { PriorityValue } from '@/components/ui/status-mark';
 
 /**
  * A ranked action's severity read as its priority (High, Medium, Low): the

@@ -8,7 +8,7 @@
  */
 import { pageKindSchema } from '@citeladder/contracts/site-health';
 import type { PageKind, PageKindScoreSummary } from '@citeladder/contracts';
-import { ownValue, titleCaseStatus } from '@/lib/utils';
+import { ownValue, sentenceCaseStatus } from '@/lib/utils';
 
 /**
  * Every page type in stable display order (filter control + breakdown
@@ -43,11 +43,15 @@ const PAGE_KIND_LABELS: Record<PageKind, string> = {
 
 /**
  * Display label for a page type. An unknown value (a vocabulary the frontend
- * has not caught up with) falls back to title-casing instead of rendering
+ * has not caught up with) falls back to sentence case instead of rendering
  * blank — the same defensive fallback `issueTitle` applies to blank titles.
  */
 export function pageKindLabel(pageKind: string): string {
-  return PAGE_KIND_LABELS[pageKind as PageKind] ?? titleCaseStatus(pageKind);
+  return isPageKind(pageKind) ? PAGE_KIND_LABELS[pageKind] : sentenceCaseStatus(pageKind);
+}
+
+function isPageKind(value: string): value is PageKind {
+  return Object.hasOwn(PAGE_KIND_LABELS, value);
 }
 
 /** One display row of the dashboard per-page-kind score breakdown. */

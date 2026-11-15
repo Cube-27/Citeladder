@@ -42,9 +42,9 @@ export function BriefingCard({
   return (
     <Stack as="section" aria-labelledby="agent-briefing" className={slipClasses()}>
       <Stack gap="tight">
-        <h3 id="agent-briefing" className={textRole('subheading')}>
+        <h2 id="agent-briefing" className={textRole('subheading')}>
           What should I work on?
-        </h3>
+        </h2>
         <p className={textRole('body', 'text-ink-2')}>
           {basis} Runs once when you ask; nothing is scheduled.
         </p>

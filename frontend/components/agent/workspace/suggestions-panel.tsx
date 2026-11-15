@@ -221,7 +221,7 @@ function SuggestionCard({
       id={suggestionCardId(suggestion.id)}
       aria-current={selected || undefined}
       state={SUGGESTION_STATE[suggestion.status]}
-      overline={suggestion.status === 'stale' ? 'Out of date' : undefined}
+      marker={suggestion.status === 'stale' ? 'Out of date' : undefined}
       className="suggestion-card"
     >
       <Inline className="flex-wrap">

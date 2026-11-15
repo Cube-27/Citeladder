@@ -177,7 +177,7 @@ type StatPart = Readonly<{ segment: StatSegment }>;
 function StatLabel({ segment }: StatPart) {
   const Icon = segment.icon;
   return (
-    <dt className="type-overline flex min-w-0 items-center justify-between gap-2">
+    <dt className="type-screen-label flex min-w-0 items-center justify-between gap-2">
       <span className="flex min-w-0 items-center gap-2">
         {Icon ? <Icon className="size-4 shrink-0" aria-hidden /> : null}
         <span className="line-clamp-2 min-w-0">{segment.label}</span>

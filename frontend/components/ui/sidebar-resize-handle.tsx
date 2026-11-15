@@ -63,7 +63,7 @@ export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string 
     >
       <span
         aria-hidden
-        className="group-hover:bg-control-line group-focus-visible:bg-ink group-data-[dragging]:bg-ink w-px bg-transparent transition-colors motion-reduce:transition-none"
+        className="group-hover:bg-control-line group-data-[dragging]:bg-ink w-px bg-transparent transition-colors motion-reduce:transition-none"
       />
       <span id={helpId} className="sr-only">
         Click to step through preset widths, or use the left and right arrow keys to resize. Hold

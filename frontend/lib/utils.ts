@@ -36,7 +36,7 @@ const twMerge = extendTailwindMerge({
             'display',
             'subheading',
             'prose',
-            'overline',
+            'screen-label',
             'figure-xl',
             'figure',
             'data-sm',
@@ -73,13 +73,11 @@ export function emailInitials(email: string) {
 }
 
 /**
- * Title-case a snake_case lifecycle/status token for display
- * (`partially_completed` → `Partially Completed`). Shared by the run/execution
+ * A snake_case lifecycle/status token in sentence case for display
+ * (`partially_completed` → `Partially completed`). Shared by the run/execution
  * and Site Health status view-models so their labels stay byte-identical.
  */
-export function titleCaseStatus(status: string): string {
-  return status
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+export function sentenceCaseStatus(status: string): string {
+  const words = status.replaceAll('_', ' ');
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }

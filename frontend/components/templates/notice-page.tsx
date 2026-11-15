@@ -15,7 +15,7 @@ import { PageFrame } from './page-frame';
  */
 type NoticeTone = 'info' | 'warning' | 'negative' | 'loading';
 
-/** Each tone's glyph, its ink and the overline's word. */
+/** Each tone's glyph, its ink and the label's word. */
 const TONE: Readonly<
   Record<Exclude<NoticeTone, 'loading'>, readonly [glyph: LucideIcon, ink: string, word: string]>
 > = {
@@ -31,7 +31,7 @@ type NoticeContent = Readonly<{
   /** A glyph for this notice in place of its tone's (not found: a search). */
   icon?: LucideIcon;
   /** The card's label, in place of the tone's word ("Not found"). */
-  overline?: string;
+  label?: string;
   /** The sentence: what happened and, when the reader can fix it, the one next step. */
   children?: ReactNode;
   /** The ways forward, primary first. */
@@ -40,7 +40,7 @@ type NoticeContent = Readonly<{
 
 /**
  * The full-page Notice in a card, its label in `caption-strong` (the tone's
- * word, or `overline`): the tone's glyph beside the heading (never colour
+ * word, or `label`): the tone's glyph beside the heading (never colour
  * alone), the sentence 8 under it (at most 72 characters wide) and the ways
  * forward 16 under that, on the main column's one left edge. Outside the
  * shell its heading is the page's `h1`; under a masthead (`heading` null) the
@@ -50,7 +50,7 @@ function NoticeBlock({
   tone,
   heading,
   icon,
-  overline,
+  label,
   children,
   actions,
 }: Omit<NoticeContent, 'heading'> & Readonly<{ heading: string | null }>) {
@@ -63,7 +63,7 @@ function NoticeBlock({
       data-notice-tone={tone}
       className="bg-surface border-rule rounded-card shadow-card flex w-full flex-col gap-4 border p-[var(--page-top-gap)]"
     >
-      <p className={textRole('captionStrong')}>{overline ?? word}</p>
+      <p className={textRole('captionStrong')}>{label ?? word}</p>
       <div className="flex flex-col gap-2">
         {heading ? (
           <div className="flex items-start gap-2">

@@ -33,22 +33,24 @@ const RETIRED_COLOURS = [
   'stage-mint',
   'stage-lilac',
   'stage-peach',
+  'rule-ink',
 ];
 const COLOUR_PREFIX = `(?:bg|text|border(?:-[xytrblse])?|ring|outline|fill|stroke|divide|decoration|from|to|via|caret|accent|placeholder)`;
 const RETIRED_COLOUR = new RegExp(
   String.raw`(?<![\w-])(?:[\w-]+:)*${COLOUR_PREFIX}-(?:${RETIRED_COLOURS.join('|')})(?:\/[\w.]+)?(?![\w-])|var\(--color-(?:${RETIRED_COLOURS.join('|')})\)`,
 );
 // `sm` (4) stays the app's: tags and checkboxes (brand direction 2.4).
-const RETIRED_RADII = '(?:2xs|xs|md|lg|xl)';
+const RETIRED_RADII = '(?:2xs|xs|md|lg|xl|sheet)';
 const RETIRED_RADIUS_CLASS = new RegExp(
   String.raw`(?<![\w-])(?:[\w-]+:)*rounded(?:-[a-z]{1,2})?-${RETIRED_RADII}(?![\w-])`,
 );
 const RETIRED_RADIUS_VAR = new RegExp(String.raw`var\(--radius-${RETIRED_RADII}\)`);
 const usesRetiredRadius = (text) =>
   RETIRED_RADIUS_CLASS.test(text) || RETIRED_RADIUS_VAR.test(text);
-// `type-code` is the app's mono role for literal machine text (2.1).
+// `type-code` is the app's mono role for literal machine text (2.1); `type-data-sm`
+// stays only in Kbd, where the app's `type-code` overrides it.
 const RETIRED_TYPE =
-  /(?<![\w-])type-(?:page-title|section-title|item-title|control|eyebrow|delta|figure-sm|badge)(?![\w-])/;
+  /(?<![\w-])type-(?:page-title|section-title|item-title|control|eyebrow|delta|figure-sm|badge|screen-label|overline|data)(?![\w-])/;
 
 export function appVocabularyViolations(source, label, ownsProductUi) {
   if (!ownsProductUi || WEBSITE_ONLY_UI.has(label) || label === TOKEN_CSS) return [];
@@ -58,7 +60,7 @@ export function appVocabularyViolations(source, label, ownsProductUi) {
   const violations = [];
   if (RETIRED_COLOUR.test(text))
     violations.push(
-      `${label}: the app's colours are ground, surface, well, raised, rule, rule-ink, control-line, ink, ink-2 and their roles`,
+      `${label}: the app's colours are ground, surface, well, raised, rule, control-line, ink, ink-2 and their roles`,
     );
   // The website's segmented track and its link and mark sizes are kept, by name, in two shared atoms.
   if (
@@ -66,7 +68,7 @@ export function appVocabularyViolations(source, label, ownsProductUi) {
     !['components/ui/tabs.tsx', 'components/ui/text-link.tsx'].includes(label)
   )
     violations.push(
-      `${label}: the app's radii are rounded-mark, -sm, -control, -card, -overlay, -sheet and -full`,
+      `${label}: the app's radii are rounded-mark, -sm, -control, -card, -overlay and -full`,
     );
   if (RETIRED_TYPE.test(text) && label !== 'components/ui/typography.tsx')
     violations.push(

@@ -162,7 +162,7 @@ export function Select<T extends string>({
                   ) : null}
                 </span>
                 {option.detail ? (
-                  <span id={`${detailId}-${index}`} className="type-data-sm text-ink-2 ms-auto">
+                  <span id={`${detailId}-${index}`} className="type-caption ms-auto tabular-nums">
                     {option.detail}
                   </span>
                 ) : null}

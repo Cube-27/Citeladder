@@ -83,7 +83,7 @@ describe('IcpConfirmation', () => {
       />,
     );
 
-    // Three suggestions plus the explicit escape hatch. Matched by exact name:
+    // Three suggestions plus the explicit way out. Matched by exact name:
     // a loose regex counted the escape chip too, because "None of these"
     // contains "one".
     for (const name of ['Product feed management platform', 'One', 'Two']) {
@@ -108,8 +108,8 @@ describe('IcpConfirmation', () => {
 
     // A database value was the first thing a new customer read on this screen.
     expect(screen.queryByRole('radio', { name: /brand_audit_services/ })).toBeNull();
-    expect(screen.getByRole('radio', { name: 'Brand Audit Services' })).toBeVisible();
-    expect(screen.getByRole('radio', { name: 'Marketing Consulting' })).toBeVisible();
+    expect(screen.getByRole('radio', { name: 'Brand audit services' })).toBeVisible();
+    expect(screen.getByRole('radio', { name: 'Marketing consulting' })).toBeVisible();
   });
 
   it('stores the discovered token, not the label it displays', async () => {
@@ -128,13 +128,13 @@ describe('IcpConfirmation', () => {
 
     // Humanising is a display concern; round-tripping the prettified string
     // back into the payload would change what the project is built from.
-    await user.click(screen.getByRole('radio', { name: 'Marketing Consulting' }));
+    await user.click(screen.getByRole('radio', { name: 'Marketing consulting' }));
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ category: 'marketing_consulting' }),
     );
   });
 
-  it('names the escape hatch for what it is when there is nothing to reject', () => {
+  it('names the way out for what it is when there is nothing to reject', () => {
     // With no suggestions on screen, "None of these" refers to an empty set.
     render(
       <IcpConfirmation

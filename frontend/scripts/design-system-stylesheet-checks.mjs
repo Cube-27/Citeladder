@@ -67,7 +67,6 @@ export function productContractViolations(root) {
     '--page-top-gap',
     '--flow-gap',
     '--mark-width',
-    '--hatch-pitch',
     '--table-row-height',
     '--table-header-height',
     '--site-gutter',

@@ -142,8 +142,3 @@ export function Measure({
   if (value === null) return <Absence state="not_measured" />;
   return <span className="tabular-nums">{format(value)}</span>;
 }
-export function formatRevenue(value: number, currency: string | null) {
-  return currency
-    ? new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value)
-    : formatCount(value);
-}

@@ -87,7 +87,7 @@ export function Input({
       )}
     >
       {startContent ? (
-        <span className="type-data-sm text-ink-2 flex shrink-0 items-center whitespace-nowrap">
+        <span className="type-caption flex shrink-0 items-center whitespace-nowrap tabular-nums">
           {startContent}
         </span>
       ) : null}
@@ -100,7 +100,7 @@ export function Input({
         {...props}
       />
       {endContent ? (
-        <span className="type-data-sm text-ink-2 flex shrink-0 items-center whitespace-nowrap">
+        <span className="type-caption flex shrink-0 items-center whitespace-nowrap tabular-nums">
           {endContent}
         </span>
       ) : null}

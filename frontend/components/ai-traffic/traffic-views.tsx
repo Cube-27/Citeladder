@@ -13,7 +13,7 @@ import {
 } from '@/lib/api/ai-traffic';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { coverageLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
-import { formatCount, formatWindowDate } from '@/lib/format';
+import { formatCount, formatMean, formatWindowDate } from '@/lib/format';
 import { useCrawlSources } from '@/lib/ai-traffic/use-crawl-connections';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { CalendarX, SearchX, Unplug } from 'lucide-react';
@@ -390,7 +390,7 @@ function CoverageTable({
             <TableCell numeric>
               {formatCount(r.batch_count)} / {formatCount(r.heartbeat_count)}
             </TableCell>
-            <TableCell numeric>{r.max_gap_minutes.toFixed(1)} minutes</TableCell>
+            <TableCell numeric>{formatMean(r.max_gap_minutes)} minutes</TableCell>
           </TableRow>
         ))}
       </DataTable>

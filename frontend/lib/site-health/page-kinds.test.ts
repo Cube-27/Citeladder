@@ -30,8 +30,9 @@ describe('pageKindLabel (the single shared mapping)', () => {
     expect(pageKindLabel('faq')).toBe('FAQ');
   });
 
-  it('falls back to title-casing an unknown type instead of rendering blank', () => {
-    expect(pageKindLabel('landing_page')).toBe('Landing Page');
+  it('falls back to sentence-casing an unknown type instead of rendering blank', () => {
+    expect(pageKindLabel('landing_page')).toBe('Landing page');
+    expect(pageKindLabel('constructor')).toBe('Constructor');
   });
 });
 

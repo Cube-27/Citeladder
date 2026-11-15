@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  */
 export type DraftState = 'draft' | 'accepted' | 'declined';
 
-const OVERLINE: Readonly<Record<DraftState, string>> = {
+const MARKER: Readonly<Record<DraftState, string>> = {
   draft: 'Draft',
   accepted: 'Accepted',
   declined: 'Dismissed',
@@ -52,7 +52,7 @@ function draftSheetClasses(state: DraftState, className?: string) {
 export function DraftSheet({
   title,
   state,
-  overline,
+  marker,
   actions,
   as: Tag = 'section',
   id,
@@ -64,7 +64,7 @@ export function DraftSheet({
   title?: string;
   state: DraftState;
   /** Overrides the state's word ("Draft", "Accepted", "Dismissed"). */
-  overline?: string;
+  marker?: string;
   actions?: ReactNode;
   as?: 'section' | 'li' | 'div';
   id?: string;
@@ -83,9 +83,12 @@ export function DraftSheet({
     >
       <Stack gap="item">
         <p className="flex">
-          <DraftTag>{overline ?? OVERLINE[state]}</DraftTag>
+          <DraftTag kind={state === 'draft' ? 'draft' : 'category'}>
+            {marker ?? MARKER[state]}
+          </DraftTag>
         </p>
-        {title ? <h3 className={textRole('subheading', 'min-w-0 break-words')}>{title}</h3> : null}
+        {/* A card's title is an h2 (SEM-01). */}
+        {title ? <h2 className={textRole('subheading', 'min-w-0 break-words')}>{title}</h2> : null}
         {children}
         {actions ? <Inline className="flex-wrap">{actions}</Inline> : null}
       </Stack>

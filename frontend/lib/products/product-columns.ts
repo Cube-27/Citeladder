@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import type { CommerceProductRow } from '@citeladder/contracts/commerce-suite';
 
-import { formatCount, formatPercent } from '@/lib/format';
+import { formatAmount, formatCount, formatMean, formatPercent } from '@/lib/format';
 
 /**
  * The Products table's metric columns, in order (the plan's "Metric
@@ -57,23 +57,10 @@ const missing = (state: MissingState, note?: string): ProductCell => ({
   ...(note ? { note } : {}),
 });
 
-/** A price in its currency when the code is a currency, else the bare amount. */
-function formatPrice(amount: number, currency: string): string {
-  if (/^[A-Z]{3}$/u.test(currency)) {
-    try {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(amount);
-    } catch {
-      // An unknown code falls through to the bare amount with its code.
-    }
-  }
-  const number = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(amount);
-  return currency ? `${number} ${currency}` : number;
-}
-
 /** A rate (visibility, win rate, share) as a percentage to one decimal. */
 export const formatRate = (value: number) => formatPercent(value);
 /** A mean rank to one decimal. */
-export const formatPosition = (value: number) => value.toFixed(1);
+export const formatPosition = formatMean;
 
 /** A rate or mean, unavailable when nothing in scope measured it. */
 const measured = (value: number | null, format: (value: number) => string): ProductCell =>
@@ -87,16 +74,16 @@ function mentionedPrice(row: CommerceProductRow): ProductCell {
   const { median, currency, other_currency } = row.mentioned_price;
   const note = other_currency ? `+${formatCount(other_currency)} in other currencies` : undefined;
   if (median === null) return missing('unavailable', note);
-  return { kind: 'value', text: formatPrice(median, currency), ...(note ? { note } : {}) };
+  return { kind: 'value', text: formatAmount(median, currency), ...(note ? { note } : {}) };
 }
 
 /** The catalog price or range; a competitor has none, a catalog product's is unknown. */
 function catalogPrice(row: CommerceProductRow): ProductCell {
   const price = row.catalog_price;
   if (price === null) return missing(row.kind === 'owned' ? 'unknown' : 'not_applicable');
-  const min = formatPrice(price.min, price.currency);
+  const min = formatAmount(price.min, price.currency);
   if (price.min === price.max) return { kind: 'value', text: min };
-  return { kind: 'value', text: `${min}–${formatPrice(price.max, price.currency)}` };
+  return { kind: 'value', text: `${min}–${formatAmount(price.max, price.currency)}` };
 }
 
 function merchantList(row: CommerceProductRow): ProductCell {

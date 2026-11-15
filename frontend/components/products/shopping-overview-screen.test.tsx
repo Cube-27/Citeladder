@@ -234,7 +234,7 @@ describe('Shopping overview', () => {
     expect(shelf).toHaveTextContent('from 5 answers and 8 recognized recommendations');
     expect(within(shelf).getByText('40.0%')).toBeInTheDocument();
     expect(within(shelf).getByText('25.0%')).toBeInTheDocument();
-    expect(within(shelf).getByText('2.00')).toBeInTheDocument();
+    expect(within(shelf).getByText('2.0')).toBeInTheDocument();
     // Measured, but no answer ranked a product: unavailable, not "not measured".
     expect(within(shelf).getByText('Unavailable')).toBeInTheDocument();
     expect(within(shelf).queryByText('Not measured')).not.toBeInTheDocument();

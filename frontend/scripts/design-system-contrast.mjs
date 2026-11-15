@@ -86,7 +86,7 @@ const CONTRAST_PAIRS = [
  * The app's palette, held on the app's scopes only:
  * text roles 4.5:1 on ground, surface, well and raised and under the hover
  * and pressed tints; status inks on every fill and their own wash; marks and
- * boundaries 3:1. The absence word is checked against the hatch's line too.
+ * boundaries 3:1.
  */
 const APP_FILLS = ['ground', 'surface', 'well', 'raised'].map(color);
 const APP_WASHES = ['accent', ...STATUSES].map((role) => color(`${role}-wash`));
@@ -110,13 +110,7 @@ const APP_PAIRS = [
   { inks: [color('accent-text')], surfaces: [...APP_FILLS, color('accent-wash')], minimum: 4.5 },
   { inks: [color('ink-2')], surfaces: [color('rule')], minimum: 4.5 },
   {
-    inks: [
-      color('accent'),
-      color('control-line'),
-      color('rule-ink'),
-      ...APP_SERIES,
-      color('data-other'),
-    ],
+    inks: [color('accent'), color('control-line'), ...APP_SERIES, color('data-other')],
     surfaces: APP_FILLS,
     minimum: 3,
   },

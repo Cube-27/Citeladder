@@ -23,7 +23,13 @@ import type {
   PerformanceSeriesPoint,
   PerformanceWindow,
 } from '@/lib/api/performance';
-import { availabilityLabel, formatCount, formatWindowDate } from '@/lib/format';
+import {
+  availabilityLabel,
+  formatCount,
+  formatMean,
+  formatWindowDate,
+  percentText,
+} from '@/lib/format';
 
 /** The not-measured placeholder (null metrics — never a fabricated zero). */
 const NOT_MEASURED = availabilityLabel('not_measured');
@@ -208,21 +214,11 @@ function isInvertedMetric(key: PerformanceMetricKey): boolean {
   return key === 'position';
 }
 
-/** Persisted CTR fraction → display percent (`0.0317` → `3.2%`). */
-function formatCtr(fraction: number, digits = 1): string {
-  return `${(fraction * 100).toFixed(digits)}%`;
-}
-
-/** Mean ranking position (`8.4`). */
-function formatPosition(value: number): string {
-  return value.toFixed(1);
-}
-
 /** One metric's display string, or the not-measured placeholder for null. */
 export function formatMetric(key: PerformanceMetricKey, value: number | null): string {
   if (value === null) return NOT_MEASURED;
-  if (key === 'ctr') return formatCtr(value);
-  if (key === 'position') return formatPosition(value);
+  if (key === 'ctr') return percentText(value);
+  if (key === 'position') return formatMean(value);
   return formatCount(value);
 }
 
@@ -310,8 +306,8 @@ export function toChartPoints(series: readonly PerformanceSeriesPoint[]): Perfor
 
 /** Compact axis tick: 60000 → `60K`, 1500 → `1.5K`, 500 → `500`. */
 export function formatAxisTick(key: PerformanceMetricKey, value: number): string {
-  if (key === 'ctr') return formatCtr(value, 1);
-  if (key === 'position') return formatPosition(value);
+  if (key === 'ctr') return percentText(value);
+  if (key === 'position') return formatMean(value);
   if (value <= 0) return '0';
   if (value >= 1000) {
     const thousands = value / 1000;

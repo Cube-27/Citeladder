@@ -102,13 +102,25 @@ type TextLinkProps = Readonly<
 function withGlyphs(variant: TextLinkVariant, children: ReactNode): ReactNode[] {
   const label = <Slottable key="label">{children}</Slottable>;
   if (variant === 'external') {
-    return [
-      label,
+    const glyph = (
       <ArrowUpRight
         key="glyph"
         className="ms-0.5 inline size-3.5 align-[-2px] [:root:not([data-public-surface])_&]:ms-2"
         aria-hidden
-      />,
+      />
+    );
+    // A text label keeps its last word with the glyph, so the glyph never wraps alone.
+    const split = typeof children === 'string' ? /^(.*\s)?(\S+)\s*$/su.exec(children) : null;
+    return [
+      ...(split
+        ? [
+            split[1] ?? '',
+            <span key="tail" className="whitespace-nowrap">
+              {split[2]}
+              {glyph}
+            </span>,
+          ]
+        : [label, glyph]),
       ' ',
       <span key="note" className="sr-only">
         (opens in a new tab)

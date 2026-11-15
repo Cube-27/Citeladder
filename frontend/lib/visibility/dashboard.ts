@@ -9,7 +9,7 @@
  * (branded / non-branded) breakdown in `VisibilityResponse` yet, so no such
  * control is offered.
  */
-import { availabilityLabel, formatDisplayTimestamp, formatPercent } from '@/lib/format';
+import { availabilityLabel, formatDisplayTimestamp, formatMean, formatPercent } from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import type {
   AuditStatus,
@@ -204,7 +204,7 @@ export function formatPosition(position: number | null): string {
 /** The unrounded mean, for the title/description that explains the rank. */
 export function formatPositionExact(position: number | null): string {
   if (position === null || Number.isNaN(position)) return PLACEHOLDER;
-  return position.toFixed(1);
+  return formatMean(position);
 }
 
 /** The not-measured placeholder for an absent average position. */
