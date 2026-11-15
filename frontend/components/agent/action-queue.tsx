@@ -2,7 +2,7 @@ import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import type { DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ClampText, TableCell } from '@/components/ui/table';
+import { ClampText, TableCell, UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import {
@@ -24,7 +24,7 @@ import {
   type ActionsParams,
   type ActionStatus,
 } from '@/lib/api/actions';
-import { pluralCount, readableUrl } from '@/lib/format';
+import { pluralCount, readableUrl, sharedOrigin } from '@/lib/format';
 import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import {
@@ -195,47 +195,61 @@ function workSummary(action: Action): string {
     .join(' · ');
 }
 
-/** Below `desktop:` the Action type column is dropped, so the caption leads with it. */
-function narrowLead(action: Action): string {
-  const approach = approachLabel(action.approach);
-  return approach ? `${approach} · ` : '';
+/** What the list's targets share, so each row prints only its path. */
+export function targetsOrigin(actions: readonly Action[]): string | null {
+  return sharedOrigin(actions.map((action) => action.target_label));
 }
 
 /**
- * A row's target cell: the target linked to its Action, its
- * status beside it only in the work queue and only when it is not Open (the
- * queue is nearly all Open), and the work summary under it.
+ * A row's Action cell: the work, linked to its Action, as the row's title,
+ * its status beside it only in the work queue and only when it is not Open
+ * (the queue is nearly all Open); the target under it, a URL breaking only
+ * after a `/` and less the origin every row shares; then the work summary.
+ * An Action with no type is titled by its target.
  */
 export function ActionTargetCell({
   action,
   status,
+  origin,
 }: Readonly<{
   action: Action;
   /** The list's status filter; undefined for the work queue. */
   status: ActionStatus | undefined;
+  /** The origin every listed target shares, from `targetsOrigin`. */
+  origin: string | null;
 }>) {
   // A page to create is named by its topic, so the label is not always a URL.
-  const label = readableUrl(action.target_label);
+  const target = readableUrl(action.target_label);
+  const work = approachLabel(action.approach);
   return (
     <TableCell>
-      {/* Title over its caption, one fact 4 apart, as `TableCellLines` binds them. */}
+      {/* Title over its captions, one fact 4 apart, as `TableCellLines` binds them. */}
       <Stack gap="tight" className="min-w-0">
         <Inline>
-          <ClampText lines={2} tooltip={label}>
+          <ClampText lines={2}>
             <TextLink href={`/agent/actions/${action.id}`} text="body">
-              {label}
+              {work ?? target}
             </TextLink>
           </ClampText>
           {status === undefined && action.status !== 'open' ? (
             <ActionStatusBadge status={action.status} />
           ) : null}
         </Inline>
+        {work === null ? null : <TargetLine label={action.target_label} origin={origin} />}
         <ClampText lines={1} className={textRole('caption')}>
-          <span className="desktop:hidden">{narrowLead(action)}</span>
           {workSummary(action)}
         </ClampText>
       </Stack>
     </TableCell>
+  );
+}
+
+function TargetLine({ label, origin }: Readonly<{ label: string; origin: string | null }>) {
+  if (/^https?:\/\//iu.test(label)) return <UrlText url={label} origin={origin} lines={1} />;
+  return (
+    <ClampText lines={1} className={textRole('caption')}>
+      {readableUrl(label)}
+    </ClampText>
   );
 }
 

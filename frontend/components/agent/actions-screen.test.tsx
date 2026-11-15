@@ -130,9 +130,12 @@ describe('Actions', () => {
       'group=products&limit=5',
     ]);
 
-    const row = screen.getByRole('link', { name: 'https://acme.test/pricing' });
-    expect(row).toHaveAttribute('href', `/agent/actions/${ACTION}?project=${PROJECT}`);
-    const cells = within(row.closest('tr')!);
+    // The row is titled by the work and links to its Action; the target is secondary.
+    const cells = within(screen.getByText('https://acme.test/pricing').closest('tr')!);
+    expect(cells.getByRole('link', { name: 'Improve the existing page' })).toHaveAttribute(
+      'href',
+      `/agent/actions/${ACTION}?project=${PROJECT}`,
+    );
     // The band, never the raw score; priority is an order, never a hue.
     expect(cells.getByText('High').closest('[data-status-tone]')).toHaveAttribute(
       'data-status-tone',
@@ -140,15 +143,13 @@ describe('Actions', () => {
     );
     expect(screen.queryByText('82.5')).not.toBeInTheDocument();
     expect(cells.getByText('Page · 1 finding in Website, Search Console')).toBeVisible();
-    expect(cells.getByText('Improve the existing page')).toBeVisible();
     // An Open row in the queue names no status; one in progress does.
     expect(cells.queryByText('Open')).not.toBeInTheDocument();
-    const started = screen.getByRole('link', { name: 'acme.test/page-0' });
+    const started = screen.getByText('acme.test/page-0');
     expect(within(started.closest('tr')!).getByText('In progress')).toBeVisible();
     expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
       'Action',
       'Priority',
-      'Action type',
     ]);
     // The server's order, marked on its column.
     expect(screen.getByRole('columnheader', { name: 'Priority' })).toHaveAttribute(
@@ -156,27 +157,26 @@ describe('Actions', () => {
       'descending',
     );
     // Five of the seven, then the way to the rest.
-    expect(screen.queryByRole('link', { name: 'acme.test/page-4' })).toBeNull();
+    expect(screen.queryByText('acme.test/page-4')).toBeNull();
 
     // A header folds its group's rows.
     await user.click(own);
     expect(own).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('link', { name: 'https://acme.test/pricing' })).toBeNull();
+    expect(screen.queryByText('https://acme.test/pricing')).toBeNull();
     await user.click(own);
 
     await user.click(screen.getByRole('button', { name: 'Show all 7 in Improve your own pages' }));
-    expect(await screen.findByRole('link', { name: 'acme.test/page-5' })).toBeVisible();
+    expect(await screen.findByText('acme.test/page-5')).toBeVisible();
     expect(window.location.search).toBe('?group=own_pages');
     expect(reads.at(-1)).toBe('group=own_pages&limit=10');
-    expect(screen.queryByRole('link', { name: 'Missing viewport meta tag' })).toBeNull();
+    expect(screen.queryByText('Missing viewport meta tag')).toBeNull();
   });
 
   it('lists an issue family in Fix how AI reads your site with its page count', async () => {
     serveActions([]);
     renderActions();
-    const row = (await screen.findByRole('link', { name: 'Missing viewport meta tag' })).closest(
-      'tr',
-    )!;
+    const row = (await screen.findByText('Missing viewport meta tag')).closest('tr')!;
+    expect(within(row).getByRole('link', { name: 'Fix a technical issue' })).toBeVisible();
     expect(
       within(row).getByText('Issue across pages · 179 pages · 1 finding in Website'),
     ).toBeVisible();
@@ -214,10 +214,8 @@ describe('Actions', () => {
     serveActions([]);
     const user = userEvent.setup();
     renderActions();
-    const row = (await screen.findByRole('link', { name: 'Missing viewport meta tag' })).closest(
-      'tr',
-    )!;
-    await user.click(within(row).getByText('Fix a technical issue'));
+    const row = (await screen.findByText('Missing viewport meta tag')).closest('tr')!;
+    await user.click(within(row).getByText('Missing viewport meta tag'));
     expect(await screen.findByText('Action detail')).toBeVisible();
   });
 });

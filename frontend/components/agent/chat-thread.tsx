@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 
+import { AgentFailureNotice } from '@/components/agent/agent-failure-notice';
 import { Composer } from '@/components/agent/composer';
 import { Conversation } from '@/components/agent/conversation';
 import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useCancelRun, useFollowUp, type FollowUp } from '@/components/agent/use-chat-turns';
-import { ProjectLink } from '@/components/ui/project-link';
 import { AgentThread } from '@/components/ui/chat-dock';
 import { latestOutput } from '@/lib/agent/documents';
 import { agentHandoffHref } from '@/lib/agent/handoff';
@@ -98,7 +98,9 @@ export function ReplyComposer({
       onStop={thread.stop}
       stopping={thread.stopping}
       onRetry={
-        turn.failure && !turn.failure.startNewChat && turn.draft.trim() === turn.failedMessage
+        turn.failure &&
+        turn.failure.recovery !== 'new-chat' &&
+        turn.draft.trim() === turn.failedMessage
           ? turn.retrySubmission
           : undefined
       }
@@ -115,19 +117,9 @@ function FollowUpFailure({
 }: Readonly<{ turn: FollowUp; actionId: string | null }>) {
   if (!turn.failure) return null;
   return (
-    <Notice
-      kind="mutation"
-      notice={turn.failure}
-      recovery={
-        turn.failure.startNewChat ? (
-          <ProjectLink
-            href={agentHandoffHref({ actionId, prompt: turn.lastMessage })}
-            className="underline"
-          >
-            Start a new chat
-          </ProjectLink>
-        ) : null
-      }
+    <AgentFailureNotice
+      failure={turn.failure}
+      newChatHref={agentHandoffHref({ actionId, prompt: turn.lastMessage })}
     />
   );
 }

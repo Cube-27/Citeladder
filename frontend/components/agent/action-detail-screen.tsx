@@ -16,15 +16,15 @@ import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/actio
 import { ActionSection } from '@/components/agent/action-section';
 import { RecordPage } from '@/components/templates/record-page';
 import type { PageBack } from '@/components/templates/page-frame';
-import { ProjectLink } from '@/components/ui/project-link';
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { FactList, type Fact } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { actionHandoffHref } from '@/lib/agent/handoff';
 import {
   approachLabel,
@@ -67,6 +67,7 @@ export function ActionDetailScreen() {
         <StateBlock
           kind="error"
           {...readErrorProps(query)}
+          title="Couldn't load this Action"
           fallback="This Action could not be loaded."
         />
       </RecordPage>
@@ -115,6 +116,7 @@ function ActionDetailView({
           action={action}
           workspaceId={workspaceId}
           dismissing={update.isPending}
+          changed={update.isSuccess ? update.variables.status : null}
           onStatus={(status) => update.mutate({ actionId: action.id, status })}
           onDeclared={() => setDeclared(true)}
         />
@@ -214,11 +216,11 @@ function Overview({ action }: Readonly<{ action: ActionDetail }>) {
   );
 }
 
-/** The identity strip: the full target, wrapping, over the Action's facts, one ruled row each. */
+/** The identity strip: the Action's facts, one ruled row each, the full target among them. */
 function Identity({ action }: Readonly<{ action: ActionDetail }>) {
   const approach = approachLabel(action.diagnosis.approach ?? action.approach);
   const sources = action.families.map(familyLabel).filter(isText);
-  const target = targetKindLabel(action.target_kind) ?? 'Target';
+  const target = targetKindLabel(action.target_kind);
   const facts: Fact[] = [
     { label: 'Status', value: <ActionStatusBadge status={action.status} /> },
     { label: 'Priority', value: <ActionPriorityBadge band={action.priority_band} /> },
@@ -226,15 +228,21 @@ function Identity({ action }: Readonly<{ action: ActionDetail }>) {
   if (approach) facts.push({ label: 'Action type', value: approach });
   facts.push({
     label: 'Target',
-    value: action.target_url ? (
-      <Inline gap="compact" className="flex-wrap">
-        <span>{target}</span>
-        <TextLink variant="external" href={action.target_url} text="body">
-          Open the page
-        </TextLink>
-      </Inline>
-    ) : (
-      target
+    value: (
+      <Stack gap="tight" className="min-w-0">
+        <span className={textRole('data', 'break-all')}>{readableUrl(action.target_label)}</span>
+        {target ? <span className={textRole('caption')}>{target}</span> : null}
+        {action.target_url ? (
+          <TextLink
+            variant="external"
+            href={action.target_url}
+            text="body"
+            className="justify-self-start"
+          >
+            Open the page
+          </TextLink>
+        ) : null}
+      </Stack>
     ),
   });
   if (sources.length) facts.push({ label: 'Source', value: sources.join(', ') });
@@ -243,10 +251,7 @@ function Identity({ action }: Readonly<{ action: ActionDetail }>) {
       <SectionTitle id="action-details" level={2} className="sr-only">
         Details
       </SectionTitle>
-      <Stack gap="workspace">
-        <p className={textRole('data', 'break-all')}>{readableUrl(action.target_label)}</p>
-        <FactList layout="ruled" facts={facts} />
-      </Stack>
+      <FactList layout="ruled" facts={facts} />
     </Section>
   );
 }
@@ -294,26 +299,31 @@ function Findings({
   if (action.members.length === 0) return null;
   return (
     <ActionSection title="Findings" id="action-findings">
-      <ul className={ledgerClasses()}>
+      <LedgerList>
         {action.members.map((member) => (
-          <Inline
-            as="li"
+          <LedgerItem
             key={member.id}
-            gap="compact"
-            className={ledgerItemClasses('flex-wrap items-start')}
-          >
-            <span className={textRole('body', 'min-w-0 flex-1')}>{member.title}</span>
-            <Button variant="quiet" onClick={() => onOpenEvidence(member.id)}>
-              View evidence
-            </Button>
-          </Inline>
+            title={member.title}
+            links={
+              <ActionButton
+                action="viewEvidence"
+                aria-label={`View evidence for ${member.title}`}
+                onClick={() => onOpenEvidence(member.id)}
+              />
+            }
+          />
         ))}
-      </ul>
+      </LedgerList>
     </ActionSection>
   );
 }
 
 const isText = (value: string | null): value is string => Boolean(value);
+
+const STATUS_CHANGED = {
+  dismissed: 'Action dismissed. Reopen puts it back in the queue.',
+  open: 'Action reopened.',
+} as const;
 
 /**
  * The page's three decisions in the record's sticky action bar: Dismiss
@@ -327,12 +337,15 @@ function ActionBar({
   action,
   workspaceId,
   dismissing,
+  changed,
   onStatus,
   onDeclared,
 }: Readonly<{
   action: ActionDetail;
   workspaceId: string;
   dismissing: boolean;
+  /** The status this page last set, so its result is announced. */
+  changed: 'open' | 'dismissed' | null;
   onStatus: (status: 'open' | 'dismissed') => void;
   onDeclared: () => void;
 }>) {
@@ -349,25 +362,29 @@ function ActionBar({
         workspaceId={workspaceId}
         action={action}
         revision={null}
-        variant="secondary"
         onDeclared={onDeclared}
       />
     );
   return (
     <Inline as="fieldset" aria-label="Work on this Action" className="flex-wrap justify-end">
+      <output className={textRole('caption', 'me-auto')}>
+        {changed ? STATUS_CHANGED[changed] : null}
+      </output>
       {undeclared ? (
+        // Never `disabled` while pending: that drops focus to the page, and
+        // the same button (now Reopen or Dismiss) keeps it once the change lands.
         <Button
           variant="secondary"
-          disabled={dismissing}
-          onClick={() => onStatus(dismissed ? 'open' : 'dismissed')}
+          aria-disabled={dismissing || undefined}
+          onClick={() => {
+            if (!dismissing) onStatus(dismissed ? 'open' : 'dismissed');
+          }}
         >
           {dismissed ? 'Reopen' : 'Dismiss'}
         </Button>
       ) : null}
       {declare}
-      <Button asChild variant="primary">
-        <ProjectLink href={actionHandoffHref(action)}>Work with the agent</ProjectLink>
-      </Button>
+      <ActionButton action="workWithAgent" href={actionHandoffHref(action)} />
     </Inline>
   );
 }
@@ -387,6 +404,7 @@ function LinkedChats({
         <Notice
           kind="read"
           {...readErrorProps(chats)}
+          title="Couldn't load the linked chats"
           fallback="Linked chats could not be loaded."
         />
       ) : null}
@@ -394,18 +412,19 @@ function LinkedChats({
         <StateBlock kind="empty" inline message="No chats have worked on this Action yet." />
       ) : null}
       {rows.length > 0 ? (
-        <ul className={ledgerClasses()}>
+        <LedgerList>
           {rows.map((chat) => (
-            <Stack as="li" gap="tight" key={chat.id} className={ledgerItemClasses()}>
-              <TextLink href={`/agent/chats/${chat.id}`} text="body" className="justify-self-start">
-                {chat.title}
-              </TextLink>
-              {chat.output_kind ? (
-                <span className={textRole('caption')}>{kindLabel(chat.output_kind)}</span>
-              ) : null}
-            </Stack>
+            <LedgerItem
+              key={chat.id}
+              title={
+                <TextLink href={`/agent/chats/${chat.id}`} text="body">
+                  {chat.title}
+                </TextLink>
+              }
+              caption={chat.output_kind ? kindLabel(chat.output_kind) : undefined}
+            />
           ))}
-        </ul>
+        </LedgerList>
       ) : null}
       {chats.hasNextPage ? (
         <Button

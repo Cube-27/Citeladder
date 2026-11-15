@@ -197,6 +197,7 @@ export function AuthFormShell({
   title,
   description,
   error,
+  errorId,
   onSubmit,
   pending,
   submitLabel,
@@ -212,8 +213,10 @@ export function AuthFormShell({
 }: Readonly<{
   title: string;
   /** A line under the title; sign-in and sign-up have none unless they report something. */
-  description?: string;
+  description?: ReactNode;
   error?: string;
+  /** The form error's id, so the field it is about can point to it. */
+  errorId?: string;
   onSubmit: NonNullable<ComponentProps<'form'>['onSubmit']>;
   pending: boolean;
   submitLabel: string;
@@ -256,7 +259,11 @@ export function AuthFormShell({
         ) : undefined
       }
     >
-      {error ? <Notice tone="negative">{error}</Notice> : null}
+      {error ? (
+        <div id={errorId}>
+          <Notice tone="negative">{error}</Notice>
+        </div>
+      ) : null}
 
       {consent.terms ? (
         <>

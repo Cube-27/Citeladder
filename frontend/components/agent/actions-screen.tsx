@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 
 import {
   ActionTargetCell,
+  targetsOrigin,
   useActionFilters,
   useActionTable,
   type ActionListQuery,
@@ -17,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { ACTION_GROUP_LABEL, approachLabel } from '@/lib/agent/vocabulary';
+import { ACTION_GROUP_LABEL } from '@/lib/agent/vocabulary';
 import {
   actionsQueries,
   type Action,
@@ -59,29 +60,13 @@ export function ActionsScreen() {
 }
 
 // No status column: under the default queue nearly every row is Open, so a
-// row names its status beside the target only when it differs (owner,
-// 2026-11-10). The server orders rows by priority. The target's caption names
-// the sources, so the identity column keeps the width; below `desktop:` it
-// leads with the action type too.
+// row names its status beside its title only when it differs (owner,
+// 2026-11-10). The server orders rows by priority. The Action cell is titled
+// by the work (the action type) over its target and sources.
 const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'target', label: 'Action' },
-  { key: 'priority', label: 'Priority', width: 'status', order: 'descending' },
-  { key: 'approach', label: 'Action type', width: 'category', desktopOnly: true },
+  { key: 'target', label: 'Action', kind: 'identity' },
+  { key: 'priority', label: 'Priority', kind: 'status', order: 'descending' },
 ];
-
-/** The columns every width shows: a full-width row spans these, then fills the rest. */
-const ALWAYS_SHOWN = COLUMNS.filter((column) => !column.desktopOnly).length;
-
-/**
- * Empty cells under the columns only `desktop:` shows. A cell spanning a
- * hidden column would keep its width in the fixed layout, so a full-width
- * row spans the shown columns and fills the rest with these.
- */
-function DesktopOnlyCells() {
-  return COLUMNS.filter((column) => column.desktopOnly).map((column) => (
-    <TableCell key={column.key} desktopOnly />
-  ));
-}
 
 type ListProps = Readonly<{ workspaceId: string; projectId: string; query: ActionListQuery }>;
 
@@ -95,12 +80,13 @@ function GroupList({ workspaceId, projectId, query, group }: ListProps & { group
     noun: 'Actions',
     empty: emptyActions,
   });
+  const origin = targetsOrigin(page?.items ?? []);
   return (
     // Every row stacks the target (up to two lines) over its kind, so short
     // pages pad with blanks and the pager stays where a full page puts it.
     <DataTable label="Actions" columns={COLUMNS} rowLines={3} {...table}>
       {page?.items.map((action) => (
-        <ActionRow key={action.id} action={action} status={query.status} />
+        <ActionRow key={action.id} action={action} status={query.status} origin={origin} />
       ))}
     </DataTable>
   );
@@ -131,7 +117,12 @@ function GroupedList({
   let state: DataTableState | undefined;
   if (reads.some((read) => read.isPending)) state = { kind: 'loading', label: 'Loading Actions…' };
   else if (failed)
-    state = { kind: 'error', ...readErrorProps(failed), fallback: 'Actions could not be loaded.' };
+    state = {
+      kind: 'error',
+      ...readErrorProps(failed),
+      title: "Couldn't load Actions",
+      fallback: 'Actions could not be loaded.',
+    };
   else if (counts && Object.values(counts.group_counts).every((count) => count === 0))
     state = emptyActions(counts);
   const toggle = (group: ActionGroup) =>
@@ -156,6 +147,8 @@ function GroupedList({
         const total = page?.group_counts[group] ?? 0;
         if (!page || total === 0) return null;
         const open = !collapsed.has(group);
+        // Per group: your own pages share an origin, mentions elsewhere do not.
+        const origin = targetsOrigin(page.items);
         return (
           <Fragment key={group}>
             <GroupHeaderRow
@@ -166,7 +159,12 @@ function GroupedList({
             />
             {open
               ? page.items.map((action) => (
-                  <ActionRow key={action.id} action={action} status={query.status} />
+                  <ActionRow
+                    key={action.id}
+                    action={action}
+                    status={query.status}
+                    origin={origin}
+                  />
                 ))
               : null}
             {open && total > page.items.length ? (
@@ -198,7 +196,7 @@ function GroupHeaderRow({
 }: Readonly<{ group: ActionGroup; total: number; open: boolean; onToggle: () => void }>) {
   return (
     <TableRow data-action-group={group}>
-      <TableCell colSpan={ALWAYS_SHOWN}>
+      <TableCell colSpan={COLUMNS.length}>
         <Button
           variant="quiet"
           aria-expanded={open}
@@ -210,7 +208,6 @@ function GroupHeaderRow({
           <span className="text-ink-2 tabular-nums">{formatCount(total)}</span>
         </Button>
       </TableCell>
-      <DesktopOnlyCells />
     </TableRow>
   );
 }
@@ -223,7 +220,7 @@ function ShowAllRow({
 }: Readonly<{ group: ActionGroup; total: number; onShow: () => void }>) {
   return (
     <TableRow>
-      <TableCell colSpan={ALWAYS_SHOWN}>
+      <TableCell colSpan={COLUMNS.length}>
         <Button
           variant="quiet"
           onClick={onShow}
@@ -232,7 +229,6 @@ function ShowAllRow({
           Show all {formatCount(total)}
         </Button>
       </TableCell>
-      <DesktopOnlyCells />
     </TableRow>
   );
 }
@@ -265,7 +261,8 @@ function emptyActions(page: ActionsPage): DataTableState {
 function ActionRow({
   action,
   status,
-}: Readonly<{ action: Action; status: ActionStatus | undefined }>) {
+  origin,
+}: Readonly<{ action: Action; status: ActionStatus | undefined; origin: string | null }>) {
   const navigate = useNavigate();
   const projectHref = useProjectHref();
   const href = `/agent/actions/${action.id}`;
@@ -276,11 +273,10 @@ function ActionRow({
   };
   return (
     <TableRow onClick={open} className="cursor-pointer">
-      <ActionTargetCell action={action} status={status} />
-      <TableCell className="whitespace-nowrap">
+      <ActionTargetCell action={action} status={status} origin={origin} />
+      <TableCell>
         <ActionPriorityBadge band={action.priority_band} />
       </TableCell>
-      <TableCell desktopOnly>{approachLabel(action.approach) ?? ''}</TableCell>
     </TableRow>
   );
 }

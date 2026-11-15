@@ -21,7 +21,7 @@ import { readableUrl } from '@/lib/format';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useDebounced } from '@/lib/use-debounced';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Spinner } from '@/components/ui/spinner';
 
@@ -195,7 +195,14 @@ function PageField({
     page && !items.some((item) => item.site_url_id === page.site_url_id) ? [page, ...items] : items;
   if (query.isPending) return <Spinner label="Loading your content pages…" showLabel />;
   if (query.isError)
-    return <Notice tone="negative">Your content pages could not be loaded.</Notice>;
+    return (
+      <Notice
+        kind="read"
+        {...readErrorProps(query)}
+        title="Couldn't load your content pages"
+        fallback="Your content pages could not be loaded."
+      />
+    );
   if (query.data.crawl_id === null)
     return (
       <StateBlock

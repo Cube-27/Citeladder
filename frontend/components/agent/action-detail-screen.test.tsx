@@ -184,7 +184,7 @@ describe('An Action page', () => {
       'Open',
       'High',
       'Fix a technical issue',
-      'PageOpen the page (opens in a new tab)',
+      'https://acme.test/pricingPageOpen the page (opens in a new tab)',
       'Website',
     ]);
 
@@ -238,11 +238,22 @@ describe('An Action page', () => {
     expect(await screen.findByRole('dialog', { name: 'Mark implemented' })).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
-    await user.click(bar.getByRole('button', { name: 'Dismiss' }));
-    expect(await bar.findByRole('button', { name: 'Reopen' })).toBeVisible();
+    // Pressed from the keyboard, the change keeps focus on its button and is announced.
+    bar.getByRole('button', { name: 'Dismiss' }).focus();
+    await user.keyboard('{Enter}');
+    const reopen = await bar.findByRole('button', { name: 'Reopen' });
+    expect(reopen).toHaveFocus();
+    expect(bar.getByRole('status')).toHaveTextContent(
+      'Action dismissed. Reopen puts it back in the queue.',
+    );
     expect(patches).toEqual([{ status: 'dismissed' }]);
     // A dismissed Action is not declared, so only Reopen and the Agent remain.
     expect(bar.queryByRole('button', { name: 'Mark implemented' })).toBeNull();
+
+    await user.keyboard('{Enter}');
+    expect(await bar.findByRole('button', { name: 'Dismiss' })).toHaveFocus();
+    expect(bar.getByRole('status')).toHaveTextContent('Action reopened.');
+    expect(patches).toEqual([{ status: 'dismissed' }, { status: 'open' }]);
   });
 });
 

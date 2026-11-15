@@ -12,6 +12,7 @@ import { renderWithProviders } from '@/test/render';
 import { AnalyzePageButton } from './analyze-page-dialog';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
+  useManagedPlan: () => false,
   useEntitlement: () => ({ hasCapability: () => true }),
 }));
 

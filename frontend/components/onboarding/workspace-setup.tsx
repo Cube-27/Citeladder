@@ -47,6 +47,7 @@ export function WorkspaceSetup() {
         <StateBlock
           kind="error"
           error={failure}
+          title="Couldn't load workspace setup"
           fallback="We could not load workspace setup."
           onRetry={() => (terms.error ? void terms.refetch() : signOut())}
           pending={terms.isFetching || leave.isPending}

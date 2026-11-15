@@ -43,6 +43,7 @@ export function ChatScreen() {
         <StateBlock
           kind="error"
           error={query.error}
+          title="Couldn't load this chat"
           fallback="This chat could not be loaded."
           onRetry={() => void query.refetch()}
           pending={query.isFetching}

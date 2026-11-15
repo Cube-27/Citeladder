@@ -30,6 +30,7 @@ export function SkillsScreen() {
       <StateBlock
         kind="error"
         error={query.error}
+        title="Couldn't load skills"
         fallback="Skills could not be loaded."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
@@ -84,7 +85,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
                 </Stack>
                 <Inline className="flex-wrap justify-between self-end">
                   <OutputBadge label={outputKind(skill.output_kind)?.label} />
-                  <Button asChild variant="quiet">
+                  <Button asChild variant="secondary">
                     <ProjectLink
                       href={agentHandoffHref({ skillId: skill.id })}
                       aria-label={`Start a chat with ${skill.label}`}

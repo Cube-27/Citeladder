@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
+import { AgentFailureNotice } from '@/components/agent/agent-failure-notice';
 import { ChatConversation, ReplyComposer, useChatThread } from '@/components/agent/chat-thread';
 import { Composer } from '@/components/agent/composer';
 import { useSkillChoice } from '@/components/agent/skill-picker';
@@ -146,7 +147,7 @@ function PanelStart({
         </p>
       </Stack>
       {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}
-      {create.failure ? <Notice kind="mutation" notice={create.failure} /> : null}
+      {create.failure ? <AgentFailureNotice failure={create.failure} /> : null}
     </DockedThread>
   );
 }
@@ -171,6 +172,7 @@ function PanelChat({
         <Notice
           kind="read"
           error={query.error}
+          title="Couldn't load this chat"
           fallback="This chat could not be loaded."
           onRetry={() => void query.refetch()}
           pending={query.isFetching}

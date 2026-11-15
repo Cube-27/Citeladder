@@ -43,6 +43,7 @@ export function OutputHistory({
       <Notice
         kind="read"
         error={query.error}
+        title="Couldn't load the revision history"
         fallback="Revision history could not be loaded."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}

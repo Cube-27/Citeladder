@@ -1,7 +1,8 @@
 import { useState, type ReactNode, type RefObject } from 'react';
 import { History } from 'lucide-react';
 
-import { IconButton } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Drawer } from '@/components/ui/drawer';
 
 import { PageFrame, type PageFrameSlots } from './page-frame';
@@ -68,13 +69,16 @@ function HistoryDrawer({ children }: Readonly<{ children: ReactNode }>) {
   const [open, setOpen] = useState(false);
   return (
     <span className="column-history:hidden contents">
-      <IconButton
-        icon={History}
-        label="History"
+      {/* Named in words, not a bare clock: it is the way to past chats here. */}
+      <Button
+        variant="quiet"
         aria-haspopup="dialog"
         aria-expanded={open}
         onClick={() => setOpen(true)}
-      />
+      >
+        <Icon icon={History} />
+        Chat history
+      </Button>
       <Drawer
         open={open}
         onOpenChange={setOpen}

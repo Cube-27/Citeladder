@@ -10,7 +10,7 @@ it('reads a refused Agent write as the shared notice with the Agent copy and sup
     retryable: false,
     code: 'agent_turn_limit',
     requestId: 'req-9',
-    startNewChat: true,
+    recovery: 'new-chat',
   });
   expect(agentWriteFailure(new TypeError('Failed to fetch'), 'send the message')).toEqual({
     message:
@@ -18,7 +18,7 @@ it('reads a refused Agent write as the shared notice with the Agent copy and sup
     retryable: true,
     code: undefined,
     requestId: undefined,
-    startNewChat: false,
+    recovery: null,
   });
 });
 
