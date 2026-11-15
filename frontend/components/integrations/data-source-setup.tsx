@@ -266,8 +266,11 @@ function SourceRow({
   );
 }
 
-/** Every source answered as unconnected, with no callback result to report. */
-function nothingConnected({
+/**
+ * The families still to connect when every source answered as unconnected and
+ * the callback has nothing to report; otherwise null.
+ */
+function unconnectedFamilies({
   sources,
   oauth,
   rows,
@@ -275,9 +278,14 @@ function nothingConnected({
   sources: ReturnType<typeof useDataSources>;
   oauth: ReturnType<typeof useOAuthReturn>;
   rows: readonly Row[];
-}>) {
-  if (sources.error || oauth.error || oauth.connected) return false;
-  return rows.every((row) => row.kind === 'connect');
+}>): GrantFamily[] | null {
+  if (sources.error || oauth.error || oauth.connected) return null;
+  const families: GrantFamily[] = [];
+  for (const row of rows) {
+    if (row.kind !== 'connect') return null;
+    families.push(row.family);
+  }
+  return families;
 }
 
 /** Nothing connected yet: the page's empty state, with each family's Connect. */
@@ -376,11 +384,12 @@ export function DataSourceSetup({
     );
 
   const rows = setupRows(providers, sources.steps);
-  if (unconnected && nothingConnected({ sources, oauth, rows }))
+  const families = unconnectedFamilies({ sources, oauth, rows });
+  if (unconnected && families)
     return (
       <UnconnectedState
         {...unconnected}
-        families={rows.map((row) => row.family)}
+        families={families}
         canManage={canManage}
         startConnect={startConnect}
       />
