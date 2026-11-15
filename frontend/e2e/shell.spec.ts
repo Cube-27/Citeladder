@@ -20,12 +20,11 @@ test('the first-load indicator keeps pulsing until the workspace answers', async
     .getByRole('status', { name: 'Loading your workspace…' });
   try {
     await expect(indicator).toBeVisible();
-    // Its live rung pulses its opacity; a still rung would read as stuck.
-    const rung = indicator.locator('[data-live-rung] .animate-live-rung');
-    const initial = await rung.evaluate((element) => getComputedStyle(element).opacity);
-    await expect
-      .poll(() => rung.evaluate((element) => getComputedStyle(element).opacity))
-      .not.toBe(initial);
+    // Its skeleton blocks shimmer; still blocks would read as stuck.
+    const block = page.locator('[data-state-block="loading"] [data-skeleton-block]').first();
+    const shimmer = () => block.evaluate((element) => getComputedStyle(element).backgroundPosition);
+    const initial = await shimmer();
+    await expect.poll(shimmer).not.toBe(initial);
   } finally {
     release();
   }

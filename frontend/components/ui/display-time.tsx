@@ -4,10 +4,9 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, formatDisplayTimestamp, formatTimeZoneNote } from '@/lib/format';
 
 /**
- * A persisted instant in the display timezone, without its zone: the table
- * or page it sits in states the zone once (`TimeZoneNote`). Inside a sentence
- * it keeps the sentence's face; a date that stands alone as a value (a fact,
- * a cell, a range) passes `standalone` for tabular numerals.
+ * A persisted instant in the display timezone, with its zone. Inside a
+ * sentence it keeps the sentence's face; a date that stands alone as a value
+ * (a fact, a cell, a range) passes `standalone` for tabular numerals.
  */
 export function DisplayTime({
   value,
@@ -30,8 +29,8 @@ export function DisplayTime({
 }
 
 /**
- * The zone a table's or page's date-times are in, said once ("Times in
- * GMT+5:30"), for a DataTable's `footer` or under a page's facts.
+ * The zone a table's date-times are in, said once ("Times in GMT+5:30"): a
+ * DataTable with a `date` column puts it in its footer bar.
  */
 export function TimeZoneNote() {
   const timeZone = useDisplayTimeZone();

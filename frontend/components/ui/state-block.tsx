@@ -68,7 +68,7 @@ type NotMeasured = NotMeasuredCopy &
   }>;
 
 /** The loading shape of the region a state block stands in for. */
-export type StateLoadingShape = 'text' | 'block' | 'chart' | 'form' | 'stat';
+type StateLoadingShape = 'text' | 'block' | 'chart' | 'form' | 'stat';
 
 export type StateBlockProps =
   | Readonly<{

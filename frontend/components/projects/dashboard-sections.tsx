@@ -27,7 +27,7 @@ import {
   rankFigure,
   VS_PREVIOUS_RUN,
 } from './dashboard-primitives';
-import { ClampText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionDescription } from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';

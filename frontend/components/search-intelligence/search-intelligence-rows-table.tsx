@@ -1,7 +1,8 @@
 import type { DataTableColumn } from '@/components/ui/data-table';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { ClampText, TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import type { SearchIntelligenceRow } from '@/lib/api/search-intelligence';
 import { SEARCH_COLUMNS_BY_KIND, type SearchColumn } from '@/lib/config/search-intelligence';
 import { Absence } from '@/components/ui/absence';

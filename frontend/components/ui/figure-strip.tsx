@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Check, type LucideIcon } from 'lucide-react';
 
 import { RungMeter } from '@/components/ui/rung-meter';
-import { ClampText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 import { Value } from '@/components/ui/value';
 import { cn } from '@/lib/utils';
 
@@ -40,7 +40,7 @@ export type FigureSegment = Readonly<
 >;
 
 /** The narrowest a figure's cell may be before the strip takes fewer per row. */
-export const FIGURE_MIN_WIDTH = 160;
+const FIGURE_MIN_WIDTH = 160;
 /** The gap between figures, in both directions. */
 const FIGURE_GAP = 16;
 
@@ -135,7 +135,7 @@ export function FigureStrip({
         aria-label={label}
         data-testid={testId}
         data-figure-strip=""
-        className="grid min-w-0"
+        className="flex min-w-0 flex-wrap gap-4"
       >
         {segments.map((segment, index) => (
           <FigureCell key={segment.key} segment={segment} rowSize={sizes[index] ?? 1} />

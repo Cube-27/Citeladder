@@ -2,7 +2,7 @@ import { Info } from 'lucide-react';
 
 import { InfoHint } from '@/components/ui/info-hint';
 import { Spinner } from '@/components/ui/spinner';
-import { ClampText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 

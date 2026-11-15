@@ -62,17 +62,16 @@ const STEP_SHARE = 0.8;
  * One sideways-scrolling region's state: the ref for the scrolling element,
  * its props, which edges hide more, and the step. The fade is a mask on the
  * content (globals.css "r3 data"); the steppers sit wherever the owner puts
- * them, never over the content. `start={false}` drops the leading cue where a
- * pinned column already marks that edge.
+ * them, never over the content. `start={false}` drops the leading fade where a
+ * pinned column already marks that edge; the steppers still step back.
  */
 export function useScrollFrame({
   label,
   start = true,
 }: Readonly<{ label?: string; start?: boolean }>) {
   const ref = useRef<HTMLDivElement>(null);
-  const measured = useScrollEdges(ref);
-  const edges: ScrollEdges = { start: start && measured.start, end: measured.end };
-  const scrolls = measured.start || measured.end;
+  const edges = useScrollEdges(ref);
+  const scrolls = edges.start || edges.end;
   const region: ScrollRegionProps =
     label && scrolls
       ? { 'data-scroll-content': '', tabIndex: 0, role: 'region', 'aria-label': label }
@@ -88,7 +87,7 @@ export function useScrollFrame({
   };
   const frame = {
     'data-scroll-frame': '',
-    'data-scroll-start': edges.start || undefined,
+    'data-scroll-start': (start && edges.start) || undefined,
     'data-scroll-end': edges.end || undefined,
   } as const;
   return { ref, region, edges, scrolls, step, frame };

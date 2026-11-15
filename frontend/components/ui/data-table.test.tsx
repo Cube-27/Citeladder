@@ -239,38 +239,58 @@ describe('DataTable', () => {
     expect(screen.getByRole('button', { name: 'Clear filters' })).toBeVisible();
   });
 
-  it('leaves out a column whose every cell is absent, and gives way when every data cell is', () => {
-    const table = (visits: 'measured' | 'absent') => (
+  it('keeps rows whose every value is absent, with their actions and the pager', () => {
+    render(
       <DataTable
         title="Pages"
         columns={[
           { key: 'page', label: 'Page', kind: 'identity' },
           { key: 'visits', label: 'Visits', kind: 'number' },
-          { key: 'rank', label: 'Rank', kind: 'number' },
+          { key: 'actions', label: 'Actions', kind: 'actions' },
         ]}
+        pager={{
+          range: { from: 1, to: 1, total: 2, noun: 'pages' },
+          canPrev: false,
+          canNext: true,
+          onPrev: () => undefined,
+          onNext: () => undefined,
+        }}
       >
-        {['/pricing', '/blog'].map((page) => (
-          <TableRow key={page}>
-            <TableCell>{page}</TableCell>
-            <TableCell numeric>
-              {visits === 'measured' ? '12' : <Absence state="not_measured" />}
-            </TableCell>
-            <TableCell numeric>
-              <Absence state="not_measured" />
-            </TableCell>
-          </TableRow>
-        ))}
-      </DataTable>
+        <TableRow>
+          <TableCell>/pricing</TableCell>
+          <TableCell numeric>
+            <Absence state="not_measured" />
+          </TableCell>
+          <TableActionsCell>
+            <Button>Open /pricing</Button>
+          </TableActionsCell>
+        </TableRow>
+      </DataTable>,
     );
-    const { container, rerender } = render(table('measured'));
-    const frame = container.querySelector('[data-data-table-frame]');
-    expect(frame).toHaveAttribute('data-hidden-cols', '3');
+    expect(screen.getAllByRole('columnheader').map((head) => head.textContent)).toEqual([
+      'Page',
+      'Visits',
+      'Actions',
+    ]);
+    expect(screen.getByRole('button', { name: 'Open /pricing' })).toBeVisible();
+    expect(screen.getByRole('button', { name: /next/i })).toBeEnabled();
     expect(screen.queryByRole('heading', { name: 'Not measured yet' })).toBeNull();
+  });
 
-    rerender(table('absent'));
-    expect(frame).toHaveAttribute('data-hidden-cols', '2 3');
-    expect(screen.getByRole('heading', { name: 'Not measured yet' })).toBeVisible();
-    expect(screen.queryByRole('table')).toBeNull();
+  it('states the time zone once in the footer of a table with a date column', () => {
+    const table = (kind: 'date' | 'text') => (
+      <DataTable
+        label="Keys"
+        columns={[{ key: 'created', label: 'Created', kind }]}
+        footer="Source: API"
+      />
+    );
+    const { rerender } = render(table('text'));
+    expect(screen.getByText('Source: API')).toBeVisible();
+    expect(screen.queryByText(/^Times in /)).toBeNull();
+    rerender(table('date'));
+    expect(screen.getByText('Source: API')).toBeVisible();
+    expect(screen.getByText(/^Times in \S+/)).toBeVisible();
   });
 
   it('loads as rows of blocks under the real head and announces its verb', async () => {
@@ -337,12 +357,14 @@ describe('DataTable', () => {
     layout(900, 500);
     expect(fades()).toEqual(['start']);
 
-    // Pinned by default: the first column covers the leading edge, so only the far edge fades.
+    // Pinned by default: the first column covers the leading edge, so only the
+    // far edge fades, yet the back stepper still steps back.
     rerender(table());
     layout(900, 200);
     expect(fades()).toEqual(['end']);
     layout(900, 500);
     expect(fades()).toEqual([]);
+    expect(steps()).toEqual(['start']);
   });
 
   it('never lets the fixed columns squeeze the identity column below its minimum', () => {

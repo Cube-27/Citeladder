@@ -5,7 +5,8 @@ import { SearchX } from 'lucide-react';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
 import { Absence } from '@/components/ui/absence';
-import { ClampText, TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { sharedOrigin } from '@/lib/format';
 import {
   performanceQueries,

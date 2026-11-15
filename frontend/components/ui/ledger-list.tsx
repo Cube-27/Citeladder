@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { ClampText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 

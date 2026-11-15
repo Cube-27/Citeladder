@@ -1,23 +1,21 @@
 import {
   createContext,
   useContext,
-  useEffect,
   useRef,
-  useState,
   type HTMLAttributes,
   type ReactNode,
   type Ref,
-  type RefObject,
   type TdHTMLAttributes,
   type ThHTMLAttributes,
 } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { ClampText, useCut } from '@/components/ui/clamp-text';
 import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayTimestamp, readableUrl, urlCellText } from '@/lib/format';
+import { formatTableTimestamp, readableUrl, urlCellText } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -233,99 +231,6 @@ function isPlainText(children: ReactNode) {
  */
 export const TableTitleLinesContext = createContext<1 | 2>(1);
 
-/**
- * One shared observer for every cut text, so a table of hundreds of cells
- * costs one observer, not hundreds.
- */
-const cutWatchers = new WeakMap<Element, () => void>();
-let cutObserver: ResizeObserver | null = null;
-
-function watchCut(node: Element, onChange: () => void) {
-  if (typeof ResizeObserver === 'undefined') return () => undefined;
-  cutObserver ??= new ResizeObserver((entries) => {
-    for (const entry of entries) cutWatchers.get(entry.target)?.();
-  });
-  cutWatchers.set(node, onChange);
-  cutObserver.observe(node);
-  return () => {
-    cutWatchers.delete(node);
-    cutObserver?.unobserve(node);
-  };
-}
-
-/**
- * Whether the text in `ref` is cut, kept current as its box resizes. A cut
- * text becomes a tab stop, so its tooltip is reachable by keyboard.
- */
-const INTERACTIVE = 'a[href], button, [role="button"], [role="link"], [role="tab"], label';
-
-function useCut(
-  ref: RefObject<HTMLElement | null>,
-  measure: (node: HTMLElement) => boolean = isTextCut,
-) {
-  const [cut, setCut] = useState(false);
-  useEffect(() => {
-    const node = ref.current;
-    if (!node) return;
-    // Inside a link or button the control is the tab stop; the text never nests a second one.
-    if (node.parentElement?.closest(INTERACTIVE)) return;
-    const update = () => setCut(measure(node));
-    update();
-    return watchCut(node, update);
-  }, [ref, measure]);
-  return cut;
-}
-
-/**
- * TruncatedText — a long value (a URL, a title, an id) on one line, cut with
- * an ellipsis. When it is cut, the whole text is in a tooltip that opens on
- * hover and on keyboard focus, and selecting the text copies all of it.
- * Wrapping is for prose and a record's own page, never a row, a fact or a stat.
- *
- * `lines={2}` survives only for a `TableCellLines` title in a three-line row.
- * `tooltip` overrides the tooltip content, e.g. a full URL behind a path.
- */
-export function ClampText({
-  children,
-  lines = 1,
-  tooltip,
-  className,
-}: Readonly<{
-  children: ReactNode;
-  lines?: 1 | 2;
-  tooltip?: ReactNode;
-  className?: string;
-}>) {
-  const ref = useRef<HTMLSpanElement>(null);
-  const cut = useCut(ref);
-  // The full text as plain text: styled children (a title role, a caption)
-  // would carry their own ink onto the tooltip sheet.
-  const [fullText, setFullText] = useState('');
-  const openWhenCut = (node: HTMLElement) => {
-    if (!isTextCut(node)) return false;
-    setFullText(node.textContent ?? '');
-    return true;
-  };
-  return (
-    <Tooltip content={tooltip ?? fullText} shouldOpen={openWhenCut}>
-      <span
-        ref={ref}
-        data-truncated={cut || undefined}
-        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a cut value is a tab stop so its full text (the tooltip) is reachable by keyboard.
-        tabIndex={cut ? 0 : undefined}
-        className={cn(
-          'block min-w-0',
-          lines === 1 ? 'truncate' : 'line-clamp-2',
-          cut && 'rounded-mark',
-          className,
-        )}
-      >
-        {children}
-      </span>
-    </Tooltip>
-  );
-}
-
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
     // Padding 8 and 8: the row hairline is drawn inside the row (globals.css "r2 data").
@@ -484,23 +389,16 @@ export function UrlText({ url, origin = null }: Readonly<{ url: string; origin?:
         tabIndex={cut ? 0 : undefined}
         className="rounded-mark flex min-w-0 whitespace-nowrap"
       >
-        {/* Read whole; drawn as a head that cuts and a tail that stays. */}
-        <span className="sr-only">{text}</span>
-        {head ? (
-          <span aria-hidden className="min-w-0 truncate">
-            {head}
-          </span>
-        ) : null}
-        <span aria-hidden className={cn('min-w-0', head ? 'shrink-0' : 'truncate')}>
-          {tail}
-        </span>
+        {/* A head that cuts and a tail that stays: together the text once, read and copied whole. */}
+        {head ? <span className="min-w-0 truncate">{head}</span> : null}
+        <span className={cn('min-w-0', head ? 'shrink-0' : 'truncate')}>{tail}</span>
       </span>
     </Tooltip>
   );
 }
 
 function anyPartCut(node: HTMLElement) {
-  return [...node.querySelectorAll(':scope > [aria-hidden]')].some(isTextCut);
+  return [...node.querySelectorAll(':scope > span')].some(isTextCut);
 }
 
 /** The tail is the last path segment (with its query); the head is everything before it. */
@@ -517,8 +415,8 @@ function splitUrlTail(text: string): { head: string; tail: string } {
 const URL_TAIL_MAX = 32;
 
 /**
- * A date-time in a table's date column, on one line without its zone: the
- * table states the zone once (`TimeZoneNote`).
+ * A date-time in a table's date column, on one line without its zone: a
+ * DataTable with a `date` column states the zone once in its footer.
  */
 export function TableTime({
   value,
@@ -528,7 +426,7 @@ export function TableTime({
   if (!value) return fallback;
   return (
     <time dateTime={value} className="block min-w-0 truncate tabular-nums">
-      {formatDisplayTimestamp(value, timeZone)}
+      {formatTableTimestamp(value, timeZone)}
     </time>
   );
 }

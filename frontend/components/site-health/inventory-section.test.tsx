@@ -201,7 +201,7 @@ describe('InventorySection', () => {
     );
 
     const table = screen.getByRole('region', { name: 'Pages discovered so far' });
-    await within(table).findByText('/journal/teapots');
+    await within(table).findByRole('cell', { name: '/journal/teapots' });
     const firstCells = within(table)
       .getAllByRole('row')
       .slice(1, 3)

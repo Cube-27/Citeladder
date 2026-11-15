@@ -2140,18 +2140,10 @@ label {
   --table-ground: var(--color-raised);
 }
 /* The head row's well meets the card's rounded top when no header bar is above it. */
-:root:not([data-public-surface])
-  [data-data-table]:not(:has([data-data-table-header]))
-  thead
-  tr
-  > :first-child {
+:root:not([data-public-surface]) [data-data-table]:not(:has(> header)) thead tr > :first-child {
   border-start-start-radius: calc(var(--radius-card) - 1px);
 }
-:root:not([data-public-surface])
-  [data-data-table]:not(:has([data-data-table-header]))
-  thead
-  tr
-  > :last-child {
+:root:not([data-public-surface]) [data-data-table]:not(:has(> header)) thead tr > :last-child {
   border-start-end-radius: calc(var(--radius-card) - 1px);
 }
 /* The footer bar closes the card under a rule, like a sheet's footer. */
@@ -2322,35 +2314,6 @@ label {
   white-space: nowrap;
 }
 
-/* A column in which every cell is an Absence is left out (`useAbsentColumns`):
-   its col, head and cells go together. */
-[data-hidden-cols~='1'] table > colgroup > col:nth-child(1),
-[data-hidden-cols~='2'] table > colgroup > col:nth-child(2),
-[data-hidden-cols~='3'] table > colgroup > col:nth-child(3),
-[data-hidden-cols~='4'] table > colgroup > col:nth-child(4),
-[data-hidden-cols~='5'] table > colgroup > col:nth-child(5),
-[data-hidden-cols~='6'] table > colgroup > col:nth-child(6),
-[data-hidden-cols~='7'] table > colgroup > col:nth-child(7),
-[data-hidden-cols~='8'] table > colgroup > col:nth-child(8),
-[data-hidden-cols~='9'] table > colgroup > col:nth-child(9),
-[data-hidden-cols~='10'] table > colgroup > col:nth-child(10),
-[data-hidden-cols~='11'] table > colgroup > col:nth-child(11),
-[data-hidden-cols~='12'] table > colgroup > col:nth-child(12),
-[data-hidden-cols~='1'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(1),
-[data-hidden-cols~='2'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(2),
-[data-hidden-cols~='3'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(3),
-[data-hidden-cols~='4'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(4),
-[data-hidden-cols~='5'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(5),
-[data-hidden-cols~='6'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(6),
-[data-hidden-cols~='7'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(7),
-[data-hidden-cols~='8'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(8),
-[data-hidden-cols~='9'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(9),
-[data-hidden-cols~='10'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(10),
-[data-hidden-cols~='11'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(11),
-[data-hidden-cols~='12'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(12) {
-  display: none;
-}
-
 /* Rows are divided by `rule` lines between them only: drawn inside the row
    (an inset line), never under the last row or the head. A ledger row takes
    the same line. */
@@ -2409,30 +2372,28 @@ label {
 }
 
 /* r3 a2 figures */
-/* FigureStrip (`figureRows`): a 60-column grid, so a row of 1 to 6 figures
-   spans evenly. On the ground each figure is a stat card; inside a card the
-   figures are cells 16 apart with no edge and no divider. */
-[data-figure-strip] {
-  grid-template-columns: repeat(60, minmax(0, 1fr));
-  gap: 16px;
-}
+/* FigureStrip (`figureRows`): a wrapping row of figures 16 apart, each as wide
+   as its row's share, so the strip is never wider than its container. On the
+   ground each figure is a stat card; inside a card the figures are cells 16
+   apart with no edge and no divider. */
 [data-figure-cell] {
-  grid-column: span 60;
+  --row: 1;
+  flex: 0 0 calc((100% - (var(--row) - 1) * 16px) / var(--row));
 }
-[data-figure-cell][data-row-size='2'] {
-  grid-column: span 30;
+[data-row-size='2'] {
+  --row: 2;
 }
-[data-figure-cell][data-row-size='3'] {
-  grid-column: span 20;
+[data-row-size='3'] {
+  --row: 3;
 }
-[data-figure-cell][data-row-size='4'] {
-  grid-column: span 15;
+[data-row-size='4'] {
+  --row: 4;
 }
-[data-figure-cell][data-row-size='5'] {
-  grid-column: span 12;
+[data-row-size='5'] {
+  --row: 5;
 }
-[data-figure-cell][data-row-size='6'] {
-  grid-column: span 10;
+[data-row-size='6'] {
+  --row: 6;
 }
 :root:not([data-public-surface]) :is([data-figure-cell], [data-figure-lead]) {
   padding: 16px;

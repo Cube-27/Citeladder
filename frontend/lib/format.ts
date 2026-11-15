@@ -89,12 +89,11 @@ export function formatWindowDate(isoDay: string): string {
   });
 }
 
-/**
- * A persisted instant in the display timezone, without the zone
- * (`Nov 14, 2026, 05:03 PM`): a table or page states its zone once
- * (`formatTimeZoneNote`), never on every row.
- */
-export function formatDisplayTimestamp(timestamp: string, timeZone: string): string {
+function formatInstant({
+  timestamp,
+  timeZone,
+  zoned,
+}: Readonly<{ timestamp: string; timeZone: string; zoned: boolean }>): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
   try {
@@ -105,10 +104,25 @@ export function formatDisplayTimestamp(timestamp: string, timeZone: string): str
       hour: '2-digit',
       minute: '2-digit',
       timeZone,
+      timeZoneName: zoned ? 'short' : undefined,
     }).format(date);
   } catch {
-    return timeZone === 'UTC' ? timestamp : formatDisplayTimestamp(timestamp, 'UTC');
+    return timeZone === 'UTC' ? timestamp : formatInstant({ timestamp, timeZone: 'UTC', zoned });
   }
+}
+
+/** A persisted instant in the display timezone, with its zone (`Nov 14, 2026, 05:03 PM GMT+5:30`). */
+export function formatDisplayTimestamp(timestamp: string, timeZone: string): string {
+  return formatInstant({ timestamp, timeZone, zoned: true });
+}
+
+/**
+ * A persisted instant in a table's date column, without the zone
+ * (`Nov 14, 2026, 05:03 PM`): the table states its zone once
+ * (`formatTimeZoneNote`), never on every row.
+ */
+export function formatTableTimestamp(timestamp: string, timeZone: string): string {
+  return formatInstant({ timestamp, timeZone, zoned: false });
 }
 
 /**
@@ -137,7 +151,7 @@ export function formatDisplayDate(timestamp: string, timeZone: string): string {
   }
 }
 
-/** Time-of-day portion of a persisted instant in the display timezone, without the zone. */
+/** Time-of-day portion of a persisted instant, with its zone, in the same display timezone. */
 export function formatDisplayTime(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -146,6 +160,7 @@ export function formatDisplayTime(timestamp: string, timeZone: string): string {
       hour: '2-digit',
       minute: '2-digit',
       timeZone,
+      timeZoneName: 'short',
     }).format(date);
   } catch {
     return timeZone === 'UTC' ? timestamp : formatDisplayTime(timestamp, 'UTC');
@@ -181,22 +196,6 @@ const numberFormat = new Intl.NumberFormat('en-US');
 /** Whole-number grouping for counts (`1,162,000`), never abbreviated. */
 export function formatCount(value: number): string {
   return numberFormat.format(value);
-}
-
-/** Stat cards abbreviate counts above this. */
-const COMPACT_FROM = 100_000;
-
-const compactFormat = new Intl.NumberFormat('en-US', {
-  notation: 'compact',
-  maximumFractionDigits: 1,
-});
-
-/**
- * A count in a stat card: grouped up to 100,000 (`50,000`), abbreviated above
- * it (`1.2M`). Tables always print `formatCount`.
- */
-export function formatFigureCount(value: number): string {
-  return Math.abs(value) > COMPACT_FROM ? compactFormat.format(value) : formatCount(value);
 }
 
 /** A grouped count with its noun, pluralized with a trailing `s` (`1 answer`, `1,200 answers`). */

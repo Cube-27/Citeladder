@@ -11,7 +11,8 @@ import {
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { TitledSection } from '@/components/ui/section';
 import { Inline } from '@/components/ui/layout';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';

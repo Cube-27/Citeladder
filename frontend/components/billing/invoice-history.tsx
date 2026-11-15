@@ -14,7 +14,8 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { ICONS } from '@/lib/icons';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';

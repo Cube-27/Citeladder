@@ -104,8 +104,8 @@ function StepChartKeys({
  * fill under it; rivals take their page-wide identity colours
  * (`SeriesTonesContext`) at 1.5px with hollow markers. A missing period breaks
  * the line and shows a `well` band with its word; nothing is interpolated.
- * A chart whose lines hold one measurement each is no chart: each line prints
- * as a figure with its date. Lines are named at
+ * A chart of one period is no chart: each line prints as a figure with its
+ * date. Lines are named at
  * their right end with their latest value (dated when it is older than the
  * last point), and a key replaces the labels when they would collide or a
  * line has no value to label.
@@ -155,32 +155,25 @@ export function StepChart({
   const [active, setActive] = useState<number | null>(null);
   const fillId = `you-fill-${useId().replaceAll(':', '')}`;
   const height = CHART_HEIGHT_PX[heightRole];
-  const plotted: readonly Readonly<{
-    name: string;
-    identity: string;
-    values: readonly (number | null)[];
-    other?: boolean;
-  }>[] = [
-    { name: name ?? label, identity: name ?? label, values: data.map((point) => point.value) },
-    ...series.slice(0, 3).map((entry) => ({
-      name: entry.label,
-      identity: entry.identity ?? entry.label,
-      values: entry.values,
-      other: entry.other,
-    })),
-  ];
+  const plotted = plottedLines({ data, name: name ?? label, series });
   const tones = useSeriesTones(plotted, you);
   const toned = plotted.map((line, index) => ({
     name: line.name,
     values: line.values,
     tone: tones[index] ?? 'other',
   }));
-  const shown = (value: number | null | undefined) =>
-    value === null || value === undefined ? availabilityLabel('not_measured') : format(value);
-  if (data.length > 0 && toned.every((line) => measuredCount(line.values) <= 1)) {
+  const shown = shownWith(format);
+  if (data.length === 1) {
     return (
       <ChartFrame height={heightRole}>
         <SingleMeasurements label={label} data={data} lines={toned} format={format} />
+        <StepChartTable
+          label={label}
+          data={data}
+          lines={toned}
+          shown={shown}
+          eventLabels={events.map((event) => event.label)}
+        />
       </ChartFrame>
     );
   }
@@ -226,11 +219,8 @@ export function StepChart({
   }));
   const count = data.length;
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const from = active ?? count - 1;
-    if (event.key === 'ArrowRight' || event.key === 'ArrowLeft') {
-      event.preventDefault();
-      setActive(event.key === 'ArrowRight' ? Math.min(count - 1, from + 1) : Math.max(0, from - 1));
-    } else if (event.key === 'Escape') setActive(null);
+    const next = keyedPoint(event, active, count);
+    if (next !== undefined) setActive(next);
   };
   const placed = placedEvents(data, events, scale);
   const point = active === null ? undefined : data[active];
@@ -298,23 +288,84 @@ export function StepChart({
           )}
         </div>
       </div>
-      <ChartTable
+      <StepChartTable
         label={label}
-        columns={data.map((entry) => entry.label)}
-        rows={lines.map((line) => ({
-          name: line.name,
-          values: data.map((_, index) => shown(line.values[index])),
-        }))}
-        notes={[
-          ...data.flatMap((entry) =>
-            entry.versionChange
-              ? [`Method changed at ${entry.label}: ${entry.versionChange.note}`]
-              : [],
-          ),
-          ...placed.map((event) => event.label),
-        ]}
+        data={data}
+        lines={lines}
+        shown={shown}
+        eventLabels={placed.map((event) => event.label)}
       />
     </ChartFrame>
+  );
+}
+
+/** The first line from `data`, then up to three further lines, each with the identity its colour follows. */
+function plottedLines({
+  data,
+  name,
+  series,
+}: Readonly<{ data: readonly TrendPoint[]; name: string; series: readonly TrendSeries[] }>) {
+  return [
+    { name, identity: name, values: data.map((point) => point.value), other: false },
+    ...series.slice(0, 3).map((entry) => ({
+      name: entry.label,
+      identity: entry.identity ?? entry.label,
+      values: entry.values,
+      other: entry.other ?? false,
+    })),
+  ];
+}
+
+/** A value as the chart prints it, its absence in words. */
+function shownWith(format: (value: number) => string) {
+  return (value: number | null | undefined) =>
+    value === null || value === undefined ? availabilityLabel('not_measured') : format(value);
+}
+
+/** The point the arrow keys move to (`null` on Escape), or undefined for any other key. */
+function keyedPoint(
+  event: KeyboardEvent<HTMLDivElement>,
+  active: number | null,
+  count: number,
+): number | null | undefined {
+  const from = active ?? count - 1;
+  if (event.key === 'Escape') return null;
+  if (event.key !== 'ArrowRight' && event.key !== 'ArrowLeft') return undefined;
+  event.preventDefault();
+  return event.key === 'ArrowRight' ? Math.min(count - 1, from + 1) : Math.max(0, from - 1);
+}
+
+/** Every value, method change and event of the chart, for a reader who cannot see it. */
+function StepChartTable({
+  label,
+  data,
+  lines,
+  shown,
+  eventLabels,
+}: Readonly<{
+  label: string;
+  data: readonly TrendPoint[];
+  lines: readonly Readonly<{ name: string; values: readonly (number | null)[] }>[];
+  shown: (value: number | null | undefined) => string;
+  eventLabels: readonly string[];
+}>) {
+  return (
+    <ChartTable
+      label={label}
+      columns={data.map((entry) => entry.label)}
+      rows={lines.map((line) => ({
+        name: line.name,
+        values: data.map((_, index) => shown(line.values[index])),
+      }))}
+      notes={[
+        ...data.flatMap((entry) =>
+          entry.versionChange
+            ? [`Method changed at ${entry.label}: ${entry.versionChange.note}`]
+            : [],
+        ),
+        ...eventLabels,
+      ]}
+    />
   );
 }
 
@@ -336,13 +387,10 @@ function summarise(
   return `${label}. ${parts.join('; ')}.`;
 }
 
-function measuredCount(values: readonly (number | null)[]) {
-  return values.filter((value) => value !== null).length;
-}
-
 /**
- * One measurement per line draws no line: each line is a figure (its name,
- * its value and the date it was measured), in the chart's footprint.
+ * One period draws no line: each line is a figure (its name, its value and
+ * the date it was measured), in the chart's footprint. Over several periods
+ * the chart stays, so its gaps and events stay in view.
  */
 function SingleMeasurements({
   label,
@@ -359,7 +407,7 @@ function SingleMeasurements({
     <ul
       aria-label={label}
       data-single-measurement=""
-      className="flex flex-wrap content-start gap-8"
+      className="flex flex-wrap content-start gap-4"
     >
       {lines.map((line) => {
         const at = lastMeasured(line.values);

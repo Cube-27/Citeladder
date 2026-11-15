@@ -5,7 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
 import { Pressable } from '@/components/ui/pressable';
 import { Spinner } from '@/components/ui/spinner';
-import { ClampText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';

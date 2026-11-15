@@ -4,8 +4,8 @@ import {
   formatCount,
   formatDisplayDate,
   formatDisplayTimestamp,
-  formatFigureCount,
   formatPercent,
+  formatTableTimestamp,
   formatTimeZoneNote,
   readableUrl,
   sharedOrigin,
@@ -56,26 +56,22 @@ describe('formatPercent', () => {
 });
 
 describe('counts', () => {
-  it('groups thousands with no stray spaces, and abbreviates only stat cards above 100,000', () => {
+  it('groups thousands with no stray spaces and never abbreviates', () => {
     expect([0, 999, 50_000, 1_162_000].map(formatCount)).toEqual([
       '0',
       '999',
       '50,000',
       '1,162,000',
     ]);
-    expect([50_000, 100_000, 1_234_567].map(formatFigureCount)).toEqual([
-      '50,000',
-      '100,000',
-      '1.2M',
-    ]);
   });
 });
 
 describe('dates and times', () => {
-  it('prints a date, a date-time without its zone, and the zone once for a table', () => {
+  it('prints a date, a date-time with its zone, a table cell without it, and the zone once', () => {
     const at = '2026-11-14T11:33:00Z';
     expect(formatDisplayDate(at, 'Asia/Kolkata')).toBe('Nov 14, 2026');
-    expect(formatDisplayTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM');
+    expect(formatDisplayTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM GMT+5:30');
+    expect(formatTableTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM');
     expect(formatTimeZoneNote('Asia/Kolkata', new Date(at))).toBe('Times in GMT+5:30');
     // A zone with daylight saving states the offset of the instant it is asked about.
     expect(formatTimeZoneNote('America/New_York', new Date('2026-07-01T12:00:00Z'))).toBe(

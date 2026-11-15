@@ -23,7 +23,7 @@ import {
 
 import { Icon } from '@/components/ui/icon';
 import { Spinner } from '@/components/ui/spinner';
-import { ClampText } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
 import { cn } from '@/lib/utils';
 
 /**
@@ -125,7 +125,7 @@ export type PriorityValue = keyof typeof priorityMarks;
 export type SentimentValue = keyof typeof sentimentMarks;
 export type ClassificationValue = keyof typeof classificationMarks;
 export type RunStatusValue = keyof typeof runStatusMarks;
-export type SeverityValue = keyof typeof severityMarks;
+type SeverityValue = keyof typeof severityMarks;
 
 export type StatusMarkProps = {
   children: ReactNode;

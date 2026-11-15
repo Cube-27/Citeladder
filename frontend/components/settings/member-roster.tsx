@@ -7,7 +7,8 @@ import { DataTable, type DataTableColumn, type DataTableState } from '@/componen
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Inline } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
+import { ClampText } from '@/components/ui/clamp-text';
+import { TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import type { AssignableWorkspaceRole, WorkspaceMember } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, roleLabel } from './member-roles';

@@ -11,12 +11,12 @@ import {
 } from '@/components/ui/data-table-columns';
 import {
   DataTableBody,
-  useAbsentColumns,
   usePinnedPadding,
   type DataTableInlineEmpty,
   type DataTableState,
   type RowLines,
 } from '@/components/ui/data-table-body';
+import { TimeZoneNote } from '@/components/ui/display-time';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
@@ -55,9 +55,11 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
  *            blank rows, so the pager never moves between pages.
  *   states — loading keeps the head and draws a page of block rows; a filter
  *            that empties a table keeps the head; an empty, not-measured or
- *            failed read replaces the whole table, head included. A column
- *            in which every cell is an Absence is left out, and a table in
- *            which every data cell is absent shows the not-measured state.
+ *            failed read replaces the whole table, head included. A page
+ *            that knows from its data that nothing was measured passes the
+ *            not-measured state; the table never guesses it from its cells.
+ *   zone   — a table with a `date` column states its time zone once, in
+ *            the footer bar; its date-times carry none (`TableTime`).
  */
 export function DataTable({
   title,
@@ -114,30 +116,21 @@ export function DataTable({
 }>) {
   const headingId = useId();
   const level = useContext(StateHeadingLevelContext);
-  const colSpan = columns.length + (selection ? 1 : 0);
+  const parts = dataTableParts({ title, label, headingId, columns, selection, pinFirstColumn });
   const paging = pagingLayout(pager, pageSize, reserveRows);
-  const regionLabel = title ?? label ?? 'Table';
-  const scroll = useScrollFrame({ label: regionLabel, start: !pinFirstColumn });
-  const absent = useAbsentColumns({
-    ref: scroll.ref,
-    columns,
-    selection: Boolean(selection),
-    rows: state === undefined ? children : null,
-  });
-  // The region and the table share one name: the visible title, else `label`.
-  const naming = title
-    ? { ariaLabelledBy: headingId, ariaLabel: undefined }
-    : { ariaLabelledBy: undefined, ariaLabel: label };
+  const scroll = useScrollFrame({ label: parts.regionLabel, start: !pinFirstColumn });
   useFlexibleColumnCheck({ columns, title, label });
-  const replacing = replacingState(state, absent.allAbsent);
+  const replacing = replacingState(state);
   const steppers = <ScrollSteppers state={scroll} />;
+  const note = tableNote(footer, parts.zoned);
+  const footed = Boolean(paging.pager ?? note);
   return (
     <section
-      aria-labelledby={naming.ariaLabelledBy}
-      aria-label={naming.ariaLabel}
+      aria-labelledby={parts.naming.ariaLabelledBy}
+      aria-label={parts.naming.ariaLabel}
       aria-busy={busy?.active || undefined}
       data-data-table=""
-      className="data-table-card relative grid min-w-0 content-start"
+      className="relative grid min-w-0 content-start"
     >
       {busy ? <BusyRung active={busy.active} label={busy.label} /> : null}
       <DataTableHeader
@@ -146,45 +139,83 @@ export function DataTable({
         level={level}
         toolbar={toolbar}
         description={description}
-        steppers={paging.pager || footer ? null : steppers}
+        steppers={footed ? null : steppers}
       />
       {replacing ? (
-        <div data-data-table-state="" className="px-4 py-4">
-          <StateHeadingLevelContext value={title ? nextLevel(level) : level}>
-            <StateBlock {...replacing} />
-          </StateHeadingLevelContext>
-        </div>
+        <ReplacingState state={replacing} level={title ? nextLevel(level) : level} />
       ) : null}
       <DataTableFrame
         hidden={replacing !== null}
         scroll={scroll}
         minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
         layout={columnLayout(columns, Boolean(selection))}
-        hiddenCols={absent.hiddenCols}
-        naming={naming}
-        pinned={pinFirstColumn ? (selection ? 2 : 1) : 0}
+        naming={parts.naming}
+        pinned={parts.pinned}
       >
         <DataTableColumns columns={columns} selection={selection} />
         <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
           <DataTableBody
-            colSpan={colSpan}
-            columns={colSpan}
+            colSpan={parts.colSpan}
             state={replacing ? undefined : state}
             pageSize={paging.pageSize}
             rowCount={rowCount}
             rowLines={rowLines}
           >
-            {/* Rows stay mounted only while they are the table's content (or measured as all absent). */}
             {state === undefined ? children : null}
           </DataTableBody>
         </TableTitleLinesContext>
       </DataTableFrame>
       <DataTableFoot
-        footer={footer}
+        footer={note}
         pager={replacing ? undefined : paging.pager}
-        steppers={paging.pager || footer ? steppers : null}
+        steppers={footed ? steppers : null}
       />
     </section>
+  );
+}
+
+/**
+ * What the table derives from its props alone: its cell count, its name (the
+ * visible title, else `label`, shared by the region and the table), how many
+ * leading columns stay pinned, and whether it shows date-times.
+ */
+function dataTableParts({
+  title,
+  label,
+  headingId,
+  columns,
+  selection,
+  pinFirstColumn,
+}: Readonly<{
+  title?: string;
+  label?: string;
+  headingId: string;
+  columns: readonly DataTableColumn[];
+  selection?: DataTableSelection;
+  pinFirstColumn: boolean;
+}>) {
+  const naming = title
+    ? { ariaLabelledBy: headingId, ariaLabel: undefined }
+    : { ariaLabelledBy: undefined, ariaLabel: label };
+  let pinned: 0 | 1 | 2 = 0;
+  if (pinFirstColumn) pinned = selection ? 2 : 1;
+  return {
+    colSpan: columns.length + (selection ? 1 : 0),
+    regionLabel: title ?? label ?? 'Table',
+    naming,
+    pinned,
+    zoned: columns.some((column) => column.kind === 'date'),
+  };
+}
+
+/** The footer's note, with the zone its date-times are in stated once. */
+function tableNote(footer: ReactNode, zoned: boolean): ReactNode {
+  if (!zoned) return footer;
+  return (
+    <>
+      {footer}
+      <TimeZoneNote />
+    </>
   );
 }
 
@@ -193,22 +224,26 @@ const nextLevel = (level: 1 | 2 | 3) => (level === 1 ? 2 : 3);
 
 /**
  * The state that takes the table's place, head included: an empty,
- * not-measured or failed read, or rows whose every data cell is absent.
- * Loading and filtered-empty keep the head.
+ * not-measured or failed read. Loading and filtered-empty keep the head.
  */
 function replacingState(
   state: DataTableState | DataTableInlineEmpty | undefined,
-  allAbsent: boolean,
 ): ComponentProps<typeof StateBlock> | null {
-  if (state === undefined) {
-    if (!allAbsent) return null;
-    return {
-      kind: 'not_measured',
-      description: 'Nothing in this table has been measured yet.',
-    };
-  }
-  if (state.kind === 'loading' || state.kind === 'filtered') return null;
+  if (state === undefined || state.kind === 'loading' || state.kind === 'filtered') return null;
   return state;
+}
+
+function ReplacingState({
+  state,
+  level,
+}: Readonly<{ state: ComponentProps<typeof StateBlock>; level: 1 | 2 | 3 }>) {
+  return (
+    <div className="p-4">
+      <StateHeadingLevelContext value={level}>
+        <StateBlock {...state} />
+      </StateHeadingLevelContext>
+    </div>
+  );
 }
 
 /**
@@ -242,7 +277,6 @@ function DataTableFrame({
   scroll,
   minWidth,
   layout,
-  hiddenCols,
   naming,
   pinned,
   children,
@@ -251,7 +285,6 @@ function DataTableFrame({
   scroll: ScrollFrameState;
   minWidth: CSSProperties;
   layout: ReturnType<typeof columnLayout>;
-  hiddenCols: string;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
   pinned: 0 | 1 | 2;
   children: ReactNode;
@@ -261,7 +294,6 @@ function DataTableFrame({
     <div
       data-data-table-frame=""
       {...layout}
-      data-hidden-cols={hiddenCols || undefined}
       data-pinned={pinned || undefined}
       hidden={hidden}
       className="isolate min-w-0"
@@ -365,8 +397,11 @@ function DataTableHeader({
   // The level a block in this place takes: h2 on the page, h3 inside a section.
   const Heading = level === 3 ? 'h3' : 'h2';
   return (
-    <header data-data-table-header="" className="grid min-w-0 gap-1 px-4 py-3">
-      <div className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2">
+    <header className="grid min-w-0 gap-1 px-4 py-3">
+      <div
+        data-data-table-header=""
+        className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
+      >
         {title ? (
           <Heading id={headingId} className={textRole('heading', 'min-w-0 shrink-0 truncate')}>
             {title}

@@ -73,56 +73,18 @@ const TEXT_WIDTHS = ['w-11/12', 'w-3/4', 'w-1/2'] as const;
 function SkeletonBody(props: SkeletonProps) {
   switch (props.variant) {
     case 'table':
-      return (
-        <TableBlocks columns={props.columns} rows={props.rows ?? 5} head={props.head ?? true} />
-      );
+      return <TableBlocks columns={props.columns} rows={props.rows} head={props.head} />;
     case 'stat':
-      return (
-        <span className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-4">
-          {Array.from({ length: props.count ?? 4 }, (_, index) => (
-            <span
-              key={index}
-              className="bg-surface border-rule rounded-card shadow-card grid gap-2 border p-4"
-            >
-              <SkeletonBlock className="h-4 w-1/2" />
-              <SkeletonBlock className="h-6 w-2/3" />
-            </span>
-          ))}
-        </span>
-      );
+      return <StatBlocks count={props.count} />;
     case 'form':
-      return (
-        <span className="grid gap-4">
-          {Array.from({ length: props.fields ?? 3 }, (_, index) => (
-            <span key={index} className="grid max-w-160 gap-1">
-              <SkeletonBlock className="h-4 w-32" />
-              <SkeletonBlock className="h-8 w-full" />
-            </span>
-          ))}
-        </span>
-      );
+      return <FormBlocks fields={props.fields} />;
     case 'block':
-      return (
-        <span className="grid">
-          {Array.from({ length: props.rows ?? 4 }, (_, index) => (
-            <span key={index} className="grid h-14 content-center gap-2">
-              <SkeletonBlock className={cn('h-4', TEXT_WIDTHS[index % 2])} />
-              <SkeletonBlock className="h-3 w-1/3" />
-            </span>
-          ))}
-        </span>
-      );
+      return <RowBlocks rows={props.rows} />;
     case 'chart':
       return <SkeletonBlock className={cn('w-full', CHART_HEIGHT[props.height ?? 'md'])} />;
     case 'text':
     case undefined:
-      return (
-        <span className="grid gap-2">
-          {TEXT_WIDTHS.slice(0, props.lines ?? 3).map((width) => (
-            <SkeletonBlock key={width} className={cn('h-4', width)} />
-          ))}
-        </span>
-      );
+      return <TextBlocks lines={props.lines} />;
     default: {
       const exhaustive: never = props;
       return exhaustive;
@@ -130,24 +92,79 @@ function SkeletonBody(props: SkeletonProps) {
   }
 }
 
+const range = (count: number) => Array.from({ length: count }, (_, index) => index);
+
+function TextBlocks({ lines = 3 }: Readonly<{ lines?: 1 | 2 | 3 }>) {
+  return (
+    <span className="grid gap-2">
+      {TEXT_WIDTHS.slice(0, lines).map((width) => (
+        <SkeletonBlock key={width} className={cn('h-4', width)} />
+      ))}
+    </span>
+  );
+}
+
+function StatBlocks({ count = 4 }: Readonly<{ count?: number }>) {
+  return (
+    <span className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-4">
+      {range(count).map((index) => (
+        <span
+          key={index}
+          className="bg-surface border-rule rounded-card shadow-card grid gap-2 border p-4"
+        >
+          <SkeletonBlock className="h-4 w-1/2" />
+          <SkeletonBlock className="h-6 w-2/3" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function FormBlocks({ fields = 3 }: Readonly<{ fields?: number }>) {
+  return (
+    <span className="grid gap-4">
+      {range(fields).map((index) => (
+        <span key={index} className="grid max-w-160 gap-1">
+          <SkeletonBlock className="h-4 w-32" />
+          <SkeletonBlock className="h-[var(--control-md)] w-full" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** A card body of list rows: a title block over a caption block, 56 apart. */
+function RowBlocks({ rows = 4 }: Readonly<{ rows?: number }>) {
+  return (
+    <span className="grid">
+      {range(rows).map((index) => (
+        <span key={index} className="grid h-14 content-center gap-2">
+          <SkeletonBlock className={cn('h-4', TEXT_WIDTHS[index % 2])} />
+          <SkeletonBlock className="h-3 w-1/3" />
+        </span>
+      ))}
+    </span>
+  );
+}
+
 /** A table's loading shape outside a DataTable: its head row and rows of cell blocks. */
 function TableBlocks({
   columns,
-  rows,
-  head,
-}: Readonly<{ columns: number; rows: number; head: boolean }>) {
-  const cells = Array.from({ length: Math.max(1, columns) }, (_, index) => index);
+  rows = 5,
+  head = true,
+}: Readonly<{ columns: number; rows?: number; head?: boolean }>) {
+  const cells = range(Math.max(1, columns));
   return (
     <span className="grid">
       {head ? (
-        <span className="bg-well flex h-9 items-center gap-6 px-4">
+        <span className="bg-well flex h-[var(--table-header-height)] items-center gap-4 px-4">
           {cells.map((cell) => (
             <span key={cell} className="flex-1" />
           ))}
         </span>
       ) : null}
-      {Array.from({ length: rows }, (_, row) => (
-        <span key={row} className="flex h-10 items-center gap-6 px-4">
+      {range(rows).map((row) => (
+        <span key={row} className="flex h-10 items-center gap-4 px-4">
           {cells.map((cell) => (
             <SkeletonBlock key={cell} className={cn('flex-1', cell === 0 && 'flex-[2]')} />
           ))}
