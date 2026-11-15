@@ -199,7 +199,7 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   expect(cells(/ChatGPT API/)).toEqual(['2', '0', '1', '0', '0', '1']);
   const unmeasured = 'Not measured';
   expect(cells(/Gemini API/)).toEqual(['0', '1', unmeasured, unmeasured, unmeasured, unmeasured]);
-  expect(screen.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
+  expect(screen.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
     'href',
     `/agent/actions/${ACTION}?project=${PROJECT}`,
   );
@@ -225,6 +225,6 @@ it('reads the market from the address and keeps a run without answers unavailabl
     expect.anything(),
   );
   const trail = within(screen.getByRole('list', { name: 'Runs that measured this prompt' }));
-  expect(trail.getByText('Visibility 50% · Owned not measured')).toBeVisible();
-  expect(trail.getByText('Visibility 100% · Owned 50%')).toBeVisible();
+  expect(trail.getByText('Visibility 50.0% · Owned not measured')).toBeVisible();
+  expect(trail.getByText('Visibility 100.0% · Owned 50.0%')).toBeVisible();
 });

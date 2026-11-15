@@ -74,9 +74,10 @@ describe('PromptTable pagination', () => {
     const [, brandRow, shelfRow] = screen.getAllByRole('row');
     expect(within(brandRow!).getAllByRole('cell')[1]!.textContent).toBe('50.0%');
     // Not "not measured": no run will ever measure it one prompt at a time.
+    // One sentence spans the measured columns and points to where it is measured.
     const shelfCells = within(shelfRow!).getAllByRole('cell');
-    expect(shelfCells[1]).toHaveTextContent('Not applicable');
-    expect(shelfCells[3]).toHaveTextContent('Not applicable');
+    expect(shelfCells[1]).toHaveTextContent('Measured with the shopping shelf');
+    expect(within(shelfCells[1]!).getByRole('link', { name: 'See Shopping' })).toBeVisible();
     expect(within(shelfRow!).queryByText('Not measured')).toBeNull();
   });
 

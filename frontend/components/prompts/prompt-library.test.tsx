@@ -176,6 +176,30 @@ describe('PromptLibrary first load', () => {
   });
 });
 
+describe('PromptLibrary failed read', () => {
+  it('names the failed prompts read once, without a second block for the topics', async () => {
+    const empty = makeProject({ prompt_sets: [] });
+    const failure = () => HttpResponse.json({ error: { message: 'down' } }, { status: 500 });
+    mswServer.use(
+      http.get('/api/v1/prompt-sets', failure),
+      http.get(`/api/v1/projects/${empty.id}/topics`, failure),
+      http.get(`/api/v1/projects/${empty.id}/visibility/prompts`, () => HttpResponse.json([])),
+    );
+    renderWithProviders(<PromptLibrary />, {
+      projectSelection: {
+        projects: [empty],
+        activeProject: empty,
+        activeProjectId: empty.id,
+        status: 'ready',
+      },
+    });
+
+    expect(await screen.findByText("Couldn't load the prompts")).toBeVisible();
+    await waitFor(() => expect(screen.getAllByRole('button', { name: /Retry/ })).toHaveLength(1));
+    expect(screen.queryByText(/topics/i)).toBeNull();
+  });
+});
+
 describe('PromptLibrary by role', () => {
   it.each([
     ['member', ['Add prompts', 'Launch run'], ['Prompt', 'Enabled', 'Actions']],

@@ -1,5 +1,4 @@
-import { ProjectLink } from '@/components/ui/project-link';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/actions';
 import { Stack } from '@/components/ui/layout';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
@@ -18,6 +17,7 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
+  TitledSection,
 } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
@@ -57,12 +57,8 @@ export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricIt
 function ActionHandoff({ actionId }: Readonly<{ actionId: string }>) {
   return (
     <>
-      <Button asChild variant="secondary">
-        <ProjectLink href={`/agent/actions/${actionId}`}>Open the Action</ProjectLink>
-      </Button>
-      <Button asChild variant="primary">
-        <ProjectLink href={agentHandoffHref({ actionId })}>Work on this</ProjectLink>
-      </Button>
+      <ActionButton action="openAction" href={`/agent/actions/${actionId}`} />
+      <ActionButton action="workWithAgent" href={agentHandoffHref({ actionId })} />
     </>
   );
 }
@@ -115,7 +111,7 @@ function LatestRun({ latest }: Readonly<{ latest: PromptMetricItem }>) {
 
 const GAP_COLUMNS: readonly DataTableColumn[] = [
   { key: 'competitor', label: 'Competitor' },
-  { key: 'answers', label: 'Answers', width: 'figure', numeric: true },
+  { key: 'answers', label: 'Answers', width: 'figure', kind: 'number' },
   { key: 'engines', label: 'Engines', width: 'name' },
 ];
 
@@ -123,17 +119,19 @@ const GAP_COLUMNS: readonly DataTableColumn[] = [
 function CompetitorGapTable({ gaps }: Readonly<{ gaps: readonly CompetitorGap[] }>) {
   const engines = useEngineCatalog();
   return (
-    <DataTable title="Competitors named without you" columns={GAP_COLUMNS}>
-      {gaps.map((gap) => (
-        <TableRow key={gap.name}>
-          <TableCell>
-            <ClampText lines={1}>{gap.name}</ClampText>
-          </TableCell>
-          <TableCell numeric>{gap.answers}</TableCell>
-          <TableCell>{gap.engines.map(engines.label).join(', ')}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Competitors named without you">
+      <DataTable label="Competitors named without you" columns={GAP_COLUMNS}>
+        {gaps.map((gap) => (
+          <TableRow key={gap.name}>
+            <TableCell>
+              <ClampText lines={1}>{gap.name}</ClampText>
+            </TableCell>
+            <TableCell numeric>{gap.answers}</TableCell>
+            <TableCell>{gap.engines.map(engines.label).join(', ')}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 
@@ -144,43 +142,48 @@ type Outcome = NonNullable<PromptMetricItem['outcomes']>[number];
 // one line at every width; the six counts share the rest evenly.
 const ENGINE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'engine', label: 'Engine', width: 'lead' },
-  { key: 'answers', label: 'Answers', numeric: true },
-  { key: 'failed', label: 'Failed', numeric: true },
+  { key: 'answers', label: 'Answers', kind: 'number', width: 'flex' },
+  { key: 'failed', label: 'Failed', kind: 'number', width: 'flex' },
   ...ANSWER_STATES.map((state): DataTableColumn => ({
     key: state.key,
     label: state.label,
-    numeric: true,
+    kind: 'number',
+    width: 'flex',
   })),
 ];
 
 function EngineTable({ outcomes }: Readonly<{ outcomes: readonly Outcome[] }>) {
   const engines = useEngineCatalog();
   return (
-    <DataTable title="Engine coverage" columns={ENGINE_COLUMNS}>
-      {outcomes.map((outcome) => (
-        <TableRow key={`${outcome.logical_engine}:${outcome.transport_model}`}>
-          {/* A row is one engine AND model, so the model is named under the
+    <TitledSection title="Engine coverage">
+      <DataTable label="Engine coverage" columns={ENGINE_COLUMNS}>
+        {outcomes.map((outcome) => (
+          <TableRow key={`${outcome.logical_engine}:${outcome.transport_model}`}>
+            {/* A row is one engine AND model, so the model is named under the
               engine: two models of one engine no longer read as a repeat. */}
-          <TableCell>
-            <TableCellLines
-              primary={engines.label(outcome.logical_engine)}
-              secondary={engines.modelLabel(outcome.logical_engine, outcome.transport_model)}
-            />
-          </TableCell>
-          <TableCell numeric>{outcome.counts.responses}</TableCell>
-          {/* An engine whose every answer failed keeps its row, read as failed. */}
-          <TableCell numeric>{outcome.counts.failed ?? <Absence state="not_measured" />}</TableCell>
-          {ANSWER_STATES.map((state) => (
-            <TableCell key={state.key} numeric>
-              {outcome.answer_states ? (
-                outcome.answer_states[state.key]
-              ) : (
-                <Absence state="not_measured" />
-              )}
+            <TableCell>
+              <TableCellLines
+                primary={engines.label(outcome.logical_engine)}
+                secondary={engines.modelLabel(outcome.logical_engine, outcome.transport_model)}
+              />
             </TableCell>
-          ))}
-        </TableRow>
-      ))}
-    </DataTable>
+            <TableCell numeric>{outcome.counts.responses}</TableCell>
+            {/* An engine whose every answer failed keeps its row, read as failed. */}
+            <TableCell numeric>
+              {outcome.counts.failed ?? <Absence state="not_measured" />}
+            </TableCell>
+            {ANSWER_STATES.map((state) => (
+              <TableCell key={state.key} numeric>
+                {outcome.answer_states ? (
+                  outcome.answer_states[state.key]
+                ) : (
+                  <Absence state="not_measured" />
+                )}
+              </TableCell>
+            ))}
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }

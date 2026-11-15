@@ -36,7 +36,7 @@ function RowStatus({ errors }: Readonly<{ errors: readonly string[] }>) {
 }
 
 const PREVIEW_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'line', label: 'Row', width: 'index', numeric: true },
+  { key: 'line', label: 'Row', width: 'index', kind: 'number' },
   { key: 'topic', label: 'Topic', width: 'name' },
   { key: 'prompt', label: 'Prompt' },
   { key: 'status', label: 'Status', width: 'status' },

@@ -2,6 +2,7 @@ import { Archive, Check, FileSearch, MoreHorizontal, Pencil, Trash2 } from 'luci
 
 import type { PromptAnswerRef } from '@/components/prompts/prompt-evidence';
 import { ProjectLink } from '@/components/ui/project-link';
+import { TextLink } from '@/components/ui/text-link';
 import { IconButton } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Delta } from '@/components/ui/delta';
@@ -92,6 +93,12 @@ export function PromptTable({
   // With no run there is nothing measured for ANY prompt, so the columns are
   // not drawn at all rather than filling with placeholders.
   const measured = Boolean(measurements?.size);
+  // After a first run every change is "first measurement": the column would
+  // be a column of the same mark, so it waits for a run that can compare.
+  const compared = [...(measurements?.values() ?? [])].some(
+    (measurement) => measurement.change.kind !== 'first',
+  );
+  const measuredColumns = measured ? measuredColumnsFor(compared) : [];
   const { page, setPage, pageCount, from, to } = useTablePage(prompts.length, PAGE_SIZE);
   const pagedPrompts = prompts.slice(from - 1, to);
 
@@ -101,7 +108,7 @@ export function PromptTable({
       // The measured columns take their full width; narrower than that the
       // table scrolls in its frame with the prompt pinned and readable.
       minWidth={measured ? 'lg' : 'sm'}
-      columns={promptColumns(measured, actions !== undefined)}
+      columns={promptColumns(measuredColumns, actions !== undefined)}
       pageSize={PAGE_SIZE}
       rowCount={pagedPrompts.length}
       rowLines={3}
@@ -141,9 +148,11 @@ export function PromptTable({
               secondary={rowCaption(prompt, setNames?.get(prompt.prompt_set_id))}
             />
           </TableCell>
-          {measured && commerceSetIds?.has(prompt.prompt_set_id) ? <ShelfMeasuredCells /> : null}
+          {measured && commerceSetIds?.has(prompt.prompt_set_id) ? (
+            <ShelfMeasuredCells span={measuredColumns.length} />
+          ) : null}
           {measured && !commerceSetIds?.has(prompt.prompt_set_id) ? (
-            <MeasuredCells measurement={measurements?.get(prompt.id)} />
+            <MeasuredCells measurement={measurements?.get(prompt.id)} compared={compared} />
           ) : null}
           {actions ? (
             <PromptRowControls
@@ -240,19 +249,22 @@ function PromptRowControls({
  * word (owner, 2026-11-11); each hint says exactly what its figure measures.
  * A reader who may not edit reads the enabled state as text, with no actions.
  */
-function promptColumns(measured: boolean, editable: boolean): DataTableColumn[] {
+function promptColumns(
+  measuredColumns: readonly DataTableColumn[],
+  editable: boolean,
+): DataTableColumn[] {
   const columns: DataTableColumn[] = [
-    { key: 'prompt', label: 'Prompt' },
-    ...(measured ? MEASURED_COLUMNS : []),
+    { key: 'prompt', label: 'Prompt', kind: 'identity' },
+    ...measuredColumns,
     { key: 'enabled', label: 'Enabled', width: 'control' },
   ];
   if (editable)
-    columns.push({ key: 'actions', label: 'Actions', width: 'control', trailing: true });
+    columns.push({ key: 'actions', label: 'Actions', width: 'control', kind: 'actions' });
   return columns;
 }
 
 const MEASURED_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'visibility', label: 'Visibility', width: 'figure', numeric: true },
+  { key: 'visibility', label: 'Visibility', width: 'figure', kind: 'number' },
   {
     key: 'mentions',
     label: 'Mentions',
@@ -263,21 +275,34 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
     key: 'citations',
     label: 'Citations',
     width: 'figure',
-    numeric: true,
+    kind: 'number',
     hint: "The share of this prompt's answers that cited one of your pages.",
   },
   {
     key: 'position',
     label: 'Position',
     width: 'figure',
-    numeric: true,
+    kind: 'number',
     hint: 'Where your brand was named among the brands in an answer, averaged over the answers that named it.',
   },
-  { key: 'change', label: 'Change', width: 'figure', numeric: true },
 ];
 
+const CHANGE_COLUMN: DataTableColumn = {
+  key: 'change',
+  label: 'Change',
+  width: 'figure',
+  kind: 'number',
+};
+
+function measuredColumnsFor(compared: boolean): readonly DataTableColumn[] {
+  return compared ? [...MEASURED_COLUMNS, CHANGE_COLUMN] : MEASURED_COLUMNS;
+}
+
 /** A prompt's measured visibility, and its movement since the last run. */
-function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasurement }>) {
+function MeasuredCells({
+  measurement,
+  compared,
+}: Readonly<{ measurement?: PromptMeasurement; compared: boolean }>) {
   return (
     <>
       <TableCell numeric>
@@ -308,32 +333,30 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
           </span>
         )}
       </TableCell>
-      <TableCell numeric>
-        <ChangeValue change={measurement?.change} />
-      </TableCell>
+      {compared ? (
+        <TableCell numeric>
+          <ChangeValue change={measurement?.change} />
+        </TableCell>
+      ) : null}
     </>
   );
 }
 
 /**
  * A Commerce prompt is measured as part of the shopping shelf, never on its
- * own: its figures do not apply here (a known gap, not a missing run).
+ * own: its figures do not apply here (a known gap, not a missing run). One
+ * sentence across the measured columns says where they are, instead of a
+ * "not applicable" mark in each.
  */
-function ShelfMeasuredCells() {
+function ShelfMeasuredCells({ span }: Readonly<{ span: number }>) {
   return (
-    <>
-      <TableCell numeric>
-        <Absence
-          state="not_applicable"
-          reason="Commerce prompts are measured together as the shopping shelf, not one prompt at a time. See Shopping."
-        />
-      </TableCell>
-      {MEASURED_COLUMNS.slice(1).map((column) => (
-        <TableCell key={column.key} numeric={column.numeric}>
-          <Absence state="not_applicable" />
-        </TableCell>
-      ))}
-    </>
+    <TableCell colSpan={span}>
+      {/* The spanned columns are figures; this sentence reads as text. */}
+      <span className="type-caption block text-start whitespace-normal">
+        Measured with the shopping shelf, not one prompt at a time.{' '}
+        <TextLink href="/products/overview">See Shopping</TextLink>
+      </span>
+    </TableCell>
   );
 }
 

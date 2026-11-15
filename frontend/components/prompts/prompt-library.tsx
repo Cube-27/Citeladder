@@ -279,7 +279,8 @@ export function PromptLibrary({
       <StateBlock
         kind="error"
         error={error}
-        fallback="Could not load prompts. Check your connection and try again."
+        title="Couldn't load the prompts"
+        fallback="Check your connection and try again."
         onRetry={retry}
         pending={retrying}
       />
@@ -294,7 +295,7 @@ export function PromptLibrary({
   if (awaitingFirstLoad({ promptsLoading: isLoading, hasPrompts, figuresRead })) {
     return (
       <CollectionPage filters={<FilterBar />}>
-        <StateBlock kind="loading" />
+        <StateBlock kind="loading" label="Loading prompts…" />
       </CollectionPage>
     );
   }
@@ -333,7 +334,8 @@ export function PromptLibrary({
           <Notice
             kind="read"
             error={error}
-            fallback="Could not load prompts. Check your connection and try again."
+            title="Couldn't refresh the prompts"
+            fallback="The prompts below are from the last successful read."
             onRetry={retry}
             pending={retrying}
           />
@@ -349,7 +351,8 @@ export function PromptLibrary({
           onDialogChange={setTopicDialog}
           topics={topics}
           mutations={topicMutations}
-          loadError={topicsQuery.isError}
+          // One error per region: a failed library read already says the page failed.
+          loadError={topicsQuery.isError && !failedEmpty}
           onAdd={openAddTopic}
           onDelete={(topic) => setPendingDelete({ kind: 'topic', topic })}
         />
