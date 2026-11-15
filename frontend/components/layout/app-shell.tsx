@@ -64,7 +64,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
               open={drawerOpen}
               onOpenChange={(open) => setDrawerLocation(open ? location.key : null)}
             >
-              <AppSidebar />
+              <AppSidebar inDrawer />
             </NavDrawer>
             <CommandPaletteHost destinations={resolveCommandGroups} />
             <AgentPanelHost />
@@ -77,7 +77,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
 
 const COLLAPSE_SHORTCUT = 'Ctrl \\';
 
-function AppSidebar() {
+function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
   const collapsed = useSidebarCollapsed();
   return (
     <SidebarFrame
@@ -88,7 +88,7 @@ function AppSidebar() {
           <SidebarFootNav />
           <div className="labelled:flex-row flex flex-col items-center gap-1">
             <div className="min-w-0 flex-1 self-stretch">
-              <UserMenuTrigger presenter="sidebar" />
+              <UserMenuTrigger presenter={inDrawer ? 'drawer' : 'sidebar'} />
             </div>
             <SidebarCollapseToggle
               collapsed={collapsed}

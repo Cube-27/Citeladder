@@ -30,7 +30,8 @@ type UserMenuState = {
   setOpen: (presenter: UserMenuPresenter, open: boolean) => void;
 };
 
-type UserMenuPresenter = 'sidebar' | 'compact';
+/** Each mounted trigger is its own presenter: the desktop sidebar and the nav drawer both mount one. */
+type UserMenuPresenter = 'sidebar' | 'drawer' | 'compact';
 
 const UserMenuContext = createContext<UserMenuState | null>(null);
 
@@ -46,7 +47,7 @@ function UserMenuContent({
 }: Readonly<{ presenter: UserMenuPresenter; currentHref?: string }>) {
   const { email, logout } = useUserMenu();
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
-  const sidebar = presenter === 'sidebar';
+  const sidebar = presenter !== 'compact';
   return (
     <MenuContent align={sidebar ? 'start' : 'end'} side={sidebar ? 'top' : 'bottom'}>
       <MenuLabel>{email}</MenuLabel>
@@ -104,7 +105,14 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
   const label = `Account menu for ${email}`;
   return (
     <Menu open={open} onOpenChange={(next) => setOpen(presenter, next)}>
-      {presenter === 'sidebar' ? (
+      {presenter === 'compact' ? (
+        <MenuTrigger
+          aria-label={label}
+          className="focus-ring not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed rounded-control flex size-[var(--control-md)] shrink-0 items-center justify-center transition-colors"
+        >
+          <Avatar name={email} />
+        </MenuTrigger>
+      ) : (
         <SidebarTextTooltip inRail>
           <MenuTrigger asChild>
             <SidebarIdentButton
@@ -116,13 +124,6 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
             />
           </MenuTrigger>
         </SidebarTextTooltip>
-      ) : (
-        <MenuTrigger
-          aria-label={label}
-          className="focus-ring not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed rounded-control flex size-[var(--control-md)] shrink-0 items-center justify-center transition-colors"
-        >
-          <Avatar name={email} />
-        </MenuTrigger>
       )}
       {open ? <UserMenuContent presenter={presenter} currentHref={currentHref} /> : null}
     </Menu>
