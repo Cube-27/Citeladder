@@ -147,7 +147,7 @@ describe('DataTable', () => {
     { key: 'count', label: 'Count', kind: 'number' },
   ] as const;
 
-  it('pads a short page to the full page of rows and keeps the header over an empty state', () => {
+  it('pads a short page to the full page of rows and gives way to one empty state, head included', () => {
     const { container, rerender } = render(
       <DataTable title="Runs" columns={columns} pageSize={5} rowCount={2}>
         <TableRow>
@@ -160,7 +160,8 @@ describe('DataTable', () => {
         </TableRow>
       </DataTable>,
     );
-    expect(screen.getByRole('heading', { level: 3, name: 'Runs' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: 'Runs' })).toBeVisible();
+    expect(screen.getByRole('columnheader', { name: 'Count' })).toBeVisible();
     expect(container.querySelectorAll('tbody tr')).toHaveLength(5);
 
     rerender(
@@ -168,12 +169,12 @@ describe('DataTable', () => {
         title="Runs"
         columns={columns}
         pageSize={5}
-        state={{ kind: 'empty', icon: Inbox, heading: 'No failed runs', headingLevel: 3 }}
+        state={{ kind: 'empty', icon: Inbox, heading: 'No failed runs' }}
       />,
     );
-    expect(screen.getByRole('columnheader', { name: 'Count' })).toBeInTheDocument();
+    // The empty state takes the table's place: no head row is left above it.
+    expect(screen.queryByRole('columnheader', { name: 'Count' })).toBeNull();
     expect(screen.getByRole('heading', { level: 3, name: 'No failed runs' })).toBeVisible();
-    expect(container.querySelectorAll('tbody tr')).toHaveLength(1);
   });
 
   it('puts an unsortable column caveat behind its header and a note under the table', async () => {

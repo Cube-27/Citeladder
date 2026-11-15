@@ -27,7 +27,8 @@ export type DataAvailabilityState =
   | 'not_applicable'
   | 'not_connected'
   | 'excluded'
-  | 'unknown';
+  | 'unknown'
+  | 'none';
 
 const availabilityLabels: Readonly<Record<DataAvailabilityState, string>> = {
   not_measured: 'Not measured',
@@ -39,6 +40,7 @@ const availabilityLabels: Readonly<Record<DataAvailabilityState, string>> = {
   not_connected: 'Not connected',
   excluded: 'Excluded',
   unknown: 'Unknown',
+  none: 'None',
 };
 
 /** Human-readable product vocabulary for explicit missing-data states. */
@@ -56,20 +58,9 @@ export function formatPercent(fraction: number | null): string {
 }
 
 /**
- * The mark a missing MEASUREMENT renders as, everywhere it is shown.
- *
- * `not_measured` is the one availability state with no words on screen: a
- * metric card, a table cell and a chart label all print this dash, because the
- * phrase said the same thing at every figure on the page and crowded out the
- * figures that WERE measured. The words stay the accessible name — every
- * renderer pairs the mark with `availabilityLabel('not_measured')` in sr-only
- * text, so nothing is lost to a screen reader.
- *
- * It must never be an empty string: a blank and a measured zero look identical,
- * and those are opposite findings.
- *
- * Workflow states a reader can ACT on — "Not run", "Failed", "Not set" — keep
- * their words. Those are answers, not absent numbers.
+ * The en dash a numeric cell too narrow for an absence's word prints instead
+ * (`Absence narrow`); the word stays in a tooltip and the accessible name.
+ * Never an empty string: a blank and a measured zero are opposite findings.
  */
 export const MISSING_MARK = '–';
 
@@ -98,7 +89,11 @@ export function formatWindowDate(isoDay: string): string {
   });
 }
 
-/** A persisted instant, rendered in the selected display timezone. */
+/**
+ * A persisted instant in the display timezone, without the zone
+ * (`Nov 14, 2026, 05:03 PM`): a table or page states its zone once
+ * (`formatTimeZoneNote`), never on every row.
+ */
 export function formatDisplayTimestamp(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -110,10 +105,24 @@ export function formatDisplayTimestamp(timestamp: string, timeZone: string): str
       hour: '2-digit',
       minute: '2-digit',
       timeZone,
-      timeZoneName: 'short',
     }).format(date);
   } catch {
     return timeZone === 'UTC' ? timestamp : formatDisplayTimestamp(timestamp, 'UTC');
+  }
+}
+
+/**
+ * The zone a table or page states once for its date-times: `Times in GMT+5:30`.
+ * `at` picks the offset for zones with daylight saving (the newest instant shown).
+ */
+export function formatTimeZoneNote(timeZone: string, at: Date = new Date()): string {
+  try {
+    const zone = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' })
+      .formatToParts(at)
+      .find((part) => part.type === 'timeZoneName')?.value;
+    return `Times in ${zone ?? timeZone}`;
+  } catch {
+    return 'Times in UTC';
   }
 }
 
@@ -128,7 +137,7 @@ export function formatDisplayDate(timestamp: string, timeZone: string): string {
   }
 }
 
-/** Time-of-day portion of a persisted instant, with its zone, in the same display timezone. */
+/** Time-of-day portion of a persisted instant in the display timezone, without the zone. */
 export function formatDisplayTime(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
@@ -137,7 +146,6 @@ export function formatDisplayTime(timestamp: string, timeZone: string): string {
       hour: '2-digit',
       minute: '2-digit',
       timeZone,
-      timeZoneName: 'short',
     }).format(date);
   } catch {
     return timeZone === 'UTC' ? timestamp : formatDisplayTime(timestamp, 'UTC');
@@ -170,9 +178,25 @@ export function measured(value: string): string | null {
 
 const numberFormat = new Intl.NumberFormat('en-US');
 
-/** Whole-number grouping for counts (`1,162,000`). */
+/** Whole-number grouping for counts (`1,162,000`), never abbreviated. */
 export function formatCount(value: number): string {
   return numberFormat.format(value);
+}
+
+/** Stat cards abbreviate counts above this. */
+const COMPACT_FROM = 100_000;
+
+const compactFormat = new Intl.NumberFormat('en-US', {
+  notation: 'compact',
+  maximumFractionDigits: 1,
+});
+
+/**
+ * A count in a stat card: grouped up to 100,000 (`50,000`), abbreviated above
+ * it (`1.2M`). Tables always print `formatCount`.
+ */
+export function formatFigureCount(value: number): string {
+  return Math.abs(value) > COMPACT_FROM ? compactFormat.format(value) : formatCount(value);
 }
 
 /** A grouped count with its noun, pluralized with a trailing `s` (`1 answer`, `1,200 answers`). */

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { formatPercent, readableUrl, sharedOrigin, shortUrlTitle, urlCellText } from './format';
+import {
+  formatCount,
+  formatDisplayDate,
+  formatDisplayTimestamp,
+  formatFigureCount,
+  formatPercent,
+  formatTimeZoneNote,
+  readableUrl,
+  sharedOrigin,
+  shortUrlTitle,
+  urlCellText,
+} from './format';
 
 describe('readableUrl', () => {
   it('decodes a doubly encoded path to what a reader expects', () => {
@@ -33,8 +44,44 @@ describe('shortUrlTitle', () => {
 
 describe('formatPercent', () => {
   it('prints one decimal for every rate, so 92.0% sits beside 10.0%', () => {
-    expect([0.92, 0.1, 0.1234, 0].map(formatPercent)).toEqual(['92.0%', '10.0%', '12.3%', '0.0%']);
+    expect([0.92, 0.1, 0.1234, 0, 1].map(formatPercent)).toEqual([
+      '92.0%',
+      '10.0%',
+      '12.3%',
+      '0.0%',
+      '100.0%',
+    ]);
     expect(formatPercent(null)).toBe('Not measured');
+  });
+});
+
+describe('counts', () => {
+  it('groups thousands with no stray spaces, and abbreviates only stat cards above 100,000', () => {
+    expect([0, 999, 50_000, 1_162_000].map(formatCount)).toEqual([
+      '0',
+      '999',
+      '50,000',
+      '1,162,000',
+    ]);
+    expect([50_000, 100_000, 1_234_567].map(formatFigureCount)).toEqual([
+      '50,000',
+      '100,000',
+      '1.2M',
+    ]);
+  });
+});
+
+describe('dates and times', () => {
+  it('prints a date, a date-time without its zone, and the zone once for a table', () => {
+    const at = '2026-11-14T11:33:00Z';
+    expect(formatDisplayDate(at, 'Asia/Kolkata')).toBe('Nov 14, 2026');
+    expect(formatDisplayTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM');
+    expect(formatTimeZoneNote('Asia/Kolkata', new Date(at))).toBe('Times in GMT+5:30');
+    // A zone with daylight saving states the offset of the instant it is asked about.
+    expect(formatTimeZoneNote('America/New_York', new Date('2026-07-01T12:00:00Z'))).toBe(
+      'Times in EDT',
+    );
+    expect(formatTimeZoneNote('UTC', new Date(at))).toBe('Times in UTC');
   });
 });
 

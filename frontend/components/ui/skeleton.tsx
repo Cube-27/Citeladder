@@ -11,89 +11,150 @@ type SkeletonProps = Readonly<{
   className?: string;
 }> &
   (
-    | Readonly<{ variant?: 'text'; lines?: number; rows?: never }>
-    | Readonly<{ variant: 'row'; rows?: number; lines?: never }>
-    | Readonly<{ variant: 'block' | 'chart'; lines?: never; rows?: never }>
+    | Readonly<{ variant?: 'text'; lines?: 1 | 2 | 3 }>
+    | Readonly<{ variant: 'table'; columns: number; rows?: number; head?: boolean }>
+    | Readonly<{ variant: 'stat'; count?: number }>
+    | Readonly<{ variant: 'form'; fields?: number }>
+    | Readonly<{ variant: 'block'; rows?: number }>
+    | Readonly<{ variant: 'chart'; height?: ChartHeight }>
   );
 
-/** Rows a 160px block holds at the 36px row. */
-const BLOCK_ROWS = 4;
-/** A chart's blank: its four gridlines. */
-const CHART_GRIDLINES = 4;
+type ChartHeight = 'sm' | 'md' | 'lg';
+
+const CHART_HEIGHT: Record<ChartHeight, string> = {
+  sm: 'h-[var(--chart-height-sm)]',
+  md: 'h-[var(--chart-height-md)]',
+  lg: 'h-[var(--chart-height-lg)]',
+};
 
 /**
- * Skeleton — the ruled blank (2.7): the rules and line boxes of the final
- * layout with blank values, and one live rung with its verb, so nothing moves
- * by more than 8px when the content arrives. No grey bars and no shimmer.
+ * Skeleton — the shape of what is loading, made of `well` blocks (radius 6)
+ * on the real card: never lines. Each variant is shaped like what it stands
+ * for, at its final size, so content arriving moves nothing by more than 8px.
+ * A soft shimmer crosses the blocks; under reduced motion they are still.
  *
- *   `text`  — `lines` blank 20px line boxes.
- *   `row`   — `rows` blank table rows on inset hairlines.
- *   `block` — a 160px slip body of blank rows.
- *   `chart` — the chart's height with its gridlines.
+ *   `text`  — two or three blocks of unequal width.
+ *   `table` — the real column count: a head row (36) and `rows` rows (40).
+ *   `stat`  — `count` stat cards: a label block over a value block.
+ *   `form`  — `fields` label and field blocks.
+ *   `block` — a card body of `rows` list rows: a title block over a caption block.
+ *   `chart` — one block at the chart's height.
  *
- * Match the count of what will load: a 25-row table loads 25 rows.
+ * The blocks are drawing, not content: only the verb is announced, after a beat.
  */
 export function Skeleton(props: SkeletonProps) {
   const { label = 'Loading', className } = props;
-  // The blank is drawing, not content: only the live verb is announced, and
-  // only once it shows (after the delay).
   return (
-    <div aria-busy="true" className={cn('flex min-w-0 flex-col', className)}>
-      <SkeletonBody {...props} label={label} />
+    <div
+      aria-busy="true"
+      data-skeleton={props.variant ?? 'text'}
+      className={cn('min-w-0', className)}
+    >
+      <LiveVerb label={label} hidden />
+      <SkeletonBody {...props} />
     </div>
   );
 }
 
-const RULED_ROW = 'flex h-[var(--table-row-height)] items-center px-[var(--table-cell-padding-x)]';
+/** One placeholder: a `well` block, at least 12 high. */
+export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
+  return (
+    <span
+      aria-hidden
+      data-skeleton-block=""
+      className={cn('skeleton-block bg-well rounded-control block h-3 min-h-3', className)}
+    />
+  );
+}
 
-function SkeletonBody(props: SkeletonProps & Readonly<{ label: string }>) {
+/** Unequal widths, so a text block does not read as a ruled form. */
+const TEXT_WIDTHS = ['w-11/12', 'w-3/4', 'w-1/2'] as const;
+
+function SkeletonBody(props: SkeletonProps) {
   switch (props.variant) {
-    case 'row':
-      return <BlankRows count={props.rows ?? 3} label={props.label} />;
-    case 'block':
+    case 'table':
       return (
-        <span className="block h-40 overflow-hidden">
-          <BlankRows count={BLOCK_ROWS} label={props.label} />
-        </span>
+        <TableBlocks columns={props.columns} rows={props.rows ?? 5} head={props.head ?? true} />
       );
-    case 'chart':
+    case 'stat':
       return (
-        <span className="flex h-[var(--chart-height-md)] flex-col justify-between">
-          {Array.from({ length: CHART_GRIDLINES }, (_, index) => (
+        <span className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-4">
+          {Array.from({ length: props.count ?? 4 }, (_, index) => (
             <span
               key={index}
-              aria-hidden={index === 0 ? undefined : true}
-              className="border-rule flex min-h-5 items-start border-t pt-1"
+              className="bg-surface border-rule rounded-card shadow-card grid gap-2 border p-4"
             >
-              {index === 0 ? <LiveVerb label={props.label} /> : null}
+              <SkeletonBlock className="h-4 w-1/2" />
+              <SkeletonBlock className="h-6 w-2/3" />
             </span>
           ))}
         </span>
       );
-    default:
-      return Array.from({ length: props.lines ?? 3 }, (_, index) => (
-        <span
-          key={index}
-          aria-hidden={index === 0 ? undefined : true}
-          className="flex h-5 items-center"
-        >
-          {index === 0 ? <LiveVerb label={props.label} /> : null}
+    case 'form':
+      return (
+        <span className="grid gap-4">
+          {Array.from({ length: props.fields ?? 3 }, (_, index) => (
+            <span key={index} className="grid max-w-160 gap-1">
+              <SkeletonBlock className="h-4 w-32" />
+              <SkeletonBlock className="h-8 w-full" />
+            </span>
+          ))}
         </span>
-      ));
+      );
+    case 'block':
+      return (
+        <span className="grid">
+          {Array.from({ length: props.rows ?? 4 }, (_, index) => (
+            <span key={index} className="grid h-14 content-center gap-2">
+              <SkeletonBlock className={cn('h-4', TEXT_WIDTHS[index % 2])} />
+              <SkeletonBlock className="h-3 w-1/3" />
+            </span>
+          ))}
+        </span>
+      );
+    case 'chart':
+      return <SkeletonBlock className={cn('w-full', CHART_HEIGHT[props.height ?? 'md'])} />;
+    case 'text':
+    case undefined:
+      return (
+        <span className="grid gap-2">
+          {TEXT_WIDTHS.slice(0, props.lines ?? 3).map((width) => (
+            <SkeletonBlock key={width} className={cn('h-4', width)} />
+          ))}
+        </span>
+      );
+    default: {
+      const exhaustive: never = props;
+      return exhaustive;
+    }
   }
 }
 
-function BlankRows({ count, label }: Readonly<{ count: number; label: string }>) {
-  return Array.from({ length: count }, (_, index) => (
-    <span
-      key={index}
-      data-ruled-row=""
-      aria-hidden={index === 0 ? undefined : true}
-      className={RULED_ROW}
-    >
-      {index === 0 ? <LiveVerb label={label} /> : null}
+/** A table's loading shape outside a DataTable: its head row and rows of cell blocks. */
+function TableBlocks({
+  columns,
+  rows,
+  head,
+}: Readonly<{ columns: number; rows: number; head: boolean }>) {
+  const cells = Array.from({ length: Math.max(1, columns) }, (_, index) => index);
+  return (
+    <span className="grid">
+      {head ? (
+        <span className="bg-well flex h-9 items-center gap-6 px-4">
+          {cells.map((cell) => (
+            <span key={cell} className="flex-1" />
+          ))}
+        </span>
+      ) : null}
+      {Array.from({ length: rows }, (_, row) => (
+        <span key={row} className="flex h-10 items-center gap-6 px-4">
+          {cells.map((cell) => (
+            <SkeletonBlock key={cell} className={cn('flex-1', cell === 0 && 'flex-[2]')} />
+          ))}
+        </span>
+      ))}
     </span>
-  ));
+  );
 }
 
 /**
@@ -105,9 +166,10 @@ let revealedLoaders = 0;
 
 /**
  * The live rung and its verb ("Loading runs"), held back a beat
- * (`loading-delayed`): a read that answers at once shows only its rules.
+ * (`loading-delayed`). `hidden` announces the verb without drawing it, for a
+ * skeleton whose blocks already show that something loads.
  */
-export function LiveVerb({ label }: Readonly<{ label: string }>) {
+export function LiveVerb({ label, hidden = false }: Readonly<{ label: string; hidden?: boolean }>) {
   const [continued] = useState(() => revealedLoaders > 0);
   const [revealed, setRevealed] = useState(continued);
   useEffect(() => {
@@ -120,6 +182,7 @@ export function LiveVerb({ label }: Readonly<{ label: string }>) {
       revealedLoaders -= 1;
     };
   }, [revealed]);
+  if (hidden) return revealed ? <output aria-label={label} className="sr-only" /> : null;
   return (
     <span className={cn('flex min-h-5 items-center', continued ? undefined : 'loading-delayed')}>
       {revealed ? (

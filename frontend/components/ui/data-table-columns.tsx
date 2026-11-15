@@ -75,16 +75,16 @@ const FLEXIBLE_WIDTHS: ReadonlySet<DataTableColumnWidth> = new Set(['flex', 'lea
  */
 type ColumnKind = 'identity' | 'text' | 'number' | 'date' | 'status' | 'url' | 'actions';
 
-type KindSpec = Readonly<{ align: 'start' | 'end'; mono: boolean; width: DataTableColumnWidth }>;
+type KindSpec = Readonly<{ align: 'start' | 'end'; tabular: boolean; width: DataTableColumnWidth }>;
 
 const KIND = {
-  identity: { align: 'start', mono: false, width: 'flex' },
-  text: { align: 'start', mono: false, width: 'flex' },
-  number: { align: 'end', mono: true, width: 'figure' },
-  date: { align: 'start', mono: true, width: 'date' },
-  status: { align: 'start', mono: false, width: 'status' },
-  url: { align: 'start', mono: true, width: 'flex' },
-  actions: { align: 'end', mono: false, width: 'rowActions' },
+  identity: { align: 'start', tabular: false, width: 'flex' },
+  text: { align: 'start', tabular: false, width: 'flex' },
+  number: { align: 'end', tabular: true, width: 'figure' },
+  date: { align: 'start', tabular: true, width: 'date' },
+  status: { align: 'start', tabular: false, width: 'status' },
+  url: { align: 'start', tabular: false, width: 'flex' },
+  actions: { align: 'end', tabular: false, width: 'rowActions' },
 } as const satisfies Record<ColumnKind, KindSpec>;
 
 export type DataTableColumn = Readonly<{
@@ -94,8 +94,13 @@ export type DataTableColumn = Readonly<{
   kind?: ColumnKind;
   /** Defaults to the kind's width. */
   width?: DataTableColumnWidth;
-  /** Keep the header for assistive technology only (an actions column). */
+  /** Keep the header for assistive technology only. An `actions` column always does. */
   hideLabel?: boolean;
+  /**
+   * `low`: a column the table can lose to scrolling. Priority columns come
+   * first and fit at 982 in the host template; low ones come last.
+   */
+  priority?: 'low';
   /** A sortable column: the header becomes the sort button. */
   sort?: Readonly<{ active: boolean; descending: boolean; onSort: () => void }>;
   /** The fixed order the rows come in, by this column (not sortable): its mark and `aria-sort`. */
@@ -132,15 +137,15 @@ function widthOf(column: DataTableColumn): DataTableColumnWidth {
 }
 
 /**
- * The table's column map for the cell rules in globals.css ("r2 data"): the
- * 1-based positions of the end-aligned and of the mono columns, the
- * selection column counted, so every cell follows its column's kind whatever
- * the page passed to the cell.
+ * The table's column map for the cell rules in globals.css ("r3 data"): the
+ * 1-based positions of the end-aligned, start-aligned and tabular columns,
+ * the selection column counted, so every cell follows its column's kind
+ * whatever the page passed to the cell.
  */
 export function columnLayout(
   columns: readonly DataTableColumn[],
   selection: boolean,
-): Readonly<{ 'data-end-cols': string; 'data-start-cols': string; 'data-mono-cols': string }> {
+): Readonly<{ 'data-end-cols': string; 'data-start-cols': string; 'data-tabular-cols': string }> {
   const offset = selection ? 2 : 1;
   const at = (test: (spec: KindSpec) => boolean) =>
     columns
@@ -149,7 +154,7 @@ export function columnLayout(
   return {
     'data-end-cols': at((spec) => spec.align === 'end'),
     'data-start-cols': at((spec) => spec.align === 'start'),
-    'data-mono-cols': at((spec) => spec.mono),
+    'data-tabular-cols': at((spec) => spec.tabular),
   };
 }
 
@@ -168,6 +173,12 @@ export function useFlexibleColumnCheck({
 }: Readonly<{ columns: readonly DataTableColumn[]; title?: string; label?: string }>) {
   useEffect(() => {
     if (!import.meta.env?.DEV) return;
+    const firstLow = columns.findIndex((column) => column.priority === 'low');
+    if (firstLow !== -1 && columns.slice(firstLow).some((column) => column.priority !== 'low')) {
+      console.warn(
+        `DataTable "${title ?? label ?? 'Table'}" puts a priority column after a low-priority one: low-priority columns come last.`,
+      );
+    }
     if (columns.some((column) => FLEXIBLE_WIDTHS.has(widthOf(column)))) return;
     const name = title ?? label ?? columns.map((column) => column.label).join(', ');
     const widths = columns.map((column) => `${column.key}:${column.width}`).join(',');
@@ -304,6 +315,7 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
   }
   // The columns are fixed, so a label longer than its role wraps under
   // itself instead of painting over the next header.
+  const hidden = column.hideLabel || columnKind(column) === 'actions';
   return (
     <TableHead
       numeric={numeric}
@@ -311,7 +323,7 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
       className="whitespace-normal"
       aria-sort={column.order}
     >
-      {column.hideLabel ? <span className="sr-only">{column.label}</span> : column.label}
+      {hidden ? <span className="sr-only">{column.label || 'Actions'}</span> : column.label}
       {column.order ? <OrderMark order={column.order} /> : null}
       {column.sublabel ? (
         <span className={textRole('caption', 'block truncate')} title={column.sublabel}>

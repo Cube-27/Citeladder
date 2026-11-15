@@ -2,7 +2,7 @@ import { Absence } from '@/components/ui/absence';
 import { cn } from '@/lib/utils';
 
 /**
- * Delta — a change: `data-sm` at 500, the signed number
+ * Delta — a change: `caption-strong`, tabular, the signed number
  * and its unit with no arrow (the sign carries the direction without colour),
  * in the tone its meaning takes, with an optional basis ("vs Nov 7") in
  * `ink-2`.
@@ -55,7 +55,7 @@ function roundedChange(value: number, precision: number) {
 
 // The website's product screens keep their 400 change line.
 const DELTA_FACE =
-  'type-data-sm inline-flex items-baseline gap-1 font-medium whitespace-nowrap [[data-public-surface]_&]:font-normal';
+  'type-caption inline-flex items-baseline gap-1 font-medium tabular-nums whitespace-nowrap [[data-public-surface]_&]:font-mono [[data-public-surface]_&]:font-normal';
 
 const SIGN = { up: '+', down: '−', flat: '' } as const satisfies Record<Direction, string>;
 

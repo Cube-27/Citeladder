@@ -67,8 +67,6 @@ describe('screenState with StateBlock', () => {
     renderScreen(() => Promise.resolve({ crawled_pages: null }));
 
     expect(await screen.findByRole('heading', { name: 'Not measured yet' })).toBeVisible();
-    // The hatched tag repeats the heading, so only the heading is read.
-    expect(screen.getByText(/^not measured$/i)).toHaveAttribute('aria-hidden', 'true');
     expect(screen.getByText('Coverage appears after the first crawl finishes.')).toBeVisible();
     expect(screen.queryByText(/pages crawled/)).not.toBeInTheDocument();
   });

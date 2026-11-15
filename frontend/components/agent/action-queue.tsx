@@ -245,7 +245,7 @@ export function ActionTargetCell({
 }
 
 function TargetLine({ label, origin }: Readonly<{ label: string; origin: string | null }>) {
-  if (/^https?:\/\//iu.test(label)) return <UrlText url={label} origin={origin} lines={1} />;
+  if (/^https?:\/\//iu.test(label)) return <UrlText url={label} origin={origin} />;
   return (
     <ClampText lines={1} className={textRole('caption')}>
       {readableUrl(label)}

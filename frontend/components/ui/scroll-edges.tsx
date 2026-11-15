@@ -59,34 +59,20 @@ export type ScrollRegionProps = Readonly<{
 const STEP_SHARE = 0.8;
 
 /**
- * ScrollFrame — every region that scrolls sideways (a wide table, a tab
- * row, a table in an Agent reply). The content fades out at the edge it can
- * scroll towards (a mask on the content, never a tinted tray) and a 24-wide
- * chevron on that edge steps it along; both appear only while there is more
- * that way. While it scrolls, a `label`led frame is a named region with a tab
- * stop, so the arrow keys scroll it; a frame whose content takes focus itself
- * (a tab list) passes no label. Scrollbars are left as they are.
- *
- * `start={false}` drops the leading cue where a pinned first column already
- * marks that edge. `stepper="head"` sets the chevrons on the header band of a
- * table instead of the full height.
+ * One sideways-scrolling region's state: the ref for the scrolling element,
+ * its props, which edges hide more, and the step. The fade is a mask on the
+ * content (globals.css "r3 data"); the steppers sit wherever the owner puts
+ * them, never over the content. `start={false}` drops the leading cue where a
+ * pinned column already marks that edge.
  */
-export function ScrollFrame({
+export function useScrollFrame({
   label,
   start = true,
-  stepper = 'full',
-  className,
-  children,
-}: Readonly<{
-  label?: string;
-  start?: boolean;
-  stepper?: 'full' | 'head';
-  className?: string;
-  children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
-}>) {
+}: Readonly<{ label?: string; start?: boolean }>) {
   const ref = useRef<HTMLDivElement>(null);
-  const edges = useScrollEdges(ref);
-  const scrolls = edges.start || edges.end;
+  const measured = useScrollEdges(ref);
+  const edges: ScrollEdges = { start: start && measured.start, end: measured.end };
+  const scrolls = measured.start || measured.end;
   const region: ScrollRegionProps =
     label && scrolls
       ? { 'data-scroll-content': '', tabIndex: 0, role: 'region', 'aria-label': label }
@@ -100,44 +86,94 @@ export function ScrollFrame({
       behavior: reduce ? 'auto' : 'smooth',
     });
   };
+  const frame = {
+    'data-scroll-frame': '',
+    'data-scroll-start': edges.start || undefined,
+    'data-scroll-end': edges.end || undefined,
+  } as const;
+  return { ref, region, edges, scrolls, step, frame };
+}
+
+export type ScrollFrameState = ReturnType<typeof useScrollFrame>;
+
+/**
+ * The pair of steppers for a scrolling table, for its footer bar (beside the
+ * Pager) or header bar. Each is present while there is more that way. A
+ * pointer aid: the keyboard scrolls the focused frame, so they are no tab stops.
+ */
+export function ScrollSteppers({ state }: Readonly<{ state: ScrollFrameState }>) {
+  if (!state.scrolls) return null;
   return (
-    <div
-      data-scroll-frame=""
-      data-scroll-start={(start && edges.start) || undefined}
-      data-scroll-end={edges.end || undefined}
-      className={cn('relative min-w-0', className)}
-    >
-      {children(ref, region)}
-      {start && edges.start ? (
-        <ScrollStep side="start" stepper={stepper} onStep={() => step(-1)} />
-      ) : null}
-      {edges.end ? <ScrollStep side="end" stepper={stepper} onStep={() => step(1)} /> : null}
+    <div data-scroll-steppers="" className="flex items-center gap-1">
+      <ScrollStep side="start" disabled={!state.edges.start} onStep={() => state.step(-1)} />
+      <ScrollStep side="end" disabled={!state.edges.end} onStep={() => state.step(1)} />
     </div>
   );
 }
 
 /**
- * The chevron on an edge with more beyond it. A pointer aid: the keyboard
- * scrolls the focused frame (or moves through its tabs), so it is no tab stop.
+ * ScrollFrame — a region that scrolls sideways outside a table card (a tab
+ * row, a table in an Agent reply). The content fades out at the edge it can
+ * scroll towards. `stepper="row-end"` (a tab row) puts one button at the
+ * row's end, outside the content, stepping towards the side with more;
+ * `stepper="below"` puts the pair under the content, end-aligned. While it
+ * scrolls, a `label`led frame is a named region with a tab stop, so the
+ * arrow keys scroll it; a frame whose content takes focus itself (a tab
+ * list) passes no label. Scrollbars are left as they are.
  */
+export function ScrollFrame({
+  label,
+  stepper = 'below',
+  className,
+  children,
+}: Readonly<{
+  label?: string;
+  stepper?: 'row-end' | 'below';
+  className?: string;
+  children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
+}>) {
+  const state = useScrollFrame({ label });
+  if (stepper === 'row-end') {
+    const forward = state.edges.end || !state.edges.start;
+    return (
+      <div {...state.frame} className={cn('flex min-w-0 items-stretch', className)}>
+        <div className="flex min-w-0 flex-1">{children(state.ref, state.region)}</div>
+        {state.scrolls ? (
+          <ScrollStep
+            side={forward ? 'end' : 'start'}
+            onStep={() => state.step(forward ? 1 : -1)}
+          />
+        ) : null}
+      </div>
+    );
+  }
+  return (
+    <div {...state.frame} className={cn('grid min-w-0 gap-1', className)}>
+      {children(state.ref, state.region)}
+      {state.scrolls ? (
+        <div className="flex justify-end">
+          <ScrollSteppers state={state} />
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ScrollStep({
   side,
-  stepper,
+  disabled = false,
   onStep,
-}: Readonly<{ side: 'start' | 'end'; stepper: 'full' | 'head'; onStep: () => void }>) {
+}: Readonly<{ side: 'start' | 'end'; disabled?: boolean; onStep: () => void }>) {
   const Glyph = side === 'start' ? ChevronLeft : ChevronRight;
   return (
     <button
       type="button"
       tabIndex={-1}
+      disabled={disabled}
       data-scroll-step={side}
       aria-label={side === 'start' ? 'Scroll back' : 'Scroll forward'}
       onClick={onStep}
-      className={cn(
-        'text-ink-2 hover:text-ink hover:overlay-hover absolute top-0 z-30 grid w-6 place-items-center transition-colors duration-[var(--motion-fast)]',
-        side === 'start' ? 'start-0' : 'end-0',
-        stepper === 'head' ? 'h-[var(--table-header-height)]' : 'bottom-0',
-      )}
+      className="text-ink-2 hover:text-ink hover:overlay-hover rounded-control grid min-h-6 min-w-6 shrink-0 place-items-center transition-colors duration-[var(--motion-fast)] disabled:opacity-60"
     >
       <Glyph className="size-4" aria-hidden />
     </button>

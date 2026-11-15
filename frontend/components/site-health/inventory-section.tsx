@@ -126,7 +126,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       {page?.items.map((row) => (
         <TableRow key={row.site_url_id}>
           <TableCell>
-            <UrlText url={row.display_url} origin={origin} lines={1} />
+            <UrlText url={row.display_url} origin={origin} />
           </TableCell>
           <TableCell className="type-caption">
             {row.source ? statusLabel(row.source) : <Absence state="unknown" />}

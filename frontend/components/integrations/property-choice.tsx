@@ -139,7 +139,7 @@ function DiscoveryStatus({
       </div>
     );
   if (discovery.isPending)
-    return <Skeleton variant="row" rows={2} label={`Loading your ${noun}s…`} />;
+    return <Skeleton variant="block" rows={2} label={`Loading your ${noun}s…`} />;
   return (
     <Notice
       kind="mutation"

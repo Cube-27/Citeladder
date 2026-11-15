@@ -80,7 +80,7 @@ export function readErrorProps(read: RetryableRead) {
 }
 
 /**
- * Notice — one inline message: the tone's glyph, a
+ * Notice — the app's one inline message (`Callout` is the website's): the tone's glyph, a
  * sentence and at most one action, on the tone's wash with the control
  * radius. Failures of a write (`kind="mutation"`) and of a read
  * (`kind="read"`) are notices too, so a failure renders one way everywhere;
@@ -195,18 +195,22 @@ function ReadFailureNotice({
       Retry
     </Button>
   ) : null;
+  let next: string | null = null;
+  if (accessFailure) next = 'Check your workspace access, then try again.';
+  else if (retryable && !sentence) next = 'Retry in a moment.';
   return (
     <MessageNoticeView tone="negative" title={title} action={action} className={className}>
       {sentence ? <p>{sentence}</p> : null}
-      {accessFailure ? <p>Check your workspace access, then try again.</p> : null}
-      {code ? <p className="type-data-sm text-ink-2">{code}</p> : null}
+      {next ? <p>{next}</p> : null}
+      {code ? <p className={textRole('caption', 'text-ink-2')}>{code}</p> : null}
     </MessageNoticeView>
   );
 }
 
 /**
  * Where a failure's own words go: a person's sentence under the headline, or,
- * for a server fault, beside the reference. Words repeating the headline drop.
+ * for a server fault, beside the reference as secondary text: a status text
+ * ("Internal Server Error") is never the sentence. Words repeating the headline drop.
  */
 function failureLines(detail: ReturnType<typeof humanizeApiError>, shown: readonly string[]) {
   const said = shown.includes(detail.message) ? null : detail.message;

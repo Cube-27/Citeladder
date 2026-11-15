@@ -23,7 +23,7 @@ function displayValue(row: SearchIntelligenceRow, column: SearchColumn, origin: 
   const result = row[column.field];
   if (column.numeric) return <SearchValue value={result} digits={column.precision ?? 0} />;
   if (URL_FIELDS.has(column.field) && typeof result === 'string' && result)
-    return <UrlText url={result} origin={origin} lines={1} />;
+    return <UrlText url={result} origin={origin} />;
   return cellText(result) ?? <Absence />;
 }
 

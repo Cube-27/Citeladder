@@ -295,7 +295,7 @@ export function DimensionTable({
         <TableRow key={row.dimension_key}>
           <TableCell>
             {dimension === 'page' ? (
-              <UrlText url={row.display_value} origin={origin} lines={1} />
+              <UrlText url={row.display_value} origin={origin} />
             ) : (
               <ClampText className={cn(dimension === 'day' && 'tabular-nums')}>
                 {formatDimensionValue(dimension, row.display_value)}

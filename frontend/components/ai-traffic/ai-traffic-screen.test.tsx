@@ -622,9 +622,8 @@ describe('AI Traffic state and navigation', () => {
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(new URLSearchParams(window.location.search).get('tab')).toBe('activity');
-    // No retained rows: the table keeps its headers and footprint and says why
-    // inside its body.
-    const activityTable = await screen.findByRole('table', {
+    // No retained rows: the table gives way to its empty state, which says why.
+    const activityTable = await screen.findByRole('region', {
       name: 'Retained automated request activity',
     });
     expect(

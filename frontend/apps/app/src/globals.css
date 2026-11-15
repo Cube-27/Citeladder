@@ -605,19 +605,9 @@
   box-shadow: var(--shadow-card, none);
 }
 
-/* The line language: solid is observed, dashed
-   is drafted, hatched is absent, no line is not applicable. `hatch` fills a
-   box with 45deg 1px `control-line` lines at an 8px pitch on `well`. `edge-draft`
+/* The line language: solid is observed, dashed is drafted. `edge-draft`
    draws a dashed `control-line` edge; with `data-draft="false"` (a person
    accepted it) a solid edge fades in over it in 200ms: the ink sets. */
-@utility hatch {
-  background-color: var(--color-well);
-  background-image: repeating-linear-gradient(
-    -45deg,
-    var(--color-control-line) 0 1px,
-    transparent 1px var(--hatch-pitch, 8px)
-  );
-}
 @layer utilities {
   .edge-draft {
     position: relative;
@@ -1617,63 +1607,6 @@ a.focus-ring:active .type-caption {
   border: 0;
 }
 
-/* The app's tables: an ink rule on top and no
-   box, overline heads on a hairline over the ground they sit on, mono
-   figures, and your row marked by the accent rung on its first cell. */
-
-:root:not([data-public-surface]) :where(.surface-slip, [data-section='card']) {
-  --table-ground: var(--color-surface);
-}
-
-:root:not([data-public-surface]) :where(.surface-well) {
-  --table-ground: var(--color-well);
-}
-
-:root:not([data-public-surface]) :where([role='dialog']) {
-  --table-ground: var(--color-raised);
-}
-
-:root:not([data-public-surface]) .table-frame {
-  border: 0;
-  border-top: 1px solid var(--color-rule-ink);
-  border-bottom: 1px solid var(--color-rule);
-  border-radius: 0;
-  background: transparent;
-}
-
-:root:not([data-public-surface]) .table-frame thead th {
-  font-family: var(--font-mono);
-  font-size: var(--text-overline);
-  line-height: var(--text-overline--line-height);
-  font-weight: var(--text-overline--font-weight);
-  letter-spacing: var(--text-overline--letter-spacing);
-  text-transform: uppercase;
-  color: var(--color-ink-2);
-  background: var(--table-ground);
-  box-shadow: inset 0 -1px 0 var(--color-rule);
-}
-
-/* A head that is a button (sortable, hinted) keeps the overline: the reset
-   gives buttons their own text-transform and tracking. */
-:root:not([data-public-surface]) .table-frame thead th button {
-  text-transform: inherit;
-  letter-spacing: inherit;
-}
-
-:root:not([data-public-surface]) .table-frame thead th[aria-sort] {
-  color: var(--color-ink);
-}
-
-:root:not([data-public-surface]) .table-frame td.tabular-nums {
-  font-family: var(--font-mono);
-  font-size: var(--text-data);
-  line-height: var(--text-data--line-height);
-}
-
-:root:not([data-public-surface]) .table-frame tr[data-you] > :first-child {
-  box-shadow: inset var(--mark-width) 0 0 var(--color-accent);
-}
-
 .surface-inset {
   border: 1px solid var(--color-rule);
   background: var(--color-surface);
@@ -1709,28 +1642,6 @@ a.focus-ring:active .type-caption {
   padding: 0;
 }
 
-/* Sideways overflow cues. Each overlays or paints behind the region, so it
-   never moves anything, and each is absent while nothing overflows. */
-@layer components {
-  /* A wide table's frame (`ScrollEdgeFades`): a 24px fade to the ground at
-     each edge that hides more columns, over the rows and the header band. */
-  .scroll-edge-fade {
-    position: absolute;
-    inset-block: 0;
-    z-index: 30;
-    width: 24px;
-    pointer-events: none;
-    --scroll-edge-ground: var(--color-surface);
-  }
-  .scroll-edge-fade[data-scroll-edge='start'] {
-    inset-inline-start: 0;
-    background: linear-gradient(to right, var(--scroll-edge-ground), transparent);
-  }
-  .scroll-edge-fade[data-scroll-edge='end'] {
-    inset-inline-end: 0;
-    background: linear-gradient(to left, var(--scroll-edge-ground), transparent);
-  }
-}
 
 /* The website's shared buttons (a form's submit, a callout action) take the
    control-md row. */
@@ -2195,13 +2106,160 @@ label {
   }
 }
 
-/* r2 data */
-/* Tables, scroll frames and figures (round 2, builder A2). */
+/* r3 data */
+/* Tables, scroll frames and skeletons (round 3, builder A2). */
 
 [data-data-table-frame] {
   /* A table's identity column never narrows past about 25 characters of row
      name; below it the table scrolls with that column pinned. */
   --data-table-identity-min: 25ch;
+}
+
+/* DataTable is a card: surface, a rule edge, radius 8 and the card shadow.
+   Inside another container it draws no second card: it bleeds to the
+   container's edges, so its first and last cells still align with the
+   container's padding. */
+:root:not([data-public-surface]) [data-data-table] {
+  --table-ground: var(--color-surface);
+  background: var(--color-surface);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+:root:not([data-public-surface])
+  :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+  [data-data-table] {
+  margin-inline: calc(var(--card-padding) * -1);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+:root:not([data-public-surface]) :where([role='dialog']) [data-data-table] {
+  --table-ground: var(--color-raised);
+}
+/* The head row's well meets the card's rounded top when no header bar is above it. */
+:root:not([data-public-surface])
+  [data-data-table]:not(:has([data-data-table-header]))
+  thead
+  tr
+  > :first-child {
+  border-start-start-radius: calc(var(--radius-card) - 1px);
+}
+:root:not([data-public-surface])
+  [data-data-table]:not(:has([data-data-table-header]))
+  thead
+  tr
+  > :last-child {
+  border-start-end-radius: calc(var(--radius-card) - 1px);
+}
+/* The footer bar closes the card under a rule, like a sheet's footer. */
+[data-data-table-foot] {
+  border-top: 1px solid var(--color-rule);
+}
+
+/* A Table on its own in the app (outside a DataTable) is a card on the
+   ground and plain inside a container. */
+:root:not([data-public-surface]) .table-frame {
+  --table-row-height: 40px;
+  --table-row-height-2: 56px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+:root:not([data-public-surface])
+  .table-frame:not(
+    [data-data-table] *,
+    :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog']) *
+  ) {
+  --table-ground: var(--color-surface);
+  background: var(--color-surface);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+@media (max-width: 899px), (pointer: coarse) {
+  :root:not([data-public-surface]) .table-frame {
+    --table-row-height: 44px;
+  }
+}
+
+/* The head row: a `well` band 36 high, caption-strong, sentence case, ink-2. */
+:root:not([data-public-surface]) .table-frame thead th {
+  height: 36px;
+  font-size: var(--text-caption);
+  line-height: var(--text-caption--line-height);
+  font-weight: 500;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--color-ink-2);
+  background: var(--color-well);
+  box-shadow: none;
+}
+:root:not([data-public-surface]) .table-frame thead th[aria-sort] {
+  color: var(--color-ink);
+}
+/* Body text is the sans face; numbers line up in tabular numerals. */
+:root:not([data-public-surface]) .table-frame tbody :is(td, th) {
+  font-size: var(--text-body-sm);
+  line-height: var(--text-body-sm--line-height);
+}
+:root:not([data-public-surface]) .table-frame td.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+/* The first and last cells take 16, so text aligns with the card's padding. */
+:root:not([data-public-surface]) .table-frame tr > :first-child {
+  padding-inline-start: 16px;
+}
+:root:not([data-public-surface]) .table-frame tr > :last-child {
+  padding-inline-end: 16px;
+}
+
+/* The pinned block: the identity column, with the selection box before it
+   when there is one, stays in view while the table scrolls sideways. */
+[data-pinned] .table-frame tr > :nth-child(1),
+[data-pinned='2'] .table-frame tr > :nth-child(2) {
+  position: sticky;
+  z-index: 10;
+  background-color: var(--table-ground);
+}
+[data-pinned] .table-frame tr > :nth-child(1) {
+  left: 0;
+}
+[data-pinned='2'] .table-frame tr > :nth-child(2) {
+  left: calc(var(--spacing) * 10);
+}
+[data-pinned] .table-frame thead tr > :nth-child(1),
+[data-pinned='2'] .table-frame thead tr > :nth-child(2) {
+  z-index: 20;
+  background-color: var(--color-well);
+}
+
+/* Skeleton blocks: a soft shimmer crosses them; under reduced motion they are still. */
+.skeleton-block {
+  background-image: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--color-surface) 55%, transparent),
+    transparent
+  );
+  background-size: 50% 100%;
+  background-repeat: no-repeat;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  from {
+    background-position: -100% 0;
+  }
+  to {
+    background-position: 200% 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+    background-image: none;
+  }
 }
 
 /* A DataTable column's kind sets its head and every cell together
@@ -2243,34 +2301,60 @@ label {
 [data-start-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(16) {
   text-align: start;
 }
-[data-mono-cols~='1'] table > tbody > tr:not([data-table-state]) > :nth-child(1),
-[data-mono-cols~='2'] table > tbody > tr:not([data-table-state]) > :nth-child(2),
-[data-mono-cols~='3'] table > tbody > tr:not([data-table-state]) > :nth-child(3),
-[data-mono-cols~='4'] table > tbody > tr:not([data-table-state]) > :nth-child(4),
-[data-mono-cols~='5'] table > tbody > tr:not([data-table-state]) > :nth-child(5),
-[data-mono-cols~='6'] table > tbody > tr:not([data-table-state]) > :nth-child(6),
-[data-mono-cols~='7'] table > tbody > tr:not([data-table-state]) > :nth-child(7),
-[data-mono-cols~='8'] table > tbody > tr:not([data-table-state]) > :nth-child(8),
-[data-mono-cols~='9'] table > tbody > tr:not([data-table-state]) > :nth-child(9),
-[data-mono-cols~='10'] table > tbody > tr:not([data-table-state]) > :nth-child(10),
-[data-mono-cols~='11'] table > tbody > tr:not([data-table-state]) > :nth-child(11),
-[data-mono-cols~='12'] table > tbody > tr:not([data-table-state]) > :nth-child(12),
-[data-mono-cols~='13'] table > tbody > tr:not([data-table-state]) > :nth-child(13),
-[data-mono-cols~='14'] table > tbody > tr:not([data-table-state]) > :nth-child(14),
-[data-mono-cols~='15'] table > tbody > tr:not([data-table-state]) > :nth-child(15),
-[data-mono-cols~='16'] table > tbody > tr:not([data-table-state]) > :nth-child(16) {
-  font-family: var(--font-mono);
-  font-size: var(--text-data);
-  line-height: var(--text-data--line-height);
+[data-tabular-cols~='1'] table > tbody > tr:not([data-table-state]) > :nth-child(1),
+[data-tabular-cols~='2'] table > tbody > tr:not([data-table-state]) > :nth-child(2),
+[data-tabular-cols~='3'] table > tbody > tr:not([data-table-state]) > :nth-child(3),
+[data-tabular-cols~='4'] table > tbody > tr:not([data-table-state]) > :nth-child(4),
+[data-tabular-cols~='5'] table > tbody > tr:not([data-table-state]) > :nth-child(5),
+[data-tabular-cols~='6'] table > tbody > tr:not([data-table-state]) > :nth-child(6),
+[data-tabular-cols~='7'] table > tbody > tr:not([data-table-state]) > :nth-child(7),
+[data-tabular-cols~='8'] table > tbody > tr:not([data-table-state]) > :nth-child(8),
+[data-tabular-cols~='9'] table > tbody > tr:not([data-table-state]) > :nth-child(9),
+[data-tabular-cols~='10'] table > tbody > tr:not([data-table-state]) > :nth-child(10),
+[data-tabular-cols~='11'] table > tbody > tr:not([data-table-state]) > :nth-child(11),
+[data-tabular-cols~='12'] table > tbody > tr:not([data-table-state]) > :nth-child(12),
+[data-tabular-cols~='13'] table > tbody > tr:not([data-table-state]) > :nth-child(13),
+[data-tabular-cols~='14'] table > tbody > tr:not([data-table-state]) > :nth-child(14),
+[data-tabular-cols~='15'] table > tbody > tr:not([data-table-state]) > :nth-child(15),
+[data-tabular-cols~='16'] table > tbody > tr:not([data-table-state]) > :nth-child(16) {
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
-/* The row hairline is drawn inside the row (an inset line), so a cell's
-   padding stays 8 and 8; the frame draws the line under the last row. A
-   ledger row and a ruled blank's row take the same hairline. */
+/* A column in which every cell is an Absence is left out (`useAbsentColumns`):
+   its col, head and cells go together. */
+[data-hidden-cols~='1'] table > colgroup > col:nth-child(1),
+[data-hidden-cols~='2'] table > colgroup > col:nth-child(2),
+[data-hidden-cols~='3'] table > colgroup > col:nth-child(3),
+[data-hidden-cols~='4'] table > colgroup > col:nth-child(4),
+[data-hidden-cols~='5'] table > colgroup > col:nth-child(5),
+[data-hidden-cols~='6'] table > colgroup > col:nth-child(6),
+[data-hidden-cols~='7'] table > colgroup > col:nth-child(7),
+[data-hidden-cols~='8'] table > colgroup > col:nth-child(8),
+[data-hidden-cols~='9'] table > colgroup > col:nth-child(9),
+[data-hidden-cols~='10'] table > colgroup > col:nth-child(10),
+[data-hidden-cols~='11'] table > colgroup > col:nth-child(11),
+[data-hidden-cols~='12'] table > colgroup > col:nth-child(12),
+[data-hidden-cols~='1'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(1),
+[data-hidden-cols~='2'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(2),
+[data-hidden-cols~='3'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(3),
+[data-hidden-cols~='4'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(4),
+[data-hidden-cols~='5'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(5),
+[data-hidden-cols~='6'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(6),
+[data-hidden-cols~='7'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(7),
+[data-hidden-cols~='8'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(8),
+[data-hidden-cols~='9'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(9),
+[data-hidden-cols~='10'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(10),
+[data-hidden-cols~='11'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(11),
+[data-hidden-cols~='12'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(12) {
+  display: none;
+}
+
+/* Rows are divided by `rule` lines between them only: drawn inside the row
+   (an inset line), never under the last row or the head. A ledger row takes
+   the same line. */
 .table-frame tbody > tr > :is(td, th),
-[data-ledger-item],
-[data-ruled-row] {
+[data-ledger-item] {
   box-shadow: inset 0 -1px 0 var(--color-rule);
 }
 .table-frame tbody > tr:last-child > :is(td, th) {
@@ -2297,29 +2381,23 @@ label {
   box-shadow: inset var(--mark-width) 0 0 var(--color-accent);
 }
 
-/* Rows stay 36 (2.2): a 24 tag or status mark, a checkbox target or a row
-   action in a cell takes the 20px line it sits on and lends the rest from the
-   cell's 8 and 8, so the row is the same height with or without one. */
-:root:not([data-public-surface]) .table-frame tbody td :is([data-tag-kind], [data-status-tone]) {
-  margin-block: calc((var(--text-data--line-height) - var(--tag-height)) / 2);
-}
-:root:not([data-public-surface]) .table-frame tbody td > :has(> [role='checkbox']) {
-  margin-block: calc((var(--text-data--line-height) - var(--target-min)) / 2);
-}
+/* Rows stay 40 (2.2): a 24 tag or status mark and a checkbox target fit; a row
+   action in a cell takes a 24px line and lends the rest from the cell's 8
+   and 8, so the row is the same height with or without one. */
 :root:not([data-public-surface]) .table-frame tbody td :is(button, a)[data-button-size] {
-  margin-block: calc((var(--text-data--line-height) - var(--control-md)) / 2);
+  margin-block: calc((24px - var(--control-md)) / 2);
 }
 
 /* ScrollFrame: the content fades out at the edge it can scroll towards (a
    mask on the content itself, never a tinted tray behind it). A mask clips
    the focus ring outside the box, so a focused frame drops its fade. */
-[data-scroll-frame][data-scroll-end] > [data-scroll-content]:not(:focus-visible) {
+[data-scroll-frame][data-scroll-end] [data-scroll-content]:not(:focus-visible) {
   mask-image: linear-gradient(to left, transparent, black 24px);
 }
-[data-scroll-frame][data-scroll-start] > [data-scroll-content]:not(:focus-visible) {
+[data-scroll-frame][data-scroll-start] [data-scroll-content]:not(:focus-visible) {
   mask-image: linear-gradient(to right, transparent, black 24px);
 }
-[data-scroll-frame][data-scroll-start][data-scroll-end] > [data-scroll-content]:not(:focus-visible) {
+[data-scroll-frame][data-scroll-start][data-scroll-end] [data-scroll-content]:not(:focus-visible) {
   mask-image: linear-gradient(
     to right,
     transparent,
@@ -2327,4 +2405,80 @@ label {
     black calc(100% - 24px),
     transparent
   );
+}
+
+/* r3 a2 figures */
+/* FigureStrip (`figureRows`): a 60-column grid, so a row of 1 to 6 figures
+   spans evenly. On the ground each figure is a stat card; inside a card the
+   figures are cells 16 apart with no edge and no divider. */
+[data-figure-strip] {
+  grid-template-columns: repeat(60, minmax(0, 1fr));
+  gap: 16px;
+}
+[data-figure-cell] {
+  grid-column: span 60;
+}
+[data-figure-cell][data-row-size='2'] {
+  grid-column: span 30;
+}
+[data-figure-cell][data-row-size='3'] {
+  grid-column: span 20;
+}
+[data-figure-cell][data-row-size='4'] {
+  grid-column: span 15;
+}
+[data-figure-cell][data-row-size='5'] {
+  grid-column: span 12;
+}
+[data-figure-cell][data-row-size='6'] {
+  grid-column: span 10;
+}
+:root:not([data-public-surface]) :is([data-figure-cell], [data-figure-lead]) {
+  padding: 16px;
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+:root:not([data-public-surface])
+  :where(.surface-card, .surface-slip, .surface-well, [role='dialog'])
+  :is([data-figure-cell], [data-figure-lead]) {
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: transparent;
+  box-shadow: none;
+}
+/* A pressable figure tints as one piece; a chosen one takes the well and a 2px ink edge. */
+[data-figure-cell][data-pressable] {
+  transition: background-color var(--motion-fast) var(--ease-standard);
+}
+[data-figure-cell][data-pressable]:not([data-selected]):hover {
+  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
+}
+:root:not([data-public-surface]) [data-figure-cell][data-selected] {
+  background: var(--color-well);
+  box-shadow: inset 0 0 0 2px var(--color-ink);
+}
+[data-icon-tile] {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
+  background: var(--color-well);
+}
+
+/* A ruled FactList in the app: in a narrow card the value moves under its label. */
+:root:not([data-public-surface]) [data-fact-list='ruled'] {
+  container-type: inline-size;
+}
+@container (max-width: 24rem) {
+  :root:not([data-public-surface]) [data-fact-list='ruled'] > div {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 4px;
+  }
+}
+
+/* Lines only between rows: the last ledger row draws none. */
+[data-ledger-item]:last-child {
+  box-shadow: none;
 }

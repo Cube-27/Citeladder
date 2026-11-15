@@ -175,7 +175,7 @@ export function PagesTable({
                   {page.robots_excluded ? <RobotsExcludedBadge /> : null}
                 </Inline>
                 <span className="type-data-sm text-ink-2 min-w-0">
-                  <UrlText url={page.display_url} origin={origin} lines={1} />
+                  <UrlText url={page.display_url} origin={origin} />
                 </span>
                 <LinkedFromLine page={page} />
               </Stack>

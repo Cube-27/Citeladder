@@ -9,6 +9,7 @@ import {
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
 import { ScrollFrame, type ScrollRegionProps } from '@/components/ui/scroll-edges';
+import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /**
@@ -23,10 +24,10 @@ const TAB_STRIP =
   'relative inline-flex max-w-full shrink-0 items-stretch gap-4 overflow-x-auto border-b border-rule [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
- * The strip's `ScrollFrame`: an edge that hides more items fades and carries
- * a stepper chevron, so a strip cut at a narrow width says more exists
- * without its hidden scrollbar. The items take focus themselves, so the frame
- * is no tab stop.
+ * The strip's `ScrollFrame`: the edge that hides more items fades, and one
+ * stepper at the row's end, outside the tabs, moves it along, so a strip cut
+ * at a narrow width says more exists and no label sits under a button. The
+ * items take focus themselves, so the frame is no tab stop.
  */
 function StripFrame({
   fill = false,
@@ -36,7 +37,10 @@ function StripFrame({
   children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
 }>) {
   return (
-    <ScrollFrame className={cn('inline-flex max-w-full shrink-0', fill && 'flex w-full')}>
+    <ScrollFrame
+      stepper="row-end"
+      className={cn('inline-flex max-w-full shrink-0', fill && 'flex w-full')}
+    >
       {children}
     </ScrollFrame>
   );
@@ -79,14 +83,11 @@ export function tabClasses(selected: boolean, className?: string) {
 
 /**
  * The count a tab, segment or filter chip carries after its label, in
- * brackets ("All signals (107)"): a count is measured, so it is the mono
- * face in `ink-2` (the website keeps its sans count). Its text leads with a
- * space, so an accessible name reads "All signals (107)".
+ * brackets ("All signals (107)"), in tabular numerals and `ink-2`. Its text
+ * leads with a space, so an accessible name reads "All signals (107)".
  */
 export function ControlCount({ count }: Readonly<{ count: number }>) {
-  return (
-    <span className="text-ink-2 font-mono tabular-nums [[data-public-surface]_&]:font-sans">{` (${count.toLocaleString()})`}</span>
-  );
+  return <span className="text-ink-2 tabular-nums">{` (${formatCount(count)})`}</span>;
 }
 
 type TabItem<T extends string> = {

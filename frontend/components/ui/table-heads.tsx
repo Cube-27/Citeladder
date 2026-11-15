@@ -99,7 +99,14 @@ export function SortableTableHead({
         !active && 'hover:text-ink',
       )}
     >
-      <span className={cn('inline-flex w-full items-center gap-1', align.row)}>
+      {/* In an end-aligned column the glyph leads, so the label ends where the values end. */}
+      <span
+        className={cn(
+          'inline-flex w-full items-center gap-1',
+          // Reversed, the main axis starts at the end: `justify-start` packs it there.
+          numeric ? 'flex-row-reverse justify-start text-right' : align.row,
+        )}
+      >
         <span className="truncate">{label}</span>
         <Icon className={cn('size-3 shrink-0', !active && 'text-ink-2')} aria-hidden />
       </span>

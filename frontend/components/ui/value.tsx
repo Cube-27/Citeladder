@@ -25,7 +25,7 @@ export type ValueProps = Readonly<{
   absentLabel?: string;
   /** Why it is absent, when the column cannot say it. */
   reason?: string;
-  /** A narrow cell: the absence is the hatched square, its word in a tooltip. */
+  /** A narrow cell: the absence is an en dash, its word in a tooltip. */
   narrow?: boolean;
   /** The unit after the numeral ("pt", "ms"), in `ink-2`. */
   unit?: string;
@@ -42,7 +42,7 @@ export type ValueProps = Readonly<{
 
 /**
  * Value — the single way to print a measured value:
- * mono numerals at the role's size with the unit, or its Absence. Loading is
+ * tabular numerals at the role's size with the unit, or its Absence. Loading is
  * its own state, the live rung, never "not measured". Every state takes the
  * same line box, so nothing moves when the value arrives or reloads. Zero is
  * a value in full ink.
@@ -76,7 +76,7 @@ export function Value({
     );
   return (
     <span className={slot}>
-      <span className={textRole(text, cn('whitespace-nowrap', asOf && 'text-ink-2'))}>
+      <span className={textRole(text, cn('whitespace-nowrap tabular-nums', asOf && 'text-ink-2'))}>
         {value}
         {unit ? <span className="text-ink-2">{` ${unit}`}</span> : null}
       </span>

@@ -21,9 +21,10 @@ describe('Notice kind="read"', () => {
       />,
     );
 
-    // The subject is the headline; the server's words and the reference follow in data-sm.
-    expect(screen.getByText("Couldn't load the data")).toBeVisible();
-    expect(screen.getByText('Temporarily unavailable · Reference request-123')).toBeVisible();
+    // The subject leads, then what to do; the status text and reference come last.
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      "Error: Couldn't load the dataRetry in a moment.Temporarily unavailable · Reference request-123",
+    );
     await user.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledOnce();
   });
