@@ -475,7 +475,7 @@ describe('Competitors', () => {
 });
 
 describe('Business map', () => {
-  it('shows the map read-only as chips, marking suggestions, linked to the Prompt Builder', async () => {
+  it('shows the map read-only as chips, a group with suggestions as a draft, linked to the Prompt Builder', async () => {
     const offering = 'Golf practice net';
     mswServer.use(
       http.get(`/api/v1/projects/${project.id}/business-map`, () =>
@@ -523,12 +523,18 @@ describe('Business map', () => {
       within(roles)
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['Club coachSuggested', 'ParentSuggested']);
+    ).toEqual(['Club coach', 'Parent']);
     expect(details).toHaveTextContent('Business modelProducts sold direct');
-    expect(details).not.toHaveTextContent('Products sold directSuggested');
-    expect(screen.getByRole('region', { name: offering })).toHaveTextContent(
-      'Situations and constraintsSmall gardenSuggested',
+    // Discovery's roles make the group a draft that names them once.
+    const map = screen.getByRole('region', { name: 'Business map' });
+    expect(map).toHaveAttribute('data-draft', 'true');
+    expect(map).toHaveTextContent('Suggested by discovery and not yet confirmed: Buyer roles.');
+    const offeringGroup = screen.getByRole('region', { name: offering });
+    expect(offeringGroup).toHaveAttribute('data-draft', 'true');
+    expect(offeringGroup).toHaveTextContent(
+      'Suggested by discovery and not yet confirmed: Situations and constraints.',
     );
+    expect(offeringGroup).toHaveTextContent('Situations and constraintsSmall garden');
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Edit in Prompt Builder' })).toHaveAttribute(
       'href',
@@ -555,6 +561,8 @@ describe('Business map', () => {
     expect(await screen.findByLabelText('Business details')).toHaveTextContent(
       'Business modelNot set',
     );
+    // Nothing suggested: the group is a plain card, not a draft.
+    expect(screen.getByRole('region', { name: 'Business map' })).not.toHaveAttribute('data-draft');
   });
 });
 

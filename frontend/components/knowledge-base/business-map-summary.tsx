@@ -1,10 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
+import { Pencil } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { z } from 'zod';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { ChipList } from '@/components/ui/chip-input';
+import { ChipList, type ChipItem } from '@/components/ui/chip-input';
+import { DraftSheet } from '@/components/ui/draft-sheet';
 import { FactList, type Fact } from '@/components/ui/facts';
+import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
@@ -19,7 +23,6 @@ import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
 import { StateBlock, screenState } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { wellClasses } from '@/components/ui/slip';
 
 const fieldSourcesSchema = z.record(z.string(), z.unknown());
 
@@ -33,57 +36,115 @@ function inferredFields(profile: BrandProfile) {
   return (field: string) => sources[field] !== 'reviewed';
 }
 
-/** A list's values as chips; an inferred list reads as suggestions until a person saves it. */
-const chips = (values: readonly string[], suggested: boolean) => (
-  <ChipList items={values.map((value) => ({ value, suggested }))} />
-);
-/** A map's entries as chips; a suggestion says so until a person confirms it. */
-const entryChips = (entries: readonly MapEntryDraft[]) => (
-  <ChipList
-    items={entries.map((entry) => ({
-      value: entry.value,
-      suggested: entry.review_state === 'suggested',
-    }))}
-  />
-);
+/** One row of a map group: its chips, and what it shows when it has none. */
+type MapField = Readonly<{ label: string; items: readonly ChipItem[]; absent?: ReactNode }>;
+
+/** A list's values; an inferred list is a suggestion until a person saves it. */
+const listField = (label: string, values: readonly string[], suggested: boolean): MapField => ({
+  label,
+  items: values.map((value) => ({ value, suggested })),
+});
+
+/** A map's entries; each is a suggestion until a person confirms it. */
+const entryField = (label: string, entries: readonly MapEntryDraft[]): MapField => ({
+  label,
+  items: entries.map((entry) => ({
+    value: entry.value,
+    suggested: entry.review_state === 'suggested',
+  })),
+});
+
 /** The saved business model's label; a saved value this app does not recognize stays distinct from none. */
-function businessModelValue(profile: BrandProfile, suggested: boolean) {
+function businessModelField(profile: BrandProfile, suggested: boolean): MapField {
   const saved = profile.business_context.business_model;
   const choice = BUSINESS_MODEL_CHOICES.find((option) => option.value === saved);
-  if (choice) return <ChipList items={[{ value: choice.label, suggested }]} />;
-  return <Absence state={saved == null || saved === '' ? 'not_set' : 'unknown'} />;
+  return {
+    label: 'Business model',
+    items: choice ? [{ value: choice.label, suggested }] : [],
+    absent: <Absence state={saved == null || saved === '' ? 'not_set' : 'unknown'} />,
+  };
+}
+
+const allSuggested = (field: MapField) =>
+  field.items.length > 0 && field.items.every((item) => item.suggested);
+
+/**
+ * A field's chips. A field that is wholly suggested is named once in its
+ * group's head, so its chips drop the per-chip word; a field mixing confirmed
+ * and suggested entries keeps it, so the two stay told apart.
+ */
+function fieldValue(field: MapField) {
+  if (field.items.length === 0 && field.absent) return field.absent;
+  const whole = allSuggested(field);
+  return (
+    <ChipList
+      items={field.items.map((item) => ({
+        value: item.value,
+        suggested: !whole && item.suggested,
+      }))}
+    />
+  );
+}
+
+/** What a draft group's head says once: which fields discovery suggested. */
+function suggestionNote(fields: readonly MapField[]) {
+  const whole = fields.filter(allSuggested).map((field) => field.label);
+  const mixed = fields.some(
+    (field) => !allSuggested(field) && field.items.some((item) => item.suggested),
+  );
+  const named = whole.length
+    ? `Suggested by discovery and not yet confirmed: ${whole.join(', ')}.`
+    : 'Suggested by discovery and not yet confirmed.';
+  return mixed ? `${named} Entries marked Suggested are too.` : named;
 }
 
 /**
- * The business facts that steer prompt generation, read-only on one card: the
- * Prompt Builder's first step owns editing them, and the card links there.
- * Each offering's map is a nested panel inside the card.
+ * One group of the map as a card: plain once every value is confirmed, a
+ * draft while any value is a suggestion (law 1), with the word said once.
  */
-export function BusinessMapSummary({
-  projectId,
-  workspaceId,
-  profile,
-}: Readonly<{ projectId: string; workspaceId: string; profile: BrandProfile }>) {
+function MapGroup({
+  title,
+  description,
+  label,
+  fields,
+  action,
+}: Readonly<{
+  title: string;
+  description?: string;
+  /** Names the fact list when the title does not. */
+  label?: string;
+  fields: readonly MapField[];
+  action?: ReactNode;
+}>) {
+  const facts: Fact[] = fields.map((field) => ({ label: field.label, value: fieldValue(field) }));
+  const list = <FactList layout="ruled" label={label} facts={facts} />;
+  if (fields.some((field) => field.items.some((item) => item.suggested)))
+    return (
+      <DraftSheet title={title} state="draft" actions={action}>
+        <p className={textRole('caption', 'max-w-[72ch]')}>
+          {description ? `${description} ` : ''}
+          {suggestionNote(fields)}
+        </p>
+        {list}
+      </DraftSheet>
+    );
   return (
-    <Section aria-labelledby="business-map">
-      <SectionHeader
-        actions={
-          <Button asChild variant="secondary">
-            <ProjectLink href={PROMPTS_GENERATE_HREF}>Edit in Prompt Builder</ProjectLink>
-          </Button>
-        }
-      >
-        <SectionTitle id="business-map">Business map</SectionTitle>
-        <SectionDescription>
-          These details steer prompt generation. Edit them in the Prompt Builder.
-        </SectionDescription>
+    <Section aria-label={title}>
+      <SectionHeader actions={action}>
+        <SectionTitle>{title}</SectionTitle>
+        {description ? <SectionDescription>{description}</SectionDescription> : null}
       </SectionHeader>
-      <BusinessMapBody projectId={projectId} workspaceId={workspaceId} profile={profile} />
+      {list}
     </Section>
   );
 }
 
-function BusinessMapBody({
+/**
+ * The business facts that steer prompt generation, read-only, one card per
+ * group: the business details, then each offering's map. The Prompt
+ * Builder's first step owns editing them; the first card links there.
+ */
+export function BusinessMapSummary({
   projectId,
   workspaceId,
   profile,
@@ -91,47 +152,53 @@ function BusinessMapBody({
   const read = screenState(useQuery(projectQueries.businessMap({ workspaceId, projectId })), {
     subject: 'the business map',
   });
-  if (read.kind === 'state') return <StateBlock {...read.state} />;
+  const edit = (
+    <Button asChild variant="secondary">
+      <ProjectLink href={PROMPTS_GENERATE_HREF}>
+        <Icon icon={Pencil} />
+        Edit in Prompt Builder
+      </ProjectLink>
+    </Button>
+  );
+  if (read.kind === 'state')
+    return (
+      <Section aria-labelledby="business-map">
+        <SectionHeader actions={edit}>
+          <SectionTitle id="business-map">Business map</SectionTitle>
+        </SectionHeader>
+        <StateBlock {...read.state} />
+      </Section>
+    );
   const draft = businessDraft(profile, read.data);
   const inferred = inferredFields(profile);
-  const facts: Fact[] = [
-    { label: 'Buyer roles', value: chips(draft.buyerRoles, inferred('buyer_roles')) },
+  const details: MapField[] = [
+    listField('Buyer roles', draft.buyerRoles, inferred('buyer_roles')),
     ...(showsServiceAreas(profile.business_context)
-      ? [
-          {
-            label: 'Service areas',
-            value: chips(draft.serviceAreas, inferred('service_areas')),
-          },
-        ]
+      ? [listField('Service areas', draft.serviceAreas, inferred('service_areas'))]
       : []),
-    { label: 'Category terms', value: chips(draft.categoryTerms, inferred('category_terms')) },
-    { label: 'Jobs to be done', value: chips(draft.jobs, inferred('jobs_to_be_done')) },
-    {
-      label: 'Business model',
-      value: businessModelValue(profile, inferred('business_model')),
-    },
+    listField('Category terms', draft.categoryTerms, inferred('category_terms')),
+    listField('Jobs to be done', draft.jobs, inferred('jobs_to_be_done')),
+    businessModelField(profile, inferred('business_model')),
   ];
   return (
     <Stack gap="workspace">
-      <FactList layout="ruled" label="Business details" facts={facts} />
+      <MapGroup
+        title="Business map"
+        description="These details steer prompt generation."
+        label="Business details"
+        fields={details}
+        action={edit}
+      />
       {draft.maps.map((map) => (
-        <Stack
-          as="section"
+        <MapGroup
           key={map.offering}
-          aria-label={map.offering}
-          gap="compact"
-          className={wellClasses()}
-        >
-          <h3 className={textRole('subheading')}>{map.offering}</h3>
-          <FactList
-            layout="ruled"
-            facts={[
-              { label: 'Who buys it', value: entryChips(map.audiences) },
-              { label: 'Situations and constraints', value: entryChips(map.situations) },
-              { label: 'Attributes', value: entryChips(map.attributes) },
-            ]}
-          />
-        </Stack>
+          title={map.offering}
+          fields={[
+            entryField('Who buys it', map.audiences),
+            entryField('Situations and constraints', map.situations),
+            entryField('Attributes', map.attributes),
+          ]}
+        />
       ))}
     </Stack>
   );

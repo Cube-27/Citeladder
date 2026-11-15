@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { Absence } from '@/components/ui/absence';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
 import { Textarea } from '@/components/ui/textarea';
@@ -105,7 +106,11 @@ export function AgentInstructionsCard({
             onChange={(event) => instructions.setDraft(event.target.value)}
             rows={8}
             readOnly={!mayEdit}
-            placeholder="For example: Write for Australian parents. Plain, warm tone. Never promise delivery dates."
+            placeholder={
+              mayEdit
+                ? 'For example: Write for Australian parents. Plain, warm tone. Never promise delivery dates.'
+                : undefined
+            }
           />
           {saveError ? (
             <Notice
@@ -114,15 +119,13 @@ export function AgentInstructionsCard({
               onRetry={instructions.retry}
             />
           ) : null}
-          <span className={textRole('caption')}>
-            {query.data.created_at ? (
-              <>
-                Saved <DisplayTime value={query.data.created_at} />
-              </>
-            ) : (
-              'Not set'
-            )}
-          </span>
+          {/* Never saved: an editor sees the empty field's example; a reader, None. */}
+          {query.data.created_at ? (
+            <span className={textRole('caption')}>
+              Saved <DisplayTime value={query.data.created_at} />
+            </span>
+          ) : null}
+          {!query.data.created_at && !mayEdit ? <Absence state="none" /> : null}
         </Stack>
       ) : null}
     </Section>

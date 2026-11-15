@@ -1,4 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
+import { Archive, Check, Pencil, Plus, Save, X } from 'lucide-react';
 import { useState } from 'react';
 
 import {
@@ -12,6 +13,7 @@ import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
@@ -19,6 +21,7 @@ import { Select } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
+import { formatCount } from '@/lib/format';
 import { projectMutations } from '@/lib/api/projects';
 import { TOPIC_LABELS } from '@/lib/visibility/accuracy';
 import { Notice } from '@/components/ui/notice';
@@ -99,9 +102,9 @@ export function BrandFactsPanel({
         </LedgerList>
       )}
       {retired.length ? (
-        <p className={textRole('caption', 'text-ink-2')}>
-          {retired.length} retired {retired.length === 1 ? 'fact is' : 'facts are'} kept for earlier
-          runs and no longer checked.
+        <p className={textRole('caption')}>
+          Retired facts: {formatCount(retired.length)}. They are kept for earlier runs and no longer
+          checked.
         </p>
       ) : null}
     </Stack>
@@ -124,6 +127,7 @@ function AddFact({
     }
     setDraft((current) => (current === sent ? EMPTY_DRAFT : current));
   };
+  const empty = !draft.statement.trim();
   return (
     <Stack
       as="form"
@@ -131,7 +135,7 @@ function AddFact({
       className={wellClasses()}
       onSubmit={(event) => {
         event.preventDefault();
-        if (pending || !draft.statement.trim()) return;
+        if (pending || empty) return;
         void submit();
       }}
     >
@@ -146,34 +150,40 @@ function AddFact({
           />
         )}
       </Field>
-      <Field label="Fact" hint="One statement, as you would want an answer to say it.">
+      <Field
+        label="Fact"
+        hint="One statement, as you want an answer to say it. For example: Orders over $50 ship free."
+      >
         {(props) => (
           <Textarea
             {...props}
             rows={2}
             maxLength={300}
             value={draft.statement}
-            placeholder="For example: The Pro plan costs $49 per month."
             onChange={(event) => setDraft({ ...draft, statement: event.target.value })}
           />
         )}
       </Field>
-      <Field label="Source page (optional)">
+      <Field
+        label="Source page (optional)"
+        hint="The full address of the page that states it, starting with https://"
+      >
         {(props) => (
           <Input
             {...props}
             type="url"
             value={draft.source_url}
-            placeholder="https://"
             onChange={(event) => setDraft({ ...draft, source_url: event.target.value })}
           />
         )}
       </Field>
-      <div>
-        <Button type="submit" variant="primary" disabled={pending || !draft.statement.trim()}>
+      <Inline>
+        <Button type="submit" variant="primary" disabled={pending || empty}>
+          <Icon icon={Plus} />
           Add draft fact
         </Button>
-      </div>
+        {empty ? <span className={textRole('caption')}>Write the fact to add it.</span> : null}
+      </Inline>
     </Stack>
   );
 }
@@ -220,13 +230,7 @@ function FactRow({
           )}
         </>
       }
-      caption={
-        fact.source_url ? (
-          <span className="block truncate" title={fact.source_url}>
-            {fact.source_url}
-          </span>
-        ) : undefined
-      }
+      caption={fact.source_url ?? undefined}
       links={
         mayEdit ? (
           <FactActions
@@ -265,10 +269,12 @@ function FactActions({
             disabled={pending}
             onClick={() => void onChange({ status: 'confirmed' }).catch(() => undefined)}
           >
+            <Icon icon={Check} />
             Confirm
           </Button>
         ) : null}
         <Button variant="secondary" onClick={() => onEdit(fact.statement)}>
+          <Icon icon={Pencil} />
           Edit
         </Button>
         <Button
@@ -276,6 +282,7 @@ function FactActions({
           disabled={pending}
           onClick={() => void onChange({ status: 'retired' }).catch(() => undefined)}
         >
+          <Icon icon={Archive} />
           Retire
         </Button>
       </Inline>
@@ -283,6 +290,7 @@ function FactActions({
   return (
     <Inline as="span" className="flex-wrap">
       <Button variant="quiet" onClick={() => onEdit(null)}>
+        <Icon icon={X} />
         Cancel
       </Button>
       <Button
@@ -296,6 +304,7 @@ function FactActions({
           );
         }}
       >
+        <Icon icon={Save} />
         Save
       </Button>
     </Inline>

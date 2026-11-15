@@ -1,3 +1,4 @@
+import { Pencil } from 'lucide-react';
 import { useState } from 'react';
 
 import { ProjectEditPanel } from '@/components/projects/project-edit-panel';
@@ -6,6 +7,7 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { ChipInput, ChipList } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { RadioGroup } from '@/components/ui/radio-group';
@@ -197,6 +199,7 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
         actions={
           mayEdit ? (
             <Button variant="secondary" onClick={() => setEditing(true)}>
+              <Icon icon={Pencil} />
               Edit competitors
             </Button>
           ) : null
