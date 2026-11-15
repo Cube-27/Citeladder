@@ -24,11 +24,12 @@ vi.mock('@/components/runs/launch-audit-button', () => ({
  * are on the way.
  */
 describe('VisibilityEmptyState', () => {
-  it('invites a first audit when nothing is running', () => {
+  it('points to the masthead Launch run when nothing is running, without a second button', () => {
     render(<VisibilityEmptyState />);
 
     expect(screen.getByText('No completed runs yet')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Launch your first audit' })).toBeVisible();
+    expect(screen.getByText(/Launch run, above,/)).toBeVisible();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'View runs' })).not.toBeInTheDocument();
   });
 

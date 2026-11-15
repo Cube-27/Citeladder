@@ -14,6 +14,7 @@ import type { Audit } from '@citeladder/contracts';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { AUDIT_STATES, pollAudits } from '@/lib/runs/status';
 import { readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -74,7 +75,11 @@ export function RunsScreen() {
   // The page keeps its action and status filters while the first load lands.
   // Launching is offered only to a role that may run audits.
   const canRun = useWorkspaceCapability('run');
-  const actions = <LaunchAuditButton showIcon={false} />;
+  const actions = (
+    <MastheadPrimary>
+      <LaunchAuditButton />
+    </MastheadPrimary>
+  );
   // The status choice is the row's view: the one shared segmented control,
   // each choice with the number of runs it keeps (2026-11-03 app review).
   const filters = (
@@ -140,7 +145,8 @@ function RunsContent({
       <StateBlock
         kind="error"
         {...readErrorProps(read)}
-        fallback="Could not load runs. Check your connection and try again."
+        title="Couldn't load the runs"
+        fallback="Check your connection and try again."
       />
     );
   }
@@ -152,14 +158,8 @@ function RunsContent({
         heading="No runs yet"
         description={
           canRun
-            ? 'Launch your first audit to measure how AI engines answer questions about your brand.'
-            : 'No audit has measured how AI engines answer questions about this brand yet.'
-        }
-        action={
-          // The masthead holds the page's one primary; this is its echo.
-          <LaunchAuditButton variant="secondary" showIcon={false}>
-            Launch your first audit
-          </LaunchAuditButton>
+            ? 'Launch run, above, measures how AI engines answer questions about your brand.'
+            : 'No run has measured how AI engines answer questions about this brand yet.'
         }
       />
     );
