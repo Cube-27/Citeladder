@@ -77,7 +77,7 @@ function cellWidth(columns: number, cell: number): string {
   return cell === 0 ? 'w-2/5' : 'flex-1';
 }
 
-/** A table: a 36px head row on `well`, then 40px rows of cell blocks. */
+/** A table: a head row on `well` at the table head's height, then 40px rows of cell blocks. */
 export function TableBlocks({
   columns = 4,
   rows = 5,
@@ -87,7 +87,7 @@ export function TableBlocks({
   const width = (cell: number) => cellWidth(columns, cell);
   return (
     <span className="grid">
-      {head ? <span className="bg-well block h-9 rounded-sm" /> : null}
+      {head ? <span className="bg-well block h-[var(--table-header-height)] rounded-sm" /> : null}
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4 px-4">
           {cells.map((cell) => (

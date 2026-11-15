@@ -92,12 +92,10 @@ const SLIP_BORDER = 1;
 const SECTION_RULE = 1;
 const SECTION_INSET_TOP = 16;
 /**
- * Loading, read-error and first-use empty share one footprint: the block
- * EmptyState's. The state draws no box of its own (its Skeleton, Callout or
- * EmptyState does), so it has no padding.
+ * A state's height is its content. On the page an empty or loading state is
+ * a card padded 24; inside a container it draws no frame of its own.
  */
-const QUERY_STATE_HEIGHT = 200;
-const QUERY_STATE_PADDING = 0;
+const QUERY_STATE_PADDING = 24;
 /**
  * A row of a title over its caption (`TableCellLines`): 8 + a body line (20)
  * + 4 + a caption line (16) + 8, the last row included.
@@ -335,9 +333,8 @@ function measure({ route }: { route: string }) {
     add('slip.inset-top', box, Math.min(...ink.map((rect) => rect.top)) - top);
     add('slip.inset-left', box, Math.min(...ink.map((rect) => rect.left)) - left);
   }
-  for (const element of all('[data-state-block]:not([data-state-block-inline])')) {
-    add('query-state.height', element, element.getBoundingClientRect().height);
-    if (!nestedState(element))
+  for (const element of all('[data-state-frame]')) {
+    if (getComputedStyle(element).borderTopWidth !== '0px')
       add('query-state.padding', element, px(getComputedStyle(element).paddingTop));
   }
   // A DataTable's title-and-toolbar row, whatever it holds; the caption under it is not part of it.
@@ -439,7 +436,9 @@ async function census(
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         }),
     );
-    await expect(page.locator('[data-state-block="loading"]')).toHaveCount(0);
+    await expect(
+      page.locator('[data-state-block="loading"], [data-skeleton="report"]'),
+    ).toHaveCount(0);
     records.push(...(await page.evaluate(measure, { route: `${label} @${width}` })));
   }
   return records;
@@ -642,7 +641,6 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'slip.border', SLIP_BORDER);
   expectOneValue(records, 'slip.inset-top', SLIP_INSET);
   expectOneValue(records, 'slip.inset-left', SLIP_INSET);
-  expectOneValue(records, 'query-state.height', QUERY_STATE_HEIGHT);
   expectOneValue(records, 'query-state.padding', QUERY_STATE_PADDING);
   expectOneValue(records, 'table-row.height.two-lines', TABLE_ROW_HEIGHT_TWO_LINES);
   expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
