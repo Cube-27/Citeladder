@@ -45,10 +45,12 @@ export function Section({
 }
 
 /**
- * SectionHeader — the label, title and caption on the left and `actions`
- * (a secondary or quiet Button, a small control group) at the right of the
- * same row; when the row is narrow the actions wrap below the title. The body
- * starts 16 below it, with no rule between.
+ * SectionHeader — the card's head, always on top of its body: the title and,
+ * 4 below, the caption on the left; `actions` (a quiet Button, a small control
+ * group, or a count as caption text) top-aligned at the right end of the title
+ * row, 8 apart. When the row is too narrow the actions wrap under the caption,
+ * left-aligned. A status belongs on the title's line, 8 after it. The body
+ * starts 16 below, with no rule between.
  */
 export function SectionHeader({
   children,
@@ -79,19 +81,6 @@ export function SectionHeader({
   );
 }
 
-/** SectionEyebrow — the `caption-strong` label above a SectionTitle; never a heading. */
-export function SectionEyebrow({
-  children,
-  className,
-  ...props
-}: Readonly<ComponentPropsWithoutRef<'span'>>) {
-  return (
-    <span {...props} className={textRole('captionStrong', className)}>
-      {children}
-    </span>
-  );
-}
-
 /** SectionTitle — the `heading` role; an h2 under the page's h1, an h3 for a section nested in another. */
 export function SectionTitle({
   children,
@@ -107,14 +96,19 @@ export function SectionTitle({
   );
 }
 
-/** SectionDescription — one or two sentences under the title, in `caption`, at most 72 characters wide. */
+/** SectionTitleLine — the title with the card's status right after it, 8 apart. */
+export function SectionTitleLine({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="flex min-w-0 flex-wrap items-center gap-2">{children}</div>;
+}
+
+/** SectionDescription — one or two sentences under the title, `body` in `ink-2`, at most 72 characters wide. */
 export function SectionDescription({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'p'>>) {
   return (
-    <p {...props} className={textRole('caption', cn('max-w-[72ch]', className))}>
+    <p {...props} className={textRole('body', cn('text-ink-2 max-w-[72ch]', className))}>
       {children}
     </p>
   );

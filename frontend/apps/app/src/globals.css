@@ -1683,40 +1683,14 @@ a.focus-ring:active .type-caption {
    (Stack, PageSections, SectionStack, AppGrid) names its gap in
    `data-rhythm-gap`, so the section adds only the difference. */
 @layer components {
-  /* Settings (3.4): one card per group across the column. From a 900px card
-     the head and caption take the left third and the rows the rest, controls
-     capped at 640; below that the head stacks over the rows. Tables, and
-     meters or plan grids marked `data-settings-wide`, take the card's full
-     width at every size. */
-  @container main (min-width: 900px) {
-    [data-settings-sections] .surface-section:not(.surface-section .surface-section) {
-      display: grid;
-      grid-template-columns: repeat(12, minmax(0, 1fr));
-      column-gap: var(--workspace-gap);
-      align-items: start;
-    }
-    [data-settings-sections] .surface-section:not(.surface-section .surface-section) > * {
-      grid-column: 5 / span 8;
-      max-width: var(--container-form);
-    }
-    [data-settings-sections] .surface-section:not(.surface-section .surface-section) > header:first-child {
-      grid-column: 1 / span 4;
-      grid-row: 1 / span 16;
-      margin-block-end: 0;
-    }
-    [data-settings-sections]
-      .surface-section:not(.surface-section .surface-section)
-      > header:first-child:has(+ :is([data-settings-wide], :has([data-data-table-frame]))) {
-      grid-row: auto;
-      grid-column: 1 / -1;
-      margin-block-end: var(--card-padding);
-    }
-    [data-settings-sections]
-      .surface-section:not(.surface-section .surface-section)
-      > :is([data-settings-wide], :has([data-data-table-frame])) {
-      grid-column: 1 / -1;
-      max-width: none;
-    }
+  /* Settings (3.4): one card per group across the column. At every width the
+     card's head sits on top and the body below it at full card width; each
+     body block (a field column) stops at 640. Tables, and meters or plan
+     grids marked `data-settings-wide`, take the card's full width. */
+  [data-settings-sections]
+    .surface-section:not(.surface-section .surface-section)
+    > :not(header:first-child, [data-settings-wide], :has([data-data-table-frame])) {
+    max-width: var(--container-form);
   }
   .surface-section {
     --section-above: var(--workspace-gap);

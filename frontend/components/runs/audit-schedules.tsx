@@ -72,8 +72,6 @@ function WorkspaceSchedules({
   const resumeMutation = useMutation(runsMutations.resumeSchedule(scope));
   const canWrite = useWorkspaceCapability('write');
 
-  // A settings-style card: its title on the left third, the schedules and the
-  // form's rows on the right, stacked when the card is narrow.
   return (
     <div data-settings-sections="">
       <Section>
