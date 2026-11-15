@@ -1,14 +1,12 @@
-import { ChevronDown } from 'lucide-react';
-import { useId, useState } from 'react';
+import { useState } from 'react';
 
 import { Absence } from '@/components/ui/absence';
+import { AccordionItem, AccordionList } from '@/components/ui/accordion-list';
 import { ChipInput, type ChipItem } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
-import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
-import { textRole } from '@/components/ui/typography';
 import type { PromptFormLimits } from '@citeladder/contracts';
 import {
   showsServiceAreas,
@@ -17,8 +15,7 @@ import {
   type MapEntryDraft,
 } from '@/lib/prompts/builder-business';
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
-import { pluralCount } from '@/lib/format';
-import { cn } from '@/lib/utils';
+import { formatCount, pluralCount } from '@/lib/format';
 
 import type { BuilderBusiness } from './use-builder-business';
 import { StateBlock } from '@/components/ui/state-block';
@@ -52,7 +49,7 @@ function OfferingFacts({
   onChange: (map: OfferingMap) => void;
 }>) {
   return (
-    <div className="grid gap-4 *:max-w-160">
+    <>
       <ChipInput
         label="Who buys it"
         items={entryChips(map.audiences)}
@@ -77,17 +74,21 @@ function OfferingFacts({
         disabled={disabled}
         max={listMax}
       />
-    </div>
+    </>
   );
 }
 
-/** A collapsed row's summary of its offering's facts. */
+/** A collapsed row's summary of its offering's facts; unreviewed entries are counted apart. */
 function offeringSummary(map: OfferingMap): string | null {
   if (map.audiences.length + map.situations.length + map.attributes.length === 0) return null;
+  const suggested = [...map.audiences, ...map.situations, ...map.attributes].filter(
+    (entry) => entry.review_state === 'suggested',
+  ).length;
   return [
     pluralCount(map.audiences.length, 'buyer'),
     pluralCount(map.situations.length, 'situation'),
     pluralCount(map.attributes.length, 'attribute'),
+    ...(suggested > 0 ? [`${formatCount(suggested)} suggested`] : []),
   ].join(' · ');
 }
 
@@ -112,58 +113,30 @@ function OfferingList({
   onChange: (index: number, map: OfferingMap) => void;
 }>) {
   const [open, setOpen] = useState(initialOffering);
-  const baseId = useId();
   if (maps.length === 0) return null;
   return (
-    <section aria-labelledby={`${baseId}-title`} className="grid gap-2">
-      <h3 id={`${baseId}-title`} className={textRole('label')}>
-        Offering details
-      </h3>
-      <ul className="divide-rule grid divide-y">
-        {maps.map((map, index) => {
-          const expanded = open === map.offering;
-          const panelId = `${baseId}-${index}`;
-          const summary = offeringSummary(map);
-          return (
-            <li
-              key={map.offering}
-              ref={map.offering === initialOffering ? scrollIntoView : undefined}
-              className="grid scroll-mt-4"
-            >
-              <button
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={panelId}
-                onClick={() => setOpen(expanded ? null : map.offering)}
-                className="hover:overlay-hover rounded-control flex min-h-10 w-full min-w-0 items-center gap-3 px-2 text-left"
-              >
-                <span className={textRole('label', 'text-ink shrink-0')}>{map.offering}</span>
-                <span className={textRole('caption', 'text-ink-2 min-w-0 flex-1 truncate')}>
-                  {summary ?? <Absence state="not_set" />}
-                </span>
-                <Icon
-                  icon={ChevronDown}
-                  className={cn(
-                    'text-ink-2 shrink-0 transition-transform',
-                    expanded && 'rotate-180',
-                  )}
-                />
-              </button>
-              <div id={panelId} hidden={!expanded} className="bg-well rounded-control mb-2 p-4">
-                {expanded ? (
-                  <OfferingFacts
-                    map={map}
-                    disabled={disabled}
-                    listMax={listMax}
-                    onChange={(next) => onChange(index, next)}
-                  />
-                ) : null}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
+    <AccordionList label="Offering details">
+      {maps.map((map, index) => {
+        const expanded = open === map.offering;
+        return (
+          <AccordionItem
+            key={map.offering}
+            itemRef={map.offering === initialOffering ? scrollIntoView : undefined}
+            title={map.offering}
+            caption={offeringSummary(map) ?? <Absence state="not_set" />}
+            open={expanded}
+            onToggle={() => setOpen(expanded ? null : map.offering)}
+          >
+            <OfferingFacts
+              map={map}
+              disabled={disabled}
+              listMax={listMax}
+              onChange={(next) => onChange(index, next)}
+            />
+          </AccordionItem>
+        );
+      })}
+    </AccordionList>
   );
 }
 

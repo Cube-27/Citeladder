@@ -5,6 +5,7 @@ import { Absence } from '@/components/ui/absence';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DraftSheet } from '@/components/ui/draft-sheet';
+import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -61,14 +62,14 @@ function OfferingRow({ map }: Readonly<{ map: OfferingMap }>) {
   return (
     <TableRow onClick={open} className="cursor-pointer">
       <TableCell>
-        <span className="grid min-w-0 gap-1">
+        <Stack as="span" gap="tight" className="min-w-0">
           <ProjectLink href={href} className={textRole('label', 'text-ink block truncate')}>
             {map.offering}
           </ProjectLink>
           <ClampText lines={1} className={textRole('caption', 'desktop:hidden')}>
             {foldedFacts(map)}
           </ClampText>
-        </span>
+        </Stack>
       </TableCell>
       {FACTS.map((fact) => (
         <TableCell key={fact.key} desktopOnly>
