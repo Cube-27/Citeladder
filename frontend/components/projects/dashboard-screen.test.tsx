@@ -268,7 +268,9 @@ describe('DashboardScreen', () => {
     expect(
       within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('32.5%'),
     ).toBeVisible();
-    expect(within(screen.getByRole('region', { name: 'Movement' })).getByText('68.3%')).toBeVisible();
+    expect(
+      within(screen.getByRole('region', { name: 'Movement' })).getByText('68.3%'),
+    ).toBeVisible();
     // With no open actions the widget keeps its place and title, still linking to every action.
     const ranked = within(screen.getByRole('region', { name: 'Ranked actions' }));
     expect(ranked.getByRole('heading', { name: 'No open actions' })).toBeVisible();
@@ -328,6 +330,21 @@ describe('DashboardScreen', () => {
       },
       movements: [],
     };
+    // A role that may not run is not told to launch one.
+    role.canWrite = false;
+    const viewer = renderDashboard(
+      <TooltipProvider>
+        <DashboardScreen />
+      </TooltipProvider>,
+    );
+    expect(
+      within(screen.getByRole('region', { name: 'Movement' })).getByText(
+        'The earlier run used different settings.',
+      ),
+    ).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Launch run' })).not.toBeInTheDocument();
+    viewer.unmount();
+    role.canWrite = true;
     renderDashboard(
       <TooltipProvider>
         <DashboardScreen />

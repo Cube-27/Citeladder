@@ -81,7 +81,9 @@ export function CategoryMatrixSheet({
               title={row.text}
               caption={
                 row.context
-                  ? `${row.context}${row.buyer_stage ? `, ${buyerStageLabels[row.buyer_stage]}` : ''}`
+                  ? [row.context, row.buyer_stage && buyerStageLabels[row.buyer_stage]]
+                      .filter(Boolean)
+                      .join(', ')
                   : undefined
               }
               meta={toggle(row)}

@@ -61,10 +61,7 @@ const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
  * measure is "not measured", a price the catalog lacks is "unknown", and a
  * competitor's catalog price does not apply; none of them is ever a zero.
  */
-export function MetricValue({
-  cell,
-  narrow = false,
-}: Readonly<{ cell: ProductCell; narrow?: boolean }>) {
+function MetricValue({ cell, narrow = false }: Readonly<{ cell: ProductCell; narrow?: boolean }>) {
   const value =
     cell.kind === 'value' ? (
       <Value value={cell.text} />

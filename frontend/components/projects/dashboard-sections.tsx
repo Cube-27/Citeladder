@@ -2,6 +2,7 @@ import { ArrowRight, Download, TrendingUp } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { Tag, TagGroup } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
@@ -320,9 +321,13 @@ export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
 }
 
 function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['measurement'] }>) {
+  const canRun = useWorkspaceCapability('run');
   const note = (message: string) => (
     <StateBlock kind="empty" inline icon={TrendingUp} message={message} />
   );
+  // Nothing to compare yet: the masthead's Launch run, when offered, measures the next one.
+  const declined = (message: string) =>
+    note(canRun ? `${message} Launch run to measure movement.` : message);
   if (!measurement) return declined('No measured run yet.');
   const basis = comparisonBasis({
     status: measurement.comparison_status,
@@ -340,18 +345,6 @@ function NoMovement({ measurement }: Readonly<{ measurement: CommandCenter['meas
       return unreachable;
     }
   }
-}
-
-/** Nothing to compare yet: the masthead's Launch run measures the next one. */
-function declined(message: string) {
-  return (
-    <StateBlock
-      kind="empty"
-      inline
-      icon={TrendingUp}
-      message={`${message} Launch run to measure movement.`}
-    />
-  );
 }
 
 /** The shared, reorderable action list. */

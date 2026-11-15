@@ -5,28 +5,8 @@ import { overviewWidgetTitles, type OverviewWidget } from '@citeladder/contracts
 import { AppGrid } from '@/components/ui/app-grid';
 import { IconButton } from '@/components/ui/button';
 import { FloatingToolbar } from '@/components/ui/workspace';
-import { moveWidget, removeWidget, toggleWidth } from '@/lib/overview/layout';
+import { loneHalves, moveWidget, removeWidget, toggleWidth } from '@/lib/overview/layout';
 import { cn } from '@/lib/utils';
-
-/**
- * The half widgets that would sit alone in their row (before a full widget,
- * or last): they span the row, so the grid never ends a row in an empty cell.
- * The saved layout keeps their size.
- */
-export function loneHalves(widgets: readonly OverviewWidget[]): ReadonlySet<string> {
-  const lone = new Set<string>();
-  let open: string | null = null;
-  for (const widget of widgets) {
-    if (widget.size === 'full') {
-      if (open) lone.add(open);
-      open = null;
-    } else {
-      open = open ? null : widget.key;
-    }
-  }
-  if (open) lone.add(open);
-  return lone;
-}
 
 /**
  * The Overview's two-column grid. Half widgets share a row and its height;

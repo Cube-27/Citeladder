@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { Stack } from '@/components/ui/layout';
 import { SectionHeader, SectionTitle } from '@/components/ui/section';
 import { slipClasses } from '@/components/ui/slip';
 import { StateHeadingLevelContext } from '@/components/ui/state-block';
@@ -37,9 +38,9 @@ export function WidgetFrame({
         <SectionTitle id={id}>{title}</SectionTitle>
         {description}
       </SectionHeader>
-      <div className="flex min-w-0 flex-1 flex-col gap-3">
+      <Stack gap="compact" className="min-w-0 flex-1 content-start">
         <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
-      </div>
+      </Stack>
     </section>
   );
 }

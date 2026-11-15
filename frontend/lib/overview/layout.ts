@@ -8,6 +8,26 @@ import {
   type OverviewWidgetKey,
 } from '@citeladder/contracts/overview';
 
+/**
+ * The half widgets that would sit alone in their row (before a full widget,
+ * or last): they span the row, so the grid never ends a row in an empty cell.
+ * The saved layout keeps their size.
+ */
+export function loneHalves(widgets: readonly OverviewWidget[]): ReadonlySet<OverviewWidgetKey> {
+  const lone = new Set<OverviewWidgetKey>();
+  let open: OverviewWidgetKey | null = null;
+  for (const widget of widgets) {
+    if (widget.size === 'full') {
+      if (open) lone.add(open);
+      open = null;
+    } else {
+      open = open ? null : widget.key;
+    }
+  }
+  if (open) lone.add(open);
+  return lone;
+}
+
 /** Widgets the layout does not show yet, in catalog order. */
 export function addableWidgets(widgets: readonly OverviewWidget[]): OverviewWidgetKey[] {
   const shown = new Set(widgets.map((widget) => widget.key));
