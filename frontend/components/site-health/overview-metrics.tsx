@@ -1,19 +1,16 @@
 import type { ReactNode } from 'react';
 
-import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
-import { ICONS } from '@/lib/icons';
 import type { SiteCrawl, SiteHealthDashboard, SiteHealthOverview } from '@citeladder/contracts';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
-/** One Site Health score as a FigureStrip figure: the rung meter and where to act. */
+/** One Site Health score as a FigureStrip figure: its ring and where to act. */
 export type AuditMetric = {
   title: string;
   value: number | null;
-  /** `percent` is a share drawn as rungs; its number reads as a percentage. */
+  /** `percent` is a share on the ring; it reads as a percentage. */
   valueUnit?: 'score' | 'percent';
   href?: string;
-  icon: typeof ICONS.site;
   unavailable?: ReactNode;
 };
 
@@ -22,14 +19,12 @@ function auditSegment({
   value,
   valueUnit = 'score',
   href,
-  icon,
   unavailable,
 }: AuditMetric): FigureSegment {
   const base = {
     key: title,
     label: title,
-    icon,
-    action: href ? <TextLink href={href}>View details</TextLink> : undefined,
+    action: href ? { label: 'View details', href } : undefined,
   };
   if (value === null) {
     return { ...base, value: unavailable ?? <Absence state="not_measured" /> };
@@ -103,7 +98,6 @@ function technicalMetric(context: MetricContext): AuditMetric {
     title: 'Web fundamentals',
     value: source?.web_fundamentals_score ?? null,
     href: '/issues?section=technical',
-    icon: ICONS.siteHealth,
   };
 }
 
@@ -113,7 +107,6 @@ function aeoMetric(context: MetricContext): AuditMetric {
     title: 'AEO readiness',
     value: source?.aeo_readiness_score ?? null,
     href: '/issues?section=aeo',
-    icon: ICONS.visibility,
   };
 }
 
@@ -124,7 +117,6 @@ function measurementMetric(context: MetricContext): AuditMetric {
     valueUnit: 'percent',
     value: percentRatio(source?.aeo_measurement_coverage),
     href: '/site?tab=aeo-readiness',
-    icon: ICONS.reports,
   };
 }
 
@@ -151,6 +143,5 @@ function crawlMetric(context: MetricContext): AuditMetric {
     valueUnit: 'percent',
     value: progress,
     href: '/site?tab=pages',
-    icon: ICONS.site,
   };
 }

@@ -1,6 +1,5 @@
 import { Absence } from '@/components/ui/absence';
 import type { PageDetail } from '@citeladder/contracts';
-import { ICONS } from '@/lib/icons';
 import { AuditScores } from './overview-metrics';
 
 export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
@@ -10,13 +9,11 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
         {
           title: 'Web fundamentals',
           value: detail.web_fundamentals_score,
-          icon: ICONS.siteHealth,
           unavailable: scoreUnavailableState(detail.web_fundamentals_state),
         },
         {
           title: 'AEO readiness',
           value: detail.aeo_readiness_score,
-          icon: ICONS.visibility,
           unavailable: scoreUnavailableState(
             detail.aeo_measurement_state,
             detail.aeo_measurement_reason,
@@ -27,7 +24,6 @@ export function UrlScoreSummary({ detail }: Readonly<{ detail: PageDetail }>) {
           value:
             detail.aeo_measurement_coverage === null ? null : detail.aeo_measurement_coverage * 100,
           valueUnit: 'percent',
-          icon: ICONS.reports,
           unavailable: scoreUnavailableState(
             detail.aeo_measurement_state,
             detail.aeo_measurement_reason,

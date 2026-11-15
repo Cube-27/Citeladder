@@ -1,6 +1,5 @@
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { Absence } from '@/components/ui/absence';
-import { ICONS } from '@/lib/icons';
 import { AuditScores } from './overview-metrics';
 
 export function ScoreSection({
@@ -17,14 +16,12 @@ export function ScoreSection({
           title: 'Web fundamentals',
           value: summary?.web_fundamentals_score ?? null,
           unavailable: unavailable(summary?.web_fundamentals_state),
-          icon: ICONS.siteHealth,
           href: '/issues?section=technical',
         },
         {
           title: 'AEO readiness',
           value: summary?.aeo_readiness_score ?? null,
           unavailable: unavailable(summary?.aeo_measurement_state),
-          icon: ICONS.visibility,
           href: '/issues?section=aeo',
         },
         {
@@ -32,7 +29,6 @@ export function ScoreSection({
           value: coverage == null ? null : coverage * 100,
           valueUnit: 'percent',
           unavailable: unavailable(summary?.aeo_measurement_state),
-          icon: ICONS.reports,
           href: '/site?tab=aeo-readiness',
         },
       ]}
