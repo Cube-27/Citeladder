@@ -99,11 +99,12 @@ describe('Input + Field', () => {
 });
 
 describe('Skeleton', () => {
-  it('announces one busy status by its label while the bars stay hidden', () => {
-    render(<Skeleton variant="row" rows={3} label="Loading prompts" />);
-    const status = screen.getByRole('status', { name: 'Loading prompts' });
-    expect(status).toHaveAttribute('aria-busy', 'true');
-    expect(status).toHaveTextContent('');
+  it('holds blank rows and announces one live status by its verb only after the delay', async () => {
+    const { container } = render(<Skeleton variant="row" rows={3} label="Loading prompts" />);
+    expect(container.firstElementChild).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(await screen.findByRole('status', { name: 'Loading prompts' })).toBeVisible();
+    expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 });
 

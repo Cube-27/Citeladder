@@ -11,9 +11,6 @@ import {
   Globe,
   Info,
   Meh,
-  SignalHigh,
-  SignalLow,
-  SignalMedium,
   Smile,
   TriangleAlert,
   Users,
@@ -40,8 +37,8 @@ const TONE_INK: Record<StatusTone, string> = {
   you: 'text-ink',
 };
 
-/** What a mark draws before its word: a glyph, the live rung, or the "you" rung. */
-type Glyph = LucideIcon | 'live' | 'you';
+/** What a mark draws before its word: a glyph, the live rung, the "you" rung or priority bars. */
+type Glyph = LucideIcon | 'live' | 'you' | Readonly<{ bars: 1 | 2 | 3 }>;
 
 const TONE_GLYPH: Record<StatusTone, Glyph> = {
   neutral: Circle,
@@ -94,13 +91,14 @@ const runStatusMarks = {
 } as const satisfies Record<string, Mark>;
 
 /**
- * Priority is an order, not a state: no hue, and a signal glyph of three, two
- * or one bars tells the three apart.
+ * Priority is an order, not a state: no hue, and three ascending bars with
+ * three, two or one filled tell the three apart; the empty bars are drawn, so
+ * the glyph keeps its shape at every level.
  */
 const priorityMarks = {
-  high: mark('neutral', SignalHigh),
-  medium: mark('neutral', SignalMedium),
-  low: mark('neutral', SignalLow),
+  high: mark('neutral', { bars: 3 }),
+  medium: mark('neutral', { bars: 2 }),
+  low: mark('neutral', { bars: 1 }),
 } as const satisfies Record<string, Mark>;
 
 export type StatusValue = keyof typeof statusMarks;
@@ -151,7 +149,33 @@ function MarkGlyph({ glyph }: Readonly<{ glyph: Glyph }>) {
         <span className="bg-accent rounded-mark block h-3 w-[var(--mark-width)]" />
       </span>
     );
+  if (typeof glyph === 'object' && 'bars' in glyph) return <PriorityBars filled={glyph.bars} />;
   return <Icon icon={glyph} className="my-0" />;
+}
+
+/** Bar heights and left edges in a 16px box, lowest first. */
+const PRIORITY_BARS = [
+  { x: 2, height: 4 },
+  { x: 7, height: 8 },
+  { x: 12, height: 12 },
+] as const;
+
+function PriorityBars({ filled }: Readonly<{ filled: 1 | 2 | 3 }>) {
+  return (
+    <svg aria-hidden width={16} height={16} viewBox="0 0 16 16" className="shrink-0">
+      {PRIORITY_BARS.map((bar, index) => (
+        <rect
+          key={bar.x}
+          x={bar.x}
+          y={14 - bar.height}
+          width={3}
+          height={bar.height}
+          rx={0.5}
+          className={index < filled ? 'fill-current' : 'fill-control-line'}
+        />
+      ))}
+    </svg>
+  );
 }
 
 /**
