@@ -20,7 +20,7 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { DisplayTime } from '@/components/ui/display-time';
 import { textRole } from '@/components/ui/typography';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useProjectMarkets } from '@/lib/project/use-project-markets';
@@ -80,7 +80,7 @@ function WorkspaceSchedules({
             />
           ) : null}
           {schedulesQuery.data?.length ? (
-            <ul className={ledgerClasses()}>
+            <LedgerList>
               {schedulesQuery.data.map((schedule) => (
                 <ScheduleRow
                   key={schedule.id}
@@ -90,7 +90,7 @@ function WorkspaceSchedules({
                   onResume={canWrite ? () => resumeMutation.mutate(schedule.id) : undefined}
                 />
               ))}
-            </ul>
+            </LedgerList>
           ) : null}
           {schedulesQuery.isSuccess && schedulesQuery.data.length === 0 ? (
             <StateBlock kind="empty" inline message="No scheduled audits yet." />
@@ -306,33 +306,36 @@ function ScheduleRow({
   onResume?: () => void;
 }>) {
   const catalog = useEngineCatalog();
+  // A one-time schedule that ran is finished, not paused; resuming would run it again.
+  const resumable = !schedule.enabled && !finishedOnce(schedule) && onResume;
   return (
-    <Inline as="li" className={ledgerItemClasses('type-body text-ink-2 flex-wrap justify-between')}>
-      <span className={textRole('emphasis', 'text-ink')}>{CADENCE_LABELS[schedule.cadence]}</span>
-      {schedule.enabled ? (
-        <span className="text-ink-2">
-          {schedule.engines.map(catalog.label).join(', ')} · next{' '}
-          {schedule.next_run_at ? (
-            <DisplayTime value={schedule.next_run_at} />
-          ) : (
-            <Absence state="not_set" />
-          )}
-          {' · '}
-          {schedule.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}
-          {marketSummary(schedule, markets)}
-        </span>
-      ) : (
-        <Inline as="span" className="text-ink-2 flex-wrap">
-          {pauseLabel(schedule)}
-          {/* A one-time schedule that ran is finished, not paused; resuming would run it again. */}
-          {finishedOnce(schedule) || !onResume ? null : (
-            <Button variant="secondary" disabled={resuming} onClick={onResume}>
-              Resume
-            </Button>
-          )}
-        </Inline>
-      )}
-    </Inline>
+    <LedgerItem
+      title={<span className={textRole('emphasis')}>{CADENCE_LABELS[schedule.cadence]}</span>}
+      caption={
+        schedule.enabled ? (
+          <>
+            {schedule.engines.map(catalog.label).join(', ')} · next{' '}
+            {schedule.next_run_at ? (
+              <DisplayTime value={schedule.next_run_at} />
+            ) : (
+              <Absence state="not_set" />
+            )}
+            {' · '}
+            {schedule.audit_scope === 'commerce' ? 'Commerce' : 'Brand'}
+            {marketSummary(schedule, markets)}
+          </>
+        ) : (
+          pauseLabel(schedule)
+        )
+      }
+      links={
+        resumable ? (
+          <Button variant="secondary" disabled={resuming} onClick={onResume}>
+            Resume
+          </Button>
+        ) : undefined
+      }
+    />
   );
 }
 

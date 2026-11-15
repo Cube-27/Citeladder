@@ -117,7 +117,7 @@ describe('Architecture panel', () => {
     expect(await screen.findByRole('heading', { name: 'Page kinds' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Observed hierarchy pages' })).toBeInTheDocument();
     // Persisted summaries, not recomputed ones.
-    expect(screen.getByText('67%')).toBeInTheDocument();
+    expect(screen.getByText('66.7%')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText('8 including menus')).toBeInTheDocument();
   });

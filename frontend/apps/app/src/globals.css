@@ -2064,7 +2064,7 @@ label {
 /* r2 data */
 /* Tables, scroll frames and figures (round 2, builder A2). */
 
-:root {
+[data-data-table-frame] {
   /* A table's identity column never narrows past about 25 characters of row
      name; below it the table scrolls with that column pinned. */
   --data-table-identity-min: 25ch;
@@ -2177,14 +2177,15 @@ label {
 }
 
 /* ScrollFrame: the content fades out at the edge it can scroll towards (a
-   mask on the content itself, never a tinted tray behind it). */
-[data-scroll-frame][data-scroll-end] > [data-scroll-content] {
+   mask on the content itself, never a tinted tray behind it). A mask clips
+   the focus ring outside the box, so a focused frame drops its fade. */
+[data-scroll-frame][data-scroll-end] > [data-scroll-content]:not(:focus-visible) {
   mask-image: linear-gradient(to left, transparent, black 24px);
 }
-[data-scroll-frame][data-scroll-start] > [data-scroll-content] {
+[data-scroll-frame][data-scroll-start] > [data-scroll-content]:not(:focus-visible) {
   mask-image: linear-gradient(to right, transparent, black 24px);
 }
-[data-scroll-frame][data-scroll-start][data-scroll-end] > [data-scroll-content] {
+[data-scroll-frame][data-scroll-start][data-scroll-end] > [data-scroll-content]:not(:focus-visible) {
   mask-image: linear-gradient(
     to right,
     transparent,

@@ -47,5 +47,8 @@ describe('URL cells', () => {
     expect(sharedOrigin([...urls, 'https://other.test/x'])).toBeNull();
     expect(sharedOrigin(['/relative/path'])).toBeNull();
     expect(urlCellText('https://other.test/Women%27s', origin)).toBe("https://other.test/Women's");
+    expect(urlCellText('https://www.shop.test.evil.test/a', origin)).toBe(
+      'https://www.shop.test.evil.test/a',
+    );
   });
 });

@@ -73,7 +73,7 @@ const FLEXIBLE_WIDTHS: ReadonlySet<DataTableColumnWidth> = new Set(['flex', 'lea
  * together: alignment, face, default width and how a long value is cut, so a
  * head can never disagree with its column.
  */
-export type ColumnKind = 'identity' | 'text' | 'number' | 'date' | 'status' | 'url' | 'actions';
+type ColumnKind = 'identity' | 'text' | 'number' | 'date' | 'status' | 'url' | 'actions';
 
 type KindSpec = Readonly<{ align: 'start' | 'end'; mono: boolean; width: DataTableColumnWidth }>;
 
@@ -128,7 +128,7 @@ export type DataTableSelection = Readonly<{
 }>;
 
 /** A column's kind, from `kind` or the older `numeric` and `trailing` flags. */
-export function columnKind(column: DataTableColumn): ColumnKind {
+function columnKind(column: DataTableColumn): ColumnKind {
   if (column.kind) return column.kind;
   if (column.numeric) return 'number';
   return column.trailing ? 'actions' : 'text';

@@ -72,7 +72,7 @@ describe('PromptTable pagination', () => {
     );
 
     const [, brandRow, shelfRow] = screen.getAllByRole('row');
-    expect(within(brandRow!).getAllByRole('cell')[1]!.textContent).toBe('50%');
+    expect(within(brandRow!).getAllByRole('cell')[1]!.textContent).toBe('50.0%');
     // Not "not measured": no run will ever measure it one prompt at a time.
     const shelfCells = within(shelfRow!).getAllByRole('cell');
     expect(shelfCells[1]).toHaveTextContent('Not applicable');
@@ -95,8 +95,13 @@ describe('PromptTable pagination', () => {
   });
 
   it('carries the whole question in a tooltip when the row cuts it', async () => {
-    // jsdom lays nothing out; report the question as wider than its line.
-    const scrollWidth = vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
+    // jsdom lays nothing out; report the question as wider than its line and
+    // the table as fitting its frame, so the frame takes no tab stop.
+    const scrollWidth = vi
+      .spyOn(HTMLElement.prototype, 'scrollWidth', 'get')
+      .mockImplementation(function (this: HTMLElement) {
+        return this.hasAttribute('data-scroll-content') ? 0 : 1000;
+      });
     renderTable([makePrompt(1)]);
 
     await userEvent.setup().tab();
@@ -175,10 +180,10 @@ describe('PromptTable pagination', () => {
       'Change',
     ]);
     const cells = within(row!).getAllByRole('cell');
-    expect(cells[1]!.textContent).toBe('50%');
+    expect(cells[1]!.textContent).toBe('50.0%');
     // Three marks, each named for a screen reader, then the fourth as overflow.
     expect(cells[2]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
-    expect(cells[3]!.textContent).toBe('25%');
+    expect(cells[3]!.textContent).toBe('25.0%');
     expect(cells[4]!.textContent).toBe('#2');
     // Measured, and no brand named: zero, not the "not measured" mark.
     expect(within(unnamedRow!).getAllByRole('cell')[2]!.textContent).toBe('None');

@@ -248,7 +248,7 @@ export function sharedOrigin(values: readonly string[]): string | null {
 /** A URL as its cell prints it: readable, without the column's shared origin. */
 export function urlCellText(value: string, origin: string | null): string {
   const readable = readableUrl(value);
-  if (origin === null || !value.startsWith(origin)) return readable;
+  if (origin === null || originOf(value) !== origin || !value.startsWith(origin)) return readable;
   const path = readableUrl(value.slice(origin.length));
   return path === '' ? '/' : path;
 }

@@ -451,13 +451,18 @@ export function UrlText({
   origin = null,
   lines,
 }: Readonly<{ url: string; origin?: string | null; lines?: 1 | 2 }>) {
-  const parts = urlCellText(url, origin).split(/(?<=\/)/u);
+  const text = urlCellText(url, origin);
+  // Each part keyed by where it starts in the text, so a break follows every '/'.
+  const parts = text.split(/(?<=\/)/u).map((part, index, all) => ({
+    part,
+    at: all.slice(0, index).join('').length,
+  }));
   return (
     <ClampText lines={lines} tooltip={readableUrl(url)} className="type-data">
-      {parts.map((part, index) => (
-        <Fragment key={index}>
+      {parts.map(({ part, at }) => (
+        <Fragment key={at}>
           {part}
-          {index < parts.length - 1 ? <wbr /> : null}
+          {at + part.length < text.length ? <wbr /> : null}
         </Fragment>
       ))}
     </ClampText>

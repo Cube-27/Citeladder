@@ -186,7 +186,11 @@ export function Pager({
         className,
       )}
     >
-      {pageSize ? <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} /> : <span />}
+      {pageSize ? (
+        <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} />
+      ) : (
+        <span className="rail:block hidden" />
+      )}
       <div className="rail:justify-start flex flex-wrap items-center justify-between gap-2">
         <PagerSummary range={range} page={page} pageCount={pageCount} />
         <PagerSteps {...steps} busy={busy} />

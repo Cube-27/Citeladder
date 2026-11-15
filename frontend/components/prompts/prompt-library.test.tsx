@@ -117,7 +117,7 @@ describe('PromptLibrary first load', () => {
       'Actions',
     ]);
     const row = within(table).getByRole('row', { name: new RegExp(prompt.text.slice(0, 20)) });
-    expect(within(row).getByText('50%')).toBeVisible();
+    expect(within(row).getByText('50.0%')).toBeVisible();
   });
 
   it("opens a measured prompt's evidence on the latest run's succeeded answer", async () => {

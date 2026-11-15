@@ -171,4 +171,41 @@ describe('InventorySection', () => {
       await within(table).findByRole('status', { name: 'Loading discovered pages…' }),
     ).toBeInTheDocument();
   });
+
+  it('prints discovered URLs without the origin they all share', async () => {
+    const discovered = (site_url_id: string, display_url: string) => ({
+      ...makePageSummary({ site_url_id, display_url, normalized_url: display_url }),
+      content_type: 'text/html',
+      source: 'sitemap',
+      depth: 1,
+      first_seen_at: null,
+      last_seen_at: null,
+    });
+    mswServer.use(
+      http.get(INVENTORY, () =>
+        HttpResponse.json({
+          items: [
+            discovered(LATER_PAGE, 'https://acme.com/journal/teapots'),
+            discovered(SITE_HEALTH_UUID_2, 'https://acme.com/'),
+          ],
+          next_cursor: null,
+        }),
+      ),
+    );
+    renderWithProviders(
+      <InventorySection
+        mode="discovering"
+        crawl={makeSiteCrawl({ status: 'running', discovery_status: 'running' })}
+        active
+      />,
+    );
+
+    const table = screen.getByRole('region', { name: 'Pages discovered so far' });
+    await within(table).findByText('/journal/teapots');
+    const firstCells = within(table)
+      .getAllByRole('row')
+      .slice(1, 3)
+      .map((row) => within(row).getAllByRole('cell')[0]!.textContent);
+    expect(firstCells).toEqual(['/journal/teapots', '/']);
+  });
 });

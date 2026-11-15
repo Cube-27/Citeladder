@@ -8,7 +8,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { SearchField } from '@/components/ui/search-field';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Absence } from '@/components/ui/absence';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
@@ -17,6 +17,7 @@ import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
 import { type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl } from '@citeladder/contracts';
+import { sharedOrigin } from '@/lib/format';
 import { stringUrlCodec, useUrlState, type UrlCodec } from '@/lib/navigation/url-state';
 import { PAGE_KINDS } from '@/lib/site-health/page-kinds';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
@@ -108,6 +109,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
     }),
   });
 
+  const origin = sharedOrigin(page?.items.map((row) => row.display_url) ?? []);
   return (
     <DataTable
       title="Pages discovered so far"
@@ -120,11 +122,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
       {page?.items.map((row) => (
         <TableRow key={row.site_url_id}>
           <TableCell>
-            {/* Clamped for the same reason as the scored table: a long
-                query-string URL is one unbreakable token. */}
-            <ClampText lines={1} className="type-caption text-ink tabular-nums">
-              {row.display_url}
-            </ClampText>
+            <UrlText url={row.display_url} origin={origin} lines={1} />
           </TableCell>
           <TableCell className="type-caption">
             {row.source ? statusLabel(row.source) : <Absence state="unknown" />}
@@ -136,7 +134,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
 }
 
 const DISCOVERED_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'url', label: 'Page URL' },
+  { key: 'url', label: 'Page URL', kind: 'url' },
   { key: 'source', label: 'Source', width: 'name' },
 ];
 

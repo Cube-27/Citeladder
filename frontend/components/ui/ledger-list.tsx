@@ -56,12 +56,12 @@ export function LedgerItem({
     >
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <div className={textRole('body', 'min-w-0 flex-1 break-words')}>{title}</div>
-        {meta ? <div className="flex shrink-0 items-center gap-2">{meta}</div> : null}
+        {meta === undefined ? null : <div className="flex shrink-0 items-center gap-2">{meta}</div>}
       </div>
-      {caption ? <p className="type-caption min-w-0">{caption}</p> : null}
-      {links ? (
+      {caption === undefined ? null : <p className="type-caption min-w-0">{caption}</p>}
+      {links === undefined ? null : (
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{links}</div>
-      ) : null}
+      )}
     </li>
   );
 }
