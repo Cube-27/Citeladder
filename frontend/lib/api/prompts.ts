@@ -10,6 +10,8 @@ import { mutationOptions, queryOptions, skipToken, type QueryClient } from '@tan
 import { PROMPT_GENERATION_REQUEST_TIMEOUT_MS } from '@/lib/config/operational';
 
 import { apiClient, type ApiRequestOptions } from './client';
+import { mainPromptSet } from '@/lib/prompts/prompt-sets';
+
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import {
@@ -195,8 +197,8 @@ export const promptsMutations = {
           ...promptsQueries.sets(scope),
           staleTime: 0,
         });
-        const [first] = available.prompt_sets;
-        if (first) return first;
+        const main = mainPromptSet(available.prompt_sets);
+        if (main) return main;
         return promptsApi.createPromptSet(
           { project_id: scope.projectId, name: 'Default prompt set' },
           scoped(scope),
@@ -204,7 +206,9 @@ export const promptsMutations = {
       },
       onSuccess: async (created, _vars, _result, { client }) => {
         client.setQueryData<PromptSetList>(queryKeys.prompts.sets(scope), (prev) =>
-          prev && !prev.prompt_sets.length ? { ...prev, prompt_sets: [created] } : prev,
+          prev && !prev.prompt_sets.some((set) => set.id === created.id)
+            ? { ...prev, prompt_sets: [created, ...prev.prompt_sets] }
+            : prev,
         );
         await client.invalidateQueries({ queryKey: queryKeys.prompts.project(scope.projectId) });
       },

@@ -12,6 +12,7 @@ import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { Select } from '@/components/ui/select';
 import { UnavailableValue } from '@/components/ui/unavailable-value';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
+import { mainPromptSet } from '@/lib/prompts/prompt-sets';
 import { toggleMarket } from '@/lib/runs/launch';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
 import type {
@@ -122,7 +123,7 @@ function ScheduleForm({
   markets: readonly ProjectMarket[];
 }>) {
   const catalog = useEngineCatalog();
-  const [promptSetId, setPromptSetId] = useState(promptSets[0]?.id ?? '');
+  const [promptSetId, setPromptSetId] = useState(mainPromptSet(promptSets)?.id ?? '');
   const [auditScope, setAuditScope] = useState<'brand' | 'commerce'>('brand');
   const [cadence, setCadence] = useState<AuditScheduleCadence>('weekly');
   const [intervalMinutes, setIntervalMinutes] = useState('60');

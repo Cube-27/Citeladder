@@ -5783,6 +5783,10 @@
           "name": {
             "type": "string"
           },
+          "kind": {
+            "type": "string",
+            "enum": ["brand", "commerce"]
+          },
           "description": {
             "type": "string"
           },
@@ -5804,7 +5808,7 @@
             "type": "string"
           }
         },
-        "required": ["id", "project_id", "name", "prompts", "created_at", "updated_at"],
+        "required": ["id", "project_id", "name", "kind", "prompts", "created_at", "updated_at"],
         "additionalProperties": false
       },
       "PromptStatus": {

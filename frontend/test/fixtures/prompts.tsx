@@ -39,6 +39,7 @@ export function makeSet(prompts: Prompt[]): PromptSet {
     id: SET_ID,
     project_id: '11111111-1111-4111-8111-111111111111',
     name: 'Default prompt set',
+    kind: 'brand',
     description: '',
     prompt_count: prompts.length,
     prompts,

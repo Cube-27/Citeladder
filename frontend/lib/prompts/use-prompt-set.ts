@@ -1,17 +1,19 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import { promptsMutations, promptsQueries } from '@/lib/api/prompts';
 import type { PromptSet } from '@citeladder/contracts';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
+import { mainPromptSet, oldestFirst } from './prompt-sets';
+
 /**
- * Resolve the active project's prompt set (F7).
+ * The active project's prompt library (F7): every prompt of every set, with
+ * each set's name, and the main brand set that adds and generation go to.
  *
- * Prompts are scoped to a `PromptSet` under the active project (F5 context).
- * The active project may already embed a prompt set (`project.prompt_sets`);
- * otherwise we list them and, if none exists, `ensurePromptSet` creates a
- * default one. Local create attempts serialize per project. The list query
+ * The active project may already embed its sets (`project.prompt_sets`);
+ * otherwise we list them and, if no brand set exists, `ensurePromptSet`
+ * creates one. Local create attempts serialize per project. The list query
  * is the source of truth once loaded so a freshly-created set is picked up.
  */
 export function usePromptSet() {
@@ -22,7 +24,13 @@ export function usePromptSet() {
   // The embedded prompt sets render the table until the list (and its form bounds) loads.
   const embedded = project.prompt_sets;
   const sets = listQuery.data?.prompt_sets ?? embedded;
-  const promptSet: PromptSet | null = sets[0] ?? null;
+  const promptSet: PromptSet | null = mainPromptSet(sets);
+  const ordered = useMemo(() => oldestFirst(sets), [sets]);
+  const prompts = useMemo(() => ordered.flatMap((set) => set.prompts), [ordered]);
+  const setNames: ReadonlyMap<string, string> = useMemo(
+    () => new Map(ordered.map((set) => [set.id, set.name])),
+    [ordered],
+  );
 
   const createMutation = useMutation(promptsMutations.ensureSet(scope));
 
@@ -34,7 +42,8 @@ export function usePromptSet() {
   return {
     projectId,
     promptSet,
-    prompts: promptSet?.prompts ?? [],
+    prompts,
+    setNames,
     /** Server-enforced bounds of the prompt forms; null until the list loads. */
     limits: listQuery.data?.limits ?? null,
     isLoading: listQuery.isLoading && !embedded.length,

@@ -66,7 +66,23 @@ function listed(sets: unknown[], limits = makeFormLimits()) {
 
 function stubApis(estimate: unknown = undefined) {
   vi.spyOn(promptsApi, 'listPromptSets').mockResolvedValue(
-    listed([{ id: PROMPT_SET_ID, name: 'Brand portfolio', prompt_count: 7 }]) as never,
+    // Commerce's newer set is listed first; the launch still defaults to the main brand set.
+    listed([
+      {
+        id: '66666666-6666-4666-8666-666666666666',
+        name: 'Commerce Buyer Prompts',
+        kind: 'commerce',
+        prompt_count: 2,
+        created_at: '2026-10-01T00:00:00Z',
+      },
+      {
+        id: PROMPT_SET_ID,
+        name: 'Brand portfolio',
+        kind: 'brand',
+        prompt_count: 7,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]) as never,
   );
   vi.spyOn(providersApi, 'listConnections').mockResolvedValue([
     {
@@ -126,7 +142,15 @@ describe('Repetitions', () => {
     const launch = stubApis();
     vi.mocked(promptsApi.listPromptSets).mockResolvedValue(
       listed(
-        [{ id: PROMPT_SET_ID, name: 'Brand portfolio', prompt_count: 7 }],
+        [
+          {
+            id: PROMPT_SET_ID,
+            name: 'Brand portfolio',
+            kind: 'brand',
+            prompt_count: 7,
+            created_at: '2026-01-01T00:00:00Z',
+          },
+        ],
         makeFormLimits({ audit_repetitions_min: 2, audit_repetitions_max: 4 }),
       ) as never,
     );
@@ -483,9 +507,20 @@ describe('LaunchDialog prompt batching', () => {
   /** A set of `count` audit-eligible prompts, in creation order. */
   function setWithPrompts(count: number) {
     return listed([
+      // Listed first as the newer set; the default is still the main brand set.
+      {
+        id: '66666666-6666-4666-8666-666666666666',
+        name: 'Commerce Buyer Prompts',
+        kind: 'commerce',
+        prompt_count: 0,
+        prompts: [],
+        created_at: '2026-10-01T00:00:00Z',
+      },
       {
         id: PROMPT_SET_ID,
         name: 'Brand portfolio',
+        kind: 'brand',
+        created_at: '2026-01-01T00:00:00Z',
         prompt_count: count,
         prompts: Array.from({ length: count }, (_, index) => ({
           id: `prompt-${String(index).padStart(2, '0')}`,

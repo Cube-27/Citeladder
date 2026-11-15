@@ -63,8 +63,11 @@ export function PromptTable({
   prompts,
   actions,
   measurements,
+  setNames,
 }: Readonly<{
   prompts: Prompt[];
+  /** Each prompt set's name by id: the library lists every set's prompts. */
+  setNames?: ReadonlyMap<string, string>;
   /**
    * The row controls, for a role that may edit prompts. Without them the
    * table states each prompt's enabled state and offers no control.
@@ -111,7 +114,8 @@ export function PromptTable({
             {/* The question opens its history: the prompt is the object. It
                 wraps to two lines. Topic and classification are filters in
                 the control strip, not tags on every row (owner, 2026-11-06);
-                the caption only says when audits skip the prompt. */}
+                the caption names the prompt's set (owner, 2026-11-15) and
+                says when audits skip the prompt. */}
             <TableCellLines
               title
               primary={
@@ -122,7 +126,7 @@ export function PromptTable({
                   {prompt.text}
                 </ProjectLink>
               }
-              secondary={prompt.over_plan_limit ? 'Not measured: beyond the plan limit' : undefined}
+              secondary={rowCaption(prompt, setNames?.get(prompt.prompt_set_id))}
             />
           </TableCell>
           {measured ? <MeasuredCells measurement={measurements?.get(prompt.id)} /> : null}
@@ -139,6 +143,12 @@ export function PromptTable({
       ))}
     </DataTable>
   );
+}
+
+/** The prompt's set, and whether audits skip it for the plan limit. */
+function rowCaption(prompt: Prompt, setName: string | undefined): string | undefined {
+  const parts = [setName, prompt.over_plan_limit ? 'Not measured: beyond the plan limit' : ''];
+  return parts.filter(Boolean).join(' · ') || undefined;
 }
 
 /** Opens the latest run's answers to a measured prompt; nothing for an unmeasured one. */
