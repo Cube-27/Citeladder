@@ -295,10 +295,12 @@ test('Action filters restore through URL history and reload', async ({ page }) =
   await page.getByRole('menuitem', { name: /^Status/ }).click();
   await page.getByRole('menuitemradio', { name: 'Open and in progress' }).click();
   await expect(page.getByRole('button', { name: 'Get mentioned elsewhere, 1' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'example.org/tools' })).toBeVisible();
+  // The row is titled by its work; the target is its second line.
+  await expect(page.getByRole('link', { name: 'Earn a placement' })).toBeVisible();
+  await expect(page.getByText('example.org/tools')).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.has('status')).toBe(false);
 
   // A row opens its Action.
-  await page.getByRole('cell', { name: 'Earn a placement' }).click();
+  await page.getByText('example.org/tools').click();
   await expect(page).toHaveURL(new RegExp(`/agent/actions/${ACTION}`));
 });

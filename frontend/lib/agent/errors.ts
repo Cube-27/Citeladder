@@ -6,7 +6,7 @@ import { SUGGESTION_CONFLICT_COPY } from '@/lib/agent/vocabulary';
  * The step that fixes a refused Agent write, offered beside its notice: a new
  * chat (the turn limit), or a model to run on (no credits and no model).
  */
-export type AgentRecovery = 'new-chat' | 'connect-model' | null;
+type AgentRecovery = 'new-chat' | 'connect-model' | null;
 
 /** A refused Agent write as the shared failure notice, and the step that fixes it. */
 export type AgentWriteFailure = MutationNotice & { recovery: AgentRecovery };

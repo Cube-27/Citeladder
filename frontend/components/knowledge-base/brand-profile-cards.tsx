@@ -130,7 +130,7 @@ function FacetChoice<T extends string>({
         ariaLabel={label}
         value={value ?? ''}
         options={options.map((option) => ({ ...option, disabled }))}
-        className="flex-row flex-wrap gap-x-6 gap-y-2"
+        variant="inline"
         onValueChange={(next) => {
           if (next && !disabled) onPick(next);
         }}

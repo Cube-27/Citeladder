@@ -20,7 +20,8 @@ const RADIO =
 
 /**
  * RadioGroup — one choice from two to five options. `list` (default) stacks
- * the options 12px apart; `cards` lays them out as selectable slips
+ * the options 12px apart; `inline` sets short options on one wrapping row,
+ * 24 apart (a form's facet such as Consumers, Businesses, Both); `cards` lays them out as selectable slips
  * (`surface`, a hairline, the control radius, 16px padding) for choices that
  * need a sentence each, the selected slip on the `well` tint with its edge in
  * `ink`, so it never resizes. Arrow keys move and select (Radix).
@@ -39,7 +40,7 @@ export function RadioGroup<T extends string>({
   options: readonly RadioOption<T>[];
   ariaLabel: string;
   className?: string;
-  variant?: 'list' | 'cards';
+  variant?: 'list' | 'inline' | 'cards';
   /** Cards per row. */
   columns?: 1 | 2 | 3;
 }>) {
@@ -59,7 +60,9 @@ export function RadioGroup<T extends string>({
               columns === 2 && 'column-split:grid-cols-2',
               columns === 3 && 'column-split:grid-cols-3',
             )
-          : 'flex flex-col gap-3',
+          : variant === 'inline'
+            ? 'flex flex-row flex-wrap gap-x-6 gap-y-2'
+            : 'flex flex-col gap-3',
         className,
       )}
     >
