@@ -90,6 +90,7 @@ function WorkspacePolicy({
       <StateBlock
         kind="error"
         error={failure}
+        title="Couldn't open this workspace"
         fallback="We could not open this workspace."
         onRetry={retry}
         pending={query.isFetching || accept.isPending || leave.isPending}

@@ -3,7 +3,9 @@ import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
+import { TextLink } from '@/components/ui/text-link';
 import { authApi } from '@/lib/api/auth';
+import { websiteHref } from '@/lib/config/app-link';
 import { usePublishedTerms } from '@/lib/auth/terms-consent';
 import { passwordHint } from '@/lib/config/auth';
 import {
@@ -74,9 +76,17 @@ export function RegisterScreen({
       <AuthFormShell
         title="Registration unavailable"
         description={
-          demoMode
-            ? 'This temporary demo uses a preconfigured account.'
-            : 'Accounts are set up for you by the CiteLadder team. Book a demo to get access.'
+          demoMode ? (
+            'This temporary demo uses a preconfigured account.'
+          ) : (
+            <>
+              Accounts are set up for you by the CiteLadder team.{' '}
+              <TextLink asChild text="inherit">
+                <a href={websiteHref('/contact')}>Book a demo</a>
+              </TextLink>{' '}
+              to get access.
+            </>
+          )
         }
         onSubmit={(event) => event.preventDefault()}
         pending={false}

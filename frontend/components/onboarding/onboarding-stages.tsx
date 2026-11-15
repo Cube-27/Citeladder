@@ -46,7 +46,14 @@ export function BrandStage({
       <form id="onboarding-brand-form" noValidate onSubmit={onSubmit}>
         <StepColumns>
           <Field label="Brand name" required error={form.formState.errors.brand_name?.message}>
-            {(props) => <Input {...props} {...form.register('brand_name')} placeholder="Acme" />}
+            {(props) => (
+              <Input
+                {...props}
+                {...form.register('brand_name')}
+                autoComplete="organization"
+                placeholder="Acme"
+              />
+            )}
           </Field>
           <Field label="Website" required error={form.formState.errors.website_url?.message}>
             {(props) => (

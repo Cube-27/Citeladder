@@ -2,10 +2,16 @@ import { ApiError } from '@/lib/api/errors';
 import { mutationNoticeForError, type MutationNotice } from '@/lib/api/mutation-notice';
 import { SUGGESTION_CONFLICT_COPY } from '@/lib/agent/vocabulary';
 
-/** A refused Agent write as the shared failure notice, and whether a new chat helps. */
-export type AgentWriteFailure = MutationNotice & { startNewChat: boolean };
+/**
+ * The step that fixes a refused Agent write, offered beside its notice: a new
+ * chat (the turn limit), or a model to run on (no credits and no model).
+ */
+export type AgentRecovery = 'new-chat' | 'connect-model' | null;
 
-type AgentCopy = { message: string; startNewChat: boolean };
+/** A refused Agent write as the shared failure notice, and the step that fixes it. */
+export type AgentWriteFailure = MutationNotice & { recovery: AgentRecovery };
+
+type AgentCopy = { message: string; recovery: AgentRecovery };
 
 const CODED: {
   agent_funding_unavailable: AgentCopy;
@@ -13,23 +19,23 @@ const CODED: {
 } = {
   agent_funding_unavailable: {
     message: 'There are not enough AI credits and no connected model to run the agent.',
-    startNewChat: false,
+    recovery: 'connect-model',
   },
   agent_model_unavailable: {
     message: 'The connected AI model is unavailable. Check Providers in Settings, then try again.',
-    startNewChat: false,
+    recovery: null,
   },
   agent_run_active: {
     message: 'Wait for the agent to finish its current turn, then try again.',
-    startNewChat: false,
+    recovery: null,
   },
   agent_turn_limit: {
     message: 'This chat has reached its turn limit. Start a new chat to continue.',
-    startNewChat: true,
+    recovery: 'new-chat',
   },
   agent_output_conflict: {
     message: 'The output changed since you opened it. Review the latest revision and try again.',
-    startNewChat: false,
+    recovery: null,
   },
 };
 
@@ -37,14 +43,14 @@ function agentCopy(error: unknown): AgentCopy | undefined {
   if (!(error instanceof ApiError)) return undefined;
   // The server says why it refused this suggestion change; its words are the copy.
   if (error.code === 'agent_suggestion_conflict')
-    return { message: error.message.trim() || SUGGESTION_CONFLICT_COPY, startNewChat: false };
+    return { message: error.message.trim() || SUGGESTION_CONFLICT_COPY, recovery: null };
   const coded = error.code ? CODED[error.code] : undefined;
   if (coded) return coded;
   if (error.status === 402) return CODED.agent_funding_unavailable;
   if (error.status === 429)
     return {
       message: 'The workspace has reached its agent usage limit. Try again later.',
-      startNewChat: false,
+      recovery: null,
     };
   return undefined;
 }
@@ -61,6 +67,6 @@ export function isOutputConflict(error: unknown): boolean {
 export function agentWriteFailure(error: unknown, action: string): AgentWriteFailure {
   const notice = mutationNoticeForError(error, { action });
   const copy = agentCopy(error);
-  if (!copy) return { ...notice, startNewChat: false };
-  return { ...notice, message: copy.message, startNewChat: copy.startNewChat };
+  if (!copy) return { ...notice, recovery: null };
+  return { ...notice, message: copy.message, recovery: copy.recovery };
 }

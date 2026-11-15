@@ -259,6 +259,7 @@ function ProfileState({ profile }: Readonly<{ profile: ProfileRead }>) {
     <StateBlock
       kind="error"
       {...readErrorProps(profile)}
+      title="Couldn't load company facts"
       fallback="Company facts could not be loaded."
     />
   );
@@ -299,6 +300,7 @@ function BrandFactsTab({
         <StateBlock
           kind="error"
           {...readErrorProps(facts)}
+          title="Couldn't load brand facts"
           fallback="Brand facts could not be loaded."
         />
       )}

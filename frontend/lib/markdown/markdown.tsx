@@ -26,6 +26,7 @@ import remarkGfm from 'remark-gfm';
 
 import { ConfirmDialog } from '@/components/ui/dialog';
 import { Stack } from '@/components/ui/layout';
+import { ScrollFrame } from '@/components/ui/scroll-edges';
 import { InlineFigure } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -101,10 +102,15 @@ const MARKDOWN_COMPONENTS: Components = {
   h6: ({ node: _node, children, ...props }) => <h6 {...props}>{children}</h6>,
   // Untrusted output: never render images (remote-fetch beacon risk).
   img: () => null,
+  // A wide table scrolls inside its frame, with the fade and stepper that say so.
   table: ({ node: _node, ...props }) => (
-    <div className="prose-table-frame">
-      <table {...props} />
-    </div>
+    <ScrollFrame label="Table" className="prose-table-frame">
+      {(ref, region) => (
+        <div ref={ref} {...region} className="overflow-x-auto">
+          <table {...props} />
+        </div>
+      )}
+    </ScrollFrame>
   ),
   // Forward the remaining DOM props (id, aria-describedby,
   // data-footnote-*) so GFM footnote back-links keep working; `node`

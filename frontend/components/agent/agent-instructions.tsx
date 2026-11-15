@@ -90,6 +90,7 @@ export function AgentInstructionsCard({
         <StateBlock
           kind="error"
           {...readErrorProps(query)}
+          title="Couldn't load the agent instructions"
           fallback="Agent instructions could not be loaded."
         />
       ) : null}

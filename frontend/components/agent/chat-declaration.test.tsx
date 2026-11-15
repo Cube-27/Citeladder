@@ -9,6 +9,7 @@ import { makeProject } from '@/test/fixtures/project';
 import { renderWithProviders } from '@/test/render';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
+  useManagedPlan: () => false,
   useEntitlement: () => ({ hasCapability: () => true }),
 }));
 

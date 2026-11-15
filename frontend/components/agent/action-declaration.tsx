@@ -1,11 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { CheckCircle2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { DeclarationStatus } from '@/components/agent/declaration-status';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Button, type ButtonVariant } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
+import { ActionButton } from '@/components/ui/actions';
+import { Button } from '@/components/ui/button';
 import { DateField } from '@/components/ui/date-field';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -44,7 +43,6 @@ export function MarkImplementedButton({
   recommendationIds,
   selectionDescription,
   onDeclared,
-  variant = 'primary',
   proposed,
 }: Readonly<{
   workspaceId: string;
@@ -52,8 +50,6 @@ export function MarkImplementedButton({
   /** The output revision shipped; null declares work done outside CiteLadder. */
   revision: { id: string; number: number } | null;
   disabled?: boolean;
-  /** Secondary where another action is the view's primary (the Action page). */
-  variant?: Extract<ButtonVariant, 'primary' | 'secondary'>;
   recommendationIds?: string[];
   selectionDescription?: string;
   onDeclared?: () => void;
@@ -90,18 +86,15 @@ export function MarkImplementedButton({
     );
   return (
     <>
-      <Button
-        variant={variant}
+      <ActionButton
+        action="markImplemented"
         disabled={disabled}
         onClick={() => {
           declare.reset();
           setAttempt(newAttempt(proposed));
           setOpen(true);
         }}
-      >
-        <Icon icon={CheckCircle2} />
-        Mark implemented
-      </Button>
+      />
       <Dialog
         open={open}
         onOpenChange={setOpen}
@@ -211,6 +204,7 @@ export function MarkActionImplemented({
       <Notice
         kind="read"
         error={action.error}
+        title="Couldn't load the Action"
         fallback="The Action could not be loaded to declare it."
         onRetry={() => void action.refetch()}
         pending={action.isFetching}
@@ -366,7 +360,7 @@ function TargetChoice({
       </p>
       <Inline className="flex-wrap">
         <Button
-          variant="primary"
+          variant="secondary"
           disabled={disabled || pending('keep')}
           pending={pending('link')}
           pendingLabel="Linking…"
@@ -415,6 +409,7 @@ function AttachedDeclaration({
       <Notice
         kind="read"
         error={action.error}
+        title="Couldn't load the implementation state"
         fallback="The Action's implementation state could not be loaded."
         onRetry={() => void action.refetch()}
         pending={action.isFetching}

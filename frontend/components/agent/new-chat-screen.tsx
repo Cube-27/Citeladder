@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
+import { AgentFailureNotice } from '@/components/agent/agent-failure-notice';
 import { BriefingCard } from '@/components/agent/briefing-card';
 import { Composer } from '@/components/agent/composer';
 import { useSkillChoice } from '@/components/agent/skill-picker';
@@ -114,7 +115,7 @@ function NewChat({
           </Notice>
         ) : null}
         {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}
-        {failure ? <Notice kind="mutation" notice={failure} /> : null}
+        {failure ? <AgentFailureNotice failure={failure} /> : null}
         {/* Without the catalog there are no skills to offer, and saying
             nothing read as a plan that has none. */}
         {catalog.read.status === 'error' ? (

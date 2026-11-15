@@ -11,6 +11,7 @@ import { renderWithProviders } from '@/test/render';
 const mocks = vi.hoisted(() => ({ saveBlob: vi.fn(), agentEnabled: true }));
 vi.mock('@/lib/download', () => ({ saveBlob: mocks.saveBlob }));
 vi.mock('@/lib/billing/entitlement-context', () => ({
+  useManagedPlan: () => false,
   useEntitlement: () => ({ hasCapability: () => mocks.agentEnabled }),
 }));
 

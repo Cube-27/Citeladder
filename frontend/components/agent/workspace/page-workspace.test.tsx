@@ -27,6 +27,7 @@ import {
 import { renderWithProviders, selectionAs, type TestRole } from '@/test/render';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
+  useManagedPlan: () => false,
   useEntitlement: () => ({ hasCapability: () => true }),
 }));
 

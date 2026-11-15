@@ -111,10 +111,12 @@ function SuggestionsTab({
 >) {
   const { query, page } = suggestions;
   if (page) return <SuggestionsPanel page={page} {...props} />;
+  if (!query.isError) return <StateBlock kind="loading" label="Loading suggestions…" />;
   return (
     <StateBlock
-      kind={query.isError ? 'error' : 'loading'}
+      kind="error"
       error={query.error}
+      title="Couldn't load the suggestions"
       fallback="The suggestions could not be loaded."
       onRetry={() => void query.refetch()}
       pending={query.isFetching}

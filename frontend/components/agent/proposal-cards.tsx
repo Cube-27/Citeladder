@@ -98,6 +98,7 @@ function DeclarationProposal({
         <Notice
           kind="read"
           error={detail.error}
+          title="Couldn't load the proposed Action"
           fallback="The proposed Action could not be loaded."
           onRetry={() => void detail.refetch()}
           pending={detail.isFetching}

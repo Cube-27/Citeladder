@@ -7,6 +7,7 @@ import { mswServer } from '@/test/msw-server';
 import { expectThreadFollowsLatest } from '@/test/chat-follow';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
+  useManagedPlan: () => false,
   useEntitlement: () => ({ hasCapability: () => true }),
 }));
 

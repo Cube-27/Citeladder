@@ -245,7 +245,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent',
-    title: 'New chat',
+    title: 'Agent',
     screen: screens.newChat,
     nav: [listed('Agent', 'agent', 'act')],
   }),

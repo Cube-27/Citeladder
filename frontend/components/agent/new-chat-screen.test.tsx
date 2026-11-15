@@ -13,6 +13,7 @@ import { renderWithProviders } from '@/test/render';
 
 const entitlement = vi.hoisted(() => ({ agent: true }));
 vi.mock('@/lib/billing/entitlement-context', () => ({
+  useManagedPlan: () => false,
   useEntitlement: () => ({ hasCapability: () => entitlement.agent }),
 }));
 
