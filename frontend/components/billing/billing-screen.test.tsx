@@ -381,7 +381,9 @@ describe('BillingScreen', () => {
     mswServer.use(catalogHandler(closed), entitlementHandler(), usageHandler());
 
     renderWithProviders(<BillingScreen />);
-    expect(await screen.findByText('Self-serve plans are not open yet.')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Self-serve plans are not open yet' }),
+    ).toBeVisible();
     expect(screen.queryByText('$49 / month')).toBeNull();
     expect(screen.queryByRole('button', { name: /Choose Starter/ })).toBeNull();
     expect(screen.getByRole('link', { name: 'Contact us' })).toBeInTheDocument();
@@ -420,6 +422,47 @@ describe('BillingScreen', () => {
     // …and an `unknown` row says so rather than rendering a zero meter.
     expect(screen.getByText('Not available')).toBeInTheDocument();
     expect(screen.queryByText(line(/0 of 0 credits/))).toBeNull();
+    expect(screen.queryByText('Nothing used yet this period.')).toBeNull();
+    expect(screen.getByRole('progressbar', { name: 'Prompts' })).toBeInTheDocument();
+  });
+
+  it('lists the limits in a table instead of empty meters when nothing is used', async () => {
+    entitlementValue = resolvedEntitlement();
+    const [prompts] = USAGE.items;
+    const idle = {
+      ...USAGE,
+      items: [
+        { ...prompts, allowance: 50200, consumed: 0, remaining: 50200 },
+        { ...prompts, key: 'ai_credits', allowance: 0, consumed: 0, remaining: 0 },
+        {
+          ...prompts,
+          key: 'project_slots',
+          limit_state: 'unlimited',
+          allowance: null,
+          consumed: 0,
+        },
+      ],
+    };
+    mswServer.use(
+      catalogHandler(),
+      entitlementHandler(),
+      http.get('/api/v1/billing/usage', () => HttpResponse.json(idle)),
+    );
+
+    renderWithProviders(<BillingScreen />);
+
+    const table = await screen.findByRole('table', { name: 'Usage limits' });
+    expect(screen.getByText('Nothing used yet this period.')).toBeVisible();
+    const rows = within(table)
+      .getAllByRole('row')
+      .map((row) => row.textContent);
+    expect(rows).toEqual([
+      'QuotaLimit',
+      'Prompts50,200',
+      'ProjectsUnlimited',
+      'AI creditsNot included',
+    ]);
+    expect(screen.queryByRole('progressbar')).toBeNull();
   });
 
   it('requires the cancellation dialog before mutating', async () => {

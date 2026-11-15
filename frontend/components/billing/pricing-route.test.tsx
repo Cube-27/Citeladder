@@ -53,6 +53,20 @@ const signedInUser = {
 };
 
 describe('app pricing continuation', () => {
+  it('offers the public pricing page once, from the empty state, when nothing is chosen', async () => {
+    mswServer.use(
+      http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
+    );
+    renderWithProviders(<PricingRoute />);
+    expect(await screen.findByRole('heading', { name: 'No plan chosen yet' })).toBeVisible();
+    expect(
+      screen.getByText(/has no plan yet\. Compare plans on the public pricing page\./u),
+    ).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'View public pricing' })).toHaveLength(1);
+    expect(screen.queryByText(/^Workspace:/u)).toBeNull();
+  });
+
   it('waits for confirmation, refreshes the catalog, and scopes the mutation to the selected workspace', async () => {
     const writes: Array<{ workspace: string | null; key: string | null }> = [];
     let reads = 0;
@@ -88,6 +102,7 @@ describe('app pricing continuation', () => {
 
     renderWithProviders(<PricingRoute />);
     expect(await screen.findByRole('heading', { name: 'Extra seats' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'View public pricing' })).toHaveLength(1);
     expect(writes).toHaveLength(0);
     await userEvent.click(screen.getByRole('button', { name: 'Review current quote' }));
     await waitFor(() => expect(writes).toHaveLength(1));
