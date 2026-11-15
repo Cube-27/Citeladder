@@ -95,12 +95,17 @@ function ExtraRow({
   );
 }
 
-/** Add-on and top-up grants still in force, each with the date it lapses. */
-function ActiveExtras({ entitlement }: Readonly<{ entitlement: BillingEntitlement | null }>) {
-  const grants = (entitlement?.grants ?? []).filter(
+type ExtraGrant = BillingEntitlement['grants'][number];
+
+function activeExtraGrants(entitlement: BillingEntitlement | null): ExtraGrant[] {
+  return (entitlement?.grants ?? []).filter(
     (grant) =>
       (grant.source_kind === 'addon' || grant.source_kind === 'topup') && grant.revoked_at === null,
   );
+}
+
+/** Add-on and top-up grants still in force, each with the date it lapses. */
+function ActiveExtras({ grants }: Readonly<{ grants: readonly ExtraGrant[] }>) {
   if (grants.length === 0) return null;
   return (
     <Section aria-labelledby="active-extras-title">
@@ -152,7 +157,9 @@ export function ExtraPurchases({
   onBuy: ExtraPurchase;
 }>) {
   const { addons, topups } = extrasForPlan(catalog, planKey);
-  if (addons.length === 0 && topups.length === 0) return null;
+  const grants = activeExtraGrants(entitlement);
+  // Purchases still in force stay listed even when the catalogue offers nothing more to buy.
+  if (addons.length === 0 && topups.length === 0 && grants.length === 0) return null;
   return (
     <Section aria-labelledby="extras-title">
       <SectionHeader>
@@ -182,7 +189,7 @@ export function ExtraPurchases({
             onBuy={onBuy}
           />
         ))}
-        <ActiveExtras entitlement={entitlement} />
+        <ActiveExtras grants={grants} />
       </Stack>
     </Section>
   );
