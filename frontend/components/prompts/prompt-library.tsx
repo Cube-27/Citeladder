@@ -335,7 +335,6 @@ export function PromptLibrary({
           onImport={() => setImportOpen(true)}
           onAdd={openAdd}
           onGenerate={() => openBuilder('business')}
-          hasActivePrompts={statusCounts.active > 0}
         />
       }
       filters={

@@ -8,6 +8,7 @@ import {
   buildLaunchPayload as buildWithLimits,
   canLaunch,
   clampRepetitions,
+  launchReadiness,
   promptBatches,
   PROMPT_BATCH_SIZE,
   toggleEngine,
@@ -109,6 +110,26 @@ describe('toggleEngine', () => {
   it('adds and removes an engine immutably', () => {
     expect(toggleEngine(['gemini'], 'claude')).toEqual(['gemini', 'claude']);
     expect(toggleEngine(['gemini', 'claude'], 'gemini')).toEqual(['claude']);
+  });
+});
+
+describe('launchReadiness', () => {
+  it('launches only when some set holds an active, enabled prompt', () => {
+    const idle = makeSet([
+      makePrompt({ id: 'archived', status: 'archived' }),
+      makePrompt({ id: 'disabled', enabled: false }),
+    ]);
+    expect([
+      launchReadiness({ status: 'success', promptSets: [] }),
+      launchReadiness({ status: 'success', promptSets: [idle] }),
+      launchReadiness({ status: 'success', promptSets: [idle, makeSet([makePrompt({})])] }),
+      launchReadiness({ status: 'pending' }),
+    ]).toEqual([
+      { kind: 'blocked', reason: 'Add an active prompt to launch a run.' },
+      { kind: 'blocked', reason: 'Add an active prompt to launch a run.' },
+      { kind: 'ready' },
+      { kind: 'checking' },
+    ]);
   });
 });
 

@@ -158,13 +158,10 @@ export function PromptActions({
   onImport,
   onAdd,
   onGenerate,
-  hasActivePrompts,
 }: Readonly<{
   onImport: () => void;
   onAdd: () => void;
   onGenerate: () => void;
-  /** Launch run measures active prompts, so it waits for at least one. */
-  hasActivePrompts: boolean;
 }>) {
   // Each control is offered only to a role that may use it.
   const canWrite = useWorkspaceCapability('write');
@@ -173,9 +170,8 @@ export function PromptActions({
       {canWrite ? (
         <AddPromptsMenu onImport={onImport} onAdd={onAdd} onGenerate={onGenerate} />
       ) : null}
-      {/* With nothing to measure, Launch run waits for an active prompt. */}
       <MastheadPrimary>
-        <LaunchAuditButton disabled={!hasActivePrompts} />
+        <LaunchAuditButton />
       </MastheadPrimary>
     </>
   );

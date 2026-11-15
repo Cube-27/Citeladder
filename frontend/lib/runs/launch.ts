@@ -55,6 +55,35 @@ export function auditablePrompts(promptSet: PromptSet | undefined): Prompt[] {
     );
 }
 
+export type LaunchReadiness =
+  | { kind: 'ready' }
+  | { kind: 'checking' }
+  | { kind: 'blocked'; reason: string };
+
+/**
+ * Whether Launch run can start, and why not: the one rule every entry reads.
+ * A failed read stays launchable so the dialog can name the failure.
+ */
+export function launchReadiness(
+  read:
+    | { status: 'pending' }
+    | { status: 'error' }
+    | { status: 'success'; promptSets: readonly PromptSet[] },
+): LaunchReadiness {
+  switch (read.status) {
+    case 'pending':
+      return { kind: 'checking' };
+    case 'error':
+      return { kind: 'ready' };
+    case 'success':
+      return read.promptSets.some((set) => auditablePrompts(set).length > 0)
+        ? { kind: 'ready' }
+        : { kind: 'blocked', reason: 'Add an active prompt to launch a run.' };
+    default:
+      return read satisfies never;
+  }
+}
+
 /** Split audit-eligible prompts into fixed-size batches. */
 export function promptBatches(prompts: Prompt[], size = PROMPT_BATCH_SIZE): Prompt[][] {
   if (!Number.isInteger(size) || size <= 0) {
