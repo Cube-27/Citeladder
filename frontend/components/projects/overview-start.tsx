@@ -1,7 +1,8 @@
-import { ArrowRight, Plus } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 
 import type { CommandCenter } from '@citeladder/contracts';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
+import { ActionButton, ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
@@ -28,7 +29,7 @@ function startSteps(data: CommandCenter): TrailStep[] {
   return [
     {
       id: 'prompts',
-      label: 'Add prompts',
+      label: ACTIONS.addPrompts.label,
       status: prompts ? 'done' : 'pending',
       detail: prompts
         ? pluralCount(data.active_prompt_count, 'active prompt')
@@ -36,7 +37,7 @@ function startSteps(data: CommandCenter): TrailStep[] {
     },
     {
       id: 'run',
-      label: 'Launch run',
+      label: ACTIONS.launchRun.label,
       status: runStatus,
       detail: data.measurement
         ? null
@@ -60,7 +61,7 @@ function startSteps(data: CommandCenter): TrailStep[] {
 /**
  * The one card a project sees before its Overview has figures: the steps as a
  * rung trail and the one button for the step that is next. Widgets join it as
- * their data arrives. With no run yet, its button is the view's primary.
+ * their data arrives. Each step's button is its named action's one look.
  */
 export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
   const firstRun = !data.measurement;
@@ -79,23 +80,16 @@ export function OverviewStart({ data }: Readonly<{ data: CommandCenter }>) {
       <Stack gap="workspace">
         <RungTrail label="Steps to your first results" steps={startSteps(data)} />
         <div>
-          <StartButton data={data} primary={firstRun} />
+          <StartButton data={data} />
         </div>
       </Stack>
     </Section>
   );
 }
 
-function StartButton({ data, primary }: Readonly<{ data: CommandCenter; primary: boolean }>) {
+function StartButton({ data }: Readonly<{ data: CommandCenter }>) {
   if (data.active_prompt_count === 0)
-    return (
-      <Button asChild variant={primary ? 'primary' : 'secondary'}>
-        <ProjectLink href={PROMPTS_HREF}>
-          <Icon icon={Plus} />
-          Add prompts
-        </ProjectLink>
-      </Button>
-    );
+    return <ActionButton action="addPrompts" href={PROMPTS_HREF} />;
   if (data.next_action.kind === 'audit_running')
     return (
       <Button asChild variant="secondary">

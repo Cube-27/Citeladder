@@ -80,7 +80,7 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
   const slices: readonly Part[] = [
     { label: 'High', value: high, status: 'negative' },
     { label: 'Medium', value: severityCount(summary.severity_counts, 'medium'), status: 'warning' },
-    { label: 'Low', value: severityCount(summary.severity_counts, 'low'), status: 'info' },
+    { label: 'Low', value: severityCount(summary.severity_counts, 'low'), status: 'neutral' },
   ];
   return (
     <Section aria-labelledby="issues-by-severity">

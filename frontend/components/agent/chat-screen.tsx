@@ -7,11 +7,8 @@ import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail } from '@/components/agent/use-chat-turns';
 import { ThreadPage } from '@/components/templates/thread-page';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
-import { ProjectLink } from '@/components/ui/project-link';
-import { Button } from '@/components/ui/button';
+import { ActionButton } from '@/components/ui/actions';
 import { ComposerDock } from '@/components/ui/chat-dock';
-import { Icon } from '@/components/ui/icon';
-import { ICONS } from '@/lib/icons';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import type { AgentChatDetail } from '@/lib/api/agent';
@@ -150,12 +147,5 @@ function ChatView({
 
 function ChatHeaderActions({ detail }: Readonly<{ detail: AgentChatDetail }>) {
   if (!detail.chat.action_id) return null;
-  return (
-    <Button asChild variant="secondary">
-      <ProjectLink href={`/agent/actions/${detail.chat.action_id}`}>
-        <Icon icon={ICONS.opportunities} />
-        Open Action
-      </ProjectLink>
-    </Button>
-  );
+  return <ActionButton action="openAction" href={`/agent/actions/${detail.chat.action_id}`} />;
 }

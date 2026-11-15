@@ -74,7 +74,7 @@ export function UrlDetailView({
             <>
               {history}
               {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
-              <AskAgentLink handoff={pageHandoff(detail)}>Ask agent about this page</AskAgentLink>
+              <AskAgentLink handoff={pageHandoff(detail)} aria-label="Ask agent about this page" />
             </>
           }
         />

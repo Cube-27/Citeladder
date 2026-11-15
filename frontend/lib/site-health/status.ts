@@ -31,7 +31,7 @@ import { CRAWL_POLL_MS } from '@/lib/config/operational';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
 import { availabilityLabel, formatCount, formatDisplayTimestamp } from '@/lib/format';
-import { titleCaseStatus } from '@/lib/utils';
+import { sentenceCaseStatus } from '@/lib/utils';
 
 const INTERNAL_LINK_REASON_LABELS: Record<string, string> = {
   funding_unavailable: 'insufficient AI credits',
@@ -368,7 +368,7 @@ export function isFetchFailure(status: PageAnalysisStatus): boolean {
 
 /** Human-readable label for any snake_case lifecycle token. */
 export function statusLabel(status: string): string {
-  return titleCaseStatus(status);
+  return sentenceCaseStatus(status);
 }
 
 /**

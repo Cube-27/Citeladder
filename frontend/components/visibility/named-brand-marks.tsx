@@ -1,5 +1,6 @@
 import type { NamedBrand } from '@citeladder/contracts';
 
+import { Absence } from '@/components/ui/absence';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -19,7 +20,7 @@ export function NamedBrandMarks({
   answers,
 }: Readonly<{ brands: readonly NamedBrand[]; total: number; answers: string }>) {
   // Measured, and no brand was named: a finding, never the "not measured" mark.
-  if (!brands.length) return <span className="text-ink-2">None</span>;
+  if (!brands.length) return <Absence state="none" />;
   const overflow = total - brands.length;
   return (
     <Inline as="span" gap="tight">

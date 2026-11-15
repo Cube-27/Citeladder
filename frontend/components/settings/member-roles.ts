@@ -1,8 +1,8 @@
 import { ASSIGNABLE_WORKSPACE_ROLES } from '@/lib/api/workspaces';
-import { titleCaseStatus } from '@/lib/utils';
+import { sentenceCaseStatus } from '@/lib/utils';
 
 /** A membership role as people read it: `admin` → `Admin`. */
-export const roleLabel = titleCaseStatus;
+export const roleLabel = sentenceCaseStatus;
 
 /** The roles a control may offer. `owner` is never among them. */
 export const ROLE_OPTIONS = ASSIGNABLE_WORKSPACE_ROLES.map((role) => ({

@@ -8,7 +8,7 @@ import {
   SectionTitle,
 } from '@/components/ui/section';
 import { UsageMeter } from '@/components/billing/usage-meter';
-import { Stack } from '@/components/ui/layout';
+import { AppGrid } from '@/components/ui/app-grid';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -100,12 +100,11 @@ function UsageBody({
       <StateBlock kind="empty" inline message="No measurable allowances on this account yet." />
     );
   }
-  // Cells of at least 220px that drop a column before a label could break.
   return (
-    <Stack gap="workspace" className="grid-cols-[repeat(auto-fill,minmax(13.75rem,1fr))]">
+    <AppGrid layout="cells">
       {items.map((item) => (
         <UsageMeter key={item.key} item={item} />
       ))}
-    </Stack>
+    </AppGrid>
   );
 }

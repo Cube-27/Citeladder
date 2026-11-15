@@ -81,12 +81,7 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
             <SectionTitle level={2}>{group}</SectionTitle>
             <SectionDescription>{pluralCount(rows.length, 'skill')}</SectionDescription>
           </SectionHeader>
-          {/* Auto-fit slips at least 280 wide: two across at 982. */}
-          <AppGrid
-            as="ul"
-            layout="pair"
-            className="column-split:grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))] grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]"
-          >
+          <AppGrid as="ul" layout="slips">
             {rows.map((skill) => (
               <li key={skill.id} className="flex">
                 <SkillSlip skill={skill} output={outputKind(skill.output_kind)?.label} />

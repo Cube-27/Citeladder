@@ -31,7 +31,7 @@ export type Part = Readonly<{
 const STATUS_FILL = {
   negative: 'bg-negative',
   warning: 'bg-warning',
-  info: 'bg-info',
+  neutral: 'bg-ink-2',
 } as const;
 
 /** A share this wide or more is labelled under its own segment. */

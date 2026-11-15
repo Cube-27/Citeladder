@@ -6,7 +6,7 @@ import { Stack } from '@/components/ui/layout';
 import { RadioGroup } from '@/components/ui/radio-group';
 import type { DiscoveryProfile } from '@/lib/api/brand-discoveries';
 import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';
-import { titleCaseStatus } from '@/lib/utils';
+import { sentenceCaseStatus } from '@/lib/utils';
 
 /**
  * Everything the user actually decides at onboarding.
@@ -47,7 +47,7 @@ function categoryChoices(profile: DiscoveryProfile): string[] {
     // Keyed on what the chip will SAY, not on what it stores: two tokens that
     // differ only by an underscore render the same word and would otherwise
     // produce two identical chips.
-    const key = titleCaseStatus(item).toLowerCase();
+    const key = sentenceCaseStatus(item).toLowerCase();
     if (!item || seen.has(key)) continue;
     seen.add(key);
     choices.push(item);
@@ -96,7 +96,7 @@ export function IcpCategory({
             // customer read on this screen.
             ...choices.map((option) => ({
               value: option,
-              label: titleCaseStatus(option),
+              label: sentenceCaseStatus(option),
             })),
             {
               value: OTHER_CATEGORY,

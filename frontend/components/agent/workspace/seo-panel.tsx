@@ -8,7 +8,7 @@ import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { AgentPageFetchDone, AgentRevision } from '@/lib/api/agent';
 import { pluralCount } from '@/lib/format';
-import { severityBadgeValue, severityLabel } from '@/lib/site-health/issues';
+import { severityLabel } from '@/lib/site-health/issues';
 import { issueSeveritySchema } from '@citeladder/contracts';
 
 type PageCheck = AgentPageFetchDone['checks'][number];
@@ -25,7 +25,7 @@ function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
     <Inline as="li" gap="compact" className={ledgerItemClasses('justify-between')}>
       <span className={textRole('body')}>{check.label}</span>
       {severity.success ? (
-        <StatusMark variant="status" value={severityBadgeValue(severity.data)}>
+        <StatusMark variant="severity" value={severity.data}>
           {severityLabel(severity.data)}
         </StatusMark>
       ) : null}

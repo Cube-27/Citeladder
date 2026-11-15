@@ -2,12 +2,10 @@ import { lazy, Suspense, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { isAgentPath } from '@/lib/navigation/app-routes';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
+import { ActionButton } from '@/components/ui/actions';
 import { MASTHEAD_LABELLED } from '@/components/ui/masthead';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAgentPanel } from '@/lib/agent/panel-context';
-import { ICONS } from '@/lib/icons';
 import { useProjectContext } from '@/lib/project/project-context';
 
 // The panel renders chats (markdown, composer, skills); it stays out of the
@@ -39,15 +37,12 @@ function PanelTrigger({ open }: Readonly<{ open: () => void }>) {
   if (!available) return null;
   return (
     <Tooltip content="Ask the agent about this screen" side="bottom">
-      <Button
-        variant="secondary"
+      <ActionButton
+        action="askAgent"
         aria-haspopup="dialog"
         onClick={open}
         className={MASTHEAD_LABELLED}
-      >
-        <Icon icon={ICONS.agent} />
-        Ask agent
-      </Button>
+      />
     </Tooltip>
   );
 }

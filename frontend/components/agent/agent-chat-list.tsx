@@ -167,7 +167,9 @@ export function ChatsFlyout() {
         return (
           <MenuLinkItem key={chat.id}>
             <Link to={projectHref(href)} aria-current={pathname === href ? 'page' : undefined}>
-              <span className="min-w-0 flex-1 truncate">{chat.title}</span>
+              <span className="min-w-0 flex-1 truncate" title={chat.title}>
+                {chat.title}
+              </span>
               {chat.running ? <Spinner label="Working" /> : null}
             </Link>
           </MenuLinkItem>

@@ -39,7 +39,7 @@ const NEXT_ACTION_COPY: Record<
   },
   configure_prompts: {
     ...RECOMMENDED,
-    link: 'Add prompts',
+    link: ACTIONS.addPrompts.label,
     reason: 'Track the questions buyers ask to start measuring.',
   },
   audit: {

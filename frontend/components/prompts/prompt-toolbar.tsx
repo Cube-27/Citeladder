@@ -1,6 +1,7 @@
-import { ChevronDown, Pencil, Plus, Sparkles, Upload } from 'lucide-react';
+import { ChevronDown, Pencil, Sparkles, Upload } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
+import { ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { choiceFilter, manyFilter, type FilterDefinition } from '@/components/ui/all-filters';
@@ -182,9 +183,9 @@ export function AddPromptsMenu({ onImport, onAdd, onGenerate }: AddPromptsHandle
   return (
     <Menu>
       <MenuTrigger asChild>
-        <Button variant="secondary">
-          <Icon icon={Plus} />
-          Add prompts
+        <Button variant={ACTIONS.addPrompts.variant}>
+          <Icon icon={ACTIONS.addPrompts.icon} />
+          {ACTIONS.addPrompts.label}
           <Icon icon={ChevronDown} className="opacity-80" />
         </Button>
       </MenuTrigger>

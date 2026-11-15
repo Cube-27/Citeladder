@@ -83,9 +83,12 @@ export function DraftSheet({
     >
       <Stack gap="item">
         <p className="flex">
-          <DraftTag>{marker ?? MARKER[state]}</DraftTag>
+          <DraftTag kind={state === 'draft' ? 'draft' : 'category'}>
+            {marker ?? MARKER[state]}
+          </DraftTag>
         </p>
-        {title ? <h3 className={textRole('subheading', 'min-w-0 break-words')}>{title}</h3> : null}
+        {/* A card's title is an h2 (SEM-01). */}
+        {title ? <h2 className={textRole('subheading', 'min-w-0 break-words')}>{title}</h2> : null}
         {children}
         {actions ? <Inline className="flex-wrap">{actions}</Inline> : null}
       </Stack>

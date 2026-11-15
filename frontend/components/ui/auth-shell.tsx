@@ -153,12 +153,12 @@ export function AuthRow({
   );
 }
 
-/** The create row's lead: a 40px dashed tile with the glyph. */
+/** The create row's lead: a 40px inset tile with the glyph (dashed is for drafts only). */
 export function AuthRowTile({ icon }: Readonly<{ icon: LucideIcon }>) {
   return (
     <span
       aria-hidden
-      className="border-control-line text-ink-2 rounded-control grid size-10 shrink-0 place-items-center border border-dashed"
+      className="bg-well text-ink-2 rounded-control grid size-10 shrink-0 place-items-center"
     >
       <Icon icon={icon} />
     </span>

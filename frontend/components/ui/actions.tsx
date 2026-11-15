@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { CheckCircle2, Copy, Rocket, Sparkles } from 'lucide-react';
+import { CheckCircle2, Copy, Plus, Rocket, Sparkles } from 'lucide-react';
 
 import {
   Button,
@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
+import { ICONS } from '@/lib/icons';
 import { cn } from '@/lib/utils';
 
 /**
@@ -23,8 +24,10 @@ type ActionPreset = Readonly<{ label: string; variant: ButtonVariant; icon?: Luc
 
 export const ACTIONS = {
   launchRun: { label: 'Launch run', variant: 'primary', icon: Rocket },
+  addPrompts: { label: 'Add prompts', variant: 'secondary', icon: Plus },
+  askAgent: { label: 'Ask agent', variant: 'secondary', icon: ICONS.agent },
   workWithAgent: { label: 'Work with the agent', variant: 'secondary', icon: Sparkles },
-  openAction: { label: 'Open Action', variant: 'secondary' },
+  openAction: { label: 'Open Action', variant: 'secondary', icon: ICONS.opportunities },
   viewEvidence: { label: 'View evidence', variant: 'secondary' },
   markImplemented: { label: 'Mark implemented', variant: 'secondary', icon: CheckCircle2 },
   runCrawl: { label: 'Run new crawl', variant: 'secondary' },

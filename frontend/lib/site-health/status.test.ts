@@ -411,8 +411,8 @@ describe('score / count / date placeholders', () => {
     expect(formatAudited('not-a-date')).toBe('not-a-date');
   });
 
-  it('titleizes snake_case status tokens', () => {
-    expect(statusLabel('sample_completed')).toBe('Sample Completed');
+  it('sentence-cases snake_case status tokens', () => {
+    expect(statusLabel('sample_completed')).toBe('Sample completed');
     expect(statusLabel('running')).toBe('Running');
   });
 });

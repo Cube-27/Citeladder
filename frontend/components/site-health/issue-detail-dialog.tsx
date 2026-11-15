@@ -128,7 +128,7 @@ export function IssueDetailDrawer({
         </Stack>
       ) : null}
       <Inline className="flex-wrap">
-        <AskAgentLink appearance="primary" handoff={handoff} />
+        <AskAgentLink handoff={handoff} />
         <CopyButton value={buildFixPrompt(issue)} variant="secondary" className="w-fit">
           Copy fix prompt
         </CopyButton>
