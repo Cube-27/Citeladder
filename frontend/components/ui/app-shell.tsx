@@ -7,12 +7,12 @@ import { SidebarResizeHandle } from '@/components/ui/sidebar-resize-handle';
 import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
 
 /**
- * The signed-in frame: the sidebar column beside the
- * main column, both on the ground.
+ * The signed-in frame: the sidebar column on `chrome` beside the main
+ * column on the ground.
  *
  * From `rail:` (900px) the sidebar is a labelled column, 200 wide below
  * `shell:` (1280px) and 224 from it; the reader may drag its inner edge
- * (`lib/sidebar-width.ts`) or collapse it to the 48px rail, and both choices
+ * (`lib/sidebar-width.ts`) or collapse it to the 56px rail, and both choices
  * persist. Below `rail:` there is no column: the masthead's menu button opens
  * the same sidebar, labelled, in a left drawer. `labelled:` styles the
  * sidebar wherever it shows its labels. The page's own anatomy (masthead,
@@ -20,10 +20,10 @@ import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
  */
 const FRAME =
   'bg-ground text-ink grid min-h-dvh grid-cols-[minmax(0,1fr)] rail:grid-cols-[var(--sidebar-width-compact)_minmax(0,1fr)] shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)]';
-// One hairline divides the sidebar from the page in both themes; the resize
-// handle's line strengthens it on hover, focus and drag.
+// The sidebar sits on `chrome`; one hairline divides it from the page in both
+// themes, and the resize handle's line strengthens it on hover, focus and drag.
 const SIDEBAR_COLUMN =
-  'bg-ground border-rule rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
+  'bg-chrome border-rule rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
 // The `main` container the `column-split:`/`column-wide:` variants measure.
 const MAIN_INSET =
   '@container/main min-w-0 px-[var(--content-gutter)] pb-[var(--page-section-gap)]';
@@ -70,21 +70,31 @@ export function AppShellFrame({
 }
 
 /**
- * The frame before the session resolves: the sidebar's column, empty (its
- * contents would be private), and the page inset exactly where the settled
- * shell puts it, so only the sidebar fills in when the shell opens.
+ * The frame before the session resolves: the sidebar's column holding the
+ * placeholder sidebar (the route manifest's rows, inert, with blocks where
+ * the reads go), and the `main` landmark exactly where the settled shell puts
+ * it, so nothing moves when the shell opens.
  */
 export function AppShellPlaceholder({
   busy,
+  sidebar,
   children,
-}: Readonly<{ busy: boolean; children: ReactNode }>) {
+}: Readonly<{ busy: boolean; sidebar: ReactNode; children: ReactNode }>) {
   const { style, state } = useFrameState();
   return (
-    <div data-sidebar-state={state} className={FRAME} style={style} aria-busy={busy || undefined}>
-      <div className={SIDEBAR_COLUMN} />
-      <div data-main-column="" className={MAIN_INSET}>
-        <div className={PAGE}>{children}</div>
+    <div
+      data-app-surface=""
+      data-sidebar-state={state}
+      className={FRAME}
+      style={style}
+      aria-busy={busy || undefined}
+    >
+      <div className={SIDEBAR_COLUMN} inert>
+        {sidebar}
       </div>
+      <main id="main" tabIndex={-1} data-main-column="" className={MAIN_INSET}>
+        <div className={PAGE}>{children}</div>
+      </main>
     </div>
   );
 }
@@ -129,7 +139,7 @@ export function NavDrawer({
       body="dock"
       closeLabel="Close navigation"
     >
-      <div data-nav-drawer="" className="bg-ground flex min-h-0 flex-1 flex-col">
+      <div data-nav-drawer="" className="bg-chrome flex min-h-0 flex-1 flex-col">
         {children}
       </div>
     </Drawer>

@@ -122,11 +122,14 @@ describe('application route recovery', () => {
     const router = await privateRouter();
     render(<RouterProvider router={router} />);
 
-    const main = await screen.findByRole('main');
+    // The shell's `main` is there from the first frame; the error arrives in it.
+    const heading = await screen.findByRole('heading', {
+      level: 2,
+      name: 'This page could not be opened',
+    });
+    const main = screen.getByRole('main');
     expect(main).toHaveAttribute('id', 'main');
-    expect(
-      within(main).getByRole('heading', { level: 2, name: 'This page could not be opened' }),
-    ).toBeInTheDocument();
+    expect(main).toContainElement(heading);
     expect(within(main).getByRole('button', { name: 'Reload page' })).toBeInTheDocument();
     expect(within(main).getByRole('link', { name: 'Go to Overview' })).toHaveAttribute(
       'href',

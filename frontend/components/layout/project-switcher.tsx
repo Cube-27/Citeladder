@@ -67,12 +67,17 @@ export function ProjectSwitcher() {
             aria-label={label}
             title={label}
             meta={domain}
+            pending={isLoading}
             lead={
-              <BrandMark
-                name={label}
-                logoUrl={activeProject?.brand.logo_url}
-                websiteUrl={activeProject?.website_url}
-              />
+              isLoading ? (
+                <span aria-hidden className="bg-well rounded-mark size-5 shrink-0" />
+              ) : (
+                <BrandMark
+                  name={label}
+                  logoUrl={activeProject?.brand.logo_url}
+                  websiteUrl={activeProject?.website_url}
+                />
+              )
             }
           />
         </MenuTrigger>

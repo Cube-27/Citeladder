@@ -58,7 +58,8 @@ export function SidebarResizeHandle({ sidebarId }: Readonly<{ sidebarId: string 
       onClick={resize.onClick}
       onDoubleClick={resize.onDoubleClick}
       onKeyDown={resize.onKeyDown}
-      className="focus-ring group rail:flex absolute inset-y-0 end-0 hidden w-2 translate-x-1/2 cursor-col-resize touch-none justify-center"
+      // A 24px hit area (WCAG 2.5.8) centred on the edge; the drawn line stays 1px.
+      className="focus-ring group rail:flex absolute inset-y-0 end-0 hidden w-6 translate-x-1/2 cursor-col-resize touch-none justify-center"
     >
       <span
         aria-hidden

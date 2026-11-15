@@ -24,7 +24,7 @@
    website's.
 
    The shell's navigation: from `rail:` (900px) the
-   sidebar column shows, labelled, unless the reader collapsed it to the 48px
+   sidebar column shows, labelled, unless the reader collapsed it to the 56px
    rail (`data-sidebar-state="collapsed"`); below it the masthead's menu
    button opens the same sidebar in a left drawer. `labelled:` is where the
    sidebar shows its labels: an expanded sidebar, and always inside that
@@ -50,13 +50,6 @@
     @variant outside-main-column {
       @slot;
     }
-  }
-}
-/* The Thread template's History pane shows beside the thread from a 1100px
-   main column; below it History opens as a drawer. */
-@custom-variant column-history {
-  @container main (min-width: 1100px) {
-    @slot;
   }
 }
 @custom-variant column-wide {
@@ -756,23 +749,25 @@
 
   /* Density (2.2): controls 32, and 44 on flow pages; below 900px or under a
      coarse pointer every control is 44 (block below); tags 24; every target
-     at least 24. Navigation rows are links, 28. Table header 32, body rows 36. */
+     at least 24. Navigation rows 32 on a 34 pitch (44 in the drawer). Table
+     header 32, body rows 36. */
   --control-lg: 44px;
   --control-coarse: 44px;
-  --nav-row-height: 28px;
+  --nav-row-height: 32px;
   --table-row-height: 36px;
 
-  /* Anatomy (2.3): masthead 48, page tabs 40, filter bar 48, then 24 to the
-     first content; sidebar 224 from 1280, 200 from 900, a 48 rail when
-     collapsed. Content caps at 1280 with a 24 gutter (16 below 900). */
-  --masthead-height: 48px;
+  /* Anatomy (2.3): masthead 56, page tabs 40, filter bar 48, then 24 to the
+     first content; sidebar 224 from 1280, 200 from 900, a 56 rail of 40px
+     buttons when collapsed. Content caps at 1280 with a 24 gutter (16 below
+     900). The current navigation item sits on a 7% ink tile (2.8). */
+  --masthead-height: 56px;
   --page-tabs-height: 40px;
   --filter-bar-height: 48px;
   --sidebar-width: 224px;
   --sidebar-width-compact: 200px;
-  --sidebar-rail-width: 48px;
-  /* The Agent's History beside a thread, once the main column reaches 1100. */
-  --history-pane-width: 240px;
+  --sidebar-rail-width: 56px;
+  --rail-button: 40px;
+  --nav-current-fill: color-mix(in srgb, var(--color-ink) 7%, transparent);
   /* The Workbench's side rail beside its editor. */
   --workbench-rail-width: 320px;
   /* What a Thread page leaves for its own scrolling region: the masthead (as
@@ -814,18 +809,45 @@
   }
 }
 
-/* Below `rail` a masthead that draws page actions gives them their own row,
-   ending on the edge (`Masthead`). */
+/* The sidebar's list fades at the end it can scroll towards (a mask on the
+   list, never a tinted tray); a list holding keyboard focus drops the fade
+   so the ring is never masked. */
+[data-sidebar-scroll][data-fade-bottom] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 32px), transparent);
+}
+[data-sidebar-scroll][data-fade-top] {
+  mask-image: linear-gradient(to top, #000 calc(100% - 32px), transparent);
+}
+[data-sidebar-scroll][data-fade-top][data-fade-bottom] {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 32px,
+    #000 calc(100% - 32px),
+    transparent
+  );
+}
+[data-sidebar-scroll]:has(:focus-visible) {
+  mask-image: none;
+}
+
+/* Below `rail` the masthead stays one row: the title keeps its first words
+   (it never breaks inside one) and a long primary action gives way first. */
 @media (max-width: 899px) {
-  [data-masthead]:has([data-masthead-overflow] > *, [data-masthead-primary] > *) {
-    flex-wrap: wrap;
-    row-gap: 0;
-    padding-bottom: calc(var(--spacing) * 2);
-    & > [data-masthead-end] {
-      flex-basis: 100%;
-      justify-content: flex-end;
-    }
+  [data-masthead] [data-masthead-primary] > * {
+    min-width: 0;
+    flex-shrink: 1;
+    overflow: hidden;
   }
+  [data-masthead] [data-masthead-primary] button {
+    justify-content: flex-start;
+  }
+}
+
+/* The thread is up to 1040 wide; its running text keeps a 760px measure,
+   while tables, documents, evidence and proposals take the full width. */
+[data-thread] :is(p, li, blockquote, h2, h3, h4) {
+  max-width: 760px;
 }
 
 /* Below the shell breakpoint the website's main gutter narrows to space-6. */
@@ -1779,7 +1801,7 @@ a.focus-ring:active .type-caption {
     --rhythm-gap-above: 4px;
   }
 
-  /* The account button carries the location rung while the page is one of
+  /* The account button carries the location mark while the page is one of
      the account's (Settings, Billing, Pricing). */
   [data-sidebar-ident][aria-current='page'] {
     position: relative;

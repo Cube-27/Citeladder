@@ -1,99 +1,197 @@
-import { useState, type ComponentPropsWithoutRef, type ReactNode, type Ref } from 'react';
-import { ChevronsUpDown, PanelLeftClose, PanelLeftOpen, type LucideIcon } from 'lucide-react';
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+  type Ref,
+  type RefObject,
+} from 'react';
+import {
+  ChevronDown,
+  ChevronsUpDown,
+  PanelLeftClose,
+  PanelLeftOpen,
+  type LucideIcon,
+} from 'lucide-react';
 
 import { IconButton } from '@/components/ui/button';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
- * The Sidebar organism's parts: the project
- * switcher in a cell as tall as the masthead and ruled under it, then one
- * scrolling list of destination groups hung on a 1px rail, then the foot
- * (Integrations, the account button and the collapse toggle). The sidebar is
- * the ladder: the current destination carries the 2px accent rung on the
- * rail. In the collapsed rail (48px) rows show only their icons and name
- * themselves in tooltips; `labelled:` is wherever the labels show.
+ * The Sidebar organism's parts, labelled and as the collapsed rail. Top to
+ * bottom: the project switcher in a cell as tall as the masthead, the mode
+ * switch, the mode's list, then the foot (Integrations, the account and the
+ * collapse toggle). The switcher, the switch and the foot are pinned; only
+ * the list scrolls. Everything sits 8 inside the column's edges, so in the
+ * 56px rail every 40px button shares one centre axis. The rail's buttons sit
+ * edge to edge with 4 between its parts, so its eleven buttons fit a window
+ * 480 high (56 + 10 × 40 + 21 = 477). `labelled:` is wherever the labels show.
  */
 export function SidebarFrame({
   ident,
+  mode,
   nav,
   foot,
-}: Readonly<{ ident: ReactNode; nav: ReactNode; foot: ReactNode }>) {
+}: Readonly<{ ident: ReactNode; mode: ReactNode; nav: ReactNode; foot: ReactNode }>) {
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col overflow-hidden">
       <div
         data-sidebar-ident-cell=""
-        className="border-rule labelled:ps-2 labelled:pe-2 in-data-[nav-drawer]:labelled:pe-12 flex min-h-[var(--masthead-height)] shrink-0 items-center border-b px-1"
+        className="border-rule flex h-[var(--masthead-height)] shrink-0 items-center border-b px-2 in-data-[nav-drawer]:pe-12"
       >
         {ident}
       </div>
-      {/* The 4px inset keeps the first and last rows' focus outlines inside the scroller. */}
-      <div className="labelled:px-2 flex min-h-0 flex-1 flex-col overflow-y-auto px-1 py-4">
-        {nav}
+      <div className="labelled:pt-3 shrink-0 px-2 pt-1">{mode}</div>
+      {nav}
+      <div className="border-rule labelled:gap-0.5 labelled:py-2 flex shrink-0 flex-col border-t px-2 py-1">
+        {foot}
       </div>
-      <div className="border-rule labelled:px-2 flex flex-col gap-1 border-t px-1 py-2">{foot}</div>
+    </div>
+  );
+}
+
+type ScrollEnds = Readonly<{ top: boolean; bottom: boolean }>;
+
+/** Which ends of a list hide more rows, kept current on scroll and resize. */
+function useScrollEnds(ref: RefObject<HTMLElement | null>): ScrollEnds {
+  const [ends, setEnds] = useState<ScrollEnds>({ top: false, bottom: false });
+  useEffect(() => {
+    const node = ref.current;
+    if (!node) return;
+    const update = () => {
+      const hidden = node.scrollHeight - node.clientHeight;
+      const top = hidden > 1 && node.scrollTop > 1;
+      const bottom = hidden > 1 && node.scrollTop < hidden - 1;
+      setEnds((current) =>
+        current.top === top && current.bottom === bottom ? current : { top, bottom },
+      );
+    };
+    update();
+    node.addEventListener('scroll', update, { passive: true });
+    const observer = new ResizeObserver(update);
+    observer.observe(node);
+    if (node.firstElementChild) observer.observe(node.firstElementChild);
+    return () => {
+      node.removeEventListener('scroll', update);
+      observer.disconnect();
+    };
+  }, [ref]);
+  return ends;
+}
+
+/** Scrolls the list just enough to show its current row (never the page). */
+function revealCurrent(list: HTMLElement) {
+  const current = list.querySelector<HTMLElement>('[aria-current="page"]');
+  if (!current) return;
+  const listBox = list.getBoundingClientRect();
+  const rowBox = current.getBoundingClientRect();
+  if (rowBox.top < listBox.top) list.scrollTop -= listBox.top - rowBox.top + 8;
+  else if (rowBox.bottom > listBox.bottom) list.scrollTop += rowBox.bottom - listBox.bottom + 8;
+}
+
+/**
+ * The labelled list between the pinned parts: the one region that scrolls.
+ * It fades at the end it can scroll towards (a mask on the list, globals.css)
+ * and shows the current row on load and whenever `revealKey` (the location)
+ * changes. Groups sit 16 apart.
+ */
+export function SidebarScrollList({
+  label,
+  revealKey,
+  children,
+}: Readonly<{ label: string; revealKey: string; children: ReactNode }>) {
+  const ref = useRef<HTMLDivElement>(null);
+  const ends = useScrollEnds(ref);
+  useEffect(() => {
+    if (ref.current) revealCurrent(ref.current);
+  }, [revealKey]);
+  return (
+    <div
+      ref={ref}
+      data-sidebar-scroll=""
+      data-fade-top={ends.top || undefined}
+      data-fade-bottom={ends.bottom || undefined}
+      className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3"
+    >
+      <nav aria-label={label} className="flex flex-col gap-4">
+        {children}
+      </nav>
     </div>
   );
 }
 
 /**
- * The destinations: groups 16 apart (their heads 4 above their rows) on one
- * 1px `rule` rail, so the whole list shows at 982×800. Rows sit on the rail,
- * so the current row's rung lands on it.
+ * A group of rows. A titled group's label is a 32-high button in
+ * `caption-strong` with a chevron that folds and unfolds the rows; the
+ * caller passes only the rows to show (a folded group still shows the
+ * current page's row). Rows sit on a 34 pitch.
  */
-export function SidebarNavList({
-  label,
-  children,
-}: Readonly<{ label: string; children: ReactNode }>) {
-  return (
-    <nav
-      aria-label={label}
-      className="labelled:border-s labelled:border-rule labelled:ms-2 flex flex-col gap-4"
-    >
-      {children}
-    </nav>
-  );
-}
-
-/** A group of destinations under its `overline` head; the head hides in the rail. */
 export function SidebarNavGroup({
   title,
+  expanded = true,
+  onToggle,
   children,
-}: Readonly<{ title?: string | null; children: ReactNode }>) {
+}: Readonly<{
+  title?: string | null;
+  expanded?: boolean;
+  onToggle?: () => void;
+  children: ReactNode;
+}>) {
+  const listId = useId();
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-0.5">
       {title ? (
-        <p className="type-overline text-ink-2 labelled:flex hidden min-h-4 items-end px-3">
-          {title}
-        </p>
+        <button
+          type="button"
+          aria-expanded={expanded}
+          aria-controls={listId}
+          onClick={onToggle}
+          className="focus-ring type-caption-strong text-ink-2 hover:overlay-hover hover:text-ink rounded-control flex h-[var(--nav-row-height)] w-full min-w-0 items-center gap-2 px-2 text-left transition-colors"
+        >
+          <span className="min-w-0 flex-1 truncate">{title}</span>
+          <ChevronDown
+            aria-hidden
+            className={cn(
+              'size-4 shrink-0 transition-transform motion-reduce:transition-none',
+              !expanded && '-rotate-90',
+            )}
+          />
+        </button>
       ) : null}
-      <ul className="flex flex-col">{children}</ul>
+      <ul id={listId} aria-label={title ?? undefined} className="flex flex-col gap-0.5">
+        {children}
+      </ul>
     </div>
   );
 }
 
+/** The current row's tile, the accent mark at its start and `ink` at 500. */
+const CURRENT_TILE = 'bg-[var(--nav-current-fill)] text-ink before:bg-accent';
+const AT_REST = 'text-ink-2 hover:overlay-hover hover:text-ink';
+
 /**
- * A destination row's face: a link 28 tall (44 below 900px), `label` type in
- * `ink-2`, the icon and the label 4 apart inside 8 of padding. Hover is the
- * hover overlay; the current row is `ink` and carries the 2px accent rung
- * over the rail, painted over the row so selecting a row moves nothing.
- * Labels never wrap: every label fits on one line at the default widths with
- * room to spare; one that cannot (larger text spacing, WCAG 1.4.12) ends in an
- * ellipsis and the row's tooltip shows it whole.
+ * A row's face: 32 tall (44 in the drawer below 900px), `label` type, the
+ * icon and the label 8 apart, radius 6. Labels never wrap: one that cannot
+ * fit (WCAG text spacing) ends in an ellipsis and the row's tooltip shows it.
  */
-export function sidebarNavRowClasses(active: boolean) {
+export function sidebarNavRowClasses(active: boolean, className?: string) {
   return cn(
-    'focus-ring group type-label labelled:justify-start labelled:px-2 relative flex min-h-[var(--nav-row-height)] shrink-0 items-center justify-center gap-1 rounded-control transition-colors',
-    'before:absolute before:inset-y-1 before:-start-px before:w-[var(--mark-width)] before:rounded-mark',
-    active ? 'text-ink before:bg-accent' : 'text-ink-2 hover:overlay-hover hover:text-ink',
+    'focus-ring type-label rounded-control relative flex h-[var(--nav-row-height)] w-full min-w-0 shrink-0 items-center gap-2 px-2 text-left transition-colors',
+    'before:rounded-mark before:absolute before:inset-y-2 before:start-0 before:w-[var(--mark-width)]',
+    active ? CURRENT_TILE : AT_REST,
+    className,
   );
 }
 
+const ROW_ICON = 'size-4 shrink-0 in-data-[nav-drawer]:size-5';
+
 /**
- * A row's content: the 16px icon, the label and, on a row that counts
- * something (Actions), a count slot of a fixed 4ch, so a count arriving never
- * moves the label. Rows without a count give its width to the label. In the
- * rail the label and count stay for assistive technology only.
+ * A row's content: the icon, the label and, on a row that counts something
+ * (Actions), a count slot of a fixed 4ch, so a count arriving never moves the
+ * label.
  */
 export function SidebarNavRowContent({
   icon: Icon,
@@ -102,31 +200,71 @@ export function SidebarNavRowContent({
 }: Readonly<{ icon: LucideIcon; label: string; count?: ReactNode }>) {
   return (
     <>
-      <Icon className="size-4 shrink-0" aria-hidden />
-      <span className="labelled:not-sr-only labelled:min-w-0 labelled:flex-1 sr-only">
-        <span data-sidebar-text="title" className="block truncate">
-          {label}
-        </span>
+      <Icon className={ROW_ICON} aria-hidden />
+      <span data-sidebar-text="title" className="min-w-0 flex-1 truncate">
+        {label}
       </span>
       {count == null ? null : (
-        <span className="type-data-sm labelled:not-sr-only labelled:w-[4ch] labelled:shrink-0 labelled:text-right sr-only">
-          {count}
-        </span>
+        <span className="w-[4ch] shrink-0 text-right tabular-nums">{count}</span>
       )}
     </>
   );
 }
 
 /**
- * The project switcher's and the account's trigger: `control-lg` (44) tall
- * with two lines (the name in `ink`, the domain or workspace in `ink-2`),
- * quiet until hovered or open. In the rail it holds only its mark.
+ * A collapsed-rail button's face: 40 square, a 20px icon, radius 6. The
+ * button of the group that holds the current page carries the tile and the
+ * accent mark.
+ */
+export function sidebarRailButtonClasses(current: boolean) {
+  return cn(
+    'focus-ring rounded-control relative flex size-[var(--rail-button)] shrink-0 items-center justify-center transition-colors [&_svg]:size-5',
+    'before:rounded-mark before:absolute before:inset-y-2.5 before:start-0 before:w-[var(--mark-width)]',
+    'data-[state=open]:overlay-pressed',
+    current ? CURRENT_TILE : AT_REST,
+  );
+}
+
+/**
+ * The Dashboard | Agent switch, the Segmented look: a `well` track 32 tall
+ * (44 in the drawer) with the current segment raised on `surface`. In the
+ * rail it is two stacked rail buttons.
+ */
+export const SIDEBAR_MODE_TRACK =
+  'labelled:grid labelled:h-[var(--nav-row-height)] labelled:grid-cols-2 labelled:bg-well labelled:p-0.5 labelled:rounded-control flex flex-col items-center';
+
+export function sidebarModeSegmentClasses(current: boolean) {
+  return cn(
+    sidebarRailButtonClasses(current),
+    'type-label labelled:size-auto labelled:h-full labelled:w-full labelled:gap-2 labelled:rounded-sm labelled:before:hidden labelled:[&_svg]:size-4',
+    current && 'labelled:bg-surface labelled:shadow-card',
+  );
+}
+
+/** The rail's buttons, top to bottom in one column on the centre axis. */
+export function SidebarRailList({
+  label,
+  children,
+}: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <nav aria-label={label} className="min-h-0 flex-1 overflow-hidden px-2 py-1">
+      <ul className="flex flex-col items-center">{children}</ul>
+    </nav>
+  );
+}
+
+/**
+ * The project switcher's and the account's trigger: two lines (the name in
+ * `ink`, the domain or workspace in `ink-2`), quiet until hovered or open.
+ * In the rail it is a 40px button holding only its mark. `pending` holds the
+ * lines' place with blocks until the read answers.
  */
 export function SidebarIdentButton({
   lead,
   title,
   meta,
   current = false,
+  pending = false,
   ref,
   className,
   ...props
@@ -135,8 +273,9 @@ export function SidebarIdentButton({
     lead: ReactNode;
     title: string;
     meta?: string;
-    /** The current page lives behind this button (the account's Settings): it carries the rung (globals.css). */
+    /** The current page lives behind this button (the account's Settings): it carries the mark. */
     current?: boolean;
+    pending?: boolean;
     ref?: Ref<HTMLButtonElement>;
   }
 >) {
@@ -147,21 +286,31 @@ export function SidebarIdentButton({
       data-sidebar-ident=""
       aria-current={current ? 'page' : undefined}
       className={cn(
-        'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-2 labelled:justify-start labelled:px-2 rounded-control flex min-h-[var(--control-lg)] w-full min-w-0 items-center justify-center gap-2 text-left transition-colors disabled:pointer-events-none',
+        'focus-ring text-ink not-data-[state=open]:hover:overlay-hover data-[state=open]:overlay-pressed disabled:text-ink-2 labelled:w-full labelled:justify-start labelled:px-2 rounded-control flex h-[var(--rail-button)] w-[var(--rail-button)] min-w-0 items-center justify-center gap-2 text-left transition-colors disabled:pointer-events-none',
+        current && 'bg-[var(--nav-current-fill)]',
         className,
       )}
       {...props}
     >
       {lead}
       <span className="labelled:flex hidden min-w-0 flex-1 flex-col">
-        <span data-sidebar-text="title" className="type-label text-ink truncate">
-          {title}
-        </span>
-        {meta ? (
-          <span data-sidebar-text="meta" className="type-caption text-ink-2 truncate">
-            {meta}
-          </span>
-        ) : null}
+        {pending ? (
+          <>
+            <span aria-hidden className="bg-well rounded-control my-0.5 block h-4 w-24" />
+            <span aria-hidden className="bg-well rounded-control block h-3 w-16" />
+          </>
+        ) : (
+          <>
+            <span data-sidebar-text="title" className="type-label text-ink truncate">
+              {title}
+            </span>
+            {meta ? (
+              <span data-sidebar-text="meta" className="type-caption text-ink-2 truncate">
+                {meta}
+              </span>
+            ) : null}
+          </>
+        )}
       </span>
       <ChevronsUpDown className="text-ink-2 labelled:block hidden size-4 shrink-0" aria-hidden />
     </button>
@@ -183,18 +332,21 @@ export function SidebarCollapseToggle({
       aria-keyshortcuts="Meta+Backslash Control+Backslash"
       aria-pressed={collapsed}
       onClick={onToggle}
-      className="shrink-0 in-data-[nav-drawer]:hidden"
+      className={cn(
+        'in-data-[nav-drawer]:hidden shrink-0',
+        collapsed && 'size-[var(--rail-button)] [&_svg]:size-5',
+      )}
     />
   );
 }
 
-/** True while the row sits in the collapsed rail, where only its tooltip names it. */
+/** True while the trigger sits in the collapsed rail, where only its tooltip names it. */
 function isRail(trigger: HTMLElement) {
   if (trigger.closest('[data-nav-drawer]')) return false;
   return Boolean(trigger.closest('[data-sidebar-state="collapsed"]'));
 }
 
-/** Names a row in the rail, or one whose label is cut; where its whole label shows, it never opens. */
+/** Names a rail button, or a row whose label is cut; where its whole label shows, it never opens. */
 export function SidebarRowTooltip({
   label,
   children,

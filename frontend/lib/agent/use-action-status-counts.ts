@@ -13,12 +13,13 @@ export function queueCount(counts: StatusCounts): number {
 /**
  * Project-wide Action counts by status, from the unfiltered first page that
  * the navigation badge, the Actions filter and the Actions table's default
- * view share. Undefined until loaded.
+ * view share: undefined until loaded, `pending` while the read is out.
  */
-export function useActionStatusCounts(): StatusCounts | undefined {
+export function useActionStatusCounts(): { counts?: StatusCounts; pending: boolean } {
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
-  return useQuery({
+  const query = useQuery({
     ...actionsQueries.list({ workspaceId: activeWorkspaceId, projectId: activeProjectId ?? '' }),
     enabled: Boolean(activeWorkspaceId && activeProjectId),
-  }).data?.status_counts;
+  });
+  return { counts: query.data?.status_counts, pending: query.isLoading };
 }

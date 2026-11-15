@@ -18,8 +18,12 @@ import type { IconName } from '@/lib/icons';
  */
 type RouteScope = 'public' | 'workspace' | 'project';
 
-/** The sidebar's groups, in the order of the product loop; `foot` sits above the account. */
-export type SidebarGroup = 'overview' | 'analyze' | 'commerce' | 'act' | 'track' | 'foot';
+/**
+ * The sidebar's groups. Dashboard mode lists `overview` (ungrouped), then
+ * `analyze`, `commerce` and `track`; Agent mode lists `agent`; `foot` sits
+ * above the account in both.
+ */
+export type SidebarGroup = 'overview' | 'analyze' | 'commerce' | 'track' | 'agent' | 'foot';
 
 /**
  * Where a nav entry is listed: a sidebar group (the command palette lists the
@@ -228,12 +232,13 @@ export const APP_ROUTES = [
     path: '/agent/actions',
     title: 'Actions',
     screen: screens.actions,
+    // Listed in both modes; it is an Agent route, so opening it switches to Agent mode.
     nav: [
       {
         label: 'Actions',
         icon: 'opportunities',
         badge: 'open-actions',
-        placements: ['sidebar:act'],
+        placements: ['sidebar:overview', 'sidebar:agent'],
       },
     ],
   }),
@@ -247,7 +252,8 @@ export const APP_ROUTES = [
     path: '/agent',
     title: 'Agent',
     screen: screens.newChat,
-    nav: [listed('Agent', 'agent', 'act')],
+    // Agent mode draws it as its "New chat" button, first in the list.
+    nav: [{ label: 'New chat', icon: 'newChat', placements: ['sidebar:agent'] }],
   }),
   page({
     path: '/agent/chats/:chatId',
@@ -259,13 +265,13 @@ export const APP_ROUTES = [
     path: '/agent/skills',
     title: 'Skills',
     screen: screens.skills,
-    nav: [listed('Skills', 'skills', 'act')],
+    nav: [listed('Skills', 'skills', 'agent')],
   }),
   page({
     path: '/agent/context',
     title: 'Context',
     screen: screens.context,
-    nav: [listed('Context', 'context', 'act')],
+    nav: [listed('Context', 'context', 'agent')],
   }),
   page({
     path: '/prompts',
@@ -412,6 +418,20 @@ export const HOME_PATH = '/projects' satisfies AppRoutePath;
 export function isAgentPath(pathname: string): boolean {
   return pathname === '/agent' || pathname.startsWith('/agent/');
 }
+
+/** The shell's two modes; the sidebar lists one at a time. */
+export type NavigationMode = 'dashboard' | 'agent';
+
+/** The mode a path belongs to: every Agent page is Agent mode, everything else Dashboard. */
+export function navigationMode(pathname: string): NavigationMode {
+  return isAgentPath(pathname) ? 'agent' : 'dashboard';
+}
+
+/** Where a mode opens when it has no remembered route for the project. */
+export const MODE_HOMES = {
+  dashboard: HOME_PATH,
+  agent: '/agent',
+} as const satisfies Record<NavigationMode, AppRoutePath>;
 
 /**
  * Whether the route manages the WORKSPACE rather than working inside a project.
