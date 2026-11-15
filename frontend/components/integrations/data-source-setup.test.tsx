@@ -112,6 +112,38 @@ describe('DataSourceSetup', () => {
     expect(back.searchParams.get('range')).toBe('28d');
   });
 
+  it("shows the page's empty state until any source connects, then the rows", async () => {
+    const ue = userEvent.setup();
+    const page = (
+      <DataSourceSetup
+        required={['gsc']}
+        optional={['ga4', 'bing']}
+        title="Connect Search Console"
+        unconnected={{ heading: 'Connect Google and Bing', description: 'Why it matters.' }}
+      />
+    );
+    serve([]);
+    const first = renderWithProviders(page, {
+      initialEntries: [`/performance?project=${PROJECT}`],
+    });
+
+    expect(await screen.findByRole('heading', { name: 'Connect Google and Bing' })).toBeVisible();
+    expect(screen.queryByTestId('data-source-setup')).toBeNull();
+    await ue.click(screen.getByRole('button', { name: 'Connect Bing' }));
+    expect(new URL(vi.mocked(hardNavigate).mock.calls[0]![0], 'https://app.test').pathname).toBe(
+      `/api/v1/integrations/workspaces/${WS}/oauth/bing/start`,
+    );
+    first.unmount();
+
+    // Bing connected, Search Console not: the rows name each source's next step.
+    serve([connection(GA4, 'bing')]);
+    renderWithProviders(page, { initialEntries: [`/performance?project=${PROJECT}`] });
+    expect(await screen.findByTestId('data-source-setup')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Connect Google and Bing' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Connect Google' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Connect Bing' })).toBeNull();
+  });
+
   it('after consent, lists the properties and offers the matching one as one click', async () => {
     const ue = userEvent.setup();
     let mapped: unknown = null;

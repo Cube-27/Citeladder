@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
+import type { ReactNode } from 'react';
 import { MessageSquareOff } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 import { RecordPage } from '@/components/templates/record-page';
 import { AppGrid } from '@/components/ui/app-grid';
 import { ClampText } from '@/components/ui/clamp-text';
-import { FilterBar } from '@/components/ui/filter-bar';
+import { Card } from '@/components/ui/card';
+import { FilterControls } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
-import { Inline, Stack } from '@/components/ui/layout';
 import { ProductImage } from '@/components/ui/product-image';
 import { TextLink } from '@/components/ui/text-link';
 import { InlineFigure, textRole } from '@/components/ui/typography';
@@ -168,11 +169,10 @@ function HolderDetail({
     engines,
     promptSets: promptSets.data?.prompt_sets ?? [],
   });
-  const bar = <FilterBar filters={filters} />;
   const back = backTo(scopeFilters);
   if (detail.isError)
     return (
-      <RecordPage back={back} filters={bar}>
+      <RecordPage back={back}>
         <StateBlock
           kind="error"
           {...readErrorProps(detail)}
@@ -183,7 +183,7 @@ function HolderDetail({
     );
   if (!detail.data)
     return (
-      <RecordPage back={back} filters={bar}>
+      <RecordPage back={back}>
         <StateBlock kind="loading" label="Loading product" />
       </RecordPage>
     );
@@ -193,9 +193,8 @@ function HolderDetail({
     <RecordPage
       title={data.product.name}
       back={back}
-      filters={bar}
       busy={detail.isFetching}
-      identity={<ProductIdentity detail={data} scope={projectScope} />}
+      identity={<ProductIdentity detail={data} scope={projectScope} filters={filters} />}
     >
       <ProductKpis detail={data} />
       {named ? (
@@ -230,47 +229,82 @@ function HolderDetail({
   );
 }
 
+/** A product URL without its origin, so a cut line keeps the path's end. */
+function urlTail(url: string) {
+  try {
+    const parsed = new URL(url);
+    const tail = `${parsed.pathname}${parsed.search}${parsed.hash}`;
+    return tail === '/' ? url : tail;
+  } catch {
+    return url;
+  }
+}
+
 /**
- * The record's identity, facts first (the masthead names it): who holds it,
- * image, description and a link to its page; a catalog product's Edit and
- * Archive controls, or Add to tracking for a product the answers showed.
+ * The record's identity card (the masthead names it): who holds it, image,
+ * description and a link to its page, with the page's filters and a catalog
+ * product's Edit and Archive, or Add to tracking for a product the answers
+ * showed, at its head's right; below 640 they drop under the link.
  */
 function ProductIdentity({
   detail,
   scope,
-}: Readonly<{ detail: CommerceProductDetail; scope: ProjectScope }>) {
+  filters,
+}: Readonly<{
+  detail: CommerceProductDetail;
+  scope: ProjectScope;
+  filters: readonly FilterDefinition[];
+}>) {
   const { product } = detail;
-  return (
-    <Inline gap="compact" className="flex-wrap items-start">
-      {product.image_url ? <ProductImage src={product.image_url} /> : null}
-      <Stack gap="tight" className="min-w-0 flex-[1_1_16rem]">
-        <span className="type-caption">
-          {holderCaption(product)} · From{' '}
-          <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
-          {detail.executions === 1 ? ' answer' : ' answers'} in the last{' '}
-          <InlineFigure>{detail.window_days}</InlineFigure> days
-        </span>
-        {product.description ? (
-          <p className={textRole('body', 'text-ink-2 line-clamp-2')}>{product.description}</p>
-        ) : null}
-        {product.url ? (
-          <TextLink
-            variant="external"
-            href={product.url}
-            text="caption"
-            className="flex max-w-full min-w-0"
-          >
-            <ClampText>{product.url}</ClampText>
-          </TextLink>
-        ) : null}
-      </Stack>
-      {product.catalog ? (
-        <ProductCatalogControls scope={scope} product={product} catalog={product.catalog} />
-      ) : null}
-      {product.kind === 'ai_observed_competitor' ? (
-        <AddToTracking scope={scope} candidateId={product.holder_id} name={product.name} />
-      ) : null}
-    </Inline>
+  const card = (notices: ReactNode, actions: ReactNode) => (
+    <Card aria-label="Product">
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
+        {product.image_url ? <ProductImage src={product.image_url} /> : null}
+        <div className="flex min-w-0 flex-[1_1_20rem] flex-col">
+          <span className="type-caption text-ink-2">
+            {holderCaption(product)} · From{' '}
+            <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
+            {detail.executions === 1 ? ' answer' : ' answers'} in the last{' '}
+            <InlineFigure>{detail.window_days}</InlineFigure> days
+          </span>
+          {product.description ? (
+            <ClampText lines={2} className={textRole('body', 'text-ink mt-1 max-w-[72ch]')}>
+              {product.description}
+            </ClampText>
+          ) : null}
+          {product.url ? (
+            <TextLink
+              variant="external"
+              href={product.url}
+              text="caption"
+              className="mt-2 flex max-w-full min-w-0"
+            >
+              {/* Cut from the start: the path's end names the product. */}
+              <ClampText tooltip={product.url} className="text-left [direction:rtl]">
+                <bdi dir="ltr">{urlTail(product.url)}</bdi>
+              </ClampText>
+            </TextLink>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-start gap-2 max-sm:basis-full">
+          <FilterControls filters={filters} align="end" />
+          {actions}
+        </div>
+      </div>
+      {notices ? <div className="mt-[var(--card-padding)]">{notices}</div> : null}
+    </Card>
+  );
+  if (product.catalog)
+    return (
+      <ProductCatalogControls scope={scope} product={product} catalog={product.catalog}>
+        {({ notices, actions }) => card(notices, actions)}
+      </ProductCatalogControls>
+    );
+  return card(
+    null,
+    product.kind === 'ai_observed_competitor' ? (
+      <AddToTracking scope={scope} candidateId={product.holder_id} name={product.name} />
+    ) : null,
   );
 }
 

@@ -31,6 +31,7 @@ import { PropertyChoice } from './property-choice';
 import { oauthErrorMessage, useDataSources, type SourceStep } from './data-sources';
 import { Notice } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * The OAuth callback's result on this screen, read once and then removed from
@@ -265,6 +266,47 @@ function SourceRow({
   );
 }
 
+/** Nothing connected yet: the page's empty state, with each family's Connect. */
+function UnconnectedState({
+  heading,
+  description,
+  icon,
+  families,
+  canManage,
+  startConnect,
+}: Readonly<{
+  heading: string;
+  description: string;
+  icon?: LucideIcon;
+  families: readonly GrantFamily[];
+  canManage: boolean;
+  startConnect: (family: GrantFamily) => void;
+}>) {
+  const [lead, ...rest] = families;
+  const action =
+    canManage && lead ? (
+      <>
+        <ConnectButton family={lead} onConnect={() => startConnect(lead)} />
+        {rest.slice(0, 1).map((family) => (
+          <Button key={family} variant="quiet" onClick={() => startConnect(family)}>
+            Connect {FAMILY_META[family].title}
+          </Button>
+        ))}
+      </>
+    ) : (
+      <span className="type-caption">Ask a workspace owner or admin to connect it.</span>
+    );
+  return (
+    <StateBlock
+      kind="empty"
+      icon={icon}
+      heading={heading}
+      description={description}
+      action={action}
+    />
+  );
+}
+
 /**
  * Connect a data source without leaving the screen that needs it.
  *
@@ -283,12 +325,18 @@ export function DataSourceSetup({
   optional = [],
   title,
   whenReady = null,
+  unconnected,
 }: Readonly<{
   required: readonly IntegrationProvider[];
   optional?: readonly IntegrationProvider[];
   title: string;
   /** Shown in place of the setup card once every required source is ready. */
   whenReady?: ReactNode;
+  /**
+   * The page's own empty state while no source is connected at all: the first
+   * family's Connect leads, a second family's is the quiet supporting action.
+   */
+  unconnected?: Readonly<{ heading: string; description: string; icon?: LucideIcon }>;
 }>) {
   const { activeProject, activeWorkspaceId } = useProjectContext();
   const canManage = useWorkspaceCapability('manage_credentials');
@@ -311,6 +359,23 @@ export function DataSourceSetup({
         activeWorkspaceId,
         projectDestination(location.pathname, params, activeProject.id),
       ),
+    );
+
+  const rows = setupRows(providers, sources.steps);
+  if (
+    unconnected &&
+    !sources.error &&
+    !oauth.error &&
+    !oauth.connected &&
+    rows.every((row) => row.kind === 'connect')
+  )
+    return (
+      <UnconnectedState
+        {...unconnected}
+        families={rows.map((row) => row.family)}
+        canManage={canManage}
+        startConnect={startConnect}
+      />
     );
 
   return (
@@ -340,7 +405,7 @@ export function DataSourceSetup({
         ) : (
           // A failed read knows no source's step, so no row is guessed from it.
           <ul className={ledgerClasses()}>
-            {setupRows(providers, sources.steps).map((row) =>
+            {rows.map((row) =>
               row.kind === 'connect' ? (
                 <ConnectRow
                   key={`connect-${row.family}`}

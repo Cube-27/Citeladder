@@ -458,6 +458,11 @@ export function PerformanceScreen() {
           required={['gsc']}
           optional={['ga4', 'bing']}
           title="Connect Search Console"
+          unconnected={{
+            heading: 'Connect Google and Bing',
+            description:
+              'Performance shows clicks, impressions and AI referral sessions from Search Console, Analytics 4 and Bing Webmaster Tools.',
+          }}
           whenReady={coverage.firstUse ? <FirstUseEmptyState action={syncAction} /> : null}
         />
         {readiness.isError ? null : <ReadinessLadder data={readiness.data} sync={idleSync(sync)} />}

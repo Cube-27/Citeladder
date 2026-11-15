@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Columns3, Download } from 'lucide-react';
+import { Columns3, Download, PackageOpen } from 'lucide-react';
 
 import { CollectionPage } from '@/components/templates/collection-page';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Menu, MenuCheckboxItem, MenuContent, MenuLabel, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
+import { StateBlock } from '@/components/ui/state-block';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { TextLink } from '@/components/ui/text-link';
 import { InlineFigure } from '@/components/ui/typography';
@@ -179,6 +180,27 @@ function ProductsContent({
       csv.rows,
     );
   };
+  // Nothing in the catalog and nothing listed: one state replaces the counts and the toolbar.
+  const noProducts =
+    catalog.data?.product_total === 0 &&
+    filters.source === 'catalog' &&
+    !narrowed(filters) &&
+    page.data?.items.length === 0;
+  if (noProducts)
+    return (
+      <CollectionPage actions={header.actions}>
+        {header.notices}
+        <StateBlock
+          kind="empty"
+          icon={PackageOpen}
+          heading="No products yet"
+          description="Add your products so CiteLadder can track how AI answers mention and price them."
+          action={
+            header.addProducts ? <Button onClick={header.addProducts}>Add products</Button> : null
+          }
+        />
+      </CollectionPage>
+    );
   return (
     <CollectionPage
       actions={header.actions}

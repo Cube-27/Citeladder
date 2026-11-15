@@ -379,6 +379,12 @@ function SearchConsoleSetup() {
     <DataSourceSetup
       required={['gsc']}
       title="Connect Search Console"
+      unconnected={{
+        icon: Search,
+        heading: 'Connect Search Console to see search demand',
+        description:
+          'Search Demand shows the queries people search around your offerings, with clicks and impressions, once Search Console is connected.',
+      }}
       whenReady={
         <DemandEmpty>
           <StateBlock

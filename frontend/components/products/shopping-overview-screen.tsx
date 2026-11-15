@@ -21,7 +21,7 @@ import type {
   CommerceShoppingOverview,
 } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
-import type { ProductWindowDays } from '@/lib/config/commerce';
+import { PRODUCT_WINDOW_DAYS, type ProductWindowDays } from '@/lib/config/commerce';
 import { categoryFilter, windowFilter } from './product-scope-filters';
 import { formatCount, formatMean, pluralCount } from '@/lib/format';
 import { formatPosition, formatRate } from '@/lib/products/product-columns';
@@ -43,6 +43,8 @@ import {
   SectionTitle,
 } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
+
+const WIDEST_WINDOW = PRODUCT_WINDOW_DAYS.at(-1) ?? '90';
 
 const RANKINGS = [
   { value: 'brands', label: 'Brands' },
@@ -489,6 +491,13 @@ export function ShoppingOverviewScreen() {
     // A category in the URL waits for the catalog that says whether it is this project's.
     enabled: !filters.category || !catalog.isPending,
   });
+  // An empty window asks the widest one, unfiltered: with no answer there
+  // either, the filters have nothing to narrow and stay hidden.
+  const widest = useQuery({
+    ...commerceQueries.overview(scope, overviewSearch({ window: WIDEST_WINDOW, category: null })),
+    enabled: query.data?.executions === 0,
+  });
+  const neverAnswered = widest.data?.executions === 0;
   return (
     <ReportPage
       actions={
@@ -501,12 +510,14 @@ export function ShoppingOverviewScreen() {
         )
       }
       filters={
-        <FilterBar
-          filters={[
-            windowFilter(filters.window, overviewFilters.setWindow),
-            categoryFilter(category, catalog.data, overviewFilters.setCategory),
-          ]}
-        />
+        neverAnswered ? undefined : (
+          <FilterBar
+            filters={[
+              windowFilter(filters.window, overviewFilters.setWindow),
+              categoryFilter(category, catalog.data, overviewFilters.setCategory),
+            ]}
+          />
+        )
       }
     >
       <OverviewSections query={query} windowDays={filters.window} />
