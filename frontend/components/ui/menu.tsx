@@ -3,17 +3,14 @@ import { Check, ChevronRight } from 'lucide-react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
-import { SHEET_FACE } from '@/components/ui/slip';
+import { POP_FACE } from '@/components/ui/slip';
 
 /**
- * The floating panel menus and listboxes share: the floating face (`surface`,
- * a 1px `line` border, `shadow-sheet`), `radius-lg`, a 4px inset,
- * entering in 200ms ease-out.
+ * The floating panel menus and listboxes share: the pop face (`raised`, a
+ * 1px `rule` border, radius 8, `shadow-pop`), a 4px inset, entering in 200ms
+ * ease-out.
  */
-export const MENU_PANEL = cn(
-  SHEET_FACE,
-  'menu-panel z-modal focus-ring overflow-hidden rounded-sheet p-1',
-);
+export const MENU_PANEL = cn(POP_FACE, 'menu-panel z-modal focus-ring overflow-hidden p-1');
 
 /**
  * One 32px row, which never shrinks when a long menu scrolls: `radius-sm`, 8px padding, 14/20 `ink`, a 16px lead column for
@@ -191,7 +188,7 @@ export function MenuItem({
       {value ? (
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
       ) : null}
-      {shortcut ? <span className="type-data-sm text-ink-2 ms-4">{shortcut}</span> : null}
+      {shortcut ? <span className="type-code text-ink-2 ms-4">{shortcut}</span> : null}
       {selected ? <Check className="text-accent size-4 shrink-0" aria-hidden /> : null}
     </MenuPrimitive.Item>
   );

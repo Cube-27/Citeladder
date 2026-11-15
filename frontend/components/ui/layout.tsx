@@ -13,14 +13,14 @@ import { cn } from '@/lib/utils';
  *
  * The rungs are one ladder for both directions, each a named relationship
  * between two elements (app values; the website and docs keep larger ones):
- *   `section`   — the page's bands: the title rule to the controls (16px)
- *   `workspace` — block to block inside one pane, and card to card (12px)
+ *   `section`   — between titled groups of cards (32px)
+ *   `workspace` — card to card, and block to block inside one pane (16px)
  *   `compact`   — elements inside one small component (8px)
  *   `item`      — atoms in one row: a badge and its text, buttons, filter
  *                 controls, the lines of a short list (8px)
  *   `tight`     — the parts of one fact: a title and its meta line, a label
  *                 and its sentence, a name and its URL (4px)
- * A Section in a Stack tops the gap up to the section gap (32) itself.
+ * A Section in a Stack tops the gap up itself: 16 above a card, 32 above a group.
  */
 const STACK_GAP = {
   section: 'gap-[var(--page-section-gap)]',

@@ -30,7 +30,7 @@ type NoticeContent = Readonly<{
   heading: string;
   /** A glyph for this notice in place of its tone's (not found: a search). */
   icon?: LucideIcon;
-  /** The mono overline on its ink rule, in place of the tone's word ("Not found"). */
+  /** The card's label, in place of the tone's word ("Not found"). */
   overline?: string;
   /** The sentence: what happened and, when the reader can fix it, the one next step. */
   children?: ReactNode;
@@ -39,10 +39,10 @@ type NoticeContent = Readonly<{
 }>;
 
 /**
- * The full-page Notice, hung from an ink rule with a mono overline (the
- * tone's word, or `overline`): the tone's glyph beside the heading (never
- * colour alone), the sentence 8 under it and the ways forward 16 under that,
- * on the main column's one left edge in a 480px measure. `level` 1 when it is
+ * The full-page Notice in a card, its label in `caption-strong` (the tone's
+ * word, or `overline`): the tone's glyph beside the heading (never colour
+ * alone), the sentence 8 under it (at most 72 characters wide) and the ways
+ * forward 16 under that, on the main column's one left edge. `level` 1 when it is
  * the page's only heading (outside the shell), 2 under a masthead.
  */
 function NoticeBlock({
@@ -61,16 +61,16 @@ function NoticeBlock({
   return (
     <section
       data-notice-tone={tone}
-      className="max-w-flow border-rule-ink flex w-full flex-col gap-4 border-t pt-3"
+      className="bg-surface border-rule rounded-card shadow-card flex w-full flex-col gap-4 border p-[var(--page-top-gap)]"
     >
-      <p className="type-overline">{overline ?? word}</p>
+      <p className={textRole('captionStrong')}>{overline ?? word}</p>
       <div className="flex flex-col gap-2">
         <div className="flex items-start gap-2">
           <Icon icon={icon ?? glyph} className={cn('mt-1 size-5 shrink-0', ink)} />
           <Heading className={textRole('display', 'min-w-0 text-balance')}>{heading}</Heading>
         </div>
         {children ? (
-          <div className={textRole('body', 'flex flex-col gap-2')}>{children}</div>
+          <div className={textRole('body', 'flex max-w-[72ch] flex-col gap-2')}>{children}</div>
         ) : null}
       </div>
       {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}

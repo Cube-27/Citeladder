@@ -41,9 +41,11 @@ const TONE: Record<TextLinkTone, string> = {
   muted: 'text-ink-2 hover:text-ink',
 };
 
+// In the app the underline is the link's own ink at rest; the website keeps
+// its control-line underline that inks on hover.
 const UNDERLINE = {
   prose: 'decoration-current hover:decoration-2',
-  ink: 'decoration-control-line hover:decoration-current focus-visible:decoration-current',
+  ink: 'decoration-control-line hover:decoration-current focus-visible:decoration-current [:root:not([data-public-surface])_&]:decoration-current',
 } as const;
 
 function textLinkClasses({ tone, text }: Readonly<{ tone: TextLinkTone; text: TextLinkText }>) {
@@ -102,7 +104,11 @@ function withGlyphs(variant: TextLinkVariant, children: ReactNode): ReactNode[] 
   if (variant === 'external') {
     return [
       label,
-      <ArrowUpRight key="glyph" className="ms-0.5 inline size-3.5 align-[-2px]" aria-hidden />,
+      <ArrowUpRight
+        key="glyph"
+        className="ms-0.5 inline size-3.5 align-[-2px] [:root:not([data-public-surface])_&]:ms-2"
+        aria-hidden
+      />,
       ' ',
       <span key="note" className="sr-only">
         (opens in a new tab)

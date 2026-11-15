@@ -152,6 +152,14 @@
   --color-negative-wash: var(--color-negative-soft);
   --color-warning-wash: var(--color-warning-soft);
   --color-info-wash: var(--color-info-soft);
+  /* The app's chrome (sidebar, masthead) and status swatches (a dot or a bar
+     segment, always beside its word). The website has neither, so they alias
+     its own roles; the app binds its values below. */
+  --color-chrome: var(--color-paper);
+  --color-positive-swatch: var(--color-positive);
+  --color-negative-swatch: var(--color-negative);
+  --color-warning-swatch: var(--color-warning);
+  --color-info-swatch: var(--color-info);
   /* Data: you are the accent, rivals one to four in rank order (ink, then
      cool hues only), a fifth and later are `data-other`. */
   --color-data-you: var(--color-accent);
@@ -308,6 +316,9 @@
   --radius-mark: 2px;
   --radius-control: var(--radius-md);
   --radius-sheet: 8px;
+  /* App-only: a card and its small overlays 8, dialogs, drawers and flow cards 12. */
+  --radius-card: 8px;
+  --radius-overlay: 12px;
 
   /* Shadows are declared in :root below (they change with the theme) and
      applied by the `shadow-*` utilities after this block. */
@@ -526,37 +537,48 @@
    system's dark at the same specificity, so it would otherwise win here.
    The website and docs keep the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
-  --color-ground: #1b1a17;
-  --color-surface: #232220;
-  --color-well: #0e0d0c;
-  --color-raised: #2c2a27;
-  --color-rule: #3a3732;
-  --color-rule-ink: #b0aba1;
-  --color-control-line: #858076;
-  --color-ink: #ebe8e1;
-  --color-ink-2: #b0aba1;
-  --color-ink-hover: #d4d0c7;
-  --color-on-ink: #1b1a17;
+  /* Each layer steps lighter than the one beneath, so it reads without its
+     shadow; the well is a tint over the card, lighter than it. */
+  --color-ground: #0f1114;
+  --color-chrome: #131519;
+  --color-surface: #181a1f;
+  --color-well: #22252b;
+  --color-raised: #1f2228;
+  --color-rule: #2b2e36;
+  --color-rule-ink: #a5abb8;
+  --color-control-line: #727886;
+  --color-ink: #eceef2;
+  --color-ink-2: #a5abb8;
+  --color-ink-hover: #d2d6de;
+  --color-on-ink: #16181d;
   --color-accent: #ff6a33;
   --color-accent-text: #ff8a5c;
   /* Washes sit 1.05 to 1.2 from the ground and stay quiet: a notice is never
      the loudest surface on a page. */
-  --color-accent-wash: #3a2114;
-  --color-positive: #7fd07a;
-  --color-positive-wash: #18281a;
-  --color-negative: #ff7fa6;
-  --color-negative-wash: #33181f;
-  --color-warning: #e8b84a;
-  --color-warning-wash: #2e2610;
+  --color-accent-wash: #3a2218;
+  --color-positive: #5fd08a;
+  --color-positive-wash: #15291d;
+  --color-positive-swatch: #3fbf74;
+  --color-negative: #ff7f96;
+  --color-negative-wash: #33181e;
+  --color-negative-swatch: #f0566f;
+  --color-warning: #f0b849;
+  --color-warning-wash: #2e2511;
+  --color-warning-swatch: #e0a530;
   --color-info: #8fb1ff;
-  --color-info-wash: #1c2538;
-  --color-data-rival-2: #6fb3e0;
-  --color-data-rival-3: #8a73d9;
+  --color-info-wash: #1a2540;
+  --color-info-swatch: #6f9bff;
+  --color-data-rival-2: #6fb3e8;
+  --color-data-rival-3: #a996ee;
   --color-data-rival-4: #4fc4b5;
-  --color-data-other: #8f8a80;
-  --color-state-hover: rgb(235 232 225 / 6%);
-  --color-state-pressed: rgb(235 232 225 / 10%);
+  --color-data-other: #8a909d;
+  --color-state-hover: rgb(236 238 242 / 6%);
+  --color-state-pressed: rgb(236 238 242 / 10%);
+  --color-state-selected: rgb(236 238 242 / 7%);
   --color-scrim: rgb(0 0 0 / 60%);
+  --shadow-card: none;
+  --shadow-pop: 0 4px 12px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-sheet: 0 16px 40px rgb(0 0 0 / 0.55);
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -578,6 +600,9 @@
 }
 @utility shadow-sheet {
   box-shadow: var(--shadow-sheet);
+}
+@utility shadow-card {
+  box-shadow: var(--shadow-card, none);
 }
 
 /* The line language: solid is observed, dashed
@@ -644,41 +669,45 @@
    system's values above. */
 :root:not([data-public-surface]) {
   --table-ground: var(--color-ground);
-  --color-ground: #f6f4ef;
-  --color-surface: #fffdf9;
-  --color-well: #ece8e0;
-  --color-raised: #fffdf9;
-  --color-rule: #ddd8cd;
-  --color-rule-ink: #1b1a17;
-  --color-control-line: #837e73;
-  --color-ink: #1b1a17;
-  --color-ink-2: #59554c;
+  /* Layers (2.4): ground, chrome, card, inset, overlay; each a fill step. */
+  --color-ground: #f5f6f8;
+  --color-chrome: #fbfbfc;
+  --color-surface: #ffffff;
+  --color-well: #f1f2f5;
+  --color-raised: #ffffff;
+  --color-rule: #e4e6eb;
+  --color-rule-ink: #16181d;
+  --color-control-line: #838995;
+  --color-ink: #16181d;
+  --color-ink-2: #565c69;
   /* The primary button's hover: its ink fill one step lighter. */
-  --color-ink-hover: #3a3832;
-  --color-on-ink: #f6f4ef;
+  --color-ink-hover: #2f333b;
+  --color-on-ink: #ffffff;
   --color-accent: #e8501a;
-  --color-accent-text: #ad3a0c;
-  --color-accent-wash: #fde4d6;
-  /* Darker than the direction's #2a6b2e so it parts from the crimson by
-     lightness for red-green colour vision (scripts/design-system-contrast.mjs). */
-  --color-positive: #1a4d24;
-  --color-positive-wash: #dcefd9;
-  --color-negative: #a8134b;
-  --color-negative-wash: #fbe1ea;
-  --color-warning: #775000;
-  --color-warning-wash: #f7eac4;
-  --color-info: #2850b0;
-  --color-info-wash: #e2e9fa;
-  --color-data-rival-2: #2f6f9f;
-  --color-data-rival-3: #4b3a8a;
-  --color-data-rival-4: #1f7d73;
-  --color-data-other: #878277;
-  /* Hover is a 6% ink tint, pressed 10%; selected is the well. */
-  --color-state-hover: rgb(27 26 23 / 6%);
-  --color-state-pressed: rgb(27 26 23 / 10%);
-  --color-state-selected: var(--color-well);
-  --color-scrim: rgb(27 26 23 / 40%);
-  --color-sidebar: var(--color-ground);
+  --color-accent-text: #b83c0e;
+  --color-accent-wash: #fdeae1;
+  --color-positive: #17713f;
+  --color-positive-wash: #e3f4ea;
+  --color-positive-swatch: #1c9450;
+  --color-negative: #c22445;
+  --color-negative-wash: #fce8ec;
+  --color-negative-swatch: #dc3655;
+  --color-warning: #8a5a00;
+  --color-warning-wash: #fdf1cf;
+  --color-warning-swatch: #b47a00;
+  --color-info: #2558c9;
+  --color-info-wash: #e6edfc;
+  --color-info-swatch: #3b73e6;
+  --color-data-rival-2: #2f6fb0;
+  --color-data-rival-3: #6d55b8;
+  --color-data-rival-4: #17807a;
+  --color-data-other: #838995;
+  /* Hover 6%, pressed 10%, selected 7% ink over the fill beneath. */
+  --color-state-hover: rgb(22 24 29 / 6%);
+  --color-state-pressed: rgb(22 24 29 / 10%);
+  --color-state-selected: rgb(22 24 29 / 7%);
+  --color-scrim: rgb(22 24 29 / 45%);
+  --color-sidebar: var(--color-chrome);
   --color-chart-grid: var(--color-rule);
   /* The website's role names, held to the app's roles so a shared rule that
      still names one renders in the app's palette. App code never uses them. */
@@ -698,15 +727,36 @@
   --color-data-2: var(--color-data-rival-1);
   --color-data-3: var(--color-data-rival-2);
 
-  /* Type (2.1): the app's title and heading. */
-  --text-title: 1.25rem;
-  --text-title--line-height: 1.75rem;
+  /* Type (2.1): seven sizes (12 13 14 16 24 28 32), one line height each;
+     weights 400, 500 and 600. Numbers are the sans face's tabular numerals. */
+  --text-title: 1.5rem;
+  --text-title--line-height: 2rem;
   --text-title--font-weight: 600;
+  --text-heading: 1rem;
+  --text-heading--line-height: 1.5rem;
   --text-heading--font-weight: 600;
+  --text-heading-lg: 1.5rem;
+  --text-heading-lg--line-height: 2rem;
+  --text-heading-lg--font-weight: 600;
+  --text-heading-lg--letter-spacing: 0;
+  --text-figure-xl: 2rem;
+  --text-figure-xl--line-height: 2.5rem;
+  --text-figure-xl--font-weight: 600;
+  --text-figure: 1.5rem;
+  --text-figure--line-height: 2rem;
+  --text-figure--font-weight: 600;
+  --text-code: 0.8125rem;
+  --text-code--line-height: 1.25rem;
 
-  /* Shape (2.4). */
-  --radius-control: 4px;
-  --shadow-sheet: 0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%);
+  /* Shape (2.4): marks 2, controls and wells 6, cards and small overlays 8,
+     dialogs, drawers and flow cards 12. */
+  --radius-mark: 2px;
+  --radius-control: 6px;
+  --radius-card: 8px;
+  --radius-overlay: 12px;
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-pop: 0 4px 12px rgb(16 24 40 / 0.1), 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow-sheet: 0 16px 40px rgb(16 24 40 / 0.18);
   /* The accent mark ("you, here") and the hatch (absent: 45deg, 1px lines). */
   --mark-width: 2px;
   --hatch-pitch: 8px;
@@ -743,12 +793,12 @@
   --content-gutter: 24px;
 
   /* Spacing roles (2.2), on the one scale 2 4 8 12 16 24 32 48 64: peers in a
-     control group 8, a slip's padding and form rows 16, the grid gap and the
-     first section's offset 24, sections 32, flow blocks 48. */
+     control group 8, card padding and cards apart 16, the chrome to the first
+     card 24, titled groups 32, flow blocks 48. */
   --compact-gap: 8px;
   --card-padding: 16px;
   --modal-padding: 16px;
-  --workspace-gap: 24px;
+  --workspace-gap: 16px;
   --page-top-gap: 24px;
   --page-section-gap: 32px;
   --flow-gap: 48px;
@@ -1135,6 +1185,51 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   }
   .type-emphasis {
     font-weight: 500;
+  }
+
+  /* The app's roles (2.1): the sans face speaks, numbers included (its
+     tabular numerals); the mono face is only literal machine text (`code`);
+     nothing is uppercase or tracked. The website keeps its mono roles above.
+     `overline`, `data` and `data-sm` remain as aliases of `caption-strong`,
+     `body` and `caption` until their callers move. */
+  :root:not([data-public-surface]) :is(.type-heading-lg, .type-caption-strong, .type-code) {
+    letter-spacing: 0;
+    color: var(--color-ink);
+  }
+  :root:not([data-public-surface]) .type-heading-lg {
+    font-family: var(--font-sans);
+    font-size: var(--text-heading-lg);
+    line-height: var(--text-heading-lg--line-height);
+    font-weight: var(--text-heading-lg--font-weight);
+  }
+  :root:not([data-public-surface]) :is(.type-caption-strong, .type-overline) {
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--color-ink-2);
+  }
+  :root:not([data-public-surface]) :is(.type-figure-xl, .type-figure) {
+    font-family: var(--font-sans);
+    letter-spacing: 0;
+  }
+  :root:not([data-public-surface]) .type-data {
+    font-family: var(--font-sans);
+    font-size: var(--text-body-sm);
+    line-height: var(--text-body-sm--line-height);
+  }
+  :root:not([data-public-surface]) .type-data-sm {
+    font-family: var(--font-sans);
+    font-size: var(--text-caption);
+    line-height: var(--text-caption--line-height);
+  }
+  :root:not([data-public-surface]) .type-code {
+    font-family: var(--font-mono);
+    font-size: var(--text-code);
+    line-height: var(--text-code--line-height);
+    font-weight: 400;
   }
   .type-control-file::file-selector-button {
     font-family: var(--font-sans);
@@ -1523,7 +1618,7 @@ a.focus-ring:active .type-caption {
    box, overline heads on a hairline over the ground they sit on, mono
    figures, and your row marked by the accent rung on its first cell. */
 
-:root:not([data-public-surface]) :where(.surface-slip) {
+:root:not([data-public-surface]) :where(.surface-slip, [data-section='card']) {
   --table-ground: var(--color-surface);
 }
 
@@ -1581,23 +1676,34 @@ a.focus-ring:active .type-caption {
   background: var(--color-surface);
 }
 
-:where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .surface-inset {
+:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+  .surface-inset {
   border-color: transparent;
   background: var(--color-well);
 }
 
 /* A Panel that lands inside a container is a sunken inset, so it takes the
    inset's 12 down and 16 across rather than a container's 16 all round. */
-:where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .surface-panel.surface-inset {
+:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+  .surface-panel.surface-inset {
   padding-block: calc(var(--spacing) * 3);
 }
 
-/* A card composed inside a dialog or drawer (settings sections in the
-   account-security dialog, a framed table in an evidence drawer) steps down
-   to the inset too, so an overlay never shows a box drawn inside a box. */
-:where(.surface-card, .surface-slip, .surface-well, [role='dialog']) .surface-card {
+/* A card never sits in a card (2.4). Inside a card, a dialog or a drawer, a
+   card or a slip steps down to the inset, and a card section to a plain group
+   (no fill, edge, shadow or padding of its own). */
+:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+  :is(.surface-card, .surface-slip) {
   border-color: transparent;
   background: var(--color-well);
+  box-shadow: none;
+}
+:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
+  [data-section='card'] {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 /* Sideways overflow cues. Each overlays or paints behind the region, so it
@@ -1689,15 +1795,17 @@ a.focus-ring:active .type-caption {
 }
 
 /* Rhythm (2.2) belongs to Section, the template and the grid, never a page.
-   A section that is not first in its container sits 32 below the block above
-   it. A container that already spaces its children (Stack, PageSections,
-   SectionStack, AppGrid) names its gap in `data-rhythm-gap`, so the section
-   adds only the difference. */
+   A card section that is not first in its container sits 16 below the block
+   above it, a titled group 32. A container that already spaces its children
+   (Stack, PageSections, SectionStack, AppGrid) names its gap in
+   `data-rhythm-gap`, so the section adds only the difference. */
 @layer components {
-  /* Settings (3.4): from a 1100px main column each section is two columns
-     on the grid, its head and caption in the first four and its rows in the
-     next eight, capped at 640; below that the head stacks over the column. */
-  @container main (min-width: 1100px) {
+  /* Settings (3.4): one card per group across the column. From a 900px card
+     the head and caption take the left third and the rows the rest, controls
+     capped at 640; below that the head stacks over the rows. Tables, and
+     meters or plan grids marked `data-settings-wide`, take the card's full
+     width at every size. */
+  @container main (min-width: 900px) {
     [data-settings-sections] .surface-section:not(.surface-section .surface-section) {
       display: grid;
       grid-template-columns: repeat(12, minmax(0, 1fr));
@@ -1708,33 +1816,50 @@ a.focus-ring:active .type-caption {
       grid-column: 5 / span 8;
       max-width: var(--container-form);
     }
-    /* A table is not a form row: it takes all eight columns so its priority columns fit. */
-    [data-settings-sections] .surface-section:not(.surface-section .surface-section) > :has([data-data-table-frame]) {
-      max-width: none;
-    }
     [data-settings-sections] .surface-section:not(.surface-section .surface-section) > header:first-child {
       grid-column: 1 / span 4;
       grid-row: 1 / span 16;
       margin-block-end: 0;
     }
+    [data-settings-sections]
+      .surface-section:not(.surface-section .surface-section)
+      > header:first-child:has(+ :is([data-settings-wide], :has([data-data-table-frame]))) {
+      grid-row: auto;
+      grid-column: 1 / -1;
+      margin-block-end: var(--card-padding);
+    }
+  }
+  [data-settings-sections] .surface-section > :is([data-settings-wide], :has([data-data-table-frame])) {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+  .surface-section {
+    --section-above: var(--workspace-gap);
+    --rhythm-gap-above: 0px;
+  }
+  .surface-section[data-section='group'] {
+    --section-above: var(--page-section-gap);
   }
   .surface-section:not(:first-child) {
-    margin-block-start: var(--page-section-gap);
+    margin-block-start: max(0px, calc(var(--section-above) - var(--rhythm-gap-above)));
   }
-  :is([data-rhythm-gap='section'], [data-app-grid]) > .surface-section:not(:first-child) {
+  [data-app-grid] > .surface-section:not(:first-child) {
     margin-block-start: 0;
   }
-  [data-rhythm-gap='workspace'] > .surface-section:not(:first-child) {
-    margin-block-start: calc(var(--page-section-gap) - var(--workspace-gap));
+  [data-rhythm-gap='section'] > .surface-section {
+    --rhythm-gap-above: var(--page-section-gap);
   }
-  [data-rhythm-gap='compact'] > .surface-section:not(:first-child) {
-    margin-block-start: calc(var(--page-section-gap) - var(--compact-gap));
+  [data-rhythm-gap='workspace'] > .surface-section {
+    --rhythm-gap-above: var(--workspace-gap);
   }
-  [data-rhythm-gap='item'] > .surface-section:not(:first-child) {
-    margin-block-start: calc(var(--page-section-gap) - 8px);
+  [data-rhythm-gap='compact'] > .surface-section {
+    --rhythm-gap-above: var(--compact-gap);
   }
-  [data-rhythm-gap='tight'] > .surface-section:not(:first-child) {
-    margin-block-start: calc(var(--page-section-gap) - 4px);
+  [data-rhythm-gap='item'] > .surface-section {
+    --rhythm-gap-above: 8px;
+  }
+  [data-rhythm-gap='tight'] > .surface-section {
+    --rhythm-gap-above: 4px;
   }
 
   /* The account button carries the location rung while the page is one of

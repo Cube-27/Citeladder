@@ -5,23 +5,38 @@ import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * Section — the default grouping on every page (law 5:
- * rules, not boxes). No box: a 1px ink rule on top, 12 to the head, 16 to
- * the body on the page ground. It owns the rhythm above it: when it is not
- * first in its container it sits 32 below the block above (globals.css,
- * `surface-section`), so a page sets no vertical gap. A section may hold
- * slips and wells, never another section's box. It sets no display of its
- * own, so a sticky child keeps its scroll container.
+ * What a section draws (law 5, surfaces not rules):
+ *   `card`  — the default: a `surface` card with a 1px `rule` edge, the card
+ *             radius and `shadow-card`, its head inside, 16 padding.
+ *   `group` — no card: a head on the ground over a row or grid of cards
+ *             (stat cards, a queue of slips, widgets), 32 below the block above.
+ */
+export type SectionVariant = 'card' | 'group';
+
+const SECTION_FACE: Record<SectionVariant, string> = {
+  card: 'bg-surface text-ink border-rule rounded-card shadow-card border p-[var(--card-padding)]',
+  group: '',
+};
+
+/**
+ * Section — the default grouping on every page. It owns the rhythm above it:
+ * cards sit 16 apart and titled groups 32 (globals.css, `surface-section`),
+ * so a page sets no vertical gap. A card never sits in a card: a section
+ * inside a card section draws no card of its own, and a slip inside one
+ * steps down to an inset (globals.css). It sets no display of its own, so a
+ * sticky child keeps its scroll container.
  */
 export function Section({
   children,
   className,
+  variant = 'card',
   ...props
-}: Readonly<ComponentPropsWithoutRef<'section'>>) {
+}: Readonly<ComponentPropsWithoutRef<'section'> & { variant?: SectionVariant }>) {
   return (
     <section
       {...props}
-      className={cn('surface-section border-rule-ink min-w-0 border-t pt-3', className)}
+      data-section={variant}
+      className={cn('surface-section min-w-0', SECTION_FACE[variant], className)}
     >
       {/* Under the section's h2 title, a block state's heading is an h3. */}
       <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
@@ -30,10 +45,10 @@ export function Section({
 }
 
 /**
- * SectionHeader — the overline, title and caption on the left and `actions`
+ * SectionHeader — the label, title and caption on the left and `actions`
  * (a secondary or quiet Button, a small control group) at the right of the
  * same row; when the row is narrow the actions wrap below the title. The body
- * starts 16 below it.
+ * starts 16 below it, with no rule between.
  */
 export function SectionHeader({
   children,
@@ -64,14 +79,14 @@ export function SectionHeader({
   );
 }
 
-/** SectionEyebrow — the overline above a SectionTitle; never a heading. */
+/** SectionEyebrow — the `caption-strong` label above a SectionTitle; never a heading. */
 export function SectionEyebrow({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'span'>>) {
   return (
-    <span {...props} className={cn('type-overline', className)}>
+    <span {...props} className={textRole('captionStrong', className)}>
       {children}
     </span>
   );
@@ -92,14 +107,14 @@ export function SectionTitle({
   );
 }
 
-/** SectionDescription — one or two sentences under the title, in `caption`. */
+/** SectionDescription — one or two sentences under the title, in `caption`, at most 72 characters wide. */
 export function SectionDescription({
   children,
   className,
   ...props
 }: Readonly<ComponentPropsWithoutRef<'p'>>) {
   return (
-    <p {...props} className={textRole('caption', className)}>
+    <p {...props} className={textRole('caption', cn('max-w-[72ch]', className))}>
       {children}
     </p>
   );
@@ -128,17 +143,19 @@ export function TitledSection({
   title,
   description,
   actions,
+  variant,
   children,
   className,
 }: Readonly<{
   title: string;
   description?: ReactNode;
   actions?: ReactNode;
+  variant?: SectionVariant;
   children: ReactNode;
   className?: string;
 }>) {
   return (
-    <Section className={className}>
+    <Section variant={variant} className={className}>
       <SectionHeader actions={actions}>
         <SectionTitle>{title}</SectionTitle>
         {description ? <SectionDescription>{description}</SectionDescription> : null}
@@ -148,7 +165,7 @@ export function TitledSection({
   );
 }
 
-/** A page's sections, stacked at the section gap. */
+/** A page's sections, cards 16 apart; a titled group adds its own 32 above. */
 export function SectionStack({
   children,
   ...props
@@ -156,8 +173,8 @@ export function SectionStack({
   return (
     <div
       {...props}
-      data-rhythm-gap="section"
-      className="flex min-w-0 flex-col gap-[var(--page-section-gap)]"
+      data-rhythm-gap="workspace"
+      className="flex min-w-0 flex-col gap-[var(--workspace-gap)]"
     >
       {children}
     </div>

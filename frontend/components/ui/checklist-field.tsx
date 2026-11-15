@@ -1,14 +1,15 @@
-import { Pencil } from 'lucide-react';
+import { Pencil, X } from 'lucide-react';
 import { useId, useState, type ReactNode } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 /**
  * FieldGroup — a question made of several controls: a `fieldset` named by
- * its label (14/20 medium `ink`), with an optional mono count
+ * its label (14/20 medium `ink`), with an optional tabular count
  * at its right, a help line under it, the controls, and a note after them
  * (why the step cannot continue yet).
  */
@@ -36,7 +37,7 @@ export function FieldGroup({
             {label}
           </span>
           {count ? (
-            <span className="text-caption text-ink-2 font-mono whitespace-nowrap">{count}</span>
+            <span className="text-caption text-ink-2 whitespace-nowrap tabular-nums">{count}</span>
           ) : null}
         </div>
         {help ? <p className="text-body-sm text-ink-2">{help}</p> : null}
@@ -182,7 +183,7 @@ function CheckRow({
         }
       />
       {item.meta ? (
-        <span className="text-caption text-ink-2 shrink-0 font-mono">{item.meta}</span>
+        <span className="text-caption text-ink-2 shrink-0 tabular-nums">{item.meta}</span>
       ) : null}
       {onEdit ? <IconButton icon={Pencil} label={onEdit.label} onClick={onEdit.start} /> : null}
       {item.extra}
@@ -232,11 +233,12 @@ function EditRow<K extends string>({
           className="min-w-0 flex-1 basis-32"
         />
       ))}
+      <Button variant="quiet" onClick={cancel}>
+        <Icon icon={X} />
+        Cancel
+      </Button>
       <Button variant="primary" onClick={save} disabled={!complete}>
         Save
-      </Button>
-      <Button variant="quiet" onClick={cancel}>
-        Cancel
       </Button>
     </li>
   );

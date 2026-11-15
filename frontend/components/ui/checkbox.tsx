@@ -30,7 +30,7 @@ export type CheckboxProps = AccessibleCheckbox & {
  * the target is never under 24. Shared with the table's row checkbox.
  */
 const CHECK_BOX =
-  'focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=indeterminate]:bg-ink data-[state=indeterminate]:border-ink relative grid size-4 shrink-0 place-items-center rounded-mark border transition-[background-color,border-color] duration-[var(--motion-fast)] before:absolute before:-inset-1 before:content-[""] disabled:cursor-not-allowed';
+  'focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=indeterminate]:bg-ink data-[state=indeterminate]:border-ink relative grid size-4 shrink-0 place-items-center rounded-mark [:root:not([data-public-surface])_&]:rounded-sm border transition-[background-color,border-color] duration-[var(--motion-fast)] before:absolute before:-inset-1 before:content-[""] disabled:cursor-not-allowed';
 
 /** The 24×24 box the 16px control centres in, on the first 20px text line. */
 const CHECK_TARGET = 'inline-flex size-[var(--target-min)] shrink-0 items-center justify-center';

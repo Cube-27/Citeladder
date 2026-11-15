@@ -180,7 +180,7 @@ function ChipInputNote({
       {max !== undefined ? (
         <span
           className={cn(
-            'ms-auto shrink-0 font-mono text-caption',
+            'ms-auto shrink-0 text-caption tabular-nums',
             count >= max ? 'text-ink' : 'text-ink-2',
           )}
         >

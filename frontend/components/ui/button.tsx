@@ -1,4 +1,11 @@
-import type { ComponentPropsWithRef, ComponentPropsWithoutRef, ReactNode, Ref } from 'react';
+import {
+  Children,
+  isValidElement,
+  type ComponentPropsWithRef,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+  type Ref,
+} from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 import { Slot } from '@radix-ui/react-slot';
@@ -31,9 +38,9 @@ const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
 // The app's one disabled look (well fill, no edge) is in globals.css, after
-// every variant. The website keeps its 8px icon gap and 45% disabled face.
+// every variant. The website keeps its 45% disabled face.
 const BUTTON_BASE =
-  'focus-ring type-label relative inline-flex shrink-0 items-center justify-center gap-1 rounded-control whitespace-nowrap no-underline transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:gap-2 [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
+  'focus-ring type-label relative inline-flex shrink-0 items-center justify-center gap-2 rounded-control whitespace-nowrap no-underline transition-[background-color,color,border-color] duration-[var(--motion-fast)] ease-[var(--ease-standard)] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [[data-public-surface]_&]:disabled:opacity-45 [[data-public-surface]_&]:aria-disabled:opacity-45';
 
 const BUTTON_SIZE: Record<ButtonSize, string> = {
   md: 'min-h-[var(--control-md)] px-3',
@@ -133,7 +140,7 @@ function NativeButton({
         {children}
       </span>
       {pending ? (
-        <span className="absolute inset-0 inline-flex items-center justify-center gap-1 overflow-hidden px-2">
+        <span className="absolute inset-0 inline-flex items-center justify-center gap-2 overflow-hidden px-2">
           <Spinner />
           {pendingLabel ? (
             <span className="truncate">{pendingLabel}</span>
@@ -146,12 +153,44 @@ function NativeButton({
   );
 }
 
+/** Quiet buttons already warned about, so a re-render warns once. */
+const warnedQuiet = new Set<string>();
+
+/** An icon among a button's direct children (or its slotted link's): decorative, so `aria-hidden`. */
+function carriesIcon(children: ReactNode): boolean {
+  return Children.toArray(children).some((child) => {
+    if (!isValidElement<{ 'aria-hidden'?: unknown; children?: ReactNode }>(child)) return false;
+    if (child.type === Icon || child.type === 'svg' || child.props['aria-hidden']) return true;
+    // A lucide glyph is a forwardRef object with no children.
+    if (typeof child.type === 'object' && child.props.children === undefined) return true;
+    return typeof child.type !== 'string' || child.type === 'a'
+      ? carriesIcon(child.props.children)
+      : false;
+  });
+}
+
+/**
+ * Development only: a quiet button always carries an icon (Similarity: with
+ * no edge, the icon is what says it can be pressed). Typing it would break
+ * callers outside `components/ui`, so this check names them instead.
+ */
+function checkQuietIcon({ variant, children }: Readonly<ButtonProps>) {
+  if (!import.meta.env?.DEV || variant !== 'quiet' || carriesIcon(children)) return;
+  const name = Children.toArray(children)
+    .filter((child) => typeof child === 'string')
+    .join(' ');
+  if (warnedQuiet.has(name)) return;
+  warnedQuiet.add(name);
+  console.warn(`Quiet button "${name}" has no icon: give it one, or make it secondary.`);
+}
+
 /**
  * One form per size: the size's control height (taller only when the reader's
- * text size grows its label), the control radius, the 16px icon 4px before
+ * text size grows its label), the control radius, the 16px icon 8px before
  * the label.
  */
 export function Button(props: Readonly<ButtonProps>) {
+  checkQuietIcon(props);
   return props.asChild ? <SlottedButton {...props} /> : <NativeButton {...props} />;
 }
 
