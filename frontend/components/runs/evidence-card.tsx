@@ -18,12 +18,8 @@ import { EvidencePerception, perceptionHighlights } from '@/components/runs/evid
 import { EvidenceAds } from '@/components/runs/evidence-ads';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import {
-  ledgerClasses,
-  ledgerItemClasses,
-  MetaFooter,
-  SubsectionHeader,
-} from '@/components/ui/workspace';
+import { MetaFooter, SubsectionHeader } from '@/components/ui/workspace';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { StateBlock } from '@/components/ui/state-block';
 import { wellClasses } from '@/components/ui/slip';
 import { FigureStrip } from '@/components/ui/figure-strip';
@@ -293,31 +289,33 @@ function CitationItem({
   const ordinal = citation.ordinal > 0 ? citation.ordinal : citation.ordinal + 1;
   const title = citation.title || citation.domain || citation.url;
 
+  // The answer's own numbering leads the title; the list order is the same.
   return (
-    <Inline as="li" gap="compact" className={ledgerItemClasses('items-start')}>
-      <span className={textRole('body', 'text-ink-2 shrink-0 tabular-nums')}>{ordinal}</span>
-      <div className="min-w-0 flex-1">
-        <Inline gap="compact" className="items-start justify-between">
-          <Stack gap="tight" className="min-w-0">
+    <LedgerItem
+      title={
+        <Inline as="span" className="items-baseline">
+          <span className="type-data text-ink-2">{ordinal}</span>
+          <span className="min-w-0 break-words">
             {href ? (
-              <TextLink variant="external" text="body" href={href} className="max-w-full">
-                <span className="truncate">{title}</span>
+              <TextLink variant="external" text="body" href={href}>
+                {title}
               </TextLink>
             ) : (
-              <p className={textRole('body', 'truncate')}>{title || 'Untitled source'}</p>
+              title || 'Untitled source'
             )}
-            <p className="type-caption truncate">{citation.domain}</p>
-          </Stack>
-          <StatusMark
-            className="shrink-0"
-            variant="classification"
-            value={classificationBadgeValue(citation.classification)}
-          >
-            {classificationLabel(citation.classification)}
-          </StatusMark>
+          </span>
         </Inline>
-      </div>
-    </Inline>
+      }
+      meta={
+        <StatusMark
+          variant="classification"
+          value={classificationBadgeValue(citation.classification)}
+        >
+          {classificationLabel(citation.classification)}
+        </StatusMark>
+      }
+      caption={citation.domain}
+    />
   );
 }
 
@@ -342,11 +340,11 @@ function EvidenceCitationsList({
           heading="No citations were captured from this response"
         />
       ) : (
-        <ol className={ledgerClasses()}>
+        <LedgerList ordered label="Citations">
           {citations.map((citation) => (
             <CitationItem key={`${citation.ordinal}-${citation.url}`} citation={citation} />
           ))}
-        </ol>
+        </LedgerList>
       )}
     </Stack>
   );

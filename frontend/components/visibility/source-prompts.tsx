@@ -9,6 +9,7 @@ import {
   type EvidenceSubject,
 } from '@/components/runs/execution-evidence-drawer';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { TitledSection } from '@/components/ui/section';
 import { Inline } from '@/components/ui/layout';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -81,23 +82,25 @@ export function SourcePrompts({
 
   return (
     <>
-      <DataTable
-        title="Prompts"
-        columns={COLUMNS}
-        state={promptsState(query)}
-        busy={{ active: query.isFetching, label: 'Updating prompts' }}
-        // The endpoint returns a bounded newest-first window. Without this a
-        // source cited by more answers than fit simply looked like it had fewer.
-        footer={
-          query.data?.truncated
-            ? `Showing the newest ${EVIDENCE_LIMIT} executions; narrow the filters to see the rest.`
-            : null
-        }
-      >
-        {(query.data?.items ?? []).map((item) => (
-          <PromptRow key={item.analysis_id} item={item} onOpenAnswer={setOpened} />
-        ))}
-      </DataTable>
+      <TitledSection title="Prompts">
+        <DataTable
+          label="Prompts"
+          columns={COLUMNS}
+          state={promptsState(query)}
+          busy={{ active: query.isFetching, label: 'Updating prompts' }}
+          // The endpoint returns a bounded newest-first window. Without this a
+          // source cited by more answers than fit simply looked like it had fewer.
+          footer={
+            query.data?.truncated
+              ? `Showing the newest ${EVIDENCE_LIMIT} executions; narrow the filters to see the rest.`
+              : null
+          }
+        >
+          {(query.data?.items ?? []).map((item) => (
+            <PromptRow key={item.analysis_id} item={item} onOpenAnswer={setOpened} />
+          ))}
+        </DataTable>
+      </TitledSection>
       <ExecutionEvidenceDrawer
         execution={opened}
         open={opened !== null}
@@ -111,10 +114,10 @@ export function SourcePrompts({
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'prompt', label: 'Prompt' },
-  { key: 'citations', label: 'Citations', width: 'figure', numeric: true },
+  { key: 'citations', label: 'Citations', width: 'figure', kind: 'number' },
   { key: 'mentioned', label: 'Mentioned', width: 'status', desktopOnly: true },
   { key: 'sources', label: 'Sources', width: 'status', desktopOnly: true },
-  { key: 'created', label: 'Created', width: 'figure', numeric: true, desktopOnly: true },
+  { key: 'created', label: 'Created', width: 'figure', kind: 'date', desktopOnly: true },
   { key: 'open', label: 'Open', width: 'status', hideLabel: true },
 ];
 
@@ -125,7 +128,8 @@ function promptsState(
     return {
       kind: 'error',
       error: query.error,
-      fallback: 'Could not load the tracked answers.',
+      title: "Couldn't load the tracked answers",
+      fallback: 'The request failed or timed out.',
       onRetry: () => void query.refetch(),
       pending: query.isFetching,
     };

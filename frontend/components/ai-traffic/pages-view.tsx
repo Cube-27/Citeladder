@@ -28,13 +28,13 @@ const SORT_BY_COLUMN: Readonly<Record<string, TrafficPagesSort>> = {
 
 const PAGE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'path', label: 'Path' },
-  { key: 'crawl', label: 'Crawler requests', width: 'metric', numeric: true },
-  { key: 'referrals', label: 'AI referral sessions', width: 'metric', numeric: true },
-  { key: 'key-events', label: 'Key events', width: 'figure', numeric: true },
-  { key: 'citations', label: 'Tracked citations', width: 'metric', numeric: true },
-  { key: 'findings', label: 'Open findings', width: 'metric', numeric: true },
-  { key: 'last-crawl', label: 'Last crawl', width: 'date', numeric: true },
-  { key: 'errors', label: '4xx / 5xx', width: 'figure', numeric: true },
+  { key: 'crawl', label: 'Crawler requests', width: 'metric', kind: 'number' },
+  { key: 'referrals', label: 'AI referral sessions', width: 'metric', kind: 'number' },
+  { key: 'key-events', label: 'Key events', width: 'figure', kind: 'number' },
+  { key: 'citations', label: 'Tracked citations', width: 'metric', kind: 'number' },
+  { key: 'findings', label: 'Open findings', width: 'metric', kind: 'number' },
+  { key: 'last-crawl', label: 'Last crawl', width: 'date', kind: 'date' },
+  { key: 'errors', label: '4xx / 5xx', width: 'figure', kind: 'number' },
 ];
 
 /** Pages' columns, sortable from their headers like every other table's. */
@@ -79,7 +79,7 @@ export function TrafficPages({
       aiTrafficQueries.pages({ workspaceId, projectId }, { ...filters, ...request }),
     noun: 'paths',
     loading: 'Loading paths…',
-    error: 'Could not read path-level AI Traffic',
+    error: "Couldn't load the pages",
     empty: () => ({
       kind: 'empty',
       icon: SearchX,
@@ -194,7 +194,7 @@ function TrafficPageRow({
       <TableCell numeric>
         <TrafficLeg compact leg={r.findings} unit="findings" />
       </TableCell>
-      <TableCell numeric>
+      <TableCell>
         {r.last_crawl ? (
           <TableTime value={r.last_crawl} />
         ) : (

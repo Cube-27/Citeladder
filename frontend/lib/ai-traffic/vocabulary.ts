@@ -29,7 +29,8 @@ const COLLECTION_POINT: Record<(typeof COLLECTION_POINTS)[number], string> = {
 };
 
 export function words(token: string): string {
-  const spaced = token.replaceAll('_', ' ');
+  // "ai_search" reads "AI search", in the product's spelling.
+  const spaced = token.replaceAll('_', ' ').replaceAll(/\bai\b/gi, 'AI');
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 

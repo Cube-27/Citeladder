@@ -36,6 +36,8 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
+  TitledSection,
+  SectionStack,
 } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
@@ -54,7 +56,8 @@ export function VisibilityAccuracy({
       <Notice
         kind="read"
         error={query.error}
-        fallback="Could not load fact checks. Check your connection and try again."
+        title="Couldn't load the fact checks"
+        fallback="Check your connection and try again."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
@@ -81,7 +84,7 @@ export function AccuracyView({ data }: Readonly<{ data: AccuracyResponse }>) {
   if (data.state !== 'value')
     return <AccuracyState state={data.state} reason={data.reason} coverage={data.score.coverage} />;
   return (
-    <Stack gap="workspace">
+    <SectionStack>
       <Headline data={data} />
       {/* The contradictions and the sources cited beside them are one
           question; the two-column table sits beside the claims where the
@@ -92,7 +95,7 @@ export function AccuracyView({ data }: Readonly<{ data: AccuracyResponse }>) {
       </AppGrid>
       <BreakdownTable title="By topic" column="Topic" rows={data.topics} label={topicLabel} />
       <BreakdownTable title="By engine" column="Engine" rows={data.engines} label={engineLabel} />
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -247,50 +250,59 @@ function BreakdownTable({
 }>) {
   if (!rows.length) return null;
   return (
-    <DataTable
-      title={title}
-      columns={[
-        { key: 'key', label: column },
-        { key: 'claims', label: 'Claims', width: 'figure', numeric: true },
-        { key: 'supported', label: VERDICT_LABELS.supported, width: 'figure', numeric: true },
-        { key: 'contradicted', label: VERDICT_LABELS.contradicted, width: 'figure', numeric: true },
-        { key: 'accuracy', label: 'Accuracy', width: 'figure', numeric: true },
-      ]}
-    >
-      {rows.map((row) => (
-        <TableRow key={row.key}>
-          <TableCell>{label(row.key)}</TableCell>
-          <TableCell numeric>{row.score.coverage.claims}</TableCell>
-          <TableCell numeric>{row.score.coverage.supported}</TableCell>
-          <TableCell numeric>{row.score.coverage.contradicted}</TableCell>
-          <TableCell numeric>{formatShare(row.score.accuracy) ?? <Absence />}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title={title}>
+      <DataTable
+        label={title}
+        columns={[
+          { key: 'key', label: column },
+          { key: 'claims', label: 'Claims', width: 'figure', kind: 'number' },
+          { key: 'supported', label: VERDICT_LABELS.supported, width: 'figure', kind: 'number' },
+          {
+            key: 'contradicted',
+            label: VERDICT_LABELS.contradicted,
+            width: 'figure',
+            kind: 'number',
+          },
+          { key: 'accuracy', label: 'Accuracy', width: 'figure', kind: 'number' },
+        ]}
+      >
+        {rows.map((row) => (
+          <TableRow key={row.key}>
+            <TableCell>{label(row.key)}</TableCell>
+            <TableCell numeric>{row.score.coverage.claims}</TableCell>
+            <TableCell numeric>{row.score.coverage.supported}</TableCell>
+            <TableCell numeric>{row.score.coverage.contradicted}</TableCell>
+            <TableCell numeric>{formatShare(row.score.accuracy) ?? <Absence />}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 
 function CitedTable({ cited }: Readonly<{ cited: AccuracyResponse['cited_alongside'] }>) {
   return (
-    <DataTable
-      title="Sources cited alongside contradictions"
-      columns={[
-        { key: 'domain', label: 'Domain' },
-        { key: 'answers', label: 'Answers', width: 'figure', numeric: true },
-      ]}
-      footer="Domains cited in answers with a contradicted claim. Cited alongside, not shown to be the source."
-      state={
-        cited.length
-          ? undefined
-          : { kind: 'empty', inline: true, message: 'No sources cited alongside contradictions.' }
-      }
-    >
-      {cited.map((row) => (
-        <TableRow key={row.domain}>
-          <TableCell>{row.domain}</TableCell>
-          <TableCell numeric>{row.answers}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Sources cited alongside contradictions">
+      <DataTable
+        label="Sources cited alongside contradictions"
+        columns={[
+          { key: 'domain', label: 'Domain' },
+          { key: 'answers', label: 'Answers', width: 'figure', kind: 'number' },
+        ]}
+        footer="Domains cited in answers with a contradicted claim. Cited alongside, not shown to be the source."
+        state={
+          cited.length
+            ? undefined
+            : { kind: 'empty', inline: true, message: 'No sources cited alongside contradictions.' }
+        }
+      >
+        {cited.map((row) => (
+          <TableRow key={row.domain}>
+            <TableCell>{row.domain}</TableCell>
+            <TableCell numeric>{row.answers}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }

@@ -17,6 +17,8 @@ import {
 } from '@/lib/visibility/dashboard';
 import { Delta } from '@/components/ui/delta';
 import { textRole } from '@/components/ui/typography';
+import { TitledSection } from '@/components/ui/section';
+import { cn } from '@/lib/utils';
 
 /**
  * Where you stand against the brands you track.
@@ -190,8 +192,15 @@ export function RankingRowsTable({
   rows,
   onSelect,
   selectedName = null,
+  beside = false,
 }: Readonly<{
   rows: readonly RankingRow[];
+  /**
+   * The table shares its row with the history chart: share of voice and owned
+   * citation rate move into each brand's caption, so every column fits
+   * beside the chart without scrolling.
+   */
+  beside?: boolean;
   /**
    * Plot this brand alone in the chart beside the table. Selecting the brand
    * already selected clears it, so the same row both focuses and restores.
@@ -214,104 +223,123 @@ export function RankingRowsTable({
   // than filled with a placeholder in every row.
   const anyPosition = rankedCount > 0;
   return (
-    <DataTable
-      title="Brand and competitors"
-      columns={rankingColumns({ anyPosition, anyChange })}
-      minWidth="md"
-      state={
-        ordered.length
-          ? undefined
-          : {
-              kind: 'empty',
-              headingLevel: 3,
-              icon: Users,
-              heading: 'No measured responses in this selection',
-            }
-      }
-      footer="How often each brand is named, across the same answers. Select a row to plot it on its own."
-    >
-      {ordered.map((row) => {
-        // A matched-subset delta is the same measurement taken over the cells
-        // both runs share. Which one it is belongs to the note above the
-        // table, not to a disclosure inside every cell.
-        const change = row.matched_visibility_delta ?? row.visibility_delta;
-        const selected = selectedName === row.name;
-        return (
-          <TableRow
-            key={`${row.is_brand}-${row.name}`}
-            highlight={row.is_brand}
-            aria-selected={selected || undefined}
-            {...selectionProps(row, selected, onSelect)}
-          >
-            <TableCell>
-              <Inline as="span">
-                <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
-                <BrandName row={row} selected={selected} onSelect={onSelect} />
-                {row.is_brand ? <YouTag /> : null}
-              </Inline>
-              <ClampText lines={1} className={textRole('caption', 'text-ink-2 desktop:hidden')}>
-                {formatRate(row.share_of_voice)} share of voice · {formatRate(row.citation_rate)}{' '}
-                owned citation rate
-              </ClampText>
-            </TableCell>
-            {/* The rate is the column. Printing its fraction under every
+    <TitledSection title="Brand and competitors">
+      <DataTable
+        label="Brand and competitors"
+        columns={rankingColumns({ anyPosition, anyChange, beside })}
+        // Beside the chart the columns set the width, so every one fits.
+        minWidth={beside ? undefined : 'md'}
+        state={
+          ordered.length
+            ? undefined
+            : {
+                kind: 'empty',
+                headingLevel: 3,
+                icon: Users,
+                heading: 'No measured responses in this selection',
+              }
+        }
+        footer="How often each brand is named, across the same answers. Select a row to plot it on its own."
+      >
+        {ordered.map((row) => {
+          // A matched-subset delta is the same measurement taken over the cells
+          // both runs share. Which one it is belongs to the note above the
+          // table, not to a disclosure inside every cell.
+          const change = row.matched_visibility_delta ?? row.visibility_delta;
+          const selected = selectedName === row.name;
+          return (
+            <TableRow
+              key={`${row.is_brand}-${row.name}`}
+              highlight={row.is_brand}
+              aria-selected={selected || undefined}
+              {...selectionProps(row, selected, onSelect)}
+            >
+              <TableCell>
+                <Inline as="span">
+                  <BrandMark name={row.name} logoUrl={row.logo_url} websiteUrl={row.website_url} />
+                  <BrandName row={row} selected={selected} onSelect={onSelect} />
+                  {row.is_brand ? <YouTag /> : null}
+                </Inline>
+                <ClampText
+                  lines={1}
+                  className={textRole('caption', cn('text-ink-2', !beside && 'desktop:hidden'))}
+                >
+                  {formatRate(row.share_of_voice)} share of voice · {formatRate(row.citation_rate)}{' '}
+                  owned citation rate
+                </ClampText>
+              </TableCell>
+              {/* The rate is the column. Printing its fraction under every
                   row turned a scannable column of percentages into two
                   stacked numbers per cell. */}
-            <TableCell numeric>{measured(formatRate(row.mention_rate)) ?? <Absence />}</TableCell>
-            {anyPosition ? (
-              <TableCell numeric>
-                <PositionValue
-                  row={row}
-                  rank={ranks.get(rowKey(row)) ?? null}
-                  rankedCount={rankedCount}
-                />
-              </TableCell>
-            ) : null}
-            {anyChange ? (
-              <TableCell numeric>
-                <Delta value={change} unit=" pp" />
-              </TableCell>
-            ) : null}
-            <TableCell numeric desktopOnly>
-              {measured(formatRate(row.share_of_voice)) ?? <Absence />}
-            </TableCell>
-            <TableCell numeric desktopOnly>
-              {measured(formatRate(row.citation_rate)) ?? <Absence />}
-            </TableCell>
-          </TableRow>
-        );
-      })}
-    </DataTable>
+              <TableCell numeric>{measured(formatRate(row.mention_rate)) ?? <Absence />}</TableCell>
+              {anyPosition ? (
+                <TableCell numeric>
+                  <PositionValue
+                    row={row}
+                    rank={ranks.get(rowKey(row)) ?? null}
+                    rankedCount={rankedCount}
+                  />
+                </TableCell>
+              ) : null}
+              {anyChange ? (
+                <TableCell numeric>
+                  <Delta value={change} unit=" pp" />
+                </TableCell>
+              ) : null}
+              {beside ? null : (
+                <>
+                  <TableCell numeric desktopOnly>
+                    {measured(formatRate(row.share_of_voice)) ?? <Absence />}
+                  </TableCell>
+                  <TableCell numeric desktopOnly>
+                    {measured(formatRate(row.citation_rate)) ?? <Absence />}
+                  </TableCell>
+                </>
+              )}
+            </TableRow>
+          );
+        })}
+      </DataTable>
+    </TitledSection>
   );
 }
 
 function rankingColumns({
   anyPosition,
   anyChange,
-}: Readonly<{ anyPosition: boolean; anyChange: boolean }>): DataTableColumn[] {
-  // The table shares its row with the history chart, so its figures take the
-  // short widths and the Brand column keeps the rest for each logo and name.
+  beside,
+}: Readonly<{ anyPosition: boolean; anyChange: boolean; beside: boolean }>): DataTableColumn[] {
+  // The table can share its row with the history chart, so its figures take
+  // the short widths and the Brand column keeps the rest for each logo and name.
   return [
-    { key: 'brand', label: 'Brand' },
-    { key: 'visibility', label: 'Visibility', width: 'short', numeric: true },
+    { key: 'brand', label: 'Brand', kind: 'identity' },
+    { key: 'visibility', label: 'Visibility', width: 'short', kind: 'number' },
     // "Rank", not "Position": the headline "Average position in answers" is
     // the mean order an answer names you in, a different measure that can
     // read #1 while this column reads #3.
     ...(anyPosition
-      ? [{ key: 'rank', label: 'Rank', width: 'short', numeric: true } as const]
+      ? [{ key: 'rank', label: 'Rank', width: 'short', kind: 'number' } as const]
       : []),
     ...(anyChange
-      ? [{ key: 'change', label: 'Change', width: 'short', numeric: true } as const]
+      ? [{ key: 'change', label: 'Change', width: 'short', kind: 'number' } as const]
       : []),
-    // Spelled out, with the KPI row's names: "S.O.V." and "Citations" read as
-    // different measures from the Share of voice and Owned citation rate
-    // tiles above. The headers wrap to two lines rather than abbreviate.
+    ...(beside ? [] : trailingRateColumns()),
+  ];
+}
+
+/**
+ * Spelled out, with the KPI row's names: "S.O.V." and "Citations" read as
+ * different measures from the Share of voice and Owned citation rate tiles
+ * above. The headers wrap to two lines rather than abbreviate.
+ */
+function trailingRateColumns(): DataTableColumn[] {
+  return [
     {
       key: 'sov',
       label: 'Share of voice',
       hint: SHARE_OF_VOICE_HINT,
       width: 'short',
-      numeric: true,
+      kind: 'number',
       desktopOnly: true,
     },
     {
@@ -319,7 +347,7 @@ function rankingColumns({
       label: OWNED_CITATION_RATE,
       hint: 'For your brand, the share of answers that link to a page you own; for a competitor, the share that link to its domains.',
       width: 'shortMetric',
-      numeric: true,
+      kind: 'number',
       desktopOnly: true,
     },
   ];

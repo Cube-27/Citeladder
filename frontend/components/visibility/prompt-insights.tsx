@@ -1,8 +1,9 @@
 import { useMutation, type UseQueryResult } from '@tanstack/react-query';
 
 import { textRole } from '@/components/ui/typography';
-import { Inline, Stack } from '@/components/ui/layout';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { Stack } from '@/components/ui/layout';
+import { DraftSheet } from '@/components/ui/draft-sheet';
+import { pluralCount } from '@/lib/format';
 import type { ObservedCompetitor } from '@citeladder/contracts';
 import { Button } from '@/components/ui/button';
 import { visibilityMutations } from '@/lib/api/visibility-queries';
@@ -71,34 +72,44 @@ function SuggestionRows({
         <Notice
           kind="read"
           error={suggestionsQuery.error}
-          fallback="Could not load competitor suggestions."
+          title="Couldn't load competitor suggestions"
+          fallback="The request failed or timed out."
           onRetry={() => void suggestionsQuery.refetch()}
           pending={suggestionsQuery.isFetching}
         />
       ) : null}
       {suggestionsQuery.data?.length ? (
-        <ul className={ledgerClasses()}>
+        // Each candidate is a draft for a person to decide on: the dashed
+        // sheet says nobody has added it yet.
+        <Stack as="ul" aria-label="Suggested competitors">
           {suggestionsQuery.data.map((candidate) => (
-            <Inline
+            <DraftSheet
               as="li"
               key={candidate.id}
-              className={ledgerItemClasses('type-body text-ink-2 flex-wrap justify-between')}
+              state="draft"
+              overline="Suggested competitor"
+              actions={
+                onAdd ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => onAdd(candidate.id)}
+                    disabled={adding}
+                    // The visible words lead the name, so a voice command can use them.
+                    aria-label={`Add competitor ${candidate.name}`}
+                  >
+                    Add competitor
+                  </Button>
+                ) : undefined
+              }
             >
-              <Stack gap="tight">
-                <p className={textRole('body')}>{candidate.name}</p>
-                <p className="type-caption">
-                  {candidate.domain} · {candidate.prompt_count} prompts / {candidate.engine_count}{' '}
-                  engines
-                </p>
-              </Stack>
-              {onAdd ? (
-                <Button variant="secondary" onClick={() => onAdd(candidate.id)} disabled={adding}>
-                  Add competitor
-                </Button>
-              ) : null}
-            </Inline>
+              <p className={textRole('subheading', 'min-w-0 break-words')}>{candidate.name}</p>
+              <p className="type-caption">
+                {candidate.domain} · {pluralCount(candidate.prompt_count, 'prompt')} ·{' '}
+                {pluralCount(candidate.engine_count, 'engine')}
+              </p>
+            </DraftSheet>
           ))}
-        </ul>
+        </Stack>
       ) : null}
       {/* Only an answered, empty list is "none yet"; a failed read says so above. */}
       {suggestionsQuery.isSuccess && !suggestionsQuery.data.length ? (

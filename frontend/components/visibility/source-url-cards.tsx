@@ -20,6 +20,7 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
+  TitledSection,
 } from '@/components/ui/section';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
@@ -114,34 +115,36 @@ export function EnginesCard({
     };
   }
   return (
-    <DataTable
-      title="Retrievals by AI model"
-      columns={ENGINE_COLUMNS}
-      state={state}
-      footer="Which engines used this page as a source."
-    >
-      {rows.map((row) => (
-        <TableRow key={`${row.logical_engine}:${row.transport_model ?? ''}`}>
-          <TableCell>
-            <span className="grid min-w-0">
-              <ClampText lines={1}>{catalog.label(row.logical_engine)}</ClampText>
-              {catalog.modelLabel(row.logical_engine, row.transport_model) ? (
-                <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
-                  {catalog.modelLabel(row.logical_engine, row.transport_model)}
-                </ClampText>
-              ) : null}
-            </span>
-          </TableCell>
-          <TableCell numeric>{count(row.retrievals) ?? <Absence />}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Retrievals by AI model">
+      <DataTable
+        label="Retrievals by AI model"
+        columns={ENGINE_COLUMNS}
+        state={state}
+        footer="Which engines used this page as a source."
+      >
+        {rows.map((row) => (
+          <TableRow key={`${row.logical_engine}:${row.transport_model ?? ''}`}>
+            <TableCell>
+              <span className="grid min-w-0">
+                <ClampText lines={1}>{catalog.label(row.logical_engine)}</ClampText>
+                {catalog.modelLabel(row.logical_engine, row.transport_model) ? (
+                  <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
+                    {catalog.modelLabel(row.logical_engine, row.transport_model)}
+                  </ClampText>
+                ) : null}
+              </span>
+            </TableCell>
+            <TableCell numeric>{count(row.retrievals) ?? <Absence />}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 
 const ENGINE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'model', label: 'Model' },
-  { key: 'retrievals', label: 'Retrievals', width: 'figure', numeric: true },
+  { key: 'retrievals', label: 'Retrievals', width: 'figure', kind: 'number' },
 ];
 
 /**

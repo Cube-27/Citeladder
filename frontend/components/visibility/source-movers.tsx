@@ -4,6 +4,7 @@ import type { z } from 'zod';
 
 import { AppGrid } from '@/components/ui/app-grid';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { TitledSection } from '@/components/ui/section';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { Delta } from '@/components/ui/delta';
 import { Stack } from '@/components/ui/layout';
@@ -61,8 +62,8 @@ const STATUS_COPY: Record<string, string> = {
 
 const MOVER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'source', label: 'Source' },
-  { key: 'share', label: 'Share', width: 'status', numeric: true },
-  { key: 'change', label: 'Change', width: 'figure', numeric: true },
+  { key: 'share', label: 'Share', width: 'status', kind: 'number' },
+  { key: 'change', label: 'Change', width: 'figure', kind: 'number' },
 ];
 
 /**
@@ -85,7 +86,8 @@ function moversState(
     return {
       kind: 'error',
       error: query.error,
-      fallback: 'Could not load top movers.',
+      title: "Couldn't load the top movers",
+      fallback: 'The request failed or timed out.',
       onRetry: () => void query.refetch(),
       pending: query.isFetching,
     };
@@ -112,38 +114,40 @@ function MoverTable({
   busy: boolean;
 }>) {
   return (
-    <DataTable
-      title={title}
-      columns={MOVER_COLUMNS}
-      pageSize={MOVER_ROWS}
-      rowCount={movers.length}
-      busy={{ active: busy, label: 'Updating top movers' }}
-      state={
-        state ??
-        (movers.length
-          ? undefined
-          : {
-              kind: 'empty',
-              headingLevel: 3,
-              icon: TrendingUp,
-              heading: 'No source moved this way',
-            })
-      }
-    >
-      {movers.map((mover) => (
-        <TableRow key={mover.key}>
-          <TableCell>
-            <ClampText lines={1}>{dimension === 'url' ? pathOf(mover.key) : mover.key}</ClampText>
-          </TableCell>
-          <TableCell numeric className="text-ink-2">
-            {`${percent(mover.previous_share, 1)} → ${percent(mover.current_share, 1)}`}
-          </TableCell>
-          <TableCell numeric>
-            <Delta value={mover.delta} policy="neutral" unit=" pp" />
-          </TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title={title}>
+      <DataTable
+        label={title}
+        columns={MOVER_COLUMNS}
+        pageSize={MOVER_ROWS}
+        rowCount={movers.length}
+        busy={{ active: busy, label: 'Updating top movers' }}
+        state={
+          state ??
+          (movers.length
+            ? undefined
+            : {
+                kind: 'empty',
+                headingLevel: 3,
+                icon: TrendingUp,
+                heading: 'No source moved this way',
+              })
+        }
+      >
+        {movers.map((mover) => (
+          <TableRow key={mover.key}>
+            <TableCell>
+              <ClampText lines={1}>{dimension === 'url' ? pathOf(mover.key) : mover.key}</ClampText>
+            </TableCell>
+            <TableCell numeric className="text-ink-2">
+              {`${percent(mover.previous_share, 1)} → ${percent(mover.current_share, 1)}`}
+            </TableCell>
+            <TableCell numeric>
+              <Delta value={mover.delta} policy="neutral" unit=" pp" />
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 

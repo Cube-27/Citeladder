@@ -35,6 +35,8 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
+  TitledSection,
+  SectionStack,
 } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
@@ -53,7 +55,8 @@ export function VisibilityPerception({
       <Notice
         kind="read"
         error={query.error}
-        fallback="Could not load perception. Check your connection and try again."
+        title="Couldn't load perception"
+        fallback="Check your connection and try again."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
@@ -82,7 +85,7 @@ export function PerceptionView({ data }: Readonly<{ data: PerceptionResponse }>)
   if (data.state !== 'value')
     return <PerceptionState state={data.state} reason={data.reason} coverage={data.coverage} />;
   return (
-    <Stack gap="workspace">
+    <SectionStack>
       <Headline data={data} />
       <EntityTable entities={data.entities} />
       <ThemeTable themes={data.themes} />
@@ -92,7 +95,7 @@ export function PerceptionView({ data }: Readonly<{ data: PerceptionResponse }>)
         <NegativeQuotes quotes={data.negative_quotes} />
         <DriverTable drivers={data.drivers} />
       </AppGrid>
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -188,44 +191,46 @@ function classifiedOf(count: number | undefined, classified: number | undefined)
 
 function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['entities'] }>) {
   return (
-    <DataTable
-      title="You and competitors"
-      columns={ENTITY_COLUMNS}
-      footer="Classified mentions of each business in the selected answers."
-    >
-      {entities.map((entity) => (
-        // Your own row is highlighted, as in the Trends brand table.
-        <TableRow key={entity.name} highlight={entity.is_brand}>
-          <TableCell>
-            <Inline as="span">
-              <ClampText>{entity.name}</ClampText>
-              {entity.is_brand ? <YouTag /> : null}
-            </Inline>
-          </TableCell>
-          <TableCell numeric>
-            {entity.score.classified} of {entity.coverage.mentions}
-          </TableCell>
-          <TableCell numeric>{entity.score.positive}</TableCell>
-          <TableCell numeric>{entity.score.negative}</TableCell>
-          <TableCell numeric>{formatNet(entity.score.net_sentiment) ?? <Absence />}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="You and competitors">
+      <DataTable
+        label="You and competitors"
+        columns={ENTITY_COLUMNS}
+        footer="Classified mentions of each business in the selected answers."
+      >
+        {entities.map((entity) => (
+          // Your own row is highlighted, as in the Trends brand table.
+          <TableRow key={entity.name} highlight={entity.is_brand}>
+            <TableCell>
+              <Inline as="span">
+                <ClampText>{entity.name}</ClampText>
+                {entity.is_brand ? <YouTag /> : null}
+              </Inline>
+            </TableCell>
+            <TableCell numeric>
+              {entity.score.classified} of {entity.coverage.mentions}
+            </TableCell>
+            <TableCell numeric>{entity.score.positive}</TableCell>
+            <TableCell numeric>{entity.score.negative}</TableCell>
+            <TableCell numeric>{formatNet(entity.score.net_sentiment) ?? <Absence />}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 
 const ENTITY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'business', label: 'Business' },
-  { key: 'classified', label: 'Classified', width: 'figure', numeric: true },
-  { key: 'positive', label: 'Positive', width: 'figure', numeric: true },
-  { key: 'negative', label: 'Negative', width: 'figure', numeric: true },
-  { key: 'net', label: 'Net sentiment', width: 'figure', numeric: true },
+  { key: 'classified', label: 'Classified', width: 'figure', kind: 'number' },
+  { key: 'positive', label: 'Positive', width: 'figure', kind: 'number' },
+  { key: 'negative', label: 'Negative', width: 'figure', kind: 'number' },
+  { key: 'net', label: 'Net sentiment', width: 'figure', kind: 'number' },
 ];
 
 const THEME_COLUMNS: readonly DataTableColumn[] = [
   { key: 'theme', label: 'Theme', width: 'name' },
-  { key: 'positive', label: 'Positive', width: 'figure', numeric: true },
-  { key: 'negative', label: 'Negative', width: 'figure', numeric: true },
+  { key: 'positive', label: 'Positive', width: 'figure', kind: 'number' },
+  { key: 'negative', label: 'Negative', width: 'figure', kind: 'number' },
   { key: 'quote', label: 'Top quote' },
 ];
 
@@ -236,27 +241,29 @@ function noneHere(message: string): ComponentProps<typeof DataTable>['state'] {
 
 function ThemeTable({ themes }: Readonly<{ themes: PerceptionResponse['themes'] }>) {
   return (
-    <DataTable
-      title="Themes"
-      columns={THEME_COLUMNS}
-      footer="What answers praised or criticised about you, with a verified quote."
-      state={themes.length ? undefined : noneHere('No themes in these answers.')}
-    >
-      {themes.map((theme) => (
-        <TableRow key={theme.theme}>
-          <TableCell>{themeLabel(theme.theme)}</TableCell>
-          <TableCell numeric>{theme.positive}</TableCell>
-          <TableCell numeric>{theme.negative}</TableCell>
-          <TableCell>
-            {theme.quotes[0] ? (
-              <ClampText tooltip={`“${theme.quotes[0].text}”`}>
-                <QuoteLink quote={theme.quotes[0]} />
-              </ClampText>
-            ) : null}
-          </TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Themes">
+      <DataTable
+        label="Themes"
+        columns={THEME_COLUMNS}
+        footer="What answers praised or criticised about you, with a verified quote."
+        state={themes.length ? undefined : noneHere('No themes in these answers.')}
+      >
+        {themes.map((theme) => (
+          <TableRow key={theme.theme}>
+            <TableCell>{themeLabel(theme.theme)}</TableCell>
+            <TableCell numeric>{theme.positive}</TableCell>
+            <TableCell numeric>{theme.negative}</TableCell>
+            <TableCell>
+              {theme.quotes[0] ? (
+                <ClampText tooltip={`“${theme.quotes[0].text}”`}>
+                  <QuoteLink quote={theme.quotes[0]} />
+                </ClampText>
+              ) : null}
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 
@@ -307,21 +314,23 @@ function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
 
 function DriverTable({ drivers }: Readonly<{ drivers: PerceptionResponse['drivers'] }>) {
   return (
-    <DataTable
-      title="Sources cited alongside criticism"
-      columns={[
-        { key: 'domain', label: 'Domain' },
-        { key: 'answers', label: 'Answers', width: 'figure', numeric: true },
-      ]}
-      footer="Domains cited in answers that criticised you. Cited alongside, not shown to be the cause."
-      state={drivers.length ? undefined : noneHere('No sources cited alongside criticism.')}
-    >
-      {drivers.map((driver) => (
-        <TableRow key={driver.domain}>
-          <TableCell>{driver.domain}</TableCell>
-          <TableCell numeric>{driver.answers}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Sources cited alongside criticism">
+      <DataTable
+        label="Sources cited alongside criticism"
+        columns={[
+          { key: 'domain', label: 'Domain' },
+          { key: 'answers', label: 'Answers', width: 'figure', kind: 'number' },
+        ]}
+        footer="Domains cited in answers that criticised you. Cited alongside, not shown to be the cause."
+        state={drivers.length ? undefined : noneHere('No sources cited alongside criticism.')}
+      >
+        {drivers.map((driver) => (
+          <TableRow key={driver.domain}>
+            <TableCell>{driver.domain}</TableCell>
+            <TableCell numeric>{driver.answers}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }

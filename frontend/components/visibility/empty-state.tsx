@@ -1,9 +1,9 @@
 import { ProjectLink } from '@/components/ui/project-link';
 import { Rocket } from 'lucide-react';
 
-import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
 import { StateBlock } from '@/components/ui/state-block';
+import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 /**
  * Empty state for a project with no completed runs. The
@@ -19,26 +19,32 @@ import { StateBlock } from '@/components/ui/state-block';
 export function VisibilityEmptyState({
   hasActiveRun = false,
 }: Readonly<{ hasActiveRun?: boolean }>) {
+  const canRun = useWorkspaceCapability('run');
   return (
     <StateBlock
       kind="empty"
       icon={Rocket}
       heading="No completed runs yet"
-      description={
-        hasActiveRun
-          ? 'An audit is running — results appear here when it finishes.'
-          : 'Launch an audit to see how AI answer engines talk about your brand.'
-      }
+      description={emptyDescription({ hasActiveRun, canRun })}
       action={
+        // Launch run is the masthead's one primary; this block does not repeat it.
         hasActiveRun ? (
           <Button asChild variant="secondary">
             <ProjectLink href="/runs">View runs</ProjectLink>
           </Button>
-        ) : (
-          // The masthead holds the page's one primary Launch run.
-          <LaunchAuditButton variant="secondary">Launch your first audit</LaunchAuditButton>
-        )
+        ) : undefined
       }
     />
   );
+}
+
+/** A role that may not run audits is never pointed at a Launch run it is not offered. */
+function emptyDescription({
+  hasActiveRun,
+  canRun,
+}: Readonly<{ hasActiveRun: boolean; canRun: boolean }>): string {
+  if (hasActiveRun) return 'A run is in progress. Results appear here when it finishes.';
+  return canRun
+    ? 'Launch run, above, measures how AI answer engines talk about your brand.'
+    : 'No run has measured how AI answer engines talk about this brand yet.';
 }

@@ -2,13 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { aiTrafficQueries } from '@/lib/api/ai-traffic';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { TextLink } from '@/components/ui/text-link';
-import { Inline, Stack } from '@/components/ui/layout';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { TrafficUrlButton } from './url-panel';
 import { patternLabel } from '@/lib/ai-traffic/vocabulary';
 import { formatWindowDate } from '@/lib/format';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /** Nothing observed is a measured absence only when both sources were complete. */
 function nothingObservedLine(coverage: Readonly<{ crawl: string; ga4_complete: boolean }>) {
@@ -27,37 +27,42 @@ export function InsightStrip({
     enabled: !!projectId && !!workspaceId,
   });
   const data = query.isError ? undefined : query.data;
-  // The card keeps its slot when nothing was observed: dropping it after the
-  // loading line would pull the Overview content up under the reader.
-  const nothingObserved = data !== undefined && !data.patterns.length && !data.coverage.notice;
+  // The section keeps its slot when nothing was observed: dropping it after
+  // loading would pull the content below up under the reader.
   return (
-    <Section>
+    <Section aria-labelledby="observed-patterns">
       <SectionHeader>
-        <SectionTitle>Observed patterns</SectionTitle>
-      </SectionHeader>
-      <Stack>
-        {query.isError ? (
-          <Notice kind="read" {...readErrorProps(query)} fallback="Could not read insights" />
-        ) : null}
-        {query.isLoading ? (
-          <p className="type-body text-ink-2">Loading persisted insights…</p>
-        ) : null}
-        {nothingObserved ? (
-          <p className="type-body text-ink-2">{nothingObservedLine(data.coverage)}</p>
-        ) : null}
-        {data?.coverage.notice ? <Notice tone="info">{data.coverage.notice}</Notice> : null}
+        <SectionTitle id="observed-patterns">Observed patterns</SectionTitle>
         {data ? (
-          <p className="type-caption">
-            {formatWindowDate(data.window_start)} – {formatWindowDate(data.window_end)} ·
-            Co-occurrence only. AI apps can strip referrers.
-          </p>
+          // An honest limit: the two sources were seen together, not linked.
+          <SectionDescription>
+            {formatWindowDate(data.window_start)} – {formatWindowDate(data.window_end)}. Crawls and
+            AI visits seen in the same window, which does not show that one caused the other. Some
+            AI apps hide where a visit came from.
+          </SectionDescription>
         ) : null}
-        {data?.patterns.length ? (
-          <ul className={ledgerClasses()}>
-            {data.patterns.map((r) => (
-              <Stack as="li" key={r.pattern} className={ledgerItemClasses()}>
-                <p className="type-body">{r.copy}</p>
-                <Inline gap="meta">
+      </SectionHeader>
+      {query.isError ? (
+        <StateBlock
+          kind="error"
+          {...readErrorProps(query)}
+          title="Couldn't load the observed patterns"
+          fallback="The request failed or timed out."
+        />
+      ) : null}
+      {query.isLoading ? <StateBlock kind="loading" label="Loading observed patterns…" /> : null}
+      {data?.coverage.notice ? <Notice tone="info">{data.coverage.notice}</Notice> : null}
+      {data && !data.patterns.length && !data.coverage.notice ? (
+        <StateBlock kind="empty" inline message={nothingObservedLine(data.coverage)} />
+      ) : null}
+      {data?.patterns.length ? (
+        <LedgerList>
+          {data.patterns.map((r) => (
+            <LedgerItem
+              key={r.pattern}
+              title={r.copy}
+              links={
+                <>
                   <TextLink
                     className="inline-flex min-h-6 items-center"
                     aria-label={`Inspect pages: ${patternLabel(r.pattern)}`}
@@ -84,15 +89,15 @@ export function InsightStrip({
                       label={`Inspect page ${index + 1}: ${patternLabel(r.pattern)}`}
                       filters={{ start_date: data.window_start, end_date: data.window_end }}
                     >
-                      Inspect page {index + 1}
+                      Page {index + 1}
                     </TrafficUrlButton>
                   ))}
-                </Inline>
-              </Stack>
-            ))}
-          </ul>
-        ) : null}
-      </Stack>
+                </>
+              }
+            />
+          ))}
+        </LedgerList>
+      ) : null}
     </Section>
   );
 }

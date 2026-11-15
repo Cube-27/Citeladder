@@ -83,7 +83,6 @@ export function RunDetailScreen() {
     >
       <RunDetailView
         audit={audit}
-        title={title}
         auditLoading={auditQuery.isLoading}
         auditRead={auditQuery}
         executions={executionsQuery.data}

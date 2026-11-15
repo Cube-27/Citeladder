@@ -1,28 +1,25 @@
-import { Rocket } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
-import { ACTIONS } from '@/components/ui/actions';
-import { Button, type ButtonProps } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
+import { ActionButton } from '@/components/ui/actions';
+import type { ButtonProps } from '@/components/ui/button';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useActiveProject, useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { LaunchDialog } from './launch-dialog';
 
+type LaunchRunProps = Omit<ButtonProps, 'variant' | 'asChild' | 'children' | 'onClick'>;
+
 /**
- * Opens the shared audit configuration dialog and routes directly to the new
- * run. A role that may not run audits is not offered it.
+ * Launch run: opens the shared run configuration dialog and routes directly
+ * to the new run. Its words and look are the `launchRun` preset on every page.
+ * A role that may not run audits is not offered it.
  */
-export function LaunchAuditButton(props: Readonly<ButtonProps & { showIcon?: boolean }>) {
+export function LaunchAuditButton(props: Readonly<LaunchRunProps>) {
   return useWorkspaceCapability('run') ? <LaunchAudit {...props} /> : null;
 }
 
-function LaunchAudit({
-  children = ACTIONS.launchRun.label,
-  showIcon = true,
-  ...buttonProps
-}: Readonly<ButtonProps & { showIcon?: boolean }>) {
+function LaunchAudit(buttonProps: Readonly<LaunchRunProps>) {
   const project = useActiveProject();
   const projectHref = useProjectHref();
   const router = useNavigate();
@@ -30,15 +27,12 @@ function LaunchAudit({
 
   return (
     <>
-      <Button
-        variant="primary"
+      <ActionButton
+        action="launchRun"
         {...buttonProps}
         disabled={!project || buttonProps.disabled}
         onClick={() => setOpen(true)}
-      >
-        {showIcon ? <Icon icon={Rocket} /> : null}
-        {children}
-      </Button>
+      />
       {project ? (
         <LaunchDialog
           open={open}

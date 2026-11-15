@@ -118,10 +118,47 @@ export function SectionContent({
   );
 }
 
-/** A page's sections, stacked at the section gap. */
-export function SectionStack({ children }: Readonly<{ children: ReactNode }>) {
+/**
+ * TitledSection — the common module: a Section headed by its h2 title, an
+ * optional caption and trailing actions, then the body (a DataTable named by
+ * `label`, a chart, a list). It adds no landmark of its own, so a table
+ * inside stays the one region with that name.
+ */
+export function TitledSection({
+  title,
+  description,
+  actions,
+  children,
+  className,
+}: Readonly<{
+  title: string;
+  description?: ReactNode;
+  actions?: ReactNode;
+  children: ReactNode;
+  className?: string;
+}>) {
   return (
-    <div data-rhythm-gap="section" className="flex min-w-0 flex-col gap-[var(--page-section-gap)]">
+    <Section className={className}>
+      <SectionHeader actions={actions}>
+        <SectionTitle>{title}</SectionTitle>
+        {description ? <SectionDescription>{description}</SectionDescription> : null}
+      </SectionHeader>
+      {children}
+    </Section>
+  );
+}
+
+/** A page's sections, stacked at the section gap. */
+export function SectionStack({
+  children,
+  ...props
+}: Readonly<{ children: ReactNode; 'aria-busy'?: boolean }>) {
+  return (
+    <div
+      {...props}
+      data-rhythm-gap="section"
+      className="flex min-w-0 flex-col gap-[var(--page-section-gap)]"
+    >
       {children}
     </div>
   );

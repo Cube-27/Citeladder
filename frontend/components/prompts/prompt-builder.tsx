@@ -211,7 +211,8 @@ function SeedsReadState({ read }: Readonly<{ read: UseQueryResult<SeedQueries> }
     <StateBlock
       kind="error"
       {...readErrorProps(read)}
-      fallback="Your search data could not be loaded."
+      title="Couldn't load your search data"
+      fallback="The request failed or timed out."
     />
   ) : (
     <StateBlock kind="loading" label="Loading your search data" />

@@ -8,7 +8,9 @@ import {
 } from '@/lib/ai-traffic/use-crawl-connections';
 import type { crawlSourceSchema } from '@citeladder/contracts/ai-traffic';
 import type { z } from 'zod';
+import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { StateBlock } from '@/components/ui/state-block';
 import { Dialog } from '@/components/ui/dialog';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { Stack } from '@/components/ui/layout';
@@ -79,24 +81,23 @@ function Connections({
   const showHeader = headerWhenEmpty || Boolean(sources.data?.items.length);
   const { setupAvailable, unavailable } = setupState(sources);
   const connect = unavailable ? undefined : (
-    <Button
-      variant="primary"
+    <ActionButton
+      action="connectCrawlLogs"
       onClick={() => {
         setIssued(null);
         setOpen(true);
       }}
       disabled={!canManage}
-    >
-      Connect crawl logs
-    </Button>
+    />
   );
   const body = (
     <>
       {sources.isError ? (
-        <Notice
-          kind="read"
+        <StateBlock
+          kind="error"
           {...readErrorProps(sources)}
-          fallback="Could not read crawl log sources"
+          title="Couldn't load the crawl log sources"
+          fallback="The request failed or timed out."
         />
       ) : null}
       {sources.data ? (
@@ -199,7 +200,8 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
       <Notice
         kind="read"
         {...readErrorProps(sources)}
-        fallback="Could not read crawl log availability"
+        title="Couldn't load crawl log availability"
+        fallback="The request failed or timed out."
       />
     );
   if (!sources.data) return <output>Checking crawl log availability…</output>;
@@ -310,13 +312,11 @@ function SourceDiagnostics({
                     Set up and verify
                   </Button>
                 ) : null}
-                <Button
-                  variant="secondary"
+                <ActionButton
+                  action="revoke"
                   onClick={() => onRevoke(s)}
                   aria-label={`Revoke ${s.host}`}
-                >
-                  Revoke
-                </Button>
+                />
               </>
             ) : null}
           </TableActionsCell>

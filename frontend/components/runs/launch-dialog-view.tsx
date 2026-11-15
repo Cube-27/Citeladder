@@ -77,7 +77,8 @@ function PromptSetField({
             <Notice
               kind="read"
               {...readErrorProps(promptSetsRead)}
-              fallback="Could not load this project's prompt sets."
+              title="Couldn't load this project's prompt sets"
+              fallback="The request failed or timed out."
             />
           );
         }

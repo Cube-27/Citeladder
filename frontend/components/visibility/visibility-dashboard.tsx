@@ -68,7 +68,8 @@ function DashboardState({
       <StateBlock
         kind="error"
         error={auditsQuery.error}
-        fallback="Could not load this project's runs. Check your connection and try again."
+        title="Couldn't load this project's runs"
+        fallback="Check your connection and try again."
         onRetry={() => void auditsQuery.refetch()}
         pending={auditsQuery.isFetching}
       />

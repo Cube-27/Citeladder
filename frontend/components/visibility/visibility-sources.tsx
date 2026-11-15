@@ -408,7 +408,8 @@ function tableState({
     return {
       kind: 'error',
       error: query.error,
-      fallback: 'Could not load sources. Check your connection and try again.',
+      title: "Couldn't load the sources",
+      fallback: 'Check your connection and try again.',
       onRetry: () => void query.refetch(),
       pending: query.isFetching,
     };

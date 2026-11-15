@@ -57,7 +57,8 @@ function AiReferralsDataRegion({
       <StateBlock
         kind="error"
         {...readErrorProps(query)}
-        fallback="AI referrals could not be loaded. Check your connection and try again."
+        title="Couldn't load the AI referrals"
+        fallback="Check your connection and try again."
       />
     );
   }

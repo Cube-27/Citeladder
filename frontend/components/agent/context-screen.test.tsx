@@ -465,7 +465,7 @@ describe('Competitors', () => {
       'https://assets.test/northstar.png',
     );
 
-    await user.click(await screen.findByRole('button', { name: 'Add competitor' }));
+    await user.click(await screen.findByRole('button', { name: 'Add competitor Globex' }));
     await waitFor(() => expect(accepted).toBe('66666666-6666-4666-8666-666666666666'));
 
     await user.click(screen.getByRole('button', { name: 'Edit competitors' }));

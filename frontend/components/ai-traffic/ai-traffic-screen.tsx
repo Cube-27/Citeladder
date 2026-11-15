@@ -122,7 +122,8 @@ function TrafficDataView({
         <StateBlock
           kind="error"
           {...readErrorProps(summary)}
-          fallback="Could not read AI Traffic. Check your connection and try again."
+          title="Couldn't load AI Traffic"
+          fallback="Check your connection and try again."
         />
       </ReportPage>
     );

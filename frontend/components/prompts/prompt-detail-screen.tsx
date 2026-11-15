@@ -11,7 +11,7 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { marketFilter } from '@/components/visibility/visibility-toolbar';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, pluralCount } from '@/lib/format';
+import { formatDisplayDate, formatPercent, pluralCount } from '@/lib/format';
 import { formatWholePercent } from '@/lib/visibility/dashboard';
 import type { PromptHistory } from '@citeladder/contracts';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -33,6 +33,7 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
+  TitledSection,
 } from '@/components/ui/section';
 
 const BACK = { href: '/prompts', label: 'Back to prompts' } as const;
@@ -59,14 +60,15 @@ export function PromptDetailScreen() {
         <StateBlock
           kind="error"
           {...readErrorProps(query)}
-          fallback="This prompt could not be loaded. Check your connection and try again."
+          title="Couldn't load this prompt"
+          fallback="Check your connection and try again."
         />
       </RecordPage>
     );
   if (!query.data)
     return (
       <RecordPage back={BACK} filters={filters}>
-        <StateBlock kind="loading" />
+        <StateBlock kind="loading" label="Loading this prompt…" />
       </RecordPage>
     );
   const history = query.data;
@@ -86,21 +88,16 @@ export function PromptDetailScreen() {
 }
 
 /**
- * The prompt in full: a question is often longer than the masthead, which
- * cuts it, so the identity block always gives the whole text.
+ * The prompt's facts. The question itself is named once, by the masthead,
+ * which gives the whole text in its tooltip when it cuts it.
  */
 function PromptIdentity({ history }: Readonly<{ history: PromptHistory }>) {
   const archived = history.prompt.status === 'archived';
   return (
-    <Section aria-label="Prompt">
-      <SectionHeader>
-        <p className="type-heading max-w-prose">{history.prompt.text}</p>
-        <SectionDescription>
-          {pluralCount(history.points.length, 'measured run')}
-          {archived ? ' · Archived: audits no longer ask it' : ''}
-        </SectionDescription>
-      </SectionHeader>
-    </Section>
+    <p className="type-caption">
+      {pluralCount(history.points.length, 'measured run')}
+      {archived ? ' · Archived: runs no longer ask it' : ''}
+    </p>
   );
 }
 
@@ -117,10 +114,9 @@ function MeasurementTrail({ history }: Readonly<{ history: PromptHistory }>) {
       const visibility = point.mention_rate;
       const owned = point.owned_citation_rate;
       const measured = visibility !== null;
-      const ownedRate =
-        owned === null ? 'Owned not measured' : `Owned ${formatWholePercent(owned * 100)}`;
+      const ownedRate = owned === null ? 'Owned not measured' : `Owned ${formatPercent(owned)}`;
       const rates = measured
-        ? `Visibility ${formatWholePercent(visibility * 100)} · ${ownedRate}`
+        ? `Visibility ${formatPercent(visibility)} · ${ownedRate}`
         : 'No successful answer: a gap in the line';
       return {
         id: point.audit_id,
@@ -184,35 +180,37 @@ function Implementations({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   if (!history.implementations.length) return null;
   return (
-    <DataTable
-      title="Work marked implemented"
-      columns={IMPLEMENTATION_COLUMNS}
-      footer={
-        <p className="type-caption">
-          A marker shows when work went live, not that it changed these rates: other changes and
-          answer-engine updates can overlap.
-        </p>
-      }
-    >
-      {history.implementations.map((item) => (
-        <TableRow key={`${item.action_id}:${item.implemented_at}`}>
-          <TableCell>
-            <ClampText lines={1} tooltip={item.title}>
-              <TextLink href={`/agent/actions/${item.action_id}`}>{item.title}</TextLink>
-            </ClampText>
-          </TableCell>
-          <TableCell numeric>{formatDisplayDate(item.implemented_at, timeZone)}</TableCell>
-          <TableCell>
-            <ActionStatusBadge status={item.status} />
-          </TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Work marked implemented">
+      <DataTable
+        label="Work marked implemented"
+        columns={IMPLEMENTATION_COLUMNS}
+        footer={
+          <p className="type-caption">
+            A marker shows when work went live, not that it changed these rates: other changes and
+            answer-engine updates can overlap.
+          </p>
+        }
+      >
+        {history.implementations.map((item) => (
+          <TableRow key={`${item.action_id}:${item.implemented_at}`}>
+            <TableCell>
+              <ClampText lines={1} tooltip={item.title}>
+                <TextLink href={`/agent/actions/${item.action_id}`}>{item.title}</TextLink>
+              </ClampText>
+            </TableCell>
+            <TableCell>{formatDisplayDate(item.implemented_at, timeZone)}</TableCell>
+            <TableCell>
+              <ActionStatusBadge status={item.status} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 
 const IMPLEMENTATION_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'action', label: 'Action' },
-  { key: 'live', label: 'Live from', width: 'date', numeric: true },
+  { key: 'action', label: 'Action', kind: 'identity' },
+  { key: 'live', label: 'Live from', width: 'date', kind: 'date' },
   { key: 'status', label: 'Status', width: 'status' },
 ];

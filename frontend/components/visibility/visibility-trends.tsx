@@ -22,11 +22,18 @@ import {
 import { toChartPoints, toCompetitorSeries, toNamedChartPoints } from '@/lib/visibility/trends';
 import { observationLabel } from '@/lib/visibility/vocabulary';
 import { coverageSummary } from '@/lib/visibility/coverage';
-import { formatDisplayDate } from '@/lib/format';
+import { formatDisplayDate, pluralCount } from '@/lib/format';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Notice } from '@/components/ui/notice';
-import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionStack,
+  SectionTitle,
+} from '@/components/ui/section';
 import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 /** The headline mean place in answers, named apart from the table's Rank. */
@@ -69,14 +76,27 @@ export function VisibilityTrends({
   // unrecognized name falls back to the full roster.
   const focusedBrand =
     focused !== null && selected.rankings.some((row) => row.name === focused) ? focused : null;
+  const trend = hasTrend(query);
   const rankingTable = (
-    <RankingRowsTable rows={selected.rankings} onSelect={setFocused} selectedName={focusedBrand} />
+    <RankingRowsTable
+      rows={selected.rankings}
+      onSelect={setFocused}
+      selectedName={focusedBrand}
+      beside={trend}
+    />
   );
   return (
-    <Stack gap="workspace" aria-busy={selectionBusy}>
-      <PooledSelectionNote selected={selected} />
-      <HeadlineMetrics selected={selected} />
-      <CoverageStrip selected={selected} />
+    <SectionStack aria-busy={selectionBusy}>
+      <Section aria-labelledby="visibility-key-figures">
+        <SectionHeader>
+          <SectionTitle id="visibility-key-figures">Key figures</SectionTitle>
+          <CoverageStrip selected={selected} />
+        </SectionHeader>
+        <Stack>
+          <PooledSelectionNote selected={selected} />
+          <HeadlineMetrics selected={selected} />
+        </Stack>
+      </Section>
       {/* Only when the reader has narrowed to the observed surface. These
           rates divide by observations, not by answers, so showing them beside
           an unfiltered cross-surface view would invite reading them as the
@@ -89,7 +109,7 @@ export function VisibilityTrends({
           name beside its figure columns from 1280px, and the chart keeps four
           ninths for its lines (an even split cut the names to their logos;
           three fifths left the chart cramped, owner 2026-11-11). */}
-      {hasTrend(query) ? (
+      {trend ? (
         <AppGrid layout="table-chart">
           {rankingTable}
           <MeasurementHistory
@@ -111,7 +131,7 @@ export function VisibilityTrends({
           onEvidence ? (engine) => onEvidence({ run: selected.audit_id, engine }) : undefined
         }
       />
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -148,9 +168,9 @@ function CoverageStrip({ selected }: Readonly<{ selected: Visibility }>) {
   const timeZone = useDisplayTimeZone();
   const summary = coverageSummary(selected, (iso) => formatDisplayDate(iso, timeZone));
   return (
-    <p className={textRole('caption')}>
+    <SectionDescription>
       {summary.answers} {summary.change}
-    </p>
+    </SectionDescription>
   );
 }
 
@@ -292,7 +312,8 @@ function MeasurementHistoryBody({
       <Notice
         kind="read"
         error={query.error}
-        fallback="Could not load history."
+        title="Couldn't load the history"
+        fallback="Check your connection and try again."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
@@ -331,7 +352,7 @@ function HistoryLineChart({
   const competitors = focused === null ? toCompetitorSeries(points, metric) : [];
   const primaryLabel = focused ?? 'You';
   return (
-    <Stack gap="compact" aria-busy={busy}>
+    <Stack aria-busy={busy}>
       <StepChart
         label={`${metricLabel} over time`}
         name={primaryLabel}
@@ -340,6 +361,13 @@ function HistoryLineChart({
         yMax={100}
         yFormat={(value) => `${Math.round(value)}%`}
       />
+      <p className={textRole('caption')}>
+        {focused === null && competitors.length
+          ? `You and the ${pluralCount(competitors.length, 'tracked brand')} named most often in the latest period; select a brand in the table to plot it on its own. `
+          : ''}
+        A line breaks where two runs are not comparable, so a run with no comparable run beside it
+        shows as a lone mark.
+      </p>
     </Stack>
   );
 }

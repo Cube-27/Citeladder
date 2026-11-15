@@ -6,6 +6,8 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
+import { Inline } from '@/components/ui/layout';
+import { TitledSection } from '@/components/ui/section';
 import type { Audit } from '@citeladder/contracts';
 import { marketLabel } from '@citeladder/contracts/markets';
 import { formatCount, formatDisplayTime } from '@/lib/format';
@@ -42,23 +44,23 @@ function runsColumns(sort: Sort, onSort: (key: SortKey) => void): DataTableColum
     onSort: () => onSort(key),
   });
   return [
-    { key: 'run', label: 'Run', sort: sortable('created') },
+    { key: 'run', label: 'Run', kind: 'identity', sort: sortable('created') },
     { key: 'status', label: 'Status', width: 'status' },
     {
       key: 'requested',
       label: 'Requested',
       width: 'figure',
-      numeric: true,
+      kind: 'number',
       sort: sortable('requested'),
     },
     {
       key: 'completed',
       label: 'Completed',
       width: 'figure',
-      numeric: true,
+      kind: 'number',
       sort: sortable('completed'),
     },
-    { key: 'failed', label: 'Failed', width: 'figure', numeric: true, sort: sortable('failed') },
+    { key: 'failed', label: 'Failed', width: 'figure', kind: 'number', sort: sortable('failed') },
   ];
 }
 
@@ -96,48 +98,59 @@ export function RunsTable({
   };
 
   return (
-    <DataTable
+    <TitledSection
       title="All runs"
-      toolbar={{ status }}
-      columns={runsColumns(sort, onSort)}
-      minWidth="md"
-      pageSize={PAGE_SIZE}
-      rowCount={pagedAudits.length}
-      rowLines={3}
-      state={
-        audits.length === 0
-          ? { kind: 'empty', headingLevel: 3, icon: Play, heading: emptyHeading }
-          : undefined
+      // Mounted while idle (empty), so the first polling note is announced.
+      actions={
+        <Inline as="output" className="type-caption">
+          {status}
+        </Inline>
       }
-      pager={{
-        range: { from, to, total: sorted.length, noun: 'runs' },
-        ...pageNumberControls(page, pageCount, setPage),
-      }}
     >
-      {pagedAudits.map((audit, index) => (
-        <TableRow key={audit.id}>
-          <TableCell>
-            <TableCellLines
-              title
-              primary={<TextLink href={`/runs/${audit.id}`}>{runTitle(audit, timeZone)}</TextLink>}
-              secondary={runCaption({
-                audit,
-                timeZone,
-                launchAbove: sort.key === 'created' && sameLaunch(audit, pagedAudits[index - 1]),
-              })}
-            />
-          </TableCell>
-          <TableCell>
-            <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
-              {AUDIT_STATES[audit.status].label}
-            </StatusMark>
-          </TableCell>
-          <TableCell numeric>{formatCount(audit.requested_count)}</TableCell>
-          <TableCell numeric>{formatCount(audit.completed_count)}</TableCell>
-          <TableCell numeric>{formatCount(audit.failed_count)}</TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+      <DataTable
+        label="All runs"
+        columns={runsColumns(sort, onSort)}
+        minWidth="md"
+        pageSize={PAGE_SIZE}
+        rowCount={pagedAudits.length}
+        rowLines={3}
+        state={
+          audits.length === 0
+            ? { kind: 'empty', headingLevel: 3, icon: Play, heading: emptyHeading }
+            : undefined
+        }
+        pager={{
+          range: { from, to, total: sorted.length, noun: 'runs' },
+          ...pageNumberControls(page, pageCount, setPage),
+        }}
+      >
+        {pagedAudits.map((audit, index) => (
+          <TableRow key={audit.id}>
+            <TableCell>
+              <TableCellLines
+                title
+                primary={
+                  <TextLink href={`/runs/${audit.id}`}>{runTitle(audit, timeZone)}</TextLink>
+                }
+                secondary={runCaption({
+                  audit,
+                  timeZone,
+                  launchAbove: sort.key === 'created' && sameLaunch(audit, pagedAudits[index - 1]),
+                })}
+              />
+            </TableCell>
+            <TableCell>
+              <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
+                {AUDIT_STATES[audit.status].label}
+              </StatusMark>
+            </TableCell>
+            <TableCell numeric>{formatCount(audit.requested_count)}</TableCell>
+            <TableCell numeric>{formatCount(audit.completed_count)}</TableCell>
+            <TableCell numeric>{formatCount(audit.failed_count)}</TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 

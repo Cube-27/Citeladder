@@ -194,7 +194,6 @@ function ProgressNotices({
  */
 export function ProgressPanel({
   audit,
-  title,
   exportError,
   cancelNotice,
   onCancelRetry,
@@ -202,8 +201,6 @@ export function ProgressPanel({
   onRerunRetry,
 }: Readonly<{
   audit: Audit;
-  /** The run's name, read in full where the masthead cuts it. */
-  title?: string;
   /** A failed export from `useRunExport`. */
   exportError?: string | null;
   /** The A4 mutation notice for a failed cancel (verbatim 4xx, transient retry). */
@@ -221,10 +218,6 @@ export function ProgressPanel({
         audit={audit}
         lead={
           <Stack>
-            {title ? (
-              // Below the shell width the masthead cuts the title; it reads here in full.
-              <p className="type-heading desktop:hidden">{title}</p>
-            ) : null}
             <ProgressStatus audit={audit} polling={polling} />
             {polling && audit.requested_count > 0 ? (
               <RunProgress

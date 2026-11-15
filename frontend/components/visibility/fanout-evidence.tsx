@@ -55,7 +55,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'search', label: 'Search' },
   // The page's filter calls these surfaces; the column uses the same word.
   { key: 'surface', label: 'Surface', width: 'name' },
-  { key: 'occurrences', label: 'Occurrences', width: 'figure', numeric: true },
+  { key: 'occurrences', label: 'Occurrences', width: 'figure', kind: 'number' },
 ];
 
 /** What a page of this grouping is counting, for the shared table footer. */

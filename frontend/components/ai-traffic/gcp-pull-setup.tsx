@@ -107,7 +107,7 @@ export function GcpSourceSetup({
         })}
       />
       <Button
-        variant="primary"
+        variant="secondary"
         className="w-fit"
         pending={verify.isPending}
         pendingLabel="Checking…"

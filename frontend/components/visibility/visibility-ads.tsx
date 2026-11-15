@@ -31,6 +31,8 @@ import {
   SectionDescription,
   SectionHeader,
   SectionTitle,
+  TitledSection,
+  SectionStack,
 } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
@@ -49,7 +51,8 @@ export function VisibilityAds({
       <Notice
         kind="read"
         error={query.error}
-        fallback="Could not load ads. Check your connection and try again."
+        title="Couldn't load the ads"
+        fallback="Check your connection and try again."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
@@ -85,12 +88,12 @@ export function AdsView({
 }: Readonly<{ data: VisibilityAdsResponse; onShowMore?: () => void; loadingMore?: boolean }>) {
   if (data.state !== 'value') return <AdsState state={data.state} engines={data.engines} />;
   return (
-    <Stack gap="workspace">
+    <SectionStack>
       <Headline data={data} />
       <AdvertiserTable advertisers={data.advertisers} total={data.advertisers_seen} />
       <PromptTable prompts={data.prompts} />
       <CreativeList creatives={data.creatives} onShowMore={onShowMore} loadingMore={loadingMore} />
-    </Stack>
+    </SectionStack>
   );
 }
 
@@ -185,54 +188,56 @@ function AdvertiserTable({
 }: Readonly<{ advertisers: VisibilityAdsResponse['advertisers']; total: number }>) {
   const timeZone = useDisplayTimeZone();
   return (
-    <DataTable
-      title="Advertisers"
-      columns={ADVERTISER_COLUMNS}
-      footer={
-        advertisers.length < total
-          ? `The ${advertisers.length} most frequent of ${total} advertisers.`
-          : 'Who paid to appear in these answers.'
-      }
-      state={advertisers.length ? undefined : noAds('No ads in these answers.')}
-    >
-      {advertisers.map((advertiser) => (
-        <TableRow key={advertiser.domain}>
-          <TableCell>
-            <span className="grid min-w-0">
-              <Inline as="span">
-                <ClampText lines={1}>{advertiser.name}</ClampText>
-                <AdOwnershipChip ownership={advertiser.ownership} />
-              </Inline>
-              <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
-                {advertiser.domain}
-              </ClampText>
-            </span>
-          </TableCell>
-          <TableCell numeric>{advertiser.appearances}</TableCell>
-          <TableCell numeric>{advertiser.prompts}</TableCell>
-          <TableCell numeric>{formatPercent(advertiser.share)}</TableCell>
-          <TableCell>
-            {formatDisplayShortDate(advertiser.first_seen_at, timeZone)} –{' '}
-            {formatDisplayShortDate(advertiser.last_seen_at, timeZone)}
-          </TableCell>
-        </TableRow>
-      ))}
-    </DataTable>
+    <TitledSection title="Advertisers">
+      <DataTable
+        label="Advertisers"
+        columns={ADVERTISER_COLUMNS}
+        footer={
+          advertisers.length < total
+            ? `The ${advertisers.length} most frequent of ${total} advertisers.`
+            : 'Who paid to appear in these answers.'
+        }
+        state={advertisers.length ? undefined : noAds('No ads in these answers.')}
+      >
+        {advertisers.map((advertiser) => (
+          <TableRow key={advertiser.domain}>
+            <TableCell>
+              <span className="grid min-w-0">
+                <Inline as="span">
+                  <ClampText lines={1}>{advertiser.name}</ClampText>
+                  <AdOwnershipChip ownership={advertiser.ownership} />
+                </Inline>
+                <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
+                  {advertiser.domain}
+                </ClampText>
+              </span>
+            </TableCell>
+            <TableCell numeric>{advertiser.appearances}</TableCell>
+            <TableCell numeric>{advertiser.prompts}</TableCell>
+            <TableCell numeric>{formatPercent(advertiser.share)}</TableCell>
+            <TableCell>
+              {formatDisplayShortDate(advertiser.first_seen_at, timeZone)} –{' '}
+              {formatDisplayShortDate(advertiser.last_seen_at, timeZone)}
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </TitledSection>
   );
 }
 
 const ADVERTISER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'advertiser', label: 'Advertiser' },
-  { key: 'appearances', label: 'Appearances', width: 'figure', numeric: true },
-  { key: 'prompts', label: 'Prompts', width: 'figure', numeric: true },
-  { key: 'share', label: 'Share', width: 'figure', numeric: true },
+  { key: 'appearances', label: 'Appearances', width: 'figure', kind: 'number' },
+  { key: 'prompts', label: 'Prompts', width: 'figure', kind: 'number' },
+  { key: 'share', label: 'Share', width: 'figure', kind: 'number' },
   // A date range is text, aligned like every other date column.
   { key: 'seen', label: 'Seen', width: 'date' },
 ];
 
 const PROMPT_COLUMNS: readonly DataTableColumn[] = [
   { key: 'prompt', label: 'Prompt' },
-  { key: 'ads', label: 'Ads seen', width: 'figure', numeric: true },
+  { key: 'ads', label: 'Ads seen', width: 'figure', kind: 'number' },
   { key: 'top', label: 'Top advertiser', width: 'status' },
   {
     key: 'beside',
@@ -248,29 +253,31 @@ function noAds(heading: string): DataTableState {
 
 function PromptTable({ prompts }: Readonly<{ prompts: VisibilityAdsResponse['prompts'] }>) {
   return (
-    <DataTable
-      title="Prompts that surface ads"
-      columns={PROMPT_COLUMNS}
-      footer="Where a competitor advertised, whether the answer also mentioned you organically. Counts only, not a cause."
-      state={prompts.length ? undefined : noAds('No prompt surfaced an ad.')}
-    >
-      {prompts.map((row) => {
-        const beside = row.competitor_ad_answers;
-        const withCompetitorAd = beside.brand_mentioned + beside.brand_not_mentioned;
-        return (
-          <TableRow key={row.prompt}>
-            <TableCell>{row.prompt}</TableCell>
-            <TableCell numeric>{row.ads_seen}</TableCell>
-            <TableCell>{row.top_advertiser?.name ?? <Absence />}</TableCell>
-            <TableCell>
-              {withCompetitorAd
-                ? `${beside.brand_mentioned} of ${withCompetitorAd} answers`
-                : 'No competitor ads'}
-            </TableCell>
-          </TableRow>
-        );
-      })}
-    </DataTable>
+    <TitledSection title="Prompts that surface ads">
+      <DataTable
+        label="Prompts that surface ads"
+        columns={PROMPT_COLUMNS}
+        footer="Where a competitor advertised, whether the answer also mentioned you organically. Counts only, not a cause."
+        state={prompts.length ? undefined : noAds('No prompt surfaced an ad.')}
+      >
+        {prompts.map((row) => {
+          const beside = row.competitor_ad_answers;
+          const withCompetitorAd = beside.brand_mentioned + beside.brand_not_mentioned;
+          return (
+            <TableRow key={row.prompt}>
+              <TableCell>{row.prompt}</TableCell>
+              <TableCell numeric>{row.ads_seen}</TableCell>
+              <TableCell>{row.top_advertiser?.name ?? <Absence />}</TableCell>
+              <TableCell>
+                {withCompetitorAd
+                  ? `${beside.brand_mentioned} of ${withCompetitorAd} answers`
+                  : 'No competitor ads'}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </DataTable>
+    </TitledSection>
   );
 }
 

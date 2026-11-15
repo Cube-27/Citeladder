@@ -99,7 +99,8 @@ export function BuilderBusinessStep({
       <StateBlock
         kind="error"
         error={business.loadError}
-        fallback="Your business details could not be loaded."
+        title="Couldn't load your business details"
+        fallback="The request failed or timed out."
         onRetry={business.retry}
         pending={business.retrying}
       />

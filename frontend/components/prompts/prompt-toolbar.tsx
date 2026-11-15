@@ -173,14 +173,10 @@ export function PromptActions({
       {canWrite ? (
         <AddPromptsMenu onImport={onImport} onAdd={onAdd} onGenerate={onGenerate} />
       ) : null}
-      {/* With nothing to measure the empty library's own action is the primary. */}
-      {hasActivePrompts ? (
-        <MastheadPrimary>
-          <LaunchAuditButton variant="primary" />
-        </MastheadPrimary>
-      ) : (
-        <LaunchAuditButton variant="secondary" disabled />
-      )}
+      {/* With nothing to measure, Launch run waits for an active prompt. */}
+      <MastheadPrimary>
+        <LaunchAuditButton disabled={!hasActivePrompts} />
+      </MastheadPrimary>
     </>
   );
 }
