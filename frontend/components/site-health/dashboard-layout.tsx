@@ -135,7 +135,10 @@ function FirstCrawl({
           actionNote={
             start.allowed
               ? undefined
-              : { id: noteId, text: "Your role in this workspace can't start a crawl." }
+              : {
+                  id: noteId,
+                  text: "Your plan's crawl limits couldn't be checked. Reload to try again.",
+                }
           }
         />
       ) : (
