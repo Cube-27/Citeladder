@@ -7,9 +7,14 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { UsageMeter } from '@/components/billing/usage-meter';
+import { ExpiryLine, UsageMeter, usageLabel } from '@/components/billing/usage-meter';
+import { Absence } from '@/components/ui/absence';
 import { AppGrid } from '@/components/ui/app-grid';
+import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
+import { Stack } from '@/components/ui/layout';
+import { TableCell, TableRow } from '@/components/ui/table';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
+import { formatCount } from '@/lib/format';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -38,6 +43,19 @@ function ordered(items: readonly UsageItem[]): UsageItem[] {
   });
 }
 
+type UsageRead = ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.usage>>>>;
+
+/**
+ * Every quota measured, and none used or held: a measured zero, never an
+ * unresolved allowance, an unread count or a reservation, which keep their meters.
+ */
+function nothingUsed(items: readonly UsageItem[]): boolean {
+  return (
+    items.length > 0 &&
+    items.every((item) => item.limit_state !== 'unknown' && item.consumed === 0 && !item.reserved)
+  );
+}
+
 /**
  * Account usage, extracted from `BillingScreen` so plan orchestration and
  * meter rendering have separate owners.
@@ -49,13 +67,17 @@ function ordered(items: readonly UsageItem[]): UsageItem[] {
 export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>) {
   const workspaceId = useActiveWorkspaceId();
   const usageQuery = useQuery({ ...billingQueries.usage(workspaceId), enabled });
+  const idle =
+    enabled && usageQuery.data?.status === 'resolved' && nothingUsed(usageQuery.data.items);
 
   return (
     <Section aria-labelledby="usage-title">
       <SectionHeader>
         <SectionTitle id="usage-title">Usage</SectionTitle>
         <SectionDescription>
-          Measured against the allowances your active grants provide.
+          {idle
+            ? 'Nothing used yet this period.'
+            : 'Measured against the allowances your active grants provide.'}
         </SectionDescription>
       </SectionHeader>
       {/* The meters take the card's full width at every size (Settings template). */}
@@ -66,13 +88,7 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
   );
 }
 
-function UsageBody({
-  enabled,
-  query,
-}: Readonly<{
-  enabled: boolean;
-  query: ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi.usage>>>>;
-}>) {
+function UsageBody({ enabled, query }: Readonly<{ enabled: boolean; query: UsageRead }>) {
   if (!enabled || query.isLoading) {
     return <StateBlock kind="loading" label="Loading usage…" />;
   }
@@ -100,6 +116,7 @@ function UsageBody({
       <StateBlock kind="empty" inline message="No measurable allowances on this account yet." />
     );
   }
+  if (nothingUsed(items)) return <QuotaTable items={items} />;
   return (
     <AppGrid layout="cells">
       {items.map((item) => (
@@ -107,4 +124,45 @@ function UsageBody({
       ))}
     </AppGrid>
   );
+}
+
+const QUOTA_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'quota', label: 'Quota' },
+  { key: 'limit', label: 'Limit', width: 'figure', kind: 'number' },
+];
+
+/** With nothing used, a meter per quota is an empty bar each; the limits read as one table. */
+function QuotaTable({ items }: Readonly<{ items: readonly UsageItem[] }>) {
+  return (
+    <DataTable label="Usage limits" columns={QUOTA_COLUMNS}>
+      {items.map((item) => (
+        <QuotaRow key={item.key} item={item} />
+      ))}
+    </DataTable>
+  );
+}
+
+/** The quota's name over its reset or expiry, and its limit. */
+function QuotaRow({ item }: Readonly<{ item: UsageItem }>) {
+  const { label, unit } = usageLabel(item);
+  return (
+    <TableRow>
+      <TableCell>
+        <Stack gap="tight">
+          <span>{label}</span>
+          <ExpiryLine item={item} unit={unit} />
+        </Stack>
+      </TableCell>
+      <TableCell numeric>
+        <QuotaLimit item={item} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
+function QuotaLimit({ item }: Readonly<{ item: UsageItem }>) {
+  if (item.limit_state === 'unlimited') return <>Unlimited</>;
+  const allowance = item.allowance ?? 0;
+  if (allowance === 0) return <Absence state="not_applicable" label="Not included" />;
+  return <>{formatCount(allowance)}</>;
 }

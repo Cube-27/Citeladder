@@ -49,10 +49,12 @@ export function AiTrafficScreen() {
   const { workspaceId, projectId } = useProjectScope();
   const sources = useCrawlSources(projectId, workspaceId);
   const [requested, setTab] = useUrlState('tab', tabCodec);
-  // Unknown while the sources read is pending; a failed read keeps every view.
+  // Unknown while the sources read is pending; a failed read keeps every view,
+  // also while it is retried (a retry without data reads as pending again, and
+  // unmounting the views it remounts would retry it forever).
   let crawlAvailable: boolean | null = null;
   if (sources.data) crawlAvailable = crawlLogsAvailable(sources.data);
-  else if (sources.isError) crawlAvailable = true;
+  else if (sources.isError || sources.errorUpdatedAt > 0) crawlAvailable = true;
   const tab = resolveTab(requested, crawlAvailable);
   useOverviewWarmup(leadsWithOverview(requested, crawlAvailable));
   const tabs: TabRowProps = {

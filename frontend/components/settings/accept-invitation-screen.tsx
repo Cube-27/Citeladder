@@ -1,15 +1,18 @@
 import { useMutation } from '@tanstack/react-query';
+import { Link2Off } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect, useRef } from 'react';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
+import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { FlowBlock, FlowPage } from '@/components/templates/flow-page';
 import { Button } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
+import { StateBlock } from '@/components/ui/state-block';
+import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { useSelectWorkspace } from '@/lib/navigation/project-destination';
-import { Notice } from '@/components/ui/notice';
 
 /** `/invitations/accept`: the acceptance as a Flow page, before the shell opens. */
 export function AcceptInvitationPage() {
@@ -50,16 +53,15 @@ export function AcceptInvitationScreen() {
     mutate(token, { onSuccess: (workspace) => selectWorkspace(workspace.id, '/projects') });
   }, [mutate, selectWorkspace, token]);
 
+  const leave = () => router('/projects');
+
   if (!token) {
     return (
-      <FlowBlock
-        title="This invitation link is incomplete"
-        sub="This link is missing its invitation token."
-      >
-        <Notice tone="negative">
-          Open the invitation link exactly as it was sent to you, or ask for a new one.
-        </Notice>
-      </FlowBlock>
+      <InvitationDeadEnd
+        heading="This invitation link is incomplete"
+        description="Open the invitation link exactly as it was sent to you, or ask for a new one."
+        onLeave={leave}
+      />
     );
   }
 
@@ -67,7 +69,7 @@ export function AcceptInvitationScreen() {
   return (
     <div aria-live="polite">
       {accept.isError ? (
-        <RefusedInvitation error={accept.error} onLeave={() => router('/projects')} />
+        <RefusedInvitation error={accept.error} onLeave={leave} />
       ) : (
         <InvitationProgress joined={accept.isSuccess} />
       )}
@@ -87,29 +89,63 @@ function InvitationProgress({ joined }: Readonly<{ joined: boolean }>) {
 }
 
 /**
- * What happened, as the title; what to do, in one sentence; the way on; and
- * the code as reference text under it. A refusal never says which of its
- * causes it was (expired, used, revoked or another address), so the title
- * does not guess.
+ * A refusal never says which of its causes it was (expired, used, revoked or
+ * another address), so the heading does not guess. Its code is reference
+ * text under the way on, never the headline.
  */
 function RefusedInvitation({ error, onLeave }: Readonly<{ error: unknown; onLeave: () => void }>) {
   const notice = mutationNoticeForError(error, { action: 'accept this invitation' });
   const reference = [notice.code, notice.requestId].filter(Boolean).join(' · ');
   return (
-    <FlowBlock
-      title={notice.retryable ? "Couldn't accept this invitation" : "This invitation can't be used"}
-      sub={
+    <InvitationDeadEnd
+      heading={
+        notice.retryable ? "Couldn't accept this invitation" : "This invitation can't be used"
+      }
+      description={
         notice.retryable
           ? notice.message
           : 'It has expired, was already used or revoked, or was sent to another address. Ask the person who invited you for a new link.'
       }
-    >
-      <Stack gap="workspace" className="justify-items-start">
-        <Button type="button" variant="secondary" onClick={onLeave}>
-          Go to your workspace
-        </Button>
-        {reference ? <p className="type-caption">Reference: {reference}</p> : null}
-      </Stack>
-    </FlowBlock>
+      reference={reference}
+      onLeave={onLeave}
+    />
+  );
+}
+
+/**
+ * Every invitation dead end has one look: the page's state block, one
+ * sentence and one way on. The route is workspace-scoped, so the reader is
+ * always signed in and the way on is their workspace.
+ */
+function InvitationDeadEnd({
+  heading,
+  description,
+  reference,
+  onLeave,
+}: Readonly<{ heading: string; description: string; reference?: string; onLeave: () => void }>) {
+  useDocumentTitle(heading);
+  return (
+    // The flow page's card is the frame, so the state draws none of its own.
+    <Stack gap="item" data-section="card" className="min-w-0 justify-items-center">
+      <StateBlock
+        kind="empty"
+        icon={Link2Off}
+        headingLevel={1}
+        heading={heading}
+        description={description}
+        action={
+          <Button type="button" onClick={onLeave}>
+            Go to your workspace
+          </Button>
+        }
+      />
+      {reference ? (
+        <p
+          className={textRole('caption', 'text-ink-2 max-w-full overflow-x-auto whitespace-nowrap')}
+        >
+          {`Reference: ${reference}`}
+        </p>
+      ) : null}
+    </Stack>
   );
 }

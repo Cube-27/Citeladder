@@ -111,4 +111,24 @@ describe('AI Traffic opening requests', () => {
     expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
     expect(asked.sort()).toEqual(['insights ?range=30d', 'overview ?range=30d']);
   });
+
+  it('settles on a failed availability read instead of reading it again forever', async () => {
+    let reads = 0;
+    mswServer.use(
+      http.get(root + '/crawl-logs/sources', () => {
+        reads += 1;
+        return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 });
+      }),
+      http.get('/api/v1/integrations', () => HttpResponse.json([])),
+      http.get(root + '/ai-traffic/overview', () => HttpResponse.json(overview)),
+      http.get(root + '/ai-traffic/insights', () => HttpResponse.json(insights)),
+    );
+    renderWithProviders(<AiTrafficScreen />, { projectSelection: { activeProject: project } });
+
+    // The view's own observer retries the failed read once when it mounts.
+    await waitFor(() => expect(reads).toBe(2));
+    expect(await screen.findByText('Referral coverage is partial')).toBeVisible();
+    expect(screen.getByRole('tab', { name: 'Overview' })).toHaveAttribute('aria-selected', 'true');
+    expect(reads).toBe(2);
+  });
 });

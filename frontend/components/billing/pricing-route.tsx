@@ -311,11 +311,6 @@ function BillingErrorNotice({
   return <Notice tone="negative">{message}</Notice>;
 }
 
-/** True when the masthead's link is the page's next step: nothing (or nothing current) is chosen. */
-function needsChoice(selection: Selection | null, offered: boolean | undefined): boolean {
-  return !selection || offered === false;
-}
-
 function PricingState({
   workspaceName,
   canBuy,
@@ -347,7 +342,6 @@ function PricingState({
   if (!workspaceName) return <StateBlock kind="loading" label="Loading workspace…" />;
   return (
     <>
-      <p className={textRole('body')}>Workspace: {workspaceName}</p>
       {canBuy ? null : (
         <Notice tone="info">Ask a workspace Owner or Admin to make this purchase.</Notice>
       )}
@@ -367,8 +361,14 @@ function PricingState({
       {selection ? null : (
         <StateBlock
           kind="empty"
+          headingLevel={2}
           heading="No plan chosen yet"
-          description="Choose a plan with View public pricing, then continue the purchase here."
+          description={`${workspaceName} has no plan yet. Compare plans on the public pricing page.`}
+          action={
+            <Button asChild>
+              <a href={websitePricing}>View public pricing</a>
+            </Button>
+          }
         />
       )}
     </>
@@ -428,12 +428,15 @@ export default function PricingRoute() {
 
   return (
     <SettingsPage
+      // The "nothing chosen" state carries this action; anything else keeps it here.
       actions={
-        <MastheadPrimary>
-          <Button asChild variant={needsChoice(selection, offered) ? 'primary' : 'secondary'}>
-            <a href={websitePricing}>View public pricing</a>
-          </Button>
-        </MastheadPrimary>
+        selection || isError ? (
+          <MastheadPrimary>
+            <Button asChild variant={!selection || offered === false ? 'primary' : 'secondary'}>
+              <a href={websitePricing}>View public pricing</a>
+            </Button>
+          </MastheadPrimary>
+        ) : undefined
       }
     >
       <PricingState

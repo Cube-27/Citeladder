@@ -105,7 +105,7 @@ it('sends the end of the chosen day in the display time zone and lists that day'
 });
 
 it('lists a key by name, prefix, scopes and projects without its ID', async () => {
-  list.mockResolvedValue({ available: true, limit: 10, keys: [ciKey] });
+  list.mockResolvedValue({ available: true, limit: 50200, keys: [ciKey] });
   renderTab();
   const row = (await screen.findByText('Acme')).closest('tr');
   expect(row).toHaveTextContent(
@@ -113,7 +113,7 @@ it('lists a key by name, prefix, scopes and projects without its ID', async () =
   );
   expect(row).toHaveTextContent('read, audits:runAcmeNot used yet');
   expect(row?.textContent).not.toContain(KEY);
-  expect(screen.getByText('1 of 10 keys in use')).toBeInTheDocument();
+  expect(screen.getByText('1 of 50,200 keys in use')).toBeInTheDocument();
 });
 
 it('creates a key for chosen projects and shows its secret once', async () => {

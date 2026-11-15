@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
+import { z } from 'zod';
 
 import { Tag } from '@/components/ui/tag';
 import { ActionButton } from '@/components/ui/actions';
@@ -36,6 +37,12 @@ function deliveryNotice(delivery: 'accepted' | 'failed' | undefined): string {
   return 'Email delivery status is unavailable. ';
 }
 
+/** Why the invite form cannot send to this address, or null when it can. */
+function inviteEmailError(address: string): string | null {
+  if (!address) return 'Enter an email address.';
+  return z.email().safeParse(address).success ? null : 'Enter a valid email address.';
+}
+
 /**
  * Issue an invitation and hand back its ONE-TIME acceptance link.
  *
@@ -63,11 +70,19 @@ export function InviteDialog({
   onInvite: (email: string, role: AssignableWorkspaceRole) => Promise<unknown>;
 }>) {
   const [email, setEmail] = useState('');
+  const [emailError, setEmailError] = useState<string | null>(null);
   const [role, setRole] = useState<AssignableWorkspaceRole>('member');
+  const emailInput = useRef<HTMLInputElement>(null);
   const submit = (event: FormEvent) => {
     event.preventDefault();
+    if (pending) return;
     const address = email.trim();
-    if (!address || pending) return;
+    const invalid = inviteEmailError(address);
+    setEmailError(invalid);
+    if (invalid) {
+      emailInput.current?.focus();
+      return;
+    }
     onInvite(address, role).then(
       () => setEmail(''),
       () => undefined,
@@ -85,13 +100,7 @@ export function InviteDialog({
           <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button
-            type="submit"
-            variant="primary"
-            form={INVITE_FORM_ID}
-            disabled={!email.trim()}
-            pending={pending}
-          >
+          <Button type="submit" variant="primary" form={INVITE_FORM_ID} pending={pending}>
             Send invitation
           </Button>
         </>
@@ -99,14 +108,18 @@ export function InviteDialog({
     >
       <form id={INVITE_FORM_ID} noValidate onSubmit={submit}>
         <Stack gap="workspace">
-          <Field label="Email">
+          <Field label="Email" error={emailError ?? undefined}>
             {(field) => (
               <Input
                 {...field}
+                ref={emailInput}
                 type="email"
                 required
                 value={email}
-                onChange={(event) => setEmail(event.target.value)}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setEmailError(null);
+                }}
                 placeholder="teammate@example.com"
               />
             )}

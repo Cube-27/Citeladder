@@ -1,3 +1,4 @@
+import { MessageSquare } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
@@ -23,7 +24,8 @@ import { newPlanCheckoutClosed } from '@/lib/billing/catalog';
 import type { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { websiteHref } from '@/lib/config/app-link';
 import { contactSalesHref } from '@/lib/config/contact';
-import { Notice } from '@/components/ui/notice';
+import { Button } from '@/components/ui/button';
+import { StateBlock } from '@/components/ui/state-block';
 
 export type NewSubscription = {
   country: string;
@@ -83,25 +85,30 @@ export function ChoosePlan({
 >): ReactNode {
   const [chosen, setChosen] = useState<SelfServePlanKey | null>(null);
   const [mode, setMode] = useState<CredentialMode>('byok');
+  // Contact is the page's one real next step while checkout is closed.
   if (newPlanCheckoutClosed(catalog))
     return (
-      <Section id="choose-plan" aria-labelledby="choose-plan-title">
-        <SectionHeader>
-          <SectionTitle id="choose-plan-title">Choose a plan</SectionTitle>
-          <SectionDescription>Self-serve plans are not open yet.</SectionDescription>
-        </SectionHeader>
-        <Notice tone="info">
-          To start a plan now, contact us and we will set it up for this workspace.{' '}
-          <ExternalHttpLink
-            href={contactSalesHref(
-              catalog.support_contact?.contact_url ?? null,
-              new URL(websiteHref('/contact'), 'https://citeladder.com').href,
-            )}
-          >
-            Contact us
-          </ExternalHttpLink>
-        </Notice>
-      </Section>
+      <div id="choose-plan">
+        <StateBlock
+          kind="empty"
+          icon={MessageSquare}
+          heading="Self-serve plans are not open yet"
+          description="To start a plan now, contact us and we will set it up for this workspace."
+          action={
+            <Button asChild>
+              <ExternalHttpLink
+                className="no-underline"
+                href={contactSalesHref(
+                  catalog.support_contact?.contact_url ?? null,
+                  new URL(websiteHref('/contact'), 'https://citeladder.com').href,
+                )}
+              >
+                Contact us
+              </ExternalHttpLink>
+            </Button>
+          }
+        />
+      </div>
     );
   return (
     <Section id="choose-plan" aria-labelledby="choose-plan-title">

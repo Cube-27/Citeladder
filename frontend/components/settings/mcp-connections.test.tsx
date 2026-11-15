@@ -53,10 +53,18 @@ beforeEach(() => {
   revoke.mockReset().mockResolvedValue(undefined);
 });
 
-it('leads with the connect strip', () => {
+it('leads with the connect strip and shows only the lists that hold rows', async () => {
+  mayManage.value = true;
   list.mockResolvedValue([]);
   renderTab();
   expect(screen.getByRole('link', { name: 'Connect to Claude' })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'No connections yet' })).toBeVisible();
+  // The workspace's own list was read, and holds nothing, so it has no card.
+  await waitFor(() => expect(list.mock.calls.map(([id]) => id)).toContain(WORKSPACE));
+  expect(screen.getByRole('heading', { name: 'Your connections' })).toBeVisible();
+  expect(
+    screen.queryByRole('heading', { name: 'Connections that can read this workspace' }),
+  ).toBeNull();
 });
 
 it('describes a connection by name and revokes it only after confirmation', async () => {
@@ -97,7 +105,6 @@ it("shows an Owner/Admin who connected and removes only this workspace's access"
     name: 'Connections that can read this workspace',
   });
   const section = heading.closest('section')!;
-  // The heading renders with the table while the read is still loading.
   await within(section).findByRole('button', { name: 'Remove workspace access' });
   expect(section).toHaveTextContent('Read and change · Connected by ana@example.test');
   expect(section).toHaveTextContent('Last used');

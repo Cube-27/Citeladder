@@ -104,7 +104,7 @@ export function UsageMeter({ item }: Readonly<{ item: UsageItem }>) {
  * Reset and expiry copy. Consumable balances forfeit at expiry, so that has to
  * be visible next to the balance rather than only at purchase.
  */
-function ExpiryLine({ item, unit }: Readonly<{ item: UsageItem; unit: string }>) {
+export function ExpiryLine({ item, unit }: Readonly<{ item: UsageItem; unit: string }>) {
   if (item.resets_at) {
     return (
       <p className="type-caption">
@@ -136,7 +136,7 @@ const USAGE_LABELS: Readonly<Record<string, { label: string; unit: string }>> = 
 };
 
 /** A key this map does not name still renders: `new_counter` → `New counter`. */
-function usageLabel(item: UsageItem) {
+export function usageLabel(item: UsageItem) {
   const known = USAGE_LABELS[item.key];
   if (known) return known;
   const words = item.key.replaceAll('_', ' ');

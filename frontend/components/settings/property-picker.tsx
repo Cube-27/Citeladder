@@ -1,11 +1,11 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { StatusMark } from '@/components/ui/status-mark';
-import { Tag } from '@/components/ui/tag';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 import { OptionRow } from '@/components/ui/list-row';
 import {
   integrationsMutations,
@@ -15,7 +15,7 @@ import {
 } from '@/lib/api/integrations';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
-import { InlineFigure } from '@/components/ui/typography';
+import { InlineFigure, textRole } from '@/components/ui/typography';
 import { activeMappingFor, ownPropertiesFirst } from '@/components/integrations/data-sources';
 import { PROVIDER_META } from '@/components/settings/grant-model';
 import { Notice } from '@/components/ui/notice';
@@ -99,53 +99,66 @@ function PropertyOptions({
   ));
 }
 
-/** The chosen property, or a visible "none selected", and the control to choose one. */
-function SelectedProperty({
-  selected,
+/** The provider read's loading, failure or empty answer above the options. */
+function DiscoveryState({
+  pending,
+  error,
+  properties,
   noun,
-  provider,
-  canChoose,
-  disabled,
-  onChoose,
 }: Readonly<{
-  selected: string;
+  pending: boolean;
+  error: Error | null;
+  properties: readonly IntegrationProperty[] | undefined;
   noun: string;
-  provider: IntegrationConnection['provider'];
-  canChoose: boolean;
-  disabled: boolean;
-  onChoose: () => void;
 }>) {
-  const verb = selected ? 'Change' : 'Select';
+  if (pending) return <StateBlock kind="loading" label={`Loading ${noun}s…`} />;
+  if (error)
+    return (
+      <Notice
+        kind="mutation"
+        notice={mutationNoticeForError(error, { action: 'load your properties from the provider' })}
+      />
+    );
+  if (properties?.length !== 0) return null;
   return (
-    <Inline className="flex-wrap">
-      {selected ? (
-        // A GA4 property is a number; a Search Console property is a site.
-        <Tag className="max-w-full truncate">
-          {provider === 'ga4' ? <InlineFigure>{selected}</InlineFigure> : selected}
-        </Tag>
-      ) : (
-        // The mapping is this project's; the connection is the workspace's.
-        <StatusMark variant="status" value="warning">
-          This project: no {noun} selected
-        </StatusMark>
-      )}
-      {canChoose ? (
-        <Button
-          variant="secondary"
-          onClick={onChoose}
-          disabled={disabled}
-          data-testid={`select-property-${provider}`}
-          aria-label={`${verb} ${noun}`}
-        >
-          {verb}
-        </Button>
-      ) : null}
-    </Inline>
+    <Notice tone="info">
+      This account has no {noun} available. Verify the property in the provider&rsquo;s own console
+      first, then reopen this dialog.
+    </Notice>
   );
 }
 
 /**
- * Property picker for one integration connection.
+ * The chosen property's name, or a visible "none selected". The mapping is
+ * this project's; the connection is the workspace's.
+ */
+export function SelectedPropertyMark({
+  connection,
+}: Readonly<{ connection: IntegrationConnection }>) {
+  const { activeProject } = useProjectContext();
+  const mappings = useQuery(integrationsQueries.mappings(connection.workspace_id, connection.id));
+  // Unread is unknown, never "none selected".
+  if (mappings.isPending) return null;
+  if (mappings.isError) return <Absence state="unavailable" label="Property unavailable" />;
+  const selected = activeMappingFor(mappings.data, activeProject?.id ?? null)?.property_ref ?? '';
+  const provider = connection.provider;
+  if (!selected)
+    return (
+      <StatusMark variant="status" value="warning">
+        No property selected
+      </StatusMark>
+    );
+  // A GA4 property is a number; a Search Console property is a site.
+  return (
+    <span className={textRole('body', 'min-w-0 truncate')} title={selected}>
+      {provider === 'ga4' ? <InlineFigure>{selected}</InlineFigure> : selected}
+    </span>
+  );
+}
+
+/**
+ * Property picker for one integration connection: the row's Select (or
+ * Change) action and the dialog it opens.
  *
  * A connected OAuth grant does not by itself tell a sync WHAT to pull: the
  * worker fetches from the connection's `account_ref`, and derivation resolves
@@ -193,22 +206,24 @@ export function PropertyPicker({
   // while every sync of it fails.
   const selected = activeMapping?.property_ref ?? '';
   const noun = PROVIDER_META[connection.provider].noun;
+  const verb = selected ? 'Change' : 'Select';
+  if (!mayDiscover) return null;
 
   return (
     <>
-      <SelectedProperty
-        selected={selected}
-        noun={noun}
-        provider={connection.provider}
-        canChoose={mayDiscover}
-        disabled={disabled || discovery.isPending}
-        onChoose={() => {
+      <Button
+        onClick={() => {
           if (discovery.isPending) return;
           discovery.reset();
           setOpen(true);
           discovery.mutate(activeProject?.id);
         }}
-      />
+        disabled={disabled || discovery.isPending}
+        data-testid={`select-property-${connection.provider}`}
+        aria-label={`${verb} ${noun}`}
+      >
+        {verb}
+      </Button>
 
       <Dialog
         open={open}
@@ -232,25 +247,12 @@ export function PropertyPicker({
               one.
             </Notice>
           ) : null}
-
-          {discovery.isPending ? <StateBlock kind="loading" label={`Loading ${noun}s…`} /> : null}
-
-          {discovery.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(discovery.error, {
-                action: 'load your properties from the provider',
-              })}
-            />
-          ) : null}
-
-          {discovery.data?.length === 0 ? (
-            <Notice tone="info">
-              This account has no {noun} available. Verify the property in the provider&rsquo;s own
-              console first, then reopen this dialog.
-            </Notice>
-          ) : null}
-
+          <DiscoveryState
+            pending={discovery.isPending}
+            error={discovery.error}
+            properties={discovery.data}
+            noun={noun}
+          />
           <Stack gap="tight">
             <PropertyOptions
               properties={discovery.data ?? []}
