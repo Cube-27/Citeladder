@@ -405,24 +405,13 @@ function DataTableBody({
     );
   }
   if (state?.kind === 'loading') {
-    // The ruled blank: a page of blank rows under the real column heads, the
-    // first carrying the live rung and its verb, so arriving rows move nothing.
-    const rows = pageSize ?? LOADING_ROWS;
     return (
-      <TableBody aria-busy="true">
-        <tr data-table-state="" style={stateFootprint(1, rowLines)}>
-          <TableCell colSpan={colSpan} className="h-[var(--data-table-row)]">
-            <InFrame>
-              <LiveVerb label={state.label ?? 'Loading…'} />
-            </InFrame>
-          </TableCell>
-        </tr>
-        <TableFillerRows
-          count={rows - 1}
-          colSpan={colSpan}
-          spacer={rowLines === 1 ? null : <TableCellLines primary={BLANK} secondary={BLANK} />}
-        />
-      </TableBody>
+      <LoadingBody
+        colSpan={colSpan}
+        label={state.label ?? 'Loading…'}
+        rows={pageSize ?? LOADING_ROWS}
+        rowLines={rowLines}
+      />
     );
   }
   if (state) {
@@ -449,13 +438,38 @@ function DataTableBody({
   return (
     <TableBody>
       {children}
-      <TableFillerRows
-        count={filler}
-        colSpan={colSpan}
-        spacer={rowLines === 1 ? null : <TableCellLines primary={BLANK} secondary={BLANK} />}
-      />
+      <TableFillerRows count={filler} colSpan={colSpan} spacer={blankLines(rowLines)} />
     </TableBody>
   );
+}
+
+/**
+ * The ruled blank: a page of blank rows under the real column heads, the
+ * first carrying the live rung and its verb, so arriving rows move nothing.
+ */
+function LoadingBody({
+  colSpan,
+  label,
+  rows,
+  rowLines,
+}: Readonly<{ colSpan: number; label: string; rows: number; rowLines: RowLines }>) {
+  return (
+    <TableBody aria-busy="true">
+      <tr data-table-state="" style={stateFootprint(1, rowLines)}>
+        <TableCell colSpan={colSpan} className="h-[var(--data-table-row)]">
+          <InFrame>
+            <LiveVerb label={label} />
+          </InFrame>
+        </TableCell>
+      </tr>
+      <TableFillerRows count={rows - 1} colSpan={colSpan} spacer={blankLines(rowLines)} />
+    </TableBody>
+  );
+}
+
+/** A blank row's lines: none for a one-line table, else a title over a caption. */
+function blankLines(rowLines: RowLines) {
+  return rowLines === 1 ? null : <TableCellLines primary={BLANK} secondary={BLANK} />;
 }
 
 /**

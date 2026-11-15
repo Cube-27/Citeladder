@@ -191,14 +191,7 @@ function ReadFailureNotice({
   const accessFailure = detail.status === 401 || detail.status === 403;
   const retryable = detail.retryable !== false && !accessFailure;
   const headline = title ?? fallback;
-  const said = detail.message === headline || detail.message === fallback ? null : detail.message;
-  const serverFault = detail.status !== undefined && detail.status >= 500;
-  const code = [
-    serverFault ? said : null,
-    detail.requestId ? `Reference ${detail.requestId}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const { sentence, code } = failureLines(detail, [headline, fallback]);
   const action = retryable ? (
     <Button variant="secondary" onClick={onRetry} pending={pending} pendingLabel="Retrying…">
       Retry
@@ -206,9 +199,21 @@ function ReadFailureNotice({
   ) : null;
   return (
     <MessageNoticeView tone="negative" title={headline} action={action} className={className}>
-      {said && !serverFault ? <p>{said}</p> : null}
+      {sentence ? <p>{sentence}</p> : null}
       {accessFailure ? <p>Check your workspace access, then try again.</p> : null}
       {code ? <p className="type-data-sm text-ink-2">{code}</p> : null}
     </MessageNoticeView>
   );
+}
+
+/**
+ * Where a failure's own words go: a person's sentence under the headline, or,
+ * for a server fault, beside the reference. Words repeating the headline drop.
+ */
+function failureLines(detail: ReturnType<typeof humanizeApiError>, shown: readonly string[]) {
+  const said = shown.includes(detail.message) ? null : detail.message;
+  const serverFault = detail.status !== undefined && detail.status >= 500;
+  const reference = detail.requestId ? `Reference ${detail.requestId}` : null;
+  const code = [serverFault ? said : null, reference].filter(Boolean).join(' · ');
+  return { sentence: serverFault ? null : said, code: code || null };
 }
