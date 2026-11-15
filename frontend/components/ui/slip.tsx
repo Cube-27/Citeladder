@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
  *           the card radius and `shadow-card`. A slip that opens on click
  *           shows it at rest (a chevron or an underlined title); on hover its
  *           edge takes `control-line` and it lifts to `shadow-pop`
- *           (`OPENS_ON_CLICK`).
+ *           (`slipClasses(…, { opens: true })`).
  *   Well  — quoted or raw material (an answer passage, code, a fact list in a
  *           drawer, a fieldset): `well`, the control radius, no edge.
  *   Sheet — anything that floats: `raised`, a 1px `rule` edge, its radius
@@ -18,12 +18,15 @@ import { cn } from '@/lib/utils';
 export const SLIP_FACE = 'bg-surface text-ink border-rule rounded-card shadow-card border';
 
 /** A slip that opens on click: the hover edge and lift. */
-export const OPENS_ON_CLICK =
+const OPENS_ON_CLICK =
   'transition-[border-color,box-shadow] duration-[var(--motion-fast)] hover:border-control-line hover:shadow-pop';
 
-/** A slip, for a semantic element that is not a `div` (a list item, a fieldset, a link). */
-export function slipClasses(className?: string) {
-  return cn('surface-slip p-[var(--card-padding)]', SLIP_FACE, className);
+/**
+ * A slip, for a semantic element that is not a `div` (a list item, a fieldset,
+ * a link). `opens`: the whole slip opens something on click.
+ */
+export function slipClasses(className?: string, { opens = false }: { opens?: boolean } = {}) {
+  return cn('surface-slip p-[var(--card-padding)]', SLIP_FACE, opens && OPENS_ON_CLICK, className);
 }
 
 /** A well, on whatever element the material needs (`blockquote`, `pre`, `dl`, `fieldset`). */

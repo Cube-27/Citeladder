@@ -71,20 +71,20 @@ const NAV_ROW_HEIGHT = 28;
 /** Masthead, page tabs and filter bar stack flush; the body starts 24 below them. */
 const BAND_GAP = 0;
 const BODY_TOP_GAP = 24;
-/** The content band's sections stand 32 apart. */
-const CONTENT_GAP = 32;
+/** The content band's cards stand 16 apart (a titled group adds its own 32). */
+const CONTENT_GAP = 16;
 /** Neighbouring slips sit on the grid, one grid gap apart. */
-const SLIP_GAP = 24;
+const SLIP_GAP = 16;
 /**
- * One slip recipe (2.4): padding 16 on the slip, radius 4 and a 1px hairline
- * border; nothing at rest has a shadow.
+ * One card recipe (2.4) for slips: padding 16, radius 8 and a 1px `rule`
+ * border.
  */
 const SLIP_INSET = 16;
-const SLIP_RADIUS = 4;
+const SLIP_RADIUS = 8;
 const SLIP_BORDER = 1;
-/** A section is no box: a 1px ink rule on top and 12 from the rule to its head. */
+/** A section is a card: a 1px `rule` border and 16 inside it to its head. */
 const SECTION_RULE = 1;
-const SECTION_INSET_TOP = 12;
+const SECTION_INSET_TOP = 16;
 /**
  * Loading, read-error and first-use empty share one footprint: the block
  * EmptyState's. The state draws no box of its own (its Skeleton, Callout or
@@ -244,19 +244,24 @@ function measure({ route }: { route: string }) {
   bandGap('[data-page-band="filters"]', 'band.gap');
   for (const body of all('[data-page-body]'))
     add('body.top-gap', body, px(getComputedStyle(body).paddingTop));
-  // Content rhythm: the gap between consecutive children of the content band.
+  // Content rhythm: the gap between consecutive cards of the content band (a
+  // titled group sets its own 32 above it).
   for (const region of all('[data-page-content]')) {
     let previous: Element | undefined;
     for (const child of Array.from(region.children).filter(visible)) {
-      if (previous) {
+      if (previous && !child.matches('[data-section="group"]')) {
         const above = previous.getBoundingClientRect().bottom;
         add('content.gap', child, child.getBoundingClientRect().top - above);
       }
       previous = child;
     }
   }
-  // Sections: the ink rule on top and the 12 between it and the head.
-  for (const section of all('.surface-section')) {
+  // Card sections: the 1px edge and the 16 inside it to the head. A card
+  // section inside another container draws no card of its own (globals.css).
+  for (const section of all('[data-section="card"]')) {
+    const host =
+      '[data-section="card"], .surface-card, .surface-slip, .surface-well, [role="dialog"]';
+    if (section.parentElement?.closest(host)) continue;
     const style = getComputedStyle(section);
     add('section.rule', section, px(style.borderTopWidth));
     add('section.inset-top', section, px(style.paddingTop));
