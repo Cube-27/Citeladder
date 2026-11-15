@@ -61,7 +61,7 @@ function quickRangeValue(selection: RangeSelection, comparing: boolean): QuickRa
  * The control band's caption: the resolved window, a note beside the range
  * controls rather than one more filter, and how far the imported history
  * reaches. Both are status, not actions, so they never fold behind the
- * masthead's More actions.
+ * masthead's More menu.
  */
 export function PerformanceWindowCaption({
   label,

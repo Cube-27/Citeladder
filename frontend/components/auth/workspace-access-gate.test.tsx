@@ -264,7 +264,10 @@ it('blocks expired product content and leaves support, switching and account rec
   const account = screen.getByRole('button', { name: 'Account security' });
   account.focus();
   await act(async () => account.click());
-  expect(await screen.findByRole('button', { name: 'Email password setup link' })).toBeEnabled();
+  // Its code loads on demand; the button enables once the account's security read answers.
+  await waitFor(() =>
+    expect(screen.getByRole('button', { name: 'Email password setup link' })).toBeEnabled(),
+  );
   expect(screen.getByRole('dialog', { name: 'Account security' })).toBeInTheDocument();
   expect(screen.queryByText('Private report')).not.toBeInTheDocument();
   await act(async () => screen.getByRole('button', { name: 'Close dialog' }).click());

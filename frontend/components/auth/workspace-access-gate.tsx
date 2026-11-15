@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState, type ReactNode } from 'react';
+import { lazy, useEffect, useReducer, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
 import { useLocation, Link } from 'react-router-dom';
 import { z } from 'zod';
@@ -20,11 +20,17 @@ import { Button } from '@/components/ui/button';
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { NoticeScreen } from '@/components/templates/notice-page';
 import { Dialog } from '@/components/ui/dialog';
-import AccountSecurity from '@/components/settings/account-security';
-import { RestorePlan } from '@/components/billing/restore-plan';
+import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionStack } from '@/components/ui/section';
+
+// Shown only once access has ended, so the plan checkout and account security
+// load on demand instead of in the shell's first chunk.
+const AccountSecurity = lazy(() => import('@/components/settings/account-security'));
+const RestorePlan = lazy(() =>
+  import('@/components/billing/restore-plan').then(({ RestorePlan }) => ({ default: RestorePlan })),
+);
 
 function accessAllowed(access: z.infer<typeof accessSchema> | undefined, deadline: number | null) {
   return Boolean(
@@ -231,7 +237,18 @@ function AccessEnded({
             ? 'Your data is retained. Choose a plan to continue, contact support, or switch to another workspace.'
             : 'Your data is retained. Contact support to restore access, or switch to another workspace.'}
         </p>
-        {activeWorkspaceId && canRestore ? <RestorePlan workspaceId={activeWorkspaceId} /> : null}
+        {activeWorkspaceId && canRestore ? (
+          <LazyIsland
+            loading={<StateBlock kind="loading" />}
+            failed={
+              <IslandUnavailable message="Plans could not load. Reload the page to try again." />
+            }
+            label="restore-plan"
+            defects="surface"
+          >
+            <RestorePlan workspaceId={activeWorkspaceId} />
+          </LazyIsland>
+        ) : null}
         {workspaces
           .filter((workspace) => workspace.id !== activeWorkspaceId)
           .map((workspace) => (
@@ -247,7 +264,16 @@ function AccessEnded({
       </NoticeScreen>
       <Dialog open={securityOpen} onOpenChange={setSecurityOpen} title="Account security">
         <SectionStack>
-          <AccountSecurity />
+          <LazyIsland
+            loading={<StateBlock kind="loading" />}
+            failed={
+              <IslandUnavailable message="Account security could not load. Reload the page to try again." />
+            }
+            label="account-security"
+            defects="surface"
+          >
+            <AccountSecurity />
+          </LazyIsland>
         </SectionStack>
       </Dialog>
     </ShellFallback>

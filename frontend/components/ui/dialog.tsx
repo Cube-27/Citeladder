@@ -25,7 +25,7 @@ const shown = (node: HTMLElement) => node.checkVisibility?.() ?? true;
 
 /**
  * Where focus goes back to: the opener while it shows, else the visible
- * control that expands the region hiding it (the masthead's More actions
+ * control that expands the region hiding it (the masthead's More
  * button for an action folded into its panel).
  */
 function returnTargetFor(node: HTMLElement | null) {
@@ -44,7 +44,7 @@ function returnTargetFor(node: HTMLElement | null) {
 /**
  * Remembers the element that opened an overlay, so closing returns focus to
  * it even when Radix's own trigger is not the opener: a menu item's menu
- * trigger, or the More actions button when the opener was folded away.
+ * trigger, or the More button when the opener was folded away.
  */
 export function useReturnFocus(open: boolean) {
   const returnFocusRef = useRef<HTMLElement | null>(null);
