@@ -143,8 +143,9 @@ export async function shoppingOverview(db: Database, scope: CommerceScope, query
       FROM holders h LEFT JOIN held x ON x.holder_id = h.holder_id
       GROUP BY h.holder_id, h.kind, h.name, h.brand
     ),
+    -- A product no answer named is not visible at all; it ranks only among the least.
     most_visible AS (
-      SELECT * FROM product_metrics WHERE kind = 'owned'
+      SELECT * FROM product_metrics WHERE kind = 'owned' AND appearances > 0
       ORDER BY appearances DESC, name_key, holder_id LIMIT ${limits.extremes_limit}
     ),
     least_visible AS (

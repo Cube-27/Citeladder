@@ -406,7 +406,7 @@ export function OverviewSections({
         <ProductList
           title="Most visible"
           description="Your products named in the most answers."
-          empty="No product in the catalog yet."
+          empty="No product was named in an answer yet."
           rows={overview.most_visible}
           scope={scope}
         />
