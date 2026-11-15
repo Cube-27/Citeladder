@@ -8,9 +8,8 @@ import { ChipInput, ChipList } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { SegmentedControl } from '@/components/ui/tabs';
+import { RadioGroup } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { textRole } from '@/components/ui/typography';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { Project } from '@citeladder/contracts';
 import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';
@@ -120,19 +119,19 @@ function FacetChoice<T extends string>({
   disabled: boolean;
   onPick: (value: T) => void;
 }>) {
+  // A form's single choice is a radio group with the field label's weight;
+  // the segmented control is a view switch and read as plain text here.
   return (
-    <Stack gap="compact">
-      <span className={textRole('body', 'text-ink-2')} aria-hidden>
+    <Stack gap="tight">
+      <span className="type-label" aria-hidden>
         {label}
       </span>
-      {/* A single choice is the shared segmented control: selection is its
-          accent bar and foreground ink, never a filled chip. */}
-      <SegmentedControl<T | ''>
+      <RadioGroup<T | ''>
         ariaLabel={label}
         value={value ?? ''}
-        options={options}
-        disabled={disabled}
-        onChange={(next) => {
+        options={options.map((option) => ({ ...option, disabled }))}
+        className="flex-row flex-wrap gap-x-6 gap-y-2"
+        onValueChange={(next) => {
           if (next && !disabled) onPick(next);
         }}
       />

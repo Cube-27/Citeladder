@@ -113,7 +113,6 @@ function GroupedList({
     })),
   });
   const failed = reads.find((read) => read.isError);
-  const origin = targetsOrigin(reads.flatMap((read) => read.data?.items ?? []));
   const counts = reads.find((read) => read.data)?.data;
   let state: DataTableState | undefined;
   if (reads.some((read) => read.isPending)) state = { kind: 'loading', label: 'Loading Actions…' };
@@ -148,6 +147,8 @@ function GroupedList({
         const total = page?.group_counts[group] ?? 0;
         if (!page || total === 0) return null;
         const open = !collapsed.has(group);
+        // Per group: your own pages share an origin, mentions elsewhere do not.
+        const origin = targetsOrigin(page.items);
         return (
           <Fragment key={group}>
             <GroupHeaderRow
