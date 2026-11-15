@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery, type QueryKey, type UseQueryOptions } from '@tanstack/react-query';
 
 import type { DataTablePager, DataTableState } from '@/components/ui/data-table';
-import { readErrorProps } from '@/components/ui/read-error';
 import { cursorControls, pageRange, useCursorTable } from './use-cursor-table';
+import { readErrorProps } from '@/components/ui/notice';
 
 /** A keyset page as the API returns it. */
 type CursorPage = Readonly<{ items: readonly unknown[]; next_cursor: string | null }>;

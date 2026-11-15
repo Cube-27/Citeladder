@@ -1,12 +1,12 @@
 import { Unplug } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { ProjectLink } from '@/components/ui/project-link';
-import { QueryState } from '@/components/ui/query-state';
 import { TextLink } from '@/components/ui/text-link';
 import type { CredentialMode } from '@/lib/api/billing';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 const PROVIDER_SETTINGS = '/settings?tab=providers';
 
@@ -19,7 +19,7 @@ export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
   const canManage = useWorkspaceCapability('manage_credentials');
   if (funded)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={Unplug}
         heading="Keyword Research is unavailable"
@@ -28,7 +28,7 @@ export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
     );
   if (!canManage)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={Unplug}
         heading="Connect DataForSEO"
@@ -36,7 +36,7 @@ export function NotConnected({ funded }: Readonly<{ funded: boolean }>) {
       />
     );
   return (
-    <QueryState
+    <StateBlock
       kind="empty"
       icon={Unplug}
       heading="Connect DataForSEO"
@@ -58,18 +58,18 @@ export function UnavailableNotice({
   if (data.connected) return null;
   if (data.credential_mode === 'funded')
     return (
-      <Callout tone="negative">
+      <Notice tone="negative">
         Research is temporarily unavailable, so saved results can be read but not refreshed.
-      </Callout>
+      </Notice>
     );
   return (
-    <Callout tone="negative">
+    <Notice tone="negative">
       DataForSEO is not connected, so saved results can be read but not refreshed.{' '}
       {canManage ? (
         <TextLink href={PROVIDER_SETTINGS}>Open provider settings</TextLink>
       ) : (
         'A workspace Owner or Admin can add the login.'
       )}
-    </Callout>
+    </Notice>
   );
 }

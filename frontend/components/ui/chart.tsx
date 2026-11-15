@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 
-import { FLOAT_FACE } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
+import { SHEET_FACE } from '@/components/ui/slip';
 
 /**
  * The chart kit every product chart draws with: plain SVG and the chart
@@ -21,26 +21,26 @@ export function chartTone(item: Readonly<{ other?: boolean }>, index: number): C
 }
 
 export const CHART_STROKE: Record<ChartTone, string> = {
-  1: 'stroke-data-1',
-  2: 'stroke-data-2',
-  3: 'stroke-data-3',
+  1: 'stroke-data-you',
+  2: 'stroke-data-rival-1',
+  3: 'stroke-data-rival-2',
   4: 'stroke-data-other',
-  5: 'stroke-data-3',
+  5: 'stroke-data-rival-2',
 };
 
 export const CHART_FILL: Record<ChartTone, string> = {
-  1: 'bg-data-1 fill-data-1',
-  2: 'bg-data-2 fill-data-2',
-  3: 'bg-data-3 fill-data-3',
+  1: 'bg-data-you fill-data-you',
+  2: 'bg-data-rival-1 fill-data-rival-1',
+  3: 'bg-data-rival-2 fill-data-rival-2',
   4: 'bg-data-other fill-data-other',
-  5: 'bg-data-3 fill-data-3',
+  5: 'bg-data-rival-2 fill-data-rival-2',
 };
 
 /** Axis text inside a chart's SVG: 12px mono figures in `ink-muted`. */
-export const CHART_AXIS_TEXT = 'fill-ink-muted text-caption font-mono tabular-nums';
+export const CHART_AXIS_TEXT = 'fill-ink-2 text-caption font-mono tabular-nums';
 
 /** The plot's focusable box, read with the arrow keys; the focus ring follows its corners. */
-export const CHART_PLOT_FRAME = 'focus-ring relative w-full rounded-sm';
+export const CHART_PLOT_FRAME = 'focus-ring relative w-full rounded-control';
 
 /** A line's dash: Other is dashed, a fifth series dotted, the rest solid. */
 export const CHART_DASH: Record<ChartTone, string | undefined> = {
@@ -122,7 +122,7 @@ export function useChartWidth<T extends HTMLElement>(fallback = 640) {
 }
 
 /** The Other texture: `data-other` stripes on the `chart-grid` ground. */
-export function ChartHatchPattern({ id }: Readonly<{ id: string }>) {
+function ChartHatchPattern({ id }: Readonly<{ id: string }>) {
   return (
     <pattern
       id={id}
@@ -131,14 +131,14 @@ export function ChartHatchPattern({ id }: Readonly<{ id: string }>) {
       patternUnits="userSpaceOnUse"
       patternTransform="rotate(45)"
     >
-      <rect width={4} height={4} className="fill-chart-grid" />
+      <rect width={4} height={4} className="fill-rule" />
       <line x1={1} y1={0} x2={1} y2={4} strokeWidth={2} className="stroke-data-other" />
     </pattern>
   );
 }
 
 /** A hatched fill for an HTML box (a bar, a swatch) standing for Other. */
-export function ChartHatch() {
+function ChartHatch() {
   const id = `chart-hatch-${useId().replaceAll(':', '')}`;
   return (
     <svg aria-hidden focusable="false" className="block size-full">
@@ -183,7 +183,7 @@ export function ChartSwatch({ tone, line = false }: Readonly<{ tone: ChartTone; 
       aria-hidden
       className={cn(
         'inline-block shrink-0 overflow-hidden',
-        line ? 'h-[3px] w-3 rounded-2xs' : 'rounded-2xs size-2',
+        line ? 'h-[3px] w-3 rounded-mark' : 'rounded-mark size-2',
         tone === 4 ? undefined : CHART_FILL[tone],
       )}
     >
@@ -223,7 +223,7 @@ export function ChartLegend({
         <li key={entry.name} className={item}>
           <ChartSwatch tone={entry.tone} line={line} />
           {/* A name wider than the card (a page's URL) is cut, whole in its title. */}
-          <span className="text-ink-secondary min-w-0 truncate" title={entry.name}>
+          <span className="text-ink-2 min-w-0 truncate" title={entry.name}>
             {entry.name}
           </span>
           {entry.value === undefined ? null : (
@@ -241,10 +241,10 @@ export function ChartLegend({
               y2={1.5}
               strokeWidth={2}
               strokeDasharray="2 3"
-              className="stroke-line-control"
+              className="stroke-control-line"
             />
           </svg>
-          <span className="text-ink-secondary">{markerLabel}</span>
+          <span className="text-ink-2">{markerLabel}</span>
         </li>
       ) : null}
     </ul>
@@ -253,7 +253,7 @@ export function ChartLegend({
 
 /**
  * The hover card every chart shares: the floating face (`surface`, 1px `line`
- * border, `shadow-float`) at the floating radius, a mono caption naming the
+ * border, `shadow-sheet`) at the floating radius, a mono caption naming the
  * point, then one row per series.
  */
 export function ChartTip({
@@ -266,12 +266,12 @@ export function ChartTip({
     <div
       aria-hidden
       className={cn(
-        FLOAT_FACE,
-        'pointer-events-none absolute z-20 flex w-54 flex-col gap-1 rounded-lg p-3',
+        SHEET_FACE,
+        'pointer-events-none absolute z-20 flex w-54 flex-col gap-1 rounded-sheet p-3',
       )}
       style={{ left, top }}
     >
-      <p className="text-caption text-ink-muted mb-1 font-mono">{title}</p>
+      <p className="text-caption text-ink-2 mb-1 font-mono">{title}</p>
       {children}
     </div>
   );
@@ -286,7 +286,7 @@ export function ChartTipRow({
   return (
     <div className={cn(compact ? 'text-caption' : 'text-body-sm', 'flex items-center gap-2')}>
       <ChartSwatch tone={tone} line />
-      <span className="text-ink-secondary min-w-0 flex-1 truncate">{name}</span>
+      <span className="text-ink-2 min-w-0 flex-1 truncate">{name}</span>
       <span className="text-ink tabular-nums">{value}</span>
     </div>
   );
@@ -313,15 +313,3 @@ export const CHART_HEIGHT_PX = { sm: 160, md: 240, lg: 320 } as const satisfies 
   ChartHeight,
   number
 >;
-
-/**
- * The box a chart and every state standing in for it share: the chart's
- * height role as a floor, so loading, a read error or an empty selection
- * occupy the plot's footprint and nothing under the card moves.
- */
-export function ChartFrame({
-  height,
-  children,
-}: Readonly<{ height: ChartHeight; children: ReactNode }>) {
-  return <div className={cn('grid min-w-0 *:min-w-0', chartFrameClasses[height])}>{children}</div>;
-}

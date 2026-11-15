@@ -16,10 +16,9 @@ import {
 } from '@/components/visibility/visibility-toolbar';
 import { VisibilityTrends } from '@/components/visibility/visibility-trends';
 import type { FilterDefinition } from '@/components/ui/all-filters';
-import { TabPanel, TabsRoot } from '@/components/ui/tabs';
-import { ListScreen } from '@/components/layout/page-shell';
-import { QueryState } from '@/components/ui/query-state';
-import { Stack } from '@/components/ui/layout';
+import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
+import { ReportPage } from '@/components/templates/report-page';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
 import { visibleTabs, type VisibilityTab } from '@/lib/visibility/dashboard';
 import {
@@ -27,6 +26,8 @@ import {
   useVisibilityFilters,
   useVisibilityQueries,
 } from '@/lib/visibility/use-visibility-dashboard';
+import { StateBlock } from '@/components/ui/state-block';
+import { SectionStack } from '@/components/ui/section';
 
 type VisibilityDashboardState = 'loading' | 'error' | 'empty' | null;
 
@@ -61,10 +62,10 @@ function DashboardState({
   state: Exclude<VisibilityDashboardState, 'empty' | null>;
   auditsQuery: ReturnType<typeof useVisibilityQueries>['auditsQuery'];
 }>) {
-  if (state === 'loading') return <QueryState kind="loading" label="Loading visibility…" />;
+  if (state === 'loading') return <StateBlock kind="loading" label="Loading visibility…" />;
   if (state === 'error')
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         error={auditsQuery.error}
         fallback="Could not load this project's runs. Check your connection and try again."
@@ -89,10 +90,10 @@ function VisibilityWorkspace({
   const pageFilters = useVisibilityPageFilters({ filters, queries });
   if (state === 'empty') {
     return (
-      <ListScreen actions={<VisibilityActions />}>
+      <ReportPage actions={<VisibilityActions />}>
         {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
         <VisibilityEmptyState hasActiveRun={Boolean(queries.activeRun)} />
-      </ListScreen>
+      </ReportPage>
     );
   }
   // The root spans the whole page: the filters every tab shares follow the
@@ -100,17 +101,16 @@ function VisibilityWorkspace({
   // lead its toolbar.
   return (
     <TabsRoot value={filters.activeTab} onValueChange={filters.selectTab}>
-      <ListScreen
+      <ReportPage
         actions={<VisibilityActions />}
-        tabs={{
-          items: visibleTabs(factChecking).map((tab) => ({
-            value: tab.id,
-            label: tab.label,
-          })),
-          ariaLabel: 'Visibility views',
-          onIntent: queries.prefetchTab,
-        }}
-        controls={{ filters: pageFilters }}
+        tabs={
+          <TabRow
+            items={visibleTabs(factChecking).map((tab) => ({ value: tab.id, label: tab.label }))}
+            ariaLabel="Visibility views"
+            onIntent={queries.prefetchTab}
+          />
+        }
+        filters={<FilterBar filters={pageFilters} />}
       >
         {queries.activeRun ? <ActiveRunBanner run={queries.activeRun} /> : null}
         <TabPanel value={filters.activeTab} className="focus-ring">
@@ -120,7 +120,7 @@ function VisibilityWorkspace({
             <DashboardPanel filters={filters} queries={queries} />
           )}
         </TabPanel>
-      </ListScreen>
+      </ReportPage>
     </TabsRoot>
   );
 }
@@ -176,7 +176,7 @@ function DashboardPanel({
   );
   const panels: Partial<Record<VisibilityTab, ReactNode>> = {
     trends: (
-      <Stack gap="workspace">
+      <SectionStack>
         <VisibilityByMarket
           query={queries.marketRowsQuery}
           markets={queries.markets}
@@ -196,7 +196,7 @@ function DashboardPanel({
             onEvidence={filters.openEvidence}
           />
         ))}
-      </Stack>
+      </SectionStack>
     ),
     sources: gated(() => <VisibilitySources filters={filters} queries={queries} />),
     perception: gated(() => <VisibilityPerception filters={filters} queries={queries} />),

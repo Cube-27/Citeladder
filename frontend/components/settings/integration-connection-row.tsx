@@ -6,7 +6,7 @@ import { BackfillHistory } from '@/components/settings/backfill-progress';
 import { PROVIDER_META, type GrantModel } from '@/components/settings/grant-model';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 import { PropertyPicker, useActiveMapping } from '@/components/settings/property-picker';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import {
   integrationsApi,
@@ -139,7 +139,7 @@ function ConnectionActions({
         </>
       }
     >
-      <div className={textRole('itemTitle', 'truncate')}>{label}</div>
+      <div className={textRole('body', 'truncate')}>{label}</div>
       <PropertyPicker connection={connection} disabled={busy} />
     </ControlRow>
   );
@@ -152,9 +152,9 @@ function RunSummary({ run, runActive }: Readonly<{ run: SyncRun; runActive: bool
   if (runActive)
     return (
       <>
-        <Badge variant="run-status" value={SYNC_RUN_STATES[run.status].badge}>
+        <StatusMark variant="run-status" value={SYNC_RUN_STATES[run.status].badge}>
           {SYNC_RUN_STATES[run.status].label}
-        </Badge>
+        </StatusMark>
         <span className="truncate">
           {run.status === 'running' ? (
             `${rows} · ${window}`
@@ -169,9 +169,9 @@ function RunSummary({ run, runActive }: Readonly<{ run: SyncRun; runActive: bool
   if (run.processing)
     return (
       <>
-        <Badge variant="run-status" value="running">
+        <StatusMark variant="run-status" value="running">
           Processing
-        </Badge>
+        </StatusMark>
         <span className="truncate">{`${rows} imported · updating reports`}</span>
       </>
     );
@@ -179,9 +179,9 @@ function RunSummary({ run, runActive }: Readonly<{ run: SyncRun; runActive: bool
     run.status === 'succeeded' ? `${rows} imported · ${window}` : run.error_detail || window;
   return (
     <>
-      <Badge variant="run-status" value={SYNC_RUN_STATES[run.status].badge}>
+      <StatusMark variant="run-status" value={SYNC_RUN_STATES[run.status].badge}>
         {SYNC_RUN_STATES[run.status].label}
-      </Badge>
+      </StatusMark>
       <span className="truncate" title={result}>
         {result}
       </span>
@@ -214,9 +214,9 @@ function ConnectionStatus({
     const message = humanizeApiError(actionError).message;
     return (
       <>
-        <Badge variant="status" value="danger">
+        <StatusMark variant="status" value="danger">
           Failed
-        </Badge>
+        </StatusMark>
         <span className="truncate" title={message}>
           {message}
         </span>
@@ -226,18 +226,18 @@ function ConnectionStatus({
   if (testState)
     return (
       <>
-        <Badge variant="status" value={testState.ok ? 'success' : 'danger'}>
+        <StatusMark variant="status" value={testState.ok ? 'success' : 'danger'}>
           {testState.ok ? 'Test passed' : 'Test failed'}
-        </Badge>
+        </StatusMark>
         <span className="truncate" title={testState.message}>
           {testState.message}
         </span>
       </>
     );
   if (activeRun) return <RunSummary run={activeRun} runActive={runActive} />;
-  if (!grantConnected) return <span className="text-ink-muted">Reconnect to sync</span>;
-  if (!hasProperty) return <span className="text-ink-muted">Select a property to import</span>;
-  return <span className="text-ink-muted">Ready to sync</span>;
+  if (!grantConnected) return <span className="text-ink-2">Reconnect to sync</span>;
+  if (!hasProperty) return <span className="text-ink-2">Select a property to import</span>;
+  return <span className="text-ink-2">Ready to sync</span>;
 }
 
 function ConnectionRowView({

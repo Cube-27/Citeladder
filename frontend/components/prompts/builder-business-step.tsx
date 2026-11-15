@@ -2,8 +2,6 @@ import { ChipInput, type ChipItem } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
-import { QueryState } from '@/components/ui/query-state';
 import { Select } from '@/components/ui/select';
 import { textRole } from '@/components/ui/typography';
 import type { PromptFormLimits } from '@citeladder/contracts';
@@ -16,6 +14,8 @@ import {
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 
 import type { BuilderBusiness } from './use-builder-business';
+import { StateBlock } from '@/components/ui/state-block';
+import { wellClasses } from '@/components/ui/slip';
 
 /** The bounds the API enforces on this step's saves and the run note, from the prompt-set list. */
 export type BusinessStepLimits = Pick<
@@ -45,8 +45,8 @@ function OfferingFacts({
   onChange: (map: BusinessDraft['maps'][number]) => void;
 }>) {
   return (
-    <Stack as="section" gap="workspace" className={panelClasses()}>
-      <h3 className={textRole('itemTitle')}>{map.offering}</h3>
+    <Stack as="section" gap="workspace" className={wellClasses()}>
+      <h3 className={textRole('subheading')}>{map.offering}</h3>
       <ChipInput
         label="Who buys it"
         items={entryChips(map.audiences)}
@@ -93,10 +93,10 @@ export function BuilderBusinessStep({
 }>) {
   const listMax = limits.context_list_max_entries;
   const { draft, profile, map } = business;
-  if (business.loading) return <QueryState kind="loading" label="Loading your business details" />;
+  if (business.loading) return <StateBlock kind="loading" label="Loading your business details" />;
   if (business.loadError || !draft || !profile || !map)
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         error={business.loadError}
         fallback="Your business details could not be loaded."

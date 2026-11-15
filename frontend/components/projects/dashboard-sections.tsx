@@ -3,24 +3,19 @@ import type { ReactNode } from 'react';
 import { ProjectLink } from '@/components/ui/project-link';
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 
-import { Badge } from '@/components/ui/badge';
-import { TagGroup } from '@/components/ui/tag';
+import { Tag, TagGroup } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Delta } from '@/components/ui/delta';
-import { EmptyState } from '@/components/ui/empty-state';
 import { Icon } from '@/components/ui/icon';
-import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
+import { Inline } from '@/components/ui/layout';
 import { ReorderList } from '@/components/ui/reorder-list';
-import { StatRow, type StatSegment } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { MetricValue } from '@/components/ui/metric-value';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { availabilityLabel, pluralCount } from '@/lib/format';
+import { Absence } from '@/components/ui/absence';
+import { pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
 import { DisplayTime } from '@/components/ui/display-time';
+import { useEngineCatalog } from '@/lib/providers/engines';
 
 import { ProjectControls } from './dashboard-controls';
 import {
@@ -31,6 +26,15 @@ import {
   VS_PREVIOUS_RUN,
 } from './dashboard-primitives';
 import { ClampText } from '@/components/ui/table';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 /**
  * One line over the Overview: the site, and the run it was last tracked in
@@ -48,6 +52,7 @@ function websiteHref(website: string): string | null {
 export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
   const website = data.project.website_url;
   const measurement = data.measurement;
+  const engines = useEngineCatalog();
   if (!website && !measurement) return null;
   const href = website ? websiteHref(website) : null;
   const shown = website?.replace(/^https?:\/\//i, '').replace(/\/$/, '');
@@ -68,7 +73,7 @@ export function ProjectMeta({ data }: Readonly<{ data: CommandCenter }>) {
       {measurement ? (
         <span>
           Tracked <DisplayTime value={measurement.completed_at} /> ·{' '}
-          {measurement.logical_engines.join(', ')}
+          {measurement.logical_engines.map(engines.label).join(', ')}
         </span>
       ) : null}
     </Inline>
@@ -79,12 +84,14 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
   const facts = data.facts;
   const offerings = facts.products_services.filter((label) => label.trim());
   return (
-    <Card aria-labelledby="company-facts" className="h-full">
-      <CardHeader
+    <Section aria-labelledby="company-facts" className="h-full">
+      <SectionHeader
         actions={
           <>
-            <span className={textRole('label')}>{facts.industry || 'Industry not set'}</span>
-            <Button asChild variant="ghost">
+            <span className={textRole('body', 'text-ink-2')}>
+              {facts.industry || 'Industry not set'}
+            </span>
+            <Button asChild variant="quiet">
               <ProjectLink href="/agent/context">
                 Edit in Agent context <Icon icon={ArrowRight} />
               </ProjectLink>
@@ -92,10 +99,10 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
           </>
         }
       >
-        <CardTitle id="company-facts">Company facts</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <StatRow
+        <SectionTitle id="company-facts">Company facts</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
+        <FigureStrip
           segments={[
             {
               key: 'positioning',
@@ -113,14 +120,14 @@ export function CompanyFacts({ data }: Readonly<{ data: CommandCenter }>) {
               value: offerings.length ? (
                 <TagGroup labels={offerings} />
               ) : (
-                <UnavailableValue state="not_set" />
+                <Absence state="not_set" />
               ),
               sub: pluralCount(facts.competitors.length, 'tracked competitor'),
             },
           ]}
         />
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -150,10 +157,10 @@ export function DashboardActions({
 
 /** A free-text fact, cut at two lines with the whole text behind a tooltip. */
 function FactSummary({ value }: Readonly<{ value: string }>) {
-  if (!value.trim()) return <UnavailableValue state="not_set" />;
+  if (!value.trim()) return <Absence state="not_set" />;
   return (
     // A value, so the primary ink under its grey label, not grey on grey.
-    <ClampText lines={2} className={textRole('itemTitle')}>
+    <ClampText lines={2} className={textRole('body')}>
       {value}
     </ClampText>
   );
@@ -203,7 +210,7 @@ function stateSegment({
   label: string;
   metric: StateMetric;
   kind: keyof typeof STATE_FIGURE;
-}>): StatSegment {
+}>): FigureSegment {
   const figure = STATE_FIGURE[kind];
   return {
     key,
@@ -225,14 +232,12 @@ function stateSegment({
 /** The metric names AI Visibility uses, so one run reads the same on both screens. */
 export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card aria-labelledby="project-state" className="h-full">
-      <CardHeader
-        actions={<Badge>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Badge>}
-      >
-        <CardTitle id="project-state">Project state</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <StatRow
+    <Section aria-labelledby="project-state" className="h-full">
+      <SectionHeader actions={<Tag>{data.measurement ? 'Citation-capable audit' : 'Not run'}</Tag>}>
+        <SectionTitle id="project-state">Project state</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
+        <FigureStrip
           segments={[
             stateSegment({
               key: 'visibility',
@@ -254,8 +259,8 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
             }),
           ]}
         />
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -266,48 +271,47 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
  * so it carries AI Visibility's name for that metric.
  */
 export function Track({ data }: Readonly<{ data: CommandCenter }>) {
+  const { track } = data;
+  const observed = Boolean(track.observed_at);
   return (
-    <Card aria-labelledby="citation-share-track" className="h-full">
-      <CardHeader
+    <Section aria-labelledby="citation-share-track" className="h-full">
+      <SectionHeader
         actions={
-          data.track.observed_at ? (
-            <span className={textRole('label')}>
-              {pluralCount(data.track.engine_coverage, 'engine')}
-            </span>
-          ) : null
-        }
-      >
-        <CardTitle id="citation-share-track">Owned citation rate</CardTitle>
-        {/* What the figure measures is the title's description, bound 4 under it. */}
-        <CardDescription>Answers that link to a page you own</CardDescription>
-      </CardHeader>
-      <Stack as={CardContent} gap="tight">
-        <MetricValue
-          value={
-            data.track.citation_share.value === null
-              ? null
-              : percentFigure(data.track.citation_share.value)
-          }
-          label={availabilityLabel(data.track.observed_at ? 'unavailable' : 'not_run')}
-        />
-        {/* The link shares the last line, so it adds no row of its own. */}
-        <Inline className="justify-between">
-          {/* No comparable run means no change; the Movement card says so once. */}
-          {data.track.observed_at && data.track.citation_share.delta !== null ? (
-            <div>
-              <Delta value={data.track.citation_share.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
-            </div>
-          ) : (
-            <p className={textRole('caption')}>{data.track.limitations[0]}</p>
-          )}
-          <Button asChild variant="ghost">
+          <Button asChild variant="quiet">
             <ProjectLink href="/visibility?tab=trends">
               Open Trends <Icon icon={ArrowRight} />
             </ProjectLink>
           </Button>
-        </Inline>
-      </Stack>
-    </Card>
+        }
+      >
+        <SectionTitle id="citation-share-track">Owned citation rate</SectionTitle>
+        <SectionDescription>Answers that link to a page you own</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
+        <FigureStrip
+          segments={[
+            {
+              key: 'citation-share',
+              label: observed
+                ? `Across ${pluralCount(track.engine_coverage, 'engine')}`
+                : 'All engines',
+              value:
+                track.citation_share.value === null
+                  ? null
+                  : percentFigure(track.citation_share.value),
+              missingLabel: observed ? 'Unavailable' : 'Not run',
+              // No comparable run means no change; the Movement card says so once.
+              delta:
+                observed && track.citation_share.delta !== null ? (
+                  <Delta value={track.citation_share.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
+                ) : undefined,
+              sub:
+                observed && track.citation_share.delta !== null ? undefined : track.limitations[0],
+            },
+          ]}
+        />
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -321,30 +325,31 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
  */
 export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card aria-labelledby="movement" className="h-full">
-      <CardHeader>
-        <CardTitle id="movement">Movement</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Section aria-labelledby="movement" className="h-full">
+      <SectionHeader>
+        <SectionTitle id="movement">Movement</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
         {data.movements.length ? (
           <MovementChart movements={data.movements} />
         ) : (
           <NoMovement comparable={Boolean(data.measurement?.comparable_audit_id)} />
         )}
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
 function NoMovement({ comparable }: Readonly<{ comparable: boolean }>) {
   if (comparable)
-    return <EmptyState variant="inline" icon={TrendingUp} title="No movement to show" />;
+    return <StateBlock kind="empty" inline icon={TrendingUp} message="No movement to show" />;
   return (
-    <EmptyState
-      variant="inline"
+    <StateBlock
+      kind="empty"
+      inline
       icon={TrendingUp}
-      title="No comparable measurement yet"
-      primary={<LaunchAuditButton variant="secondary" />}
+      message="No comparable measurement yet"
+      action={<LaunchAuditButton variant="secondary" />}
     />
   );
 }
@@ -361,7 +366,7 @@ export function RankedActionsCard({
 }>) {
   if (!actions.length)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={ArrowRight}
         heading="No open actions"
@@ -371,37 +376,37 @@ export function RankedActionsCard({
       />
     );
   return (
-    <Card aria-labelledby="ranked-actions" className="h-full">
-      <CardHeader actions={<ViewAllActions />}>
-        <CardTitle id="ranked-actions">Ranked actions</CardTitle>
-        <CardDescription>Shared order · drag or use the arrow controls.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Section aria-labelledby="ranked-actions" className="h-full">
+      <SectionHeader actions={<ViewAllActions />}>
+        <SectionTitle id="ranked-actions">Ranked actions</SectionTitle>
+        <SectionDescription>Shared order · drag or use the arrow controls.</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <ReorderList items={actions.map(actionItem)} pending={pending} onMove={onMove} />
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
 /** What has been resolved since the comparable run. */
 export function ProgressProofCard({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <Card aria-labelledby="progress-proof" className="h-full">
-      <CardHeader>
-        <CardTitle id="progress-proof">Progress and report proof</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className={textRole('body')}>
+    <Section aria-labelledby="progress-proof" className="h-full">
+      <SectionHeader>
+        <SectionTitle id="progress-proof">Progress and report proof</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
+        <p className={textRole('body', 'text-ink-2')}>
           {pluralCount(data.resolved_actions.count, 'action')} resolved since the comparable run.
         </p>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
 function ViewAllActions() {
   return (
-    <Button asChild variant="ghost">
+    <Button asChild variant="quiet">
       <ProjectLink href="/agent/actions">
         View all <Icon icon={ArrowRight} />
       </ProjectLink>

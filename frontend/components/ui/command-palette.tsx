@@ -12,8 +12,7 @@ import {
 } from 'react';
 
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Button } from '@/components/ui/button';
-import { FLOAT_FACE } from '@/components/ui/card';
+import { Button, LABEL_FROM_SHELL } from '@/components/ui/button';
 import { Kbd } from '@/components/ui/kbd';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useManagedPlan } from '@/lib/billing/entitlement-context';
@@ -24,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
+import { SHEET_FACE } from '@/components/ui/slip';
 
 /** A group of shell destinations the palette lists; the shell supplies them. */
 type PaletteGroup = Readonly<{
@@ -37,7 +37,9 @@ type PaletteGroup = Readonly<{
 }>;
 
 /**
- * CommandPalette — ⌘K / Ctrl+K navigation for the authed shell.
+ * CommandPalette — ⌘K / Ctrl+K navigation for the authed shell: the
+ * sidebar's groups in the same order with the same labels, the workspace and
+ * account pages, then "Switch project" (brand direction 4).
  *
  * Keyboard-first velocity is the point: every nav destination and every
  * project in the workspace is reachable without leaving the home row. The
@@ -101,14 +103,15 @@ export function CommandPaletteTrigger({
       aria-label="Search or jump to"
       aria-keyshortcuts="Meta+K Control+K"
       className={cn(
-        'text-ink-muted min-w-0 w-full justify-start text-left [&>span]:w-full',
+        'text-ink-2 shell:justify-start min-w-0 text-left',
+        LABEL_FROM_SHELL,
         className,
       )}
     >
-      <Search className="text-ink-muted size-4 shrink-0" aria-hidden />
+      <Search className="text-ink-2 size-4 shrink-0" aria-hidden />
       {/* The visible word stays short beside the shortcut; the name says it all. */}
-      <span className="min-w-0 truncate">Search</span>
-      <Kbd className="desktop:inline-flex ms-auto hidden">{isMac ? '⌘K' : 'Ctrl K'}</Kbd>
+      <span className="shell:inline hidden min-w-0 truncate">Search</span>
+      <Kbd className="shell:inline-flex hidden">{isMac ? '⌘K' : 'Ctrl K'}</Kbd>
     </Button>
   );
 }
@@ -233,7 +236,7 @@ export function CommandPalette({
       }),
     );
 
-    // Switching project re-scopes the API client's workspace header, so this
+    // Projects come last, after every destination. Switching project re-scopes the API client's workspace header, so this
     // is a genuine action rather than a link.
     const projectCommands = projects.map((project) => ({
       id: `project:${project.id}`,
@@ -325,14 +328,14 @@ export function CommandPalette({
             restoreFocus();
           }}
           className={cn(
-            FLOAT_FACE,
-            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-lg',
+            SHEET_FACE,
+            'dialog-panel z-modal fixed top-16 left-1/2 flex max-h-[calc(100dvh-8rem)] w-[calc(100vw-3rem)] max-w-160 -translate-x-1/2 flex-col overflow-hidden overscroll-contain rounded-sheet',
           )}
         >
           <DialogPrimitive.Title className="sr-only">Command palette</DialogPrimitive.Title>
           {/* The search row is the dialog's header: the open dialog is the
               focus context, so its divider stays the soft `line` rule. */}
-          <div className="palette-field border-line text-ink-muted flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
+          <div className="palette-field border-rule text-ink-2 flex min-h-[var(--control-lg)] shrink-0 items-center gap-3 border-b px-4">
             <Search className="size-4 shrink-0" aria-hidden />
             <input
               ref={inputRef}
@@ -348,7 +351,7 @@ export function CommandPalette({
               aria-activedescendant={
                 results[activeIndex] ? `${listboxId}-${results[activeIndex].id}` : undefined
               }
-              className="text-body-sm text-ink placeholder:text-ink-muted min-w-0 flex-1 self-stretch bg-transparent"
+              className="type-body text-ink placeholder:text-ink-2 min-w-0 flex-1 self-stretch bg-transparent"
             />
             <Kbd>Esc</Kbd>
           </div>
@@ -360,7 +363,7 @@ export function CommandPalette({
             {/* The empty state is a message, not an option, so it sits
                   beside the listbox rather than inside it. */}
             {results.length === 0 ? (
-              <p className="text-body-sm text-ink-secondary px-4 py-[var(--page-section-gap)] text-center">
+              <p className="type-body text-ink-2 px-4 py-[var(--page-section-gap)] text-center">
                 {`No matches for “${query}”`}
               </p>
             ) : null}
@@ -380,7 +383,7 @@ export function CommandPalette({
                     aria-labelledby={headingId}
                     className="[&+&]:mt-2"
                   >
-                    <p id={headingId} className="text-ink-muted text-caption px-2 py-1">
+                    <p id={headingId} className="type-overline text-ink-2 px-2 py-1">
                       {section.group}
                     </p>
                     {section.rows.map(({ command, index }) => {
@@ -401,12 +404,12 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'text-ink flex min-h-[var(--control-md)] w-full items-center gap-3 rounded-sm px-2 text-left text-body-sm',
+                            'type-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-control px-2 text-left',
                             isActive && 'overlay-hover',
                           )}
                         >
                           {Icon ? (
-                            <Icon className="text-ink-secondary size-4 shrink-0" aria-hidden />
+                            <Icon className="text-ink-2 size-4 shrink-0" aria-hidden />
                           ) : (
                             <BrandMark
                               name={command.label}
@@ -416,7 +419,7 @@ export function CommandPalette({
                           )}
                           <span className="min-w-0 flex-1 truncate">{command.label}</span>
                           {command.hint ? (
-                            <span className="text-ink-muted text-caption shrink-0 whitespace-nowrap">
+                            <span className="type-caption text-ink-2 shrink-0 whitespace-nowrap">
                               {command.hint}
                             </span>
                           ) : null}
@@ -431,7 +434,7 @@ export function CommandPalette({
 
           {/* Keyboard legend — the palette is a keyboard surface first, so
                 it states its own controls rather than assuming they are known. */}
-          <div className="border-line text-ink-muted text-caption flex shrink-0 items-center gap-4 border-t px-4 py-2">
+          <div className="border-rule type-caption text-ink-2 flex shrink-0 items-center gap-4 border-t px-4 py-2">
             <span className="inline-flex items-center gap-2">
               <Kbd keys={['↑', '↓']} />
               {'navigate'}

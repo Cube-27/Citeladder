@@ -2,18 +2,16 @@ import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { DetailScreen } from '@/components/layout/page-shell';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
+import { RecordPage } from '@/components/templates/record-page';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { RungTrail, type TrailStep } from '@/components/ui/rung-trail';
 import { TextLink } from '@/components/ui/text-link';
-import { TrendChart } from '@/components/ui/trend-chart';
+import { StepChart } from '@/components/ui/step-chart';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { marketFilter } from '@/components/visibility/visibility-toolbar';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate } from '@/lib/format';
+import { formatDisplayDate, pluralCount } from '@/lib/format';
 import { formatWholePercent } from '@/lib/visibility/dashboard';
 import type { PromptHistory } from '@citeladder/contracts';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -27,8 +25,17 @@ import {
 } from '@/lib/prompts/history';
 
 import { PromptAnswerStates } from './prompt-answer-states';
+import { readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
-const BACK = { href: '/prompts', label: 'Back to Prompts' } as const;
+const BACK = { href: '/prompts', label: 'Back to prompts' } as const;
 
 /** /prompts/:promptId — one prompt's measurements over time, in one market. */
 export function PromptDetailScreen() {
@@ -45,35 +52,92 @@ export function PromptDetailScreen() {
   // A single market has nothing to choose, so the row is not drawn empty.
   const marketChoice = marketFilter({ markets, market, onChangeMarket: setMarket });
 
+  const filters = marketChoice ? <FilterBar filters={[marketChoice]} /> : undefined;
   if (query.isError)
     return (
-      <DetailScreen back={BACK}>
-        <QueryState
+      <RecordPage back={BACK} filters={filters}>
+        <StateBlock
           kind="error"
           {...readErrorProps(query)}
-          fallback="This prompt could not be loaded."
+          fallback="This prompt could not be loaded. Check your connection and try again."
         />
-      </DetailScreen>
+      </RecordPage>
     );
   if (!query.data)
     return (
-      <DetailScreen back={BACK}>
-        <QueryState kind="loading" />
-      </DetailScreen>
+      <RecordPage back={BACK} filters={filters}>
+        <StateBlock kind="loading" />
+      </RecordPage>
     );
   const history = query.data;
   return (
-    <DetailScreen
+    <RecordPage
       title={history.prompt.text}
       back={BACK}
-      controls={marketChoice ? { filters: [marketChoice] } : undefined}
+      filters={filters}
+      identity={<PromptIdentity history={history} />}
+      aside={<MeasurementTrail history={history} />}
     >
-      <Stack gap="workspace" aria-busy={query.isFetching}>
-        <HistoryCard history={history} />
-        <Implementations history={history} />
-        <PromptAnswerStates latest={history.latest} />
-      </Stack>
-    </DetailScreen>
+      <HistoryCard history={history} />
+      <Implementations history={history} />
+      <PromptAnswerStates latest={history.latest} />
+    </RecordPage>
+  );
+}
+
+/**
+ * The prompt in full: a question is often longer than the masthead, which
+ * cuts it, so the identity block always gives the whole text.
+ */
+function PromptIdentity({ history }: Readonly<{ history: PromptHistory }>) {
+  const archived = history.prompt.status === 'archived';
+  return (
+    <Section aria-label="Prompt">
+      <SectionHeader>
+        <p className="type-heading max-w-prose">{history.prompt.text}</p>
+        <SectionDescription>
+          {pluralCount(history.points.length, 'measured run')}
+          {archived ? ' · Archived: audits no longer ask it' : ''}
+        </SectionDescription>
+      </SectionHeader>
+    </Section>
+  );
+}
+
+/**
+ * Every run that measured the prompt, newest first, as rungs: a measured run
+ * is done, a run with no successful answer is a hatched gap, and a change in
+ * measurement conditions is said on the run that started the new line.
+ */
+function MeasurementTrail({ history }: Readonly<{ history: PromptHistory }>) {
+  const timeZone = useDisplayTimeZone();
+  if (!history.points.length) return null;
+  const steps: TrailStep[] = history.points
+    .map((point): TrailStep => {
+      const visibility = point.mention_rate;
+      const owned = point.owned_citation_rate;
+      const measured = visibility !== null;
+      const ownedPercent = owned === null ? null : owned * 100;
+      const rates = measured
+        ? `Visibility ${formatWholePercent(visibility * 100)} · Owned ${formatWholePercent(ownedPercent)}`
+        : 'No successful answer: a gap in the line';
+      return {
+        id: point.audit_id,
+        label: formatDisplayDate(point.completed_at, timeZone),
+        status: measured ? 'done' : 'unavailable',
+        detail: point.comparable_with_previous === false ? `${rates} · New conditions` : rates,
+      };
+    })
+    .reverse();
+  return (
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Measurements</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
+        <RungTrail label="Runs that measured this prompt" steps={steps} />
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -82,17 +146,17 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
   const timeZone = useDisplayTimeZone();
   const data = mentionRatePoints(history.points, timeZone);
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Over time</CardTitle>
-        <CardDescription>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Over time</SectionTitle>
+        <SectionDescription>
           Each point is one run that measured this prompt. A run with no successful answer is a gap,
           and a change in measurement conditions starts a new line.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         {data.length ? (
-          <TrendChart
+          <StepChart
             label="Visibility over time"
             name="Visibility"
             data={data}
@@ -103,14 +167,14 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
             yFormat={formatWholePercent}
           />
         ) : (
-          <QueryState
+          <StateBlock
             kind="empty"
             inline
             message="No run has measured this prompt in this market yet."
           />
         )}
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 

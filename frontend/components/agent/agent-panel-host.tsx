@@ -1,8 +1,9 @@
 import { lazy, Suspense, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-import { navigationMode } from '@/lib/navigation/app-routes';
-import { IconButton } from '@/components/ui/button';
+import { isAgentPath } from '@/lib/navigation/app-routes';
+import { Button, LABEL_FROM_SHELL } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useAgentPanel } from '@/lib/agent/panel-context';
 import { ICONS } from '@/lib/icons';
@@ -14,17 +15,17 @@ const AgentPanel = lazy(() =>
   import('./agent-panel').then(({ AgentPanel }) => ({ default: AgentPanel })),
 );
 
-function useDashboardProject(): boolean {
+function usePanelAvailable(): boolean {
   const pathname = useLocation().pathname ?? '';
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
-  return Boolean(activeProjectId && activeWorkspaceId) && navigationMode(pathname) === 'dashboard';
+  return Boolean(activeProjectId && activeWorkspaceId) && !isAgentPath(pathname);
 }
 
 /**
- * The page header's button that opens the agent panel on Dashboard screens.
- * The header draws it on every page; a page rendered outside the shell (a
+ * "Ask agent", last in the masthead of every page but the Agent's own: it
+ * opens the agent panel over the screen. A page rendered outside the shell (a
  * preview, a test) has no panel and so no trigger, and never reads the
- * project context it lacks.
+ * project context it lacks. Below 1280px only its glyph shows; its name stays.
  */
 export function AgentPanelTrigger() {
   const panel = useAgentPanel();
@@ -33,17 +34,20 @@ export function AgentPanelTrigger() {
 }
 
 function PanelTrigger({ open }: Readonly<{ open: () => void }>) {
-  const available = useDashboardProject();
+  const available = usePanelAvailable();
   if (!available) return null;
   return (
     <Tooltip content="Ask the agent about this screen" side="bottom">
-      <IconButton
-        icon={ICONS.agent}
-        label="Open agent"
-        tooltip={false}
+      <Button
+        variant="secondary"
         aria-haspopup="dialog"
+        aria-label="Ask agent"
         onClick={open}
-      />
+        className={LABEL_FROM_SHELL}
+      >
+        <Icon icon={ICONS.agent} />
+        <span className="shell:inline hidden">Ask agent</span>
+      </Button>
     </Tooltip>
   );
 }

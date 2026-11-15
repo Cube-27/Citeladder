@@ -1,22 +1,20 @@
 import { RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { panelClasses } from '@/components/ui/panel';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatRow } from '@/components/ui/stat-row';
 import { textRole } from '@/components/ui/typography';
 import type { SearchIntelligenceRun } from '@/lib/api/search-intelligence';
 import { formatCount } from '@/lib/format';
 import { words } from '@/lib/ai-traffic/vocabulary';
 import { SEARCH_RUN_STATES } from '@/lib/search-intelligence/status';
 import { reportedCost, runEstimate } from './search-intelligence-format';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { wellClasses } from '@/components/ui/slip';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /** Why an acquisition stopped, in the reader's terms. */
 const STOP_REASONS: Readonly<Record<string, string>> = {
@@ -54,7 +52,7 @@ export function RunNotice({
   if (!run) return null;
   if (SEARCH_RUN_STATES[run.status].active)
     return (
-      <Callout
+      <Notice
         tone="info"
         icon={RefreshCw}
         action={
@@ -66,7 +64,7 @@ export function RunNotice({
         }
       >
         Analysis in progress: {run.completed_calls} of {run.planned_calls} requests complete.
-      </Callout>
+      </Notice>
     );
   if (!['partial', 'failed', 'uncertain'].includes(run.status)) return null;
   const reason =
@@ -75,7 +73,8 @@ export function RunNotice({
     `${run.completed_calls} of ${run.planned_calls} requests completed.`;
   // A stopped analysis is recovered by reviewing and running it again.
   return (
-    <MutationNotice
+    <Notice
+      kind="mutation"
       notice={{
         message: `Analysis ${SEARCH_RUN_STATES[run.status].label.toLowerCase()}. ${reason} Saved results remain available below.`,
         retryable: false,
@@ -107,21 +106,21 @@ export function CostDetails({
   error: unknown;
   onRetry: () => void;
 }>) {
-  let content = <QueryState kind="empty" inline message="No analysis has been run yet." />;
+  let content = <StateBlock kind="empty" inline message="No analysis has been run yet." />;
   if (runs?.length) {
     content = (
       <Stack as="ul" gap="compact">
         {runs.map((run) => (
-          <Stack as="li" gap="compact" key={run.id} className={panelClasses()}>
+          <Stack as="li" gap="compact" key={run.id} className={wellClasses()}>
             <Stack gap="tight">
-              <p className={textRole('itemTitle')}>
+              <p className={textRole('body')}>
                 {words(run.action)} · {SEARCH_RUN_STATES[run.status].label}
               </p>
               <p className={textRole('caption')}>
                 <DisplayTime value={run.created_at} />
               </p>
             </Stack>
-            <StatRow
+            <FigureStrip
               segments={[
                 {
                   key: 'estimated',
@@ -153,7 +152,13 @@ export function CostDetails({
   }
   if (error)
     content = (
-      <ReadError error={error} fallback="Cost history could not be loaded." onRetry={onRetry} />
+      <Notice
+        kind="read"
+        error={error}
+        fallback="Cost history could not be loaded."
+        title="Cost history could not be loaded"
+        onRetry={onRetry}
+      />
     );
   if (pending) content = <Skeleton variant="block" />;
   return (

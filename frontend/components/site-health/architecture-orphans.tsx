@@ -9,10 +9,10 @@
 
 import { Drawer } from '@/components/ui/drawer';
 import { Stack } from '@/components/ui/layout';
-import type { StatSegment } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
 import type { SiteArchitecture } from '@citeladder/contracts';
 import { pluralCount } from '@/lib/format';
+import { type FigureSegment } from '@/components/ui/figure-strip';
 
 // Scope, in the metric's own words. The count is a fact about the pages this
 // crawl fetched; it is not the stronger claim that nothing anywhere links to
@@ -28,7 +28,7 @@ export function orphanSegment({
   pages: SiteArchitecture['internal_linking']['orphan_pages'];
   total: number | null;
   onOpen: () => void;
-}>): StatSegment {
+}>): FigureSegment {
   const base = { key: 'orphans', label: 'Orphaned pages' };
   if (total === null) return { ...base, value: null };
   // The count opens the evidence rather than listing it in place. A list of
@@ -84,7 +84,7 @@ export function OrphanPageDrawer({
                   {page.title || page.url}
                 </TextLink>
               ) : (
-                <span className="type-body truncate">{page.title || page.url}</span>
+                <span className="type-body text-ink-2 truncate">{page.title || page.url}</span>
               )}
               <span className="type-caption truncate">{page.url}</span>
             </Stack>

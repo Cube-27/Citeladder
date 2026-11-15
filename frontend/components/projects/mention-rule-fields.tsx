@@ -60,7 +60,7 @@ export function MentionRuleFields({
           onCheckedChange={(checked) => update({ mode: checked ? 'context_required' : 'always' })}
           label={`${name || 'This name'} needs context to count as a mention`}
         />
-        <span aria-hidden className={textRole('body')}>
+        <span aria-hidden className={textRole('body', 'text-ink-2')}>
           Needs context to count as a mention
         </span>
       </Inline>

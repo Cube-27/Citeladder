@@ -3,14 +3,11 @@ import { z } from 'zod';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChipList } from '@/components/ui/chip-input';
 import { FactList, type Fact } from '@/components/ui/facts';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
-import { QueryState, screenState } from '@/components/ui/query-state';
 import { textRole } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile } from '@citeladder/contracts';
 import {
@@ -20,6 +17,9 @@ import {
 } from '@/lib/prompts/builder-business';
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
 import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
+import { StateBlock, screenState } from '@/components/ui/state-block';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { wellClasses } from '@/components/ui/slip';
 
 const fieldSourcesSchema = z.record(z.string(), z.unknown());
 
@@ -51,7 +51,7 @@ function businessModelValue(profile: BrandProfile, suggested: boolean) {
   const saved = profile.business_context.business_model;
   const choice = BUSINESS_MODEL_CHOICES.find((option) => option.value === saved);
   if (choice) return <ChipList items={[{ value: choice.label, suggested }]} />;
-  return <UnavailableValue state={saved == null || saved === '' ? 'not_set' : 'unknown'} />;
+  return <Absence state={saved == null || saved === '' ? 'not_set' : 'unknown'} />;
 }
 
 /**
@@ -65,21 +65,21 @@ export function BusinessMapSummary({
   profile,
 }: Readonly<{ projectId: string; workspaceId: string; profile: BrandProfile }>) {
   return (
-    <Card aria-labelledby="business-map">
-      <CardHeader
+    <Section aria-labelledby="business-map">
+      <SectionHeader
         actions={
           <Button asChild variant="secondary">
             <ProjectLink href={PROMPTS_GENERATE_HREF}>Edit in Prompt Builder</ProjectLink>
           </Button>
         }
       >
-        <CardTitle id="business-map">Business map</CardTitle>
-        <CardDescription>
+        <SectionTitle id="business-map">Business map</SectionTitle>
+        <SectionDescription>
           These details steer prompt generation. Edit them in the Prompt Builder.
-        </CardDescription>
-      </CardHeader>
+        </SectionDescription>
+      </SectionHeader>
       <BusinessMapBody projectId={projectId} workspaceId={workspaceId} profile={profile} />
-    </Card>
+    </Section>
   );
 }
 
@@ -91,7 +91,7 @@ function BusinessMapBody({
   const read = screenState(useQuery(projectQueries.businessMap({ workspaceId, projectId })), {
     subject: 'the business map',
   });
-  if (read.kind === 'state') return <QueryState {...read.state} />;
+  if (read.kind === 'state') return <StateBlock {...read.state} />;
   const draft = businessDraft(profile, read.data);
   const inferred = inferredFields(profile);
   const facts: Fact[] = [
@@ -120,9 +120,9 @@ function BusinessMapBody({
           key={map.offering}
           aria-label={map.offering}
           gap="compact"
-          className={panelClasses()}
+          className={wellClasses()}
         >
-          <h4 className={textRole('itemTitle')}>{map.offering}</h4>
+          <h4 className={textRole('subheading')}>{map.offering}</h4>
           <FactList
             layout="ruled"
             facts={[

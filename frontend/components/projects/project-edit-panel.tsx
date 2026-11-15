@@ -2,8 +2,6 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { Plus, X } from 'lucide-react';
 import { useState } from 'react';
 
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { QueryState } from '@/components/ui/query-state';
 import { Button, IconButton } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -20,6 +18,8 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 
 import { MentionRuleFields, mentionRuleDraft, type MentionRuleDraft } from './mention-rule-fields';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Edit an existing project's configuration.
@@ -175,7 +175,7 @@ export function ProjectEditPanel({
       width="wide"
       footer={
         <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={save.isPending}>
+          <Button variant="quiet" onClick={() => onOpenChange(false)} disabled={save.isPending}>
             Cancel
           </Button>
           <Button variant="primary" onClick={submit} disabled={save.isPending}>
@@ -186,7 +186,8 @@ export function ProjectEditPanel({
     >
       <Stack gap="workspace">
         {save.isError ? (
-          <MutationNotice
+          <Notice
+            kind="mutation"
             notice={mutationNoticeForError(save.error, { action: 'save the project' })}
           />
         ) : null}
@@ -263,7 +264,7 @@ export function ProjectEditPanel({
         </Stack>
 
         <Stack gap="workspace">
-          <p className={textRole('label')}>Domains</p>
+          <p className={textRole('body', 'text-ink-2')}>Domains</p>
           <Field label="Owned" hint="Comma separated">
             {(props) => (
               <Input
@@ -287,12 +288,12 @@ export function ProjectEditPanel({
 
         <Stack gap="compact">
           <Inline>
-            <p className={textRole('label')}>Competitors</p>
+            <p className={textRole('body', 'text-ink-2')}>Competitors</p>
             <span className="type-caption">
               {competitors.length} of {maximumCompetitors ?? '…'}
             </span>
             <Button
-              variant="ghost"
+              variant="quiet"
               className="ms-auto"
               aria-label="Add competitor"
               disabled={competitorLimitReached}
@@ -314,7 +315,7 @@ export function ProjectEditPanel({
             </Button>
           </Inline>
           {competitors.length === 0 ? (
-            <QueryState kind="empty" inline message="None tracked." />
+            <StateBlock kind="empty" inline message="None tracked." />
           ) : (
             <Stack as="ul" gap="compact" className="list-none">
               {competitors.map((competitor, index) => (

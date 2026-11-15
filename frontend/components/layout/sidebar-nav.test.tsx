@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -48,15 +48,15 @@ import { performanceQueries } from '@/lib/api/performance';
 import { INITIAL_VISIBILITY_PARAMS } from '@/lib/api/visibility';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { INITIAL_DASHBOARD_PARAMS } from '@/lib/performance/performance';
-import { ModeSwitch } from './mode-switch';
-import { SidebarNav as Destinations } from './sidebar-nav';
+import { SidebarFootNav, SidebarNav as Destinations, useDestinationMemory } from './sidebar-nav';
 
-/** The sidebar's mode switch and destinations, as the shell stacks them. */
+/** The sidebar's destinations and foot, remembering screens as the shell does. */
 function SidebarNav() {
+  useDestinationMemory();
   return (
     <>
-      <ModeSwitch />
       <Destinations />
+      <SidebarFootNav />
     </>
   );
 }
@@ -93,7 +93,7 @@ describe('station navigation', () => {
     );
   });
 
-  it('shows open and in-progress Actions as the Actions count in Dashboard mode', async () => {
+  it('shows open and in-progress Actions as the Actions count', async () => {
     render(<SidebarNav />);
     // The count's code loads after the shell, so it arrives a moment later.
     expect(
@@ -115,14 +115,10 @@ describe('station navigation', () => {
     expect(screen.getByRole('link', { name: 'Integrations' })).not.toHaveAttribute('aria-current');
   });
 
-  it('marks the Commerce Overview current, not also Products below it', () => {
-    const shoppingOverview = () =>
-      screen
-        .getAllByRole('link', { name: 'Overview' })
-        .find((link) => link.getAttribute('href')?.startsWith('/products/overview?'));
+  it('marks Shopping current, not also Products below it', () => {
     pathname = '/products/overview';
     const { unmount } = render(<SidebarNav />);
-    expect(shoppingOverview()).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Shopping' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Products' })).not.toHaveAttribute('aria-current');
     unmount();
 
@@ -130,44 +126,40 @@ describe('station navigation', () => {
     pathname = '/products/22222222-2222-4222-8222-222222222222';
     render(<SidebarNav />);
     expect(screen.getByRole('link', { name: 'Products' })).toHaveAttribute('aria-current', 'page');
-    expect(shoppingOverview()).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: 'Shopping' })).not.toHaveAttribute('aria-current');
   });
 
-  it('derives the Dashboard | Agent mode from the route', () => {
-    pathname = '/site';
+  it('lists every destination once, Agent among them, with Actions not also Agent', () => {
+    pathname = '/agent/actions';
+    render(<SidebarNav />);
+    expect(screen.getAllByRole('link', { name: /^Actions/ })).toHaveLength(1);
+    expect(screen.getByRole('link', { name: /^Actions/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Agent' })).not.toHaveAttribute('aria-current');
+    // No mode hides the analysis destinations while an Agent page is open.
+    expect(screen.getByRole('link', { name: 'Website' })).toBeInTheDocument();
+  });
+
+  it('returns each destination to the last screen used under it, and the current one home', () => {
+    const chat = '/agent/chats/33333333-3333-4333-8333-333333333331';
+    pathname = chat;
     const { unmount } = render(<SidebarNav />);
-    const modes = screen.getByRole('navigation', { name: 'Mode' });
-    expect(within(modes).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    expect(within(modes).getByRole('link', { name: 'Agent' })).toHaveAttribute(
+    // On the chat itself, Agent is current and opens a new chat.
+    expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute(
       'href',
       '/agent?project=11111111-1111-4111-8111-111111111111',
     );
-    unmount();
-
-    pathname = '/agent/actions';
-    render(<SidebarNav />);
-    expect(
-      within(screen.getByRole('navigation', { name: 'Mode' })).getByRole('link', {
-        name: 'Agent',
-      }),
-    ).toHaveAttribute('aria-current', 'page');
-    // Agent mode replaces the Dashboard stations.
-    expect(screen.queryByRole('link', { name: 'Website' })).not.toBeInTheDocument();
-  });
-
-  it('returns each mode to the last route it used for the project', () => {
-    pathname = '/agent/skills';
-    const { unmount } = render(<SidebarNav />);
     unmount();
 
     pathname = '/demand';
     render(<SidebarNav />);
     expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute(
       'href',
-      '/agent/skills?project=11111111-1111-4111-8111-111111111111',
+      `${chat}?project=11111111-1111-4111-8111-111111111111`,
+    );
+    // A destination never used keeps its front door.
+    expect(screen.getByRole('link', { name: 'Runs' })).toHaveAttribute(
+      'href',
+      '/runs?project=11111111-1111-4111-8111-111111111111',
     );
   });
 

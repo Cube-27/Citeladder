@@ -2,6 +2,7 @@ import { ChevronDown, Plus, Sparkles, Upload } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
 import { Button } from '@/components/ui/button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { choiceFilter, manyFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
@@ -149,7 +150,7 @@ export function promptFilterControls({
 }
 
 /**
- * The library's own actions, for the `ListScreen` identity band: the three ways to
+ * The library's own actions, for the masthead: the three ways to
  * add prompts share one menu, so the band holds one secondary and one primary
  * action at every width instead of wrapping five buttons over the title.
  */
@@ -172,7 +173,14 @@ export function PromptActions({
       {canWrite ? (
         <AddPromptsMenu onImport={onImport} onAdd={onAdd} onGenerate={onGenerate} />
       ) : null}
-      <LaunchAuditButton variant="primary" disabled={!hasActivePrompts} />
+      {/* With nothing to measure the empty library's own action is the primary. */}
+      {hasActivePrompts ? (
+        <MastheadPrimary>
+          <LaunchAuditButton variant="primary" />
+        </MastheadPrimary>
+      ) : (
+        <LaunchAuditButton variant="secondary" disabled />
+      )}
     </>
   );
 }

@@ -6,9 +6,18 @@ import { TOKEN_CSS } from './design-system-source-checks.mjs';
 import { marketingCssFiles, readMarketingCss } from './marketing-css.mjs';
 
 /** Geometry roles belong to one ladder in globals.css; no surface re-scales them. */
-const SHARED_GEOMETRY_ROLES = ['2xs', 'xs', 'sm', 'md', 'lg', 'xl', 'full'].map(
-  (size) => `--radius-${size}`,
-);
+const SHARED_GEOMETRY_ROLES = [
+  'mark',
+  'control',
+  'sheet',
+  '2xs',
+  'xs',
+  'sm',
+  'md',
+  'lg',
+  'xl',
+  'full',
+].map((size) => `--radius-${size}`);
 
 /**
  * Roles that must take their color from a token rather than a literal.
@@ -46,10 +55,17 @@ export function productContractViolations(root) {
     '--page-section-gap',
     '--card-padding',
     '--modal-padding',
-    '--nav-item-height',
-    '--menu-item-height',
-    '--tab-height',
-    '--badge-height-sm',
+    '--control-coarse',
+    '--tag-height',
+    '--target-min',
+    '--masthead-height',
+    '--page-tabs-height',
+    '--filter-bar-height',
+    '--sidebar-width-compact',
+    '--page-top-gap',
+    '--flow-gap',
+    '--mark-width',
+    '--hatch-pitch',
     '--table-row-height',
     '--table-header-height',
     '--site-gutter',

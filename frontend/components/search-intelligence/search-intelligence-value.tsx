@@ -1,4 +1,4 @@
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { searchNumber } from './search-intelligence-format';
 
 /**
@@ -11,7 +11,7 @@ export function SearchValue({
   fetched = true,
   digits = 0,
 }: Readonly<{ value: unknown; fetched?: boolean; digits?: number }>) {
-  if (!fetched) return <span className="value-placeholder">Not fetched</span>;
+  if (!fetched) return <Absence state="not_run" label="Not fetched" />;
   const text = searchNumber(value, digits);
-  return text === null ? <MissingValue /> : <>{text}</>;
+  return text === null ? <Absence /> : <>{text}</>;
 }

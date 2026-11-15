@@ -1,7 +1,7 @@
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Inline } from '@/components/ui/layout';
 import { ClampText, TableCell } from '@/components/ui/table';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { textRole } from '@/components/ui/typography';
 import type { SortState, SourcesData } from '@/lib/visibility/sources';
 
@@ -17,7 +17,7 @@ export function SourceName({
       <span className="grid min-w-0">
         <ClampText lines={secondary ? 1 : 2}>{name}</ClampText>
         {secondary ? (
-          <ClampText lines={1} className={textRole('caption', 'text-ink-secondary')}>
+          <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
             {secondary}
           </ClampText>
         ) : null}
@@ -32,7 +32,7 @@ export function SourceName({
  * The formatters answer `null` for "nothing to show"; deciding what that MEANS
  * is the table's job, and every numeric column here means the same thing by it.
  * The reason is said once, on the column header, instead of once per row --
- * see `MissingValue` for why the mark is not simply blank.
+ * see `Absence` for why the mark is not simply blank.
  */
 export function NumericCell({
   value,
@@ -40,7 +40,7 @@ export function NumericCell({
 }: Readonly<{ value: string | null; desktopOnly?: boolean }>) {
   return (
     <TableCell numeric desktopOnly={desktopOnly}>
-      {value ?? <MissingValue />}
+      {value ?? <Absence />}
     </TableCell>
   );
 }
@@ -53,7 +53,7 @@ export function RetrievedCell({ value }: Readonly<{ value: string | null }>) {
   return (
     <TableCell numeric>
       {value ?? (
-        <MissingValue
+        <Absence
           state="unavailable"
           reason="No answer in this selection exposes the pages it read."
         />

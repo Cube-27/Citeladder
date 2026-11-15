@@ -4,11 +4,11 @@ import { useState, type ReactNode } from 'react';
 import { OverviewDetails } from './overview-details';
 import { OverviewMetricCards } from './overview-metrics';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { httpErrorStatus } from '@/lib/api/client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { CRAWL_STATES } from '@/lib/site-health/status';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Overview shares the screen's single polling dashboard while a crawl runs.
@@ -36,7 +36,7 @@ export function OverviewPanel({
   if (useAwaitingFirstSnapshot(terminal && overview.isPending))
     return (
       <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
-        <QueryState kind="loading" label="Loading Overview" />
+        <StateBlock kind="loading" label="Loading Overview" />
       </Stack>
     );
   let overviewBody: ReactNode = null;
@@ -49,10 +49,11 @@ export function OverviewPanel({
   // now, and never the expected absence.
   if (terminal && overview.isError && httpErrorStatus(overview.error) !== 404) {
     overviewBody = (
-      <QueryState
+      <StateBlock
         kind="error"
         error={overview.error}
         fallback="Could not load the Website overview."
+        title="Could not load the Website overview"
         onRetry={() => void overview.refetch()}
         pending={overview.isFetching}
       />
@@ -60,7 +61,7 @@ export function OverviewPanel({
   } else if (data) {
     overviewBody = <OverviewDetails data={data} />;
   } else if (terminal && overview.isLoading) {
-    overviewBody = <QueryState kind="loading" label="Loading Overview details" />;
+    overviewBody = <StateBlock kind="loading" label="Loading Overview details" />;
   }
 
   return (

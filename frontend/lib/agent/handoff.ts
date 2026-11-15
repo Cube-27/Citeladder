@@ -283,7 +283,7 @@ export function contextChips(context: AgentContextRefs): ContextChip[] {
 
 /** Where a chat started, in the words its context chips use. */
 export const CHAT_ORIGIN_LABELS = {
-  site_health: 'Site Health',
+  site_health: 'Website',
   page: 'Page',
   recommendation: 'Recommendation',
   demand: 'Demand signal',

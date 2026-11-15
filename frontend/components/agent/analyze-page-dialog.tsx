@@ -4,12 +4,9 @@ import { useNavigate } from 'react-router-dom';
 import type { Prompt, Topic } from '@citeladder/contracts';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { ChecklistField } from '@/components/ui/checklist-field';
 import { Dialog } from '@/components/ui/dialog';
-import { EmptyState } from '@/components/ui/empty-state';
 import { Field } from '@/components/ui/field';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchableSelect } from '@/components/ui/searchable-select';
 import { Select } from '@/components/ui/select';
 import { agentWriteFailure } from '@/lib/agent/errors';
@@ -24,6 +21,9 @@ import { readableUrl } from '@/lib/format';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useDebounced } from '@/lib/use-debounced';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * Analyze a page (CO6): the Actions header's button and its dialog. Pick one
@@ -109,9 +109,9 @@ function AnalyzePageDialog({ onClose }: Readonly<{ onClose: () => void }>) {
         </>
       }
     >
-      {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
+      {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}
       {analyze.isError ? (
-        <MutationNotice notice={agentWriteFailure(analyze.error, 'start the analysis')} />
+        <Notice kind="mutation" notice={agentWriteFailure(analyze.error, 'start the analysis')} />
       ) : null}
       <PageField scope={scope} page={page} onPick={setPage} />
       <TopicField
@@ -193,23 +193,33 @@ function PageField({
   const items = query.data?.items ?? [];
   const pages =
     page && !items.some((item) => item.site_url_id === page.site_url_id) ? [page, ...items] : items;
-  if (query.isPending) return <EmptyState variant="inline" title="Loading your content pages…" />;
+  if (query.isPending) return <Spinner label="Loading your content pages…" showLabel />;
   if (query.isError)
-    return <Callout tone="negative">Your content pages could not be loaded.</Callout>;
+    return <Notice tone="negative">Your content pages could not be loaded.</Notice>;
   if (query.data.crawl_id === null)
     return (
-      <EmptyState
-        variant="inline"
-        title="No crawl yet"
-        description="Analyze a page reads the content pages of your latest crawl. Run a crawl in Site Health first."
+      <StateBlock
+        kind="empty"
+        inline
+        message={
+          <>
+            <span className="type-emphasis">No crawl yet</span> Analyze a page reads the content
+            pages of your latest crawl. Run a crawl in Website first.
+          </>
+        }
       />
     );
   if (pages.length === 0 && search.trim() === '')
     return (
-      <EmptyState
-        variant="inline"
-        title="No content pages"
-        description="Your latest crawl found no articles, guides or other content pages."
+      <StateBlock
+        kind="empty"
+        inline
+        message={
+          <>
+            <span className="type-emphasis">No content pages</span> Your latest crawl found no
+            articles, guides or other content pages.
+          </>
+        }
       />
     );
   return (
@@ -253,14 +263,19 @@ function TopicField({
   value: string;
   onPick: (id: string) => void;
 }>) {
-  if (state === 'loading') return <EmptyState variant="inline" title="Loading your topics…" />;
-  if (state === 'error') return <Callout tone="negative">Your topics could not be loaded.</Callout>;
+  if (state === 'loading') return <Spinner label="Loading your topics…" showLabel />;
+  if (state === 'error') return <Notice tone="negative">Your topics could not be loaded.</Notice>;
   if (choices.length === 0)
     return (
-      <EmptyState
-        variant="inline"
-        title="No topics with prompts"
-        description="Add prompts to a topic on the Prompts page first."
+      <StateBlock
+        kind="empty"
+        inline
+        message={
+          <>
+            <span className="type-emphasis">No topics with prompts</span> Add prompts to a topic on
+            the Prompts page first.
+          </>
+        }
       />
     );
   return (

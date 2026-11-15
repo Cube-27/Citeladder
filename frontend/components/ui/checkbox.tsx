@@ -24,13 +24,16 @@ export type CheckboxProps = AccessibleCheckbox & {
 };
 
 /**
- * The 16px box: `surface` with the soft field edge (`line`, `shadow-edge`,
- * `line-strong` on hover); checked and
- * indeterminate are an `ink` fill with an `on-ink` check or dash. Shared with
- * the table's row checkbox.
+ * The 16px box (brand direction 3.1): `surface` with the control line,
+ * radius 2; checked and indeterminate are an `ink` fill with an `on-ink`
+ * check or dash. It is drawn centred in a 24×24 target (`CHECK_TARGET`), so
+ * the target is never under 24. Shared with the table's row checkbox.
  */
 const CHECK_BOX =
-  'focus-ring bg-surface border-line shadow-edge data-[state=unchecked]:hover:border-line-strong text-on-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=indeterminate]:bg-ink data-[state=indeterminate]:border-ink grid size-4 shrink-0 place-items-center rounded-xs border transition-[background-color,border-color] duration-[var(--motion-fast)] disabled:cursor-not-allowed';
+  'focus-ring bg-surface border-control-line text-on-ink data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=indeterminate]:bg-ink data-[state=indeterminate]:border-ink relative grid size-4 shrink-0 place-items-center rounded-mark border transition-[background-color,border-color] duration-[var(--motion-fast)] before:absolute before:-inset-1 before:content-[""] disabled:cursor-not-allowed';
+
+/** The 24×24 box the 16px control centres in, on the first 20px text line. */
+const CHECK_TARGET = 'inline-flex size-[var(--target-min)] shrink-0 items-center justify-center';
 
 function Box({
   checked,
@@ -75,10 +78,10 @@ function Box({
 }
 
 /**
- * Checkbox — a 16px box with a label (14/20 `ink`) and an optional
- * description below it in `ink-secondary`, which turns the label medium. The
- * whole row is the click target; focus is the 2px ring on the box. Disabled is
- * 45%, with the reason in the description.
+ * Checkbox — the 16px box in its 24px target with a label (`body`) and an
+ * optional description below it in `ink-2`. The whole row is the click
+ * target; focus is the 2px ring on the box. Disabled is 60%, with the reason
+ * in the description.
  */
 export function Checkbox({
   checked,
@@ -112,24 +115,22 @@ export function Checkbox({
   );
 
   if (label == null || typeof label === 'boolean') {
-    return <span className={cn('inline-flex h-5 items-center', className)}>{box}</span>;
+    return <span className={cn(CHECK_TARGET, className)}>{box}</span>;
   }
 
   return (
     <label
       className={cn(
-        'text-ink inline-flex cursor-pointer items-start gap-3',
-        disabled && 'cursor-not-allowed opacity-45',
+        'text-ink inline-flex cursor-pointer items-start gap-2',
+        disabled && 'cursor-not-allowed opacity-60',
         nested && 'ms-6',
         className,
       )}
     >
-      <span className="inline-flex h-5 shrink-0 items-center">{box}</span>
+      <span className={cn(CHECK_TARGET, '-my-0.5')}>{box}</span>
       <span className="flex min-w-0 flex-col">
-        <span className="text-body-sm">{label}</span>
-        {description != null ? (
-          <span className="text-body-sm text-ink-secondary">{description}</span>
-        ) : null}
+        <span className="type-body">{label}</span>
+        {description != null ? <span className="type-body text-ink-2">{description}</span> : null}
       </span>
     </label>
   );

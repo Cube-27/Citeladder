@@ -36,7 +36,7 @@ export function EvidenceLine({
   lead,
   facts,
   text: role = 'caption',
-}: Readonly<{ lead: string | null; facts: readonly string[]; text?: 'caption' | 'itemTitle' }>) {
+}: Readonly<{ lead: string | null; facts: readonly string[]; text?: 'caption' | 'body' }>) {
   if (!lead)
     return (
       <p className={textRole(role, '[overflow-wrap:anywhere]')}>

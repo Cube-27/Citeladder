@@ -1,5 +1,5 @@
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { ICONS } from '@/lib/icons';
 import { AuditScores } from './overview-metrics';
 
@@ -42,5 +42,5 @@ export function ScoreSection({
 function unavailable(state?: string) {
   if (state === 'limited_evidence') return <span className="type-caption">Limited evidence</span>;
   if (state === 'excluded') return <span className="type-caption">Excluded</span>;
-  return <UnavailableValue state="not_measured" />;
+  return <Absence state="not_measured" />;
 }

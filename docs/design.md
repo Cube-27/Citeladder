@@ -35,19 +35,30 @@ colors:
   accent: '#e8501a' # dark '#ff6a33'
   accent-ink: '#b53a0c' # dark '#ff9466'
   accent-soft: '#ffe6da' # dark '#3b1a0c'
+  accent-text: '#b53a0c' # dark '#ff9466'
+  accent-wash: '#ffe6da' # dark '#3b1a0c'
   brand-google-blue: '#4285f4' # dark '#4285f4'
   brand-google-green: '#34a853' # dark '#34a853'
   brand-google-red: '#ea4335' # dark '#ea4335'
   brand-google-yellow: '#fbbc05' # dark '#fbbc05'
   chart-grid: '#ececec' # dark '#262626'
+  control-line: '#858585' # dark '#747474'
   data-1: '#e8501a' # dark '#ff6a33'
   data-2: '#111111' # dark '#f4f4f4'
   data-3: '#7a7a7a' # dark '#8c8c8c'
   data-other: '#c2c2c2' # dark '#4a4a4a'
+  data-rival-1: '#111111' # dark '#f4f4f4'
+  data-rival-2: '#2f6f9f' # dark '#2f6f9f'
+  data-rival-3: '#4b3a8a' # dark '#4b3a8a'
+  data-rival-4: '#1f7d73' # dark '#1f7d73'
+  data-you: '#e8501a' # dark '#ff6a33'
   focus: '#111111' # dark '#f4f4f4'
+  ground: '#f4f4f4' # dark '#0a0a0a'
   info: '#1f5fbf' # dark '#7fb0ff'
   info-soft: '#e3edfc' # dark '#14243d'
+  info-wash: '#e3edfc' # dark '#14243d'
   ink: '#111111' # dark '#f4f4f4'
+  ink-2: '#525252' # dark '#a6a6a6'
   ink-hover: '#2a2a2a' # dark '#d6d6d6'
   ink-muted: '#525252' # dark '#a6a6a6'
   ink-secondary: '#525252' # dark '#a6a6a6'
@@ -56,11 +67,16 @@ colors:
   line-strong: '#d4d4d4' # dark '#3a3a3a'
   negative: '#c4122f' # dark '#ff7387'
   negative-soft: '#ffe2e6' # dark '#3d0e16'
+  negative-wash: '#ffe2e6' # dark '#3d0e16'
   on-accent: '#111111' # dark '#111111'
   on-ink: '#ffffff' # dark '#111111'
   paper: '#f4f4f4' # dark '#0a0a0a'
   positive: '#0b6e69' # dark '#4fd1c5'
   positive-soft: '#d6f2ef' # dark '#0e2e2b'
+  positive-wash: '#d6f2ef' # dark '#0e2e2b'
+  raised: '#ffffff' # dark '#151515'
+  rule: '#e5e5e5' # dark '#2a2a2a'
+  rule-ink: '#111111' # dark '#f4f4f4'
   scrim: 'rgb(17 17 17 / 32%)' # dark 'rgb(0 0 0 / 64%)'
   sidebar: '#f4f4f4' # dark '#0a0a0a'
   stage-lilac: '#dfd6f7' # dark '#231b3d'
@@ -74,6 +90,8 @@ colors:
   surface-sunken: '#ececec' # dark '#1e1e1e'
   warning: '#8a5000' # dark '#f5b84a'
   warning-soft: '#fff0d1' # dark '#3a2a0a'
+  warning-wash: '#fff0d1' # dark '#3a2a0a'
+  well: '#ececec' # dark '#1e1e1e'
 ```
 
 <!-- generated:tokens:end -->
@@ -120,19 +138,23 @@ colors:
 
 ```yaml
 typography:
-  type-badge: { fontSize: 12px, lineHeight: 16px }
   type-body: { fontSize: 14px, lineHeight: 20px }
   type-caption: { fontSize: 12px, lineHeight: 16px }
-  type-code: { fontSize: 12px, lineHeight: 20px }
   type-control: { fontSize: 14px, lineHeight: 20px }
+  type-data: { fontSize: 13px, lineHeight: 20px }
+  type-data-sm: { fontSize: 12px, lineHeight: 16px }
   type-delta: { fontSize: 12px, lineHeight: 16px }
+  type-display: { fontSize: 28px, lineHeight: 36px }
   type-eyebrow: { fontSize: 12px, lineHeight: 16px }
   type-figure: { fontSize: 24px, lineHeight: 32px }
-  type-figure-sm: { fontSize: 14px, lineHeight: 20px }
-  type-item-title: { fontSize: 14px, lineHeight: 20px }
+  type-figure-xl: { fontSize: 40px, lineHeight: 44px }
+  type-heading: { fontSize: 16px, lineHeight: 24px }
   type-label: { fontSize: 14px, lineHeight: 20px }
+  type-overline: { fontSize: 12px, lineHeight: 16px }
   type-page-title: { fontSize: 20px, lineHeight: 28px }
-  type-section-title: { fontSize: 16px, lineHeight: 24px }
+  type-prose: { fontSize: 16px, lineHeight: 26px }
+  type-subheading: { fontSize: 14px, lineHeight: 20px }
+  type-title: { fontSize: 22px, lineHeight: 28px }
   cl-body: { fontSize: 16px, lineHeight: 26px }
   cl-fcard-title: { fontSize: 22px, lineHeight: 28px }
   cl-lead: { fontSize: 18px, lineHeight: 30px }
@@ -175,15 +197,15 @@ spacing:
   container-thread: 1040px
   container-prose: 720px
   container-narrow: 560px
+  container-content: 1280px
+  container-form: 640px
+  container-flow: 480px
   control-sm: 28px
   control-md: 32px
   control-lg: 48px
+  control-coarse: 32px
   nav-height: 64px
   sidebar-width: 248px
-  nav-item-height: 32px
-  menu-item-height: 32px
-  badge-height-sm: 22px
-  tab-height: 32px
   table-row-height: 44px
   table-header-height: 32px
 ```
@@ -254,10 +276,13 @@ and empty states keep their footprint; a pending button keeps its label's box.
 rounded:
   2xs: 2px
   xs: 2px
+  mark: 2px
   sm: 4px
   md: 6px
+  control: 6px
   lg: 8px
   xl: 8px
+  sheet: 8px
   full: 9999px
 ```
 

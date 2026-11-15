@@ -7,20 +7,15 @@ import { MessageSquareQuote } from 'lucide-react';
 import type { ComponentProps } from 'react';
 
 import { AppGrid } from '@/components/ui/app-grid';
-import { Badge } from '@/components/ui/badge';
-import { BusyBar } from '@/components/ui/progress-bar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { StatusMark } from '@/components/ui/status-mark';
+import { BusyRung } from '@/components/ui/rung-meter';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { Skeleton } from '@/components/ui/skeleton';
-import { StatRow } from '@/components/ui/stat-row';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { TAG_FACE } from '@/components/ui/tag';
+import { ClampText, TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import {
   coverageLine,
@@ -32,6 +27,16 @@ import {
 import { usePerception } from '@/lib/visibility/use-perception';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
  * How answers portray the brand and its competitors. Every figure travels with
@@ -45,7 +50,8 @@ export function VisibilityPerception({
   const query = usePerception(filters, queries);
   if (query.error)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load perception. Check your connection and try again."
         onRetry={() => void query.refetch()}
@@ -57,7 +63,7 @@ export function VisibilityPerception({
   if (!query.data) return <PerceptionLoading />;
   return (
     <div className="relative">
-      <BusyBar active={query.isFetching} label="Updating perception" />
+      <BusyRung active={query.isFetching} label="Updating perception" />
       <PerceptionView data={query.data} />
     </div>
   );
@@ -104,7 +110,7 @@ function PerceptionState({
   // One state box at the shared footprint: the coverage it read is part of
   // the same sentence, not a caption that grows the box.
   return (
-    <QueryState
+    <StateBlock
       kind="empty"
       headingLevel={3}
       icon={MessageSquareQuote}
@@ -117,17 +123,17 @@ function PerceptionState({
 }
 
 function CoverageNote({ coverage }: Readonly<{ coverage: PerceptionCoverage }>) {
-  return <p className={textRole('caption', 'text-ink-muted')}>{coverageLine(coverage)}</p>;
+  return <p className={textRole('caption', 'text-ink-2')}>{coverageLine(coverage)}</p>;
 }
 
 function Headline({ data }: Readonly<{ data: PerceptionResponse }>) {
   const score = data.brand?.score;
   const recommended = data.recommended;
   return (
-    <Card>
-      <CardContent>
+    <Section>
+      <SectionContent>
         <Stack gap="item">
-          <StatRow
+          <FigureStrip
             label="Brand perception"
             segments={[
               {
@@ -166,8 +172,8 @@ function Headline({ data }: Readonly<{ data: PerceptionResponse }>) {
           />
           <CoverageNote coverage={data.coverage} />
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -176,7 +182,7 @@ function Headline({ data }: Readonly<{ data: PerceptionResponse }>) {
  * score: an unknown count is never printed as a zero.
  */
 function classifiedOf(count: number | undefined, classified: number | undefined) {
-  if (count === undefined || classified === undefined) return <MissingValue />;
+  if (count === undefined || classified === undefined) return <Absence />;
   return `${count} of ${classified} classified mentions`;
 }
 
@@ -193,7 +199,7 @@ function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['enti
           <TableCell>
             <Inline as="span">
               <ClampText>{entity.name}</ClampText>
-              {entity.is_brand ? <span className={textRole('label', TAG_FACE)}>You</span> : null}
+              {entity.is_brand ? <YouTag /> : null}
             </Inline>
           </TableCell>
           <TableCell numeric>
@@ -201,7 +207,7 @@ function EntityTable({ entities }: Readonly<{ entities: PerceptionResponse['enti
           </TableCell>
           <TableCell numeric>{entity.score.positive}</TableCell>
           <TableCell numeric>{entity.score.negative}</TableCell>
-          <TableCell numeric>{formatNet(entity.score.net_sentiment) ?? <MissingValue />}</TableCell>
+          <TableCell numeric>{formatNet(entity.score.net_sentiment) ?? <Absence />}</TableCell>
         </TableRow>
       ))}
     </DataTable>
@@ -265,16 +271,16 @@ function QuoteLink({ quote }: Readonly<{ quote: PerceptionQuote }>) {
 function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
   const { label: engineLabel } = useEngineCatalog();
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Criticism in answers</CardTitle>
-        <CardDescription>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Criticism in answers</SectionTitle>
+        <SectionDescription>
           Negative points about you, quoted exactly as the answer put them.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         {!quotes.length ? (
-          <QueryState
+          <StateBlock
             kind="empty"
             inline
             message="No negative points about you in these answers."
@@ -284,18 +290,18 @@ function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
             {quotes.map((quote) => (
               <Stack as="li" gap="tight" key={`${quote.execution_id}:${quote.text}`}>
                 <QuoteLink quote={quote} />
-                <Inline as="span" className={textRole('caption', 'text-ink-muted flex-wrap')}>
-                  <Badge variant="sentiment" value="negative">
+                <Inline as="span" className={textRole('caption', 'text-ink-2 flex-wrap')}>
+                  <StatusMark variant="sentiment" value="negative">
                     {themeLabel(quote.theme)}
-                  </Badge>
+                  </StatusMark>
                   {engineLabel(quote.logical_engine)} · {quote.prompt}
                 </Inline>
               </Stack>
             ))}
           </Stack>
         )}
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 

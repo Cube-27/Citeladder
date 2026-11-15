@@ -50,7 +50,7 @@ export function SourcesView({
   if (!parsed.success) {
     const missing = notYetMeasuredMessage(state.result?.evidence);
     return (
-      <p role={missing ? undefined : 'alert'} className={textRole('body')}>
+      <p role={missing ? undefined : 'alert'} className={textRole('body', 'text-ink-2')}>
         {missing ?? 'Source evidence is unavailable for the selected audit. Retry or reconnect.'}
       </p>
     );
@@ -92,7 +92,7 @@ export function SourcesView({
               <TableCell>
                 {selection.level === 'domain' && (
                   <Button
-                    variant="ghost"
+                    variant="quiet"
                     onClick={() =>
                       void controller.select({
                         ...selection,
@@ -105,7 +105,7 @@ export function SourcesView({
                     URLs
                   </Button>
                 )}
-                <Button variant="ghost" onClick={() => void controller.drill(row.key)}>
+                <Button variant="quiet" onClick={() => void controller.drill(row.key)}>
                   Answers
                 </Button>
               </TableCell>
@@ -114,7 +114,7 @@ export function SourcesView({
         </TableBody>
       </Table>
       {!data.items.length && (
-        <p className={textRole('body')}>No citations observed in this selection.</p>
+        <p className={textRole('body', 'text-ink-2')}>No citations observed in this selection.</p>
       )}
       {data.pagination.next_cursor && (
         <Button
@@ -131,14 +131,14 @@ export function SourcesView({
       </p>
       {state.answers.map((answer) => (
         <article key={answer.task_id} className="space-y-2">
-          <h3 className={textRole('itemTitle')}>{answer.prompt_text}</h3>
-          <p className={textRole('body')}>
+          <h3 className={textRole('subheading')}>{answer.prompt_text}</h3>
+          <p className={textRole('body', 'text-ink-2')}>
             {answer.answer_text ?? 'Fetch the referenced answer for its retained text.'}
           </p>
           <p className={textRole('caption')}>
             {answer.logical_engine} · {moment(answer.completed_at)}
           </p>
-          <Button variant="ghost" onClick={() => void controller.fetchAnswer(answer.record_uri)}>
+          <Button variant="quiet" onClick={() => void controller.fetchAnswer(answer.record_uri)}>
             Read retained answer
           </Button>
         </article>
@@ -160,7 +160,7 @@ export function SiteHealthView({ state, controller }: Props) {
       .extend({ reason: z.literal('no_site_snapshot') })
       .safeParse(state.result?.evidence);
     return (
-      <p role={missing.success ? undefined : 'alert'} className={textRole('body')}>
+      <p role={missing.success ? undefined : 'alert'} className={textRole('body', 'text-ink-2')}>
         {missing.success
           ? 'No persisted Site Health snapshot. Start a crawl in CiteLadder, then return.'
           : 'Site Health evidence is unavailable. Retry or reconnect.'}
@@ -171,7 +171,7 @@ export function SiteHealthView({ state, controller }: Props) {
   return (
     <div className="space-y-4">
       <EditorialSectionHeader title="Persisted Site Health" />
-      <p className={textRole('body')}>
+      <p className={textRole('body', 'text-ink-2')}>
         Web fundamentals: {site.scores.web_fundamentals ?? 'Unavailable'} · AEO readiness:{' '}
         {site.scores.aeo_readiness ?? 'Unavailable'} · measurement coverage:{' '}
         {rate(site.scores.aeo_measurement_coverage)}
@@ -232,29 +232,31 @@ export function SiteHealthView({ state, controller }: Props) {
         Read pages from this crawl
       </Button>
       {findingsError && (
-        <p role="alert" className={textRole('body')}>
+        <p role="alert" className={textRole('body', 'text-ink-2')}>
           Actions are unavailable. Retry or reconnect.
         </p>
       )}
       {pagesError && (
-        <p role="alert" className={textRole('body')}>
+        <p role="alert" className={textRole('body', 'text-ink-2')}>
           Page evidence is unavailable. Retry or reconnect.
         </p>
       )}
       {loadingPages && <output>Loading persisted pages…</output>}
       {loadingFindings && <output>Loading Actions…</output>}
       {findings?.state === 'unavailable' && (
-        <output className={textRole('body', 'block')}>
+        <output className={textRole('body', 'text-ink-2 block')}>
           Actions are unavailable. Retry or reconnect.
         </output>
       )}
       {findings?.state === 'available' && !findings.items.length && (
-        <output className={textRole('body', 'block')}>No open Actions for this project.</output>
+        <output className={textRole('body', 'text-ink-2 block')}>
+          No open Actions for this project.
+        </output>
       )}
       {(findings?.state === 'available' ? findings.items : []).map((action) => (
         <article key={action.id}>
-          <h3 className={textRole('itemTitle')}>{action.target_label}</h3>
-          {action.approach && <p className={textRole('body')}>{action.approach}</p>}
+          <h3 className={textRole('subheading')}>{action.target_label}</h3>
+          {action.approach && <p className={textRole('body', 'text-ink-2')}>{action.approach}</p>}
           <p className={textRole('caption')}>
             {action.status.replaceAll('_', ' ')}
             {action.target_url && ` · ${action.target_url}`}
@@ -263,7 +265,7 @@ export function SiteHealthView({ state, controller }: Props) {
       ))}
       {pages.map((page) => (
         <article key={page.site_url_id}>
-          <h3 className={textRole('itemTitle')}>{page.url}</h3>
+          <h3 className={textRole('subheading')}>{page.url}</h3>
           {page.title && page.title !== page.url && (
             <p className={textRole('caption')}>{page.title}</p>
           )}

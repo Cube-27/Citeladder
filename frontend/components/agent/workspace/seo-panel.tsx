@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Disclosure } from '@/components/ui/disclosure';
 import { FactList } from '@/components/ui/facts';
@@ -14,19 +14,19 @@ type PageCheck = AgentPageFetchDone['checks'][number];
 
 /** A value as it reads on the page, or that the page has none. */
 function FieldValue({ value }: Readonly<{ value: string }>) {
-  if (!value.trim()) return <span className={textRole('body')}>None</span>;
-  return <span className={textRole('itemTitle', '[overflow-wrap:anywhere]')}>{value}</span>;
+  if (!value.trim()) return <span className={textRole('body', 'text-ink-2')}>None</span>;
+  return <span className={textRole('body', '[overflow-wrap:anywhere]')}>{value}</span>;
 }
 
 function CheckRow({ check }: Readonly<{ check: PageCheck }>) {
   const severity = issueSeveritySchema.safeParse(check.severity);
   return (
     <Inline as="li" gap="compact" className={ledgerItemClasses('justify-between')}>
-      <span className={textRole('itemTitle')}>{check.label}</span>
+      <span className={textRole('body')}>{check.label}</span>
       {severity.success ? (
-        <Badge variant="status" value={severityBadgeValue(severity.data)}>
+        <StatusMark variant="status" value={severityBadgeValue(severity.data)}>
           {severityLabel(severity.data)}
-        </Badge>
+        </StatusMark>
       ) : null}
     </Inline>
   );
@@ -46,7 +46,7 @@ export function SeoPanel({
   return (
     <Stack gap="workspace">
       <Stack as="section" gap="compact" aria-labelledby="seo-fields">
-        <h3 id="seo-fields" className={textRole('itemTitle')}>
+        <h3 id="seo-fields" className={textRole('subheading')}>
           SEO fields
         </h3>
         {fields ? (
@@ -74,15 +74,15 @@ export function SeoPanel({
             )}
           </>
         ) : (
-          <p className={textRole('body')}>This revision has no SEO fields.</p>
+          <p className={textRole('body', 'text-ink-2')}>This revision has no SEO fields.</p>
         )}
       </Stack>
       <Stack as="section" gap="compact" aria-labelledby="seo-checks">
-        <h3 id="seo-checks" className={textRole('itemTitle')}>
+        <h3 id="seo-checks" className={textRole('subheading')}>
           Page checks
         </h3>
         <p className={textRole('caption')}>
-          Site Health’s checks on the page as fetched
+          Website’s checks on the page as fetched
           {fetch?.fetched_at ? (
             <>
               {' '}
@@ -98,7 +98,7 @@ export function SeoPanel({
             ))}
           </ul>
         ) : (
-          <p className={textRole('body')}>
+          <p className={textRole('body', 'text-ink-2')}>
             {fetch?.checks.length
               ? 'Every page check passed.'
               : 'No page checks ran on this fetch.'}

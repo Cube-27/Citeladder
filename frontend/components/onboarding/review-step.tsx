@@ -126,7 +126,7 @@ export function ReviewStep({
         editingId={editingId}
         onEditingChange={setEditing}
         footer={
-          <Button variant="ghost" onClick={onAddCompetitor} disabled={competitorLimitReached}>
+          <Button variant="quiet" onClick={onAddCompetitor} disabled={competitorLimitReached}>
             <Icon icon={Plus} />
             Add
           </Button>

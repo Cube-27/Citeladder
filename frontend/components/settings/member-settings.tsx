@@ -6,7 +6,6 @@ import { ConfirmDialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { SearchField } from '@/components/ui/search-field';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import {
@@ -22,6 +21,7 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { InviteDialog, PendingInvitations } from './member-invitations';
 import { MemberRoster } from './member-roster';
 import { ROLE_SUMMARY, roleLabel } from './member-roles';
+import { Notice } from '@/components/ui/notice';
 
 type Confirmation = Omit<ConfirmRequest, 'onConfirm'>;
 
@@ -73,7 +73,8 @@ function MemberFailure({
 }: Readonly<{ failure: { error: unknown; reset: () => void } | undefined; onRetry: () => void }>) {
   if (!failure) return null;
   return (
-    <MutationNotice
+    <Notice
+      kind="mutation"
       notice={mutationNoticeForError(failure.error, { action: 'change workspace members' })}
       // Clearing the failed mutation is what makes the notice go away;
       // re-reading the roster alone would leave it standing forever.

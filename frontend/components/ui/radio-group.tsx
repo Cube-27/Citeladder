@@ -11,19 +11,19 @@ export type RadioOption<T extends string> = {
 };
 
 /**
- * The 16px radio: a 1px `line` circle (`line-strong` on hover);
- * selected is an `ink` disc with
- * a `surface` centre (an inset 4px ring), so the mark never changes size.
+ * The 16px radio: a 1px `control-line` circle; selected is an `ink` disc with
+ * a `surface` centre (an inset 4px ring), so the mark never changes size. Its
+ * target is 24×24 (an invisible inset), never under the minimum.
  */
 const RADIO =
-  'focus-ring bg-surface border-line data-[state=unchecked]:hover:border-line-strong data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset data-[state=checked]:ring-4 disabled:cursor-not-allowed';
+  'focus-ring bg-surface border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface relative size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset before:absolute before:-inset-1 before:content-[""] data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
 /**
  * RadioGroup — one choice from two to five options. `list` (default) stacks
- * the options with `space-3` between; `cards` lays them out as selectable
- * cards (`surface`, a 1px `line` border, `radius-md`, 16px padding) for
- * choices that need a sentence each, the selected card's border turning `ink`
- * so it never resizes. Arrow keys move and select (Radix).
+ * the options 12px apart; `cards` lays them out as selectable slips
+ * (`surface`, a hairline, the control radius, 16px padding) for choices that
+ * need a sentence each, the selected slip on the `well` tint with its edge in
+ * `ink`, so it never resizes. Arrow keys move and select (Radix).
  */
 export function RadioGroup<T extends string>({
   value,
@@ -70,8 +70,8 @@ export function RadioGroup<T extends string>({
           <label
             key={option.value}
             className={cn(
-              'text-ink inline-flex cursor-pointer items-start gap-3',
-              option.disabled && 'cursor-not-allowed opacity-45',
+              'text-ink inline-flex cursor-pointer items-start gap-2',
+              option.disabled && 'cursor-not-allowed opacity-60',
             )}
           >
             {/* The 16px circle centres on the 20px first line. */}
@@ -92,9 +92,9 @@ export function RadioGroup<T extends string>({
 function radioText<T extends string>(option: RadioOption<T>) {
   return (
     <span className="flex min-w-0 flex-1 flex-col">
-      <span className="text-body-sm">{option.label}</span>
+      <span className="type-body">{option.label}</span>
       {option.description != null ? (
-        <span className="text-body-sm text-ink-secondary">{option.description}</span>
+        <span className="type-body text-ink-2">{option.description}</span>
       ) : null}
     </span>
   );
@@ -107,10 +107,10 @@ function RadioCard<T extends string>({
   return (
     <label
       className={cn(
-        'bg-surface text-ink flex cursor-pointer items-start gap-3 rounded-md border p-4 transition-[background-color,border-color]',
-        selected ? 'border-ink' : 'border-line',
+        'text-ink flex cursor-pointer items-start gap-2 rounded-control border p-4 transition-[background-color,border-color]',
+        selected ? 'bg-well border-ink' : 'bg-surface border-rule',
         !selected && !option.disabled && 'hover:overlay-hover',
-        option.disabled && 'cursor-not-allowed opacity-45',
+        option.disabled && 'cursor-not-allowed opacity-60',
       )}
     >
       <RadioGroupPrimitive.Item

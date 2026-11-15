@@ -2,19 +2,25 @@ import type { ReactNode } from 'react';
 import { Bot } from 'lucide-react';
 import type { z } from 'zod';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility-evidence';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { count } from '@/lib/visibility/sources';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
 
@@ -44,17 +50,17 @@ function SectionCard({
   children: ReactNode | null;
 }>) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        {caption ? <CardDescription>{caption}</CardDescription> : null}
-      </CardHeader>
-      <CardContent>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>{title}</SectionTitle>
+        {caption ? <SectionDescription>{caption}</SectionDescription> : null}
+      </SectionHeader>
+      <SectionContent>
         <SectionBody loading={loading} errored={errored} empty={empty}>
           {children}
         </SectionBody>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -79,7 +85,7 @@ function SectionBody({
   if (errored) return null;
   if (loading) return <Skeleton variant="block" />;
   if (children) return <>{children}</>;
-  return <QueryState kind="empty" inline message={empty} />;
+  return <StateBlock kind="empty" inline message={empty} />;
 }
 
 export function EnginesCard({
@@ -120,13 +126,13 @@ export function EnginesCard({
             <span className="grid min-w-0">
               <ClampText lines={1}>{catalog.label(row.logical_engine)}</ClampText>
               {catalog.modelLabel(row.logical_engine, row.transport_model) ? (
-                <ClampText lines={1} className={textRole('caption', 'text-ink-secondary')}>
+                <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
                   {catalog.modelLabel(row.logical_engine, row.transport_model)}
                 </ClampText>
               ) : null}
             </span>
           </TableCell>
-          <TableCell numeric>{count(row.retrievals) ?? <MissingValue />}</TableCell>
+          <TableCell numeric>{count(row.retrievals) ?? <Absence />}</TableCell>
         </TableRow>
       ))}
     </DataTable>
@@ -168,13 +174,13 @@ export function BrandsCard({
             <Inline as="li" key={`${brand.kind}:${brand.name}`}>
               <BrandMark name={brand.name} logoUrl={brand.logo_url} websiteUrl={brand.website} />
               <span className="min-w-0 flex-1 truncate">{brand.name}</span>
-              <Badge
+              <StatusMark
                 className="shrink-0"
                 variant="classification"
                 value={brand.kind === 'brand' ? 'owned' : 'competitor'}
               >
                 {count(brand.responses) ?? '0'}
-              </Badge>
+              </StatusMark>
             </Inline>
           ))}
         </Stack>

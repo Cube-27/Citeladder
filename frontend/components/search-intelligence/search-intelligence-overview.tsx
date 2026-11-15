@@ -3,8 +3,6 @@ import { Database } from 'lucide-react';
 import { Disclosure } from '@/components/ui/disclosure';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { KpiRow } from '@/components/ui/stat-row';
 import { textRole } from '@/components/ui/typography';
 import type {
   SearchIntelligenceDataset,
@@ -13,6 +11,8 @@ import type {
 import { SEARCH_DATASET_LABELS } from '@/lib/config/search-intelligence';
 import { SearchIntelligenceCompetitors } from './search-intelligence-competitors';
 import { SearchValue } from './search-intelligence-value';
+import { StateBlock } from '@/components/ui/state-block';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /** A metric is read from one dataset's summary; no dataset means it was never fetched. */
 export type SearchMetric = readonly [
@@ -23,7 +23,7 @@ export type SearchMetric = readonly [
 
 export function SearchMetrics({ metrics }: Readonly<{ metrics: readonly SearchMetric[] }>) {
   return (
-    <KpiRow
+    <FigureStrip
       segments={metrics.map(([label, dataset, field]) => ({
         key: label,
         label,
@@ -55,7 +55,7 @@ export function SearchIntelligenceOverview({
   );
   if (!footprint && !backlinks)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={Database}
         heading="See where you rank and where competitors outrank you"

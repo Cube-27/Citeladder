@@ -4,10 +4,11 @@ import { Sparkles } from 'lucide-react';
 import type { NewChatInput } from '@/components/agent/use-chat-turns';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { cardClasses } from '@/components/ui/card';
-import { EditorialSectionHeader } from '@/components/ui/workspace';
+import { Stack } from '@/components/ui/layout';
+import { textRole } from '@/components/ui/typography';
 import { actionsQueries } from '@/lib/api/actions';
 import { AGENT_BRIEFING_ACTIONS } from '@/lib/config/agent';
+import { slipClasses } from '@/components/ui/slip';
 
 const BRIEFING_REQUEST =
   'What should I work on this week? Brief me on the highest-value work, why each item matters with its evidence, and the first step for each.';
@@ -15,7 +16,8 @@ const BRIEFING_REQUEST =
 /**
  * "What should I work on?": one click starts a growth-plan chat that mentions
  * the project's top open Actions, so their diagnoses are in its context. It
- * runs only when the user asks; nothing is scheduled.
+ * runs only when the user asks; nothing is scheduled. A slip under the
+ * composer, whose Send is the page's one primary, so Brief me is secondary.
  */
 export function BriefingCard({
   workspaceId,
@@ -36,31 +38,33 @@ export function BriefingCard({
   const basis =
     top.length > 0
       ? `Reads your evidence and your top ${top.length} open ${actionLabel}.`
-      : 'Reads your evidence across Visibility, Site Health, Demand and Performance.';
+      : 'Reads your evidence across Visibility, Website, Demand and Performance.';
   return (
-    <section aria-labelledby="agent-briefing" className={cardClasses()}>
-      <EditorialSectionHeader
-        title="What should I work on?"
-        headingId="agent-briefing"
-        description={`${basis} Runs once when you ask; nothing is scheduled.`}
-        actions={
-          <Button
-            variant="primary"
-            disabled={disabled || pending || actions.isPending}
-            onClick={() =>
-              onStart({
-                message: BRIEFING_REQUEST,
-                skillId: 'growth_plan',
-                context: {},
-                mentions: top.map((action) => action.id),
-              })
-            }
-          >
-            <Icon icon={Sparkles} />
-            Brief me
-          </Button>
+    <Stack as="section" aria-labelledby="agent-briefing" className={slipClasses()}>
+      <Stack gap="tight">
+        <h3 id="agent-briefing" className={textRole('subheading')}>
+          What should I work on?
+        </h3>
+        <p className={textRole('body', 'text-ink-2')}>
+          {basis} Runs once when you ask; nothing is scheduled.
+        </p>
+      </Stack>
+      <Button
+        variant="secondary"
+        className="justify-self-start"
+        disabled={disabled || pending || actions.isPending}
+        onClick={() =>
+          onStart({
+            message: BRIEFING_REQUEST,
+            skillId: 'growth_plan',
+            context: {},
+            mentions: top.map((action) => action.id),
+          })
         }
-      />
-    </section>
+      >
+        <Icon icon={Sparkles} />
+        Brief me
+      </Button>
+    </Stack>
   );
 }

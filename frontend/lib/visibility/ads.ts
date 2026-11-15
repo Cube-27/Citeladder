@@ -10,7 +10,7 @@ import type {
   VisibilityAdsResponse,
 } from '@citeladder/contracts/visibility-ads';
 
-import type { ClassificationValue } from '@/components/ui/badge';
+import type { ClassificationValue } from '@/components/ui/status-mark';
 import { availabilityLabel } from '@/lib/format';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
 

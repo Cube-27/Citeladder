@@ -23,7 +23,11 @@ it('reveals overflow labels from the keyboard and keeps the disclosure focused',
 it('removes a tag from its named remove button', async () => {
   const user = userEvent.setup();
   const onRemove = vi.fn();
-  render(<Tag onRemove={onRemove}>ChatGPT</Tag>);
+  render(
+    <Tag kind="removable" onRemove={onRemove}>
+      ChatGPT
+    </Tag>,
+  );
   await user.click(screen.getByRole('button', { name: 'Remove ChatGPT' }));
   expect(onRemove).toHaveBeenCalledTimes(1);
 });

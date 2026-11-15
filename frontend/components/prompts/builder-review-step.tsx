@@ -1,7 +1,7 @@
 import { Sparkles } from 'lucide-react';
 import type { ReactNode } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
 import { FactList } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
@@ -39,11 +39,11 @@ function CoverageValue({
       <span className="tabular-nums">
         {row.actual} of {row.target}
       </span>
-      <Badge variant="status" value={STATE[row.state].badge}>
+      <StatusMark variant="status" value={STATE[row.state].badge}>
         {STATE[row.state].label}
-      </Badge>
+      </StatusMark>
       <Button
-        variant="ghost"
+        variant="quiet"
         onClick={onMore}
         disabled={disabled || !short}
         aria-label={`Generate more for ${row.label}`}
@@ -88,11 +88,11 @@ export function RunCoverage({
   return (
     <Stack gap="workspace">
       <Stack gap="compact">
-        <h3 className={textRole('itemTitle')}>Coverage by topic</h3>
+        <h3 className={textRole('subheading')}>Coverage by topic</h3>
         <FactList layout="spread" facts={facts(byTopic, (row) => moreForTopic(request, row))} />
       </Stack>
       <Stack gap="compact">
-        <h3 className={textRole('itemTitle')}>Coverage by segment</h3>
+        <h3 className={textRole('subheading')}>Coverage by segment</h3>
         <FactList layout="spread" facts={facts(bySegment, (row) => moreForSegment(request, row))} />
       </Stack>
     </Stack>

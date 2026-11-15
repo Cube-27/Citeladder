@@ -4,7 +4,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import type { SearchIntelligenceRow } from '@/lib/api/search-intelligence';
 import { SEARCH_COLUMNS_BY_KIND, type SearchColumn } from '@/lib/config/search-intelligence';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { SearchValue } from './search-intelligence-value';
 
 function cellText(value: unknown): string | null {
@@ -18,7 +18,7 @@ function cellText(value: unknown): string | null {
 function displayValue(row: SearchIntelligenceRow, column: SearchColumn) {
   const result = row[column.field];
   if (column.numeric) return <SearchValue value={result} digits={column.precision ?? 0} />;
-  return cellText(result) ?? <MissingValue />;
+  return cellText(result) ?? <Absence />;
 }
 
 function columnsFor(kind: string) {

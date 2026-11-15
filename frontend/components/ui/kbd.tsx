@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
 const CAP =
-  'bg-surface text-ink-secondary border-line border inline-flex min-h-5 min-w-5 items-center justify-center rounded-xs px-1 font-mono text-eyebrow font-normal tracking-normal whitespace-nowrap normal-case';
+  'bg-surface text-ink-2 border-rule border inline-flex min-h-5 min-w-5 items-center justify-center rounded-mark px-1 type-data-sm whitespace-nowrap normal-case';
 
 /**
  * Kbd — a keyboard key cap in the mono face: `surface` with the xs ring, 20px

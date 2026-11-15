@@ -4,9 +4,6 @@ import { ProjectEditPanel } from '@/components/projects/project-edit-panel';
 import { AppGrid } from '@/components/ui/app-grid';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChipInput, ChipList } from '@/components/ui/chip-input';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -20,16 +17,19 @@ import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import type { BrandProfileForm } from './use-brand-profile-form';
+import { Notice } from '@/components/ui/notice';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /** The profile save's outcome, above the tab it was saved from. */
 export function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }>) {
   if (form.error)
     return (
-      <MutationNotice
+      <Notice
+        kind="mutation"
         notice={mutationNoticeForError(form.error, { action: 'save the brand profile' })}
       />
     );
-  return form.notice ? <Callout tone="positive">{form.notice}</Callout> : null;
+  return form.notice ? <Notice tone="positive">{form.notice}</Notice> : null;
 }
 
 /**
@@ -40,13 +40,13 @@ export function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }
 export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>) {
   const { draft, identity, saving } = form;
   return (
-    <Card aria-labelledby="company-facts">
-      <CardHeader>
-        <CardTitle id="company-facts">Company facts</CardTitle>
-        <CardDescription>
+    <Section aria-labelledby="company-facts">
+      <SectionHeader>
+        <SectionTitle id="company-facts">Company facts</SectionTitle>
+        <SectionDescription>
           The canonical facts used across CiteLadder, including by the agent.
-        </CardDescription>
-      </CardHeader>
+        </SectionDescription>
+      </SectionHeader>
       <Stack gap="workspace">
         <Field
           label="What you sell"
@@ -103,7 +103,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
           )}
         </Field>
       </Stack>
-    </Card>
+    </Section>
   );
 }
 
@@ -122,7 +122,7 @@ function FacetChoice<T extends string>({
 }>) {
   return (
     <Stack gap="compact">
-      <span className={textRole('label')} aria-hidden>
+      <span className={textRole('body', 'text-ink-2')} aria-hidden>
         {label}
       </span>
       {/* A single choice is the shared segmented control: selection is its
@@ -149,11 +149,11 @@ function FacetChoice<T extends string>({
 export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
   const { draft, saving } = form;
   return (
-    <Card aria-labelledby="audience-offerings">
-      <CardHeader>
-        <CardTitle id="audience-offerings">Audience and offerings</CardTitle>
-        <CardDescription>Who you sell to, and what you sell.</CardDescription>
-      </CardHeader>
+    <Section aria-labelledby="audience-offerings">
+      <SectionHeader>
+        <SectionTitle id="audience-offerings">Audience and offerings</SectionTitle>
+        <SectionDescription>Who you sell to, and what you sell.</SectionDescription>
+      </SectionHeader>
       <Stack gap="workspace">
         <Field
           label="Target audience"
@@ -181,7 +181,7 @@ export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
           disabled={saving}
         />
       </Stack>
-    </Card>
+    </Section>
   );
 }
 
@@ -193,8 +193,8 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
   const mayEdit = useWorkspaceCapability('write');
   const [editing, setEditing] = useState(false);
   return (
-    <Card aria-labelledby="tracked-competitors">
-      <CardHeader
+    <Section aria-labelledby="tracked-competitors">
+      <SectionHeader
         actions={
           mayEdit ? (
             <Button variant="secondary" onClick={() => setEditing(true)}>
@@ -203,9 +203,9 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
           ) : null
         }
       >
-        <CardTitle id="tracked-competitors">Tracked competitors</CardTitle>
-        <CardDescription>The brands CiteLadder measures you against.</CardDescription>
-      </CardHeader>
+        <SectionTitle id="tracked-competitors">Tracked competitors</SectionTitle>
+        <SectionDescription>The brands CiteLadder measures you against.</SectionDescription>
+      </SectionHeader>
       <ChipList
         label="Tracked competitors"
         items={(project.competitors ?? []).map((competitor) => ({
@@ -221,6 +221,6 @@ export function TrackedCompetitorsCard({ project }: Readonly<{ project: Project 
         }))}
       />
       {editing ? <ProjectEditPanel project={project} open onOpenChange={setEditing} /> : null}
-    </Card>
+    </Section>
   );
 }

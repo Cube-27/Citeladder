@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { KpiRow, type StatSegment } from '@/components/ui/stat-row';
 import { followCatalogAnalysis } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
-import { pluralCount } from '@/lib/format';
+import { formatCount, pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { crawlPollInterval } from '@/lib/site-health/status';
 
@@ -19,6 +19,8 @@ import type { CommerceProjection } from '@citeladder/contracts/commerce-suite';
 
 import { AddProductsDialog } from './add-products-dialog';
 import type { CommerceQueries } from './commerce-queries';
+import { Notice } from '@/components/ui/notice';
+import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 /**
  * What the Site Health dashboard read says about the project's crawl. Only an
@@ -54,22 +56,27 @@ function analyzedLabel(crawl: SiteCrawl): string {
 }
 
 /** The two Site Health stats: pages analyzed, and the crawl's status. */
-function crawlSegments(read: CrawlRead): StatSegment[] {
+function crawlSegments(read: CrawlRead): FigureSegment[] {
   if (read.kind !== 'answered') {
     const loading = read.kind === 'pending';
     const missingLabel = loading ? undefined : "Couldn't load";
     return [
       { key: 'analyzed', label: 'Pages analyzed', value: null, loading, missingLabel },
-      { key: 'site-health', label: 'Site Health', value: null, loading, missingLabel },
+      { key: 'site-health', label: 'Website', value: null, loading, missingLabel },
     ];
   }
   const { crawl } = read;
   return [
-    { key: 'analyzed', label: 'Pages analyzed', value: crawl ? analyzedLabel(crawl) : null },
+    {
+      key: 'analyzed',
+      label: 'Pages analyzed',
+      value: crawl ? analyzedLabel(crawl) : null,
+      missingLabel: 'Not run',
+    },
     {
       key: 'site-health',
-      label: 'Site Health',
-      value: crawl ? <CrawlStatusBadge crawl={crawl} /> : <Badge>No crawl yet</Badge>,
+      label: 'Website',
+      value: crawl ? <CrawlStatusBadge crawl={crawl} /> : <Tag>No crawl yet</Tag>,
     },
   ];
 }
@@ -84,47 +91,55 @@ function projectionBadge(projection: CommerceProjection | undefined) {
   if (!projection) return null;
   if (projection.in_flight)
     return (
-      <Badge variant="status" value="info">
+      <StatusMark variant="status" value="info">
         {projection.in_flight} projecting
-      </Badge>
+      </StatusMark>
     );
   if (projection.failed)
     return (
-      <Badge variant="status" value="danger">
+      <StatusMark variant="status" value="danger">
         {pluralCount(projection.failed, 'page')} not projected
-      </Badge>
+      </StatusMark>
     );
-  if (projection.applicability === 'not_applicable') return <Badge>Not applicable</Badge>;
-  if (projection.applicability === 'unknown') return <Badge>Business model unconfirmed</Badge>;
+  if (projection.applicability === 'not_applicable') return <Tag>Not applicable</Tag>;
+  if (projection.applicability === 'unknown') return <Tag>Business model unconfirmed</Tag>;
   return null;
 }
 
 /** The catalog-wide metrics half of the toolbar: counts, crawl, queue. */
 function CatalogStats({
-  counts,
+  catalog,
   projection,
   crawl,
 }: Readonly<{
-  counts: CommerceQueries['catalog']['data'];
+  catalog: CommerceQueries['catalog'];
   projection: CommerceProjection | undefined;
   crawl: CrawlRead;
 }>) {
-  const items: StatSegment[] = [
+  // A catalog read still pending or failed says nothing about the counts (invariant 7).
+  const missing = {
+    loading: catalog.isPending,
+    missingLabel: catalog.isError ? "Couldn't load" : undefined,
+  };
+  const counts = catalog.data;
+  const items: FigureSegment[] = [
     {
       key: 'products',
       label: 'Products',
-      value: counts ? `${counts.product_total}` : null,
+      value: counts ? formatCount(counts.product_total) : null,
+      ...missing,
     },
     {
       key: 'categories',
       label: 'Categories',
-      value: counts ? `${counts.categories.length}` : null,
+      value: counts ? formatCount(counts.categories.length) : null,
+      ...missing,
     },
     ...crawlSegments(crawl),
   ];
   const badge = projectionBadge(projection);
   if (badge) items.push({ key: 'projection', label: 'Projection', value: badge });
-  return <KpiRow segments={items} />;
+  return <FigureStrip segments={items} />;
 }
 
 /**
@@ -174,7 +189,6 @@ export function useCatalogHeader({
   const startDiscovery = () =>
     discover.mutate({ project_id: projectId }, { onSuccess: () => void query.refetch() });
   const crawl = crawlRead(dashboard);
-  const counts = query.data;
   // Only an answered read with no crawl offers to start one; a failed read
   // offers to read again, never a crawl nobody asked for.
   const noCrawl = crawl.kind === 'answered' && crawl.crawl === null;
@@ -191,13 +205,15 @@ export function useCatalogHeader({
           </Button>
         ) : null}
         {canRun || !noCrawl ? (
-          <Button
-            variant="primary"
-            disabled={discover.isPending || dashboard.isPending}
-            onClick={refresh}
-          >
-            {noCrawl ? 'Run Site Health crawl' : 'Refresh from Site Health'}
-          </Button>
+          <MastheadPrimary>
+            <Button
+              variant="primary"
+              disabled={discover.isPending || dashboard.isPending}
+              onClick={refresh}
+            >
+              {noCrawl ? 'Run Website crawl' : 'Refresh from Website'}
+            </Button>
+          </MastheadPrimary>
         ) : null}
         {canRun ? (
           <AddProductsDialog
@@ -209,7 +225,7 @@ export function useCatalogHeader({
         ) : null}
       </>
     ),
-    stats: <CatalogStats counts={counts} projection={projection} crawl={crawl} />,
+    stats: <CatalogStats catalog={query} projection={projection} crawl={crawl} />,
     notices: (
       <CatalogNotices refreshError={discover.error ?? dashboard.error} onRefresh={refresh} />
     ),
@@ -229,9 +245,10 @@ function CatalogNotices({
   return (
     <Stack>
       {refreshError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(refreshError, {
-            action: 'refresh Site Health progress',
+            action: 'refresh Website progress',
           })}
           recovery={
             <Button type="button" variant="secondary" onClick={onRefresh}>

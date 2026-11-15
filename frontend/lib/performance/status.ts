@@ -4,7 +4,7 @@
  */
 import type { PerformanceRangeTaskStatus } from '@citeladder/contracts';
 import type { ProjectReadinessStage } from '@/lib/api/performance';
-import type { RunStatusValue } from '@/components/ui/badge';
+import type { RunStatusValue } from '@/components/ui/status-mark';
 import { RANGE_TASK_POLL_MS, READINESS_POLL_MS } from '@/lib/config/operational';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
 

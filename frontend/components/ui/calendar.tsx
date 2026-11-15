@@ -119,19 +119,19 @@ export function Calendar({
           type="button"
           aria-label="Previous month"
           onClick={() => setMonth((current) => addMonths(current, -1))}
-          className="enabled:hover:overlay-hover enabled:active:overlay-pressed inline-flex size-[var(--control-md)] items-center justify-center rounded-md"
+          className="enabled:hover:overlay-hover enabled:active:overlay-pressed rounded-control inline-flex size-[var(--control-md)] items-center justify-center"
         >
           <ChevronLeft className="size-4" aria-hidden />
         </Pressable>
         {/* Announced on change so a screen reader hears the month it moved to. */}
-        <span aria-live="polite" className="type-item-title">
+        <span aria-live="polite" className="type-body">
           {monthLabel(month)}
         </span>
         <Pressable
           type="button"
           aria-label="Next month"
           onClick={() => setMonth((current) => addMonths(current, 1))}
-          className="enabled:hover:overlay-hover enabled:active:overlay-pressed inline-flex size-[var(--control-md)] items-center justify-center rounded-md"
+          className="enabled:hover:overlay-hover enabled:active:overlay-pressed rounded-control inline-flex size-[var(--control-md)] items-center justify-center"
         >
           <ChevronRight className="size-4" aria-hidden />
         </Pressable>
@@ -165,14 +165,14 @@ export function Calendar({
                       disabled={disabled}
                       onClick={() => onSelect(iso)}
                       className={cn(
-                        'type-body text-ink inline-flex size-[var(--control-md)] items-center justify-center rounded-md tabular-nums transition-colors',
+                        'type-body text-ink-2 text-ink inline-flex size-[var(--control-md)] items-center justify-center rounded-control tabular-nums transition-colors',
                         isSelected
                           ? 'bg-ink text-on-ink enabled:hover:bg-ink-hover enabled:active:bg-ink-hover'
                           : 'enabled:hover:overlay-hover enabled:active:overlay-pressed',
                         // Days spilling in from the neighbouring months stay
                         // legible but recede, so the current month reads as
                         // the subject.
-                        outside && !isSelected && 'text-ink-muted',
+                        outside && !isSelected && 'text-ink-2',
                       )}
                     >
                       {day.getUTCDate()}

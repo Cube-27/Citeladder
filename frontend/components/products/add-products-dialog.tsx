@@ -1,16 +1,15 @@
 import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { CsvImportFileInput } from '@/components/ui/csv-import';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { TreeCheckOption, TreeList } from '@/components/ui/list-row';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
@@ -27,6 +26,7 @@ import {
 } from '@/lib/products/catalog-import';
 import type { CatalogImportRequest } from '@citeladder/contracts/commerce-requests';
 import type { CatalogImport, CatalogImportStage } from '@citeladder/contracts/commerce-suite';
+import { Notice } from '@/components/ui/notice';
 
 type Source = CatalogImportRequest['source'];
 const SOURCES = [
@@ -59,7 +59,7 @@ function FilePick({
   return (
     <Stack gap="compact">
       <CsvImportFileInput label={label} accept={accept} onSelect={(next) => onFile(next ?? null)} />
-      {file ? <p className={textRole('body')}>Chosen: {file.name}</p> : null}
+      {file ? <p className={textRole('body', 'text-ink-2')}>Chosen: {file.name}</p> : null}
       <div>
         <Button
           variant="secondary"
@@ -85,14 +85,14 @@ function CategoryReview({
   const leftOut = leftOutCategories(stage.categories, unticked);
   return (
     <Stack>
-      <p className={textRole('body')}>
+      <p className={textRole('body', 'text-ink-2')}>
         {pluralCount(stage.products, 'product')} ready from {stage.source_label}
         {stage.rejected ? `; ${pluralCount(stage.rejected, 'row')} cannot be imported` : ''}.
       </p>
       {stage.categories.length ? (
         <Stack gap="compact">
-          <h3 className={textRole('itemTitle')}>Categories</h3>
-          <p className={textRole('body')}>
+          <h3 className={textRole('subheading')}>Categories</h3>
+          <p className={textRole('body', 'text-ink-2')}>
             Clear a category to leave it and the categories under it out of your catalog.
           </p>
           <TreeList label="Proposed categories">
@@ -103,14 +103,14 @@ function CategoryReview({
                 depth={node.depth}
                 checked={!leftOut.has(node.key)}
                 disabled={leftOut.has(node.key) && !unticked.has(node.key)}
-                badge={node.existing ? <Badge>In catalog</Badge> : null}
+                badge={node.existing ? <Tag>In catalog</Tag> : null}
                 onCheckedChange={() => onToggle(node.key)}
               />
             ))}
           </TreeList>
         </Stack>
       ) : (
-        <p className={textRole('body')}>The file names no categories.</p>
+        <p className={textRole('body', 'text-ink-2')}>The file names no categories.</p>
       )}
     </Stack>
   );
@@ -124,9 +124,9 @@ function ImportResults({
   return (
     <Stack>
       {repeated ? (
-        <Callout tone="info">This content was imported before; these are its results.</Callout>
+        <Notice tone="info">This content was imported before; these are its results.</Notice>
       ) : null}
-      <p aria-label="Import results" className={textRole('body')}>
+      <p aria-label="Import results" className={textRole('body', 'text-ink-2')}>
         {result.created} added, {result.updated} updated, {result.unchanged} unchanged,{' '}
         {result.rejected} rejected
       </p>
@@ -141,13 +141,13 @@ function ImportResults({
             >
               <span className="text-ink-tertiary tabular-nums">Row {row.row_number}</span>
               {row.status === 'rejected' ? (
-                <Badge variant="status" value="danger">
+                <StatusMark variant="status" value="danger">
                   {STATUS_LABEL[row.status]}
-                </Badge>
+                </StatusMark>
               ) : (
-                <Badge>{STATUS_LABEL[row.status]}</Badge>
+                <Tag>{STATUS_LABEL[row.status]}</Tag>
               )}
-              {row.detail ? <span className="text-ink-secondary">{row.detail}</span> : null}
+              {row.detail ? <span className="text-ink-2">{row.detail}</span> : null}
             </Inline>
           ))}
         </ul>
@@ -219,15 +219,16 @@ function SourceStep({
               onFile={onFile}
               sample={CATALOG_SAMPLE}
             />
-            <p className={textRole('body')}>
+            <p className={textRole('body', 'text-ink-2')}>
               Title and brand are required. A category is a path such as Footwear &gt; Running.
             </p>
           </Stack>
         </TabPanel>
       </Tabs>
-      {readError ? <Callout tone="negative">{readError}</Callout> : null}
+      {readError ? <Notice tone="negative">{readError}</Notice> : null}
       {stageError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(stageError, { action: 'read the products' })}
         />
       ) : null}
@@ -343,7 +344,8 @@ export function AddProductsDialog({
       <Stack>
         <CategoryReview stage={staged} unticked={unticked} onToggle={toggle} />
         {apply.error ? (
-          <MutationNotice
+          <Notice
+            kind="mutation"
             notice={mutationNoticeForError(apply.error, { action: 'import the products' })}
           />
         ) : null}

@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { downloadCsv } from '@/lib/csv/download';
 import {
   searchIntelligenceApi,
@@ -9,6 +8,7 @@ import {
 } from '@/lib/api/search-intelligence';
 import { SEARCH_COLUMNS_BY_KIND, searchScopeLabel } from '@/lib/config/search-intelligence';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { Notice } from '@/components/ui/notice';
 
 export function SearchIntelligenceExport({
   dataset,
@@ -74,10 +74,10 @@ export function SearchIntelligenceExport({
   };
   return (
     <>
-      <Button variant="ghost" disabled={exporting} onClick={() => void exportSaved()}>
+      <Button variant="quiet" disabled={exporting} onClick={() => void exportSaved()}>
         {exporting ? 'Exporting…' : 'Export saved CSV'}
       </Button>
-      {exportError ? <Callout tone="negative">{exportError}</Callout> : null}
+      {exportError ? <Notice tone="negative">{exportError}</Notice> : null}
     </>
   );
 }

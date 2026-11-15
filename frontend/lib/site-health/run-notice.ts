@@ -10,7 +10,7 @@
  * is a problem with the audit, so only the second gets a notice. The backend
  * names the reason; this module never infers it.
  */
-import type { RunStatusValue } from '@/components/ui/badge';
+import type { RunStatusValue } from '@/components/ui/status-mark';
 import type { SiteCrawl } from '@citeladder/contracts';
 
 import { crawlDisplayStatus, endSentence } from './status';

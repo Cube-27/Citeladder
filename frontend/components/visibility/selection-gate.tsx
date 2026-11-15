@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { Callout } from '@/components/ui/callout';
-import { QueryState, screenState } from '@/components/ui/query-state';
 import type { Visibility } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock, screenState } from '@/components/ui/state-block';
 
 /**
  * A projection that names a measured run. A range counts only when it lists
@@ -40,9 +40,9 @@ export function SelectionGate({
   // ends; reporting it as an error told readers their results were lost.
   if (query.status === 'error' && isMetricsPending(query.error)) {
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         Results for this run are still being prepared. They appear here as soon as they are ready.
-      </Callout>
+      </Notice>
     );
   }
   const state = screenState(query, {
@@ -52,6 +52,6 @@ export function SelectionGate({
       description: 'Results appear here once a run in this selection finishes measuring.',
     },
   });
-  if (state.kind === 'state') return <QueryState {...state.state} />;
+  if (state.kind === 'state') return <StateBlock {...state.state} />;
   return children(state.data);
 }

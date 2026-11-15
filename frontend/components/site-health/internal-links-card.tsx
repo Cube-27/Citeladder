@@ -1,12 +1,12 @@
 import { AppGrid } from '@/components/ui/app-grid';
-import { Badge } from '@/components/ui/badge';
-import { QueryState } from '@/components/ui/query-state';
+import { Tag } from '@/components/ui/tag';
 import { FactList } from '@/components/ui/facts';
 import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
 import type { PageDetail } from '@citeladder/contracts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Internal links — the crawl's persisted link-graph projection for this page.
@@ -97,7 +97,7 @@ function NeighbourList({
     <Stack as="section" gap="item" className="min-w-0 content-start overflow-hidden">
       <Label>{heading}</Label>
       {neighbours.length === 0 ? (
-        <QueryState kind="empty" inline message={emptyMessage} />
+        <StateBlock kind="empty" inline message={emptyMessage} />
       ) : (
         <ul className={ledgerClasses()}>
           {neighbours.map((neighbour) => (
@@ -124,8 +124,8 @@ function NeighbourList({
                 </span>
               )}
               <Inline as="span" className="shrink-0">
-                {neighbour.main_content ? <Badge>Main</Badge> : null}
-                {neighbour.nofollow ? <Badge className="text-ink-muted">nofollow</Badge> : null}
+                {neighbour.main_content ? <Tag>Main</Tag> : null}
+                {neighbour.nofollow ? <Tag className="text-ink-2">nofollow</Tag> : null}
                 <span className="type-caption tabular-nums">×{neighbour.anchor_count}</span>
               </Inline>
             </Inline>

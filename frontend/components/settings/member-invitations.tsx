@@ -1,9 +1,7 @@
 import { useState, type FormEvent } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -11,13 +9,13 @@ import { Dialog } from '@/components/ui/dialog';
 import { TableTime } from '@/components/ui/display-time';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { readErrorProps, type RetryableRead } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
 import { Select } from '@/components/ui/select';
 import { ClampText, TableActionsCell, TableCell, TableRow } from '@/components/ui/table';
 import type { AssignableWorkspaceRole, WorkspaceInvitation } from '@/lib/api/workspaces';
 
 import { ROLE_OPTIONS, ROLE_SUMMARY, roleLabel } from './member-roles';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 
 const INVITE_FORM_ID = 'invite-member-form';
 
@@ -121,9 +119,9 @@ export function InviteDialog({
               />
             )}
           </Field>
-          {error ? <MutationNotice notice={error} /> : null}
+          {error ? <Notice kind="mutation" notice={error} /> : null}
           {issuedToken ? (
-            <Callout tone="info">
+            <Notice tone="info">
               <Stack gap="compact" className="justify-items-start">
                 <span>
                   {deliveryNotice(delivery)}
@@ -135,7 +133,7 @@ export function InviteDialog({
                 </code>
                 <CopyButton value={acceptanceLink(issuedToken)}>Copy link</CopyButton>
               </Stack>
-            </Callout>
+            </Notice>
           ) : null}
         </Stack>
       </form>
@@ -175,7 +173,7 @@ export function PendingInvitations({
             <ClampText lines={1}>{invitation.email}</ClampText>
           </TableCell>
           <TableCell className="whitespace-nowrap">
-            <Badge>{roleLabel(invitation.role)}</Badge>
+            <Tag>{roleLabel(invitation.role)}</Tag>
           </TableCell>
           <TableCell numeric className="type-caption">
             <TableTime value={invitation.expires_at} />
@@ -191,7 +189,7 @@ export function PendingInvitations({
             </Button>
             <Button
               type="button"
-              variant="ghost"
+              variant="quiet"
               disabled={busy}
               onClick={() => onRevoke(invitation)}
             >

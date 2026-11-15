@@ -69,7 +69,49 @@ function Panel({ projectId }: Readonly<{ projectId: string }>) {
   );
 }
 
+function EmptyPanel({ onClearFilters }: Readonly<{ onClearFilters?: () => void }>) {
+  const empty: VisibilityEvidenceResponse = { truncated: false, items: [] };
+  const query = useQuery({
+    queryKey: ['test-evidence-empty'],
+    queryFn: async () => empty,
+    initialData: empty,
+  });
+  const project = useMemo(() => makeProject({ id: A }), []);
+  return (
+    <ActiveProjectScopeProvider project={project}>
+      <FanoutEvidence
+        query={query}
+        runId={null}
+        scope={{}}
+        scopeReady
+        scopeNarrowed={false}
+        isFiltered={onClearFilters !== undefined}
+        onClearFilters={onClearFilters}
+        limit={100}
+      />
+    </ActiveProjectScopeProvider>
+  );
+}
+
 afterEach(() => vi.restoreAllMocks());
+
+describe('Fanout empty states', () => {
+  // No searches yet sends the reader to run something; filters that hide
+  // every search offer to clear them instead, since the data may exist.
+  it('tells an empty read from one the filters emptied', async () => {
+    vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
+    const onClear = vi.fn();
+    const view = renderWithProviders(<EmptyPanel />);
+    expect(screen.getByText('No searches recorded yet')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'View Runs' })).toHaveAttribute('href', '/runs');
+    expect(screen.queryByRole('button', { name: /Clear filters/ })).toBeNull();
+
+    view.rerender(<EmptyPanel onClearFilters={onClear} />);
+    expect(screen.queryByRole('link', { name: 'View Runs' })).toBeNull();
+    await userEvent.setup().click(screen.getByRole('button', { name: /Clear filters/ }));
+    expect(onClear).toHaveBeenCalledTimes(1);
+  });
+});
 
 describe('Fanout evidence scope', () => {
   it('drops another project’s totals during a switch and after the new summary fails', async () => {

@@ -195,6 +195,12 @@ function workSummary(action: Action): string {
     .join(' · ');
 }
 
+/** Below `desktop:` the Action type column is dropped, so the caption leads with it. */
+function narrowLead(action: Action): string {
+  const approach = approachLabel(action.approach);
+  return approach ? `${approach} · ` : '';
+}
+
 /**
  * A row's target cell: the target linked to its Action, its
  * status beside it only in the work queue and only when it is not Open (the
@@ -215,8 +221,8 @@ export function ActionTargetCell({
       {/* Title over its caption, one fact 4 apart, as `TableCellLines` binds them. */}
       <Stack gap="tight" className="min-w-0">
         <Inline>
-          <ClampText lines={1} tooltip={label}>
-            <TextLink href={`/agent/actions/${action.id}`} text="itemTitle">
+          <ClampText lines={2} tooltip={label}>
+            <TextLink href={`/agent/actions/${action.id}`} text="body">
               {label}
             </TextLink>
           </ClampText>
@@ -225,6 +231,7 @@ export function ActionTargetCell({
           ) : null}
         </Inline>
         <ClampText lines={1} className={textRole('caption')}>
+          <span className="desktop:hidden">{narrowLead(action)}</span>
           {workSummary(action)}
         </ClampText>
       </Stack>

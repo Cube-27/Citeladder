@@ -94,9 +94,12 @@ describe('Visibility trends', () => {
     expect(screen.getByRole('group', { name: /^Visibility over time/u })).toBeVisible();
     expect(screen.getByText('Over time')).toBeVisible();
     expect(screen.getByRole('region', { name: 'Brand and competitors' })).toBeVisible();
-    expect(
-      [...container.querySelectorAll('[data-line-labels] text')].map((label) => label.textContent),
-    ).toEqual(expect.arrayContaining(['You', 'Kmart Australia']));
+    // Each line is named at its end, or in the key when those names would collide.
+    const names = [...container.querySelectorAll('[data-end-labels] text, ul[aria-hidden] li')].map(
+      (label) => label.textContent ?? '',
+    );
+    expect(names.some((name) => name.startsWith('You'))).toBe(true);
+    expect(names.some((name) => name.startsWith('Kmart Australia'))).toBe(true);
     // The table and the chart share one row, the table the wider of the two.
     const row = screen
       .getByRole('region', { name: 'Brand and competitors' })

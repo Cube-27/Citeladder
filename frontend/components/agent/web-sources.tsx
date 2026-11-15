@@ -15,7 +15,7 @@ export function WebSources({
   if (sources.length === 0) return null;
   return (
     <Stack as="section" gap="tight" aria-label={label}>
-      <span className={textRole('label')}>{label}</span>
+      <span className={textRole('body', 'text-ink-2')}>{label}</span>
       <Stack as="ul" gap="tight">
         {sources.map((source) => (
           <li key={source.url} className="min-w-0">

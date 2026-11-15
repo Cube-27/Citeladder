@@ -1,8 +1,8 @@
 import type { SiteHealthOverview } from '@citeladder/contracts';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 import { textRole } from '@/components/ui/typography';
-import { panelClasses } from '@/components/ui/panel';
 import { Stack } from '@/components/ui/layout';
+import { wellClasses } from '@/components/ui/slip';
 
 type CohortComposition = SiteHealthOverview['change_summary']['cohort_composition'];
 
@@ -21,9 +21,9 @@ export function CohortCompositionContext({
   ].filter((clause) => clause !== null);
 
   return (
-    <Stack gap="item" className={panelClasses('type-caption')}>
+    <Stack gap="item" className={wellClasses('type-caption')}>
       <p className={textRole('emphasis', 'text-ink')}>Scored cohort composition changed.</p>
-      <p className="text-ink-secondary">{clauses.join(' ')}</p>
+      <p className="text-ink-2">{clauses.join(' ')}</p>
       <Stack as="dl" gap="item">
         <CompositionRow label="Previous counts" counts={composition.previous_page_count_by_kind} />
         <CompositionRow label="Current counts" counts={composition.current_page_count_by_kind} />
@@ -44,8 +44,8 @@ function CompositionRow({
   const rows = Object.entries(counts).sort(([left], [right]) => left.localeCompare(right));
   return (
     <Stack gap="tight">
-      <dt className="text-ink-muted">{label}</dt>
-      <dd className="text-ink-secondary tabular-nums">
+      <dt className="text-ink-2">{label}</dt>
+      <dd className="text-ink-2 tabular-nums">
         {rows.length === 0
           ? 'No scored page kinds'
           : rows.map(([kind, count]) => `${pageKindLabel(kind)} ${count}`).join(' · ')}

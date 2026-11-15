@@ -75,7 +75,7 @@ export function ScoreRing({
           r={radius}
           fill="none"
           strokeWidth={STROKE}
-          className="stroke-chart-grid"
+          className="stroke-rule"
         />
         {score > 0 ? (
           <circle

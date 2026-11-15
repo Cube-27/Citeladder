@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { AiReferralsContent } from '@/components/ai-traffic/referrals-content';
-import { choiceFilter } from '@/components/ui/all-filters';
+import { choiceFilter, rangeFilter } from '@/components/ui/all-filters';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Spinner } from '@/components/ui/spinner';
 import type { TabRowProps } from '@/components/ui/tabs';
@@ -86,12 +86,10 @@ function referralsControls({
     // The same control row as the other AI Traffic tabs: the window and the
     // chart interval in All filters, the live note at the row's end.
     filters: [
-      choiceFilter({
-        id: 'range',
-        label: 'Reporting range',
+      rangeFilter({
         value: range,
         defaultValue: DEFAULT_RANGE,
-        groups: [{ options: RANGE_OPTIONS }],
+        options: RANGE_OPTIONS,
         onChange: onChangeRange,
       }),
       choiceFilter({

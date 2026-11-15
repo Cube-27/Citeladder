@@ -1,13 +1,12 @@
-import { memo, useDeferredValue } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 
 import { Disclosure } from '@/components/ui/disclosure';
-import { Stack } from '@/components/ui/layout';
-import { cardClasses } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import type { LiveTurn } from '@/lib/agent/live-turns';
+import { AGENT_STREAM_THROTTLE_MS } from '@/lib/config/agent';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
-import { cn } from '@/lib/utils';
+import { DraftSheet } from '@/components/ui/draft-sheet';
 
 /**
  * The thinking summary, reply and document as they are written, inside the
@@ -16,7 +15,7 @@ import { cn } from '@/lib/utils';
  * replaces the whole running turn.
  */
 export function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefined }>) {
-  const live = useDeferredValue(latest);
+  const live = useThrottled(latest, AGENT_STREAM_THROTTLE_MS);
   // The turn's sources are known once it is saved; until then only the
   // project's own hosts open directly.
   const knownHosts = useAgentLinkHosts();
@@ -45,6 +44,26 @@ export function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefine
   );
 }
 
+/**
+ * The latest value at most once per `ms`, always ending on the newest: the
+ * stream's deltas are an outside clock, and this paces the repaint to it.
+ */
+function useThrottled<T>(value: T, ms: number): T {
+  const [shown, setShown] = useState(value);
+  const paintedAt = useRef(0);
+  useEffect(() => {
+    const timer = setTimeout(
+      () => {
+        paintedAt.current = Date.now();
+        setShown(value);
+      },
+      Math.max(0, paintedAt.current + ms - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return shown;
+}
+
 /** Memoized, so only the segment being written re-renders its Markdown. */
 const ReplySegment = memo(function ReplySegment({
   text,
@@ -53,22 +72,21 @@ const ReplySegment = memo(function ReplySegment({
   return <ContentMarkdown markdown={text} density="compact" knownHosts={knownHosts} />;
 });
 
-/** Memoized, so reply and thinking deltas do not re-render the document's Markdown. */
+/**
+ * The document as it is written, on the one document view's draft face.
+ * Memoized, so reply and thinking deltas do not re-render its Markdown.
+ */
 const LiveDocument = memo(function LiveDocument({
   title,
   body,
   knownHosts,
 }: Readonly<{ title: string | null; body: string; knownHosts: readonly string[] }>) {
   return (
-    <Stack
-      as="section"
-      gap="compact"
-      aria-label={title ? `Writing ${title}` : 'Writing the document'}
-      className={cn(cardClasses(), 'min-w-0')}
-    >
-      <span className={textRole('caption')}>Writing…</span>
-      {title ? <h2 className={textRole('sectionTitle')}>{title}</h2> : null}
-      <ContentMarkdown markdown={body} knownHosts={knownHosts} />
-    </Stack>
+    <section aria-label={title ? `Writing ${title}` : 'Writing the document'} className="min-w-0">
+      <DraftSheet as="div" state="draft" overline="Draft · writing">
+        {title ? <h2 className={textRole('heading')}>{title}</h2> : null}
+        <ContentMarkdown markdown={body} knownHosts={knownHosts} />
+      </DraftSheet>
+    </section>
   );
 });

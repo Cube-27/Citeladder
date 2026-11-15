@@ -32,7 +32,7 @@ import { cn } from '@/lib/utils';
  * page its boundary is the `table-frame` hairline ring (an outer shadow, so it
  * never changes the box); inside a Card the ring drops.
  */
-const tableHeadClasses = 'text-caption text-ink-secondary whitespace-nowrap';
+const tableHeadClasses = 'text-caption text-ink-2 whitespace-nowrap';
 const TABLE_MIN_WIDTH = {
   sm: 'min-w-[var(--table-min-width-sm)]',
   md: 'min-w-[var(--table-min-width-md)]',
@@ -73,7 +73,7 @@ export function Table({
     <div
       ref={wrapperRef}
       className={cn(
-        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto rounded-lg',
+        'table-frame bg-surface relative w-full max-w-full min-w-0 overflow-auto rounded-sheet',
         wrapperClassName,
       )}
     >
@@ -136,9 +136,11 @@ export function TableRow({
         // `accent-soft`, and hover never changes it.
         pressable && !highlight && 'not-aria-selected:hover:overlay-hover',
         'aria-selected:overlay-selected',
-        highlight && 'bg-accent-soft',
+        // The website tints its brand row; the app marks yours with the accent rung (globals.css).
+        highlight && '[[data-public-surface]_&]:bg-accent-wash',
         className,
       )}
+      data-you={highlight || undefined}
     >
       {children}
     </tr>
@@ -198,7 +200,7 @@ export function TableHead({
         'aria-[sort=ascending]:text-ink aria-[sort=descending]:text-ink',
         // The header is a square `surface-sunken` band, full-bleed like the
         // rows under it; its opaque fill keeps a sticky header over scrolled rows.
-        'bg-surface-sunken sticky top-0 z-10 h-[var(--table-header-height)] px-[var(--table-cell-padding-x)] text-left align-middle',
+        'bg-well sticky top-0 z-10 h-[var(--table-header-height)] px-[var(--table-cell-padding-x)] text-left align-middle',
         numeric && 'tabular-nums text-right',
         trailing && 'text-right',
         desktopOnly && desktopOnlyClasses,
@@ -293,9 +295,10 @@ export function ClampText({
 
 const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
   cn(
-    'text-body-sm text-ink border-line px-[var(--table-cell-padding-x)] pt-[var(--table-cell-padding-y)] pb-[var(--table-cell-padding-bottom)] text-left align-middle',
-    // Row rule, dropped on the last row.
-    'border-b [tr:last-child>&]:border-b-0',
+    'text-body-sm text-ink border-rule px-[var(--table-cell-padding-x)] pt-[var(--table-cell-padding-y)] pb-[var(--table-cell-padding-bottom)] text-left align-middle',
+    // Row rule, dropped on the last row (the frame draws the line under it);
+    // that row takes the rule's pixel back as padding, so every row is one height.
+    'border-b [tr:last-child>&]:border-b-0 [tr:last-child>&]:pb-[var(--table-cell-padding-y)]',
     // A value never wraps: "Not measured" split over two lines read as two values.
     // Tabular figures, so a right-aligned column lines up place by place.
     numeric && 'whitespace-nowrap text-right tabular-nums',
@@ -308,7 +311,7 @@ const cellClasses = ({ numeric, desktopOnly }: CellOptions) =>
  * never takes a band colour.
  */
 export const mutedWhenMissing = (value: number | null) =>
-  value === null ? 'text-ink-muted' : undefined;
+  value === null ? 'text-ink-2' : undefined;
 
 export function TableCell({
   children,
@@ -358,8 +361,8 @@ export function TableCellLines({
   const titleLines = useContext(TableTitleLinesContext);
   return (
     // The title and its caption are one fact: 4 apart.
-    <span className="grid min-w-0 gap-1">
-      <ClampText lines={titleLines} className={title ? textRole('itemTitle') : undefined}>
+    <span data-cell-lines="" className="grid min-w-0 gap-1">
+      <ClampText lines={titleLines} className={title ? textRole('body') : undefined}>
         {primary}
       </ClampText>
       {secondary ? (
@@ -369,6 +372,11 @@ export function TableCellLines({
       ) : null}
     </span>
   );
+}
+
+/** The word on your own row, the rare accent-coloured word (brand direction 2.5). */
+export function YouTag() {
+  return <span className="type-label text-accent-text shrink-0">You</span>;
 }
 
 /** A row's trailing buttons, end-aligned at the button gap (`rowActions` column). */
@@ -417,7 +425,7 @@ export function TableRowHeader({
   className,
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
-    <th scope="row" className={cn(cellClasses({}), 'type-item-title', className)}>
+    <th scope="row" className={cn(cellClasses({}), 'type-body', className)}>
       {isPlainText(children) ? <ClampText>{children}</ClampText> : children}
     </th>
   );

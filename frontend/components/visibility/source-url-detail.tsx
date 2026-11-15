@@ -1,11 +1,8 @@
 import { AppGrid } from '@/components/ui/app-grid';
 import { BrandMark } from '@/components/ui/brand-mark';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
-import { BusyBar } from '@/components/ui/progress-bar';
+import { BusyRung } from '@/components/ui/rung-meter';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ReadError } from '@/components/ui/read-error';
-import { StatRow } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
 import { SourceBreadcrumb } from '@/components/visibility/source-breadcrumb';
 import { SourcePrompts } from '@/components/visibility/source-prompts';
@@ -19,6 +16,9 @@ import {
   useSourceUrl,
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
+import { Notice } from '@/components/ui/notice';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
  * One cited URL: whether there is something to do about it, what is on it,
@@ -72,12 +72,13 @@ export function SourceUrlDetail({
         current={title}
       />
 
-      <Card className="relative" aria-busy={query.isFetching}>
-        <BusyBar active={query.isFetching} label="Updating source" />
+      <Section className="relative" aria-busy={query.isFetching}>
+        <BusyRung active={query.isFetching} label="Updating source" />
         <PageIdentity title={title} url={url} />
-        <CardContent>
+        <SectionContent>
           {query.isError ? (
-            <ReadError
+            <Notice
+              kind="read"
               error={query.error}
               fallback="Could not load this source."
               onRetry={() => void query.refetch()}
@@ -86,8 +87,8 @@ export function SourceUrlDetail({
           ) : null}
           {pending ? <Skeleton variant="block" /> : null}
           {data ? <Overview data={data} /> : null}
-        </CardContent>
-      </Card>
+        </SectionContent>
+      </Section>
 
       <SourceUrlPageCard url={url} page={data?.page} loading={pending} />
 
@@ -115,7 +116,7 @@ export function SourceUrlDetail({
 function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) {
   const host = hostOf(url);
   return (
-    <CardHeader>
+    <SectionHeader>
       <Inline gap="compact" className="items-start">
         <BrandMark
           name={host ?? url}
@@ -123,14 +124,14 @@ function PageIdentity({ title, url }: Readonly<{ title: string; url: string }>) 
           placement="header"
         />
         <Stack gap="tight" className="min-w-0">
-          <CardTitle className="truncate">{title}</CardTitle>
+          <SectionTitle className="truncate">{title}</SectionTitle>
           {/* An unsafe cited URL renders as plain text rather than a link. */}
           <TextLink variant="external" text="caption" href={url} className="min-w-0">
             <span className="truncate">{url}</span>
           </TextLink>
         </Stack>
       </Inline>
-    </CardHeader>
+    </SectionHeader>
   );
 }
 
@@ -138,7 +139,7 @@ function Overview({
   data,
 }: Readonly<{ data: NonNullable<ReturnType<typeof useSourceUrl>['data']> }>) {
   return (
-    <StatRow
+    <FigureStrip
       segments={[
         { key: 'citation-rate', label: 'Citation rate', value: ratio(data.citation_rate) },
         { key: 'retrievals', label: 'Retrievals', value: count(data.retrievals) },

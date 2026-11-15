@@ -6,12 +6,12 @@ import type { VisibilityMarkets } from '@citeladder/contracts/visibility';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Delta } from '@/components/ui/delta';
-import { readErrorProps } from '@/components/ui/read-error';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { MissingValue, UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { formatRate, measured } from '@/lib/visibility/dashboard';
 import { formatNet } from '@/lib/visibility/perception';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
+import { readErrorProps } from '@/components/ui/notice';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'market', label: 'Market' },
@@ -63,7 +63,7 @@ export function VisibilityByMarket({
         <TableRow key={row.market.id ?? 'default'}>
           <TableCell>
             <Button
-              variant="ghost"
+              variant="quiet"
               aria-current={row.market.id === market ? 'true' : undefined}
               onClick={() => onSelectMarket(row.market.id)}
             >
@@ -72,9 +72,7 @@ export function VisibilityByMarket({
           </TableCell>
           {row.state === 'measured' ? (
             <>
-              <TableCell numeric>
-                {measured(formatRate(row.mention_rate)) ?? <MissingValue />}
-              </TableCell>
+              <TableCell numeric>{measured(formatRate(row.mention_rate)) ?? <Absence />}</TableCell>
               <TableCell numeric>
                 <Delta
                   value={row.mention_rate_delta}
@@ -83,7 +81,7 @@ export function VisibilityByMarket({
                 />
               </TableCell>
               <TableCell numeric>
-                {measured(formatRate(row.share_of_voice)) ?? <MissingValue />}
+                {measured(formatRate(row.share_of_voice)) ?? <Absence />}
               </TableCell>
               <TableCell numeric>
                 <Delta
@@ -93,12 +91,12 @@ export function VisibilityByMarket({
                 />
               </TableCell>
               <TableCell numeric>
-                {formatNet(row.net_sentiment) ?? <MissingValue reason="No classified mentions" />}
+                {formatNet(row.net_sentiment) ?? <Absence reason="No classified mentions" />}
               </TableCell>
             </>
           ) : (
             <TableCell numeric colSpan={5}>
-              <UnavailableValue state={row.state === 'no_run' ? 'not_run' : 'pending'} />
+              <Absence state={row.state === 'no_run' ? 'not_run' : 'pending'} />
             </TableCell>
           )}
         </TableRow>

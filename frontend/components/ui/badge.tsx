@@ -76,11 +76,11 @@ const PRIORITY_ICON = {
   low: SignalLow,
 } as const satisfies Record<keyof typeof priorityTone, LucideIcon>;
 
-export type StatusValue = keyof typeof statusTone;
-export type PriorityValue = keyof typeof priorityTone;
-export type SentimentValue = keyof typeof sentimentTone;
-export type ClassificationValue = keyof typeof classificationTone;
-export type RunStatusValue = keyof typeof runStatusTone;
+type StatusValue = keyof typeof statusTone;
+type PriorityValue = keyof typeof priorityTone;
+type SentimentValue = keyof typeof sentimentTone;
+type ClassificationValue = keyof typeof classificationTone;
+type RunStatusValue = keyof typeof runStatusTone;
 
 /**
  * The badge face: 22px, 8px padding, `radius-xs`, 12/16 medium. Centred on

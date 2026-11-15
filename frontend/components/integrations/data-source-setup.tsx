@@ -13,12 +13,8 @@ import {
   type GrantFamily,
 } from '@/components/settings/grant-model';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { InlineFigure, textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import {
@@ -32,6 +28,9 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 
 import { PropertyChoice } from './property-choice';
 import { oauthErrorMessage, useDataSources, type SourceStep } from './data-sources';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * The OAuth callback's result on this screen, read once and then removed from
@@ -115,9 +114,9 @@ function RowFrame({
         className="desktop:flex-row desktop:items-center flex-col items-stretch"
       >
         <Inline gap="compact" className="flex-1 items-start">
-          <Icon icon={glyph} className="text-ink-secondary" />
+          <Icon icon={glyph} className="text-ink-2" />
           <div className="min-w-0">
-            <div className={textRole('itemTitle', 'truncate')}>{title}</div>
+            <div className={textRole('body', 'truncate')}>{title}</div>
             <div className="type-caption">{status}</div>
           </div>
         </Inline>
@@ -283,24 +282,28 @@ export function DataSourceSetup({
 
   return (
     // At the prose width, so a row's Connect button sits close to its text.
-    <Card data-testid="data-source-setup" className="mx-auto w-full max-w-[var(--container-prose)]">
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
+    <Section
+      data-testid="data-source-setup"
+      className="mx-auto w-full max-w-[var(--container-prose)]"
+    >
+      <SectionHeader>
+        <SectionTitle>{title}</SectionTitle>
+      </SectionHeader>
       <Stack gap="compact">
-        {oauth.error ? <Callout tone="negative">{oauthErrorMessage(oauth.error)}</Callout> : null}
+        {oauth.error ? <Notice tone="negative">{oauthErrorMessage(oauth.error)}</Notice> : null}
         {oauth.connected ? (
-          <Callout tone="positive">{FAMILY_META[oauth.connected].title} connected.</Callout>
+          <Notice tone="positive">{FAMILY_META[oauth.connected].title} connected.</Notice>
         ) : null}
         {sources.error ? (
-          <ReadError
+          <Notice
+            kind="read"
             error={sources.error}
             fallback="Could not load your data sources. Check your connection and try again."
             onRetry={sources.retry}
           />
         ) : null}
         {sources.loading ? (
-          <QueryState kind="loading" />
+          <StateBlock kind="loading" />
         ) : (
           <ul className={ledgerClasses()}>
             {setupRows(providers, sources.steps).map((row) =>
@@ -328,6 +331,6 @@ export function DataSourceSetup({
           </ul>
         )}
       </Stack>
-    </Card>
+    </Section>
   );
 }

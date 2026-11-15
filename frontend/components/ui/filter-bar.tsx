@@ -200,7 +200,7 @@ export function FilterTrigger({
       ) : (
         <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
       )}
-      <ChevronDown className="text-ink-muted ms-auto size-4 shrink-0" aria-hidden />
+      <ChevronDown className="text-ink-2 ms-auto size-4 shrink-0" aria-hidden />
     </button>
   );
 }
@@ -213,7 +213,7 @@ function FilterTriggerText({
   if (value === undefined || value === null) return <span className="truncate">{label}</span>;
   return (
     <span className="min-w-0 truncate">
-      <span className={hideLabel ? 'sr-only' : 'text-ink-muted'}>{label}:</span>{' '}
+      <span className={hideLabel ? 'sr-only' : 'text-ink-2'}>{label}:</span>{' '}
       <span className="text-ink">{value}</span>
     </span>
   );

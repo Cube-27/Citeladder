@@ -35,16 +35,16 @@ export function SourceBreadcrumb({
                 onClick={crumb.onClick}
                 className={textRole(
                   'caption',
-                  'text-ink-secondary hover:text-accent-ink w-auto transition-colors',
+                  'text-ink-2 hover:underline w-auto transition-colors',
                 )}
               >
                 {crumb.label}
               </Pressable>
-              <Icon icon={ChevronRight} className="text-ink-muted" />
+              <Icon icon={ChevronRight} className="text-ink-2" />
             </Inline>
           ))}
           <li className="min-w-0">
-            <span aria-current="page" className={textRole('sectionTitle', 'block truncate')}>
+            <span aria-current="page" className={textRole('heading', 'block truncate')}>
               {current}
             </span>
           </li>

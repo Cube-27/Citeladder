@@ -1,62 +1,98 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { createContext, useContext, useRef } from 'react';
+import {
+  createContext,
+  useContext,
+  useRef,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+  type RefObject,
+} from 'react';
 import * as TabsPrimitive from '@radix-ui/react-tabs';
 
+import { ScrollEdgeFades, useScrollEdges } from '@/components/ui/scroll-edges';
 import { cn } from '@/lib/utils';
 
 /**
- * The segmented track every in-page switch shares (Tabs, SegmentedControl,
- * the sidebar's mode switch): the pressed tint of whatever fill it sits on
- * (`scroll-shade-x` paints it, since sunken would not show on the page
- * ground), `radius-md`, 32px with a 2px inset and 2px between segments. It
- * keeps its width when the selection changes. Its scrollbar is hidden, so when
- * the segments overflow it a soft shade marks each edge with more of them;
- * nothing shows while they fit.
+ * Tabs and Segmented (brand direction 3.1): text on a hairline. The strip is
+ * one row with a 1px `rule` under it that scrolls sideways inside itself
+ * (its scrollbar hidden) when its items overflow; each item is `body` in
+ * `ink-2`, and the current one is `ink` at `label` weight with the 2px
+ * accent underline ("you are here") on the hairline. One face for page tabs,
+ * in-section tabs and the Segmented view switch.
  */
-export const TAB_TRACK =
-  'scroll-shade-x inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+const TAB_STRIP =
+  'relative inline-flex max-w-full shrink-0 items-stretch gap-4 overflow-x-auto border-b border-rule [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
 /**
- * One segment: full track height, 12px padding, `radius-sm`, 14/20 regular
- * `ink-secondary`; the selected one lifts onto `surface` with a 1px `line`
- * border (an edge is a border, never a shadow ring) in `ink` at weight
- * 500 (owner, 2026-11-10; buttons stay 500 throughout). Every segment keeps a
- * 1px border, transparent until selected, so selecting one moves nothing. A
- * count follows the label in brackets (`ControlCount`).
+ * The strip's frame: a fade over an edge that hides more items, so a strip
+ * cut at a narrow width says more exists without its hidden scrollbar.
  */
-export function tabClasses(selected: boolean, className?: string) {
+function StripFrame({
+  fill = false,
+  children,
+}: Readonly<{
+  fill?: boolean;
+  children: (ref: RefObject<HTMLDivElement | null>) => ReactNode;
+}>) {
+  const ref = useRef<HTMLDivElement>(null);
+  const edges = useScrollEdges(ref);
+  return (
+    <div
+      className={cn(
+        'relative inline-flex max-w-full min-w-0 shrink-0 [--scroll-edge-ground:var(--color-ground)]',
+        fill && 'flex w-full',
+      )}
+    >
+      {children(ref)}
+      <ScrollEdgeFades edges={edges} />
+    </div>
+  );
+}
+
+/**
+ * One item: the label, and the current item's accent rung on the hairline.
+ * The item stops 1px short so the strip, hairline included, is one control
+ * high (brand direction 2.2).
+ */
+function tabFace(selected: boolean, className?: string) {
   return cn(
-    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
+    'focus-ring-inset type-body relative inline-flex min-h-[calc(var(--control-md)-1px)] shrink-0 items-center justify-center gap-1 whitespace-nowrap transition-[color] duration-[var(--motion-fast)] disabled:cursor-not-allowed disabled:opacity-60',
+    'after:absolute after:inset-x-0 after:-bottom-px after:h-[var(--mark-width)] after:content-[""]',
     selected
-      ? 'bg-surface border-line text-ink font-medium'
-      : 'text-ink-secondary not-disabled:hover:text-ink border-transparent font-normal',
+      ? 'text-ink after:bg-accent font-medium'
+      : 'text-ink-2 not-disabled:hover:text-ink after:bg-transparent',
     className,
   );
 }
 
 /**
- * The sidebar's mode switch: the track stretched to two equal segments, and
- * in the rail (below the `shell:` breakpoint) the same track stacked as two
- * icon segments one control wide.
+ * The website's segmented track and segment, kept for its product screens
+ * (components/marketing/screens) and the shell's mode switch until it is
+ * retired. The app's tabs and switches use `tabFace` above.
  */
-export const MODE_TRACK =
-  'overlay-pressed shell:min-h-[var(--control-md)] shell:w-full shell:flex-row shell:items-center flex w-[var(--control-md)] flex-col gap-0.5 rounded-md p-0.5';
+export const TAB_TRACK =
+  'scroll-shade-x inline-flex min-h-[var(--control-md)] max-w-full shrink-0 items-center gap-0.5 overflow-x-auto rounded-md p-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
 
-export function modeSegmentClasses(selected: boolean) {
-  return tabClasses(
-    selected,
-    'shell:h-auto shell:flex-1 shell:basis-0 shell:px-3 h-[calc(var(--control-md)-6px)] w-full px-0',
+/** A segment of the website's track (see `TAB_TRACK`). */
+export function tabClasses(selected: boolean, className?: string) {
+  return cn(
+    'focus-ring inline-flex shrink-0 items-center self-stretch justify-center gap-1.5 rounded-sm border px-3 text-label whitespace-nowrap transition-[background-color,color] duration-[var(--motion-fast)] focus-visible:outline-offset-1 disabled:cursor-not-allowed disabled:opacity-45',
+    selected
+      ? 'bg-surface border-rule text-ink font-medium'
+      : 'text-ink-2 not-disabled:hover:text-ink border-transparent font-normal',
+    className,
   );
 }
 
 /**
- * The count a tab, segment or filter chip carries after its label: the sans face at
- * the control's own size, `ink-muted`, in brackets ("All signals (107)"),
- * never mono. Its text leads with a space, so an accessible
- * name reads "All signals (107)".
+ * The count a tab, segment or filter chip carries after its label, in
+ * brackets ("All signals (107)"): a count is measured, so it is the mono
+ * face in `ink-2` (the website keeps its sans count). Its text leads with a
+ * space, so an accessible name reads "All signals (107)".
  */
 export function ControlCount({ count }: Readonly<{ count: number }>) {
-  return <span className="text-ink-muted tabular-nums">{` (${count.toLocaleString()})`}</span>;
+  return (
+    <span className="text-ink-2 font-mono tabular-nums [[data-public-surface]_&]:font-sans">{` (${count.toLocaleString()})`}</span>
+  );
 }
 
 type TabItem<T extends string> = {
@@ -73,7 +109,7 @@ type TabStripProps<T extends string> = {
   ariaLabel: string;
   className?: string;
   onIntent?: (value: T) => void;
-  /** Segments share the track's full width (the sidebar's mode switch, a card head). */
+  /** Items share the strip's full width (a card head). */
   fill?: boolean;
 };
 
@@ -142,30 +178,35 @@ function TabStrip<T extends string>({
 }: Readonly<TabStripProps<T>>) {
   const active = useContext(ActiveTabContext);
   return (
-    <TabsPrimitive.List
-      aria-label={ariaLabel}
-      className={cn(TAB_TRACK, fill && 'flex w-full', className)}
-    >
-      {items.map((item) => (
-        <TabsPrimitive.Trigger
-          key={item.value}
-          value={item.value}
-          disabled={item.disabled}
-          onMouseEnter={() => onIntent?.(item.value)}
-          onFocus={(event) => {
-            onIntent?.(item.value);
-            event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
-          }}
-          className={tabClasses(
-            item.value === active,
-            fill ? 'min-w-max flex-1 basis-0' : undefined,
-          )}
+    <StripFrame fill={fill}>
+      {(ref) => (
+        <TabsPrimitive.List
+          ref={ref}
+          aria-label={ariaLabel}
+          className={cn(TAB_STRIP, fill && 'flex w-full', className)}
         >
-          {item.label}
-          {item.count === undefined ? null : <ControlCount count={item.count} />}
-        </TabsPrimitive.Trigger>
-      ))}
-    </TabsPrimitive.List>
+          {items.map((item) => (
+            <TabsPrimitive.Trigger
+              key={item.value}
+              value={item.value}
+              disabled={item.disabled}
+              onMouseEnter={() => onIntent?.(item.value)}
+              onFocus={(event) => {
+                onIntent?.(item.value);
+                event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+              }}
+              className={tabFace(
+                item.value === active,
+                fill ? 'min-w-max flex-1 basis-0' : undefined,
+              )}
+            >
+              {item.label}
+              {item.count === undefined ? null : <ControlCount count={item.count} />}
+            </TabsPrimitive.Trigger>
+          ))}
+        </TabsPrimitive.List>
+      )}
+    </StripFrame>
   );
 }
 
@@ -236,8 +277,9 @@ export type SegmentedOption<T extends string> = Readonly<{
 }>;
 
 /**
- * SegmentedControl — the Tabs track as a single-select value with no panel
- * (a date range, a metric, a filter). Radiogroup semantics: one tab stop at
+ * SegmentedControl — a view switch for two to four exclusive views with no
+ * panel (a date range, a metric, a filter), in the Tabs face: the current
+ * segment carries the accent underline. Radiogroup semantics: one tab stop at
  * the checked option, and the arrow keys move focus and selection, wrapping
  * at both ends.
  *
@@ -282,62 +324,66 @@ export function SegmentedControl<T extends string>({
   };
 
   return (
-    <div data-segmented-track="" className={cn(TAB_TRACK, className)}>
-      {/* A nested flex row, NOT `display: contents`: some browsers drop a
+    <StripFrame>
+      {(ref) => (
+        <div ref={ref} data-segmented-track="" className={cn(TAB_STRIP, className)}>
+          {/* A nested flex row, NOT `display: contents`: some browsers drop a
           contents box from the accessibility tree, costing the group its name. */}
-      <div
-        id={id}
-        role="radiogroup"
-        aria-label={ariaLabel}
-        aria-describedby={describedBy}
-        className="flex h-full shrink-0 items-center gap-0.5"
-      >
-        {options.map((option, index) => {
-          const selected = option.value === value;
-          const segment = (
-            <button
-              key={option.value}
-              ref={(node) => {
-                buttonsRef.current[index] = node;
-              }}
-              type="button"
-              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Button-based radio keeps roving focus and the segment face.
-              role="radio"
-              aria-checked={selected}
-              disabled={disabled}
-              tabIndex={index === tabStop ? 0 : -1}
-              onClick={() => onChange(option.value)}
-              onFocus={(event) =>
-                event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
-              }
-              onKeyDown={(event) => {
-                const delta = ARROW_DELTA[event.key];
-                if (delta === undefined) return;
-                event.preventDefault();
-                move(index, delta);
-              }}
-              className={tabClasses(selected)}
-            >
-              {option.label}
-              {/* Each part leads with a space, so the radio's accessible name
+          <div
+            id={id}
+            role="radiogroup"
+            aria-label={ariaLabel}
+            aria-describedby={describedBy}
+            className="flex shrink-0 items-stretch gap-4"
+          >
+            {options.map((option, index) => {
+              const selected = option.value === value;
+              const segment = (
+                <button
+                  key={option.value}
+                  ref={(node) => {
+                    buttonsRef.current[index] = node;
+                  }}
+                  type="button"
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- Button-based radio keeps roving focus and the segment face.
+                  role="radio"
+                  aria-checked={selected}
+                  disabled={disabled}
+                  tabIndex={index === tabStop ? 0 : -1}
+                  onClick={() => onChange(option.value)}
+                  onFocus={(event) =>
+                    event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+                  }
+                  onKeyDown={(event) => {
+                    const delta = ARROW_DELTA[event.key];
+                    if (delta === undefined) return;
+                    event.preventDefault();
+                    move(index, delta);
+                  }}
+                  className={tabFace(selected)}
+                >
+                  {option.label}
+                  {/* Each part leads with a space, so the radio's accessible name
                   reads "CTR gaps · Partial (50)". */}
-              {option.detail ? (
-                <span className="text-ink-muted">{` · ${option.detail}`}</span>
-              ) : null}
-              {option.count === undefined ? null : <ControlCount count={option.count} />}
-            </button>
-          );
-          if (!option.hint) return segment;
-          return (
-            <span key={option.value} className="inline-flex h-full shrink-0 items-center gap-1">
-              {segment}
-              {option.hint}
-            </span>
-          );
-        })}
-      </div>
-      {trailing}
-    </div>
+                  {option.detail ? (
+                    <span className="text-ink-2 font-normal">{` · ${option.detail}`}</span>
+                  ) : null}
+                  {option.count === undefined ? null : <ControlCount count={option.count} />}
+                </button>
+              );
+              if (!option.hint) return segment;
+              return (
+                <span key={option.value} className="inline-flex shrink-0 items-center gap-1">
+                  {segment}
+                  {option.hint}
+                </span>
+              );
+            })}
+          </div>
+          {trailing}
+        </div>
+      )}
+    </StripFrame>
   );
 }
 
@@ -366,7 +412,7 @@ export function SegmentedAction({
   }
 >) {
   return (
-    <button {...props} type="button" className={tabClasses(selected, className)}>
+    <button {...props} type="button" className={tabFace(selected, className)}>
       <span className="inline-grid justify-items-center">
         {labels.map((reserved) => (
           <span key={reserved} aria-hidden="true" className="invisible col-start-1 row-start-1">

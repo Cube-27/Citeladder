@@ -5,18 +5,18 @@ import { askAgentPrompt, buildFixPrompt } from '@/components/site-health/issue-d
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Inline, Stack } from '@/components/ui/layout';
 import { OpenRow } from '@/components/ui/list-row';
 import { Pager } from '@/components/ui/pager';
-import { QueryState } from '@/components/ui/query-state';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses, SubsectionHeader } from '@/components/ui/workspace';
 import type { PageIssue } from '@citeladder/contracts';
 import { scoreRoleLabels, severityRank } from '@/lib/site-health/issues';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /** Issues the list shows before "View all". */
 const PREVIEW_COUNT = 5;
@@ -56,13 +56,13 @@ export function PageIssues({
   };
   return (
     <>
-      <Card>
-        <CardHeader>
-          <CardTitle>All issues ({defects.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
+      <Section>
+        <SectionHeader>
+          <SectionTitle>All issues ({defects.length})</SectionTitle>
+        </SectionHeader>
+        <SectionContent>
           {defects.length === 0 ? (
-            <QueryState
+            <StateBlock
               kind="empty"
               inline
               message={
@@ -74,8 +74,8 @@ export function PageIssues({
           ) : (
             <IssueList issues={defects} onSelect={show} />
           )}
-        </CardContent>
-      </Card>
+        </SectionContent>
+      </Section>
       {defects.length > 0 ? (
         <IssueDetails
           ref={details}
@@ -113,7 +113,7 @@ function IssueList({
         ))}
       </ol>
       {issues.length > PREVIEW_COUNT ? (
-        <Button variant="ghost" className="w-fit" onClick={() => setExpanded(!expanded)}>
+        <Button variant="quiet" className="w-fit" onClick={() => setExpanded(!expanded)}>
           {expanded ? 'Show fewer issues' : `View all ${issues.length} issues`}
         </Button>
       ) : null}
@@ -147,7 +147,7 @@ function IssueDetails({
       className="scroll-mt-24"
     >
       <Inline className="flex-wrap justify-between">
-        <h2 id="page-issue-details" className={textRole('sectionTitle')}>
+        <h2 id="page-issue-details" className={textRole('heading')}>
           Issue details
         </h2>
         <Pager
@@ -200,7 +200,7 @@ function IssueCard({
   const head = { ...issue, title: issue.issue_title, affected_url_count: 1 };
   const scores = scoreRoleLabels(issue.score_roles);
   return (
-    <Card aria-label={issue.issue_title}>
+    <Section aria-label={issue.issue_title}>
       <Stack gap="compact">
         <Inline className="flex-wrap justify-between">
           <IssueMetadata issue={issue} />
@@ -208,16 +208,16 @@ function IssueCard({
             {position}/{total}
           </span>
         </Inline>
-        <h3 className={textRole('itemTitle')}>{issue.issue_title}</h3>
+        <h3 className={textRole('subheading')}>{issue.issue_title}</h3>
         {issue.remediation ? (
-          <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
+          <p className="type-body text-ink-2 text-ink whitespace-pre-line">{issue.remediation}</p>
         ) : null}
         <IssueEvidence occurrence={issue} />
         {scores.length > 0 ? (
           <Inline as="p" className="flex-wrap">
             <span className="type-caption">Counts toward</span>
             {scores.map((score) => (
-              <Badge key={score}>{score}</Badge>
+              <Tag key={score}>{score}</Tag>
             ))}
           </Inline>
         ) : null}
@@ -233,21 +233,21 @@ function IssueCard({
             Copy fix prompt
           </CopyButton>
           {rerun ? (
-            <Button variant="ghost" onClick={rerun.onRerun} disabled={rerun.busy}>
+            <Button variant="quiet" onClick={rerun.onRerun} disabled={rerun.busy}>
               Re-audit to verify
             </Button>
           ) : null}
         </Inline>
       </Stack>
-    </Card>
+    </Section>
   );
 }
 
 /** Recommendations, labelled as the catalog labels them, never with a severity. */
 function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] }>) {
   return (
-    <Card>
-      <CardContent>
+    <Section>
+      <SectionContent>
         <Stack as="section" gap="item">
           <SubsectionHeader
             title={`Advisories (${advisories.length})`}
@@ -257,18 +257,20 @@ function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] 
             {advisories.map((issue) => (
               <Stack as="li" gap="tight" key={issue.occurrence_id} className={ledgerItemClasses()}>
                 <Inline className="flex-wrap items-start justify-between">
-                  <span className={textRole('itemTitle', 'min-w-0')}>{issue.issue_title}</span>
-                  <Badge>Advisory</Badge>
+                  <span className={textRole('body', 'min-w-0')}>{issue.issue_title}</span>
+                  <Tag>Advisory</Tag>
                 </Inline>
                 <IssueEvidence occurrence={issue} />
                 {issue.remediation ? (
-                  <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
+                  <p className="type-body text-ink-2 text-ink whitespace-pre-line">
+                    {issue.remediation}
+                  </p>
                 ) : null}
               </Stack>
             ))}
           </ol>
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }

@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vite-plus/test';
@@ -38,7 +37,7 @@ describe('ListScreen', () => {
     expect(screen.getByRole('button', { name: 'Add prompts' })).toBeInTheDocument();
   });
 
-  it('puts a tabbed page’s filters after its tabs, and a row with an action in its own band', () => {
+  it('stacks the masthead, the page tabs band, the filter bar band, then the content', () => {
     const choice = (id: string) =>
       choiceFilter({
         id,
@@ -48,25 +47,35 @@ describe('ListScreen', () => {
         groups: [{ options: [{ value: 'all', label: 'All' }] }],
         onChange: () => undefined,
       });
-    const page = (actions?: ReactNode) => (
+    render(
       <MemoryRouter initialEntries={['/visibility']}>
         <TabsRoot value="a" onValueChange={() => undefined}>
           <ListScreen
             tabs={{ items: [{ value: 'a', label: 'A' }], ariaLabel: 'Views' }}
-            controls={{ filters: [choice('Period'), choice('Engine')], actions }}
+            controls={{ filters: [choice('Period'), choice('Engine')] }}
           >
             <p>Table</p>
           </ListScreen>
         </TabsRoot>
-      </MemoryRouter>
+      </MemoryRouter>,
     );
-    const band = (name: string | RegExp) =>
-      screen.getByRole('button', { name }).closest('[data-page-band]');
-    const { rerender } = render(page());
-    expect(band(/^All filters/u)).toBe(screen.getByRole('tablist').closest('[data-page-band]'));
-    rerender(page(<button type="button">Export</button>));
-    expect(band(/^All filters/u)).toBe(band('Export'));
-    expect(band('Export')).not.toBe(screen.getByRole('tablist').closest('[data-page-band]'));
+    const order = [
+      screen.getByRole('heading', { level: 1, name: 'AI Visibility' }),
+      screen.getByRole('tablist', { name: 'Views' }).closest('[data-page-band]'),
+      screen.getByRole('button', { name: /^All filters/u }).closest('[data-page-band]'),
+      screen.getByText('Table'),
+    ];
+    expect(order.map((node) => node?.getAttribute('data-page-band') ?? node?.tagName)).toEqual([
+      'H1',
+      'tabs',
+      'filters',
+      'P',
+    ]);
+    order.slice(1).forEach((node, index) => {
+      expect(
+        order[index]!.compareDocumentPosition(node!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
   });
 });
 

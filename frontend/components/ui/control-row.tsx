@@ -1,7 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { panelClasses } from '@/components/ui/panel';
 import { cn } from '@/lib/utils';
+import { slipClasses } from '@/components/ui/slip';
 
 /**
  * A row that offers something and the controls that act on it: an optional
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  * the stacking are the row's.
  *
  *   `boxed` — a standalone offer on the section's surface (a plan, an add-on,
- *             a plan change): the tonal panel, padding 16.
+ *             a plan change): an actionable object, so a slip, padding 16.
  *   unboxed — a row inside a card that already frames it (a connection).
  */
 export function ControlRow({
@@ -35,7 +35,7 @@ export function ControlRow({
       data-control-row=""
       className={cn(
         'desktop:flex-row desktop:items-center flex flex-col justify-between gap-[var(--compact-gap)]',
-        boxed && panelClasses(),
+        boxed && slipClasses(),
       )}
     >
       <div className="flex min-w-0 flex-1 items-start gap-[var(--compact-gap)]">

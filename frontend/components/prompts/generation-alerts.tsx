@@ -1,9 +1,8 @@
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { PromptGenerateResponse } from '@citeladder/contracts';
 import { admissionDropSummary } from '@/lib/prompts/admission';
+import { Notice } from '@/components/ui/notice';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 const SHORTFALL: Record<NonNullable<PromptGenerateResponse['shortfall_reason']>, string> = {
@@ -36,7 +35,7 @@ export function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerat
       ? ' Quality checks may have been unavailable for some suggestions, so an unflagged row may not have been checked.'
       : '';
   return (
-    <Callout tone={result.quality_gate === 'unavailable' || stopped ? 'warning' : 'info'}>
+    <Notice tone={result.quality_gate === 'unavailable' || stopped ? 'warning' : 'info'}>
       Drafted {plural(total, 'suggestion')}
       {shortfall}
       {topicCount ? ` across ${plural(topicCount, 'topic')}` : ''}
@@ -44,7 +43,7 @@ export function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerat
       {gated}. Accept the ones worth tracking.{drops ? ` ${drops}` : ''}
       {stopped}
       {judge}
-    </Callout>
+    </Notice>
   );
 }
 
@@ -57,24 +56,22 @@ export function GenerateErrorAlert({
   if (status === 429) {
     const retryAfter = humanizeApiError(error).retryAfterSeconds;
     return (
-      <Callout tone="warning">
+      <Notice tone="warning">
         The AI provider is rate limited. Try again
         {retryAfter ? ` in about ${retryAfter} seconds` : ' in a moment'}.
-      </Callout>
+      </Notice>
     );
   }
   if (status === 503) {
     return (
-      <Callout tone="warning">
-        Prompt generation isn&apos;t available on this deployment yet.
-      </Callout>
+      <Notice tone="warning">Prompt generation isn&apos;t available on this deployment yet.</Notice>
     );
   }
   if (status === 502)
     return (
-      <Callout tone="negative">
+      <Notice tone="negative">
         The AI provider call failed or returned unusable output. Try again in a moment.
-      </Callout>
+      </Notice>
     );
-  return <MutationNotice notice={mutationNoticeForError(error, { action })} />;
+  return <Notice kind="mutation" notice={mutationNoticeForError(error, { action })} />;
 }

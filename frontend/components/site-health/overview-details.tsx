@@ -3,17 +3,16 @@ import { ProjectLink } from '@/components/ui/project-link';
 
 import { CohortCompositionContext } from './cohort-composition-context';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Delta } from '@/components/ui/delta';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Drawer } from '@/components/ui/drawer';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { TrendChart } from '@/components/ui/trend-chart';
-import { QueryState } from '@/components/ui/query-state';
+import { StepChart } from '@/components/ui/step-chart';
 import { TextLink } from '@/components/ui/text-link';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { SiteHealthOverview } from '@citeladder/contracts';
 import { issueTitle } from '@/lib/site-health/issues';
 import { formatScore, PLACEHOLDER, statusLabel } from '@/lib/site-health/status';
@@ -25,6 +24,14 @@ import {
   ledgerItemClasses,
 } from '@/components/ui/workspace';
 import { ICONS } from '@/lib/icons';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 function percent(value: number | null): string {
   return value === null ? PLACEHOLDER : `${Math.round(value * 100)}%`;
@@ -102,7 +109,7 @@ function DimensionLedger({
           </TableCell>
           <TableCell numeric>
             {dimension.coverage === null ? (
-              <UnavailableValue state="not_measured" />
+              <Absence state="not_measured" />
             ) : (
               percent(dimension.coverage)
             )}
@@ -149,19 +156,23 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
       {issues.map((issue) => (
         <TableRow key={`${issue.rule_id}-${issue.finding_class}`}>
           <TableCell className="whitespace-nowrap">
-            <Badge variant="status" value={impactTone(issue.impact_band)}>
+            <StatusMark variant="status" value={impactTone(issue.impact_band)}>
               {impactLabel(issue.impact_band)}
-            </Badge>
+            </StatusMark>
           </TableCell>
           <TableCell>
             <Inline>
-              <TextLink text="body" href={issueHref(issue)} className="min-w-0">
+              <TextLink
+                text="body"
+                href={issueHref(issue)}
+                className="inline-flex min-h-6 min-w-0 items-center"
+              >
                 {/* One line, cut with its full title in a tooltip: beside an
                     Advisory badge in a half-width card, two clamped lines
                     broke a title mid-word ("Recommend / ed schema"). */}
                 <ClampText lines={1}>{issueTitle(issue)}</ClampText>
               </TextLink>
-              {issue.finding_class === 'advisory' ? <Badge>Advisory</Badge> : null}
+              {issue.finding_class === 'advisory' ? <Tag>Advisory</Tag> : null}
             </Inline>
           </TableCell>
           <TableCell numeric>{issue.affected_pages}</TableCell>
@@ -176,22 +187,22 @@ function WebFundamentalsCard({
   onOpen,
 }: Readonly<{ data: SiteHealthOverview['web_fundamentals']; onOpen: () => void }>) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Web Fundamentals</CardTitle>
-        <CardDescription>What each page’s HTML and response headers show.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Web Fundamentals</SectionTitle>
+        <SectionDescription>What each page’s HTML and response headers show.</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <Stack gap="workspace">
           {/* One list, one area a row: a 2 × 2 grid of badges left uneven
               cells in a row of equal-height cards. */}
           <ul aria-label="Web Fundamentals areas" className={ledgerClasses()}>
             {data.areas.map((area) => (
               <Inline as="li" key={area.key} className={ledgerItemClasses('justify-between')}>
-                <span className={textRole('label', 'capitalize')}>{area.key}</span>
-                <Badge variant="status" value={measurementTone(area.state)}>
+                <span className={textRole('body', 'text-ink-2 capitalize')}>{area.key}</span>
+                <StatusMark variant="status" value={measurementTone(area.state)}>
                   {statusLabel(area.state)}
-                </Badge>
+                </StatusMark>
               </Inline>
             ))}
           </ul>
@@ -199,8 +210,8 @@ function WebFundamentalsCard({
             View evidence
           </Button>
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -209,16 +220,16 @@ function OpenIssuesTrendCard({
   points,
 }: Readonly<{ points: SiteHealthOverview['open_issue_trend'] }>) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Open issues over time</CardTitle>
-        <CardDescription>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Open issues over time</SectionTitle>
+        <SectionDescription>
           Each day&rsquo;s count after that day&rsquo;s crawls and re-audits of your tracked pages.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <Stack gap="item">
-          <TrendChart
+          <StepChart
             data={points.map((point) => ({
               label: point.day,
               value: point.open_count,
@@ -226,6 +237,8 @@ function OpenIssuesTrendCard({
             }))}
             label="Open issues over time"
             name="Open issues"
+            // Your own site's count, read alone: no brand is compared, so no line is the accent.
+            you={false}
             height="sm"
             yMin={0}
             yFormat={(value) => `${Math.round(value)}`}
@@ -234,8 +247,8 @@ function OpenIssuesTrendCard({
             <p className="type-caption">The trend starts once audits land on two days.</p>
           ) : null}
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -252,28 +265,26 @@ const CHANGE_METRIC_LABELS: Record<string, string> = {
 
 function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change_summary'] }>) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Change summary</CardTitle>
-        <CardDescription>Change since the previous comparable crawl.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Change summary</SectionTitle>
+        <SectionDescription>Change since the previous comparable crawl.</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <Stack>
           {data.metrics.map((metric) => (
-            <Inline gap="compact" key={metric.key} className="type-body justify-between">
-              <span className="text-ink-secondary">
-                {CHANGE_METRIC_LABELS[metric.key] ?? metric.label}
-              </span>
+            <Inline gap="compact" key={metric.key} className="type-body text-ink-2 justify-between">
+              <span className="text-ink-2">{CHANGE_METRIC_LABELS[metric.key] ?? metric.label}</span>
               <ChangeDelta metricKey={metric.key} delta={metric.delta} />
             </Inline>
           ))}
           {data.state === 'unavailable' ? (
-            <QueryState kind="empty" inline message="No comparable snapshot yet." />
+            <StateBlock kind="empty" inline message="No comparable snapshot yet." />
           ) : null}
           <CohortCompositionContext reason={data.reason} composition={data.cohort_composition} />
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -347,18 +358,18 @@ function WebFundamentalsDrawer({
                 </>
               }
               actions={
-                <Badge variant="status" value={measurementTone(area.state)}>
+                <StatusMark variant="status" value={measurementTone(area.state)}>
                   {statusLabel(area.state)}
-                </Badge>
+                </StatusMark>
               }
             />
             <Stack>
               {area.top_findings.length === 0 ? (
-                <QueryState kind="empty" inline message="No missing checks in this area." />
+                <StateBlock kind="empty" inline message="No missing checks in this area." />
               ) : (
                 area.top_findings.map((finding) => (
                   <Stack gap="tight" key={finding.rule_id}>
-                    <span className={textRole('itemTitle')}>{finding.title}</span>
+                    <span className={textRole('body')}>{finding.title}</span>
                     <span className="type-caption">
                       {finding.affected_pages} affected pages · {finding.remediation}
                     </span>

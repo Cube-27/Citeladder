@@ -4,10 +4,9 @@ import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { isDeclarable, MarkImplementedButton } from '@/components/agent/action-declaration';
 import { useChatThread } from '@/components/agent/chat-thread';
 import { contentGapMembers } from '@/components/agent/content-gap-evidence';
-import { ListScreen } from '@/components/layout/page-shell';
-import { Badge } from '@/components/ui/badge';
+import { WorkbenchPage } from '@/components/templates/workbench-page';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import {
   EditorPane,
   EditorRail,
@@ -16,8 +15,6 @@ import {
 } from '@/components/ui/editor-workspace';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { QueryState } from '@/components/ui/query-state';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { UnsavedChangesGuard } from '@/components/ui/unsaved-changes-guard';
@@ -48,6 +45,8 @@ import {
   type StackTab,
 } from './use-page-workspace';
 import { WorkspaceChat } from './workspace-chat';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 const ASK_REQUEST = 'Suggest how to improve this passage.';
 
@@ -71,7 +70,7 @@ function WorkspaceDeclaration({
 }>) {
   const mayWrite = useWorkspaceCapability('write');
   if (!action) return null;
-  if (action.declaration) return <Badge tone="positive">Marked implemented</Badge>;
+  if (action.declaration) return <StatusMark tone="positive">Marked implemented</StatusMark>;
   if (!isDeclarable(action) || !mayWrite) return null;
   return (
     <MarkImplementedButton
@@ -113,7 +112,7 @@ function SuggestionsTab({
   const { query, page } = suggestions;
   if (page) return <SuggestionsPanel page={page} {...props} />;
   return (
-    <QueryState
+    <StateBlock
       kind={query.isError ? 'error' : 'loading'}
       error={query.error}
       fallback="The suggestions could not be loaded."
@@ -221,7 +220,7 @@ export function PageWorkspace({
   const header = workspaceHeader(detail, output);
 
   return (
-    <ListScreen
+    <WorkbenchPage
       title={header.title}
       back={header.back}
       actions={
@@ -269,7 +268,7 @@ export function PageWorkspace({
           }
         />
       )}
-    </ListScreen>
+    </WorkbenchPage>
   );
 }
 
@@ -345,13 +344,13 @@ function PageHead({
           {status}
         </span>
         <Inline className="flex-wrap">
-          <Button variant="ghost" disabled={!canAsk} onClick={onAsk}>
+          <Button variant="quiet" disabled={!canAsk} onClick={onAsk}>
             <Icon icon={Sparkles} />
             Ask AI
           </Button>
           {draft.draft ? (
             <>
-              <Button variant="ghost" disabled={draft.saving} onClick={draft.discard}>
+              <Button variant="quiet" disabled={draft.saving} onClick={draft.discard}>
                 Discard
               </Button>
               <Button
@@ -367,12 +366,12 @@ function PageHead({
         </Inline>
       </Inline>
       {draft.moved && !draft.failure ? (
-        <Callout tone="warning">
+        <Notice tone="warning">
           The page changed since you started editing. Saving will be refused; discard your edits to
           see the latest version.
-        </Callout>
+        </Notice>
       ) : null}
-      {draft.failure ? <MutationNotice notice={draft.failure} /> : null}
+      {draft.failure ? <Notice kind="mutation" notice={draft.failure} /> : null}
     </>
   );
 }

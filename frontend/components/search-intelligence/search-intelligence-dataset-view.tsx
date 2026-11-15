@@ -3,7 +3,6 @@ import { SearchX } from 'lucide-react';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable } from '@/components/ui/data-table';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -20,7 +19,7 @@ import {
 } from '@/lib/api/search-intelligence';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { evidenceFields, searchNumber } from './search-intelligence-format';
 import { SEARCH_COLUMNS_BY_KIND } from '@/lib/config/search-intelligence';
@@ -32,6 +31,7 @@ import {
   searchIntelligenceColumns,
   searchIntelligenceMinWidth,
 } from './search-intelligence-rows-table';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * One saved dataset's rows. The table's own toolbar keeps only the search,
@@ -214,11 +214,11 @@ function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
     (SEARCH_COLUMNS_BY_KIND[row.row_kind] ?? []).map((column) => [column.field, column.label]),
   );
   return (
-    <dl className={ledgerClasses('type-body')}>
+    <dl className={ledgerClasses('type-body text-ink-2')}>
       {evidenceFields(row, labels, timeZone).map((field) => (
         <Stack key={field.key} gap="tight" className={ledgerItemClasses()}>
-          <dt className="text-ink-muted">{field.label}</dt>
-          <dd className="break-all">{field.value ?? <MissingValue />}</dd>
+          <dt className="text-ink-2">{field.label}</dt>
+          <dd className="break-all">{field.value ?? <Absence />}</dd>
         </Stack>
       ))}
     </dl>
@@ -230,14 +230,14 @@ function EmptyDataset({
   title,
 }: Readonly<{ dataset: SearchIntelligenceDataset; title: string }>) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>{title}</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
         <Stack gap="compact">
-          <p className={textRole('itemTitle')}>{emptyDatasetHeading(dataset)}</p>
-          <p className={textRole('body')}>
+          <p className={textRole('body')}>{emptyDatasetHeading(dataset)}</p>
+          <p className={textRole('body', 'text-ink-2')}>
             Requests can incur charges even when no results are returned. Check the website and
             market before reviewing another analysis.
           </p>
@@ -249,8 +249,8 @@ function EmptyDataset({
             · 0 saved rows
           </p>
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 

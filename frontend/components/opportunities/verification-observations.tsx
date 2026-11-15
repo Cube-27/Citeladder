@@ -44,7 +44,7 @@ function ComparableMovement({ result }: Readonly<{ result: VerificationResult | 
   if (!entries.length) return null;
   return (
     <Stack gap="tight">
-      <p className={textRole('label')}>Comparable movement</p>
+      <p className={textRole('body', 'text-ink-2')}>Comparable movement</p>
       {entries.map(([label, leg]) => (
         <p key={label}>
           {label}: {movementStateLabel(legState(leg))}

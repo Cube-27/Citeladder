@@ -8,7 +8,7 @@
  * projects persisted values for display (invariant 7). Average position stays
  * the not-measured placeholder when no ranked answer exists (invariant 9).
  */
-import type { TrendPoint, TrendSeries } from '@/components/ui/trend-chart';
+import type { TrendPoint, TrendSeries } from '@/components/ui/step-chart';
 import type { VisibilityTrendPoint } from '@citeladder/contracts';
 import {
   formatDisplayDate,
@@ -82,7 +82,7 @@ function metricValue(point: VisibilityTrendPoint, metric: TrendMetric): number |
 }
 
 /**
- * Map the trend series into `TrendChart` points for `metric`. A point that
+ * Map the trend series into `StepChart` points for `metric`. A point that
  * introduces a new analyzer/scoring version (its distinct version set differs
  * from the previous point's, or it spans a boundary) carries a `versionChange`
  * marker so the chart can flag it (invariant 4 / version continuity).
@@ -135,7 +135,7 @@ function versionChangeNote(point: VisibilityTrendPoint): string {
 /**
  * Comparison lines drawn by default.
  *
- * Three, plus the tracked brand: a TrendChart draws at most four lines, the
+ * Three, plus the tracked brand: a StepChart draws at most four lines, the
  * most that stay tellable apart by colour and dash. The roster is not
  * truncated as a result: the table beside the chart lists every brand, and
  * selecting one there plots it alone.

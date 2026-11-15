@@ -86,14 +86,15 @@ function PagerSummary({
 }: Readonly<{ range?: PagerRange; page?: number; pageCount?: number }>) {
   // Tabular figures hold every digit to one width, so the range does not
   // change width as the reader pages.
-  const face = 'text-body-sm text-ink pe-2 whitespace-nowrap tabular-nums';
+  const face = 'type-data text-ink pe-2 whitespace-nowrap';
   if (range) {
     return (
       <output className={face}>
         {range.from}–{range.to}
-        <span className="text-ink-muted">
-          {range.total === undefined ? null : ` of ${formatCount(range.total)}`} {range.noun}
-        </span>
+        {range.total === undefined ? null : (
+          <span className="text-ink-2">{` of ${formatCount(range.total)}`}</span>
+        )}{' '}
+        <span className="type-body text-ink-2">{range.noun}</span>
       </output>
     );
   }
@@ -101,7 +102,7 @@ function PagerSummary({
   return (
     <output className={face}>
       Page {page}
-      {pageCount ? <span className="text-ink-muted">{` of ${pageCount}`}</span> : null}
+      {pageCount ? <span className="text-ink-2">{` of ${pageCount}`}</span> : null}
     </output>
   );
 }
@@ -110,7 +111,7 @@ function PageSizeSelect({ pageSize, noun }: Readonly<{ pageSize: PagerPageSize; 
   const id = useId();
   return (
     <div className="flex items-center gap-2">
-      <label className="text-caption text-ink-muted" htmlFor={id}>
+      <label className="text-caption text-ink-2" htmlFor={id}>
         Rows per page
       </label>
       <Select
@@ -179,7 +180,7 @@ export function Pager({
   return (
     <div className={cn('flex flex-wrap items-center justify-between gap-3', className)}>
       {pageSize ? <PageSizeSelect pageSize={pageSize} noun={range?.noun ?? 'rows'} /> : <span />}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <PagerSummary range={range} page={page} pageCount={pageCount} />
         <PagerSteps {...steps} busy={busy} />
       </div>

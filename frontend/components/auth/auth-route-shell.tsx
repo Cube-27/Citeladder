@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { AuthSplitShell } from '@/components/ui/auth-shell';
+import { FlowPage } from '@/components/templates/flow-page';
 import { TextLink } from '@/components/ui/text-link';
 import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
@@ -9,11 +9,15 @@ import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
 /**
- * Account access (sign-in, sign-up and the mailbox screens): the split shell
- * with the product showcase, closed by the copyright and legal links.
+ * Account access (sign-in, sign-up and the mailbox screens): a Flow page,
+ * closed by the copyright and legal links.
  */
 export function AuthRouteShell({ children }: Readonly<{ children: ReactNode }>) {
-  return <AuthSplitShell footer={<AuthLegalFooter />}>{children}</AuthSplitShell>;
+  return (
+    <FlowPage label="Account access" footer={<AuthLegalFooter />}>
+      {children}
+    </FlowPage>
+  );
 }
 
 function AuthLegalFooter() {

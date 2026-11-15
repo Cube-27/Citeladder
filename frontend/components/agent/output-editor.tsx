@@ -2,12 +2,12 @@ import { useMutation } from '@tanstack/react-query';
 import type { FormEvent } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Textarea } from '@/components/ui/textarea';
 import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentMutations, type AgentDocumentRef, type AgentRevision } from '@/lib/api/agent';
+import { Notice } from '@/components/ui/notice';
 
 /** An edit in progress, bound to the revision it started from. */
 export type OutputDraft = { baseRevisionId: string; title: string; body: string };
@@ -70,10 +70,10 @@ export function OutputEditor({
         className="tabular-nums"
       />
       {save.isError ? (
-        <MutationNotice notice={agentWriteFailure(save.error, 'save the output')} />
+        <Notice kind="mutation" notice={agentWriteFailure(save.error, 'save the output')} />
       ) : null}
       <Inline className="justify-end">
-        <Button type="button" variant="ghost" onClick={onDone} disabled={save.isPending}>
+        <Button type="button" variant="quiet" onClick={onDone} disabled={save.isPending}>
           Cancel
         </Button>
         <Button type="submit" variant="primary" disabled={unchanged || blank || save.isPending}>

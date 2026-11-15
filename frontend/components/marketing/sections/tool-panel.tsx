@@ -75,7 +75,7 @@ export function ToolPanel({
               {copy === 'failed' && 'Couldn’t copy'}
             </output>
             <Button
-              variant="ghost"
+              variant="quiet"
               className="cl-tool-copy"
               disabled={!copyText}
               onClick={() => void copyResult()}
@@ -84,7 +84,7 @@ export function ToolPanel({
               Copy
             </Button>
             {onDownload && (
-              <Button variant="ghost" disabled={!copyText} onClick={onDownload}>
+              <Button variant="quiet" disabled={!copyText} onClick={onDownload}>
                 <Icon icon={Download} />
                 {downloadLabel}
               </Button>

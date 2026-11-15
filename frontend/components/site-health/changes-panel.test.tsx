@@ -150,10 +150,9 @@ describe('Website Changes', () => {
     );
     expect(screen.getByRole('cell', { name: 'HTTP status' })).toBeInTheDocument();
     const table = screen.getByRole('region', { name: 'Website changes' });
-    expect(within(table).getByText('Critical regression')).toHaveAttribute(
-      'data-badge-tone',
-      'negative',
-    );
+    expect(
+      within(table).getByText('Critical regression').closest('[data-status-tone]'),
+    ).toHaveAttribute('data-status-tone', 'negative');
     const open = screen.getByRole('button', {
       name: 'View evidence: HTTP status on acme.test/guide',
     });
@@ -274,7 +273,10 @@ describe('Website Changes', () => {
     renderWithProviders(<ChangesPanel projectId={PROJECT} />);
     expect(await screen.findByRole('cell', { name: 'Meta description' })).toBeInTheDocument();
     const table = screen.getByRole('region', { name: 'Website changes' });
-    expect(within(table).getByText('Improvement')).toHaveAttribute('data-badge-tone', 'positive');
+    expect(within(table).getByText('Improvement').closest('[data-status-tone]')).toHaveAttribute(
+      'data-status-tone',
+      'positive',
+    );
   });
 
   it('says when two crawls cannot be compared', async () => {

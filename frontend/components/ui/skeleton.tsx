@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils';
 
-/** One placeholder shape: `surface-sunken`, `radius-xs`, a gentle 1.6s pulse (still under reduced motion). */
-const BAR = 'bg-surface-sunken block rounded-xs animate-skeleton-pulse';
+/** One placeholder shape: `well`, the mark radius, held still (no shimmer, no pulse). */
+const BAR = 'bg-well block rounded-mark';
 
 const ROW_WIDTHS = ['62%', '48%', '70%', '54%', '40%'] as const;
 
@@ -48,7 +48,7 @@ function SkeletonBody(props: SkeletonProps) {
       return Array.from({ length: props.rows ?? 3 }, (_, index) => (
         <span
           key={index}
-          className="border-line flex h-[var(--table-row-height)] items-center gap-3 px-3 [&+&]:border-t"
+          className="border-rule flex h-[var(--table-row-height)] items-center gap-3 px-3 [&+&]:border-t"
         >
           <span className={cn(BAR, 'size-4 shrink-0')} />
           {/* A table row tall (`table-row-height`), holding one body-sm line box. */}
@@ -62,9 +62,9 @@ function SkeletonBody(props: SkeletonProps) {
         </span>
       ));
     case 'block':
-      return <span className={cn(BAR, 'h-40 w-full rounded-lg')} />;
+      return <span className={cn(BAR, 'h-40 w-full rounded-sheet')} />;
     case 'chart':
-      return <span className={cn(BAR, 'h-[var(--chart-height-md)] w-full rounded-lg')} />;
+      return <span className={cn(BAR, 'h-[var(--chart-height-md)] w-full rounded-sheet')} />;
     default: {
       const lines = props.lines ?? 3;
       return Array.from({ length: lines }, (_, index) => (

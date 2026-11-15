@@ -1,7 +1,7 @@
 import { BarChart3 } from 'lucide-react';
 
 import { DataSourceSetup } from '@/components/integrations/data-source-setup';
-import { QueryState } from '@/components/ui/query-state';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Empty state for the AI Traffic referrals view. Referral measurement begins
@@ -14,7 +14,7 @@ export function AiReferralsEmptyState() {
       required={['ga4']}
       title="Connect Google Analytics 4"
       whenReady={
-        <QueryState
+        <StateBlock
           kind="empty"
           icon={BarChart3}
           heading="No AI-referral data yet"

@@ -15,8 +15,8 @@ type Element = {
 type Node = Text | Element | { type: string; children?: Node[] };
 
 const TONE_CLASS: Record<Highlight['tone'], string> = {
-  positive: 'bg-positive-soft text-ink',
-  negative: 'bg-negative-soft text-ink',
+  positive: 'bg-positive-wash text-ink',
+  negative: 'bg-negative-wash text-ink',
 };
 const SKIPPED = new Set(['code', 'pre']);
 

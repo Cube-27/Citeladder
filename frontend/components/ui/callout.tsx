@@ -16,20 +16,20 @@ export type CalloutTone = 'neutral' | 'info' | 'positive' | 'warning' | 'negativ
  */
 const TONE: Record<CalloutTone, { box: string; title: string; icon: LucideIcon; word: string }> = {
   neutral: {
-    box: 'surface-inset text-ink-secondary',
+    box: 'surface-inset text-ink-2',
     title: 'text-ink',
     icon: Info,
     word: 'Note',
   },
-  info: { box: 'bg-info-soft text-info', title: '', icon: Info, word: 'Info' },
+  info: { box: 'bg-info-wash text-info', title: '', icon: Info, word: 'Info' },
   positive: {
-    box: 'bg-positive-soft text-positive',
+    box: 'bg-positive-wash text-positive',
     title: '',
     icon: CheckCircle2,
     word: 'Success',
   },
-  warning: { box: 'bg-warning-soft text-warning', title: '', icon: AlertTriangle, word: 'Warning' },
-  negative: { box: 'bg-negative-soft text-negative', title: '', icon: XCircle, word: 'Error' },
+  warning: { box: 'bg-warning-wash text-warning', title: '', icon: AlertTriangle, word: 'Warning' },
+  negative: { box: 'bg-negative-wash text-negative', title: '', icon: XCircle, word: 'Error' },
 };
 
 /**
@@ -70,7 +70,7 @@ export function Callout({
       role={urgent ? 'alert' : undefined}
       data-callout-tone={tone}
       className={cn(
-        'flex items-start gap-2 rounded-md border border-transparent px-4 py-3 text-body-sm',
+        'flex items-start gap-2 rounded-control border border-transparent px-4 py-3 text-body-sm',
         style.box,
         className,
       )}

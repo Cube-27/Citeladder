@@ -1,79 +1,93 @@
 import type { LucideIcon } from 'lucide-react';
 
 import { ICONS } from '@/lib/icons';
-import { navDestinations, type NavDestination } from '@/lib/navigation/app-routes';
+import {
+  navDestinations,
+  type NavDestination,
+  type SidebarGroup,
+} from '@/lib/navigation/app-routes';
 
 /** A manifest nav entry with its glyph resolved, ready to render as a link. */
 export type NavItem = Omit<NavDestination, 'icon'> & { icon: LucideIcon };
 
-type NavGroup = {
-  /** Null renders the group without a heading. */
+type NavGroup = Readonly<{
+  group: SidebarGroup;
+  /** The sidebar's `overline` head; null draws the group without one. */
   title: 'Analyze' | 'Commerce' | 'Act' | 'Track' | null;
+  /** The command palette's head for the same group. */
+  paletteTitle: string;
   items: readonly NavItem[];
-};
+}>;
 
 function navItems(placement: Parameters<typeof navDestinations>[0]): readonly NavItem[] {
   return navDestinations(placement).map((entry) => ({ ...entry, icon: ICONS[entry.icon] }));
 }
 
-/** Dashboard navigation in the order of the product loop. */
+function group(
+  id: SidebarGroup,
+  title: NavGroup['title'],
+  paletteTitle: string = title ?? '',
+): NavGroup {
+  return { group: id, title, paletteTitle, items: navItems(`sidebar:${id}`) };
+}
+
+/** The sidebar's destinations in the order of the product loop (brand direction 4). */
 export const NAV_GROUPS: readonly NavGroup[] = [
-  { title: null, items: navItems('dashboard:overview') },
-  { title: 'Analyze', items: navItems('dashboard:analyze') },
-  { title: 'Commerce', items: navItems('dashboard:commerce') },
-  { title: 'Act', items: navItems('dashboard:act') },
-  { title: 'Track', items: navItems('dashboard:track') },
+  group('overview', null, 'Overview'),
+  group('analyze', 'Analyze'),
+  group('commerce', 'Commerce'),
+  group('act', 'Act'),
+  group('track', 'Track'),
 ];
 
-/** Setup destinations shown below the Dashboard groups. */
-export const SETUP_NAV_ITEMS = navItems('dashboard:setup');
+/** The foot's destinations, above the account button. */
+export const FOOT_NAV_ITEMS = navItems('sidebar:foot');
 
-/** Agent mode's fixed destinations, below New chat and above the chat list. */
-export const AGENT_NAV_ITEMS = navItems('agent');
+/** The account menu's workspace and account links. */
+export const ACCOUNT_MENU_ITEMS = navItems('account');
 
-/** The user menu's workspace and account links. */
-export const USER_MENU_ITEMS = navItems('user-menu');
-
-const PALETTE_GROUPS = ['Overview', 'Analyze', 'Commerce', 'Track', 'Agent', 'Settings'] as const;
+/** Every destination a sidebar row stands for, for telling a nested one from its parent. */
+const SIDEBAR_PATHS = [...NAV_GROUPS.flatMap((entry) => entry.items), ...FOOT_NAV_ITEMS].map(
+  (item) => new URL(item.href, 'https://citeladder.local').pathname,
+);
 
 /**
- * Every shell destination, grouped for the command palette. A managed plan has
- * no provider settings (B32).
+ * Every shell destination, grouped for the command palette: the sidebar's
+ * groups in the same order with the same labels, then the workspace and
+ * account pages. A managed plan has no provider settings (B32).
  */
 export function resolveCommandGroups({ managed = false }: { managed?: boolean } = {}): readonly {
   title: string;
   items: readonly NavItem[];
 }[] {
-  return PALETTE_GROUPS.map((title) => ({
-    title,
-    items: navItems(`palette:${title}`).filter((item) => !managed || !item.hiddenWhenManaged),
-  }));
+  const workspace = [...FOOT_NAV_ITEMS, ...ACCOUNT_MENU_ITEMS, ...navItems('palette')].filter(
+    (item) => !managed || !item.hiddenWhenManaged,
+  );
+  return [
+    ...NAV_GROUPS.map(({ paletteTitle, items }) => ({ title: paletteTitle, items })),
+    { title: 'Workspace', items: workspace },
+  ];
 }
 
 const atOrBelow = (pathname: string, base: string) =>
   pathname === base || pathname.startsWith(`${base}/`);
 
-/** Every Dashboard destination's path, for telling a nested destination from its parent. */
-const DASHBOARD_PATHS = NAV_GROUPS.flatMap((group) =>
-  group.items.map((item) => new URL(item.href, 'https://citeladder.local').pathname),
-);
-
 /**
  * A destination is current when the path is it or below it, unless another
- * destination sits deeper on that path: Commerce's Overview
- * (`/products/overview`) is not also Products. A destination that names query
- * parameters (a settings tab) also needs each of them to match, so
- * Integrations is not current on another settings tab. Screens own their own
- * tabs: every tab of Website is still Website.
+ * destination sits deeper on that path: Shopping (`/products/overview`) is
+ * not also Products, and Actions (`/agent/actions`) is not also Agent. A
+ * destination that names query parameters (a settings tab) also needs each of
+ * them to match, so Integrations is not current on another settings tab.
+ * Screens own their own tabs: every tab of Website is still Website.
  */
 export function isNavItemActive(
   pathname: string,
   searchParams: URLSearchParams,
-  item: NavItem,
+  item: Pick<NavItem, 'href'>,
 ): boolean {
   const target = new URL(item.href, 'https://citeladder.local');
   if (!atOrBelow(pathname, target.pathname)) return false;
-  const deeper = DASHBOARD_PATHS.some(
+  const deeper = SIDEBAR_PATHS.some(
     (path) => path.length > target.pathname.length && atOrBelow(pathname, path),
   );
   if (deeper) return false;

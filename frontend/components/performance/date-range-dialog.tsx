@@ -111,7 +111,7 @@ function DateRangeFields({
             />
           )}
         </Field>
-        <span className="text-ink-muted">–</span>
+        <span className="text-ink-2">–</span>
         <Field label="End date">
           {(props) => (
             <DateField
@@ -195,7 +195,7 @@ export function DateRangeDialog({
       }
       footer={
         <>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+          <Button variant="quiet" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
           <Button

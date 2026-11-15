@@ -8,7 +8,7 @@
  * longer in flight.
  */
 import type { IntegrationSyncRun } from '@/lib/api/integrations';
-import type { RunStatusValue } from '@/components/ui/badge';
+import type { RunStatusValue } from '@/components/ui/status-mark';
 import { SYNC_RUN_POLL_MS } from '@/lib/config/operational';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
 

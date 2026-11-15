@@ -1,20 +1,18 @@
 import { useState } from 'react';
+import { Absence } from '@/components/ui/absence';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { QueryState } from '@/components/ui/query-state';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import type { ActionStatus } from '@/lib/api/actions';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
-import { MISSING_MARK, formatCount, readableUrl } from '@/lib/format';
+import { formatCount, readableUrl } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { internalLinkStateNotice } from '@/lib/site-health/status';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -25,6 +23,8 @@ import {
   useLinkParams,
   type LinksRead,
 } from './internal-links-panel-bands';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * The Internal links tab's content. Its read, header actions and control band
@@ -80,15 +80,16 @@ function Notices({ read }: Readonly<{ read: LinksRead }>) {
   return (
     <>
       {read.query.isError ? (
-        <QueryState
+        <StateBlock
           kind="error"
           error={read.query.error}
           fallback="Internal links could not be loaded."
+          title="Internal links could not be loaded"
           onRetry={() => void read.query.refetch()}
         />
       ) : null}
-      {failure ? <MutationNotice notice={failure} /> : null}
-      {read.query.isPending ? <QueryState kind="loading" label="Loading internal links…" /> : null}
+      {failure ? <Notice kind="mutation" notice={failure} /> : null}
+      {read.query.isPending ? <StateBlock kind="loading" label="Loading internal links…" /> : null}
     </>
   );
 }
@@ -99,7 +100,7 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
   if (!data) return null;
   if (!data.crawl_id)
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={ICONS.site}
         heading="Run a crawl first"
@@ -107,7 +108,7 @@ function StartState({ read }: Readonly<{ read: LinksRead }>) {
       />
     );
   return (
-    <QueryState
+    <StateBlock
       kind="empty"
       icon={ICONS.site}
       heading="Find missing internal links"
@@ -138,7 +139,7 @@ function LinksResult({
   const notice = internalLinkStateNotice(analysis);
   if (isRunning(analysis.state) && !analysis.recommendations.length)
     return (
-      <output className="type-body">
+      <output className="type-body text-ink-2">
         {summary
           ? `Checking related pages… ${formatCount(summary.candidates - summary.pending)} of ${formatCount(summary.candidates)} page pairs done.`
           : 'Checking related pages…'}
@@ -147,12 +148,12 @@ function LinksResult({
   return (
     <>
       {analysis.stale ? (
-        <Callout tone="warning">
+        <Notice tone="warning">
           These suggestions use an earlier crawl.{' '}
           {canAnalyze ? 'Analyze again before making edits.' : null}
-        </Callout>
+        </Notice>
       ) : null}
-      {notice ? <Callout tone="info">{notice}</Callout> : null}
+      {notice ? <Notice tone="info">{notice}</Notice> : null}
       {/* A run that could not check pairs has no result; never render it as empty. */}
       {['unavailable', 'failed', 'cancelled'].includes(analysis.state) &&
       !analysis.recommendations.length ? null : (
@@ -261,7 +262,7 @@ function LinksTable({
           </TableCell>
           <TableCell>
             <Button
-              variant="ghost"
+              variant="quiet"
               onClick={() => onSelect(link.id)}
               aria-label={`Review link from ${link.source.title || link.source.url} to ${link.target.title || link.target.url}`}
             >
@@ -286,12 +287,7 @@ function LinkActionStatus({ status }: Readonly<{ status: string | null }>) {
  * same words on every row, still named for assistive technology.
  */
 function NoAction() {
-  return (
-    <span className="value-placeholder">
-      <span aria-hidden>{MISSING_MARK}</span>
-      <span className="sr-only">No Action yet</span>
-    </span>
-  );
+  return <Absence state="not_set" label="No Action yet" />;
 }
 
 function PageCell({ title, url }: Readonly<{ title: string; url: string }>) {

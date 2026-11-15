@@ -1,5 +1,5 @@
-import { Badge } from '@/components/ui/badge';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Tag } from '@/components/ui/tag';
+import { Absence } from '@/components/ui/absence';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 
 /**
@@ -17,7 +17,7 @@ export function PageKindBadge({
   className,
 }: Readonly<{ pageKind: string | null | undefined; className?: string }>) {
   if (!pageKind) {
-    return <UnavailableValue state="not_measured" className={className} />;
+    return <Absence state="not_measured" className={className} />;
   }
-  return <Badge className={className}>{pageKindLabel(pageKind)}</Badge>;
+  return <Tag className={className}>{pageKindLabel(pageKind)}</Tag>;
 }

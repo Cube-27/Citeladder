@@ -1,0 +1,102 @@
+import { CircleAlert, Info, TriangleAlert, type LucideIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
+
+import { Icon } from '@/components/ui/icon';
+import { Spinner } from '@/components/ui/spinner';
+import { textRole } from '@/components/ui/typography';
+import { cn } from '@/lib/utils';
+
+import { PageFrame } from './page-frame';
+
+/**
+ * What a full-page notice says: a gate, a dead end, a failure, or the
+ * workspace still loading (the live rung, shown only after 300ms).
+ */
+type NoticeTone = 'info' | 'warning' | 'negative' | 'loading';
+
+const TONE_GLYPH: Readonly<Record<Exclude<NoticeTone, 'loading'>, LucideIcon>> = {
+  info: Info,
+  warning: TriangleAlert,
+  negative: CircleAlert,
+};
+
+const TONE_INK: Readonly<Record<Exclude<NoticeTone, 'loading'>, string>> = {
+  info: 'text-info',
+  warning: 'text-warning',
+  negative: 'text-negative',
+};
+
+type NoticeContent = Readonly<{
+  tone: NoticeTone;
+  /** The notice's heading, in the display face. */
+  heading: string;
+  /** A glyph for this notice in place of its tone's (not found: a search). */
+  icon?: LucideIcon;
+  /** The sentence: what happened and, when the reader can fix it, the one next step. */
+  children?: ReactNode;
+  /** The ways forward, primary first. */
+  actions?: ReactNode;
+}>;
+
+/**
+ * The full-page Notice: the tone's glyph (never colour alone), the heading,
+ * the sentence and the ways forward, on the main column's one left edge in a
+ * 480px measure. `level` 1 when it is the page's only heading (outside the
+ * shell), 2 under a masthead.
+ */
+function NoticeBlock({
+  tone,
+  heading,
+  icon,
+  children,
+  actions,
+  level,
+}: NoticeContent & Readonly<{ level: 1 | 2 }>) {
+  const Heading = level === 1 ? 'h1' : 'h2';
+  return (
+    <section
+      data-notice-tone={tone}
+      aria-busy={tone === 'loading' || undefined}
+      className={cn(
+        'max-w-flow flex w-full flex-col gap-[var(--card-padding)]',
+        tone === 'loading' && 'loading-delayed',
+      )}
+    >
+      {tone === 'loading' ? (
+        // The heading names what is loading, so the rung carries no label of its own.
+        <Spinner />
+      ) : (
+        <Icon icon={icon ?? TONE_GLYPH[tone]} className={cn('size-5', TONE_INK[tone])} />
+      )}
+      <Heading className={textRole('display', 'text-balance')}>{heading}</Heading>
+      {children ? <div className={textRole('body', 'flex flex-col gap-2')}>{children}</div> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+    </section>
+  );
+}
+
+/**
+ * Notice page inside the shell (brand direction 3.4): the masthead named for
+ * the page, then the full-page Notice where the content begins. Not found, a
+ * screen that failed, a workspace with no projects, the workspace loading.
+ */
+export function NoticePage({ title, ...notice }: NoticeContent & Readonly<{ title?: string }>) {
+  return (
+    <PageFrame title={title}>
+      <NoticeBlock {...notice} level={2} />
+    </PageFrame>
+  );
+}
+
+/**
+ * Notice page outside the shell, before it can open (a route that failed,
+ * access that ended, the session loading): the page's own `main` and its
+ * one heading, 48 from the top. The caller supplies the frame around it.
+ */
+export function NoticeScreen(notice: NoticeContent) {
+  return (
+    <main id="main" className="flex min-w-0 flex-col pt-[var(--flow-gap)]">
+      <NoticeBlock {...notice} level={1} />
+    </main>
+  );
+}

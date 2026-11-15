@@ -1,6 +1,12 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
 import { ProviderList } from '@/components/providers/provider-list';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /**
  * BYOK Provider Settings panel, rendered inside the Settings screen's
@@ -13,18 +19,18 @@ import { ProviderList } from '@/components/providers/provider-list';
 export function ProviderSettings() {
   return (
     <Stack gap="workspace">
-      <Card>
-        <CardHeader>
-          <CardTitle>Measurement providers</CardTitle>
-          <CardDescription>
+      <Section>
+        <SectionHeader>
+          <SectionTitle>Measurement providers</SectionTitle>
+          <SectionDescription>
             Bring your own credentials. Each provider is entered once and measures every engine
             listed with it. Saving runs a connection test; stored secrets are never displayed.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+          </SectionDescription>
+        </SectionHeader>
+        <SectionContent>
           <ProviderList />
-        </CardContent>
-      </Card>
+        </SectionContent>
+      </Section>
     </Stack>
   );
 }

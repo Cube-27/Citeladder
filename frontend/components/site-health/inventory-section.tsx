@@ -7,11 +7,10 @@ import { Icon } from '@/components/ui/icon';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { SearchField } from '@/components/ui/search-field';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';
 import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
@@ -27,6 +26,7 @@ import {
   statusLabel,
   type InventoryMode,
 } from '@/lib/site-health/status';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Always-mounted inventory section of the canonical Site Health screen.
@@ -59,7 +59,7 @@ export function InventorySection({
   let content: ReactNode;
   if (mode === 'none' || !crawl) {
     content = (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={FileText}
         heading="Pages appear here as discovery finds them"
@@ -127,7 +127,7 @@ function DiscoveringInventory({ crawl }: Readonly<{ crawl: SiteCrawl }>) {
             </ClampText>
           </TableCell>
           <TableCell className="type-caption">
-            {row.source ? statusLabel(row.source) : <UnavailableValue state="unknown" />}
+            {row.source ? statusLabel(row.source) : <Absence state="unknown" />}
           </TableCell>
         </TableRow>
       ))}
@@ -320,7 +320,7 @@ function ScoredInventoryState({
   // view switch, page turn or filter change keeps the rows and the pager on
   // screen until the next page lands. No exact total: these are FILTERED
   // views and no persisted count describes a filtered set.
-  const { page, table, rowOffset } = useCursorTableQuery({
+  const { page, table } = useCursorTableQuery({
     workspaceId: crawl.workspace_id,
     scopeId: crawl.id,
     scope: [view, activeViewParams, pageKind, query, sort],
@@ -354,7 +354,6 @@ function ScoredInventoryState({
       <PagesTable
         toolbar={toolbar}
         pages={page?.items ?? []}
-        rowOffset={rowOffset}
         crawlId={crawl.id}
         sort={sort}
         onSortChange={setSort}

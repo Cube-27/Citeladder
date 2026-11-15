@@ -10,7 +10,9 @@ import { UnsavedChangesGuard } from '@/components/ui/unsaved-changes-guard';
 import { OutputHistory } from '@/components/agent/output-history';
 import { WebSources } from '@/components/agent/web-sources';
 import { ProjectLink } from '@/components/ui/project-link';
-import { Badge } from '@/components/ui/badge';
+import { DraftSheet } from '@/components/ui/draft-sheet';
+import { revisionDraft } from '@/components/agent/revision-draft';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Icon } from '@/components/ui/icon';
@@ -25,7 +27,10 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 type PaneTab = 'output' | 'sources' | 'history';
 
 /**
- * One of the chat's documents, shown inline in the thread after the reply that wrote it. Edits and restores are refused by
+ * The one document view (brand direction 3.2, DraftSheet): one of the chat's
+ * documents, on a dashed edge while the Agent's revision is current and solid
+ * once a person saved theirs, shown inline in the thread after the reply that
+ * wrote it. Edits and restores are refused by
  * the server while a turn is queued or running, so the pane disables them
  * then rather than offering a control that will fail.
  */
@@ -69,97 +74,106 @@ export function OutputPane({
     />
   );
   return (
-    <Stack as="section" gap="compact" aria-labelledby={headingId} className="min-w-0 content-start">
-      <UnsavedChangesGuard when={unsaved} />
-      <Stack as="header" gap="tight">
-        <h2 id={headingId} className={textRole('sectionTitle', 'min-w-0')}>
-          {revision.title}
-        </h2>
-        <Inline className="flex-wrap">
-          <span className={textRole('caption')}>Document {output.number}</span>
-          <Badge>{kindLabel(output.kind)}</Badge>
-          <span className={textRole('caption')}>Revision {revision.number}</span>
-          {output.target_label ? (
-            <span className={textRole('caption', 'truncate')}>{output.target_label}</span>
-          ) : null}
-        </Inline>
-        {editing ? null : (
-          <OutputActions
-            revision={revision}
-            locked={locked}
-            onEdit={
-              canEdit
-                ? () => {
-                    setTab('output');
-                    setDraft({
-                      baseRevisionId: revision.id,
-                      title: revision.title,
-                      body: revision.body,
-                    });
-                  }
-                : undefined
-            }
-          />
-        )}
-        {editing ? null : (
-          <OutputDeclaration
-            workspaceId={workspaceId}
-            chatId={chatId}
-            output={output}
-            runActive={runActive}
-            canEdit={canEdit}
-          />
-        )}
-        {editing ? null : <PromptBuilderHandoff kind={output.kind} />}
-      </Stack>
-      <Tabs
-        value={tab}
-        onValueChange={setTab}
-        ariaLabel="Output views"
-        spaced
-        items={[
-          { value: 'output', label: 'Document' },
-          { value: 'sources', label: 'Sources' },
-          { value: 'history', label: 'History' },
-        ]}
+    <DraftSheet as="div" {...revisionDraft(revision)} className="min-w-0">
+      <Stack
+        as="section"
+        gap="compact"
+        aria-labelledby={headingId}
+        className="min-w-0 content-start"
       >
-        <TabPanel value="output" className="min-w-0">
-          {draft ? (
-            <OutputEditor
-              workspaceId={workspaceId}
-              target={target}
+        <UnsavedChangesGuard when={unsaved} />
+        <Stack as="header" gap="tight">
+          <h2 id={headingId} className={textRole('heading', 'min-w-0')}>
+            {revision.title}
+          </h2>
+          <Inline className="flex-wrap">
+            <span className={textRole('caption')}>Document {output.number}</span>
+            <Tag>{kindLabel(output.kind)}</Tag>
+            <span className={textRole('caption')}>Revision {revision.number}</span>
+            {output.target_label ? (
+              <span className={textRole('caption', 'truncate')}>{output.target_label}</span>
+            ) : null}
+          </Inline>
+          {editing ? null : (
+            <OutputActions
               revision={revision}
-              draft={draft}
-              onChange={setDraft}
-              onDone={() => setDraft(null)}
+              locked={locked}
+              onEdit={
+                canEdit
+                  ? () => {
+                      setTab('output');
+                      setDraft({
+                        baseRevisionId: revision.id,
+                        title: revision.title,
+                        body: revision.body,
+                      });
+                    }
+                  : undefined
+              }
             />
-          ) : (
-            document
           )}
-        </TabPanel>
-        <TabPanel value="sources">
-          <Stack gap="compact">
-            {revision.source_refs.length === 0 ? (
-              <p className={textRole('body')}>This revision cites no CiteLadder records.</p>
-            ) : (
-              <EvidenceChips refs={revision.source_refs} label="CiteLadder records" />
-            )}
-            <WebSources sources={revision.web_sources} />
-          </Stack>
-        </TabPanel>
-        <TabPanel value="history">
-          {tab === 'history' ? (
-            <OutputHistory
+          {editing ? null : (
+            <OutputDeclaration
               workspaceId={workspaceId}
               chatId={chatId}
-              outputId={output.id}
-              latestRevisionId={revision.id}
-              canRestore={!locked}
+              output={output}
+              runActive={runActive}
+              canEdit={canEdit}
             />
-          ) : null}
-        </TabPanel>
-      </Tabs>
-    </Stack>
+          )}
+          {editing ? null : <PromptBuilderHandoff kind={output.kind} />}
+        </Stack>
+        <Tabs
+          value={tab}
+          onValueChange={setTab}
+          ariaLabel="Output views"
+          spaced
+          items={[
+            { value: 'output', label: 'Document' },
+            { value: 'sources', label: 'Sources' },
+            { value: 'history', label: 'History' },
+          ]}
+        >
+          <TabPanel value="output" className="min-w-0">
+            {draft ? (
+              <OutputEditor
+                workspaceId={workspaceId}
+                target={target}
+                revision={revision}
+                draft={draft}
+                onChange={setDraft}
+                onDone={() => setDraft(null)}
+              />
+            ) : (
+              document
+            )}
+          </TabPanel>
+          <TabPanel value="sources">
+            <Stack gap="compact">
+              {revision.source_refs.length === 0 ? (
+                <p className={textRole('body', 'text-ink-2')}>
+                  This revision cites no CiteLadder records.
+                </p>
+              ) : (
+                <EvidenceChips refs={revision.source_refs} label="CiteLadder records" />
+              )}
+              <WebSources sources={revision.web_sources} />
+            </Stack>
+          </TabPanel>
+          <TabPanel value="history">
+            {tab === 'history' ? (
+              <OutputHistory
+                workspaceId={workspaceId}
+                chatId={chatId}
+                outputId={output.id}
+                latestRevisionId={revision.id}
+                canRestore={!locked}
+              />
+            ) : null}
+          </TabPanel>
+        </Tabs>
+      </Stack>
+    </DraftSheet>
   );
 }
 

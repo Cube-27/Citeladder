@@ -15,6 +15,7 @@ import {
   stringValue,
   walk,
 } from './source-ast.mjs';
+import { WEBSITE_ONLY_UI } from './design-system-website-only.mjs';
 
 const EDITORIAL_TAGS = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p']);
 /** Size utilities an editorial heading or paragraph must take from its role instead. */
@@ -44,6 +45,13 @@ const EDITORIAL_SIZES = [
   'display-xl',
   'display-2xl',
   'stat',
+  'display',
+  'subheading',
+  'prose',
+  'overline',
+  'figure-xl',
+  'figure',
+  'data-sm',
 ];
 const EDITORIAL_SIZE = new RegExp(
   String.raw`(?<![\w-])text-(?:${EDITORIAL_SIZES.join('|')})(?![\w-])`,
@@ -84,7 +92,7 @@ function withoutLineComments(text) {
   return kept + text.slice(copied);
 }
 
-function withoutComments(source) {
+export function withoutComments(source) {
   return withoutLineComments(source.replace(/\/\*[\s\S]*?\*\//g, ''));
 }
 
@@ -136,47 +144,54 @@ export function focusRoleViolations(source, label, ownsProductUi) {
   return [];
 }
 
-/** The system's five shadows (and none) are the whole elevation vocabulary. */
-const SHADOW_ROLES = new Set(['none', 'edge', 'xs', 'float', 'pop', 'press']);
+/**
+ * The app has one shadow, `shadow-sheet`, under anything that floats; nothing
+ * at rest has a shadow (brand direction 2.4). The website's edge, xs, float,
+ * pop and press shadows are its own.
+ */
+const SHADOW_ROLES = new Set(['none', 'sheet']);
 
 export function shadowRoleViolations(source, label, ownsProductUi) {
-  if (!ownsProductUi || label === TOKEN_CSS) return [];
-  const text = withoutComments(source);
+  if (!ownsProductUi || label === TOKEN_CSS || WEBSITE_ONLY_UI.has(label)) return [];
+  if (label.startsWith('components/content/')) return [];
+  const text = withoutWebsiteVariants(withoutComments(source));
   const shadows = text.matchAll(/\bshadow-(\[[^\]]+\]|[\w-]+)/g);
   const rawDeclaration =
     label.endsWith('.css') &&
     [...text.matchAll(/box-shadow\s*:([^;]+);/g)].some(
-      ([, value]) => !/^(?:none|var\(--shadow-(?:edge|xs|float|pop|press)\))$/.test(value.trim()),
+      ([, value]) => !/^(?:none|var\(--shadow-sheet\))$/.test(value.trim()),
     );
   if ([...shadows].some(([, role]) => !SHADOW_ROLES.has(role)) || rawDeclaration) {
-    return [
-      `${label}: elevation must use shadow-edge, shadow-xs, shadow-float, shadow-pop, shadow-press or none`,
-    ];
+    return [`${label}: elevation must use shadow-sheet (anything that floats) or none`];
   }
   return [];
 }
 
+/** A class that applies only on the website's surfaces keeps the website's names. */
+export const withoutWebsiteVariants = (text) =>
+  text.replaceAll(/\[\[data-public-surface\]_&\]:[^\s'"`]+/g, '');
+
 /** Radius family mismatches are review advice because composition can be intentional. */
 export function radiusRoleAdvisories(source, label, ownsProductUi) {
   if (!ownsProductUi || !label.endsWith('.tsx')) return [];
-  // The system's radius per component family: controls 12, app surfaces 14.
+  // The app's radius per component family: controls and slips 4, sheets 8.
   const roles = {
-    Button: 'md',
-    Input: 'md',
-    Textarea: 'md',
-    Select: 'md',
-    Card: 'lg',
-    Panel: 'lg',
-    Dialog: 'lg',
-    Drawer: 'lg',
-    DropdownContent: 'lg',
+    Button: 'control',
+    Input: 'control',
+    Textarea: 'control',
+    Select: 'control',
+    Card: 'control',
+    Panel: 'control',
+    Dialog: 'sheet',
+    Drawer: 'sheet',
+    DropdownContent: 'sheet',
   };
   return jsxClassData(source, label).flatMap(({ tag, classes, line }) => {
     const expected = roles[tag];
     if (!expected) return [];
-    const mismatch = [...classes.matchAll(/(?<![\w-])rounded-(2xs|xs|sm|md|lg|xl)(?![\w-])/g)].some(
-      ([, size]) => size !== expected,
-    );
+    const mismatch = [
+      ...classes.matchAll(/(?<![\w-])rounded-(mark|control|sheet|2xs|xs|sm|md|lg|xl)(?![\w-])/g),
+    ].some(([, size]) => size !== expected);
     return mismatch
       ? [`${label}:${line}: review ${tag} radius; its family is rounded-${expected}`]
       : [];
@@ -226,6 +241,13 @@ const TYPE_SIZES = [
   'eyebrow',
   'data',
   'code',
+  'display',
+  'subheading',
+  'prose',
+  'overline',
+  'figure-xl',
+  'figure',
+  'data-sm',
 ];
 const SPACING_UTILITIES = [
   'gap',
@@ -317,9 +339,9 @@ const PRODUCT_UI_CLASS_RULES = [
   {
     appliesTo: outsideUiPackage,
     test: (classes) =>
-      /(?<![:\w\]-])bg-(?:surface|surface-sunken|paper)(?:\/\d+)?(?![\w-])/.test(classes) &&
+      /(?<![:\w\]-])bg-(?:surface|well|ground|raised)(?:\/\d+)?(?![\w-])/.test(classes) &&
       /(?<![:\w\]-])border(?![-\w])/.test(classes) &&
-      /(?<![:\w\]-])rounded-(?:sm|md|lg|xl)(?![\w-])/.test(classes) &&
+      /(?<![:\w\]-])rounded-(?:control|sheet)(?![\w-])/.test(classes) &&
       /(?<![:\w\]-])p-(?:\d[\d.]*|\[var\([^)]+\)\])/.test(classes),
     message: 'a bordered filled box is a Panel (components/ui/panel.tsx)',
   },
@@ -388,7 +410,7 @@ const PRODUCT_UI_CLASS_RULES = [
   {
     appliesTo: outsideUiPackage,
     test: (classes) =>
-      /(?<![\w-])(?:hover:)?shadow-(?:xs|sm|float|lg|press)(?![\w-])/.test(classes),
+      /(?<![\w-])(?:hover:)?shadow-(?:xs|sm|float|lg|press|sheet)(?![\w-])/.test(classes),
     message: 'feature-owned static elevation is retired',
   },
   {
@@ -564,12 +586,12 @@ export function directRadixImportViolations(source, label) {
 const TEXT_ROLE_BACKGROUND = new RegExp(
   // Assembled from fragments so this policy source -- which the walk in
   // check-design-system.mjs also reads -- can never match itself.
-  String.raw`(^|\s)${['bg', '-'].join('')}(ink-secondary|ink-muted|accent-ink|subtle|secondary|muted)(\s|/|$)`,
+  String.raw`(^|\s)${['bg', '-'].join('')}(ink-2|ink-secondary|ink-muted|accent-ink|accent-text|subtle|secondary|muted)(\s|/|$)`,
 );
 
 const TEXT_ROLE_BACKGROUND_MESSAGE =
   'background utility built from a TEXT-role token; use a surface token ' +
-  '(bg-paper, bg-surface, bg-surface-sunken, bg-ink) or a semantic bg-*-soft';
+  '(bg-ground, bg-surface, bg-well, bg-raised, bg-ink) or a semantic bg-*-wash';
 
 /** Surfaces must never be painted with a text-ink token. */
 

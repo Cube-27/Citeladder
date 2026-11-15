@@ -4,12 +4,11 @@ import { ArrowUpRight, ShieldCheck, Split } from 'lucide-react';
 
 import { SignalInsight } from '@/components/demand/demand-signal-insight';
 import { SignalChip } from '@/components/demand/demand-signal-table';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
-import { StatRow } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
 import {
@@ -25,8 +24,9 @@ import { formatCount, formatPercent } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
+import { wellClasses } from '@/components/ui/slip';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 export function DemandEvidenceDrawer({
   signal,
@@ -85,10 +85,10 @@ function DemandEvidenceContent({
       <Stack gap="workspace">
         <Stack>
           <Inline className="flex-wrap">
-            <Badge>{details.targetKind}</Badge>
+            <Tag>{details.targetKind}</Tag>
             <SignalChip signalType={signal.signal_type} />
           </Inline>
-          <h2 className={textRole('sectionTitle', 'break-words')}>{details.target}</h2>
+          <h2 className={textRole('heading', 'break-words')}>{details.target}</h2>
           {details.linkablePageUrl && (
             <Inline className="type-caption">
               <span className={textRole('emphasis', 'shrink-0')}>Landing page</span>
@@ -107,8 +107,8 @@ function DemandEvidenceContent({
         <SignalInsight signal={signal} policy={policy} />
 
         <Stack as="section">
-          <h3 className={textRole('label')}>Search Console performance</h3>
-          <StatRow
+          <h3 className={textRole('body', 'text-ink-2')}>Search Console performance</h3>
+          <FigureStrip
             segments={[
               {
                 key: 'impressions',
@@ -150,8 +150,8 @@ function DemandEvidenceContent({
             page holds at least a 10% share, so there are never more than 10. */}
         {details.pages.length > 0 && (
           <Stack as="section">
-            <Inline as="h3" className={textRole('label')}>
-              <Icon icon={Split} className="text-ink-muted" />
+            <Inline as="h3" className={textRole('body', 'text-ink-2')}>
+              <Icon icon={Split} className="text-ink-2" />
               Competing pages ({details.pages.length})
             </Inline>
             <div className={ledgerClasses()}>
@@ -174,32 +174,32 @@ function DemandEvidenceContent({
 
         {details.cohortMedianCtr !== null && (
           <Stack as="section">
-            <h3 className={textRole('label')}>Position benchmark</h3>
-            <Stack className={panelClasses('type-caption')}>
+            <h3 className={textRole('body', 'text-ink-2')}>Position benchmark</h3>
+            <Stack className={wellClasses('type-caption')}>
               <div className="flex justify-between">
-                <span className="text-ink-muted">Position band</span>
+                <span className="text-ink-2">Position band</span>
                 {details.positionBand !== null ? (
                   <span className={textRole('emphasis', 'text-ink')}>
                     Positions {details.positionBand}.0 – {details.positionBand}.9
                   </span>
                 ) : (
-                  <UnavailableValue state="not_measured" />
+                  <Absence state="not_measured" />
                 )}
               </div>
               <div className="flex justify-between">
-                <span className="text-ink-muted">Median CTR in this band</span>
-                <span className={textRole('emphasis', 'text-ink-secondary tabular-nums')}>
+                <span className="text-ink-2">Median CTR in this band</span>
+                <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
                   {formatPercent(details.cohortMedianCtr, 1)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-ink-muted">This query’s CTR</span>
+                <span className="text-ink-2">This query’s CTR</span>
                 {numericMetric(signal, 'ctr') !== null ? (
-                  <span className={textRole('emphasis', 'text-ink-secondary tabular-nums')}>
+                  <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
                     {formatPercent(numericMetric(signal, 'ctr'), 1)}
                   </span>
                 ) : (
-                  <UnavailableValue state="not_measured" />
+                  <Absence state="not_measured" />
                 )}
               </div>
             </Stack>
@@ -208,11 +208,11 @@ function DemandEvidenceContent({
 
         {/* Where the figures came from, as counts and a date; internal IDs stay out of view. */}
         <Stack as="section" aria-labelledby="demand-provenance">
-          <Inline as="h3" id="demand-provenance" className={textRole('label')}>
-            <Icon icon={ShieldCheck} className="text-ink-muted" />
+          <Inline as="h3" id="demand-provenance" className={textRole('body', 'text-ink-2')}>
+            <Icon icon={ShieldCheck} className="text-ink-2" />
             Provenance
           </Inline>
-          <Stack as="dl" className={panelClasses('type-caption')}>
+          <Stack as="dl" className={wellClasses('type-caption')}>
             <ProvenanceRow label="Search Console rows">
               <ProvenanceCount value={details.metricRowCount} />
             </ProvenanceRow>
@@ -232,7 +232,7 @@ function DemandEvidenceContent({
 function ProvenanceRow({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
   return (
     <Inline gap="workspace" className="justify-between">
-      <dt className="text-ink-muted">{label}</dt>
+      <dt className="text-ink-2">{label}</dt>
       <dd className="text-ink tabular-nums">{children}</dd>
     </Inline>
   );
@@ -261,5 +261,5 @@ function sourceCount(value: unknown): number | null {
 }
 
 function ProvenanceCount({ value }: Readonly<{ value: number | null }>) {
-  return value === null ? <UnavailableValue state="not_measured" /> : formatCount(value);
+  return value === null ? <Absence state="not_measured" /> : formatCount(value);
 }

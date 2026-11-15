@@ -1,13 +1,8 @@
 import { useMutation } from '@tanstack/react-query';
 import { Users } from 'lucide-react';
 
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { QueryState } from '@/components/ui/query-state';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -21,6 +16,15 @@ import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { sameTarget } from '@/lib/products/targets';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 type Discovery = ReturnType<typeof useCompetitorDiscovery>;
 
@@ -60,8 +64,8 @@ export function SetupCompetitors({
   const running = tasks.some((task) => !task.terminal);
   const rows = query.data ? forTarget(query.data, target) : [];
   return (
-    <Card>
-      <CardHeader
+    <Section>
+      <SectionHeader
         actions={
           canRun ? (
             <Button
@@ -74,14 +78,15 @@ export function SetupCompetitors({
           ) : undefined
         }
       >
-        <CardTitle>Competitors</CardTitle>
-        <CardDescription>Candidates do not enter measurement until approved.</CardDescription>
-      </CardHeader>
-      <CardContent>
+        <SectionTitle>Competitors</SectionTitle>
+        <SectionDescription>Candidates do not enter measurement until approved.</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <Stack>
           {tasks.map((task) =>
             task.status === 'failed' ? (
-              <MutationNotice
+              <Notice
+                kind="mutation"
                 key={task.id}
                 notice={{
                   message: discoveryMessage(task.status, task.target.kind, task.error_code),
@@ -101,20 +106,22 @@ export function SetupCompetitors({
                 }
               />
             ) : (
-              <Callout key={task.id} tone="info">
+              <Notice key={task.id} tone="info">
                 {discoveryMessage(task.status, task.target.kind, task.error_code)}
-              </Callout>
+              </Notice>
             ),
           )}
           {discovery.discover.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(discovery.discover.error, {
                 action: 'start competitor discovery',
               })}
             />
           ) : null}
           {decide.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(decide.error, {
                 action: 'save the competitor decision',
               })}
@@ -129,8 +136,8 @@ export function SetupCompetitors({
             onDecide={canWrite ? (id, decision) => decide.mutate({ id, decision }) : undefined}
           />
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -152,11 +159,13 @@ function CompetitorRows({
   onDecide?: (id: string, decision: 'approved' | 'rejected') => void;
 }>) {
   if (query.isError)
-    return <ReadError {...readErrorProps(query)} fallback="Competitors could not be loaded." />;
-  if (query.isPending) return <QueryState kind="loading" />;
+    return (
+      <Notice kind="read" {...readErrorProps(query)} fallback="Competitors could not be loaded." />
+    );
+  if (query.isPending) return <StateBlock kind="loading" />;
   if (!rows.length) {
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={Users}
         heading={running ? 'Looking for competitors…' : 'No candidates yet'}
@@ -188,13 +197,13 @@ function CompetitorRows({
                 .join(' · ')}
             </span>
           </Stack>
-          <Badge variant="status" value={competitorState(row.state).tone}>
+          <StatusMark variant="status" value={competitorState(row.state).tone}>
             {competitorState(row.state).label}
-          </Badge>
+          </StatusMark>
           {row.state === 'pending' && onDecide ? (
             <Inline>
               <Button
-                variant="primary"
+                variant="secondary"
                 disabled={pending}
                 onClick={() => onDecide(row.id, 'approved')}
               >

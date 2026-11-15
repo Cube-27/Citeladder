@@ -16,7 +16,7 @@
  *     stable order (high → medium → low), never a client re-count.
  */
 import type { IssueSeverity, IssueDimension } from '@citeladder/contracts';
-import type { PriorityValue, StatusValue } from '@/components/ui/badge';
+import type { PriorityValue, StatusValue } from '@/components/ui/status-mark';
 
 /** Map an issue severity onto a status-badge value (shared palette, §8). */
 export function severityBadgeValue(severity: IssueSeverity): StatusValue {

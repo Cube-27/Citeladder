@@ -22,7 +22,7 @@ export function CollectionViewControl({ collection }: Readonly<{ collection: Sea
   if (collection.tab !== 'competitors') return views;
   return (
     <Inline gap="compact">
-      <Button variant="ghost" onClick={collection.showAllCompetitors}>
+      <Button variant="quiet" onClick={collection.showAllCompetitors}>
         All competitors
       </Button>
       {views}

@@ -8,11 +8,9 @@ import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
-import { ListScreen } from '@/components/layout/page-shell';
-import { Callout } from '@/components/ui/callout';
+import { ChatHistory } from '@/components/agent/chat-history';
+import { ThreadPage } from '@/components/templates/thread-page';
 import { Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import { contextChips, parseAgentHandoff, withoutContext } from '@/lib/agent/handoff';
@@ -21,10 +19,11 @@ import { actionsQueries, type Action } from '@/lib/api/actions';
 import { shortUrlTitle } from '@/lib/format';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 
 /**
- * New chat: the composer centred in the page with "What should I work on?"
- * open beneath it. Skills and the project's top Actions are in the
+ * New chat: the greeting and composer at the top of the thread column with
+ * "What should I work on?" beneath it. Skills and the project's top Actions are in the
  * composer's + menu. An evidence-screen handoff arrives as typed references
  * in the URL and is shown as removable context before the first message is
  * sent. A chat opened on an Action is about that Action alone: it is one
@@ -104,26 +103,23 @@ function NewChat({
   const pending = create.pending || commands.resolving;
 
   return (
-    <ListScreen
-      // Fill the viewport below the shell chrome: only the content scrolls and
-      // the window never moves. Kept identical in chat- and new-chat-screen.
-      fill
-      narrow
-    >
-      {/* `my-auto` centres the heading, composer and briefing in the page. */}
-      <Stack gap="section" className="my-auto">
-        <h2 className={textRole('sectionTitle', 'text-center')}>What can I help with?</h2>
+    <ThreadPage history={<ChatHistory />}>
+      {/* The greeting, composer and briefing start at the top of the thread
+          column, where a chat's first turn will be. */}
+      <Stack gap="section">
+        <h2 className={textRole('display')}>What can I help with?</h2>
         {unavailable ? (
-          <Callout tone="negative">
+          <Notice tone="negative">
             This Action is unavailable. The chat will start without it.
-          </Callout>
+          </Notice>
         ) : null}
-        {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
-        {failure ? <MutationNotice notice={failure} /> : null}
+        {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}
+        {failure ? <Notice kind="mutation" notice={failure} /> : null}
         {/* Without the catalog there are no skills to offer, and saying
             nothing read as a plan that has none. */}
         {catalog.read.status === 'error' ? (
-          <ReadError
+          <Notice
+            kind="read"
             {...readErrorProps(catalog.read)}
             title="Couldn't load skills"
             fallback="The request failed or timed out."
@@ -164,7 +160,7 @@ function NewChat({
           />
         )}
       </Stack>
-    </ListScreen>
+    </ThreadPage>
   );
 }
 

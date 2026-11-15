@@ -6,11 +6,16 @@
  * the detail screen knows whether to keep polling. Pure functions — no
  * transport, no React — so they are trivially unit-testable.
  */
-import type { AuditStatus, CitationClassification, ExecutionStatus } from '@citeladder/contracts';
-import type { ClassificationValue, RunStatusValue, StatusValue } from '@/components/ui/badge';
+import type {
+  Audit,
+  AuditStatus,
+  CitationClassification,
+  ExecutionStatus,
+} from '@citeladder/contracts';
+import type { ClassificationValue, RunStatusValue, StatusValue } from '@/components/ui/status-mark';
 import { ACTIVE_RUN_POLL_MS } from '@/lib/config/operational';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
-import { availabilityLabel, formatDisplayTimestamp } from '@/lib/format';
+import { availabilityLabel, formatDisplayDate, formatDisplayTimestamp } from '@/lib/format';
 
 /**
  * Every audit status: its label, its run-status badge, and whether the run is
@@ -146,6 +151,19 @@ export function classificationBadgeValue(
 export function formatDateTime(timestamp: string | null, timeZone = 'UTC'): string {
   if (!timestamp) return availabilityLabel('unknown');
   return formatDisplayTimestamp(timestamp, timeZone);
+}
+
+/**
+ * A run's own name: what it measured and the day it was created, and a
+ * repair run (a rerun of another's failures) says so ("Brand audit · Nov 11, 2026").
+ */
+export function runTitle(
+  audit: Pick<Audit, 'audit_scope' | 'parent_audit_id' | 'created_at'>,
+  timeZone = 'UTC',
+): string {
+  const scope = audit.audit_scope === 'commerce' ? 'Commerce' : 'Brand';
+  const kind = audit.parent_audit_id ? `${scope} repair run` : `${scope} audit`;
+  return `${kind} · ${formatDisplayDate(audit.created_at, timeZone)}`;
 }
 
 /** Human-readable label for a citation classification. */

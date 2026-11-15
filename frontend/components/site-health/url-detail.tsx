@@ -3,9 +3,8 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { History } from 'lucide-react';
 
-import { Callout } from '@/components/ui/callout';
-import { QueryState } from '@/components/ui/query-state';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -25,9 +24,11 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 
 import { PAGE_DETAIL_BACK, UrlDetailView } from './url-detail-view';
-import { DetailScreen } from '@/components/layout/page-shell';
+import { RecordPage } from '@/components/templates/record-page';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 const HISTORY_LIMIT = 25;
 const RERUN_SEARCH_PARAM = 'rerun';
@@ -85,21 +86,22 @@ export function UrlDetail({
 
   if (detailQuery.isLoading)
     return (
-      <DetailScreen back={PAGE_DETAIL_BACK}>
-        <QueryState kind="loading" label="Loading page detail…" />
-      </DetailScreen>
+      <RecordPage back={PAGE_DETAIL_BACK}>
+        <StateBlock kind="loading" label="Loading page detail…" />
+      </RecordPage>
     );
   if (detailQuery.isError || !detailQuery.data) {
     return (
-      <DetailScreen back={PAGE_DETAIL_BACK}>
-        <QueryState
+      <RecordPage back={PAGE_DETAIL_BACK}>
+        <StateBlock
           kind="error"
           error={detailQuery.error}
           fallback="Could not load this page. It may not exist in this crawl."
+          title="Could not load this page"
           onRetry={() => void detailQuery.refetch()}
           pending={detailQuery.isFetching}
         />
-      </DetailScreen>
+      </RecordPage>
     );
   }
 
@@ -127,7 +129,7 @@ export function UrlDetail({
         />
       }
     >
-      {rerunError ? <Callout tone="negative">{rerunError}</Callout> : null}
+      {rerunError ? <Notice tone="negative">{rerunError}</Notice> : null}
     </UrlDetailView>
   );
 }
@@ -172,7 +174,7 @@ function IssueHistoryButton(target: HistoryTarget) {
   return (
     <>
       <Button
-        variant="ghost"
+        variant="quiet"
         onClick={() => {
           setRequested(true);
           setOpen(true);
@@ -221,17 +223,17 @@ function IssueHistory({ workspaceId, crawlId, siteUrlId }: HistoryTarget) {
   });
 
   return (
-    <DataTable label="Resolved issues" columns={HISTORY_COLUMNS} nested {...table}>
+    <DataTable label="Resolved issues" columns={HISTORY_COLUMNS} {...table}>
       {page?.items.map((row) => (
         <TableRow key={row.id}>
           <TableCell>{issueTitle(row)}</TableCell>
           <TableCell>
-            <Badge>{dimensionLabel(row.dimension)}</Badge>
+            <Tag>{dimensionLabel(row.dimension)}</Tag>
           </TableCell>
           <TableCell>
-            <Badge variant="status" value={severityBadgeValue(row.severity)}>
+            <StatusMark variant="status" value={severityBadgeValue(row.severity)}>
               {severityLabel(row.severity)}
-            </Badge>
+            </StatusMark>
           </TableCell>
           <TableCell numeric>{formatAudited(row.created_at, timeZone)}</TableCell>
         </TableRow>

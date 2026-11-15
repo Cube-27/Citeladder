@@ -1,21 +1,14 @@
-import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 
-import { ListScreen } from '@/components/layout/page-shell';
-import type { FilterDefinition } from '@/components/ui/all-filters';
+import { ReportPage } from '@/components/templates/report-page';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
-import { StatRow } from '@/components/ui/stat-row';
 import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
-import { InlineFigure } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
-import { Measured } from '@/components/products/measured';
+import { Absence } from '@/components/ui/absence';
+import { Value } from '@/components/ui/value';
 import { ProductName } from '@/components/products/products-table';
 import type {
   CommerceOverviewBrand,
@@ -32,13 +25,28 @@ import {
   useOverviewFilters,
   type ProductScopeFilters,
 } from '@/lib/products/product-filters';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 const RANKINGS = [
   { value: 'brands', label: 'Brands' },
   { value: 'products', label: 'Products' },
 ] as const;
 type Ranking = (typeof RANKINGS)[number]['value'];
+const rankingCodec = stringUrlCodec<Ranking>(
+  RANKINGS.map((ranking) => ranking.value),
+  'brands',
+);
 type Overview = CommerceShoppingOverview;
 
 /** One row in place of rows: what is absent. */
@@ -76,6 +84,14 @@ const SHARE_COLUMN: DataTableColumn = {
   numeric: true,
 };
 
+/** A rate or mean as a narrow cell's Value: unavailable when nothing in scope measured it. */
+function Measured({
+  value,
+  format,
+}: Readonly<{ value: number | null; format: (value: number) => string }>) {
+  return <Value value={value === null ? null : format(value)} absent="unavailable" narrow />;
+}
+
 function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | CommerceOverviewBrand }>) {
   return (
     <>
@@ -96,13 +112,11 @@ function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | Commerce
 function RankingTable({
   overview,
   scope,
-  filters,
 }: Readonly<{
   overview: Overview;
   scope: ProductScopeFilters;
-  filters: readonly FilterDefinition[];
 }>) {
-  const [ranking, setRanking] = useState<Ranking>('brands');
+  const [ranking, setRanking] = useUrlState('ranking', rankingCodec);
   const brands = ranking === 'brands';
   const count = brands ? overview.brands.length : overview.products.length;
   const emptyMessage = brands ? 'No brand yet.' : 'No product yet.';
@@ -119,8 +133,6 @@ function RankingTable({
             onChange={setRanking}
           />
         ),
-        // The page's window and category, beside the ranking switch.
-        filters,
       }}
       columns={[
         { key: 'name', label: brands ? 'Brand' : 'Product' },
@@ -133,7 +145,7 @@ function RankingTable({
     >
       {brands
         ? overview.brands.map((row) => (
-            <TableRow key={row.brand}>
+            <TableRow key={row.brand} highlight={row.owned}>
               <TableCell>
                 <TableCellLines
                   title
@@ -148,7 +160,7 @@ function RankingTable({
             </TableRow>
           ))
         : overview.products.map((row) => (
-            <TableRow key={row.holder_id}>
+            <TableRow key={row.holder_id} highlight={row.kind === 'owned'}>
               <TableCell>
                 <ProductName row={row} scope={scope} />
               </TableCell>
@@ -196,7 +208,9 @@ function ProductList({
           <TableCell>
             <ProductName row={row} scope={scope} />
           </TableCell>
-          <TableCell numeric>{formatCount(row.appearances)}</TableCell>
+          <TableCell numeric>
+            <Value value={formatCount(row.appearances)} />
+          </TableCell>
           <TableCell numeric>
             <Measured value={row.visibility} format={formatRate} />
           </TableCell>
@@ -222,8 +236,12 @@ function MerchantTable({ rows }: Readonly<{ rows: Overview['merchants'] }>) {
       {rows.map((row) => (
         <TableRow key={row.domain}>
           <TableCell>{row.domain}</TableCell>
-          <TableCell numeric>{formatCount(row.answers)}</TableCell>
-          <TableCell numeric>{formatCount(row.products)}</TableCell>
+          <TableCell numeric>
+            <Value value={formatCount(row.answers)} />
+          </TableCell>
+          <TableCell numeric>
+            <Value value={formatCount(row.products)} />
+          </TableCell>
         </TableRow>
       ))}
     </DataTable>
@@ -262,7 +280,9 @@ function FanoutTable({ fanout }: Readonly<{ fanout: Overview['fanout'] }>) {
       {fanout.queries.map((row) => (
         <TableRow key={row.query}>
           <TableCell>{row.query}</TableCell>
-          <TableCell numeric>{formatCount(row.answers)}</TableCell>
+          <TableCell numeric>
+            <Value value={formatCount(row.answers)} />
+          </TableCell>
         </TableRow>
       ))}
     </DataTable>
@@ -301,10 +321,10 @@ function CategoryShelf({ shelf }: Readonly<{ shelf: Overview['category_shelf'] }
     },
   ];
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Category shelf</CardTitle>
-        <CardDescription>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Category shelf</SectionTitle>
+        <SectionDescription>
           {shelf ? (
             <>
               Latest Commerce run, <DisplayTime value={shelf.measured_at} dateOnly />, from{' '}
@@ -314,62 +334,67 @@ function CategoryShelf({ shelf }: Readonly<{ shelf: Overview['category_shelf'] }
           ) : (
             'No Commerce run has measured this category yet.'
           )}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <StatRow
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
+        <FigureStrip
           segments={segments.map(({ label, sub, value }) => ({
             key: label,
             label,
             sub,
-            value: value ?? <UnavailableValue state={missing} />,
+            value: value ?? <Absence state={missing} />,
           }))}
         />
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
 /**
  * What the screen draws for one read of the overview; each product links to
- * its page in `windowDays`, the window the overview was read in. The page's
- * `filters` sit in the Ranking table's toolbar.
+ * its page in `windowDays`, the window the overview was read in. A failed
+ * read stays inside the page, under its filter bar.
  */
 export function OverviewSections({
   query,
   windowDays,
-  filters,
 }: Readonly<{
   query: UseQueryResult<Overview>;
   windowDays: ProductWindowDays;
-  filters: readonly FilterDefinition[];
 }>) {
-  if (query.isPending) return <QueryState kind="loading" label="Loading the Shopping overview" />;
+  if (query.isPending) return <StateBlock kind="loading" label="Loading the Shopping overview" />;
   if (query.isError)
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         {...readErrorProps(query)}
+        title="Couldn't load the Shopping overview"
         fallback="The Shopping overview could not be loaded."
       />
     );
   const overview = query.data;
   const scope: ProductScopeFilters = { window: windowDays, engine: null, promptSet: null };
   return (
-    <Stack gap="workspace">
-      <Inline as="p" gap="meta" className="type-caption">
-        <span>
-          <InlineFigure>{formatCount(overview.executions)}</InlineFigure>
-          {overview.executions === 1 ? ' answer' : ' answers'} in the last {overview.window_days}{' '}
-          days
-        </span>
-        <span>
-          <InlineFigure>{formatCount(overview.slots)}</InlineFigure>
-          {overview.slots === 1 ? ' product recommendation' : ' product recommendations'}
-        </span>
-      </Inline>
+    <>
+      <FigureStrip
+        segments={[
+          {
+            key: 'answers',
+            label: 'Answers',
+            value: formatCount(overview.executions),
+            sub: `In the last ${overview.window_days} days`,
+          },
+          {
+            key: 'recommendations',
+            label: 'Product recommendations',
+            value: formatCount(overview.slots),
+          },
+          { key: 'brands', label: 'Brands', value: formatCount(overview.brands.length) },
+          { key: 'products', label: 'Products', value: formatCount(overview.products.length) },
+        ]}
+      />
       {overview.category ? <CategoryShelf shelf={overview.category_shelf} /> : null}
-      <RankingTable overview={overview} scope={scope} filters={filters} />
+      <RankingTable overview={overview} scope={scope} />
       <AppGrid layout="halves">
         <ProductList
           title="Most visible"
@@ -390,7 +415,7 @@ export function OverviewSections({
         <MerchantTable rows={overview.merchants} />
         <FanoutTable fanout={overview.fanout} />
       </AppGrid>
-    </Stack>
+    </>
   );
 }
 
@@ -415,15 +440,17 @@ export function ShoppingOverviewScreen() {
     enabled: !filters.category || !catalog.isPending,
   });
   return (
-    <ListScreen>
-      <OverviewSections
-        query={query}
-        windowDays={filters.window}
-        filters={[
-          windowFilter(filters.window, overviewFilters.setWindow),
-          categoryFilter(category, known, overviewFilters.setCategory),
-        ]}
-      />
-    </ListScreen>
+    <ReportPage
+      filters={
+        <FilterBar
+          filters={[
+            windowFilter(filters.window, overviewFilters.setWindow),
+            categoryFilter(category, catalog.data, overviewFilters.setCategory),
+          ]}
+        />
+      }
+    >
+      <OverviewSections query={query} windowDays={filters.window} />
+    </ReportPage>
   );
 }

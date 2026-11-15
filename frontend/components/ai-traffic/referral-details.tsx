@@ -3,12 +3,12 @@ import { SearchX } from 'lucide-react';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { Callout } from '@/components/ui/callout';
 import { formatCount, formatPercent } from '@/lib/format';
 import { aiSourceLabel } from '@/lib/ai-traffic/series';
 import { reasonLabel } from '@/lib/ai-traffic/vocabulary';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { TrafficUrlButton } from './url-panel';
+import { Notice } from '@/components/ui/notice';
 
 const COMPARISON_COLUMNS: readonly DataTableColumn[] = [
   { key: 'channel', label: 'Channel' },
@@ -119,10 +119,10 @@ export function ReferralQuality({ data }: Readonly<{ data: AiReferrals }>) {
         {excluded}
       </p>
       {flags.length ? (
-        <Callout tone="info">
+        <Notice tone="info">
           GA4 quality: {flags.map(reasonLabel).join('; ')}. Missing or flagged observations are
           unavailable.
-        </Callout>
+        </Notice>
       ) : null}
     </>
   );
@@ -132,7 +132,7 @@ export function Measure({
   value,
   format,
 }: Readonly<{ value: number | null; format: (value: number) => string }>) {
-  if (value === null) return <UnavailableValue state="not_measured" />;
+  if (value === null) return <Absence state="not_measured" />;
   return <span className="tabular-nums">{format(value)}</span>;
 }
 export function formatRevenue(value: number, currency: string | null) {

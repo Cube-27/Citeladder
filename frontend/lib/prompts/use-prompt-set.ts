@@ -32,6 +32,11 @@ export function usePromptSet() {
     () => new Map(ordered.length > 1 ? ordered.map((set) => [set.id, set.name]) : []),
     [ordered],
   );
+  // Commerce measures its prompts as a shelf, never one prompt at a time.
+  const commerceSetIds: ReadonlySet<string> = useMemo(
+    () => new Set(sets.filter((set) => set.kind === 'commerce').map((set) => set.id)),
+    [sets],
+  );
 
   const createMutation = useMutation(promptsMutations.ensureSet(scope));
 
@@ -45,6 +50,7 @@ export function usePromptSet() {
     promptSet,
     prompts,
     setNames,
+    commerceSetIds,
     /** Server-enforced bounds of the prompt forms; null until the list loads. */
     limits: listQuery.data?.limits ?? null,
     isLoading: listQuery.isLoading && !embedded.length,

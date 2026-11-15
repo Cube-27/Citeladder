@@ -6,15 +6,13 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { restartAt } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { Dialog } from '@/components/ui/dialog';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
 import { PasswordField } from '@/components/ui/password-field';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
-import { SettingsSection } from '@/components/ui/settings-section';
 import { textRole } from '@/components/ui/typography';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { Section, SectionHeader, SectionTitle, SectionDescription } from '@/components/ui/section';
 
 const METHOD_LABELS: Record<string, string> = { password: 'Email and password', google: 'Google' };
 
@@ -41,13 +39,25 @@ function SignInSection({
   security,
 }: Readonly<{ security: UseQueryResult<Awaited<ReturnType<typeof authApi.security>>> }>) {
   return (
-    <SettingsSection title="Sign-in" description="How you sign in to CiteLadder.">
-      {security.isPending && <p className={textRole('body')}>Loading account security…</p>}
-      {security.isError && (
-        <ReadError fallback="Account security could not be loaded." {...readErrorProps(security)} />
-      )}
-      <SecurityIdentity data={security.data} />
-    </SettingsSection>
+    <Section>
+      <SectionHeader>
+        <SectionTitle level={2}>Sign-in</SectionTitle>
+        <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
+      </SectionHeader>
+      <Stack gap="item">
+        {security.isPending && (
+          <p className={textRole('body', 'text-ink-2')}>Loading account security…</p>
+        )}
+        {security.isError && (
+          <Notice
+            kind="read"
+            fallback="Account security could not be loaded."
+            {...readErrorProps(security)}
+          />
+        )}
+        <SecurityIdentity data={security.data} />
+      </Stack>
+    </Section>
   );
 }
 
@@ -55,7 +65,8 @@ function SignInSection({
 function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
   return Object.entries(errors).map(([name, error]) =>
     error ? (
-      <MutationNotice
+      <Notice
+        kind="mutation"
         key={name}
         notice={mutationNoticeForError(error, { action: 'update your sign-in settings' })}
       />
@@ -65,7 +76,7 @@ function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Erro
 
 /**
  * The account's sign-in, password and session controls, as settings
- * sections. Place it inside `SettingsSections`.
+ * sections. Place it inside `SectionStack`.
  */
 export default function AccountSecurity() {
   const [current, setCurrent] = useState('');
@@ -94,85 +105,94 @@ export default function AccountSecurity() {
   return (
     <>
       <SignInSection security={security} />
-      <SettingsSection
-        title="Password"
-        description={
-          canLinkGoogle
-            ? 'Changing it signs you out everywhere. To connect Google, enter your current password, then choose Connect Google.'
-            : 'Changing it signs you out everywhere.'
-        }
-      >
-        {hasPassword ? (
-          <Stack
-            as="form"
-            gap="workspace"
-            className="max-w-md"
-            onSubmit={(event) => {
-              event.preventDefault();
-              mutation.mutate('change-password');
-            }}
-          >
-            <PasswordField
-              label="Current password"
-              autoComplete="current-password"
-              placeholder="Current password"
-              inputProps={{
-                value: current,
-                onChange: (event) => setCurrent(event.target.value),
-                required: true,
+      <Section>
+        <SectionHeader>
+          <SectionTitle level={2}>Password</SectionTitle>
+          <SectionDescription>
+            {canLinkGoogle
+              ? 'Changing it signs you out everywhere. To connect Google, enter your current password, then choose Connect Google.'
+              : 'Changing it signs you out everywhere.'}
+          </SectionDescription>
+        </SectionHeader>
+        <Stack gap="item">
+          {hasPassword ? (
+            <Stack
+              as="form"
+              gap="workspace"
+              className="max-w-md"
+              onSubmit={(event) => {
+                event.preventDefault();
+                mutation.mutate('change-password');
               }}
-            />
-            <PasswordField
-              label="New password"
-              autoComplete="new-password"
-              placeholder={passwordHint}
-              inputProps={{
-                value: password,
-                onChange: (event) => setPassword(event.target.value),
-                required: true,
-                minLength: authFormPolicy.passwordMinLength,
-                maxLength: authFormPolicy.passwordMaxLength,
-              }}
-            />
-            <Inline className="flex-wrap">
-              <Button type="submit" variant="primary" disabled={mutation.isPending}>
-                Change password and sign out
-              </Button>
-              {canLinkGoogle && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  disabled={!current || link.isPending}
-                  onClick={() => link.mutate()}
-                >
-                  Connect Google
+            >
+              <PasswordField
+                label="Current password"
+                autoComplete="current-password"
+                placeholder="Current password"
+                inputProps={{
+                  value: current,
+                  onChange: (event) => setCurrent(event.target.value),
+                  required: true,
+                }}
+              />
+              <PasswordField
+                label="New password"
+                autoComplete="new-password"
+                placeholder={passwordHint}
+                inputProps={{
+                  value: password,
+                  onChange: (event) => setPassword(event.target.value),
+                  required: true,
+                  minLength: authFormPolicy.passwordMinLength,
+                  maxLength: authFormPolicy.passwordMaxLength,
+                }}
+              />
+              <Inline className="flex-wrap">
+                <Button type="submit" variant="primary" disabled={mutation.isPending}>
+                  Change password and sign out
                 </Button>
-              )}
-            </Inline>
-          </Stack>
-        ) : (
-          <Button
-            variant="primary"
-            className="w-fit"
-            disabled={!security.data || setup.isPending}
-            onClick={() => setup.mutate()}
-          >
-            Email password setup link
-          </Button>
-        )}
-        {setup.isSuccess && <Callout tone="info">{setup.data.message}</Callout>}
-        <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
-      </SettingsSection>
-      <SettingsSection title="Sessions" description="Sign out every device, including this one.">
-        <Inline className="flex-wrap">
-          <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
-            Sign out all sessions
-          </Button>
-          <Button variant="danger" onClick={() => setConfirm('disconnect')}>
-            Sign out everywhere and disconnect integrations
-          </Button>
-        </Inline>
-      </SettingsSection>
+                {canLinkGoogle && (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    disabled={!current || link.isPending}
+                    onClick={() => link.mutate()}
+                  >
+                    Connect Google
+                  </Button>
+                )}
+              </Inline>
+            </Stack>
+          ) : (
+            <Button
+              variant="primary"
+              className="w-fit"
+              disabled={!security.data || setup.isPending}
+              onClick={() => setup.mutate()}
+            >
+              Email password setup link
+            </Button>
+          )}
+          {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
+          <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />
+        </Stack>
+      </Section>
+      <Section>
+        <SectionHeader>
+          <SectionTitle level={2}>Sessions</SectionTitle>
+          <SectionDescription>Sign out every device, including this one.</SectionDescription>
+        </SectionHeader>
+        <Stack gap="item">
+          <Inline className="flex-wrap">
+            <Button variant="secondary" onClick={() => setConfirm('sign-out')}>
+              Sign out all sessions
+            </Button>
+            <Button variant="danger" onClick={() => setConfirm('disconnect')}>
+              Sign out and disconnect
+            </Button>
+          </Inline>
+        </Stack>
+      </Section>
       <Dialog
         open={confirm === 'sign-out'}
         onOpenChange={(open) => setConfirm(open ? 'sign-out' : null)}

@@ -1,16 +1,15 @@
 import { useMutation, type UseQueryResult } from '@tanstack/react-query';
 
-import { Callout } from '@/components/ui/callout';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { textRole } from '@/components/ui/typography';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import type { ObservedCompetitor } from '@citeladder/contracts';
 import { Button } from '@/components/ui/button';
 import { visibilityMutations } from '@/lib/api/visibility-queries';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * Competitors the runs observed but the project does not yet track, with the
@@ -35,13 +34,13 @@ export function CompetitorSuggestions({
   const canWrite = useWorkspaceCapability('write');
 
   return (
-    <Card aria-labelledby="competitor-suggestions">
-      <CardHeader>
-        <CardTitle id="competitor-suggestions">Competitor suggestions</CardTitle>
-        <CardDescription>
+    <Section aria-labelledby="competitor-suggestions">
+      <SectionHeader>
+        <SectionTitle id="competitor-suggestions">Competitor suggestions</SectionTitle>
+        <SectionDescription>
           Observed repeatedly in third-party citations. Verify relevance before adding.
-        </CardDescription>
-      </CardHeader>
+        </SectionDescription>
+      </SectionHeader>
       <Stack>
         <SuggestionRows
           suggestionsQuery={suggestionsQuery}
@@ -49,10 +48,10 @@ export function CompetitorSuggestions({
           onAdd={canWrite ? (candidateId) => acceptMutation.mutate(candidateId) : undefined}
         />
         {acceptMutation.isError ? (
-          <Callout tone="negative">Could not add that competitor. Try again.</Callout>
+          <Notice tone="negative">Could not add that competitor. Try again.</Notice>
         ) : null}
       </Stack>
-    </Card>
+    </Section>
   );
 }
 
@@ -69,7 +68,8 @@ function SuggestionRows({
   return (
     <>
       {suggestionsQuery.isError ? (
-        <ReadError
+        <Notice
+          kind="read"
           error={suggestionsQuery.error}
           fallback="Could not load competitor suggestions."
           onRetry={() => void suggestionsQuery.refetch()}
@@ -82,10 +82,10 @@ function SuggestionRows({
             <Inline
               as="li"
               key={candidate.id}
-              className={ledgerItemClasses('type-body flex-wrap justify-between')}
+              className={ledgerItemClasses('type-body text-ink-2 flex-wrap justify-between')}
             >
               <Stack gap="tight">
-                <p className={textRole('itemTitle')}>{candidate.name}</p>
+                <p className={textRole('body')}>{candidate.name}</p>
                 <p className="type-caption">
                   {candidate.domain} · {candidate.prompt_count} prompts / {candidate.engine_count}{' '}
                   engines
@@ -102,7 +102,7 @@ function SuggestionRows({
       ) : null}
       {/* Only an answered, empty list is "none yet"; a failed read says so above. */}
       {suggestionsQuery.isSuccess && !suggestionsQuery.data.length ? (
-        <QueryState kind="empty" inline message="No repeated citation candidates yet." />
+        <StateBlock kind="empty" inline message="No repeated citation candidates yet." />
       ) : null}
     </>
   );

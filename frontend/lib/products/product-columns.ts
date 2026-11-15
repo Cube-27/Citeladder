@@ -39,15 +39,19 @@ export type ProductColumnKey = (typeof PRODUCT_COLUMNS)[number]['key'];
 
 /**
  * A cell's text, or the state that stands in for a missing value: no answer
- * in scope is `unavailable`, a price the catalog lacks is `unknown`. A real
+ * in scope is `unavailable`, a price the catalog lacks is `unknown`, a
+ * competitor has no catalog price to lack (`not_applicable`). A real
  * zero is text ("0", "0%"), never a state. A note (quotes in other
  * currencies) can accompany either.
  */
 export type ProductCell =
   | Readonly<{ kind: 'value'; text: string; note?: string }>
-  | Readonly<{ kind: 'missing'; state: 'unavailable' | 'unknown' | 'none'; note?: string }>;
+  | Readonly<{ kind: 'missing'; state: MissingState; note?: string }>;
 
-const missing = (state: 'unavailable' | 'unknown' | 'none', note?: string): ProductCell => ({
+/** No answer in scope; no catalog price; nothing listed (no merchant); does not apply. */
+type MissingState = 'unavailable' | 'unknown' | 'none' | 'not_applicable';
+
+const missing = (state: MissingState, note?: string): ProductCell => ({
   kind: 'missing',
   state,
   ...(note ? { note } : {}),
@@ -89,7 +93,7 @@ function mentionedPrice(row: CommerceProductRow): ProductCell {
 /** The catalog price or range; a competitor has none, a catalog product's is unknown. */
 function catalogPrice(row: CommerceProductRow): ProductCell {
   const price = row.catalog_price;
-  if (price === null) return missing(row.kind === 'owned' ? 'unknown' : 'none');
+  if (price === null) return missing(row.kind === 'owned' ? 'unknown' : 'not_applicable');
   const min = formatPrice(price.min, price.currency);
   if (price.min === price.max) return { kind: 'value', text: min };
   return { kind: 'value', text: `${min}–${formatPrice(price.max, price.currency)}` };

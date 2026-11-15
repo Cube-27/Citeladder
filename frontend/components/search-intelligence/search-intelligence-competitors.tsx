@@ -68,7 +68,7 @@ export function SearchIntelligenceCompetitors({
           <TableRow key={competitor.identity}>
             <TableCell>
               <div className="grid max-w-sm min-w-0">
-                <ClampText lines={1} className={textRole('itemTitle')}>
+                <ClampText lines={1} className={textRole('body')}>
                   {competitor.label}
                 </ClampText>
                 <ClampText lines={1} className={textRole('caption')}>
@@ -95,7 +95,7 @@ export function SearchIntelligenceCompetitors({
                   {dataset ? (
                     <TextLink asChild text="body">
                       <Pressable
-                        className="w-auto text-center"
+                        className="min-h-6 w-auto min-w-6 text-center"
                         aria-label={`${competitor.label}: ${SEARCH_DATASET_LABELS[kind]}`}
                         onClick={() => onOpen(dataset)}
                       >

@@ -110,9 +110,9 @@ test('shell → open run → open execution evidence', async ({ page }) => {
 
   await page.goto(fixtureProjectPath('/runs'));
 
-  // Runs list renders and the run links to its detail page.
+  // Runs list renders and the run's name is the link to its detail page.
   await expect(page.getByRole('heading', { level: 1, name: 'Runs' })).toBeVisible();
-  await page.getByRole('table').getByRole('link', { name: 'View' }).first().click();
+  await page.getByRole('table').getByRole('link', { name: 'Brand audit · Jan 1, 2026' }).click();
 
   // Run detail: progress panel + executions table.
   await expect(page).toHaveURL(fixtureProjectPath(`/runs/${AUDIT_ID}`));

@@ -1,15 +1,21 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { BusyBar } from '@/components/ui/progress-bar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartFrame } from '@/components/ui/chart';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
+import { BusyRung } from '@/components/ui/rung-meter';
+import { ChartFrame } from '@/components/ui/chart-frame';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DonutChart, type DonutSlice } from '@/components/ui/donut-chart';
-import { TrendChart, type TrendSeries } from '@/components/ui/trend-chart';
+import { PartBar, type Part } from '@/components/ui/part-bar';
+import { StepChart, type TrendSeries } from '@/components/ui/step-chart';
 import { seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
 import type { useSourceSeries } from '@/lib/visibility/use-source-analysis';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /**
  * The two cards above the Sources table: usage over time, and the type mix.
@@ -34,24 +40,24 @@ export function UsageCard({
   const urls = dimension === 'url';
   const title = heading?.title ?? (urls ? 'Source usage by URL' : 'Source usage by domain');
   return (
-    <Card className="relative">
-      <BusyBar active={query.isFetching} label="Updating usage" />
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>
+    <Section className="relative">
+      <BusyRung active={query.isFetching} label="Updating usage" />
+      <SectionHeader>
+        <SectionTitle>{title}</SectionTitle>
+        <SectionDescription>
           {heading?.description ??
             `How often each of the leading ${urls ? 'pages' : 'domains'} was used as a source, as a share of the answers in each period.`}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         {/* Every state occupies the page-chart box, which holds the legend
             (up to two wrapped lines) above the plot, so a state of another
             height never moves the table below this card. */}
         <ChartFrame height="lg">
           <UsagePlot query={query} label={title} />
         </ChartFrame>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -64,7 +70,8 @@ function UsagePlot({
 }: Readonly<{ query: ReturnType<typeof useSourceSeries>; label: string }>) {
   if (query.isError) {
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load source usage."
         onRetry={() => void query.refetch()}
@@ -80,12 +87,12 @@ function UsagePlot({
   if (!first) {
     return (
       <div className="grid place-items-center">
-        <QueryState kind="empty" inline message="No sources were used in this period." />
+        <StateBlock kind="empty" inline message="No sources were used in this period." />
       </div>
     );
   }
   return (
-    <TrendChart
+    <StepChart
       label={label}
       name={first.label}
       data={(query.data?.buckets ?? []).map((bucket, index) => ({
@@ -137,7 +144,7 @@ const OTHER_TYPES = new Set(['other_third_party', 'unresolved']);
  * largest types, and the rest (with the types that already read "Other")
  * merged into one Other part, so a long taxonomy never becomes nine slivers.
  */
-function typeSegments(slices: readonly TypeSlice[]): DonutSlice[] {
+function typeSegments(slices: readonly TypeSlice[]): Part[] {
   const own = slices.filter((slice) => slice.key === 'brand_owned');
   const ranked = slices
     .filter((slice) => slice.key !== 'brand_owned' && !OTHER_TYPES.has(slice.key))
@@ -147,10 +154,14 @@ function typeSegments(slices: readonly TypeSlice[]): DonutSlice[] {
   const room = others.length ? 3 : 4;
   const kept = named.length > room ? named.slice(0, 3) : named;
   const folded = [...named.slice(kept.length), ...others];
-  const parts: DonutSlice[] = kept.map((slice) => ({ name: slice.label, value: slice.value }));
+  const parts: Part[] = kept.map((slice) => ({
+    label: slice.label,
+    value: slice.value,
+    you: slice.key === 'brand_owned',
+  }));
   if (!folded.length) return parts;
   const value = folded.reduce((sum, slice) => sum + slice.value, 0);
-  return [...parts, { name: 'Other', value, other: true }];
+  return [...parts, { label: 'Other', value, other: true }];
 }
 
 type ReadState = Pick<
@@ -169,18 +180,18 @@ export function TypesCard({
   query: ReadState;
 }>) {
   return (
-    <Card className="relative">
-      <BusyBar active={query.isFetching} label="Updating source types" />
-      <CardHeader>
-        <CardTitle>Source types</CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* The donut and its legend in the default chart height role. */}
+    <Section className="relative">
+      <BusyRung active={query.isFetching} label="Updating source types" />
+      <SectionHeader>
+        <SectionTitle>Source types</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
+        {/* The bar and its labels in the default chart height role. */}
         <ChartFrame height="md">
           <TypesMix slices={slices} total={total} query={query} />
         </ChartFrame>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -198,7 +209,8 @@ function TypesMix({
   // "no citations in this selection" for a request that never answered.
   if (query.isError) {
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load source types."
         onRetry={() => void query.refetch()}
@@ -210,7 +222,7 @@ function TypesMix({
   if (!slices.length && total <= 0) {
     return (
       <div className="grid place-items-center">
-        <QueryState kind="empty" inline message="No citations in this selection." />
+        <StateBlock kind="empty" inline message="No citations in this selection." />
       </div>
     );
   }
@@ -218,10 +230,10 @@ function TypesMix({
   // page was never classified are counted in it and belong to no type, so
   // they stay an unfilled remainder instead of stretching the types to 100%.
   return (
-    <DonutChart
-      slices={typeSegments(slices)}
+    <PartBar
+      parts={typeSegments(slices)}
       total={total}
-      totalLabel="Citations"
+      totalLabel="citations"
       remainderLabel="Unclassified"
       label="Source types"
     />

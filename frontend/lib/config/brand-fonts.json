@@ -5,7 +5,7 @@
     "display": {
       "family": "Stack Sans Notch",
       "file": "StackSansNotch-Variable.woff2",
-      "preload": ["public", "docs"],
+      "preload": ["app", "public", "docs"],
       "weights": "400 600",
       "fallback": {
         "sizeAdjust": "107.9%",

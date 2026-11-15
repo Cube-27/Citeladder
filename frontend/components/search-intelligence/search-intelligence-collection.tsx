@@ -1,6 +1,5 @@
 import { Database } from 'lucide-react';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { textRole } from '@/components/ui/typography';
 import type {
   SearchIntelligenceDataset,
@@ -12,6 +11,7 @@ import { SearchMetrics, SearchSummaryEvidence } from './search-intelligence-over
 import { SearchIntelligenceHistory } from './search-intelligence-history';
 import { SearchValue } from './search-intelligence-value';
 import type { SearchCollection } from './search-intelligence-collection-state';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * A tab's saved collection: the result the page's control strip chose (the
@@ -89,7 +89,7 @@ function CollectionResult({ collection }: Readonly<{ collection: SearchCollectio
   return (
     <Stack gap="workspace" className="min-w-0">
       {collection.tab === 'competitors' && dataset ? (
-        <p className={textRole('itemTitle')}>
+        <p className={textRole('body')}>
           {collection.label(dataset)} compared with {dataset.target_hostname}
         </p>
       ) : null}
@@ -101,7 +101,7 @@ function CollectionResult({ collection }: Readonly<{ collection: SearchCollectio
           keywordFilters={collection.keywordDataset ? collection.keywordFilters : undefined}
         />
       ) : (
-        <QueryState
+        <StateBlock
           kind="empty"
           icon={Database}
           heading={`No saved ${title.toLowerCase()}`}

@@ -1,9 +1,9 @@
-import { Callout } from '@/components/ui/callout';
 import { Inline } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import type { ActiveRun } from '@/lib/visibility/dashboard';
 import { TextLink } from '@/components/ui/text-link';
+import { Notice } from '@/components/ui/notice';
 
 /**
  * In-progress run banner for the Visibility workspace. An active run has no
@@ -13,7 +13,7 @@ import { TextLink } from '@/components/ui/text-link';
  */
 export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
   return (
-    <Callout tone="info">
+    <Notice tone="info">
       <Inline className="flex-wrap">
         <Spinner />
         <span>
@@ -24,6 +24,6 @@ export function ActiveRunBanner({ run }: Readonly<{ run: ActiveRun }>) {
           Watch live progress →
         </TextLink>
       </Inline>
-    </Callout>
+    </Notice>
   );
 }

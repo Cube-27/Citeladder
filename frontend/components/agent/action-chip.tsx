@@ -1,5 +1,5 @@
 import { ActionStatusBadge } from '@/components/agent/action-status-badge';
-import { RecordChip } from '@/components/ui/record-chip';
+import { RecordTag } from '@/components/ui/tag';
 import type { AgentChatDetail } from '@/lib/api/agent';
 
 type ChatAction = AgentChatDetail['actions'][number];
@@ -10,10 +10,10 @@ export function ActionChip({
   prefix = '',
 }: Readonly<{ action: ChatAction; prefix?: string }>) {
   return (
-    <RecordChip
+    <RecordTag
       href={`/agent/actions/${action.id}`}
       label={`${prefix}${action.target_label}`}
-      mark={<ActionStatusBadge status={action.status} />}
+      status={<ActionStatusBadge status={action.status} />}
     />
   );
 }

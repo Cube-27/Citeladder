@@ -16,9 +16,9 @@ import { safeAuthReturnPath, withAuthReturnPath } from '@/lib/auth/auth-return-p
 import { httpErrorStatus, humanizeApiError } from '@/lib/api/errors';
 import type { SessionUser } from '@citeladder/contracts';
 import { isDeparting, restartAt } from '@/lib/auth/account-transition';
-import { Callout } from '@/components/ui/callout';
 import { Button } from '@/components/ui/button';
 import { textRole } from '@/components/ui/typography';
+import { Notice } from '@/components/ui/notice';
 
 export type SessionContextValue = {
   user: SessionUser;
@@ -182,7 +182,7 @@ export function SessionGuard({
     if (isError && httpErrorStatus(error) !== 401) {
       const notice = (
         <div className="grid min-h-[60vh] place-items-center p-[var(--page-section-gap)]">
-          <Callout
+          <Notice
             tone="warning"
             className="max-w-lg"
             action={
@@ -196,9 +196,9 @@ export function SessionGuard({
               </Button>
             }
           >
-            <h1 className={textRole('sectionTitle')}>Your session could not be verified</h1>
+            <h1 className={textRole('heading')}>Your session could not be verified</h1>
             <p>{humanizeApiError(error, 'Please try again.').message}</p>
-          </Callout>
+          </Notice>
         </div>
       );
       return <>{renderSessionFallback(fallback, notice)}</>;

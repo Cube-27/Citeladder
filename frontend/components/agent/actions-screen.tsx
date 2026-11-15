@@ -11,13 +11,13 @@ import {
 } from '@/components/agent/action-queue';
 import { ActionPriorityBadge } from '@/components/agent/action-status-badge';
 import { AnalyzePageButton } from '@/components/agent/analyze-page-dialog';
-import { ListScreen } from '@/components/layout/page-shell';
+import { CollectionPage } from '@/components/templates/collection-page';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
-import { readErrorProps } from '@/components/ui/read-error';
-import { ClampText, TableCell, TableRow } from '@/components/ui/table';
-import { ACTION_GROUP_LABEL, approachLabel, familyLabel } from '@/lib/agent/vocabulary';
+import { TableCell, TableRow } from '@/components/ui/table';
+import { ACTION_GROUP_LABEL, approachLabel } from '@/lib/agent/vocabulary';
 import {
   actionsQueries,
   type Action,
@@ -30,6 +30,7 @@ import { ICONS } from '@/lib/icons';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { actionGroupSchema } from '@citeladder/contracts/actions';
+import { readErrorProps } from '@/components/ui/notice';
 
 /**
  * Every Action of the project, content-gap work included, in the table it
@@ -44,25 +45,43 @@ export function ActionsScreen() {
   const filters = useActionFilters();
   const scope = { workspaceId, projectId };
   return (
-    <ListScreen narrow actions={<AnalyzePageButton />} controls={{ filters: filters.definitions }}>
+    <CollectionPage
+      actions={<AnalyzePageButton />}
+      filters={<FilterBar filters={filters.definitions} />}
+    >
       {filters.group ? (
         <GroupList {...scope} query={filters.query} group={filters.group} />
       ) : (
         <GroupedList {...scope} query={filters.query} onShowGroup={filters.showGroup} />
       )}
-    </ListScreen>
+    </CollectionPage>
   );
 }
 
 // No status column: under the default queue nearly every row is Open, so a
 // row names its status beside the target only when it differs (owner,
-// 2026-11-10).
+// 2026-11-10). The server orders rows by priority. The target's caption names
+// the sources, so the identity column keeps the width; below `desktop:` it
+// leads with the action type too.
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Action' },
-  { key: 'priority', label: 'Priority', width: 'status' },
-  { key: 'approach', label: 'Action type', width: 'name' },
-  { key: 'source', label: 'Source', width: 'name' },
+  { key: 'priority', label: 'Priority', width: 'status', order: 'descending' },
+  { key: 'approach', label: 'Action type', width: 'category', desktopOnly: true },
 ];
+
+/** The columns every width shows: a full-width row spans these, then fills the rest. */
+const ALWAYS_SHOWN = COLUMNS.filter((column) => !column.desktopOnly).length;
+
+/**
+ * Empty cells under the columns only `desktop:` shows. A cell spanning a
+ * hidden column would keep its width in the fixed layout, so a full-width
+ * row spans the shown columns and fills the rest with these.
+ */
+function DesktopOnlyCells() {
+  return COLUMNS.filter((column) => column.desktopOnly).map((column) => (
+    <TableCell key={column.key} desktopOnly />
+  ));
+}
 
 type ListProps = Readonly<{ workspaceId: string; projectId: string; query: ActionListQuery }>;
 
@@ -77,9 +96,9 @@ function GroupList({ workspaceId, projectId, query, group }: ListProps & { group
     empty: emptyActions,
   });
   return (
-    // Every row stacks the target over its kind, so short pages pad with
-    // two-line blanks and the pager stays where a full page puts it.
-    <DataTable label="Actions" columns={COLUMNS} rowLines={2} {...table}>
+    // Every row stacks the target (up to two lines) over its kind, so short
+    // pages pad with blanks and the pager stays where a full page puts it.
+    <DataTable label="Actions" columns={COLUMNS} rowLines={3} {...table}>
       {page?.items.map((action) => (
         <ActionRow key={action.id} action={action} status={query.status} />
       ))}
@@ -125,7 +144,7 @@ function GroupedList({
     <DataTable
       label="Actions"
       columns={COLUMNS}
-      rowLines={2}
+      rowLines={3}
       state={state}
       busy={{
         active: reads.some((read) => read.isFetching && !read.isPending),
@@ -179,18 +198,19 @@ function GroupHeaderRow({
 }: Readonly<{ group: ActionGroup; total: number; open: boolean; onToggle: () => void }>) {
   return (
     <TableRow data-action-group={group}>
-      <TableCell colSpan={COLUMNS.length}>
+      <TableCell colSpan={ALWAYS_SHOWN}>
         <Button
-          variant="ghost"
+          variant="quiet"
           aria-expanded={open}
           aria-label={`${ACTION_GROUP_LABEL[group]}, ${formatCount(total)}`}
           onClick={onToggle}
         >
           <Icon icon={open ? ChevronDown : ChevronRight} />
           <span className="text-ink">{ACTION_GROUP_LABEL[group]}</span>
-          <span className="text-ink-muted tabular-nums">{formatCount(total)}</span>
+          <span className="text-ink-2 tabular-nums">{formatCount(total)}</span>
         </Button>
       </TableCell>
+      <DesktopOnlyCells />
     </TableRow>
   );
 }
@@ -203,15 +223,16 @@ function ShowAllRow({
 }: Readonly<{ group: ActionGroup; total: number; onShow: () => void }>) {
   return (
     <TableRow>
-      <TableCell colSpan={COLUMNS.length}>
+      <TableCell colSpan={ALWAYS_SHOWN}>
         <Button
-          variant="ghost"
+          variant="quiet"
           onClick={onShow}
           aria-label={`Show all ${formatCount(total)} in ${ACTION_GROUP_LABEL[group]}`}
         >
           Show all {formatCount(total)}
         </Button>
       </TableCell>
+      <DesktopOnlyCells />
     </TableRow>
   );
 }
@@ -253,19 +274,13 @@ function ActionRow({
     if (event.target instanceof Element && event.target.closest('a, button')) return;
     navigate(projectHref(href));
   };
-  const sources = action.families.map(familyLabel).filter(Boolean).join(', ');
   return (
     <TableRow onClick={open} className="cursor-pointer">
       <ActionTargetCell action={action} status={status} />
       <TableCell className="whitespace-nowrap">
         <ActionPriorityBadge band={action.priority_band} />
       </TableCell>
-      <TableCell>{approachLabel(action.approach) ?? ''}</TableCell>
-      <TableCell>
-        <ClampText lines={1} tooltip={sources}>
-          {sources}
-        </ClampText>
-      </TableCell>
+      <TableCell desktopOnly>{approachLabel(action.approach) ?? ''}</TableCell>
     </TableRow>
   );
 }

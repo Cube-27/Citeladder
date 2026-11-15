@@ -2,10 +2,10 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { AlertTriangle, X } from 'lucide-react';
 import { useInsertionEffect, useRef, type ReactNode, type RefObject } from 'react';
 
-import { FLOAT_FACE } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { Button, IconButton } from './button';
 import { Icon } from './icon';
+import { SHEET_FACE } from '@/components/ui/slip';
 
 /**
  * Remembers the element that opened an overlay, so closing returns focus to
@@ -36,13 +36,45 @@ export function useReturnFocus(open: boolean) {
   };
 }
 
+function DialogHeader({
+  title,
+  description,
+  danger,
+  divided,
+}: Readonly<{ title: ReactNode; description?: ReactNode; danger: boolean; divided: boolean }>) {
+  return (
+    <header
+      className={cn(
+        'flex items-start gap-3 p-[var(--card-padding)]',
+        !danger && 'pe-14',
+        divided && 'border-rule border-b',
+      )}
+    >
+      {danger ? (
+        <span className="text-negative inline-flex h-7 items-center">
+          <Icon icon={AlertTriangle} className="my-0" />
+        </span>
+      ) : null}
+      <div className="min-w-0">
+        <DialogPrimitive.Title className="type-heading">{title}</DialogPrimitive.Title>
+        {description ? (
+          <DialogPrimitive.Description asChild>
+            <div className="text-body-sm text-ink-2 mt-1">{description}</div>
+          </DialogPrimitive.Description>
+        ) : null}
+      </div>
+    </header>
+  );
+}
+
 /**
  * Dialog — a modal panel for one short task, centred across the scrim with its
  * top edge fixed at 12vh, so content that changes inside it (a tab, a picked
  * file) grows or shrinks it downward and nothing above moves: `surface`,
- * `radius-lg`, the floating face (1px `line` border, `shadow-float`), `modal-padding` (16 in the app) padding and gaps, `container-narrow` wide.
+ * `radius-lg`, the floating face (1px `line` border, `shadow-sheet`), `modal-padding` (16 in the app) padding and gaps, `container-narrow` wide.
  * The title is the section title (500, 22/28), the description
- * `ink-secondary`, the footer right-aligned (Cancel first, then the action). `tone="danger"` is a
+ * `ink-secondary`, the footer right-aligned (Cancel first, then the action).
+ * Header, body and footer are divided by hairlines (brand direction 2.4). `tone="danger"` is a
  * confirmation: an `alertdialog`, 440px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.
  * Focus opens on the first tabbable element unless `initialFocusRef` is set,
@@ -90,27 +122,18 @@ export function Dialog({
           }}
           onCloseAutoFocus={returnFocus}
           className={cn(
-            FLOAT_FACE,
-            'dialog-panel z-modal fixed top-[12vh] left-1/2 flex max-h-[calc(88dvh-1.5rem)] w-[calc(100vw-3rem)] -translate-x-1/2 flex-col gap-[var(--card-padding)] rounded-lg p-[var(--card-padding)]',
+            SHEET_FACE,
+            'dialog-panel z-modal fixed top-[12vh] left-1/2 flex max-h-[calc(88dvh-1.5rem)] w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden rounded-sheet',
             danger && 'max-w-110',
             !danger && (width === 'wide' ? 'max-w-180' : 'max-w-narrow'),
           )}
         >
-          <header className={cn('flex items-start gap-3', !danger && 'pe-8')}>
-            {danger ? (
-              <span className="text-negative inline-flex h-7 items-center">
-                <Icon icon={AlertTriangle} className="my-0" />
-              </span>
-            ) : null}
-            <div className="min-w-0">
-              <DialogPrimitive.Title className="type-section-title">{title}</DialogPrimitive.Title>
-              {description ? (
-                <DialogPrimitive.Description asChild>
-                  <div className="text-body-sm text-ink-secondary mt-1">{description}</div>
-                </DialogPrimitive.Description>
-              ) : null}
-            </div>
-          </header>
+          <DialogHeader
+            title={title}
+            description={description}
+            danger={danger}
+            divided={children != null}
+          />
           {danger ? null : (
             <DialogPrimitive.Close asChild>
               <IconButton
@@ -122,12 +145,14 @@ export function Dialog({
             </DialogPrimitive.Close>
           )}
           {children == null ? null : (
-            <div className="text-ink -mx-[var(--card-padding)] flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain px-[var(--card-padding)]">
+            <div className="text-ink flex min-h-0 flex-1 flex-col gap-4 overflow-auto overscroll-contain p-[var(--card-padding)]">
               {children}
             </div>
           )}
           {footer ? (
-            <footer className="flex items-center justify-end gap-2">{footer}</footer>
+            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--card-padding)] py-3">
+              {footer}
+            </footer>
           ) : null}
         </DialogPrimitive.Content>
       </DialogPrimitive.Portal>

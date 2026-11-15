@@ -197,7 +197,7 @@ it('charts the prompt over time with declared work marked, and hands off to its 
       .slice(1)
       .map((cell) => cell.textContent);
   expect(cells(/ChatGPT API/)).toEqual(['2', '0', '1', '0', '0', '1']);
-  const unmeasured = '–Not measured';
+  const unmeasured = 'Not measured';
   expect(cells(/Gemini API/)).toEqual(['0', '1', unmeasured, unmeasured, unmeasured, unmeasured]);
   expect(screen.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
     'href',

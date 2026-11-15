@@ -145,7 +145,13 @@ describe('Context layout', () => {
       ),
     );
     renderContext();
-    expect(await screen.findByRole('button', { name: 'Save brand knowledge' })).toBeEnabled();
+    // A blank profile says what belongs here and offers no save until a change.
+    const save = await screen.findByRole('button', { name: 'Save brand knowledge' });
+    expect(save).toBeDisabled();
+    expect(screen.getByText(/^No company facts yet/)).toBeVisible();
+    await user.type(screen.getByLabelText('Description'), 'Coffee');
+    expect(save).toBeEnabled();
+    expect(screen.queryByText(/^No company facts yet/)).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Business map' }));
     expect(screen.queryByRole('button', { name: /^save/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Agent instructions' }));

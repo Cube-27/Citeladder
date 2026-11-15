@@ -1,9 +1,7 @@
 import { Fragment, useState } from 'react';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Disclosure } from '@/components/ui/disclosure';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -24,6 +22,8 @@ import {
   type SiteFactsView,
 } from '@/lib/site-health/site-facts';
 import { RobotsHistory } from './robots-history';
+import { Notice } from '@/components/ui/notice';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 export function SiteFactsPanel({
   crawl,
@@ -53,8 +53,8 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
   let llmsStatus = 'not fetched';
   if (view.llms_txt.fetched) llmsStatus = view.llms_txt.present ? 'present' : 'absent';
   return (
-    <Card className="min-w-0">
-      <CardHeader
+    <Section className="min-w-0">
+      <SectionHeader
         actions={
           <Button variant="secondary" asChild>
             <ProjectLink
@@ -69,7 +69,7 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
           </Button>
         }
       >
-        <CardTitle>AI crawler robots policy</CardTitle>
+        <SectionTitle>AI crawler robots policy</SectionTitle>
         <p className={textRole('caption')}>
           What robots.txt permits over known URLs. This does not prove that a crawler retrieved a
           page.
@@ -79,18 +79,18 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
           {view.robots.status_code !== null ? ` (HTTP ${view.robots.status_code})` : ''} · llms.txt:{' '}
           {llmsStatus}
         </p>
-      </CardHeader>
-      <CardContent>
+      </SectionHeader>
+      <SectionContent>
         <Stack className="min-w-0">
           {unknown ? (
-            <Callout tone="warning">
+            <Notice tone="warning">
               robots.txt could not be read. Root access and robots policy are unknown.
-            </Callout>
+            </Notice>
           ) : null}
           {view.robots.status === 'not_found' ? (
-            <Callout tone="info">
+            <Notice tone="info">
               No robots.txt was found. No robots rules restrict these known URLs.
-            </Callout>
+            </Notice>
           ) : null}
           <Disclosure title={crawlerSummary(view)}>
             <CrawlerTable
@@ -120,8 +120,8 @@ function SiteFactsViewPanel({ crawl, view }: Readonly<{ crawl: SiteCrawl; view: 
             ) : null}
           </Disclosure>
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -186,11 +186,11 @@ function CrawlerTable({
                   <TableCell>{bot.operator}</TableCell>
                   <TableCell>{crawlerMatchedLabels[bot.matched]}</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <Badge>{crawlerRootAccessLabels[bot.root_access]}</Badge>
+                    <Tag>{crawlerRootAccessLabels[bot.root_access]}</Tag>
                   </TableCell>
                   <TableCell>
                     <Inline className="whitespace-nowrap">
-                      <Badge>{crawlerPolicyLabels[bot.policy]}</Badge>
+                      <Tag>{crawlerPolicyLabels[bot.policy]}</Tag>
                       <PolicySample bot={bot} />
                     </Inline>
                   </TableCell>

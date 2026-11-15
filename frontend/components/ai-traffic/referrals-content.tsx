@@ -1,18 +1,17 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
 import { AiReferralsEmptyState } from '@/components/ai-traffic/empty-state';
-import { Callout } from '@/components/ui/callout';
-import type { FilterBarProps } from '@/components/ui/filter-bar';
-import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
+import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { DEFAULT_RANGE, rangeLabel, type AiReferralsRange } from '@/lib/ai-traffic/options';
 import { isAiReferralsEmpty } from '@/lib/ai-traffic/series';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 
 import { AiReferralsDashboard } from './referrals-dashboard';
-import { ListScreen } from '@/components/layout/page-shell';
-import { TabPanel, type TabRowProps } from '@/components/ui/tabs';
+import { ReportPage } from '@/components/templates/report-page';
+import { TabPanel, TabRow, type TabRowProps } from '@/components/ui/tabs';
+import { SectionStack } from '@/components/ui/section';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 export function AiReferralsContent({
   range,
@@ -31,17 +30,20 @@ export function AiReferralsContent({
   // work jumping a row's height the moment data arrived.
   const data = <AiReferralsDataRegion range={range} query={query} />;
   const region = notice ? (
-    <Stack gap="workspace">
+    <SectionStack>
       {notice}
       {data}
-    </Stack>
+    </SectionStack>
   ) : (
     data
   );
   return (
-    <ListScreen tabs={tabs} controls={controls}>
+    <ReportPage
+      tabs={tabs ? <TabRow {...tabs} /> : undefined}
+      filters={<FilterBar {...controls} />}
+    >
       {tabs ? <TabPanel value="referrals">{region}</TabPanel> : region}
-    </ListScreen>
+    </ReportPage>
   );
 }
 
@@ -49,10 +51,10 @@ function AiReferralsDataRegion({
   range,
   query,
 }: Omit<React.ComponentProps<typeof AiReferralsContent>, 'controls' | 'notice' | 'tabs'>) {
-  if (query.isLoading) return <QueryState kind="loading" label="Loading AI referrals…" />;
+  if (query.isLoading) return <StateBlock kind="loading" label="Loading AI referrals…" />;
   if (query.isError) {
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         {...readErrorProps(query)}
         fallback="AI referrals could not be loaded. Check your connection and try again."
@@ -77,9 +79,9 @@ function AiReferralsDataRegion({
  */
 function AiReferralsNoSnapshot({ range }: Readonly<{ range: AiReferralsRange }>) {
   return (
-    <Callout tone="info">
+    <Notice tone="info">
       No synced AI-referral snapshot covers {rangeLabel(range).toLowerCase()} yet. Switch to the
       latest synced window, or run a sync from Performance.
-    </Callout>
+    </Notice>
   );
 }

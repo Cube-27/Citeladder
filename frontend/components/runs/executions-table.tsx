@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { useExecutionFilters } from '@/components/runs/executions-filters';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ import {
   TableCellLines,
   TableRow,
 } from '@/components/ui/table';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { productTransportLabel } from '@/lib/providers/catalog';
@@ -77,6 +77,7 @@ export function ExecutionsTable({
       // The filters need rows to choose from: none while the read stands in.
       toolbar={state ? undefined : { filters: filters.definitions }}
       columns={COLUMNS}
+      minWidth="md"
       state={state ?? unmatched}
       rowLines={2}
       rowCount={pageRows.length}
@@ -120,7 +121,7 @@ export function ExecutionsTable({
           </TableCell>
           <TableCell numeric>
             {execution.latency_ms == null ? (
-              <UnavailableValue state="not_measured" />
+              <Absence state="not_measured" />
             ) : (
               `${formatCount(execution.latency_ms)} ms`
             )}
@@ -132,7 +133,7 @@ export function ExecutionsTable({
                 Evidence
               </Button>
             ) : (
-              <UnavailableValue state="unavailable" />
+              <Absence state="unavailable" />
             )}
           </TableActionsCell>
         </TableRow>
@@ -146,13 +147,13 @@ function StatusBadge({ execution }: Readonly<{ execution: Execution }>) {
   const engines = useEngineCatalog();
   const label = executionStatusLabel(execution.status, engines.label(execution.logical_engine));
   return (
-    <Badge
+    <StatusMark
       variant="status"
       value={EXECUTION_STATES[execution.status].badge}
       className="max-w-full"
       title={label}
     >
       <span className="min-w-0 truncate">{label}</span>
-    </Badge>
+    </StatusMark>
   );
 }

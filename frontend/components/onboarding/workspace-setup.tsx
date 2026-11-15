@@ -3,20 +3,19 @@ import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
-import { AuthShell } from '@/components/ui/auth-shell';
 import { Button } from '@/components/ui/button';
-import { OnboardingShell, OnboardingStep } from '@/components/ui/onboarding-shell';
-import { MutationNotice } from '@/components/ui/mutation-notice';
+import { FlowPage, FlowStep } from '@/components/templates/flow-page';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { authQueries } from '@/lib/api/auth';
 import { signOutForChangedTerms } from '@/lib/auth/account-transition';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 const FORM_ID = 'workspace-setup-form';
 
@@ -44,17 +43,17 @@ export function WorkspaceSetup() {
   const failure = terms.error ?? leave.error;
   if (failure)
     return (
-      <AuthShell mainLabel="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
-        <QueryState
+      <FlowPage label="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
+        <StateBlock
           kind="error"
           error={failure}
           fallback="We could not load workspace setup."
           onRetry={() => (terms.error ? void terms.refetch() : signOut())}
           pending={terms.isFetching || leave.isPending}
         />
-      </AuthShell>
+      </FlowPage>
     );
-  if (!terms.data?.accepted_at) return <AuthShell mainLabel="Workspace setup">{null}</AuthShell>;
+  if (!terms.data?.accepted_at) return <FlowPage label="Workspace setup">{null}</FlowPage>;
   return <NameWorkspace termsRevision={terms.data.terms_revision} />;
 }
 
@@ -82,9 +81,8 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
   };
 
   return (
-    <OnboardingShell mainLabel="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
-      <OnboardingStep
-        width="narrow"
+    <FlowPage label="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
+      <FlowStep
         title="Set up your workspace"
         help="Your projects and team live here. Your trial starts when you create it."
         next={
@@ -118,13 +116,14 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
               )}
             </Field>
             {create.error ? (
-              <MutationNotice
+              <Notice
+                kind="mutation"
                 notice={mutationNoticeForError(create.error, { action: 'create the workspace' })}
               />
             ) : null}
           </Stack>
         </form>
-      </OnboardingStep>
-    </OnboardingShell>
+      </FlowStep>
+    </FlowPage>
   );
 }

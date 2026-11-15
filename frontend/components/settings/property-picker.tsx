@@ -2,13 +2,11 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
 import { OptionRow } from '@/components/ui/list-row';
-import { QueryState } from '@/components/ui/query-state';
 import {
   integrationsMutations,
   integrationsQueries,
@@ -20,6 +18,8 @@ import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project
 import { InlineFigure } from '@/components/ui/typography';
 import { activeMappingFor, ownPropertiesFirst } from '@/components/integrations/data-sources';
 import { PROVIDER_META } from '@/components/settings/grant-model';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * One selectable row in the picker list.
@@ -120,17 +120,17 @@ function SelectedProperty({
     <Inline className="flex-wrap">
       {selected ? (
         // A GA4 property is a number; a Search Console property is a site.
-        <Badge className="max-w-full truncate">
+        <Tag className="max-w-full truncate">
           {provider === 'ga4' ? <InlineFigure>{selected}</InlineFigure> : selected}
-        </Badge>
+        </Tag>
       ) : (
-        <Badge variant="status" value="warning">
+        <StatusMark variant="status" value="warning">
           No {noun} selected
-        </Badge>
+        </StatusMark>
       )}
       {canChoose ? (
         <Button
-          variant="ghost"
+          variant="quiet"
           onClick={onChoose}
           disabled={disabled}
           data-testid={`select-property-${provider}`}
@@ -226,16 +226,17 @@ export function PropertyPicker({
       >
         <Stack gap="compact">
           {!activeProject ? (
-            <Callout tone="warning">
+            <Notice tone="warning">
               No active project. Create or select a project first — a property must be imported into
               one.
-            </Callout>
+            </Notice>
           ) : null}
 
-          {discovery.isPending ? <QueryState kind="loading" label={`Loading ${noun}s…`} /> : null}
+          {discovery.isPending ? <StateBlock kind="loading" label={`Loading ${noun}s…`} /> : null}
 
           {discovery.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(discovery.error, {
                 action: 'load your properties from the provider',
               })}
@@ -243,10 +244,10 @@ export function PropertyPicker({
           ) : null}
 
           {discovery.data?.length === 0 ? (
-            <Callout tone="neutral">
+            <Notice tone="info">
               This account has no {noun} available. Verify the property in the provider&rsquo;s own
               console first, then reopen this dialog.
-            </Callout>
+            </Notice>
           ) : null}
 
           <Stack gap="tight">
@@ -263,7 +264,8 @@ export function PropertyPicker({
           </Stack>
 
           {selectMutation.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(selectMutation.error, { action: 'save the property' })}
             />
           ) : null}

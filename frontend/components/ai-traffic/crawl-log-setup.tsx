@@ -17,15 +17,14 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import { Field } from '@/components/ui/field';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { RadioGroup } from '@/components/ui/radio-group';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { CopyButton } from '@/components/ui/copy-button';
 import { TextLink } from '@/components/ui/text-link';
 import { Checkbox } from '@/components/ui/checkbox';
 import { GcpFields, GcpSourceSetup, GcpSteps } from './gcp-pull-setup';
+import { Notice } from '@/components/ui/notice';
+import { wellClasses } from '@/components/ui/slip';
 const SETUP_STEPS: Partial<Record<(typeof CRAWL_LOG_SETUPS)[number]['value'], string>> = {
   cloudflare_worker:
     'Deploy the downloadable template yourself. Store the token as a Worker secret, use a fail-open route, and expect partial coverage. Every routed request uses your Workers quota.',
@@ -77,7 +76,7 @@ export function CrawlLogSetup({
             disabled: unavailable,
             label: (
               <span className="grid">
-                <span className="type-control text-ink">{s.label}</span>
+                <span className="type-body text-ink">{s.label}</span>
                 <span className="type-caption">
                   {unavailable ? 'Not available in this environment.' : s.description}
                 </span>
@@ -86,8 +85,8 @@ export function CrawlLogSetup({
           };
         })}
       />
-      <Stack className={panelClasses()}>
-        {steps ? <p className="type-body text-ink-secondary">{steps}</p> : null}
+      <Stack className={wellClasses()}>
+        {steps ? <p className="type-body text-ink-2">{steps}</p> : null}
         {firehose ? <FirehoseSteps interval={model.bufferInterval} /> : null}
         {gcp ? <GcpSteps /> : null}
         <TextLink variant="external" href={chosen.guide} className="w-fit">
@@ -103,7 +102,8 @@ export function CrawlLogSetup({
         {fields}
       </Stack>
       {mutation.isError && mutation.variables.kind === 'create' ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(mutation.error, { action: 'set up the crawl-log source' })}
         />
       ) : null}
@@ -202,7 +202,7 @@ function FirehoseFields({ model }: Readonly<{ model: ReturnType<typeof useCrawlC
 /** Generated AWS console steps; the endpoint and token appear once the source exists. */
 function FirehoseSteps({ interval }: Readonly<{ interval: string }>) {
   return (
-    <Stack as="ol" gap="tight" className="type-body text-ink-secondary list-inside list-decimal">
+    <Stack as="ol" gap="tight" className="type-body text-ink-2 list-inside list-decimal">
       <li>
         In us-east-1, create an Amazon Data Firehose stream: source Direct PUT, destination HTTP
         endpoint. Use the endpoint URL and the token (as the access key) shown after you create the
@@ -257,7 +257,7 @@ export function IssuedToken({
   const route = issued.setup === 'aws_firehose' ? 'firehose' : 'ingest';
   const endpoint = `${CRAWL_INGEST_ORIGIN}/v1/crawl-logs/${route}/${issued.id}`;
   return (
-    <Callout tone="info">
+    <Notice tone="info">
       <Stack>
         {issued.token ? (
           <>
@@ -268,7 +268,7 @@ export function IssuedToken({
           </>
         ) : null}
       </Stack>
-    </Callout>
+    </Notice>
   );
 }
 /** The dialog's one committing action, held in its footer. */
@@ -306,10 +306,10 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
   );
   if (!uploadSources.length) {
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         First, create an upload source using the settings above and Create source below. Then choose
         your log file here to upload recognized requests.
-      </Callout>
+      </Notice>
     );
   }
   return (
@@ -351,17 +351,18 @@ function UploadForm({ model }: Readonly<{ model: ReturnType<typeof useCrawlConne
         Upload recognized requests
       </Button>
       {progress ? (
-        <output className="type-body">
+        <output className="type-body text-ink-2">
           {progress.scanned} lines scanned · {progress.matched} recognized crawler requests sent.
         </output>
       ) : null}
       {upload.isSuccess ? (
-        <Callout tone={processing === 'processed' ? 'positive' : 'info'}>
+        <Notice tone={processing === 'processed' ? 'positive' : 'info'}>
           {UPLOAD_PROCESSING_COPY[processing ?? 'processed']}
-        </Callout>
+        </Notice>
       ) : null}
       {upload.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(upload.error, { action: 'upload the log file' })}
           recovery={
             progress ? (

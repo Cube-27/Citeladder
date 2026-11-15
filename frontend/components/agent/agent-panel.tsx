@@ -7,16 +7,12 @@ import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail, useCreateChat } from '@/components/agent/use-chat-turns';
-import { navigationMode } from '@/lib/navigation/app-routes';
+import { isAgentPath } from '@/lib/navigation/app-routes';
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { DockedThread } from '@/components/ui/chat-dock';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { textRole } from '@/components/ui/typography';
 import { contextChips, withoutContext, type AgentHandoff } from '@/lib/agent/handoff';
 import { useAgentPanel } from '@/lib/agent/panel-context';
@@ -24,11 +20,15 @@ import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { DraftSheet } from '@/components/ui/draft-sheet';
+import { revisionDraft } from '@/components/agent/revision-draft';
+import { StateBlock } from '@/components/ui/state-block';
 
 const EMPTY_SEED: AgentHandoff = { context: {} };
 
 /**
- * A right-side chat over the current Dashboard screen. It starts from the
+ * A right-side chat over the current screen (any but the Agent's own). It starts from the
  * screen's typed context and uses the same chats, runs and outputs as the
  * Agent workspace; **Open in Agent** continues the chat there.
  */
@@ -36,9 +36,9 @@ export function AgentPanel() {
   const panel = useAgentPanel();
   const pathname = useLocation().pathname ?? '';
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
-  const onDashboard = navigationMode(pathname) === 'dashboard';
+  const onDashboard = !isAgentPath(pathname);
   const setOpen = panel?.setOpen;
-  // Leaving the Dashboard (Open in Agent, a workspace link) closes the panel,
+  // Going to the Agent's pages (Open in Agent, a workspace link) closes the panel,
   // so returning does not reopen it over the next screen.
   useEffect(() => {
     if (!onDashboard) setOpen?.(false);
@@ -66,7 +66,7 @@ export function AgentPanel() {
           onLeave={close}
           toolbar={
             <Inline className="flex-wrap justify-end">
-              <Button variant="ghost" onClick={() => panel.setChat(null)}>
+              <Button variant="quiet" onClick={() => panel.setChat(null)}>
                 New chat
               </Button>
               <Button asChild variant="secondary">
@@ -137,16 +137,16 @@ function PanelStart({
         />
       }
     >
-      <Stack gap="tight" className="flex-1 content-center justify-items-center text-center">
-        <p className={textRole('sectionTitle')}>Ask about this screen</p>
-        <p className={textRole('caption', 'max-w-xs')}>
+      <Stack gap="tight">
+        <p className={textRole('heading')}>Ask about this screen</p>
+        <p className={textRole('caption')}>
           {hasContext
             ? 'The references below go with your question; remove any you do not need.'
             : 'The agent reads your CiteLadder evidence and answers with sources.'}
         </p>
       </Stack>
-      {access.canSend ? null : <Callout tone="info">{access.message}</Callout>}
-      {create.failure ? <MutationNotice notice={create.failure} /> : null}
+      {access.canSend ? null : <Notice tone="info">{access.message}</Notice>}
+      {create.failure ? <Notice kind="mutation" notice={create.failure} /> : null}
     </DockedThread>
   );
 }
@@ -168,7 +168,8 @@ function PanelChat({
   if (query.isError && !query.data)
     return (
       <DockedThread>
-        <ReadError
+        <Notice
+          kind="read"
           error={query.error}
           fallback="This chat could not be loaded."
           onRetry={() => void query.refetch()}
@@ -179,13 +180,13 @@ function PanelChat({
   if (!query.data)
     return (
       <DockedThread>
-        <QueryState kind="loading" label="Loading chat…" />
+        <StateBlock kind="loading" label="Loading chat…" />
       </DockedThread>
     );
   if (query.data.chat.project_id !== projectId)
     return (
       <DockedThread>
-        <Callout tone="negative">This chat belongs to another project.</Callout>
+        <Notice tone="negative">This chat belongs to another project.</Notice>
       </DockedThread>
     );
   return (
@@ -238,13 +239,18 @@ function PanelConversation({
         thread={thread}
         detail={detail}
         renderOutput={(output) => (
-          <Stack gap="compact" className="justify-items-start">
+          <DraftSheet
+            as="div"
+            {...revisionDraft(output.latest_revision)}
+            title={output.latest_revision.title}
+            actions={
+              <Button variant="secondary" onClick={openOutput}>
+                Open output
+              </Button>
+            }
+          >
             <span className={textRole('caption')}>Document {output.number}</span>
-            <span className={textRole('itemTitle')}>{output.latest_revision.title}</span>
-            <Button variant="secondary" onClick={openOutput}>
-              Open output
-            </Button>
-          </Stack>
+          </DraftSheet>
         )}
       />
     </DockedThread>

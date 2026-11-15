@@ -1,54 +1,126 @@
-import { useId, useState, type ComponentPropsWithoutRef } from 'react';
+import { useId, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 import { X } from 'lucide-react';
 
+import { ProjectLink } from '@/components/ui/project-link';
 import { cn } from '@/lib/utils';
 
 /**
- * The tag face: 24px, the sans label style (12px medium, normal tracking and
- * figures, set here so a tag inside a figure never inherits the figure's
- * tight tracking) in `ink` on `surface` with a 1px `line` border, `radius-xs`. It is
- * never wider than its container.
+ * The tag face (brand direction 3.1): 24px tall, radius 2, the `caption`
+ * role in `ink`, never wider than its container. In the app a static tag is
+ * a `well` fill with no edge, so it never looks operable; a tag you can
+ * operate (`OPERABLE_TAG`) carries the solid control line and a draft the
+ * dashed one. The website keeps its `surface` face with a hairline.
  */
-export const TAG_FACE =
-  'bg-surface text-ink border-line border inline-flex min-h-6 max-w-full min-w-0 shrink-0 items-center gap-1 rounded-xs px-2 font-sans text-caption tracking-normal normal-nums whitespace-nowrap';
+const TAG_FACE =
+  'type-caption text-ink bg-well border-transparent [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:border-rule border inline-flex min-h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-1 rounded-mark px-2 normal-nums whitespace-nowrap';
+
+/** The solid control line: this tag can be operated (a link, a remove, an expander). */
+const OPERABLE_TAG = 'bg-surface border-control-line';
 
 /**
- * Tag — a neutral chip for a topic, engine or active filter, optionally
- * removable (`onRemove` adds a remove button named "Remove …"). Status is a
- * `Badge`, never a Tag; tags are never coloured and never buttons.
- *
- * A tag never overflows its container: a text label is one line, cut with an
- * ellipsis, its full text in the tooltip. A tag whose children are not plain
- * text truncates its own label span (`min-w-0 truncate`).
+ * What a tag is for (brand direction 3.1). A status is a `StatusMark`, never
+ * a Tag; tags are never coloured.
+ *   - `category` (default): a topic, engine or kind, with its hairline edge.
+ *   - `draft`: model-written and not yet accepted (law 1), dashed.
+ *   - `removable`: an active filter or context chip, with a remove button
+ *     named "Remove …".
+ *   - `record`: one CiteLadder record named inside text (an Action in a
+ *     reply), a link to its screen in this project, an optional status after
+ *     its label.
  */
-export function Tag({
+type TagKind =
+  | { kind?: 'category' | 'draft' }
+  | {
+      kind: 'removable';
+      onRemove: () => void;
+      /** What the remove button removes, when the children are not plain text. */
+      removeLabel?: string;
+    };
+
+type SpanProps = Omit<ComponentPropsWithoutRef<'span'>, 'children'> & { children?: ReactNode };
+type TagProps = Readonly<SpanProps & TagKind>;
+
+/** The face and its one-line label, with an optional control at its end. */
+function TagShell({
+  kind,
   className,
   children,
-  onRemove,
-  removeLabel,
-  ...props
-}: Readonly<
-  ComponentPropsWithoutRef<'span'> & {
-    onRemove?: () => void;
-    /** What the remove button removes, when the children are not plain text. */
-    removeLabel?: string;
-  }
->) {
+  end,
+  ...span
+}: Readonly<SpanProps & { kind: 'category' | 'draft' | 'removable'; end?: ReactNode }>) {
   const text = typeof children === 'string' ? children : undefined;
   return (
-    <span title={text} {...props} className={cn(TAG_FACE, onRemove && 'pe-0.5', className)}>
+    <span
+      title={text}
+      {...span}
+      data-tag-kind={kind}
+      className={cn(
+        TAG_FACE,
+        kind === 'draft' && 'bg-surface border-control-line border-dashed',
+        kind === 'removable' && OPERABLE_TAG,
+        kind === 'removable' && 'pe-0.5',
+        className,
+      )}
+    >
       {text === undefined ? children : <span className="min-w-0 truncate">{text}</span>}
-      {onRemove ? (
-        <button
-          type="button"
-          aria-label={`Remove ${removeLabel ?? (typeof children === 'string' ? children : 'tag')}`}
-          onClick={onRemove}
-          className="focus-ring text-ink-muted hover:overlay-hover hover:text-ink grid size-5 place-items-center rounded-xs transition-colors"
-        >
-          <X className="size-3.5" aria-hidden />
-        </button>
-      ) : null}
+      {end}
     </span>
+  );
+}
+
+/**
+ * Tag — a short label. A text label is one line, cut with an ellipsis, its
+ * full text in the tooltip; a tag whose children are not plain text cuts its
+ * own label span (`min-w-0 truncate`).
+ */
+export function Tag(props: TagProps) {
+  if (props.kind === 'removable') {
+    const { kind, onRemove, removeLabel, ...span } = props;
+    const text = typeof span.children === 'string' ? span.children : undefined;
+    return (
+      <TagShell
+        {...span}
+        kind={kind}
+        end={
+          <button
+            type="button"
+            aria-label={`Remove ${removeLabel ?? text ?? 'tag'}`}
+            onClick={onRemove}
+            className="focus-ring text-ink-2 hover:overlay-hover hover:text-ink rounded-mark relative grid size-5 place-items-center transition-colors before:absolute before:-inset-0.5 before:content-['']"
+          >
+            <X className="size-3.5" aria-hidden />
+          </button>
+        }
+      />
+    );
+  }
+  const { kind = 'category', ...span } = props;
+  return <TagShell {...span} kind={kind} />;
+}
+
+/**
+ * RecordTag — the `record` tag: one record named inside text, linking to its
+ * screen in this project, its label cutting before the optional status after
+ * it (a `StatusMark`).
+ */
+export function RecordTag({
+  href,
+  label,
+  status,
+}: Readonly<{ href: string; label: string; status?: ReactNode }>) {
+  return (
+    <ProjectLink
+      href={href}
+      data-tag-kind="record"
+      className={cn(
+        TAG_FACE,
+        OPERABLE_TAG,
+        'focus-ring hover:overlay-hover align-middle no-underline',
+      )}
+    >
+      <span className="min-w-0 truncate">{label}</span>
+      {/* Read as two words; flex layout drops the space visually. */} {status}
+    </ProjectLink>
   );
 }
 
@@ -67,7 +139,7 @@ export function TagGroup({ labels }: Readonly<{ labels: readonly string[] }>) {
       {labels.length > 2 ? (
         <button
           type="button"
-          className={cn(TAG_FACE, 'focus-ring hover:overlay-hover')}
+          className={cn(TAG_FACE, OPERABLE_TAG, 'focus-ring hover:overlay-hover')}
           aria-expanded={expanded}
           aria-controls={id}
           aria-label={expanded ? 'Show fewer tags' : `Show ${labels.length - 2} more tags`}

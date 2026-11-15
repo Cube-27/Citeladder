@@ -2,12 +2,9 @@ import { Plus, RotateCcw, Sparkles, Tags, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Button, IconButton } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { Tag } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
 import { isImeComposing } from '@/lib/accessibility/ime';
@@ -16,6 +13,8 @@ import type { TopicRow } from '@/lib/prompts/builder-topics';
 
 import { GenerateErrorAlert } from './generation-alerts';
 import type { BuilderTopics } from './use-builder-topics';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 const TOPIC_NAME_MAX = 255;
 
@@ -98,7 +97,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
   return (
     <Stack gap="workspace">
       <Inline className="flex-wrap justify-between">
-        <p className={textRole('body', 'text-ink-secondary')}>
+        <p className={textRole('body', 'text-ink-2')}>
           Proposals fill gaps beside your topics and never replace them. A removed topic&apos;s
           prompts stay in your library without a topic. Nothing changes until you confirm.
         </p>
@@ -117,11 +116,12 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
         <GenerateErrorAlert error={topics.preview.error} action="propose topics" />
       ) : null}
       {topics.confirm.error ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(topics.confirm.error, { action: 'confirm the topics' })}
         />
       ) : null}
-      {topics.problem ? <Callout tone="warning">{topics.problem}</Callout> : null}
+      {topics.problem ? <Notice tone="warning">{topics.problem}</Notice> : null}
       {topics.rows.length ? (
         <Stack as="ul" gap="item" aria-label="Topics">
           {topics.rows.map((row) => (
@@ -135,7 +135,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
           ))}
         </Stack>
       ) : (
-        <QueryState
+        <StateBlock
           kind="empty"
           inline
           icon={Tags}
@@ -144,7 +144,7 @@ export function BuilderTopicsStep({ topics }: Readonly<{ topics: BuilderTopics }
       )}
       {topics.overflow.length ? (
         <Inline>
-          <Button variant="ghost" onClick={topics.showOverflow} disabled={busy}>
+          <Button variant="quiet" onClick={topics.showOverflow} disabled={busy}>
             +{topics.overflow.length} more
           </Button>
         </Inline>

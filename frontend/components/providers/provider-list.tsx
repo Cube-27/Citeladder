@@ -1,7 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { providerQueries } from '@/lib/api/providers';
 import type { LogicalEngine } from '@citeladder/contracts';
@@ -9,6 +7,8 @@ import { buildEngineCards, buildProviderGroups, transportForEngine } from '@/lib
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 
 import { ProviderRow } from './provider-row';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * The workspace's BYOK credentials, one row per provider. Shared by Settings
@@ -36,7 +36,8 @@ export function ProviderList({
 
   if (catalogQuery.isError || connectionsQuery.isError) {
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={catalogQuery.error ?? connectionsQuery.error}
         fallback="Could not load providers. Check your connection and try again."
         onRetry={() => {
@@ -48,7 +49,7 @@ export function ProviderList({
     );
   }
   if (catalogQuery.isLoading || connectionsQuery.isLoading) {
-    return <QueryState kind="loading" />;
+    return <StateBlock kind="loading" />;
   }
 
   const groups = buildProviderGroups(

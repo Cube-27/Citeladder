@@ -42,8 +42,9 @@ async function findSignalRow(target: string) {
   return (await screen.findByText(target)).closest('tr')!;
 }
 
+/** A row's priority: its rank in the whole snapshot, after the query and its signal. */
 function rankOf(row: HTMLElement) {
-  return within(row).getAllByRole('cell')[0]!.textContent;
+  return within(row).getAllByRole('cell')[2]!.textContent;
 }
 
 // Mutable so a test can switch projects mid-render; `vi.hoisted` keeps it
@@ -272,8 +273,8 @@ describe('DemandProjection', () => {
 
     const table = signalTable();
     expect(signalRows().map((row) => row.textContent)).toEqual([
-      expect.stringMatching(/^1ai marketing toolsQuery · \/ai-toolsStriking distance25012/),
-      expect.stringMatching(/^2school feesQuery · \/feesLow CTR10000\.0%12\.0/),
+      expect.stringMatching(/^ai marketing toolsQuery · \/ai-toolsStriking distance125012/),
+      expect.stringMatching(/^school feesQuery · \/feesLow CTR210000\.0%12\.0/),
     ]);
     expect(within(table).queryByText('https://example.com/ai-tools')).not.toBeInTheDocument();
     expect(screen.queryByText('Within reach of the top results')).not.toBeInTheDocument();

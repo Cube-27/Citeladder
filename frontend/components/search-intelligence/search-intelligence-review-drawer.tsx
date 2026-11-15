@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import { Callout } from '@/components/ui/callout';
 import { Drawer } from '@/components/ui/drawer';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -32,6 +31,7 @@ import {
   ReviewSummary,
   marketOptions,
 } from './search-intelligence-review-parts';
+import { Notice } from '@/components/ui/notice';
 
 /** Typed depths keep a draft per dataset, so a field can be cleared while typing. */
 function useDatasetSelections(readiness: SearchIntelligenceReadiness, action: string) {
@@ -181,7 +181,7 @@ export function SearchIntelligenceReviewDrawer({
         />
       }
     >
-      {error ? <Callout tone="negative">{error}</Callout> : null}
+      {error ? <Notice tone="negative">{error}</Notice> : null}
       {review ? (
         <ReviewSummary review={review} />
       ) : (
@@ -214,10 +214,10 @@ export function SearchIntelligenceReviewDrawer({
           />
           <HistoryScopeNotice scope={researchScope} selections={selections} />
           {comparisonOrderConflict(selections, researchScope, rankingOrder) ? (
-            <Callout tone="negative">
+            <Notice tone="negative">
               Keyword comparisons on an exact host can be ordered by volume, cost per click or
               difficulty. Change the keyword order or the research scope in Advanced options.
-            </Callout>
+            </Notice>
           ) : null}
           <AdvancedOptions
             targets={readiness.owned_targets}

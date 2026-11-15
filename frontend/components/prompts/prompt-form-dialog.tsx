@@ -3,7 +3,6 @@ import { useMemo } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import type { MutationNotice as MutationNoticeData } from '@/lib/api/mutation-notice';
 import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
@@ -22,6 +21,7 @@ import {
   promptToFormValues,
   type PromptFormValues,
 } from '@/lib/prompts/forms';
+import { Notice } from '@/components/ui/notice';
 
 const INTENT_OPTIONS = intentValues.map((value) => ({ value, label: intentLabels[value] }));
 const STAGE_OPTIONS = buyerStageValues.map((value) => ({ value, label: buyerStageLabels[value] }));
@@ -105,7 +105,7 @@ export function PromptFormDialog({
       title={isEdit ? 'Edit prompt' : 'Add prompt'}
       footer={
         <>
-          <Button variant="ghost" onClick={() => handleOpenChange(false)}>
+          <Button variant="quiet" onClick={() => handleOpenChange(false)}>
             Cancel
           </Button>
           <Button variant="primary" onClick={submit} disabled={isSaving}>
@@ -116,7 +116,7 @@ export function PromptFormDialog({
     >
       <form noValidate onSubmit={submit}>
         <Stack gap="workspace">
-          {error ? <MutationNotice notice={error} /> : null}
+          {error ? <Notice kind="mutation" notice={error} /> : null}
 
           <Field label="Topic">
             {(props) => (

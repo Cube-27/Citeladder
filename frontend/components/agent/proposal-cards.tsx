@@ -6,14 +6,14 @@ import {
   MarkImplementedButton,
 } from '@/components/agent/action-declaration';
 import { Button } from '@/components/ui/button';
-import { Confirmation } from '@/components/ui/confirmation';
+import { DraftSheet } from '@/components/ui/draft-sheet';
 import { ProjectLink } from '@/components/ui/project-link';
-import { ReadError } from '@/components/ui/read-error';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
 import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
 
 type Proposal = AgentMessage['proposals'][number];
 type ChatAction = AgentChatDetail['actions'][number];
@@ -80,16 +80,16 @@ function DeclarationProposal({
   const declared = detail.data ? detail.data.declaration !== null : DECLARED.has(action.status);
   if (declared)
     return (
-      <Confirmation title={`${label} is marked implemented`} state="accepted" actions={open}>
+      <DraftSheet title={`${label} is marked implemented`} state="accepted" actions={open}>
         <p className={textRole('caption')}>CiteLadder measures it from the day it went live.</p>
-      </Confirmation>
+      </DraftSheet>
     );
   const declarable =
     mayWrite && (detail.data ? isDeclarable(detail.data) : PENDING.has(action.status));
   return (
-    <Confirmation
+    <DraftSheet
       title={`Mark ${label} implemented?`}
-      state="requested"
+      state="draft"
       actions={
         <>
           {open}
@@ -100,7 +100,8 @@ function DeclarationProposal({
       }
     >
       {detail.isError ? (
-        <ReadError
+        <Notice
+          kind="read"
           error={detail.error}
           fallback="The proposed Action could not be loaded."
           onRetry={() => void detail.refetch()}
@@ -111,7 +112,7 @@ function DeclarationProposal({
           {declarable ? proposalDetail(proposal) : unavailable(mayWrite)}
         </p>
       )}
-    </Confirmation>
+    </DraftSheet>
   );
 }
 

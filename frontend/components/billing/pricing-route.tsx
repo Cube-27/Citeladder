@@ -6,11 +6,14 @@ import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { CheckoutConsent } from '@/components/billing/billing-policies';
 import { BillingQuoteSummary } from '@/components/billing/quote-summary';
 import { CheckoutStatus } from '@/components/billing/checkout-status';
-import { ListScreen } from '@/components/layout/page-shell';
+import { SettingsPage } from '@/components/templates/settings-page';
 import { Button } from '@/components/ui/button';
+import { Notice as NoticeBox } from '@/components/ui/notice';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { StateBlock } from '@/components/ui/state-block';
 import { Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
-import { textRole } from '@/components/ui/typography';
+import { InlineFigure, textRole } from '@/components/ui/typography';
+import { Value } from '@/components/ui/value';
 import {
   billingDetailsError,
   emptyBillingCustomerDetails,
@@ -153,9 +156,9 @@ function PriceInfo({
   catalog: BillingCatalog;
 }>) {
   if (price?.kind === 'price')
-    return <p>{formatMoney(price.money, catalog.currency_minor_units)}</p>;
+    return <Value text="figure" value={formatMoney(price.money, catalog.currency_minor_units)} />;
   if (price?.kind === 'unavailable')
-    return <p>Checkout is unavailable for this credential mode.</p>;
+    return <p className={textRole('body')}>Checkout is unavailable for this credential mode.</p>;
   return null;
 }
 
@@ -215,35 +218,45 @@ function SelectedPurchase({
   const usage = selection.byok ? 'byok' : 'funded';
   const price = plan ? headlinePrice(plan, usage) : null;
   return (
-    <Stack as="section" gap="workspace" className={panelClasses()} aria-label="Selected purchase">
-      <h2 className={textRole('sectionTitle')}>{plan?.name ?? extra?.name}</h2>
-      <p>
-        {selection.quantity} × {selection.byok ? 'Your own provider keys' : 'Funded usage'}
-      </p>
-      <PriceInfo price={price} catalog={catalog} />
-      {extra?.unit_price ? (
-        <p>{formatMoney(extra.unit_price, catalog.currency_minor_units)} per unit before tax</p>
-      ) : null}
-      <CheckoutFields
-        selection={selection}
-        country={country}
-        setCountry={setCountry}
-        details={details}
-        setDetails={setDetails}
-      />
-      <p className={textRole('body')}>
-        The server resolves the current amount and tax for your billing country. Review its quote
-        before continuing to payment.
-      </p>
-      <PurchaseButton
-        canBuy={canBuy}
-        workspaceId={workspaceId}
-        pending={pending}
-        quoted={quoted}
-        priceUnavailable={Boolean(price && price.kind !== 'price')}
-        onPurchase={onPurchase}
-      />
-    </Stack>
+    <Section aria-label="Selected purchase">
+      <SectionHeader>
+        <SectionTitle level={2}>{plan?.name ?? extra?.name}</SectionTitle>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="workspace">
+        <p className={textRole('body')}>
+          <InlineFigure>{selection.quantity}</InlineFigure> ×{' '}
+          {selection.byok ? 'Your own provider keys' : 'Funded usage'}
+        </p>
+        <PriceInfo price={price} catalog={catalog} />
+        {extra?.unit_price ? (
+          <p className={textRole('body')}>
+            <InlineFigure>
+              {formatMoney(extra.unit_price, catalog.currency_minor_units)}
+            </InlineFigure>{' '}
+            per unit before tax
+          </p>
+        ) : null}
+        <CheckoutFields
+          selection={selection}
+          country={country}
+          setCountry={setCountry}
+          details={details}
+          setDetails={setDetails}
+        />
+        <p className={textRole('body', 'text-ink-2')}>
+          The server resolves the current amount and tax for your billing country. Review its quote
+          before continuing to payment.
+        </p>
+        <PurchaseButton
+          canBuy={canBuy}
+          workspaceId={workspaceId}
+          pending={pending}
+          quoted={quoted}
+          priceUnavailable={Boolean(price && price.kind !== 'price')}
+          onPurchase={onPurchase}
+        />
+      </Stack>
+    </Section>
   );
 }
 
@@ -286,7 +299,7 @@ function Notice({
   if (!error) return null;
   const message = billingErrorMessage(error, fallback);
   if (message === shown) return null;
-  return <p role="alert">{message}</p>;
+  return <NoticeBox tone="negative">{message}</NoticeBox>;
 }
 
 function PricingState({
@@ -311,26 +324,48 @@ function PricingState({
   return (
     <>
       {workspaceError ? (
-        <Button variant="primary" onClick={retryWorkspace}>
-          Retry workspace
-        </Button>
+        <NoticeBox
+          tone="negative"
+          action={
+            <Button variant="secondary" onClick={retryWorkspace}>
+              Retry workspace
+            </Button>
+          }
+        >
+          The billing workspace could not be loaded.
+        </NoticeBox>
       ) : null}
-      {workspaceName ? <p>Workspace: {workspaceName}</p> : <p>Loading workspace…</p>}
+      <p className={textRole('body')}>
+        {workspaceName ? `Workspace: ${workspaceName}` : 'Loading workspace…'}
+      </p>
       {!canBuy && workspaceName ? (
-        <p>Ask a workspace Owner or Admin to make this purchase.</p>
+        <NoticeBox tone="info">Ask a workspace Owner or Admin to make this purchase.</NoticeBox>
       ) : null}
       {catalogError ? (
-        <Button variant="primary" onClick={retryCatalog}>
-          Retry catalog
-        </Button>
+        <NoticeBox
+          tone="negative"
+          action={
+            <Button variant="secondary" onClick={retryCatalog}>
+              Retry catalog
+            </Button>
+          }
+        >
+          The plan catalog could not be loaded.
+        </NoticeBox>
       ) : null}
       {selection && offered === false ? (
-        <p>
+        <NoticeBox tone="warning">
           This selection is no longer in the current catalog. Choose again on the public pricing
           page.
-        </p>
+        </NoticeBox>
       ) : null}
-      {!selection ? <p>Choose a plan on the public pricing page to continue here.</p> : null}
+      {!selection ? (
+        <StateBlock
+          kind="empty"
+          heading="No plan chosen yet"
+          description="Choose a plan on the public pricing page to continue here."
+        />
+      ) : null}
     </>
   );
 }
@@ -387,48 +422,45 @@ export default function PricingRoute() {
   const offered = hasSelectedOffer(catalog, selection);
 
   return (
-    <ListScreen
-      title="Review your selection"
+    <SettingsPage
       actions={
-        <a className="type-control text-accent-ink underline" href={websitePricing}>
-          View public pricing
-        </a>
+        <Button asChild variant="secondary">
+          <a href={websitePricing}>View public pricing</a>
+        </Button>
       }
     >
-      <Stack gap="section">
-        <PricingState
-          workspaceName={activeWorkspace?.name ?? null}
-          canBuy={canBuy}
-          workspaceError={isError}
-          retryWorkspace={retry}
-          catalogError={catalogQuery.isError}
-          retryCatalog={() => void catalogQuery.refetch()}
-          selection={selection}
-          offered={offered}
-        />
-        <SelectedPurchase
-          selection={selection}
-          catalog={catalog}
-          country={country}
-          setCountry={setCountry}
-          details={details}
-          setDetails={setDetails}
-          canBuy={canBuy}
-          workspaceId={activeWorkspaceId}
-          pending={purchase.isPending}
-          quoted={Boolean(checkout.prepared?.quote)}
-          onPurchase={() => void purchase.mutate()}
-        />
-        <QuoteConfirmation
-          checkout={checkout}
-          catalog={catalog}
-          pending={confirm.isPending}
-          onConfirm={() => void confirm.mutate()}
-        />
-        <CheckoutStatus checkout={checkout} />
-        <Notice error={purchase.error} fallback="Quote unavailable." shown={checkout.notice} />
-        <Notice error={confirm.error} fallback="Checkout unavailable." shown={checkout.notice} />
-      </Stack>
-    </ListScreen>
+      <PricingState
+        workspaceName={activeWorkspace?.name ?? null}
+        canBuy={canBuy}
+        workspaceError={isError}
+        retryWorkspace={retry}
+        catalogError={catalogQuery.isError}
+        retryCatalog={() => void catalogQuery.refetch()}
+        selection={selection}
+        offered={offered}
+      />
+      <SelectedPurchase
+        selection={selection}
+        catalog={catalog}
+        country={country}
+        setCountry={setCountry}
+        details={details}
+        setDetails={setDetails}
+        canBuy={canBuy}
+        workspaceId={activeWorkspaceId}
+        pending={purchase.isPending}
+        quoted={Boolean(checkout.prepared?.quote)}
+        onPurchase={() => void purchase.mutate()}
+      />
+      <QuoteConfirmation
+        checkout={checkout}
+        catalog={catalog}
+        pending={confirm.isPending}
+        onConfirm={() => void confirm.mutate()}
+      />
+      <CheckoutStatus checkout={checkout} />
+      <Notice error={purchase.error} fallback="Quote unavailable." shown={checkout.notice} />
+      <Notice error={confirm.error} fallback="Checkout unavailable." shown={checkout.notice} />
+    </SettingsPage>
   );
 }

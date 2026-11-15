@@ -26,11 +26,11 @@ import { cn } from '@/lib/utils';
  */
 function listRowClasses({ selected = false }: Readonly<{ selected?: boolean }> = {}) {
   return cn(
-    'relative rounded-md transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
+    'relative rounded-control transition-[background-color,color] duration-[var(--motion-fast)] ease-[var(--ease-standard)]',
     // Three states, three overlays: selected never looks hovered.
     selected
       ? 'overlay-selected text-ink'
-      : 'text-ink-secondary hover:overlay-hover hover:text-ink active:overlay-pressed',
+      : 'text-ink-2 hover:overlay-hover hover:text-ink active:overlay-pressed',
   );
 }
 
@@ -67,16 +67,16 @@ export function OptionRow({
       className={cn(
         listRowClasses({ selected }),
         paddedRowClasses,
-        'disabled:pointer-events-none disabled:[&_.type-item-title]:text-ink-muted',
+        'disabled:pointer-events-none disabled:[&_.type-body]:text-ink-2',
       )}
     >
       <span className="min-w-0 flex-1">
-        <span className={textRole('itemTitle', 'block truncate')}>{title}</span>
+        <span className={textRole('body', 'block truncate')}>{title}</span>
         {caption ? (
           <span className="type-caption block truncate tabular-nums">{caption}</span>
         ) : null}
       </span>
-      {pending ? <Spinner className="text-ink-muted" /> : null}
+      {pending ? <Spinner className="text-ink-2" /> : null}
       {selected && !pending ? <Icon icon={Check} className="text-accent" /> : null}
     </Pressable>
   );
@@ -110,7 +110,7 @@ export function OpenRow({
         {number === undefined ? null : (
           <span className="type-caption w-6 shrink-0 tabular-nums">{number}</span>
         )}
-        <span className={textRole('itemTitle', 'min-w-0 flex-1')}>{title}</span>
+        <span className={textRole('body', 'min-w-0 flex-1')}>{title}</span>
         {meta}
       </span>
       {caption ? <span className="type-caption">{caption}</span> : null}
@@ -155,7 +155,7 @@ export function TreeItem({
         listRowClasses(),
       )}
     >
-      <ClampText lines={1} className="type-control flex-1">
+      <ClampText lines={1} className="type-body flex-1">
         {label}
       </ClampText>
       {typeof count === 'number' ? (
@@ -204,47 +204,6 @@ export function TreeCheckOption({
         onCheckedChange={(next) => onCheckedChange(next === true)}
       />
       {badge}
-    </li>
-  );
-}
-
-/**
- * A tree list's row that is itself the choice (a category narrowing a table):
- * one control tall, the label truncated and its count at the end, pressed to
- * select, marked `aria-current` while selected. Each level of `depth` is
- * indented 16 from its parent.
- */
-export function TreeOption({
-  label,
-  count,
-  selected,
-  depth = 0,
-  onSelect,
-}: Readonly<{
-  label: string;
-  count?: string;
-  selected: boolean;
-  depth?: number;
-  onSelect: () => void;
-}>) {
-  return (
-    <li className={cn('min-w-0', treeIndent(depth))}>
-      <Pressable
-        type="button"
-        onClick={onSelect}
-        aria-current={selected ? 'true' : undefined}
-        className={cn(
-          listRowClasses({ selected }),
-          'focus-ring flex min-h-[var(--nav-item-height)] w-full min-w-0 items-center gap-2 ps-3 pe-2 text-start',
-        )}
-      >
-        <ClampText lines={1} className="type-control flex-1">
-          {label}
-        </ClampText>
-        {count === undefined ? null : (
-          <span className="type-caption shrink-0 tabular-nums">{count}</span>
-        )}
-      </Pressable>
     </li>
   );
 }

@@ -2,15 +2,13 @@ import { useQuery } from '@tanstack/react-query';
 import { MessageSquareOff } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
-import { DetailScreen } from '@/components/layout/page-shell';
+import { RecordPage } from '@/components/templates/record-page';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Card } from '@/components/ui/card';
+import { FilterBar } from '@/components/ui/filter-bar';
+import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps } from '@/components/ui/read-error';
 import { ProductImage } from '@/components/ui/product-image';
-import { KpiRow } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
 import { InlineFigure, textRole } from '@/components/ui/typography';
 import type { CommerceCatalog, CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
@@ -45,6 +43,10 @@ import {
 import { MetricValue } from './products-table';
 import { SetupCompetitors } from './setup-competitors';
 import { SetupPrompts } from './setup-prompts';
+import { readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section } from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 /** The KPIs, in the plan's order; merchants have their own section below. */
 const KPIS = [
@@ -74,19 +76,20 @@ export function ProductDetailScreen() {
   const { catalog } = queries;
   if (catalog.isError)
     return (
-      <DetailScreen back={back}>
-        <QueryState
+      <RecordPage back={back}>
+        <StateBlock
           kind="error"
           {...readErrorProps(catalog)}
+          title="Couldn't load this product"
           fallback="This product could not be loaded."
         />
-      </DetailScreen>
+      </RecordPage>
     );
   if (!catalog.data)
     return (
-      <DetailScreen back={back}>
-        <QueryState kind="loading" label="Loading product" />
-      </DetailScreen>
+      <RecordPage back={back}>
+        <StateBlock kind="loading" label="Loading product" />
+      </RecordPage>
     );
   const category = catalog.data.categories.find((row) => row.id === targetId);
   if (category)
@@ -122,23 +125,21 @@ function CategorySetup({
   const discovery = useCompetitorDiscovery(projectId);
   const target = { kind: 'category', id: category.id } as const;
   return (
-    <DetailScreen title={category.name} back={back}>
-      <Stack gap="workspace">
-        <SetupCompetitors
-          projectId={projectId}
-          target={target}
-          query={queries.competitors}
-          discovery={discovery}
-        />
-        <SetupPrompts
-          key={category.id}
-          projectId={projectId}
-          target={target}
-          targetLabel={category.name}
-          query={queries.buyerPrompts}
-        />
-      </Stack>
-    </DetailScreen>
+    <RecordPage title={category.name} back={back}>
+      <SetupCompetitors
+        projectId={projectId}
+        target={target}
+        query={queries.competitors}
+        discovery={discovery}
+      />
+      <SetupPrompts
+        key={category.id}
+        projectId={projectId}
+        target={target}
+        targetLabel={category.name}
+        query={queries.buyerPrompts}
+      />
+    </RecordPage>
   );
 }
 
@@ -155,99 +156,110 @@ function HolderDetail({
 }>) {
   const { workspaceId } = useProjectScope();
   const projectScope = { workspaceId, projectId };
-  const { filters } = scope;
+  const scopeFilters = scope.filters;
   const detail = useQuery(
-    commerceQueries.productDetail(projectScope, holderId, productScopeSearch(filters)),
+    commerceQueries.productDetail(projectScope, holderId, productScopeSearch(scopeFilters)),
   );
   const promptSets = useQuery(promptsQueries.sets(projectScope));
   const engines = useEngineCatalog();
-  const controls = {
-    filters: productScopeFilters({
-      scope,
-      engines,
-      promptSets: promptSets.data?.prompt_sets ?? [],
-    }),
-  };
-  const back = backTo(filters);
+  const filters: FilterDefinition[] = productScopeFilters({
+    scope,
+    engines,
+    promptSets: promptSets.data?.prompt_sets ?? [],
+  });
+  const bar = <FilterBar filters={filters} />;
+  const back = backTo(scopeFilters);
   if (detail.isError)
     return (
-      <DetailScreen back={back} controls={controls}>
-        <QueryState
+      <RecordPage back={back} filters={bar}>
+        <StateBlock
           kind="error"
           {...readErrorProps(detail)}
+          title="Couldn't load this product"
           fallback="This product could not be loaded."
         />
-      </DetailScreen>
+      </RecordPage>
     );
   if (!detail.data)
     return (
-      <DetailScreen back={back} controls={controls}>
-        <QueryState kind="loading" label="Loading product" />
-      </DetailScreen>
+      <RecordPage back={back} filters={bar}>
+        <StateBlock kind="loading" label="Loading product" />
+      </RecordPage>
     );
   const data = detail.data;
   const named = data.answer_total > 0;
   return (
-    <DetailScreen title={data.product.name} back={back} controls={controls}>
-      <Stack gap="workspace" aria-busy={detail.isFetching}>
-        <ProductKpis detail={data} scope={projectScope} />
-        {named ? (
-          <AppGrid layout="pair">
-            <CompetingProducts detail={data} scope={filters} />
-            <Merchants detail={data} />
-            <SeenIn detail={data} scope={filters} />
-            <Sources detail={data} />
-            <FanOutQueries detail={data} />
-          </AppGrid>
-        ) : null}
-        {named || data.prompts.length > 0 ? <PromptMetrics detail={data} /> : null}
-        {named ? (
-          <Answers detail={data} />
-        ) : (
-          // Every section below reads the answers that named it: with none,
-          // one sentence says so instead of six empty cards.
-          <Card>
-            <QueryState
-              kind="empty"
-              icon={MessageSquareOff}
-              heading={`No answer named it in the last ${data.window_days} days`}
-              description="Its competing products, merchants, sources, fan-out queries and answers appear here once an answer in this window names it."
-            />
-          </Card>
-        )}
-        {/* An archived product takes no new competitors or shopping prompts until restored. */}
-        {data.product.kind === 'owned' && data.product.catalog?.lifecycle_state !== 'archived' ? (
-          <ProductSetup detail={data} projectId={projectId} queries={queries} />
-        ) : null}
-      </Stack>
-    </DetailScreen>
+    <RecordPage
+      title={data.product.name}
+      back={back}
+      filters={bar}
+      identity={<ProductIdentity detail={data} scope={projectScope} />}
+    >
+      <ProductKpis detail={data} />
+      {named ? (
+        <AppGrid layout="pair">
+          <CompetingProducts detail={data} scope={scopeFilters} />
+          <Merchants detail={data} />
+          <SeenIn detail={data} scope={scopeFilters} />
+          <Sources detail={data} />
+          <FanOutQueries detail={data} />
+        </AppGrid>
+      ) : null}
+      {named || data.prompts.length > 0 ? <PromptMetrics detail={data} /> : null}
+      {named ? (
+        <Answers detail={data} />
+      ) : (
+        // Every section below reads the answers that named it: with none,
+        // one sentence says so instead of six empty cards.
+        <Section>
+          <StateBlock
+            kind="empty"
+            icon={MessageSquareOff}
+            heading={`No answer named it in the last ${data.window_days} days`}
+            description="Its competing products, merchants, sources, fan-out queries and answers appear here once an answer in this window names it."
+          />
+        </Section>
+      )}
+      {/* An archived product takes no new competitors or shopping prompts until restored. */}
+      {data.product.kind === 'owned' && data.product.catalog?.lifecycle_state !== 'archived' ? (
+        <ProductSetup detail={data} projectId={projectId} queries={queries} />
+      ) : null}
+    </RecordPage>
   );
 }
 
 /**
- * Brand, who holds it, image, description and a link to its page; a catalog
+ * The record's identity: its full name (the masthead's title may be cut),
+ * who holds it, image, description and a link to its page; a catalog
  * product's Edit and Archive controls, or Add to tracking for a product the
  * answers showed.
  */
-function ProductHeader({
+function ProductIdentity({
   detail,
   scope,
 }: Readonly<{ detail: CommerceProductDetail; scope: ProjectScope }>) {
   const { product } = detail;
   return (
-    <Inline gap="compact" className="items-start">
+    <Inline gap="compact" className="flex-wrap items-start">
       {product.image_url ? <ProductImage src={product.image_url} /> : null}
-      <Stack gap="tight" className="min-w-0 flex-1">
+      <Stack gap="tight" className="min-w-0 flex-[1_1_16rem]">
+        <p className={textRole('subheading', 'break-words')}>{product.name}</p>
         <span className="type-caption">
           {holderCaption(product)} · From{' '}
           <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
-          {detail.executions === 1 ? ' answer' : ' answers'} in the last {detail.window_days} days
+          {detail.executions === 1 ? ' answer' : ' answers'} in the last{' '}
+          <InlineFigure>{detail.window_days}</InlineFigure> days
         </span>
         {product.description ? (
-          <p className={textRole('body', 'line-clamp-2')}>{product.description}</p>
+          <p className={textRole('body', 'text-ink-2 line-clamp-2')}>{product.description}</p>
         ) : null}
         {product.url ? (
-          <TextLink variant="external" href={product.url} text="caption" className="truncate">
+          <TextLink
+            variant="external"
+            href={product.url}
+            text="caption"
+            className="max-w-full min-w-0 break-all"
+          >
             {product.url}
           </TextLink>
         ) : null}
@@ -262,15 +274,11 @@ function ProductHeader({
   );
 }
 
-/** The product and its figures in one card: who holds it above, its KPIs in one row below. */
-function ProductKpis({
-  detail,
-  scope,
-}: Readonly<{ detail: CommerceProductDetail; scope: ProjectScope }>) {
+/** Its figures in one strip, each label carrying its definition. */
+function ProductKpis({ detail }: Readonly<{ detail: CommerceProductDetail }>) {
   return (
-    <KpiRow
+    <FigureStrip
       label="Product metrics"
-      lead={<ProductHeader detail={detail} scope={scope} />}
       segments={KPIS.map((key) => {
         const column = PRODUCT_COLUMNS.find((row) => row.key === key);
         const label = column?.label ?? key;
@@ -296,7 +304,7 @@ function ProductSetup({
   const target = { kind: 'product', id: detail.product.holder_id } as const;
   return (
     <Stack as="section" gap="workspace" aria-labelledby="product-setup">
-      <h2 id="product-setup" className={textRole('sectionTitle')}>
+      <h2 id="product-setup" className={textRole('heading')}>
         Setup
       </h2>
       <ProductActions detail={detail} />

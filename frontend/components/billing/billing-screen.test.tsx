@@ -410,10 +410,10 @@ describe('BillingScreen', () => {
     // The digits sit in their own figure-face span, so a line is matched whole.
     const line = (pattern: RegExp) => (_content: string, element: Element | null) =>
       element?.tagName === 'SPAN' && pattern.test(element.textContent ?? '');
-    expect(await screen.findByText(line(/^42 \/ 100 prompts$/))).toBeInTheDocument();
+    expect(await screen.findByText(line(/^42 of 100 prompts$/))).toBeInTheDocument();
     // …and an `unknown` row says so rather than rendering a zero meter.
     expect(screen.getByText('Not available')).toBeInTheDocument();
-    expect(screen.queryByText(line(/0 \/ 0 credits/))).toBeNull();
+    expect(screen.queryByText(line(/0 of 0 credits/))).toBeNull();
   });
 
   it('requires the cancellation dialog before mutating', async () => {

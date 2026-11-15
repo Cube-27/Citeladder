@@ -1,5 +1,4 @@
-import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { StatusMark } from '@/components/ui/status-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import { FactList } from '@/components/ui/facts';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -12,6 +11,7 @@ import { promptHistoryHref } from '@/lib/prompts/history';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import { citationClassificationSchema } from '@citeladder/contracts/audits';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /** A finding with the content-gap evidence the Action read returned for it. */
 export type GapMember = Readonly<{ id: string; evidence: ContentGapEvidence }>;
@@ -35,11 +35,11 @@ export function contentGapMembers(action: ActionDetail): GapMember[] {
  */
 export function ContentGapWhy({ members }: Readonly<{ members: readonly GapMember[] }>) {
   return (
-    <Card aria-labelledby="action-why">
-      <CardHeader>
-        <CardTitle id="action-why">Why this matters</CardTitle>
-      </CardHeader>
-      <CardContent>
+    <Section aria-labelledby="action-why">
+      <SectionHeader>
+        <SectionTitle id="action-why">Why this matters</SectionTitle>
+      </SectionHeader>
+      <SectionContent>
         <ul className={ledgerClasses()}>
           {members.map((member) => (
             <li key={member.id} className={ledgerItemClasses()}>
@@ -47,15 +47,15 @@ export function ContentGapWhy({ members }: Readonly<{ members: readonly GapMembe
             </li>
           ))}
         </ul>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
 function GapAngle({ evidence }: Readonly<{ evidence: ContentGapEvidence }>) {
   return (
     <Stack>
-      <p className={textRole('itemTitle')}>{evidence.angle_label}</p>
+      <p className={textRole('body')}>{evidence.angle_label}</p>
       <GapEvidence evidence={evidence} />
     </Stack>
   );
@@ -90,7 +90,7 @@ export function GapEvidence({ evidence }: Readonly<{ evidence: ContentGapEvidenc
         ]}
       />
       <Stack as="section" gap="tight" aria-label="Cited pages">
-        <span className={textRole('label')}>Cited pages</span>
+        <span className={textRole('body', 'text-ink-2')}>Cited pages</span>
         <ul className={ledgerClasses()}>
           {evidence.members.map((page) => (
             <CitedPage key={page.url} page={page} />
@@ -105,13 +105,13 @@ export function GapEvidence({ evidence }: Readonly<{ evidence: ContentGapEvidenc
       </Stack>
       {prompts.length > 0 ? (
         <Stack as="section" gap="tight" aria-label="Prompts">
-          <span className={textRole('label')}>Prompts</span>
+          <span className={textRole('body', 'text-ink-2')}>Prompts</span>
           <Stack as="ul" gap="tight">
             {prompts.map((prompt) => (
               <li key={prompt.id}>
                 {prompt.text === null ? (
                   // Recorded at the refresh without text: the library no longer had it.
-                  <span className={textRole('body', 'text-ink-secondary')}>{DELETED_PROMPT}</span>
+                  <span className={textRole('body', 'text-ink-2')}>{DELETED_PROMPT}</span>
                 ) : (
                   <TextLink href={promptHistoryHref(prompt.id)} text="body">
                     {prompt.text}
@@ -144,9 +144,12 @@ function CitedPage({ page }: Readonly<{ page: ContentGapEvidence['members'][numb
       </TextLink>
       <Inline gap="compact" className="flex-wrap">
         {classification.success ? (
-          <Badge variant="classification" value={classificationBadgeValue(classification.data)}>
+          <StatusMark
+            variant="classification"
+            value={classificationBadgeValue(classification.data)}
+          >
             {classificationLabel(classification.data)}
-          </Badge>
+          </StatusMark>
         ) : null}
         <span className={textRole('caption')}>
           {site} · {pluralCount(page.citation_count, 'citation')}

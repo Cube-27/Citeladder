@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
+import { skills } from '../test/agent-chat-fixture';
 import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
 
 /**
@@ -9,18 +10,18 @@ import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/
  * `check:policy` guards the inputs (tokens, classes). It cannot see a 28px
  * button beside a 32px tab, a toolbar rebinding a token, or an error block
  * that is 88px on one route and 152px on the next — and those are what made
- * the app look inconsistent (docs/design.md, Layout). So this
+ * the app look inconsistent (brand direction 2.2 and 2.4). So this
  * walks every product route at the owner's viewport (982×900, DPR 1) and at
- * 1280×900 (light: dark rebinds only colours and shadows), measures every visible control, badge, tab,
- * band, box and query state, and asserts ONE value per role — the same
+ * 1280×900 (light: dark rebinds only colours and shadows), measures every visible control, tag, tab,
+ * band, section, slip and state block, and asserts ONE value per role — the same
  * literals in every configuration. The expected values are literals on
  * purpose: deriving them from the tokens would let a token edit move the
  * whole app and still pass.
  *
  * The shell fixture answers every unstubbed read with a 404, so most routes
  * settle into their read-error state; Runs is also rendered with fixture
- * rows, so table rows, badges and real cards are measured too, and Settings
- * integrations with a connection, so two neighbouring cards are measured.
+ * rows, so table rows and status marks are measured too, and Settings
+ * integrations with a connection, so neighbouring slips are measured.
  */
 
 const ROUTES = [
@@ -50,40 +51,40 @@ const ROUTES = [
 
 /** One control height for the product: control-md, 32 in the app. */
 const CONTROL_HEIGHT = 32;
-/** One badge height. */
-const BADGE_HEIGHT = 22;
-/** Text controls and tabs share one horizontal padding; icon-only controls have none. */
+/** Tags and status marks in running content (cells, facts): 24 (brand direction 2.2). */
+const TAG_HEIGHT = 24;
+/** Text controls have one horizontal padding; icon-only controls are square, with none. */
 const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
+/** Tabs and segments are text on a hairline: no padding, 16 between labels (3.1). */
+const TAB_PADDING_X = 0;
+const TAB_GAP = 16;
+/** The sidebar's project and account buttons: control-lg, 44, at 982 and at 1280. */
+const SIDEBAR_IDENT_HEIGHT = 44;
 /**
- * The sidebar's project and account buttons: as tall as the PageHeader's
- * title row (row-app, 40) in the full column and in the 57px rail,
- * so the sidebar and the page share their first line.
+ * The masthead and the sidebar's switcher cell end on one 48px line from the
+ * top of the window, the hairline under both (brand direction 2.3).
  */
-const SIDEBAR_IDENT_HEIGHT_FULL = 40;
-const SIDEBAR_IDENT_HEIGHT_RAIL = 40;
+const MASTHEAD_HEIGHT = 48;
+/** Sidebar destination rows are 28: links, not controls, and their labels never wrap. */
+const NAV_ROW_HEIGHT = 28;
+/** Masthead, page tabs and filter bar stack flush; the body starts 24 below them. */
+const BAND_GAP = 0;
+const BODY_TOP_GAP = 24;
+/** The content band's sections stand 32 apart (brand direction 2.2). */
+const CONTENT_GAP = 32;
+/** Neighbouring slips sit on the grid, one grid gap apart (brand direction 2.2). */
+const SLIP_GAP = 24;
 /**
- * The sticky top bar: the switcher cell and the PageHeader are one 56px bar
- * from the top of the window, the 40 title row with 8 above and below.
+ * One slip recipe (2.4): padding 16 on the slip, radius 4 and a 1px hairline
+ * border; nothing at rest has a shadow.
  */
-const TOP_BAR_HEIGHT = 56;
-/** The rail stacks the Dashboard | Agent track: one control wide. */
-const RAIL_MODE_TRACK_WIDTH = 32;
-/** The shell's breakpoint (`shell:`): the full sidebar from here, the rail below. */
-const SHELL_MIN_WIDTH = 1280;
-/** The page template: header → 16 → controls → 8 → content; 16 with no controls. */
-const HEADER_BAND_GAP = 16;
-const CONTROL_BAND_GAP = 8;
-/** The content band's children (cards, sections) stand 12 apart, as do cards inside them. */
-const CONTENT_GAP = 12;
-const CARD_GAP = 12;
-/**
- * One box recipe: padding 16 on the box element, radius 8 (rounded-lg),
- * and a 1px border: every box's edge is a border, never a shadow.
- */
-const CARD_INSET = 16;
-const BOX_RADIUS = 8;
-const BOX_BORDER = 1;
+const SLIP_INSET = 16;
+const SLIP_RADIUS = 4;
+const SLIP_BORDER = 1;
+/** A section is no box: a 1px ink rule on top and 12 from the rule to its head. */
+const SECTION_RULE = 1;
+const SECTION_INSET_TOP = 12;
 /**
  * Loading, read-error and first-use empty share one footprint: the block
  * EmptyState's. The state draws no box of its own (its Skeleton, Callout or
@@ -91,15 +92,16 @@ const BOX_BORDER = 1;
  */
 const QUERY_STATE_HEIGHT = 200;
 const QUERY_STATE_PADDING = 0;
-const TABLE_ROW_HEIGHT = 40;
+/**
+ * A row of a title over its caption (`TableCellLines`): 8 + a body line (20)
+ * + 4 + a caption line (16) + 8, the last row included.
+ */
+const TABLE_ROW_HEIGHT_TWO_LINES = 56;
 const TABLE_CELL_PADDING_Y = 8;
 /** A DataTable's title-and-toolbar row is one control high; the card's 16 insets it. */
 const DATA_TABLE_HEADER_HEIGHT = 32;
-/**
- * A StatRow segment is padded 12 above and below (cancelled by its margin, so
- * a pressable segment's fill has room); a row's segments share one height.
- */
-const STAT_SEGMENT_PADDING_Y = 12;
+/** A FigureStrip cell is padded 16 (2.2); a strip's cells share one height. */
+const STAT_SEGMENT_PADDING_Y = 16;
 const STAT_ROW_HEIGHT_SPREAD = 0;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
@@ -118,8 +120,7 @@ const CODE_TOKEN_PADDING_Y = 4;
 type Box = Readonly<{ route: string; role: string; label: string; value: number }>;
 
 /** Everything the census measures on one settled page, as role/value records. */
-function measure({ route, shellMinWidth }: { route: string; shellMinWidth: number }) {
-  const rail = window.innerWidth < shellMinWidth;
+function measure({ route }: { route: string }) {
   const round = (value: number) => Math.round(value * 2) / 2;
   const visible = (element: Element) => {
     if (element.closest('[hidden]')) return false;
@@ -194,39 +195,34 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
     add('tab.height', element, element.getBoundingClientRect().height);
   for (const element of all('[role="tab"]'))
     add('tab.padding-x', element, px(getComputedStyle(element).paddingLeft));
+  for (const element of all('[role="tablist"], [data-segmented-track] > [role="radiogroup"]'))
+    add('tab.gap', element, px(getComputedStyle(element).columnGap));
   for (const element of all(
     '[data-segmented-track], [role="radiogroup"]:not([data-segmented-track] *)',
   )) {
-    // In the icon rail the Dashboard | Agent track stands on end: one control wide.
-    if (rail && element.closest('aside'))
-      add('rail-mode-track.width', element, element.getBoundingClientRect().width);
-    else add('segmented.height', element, element.getBoundingClientRect().height);
+    add('segmented.height', element, element.getBoundingClientRect().height);
   }
   for (const element of all('[data-sidebar-ident]'))
-    add(
-      rail ? 'sidebar-ident.height.rail' : 'sidebar-ident.height.full',
-      element,
-      element.getBoundingClientRect().height,
-    );
-  // The sticky top bar: the sidebar's switcher cell and the PageHeader
-  // end on one line, the rule under both, scrolled or not.
-  for (const element of all('[data-top-bar], [data-page-header]'))
-    add('top-bar.bottom', element, element.getBoundingClientRect().bottom);
+    add('sidebar-ident.height', element, element.getBoundingClientRect().height);
+  // The sidebar's switcher cell and the masthead end on one line, the rule
+  // under both, scrolled or not.
+  for (const element of all('[data-sidebar-ident-cell], [data-masthead]'))
+    add('masthead.bottom', element, element.getBoundingClientRect().bottom);
   for (const element of all('aside a, nav a')) {
     if (element.closest('[role="radiogroup"], [role="tablist"], [data-segmented-track]')) continue;
     if (!hasText(element)) continue;
     add('nav-row.height', element, element.getBoundingClientRect().height);
   }
-  // Badges: status and count objects in text or cells, never inside a control.
-  for (const element of all('[data-badge-tone]')) {
+  // Tags and status marks in running content, never inside a control.
+  for (const element of all('[data-tag-kind], [data-status-tone]')) {
     if (element.closest('button, a, [role="radiogroup"], [role="tab"]')) continue;
     const display = getComputedStyle(element).display;
     if (!display.includes('flex')) continue;
-    add('badge.height', element, element.getBoundingClientRect().height);
+    add('tag.height', element, element.getBoundingClientRect().height);
   }
-  // The header cluster: every control on the identity band's row, the
-  // shell's own glyphs included.
-  const identity = document.querySelector('[data-page-band="identity"]');
+  // The masthead cluster: every control on the masthead's row, the shell's
+  // own (search, Ask agent) included.
+  const identity = document.querySelector('[data-masthead]');
   if (identity && visible(identity)) {
     const band = identity.getBoundingClientRect();
     for (const element of all('button, a[role="button"]')) {
@@ -243,8 +239,11 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
         add(role, next, next.getBoundingClientRect().top - band.getBoundingClientRect().bottom);
     }
   };
-  bandGap('[data-page-band="identity"]', 'band.gap.header');
-  bandGap('[data-page-band="control"]', 'band.gap.controls');
+  bandGap('[data-masthead]', 'band.gap');
+  bandGap('[data-page-band="tabs"]', 'band.gap');
+  bandGap('[data-page-band="filters"]', 'band.gap');
+  for (const body of all('[data-page-body]'))
+    add('body.top-gap', body, px(getComputedStyle(body).paddingTop));
   // Content rhythm: the gap between consecutive children of the content band.
   for (const region of all('[data-page-content]')) {
     let previous: Element | undefined;
@@ -256,10 +255,16 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
       previous = child;
     }
   }
-  // Boxes (cards and panels): the gap between neighbouring boxes inside a
-  // section, and where their content starts — the ink, not the CSS, because
-  // the same 16 can sit on the box or on a child.
-  const boxes = '.surface-card, .surface-panel';
+  // Sections: the ink rule on top and the 12 between it and the head.
+  for (const section of all('.surface-section')) {
+    const style = getComputedStyle(section);
+    add('section.rule', section, px(style.borderTopWidth));
+    add('section.inset-top', section, px(style.paddingTop));
+  }
+  // Slips: the gap between neighbouring slips, and where their content
+  // starts — the ink, not the CSS, because the same 16 can sit on the slip or
+  // on a child.
+  const boxes = '.surface-slip';
   // A Callout is a drawn box of its own: its edge is the ink, not its text.
   const isContent = (element: Element) =>
     element.matches('[data-callout-tone]') ||
@@ -271,14 +276,14 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
   // A state nested in a container shares that container's surface and inset
   // (globals.css), so it is not a box of its own.
   const nestedState = (element: Element) =>
-    element.matches('.query-state') &&
+    element.matches('[data-state-block]') &&
     element.parentElement?.closest(`${boxes}, [role="dialog"], .table-frame`) != null;
   for (const box of all(boxes)) {
     if (nestedState(box)) continue;
     const boxStyle = getComputedStyle(box);
-    add('box.padding', box, px(boxStyle.paddingTop));
-    add('box.radius', box, px(boxStyle.borderTopLeftRadius));
-    add('box.border', box, px(boxStyle.borderTopWidth));
+    add('slip.padding', box, px(boxStyle.paddingTop));
+    add('slip.radius', box, px(boxStyle.borderTopLeftRadius));
+    add('slip.border', box, px(boxStyle.borderTopWidth));
     const next = box.nextElementSibling;
     if (
       next?.matches(boxes) &&
@@ -287,8 +292,8 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
     ) {
       const a = box.getBoundingClientRect();
       const b = next.getBoundingClientRect();
-      if (b.top >= a.bottom) add('card.gap', next, b.top - a.bottom);
-      else if (b.left >= a.right) add('card.gap', next, b.left - a.right);
+      if (b.top >= a.bottom) add('slip.gap', next, b.top - a.bottom);
+      else if (b.left >= a.right) add('slip.gap', next, b.left - a.right);
     }
     if (box.querySelector('table')) continue;
     const ink = Array.from(box.querySelectorAll('*'))
@@ -307,10 +312,10 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
     const edge = box.getBoundingClientRect();
     const top = edge.top + Number.parseFloat(boxStyle.borderTopWidth);
     const left = edge.left + Number.parseFloat(boxStyle.borderLeftWidth);
-    add('card.inset-top', box, Math.min(...ink.map((rect) => rect.top)) - top);
-    add('card.inset-left', box, Math.min(...ink.map((rect) => rect.left)) - left);
+    add('slip.inset-top', box, Math.min(...ink.map((rect) => rect.top)) - top);
+    add('slip.inset-left', box, Math.min(...ink.map((rect) => rect.left)) - left);
   }
-  for (const element of all('[data-query-state]:not([data-query-state-inline])')) {
+  for (const element of all('[data-state-block]:not([data-state-block-inline])')) {
     add('query-state.height', element, element.getBoundingClientRect().height);
     if (!nestedState(element))
       add('query-state.padding', element, px(getComputedStyle(element).paddingTop));
@@ -320,9 +325,9 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
     add('data-table-header.height', element, element.getBoundingClientRect().height);
   // A StatRow: every segment's padding, and the segments of one row at one
   // height (the spread between the tallest and the shortest).
-  for (const element of all('[data-stat-segment]'))
+  for (const element of all('[data-figure-cell]'))
     add('stat-segment.padding-y', element, px(getComputedStyle(element).paddingTop));
-  for (const row of all('dl[data-stat-row]')) {
+  for (const row of all('dl[data-figure-strip]')) {
     const heights = Array.from(row.children)
       .filter(visible)
       .map((segment) => segment.getBoundingClientRect().height);
@@ -376,9 +381,11 @@ function measure({ route, shellMinWidth }: { route: string; shellMinWidth: numbe
     add('code-token.padding-x', element, px(style.paddingLeft));
     add('code-token.padding-y', element, px(style.paddingTop));
   }
-  // Rows only: a DataTable's state row holds a QueryState, measured above.
+  // Rows only: a DataTable's state row holds a StateBlock, measured above. A
+  // row of a title over its caption has its own height.
   for (const row of all('tbody tr:not([data-table-state])')) {
-    add('table-row.height', row, row.getBoundingClientRect().height);
+    if (row.querySelector('[data-cell-lines] > :nth-child(2)'))
+      add('table-row.height.two-lines', row, row.getBoundingClientRect().height);
     const cell = row.querySelector('td');
     if (cell) add('table-cell.padding-y', cell, px(getComputedStyle(cell).paddingTop));
   }
@@ -412,13 +419,8 @@ async function census(
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         }),
     );
-    await expect(page.locator('[data-query-state="loading"]')).toHaveCount(0);
-    records.push(
-      ...(await page.evaluate(measure, {
-        route: `${label} @${width}`,
-        shellMinWidth: SHELL_MIN_WIDTH,
-      })),
-    );
+    await expect(page.locator('[data-state-block="loading"]')).toHaveCount(0);
+    records.push(...(await page.evaluate(measure, { route: `${label} @${width}` })));
   }
   return records;
 }
@@ -470,7 +472,7 @@ const RUNS = [
   completed_at: '2026-01-01T00:10:00Z',
 }));
 
-/** A Search Console connection, so Settings draws its two integration cards. */
+/** A Search Console connection, so Settings draws its integration slips. */
 const CONNECTIONS = [
   {
     id: '55555555-5555-4555-8555-555555555551',
@@ -505,7 +507,7 @@ async function expectOneGeometry(page: Page) {
   const records: Box[] = [];
   for (const route of ROUTES) records.push(...(await census(page, route)));
 
-  // A list route with rows, so tables, badges and real cards are measured.
+  // A list route with rows, so table rows and status marks are measured.
   await stubAuthedShell(page, [[/\/api\/v1\/audits(\?.*)?$/, RUNS]]);
   records.push(...(await census(page, '/runs', { label: '/runs (rows)' })));
 
@@ -518,13 +520,24 @@ async function expectOneGeometry(page: Page) {
   ]);
   records.push(...(await census(page, `/runs/${run.id}`, { label: '/runs/:id (detail)' })));
 
-  // Neighbouring cards, so the card → card gap is measured, not assumed.
+  // Neighbouring slips, so the slip → slip gap is measured, not assumed.
   await stubAuthedShell(page, [[/\/api\/v1\/integrations(\?.*)?$/, CONNECTIONS]]);
   records.push(
     ...(await census(page, '/settings?tab=integrations', {
       label: '/settings integrations (cards)',
     })),
   );
+
+  // Two skills in one group, so neighbouring slips are measured.
+  const [skill] = skills.skills;
+  if (!skill) throw new Error('the skills fixture has a skill');
+  await stubAuthedShell(page, [
+    [
+      /\/api\/v1\/agent\/skills$/,
+      { ...skills, skills: [skill, { ...skill, id: 'gsc_titles', label: 'Title rewrites' }] },
+    ],
+  ]);
+  records.push(...(await census(page, '/agent/skills', { label: '/agent/skills (slips)' })));
 
   // A search holding a value, so its end target (Clear search) is drawn.
   await stubAuthedShell(page);
@@ -556,29 +569,30 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);
   expectOneValue(records, 'tab.height', CONTROL_HEIGHT);
   expectOneValue(records, 'segmented.height', CONTROL_HEIGHT);
-  expectOneValue(records, 'nav-row.height', CONTROL_HEIGHT);
+  expectOneValue(records, 'nav-row.height', NAV_ROW_HEIGHT);
   expectOneValue(records, 'header-cluster.height', CONTROL_HEIGHT);
   expectOneValue(records, 'control.font-size', 14);
-  expectOneValue(records, 'badge.height', BADGE_HEIGHT);
+  expectOneValue(records, 'tag.height', TAG_HEIGHT);
   expectOneValue(records, 'button.padding-x.text', TEXT_CONTROL_PADDING_X);
   expectOneValue(records, 'button.padding-x.icon', ICON_CONTROL_PADDING_X);
-  expectOneValue(records, 'tab.padding-x', TEXT_CONTROL_PADDING_X);
-  expectOneValue(records, 'sidebar-ident.height.full', SIDEBAR_IDENT_HEIGHT_FULL);
-  expectOneValue(records, 'sidebar-ident.height.rail', SIDEBAR_IDENT_HEIGHT_RAIL);
-  expectOneValue(records, 'rail-mode-track.width', RAIL_MODE_TRACK_WIDTH);
-  expectOneValue(records, 'top-bar.bottom', TOP_BAR_HEIGHT);
-  expectOneValue(records, 'band.gap.header', HEADER_BAND_GAP);
-  expectOneValue(records, 'band.gap.controls', CONTROL_BAND_GAP);
+  expectOneValue(records, 'tab.padding-x', TAB_PADDING_X);
+  expectOneValue(records, 'tab.gap', TAB_GAP);
+  expectOneValue(records, 'sidebar-ident.height', SIDEBAR_IDENT_HEIGHT);
+  expectOneValue(records, 'masthead.bottom', MASTHEAD_HEIGHT);
+  expectOneValue(records, 'band.gap', BAND_GAP);
+  expectOneValue(records, 'body.top-gap', BODY_TOP_GAP);
   expectOneValue(records, 'content.gap', CONTENT_GAP);
-  expectOneValue(records, 'card.gap', CARD_GAP);
-  expectOneValue(records, 'box.padding', CARD_INSET);
-  expectOneValue(records, 'box.radius', BOX_RADIUS);
-  expectOneValue(records, 'box.border', BOX_BORDER);
-  expectOneValue(records, 'card.inset-top', CARD_INSET);
-  expectOneValue(records, 'card.inset-left', CARD_INSET);
+  expectOneValue(records, 'section.rule', SECTION_RULE);
+  expectOneValue(records, 'section.inset-top', SECTION_INSET_TOP);
+  expectOneValue(records, 'slip.gap', SLIP_GAP);
+  expectOneValue(records, 'slip.padding', SLIP_INSET);
+  expectOneValue(records, 'slip.radius', SLIP_RADIUS);
+  expectOneValue(records, 'slip.border', SLIP_BORDER);
+  expectOneValue(records, 'slip.inset-top', SLIP_INSET);
+  expectOneValue(records, 'slip.inset-left', SLIP_INSET);
   expectOneValue(records, 'query-state.height', QUERY_STATE_HEIGHT);
   expectOneValue(records, 'query-state.padding', QUERY_STATE_PADDING);
-  expectOneValue(records, 'table-row.height', TABLE_ROW_HEIGHT);
+  expectOneValue(records, 'table-row.height.two-lines', TABLE_ROW_HEIGHT_TWO_LINES);
   expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
   expectOneValue(records, 'data-table-header.height', DATA_TABLE_HEADER_HEIGHT);
   expectOneValue(records, 'stat-segment.padding-y', STAT_SEGMENT_PADDING_Y);

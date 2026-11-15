@@ -2,15 +2,15 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { ProjectLink } from '@/components/ui/project-link';
 
 import { Button } from '@/components/ui/button';
-import { ListScreen } from '@/components/layout/page-shell';
-import { QueryState } from '@/components/ui/query-state';
-import { ReadError } from '@/components/ui/read-error';
+import { CollectionPage } from '@/components/templates/collection-page';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
 import { ICONS } from '@/lib/icons';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteHealthDashboard } from '@citeladder/contracts';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Issues screen container (Slice 8, mockup 710).
@@ -39,28 +39,28 @@ function IssuesDataRegion({
 }>) {
   if (dashboard.isLoading)
     return (
-      <ListScreen narrow>
-        <QueryState kind="loading" label="Loading issues…" />
-      </ListScreen>
+      <CollectionPage>
+        <StateBlock kind="loading" label="Loading issues…" />
+      </CollectionPage>
     );
 
   const status = httpErrorStatus(dashboard.error);
   const accessDenied = status === 401 || status === 403;
   if (dashboard.isError && (accessDenied || !dashboard.data)) {
     return (
-      <ListScreen narrow>
-        <QueryState
+      <CollectionPage>
+        <StateBlock
           kind="error"
           error={dashboard.error}
           fallback={
             accessDenied
-              ? 'Site Health is unavailable for this project.'
-              : 'Could not load Site Health.'
+              ? 'Website is unavailable for this project.'
+              : 'Could not load the latest Website crawl.'
           }
           onRetry={() => void dashboard.refetch()}
           pending={dashboard.isFetching}
         />
-      </ListScreen>
+      </CollectionPage>
     );
   }
 
@@ -86,41 +86,44 @@ function IssuesLoadedRegion({
         projectId={projectId}
         crawlId={crawl.id}
         notice={
-          <ReadError
+          <Notice
+            kind="read"
             error={dashboard.error}
-            fallback="Could not refresh Site Health."
+            fallback="Could not refresh the latest Website crawl."
+            title="Could not refresh the latest Website crawl"
             onRetry={() => void dashboard.refetch()}
             pending={dashboard.isFetching}
           />
         }
       />
     ) : (
-      <ListScreen narrow>
-        <QueryState
+      <CollectionPage>
+        <StateBlock
           kind="error"
           error={dashboard.error}
-          fallback="Could not refresh Site Health."
+          fallback="Could not refresh the latest Website crawl."
+          title="Could not refresh the latest Website crawl"
           onRetry={() => void dashboard.refetch()}
           pending={dashboard.isFetching}
         />
-      </ListScreen>
+      </CollectionPage>
     );
   }
   if (!crawl) {
     return (
-      <ListScreen narrow>
-        <QueryState
+      <CollectionPage>
+        <StateBlock
           kind="empty"
           icon={ICONS.issues}
-          heading="No Site Health crawl yet"
-          description="Run Site Health to discover and analyze this project's pages — grouped issues will appear here once a crawl finishes."
+          heading="No Website crawl yet"
+          description="Run a crawl in Website to discover and analyze this project's pages — grouped issues will appear here once a crawl finishes."
           action={
             <Button variant="secondary" asChild>
               <ProjectLink href="/site">Go to Website</ProjectLink>
             </Button>
           }
         />
-      </ListScreen>
+      </CollectionPage>
     );
   }
   return <IssuesCatalog workspaceId={workspaceId} projectId={projectId} crawlId={crawl.id} />;

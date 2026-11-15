@@ -68,7 +68,7 @@ it('hides refused calls, says what failed and keeps an unknown outcome apart fro
   ).toEqual([
     ['Couldn’t read a cited page', 'https://other.example/a', 'failed'],
     ['Couldn’t search the web', 'uniform', 'failed'],
-    ['Read Site Health', 'outcome unknown', 'unknown'],
+    ['Read Website', 'outcome unknown', 'unknown'],
   ]);
   expect(activityRows([{ kind: 'model', ordinal: 1 }, read('fetch', 'refused')])).toEqual([]);
 });

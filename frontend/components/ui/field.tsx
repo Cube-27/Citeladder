@@ -1,5 +1,7 @@
 import { useId, type ReactNode } from 'react';
+import { CircleAlert } from 'lucide-react';
 
+import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
 type ControlProps = {
@@ -10,12 +12,12 @@ type ControlProps = {
 };
 
 /**
- * Field — a control with its label above (14/20 medium `ink`) and one line of
- * hint or error below (12/16; `ink-muted`, or `negative` for an error), 6px
- * apart. Never hint and error together: the error replaces the hint. An
- * optional counter ("48/200") sits at the right of that line in mono,
- * turning `ink` at the limit. The label is tied to the control through the
- * id passed to `children`.
+ * Field — one frame for Input, Textarea, Select, Combobox, DateField and
+ * SearchField (brand direction 3.1): the label above in the `label` role,
+ * 8px to the control, and one line of help or error below in `caption`.
+ * Never help and error together: the error replaces the help, in crimson
+ * with its glyph, linked to the control. An optional counter ("48/200") sits
+ * at the right of that line in mono, turning `ink` at the limit.
  */
 export function Field({
   label,
@@ -40,12 +42,12 @@ export function Field({
   const message = error ?? hint;
 
   return (
-    <div className={cn('flex min-w-0 flex-col gap-2', className)}>
-      <label htmlFor={id} className="text-body-sm text-ink">
+    <div className={cn('flex min-w-0 flex-col gap-1 [[data-public-surface]_&]:gap-2', className)}>
+      <label htmlFor={id} className="type-label [[data-public-surface]_&]:font-normal">
         {label}
         {/* Seen only: the control itself tells assistive tech it is required. */}
         {required ? (
-          <span aria-hidden="true" className="text-ink-muted ms-0.5">
+          <span aria-hidden="true" className="text-ink-2 ms-0.5">
             *
           </span>
         ) : null}
@@ -77,13 +79,14 @@ function FieldFoot({
   let note: ReactNode = <span />;
   if (error) {
     note = (
-      <p id={id} role="alert" className="text-caption text-negative">
-        {error}
+      <p id={id} role="alert" className="type-caption text-negative flex items-start gap-1">
+        <Icon icon={CircleAlert} className="my-0 [[data-public-surface]_&]:hidden" />
+        <span>{error}</span>
       </p>
     );
   } else if (hint) {
     note = (
-      <p id={id} className="text-caption text-ink-muted">
+      <p id={id} className="type-caption">
         {hint}
       </p>
     );
@@ -94,8 +97,8 @@ function FieldFoot({
       {count ? (
         <span
           className={cn(
-            'ms-auto shrink-0 font-mono text-caption',
-            count.used >= count.max ? 'text-ink' : 'text-ink-muted',
+            'type-data-sm ms-auto shrink-0',
+            count.used >= count.max ? 'text-ink' : 'text-ink-2',
           )}
         >
           {`${count.used}/${count.max}`}

@@ -51,7 +51,7 @@ const TOOL_ACTIVITY: Record<string, { verb: Verb; noun: string }> = {
   read_actions: { verb: VERB.read, noun: 'Actions' },
   read_content_differentiation: { verb: VERB.read, noun: 'content comparisons' },
   read_ai_shelf: { verb: VERB.read, noun: 'the AI Shelf' },
-  read_site_health: { verb: VERB.read, noun: 'Site Health' },
+  read_site_health: { verb: VERB.read, noun: 'Website' },
   read_site_pages: { verb: VERB.read, noun: 'site pages' },
   read_page_text: { verb: VERB.read, noun: 'page' },
   read_site_links: { verb: VERB.read, noun: 'internal links' },

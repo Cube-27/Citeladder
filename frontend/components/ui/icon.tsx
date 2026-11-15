@@ -63,7 +63,7 @@ export function IconTile({ icon }: Readonly<{ icon: LucideIcon }>) {
     <span
       aria-hidden
       data-icon-tile=""
-      className="bg-surface-sunken border-line text-ink-secondary flex size-[var(--control-md)] shrink-0 items-center justify-center rounded-md border"
+      className="bg-well border-rule text-ink-2 rounded-control flex size-[var(--control-md)] shrink-0 items-center justify-center border"
     >
       <Icon icon={icon} />
     </span>

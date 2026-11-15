@@ -2,9 +2,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
-import { GateNoticeFrame } from '@/components/layout/gate-notice-frame';
 import { Button } from '@/components/ui/button';
-import { RouteLoadingScreen } from '@/components/layout/page-shell';
+import { NoticePage } from '@/components/templates/notice-page';
 import { refetchBilling } from '@/lib/api/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { isWorkspaceOnlyRoute } from '@/lib/navigation/app-routes';
@@ -81,10 +80,10 @@ export function OnboardingGate({ children }: Readonly<{ children: ReactNode }>) 
   useOnboardingRedirect(state === 'redirecting', activeWorkspaceId);
   useCanonicalProjectUrl(status === 'ready' && projectRequired);
 
-  // The route's own loading frame, so this wait and the page's first read are
-  // one loading state in one place rather than a bare box, then a header.
-  if (state === 'redirecting') return <RouteLoadingScreen label="Opening project setup…" />;
-  if (state === 'loading') return <RouteLoadingScreen label="Loading your workspace…" />;
+  // The route's masthead over the loading notice, so the shell never shows a bare page.
+  if (state === 'redirecting')
+    return <NoticePage tone="loading" heading="Opening project setup…" />;
+  if (state === 'loading') return <NoticePage tone="loading" heading="Loading your workspace…" />;
   if (state !== 'ready') {
     return (
       <GateNotice
@@ -152,24 +151,30 @@ function GateNotice({
   if (kind === 'failed') return <FailureNotice errorScope={errorScope} onRetry={onRetry} />;
   if (kind === 'missing-project') {
     return (
-      <NoticeShell title="That project is unavailable">
-        <p>
-          It may have been deleted, or it belongs to a workspace you do not have access to. Choose
-          another project to continue.
-        </p>
-        <NoticeLink href={noticeHref('/projects', workspaceId)}>Go to your projects</NoticeLink>
-      </NoticeShell>
+      <NoticePage
+        tone="warning"
+        heading="That project is unavailable"
+        actions={
+          <NoticeLink href={noticeHref('/projects', workspaceId)}>Go to your projects</NoticeLink>
+        }
+      >
+        It may have been deleted, or it belongs to a workspace you do not have access to. Choose
+        another project to continue.
+      </NoticePage>
     );
   }
   return (
-    <NoticeShell title="This workspace has no projects">
-      <p>
-        {mayCreate
-          ? 'Your current access does not include another project.'
-          : 'You have read-only access to this workspace.'}
-      </p>
-      <NoticeLink href={noticeHref('/settings', workspaceId)}>Open workspace settings</NoticeLink>
-    </NoticeShell>
+    <NoticePage
+      tone="info"
+      heading="This workspace has no projects"
+      actions={
+        <NoticeLink href={noticeHref('/settings', workspaceId)}>Open workspace settings</NoticeLink>
+      }
+    >
+      {mayCreate
+        ? 'Your current access does not include another project.'
+        : 'You have read-only access to this workspace.'}
+    </NoticePage>
   );
 }
 
@@ -186,19 +191,20 @@ function FailureNotice({
 }: Readonly<{ errorScope: FailureScope; onRetry: () => void }>) {
   const workspaceFailed = errorScope === 'workspace';
   return (
-    <NoticeShell
-      title={
+    <NoticePage
+      tone="negative"
+      heading={
         workspaceFailed ? 'Your workspace could not be loaded' : 'Projects could not be loaded'
       }
+      actions={
+        <Button variant="primary" onClick={onRetry}>
+          Retry
+        </Button>
+      }
     >
-      <p>
-        Your session is active. Retry to load your{' '}
-        {workspaceFailed ? 'workspace and its projects' : 'projects and allowance'}.
-      </p>
-      <Button variant="secondary" className="w-fit" onClick={onRetry}>
-        Retry
-      </Button>
-    </NoticeShell>
+      Your session is active. Retry to load your{' '}
+      {workspaceFailed ? 'workspace and its projects' : 'projects and allowance'}.
+    </NoticePage>
   );
 }
 
@@ -216,16 +222,8 @@ function noticeHref(pathname: string, workspaceId: string | null): string {
 
 function NoticeLink({ href, children }: Readonly<{ href: string; children: ReactNode }>) {
   return (
-    <Button asChild variant="secondary" className="w-fit">
+    <Button asChild variant="primary">
       <Link to={href}>{children}</Link>
     </Button>
-  );
-}
-
-function NoticeShell({ title, children }: Readonly<{ title: string; children: ReactNode }>) {
-  return (
-    <section className="grid min-h-[60vh] place-items-center py-[var(--page-section-gap)]">
-      <GateNoticeFrame title={title}>{children}</GateNoticeFrame>
-    </section>
   );
 }

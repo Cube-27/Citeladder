@@ -1,24 +1,14 @@
 import { Fragment, useState, type KeyboardEvent } from 'react';
 
-import {
-  CHART_DASH,
-  CHART_FILL,
-  CHART_AXIS_TEXT,
-  CHART_PLOT_FRAME,
-  CHART_STROKE,
-  ChartTip,
-  ChartTipRow,
-  chartPath,
-  useChartWidth,
-  type ChartTone,
-} from '@/components/ui/chart';
+import { CHART_AXIS_TEXT, CHART_PLOT_FRAME, useChartWidth } from '@/components/ui/chart';
+import { ChartTipSheet } from '@/components/ui/chart-frame';
 import {
   isolatedPoints,
   linePoints,
   trendScale,
   type TrendScale,
 } from '@/components/ui/trend-geometry';
-import { textRole } from '@/components/ui/typography';
+import { MarkerMark, SERIES_FILL, SERIES_STROKE, stepPath } from '@/components/ui/step-chart-parts';
 import { formatShortDate } from '@/lib/format';
 import {
   computeTickIndices,
@@ -29,7 +19,7 @@ import {
 } from '@/lib/performance/performance';
 import { cn } from '@/lib/utils';
 
-import type { ChartSeries } from './performance-chart';
+import type { ChartSeries, MetricMark } from './performance-chart';
 
 /** The page's primary chart: the `lg` plot height. */
 const HEIGHT = 320;
@@ -42,7 +32,7 @@ type Heights = readonly (number | null)[];
 /** One metric in plot terms: each value as a height on the metric's OWN domain. */
 type PlotLine = Readonly<{
   key: PerformanceMetricKey;
-  tone: ChartTone;
+  mark: MetricMark;
   selected: Heights;
   comparison: Heights | null;
 }>;
@@ -76,7 +66,7 @@ function plotLines(
       );
     return {
       key: entry.key,
-      tone: entry.tone,
+      mark: entry.mark,
       selected: heights(entry.selected),
       comparison: entry.comparison ? heights(entry.comparison) : null,
     };
@@ -216,19 +206,17 @@ function PerformanceTip({
 }>) {
   const comparisonDate = dateSource?.comparison?.[index]?.date ?? null;
   return (
-    <ChartTip title={dayTitle(index, dateSource?.selected[index]?.date)} top={top} left={left}>
-      {series.map((entry) => (
-        <ChartTipRow
-          key={entry.key}
-          tone={entry.tone}
-          name={entry.label}
-          value={tipValue(entry, index)}
-        />
-      ))}
-      {comparisonDate ? (
-        <p className={textRole('caption')}>Comparison day · {comparisonDate}</p>
-      ) : null}
-    </ChartTip>
+    <ChartTipSheet
+      title={dayTitle(index, dateSource?.selected[index]?.date)}
+      top={top}
+      left={left}
+      rows={series.map((entry) => ({
+        name: entry.label,
+        tone: entry.mark.tone,
+        value: tipValue(entry, index),
+      }))}
+      note={comparisonDate ? `Comparison day · ${comparisonDate}` : undefined}
+    />
   );
 }
 
@@ -267,7 +255,7 @@ function PlotDrawing({
             y1={y}
             y2={y}
             shapeRendering="crispEdges"
-            className="stroke-chart-grid"
+            className="stroke-rule"
           />
         );
       })}
@@ -295,15 +283,15 @@ function PlotDrawing({
           y2={bottom}
           strokeDasharray="3 3"
           shapeRendering="crispEdges"
-          className="stroke-line-control"
+          className="stroke-control-line"
         />
       )}
       {[...lines].reverse().map((line) => (
         <Fragment key={line.key}>
           {line.comparison ? (
-            <PlotLinePath heights={line.comparison} tone={line.tone} scale={scale} comparison />
+            <PlotLinePath heights={line.comparison} mark={line.mark} scale={scale} comparison />
           ) : null}
-          <PlotLinePath heights={line.selected} tone={line.tone} scale={scale} />
+          <PlotLinePath heights={line.selected} mark={line.mark} scale={scale} />
         </Fragment>
       ))}
       {active === null ? null : <ActiveDots lines={lines} scale={scale} index={active} />}
@@ -311,32 +299,37 @@ function PlotDrawing({
   );
 }
 
+/**
+ * One metric's steps at 1.5px with square ends; its comparison is dotted. A
+ * measured bucket with no neighbour to step to is its marker alone.
+ */
 function PlotLinePath({
   heights,
-  tone,
+  mark,
   scale,
   comparison = false,
-}: Readonly<{ heights: Heights; tone: ChartTone; scale: TrendScale; comparison?: boolean }>) {
+}: Readonly<{ heights: Heights; mark: MetricMark; scale: TrendScale; comparison?: boolean }>) {
   const points = linePoints(heights, [], scale);
   return (
     <g data-performance-line={comparison ? 'comparison' : 'selected'}>
       <path
-        d={chartPath(points)}
+        d={stepPath(points)}
         fill="none"
-        strokeWidth={2}
-        strokeDasharray={comparison ? COMPARISON_DASH : CHART_DASH[tone]}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className={CHART_STROKE[tone]}
+        strokeWidth={1.5}
+        strokeDasharray={comparison ? COMPARISON_DASH : undefined}
+        strokeLinecap={comparison ? 'round' : 'square'}
+        className={SERIES_STROKE[mark.tone]}
       />
       {isolatedPoints(points).map(([x, y]) => (
-        <circle key={`${x}-${y}`} cx={x} cy={y} r={2.5} className={CHART_FILL[tone]} />
+        <g key={`${x}-${y}`} data-marker-shape={mark.shape}>
+          <MarkerMark x={x} y={y} shape={mark.shape} className={SERIES_FILL[mark.tone]} />
+        </g>
       ))}
     </g>
   );
 }
 
-/** A dot on every measured value at the crosshair; a comparison's is the smaller. */
+/** A marker on every measured value at the crosshair; a comparison's is hollow. */
 function ActiveDots({
   lines,
   scale,
@@ -348,23 +341,21 @@ function ActiveDots({
     const comparison = line.comparison?.[index];
     return [
       typeof comparison === 'number' ? (
-        <circle
+        <MarkerMark
           key={`${line.key}-comparison`}
-          cx={x}
-          cy={scale.y(comparison)}
-          r={3}
-          strokeWidth={2}
-          className={cn('stroke-surface', CHART_FILL[line.tone])}
+          x={x}
+          y={scale.y(comparison)}
+          shape={line.mark.shape}
+          className={cn(SERIES_STROKE[line.mark.tone], 'fill-ground')}
         />
       ) : null,
       typeof selected === 'number' ? (
-        <circle
+        <MarkerMark
           key={line.key}
-          cx={x}
-          cy={scale.y(selected)}
-          r={4}
-          strokeWidth={2}
-          className={cn('stroke-surface', CHART_FILL[line.tone])}
+          x={x}
+          y={scale.y(selected)}
+          shape={line.mark.shape}
+          className={SERIES_FILL[line.mark.tone]}
         />
       ) : null,
     ];

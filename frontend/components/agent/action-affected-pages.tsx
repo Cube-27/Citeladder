@@ -1,18 +1,13 @@
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Stack } from '@/components/ui/layout';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import {
-  EditorialSectionHeader,
-  ledgerClasses,
-  ledgerItemClasses,
-} from '@/components/ui/workspace';
+import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { ActionDetail } from '@/lib/api/actions';
 import { pluralCount, readableUrl } from '@/lib/format';
+import { ActionSection } from '@/components/agent/action-section';
 
 /** How many cohort pages the section lists before "Show all". */
 const COHORT_PAGES_SHOWN = 20;
@@ -30,9 +25,8 @@ export function AffectedPages({ action }: Readonly<{ action: ActionDetail }>) {
   const shown = all ? cohort.pages : cohort.pages.slice(0, COHORT_PAGES_SHOWN);
   const unlisted = cohort.page_count - cohort.pages.length;
   return (
-    <Stack as="section" aria-labelledby={HEADING_ID}>
-      <EditorialSectionHeader title="Affected pages" headingId={HEADING_ID} />
-      <p className={textRole('body')}>
+    <ActionSection title="Affected pages" id={HEADING_ID}>
+      <p className={textRole('body', 'text-ink-2')}>
         {cohort.rule_label} fails on {pluralCount(cohort.page_count, 'page')}
         {cohort.crawl_completed_at ? (
           <>
@@ -44,19 +38,15 @@ export function AffectedPages({ action }: Readonly<{ action: ActionDetail }>) {
         )}
         .
       </p>
-      <Card>
-        <CardContent>
-          <ul className={ledgerClasses()} aria-label="Affected pages">
-            {shown.map((page) => (
-              <li key={page.site_url_id} className={ledgerItemClasses()}>
-                <TextLink variant="external" href={page.url} text="body" className="break-all">
-                  {readableUrl(page.url)}
-                </TextLink>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      <ul className={ledgerClasses()} aria-label="Affected pages">
+        {shown.map((page) => (
+          <li key={page.site_url_id} className={ledgerItemClasses()}>
+            <TextLink variant="external" href={page.url} text="body" className="break-all">
+              {readableUrl(page.url)}
+            </TextLink>
+          </li>
+        ))}
+      </ul>
       {cohort.pages.length > COHORT_PAGES_SHOWN ? (
         <Button variant="secondary" className="justify-self-start" onClick={() => setAll(!all)}>
           {all ? 'Show fewer pages' : `Show all ${cohort.pages.length} listed pages`}
@@ -67,6 +57,6 @@ export function AffectedPages({ action }: Readonly<{ action: ActionDetail }>) {
           {pluralCount(unlisted, 'more page')} share this issue and are not listed.
         </p>
       ) : null}
-    </Stack>
+    </ActionSection>
   );
 }

@@ -96,8 +96,10 @@ function ReorderRow({
       )}
     >
       <div className="flex items-center gap-2">
-        <Icon icon={GripVertical} className="text-ink-muted hover:text-ink cursor-grab" />
-        <span className={textRole('label', 'font-mono w-5 text-center')}>{index + 1}</span>
+        <Icon icon={GripVertical} className="text-ink-2 hover:text-ink cursor-grab" />
+        <span className={textRole('body', 'text-ink-2 font-mono w-5 text-center')}>
+          {index + 1}
+        </span>
       </div>
       <div className="min-w-0">{item.content}</div>
       <div className="flex items-center justify-end gap-2">

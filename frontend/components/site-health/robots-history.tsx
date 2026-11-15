@@ -171,7 +171,7 @@ function RobotsDiff({
       {lines ? (
         <LineDiff lines={lines} label="robots.txt line diff" />
       ) : (
-        <p className={textRole('body')}>
+        <p className={textRole('body', 'text-ink-2')}>
           These robots.txt files are too long to compare line by line.
         </p>
       )}

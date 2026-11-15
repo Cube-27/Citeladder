@@ -1,15 +1,21 @@
 import type { UseQueryResult } from '@tanstack/react-query';
 
-import { BusyBar } from '@/components/ui/progress-bar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ReadError } from '@/components/ui/read-error';
-import { StatRow, type StatSegment } from '@/components/ui/stat-row';
-import { MissingValue } from '@/components/ui/unavailable-value';
+import { BusyRung } from '@/components/ui/rung-meter';
+import { Absence } from '@/components/ui/absence';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses, SubsectionHeader } from '@/components/ui/workspace';
 import type { AioRate, SurfaceRates } from '@citeladder/contracts';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
 
 /**
  * The five AI Overview rates, each shown with what it divided by.
@@ -51,7 +57,7 @@ function rateStat({
   label,
   caption,
   rate,
-}: Readonly<{ key: string; label: string; caption: string; rate: AioRate }>): StatSegment {
+}: Readonly<{ key: string; label: string; caption: string; rate: AioRate }>): FigureSegment {
   return {
     key,
     label,
@@ -86,13 +92,15 @@ function CompetitorRates({ rates }: Readonly<{ rates: SurfaceRates['competitor_m
             key={entry.name}
             className={ledgerItemClasses('justify-between')}
           >
-            <span className={textRole('body', 'min-w-0 truncate')}>{entry.name}</span>
+            <span className={textRole('body', 'text-ink-2 min-w-0 truncate')}>{entry.name}</span>
             <Inline as="span" className="shrink-0">
               {entry.rate.value === null ? (
-                <MissingValue state="unavailable" className="type-body" />
+                <Absence state="unavailable" className="type-body text-ink-2" />
               ) : (
                 <>
-                  <span className="type-body tabular-nums">{ratePercent(entry.rate.value)}</span>
+                  <span className="type-body text-ink-2 tabular-nums">
+                    {ratePercent(entry.rate.value)}
+                  </span>
                   {/* The denominator is stated once for the list above; the
                       numerator is not, and it is what separates one competitor
                       named in a single overview from one named in fifty. */}
@@ -115,14 +123,15 @@ export function SurfaceRatesPanel({
   const data = query.data;
   if (query.isError)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="Could not load the AI Overview rates."
         onRetry={() => void query.refetch()}
         pending={query.isFetching}
       />
     );
-  if (!data) return <QueryState kind="loading" label="Loading AI Overview rates…" />;
+  if (!data) return <StateBlock kind="loading" label="Loading AI Overview rates…" />;
   // These rates are RETAINED across a surface or run change, the same way
   // the sources and evidence panels retain theirs, so the reader is not
   // handed a skeleton for every round trip. Retained numbers carry no
@@ -130,18 +139,18 @@ export function SurfaceRatesPanel({
   // equally plausible under any selection -- so the busy bar every other
   // retaining panel shows is what keeps them from reading as settled.
   return (
-    <Card className="relative" aria-busy={query.isFetching}>
-      <BusyBar active={query.isFetching} label="Updating AI Overview rates" />
-      <CardHeader>
-        <CardTitle>Google AI Overview</CardTitle>
-        <CardDescription>
+    <Section className="relative" aria-busy={query.isFetching}>
+      <BusyRung active={query.isFetching} label="Updating AI Overview rates" />
+      <SectionHeader>
+        <SectionTitle>Google AI Overview</SectionTitle>
+        <SectionDescription>
           {`${data.successful} successfully observed ${data.successful === 1 ? 'search' : 'searches'}, ${data.with_overview} of which showed an overview. Each rate below states what it divided by.`}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <Stack gap="workspace">
-          <div className="border-line border-b">
-            <StatRow
+          <div className="border-rule border-b">
+            <FigureStrip
               segments={[
                 rateStat({
                   key: 'trigger',
@@ -176,7 +185,7 @@ export function SurfaceRatesPanel({
           </div>
           <CompetitorRates rates={data.competitor_mention_rates} />
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }

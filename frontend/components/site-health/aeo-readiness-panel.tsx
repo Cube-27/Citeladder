@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { Badge, type BadgeTone } from '@/components/ui/badge';
-import { Callout } from '@/components/ui/callout';
+import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Drawer } from '@/components/ui/drawer';
 import { Dot } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
-import { QueryState } from '@/components/ui/query-state';
 import { TextLink } from '@/components/ui/text-link';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { ReadinessCheck, ReadinessDimension } from '@citeladder/contracts';
@@ -23,6 +21,9 @@ import {
   ledgerClasses,
   ledgerItemClasses,
 } from '@/components/ui/workspace';
+import { cn } from '@/lib/utils';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 function pageLabel(url: string) {
   try {
@@ -81,7 +82,7 @@ function dimensionState(dimension: ReadinessDimension): DimensionState {
  * Each band its own tone, so "Nearly there" never reads as "Needs work". A
  * pillar with no score has no band: it takes the neutral badge.
  */
-const DIMENSION_TONES: Record<DimensionState, BadgeTone> = {
+const DIMENSION_TONES: Record<DimensionState, StatusTone> = {
   Critical: 'negative',
   'Needs work': 'warning',
   'Nearly there': 'info',
@@ -94,7 +95,7 @@ const DIMENSION_TONES: Record<DimensionState, BadgeTone> = {
 type CheckState = 'Incomplete' | 'Needs work' | 'Passing' | 'Did not apply' | 'Not measured';
 
 /** A check's state in the same tones as the pillar bands it rolls up into. */
-const CHECK_TONES: Record<CheckState, BadgeTone> = {
+const CHECK_TONES: Record<CheckState, StatusTone> = {
   Incomplete: 'info',
   'Needs work': 'warning',
   Passing: 'positive',
@@ -115,24 +116,25 @@ export function AeoReadinessPanel({
   const [detailKey, setDetailKey] = useState<string | null>(null);
 
   if (readiness.isLoading) {
-    return <QueryState kind="loading" label="Loading AEO Readiness…" />;
+    return <StateBlock kind="loading" label="Loading AEO Readiness…" />;
   }
   if (readiness.isError)
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         error={readiness.error}
         fallback="Could not load AEO Readiness."
+        title="Could not load AEO Readiness"
         onRetry={() => void readiness.refetch()}
         pending={readiness.isFetching}
       />
     );
   if (!readiness.data || readiness.data.crawl_id === null) {
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         {readiness.data?.limitations[0] ??
           'AEO Readiness appears once a crawl has finished analyzing pages.'}
-      </Callout>
+      </Notice>
     );
   }
 
@@ -141,7 +143,7 @@ export function AeoReadinessPanel({
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="aeo-readiness">
       {data.limitations.length > 0 ? (
-        <Callout tone="info">{data.limitations.join(' ')}</Callout>
+        <Notice tone="info">{data.limitations.join(' ')}</Notice>
       ) : null}
       <ReadinessLedger dimensions={data.dimensions} onOpen={setDetailKey} />
       <DimensionDrawer dimension={selected} crawlId={crawlId} onClose={() => setDetailKey(null)} />
@@ -185,13 +187,13 @@ function ReadinessLedger({
             <TableCell numeric>{formatScore(dimension.score)}</TableCell>
             <TableCell numeric>
               {dimension.coverage === null ? (
-                <UnavailableValue state="not_measured" />
+                <Absence state="not_measured" />
               ) : (
                 formatCoverage(dimension.coverage)
               )}
             </TableCell>
             <TableCell>
-              <Badge tone={DIMENSION_TONES[state]}>{state}</Badge>
+              <StatusMark tone={DIMENSION_TONES[state]}>{state}</StatusMark>
             </TableCell>
           </TableRow>
         );
@@ -239,7 +241,7 @@ function CheckLedger({ checks }: Readonly<{ checks: ReadinessCheck[] }>) {
     <Stack as="section" gap="item">
       <EditorialSectionHeader title="Checks" />
       {checks.length === 0 ? (
-        <QueryState kind="empty" inline message="No determinate checks were recorded." />
+        <StateBlock kind="empty" inline message="No determinate checks were recorded." />
       ) : (
         <ul className={ledgerClasses()}>
           {checks.map((check) => (
@@ -256,10 +258,10 @@ function CheckRow({ check }: Readonly<{ check: ReadinessCheck }>) {
   return (
     <Stack as="li" gap="tight" className={ledgerItemClasses()}>
       <Inline className="flex-wrap justify-between">
-        <span className={textRole('itemTitle')}>{check.title}</span>
-        <Badge tone={CHECK_TONES[state]}>{state}</Badge>
+        <span className={textRole('body')}>{check.title}</span>
+        <StatusMark tone={CHECK_TONES[state]}>{state}</StatusMark>
       </Inline>
-      <p className={textRole('body', check.remediation ? 'text-ink' : undefined)}>
+      <p className={textRole('body', cn('text-ink-2', check.remediation ? 'text-ink' : undefined))}>
         {check.remediation || 'No remediation guidance is recorded for this check.'}
       </p>
       <p className="type-caption tabular-nums">
@@ -302,7 +304,7 @@ function FailingPages({
         {dimension.evidence_pages.map((page) => (
           <Stack as="li" gap="item" key={page.site_url_id} className={ledgerItemClasses()}>
             <TextLink
-              text="itemTitle"
+              text="body"
               className="truncate"
               href={`/site/crawls/${crawlId}/pages/${page.site_url_id}`}
             >

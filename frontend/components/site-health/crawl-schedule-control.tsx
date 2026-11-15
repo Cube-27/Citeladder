@@ -14,11 +14,11 @@ import {
   MenuSeparator,
   MenuTrigger,
 } from '@/components/ui/menu';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { robotsChoiceNote } from '@/components/site-health/robots-choice';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
+import { Notice } from '@/components/ui/notice';
 
 type Choice = 'off' | CrawlScheduleCadence;
 
@@ -162,7 +162,8 @@ export function useCrawlSchedule(
       />
     ) : null,
     notice: mutation.isError ? (
-      <MutationNotice
+      <Notice
+        kind="mutation"
         notice={mutationNoticeForError(mutation.error, { action: 'save the crawl schedule' })}
         onRetry={retry}
       />

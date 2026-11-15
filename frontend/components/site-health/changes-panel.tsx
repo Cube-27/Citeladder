@@ -2,13 +2,10 @@ import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { GitCompare } from 'lucide-react';
 
-import { Badge, type BadgeTone } from '@/components/ui/badge';
+import { StatusMark, type StatusTone } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { readErrorProps } from '@/components/ui/read-error';
-import { StatRow } from '@/components/ui/stat-row';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
@@ -16,6 +13,15 @@ import type { ChangeObservation, ChangeSummary } from '@citeladder/contracts';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { changeFieldLabel } from '@/lib/site-health/change-fields';
 import { ChangeEvidenceDrawer } from './changes-panel-evidence';
+import { readErrorProps } from '@/components/ui/notice';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 const CLASS_LABELS = {
   improvement: 'Improvement',
@@ -25,7 +31,7 @@ const CLASS_LABELS = {
 } as const;
 
 /** A change class is a delta, so it carries the delta's direction. */
-const CLASS_TONES: Readonly<Record<keyof typeof CLASS_LABELS, BadgeTone>> = {
+const CLASS_TONES: Readonly<Record<keyof typeof CLASS_LABELS, StatusTone>> = {
   improvement: 'positive',
   'neutral-change': 'neutral',
   'potential-regression': 'warning',
@@ -83,24 +89,24 @@ export function ChangesPanel({
   const summaryState = comparisonState(summary, pairAvailable);
   return (
     <Stack gap="workspace" className="min-w-0" data-testid="website-changes">
-      <Card>
-        <CardHeader>
-          <CardTitle>Since the previous crawl</CardTitle>
-          <CardDescription>
+      <Section>
+        <SectionHeader>
+          <SectionTitle>Since the previous crawl</SectionTitle>
+          <SectionDescription>
             What changed on your pages between your last two crawls. Expected means the change
             matches an implementation you declared.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <StatRow
+          </SectionDescription>
+        </SectionHeader>
+        <SectionContent>
+          <FigureStrip
             segments={Object.entries(CLASS_LABELS).map(([key, label]) => ({
               key,
               label,
               value: counts ? (counts[key] ?? 0) : null,
             }))}
           />
-        </CardContent>
-      </Card>
+        </SectionContent>
+      </Section>
       <DataTable
         label="Website changes"
         columns={CHANGE_COLUMNS}
@@ -144,13 +150,15 @@ function ChangeRow({
       <TableCell>{field}</TableCell>
       <TableCell>
         <Inline className="whitespace-nowrap">
-          <Badge tone={CLASS_TONES[row.change_class]}>{CLASS_LABELS[row.change_class]}</Badge>
+          <StatusMark tone={CLASS_TONES[row.change_class]}>
+            {CLASS_LABELS[row.change_class]}
+          </StatusMark>
           {row.expected ? <span className="type-caption">Expected</span> : null}
         </Inline>
       </TableCell>
       <TableCell>
         <Button
-          variant="ghost"
+          variant="quiet"
           onClick={onOpen}
           aria-label={`View evidence: ${field} on ${displayPath(row.normalized_url)}`}
         >
@@ -172,6 +180,7 @@ function comparisonState(
       kind: 'error',
       ...readErrorProps(summary),
       fallback: 'Could not load Website Changes.',
+      title: 'Could not load Website Changes',
     };
   if (summary.data.state === 'unavailable')
     return {

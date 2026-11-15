@@ -16,11 +16,12 @@ export type StatusMessage = Readonly<{
   busy?: boolean;
 }>;
 
-const TONE_TEXT: Record<StatusTone, string> = {
-  info: 'text-info',
-  warning: 'text-warning',
-  danger: 'text-negative',
-  neutral: 'text-ink-muted',
+/** The glyph's ink and the word a screen reader hears first; the sentence stays in ink. */
+const TONE_MARK: Record<StatusTone, { ink: string; word: string | null }> = {
+  info: { ink: 'text-info', word: 'Note' },
+  warning: { ink: 'text-warning', word: 'Warning' },
+  danger: { ink: 'text-negative', word: 'Error' },
+  neutral: { ink: 'text-ink-2', word: null },
 };
 
 const TONE_ICON = {
@@ -39,6 +40,8 @@ const TONE_ICON = {
  * footprint in every state: it shows the most important message, says how
  * many more there are behind a hint, and at rest shows the `resting` fact.
  * Long text truncates; the full sentence stays in the title and the DOM.
+ * Like a StatusMark, the tone is its glyph and word, never the sentence's
+ * colour; work in flight is the live rung.
  */
 export function StatusLine({
   messages,
@@ -54,18 +57,21 @@ export function StatusLine({
   const tone = first?.tone ?? 'neutral';
   const text = first?.text ?? resting;
   const ToneIcon = TONE_ICON[tone];
+  const mark = TONE_MARK[tone];
   if (!text) return <output data-testid={testId} className="h-[var(--control-md)]" />;
   return (
     <output
       data-testid={testId}
       data-status-tone={tone}
-      className={cn(
-        'type-caption flex min-h-[var(--control-md)] min-w-0 items-center gap-2',
-        TONE_TEXT[tone],
-      )}
+      className="type-body text-ink flex min-h-[var(--control-md)] min-w-0 items-center gap-2"
     >
-      {first?.busy ? <Spinner /> : <ToneIcon className="size-4 shrink-0" aria-hidden />}
+      {first?.busy ? (
+        <Spinner />
+      ) : (
+        <ToneIcon className={cn('size-4 shrink-0', mark.ink)} aria-hidden />
+      )}
       <span className="min-w-0 truncate" title={text}>
+        {first && mark.word ? <span className="sr-only">{`${mark.word}: `}</span> : null}
         {text}
       </span>
       {rest.length ? (

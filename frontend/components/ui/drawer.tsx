@@ -3,15 +3,15 @@ import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { IconButton } from '@/components/ui/button';
-import { FLOAT_FACE } from '@/components/ui/card';
 import { useReturnFocus } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { SHEET_FACE } from '@/components/ui/slip';
 
 /**
  * Drawer — a sheet for editing or inspecting one item without leaving the
  * list behind it. It floats 8px from the viewport edges, `container-narrow`
  * wide, with `radius-lg` and the floating face (1px `line` border,
- * `shadow-float`) on the scrim. The header (eyebrow,
+ * `shadow-sheet`) on the scrim. The header (eyebrow,
  * the section title at 500, 22/28, description) and the footer are fixed behind 1px
  * `line` rules; only the body scrolls, with `modal-padding` and 16px between
  * blocks. `footerStart` holds a delete or secondary action on the left,
@@ -89,8 +89,8 @@ export function Drawer({
           }}
           data-side={side}
           className={cn(
-            FLOAT_FACE,
-            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-lg',
+            SHEET_FACE,
+            'drawer-panel z-modal fixed inset-y-2 flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-sheet',
             side === 'left' ? 'left-2 max-w-68' : 'right-2',
             side === 'right' && (width === 'wide' ? 'max-w-220' : 'max-w-narrow'),
           )}
@@ -114,7 +114,7 @@ export function Drawer({
             {children}
           </Body>
           {footer || footerStart ? (
-            <footer className="border-line flex items-center justify-between gap-2 border-t px-[var(--card-padding)] py-4">
+            <footer className="border-rule flex items-center justify-between gap-2 border-t px-[var(--card-padding)] py-4">
               <div className="flex items-center gap-2">{footerStart}</div>
               <div className="flex items-center gap-2">{footer}</div>
             </footer>
@@ -156,15 +156,13 @@ function DrawerHeader({
     );
   }
   return (
-    <header className="border-line flex items-start justify-between gap-4 border-b px-[var(--card-padding)] py-4">
+    <header className="border-rule flex items-start justify-between gap-4 border-b px-[var(--card-padding)] py-4">
       <div className="min-w-0">
-        {eyebrow ? <p className="type-eyebrow mb-1">{eyebrow}</p> : null}
-        <DialogPrimitive.Title className="type-section-title truncate">
-          {title}
-        </DialogPrimitive.Title>
+        {eyebrow ? <p className="type-overline mb-1">{eyebrow}</p> : null}
+        <DialogPrimitive.Title className="type-heading truncate">{title}</DialogPrimitive.Title>
         {description ? (
           <DialogPrimitive.Description asChild>
-            <div className="text-body-sm text-ink-secondary mt-1">{description}</div>
+            <div className="text-body-sm text-ink-2 mt-1">{description}</div>
           </DialogPrimitive.Description>
         ) : null}
       </div>

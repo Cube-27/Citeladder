@@ -2,8 +2,6 @@ import { useMutation } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { textRole } from '@/components/ui/typography';
@@ -18,6 +16,7 @@ import {
 import { PROVIDER_META } from '@/components/settings/grant-model';
 
 import { ownPropertiesFirst } from './data-sources';
+import { Notice } from '@/components/ui/notice';
 
 const onlyItem = <T,>(items: readonly T[]) => (items.length === 1 ? items[0] : undefined);
 
@@ -74,12 +73,12 @@ export function PropertyChoice({
   const properties = ownPropertiesFirst(discovery.data);
   if (properties.length === 0)
     return (
-      <Callout tone="neutral">
+      <Notice tone="info">
         This account has no {source.noun}. Add and verify the site in {source.console}, then{' '}
-        <Button variant="ghost" onClick={discover}>
+        <Button variant="quiet" onClick={discover}>
           check again
         </Button>
-      </Callout>
+      </Notice>
     );
   const suggested = suggestedProperty(provider, properties);
   return (
@@ -97,7 +96,7 @@ export function PropertyChoice({
             Use {suggested.label}
           </Button>
           {properties.length > 1 && !showAll ? (
-            <Button variant="ghost" onClick={() => setShowAll(true)}>
+            <Button variant="quiet" onClick={() => setShowAll(true)}>
               Choose another
             </Button>
           ) : null}
@@ -112,7 +111,8 @@ export function PropertyChoice({
         />
       )}
       {select.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(select.error, { action: 'save the property' })}
         />
       ) : null}
@@ -145,7 +145,8 @@ function DiscoveryStatus({
       </Inline>
     );
   return (
-    <MutationNotice
+    <Notice
+      kind="mutation"
       notice={mutationNoticeForError(discovery.error, { action: `load your ${noun}s` })}
       recovery={
         <Button variant="secondary" onClick={discover}>
@@ -175,7 +176,9 @@ function PropertyList({
         return (
           <Inline as="li" key={property.property_ref} gap="compact">
             <span className="min-w-0 flex-1">
-              <span className={textRole('label', 'block truncate')}>{property.label}</span>
+              <span className={textRole('body', 'text-ink-2 block truncate')}>
+                {property.label}
+              </span>
               <span className="type-caption block truncate">
                 {foreign ? 'Belongs to a different site' : property.property_ref}
               </span>

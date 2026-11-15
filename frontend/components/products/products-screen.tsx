@@ -2,14 +2,14 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Columns3, Download } from 'lucide-react';
 
-import { ListScreen } from '@/components/layout/page-shell';
-import { AppGrid } from '@/components/ui/app-grid';
+import { CollectionPage } from '@/components/templates/collection-page';
 import { Button } from '@/components/ui/button';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
 import { Menu, MenuCheckboxItem, MenuContent, MenuLabel, MenuTrigger } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { SegmentedControl } from '@/components/ui/tabs';
+import { TextLink } from '@/components/ui/text-link';
 import { InlineFigure } from '@/components/ui/typography';
 import type { CommerceProductSource, CommerceTarget } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
@@ -24,17 +24,23 @@ import {
   useProductColumns,
   type ProductColumnKey,
 } from '@/lib/products/product-columns';
-import { productSearch, useProductFilters } from '@/lib/products/product-filters';
+import {
+  DEFAULT_PRODUCT_FILTERS,
+  productSearch,
+  useProductFilters,
+  type ProductFilters,
+} from '@/lib/products/product-filters';
+import { targetHref } from '@/lib/products/targets';
 import { isTablePageSize, TABLE_DEFAULT_PAGE_SIZE, type TablePageSize } from '@/lib/config/tables';
+import { setUrlParams } from '@/lib/navigation/url-state';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { BulkActions } from './bulk-actions';
-import { productScopeFilters } from './product-scope-filters';
+import { categoryFilter, productScopeFilters } from './product-scope-filters';
 import { useCatalogHeader } from './catalog-header';
-import { CategorySidebar } from './category-sidebar';
-import { ProductsTable } from './products-table';
+import { ProductsTable, type ProductsEmpty } from './products-table';
 
 const SOURCES: readonly { value: CommerceProductSource; label: string }[] = [
   { value: 'catalog', label: 'My catalog' },
@@ -56,7 +62,7 @@ function ColumnSettings({
         <Button variant="secondary">
           <Icon icon={Columns3} />
           Columns
-          <span className="text-ink-muted">
+          <span className="text-ink-2">
             {shown.length} of {PRODUCT_COLUMNS.length}
           </span>
         </Button>
@@ -109,10 +115,21 @@ function pageRange({
   return { from, to: from + shown - 1, total, noun: 'products' };
 }
 
+/** Whether the reader narrowed the list, so an empty page is "none match", not "none yet". */
+function narrowed(filters: ProductFilters): boolean {
+  return Boolean(
+    filters.q.trim() ||
+    filters.category ||
+    filters.engine ||
+    filters.promptSet ||
+    filters.window !== DEFAULT_PRODUCT_FILTERS.window,
+  );
+}
+
 /**
- * Commerce's Products table (commerce improvement PR 3): every product holder
- * with its metrics over the chosen window, the catalog's categories beside it,
- * and the filters in the top strip. A catalog product opens its own page.
+ * Commerce's Products collection (commerce improvement PR 3): every product
+ * holder with its metrics over the chosen window, narrowed by the filter bar
+ * (source, search, category and scope). A catalog product opens its own page.
  */
 export function ProductsScreen() {
   const { workspaceId, projectId } = useProjectScope();
@@ -148,6 +165,14 @@ function ProductsContent({
       return updated;
     });
   const targets: CommerceTarget[] = [...checked].map((id) => ({ kind: 'product', id }));
+  const empty: ProductsEmpty = narrowed(filters)
+    ? {
+        kind: 'filtered',
+        onClear: () =>
+          setUrlParams({ q: null, category: null, engine: null, prompt_set: null, window: null }),
+      }
+    : { kind: 'empty', source: filters.source };
+  const selectedCategory = catalog.data?.categories.find((row) => row.id === filters.category);
   const exportRows = () => {
     const csv = productCsv(rows, columns.shown);
     downloadCsv(
@@ -157,114 +182,118 @@ function ProductsContent({
     );
   };
   return (
-    <ListScreen
+    <CollectionPage
       actions={header.actions}
-      controls={{
-        view: (
-          <SegmentedControl
-            ariaLabel="Products shown"
-            value={filters.source}
-            options={SOURCES}
-            onChange={productFilters.setSource}
-          />
-        ),
-        search: (
-          <SearchField
-            value={filters.q}
-            onValueChange={productFilters.setQ}
-            onClear={() => productFilters.setQ('')}
-            placeholder="Search products"
-            aria-label="Search products"
-          />
-        ),
-        filters: productScopeFilters({
-          scope: productFilters,
-          engines,
-          promptSets: promptSets.data?.prompt_sets ?? [],
-        }),
-        // What the table lists closes the row: its products and the answers they came from.
-        status: page.data ? (
-          <>
-            <span>
-              <InlineFigure>{formatCount(page.data.total)}</InlineFigure>
-              {page.data.total === 1 ? ' product' : ' products'}
-            </span>
-            <span>
-              <InlineFigure>{formatCount(page.data.executions)}</InlineFigure>
-              {page.data.executions === 1 ? ' answer' : ' answers'} in the last{' '}
-              {page.data.window_days} days
-            </span>
-          </>
-        ) : null,
-        actions: (
-          <>
-            <ColumnSettings shown={columns.shown} onToggle={columns.toggle} />
-            <Button variant="secondary" onClick={exportRows} disabled={rows.length === 0}>
-              <Icon icon={Download} />
-              Export
-            </Button>
-          </>
-        ),
-      }}
-    >
-      <Stack gap="workspace">
-        {header.stats}
-        {header.notices}
-        {checked.size ? (
-          <BulkActions
-            count={checked.size}
-            pending={discovery.discover.isPending}
-            error={discovery.discover.error}
-            onDiscover={() => discovery.discover.mutate(targets)}
-            onClear={() => setChecked(new Set())}
-          />
-        ) : null}
-        <AppGrid layout="list-detail">
-          <CategorySidebar
-            query={catalog}
-            category={filters.category}
-            onCategory={productFilters.setCategory}
-          />
-          <Stack>
-            <ProductsTable
-              query={page}
-              scope={filters}
-              trackable={filters.source === 'all'}
-              // Checked products are for competitor discovery, a run.
-              selectable={canRun && filters.source !== 'archived'}
-              columns={columns.shown}
-              sort={filters.sort}
-              onSort={productFilters.setSort}
-              checked={checked}
-              onCheck={check}
-              pageSize={pageSize}
-              pager={{
-                pageSize: {
-                  value: pageSize,
-                  onChange: (size) => {
-                    if (isTablePageSize(size)) setPageSize(size);
-                  },
-                },
-                range: pageRange({
-                  page: cursors.page,
-                  pageSize,
-                  shown: rows.length,
-                  total: page.data?.total,
-                }),
-                canPrev: cursors.page > 1,
-                canNext: Boolean(page.data?.next_cursor),
-                onPrev: cursors.prev,
-                onNext: () => {
-                  if (page.data?.next_cursor) cursors.next(page.data.next_cursor);
-                },
-                onFirst: cursors.first,
-                page: cursors.page,
-                busy: page.isFetching,
-              }}
+      filters={
+        <FilterBar
+          view={
+            <SegmentedControl
+              ariaLabel="Products shown"
+              value={filters.source}
+              options={SOURCES}
+              onChange={productFilters.setSource}
             />
-          </Stack>
-        </AppGrid>
-      </Stack>
-    </ListScreen>
+          }
+          search={
+            <SearchField
+              value={filters.q}
+              onValueChange={productFilters.setQ}
+              onClear={() => productFilters.setQ('')}
+              placeholder="Search products"
+              aria-label="Search products"
+            />
+          }
+          filters={[
+            categoryFilter(filters.category, catalog.data, productFilters.setCategory),
+            ...productScopeFilters({
+              scope: productFilters,
+              engines,
+              promptSets: promptSets.data?.prompt_sets ?? [],
+            }),
+          ]}
+          // What the table lists closes the row: its products and the answers they came from.
+          status={
+            page.data ? (
+              <>
+                <span>
+                  <InlineFigure>{formatCount(page.data.total)}</InlineFigure>
+                  {page.data.total === 1 ? ' product' : ' products'}
+                </span>
+                <span>
+                  <InlineFigure>{formatCount(page.data.executions)}</InlineFigure>
+                  {page.data.executions === 1 ? ' answer' : ' answers'} in the last{' '}
+                  <InlineFigure>{page.data.window_days}</InlineFigure> days
+                </span>
+              </>
+            ) : null
+          }
+          actions={
+            <>
+              <ColumnSettings shown={columns.shown} onToggle={columns.toggle} />
+              <Button variant="secondary" onClick={exportRows} disabled={rows.length === 0}>
+                <Icon icon={Download} />
+                Export
+              </Button>
+            </>
+          }
+        />
+      }
+    >
+      {header.stats}
+      {header.notices}
+      {checked.size ? (
+        <BulkActions
+          count={checked.size}
+          pending={discovery.discover.isPending}
+          error={discovery.discover.error}
+          onDiscover={() => discovery.discover.mutate(targets)}
+          onClear={() => setChecked(new Set())}
+        />
+      ) : null}
+      <ProductsTable
+        query={page}
+        scope={filters}
+        empty={empty}
+        description={
+          selectedCategory ? (
+            <TextLink href={targetHref(selectedCategory.id)} text="caption">
+              Open {selectedCategory.name}: its competitors and shopping prompts
+            </TextLink>
+          ) : undefined
+        }
+        trackable={filters.source === 'all'}
+        // Checked products are for competitor discovery, a run.
+        selectable={canRun && filters.source !== 'archived'}
+        columns={columns.shown}
+        sort={filters.sort}
+        onSort={productFilters.setSort}
+        checked={checked}
+        onCheck={check}
+        pageSize={pageSize}
+        pager={{
+          pageSize: {
+            value: pageSize,
+            onChange: (size) => {
+              if (isTablePageSize(size)) setPageSize(size);
+            },
+          },
+          range: pageRange({
+            page: cursors.page,
+            pageSize,
+            shown: rows.length,
+            total: page.data?.total,
+          }),
+          canPrev: cursors.page > 1,
+          canNext: Boolean(page.data?.next_cursor),
+          onPrev: cursors.prev,
+          onNext: () => {
+            if (page.data?.next_cursor) cursors.next(page.data.next_cursor);
+          },
+          onFirst: cursors.first,
+          page: cursors.page,
+          busy: page.isFetching,
+        }}
+      />
+    </CollectionPage>
   );
 }

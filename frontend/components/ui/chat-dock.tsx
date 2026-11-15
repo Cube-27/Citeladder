@@ -9,6 +9,7 @@ import { LogoMark } from '@/components/ui/logo-mark';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { Pressable } from '@/components/ui/pressable';
 import { textRole } from '@/components/ui/typography';
+import { wellClasses } from '@/components/ui/slip';
 import { cn } from '@/lib/utils';
 
 /**
@@ -73,7 +74,7 @@ export function ComposerDock({
             label="Jump to latest"
             variant="secondary"
             onClick={onJumpToLatest}
-            className="shadow-float pointer-events-auto rounded-full"
+            className="shadow-sheet pointer-events-auto rounded-full"
           />
         </div>
       ) : null}
@@ -112,7 +113,7 @@ export function ComposerFrame({
   return (
     <form
       className={cn(
-        'focus-frame max-w-thread mx-auto grid w-full gap-1 rounded-lg p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]',
+        'focus-frame max-w-thread mx-auto grid w-full gap-1 rounded-sheet p-2 transition-[border-color,box-shadow] duration-[var(--motion-fast)]',
         FIELD_EDGE,
       )}
       onSubmit={(event: FormEvent) => {
@@ -158,8 +159,12 @@ export function AgentThread({ children }: Readonly<{ children: ReactNode }>) {
 export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: ReactNode }>) {
   return (
     <div className="flex justify-end">
-      <div className="bg-surface border-line flex max-w-[min(80%,var(--container-prose))] min-w-0 flex-col gap-2 rounded-lg border px-4 py-3">
-        <p className={textRole('body', 'text-ink whitespace-pre-wrap')}>{text}</p>
+      <div
+        className={wellClasses(
+          'flex max-w-[min(80%,var(--container-prose))] min-w-0 flex-col gap-2 px-4 py-3',
+        )}
+      >
+        <p className={textRole('body', 'text-ink-2 text-ink whitespace-pre-wrap')}>{text}</p>
         {footer}
       </div>
     </div>
@@ -167,8 +172,9 @@ export function UserTurn({ text, footer }: Readonly<{ text: string; footer?: Rea
 }
 
 /**
- * The agent's turn, with no bubble: the logo mark, "Agent", the time and any
- * `meta` (the skill it used) on one line, then the reply's parts 12 apart.
+ * The agent's turn (brand direction 3.2 Turn), with no bubble: the logo mark,
+ * "Agent", the time and any `meta` (the skill it used) on one line, then the
+ * reply's parts 12 apart on a dashed rail, because the model wrote them.
  * `inProgress` marks the reply still being written.
  */
 export function AgentTurn({
@@ -185,13 +191,20 @@ export function AgentTurn({
     >
       <div className="flex min-h-6 flex-wrap items-center gap-2">
         <LogoMark wordmark={false} variant="compact" />
-        <span className={textRole('label')}>Agent</span>
+        <span className={textRole('body', 'text-ink-2')}>Agent</span>
+        {/* Model-written, so drafted (law 1): the dashed rail and this word say so. */}
+        <span className={textRole('overline')}>Draft</span>
         {time ? (
           <span className={textRole('caption', 'font-mono tabular-nums')}>{time}</span>
         ) : null}
         {meta ? <span className={textRole('caption')}>{meta}</span> : null}
       </div>
-      {children}
+      <div
+        data-turn-rail=""
+        className="border-control-line ms-3 flex min-w-0 flex-col gap-3 border-s border-dashed ps-4"
+      >
+        {children}
+      </div>
     </article>
   );
 }
@@ -207,19 +220,19 @@ export function RemovableChip({
 }: Readonly<{ label: string; onRemove?: () => void }>) {
   return (
     <li className={CHIP}>
-      <span className={textRole('caption', 'truncate text-ink-secondary')}>{label}</span>
+      <span className={textRole('caption', 'truncate text-ink-2')}>{label}</span>
       {onRemove ? <RemoveControl label={label} onRemove={onRemove} /> : null}
     </li>
   );
 }
 
 const CHIP =
-  'border-line text-ink-secondary inline-flex max-w-full items-center gap-1 rounded-sm border px-3 py-0.5';
+  'border-rule text-ink-2 inline-flex max-w-full items-center gap-1 rounded-control border px-3 py-0.5';
 
 function RemoveControl({ label, onRemove }: Readonly<{ label: string; onRemove: () => void }>) {
   return (
     <Pressable
-      className="focus-ring hover:text-ink flex w-auto rounded-xs"
+      className="focus-ring hover:text-ink rounded-mark flex w-auto"
       aria-label={`Remove ${label}`}
       onClick={onRemove}
     >
@@ -243,16 +256,21 @@ export function PastedTextChip({
   return (
     <li className={CHIP}>
       <Pressable
-        className="focus-ring hover:text-ink inline-flex w-auto min-w-0 items-center gap-1 rounded-xs"
+        className="focus-ring hover:text-ink rounded-mark inline-flex w-auto min-w-0 items-center gap-1"
         aria-label={`View ${label}`}
         onClick={() => setOpen(true)}
       >
         <Icon icon={FileText} />
-        <span className={textRole('caption', 'truncate text-ink-secondary')}>{label}</span>
+        <span className={textRole('caption', 'truncate text-ink-2')}>{label}</span>
       </Pressable>
       {onRemove ? <RemoveControl label={label} onRemove={onRemove} /> : null}
       <Dialog open={open} onOpenChange={setOpen} title="Pasted text" width="wide">
-        <pre className={textRole('body', 'text-ink font-mono break-words whitespace-pre-wrap')}>
+        <pre
+          className={textRole(
+            'body',
+            'text-ink-2 text-ink font-mono break-words whitespace-pre-wrap',
+          )}
+        >
           {text}
         </pre>
       </Dialog>

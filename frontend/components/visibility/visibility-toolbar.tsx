@@ -1,8 +1,9 @@
 import { CircleHelp } from 'lucide-react';
 
 import { LaunchAuditButton } from '@/components/runs/launch-audit-button';
-import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { choiceFilter, rangeFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import { IconButton } from '@/components/ui/button';
+import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { LogicalEngine } from '@citeladder/contracts';
 import type { ProjectMarket } from '@citeladder/contracts/markets';
@@ -100,12 +101,10 @@ export function useVisibilityFilterMenu(props: ToolbarProps): FilterDefinition[]
     evidence ? promptFilter(props) : null,
     evidence ? outcomeFilter(props) : null,
     pooled
-      ? choiceFilter({
-          id: 'range',
-          label: 'Period',
+      ? rangeFilter({
           value: props.range,
           defaultValue: '90d',
-          groups: [{ options: RANGE_OPTIONS }],
+          options: RANGE_OPTIONS,
           onChange: props.onChangeRange,
         })
       : null,
@@ -262,7 +261,9 @@ function outcomeFilter({ outcome, onChangeOutcome }: ToolbarProps): FilterDefini
 export function VisibilityActions() {
   return (
     <>
-      <LaunchAuditButton />
+      <MastheadPrimary>
+        <LaunchAuditButton />
+      </MastheadPrimary>
       <Tooltip content="How these metrics are calculated">
         <IconButton
           variant="secondary"

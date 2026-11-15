@@ -3,10 +3,8 @@ import { useMemo } from 'react';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
-import { ReadError } from '@/components/ui/read-error';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
@@ -14,6 +12,14 @@ import { missingPrompts, promptHistoryHref, type MissingPrompt } from '@/lib/pro
 import { useEngineCatalog } from '@/lib/providers/engines';
 
 import { useLatestPromptMetrics } from '@/components/prompts/use-latest-prompt-measurements';
+import { Notice } from '@/components/ui/notice';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /** Rows shown on Overview; the rest are one click away in Prompts. */
 const SHOWN = 5;
@@ -32,11 +38,11 @@ export function MissingPrompts({
   // No run yet has nothing to compare, so the section stays out of the way.
   if (query.isPending || query.data?.length === 0) return null;
   return (
-    <Card aria-labelledby="missing-prompts">
-      <CardHeader
+    <Section aria-labelledby="missing-prompts">
+      <SectionHeader
         actions={
           rows.length > SHOWN ? (
-            <Button asChild variant="ghost">
+            <Button asChild variant="quiet">
               <ProjectLink href="/prompts">
                 All prompts <Icon icon={ArrowRight} />
               </ProjectLink>
@@ -44,14 +50,15 @@ export function MissingPrompts({
           ) : null
         }
       >
-        <CardTitle id="missing-prompts">{"Where you're missing"}</CardTitle>
-        <CardDescription>
+        <SectionTitle id="missing-prompts">{"Where you're missing"}</SectionTitle>
+        <SectionDescription>
           Prompts in the latest run where an answer named a competitor but not you.
-        </CardDescription>
-      </CardHeader>
-      <Stack as={CardContent} gap="compact">
+        </SectionDescription>
+      </SectionHeader>
+      <Stack as={SectionContent} gap="compact">
         {query.isError ? (
-          <ReadError
+          <Notice
+            kind="read"
             error={query.error}
             fallback="Prompt results could not be loaded."
             onRetry={() => void query.refetch()}
@@ -71,7 +78,7 @@ export function MissingPrompts({
           </ul>
         ) : null}
       </Stack>
-    </Card>
+    </Section>
   );
 }
 

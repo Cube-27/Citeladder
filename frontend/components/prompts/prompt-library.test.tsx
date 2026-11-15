@@ -259,4 +259,40 @@ describe('PromptLibrary topic filter', () => {
     expect(within(table).queryByText('Best road shoes?')).not.toBeInTheDocument();
     expect(await openFilterRow(user, 'Topic', 'Trail')).toBeVisible();
   });
+
+  it('opens on the status the URL names, so a linked Archived view shows the archived prompts', async () => {
+    const active = makePrompt({
+      id: '66666666-6666-4666-8666-666666666661',
+      text: 'Best trail shoes?',
+    });
+    const archived = makePrompt({
+      id: '66666666-6666-4666-8666-666666666662',
+      text: 'Best road shoes?',
+      status: 'archived',
+    });
+    const statusSet = makeSet([active, archived]);
+    const statusProject = makeProject({ prompt_sets: [statusSet] });
+    mswServer.use(
+      http.get('/api/v1/prompt-sets', () => HttpResponse.json(makeSetList([statusSet]))),
+      http.get(`/api/v1/prompt-sets/${statusSet.id}/candidates`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${statusProject.id}/topics`, () => HttpResponse.json([])),
+      http.get(`/api/v1/projects/${statusProject.id}/visibility/prompts`, () =>
+        HttpResponse.json([]),
+      ),
+    );
+    window.history.replaceState(null, '', `/projects/${statusProject.id}/prompts?status=archived`);
+    renderWithProviders(<PromptLibrary />, {
+      projectSelection: {
+        projects: [statusProject],
+        activeProject: statusProject,
+        activeProjectId: statusProject.id,
+        status: 'ready',
+      },
+    });
+
+    const table = await screen.findByRole('table', { name: 'Prompts' });
+    expect(within(table).getByText('Best road shoes?')).toBeVisible();
+    expect(within(table).queryByText('Best trail shoes?')).not.toBeInTheDocument();
+    window.history.replaceState(null, '', '/');
+  });
 });

@@ -225,7 +225,7 @@ describe('ProductDetailScreen', () => {
 
     const user = userEvent.setup();
     await screen.findByRole('heading', { name: 'Acme Road Runner' });
-    await chooseFilterOption(user, 'Window', 'Last 7 days');
+    await chooseFilterOption(user, 'Period', 'Last 7 days');
     await waitFor(() => expect(requested).toEqual(['?window=30', '?window=7']));
   });
 

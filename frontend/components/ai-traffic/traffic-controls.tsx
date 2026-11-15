@@ -5,7 +5,12 @@ import { words } from '@/lib/ai-traffic/vocabulary';
 import { TRAFFIC_RANGES, VERIFICATION_OPTIONS } from '@/lib/config/crawl-logs';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { choiceFilter, menuFieldKeys, type FilterDefinition } from '@/components/ui/all-filters';
+import {
+  choiceFilter,
+  menuFieldKeys,
+  rangeFilter,
+  type FilterDefinition,
+} from '@/components/ui/all-filters';
 import { MenuItem } from '@/components/ui/menu';
 import { Icon } from '@/components/ui/icon';
 type ControlProps = Readonly<{ model: ReturnType<typeof useTrafficData> }>;
@@ -29,7 +34,7 @@ type FilterBuilder = (props: TrafficControlsProps) => FilterDefinition | null;
 
 /** In menu order. */
 const FILTER_BUILDERS: readonly FilterBuilder[] = [
-  rangeFilter,
+  trafficRangeFilter,
   verificationFilter,
   purposeFilter,
   botFilter,
@@ -75,13 +80,11 @@ function optionalChoice({
 }
 
 /** The reporting window every tab reads. */
-function rangeFilter({ model }: TrafficControlsProps) {
-  return choiceFilter({
-    id: 'range',
-    label: 'Reporting range',
+function trafficRangeFilter({ model }: TrafficControlsProps) {
+  return rangeFilter({
     value: model.selection.range,
     defaultValue: TRAFFIC_RANGES[0].value,
-    groups: [{ options: TRAFFIC_RANGES }],
+    options: TRAFFIC_RANGES,
     onChange: model.selection.setRange,
   });
 }

@@ -2,9 +2,9 @@ import type { BillingEntitlement } from '@/lib/api/billing';
 
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { panelClasses } from '@/components/ui/panel';
 import { textRole } from '@/components/ui/typography';
 import { DisplayTime } from '@/components/ui/display-time';
+import { wellClasses } from '@/components/ui/slip';
 
 export function BillingCountryInput({
   country,
@@ -14,7 +14,7 @@ export function BillingCountryInput({
     <Field
       label="Billing country"
       hint="Two-letter ISO code. The server resolves currency, tax and the exact amount from it."
-      className={panelClasses()}
+      className={wellClasses()}
     >
       {(field) => (
         <Input

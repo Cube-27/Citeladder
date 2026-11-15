@@ -1,6 +1,6 @@
-import { ChartLegend, type ChartTone } from '@/components/ui/chart';
+import { ChartFrame, ChartKey } from '@/components/ui/chart-frame';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
+import type { MarkerShape, SeriesTone } from '@/components/ui/step-chart-parts';
 import {
   axisDomainMax,
   formatAxisTick,
@@ -11,6 +11,7 @@ import {
 } from '@/lib/performance/performance';
 
 import { PerformancePlot } from './performance-plot';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * The combined Performance chart: every selected GSC metric on one hoverable
@@ -33,11 +34,22 @@ import { PerformancePlot } from './performance-plot';
  * dropping to zero.
  */
 
+/** A metric's line: ink or a cool hue (never the accent: no series here is "you") and its marker. */
+export type MetricMark = Readonly<{ tone: SeriesTone; shape: MarkerShape }>;
+
+/** Each metric's mark, shared by its figure's key and its line. */
+export const METRIC_MARKS: Record<PerformanceMetricKey, MetricMark> = {
+  clicks: { tone: 'rival-1', shape: 'square' },
+  impressions: { tone: 'rival-2', shape: 'diamond' },
+  ctr: { tone: 'rival-3', shape: 'triangle' },
+  position: { tone: 'rival-4', shape: 'circle' },
+};
+
 export type ChartSeries = {
   key: PerformanceMetricKey;
   label: string;
-  /** The metric's chart position: its colour and texture. */
-  tone: ChartTone;
+  /** The metric's line colour and marker, shared with its figure's key. */
+  mark: MetricMark;
   selected: PerformanceChartPoint[];
   comparison: PerformanceChartPoint[] | null;
 };
@@ -71,7 +83,7 @@ export function PerformanceChart({
     // Nothing is plotted, so the plot's height is not reserved. A tall empty
     // box read as a broken chart rather than an absent one. The line still
     // states which absence this is.
-    return <QueryState kind="empty" inline message={summary} />;
+    return <StateBlock kind="empty" inline message={summary} />;
   }
 
   // Axis dates come from the LONGEST selected series, never the first
@@ -87,22 +99,24 @@ export function PerformanceChart({
   );
 
   return (
-    <Stack gap="compact" className={className}>
-      <ChartLegend
-        line
-        entries={series.map((entry) => ({
-          name: entry.label,
-          tone: entry.tone,
-          value: `0–${formatAxisTick(entry.key, domainFor(entry)[1])}`,
-        }))}
-      />
-      <PerformancePlot
-        series={series}
-        columnCount={columnCount}
-        domains={domains}
-        axisEntry={axisEntry}
-        label={summary}
-      />
-    </Stack>
+    <ChartFrame height="lg">
+      <Stack gap="compact" className={className}>
+        <ChartKey
+          entries={series.map((entry) => ({
+            name: entry.label,
+            tone: entry.mark.tone,
+            shape: entry.mark.shape,
+            value: `0–${formatAxisTick(entry.key, domainFor(entry)[1])}`,
+          }))}
+        />
+        <PerformancePlot
+          series={series}
+          columnCount={columnCount}
+          domains={domains}
+          axisEntry={axisEntry}
+          label={summary}
+        />
+      </Stack>
+    </ChartFrame>
   );
 }

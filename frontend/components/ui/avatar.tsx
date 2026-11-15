@@ -7,9 +7,9 @@ import { cn, emailInitials } from '@/lib/utils';
  * in rows, menus and the account button, `profile` (40px) in a profile header.
  */
 const PLACEMENT = {
-  byline: 'size-5 text-eyebrow tracking-normal',
-  row: 'size-7 text-caption',
-  profile: 'size-10 text-body-sm',
+  byline: 'size-5 type-caption',
+  row: 'size-7 type-caption',
+  profile: 'size-10 type-body',
 } as const;
 
 export type AvatarPlacement = keyof typeof PLACEMENT;
@@ -36,7 +36,7 @@ export function Avatar({
     <span
       aria-hidden
       className={cn(
-        'bg-surface-sunken border-line text-ink grid shrink-0 place-items-center overflow-hidden rounded-full border font-medium uppercase',
+        'bg-well border-rule text-ink grid shrink-0 place-items-center overflow-hidden rounded-full border font-medium uppercase',
         PLACEMENT[placement],
       )}
     >

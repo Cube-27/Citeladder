@@ -13,8 +13,7 @@ import { Inline } from '@/components/ui/layout';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
-import { MissingValue } from '@/components/ui/unavailable-value';
-import { TruncationNotice } from '@/components/visibility/evidence-states';
+import { Absence } from '@/components/ui/absence';
 import type {
   VisibilityEvidenceResponse,
   VisibilityExecutionEvidence,
@@ -28,7 +27,7 @@ import { EVIDENCE_LIMIT } from '@/lib/visibility/use-visibility-dashboard';
 
 /** A counted nought in a column of chips, kept apart from an absent one. */
 function ObservedNone() {
-  return <span className={textRole('caption', 'text-ink-secondary tabular-nums')}>0</span>;
+  return <span className={textRole('caption', 'text-ink-2 tabular-nums')}>0</span>;
 }
 
 /** Chips a cell carries before it stops being a cell; the rest become "+N". */
@@ -89,7 +88,11 @@ export function SourcePrompts({
         busy={{ active: query.isFetching, label: 'Updating prompts' }}
         // The endpoint returns a bounded newest-first window. Without this a
         // source cited by more answers than fit simply looked like it had fewer.
-        footer={query.data?.truncated ? <TruncationNotice limit={EVIDENCE_LIMIT} /> : null}
+        footer={
+          query.data?.truncated
+            ? `Showing the newest ${EVIDENCE_LIMIT} executions; narrow the filters to see the rest.`
+            : null
+        }
       >
         {(query.data?.items ?? []).map((item) => (
           <PromptRow key={item.analysis_id} item={item} onOpenAnswer={setOpened} />
@@ -161,7 +164,7 @@ function PromptRow({
           <BrandMark name={engines.label(item.logical_engine)} />
           <span className="grid min-w-0">
             <ClampText lines={1}>{item.prompt_text || 'Untitled prompt'}</ClampText>
-            <ClampText lines={1} className={textRole('caption', 'text-ink-secondary')}>
+            <ClampText lines={1} className={textRole('caption', 'text-ink-2')}>
               {engines.modelLabel(item.logical_engine, item.transport_model) ||
                 engines.label(item.logical_engine)}
             </ClampText>
@@ -176,14 +179,14 @@ function PromptRow({
         <SourceChips item={item} />
       </TableCell>
       <TableCell numeric desktopOnly>
-        {sinceLabel(item.completed_at) ?? <MissingValue />}
+        {sinceLabel(item.completed_at) ?? <Absence />}
       </TableCell>
       <TableCell>
         {/* The row summarises the answer; this reaches the answer itself. It
             is the one thing the old evidence feed carried that a compact row
             cannot replace with a number. */}
         <Button
-          variant="ghost"
+          variant="quiet"
           onClick={() =>
             onOpenAnswer({
               // The visibility row names the execution as `task_id`; the drawer
@@ -206,7 +209,7 @@ function PromptRow({
  * The brands this answer named, as marks.
  *
  * An empty list is an OBSERVED zero, not an absent measurement: the answer was
- * read and it named nobody. `MissingValue` would report that as "not measured",
+ * read and it named nobody. `Absence` would report that as "not measured",
  * which is the opposite finding -- so the cell says nought and means it.
  */
 function MentionChips({ item }: Readonly<{ item: VisibilityExecutionEvidence }>) {
@@ -249,7 +252,7 @@ function ChipRow({ children, overflow }: Readonly<{ children: ReactNode; overflo
     <Inline as="span" gap="tight">
       {children}
       {overflow > 0 ? (
-        <span className={textRole('caption', 'text-ink-secondary tabular-nums')}>+{overflow}</span>
+        <span className={textRole('caption', 'text-ink-2 tabular-nums')}>+{overflow}</span>
       ) : null}
     </Inline>
   );

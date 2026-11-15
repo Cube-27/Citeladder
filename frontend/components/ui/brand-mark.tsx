@@ -13,9 +13,9 @@ import { cn } from '@/lib/utils';
  *                       tile with the xs ring.
  */
 const PLACEMENT = {
-  inline: { pixels: 16, box: 'size-4 rounded-xs text-eyebrow tracking-normal', image: 'size-4' },
-  row: { pixels: 20, box: 'size-5 rounded-xs text-caption', image: 'size-5' },
-  header: { pixels: 24, box: 'bg-surface shadow-xs size-10 rounded-sm text-body', image: 'size-6' },
+  inline: { pixels: 16, box: 'size-4 rounded-mark text-eyebrow tracking-normal', image: 'size-4' },
+  row: { pixels: 20, box: 'size-5 rounded-mark text-caption', image: 'size-5' },
+  header: { pixels: 24, box: 'bg-surface size-10 rounded-control text-body', image: 'size-6' },
 } as const;
 
 export type BrandMarkPlacement = keyof typeof PLACEMENT;
@@ -63,7 +63,11 @@ export function BrandMark({
           alt=""
           width={spec.pixels}
           height={spec.pixels}
-          className={cn('block object-contain', spec.image, placement !== 'header' && 'rounded-xs')}
+          className={cn(
+            'block object-contain',
+            spec.image,
+            placement !== 'header' && 'rounded-mark',
+          )}
           onError={() => setFailed((prev) => ({ ...prev, [src]: true }))}
         />
       ) : (

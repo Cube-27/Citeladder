@@ -5,7 +5,8 @@ import { useState } from 'react';
 import { ExecutionEvidenceDrawer } from '@/components/runs/execution-evidence-drawer';
 import { RunActions, useRunExport } from '@/components/runs/progress-panel';
 import { RunDetailView } from '@/components/runs/run-detail-view';
-import { DetailScreen } from '@/components/layout/page-shell';
+import { RecordPage } from '@/components/templates/record-page';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { runsMutations, runsQueries } from '@/lib/api/runs';
 import { useProjectHref } from '@/lib/navigation/project-destination';
@@ -13,7 +14,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useRunEvents } from '@/lib/runs/use-run-events';
 import { useRunExecutions } from '@/lib/runs/use-run-executions';
-import { AUDIT_STATES, pollAudits } from '@/lib/runs/status';
+import { AUDIT_STATES, pollAudits, runTitle } from '@/lib/runs/status';
 
 /** Active-run progress, cancellation, failed-execution reruns, and evidence selection. */
 export function RunDetailScreen() {
@@ -59,9 +60,12 @@ export function RunDetailScreen() {
 
   const audit = auditQuery.data;
   const runExport = useRunExport(audit);
+  const timeZone = useDisplayTimeZone();
+  const title = audit ? runTitle(audit, timeZone) : undefined;
 
   return (
-    <DetailScreen
+    <RecordPage
+      title={title}
       back={{ href: '/runs', label: 'Back to runs', projectId: audit?.project_id }}
       actions={
         audit ? (
@@ -79,6 +83,7 @@ export function RunDetailScreen() {
     >
       <RunDetailView
         audit={audit}
+        title={title}
         auditLoading={auditQuery.isLoading}
         auditRead={auditQuery}
         executions={executionsQuery.data}
@@ -114,6 +119,6 @@ export function RunDetailScreen() {
           }
         }}
       />
-    </DetailScreen>
+    </RecordPage>
   );
 }

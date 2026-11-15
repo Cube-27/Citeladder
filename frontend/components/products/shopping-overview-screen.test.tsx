@@ -85,7 +85,7 @@ function Harness() {
   const query = useQuery(
     commerceQueries.overview({ workspaceId: null, projectId: PROJECT_ID }, 'window=90'),
   );
-  return <OverviewSections query={query} windowDays="90" filters={[]} />;
+  return <OverviewSections query={query} windowDays="90" />;
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));

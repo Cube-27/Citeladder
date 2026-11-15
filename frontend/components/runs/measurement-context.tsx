@@ -1,4 +1,4 @@
-import { Badge } from '@/components/ui/badge';
+import { Tag } from '@/components/ui/tag';
 import { Inline } from '@/components/ui/layout';
 import type { ModelProvenance } from '@citeladder/contracts';
 
@@ -37,13 +37,13 @@ export function MeasurementContext({
     <div className={className} data-measurement-context>
       <Inline as="span" className="flex-wrap">
         {aggregate ? (
-          <Badge title={models.join(', ')}>Multiple models ({models.length})</Badge>
+          <Tag title={models.join(', ')}>Multiple models ({models.length})</Tag>
         ) : (
           <ModelBadge model={model ?? models[0] ?? null} />
         )}
 
         {retrieval === null || retrieval === undefined ? null : (
-          <Badge>{retrieval ? 'Retrieval on' : 'Retrieval off'}</Badge>
+          <Tag>{retrieval ? 'Retrieval on' : 'Retrieval off'}</Tag>
         )}
       </Inline>
     </div>
@@ -51,11 +51,11 @@ export function MeasurementContext({
 }
 
 function ModelBadge({ model }: Readonly<{ model: string | null }>) {
-  if (!model) return <Badge>Model not recorded</Badge>;
+  if (!model) return <Tag>Model not recorded</Tag>;
   return (
-    <Badge>
+    <Tag>
       <span className="tabular-nums">{model}</span>
-    </Badge>
+    </Tag>
   );
 }
 

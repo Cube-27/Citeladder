@@ -5,8 +5,6 @@ import { Link } from 'react-router-dom';
 import { z } from 'zod';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CopyButton } from '@/components/ui/copy-button';
 import { DateField } from '@/components/ui/date-field';
@@ -15,9 +13,7 @@ import { DisplayTime, TableTime } from '@/components/ui/display-time';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { RadioGroup } from '@/components/ui/radio-group';
-import { ReadError } from '@/components/ui/read-error';
 import { TagGroup } from '@/components/ui/tag';
 import { textRole } from '@/components/ui/typography';
 import { EditorialSectionHeader } from '@/components/ui/workspace';
@@ -30,6 +26,8 @@ import { endOfDayInZone, useDisplayTimeZone } from '@/lib/display-timezone';
 import { API_HOST_ORIGIN } from '@/lib/config/api-host';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 const API_BASE_URL = `${API_HOST_ORIGIN}/v1`;
 
@@ -66,7 +64,7 @@ function KeyRow({
     <TableRow>
       <TableCell>
         <div className="grid min-w-0">
-          <ClampText lines={1} className={textRole('itemTitle')}>
+          <ClampText lines={1} className={textRole('body')}>
             {apiKey.name}
           </ClampText>
           <ClampText lines={1} className={textRole('caption')}>
@@ -181,9 +179,7 @@ function CreateKeyDialog({
     >
       {created ? (
         <Stack gap="compact">
-          <Callout tone="warning">
-            You won’t see this key again. Store it somewhere safe now.
-          </Callout>
+          <Notice tone="warning">You won’t see this key again. Store it somewhere safe now.</Notice>
           <code className="type-caption break-all">{created.secret}</code>
           <div>
             <CopyButton value={created.secret}>Copy key</CopyButton>
@@ -202,7 +198,7 @@ function CreateKeyDialog({
             )}
           </Field>
           <Stack as="fieldset" gap="tight">
-            <legend className={textRole('label')}>What the key can do</legend>
+            <legend className={textRole('body', 'text-ink-2')}>What the key can do</legend>
             {SCOPES.map((scope) => (
               <Checkbox
                 key={scope.value}
@@ -227,7 +223,7 @@ function CreateKeyDialog({
           />
           {projectMode === 'chosen' ? (
             <Stack as="fieldset" gap="tight">
-              <legend className={textRole('label')}>Projects</legend>
+              <legend className={textRole('body', 'text-ink-2')}>Projects</legend>
               {projects.map((project) => (
                 <Checkbox
                   key={project.id}
@@ -255,7 +251,8 @@ function CreateKeyDialog({
             )}
           </Field>
           {create.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(create.error, { action: 'create the API key' })}
             />
           ) : null}
@@ -288,10 +285,11 @@ export function ApiKeys() {
   const [pending, setPending] = useState<ApiKey | null>(null);
   const query = useQuery({ ...apiKeyQueries.list(workspaceId), enabled: workspaceId !== '' });
   const revoke = useMutation(apiKeyMutations.revoke(workspaceId));
-  if (query.isPending) return <QueryState kind="loading" label="Loading API keys…" />;
+  if (query.isPending) return <StateBlock kind="loading" label="Loading API keys…" />;
   if (query.isError)
     return (
-      <ReadError
+      <Notice
+        kind="read"
         error={query.error}
         fallback="API keys could not be loaded."
         onRetry={() => void query.refetch()}
@@ -310,7 +308,7 @@ export function ApiKeys() {
           description={`Call the REST API at ${API_BASE_URL} from your own code.`}
         />
         {available ? null : (
-          <Callout tone="info">
+          <Notice tone="info">
             The REST API is included in paid plans.{' '}
             <Link
               to={workspaceDestination('/billing', null, workspaceId)}
@@ -318,7 +316,7 @@ export function ApiKeys() {
             >
               Choose a plan
             </Link>
-          </Callout>
+          </Notice>
         )}
       </Stack>
       {keys.length === 0 && !available ? null : (
@@ -370,7 +368,8 @@ export function ApiKeys() {
               <Stack gap="compact">
                 <p>Requests with this key are refused at once. This cannot be undone.</p>
                 {revoke.isError ? (
-                  <MutationNotice
+                  <Notice
+                    kind="mutation"
                     notice={mutationNoticeForError(revoke.error, { action: 'revoke the API key' })}
                   />
                 ) : null}

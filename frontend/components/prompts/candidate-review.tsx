@@ -1,9 +1,8 @@
 import { Check, X } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
 import { InfoHint } from '@/components/ui/info-hint';
@@ -13,6 +12,7 @@ import { Tag } from '@/components/ui/tag';
 import type { PromptCandidate, Topic } from '@citeladder/contracts';
 import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-quality';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
+import { Notice } from '@/components/ui/notice';
 
 const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 
@@ -72,17 +72,16 @@ export function CandidateReview({
 
   return (
     <Stack gap="compact" className="min-w-0">
-      {error ? <Callout tone="negative">{error}</Callout> : null}
-      {notice ? <Callout tone="positive">{notice}</Callout> : null}
+      {error ? <Notice tone="negative">{error}</Notice> : null}
+      {notice ? <Notice tone="positive">{notice}</Notice> : null}
       <DataTable
-        nested
         title={`Review ${plural(candidates.length, 'suggestion')}`}
         toolbar={{
           status: <span className="type-caption tabular-nums">{selected.length} selected</span>,
           actions: (
             <>
               <Button
-                variant="ghost"
+                variant="quiet"
                 onClick={() => review(onReject)}
                 disabled={isReviewing || selected.length === 0}
               >
@@ -144,9 +143,9 @@ export function CandidateReview({
                     </>
                   ) : null}
                   {candidate.quality_flags.map((flag) => (
-                    <Badge key={flag} variant="status" value="warning">
+                    <StatusMark key={flag} variant="status" value="warning">
                       {qualityFlagLabel(flag)}
-                    </Badge>
+                    </StatusMark>
                   ))}
                 </Inline>
               </TableCell>
@@ -175,19 +174,19 @@ export function CandidateReviewPanel({
   if (setsLoading || review.isLoading) return <output>Loading suggestions…</output>;
   if (setsError || review.loadError)
     return (
-      <Callout tone="negative">
+      <Notice tone="negative">
         {review.loadError || 'Could not load prompt sets.'}
         <Button variant="secondary" onClick={setsError ? retrySets : review.retry}>
           Retry
         </Button>
-      </Callout>
+      </Notice>
     );
   if (!review.candidates.length && !review.notice)
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         No pending suggestions remain. They may have expired or already been reviewed. Use Adjust
         run to generate a new batch.
-      </Callout>
+      </Notice>
     );
   return (
     <CandidateReview
@@ -210,7 +209,7 @@ export function PendingReviewNotice({
 }: Readonly<{ count: number; hidden: boolean; onReview: () => void }>) {
   if (!count || hidden) return null;
   return (
-    <Callout tone="info">
+    <Notice tone="info">
       <Inline as="span" className="flex-wrap justify-between">
         {count === 1
           ? '1 generated prompt is waiting for review.'
@@ -219,6 +218,6 @@ export function PendingReviewNotice({
           Review suggestions
         </Button>
       </Inline>
-    </Callout>
+    </Notice>
   );
 }

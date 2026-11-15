@@ -230,10 +230,10 @@ describe('CatalogHeader', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Run Site Health crawl' })).toBeInTheDocument(),
+      expect(screen.getByRole('button', { name: 'Run Website crawl' })).toBeInTheDocument(),
     );
     expect(screen.getByText('No crawl yet')).toBeInTheDocument();
-    expect(statValue('Pages analyzed')).toHaveTextContent('Not measured');
+    expect(statValue('Pages analyzed')).toHaveTextContent('Not run');
   });
 
   it('never reads a failed Site Health read as no crawl, and Refresh reads it again', async () => {
@@ -248,10 +248,10 @@ describe('CatalogHeader', () => {
       />,
     );
 
-    await waitFor(() => expect(statValue('Site Health')).toHaveTextContent("Couldn't load"));
+    await waitFor(() => expect(statValue('Website')).toHaveTextContent("Couldn't load"));
     expect(statValue('Pages analyzed')).toHaveTextContent("Couldn't load");
     expect(screen.queryByText('No crawl yet')).not.toBeInTheDocument();
-    const refresh = screen.getByRole('button', { name: 'Refresh from Site Health' });
+    const refresh = screen.getByRole('button', { name: 'Refresh from Website' });
 
     getDashboard.mockResolvedValue(crawl());
     await user.click(refresh);
@@ -273,8 +273,8 @@ describe('CatalogHeader', () => {
     getDashboard.mockRejectedValue(new ApiError('Bad request', 400, ''));
     await act(() => queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY }));
 
-    await waitFor(() => expect(statValue('Site Health')).toHaveTextContent("Couldn't load"));
+    await waitFor(() => expect(statValue('Website')).toHaveTextContent("Couldn't load"));
     expect(screen.queryByText('No crawl yet')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh from Site Health' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh from Website' })).toBeInTheDocument();
   });
 });

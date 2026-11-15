@@ -2,13 +2,11 @@ import { useMutation } from '@tanstack/react-query';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
 import { ChipInput } from '@/components/ui/chip-input';
 import { Drawer } from '@/components/ui/drawer';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { Textarea } from '@/components/ui/textarea';
 import type { CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { commerceMutations } from '@/lib/api/commerce';
@@ -20,6 +18,7 @@ import {
   productEditForm,
   type ProductEditForm,
 } from '@/lib/products/product-edit';
+import { Notice } from '@/components/ui/notice';
 
 type Product = CommerceProductDetail['product'];
 type Catalog = NonNullable<Product['catalog']>;
@@ -76,7 +75,7 @@ function ProductEditDrawer({
       description="Your edits win over CSV imports and crawls until a later import changes the field."
       footer={
         <>
-          <Button variant="ghost" onClick={() => close(false)}>
+          <Button variant="quiet" onClick={() => close(false)}>
             Cancel
           </Button>
           <Button variant="primary" onClick={submit} disabled={save.isPending}>
@@ -93,9 +92,10 @@ function ProductEditDrawer({
         }}
       >
         <Stack gap="workspace">
-          {invalid ? <Callout tone="negative">{invalid}</Callout> : null}
+          {invalid ? <Notice tone="negative">{invalid}</Notice> : null}
           {save.error ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(save.error, { action: 'save the product' })}
             />
           ) : null}
@@ -164,7 +164,8 @@ function AddToTrackingButton({
         {approve.isPending ? 'Adding…' : 'Add to tracking'}
       </Button>
       {approve.error ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(approve.error, { action: 'add the product to tracking' })}
         />
       ) : null}
@@ -198,15 +199,15 @@ export function ProductCatalogControls({
   const canWrite = useWorkspaceCapability('write');
   if (!canWrite) {
     return archived ? (
-      <Callout tone="warning" title="Archived">
+      <Notice tone="warning" title="Archived">
         {ARCHIVED_NOTE}
-      </Callout>
+      </Notice>
     ) : null;
   }
   return (
     <Stack gap="compact">
       {archived ? (
-        <Callout
+        <Notice
           tone="warning"
           title="Archived"
           action={
@@ -216,10 +217,11 @@ export function ProductCatalogControls({
           }
         >
           {ARCHIVED_NOTE}
-        </Callout>
+        </Notice>
       ) : null}
       {lifecycle.error ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(lifecycle.error, {
             action: `${lifecycleLabel.toLowerCase()} the product`,
           })}
@@ -228,7 +230,7 @@ export function ProductCatalogControls({
       <Inline gap="compact">
         <Button onClick={() => setEditing(true)}>Edit product</Button>
         {archived ? null : (
-          <Button variant="ghost" onClick={toggle} disabled={lifecycle.isPending}>
+          <Button variant="quiet" onClick={toggle} disabled={lifecycle.isPending}>
             {lifecycle.isPending ? 'Archiving…' : 'Archive'}
           </Button>
         )}

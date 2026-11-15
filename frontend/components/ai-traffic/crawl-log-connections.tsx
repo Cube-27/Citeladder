@@ -10,10 +10,7 @@ import type { crawlSourceSchema } from '@citeladder/contracts/ai-traffic';
 import type { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Dialog } from '@/components/ui/dialog';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { Stack } from '@/components/ui/layout';
 import { DisplayTime } from '@/components/ui/display-time';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -33,6 +30,8 @@ import {
 } from '@/lib/ai-traffic/vocabulary';
 import { SinkFilterUpdates } from './gcp-pull-setup';
 import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 const SOURCE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'source', label: 'Source' },
@@ -94,7 +93,11 @@ function Connections({
   const body = (
     <>
       {sources.isError ? (
-        <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log sources" />
+        <Notice
+          kind="read"
+          {...readErrorProps(sources)}
+          fallback="Could not read crawl log sources"
+        />
       ) : null}
       {sources.data ? (
         <CrawlLogAvailabilityNotice
@@ -135,7 +138,8 @@ function Connections({
         onClose={() => setRotating(null)}
       />
       {mutation.isError && !open ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(mutation.error, { action: 'update the crawl-log source' })}
         />
       ) : null}
@@ -168,12 +172,12 @@ function Connections({
       </Stack>
     );
   return (
-    <Card id="crawl-log-connections" aria-label="Crawl log connections">
-      <CardHeader actions={connect}>
-        <CardTitle>Crawl logs</CardTitle>
-      </CardHeader>
+    <Section id="crawl-log-connections" aria-label="Crawl log connections">
+      <SectionHeader actions={connect}>
+        <SectionTitle>Crawl logs</SectionTitle>
+      </SectionHeader>
       <Stack className="empty:hidden">{body}</Stack>
-    </Card>
+    </Section>
   );
 }
 /**
@@ -192,14 +196,19 @@ function SetupAvailability({ model }: Readonly<{ model: ReturnType<typeof useCra
   const { sources, mutation } = model;
   if (sources.isError)
     return (
-      <ReadError {...readErrorProps(sources)} fallback="Could not read crawl log availability" />
+      <Notice
+        kind="read"
+        {...readErrorProps(sources)}
+        fallback="Could not read crawl log availability"
+      />
     );
   if (!sources.data) return <output>Checking crawl log availability…</output>;
   if (sources.data.availability === 'available') return <CrawlLogSetup model={model} />;
   return (
     <>
       {mutation.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(mutation.error, { action: 'update the crawl-log source' })}
         />
       ) : null}
@@ -241,7 +250,7 @@ function SourceDiagnostics({
   // The sources sit in the Crawl logs card under its header, so the table is
   // nested in that card rather than a card of its own.
   return (
-    <DataTable nested label="Crawl log source diagnostics" columns={SOURCE_COLUMNS} minWidth="lg">
+    <DataTable label="Crawl log source diagnostics" columns={SOURCE_COLUMNS} minWidth="lg">
       {items.map((s) => (
         <TableRow key={s.id}>
           <TableCell>
@@ -369,7 +378,8 @@ function RotateToken({ source, projectId, workspaceId, onClose }: RotateTokenPro
       }
     >
       {rotate.isError ? (
-        <MutationNotice
+        <Notice
+          kind="mutation"
           notice={mutationNoticeForError(rotate.error, { action: 'rotate the token' })}
         />
       ) : null}
@@ -414,7 +424,7 @@ function RevokeSourceDialog({
         </>
       }
     >
-      <p className="type-body">
+      <p className="type-body text-ink-2">
         New batches and uploads for this host are refused. Requests already received stay in your
         reports.
       </p>

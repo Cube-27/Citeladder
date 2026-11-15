@@ -3,6 +3,9 @@
  * follows an active turn. Reads never run the agent, so the UI polls the
  * persisted chat until the run reaches a terminal state.
  */
+/** Streamed reply text repaints at most this often, so Markdown is not re-parsed per token. */
+export const AGENT_STREAM_THROTTLE_MS = 50;
+
 export const AGENT_CHAT_PAGE_SIZE = 30;
 /** How many of an issue family's pages a developer ticket lists before "and N more". */
 export const DEVELOPER_TICKET_PAGES_MAX = 50;

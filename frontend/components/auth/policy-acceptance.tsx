@@ -3,12 +3,12 @@ import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { ShellFallback } from '@/components/layout/shell-fallback';
-import { QueryState } from '@/components/ui/query-state';
 import { policyMutations, policyQueries } from '@/lib/api/policies';
 import { signOutForChangedTerms } from '@/lib/auth/account-transition';
 import { revisionChanged, sessionLacksTerms } from '@/lib/auth/terms-consent';
 import { isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
+import { StateBlock } from '@/components/ui/state-block';
 
 export function PolicyAcceptanceGate({ children }: Readonly<{ children: ReactNode }>) {
   const { activeWorkspaceId } = useProjectContext();
@@ -87,7 +87,7 @@ function WorkspacePolicy({
   };
   return (
     <ShellFallback>
-      <QueryState
+      <StateBlock
         kind="error"
         error={failure}
         fallback="We could not open this workspace."

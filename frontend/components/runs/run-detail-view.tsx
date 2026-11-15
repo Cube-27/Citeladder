@@ -1,15 +1,16 @@
 import type { DataTableState } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
-import { readErrorProps, type RetryableRead } from '@/components/ui/read-error';
 import { ExecutionsTable } from '@/components/runs/executions-table';
 import { ProgressPanel } from '@/components/runs/progress-panel';
 import { ICONS } from '@/lib/icons';
 import type { MutationNotice } from '@/lib/api/mutation-notice';
 import type { Audit, Execution } from '@citeladder/contracts';
+import { readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
 
 type RunDetailViewProps = {
   audit: Audit | undefined;
+  /** The run's name, read in full where the masthead cuts it. */
+  title?: string;
   auditLoading: boolean;
   /** The audit read: its failure, and the retry of exactly that read. */
   auditRead: RetryableRead;
@@ -26,6 +27,7 @@ type RunDetailViewProps = {
 
 function AuditSection({
   audit,
+  title,
   auditLoading,
   auditRead,
   exportError,
@@ -36,7 +38,7 @@ function AuditSection({
 }: Readonly<RunDetailViewProps>) {
   if (auditRead.error && !audit) {
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         {...readErrorProps(auditRead)}
         fallback="Something went wrong. Please try again."
@@ -44,11 +46,12 @@ function AuditSection({
     );
   }
   if (auditLoading || !audit) {
-    return <QueryState kind="loading" label="Loading run…" />;
+    return <StateBlock kind="loading" label="Loading run…" />;
   }
   return (
     <ProgressPanel
       audit={audit}
+      title={title}
       exportError={exportError}
       cancelNotice={cancelNotice}
       onCancelRetry={onCancel}
@@ -88,13 +91,13 @@ function executionsState({
 
 export function RunDetailView(props: Readonly<RunDetailViewProps>) {
   return (
-    <Stack gap="workspace">
+    <>
       <AuditSection {...props} />
       <ExecutionsTable
         executions={props.executions ?? []}
         state={executionsState(props)}
         onSelectEvidence={props.onSelectEvidence}
       />
-    </Stack>
+    </>
   );
 }

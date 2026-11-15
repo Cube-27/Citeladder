@@ -1,12 +1,18 @@
 import { useMemo } from 'react';
 
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
-import { QueryState } from '@/components/ui/query-state';
 import { TextLink } from '@/components/ui/text-link';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import type { ArchitectureNode } from '@citeladder/contracts';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /**
  * Where a page's parent came from. Most pages sit under their URL parent, so
@@ -54,17 +60,17 @@ export function HierarchyCard({
   const grouped = useMemo(() => nodesByParent(nodes), [nodes]);
   const roots = grouped.get(null) ?? [];
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Observed hierarchy</CardTitle>
-        <CardDescription>
+    <Section>
+      <SectionHeader>
+        <SectionTitle>Observed hierarchy</SectionTitle>
+        <SectionDescription>
           Each page sits under its parent in the URL path unless its breadcrumb or the site’s
           structure says otherwise. Pages with no known parent sit at the top.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         {roots.length === 0 ? (
-          <QueryState kind="empty" inline message="No hierarchy nodes were measured." />
+          <StateBlock kind="empty" inline message="No hierarchy nodes were measured." />
         ) : (
           <section
             className="content-scroll max-h-96 overflow-y-auto overscroll-contain"
@@ -73,8 +79,8 @@ export function HierarchyCard({
             <HierarchyList nodes={roots} grouped={grouped} crawlId={crawlId} />
           </section>
         )}
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -106,7 +112,7 @@ function HierarchyList({
                   {node.url}
                 </TextLink>
               ) : (
-                <span className="type-body text-ink min-w-0 [overflow-wrap:anywhere]">
+                <span className="type-body text-ink-2 text-ink min-w-0 [overflow-wrap:anywhere]">
                   {node.url}
                 </span>
               )}

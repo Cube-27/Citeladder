@@ -1,21 +1,21 @@
 import type { ReactNode } from 'react';
 
-import { DetailScreen, type PageBack } from '@/components/layout/page-shell';
+import { RecordPage } from '@/components/templates/record-page';
+import type { PageBack } from '@/components/templates/page-frame';
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { Inline, Stack } from '@/components/ui/layout';
+import { textRole } from '@/components/ui/typography';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { PageIssues, type RerunControl } from '@/components/site-health/page-issues';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { RobotsExcludedBadge } from '@/components/site-health/robots-choice';
 import { UrlScoreSummary } from '@/components/site-health/url-score-summary';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Disclosure } from '@/components/ui/disclosure';
 import { FactList } from '@/components/ui/facts';
-import { QueryState } from '@/components/ui/query-state';
 import { TextLink } from '@/components/ui/text-link';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { ledgerClasses, ledgerItemClasses, SubsectionHeader } from '@/components/ui/workspace';
 import type { DeliveryFacts, PageDetail } from '@citeladder/contracts';
@@ -27,6 +27,14 @@ import {
   statusLabel,
 } from '@/lib/site-health/status';
 import { TrafficUrlButton } from '@/components/ai-traffic/url-panel';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 /** A page detail's way back: the Pages tab of Website, where its rows live. */
 export const PAGE_DETAIL_BACK: PageBack = { href: '/site?tab=pages', label: 'Back to Pages' };
@@ -53,22 +61,30 @@ export function UrlDetailView({
   history?: ReactNode;
   children?: ReactNode;
 }>) {
+  const title = pageDisplayTitle(detail.title, detail.display_url);
   return (
-    <DetailScreen
-      title={pageDisplayTitle(detail.title, detail.display_url)}
+    <RecordPage
+      title={title}
       back={PAGE_DETAIL_BACK}
-      lead={<PageMetaLine detail={detail} />}
+      identity={
+        <PageIdentity
+          detail={detail}
+          title={title}
+          actions={
+            <>
+              {history}
+              {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
+              <AskAgentLink handoff={pageHandoff(detail)}>Ask agent about this page</AskAgentLink>
+            </>
+          }
+        />
+      }
       actions={
-        <>
-          {history}
-          {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
-          <AskAgentLink handoff={pageHandoff(detail)}>Ask agent about this page</AskAgentLink>
-          {rerun ? (
-            <Button variant="primary" onClick={rerun.onRerun} disabled={rerun.busy}>
-              {rerunLabel(rerun.busy)}
-            </Button>
-          ) : null}
-        </>
+        rerun ? (
+          <Button variant="primary" onClick={rerun.onRerun} disabled={rerun.busy}>
+            {rerunLabel(rerun.busy)}
+          </Button>
+        ) : undefined
       }
     >
       {children}
@@ -81,7 +97,7 @@ export function UrlDetailView({
         rerun={rerun}
       />
       <TechnicalDetails detail={detail} />
-    </DetailScreen>
+    </RecordPage>
   );
 }
 
@@ -108,29 +124,56 @@ function pagePrompt(detail: PageDetail, count: number): string {
   return `Review ${url} for search and answer-engine readiness and propose improvements.`;
 }
 
-/** The page's URL, kind and audit date on one line; its status only when it is not done. */
-function PageMetaLine({ detail }: Readonly<{ detail: PageDetail }>) {
+/**
+ * The record's identity: its full title (the masthead may cut it), its URL,
+ * kind, audit date and, when it is not done, its status, then the page's
+ * secondary actions. The masthead keeps the one primary action.
+ */
+function PageIdentity({
+  detail,
+  title,
+  actions,
+}: Readonly<{ detail: PageDetail; title: string; actions: ReactNode }>) {
   const timeZone = useDisplayTimeZone();
+  const facts = [
+    {
+      label: 'URL',
+      value: (
+        <TextLink
+          variant="external"
+          text="data"
+          href={detail.display_url}
+          className="min-w-0 [overflow-wrap:anywhere]"
+        >
+          {detail.display_url}
+        </TextLink>
+      ),
+    },
+    { label: 'Kind', value: <PageKindBadge pageKind={detail.page_kind} /> },
+    {
+      label: 'Audited',
+      value: <span className="type-data">{formatAudited(detail.last_audited, timeZone)}</span>,
+    },
+    ...(detail.analysis_status === 'completed'
+      ? []
+      : [
+          {
+            label: 'Status',
+            value: (
+              <StatusMark variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
+                {statusLabel(detail.analysis_status)}
+              </StatusMark>
+            ),
+          },
+        ]),
+    ...(detail.robots_excluded ? [{ label: 'Robots', value: <RobotsExcludedBadge /> }] : []),
+  ];
   return (
-    <Inline gap="meta" className="min-w-0 items-center">
-      <TextLink
-        variant="external"
-        text="caption"
-        href={detail.display_url}
-        title={detail.display_url}
-        className="min-w-0 truncate"
-      >
-        {detail.display_url}
-      </TextLink>
-      <PageKindBadge pageKind={detail.page_kind} />
-      <span className="type-caption">Audited {formatAudited(detail.last_audited, timeZone)}</span>
-      {detail.analysis_status === 'completed' ? null : (
-        <Badge variant="status" value={pageStatusBadgeValue(detail.analysis_status)}>
-          {statusLabel(detail.analysis_status)}
-        </Badge>
-      )}
-      {detail.robots_excluded ? <RobotsExcludedBadge /> : null}
-    </Inline>
+    <Stack gap="item" className="min-w-0" data-testid="page-identity">
+      <p className={textRole('heading', 'min-w-0 [overflow-wrap:anywhere]')}>{title}</p>
+      <FactList layout="inline" label="Page" facts={facts} />
+      <Inline className="flex-wrap">{actions}</Inline>
+    </Stack>
   );
 }
 
@@ -138,12 +181,12 @@ function PageMetaLine({ detail }: Readonly<{ detail: PageDetail }>) {
 function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
   if (!isFetchFailure(detail.analysis_status) || !detail.linked_from.length) return null;
   return (
-    <Card className="min-w-0">
-      <CardHeader>
-        <CardTitle>Linked from</CardTitle>
-        <CardDescription>Pages this crawl found linking to this URL</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Section className="min-w-0">
+      <SectionHeader>
+        <SectionTitle>Linked from</SectionTitle>
+        <SectionDescription>Pages this crawl found linking to this URL</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <ul className={ledgerClasses()}>
           {detail.linked_from.map((referrer) => (
             <li key={referrer.site_url_id} className={ledgerItemClasses()}>
@@ -158,16 +201,16 @@ function LinkedFrom({ detail }: Readonly<{ detail: PageDetail }>) {
             </li>
           ))}
         </ul>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
 /** HTTP delivery and link-graph measurements, closed by default at the page's foot. */
 function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
   return (
-    <Card className="min-w-0">
-      <CardContent>
+    <Section className="min-w-0">
+      <SectionContent>
         <Disclosure title="Technical details">
           <Stack gap="workspace" className="min-w-0">
             <Stack as="section" gap="item">
@@ -179,7 +222,7 @@ function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
               {detail.internal_links ? (
                 <InternalLinksCard links={detail.internal_links} crawlId={detail.crawl_id} />
               ) : (
-                <QueryState
+                <StateBlock
                   kind="empty"
                   inline
                   message="Internal links not measured for this page."
@@ -188,13 +231,13 @@ function TechnicalDetails({ detail }: Readonly<{ detail: PageDetail }>) {
             </Stack>
           </Stack>
         </Disclosure>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
 function measured(value: string | null): ReactNode {
-  return value ?? <UnavailableValue state="not_measured" />;
+  return value ?? <Absence state="not_measured" />;
 }
 
 function DeliveryMetrics({ delivery }: Readonly<{ delivery: DeliveryFacts }>) {

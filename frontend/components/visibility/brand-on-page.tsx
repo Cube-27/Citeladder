@@ -17,8 +17,8 @@ export function BrandOnPage({
   const basis = absenceBasis(brand.presence, brand.match_method, extractedChars);
   return (
     <Stack gap="item">
-      <p className={textRole('label')}>{heading}</p>
-      <p className={textRole('itemTitle')}>
+      <p className={textRole('body', 'text-ink-2')}>{heading}</p>
+      <p className={textRole('body')}>
         {brand.entity_name}
         {verdict ? ` — ${verdict.toLowerCase()}` : ''}
       </p>

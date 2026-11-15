@@ -1,10 +1,10 @@
 import { useId, useState } from 'react';
 
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { BrandMark } from '@/components/ui/brand-mark';
 import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { panelClasses } from '@/components/ui/panel';
 import { ledgerItemClasses } from '@/components/ui/workspace';
 import { textRole } from '@/components/ui/typography';
 import type { ProviderConnection } from '@citeladder/contracts';
@@ -19,6 +19,7 @@ import { useProviderConnection } from '@/lib/providers/use-provider-connection';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { ProviderConnectionFields } from './provider-connection-fields';
+import { wellClasses } from '@/components/ui/slip';
 
 type ConnectionState = ReturnType<typeof useProviderConnection>;
 
@@ -37,19 +38,19 @@ function StatusBadge({
 }: Readonly<{ group: ProviderGroup; connection: ProviderConnection | undefined }>) {
   if (group.engines.some((engine) => engine.state === 'connected')) {
     return (
-      <Badge variant="status" value="success">
+      <StatusMark variant="status" value="success">
         Connected
-      </Badge>
+      </StatusMark>
     );
   }
   if (group.engines.some((engine) => engine.state === 'failed')) {
     return (
-      <Badge variant="status" value="danger">
+      <StatusMark variant="status" value="danger">
         Failed
-      </Badge>
+      </StatusMark>
     );
   }
-  return <Badge>{isConfigured(connection) ? 'Not verified' : 'Not connected'}</Badge>;
+  return <Tag>{isConfigured(connection) ? 'Not verified' : 'Not connected'}</Tag>;
 }
 
 /** "ChatGPT API · gpt-6.1-terra" for an API; the bare surface name for a consumer app. */
@@ -86,7 +87,7 @@ function CredentialForm({ id, state }: Readonly<{ id: string; state: ConnectionS
   const saveVerb = configured ? 'Update' : 'Save';
   const saveLabel = saveMutation.isPending ? 'Saving & testing…' : `${saveVerb} ${noun}`;
   return (
-    <Stack gap="compact" id={id} className={panelClasses()}>
+    <Stack gap="compact" id={id} className={wellClasses()}>
       <ProviderConnectionFields state={state} />
       <Inline className="flex-wrap justify-end">
         <Button
@@ -142,7 +143,7 @@ export function ProviderRow({
             websiteUrl={TRANSPORT_DOMAINS[group.transport]}
           />
           <div className="grid min-w-0">
-            <h3 className={textRole('itemTitle')}>{group.label}</h3>
+            <h3 className={textRole('subheading')}>{group.label}</h3>
             <p className={textRole('caption')}>{group.engines.map(engineSummary).join(' · ')}</p>
           </div>
         </Inline>
@@ -151,7 +152,7 @@ export function ProviderRow({
           {canManage ? (
             <Button
               type="button"
-              variant={open ? 'ghost' : 'secondary'}
+              variant={open ? 'quiet' : 'secondary'}
               aria-expanded={open}
               aria-controls={formId}
               aria-label={`${toggleLabel} ${group.label}`}

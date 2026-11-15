@@ -1,10 +1,9 @@
 import { SearchX } from 'lucide-react';
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { TableCell, TableRow } from '@/components/ui/table';
-import { TrendChart, type TrendPoint } from '@/components/ui/trend-chart';
+import { StepChart, type TrendPoint } from '@/components/ui/step-chart';
 import type { AiReferrals } from '@/lib/api/ai-traffic';
 import {
   aiSourceLabel,
@@ -15,7 +14,7 @@ import {
 } from '@/lib/ai-traffic/series';
 import { bucketCountLabel } from '@/lib/ai-traffic/options';
 import { formatCount, formatPercent, formatWindowDate } from '@/lib/format';
-import { useState } from 'react';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { Tabs, TabPanel } from '@/components/ui/tabs';
 import {
   formatRevenue,
@@ -24,12 +23,31 @@ import {
   ReferralLandingPages,
   ReferralQuality,
 } from './referral-details';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
+
+const REFERRAL_VIEWS = [
+  { value: 'overview', label: 'Overview' },
+  { value: 'sources', label: 'Sources' },
+  { value: 'landing', label: 'Landing pages' },
+] as const;
+type ReferralView = (typeof REFERRAL_VIEWS)[number]['value'];
+const viewCodec = stringUrlCodec<ReferralView>(
+  REFERRAL_VIEWS.map((view) => view.value),
+  'overview',
+);
 
 export function AiReferralsDashboard({
   data,
   fetching,
 }: Readonly<{ data: AiReferrals; fetching: boolean }>) {
-  const [tab, setTab] = useState('overview');
+  // The view is in the URL like every other tab, so it links and Back returns to it.
+  const [tab, setTab] = useUrlState('referrals_view', viewCodec);
   return (
     <Stack gap="workspace" aria-busy={fetching}>
       <ReferralQuality data={data} />
@@ -38,11 +56,7 @@ export function AiReferralsDashboard({
         onValueChange={setTab}
         ariaLabel="Referral views"
         spaced
-        items={[
-          { value: 'overview', label: 'Overview' },
-          { value: 'sources', label: 'Sources' },
-          { value: 'landing', label: 'Landing pages' },
-        ]}
+        items={REFERRAL_VIEWS}
       >
         {/* The tab strip, the cards and the comparison are blocks: 12 apart. */}
         <TabPanel value="overview">
@@ -89,13 +103,13 @@ function TrendCard({
   formatTick?: (value: number) => string;
 }>) {
   return (
-    <Card>
-      <CardHeader actions={<span className="type-caption">{badge}</span>}>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <TrendChart
+    <Section>
+      <SectionHeader actions={<span className="type-caption">{badge}</span>}>
+        <SectionTitle>{title}</SectionTitle>
+        <SectionDescription>{description}</SectionDescription>
+      </SectionHeader>
+      <SectionContent>
+        <StepChart
           label={title}
           name={unit}
           data={points}
@@ -103,8 +117,8 @@ function TrendCard({
           yMax={domainMax}
           yFormat={formatTick}
         />
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 

@@ -11,18 +11,9 @@ import {
   type GrantFamily,
   type GrantModel,
 } from '@/components/settings/grant-model';
-import { Badge } from '@/components/ui/badge';
+import { StatusMark } from '@/components/ui/status-mark';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
-import { Callout } from '@/components/ui/callout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardEyebrow,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/table';
 import { ledgerClasses, MetaFooter } from '@/components/ui/workspace';
@@ -34,6 +25,15 @@ import {
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { textRole } from '@/components/ui/typography';
+import { Notice } from '@/components/ui/notice';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionEyebrow,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 type GrantStatus = IntegrationConnection['grant_status'];
 type GrantBadge =
@@ -61,33 +61,33 @@ function GrantAlert({ family, status }: Readonly<{ family: GrantFamily; status: 
 
   if (status === 'needs_reauth') {
     return (
-      <Callout tone="warning">
+      <Notice tone="warning">
         {title} needs you to sign in again. Reconnect to resume syncing — previously imported data
         is unaffected.
-      </Callout>
+      </Notice>
     );
   }
   if (status === 'error') {
     return (
-      <Callout tone="negative">
+      <Notice tone="negative">
         The last connection test failed — {title}&nbsp;rejected CiteLadder&rsquo;s access. Reconnect
         to resume syncing.
-      </Callout>
+      </Notice>
     );
   }
   if (status === 'pending_revocation') {
     return (
-      <Callout tone="warning">
+      <Notice tone="warning">
         Disconnect is finishing — CiteLadder is retrying the {title} revocation in the background.
         Previously imported data is kept.
-      </Callout>
+      </Notice>
     );
   }
   if (status === 'revoked') {
     return (
-      <Callout tone="neutral">
+      <Notice tone="info">
         {title} is disconnected. Imported data is kept; reconnect to resume syncing.
-      </Callout>
+      </Notice>
     );
   }
 
@@ -103,24 +103,24 @@ function GrantHeader({
   const label = grant ? GRANT_STATUS_LABEL[grant.status] : 'Not connected';
 
   return (
-    <CardHeader
+    <SectionHeader
       actions={
         badge.variant === 'status' ? (
-          <Badge variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
+          <StatusMark variant="status" value={badge.value} data-testid={`grant-status-${family}`}>
             {label}
-          </Badge>
+          </StatusMark>
         ) : (
-          <Badge data-testid={`grant-status-${family}`}>{label}</Badge>
+          <Tag data-testid={`grant-status-${family}`}>{label}</Tag>
         )
       }
     >
-      <CardEyebrow>Connection</CardEyebrow>
-      <CardTitle>{meta.title}</CardTitle>
+      <SectionEyebrow>Connection</SectionEyebrow>
+      <SectionTitle>{meta.title}</SectionTitle>
       {/* Cut at one line, with the whole description in a tooltip when cut. */}
-      <CardDescription>
+      <SectionDescription>
         <ClampText lines={1}>{meta.blurb}</ClampText>
-      </CardDescription>
-    </CardHeader>
+      </SectionDescription>
+    </SectionHeader>
   );
 }
 
@@ -132,19 +132,24 @@ function ConnectCard({
   const canManage = useWorkspaceCapability('manage_credentials');
 
   return (
-    <Stack as={Card} gap="compact" data-testid={`grant-card-${family}`} className="content-between">
-      <div>
+    <Stack
+      as={Section}
+      gap="compact"
+      data-testid={`grant-card-${family}`}
+      className="content-between"
+    >
+      <div className="min-w-0">
         <GrantHeader family={family} grant={null} />
-        <CardContent>
-          <p className={textRole('body')}>
+        <SectionContent>
+          <p className={textRole('body', 'text-ink-2')}>
             {canManage
               ? `Connect your ${meta.title} account to automatically import traffic and search visibility metrics.`
               : `A workspace Owner or Admin can connect ${meta.title} to import traffic and search visibility metrics.`}
           </p>
-        </CardContent>
+        </SectionContent>
       </div>
       {canManage ? (
-        <CardContent>
+        <SectionContent>
           <Button
             variant="secondary"
             onClick={() =>
@@ -153,7 +158,7 @@ function ConnectCard({
           >
             Connect {meta.title}
           </Button>
-        </CardContent>
+        </SectionContent>
       ) : null}
     </Stack>
   );
@@ -204,12 +209,13 @@ function DisconnectGrant({ grant }: Readonly<{ grant: GrantModel }>) {
         }
       >
         <Stack gap="compact">
-          <p className={textRole('body')}>
+          <p className={textRole('body', 'text-ink-2')}>
             Previously imported data is kept. Reconnecting resumes from it; to stop importing just
             one property, use Remove on its row instead.
           </p>
           {disconnect.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(disconnect.error, {
                 action: 'disconnect the integration',
               })}
@@ -231,10 +237,15 @@ function ConnectedCard({
   const canManage = useWorkspaceCapability('manage_credentials');
 
   return (
-    <Stack as={Card} gap="compact" data-testid={`grant-card-${family}`} className="content-between">
-      <div>
+    <Stack
+      as={Section}
+      gap="compact"
+      data-testid={`grant-card-${family}`}
+      className="content-between"
+    >
+      <div className="min-w-0">
         <GrantHeader family={family} grant={grant} />
-        <Stack as={CardContent} gap="compact">
+        <Stack as={SectionContent} gap="compact">
           <GrantAlert family={family} status={grant.status} />
           <ul className={ledgerClasses()}>
             {grant.connections.map((connection) => (
@@ -244,7 +255,7 @@ function ConnectedCard({
         </Stack>
       </div>
       {canManage ? (
-        <CardContent>
+        <SectionContent>
           <MetaFooter
             trailing={
               <span className="text-right">
@@ -264,7 +275,7 @@ function ConnectedCard({
               {isGrantGone(grant.status) ? null : <DisconnectGrant grant={grant} />}
             </Inline>
           </MetaFooter>
-        </CardContent>
+        </SectionContent>
       ) : null}
     </Stack>
   );

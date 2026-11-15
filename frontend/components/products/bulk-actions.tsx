@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { COMMERCE_TARGETS_MAX } from '@citeladder/contracts/commerce-suite';
 import { humanizeApiError } from '@/lib/api/errors';
+import { Section } from '@/components/ui/section';
 
 /** Selection-only bulk actions for the checked catalog products. */
 export function BulkActions({
@@ -26,10 +26,10 @@ export function BulkActions({
     hint = `Competitors can be found for up to ${COMMERCE_TARGETS_MAX} products at a time.`;
   else if (count) hint = 'Find competitors for every checked product.';
   return (
-    <Card>
+    <Section>
       <Inline gap="compact" className="flex-wrap justify-between">
         <Stack gap="tight">
-          <span aria-live="polite" className={textRole('itemTitle')}>
+          <span aria-live="polite" className={textRole('body')}>
             {count ? `${count} ${noun} selected` : 'No products selected'}
           </span>
           <span className="type-caption">{hint}</span>
@@ -49,11 +49,11 @@ export function BulkActions({
           >
             Find competitors
           </Button>
-          <Button variant="ghost" disabled={pending} onClick={onClear}>
+          <Button variant="quiet" disabled={pending} onClick={onClear}>
             Clear selection
           </Button>
         </Inline>
       </Inline>
-    </Card>
+    </Section>
   );
 }

@@ -6,18 +6,14 @@ import { HierarchyCard } from '@/components/site-health/architecture-hierarchy';
 import { OrphanPageDrawer, orphanSegment } from '@/components/site-health/architecture-orphans';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Badge } from '@/components/ui/badge';
-import { Callout } from '@/components/ui/callout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MeterRow } from '@/components/ui/meter';
 import { Pressable } from '@/components/ui/pressable';
-import { QueryState } from '@/components/ui/query-state';
-import { StatRow } from '@/components/ui/stat-row';
 import { TextLink } from '@/components/ui/text-link';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import { ClampText, TableCell, TableRow } from '@/components/ui/table';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type {
@@ -27,6 +23,10 @@ import type {
   SiteArchitecture,
 } from '@citeladder/contracts';
 import { formatPercent } from '@/lib/format';
+import { Notice } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { FigureStrip } from '@/components/ui/figure-strip';
 
 const COVERAGE_LABELS: Record<CoverageState, string> = {
   complete: 'Complete coverage',
@@ -68,24 +68,25 @@ export function ArchitecturePanel({
   );
 
   if (architecture.isLoading) {
-    return <QueryState kind="loading" label="Loading the observed architecture" />;
+    return <StateBlock kind="loading" label="Loading the observed architecture" />;
   }
   if (architecture.isError)
     return (
-      <QueryState
+      <StateBlock
         kind="error"
         error={architecture.error}
         fallback="Could not load Architecture."
+        title="Could not load Architecture"
         onRetry={() => void architecture.refetch()}
         pending={architecture.isFetching}
       />
     );
   if (!architecture.data || architecture.data.state === 'unavailable') {
     return (
-      <Callout tone="info">
+      <Notice tone="info">
         {architecture.data?.limitations[0] ??
           'Page kinds appear once a crawl has finished and its structure has been derived.'}
-      </Callout>
+      </Notice>
     );
   }
   return <ArchitectureLedger data={architecture.data} />;
@@ -161,9 +162,9 @@ function PageKindTable({
       description={pageKindDescription(coverage, reasons)}
       toolbar={{
         actions: (
-          <Badge variant="status" value={coverage === 'complete' ? 'success' : 'warning'}>
+          <StatusMark variant="status" value={coverage === 'complete' ? 'success' : 'warning'}>
             {COVERAGE_LABELS[coverage]}
-          </Badge>
+          </StatusMark>
         ),
       }}
       columns={PAGE_KIND_COLUMNS}
@@ -195,21 +196,21 @@ function PageKindTable({
                   className="w-auto"
                 >
                   <Inline as="span">
-                    <Icon icon={open ? ChevronDown : ChevronRight} className="text-ink-muted" />
+                    <Icon icon={open ? ChevronDown : ChevronRight} className="text-ink-2" />
                     <PageKindBadge pageKind={pageKind.page_kind} />
                   </Inline>
                 </Pressable>
               </TableCell>
               <TableCell numeric>{pageKind.page_count}</TableCell>
               <TableCell numeric>
-                {pageKind.median_depth ?? <UnavailableValue state="not_measured" />}
+                {pageKind.median_depth ?? <Absence state="not_measured" />}
               </TableCell>
               <TableCell numeric>
                 {pageKind.indexable_count} / {pageKind.page_count}
               </TableCell>
               <TableCell numeric>{pageKind.duplicate_metadata_count}</TableCell>
               <TableCell numeric>
-                {pageKind.orphan_count ?? <UnavailableValue state="not_measured" />}
+                {pageKind.orphan_count ?? <Absence state="not_measured" />}
               </TableCell>
             </TableRow>
             {open ? <PageKindPages id={listId} pages={pages} crawlId={crawlId} /> : null}
@@ -235,10 +236,10 @@ function PageKindPages({
   crawlId,
 }: Readonly<{ id: string; pages: ArchitectureNode[]; crawlId: string | null }>) {
   return (
-    <TableRow id={id} className="bg-surface-sunken hover:bg-surface-sunken">
+    <TableRow id={id} className="bg-well hover:bg-well">
       <TableCell colSpan={6}>
         {pages.length === 0 ? (
-          <QueryState kind="empty" inline message="No pages of this kind to list." />
+          <StateBlock kind="empty" inline message="No pages of this kind to list." />
         ) : (
           <Stack
             as="ul"
@@ -256,7 +257,7 @@ function PageKindPages({
                     <ClampText lines={1}>{page.url}</ClampText>
                   </TextLink>
                 ) : (
-                  <ClampText lines={1} className="type-body text-ink">
+                  <ClampText lines={1} className="type-body text-ink-2 text-ink">
                     {page.url}
                   </ClampText>
                 )}
@@ -276,17 +277,17 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
   return (
     <>
       <AppGrid layout="halves">
-        <Card>
-          <CardHeader>
-            <CardTitle>
+        <Section>
+          <SectionHeader>
+            <SectionTitle>
               <Inline as="span">
-                <Icon icon={Link2} className="text-ink-muted" />
+                <Icon icon={Link2} className="text-ink-2" />
                 Internal linking
               </Inline>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <StatRow
+            </SectionTitle>
+          </SectionHeader>
+          <SectionContent>
+            <FigureStrip
               segments={[
                 {
                   key: 'content-links',
@@ -314,18 +315,18 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
               open={orphansOpen}
               onOpenChange={setOrphansOpen}
             />
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>
+          </SectionContent>
+        </Section>
+        <Section>
+          <SectionHeader>
+            <SectionTitle>
               <Inline as="span">
-                <Icon icon={ListTree} className="text-ink-muted" />
+                <Icon icon={ListTree} className="text-ink-2" />
                 Structure depth
               </Inline>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </SectionTitle>
+          </SectionHeader>
+          <SectionContent>
             <Stack>
               {data.structure_depth.buckets.map((bucket) => (
                 <MeterRow
@@ -343,10 +344,13 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
                 </p>
               ) : null}
             </Stack>
-          </CardContent>
-        </Card>
+          </SectionContent>
+        </Section>
       </AppGrid>
-      <TextLink className="justify-self-start" href="/site?tab=internal-links">
+      <TextLink
+        className="inline-flex min-h-6 items-center justify-self-start"
+        href="/site?tab=internal-links"
+      >
         Review internal link suggestions
       </TextLink>
     </>

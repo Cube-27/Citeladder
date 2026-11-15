@@ -2,16 +2,11 @@ import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { MessageSquare } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
-import { Callout } from '@/components/ui/callout';
-import { ReadError, readErrorProps } from '@/components/ui/read-error';
-import { QueryState } from '@/components/ui/query-state';
+import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { Disclosure } from '@/components/ui/disclosure';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Inline, Stack } from '@/components/ui/layout';
-import { MutationNotice } from '@/components/ui/mutation-notice';
 import { commerceMutations } from '@/lib/api/commerce';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { CommerceTarget } from '@citeladder/contracts/commerce-suite';
@@ -25,6 +20,15 @@ import { useGenerateBuyerPrompts } from '@/lib/products/use-generate-buyer-promp
 import type { CommerceQueries } from './commerce-queries';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { StateBlock } from '@/components/ui/state-block';
+import {
+  Section,
+  SectionContent,
+  SectionDescription,
+  SectionHeader,
+  SectionTitle,
+} from '@/components/ui/section';
 
 // Per hero product; the API defaults the count, and a category generates its matrix.
 const HERO_COUNT = 3;
@@ -81,8 +85,8 @@ export function SetupPrompts({
   const busy = [generate.isPending, manual.isPending, decide.isPending].some(Boolean);
   const failed = [manual.isError, decide.isError].some(Boolean);
   return (
-    <Card>
-      <CardHeader
+    <Section>
+      <SectionHeader
         actions={
           <SetupPromptActions
             kind={target.kind}
@@ -97,33 +101,34 @@ export function SetupPrompts({
           />
         }
       >
-        <CardTitle>Prompts that measure it</CardTitle>
-        <CardDescription>
+        <SectionTitle>Prompts that measure it</SectionTitle>
+        <SectionDescription>
           {approvedIds.length
             ? 'Generated prompts stay disabled until you approve them.'
             : `Approve at least one prompt to launch an audit for this ${target.kind}.`}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+        </SectionDescription>
+      </SectionHeader>
+      <SectionContent>
         <Stack>
           {generate.isError ? (
-            <MutationNotice
+            <Notice
+              kind="mutation"
               notice={mutationNoticeForError(generate.error, { action: 'generate the prompts' })}
             />
           ) : null}
           {failed ? (
-            <Callout tone="negative">The buyer-prompt update failed. Please try again.</Callout>
+            <Notice tone="negative">The buyer-prompt update failed. Please try again.</Notice>
           ) : null}
           {shortfall !== null ? (
-            <Callout tone="info">
+            <Notice tone="info">
               {shortfall} of {HERO_COUNT} generated prompts were usable. Generate again for more.
-            </Callout>
+            </Notice>
           ) : null}
           {launchedAuditId ? (
-            <Callout tone="info">
+            <Notice tone="info">
               Audit launched. The metrics update when it finishes.{' '}
               <ProjectLink href={`/runs/${launchedAuditId}`}>View the run</ProjectLink>
-            </Callout>
+            </Notice>
           ) : null}
           {target.kind === 'category' ? (
             <CategoryMatrixSheet
@@ -158,8 +163,8 @@ export function SetupPrompts({
             <ManualPrompt text={text} onText={setText} busy={busy} onAdd={addPrompt} />
           ) : null}
         </Stack>
-      </CardContent>
-    </Card>
+      </SectionContent>
+    </Section>
   );
 }
 
@@ -229,7 +234,7 @@ function ManualPrompt({
         placeholder="best instant read thermometer for grilling under $50"
       />
       <div>
-        <Button variant="primary" disabled={!text.trim() || busy} onClick={onAdd}>
+        <Button variant="secondary" disabled={!text.trim() || busy} onClick={onAdd}>
           Add prompt
         </Button>
       </div>
@@ -250,11 +255,17 @@ function PromptRows({
   onToggle?: (id: string, approved: boolean) => void;
 }>) {
   if (query.isError)
-    return <ReadError {...readErrorProps(query)} fallback="Buyer prompts could not be loaded." />;
-  if (query.isPending) return <QueryState kind="loading" />;
+    return (
+      <Notice
+        kind="read"
+        {...readErrorProps(query)}
+        fallback="Buyer prompts could not be loaded."
+      />
+    );
+  if (query.isPending) return <StateBlock kind="loading" />;
   if (!rows.length) {
     return (
-      <QueryState
+      <StateBlock
         kind="empty"
         icon={MessageSquare}
         heading="No prompts yet"
@@ -267,7 +278,7 @@ function PromptRows({
     <ul className={ledgerClasses()}>
       {rows.map((row) => (
         <Inline as="li" key={row.id} gap="compact" className={ledgerItemClasses('flex-wrap')}>
-          <span className="text-ink-secondary min-w-0 flex-1">{row.text}</span>
+          <span className="text-ink-2 min-w-0 flex-1">{row.text}</span>
           {onToggle ? (
             <Button
               variant={row.enabled ? 'secondary' : 'primary'}
@@ -277,7 +288,7 @@ function PromptRows({
               {row.enabled ? 'Disable' : 'Approve'}
             </Button>
           ) : (
-            <Badge>{row.enabled ? 'Approved' : 'Not approved'}</Badge>
+            <Tag>{row.enabled ? 'Approved' : 'Not approved'}</Tag>
           )}
         </Inline>
       ))}

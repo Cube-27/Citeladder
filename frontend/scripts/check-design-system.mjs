@@ -19,6 +19,8 @@ import {
   densityRoleViolations,
   textRoleBackgroundViolations,
 } from './design-system-source-checks.mjs';
+import { appVocabularyViolations } from './design-system-app-vocabulary.mjs';
+import { websiteOnlyImportViolations } from './design-system-website-only.mjs';
 import {
   featureLayeringViolations,
   rawRadiusViolations,
@@ -103,8 +105,8 @@ for (const path of files(root)) {
   );
   const ownsWebsiteEditorialCopy =
     !label.includes('.test.') && label.startsWith('components/marketing/');
-  // Sign-in and onboarding are product UI: they compose the system's
-  // AuthShell, AuthCard and OnboardingStep (components/ui).
+  // Sign-in and onboarding are product UI: they compose the Flow template
+  // (components/templates/flow-page.tsx).
   const ownsProductUi =
     !label.includes('.test.') &&
     !label.startsWith('components/marketing/') &&
@@ -127,6 +129,8 @@ for (const path of files(root)) {
     ...nestedCardViolations(source, label, ownsProductUi),
     ...cardHeaderLayoutViolations(source, label, ownsProductUi),
     ...productControlViolations(source, label, ownsProductUi),
+    ...appVocabularyViolations(source, label, ownsProductUi),
+    ...websiteOnlyImportViolations(source, label, ownsProductUi),
     ...featureLayeringViolations(source, label),
   );
   advisories.push(...radiusRoleAdvisories(source, label, ownsProductUi));

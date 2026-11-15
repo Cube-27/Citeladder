@@ -1,8 +1,6 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { ChartSwatch, type ChartTone } from '@/components/ui/chart';
+import { SeriesSwatch } from '@/components/ui/chart-frame';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Stack } from '@/components/ui/layout';
-import { StatRow } from '@/components/ui/stat-row';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { availabilityLabel, formatCount } from '@/lib/format';
 import {
@@ -10,6 +8,9 @@ import {
   formatMetric,
   type PerformanceMetricKey,
 } from '@/lib/performance/performance';
+import { FigureStrip } from '@/components/ui/figure-strip';
+
+import type { MetricMark } from './performance-chart';
 
 /** The one missing-figure label on this surface. */
 const NOT_MEASURED = availabilityLabel('not_measured');
@@ -31,7 +32,7 @@ function measured(key: PerformanceMetricKey, value: number | null | undefined): 
  * Selecting a card toggles its series on the chart below. At least one metric
  * always stays selected, so the chart never renders as an empty plot.
  *
- * The four render as ONE connected band (a `StatRow`) rather
+ * The four render as ONE connected band (a `FigureStrip`) rather
  * than four detached cards: they are a single control group over one window.
  * The cards are neutral; the metric's chart colour appears only as the series
  * key beside the label, and only while the metric is plotted. Selection is the
@@ -63,24 +64,24 @@ function metricComparison(
 /**
  * The label row's end: the series key (shown only while the metric is plotted
  * — a key on an unplotted metric would point at a line that is not there) and
- * the metric's definition. `StatRow` raises it above the cell's stretched
+ * the metric's definition. `FigureStrip` raises it above the cell's stretched
  * toggle, so the definition stays reachable.
  */
 function MetricMarker({
   metricKey,
   label,
-  tone,
+  mark,
   plotted,
 }: Readonly<{
   metricKey: PerformanceMetricKey;
   label: string;
-  tone: ChartTone;
+  mark: MetricMark;
   plotted: boolean;
 }>) {
   return (
     <>
       <span className={plotted ? 'inline-flex' : 'invisible inline-flex'}>
-        <ChartSwatch tone={tone} line />
+        <SeriesSwatch tone={mark.tone} shape={mark.shape} />
       </span>
       <InfoHint label={label}>{METRIC_HELP[metricKey]}</InfoHint>
     </>
@@ -94,7 +95,7 @@ export function MetricCards({
   compareLabel,
   active,
   onToggle,
-  tones,
+  marks,
   loading = false,
   className,
   'data-testid': testId,
@@ -105,8 +106,8 @@ export function MetricCards({
   compareLabel: string;
   active: ReadonlySet<PerformanceMetricKey>;
   onToggle: (key: PerformanceMetricKey) => void;
-  /** Each metric's chart position, shared with its line on the chart. */
-  tones: Record<PerformanceMetricKey, ChartTone>;
+  /** Each metric's line colour and marker, shared with its line on the chart. */
+  marks: Record<PerformanceMetricKey, MetricMark>;
   /** A read is in flight. The cards spin rather than claiming a value is absent. */
   loading?: boolean;
   className?: string;
@@ -114,7 +115,7 @@ export function MetricCards({
 }>) {
   return (
     <div className={className}>
-      <StatRow
+      <FigureStrip
         label="Search Console metrics"
         testId={testId}
         segments={METRIC_CARDS.map((card) => {
@@ -135,7 +136,7 @@ export function MetricCards({
               <MetricMarker
                 metricKey={card.key}
                 label={card.label}
-                tone={tones[card.key]}
+                mark={marks[card.key]}
                 plotted={plotted}
               />
             ),
@@ -187,33 +188,31 @@ export function Ga4SummaryRow({
   loading?: boolean;
 }>) {
   return (
-    <Card data-testid="ga4-summary">
-      <CardContent>
-        <Stack gap="compact">
-          <StatRow
-            segments={GA4_SUMMARY_ENTRIES.map((entry) => {
-              const value = selected.totals[entry.key];
-              const comparisonValue = comparison ? comparison.totals[entry.key] : undefined;
-              return {
-                key: entry.key,
-                label: entry.label,
-                value: value === null || value === undefined ? null : formatCount(value),
-                missingLabel: NOT_MEASURED,
-                loading,
-                sub: comparison ? (
-                  <span className="tabular-nums">
-                    {ga4ComparisonLabel(comparison, comparisonValue, compareLabel)}
-                  </span>
-                ) : undefined,
-              };
-            })}
-          />
-          <p className="type-caption">
-            Google Analytics 4 · Property-wide organic and AI sessions · Key events as configured in
-            GA4
-          </p>
-        </Stack>
-      </CardContent>
-    </Card>
+    <div data-testid="ga4-summary" className="min-w-0">
+      <Stack gap="compact">
+        <FigureStrip
+          segments={GA4_SUMMARY_ENTRIES.map((entry) => {
+            const value = selected.totals[entry.key];
+            const comparisonValue = comparison ? comparison.totals[entry.key] : undefined;
+            return {
+              key: entry.key,
+              label: entry.label,
+              value: value === null || value === undefined ? null : formatCount(value),
+              missingLabel: NOT_MEASURED,
+              loading,
+              sub: comparison ? (
+                <span className="tabular-nums">
+                  {ga4ComparisonLabel(comparison, comparisonValue, compareLabel)}
+                </span>
+              ) : undefined,
+            };
+          })}
+        />
+        <p className="type-caption">
+          Google Analytics 4 · Property-wide organic and AI sessions · Key events as configured in
+          GA4
+        </p>
+      </Stack>
+    </div>
   );
 }

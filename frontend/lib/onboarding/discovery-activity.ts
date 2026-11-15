@@ -1,4 +1,4 @@
-import type { Step, StepStatus } from '@/components/ui/step-list';
+import type { TrailStep, RungStatus } from '@/components/ui/rung-trail';
 import type { BrandDiscovery } from '@/lib/api/brand-discoveries';
 import { BRAND_DISCOVERY_POLL_MS } from '@/lib/config/operational';
 import { pollWhileActive } from '@/lib/jobs/poll';
@@ -51,7 +51,7 @@ function countDetail(
   return `${count} ${noun} ${action}`;
 }
 
-function stepStatus(index: number, current: number): StepStatus {
+function stepStatus(index: number, current: number): RungStatus {
   if (index < current) return 'done';
   if (index > current) return 'pending';
   return 'running';
@@ -67,7 +67,7 @@ function openingLabel(discovery: BrandDiscovery | undefined, current: number): s
  * Convert persisted discovery facts into customer language. Unknown backend
  * details never become a copy fallback; adding a phase must be handled here.
  */
-export function discoveryActivity(discovery: BrandDiscovery | undefined): Step[] {
+export function discoveryActivity(discovery: BrandDiscovery | undefined): TrailStep[] {
   const current = currentStep(discovery);
   const progress = discovery?.progress;
   const labels = [

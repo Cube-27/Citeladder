@@ -316,6 +316,150 @@
           "dark": "#262626"
         },
         "usage": "Chart gridlines and axis baselines. Decorative."
+      },
+      {
+        "name": "ground",
+        "value": {
+          "light": "{paper}",
+          "dark": "{paper}"
+        },
+        "usage": "The app's page. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "well",
+        "value": {
+          "light": "{surface-sunken}",
+          "dark": "{surface-sunken}"
+        },
+        "usage": "Sunken material: an answer passage, code, a user's chat turn; the hatch's base. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "raised",
+        "value": {
+          "light": "{surface}",
+          "dark": "{surface}"
+        },
+        "usage": "Sheets: menus, popovers, tooltips, dialogs, drawers, toasts. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "rule",
+        "value": {
+          "light": "{line}",
+          "dark": "{line}"
+        },
+        "usage": "Hairlines between rows and figure cells, under the masthead; the hatch's lines. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "rule-ink",
+        "value": {
+          "light": "{ink}",
+          "dark": "{ink}"
+        },
+        "usage": "The ink rule a section and a table hang from. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "control-line",
+        "value": {
+          "light": "{line-control}",
+          "dark": "{line-control}"
+        },
+        "usage": "Field and control boundaries (3:1) and the dashed edge of a draft. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "ink-2",
+        "value": {
+          "light": "{ink-secondary}",
+          "dark": "{ink-secondary}"
+        },
+        "usage": "Supporting text: the second and last ink step. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "accent-text",
+        "value": {
+          "light": "{accent-ink}",
+          "dark": "{accent-ink}"
+        },
+        "usage": "The rare accent-coloured word, such as \"You\". The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "accent-wash",
+        "value": {
+          "light": "{accent-soft}",
+          "dark": "{accent-soft}"
+        },
+        "usage": "The highlighter behind your brand in a quoted answer; text selection. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "positive-wash",
+        "value": {
+          "light": "{positive-soft}",
+          "dark": "{positive-soft}"
+        },
+        "usage": "The positive notice and validation wash. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "negative-wash",
+        "value": {
+          "light": "{negative-soft}",
+          "dark": "{negative-soft}"
+        },
+        "usage": "The negative notice and validation wash. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "warning-wash",
+        "value": {
+          "light": "{warning-soft}",
+          "dark": "{warning-soft}"
+        },
+        "usage": "The warning notice and validation wash. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "info-wash",
+        "value": {
+          "light": "{info-soft}",
+          "dark": "{info-soft}"
+        },
+        "usage": "The info notice and validation wash. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "data-you",
+        "value": {
+          "light": "{accent}",
+          "dark": "{accent}"
+        },
+        "usage": "Your brand in every chart and comparison, always."
+      },
+      {
+        "name": "data-rival-1",
+        "value": {
+          "light": "{ink}",
+          "dark": "{ink}"
+        },
+        "usage": "The first rival series (ink)."
+      },
+      {
+        "name": "data-rival-2",
+        "value": {
+          "light": "#2f6f9f",
+          "dark": "#2f6f9f"
+        },
+        "usage": "The second rival series; cool hues only for rivals. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "data-rival-3",
+        "value": {
+          "light": "#4b3a8a",
+          "dark": "#4b3a8a"
+        },
+        "usage": "The third rival series. The website aliases its own role here; the app binds its value (brand direction 2.5)."
+      },
+      {
+        "name": "data-rival-4",
+        "value": {
+          "light": "#1f7d73",
+          "dark": "#1f7d73"
+        },
+        "usage": "The fourth rival series; a fifth and later are data-other. The website aliases its own role here; the app binds its value (brand direction 2.5)."
       }
     ]
   },
@@ -394,6 +538,15 @@
             "fontWeight": 400,
             "sample": "Round robin",
             "usage": "Captions under product frames and the docs h3. On the website FAQ questions, pricing plan names and the author's name set this size in the sans face at 500. Footer column heads are not this (they use label)."
+          },
+          {
+            "name": "display",
+            "fontSize": "28px",
+            "lineHeight": "36px",
+            "fontWeight": 500,
+            "letterSpacing": "-0.01em",
+            "sample": "Set up your workspace",
+            "usage": "The app's flow headings, the new-chat greeting and full-page notices, in the display face."
           }
         ]
       },
@@ -482,6 +635,22 @@
             "fontWeight": 400,
             "sample": "Source: 412 answers, 14–20 Oct",
             "usage": "Chart axes and footnotes, helper text under fields."
+          },
+          {
+            "name": "subheading",
+            "fontSize": "14px",
+            "lineHeight": "20px",
+            "fontWeight": 600,
+            "sample": "Integrations",
+            "usage": "The app's slip titles, table group heads and field-group legends."
+          },
+          {
+            "name": "prose",
+            "fontSize": "16px",
+            "lineHeight": "26px",
+            "fontWeight": 400,
+            "sample": "Reading text",
+            "usage": "The app's reading text: Agent replies, documents, long explanations; 60 to 80 characters a line."
           }
         ]
       },
@@ -513,6 +682,41 @@
             "fontWeight": 400,
             "sample": "curl https://api.citeladder.com/v1/prompts",
             "usage": "Code blocks in docs, blog and product frames."
+          },
+          {
+            "name": "overline",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": 500,
+            "letterSpacing": "0.06em",
+            "sample": "VISIBILITY",
+            "usage": "The app's column heads, navigation group heads, key-figure labels and the DRAFT marker, uppercase."
+          },
+          {
+            "name": "figure-xl",
+            "fontSize": "40px",
+            "lineHeight": "44px",
+            "fontWeight": 500,
+            "letterSpacing": "-0.02em",
+            "sample": "48.6%",
+            "usage": "At most one hero figure on an app page."
+          },
+          {
+            "name": "figure",
+            "fontSize": "24px",
+            "lineHeight": "32px",
+            "fontWeight": 500,
+            "letterSpacing": "-0.01em",
+            "sample": "1,284",
+            "usage": "The app's key figures."
+          },
+          {
+            "name": "data-sm",
+            "fontSize": "12px",
+            "lineHeight": "16px",
+            "fontWeight": 400,
+            "sample": "+3.2 pt",
+            "usage": "Changes (at 500), citation markers, counts, keyboard hints and absence words."
           }
         ]
       }
@@ -618,6 +822,21 @@
         "name": "radius-full",
         "value": "9999px",
         "usage": "Only avatars, status dots, switch tracks (and their thumb), count pills (footnote numbers, nav counts) and the radio circle. Never a pill-shaped button, chip, citation or bar."
+      },
+      {
+        "name": "radius-mark",
+        "value": "2px",
+        "usage": "The app's tags, checkboxes, rung marks and bar ends."
+      },
+      {
+        "name": "radius-control",
+        "value": "var(--radius-md)",
+        "usage": "The app's controls, fields, slips and wells: 4px in the app, the website's 6px control radius on its own surfaces."
+      },
+      {
+        "name": "radius-sheet",
+        "value": "8px",
+        "usage": "The app's floating layers: menus, popovers, tooltips, dialogs, drawers, toasts."
       }
     ]
   },
@@ -663,6 +882,14 @@
           "dark": "inset 0 1px 0 rgba(255,255,255,0.6), inset 0 -2px 0 rgba(0,0,0,0.2), 0 1px 2px rgba(0,0,0,0.6), 0 8px 24px -6px rgba(0,0,0,0.6)"
         },
         "usage": "The primary (ink) button, a raised key: a top highlight, a bottom inner shade, a tight drop and a soft lift."
+      },
+      {
+        "name": "shadow-sheet",
+        "value": {
+          "light": "0 1px 2px rgb(27 26 23 / 6%), 0 12px 32px -8px rgb(27 26 23 / 18%)",
+          "dark": "0 1px 2px rgb(0 0 0 / 40%), 0 16px 40px -8px rgb(0 0 0 / 60%)"
+        },
+        "usage": "The app's one shadow, under a sheet. Nothing at rest has a shadow."
       }
     ]
   },
@@ -673,6 +900,21 @@
         "name": "control-sm",
         "value": "28px",
         "usage": "The app's compact controls: dense tables, toolbar buttons, citation pills."
+      },
+      {
+        "name": "target-min",
+        "value": "24px",
+        "usage": "The smallest interactive target anywhere (WCAG 2.5.8): toggle boxes and field end buttons sit in it."
+      },
+      {
+        "name": "tag-height",
+        "value": "24px",
+        "usage": "A tag and a status mark."
+      },
+      {
+        "name": "control-coarse",
+        "value": "var(--control-md)",
+        "usage": "A primary target under a coarse pointer: 44 in the app; the website keeps control-md."
       },
       {
         "name": "control-md",
@@ -723,6 +965,16 @@
         "name": "container-narrow",
         "value": "560px",
         "usage": "Centred section headers, auth cards, onboarding steps, empty states."
+      },
+      {
+        "name": "container-content",
+        "value": "1280px",
+        "usage": "The app's content cap, left-aligned to the gutter."
+      },
+      {
+        "name": "container-form",
+        "value": "640px",
+        "usage": "The app's form column."
       }
     ]
   }

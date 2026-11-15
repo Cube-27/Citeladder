@@ -2,11 +2,12 @@ import { classTokens, jsxClassData, oneOf } from './design-system-class-data.mjs
 import { lineIndex, nameText, parseSource, stringValue, unwrap, walk } from './source-ast.mjs';
 
 /**
- * Radius is the system's scale and nothing else: `rounded-2xs` (2, chart bars,
- * rungs), `-xs` (6, badges, checkboxes), `-sm` (8, tabs in a track, menu
- * items), `-md` (12, buttons, inputs, code), `-lg` (14, app cards, menus,
- * dialogs), `-xl` (20, website cards, frames, the navbar) and `-full`. No
- * arbitrary value, not even a `var()`.
+ * Radius is the system's scale and nothing else: the app's roles
+ * `rounded-mark` (2: tags, checkboxes, rung marks), `-control` (4: controls,
+ * fields, slips, wells) and `-sheet` (8: floating layers), the website's
+ * `-2xs`, `-xs`, `-sm`, `-md`, `-lg` and `-xl`, and `-full`. No arbitrary
+ * value, not even a `var()`. Which names the app may use is
+ * `appRadiusViolations` (design-system-source-checks.mjs).
  *
  * This applies to every surface, not just product UI: the app, login and
  * marketing each used to carry their own idea of a rounded corner, so the same
@@ -19,7 +20,7 @@ export function rawRadiusViolations(source, label) {
     const raw = entry.classes.split(/\s+/).filter(isRawRadiusToken);
     if (raw.length) {
       violations.push(
-        `${label}:${entry.line}: ${raw.join(', ')} — radius must be rounded-2xs, -xs, -sm, -md, -lg, -xl or -full`,
+        `${label}:${entry.line}: ${raw.join(', ')} — radius must be rounded-mark, -control, -sheet or -full (the website: -2xs, -xs, -sm, -md, -lg, -xl)`,
       );
     }
   }
@@ -28,7 +29,18 @@ export function rawRadiusViolations(source, label) {
 
 const RADIUS_SIDES = ['t', 'b', 'l', 'r', 's', 'e', 'tl', 'tr', 'bl', 'br', 'ss', 'se', 'es', 'ee'];
 /** The system's radius scale: the only sizes a `rounded-*` utility may name. */
-const SYSTEM_RADII = new Set(['2xs', 'xs', 'sm', 'md', 'lg', 'xl', 'full']);
+const SYSTEM_RADII = new Set([
+  'mark',
+  'control',
+  'sheet',
+  '2xs',
+  'xs',
+  'sm',
+  'md',
+  'lg',
+  'xl',
+  'full',
+]);
 const LOWERCASE_VARIANTS = /^(?:[a-z-]+:)*$/;
 
 /**
@@ -172,7 +184,9 @@ export function tsxGeometryFindings(source, label) {
  * none of its own. The website (`components/marketing`) keeps its own ladder,
  * and so do the auth and onboarding flows for breakpoints.
  */
-const LAYERING_OWNERS = new Set(['ui', 'layout', 'marketing']);
+// Templates (components/templates) own page geometry from tokens, as atoms and
+// organisms do theirs; pages compose them and set none (brand direction 3).
+const LAYERING_OWNERS = new Set(['ui', 'layout', 'templates', 'marketing']);
 const FLOW_FOLDERS = new Set(['auth', 'onboarding']);
 const LAYER_SPACING = /^-?(?:p[xytrblse]?|m[xytrblse]?|gap(?:-[xy])?|space-[xy])-(?:\d|px\b|\[|\()/;
 const LAYER_SIZE = /^-?(?:h|w|size)-(?:\d|px\b|\[|\()/;

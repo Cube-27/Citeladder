@@ -4,8 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { QueryState } from '@/components/ui/query-state';
-import { ListScreen } from '@/components/layout/page-shell';
+import { ReportPage } from '@/components/templates/report-page';
 import type { Project } from '@citeladder/contracts';
 import { useProjectCreation } from '@/components/layout/use-project-creation';
 import { useProjectContext } from '@/lib/project/project-context';
@@ -14,6 +13,7 @@ import { newProjectDestination } from '@/lib/navigation/project-destination';
 
 import { ProjectEditPanel } from './project-edit-panel';
 import { DashboardScreen } from './dashboard-screen';
+import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * `/projects` — manage every project in the workspace.
@@ -53,15 +53,15 @@ export function ProjectsScreen() {
   // who had just created their first project, until they refreshed.
   if (projects.length === 0 && !projectsSettled) {
     return (
-      <ListScreen>
-        <QueryState kind="loading" label="Loading your projects…" />
-      </ListScreen>
+      <ReportPage>
+        <StateBlock kind="loading" label="Loading your projects…" />
+      </ReportPage>
     );
   }
   if (projects.length === 0) {
     return (
-      <ListScreen>
-        <QueryState
+      <ReportPage>
+        <StateBlock
           kind="empty"
           icon={FolderOpen}
           heading="No projects yet"
@@ -83,11 +83,11 @@ export function ProjectsScreen() {
             ) : undefined
           }
         />
-      </ListScreen>
+      </ReportPage>
     );
   }
 
-  // A fragment: the dashboard is a ListScreen whose bands must meet flush, and
+  // A fragment: the dashboard is its own ReportPage, and
   // the edit panel is an overlay, so there is no rhythm here to own.
   return (
     <>

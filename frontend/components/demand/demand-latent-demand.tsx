@@ -3,7 +3,7 @@ import { Zap } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { InlineFigure } from '@/components/ui/typography';
-import { UnavailableValue } from '@/components/ui/unavailable-value';
+import { Absence } from '@/components/ui/absence';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { isActionableGap, numericMetric } from '@/lib/demand/signals';
 import { formatCount } from '@/lib/format';
@@ -26,7 +26,7 @@ export function DemandLatentDemand({ snapshot }: Readonly<{ snapshot: DemandSnap
       <Icon icon={Zap} />
       {observed.length > 0 && known.length === 0 ? (
         <>
-          <UnavailableValue state="not_measured" /> latent demand
+          <Absence state="not_measured" /> latent demand
         </>
       ) : (
         <>

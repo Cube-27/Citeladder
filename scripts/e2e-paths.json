@@ -20,7 +20,7 @@
       "frontend/apps/app/src/globals.css",
       "frontend/components/layout/page-shell.tsx",
       "frontend/components/ui/filter-bar.tsx",
-      "frontend/components/ui/query-state.tsx",
+      "frontend/components/ui/state-block.tsx",
       "frontend/components/ui/tabs.tsx",
       "frontend/e2e/helpers/app-fixture.ts"
     ],
