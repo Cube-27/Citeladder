@@ -104,7 +104,7 @@ describe('PromptTable pagination', () => {
                   {
                     visibilityRate: 0,
                     ownedCitationRate: 0,
-                    change: { kind: 'not_compared' },
+                    change: { kind: 'not_compared', reason: 'changed_context' },
                     position: null,
                     answer: ANSWER,
                     mentions: 0,

@@ -13,7 +13,7 @@ import { groupBy } from '../lists.ts';
 import { round2 } from './metrics.ts';
 import { enrichedRows, promptItems, type PromptMetricItem, type PromptRow } from './prompts.ts';
 import { marketOf, type RunScope } from './runs.ts';
-import { TrendQueryError, validateEngineAndRange } from './selection.ts';
+import { TrendQueryError } from './selection.ts';
 
 const visibility = policy.visibility;
 
@@ -54,23 +54,23 @@ async function recentMeasurements(db: Database, scope: RunScope): Promise<Measur
 }
 
 /** The change since the prompt's previous measurement, or why there is none. */
-function change(
-  engine: string | null,
-  [current, previous]: readonly (Measurement | undefined)[],
-  now: PromptMetricItem,
-  before: PromptMetricItem | undefined,
-): Pick<PromptMetricItem, 'comparison_status' | 'visibility_delta'> {
-  if (current === undefined || previous === undefined || before === undefined)
-    return { comparison_status: 'no_baseline', visibility_delta: null };
-  const key = frozenComparisonKey(current.configuration, engine, false);
+function change(pair: {
+  current: Measurement;
+  previous: Measurement | undefined;
+  now: PromptMetricItem;
+  before: PromptMetricItem | undefined;
+}): Pick<PromptMetricItem, 'comparison_status' | 'visibility_delta'> {
+  const { current, previous, now, before } = pair;
+  if (previous === undefined) return { comparison_status: 'no_baseline', visibility_delta: null };
+  const key = frozenComparisonKey(current.configuration, null, false);
   const comparable =
     key !== null &&
-    key === frozenComparisonKey(previous.configuration, engine, false) &&
+    key === frozenComparisonKey(previous.configuration, null, false) &&
     current.cohort === previous.cohort &&
     current.prompt_text === previous.prompt_text &&
     current.versions === previous.versions;
   if (!comparable) return { comparison_status: 'changed_context', visibility_delta: null };
-  if (now.visibility_rate == null || before.visibility_rate == null)
+  if (now.visibility_rate == null || before?.visibility_rate == null)
     return { comparison_status: 'no_observations', visibility_delta: null };
   return {
     comparison_status: 'comparable',
@@ -80,33 +80,40 @@ function change(
 
 const pairKey = (promptId: string, auditId: string) => `${promptId}:${auditId}`;
 
+/** Each measured pair's row, read in the pair's own cohort; the runs are already scoped. */
+async function measuredRows(db: Database, scope: RunScope, recent: readonly Measurement[]) {
+  const wanted = new Set(recent.map((row) => pairKey(row.prompt_id, row.audit_id)));
+  const reads = [...groupBy(recent, (row) => row.cohort)].map(([cohort, measured]) =>
+    enrichedRows(db, scope, { cohort, logicalEngine: null }, [
+      ...new Set(measured.map((row) => row.audit_id)),
+    ]),
+  );
+  const rows = new Map<string, PromptRow>();
+  for (const row of (await Promise.all(reads)).flat()) {
+    const key = row.item.prompt_id ? pairKey(row.item.prompt_id, row.item.audit_id) : '';
+    if (wanted.has(key)) rows.set(key, row);
+  }
+  return rows;
+}
+
+/** One read with one meaning: it takes no engine, cohort, named run or baseline. */
 export async function getLatestPromptMetrics(
   db: Database,
   scope: RunScope,
-  query: { logicalEngine: string | null; narrowed: boolean },
+  query: { narrowed: boolean },
 ): Promise<PromptMetricItem[]> {
   if (query.narrowed)
-    throw new TrendQueryError('A per-prompt latest read takes no cohort, run or baseline');
-  validateEngineAndRange({ logicalEngine: query.logicalEngine, fromAt: null, toAt: null });
+    throw new TrendQueryError('A per-prompt latest read takes no engine, cohort, run or baseline');
   const recent = await recentMeasurements(db, scope);
-  const wanted = new Set(recent.map((row) => pairKey(row.prompt_id, row.audit_id)));
-  const rows = new Map<string, PromptRow>();
-  for (const [cohort, measured] of groupBy(recent, (row) => row.cohort)) {
-    const ids = [...new Set(measured.map((row) => row.audit_id))];
-    const read = { cohort, logicalEngine: query.logicalEngine };
-    for (const row of await enrichedRows(db, scope, read, ids)) {
-      const key = row.item.prompt_id ? pairKey(row.item.prompt_id, row.item.audit_id) : '';
-      if (wanted.has(key)) rows.set(key, row);
-    }
-  }
+  const rows = await measuredRows(db, scope, recent);
   const latest: PromptRow[] = [];
   for (const [promptId, pair] of groupBy(recent, (row) => row.prompt_id)) {
     const current = pair.find((row) => row.rank === 1);
     const previous = pair.find((row) => row.rank === 2);
     const row = current && rows.get(pairKey(promptId, current.audit_id));
-    if (row === undefined) continue;
+    if (current === undefined || row === undefined) continue;
     const before = previous && rows.get(pairKey(promptId, previous.audit_id))?.item;
-    Object.assign(row.item, change(query.logicalEngine, [current, previous], row.item, before));
+    Object.assign(row.item, change({ current, previous, now: row.item, before }));
     latest.push(row);
   }
   return promptItems(db, scope, latest);

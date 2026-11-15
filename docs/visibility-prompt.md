@@ -403,8 +403,9 @@ prioritizes question text, topic, measurement and enabled state; classification
 is secondary detail on the question, available on keyboard focus and to screen readers.
 
 `/prompts` opens directly on the prompt library: every prompt of every prompt
-set in the project, each row naming its set, with adds going to the main brand
-set ([decision](decisions.md#one-prompt-library-across-every-prompt-set)).
+set in the project, with adds going to the main brand set
+([decision](decisions.md#one-prompt-library-across-every-prompt-set)); a row
+names its set when the project has more than one.
 Active/Archived, search and
 All filters (Topic first, then intent, stage, persona, enabled, branded) sit in one
 control row over the full-width

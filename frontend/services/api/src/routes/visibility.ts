@@ -342,8 +342,9 @@ export const visibilityRoutes = [
       return selectionErrors(() =>
         query.latest === 'prompt'
           ? getLatestPromptMetrics(db, scope, {
-              logicalEngine: query.engine,
-              narrowed: query.cohort != null || Object.values(runs).some((value) => value != null),
+              narrowed: [query.engine, query.cohort, ...Object.values(runs)].some(
+                (value) => value != null,
+              ),
             })
           : getPromptMetrics(db, scope, {
               ...runs,

@@ -57,5 +57,9 @@ export function useLatestPromptMeasurements(
 /** A row's change since the prompt's previous measurement, or why there is none. */
 function promptChange(row: PromptMetricItem): PromptChange {
   if (row.visibility_delta != null) return { kind: 'delta', points: row.visibility_delta };
-  return row.comparison_status === 'no_baseline' ? { kind: 'first' } : { kind: 'not_compared' };
+  if (row.comparison_status === 'no_baseline') return { kind: 'first' };
+  // Any other status without a delta is a pair that could not be compared.
+  const reason =
+    row.comparison_status === 'no_observations' ? 'no_observations' : 'changed_context';
+  return { kind: 'not_compared', reason };
 }

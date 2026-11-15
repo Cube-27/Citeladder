@@ -27,8 +27,9 @@ export function usePromptSet() {
   const promptSet: PromptSet | null = mainPromptSet(sets);
   const ordered = useMemo(() => oldestFirst(sets), [sets]);
   const prompts = useMemo(() => ordered.flatMap((set) => set.prompts), [ordered]);
+  // A row names its set only when there is more than one to tell apart.
   const setNames: ReadonlyMap<string, string> = useMemo(
-    () => new Map(ordered.map((set) => [set.id, set.name])),
+    () => new Map(ordered.length > 1 ? ordered.map((set) => [set.id, set.name]) : []),
     [ordered],
   );
 

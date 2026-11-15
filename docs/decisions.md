@@ -812,7 +812,7 @@ minimum to Chrome 123, Firefox 132, Safari 17.5".
 ## One prompt library across every prompt set
 
 The Prompts page is one library of every prompt in every prompt set of the
-project, Commerce's buyer-prompt set included, with each row naming its set.
+project, Commerce's buyer-prompt set included.
 A run or an audit adds evidence to prompts already in the library, or adds new
 prompts; it never hides earlier prompts or their results. Manual adds,
 imports and Prompt Builder generation go to the main brand set (the project's

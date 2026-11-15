@@ -25,7 +25,7 @@ import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibilit
 export type PromptChange =
   | { kind: 'delta'; points: number }
   | { kind: 'first' }
-  | { kind: 'not_compared' };
+  | { kind: 'not_compared'; reason: 'changed_context' | 'no_observations' };
 
 /** What the run that last measured a prompt found, keyed by prompt id. */
 export type PromptMeasurement = {
@@ -124,8 +124,8 @@ export function PromptTable({
             {/* The question opens its history: the prompt is the object. It
                 wraps to two lines. Topic and classification are filters in
                 the control strip, not tags on every row (owner, 2026-11-06);
-                the caption names the prompt's set (owner, 2026-11-15) and
-                says when audits skip the prompt. */}
+                the caption names the prompt's set when there are several,
+                and says when audits skip the prompt. */}
             <TableCellLines
               title
               primary={
@@ -318,6 +318,12 @@ function MeasuredCells({ measurement }: Readonly<{ measurement?: PromptMeasureme
   );
 }
 
+const NOT_COMPARED = {
+  changed_context:
+    'Not comparable with its previous measurement: the run settings or prompt changed.',
+  no_observations: 'Not comparable with its previous measurement: one of the runs had no answers.',
+} as const satisfies Record<Extract<PromptChange, { kind: 'not_compared' }>['reason'], string>;
+
 /** The change since the prompt's previous measurement, or why there is none. */
 function ChangeValue({ change }: Readonly<{ change?: PromptChange }>) {
   if (change === undefined) return <UnavailableValue state="not_measured" />;
@@ -332,12 +338,7 @@ function ChangeValue({ change }: Readonly<{ change?: PromptChange }>) {
         />
       );
     case 'not_compared':
-      return (
-        <MissingValue
-          state="unknown"
-          reason="Not comparable with its previous measurement: the settings changed or a run had no answers."
-        />
-      );
+      return <MissingValue state="unknown" reason={NOT_COMPARED[change.reason]} />;
     default: {
       const unhandled: never = change;
       return unhandled;
