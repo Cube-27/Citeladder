@@ -62,9 +62,7 @@ function ColumnSettings({
         <Button variant="secondary">
           <Icon icon={Columns3} />
           Columns
-          <span className="text-ink-2">
-            {shown.length} of {PRODUCT_COLUMNS.length}
-          </span>
+          <span className="text-ink-2">{shown.length}</span>
         </Button>
       </MenuTrigger>
       <MenuContent>

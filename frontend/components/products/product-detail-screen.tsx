@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 
 import { RecordPage } from '@/components/templates/record-page';
 import { AppGrid } from '@/components/ui/app-grid';
+import { ClampText } from '@/components/ui/clamp-text';
 import { FilterBar } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
@@ -257,9 +258,9 @@ function ProductIdentity({
             variant="external"
             href={product.url}
             text="caption"
-            className="max-w-full min-w-0 break-all"
+            className="flex max-w-full min-w-0"
           >
-            {product.url}
+            <ClampText>{product.url}</ClampText>
           </TextLink>
         ) : null}
       </Stack>

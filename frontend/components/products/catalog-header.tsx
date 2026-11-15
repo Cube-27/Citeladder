@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { StatusMark } from '@/components/ui/status-mark';
-import { Tag } from '@/components/ui/tag';
+import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
@@ -75,7 +75,8 @@ function crawlSegments(read: CrawlRead): FigureSegment[] {
     {
       key: 'site-health',
       label: 'Website',
-      value: crawl ? <CrawlStatusBadge crawl={crawl} /> : <Tag>No crawl yet</Tag>,
+      value: crawl ? <CrawlStatusBadge crawl={crawl} /> : null,
+      missingLabel: 'No crawl yet',
     },
   ];
 }
@@ -100,8 +101,9 @@ function projectionBadge(projection: CommerceProjection | undefined) {
         {pluralCount(projection.failed, 'page')} not projected
       </StatusMark>
     );
-  if (projection.applicability === 'not_applicable') return <Tag>Not applicable</Tag>;
-  if (projection.applicability === 'unknown') return <Tag>Business model unconfirmed</Tag>;
+  if (projection.applicability === 'not_applicable') return <Absence state="not_applicable" />;
+  if (projection.applicability === 'unknown')
+    return <StatusMark tone="warning">Business model unconfirmed</StatusMark>;
   return null;
 }
 
