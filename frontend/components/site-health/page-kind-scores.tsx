@@ -122,6 +122,6 @@ function MeasurementValue({
   }
   if (state === 'limited_evidence')
     return <Absence state="not_measured" label="Limited evidence" />;
-  if (state === 'excluded') return <Absence state="excluded" />;
+  if (state === 'excluded') return <Absence state="not_applicable" label="Excluded" />;
   return <Absence state="not_measured" />;
 }

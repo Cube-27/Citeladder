@@ -108,7 +108,10 @@ export function VisibilityByMarket({
               </>
             ) : (
               <TableCell numeric colSpan={5}>
-                <Absence state={row.state === 'no_run' ? 'not_run' : 'pending'} />
+                <Absence
+                  state="not_run"
+                  label={row.state === 'no_run' ? undefined : 'Being prepared'}
+                />
               </TableCell>
             )}
           </TableRow>

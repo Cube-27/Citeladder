@@ -68,8 +68,7 @@ function CompactTrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) 
 }
 /** A leg with no value, as the absence it is. */
 function legAbsence(leg: Leg): DataAvailabilityState {
-  if (leg.state === 'not_connected') return 'not_connected';
-  return leg.state === 'unknown' ? 'unknown' : 'unavailable';
+  return leg.state === 'not_connected' ? 'not_connected' : 'unavailable';
 }
 export function UrlPanel({
   urlHash,

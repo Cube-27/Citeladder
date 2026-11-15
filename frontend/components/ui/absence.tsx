@@ -17,9 +17,10 @@ type AbsenceProps = Readonly<
 >;
 
 /**
- * Absence — a missing value that says which kind it is: its word ("Not
- * measured", "Not connected", "Not applicable", "None") in `ink-2`, sentence
- * case, with no container and no pattern. It is never blank, because a blank
+ * Absence — a missing value that says which kind it is: its word from the one
+ * list of kinds (`availabilityLabel`, lib/format.ts) in `ink-2`, sentence
+ * case, at the body or caption size of its context (never figure size), with
+ * no container and no pattern. It is never blank, because a blank
  * and a measured zero are opposite findings; a zero is a Value. A `reason`
  * (or a narrow cell's dash) hangs its words off a real button, so they are
  * reachable by keyboard.
@@ -37,7 +38,11 @@ export function Absence({
     <span
       {...props}
       data-absence={state}
-      className={cn('text-ink-2 whitespace-nowrap', !narrow && 'font-normal', className)}
+      className={cn(
+        'text-ink-2 text-[length:min(1em,var(--text-body))] whitespace-nowrap',
+        !narrow && 'font-normal',
+        className,
+      )}
     >
       {narrow ? (
         <>

@@ -94,7 +94,7 @@ export function MissingValue({
     case 'not_applicable':
       return <Absence state="not_applicable" />;
     case 'unknown':
-      return <Absence state="unknown" narrow={narrow} />;
+      return <Absence state="unavailable" label="Unknown" narrow={narrow} />;
     case 'unavailable':
       return <Absence state="not_measured" narrow={narrow} />;
     default: {
