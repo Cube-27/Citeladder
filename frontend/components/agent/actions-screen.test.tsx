@@ -96,6 +96,10 @@ function serveActions(reads: string[]) {
   );
 }
 
+/** The pricing page's address, which a URL cell draws as a head and a tail. */
+const pricingUrl = (_: string, node: Element | null) =>
+  node?.hasAttribute('data-url-text') === true && node.textContent === 'https://acme.test/pricing';
+
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 beforeEach(() => window.history.replaceState(null, '', '/agent/actions'));
 afterEach(() => mswServer.resetHandlers());
@@ -131,7 +135,7 @@ describe('Actions', () => {
     ]);
 
     // The row is titled by the work and links to its Action; the target is secondary.
-    const cells = within(screen.getByText('https://acme.test/pricing').closest('tr')!);
+    const cells = within(screen.getByText(pricingUrl).closest('tr')!);
     expect(cells.getByRole('link', { name: 'Improve the existing page' })).toHaveAttribute(
       'href',
       `/agent/actions/${ACTION}?project=${PROJECT}`,
@@ -162,7 +166,7 @@ describe('Actions', () => {
     // A header folds its group's rows.
     await user.click(own);
     expect(own).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText('https://acme.test/pricing')).toBeNull();
+    expect(screen.queryByText(pricingUrl)).toBeNull();
     await user.click(own);
 
     await user.click(screen.getByRole('button', { name: 'Show all 7 in Improve your own pages' }));

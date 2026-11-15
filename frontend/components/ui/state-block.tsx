@@ -3,7 +3,7 @@ import { CircleDashed, Inbox, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
-import { Skeleton } from '@/components/ui/skeleton';
+import { RowBlocks, SkeletonFrame } from '@/components/ui/skeleton-block';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -67,16 +67,11 @@ type NotMeasured = NotMeasuredCopy &
     headingLevel?: HeadingLevel;
   }>;
 
-/** The loading shape of the region a state block stands in for. */
-type StateLoadingShape = 'text' | 'block' | 'chart' | 'form' | 'stat';
-
 export type StateBlockProps =
   | Readonly<{
       kind: 'loading';
       /** What is loading, announced to assistive technology. */
       label?: string;
-      /** The region's shape, so loading looks like what arrives. Defaults to `block`. */
-      shape?: StateLoadingShape;
     }>
   | Readonly<{
       kind: 'error';
@@ -164,8 +159,8 @@ export function screenState<T, M extends T>(
 /**
  * StateBlock — the loading, empty, filtered-empty, not-measured and error
  * states of a read in one footprint, so a read that goes loading → error →
- * retry → empty never moves the page. Loading is the skeleton of the region's
- * own shape (`Skeleton`, `well` blocks); empty is one block with an icon
+ * retry → empty never moves the page. Loading is a card body of `well` row
+ * blocks (a region of another shape draws its own `Skeleton`); empty is one block with an icon
  * tile, a headline, one sentence and the one next step; a failed read is a
  * Notice that names what failed, with one Retry. Callers choose the state,
  * never the geometry.
@@ -226,7 +221,11 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
   const containerLevel = useContext(StateHeadingLevelContext);
   switch (props.kind) {
     case 'loading':
-      return <LoadingShape shape={props.shape ?? 'block'} label={props.label ?? 'Loading…'} />;
+      return (
+        <SkeletonFrame label={props.label ?? 'Loading…'} variant="block">
+          <RowBlocks rows={LOADING_ROWS} />
+        </SkeletonFrame>
+      );
     case 'error':
       return (
         <Notice
@@ -262,29 +261,6 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
       return <FilteredBody {...props} containerLevel={containerLevel} />;
     default: {
       const exhaustive: never = props;
-      return exhaustive;
-    }
-  }
-}
-
-/**
- * Loading in the region's shape, in the block's footprint. `block` is a card
- * body of list rows; the rest are the Skeleton variants of the same name.
- */
-function LoadingShape({ shape, label }: Readonly<{ shape: StateLoadingShape; label: string }>) {
-  switch (shape) {
-    case 'block':
-      return <Skeleton variant="block" rows={LOADING_ROWS} label={label} />;
-    case 'chart':
-      return <Skeleton variant="chart" label={label} />;
-    case 'form':
-      return <Skeleton variant="form" label={label} />;
-    case 'stat':
-      return <Skeleton variant="stat" label={label} />;
-    case 'text':
-      return <Skeleton variant="text" label={label} />;
-    default: {
-      const exhaustive: never = shape;
       return exhaustive;
     }
   }

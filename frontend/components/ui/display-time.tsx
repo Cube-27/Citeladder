@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, formatDisplayTimestamp, formatTimeZoneNote } from '@/lib/format';
+import { formatDisplayDate, formatDisplayTimestamp } from '@/lib/format';
 
 /**
  * A persisted instant in the display timezone, with its zone. Inside a
@@ -26,13 +26,4 @@ export function DisplayTime({
       {dateOnly ? formatDisplayDate(value, timeZone) : formatDisplayTimestamp(value, timeZone)}
     </time>
   );
-}
-
-/**
- * The zone a table's date-times are in, said once ("Times in GMT+5:30"): a
- * DataTable with a `date` column puts it in its footer bar.
- */
-export function TimeZoneNote() {
-  const timeZone = useDisplayTimeZone();
-  return <span className="type-caption">{formatTimeZoneNote(timeZone)}</span>;
 }

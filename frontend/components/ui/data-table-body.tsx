@@ -1,6 +1,6 @@
 import { useLayoutEffect, type CSSProperties, type ReactNode, type RefObject } from 'react';
 
-import { LiveVerb, SkeletonBlock } from '@/components/ui/skeleton';
+import { LiveVerb, SkeletonBlock } from '@/components/ui/skeleton-block';
 import { StateBlock, type StateBlockProps } from '@/components/ui/state-block';
 import { TableBody, TableCell, TableCellLines, TableFillerRows } from '@/components/ui/table';
 
@@ -90,7 +90,7 @@ function LoadingBody({
         >
           {cells.map((cell) => (
             <td key={cell} className="px-[var(--table-cell-padding-x)]">
-              {row === 0 && cell === 0 ? <LiveVerb label={label} hidden /> : null}
+              {row === 0 && cell === 0 ? <LiveVerb label={label} /> : null}
               <SkeletonBlock className="h-3 w-3/4" />
             </td>
           ))}

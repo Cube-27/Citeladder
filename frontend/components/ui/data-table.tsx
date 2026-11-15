@@ -16,10 +16,11 @@ import {
   type DataTableState,
   type RowLines,
 } from '@/components/ui/data-table-body';
-import { TimeZoneNote } from '@/components/ui/display-time';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Pager } from '@/components/ui/pager';
 import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatTimeZoneNote } from '@/lib/format';
 import {
   ScrollSteppers,
   useScrollFrame,
@@ -217,6 +218,12 @@ function tableNote(footer: ReactNode, zoned: boolean): ReactNode {
       <TimeZoneNote />
     </>
   );
+}
+
+/** The zone the table's date-times are in, said once ("Times in GMT+5:30"). */
+function TimeZoneNote() {
+  const timeZone = useDisplayTimeZone();
+  return <span className="type-caption">{formatTimeZoneNote(timeZone)}</span>;
 }
 
 /** A state under the table's own title takes the next level. */

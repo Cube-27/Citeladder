@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
-
-import { Spinner } from '@/components/ui/spinner';
-import { textRole } from '@/components/ui/typography';
-import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
+import {
+  RowBlocks,
+  SkeletonBlock,
+  SkeletonFrame,
+  TEXT_WIDTHS,
+} from '@/components/ui/skeleton-block';
 import { cn } from '@/lib/utils';
 
 type SkeletonProps = Readonly<{
@@ -34,7 +35,7 @@ const CHART_HEIGHT: Record<ChartHeight, string> = {
  * A soft shimmer crosses the blocks; under reduced motion they are still.
  *
  *   `text`  — two or three blocks of unequal width.
- *   `table` — the real column count: a head row (36) and `rows` rows (40).
+ *   `table` — the real column count: a head row and `rows` rows (40).
  *   `stat`  — `count` stat cards: a label block over a value block.
  *   `form`  — `fields` label and field blocks.
  *   `block` — a card body of `rows` list rows: a title block over a caption block.
@@ -43,32 +44,16 @@ const CHART_HEIGHT: Record<ChartHeight, string> = {
  * The blocks are drawing, not content: only the verb is announced, after a beat.
  */
 export function Skeleton(props: SkeletonProps) {
-  const { label = 'Loading', className } = props;
   return (
-    <div
-      aria-busy="true"
-      data-skeleton={props.variant ?? 'text'}
-      className={cn('min-w-0', className)}
+    <SkeletonFrame
+      label={props.label ?? 'Loading'}
+      variant={props.variant ?? 'text'}
+      className={props.className}
     >
-      <LiveVerb label={label} hidden />
       <SkeletonBody {...props} />
-    </div>
+    </SkeletonFrame>
   );
 }
-
-/** One placeholder: a `well` block, at least 12 high. */
-export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
-  return (
-    <span
-      aria-hidden
-      data-skeleton-block=""
-      className={cn('skeleton-block bg-well rounded-control block h-3 min-h-3', className)}
-    />
-  );
-}
-
-/** Unequal widths, so a text block does not read as a ruled form. */
-const TEXT_WIDTHS = ['w-11/12', 'w-3/4', 'w-1/2'] as const;
 
 function SkeletonBody(props: SkeletonProps) {
   switch (props.variant) {
@@ -133,20 +118,6 @@ function FormBlocks({ fields = 3 }: Readonly<{ fields?: number }>) {
   );
 }
 
-/** A card body of list rows: a title block over a caption block, 56 apart. */
-function RowBlocks({ rows = 4 }: Readonly<{ rows?: number }>) {
-  return (
-    <span className="grid">
-      {range(rows).map((index) => (
-        <span key={index} className="grid h-14 content-center gap-2">
-          <SkeletonBlock className={cn('h-4', TEXT_WIDTHS[index % 2])} />
-          <SkeletonBlock className="h-3 w-1/3" />
-        </span>
-      ))}
-    </span>
-  );
-}
-
 /** A table's loading shape outside a DataTable: its head row and rows of cell blocks. */
 function TableBlocks({
   columns,
@@ -170,46 +141,6 @@ function TableBlocks({
           ))}
         </span>
       ))}
-    </span>
-  );
-}
-
-/**
- * Loaders on screen that have already been revealed. A cold load passes
- * through several owners in turn (shell, route chunk, first read); a loader
- * that mounts while another is showing is the same wait, so it starts revealed.
- */
-let revealedLoaders = 0;
-
-/**
- * The live rung and its verb ("Loading runs"), held back a beat
- * (`loading-delayed`). `hidden` announces the verb without drawing it, for a
- * skeleton whose blocks already show that something loads.
- */
-export function LiveVerb({ label, hidden = false }: Readonly<{ label: string; hidden?: boolean }>) {
-  const [continued] = useState(() => revealedLoaders > 0);
-  const [revealed, setRevealed] = useState(continued);
-  useEffect(() => {
-    if (!revealed) {
-      const timer = setTimeout(() => setRevealed(true), LOADING_INDICATOR_DELAY_MS);
-      return () => clearTimeout(timer);
-    }
-    revealedLoaders += 1;
-    return () => {
-      revealedLoaders -= 1;
-    };
-  }, [revealed]);
-  if (hidden) return revealed ? <output aria-label={label} className="sr-only" /> : null;
-  return (
-    <span className={cn('flex min-h-5 items-center', continued ? undefined : 'loading-delayed')}>
-      {revealed ? (
-        <output aria-label={label} className="inline-flex items-center gap-2">
-          <Spinner />
-          <span aria-hidden className={textRole('body', 'text-ink-2')}>
-            {label}
-          </span>
-        </output>
-      ) : null}
     </span>
   );
 }

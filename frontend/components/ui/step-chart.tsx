@@ -213,10 +213,7 @@ export function StepChart({
   const endLabels = ends.length === toned.length ? placeEndLabels(ends, labelled.right) : null;
   const scale = endLabels ? labelled : scaleFor(24);
   const keyed = !endLabels && toned.length > 1;
-  const lines: Line[] = toned.map((line, index) => ({
-    ...line,
-    shape: keyed ? (MARKER_SHAPES[index % MARKER_SHAPES.length] ?? 'circle') : 'circle',
-  }));
+  const lines = shapedLines(toned, keyed);
   const count = data.length;
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     const next = keyedPoint(event, active, count);
@@ -314,6 +311,14 @@ function plottedLines({
       other: entry.other ?? false,
     })),
   ];
+}
+
+/** Round markers while end labels name the lines; once a key does, each line its own shape. */
+function shapedLines(lines: readonly Omit<Line, 'shape'>[], keyed: boolean): Line[] {
+  return lines.map((line, index) => ({
+    ...line,
+    shape: keyed ? (MARKER_SHAPES[index % MARKER_SHAPES.length] ?? 'circle') : 'circle',
+  }));
 }
 
 /** A value as the chart prints it, its absence in words. */
