@@ -265,11 +265,11 @@ export function SetupSteps({
             <span
               aria-hidden
               className={cn(
-                'relative grid size-3 shrink-0 place-items-center rounded-[4px]',
+                'relative grid size-3 shrink-0 place-items-center rounded-mark',
                 SETUP_MARKER[step.state],
               )}
             >
-              {step.state === 'done' ? <Check className="size-2.5" strokeWidth={3} /> : null}
+              {step.state === 'done' ? <Check className="size-2.5" /> : null}
             </span>
             <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 py-1">
               <span className={textRole(current ? 'label' : 'body', 'text-ink min-w-0')}>

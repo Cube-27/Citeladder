@@ -165,6 +165,7 @@ function RunsContent({
     );
   }
   if (audits.length === 0) {
+    const toStart = promptsReady ? '' : ' Add prompts to start.';
     return (
       <StateBlock
         kind="empty"
@@ -172,7 +173,7 @@ function RunsContent({
         heading="No runs yet"
         description={
           canRun
-            ? `A run asks AI engines your prompts and measures how they answer about your brand.${promptsReady ? '' : ' Add prompts to start.'}`
+            ? `A run asks AI engines your prompts and measures how they answer about your brand.${toStart}`
             : 'No run has measured how AI engines answer questions about this brand yet.'
         }
         action={canRun ? <FirstRunAction /> : undefined}
