@@ -60,9 +60,6 @@ const BUTTON_VARIANT: Record<ButtonVariant, string> = {
     'bg-negative text-on-ink border border-negative not-disabled:hover:opacity-90 pointer-coarse:min-h-[var(--control-coarse)]',
 };
 
-/** A masthead button whose word shows only from `shell`: below it, a square icon control. */
-export const LABEL_FROM_SHELL = 'w-[var(--control-md)] justify-center px-0 shell:w-auto shell:px-3';
-
 /** The button face for an element that is not a `Button` (a link styled as one). */
 export function buttonClasses(
   variant: ButtonVariant = 'secondary',

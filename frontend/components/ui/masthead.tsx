@@ -15,22 +15,24 @@ import { cn } from '@/lib/utils';
  * shows beside it and its hairline meets the sidebar's ident cell.
  */
 const BAR_LAYER =
-  'before:bg-ground before:border-rule before:absolute before:inset-y-0 before:-start-[var(--content-gutter)] before:-z-10 before:w-[calc(100cqw+2*var(--content-gutter))] before:border-b';
+  'before:bg-chrome before:border-rule before:absolute before:inset-y-0 before:-start-[var(--content-gutter)] before:-z-10 before:w-[calc(100cqw+2*var(--content-gutter))] before:border-b';
+
+/** A masthead control that keeps its text label wherever it is drawn (search, "Ask agent"). */
+export const MASTHEAD_LABELLED = 'min-w-0 justify-start';
 
 /**
- * Masthead: the head of every shell page, 48 tall and
- * sticky with a hairline under it. From the left: the menu button below
- * 900px and a record page's back link (`lead`), the page title in `title`
- * type; at the right the search trigger, the page's secondary actions and its
- * one primary action (`actions`, the primary inside `MastheadPrimary`), then
- * "Ask agent" (`end`). Controls are 32 and share the row.
+ * Masthead: the head of every shell page, 56 tall on `chrome`, sticky with a
+ * rule under it, one row at every width. From the left: the menu button
+ * below 900px and a record page's back link (`lead`), the page title in
+ * `title` type; at the right the search trigger, the page's secondary
+ * actions, its one primary action (`actions`, the primary inside
+ * `MastheadPrimary`), then "Ask agent" (`end`), each with its text label.
  *
- * From `rail` the masthead is one 48px row and the title one line: a longer
- * name is cut with an ellipsis, and only then does it take keyboard focus and
- * show the full name in the tooltip. Its accessible name is always the full
- * name. Below `rail` a page with actions takes a second row for them, ending on
- * the edge: More actions (the secondary actions, folded), the primary, "Ask
- * agent"; the title then wraps to two lines before it is cut.
+ * The title is one line from `rail` and up to two below it: a longer name is
+ * cut with an ellipsis, and only then does it take keyboard focus and show
+ * the full name in the tooltip. Its accessible name is always the full name.
+ * Below `rail` the row is the menu button, the title, the primary and one
+ * "More" menu holding the search, the secondary actions and "Ask agent".
  */
 export function Masthead({
   title,
@@ -54,7 +56,9 @@ export function Masthead({
   const cut = useIsCut(heading, title);
   usePublishedHeight(header);
   const [primarySlot, setPrimarySlot] = useState<HTMLElement | null>(null);
-  const hasActions = actions !== undefined && actions !== null && actions !== false;
+  const hasControls = [search, actions, end].some(
+    (part) => part !== undefined && part !== null && part !== false,
+  );
   return (
     <header
       data-masthead=""
@@ -64,7 +68,8 @@ export function Masthead({
         'z-sticky sticky top-0 isolate flex min-h-[var(--masthead-height)] min-w-0 items-center gap-2 rail:h-[var(--masthead-height)]',
       )}
     >
-      <div className="me-2 flex min-h-[var(--masthead-height)] min-w-0 flex-1 items-center gap-2">
+      {/* Below `rail` the title side keeps its content's minimum; the actions give way. */}
+      <div className="rail:min-w-0 me-2 flex flex-1 items-center gap-2">
         {lead}
         <Tooltip content={title} side="bottom" describe={false} shouldOpen={isTextCut}>
           <h1
@@ -73,22 +78,29 @@ export function Masthead({
             tabIndex={cut ? 0 : undefined}
             className={textRole(
               'title',
-              cn('min-w-0 break-words not-rail:line-clamp-2 rail:truncate', cut && 'focus-ring'),
+              // Below `rail` it keeps 112px, room for its first words on two lines.
+              cn(
+                'not-rail:min-w-28 not-rail:line-clamp-2 rail:truncate min-w-0 break-normal',
+                cut && 'focus-ring',
+              ),
             )}
           >
             {title}
           </h1>
         </Tooltip>
       </div>
-      {search}
-      <div data-masthead-end="" className="flex shrink-0 items-center gap-2">
-        {hasActions ? (
+      <div data-masthead-end="" className="rail:shrink-0 flex min-w-0 items-center gap-2">
+        {hasControls ? (
           <MastheadPrimarySlot value={primarySlot}>
-            <MastheadOverflow>{actions}</MastheadOverflow>
+            <MastheadOverflow>
+              {search}
+              {actions}
+              {/* "Ask agent" comes after the primary in the row. */}
+              {end ? <div className="rail:order-1 flex flex-col">{end}</div> : null}
+            </MastheadOverflow>
           </MastheadPrimarySlot>
         ) : null}
         <span ref={setPrimarySlot} data-masthead-primary="" className="contents" />
-        {end}
       </div>
     </header>
   );

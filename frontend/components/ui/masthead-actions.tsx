@@ -24,7 +24,7 @@ export const MastheadPrimarySlot = createContext<HTMLElement | null | undefined>
 /**
  * The page's one primary action, wherever the actions component renders it:
  * drawn in the masthead's primary slot after the secondary actions, so it
- * stays in view when they fold behind More actions. Outside a masthead it
+ * stays in view when they fold behind More. Outside a masthead it
  * renders in place.
  */
 export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>) {
@@ -37,9 +37,10 @@ export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>)
 const POPUP_LAYER = '[data-radix-popper-content-wrapper], [role="dialog"], [role="alertdialog"]';
 
 /**
- * The masthead's secondary actions. In a wide masthead they sit in the row.
- * Below `rail`, two or more, or one beside the primary, fold behind a
- * labelled More actions button into a panel under the masthead, rendered once
+ * The masthead's controls other than the primary (search, secondary actions,
+ * "Ask agent"). In a wide masthead they sit in the row. Below `rail`, two or
+ * more, or one beside the primary, fold behind one button named "More" into
+ * a panel under the masthead, rendered once
  * and kept mounted, so their dialogs and state survive it closing. Escape, a
  * press outside or a finished action closes it; Escape returns focus to the
  * button.
@@ -75,7 +76,7 @@ export function MastheadOverflow({ children }: Readonly<{ children: ReactNode }>
         <IconButton
           ref={trigger}
           icon={MoreHorizontal}
-          label="More actions"
+          label="More"
           variant="secondary"
           aria-expanded={open}
           aria-controls={panelId}
@@ -128,15 +129,22 @@ function clickOutcome(target: Element, panel: HTMLElement): OverflowOutcome {
   return opensPopup ? 'stay' : 'close';
 }
 
-/** How many elements the box holds, kept current as its children render. */
+/**
+ * How many controls the box holds, kept current as its children render; a
+ * wrapper whose control drew nothing (no "Ask agent" on an Agent page) is none.
+ */
 function useChildCount(node: HTMLElement | null) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     if (!node) return;
-    const update = () => setCount(node.childElementCount);
+    const update = () =>
+      setCount(
+        [...node.children].filter((child) => child.matches('button, a') || child.firstElementChild)
+          .length,
+      );
     update();
     const observer = new MutationObserver(update);
-    observer.observe(node, { childList: true });
+    observer.observe(node, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [node]);
   return count;

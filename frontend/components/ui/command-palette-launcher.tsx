@@ -1,9 +1,10 @@
 import { Search } from 'lucide-react';
 import { useEffect, useState, useSyncExternalStore, type ComponentProps } from 'react';
 
-import { Button, LABEL_FROM_SHELL } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import type { CommandPalette, PaletteLaunch } from '@/components/ui/command-palette';
 import { Kbd } from '@/components/ui/kbd';
+import { MASTHEAD_LABELLED } from '@/components/ui/masthead';
 import { reportClientError } from '@/lib/client-errors';
 import { OPEN_COMMAND_PALETTE_EVENT } from '@/lib/navigation/shell-events';
 import { cn } from '@/lib/utils';
@@ -42,15 +43,11 @@ export function CommandPaletteTrigger({
       }}
       aria-label="Search or jump to"
       aria-keyshortcuts="Meta+K Control+K"
-      className={cn(
-        'text-ink-2 shell:justify-start min-w-0 text-left',
-        LABEL_FROM_SHELL,
-        className,
-      )}
+      className={cn('text-ink-2 text-left', MASTHEAD_LABELLED, className)}
     >
       <Search className="text-ink-2 size-4 shrink-0" aria-hidden />
       {/* The visible word stays short beside the shortcut; the name says it all. */}
-      <span className="shell:inline hidden min-w-0 truncate">Search</span>
+      <span className="min-w-0 truncate">Search</span>
       <Kbd className="shell:inline-flex hidden">{isMac ? '⌘K' : 'Ctrl K'}</Kbd>
     </Button>
   );
