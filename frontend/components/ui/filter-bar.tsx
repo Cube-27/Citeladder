@@ -36,8 +36,9 @@ export type FilterBarProps = Readonly<{
   /**
    * Every filter of the list, after the search: period, market, engine, kind,
    * status and typed values alike, each its own trigger ("Page kind ▾" until
-   * set, then "Page kind: Article"), in this order. Beside a search, more than
-   * four share the one All filters menu.
+   * set, then "Page kind: Article"), in this order. In a full row (view,
+   * search and actions), or more than four beside a search, they share one
+   * All filters menu.
    */
   filters?: readonly FilterDefinition[];
   /**
@@ -56,10 +57,11 @@ export type FilterBarProps = Readonly<{
  * one order on every page: the view, the search, the filters, then the count
  * and the action at the row's end. Every control is 32px and 8 apart.
  *
- * Each filter is its own trigger: the row has room for them. Only a row that
- * also holds a search and more than `FILTERS_BESIDE_SEARCH` filters groups
- * them in All filters (with the count of active ones), so the search keeps
- * its width. From 900px it is one row and the search (200 at least) takes the
+ * Each filter is its own trigger where the row has room for them. Two or more
+ * share All filters (with the count of active ones) in a full row, one that
+ * also holds a view, a search and actions (Products), or beside a search when
+ * there are more than `FILTERS_BESIDE_SEARCH`, so the row stays one line and
+ * the search keeps its width. From 900px it is one row and the search (200 at least) takes the
  * spare width; when the row cannot hold everything, controls wrap as whole
  * units, the actions at the line's right end, and nothing shrinks below its
  * label. Below 900px the bar stacks into one full-width column in the same
@@ -70,6 +72,7 @@ export type FilterBarProps = Readonly<{
 export function FilterBar({ view, search, filters, status, actions }: FilterBarProps) {
   // A search takes every spare pixel of its line, so the count needs no push.
   const searched = Boolean(search);
+  const full = searched && Boolean(view) && Boolean(actions);
   return (
     <fieldset
       data-filter-bar=""
@@ -80,7 +83,9 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
       {search ? (
         <div className="rail:flex-[1_1_200px] rail:min-w-[200px] min-w-0">{search}</div>
       ) : null}
-      {filters ? <RowFilters filters={filters} searched={searched} /> : null}
+      {filters ? (
+        <RowFilters filters={filters} grouped={grouped(filters.length, searched, full)} />
+      ) : null}
       {status === undefined ? null : (
         <output
           aria-live="polite"
@@ -110,12 +115,17 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
 /** Beside a search, the most filters the row shows as their own triggers. */
 const FILTERS_BESIDE_SEARCH = 4;
 
-/** The row's filters: each its own trigger, or All filters beside a search with more than four. */
+/** Whether the row's filters share All filters: two or more in a full row, or more than four beside a search. */
+function grouped(count: number, searched: boolean, full: boolean): boolean {
+  return (full && count > 1) || (searched && count > FILTERS_BESIDE_SEARCH);
+}
+
+/** The row's filters: each its own trigger, or one All filters menu. */
 function RowFilters({
   filters,
-  searched,
-}: Readonly<{ filters: readonly FilterDefinition[]; searched: boolean }>) {
-  if (searched && filters.length > FILTERS_BESIDE_SEARCH)
+  grouped,
+}: Readonly<{ filters: readonly FilterDefinition[]; grouped: boolean }>) {
+  if (grouped)
     return (
       <div className="flex min-w-0 shrink-0">
         <AllFilters filters={filters} />
