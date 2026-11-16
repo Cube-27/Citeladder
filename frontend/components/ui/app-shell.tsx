@@ -19,7 +19,7 @@ import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
  * page tabs, filter bar, sections) belongs to the templates.
  */
 const FRAME =
-  'bg-ground text-ink grid min-h-dvh grid-cols-[minmax(0,1fr)] rail:grid-cols-[var(--sidebar-width-compact)_minmax(0,1fr)] shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-[var(--motion-open)] ease-[var(--ease-standard)] data-[sidebar-state=collapsed]:ease-[var(--ease-exit)] motion-reduce:transition-none has-[[data-dragging]]:transition-none';
+  'bg-ground text-ink grid min-h-dvh grid-cols-[minmax(0,1fr)] rail:grid-cols-[var(--sidebar-width-compact)_minmax(0,1fr)] shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-[var(--motion-open)] ease-[var(--ease-resize)] motion-reduce:transition-none has-[[data-dragging]]:transition-none';
 // The sidebar sits on `chrome`; one hairline divides it from the page in both
 // themes, and the resize handle's line strengthens it on hover, focus and drag.
 const SIDEBAR_COLUMN =

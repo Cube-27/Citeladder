@@ -31,13 +31,13 @@
   animation: modal-overlay-in var(--motion-open) var(--ease-standard) both;
 }
 .dialog-overlay[data-state='closed'] {
-  animation: modal-overlay-in var(--motion-open) var(--ease-exit) reverse both;
+  animation: modal-overlay-in var(--motion-close) var(--ease-exit) reverse both;
 }
 .dialog-panel[data-state='open'] {
   animation: modal-panel-in var(--motion-open) var(--ease-standard) both;
 }
 .dialog-panel[data-state='closed'] {
-  animation: modal-panel-in var(--motion-open) var(--ease-exit) reverse both;
+  animation: modal-panel-in var(--motion-close) var(--ease-exit) reverse both;
 }
 
 .tooltip-panel,
@@ -70,6 +70,7 @@
 .toast-panel[data-state='closed'] {
   opacity: 0;
   transform: translateY(2px);
+  transition-duration: var(--motion-close);
   transition-timing-function: var(--ease-exit);
 }
 

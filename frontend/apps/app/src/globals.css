@@ -311,12 +311,16 @@
   /* The Flow template's one column (sign-in, setup, the workspace chooser). */
   --container-flow: 480px;
 
-  /* Motion: hover and colour over --motion-fast. Whatever opens closes over
-     the same --motion-open, easing out as it opens and in as it closes. */
+  /* Motion: hover and colour over --motion-fast. Whatever opens eases out over
+     --motion-open and closes 20% faster, easing in; a literal so script can read it. */
   --motion-fast: 120ms;
   --motion-open: 200ms;
+  --motion-close: 160ms;
   --ease-standard: ease-out;
   --ease-exit: ease-in;
+  /* Resizing what is already on screen (the sidebar) is no open or close:
+     --motion-open both ways, on one symmetric curve. */
+  --ease-resize: ease-in-out;
   /* The website's steps (and the app's draft edge); app open/close never uses them. */
   --motion-normal: 150ms;
   --motion-slow: 200ms;
@@ -1845,6 +1849,7 @@ samp {
 .menu-panel[data-state="closed"] {
   opacity: 0;
   transform: translateY(-2px);
+  transition-duration: var(--motion-close);
   transition-timing-function: var(--ease-exit);
 }
 
@@ -1884,7 +1889,7 @@ samp {
 }
 
 .drawer-overlay[data-state="closed"] {
-  animation: drawer-overlay-out var(--motion-open) var(--ease-exit) both;
+  animation: drawer-overlay-out var(--motion-close) var(--ease-exit) both;
 }
 
 .drawer-panel[data-state="open"] {
@@ -1892,7 +1897,7 @@ samp {
 }
 
 .drawer-panel[data-state="closed"] {
-  animation: drawer-panel-out var(--motion-open) var(--ease-exit) both;
+  animation: drawer-panel-out var(--motion-close) var(--ease-exit) both;
 }
 
 .drawer-panel[data-side="left"] {
