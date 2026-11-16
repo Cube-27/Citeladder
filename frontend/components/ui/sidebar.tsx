@@ -116,7 +116,8 @@ function revealCurrent(list: HTMLElement) {
  * The labelled list between the pinned parts: the one region that scrolls.
  * It fades at the end it can scroll towards (a mask on the list, globals.css)
  * and shows the current row on load and whenever `revealKey` (the location)
- * changes. Groups stack as `NAV_STACK` spaces them.
+ * changes. Sections sit 16 apart; groups closer (`[data-sidebar-group]`,
+ * globals.css).
  */
 export function SidebarScrollList({
   label,
@@ -136,23 +137,12 @@ export function SidebarScrollList({
       data-fade-bottom={ends.bottom || undefined}
       className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-3"
     >
-      <nav aria-label={label} className={NAV_STACK}>
+      <nav aria-label={label} className="flex flex-col gap-4">
         {children}
       </nav>
     </div>
   );
 }
-
-/**
- * Sections 16 apart; a group 8 below the rows of the one before it, and 2
- * below a folded group with no rows showing, so folded labels share the
- * rows' 34 pitch and read as one list.
- */
-const NAV_STACK = cn(
-  'flex flex-col [&>*+*]:mt-4',
-  '[&>[data-sidebar-group]+[data-sidebar-group]]:mt-2',
-  '[&>[data-sidebar-group]:not(:has(li))+[data-sidebar-group]]:mt-0.5',
-);
 
 /**
  * A group of rows. A titled group's label is a 32-high button in

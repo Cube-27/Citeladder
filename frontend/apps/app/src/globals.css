@@ -792,6 +792,14 @@
 [data-sidebar-scroll]:has(:focus-visible) {
   mask-image: none;
 }
+/* In the list's 16 gap, a group sits 8 below the rows before it and 2 below
+   a folded label, so folded labels share the rows' 34 pitch. */
+[data-sidebar-group] + [data-sidebar-group] {
+  margin-top: -8px;
+}
+[data-sidebar-group]:not(:has(li)) + [data-sidebar-group] {
+  margin-top: -14px;
+}
 
 /* Below the shell breakpoint the website's main gutter narrows to space-6. */
 @media (max-width: 1279px) {
