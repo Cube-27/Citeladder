@@ -18,7 +18,7 @@ import { notFound } from '../errors.ts';
 import { markIssueFixed } from './issue-states.ts';
 import { crawlError } from './planner-policy.ts';
 import { loadCrawl, pageAuditsSql, viewIssuesSql, type Crawl } from './reads/crawl.ts';
-import { issueGroupId, siteLevelRule } from './reads/rules.ts';
+import { issueGroupId, siteLevelRule, siteLevelScope } from './reads/rules.ts';
 import { rerunTrackedPages } from './selection.ts';
 
 const FIXED_STATES = ['marked_fixed', 'resolved'];
@@ -84,15 +84,31 @@ export async function issueFixes(
     ${issuePagesFrom(crawl)}
     group by i.rule_id, i.finding_class
     order by i.rule_id, i.finding_class`.execute(db);
+  const siteLevel = await sql<{ rule_id: string; finding_class: string; evidence: unknown }>`
+    select i.rule_id, i.finding_class, i.evidence from site_issues i
+    where ${viewIssuesSql(crawl, 'i')} and ${siteLevelRule}`.execute(db);
+  const scopes = new Map(
+    siteLevel.rows.map((row) => [
+      issueGroupId(crawl.id, row.rule_id, row.finding_class),
+      siteLevelScope(row.rule_id, row.evidence),
+    ]),
+  );
   return {
     crawl_id: crawl.id,
-    items: rows.rows.map((row) => ({
-      group_id: issueGroupId(crawl.id, row.rule_id, row.finding_class),
-      affected_url_count: row.affected,
-      fixed_url_count: row.fixed,
-      verified_url_count: row.verified,
-      rerun_url_count: row.rerun,
-    })),
+    items: rows.rows.map((row) => {
+      const groupId = issueGroupId(crawl.id, row.rule_id, row.finding_class);
+      const scope = scopes.get(groupId);
+      // A site-level finding is one row on the homepage naming its pages: its
+      // one state covers every page it names, as the Issues list counts them.
+      const pages = (homepage: number) => (scope ? Math.sign(homepage) * scope.affected : homepage);
+      return {
+        group_id: groupId,
+        affected_url_count: scope ? scope.affected : row.affected,
+        fixed_url_count: pages(row.fixed),
+        verified_url_count: pages(row.verified),
+        rerun_url_count: row.rerun,
+      };
+    }),
   };
 }
 

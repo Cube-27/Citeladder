@@ -1,14 +1,68 @@
-import type { PageKindEvidence, PageListEvidence } from '@citeladder/contracts/site-health';
+import type {
+  DuplicateMetadataEvidence,
+  PageListEvidence,
+  UnhubbedPageKindEvidence,
+} from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
 import { compareText } from '../text-order.ts';
-import type { ArchitecturePage, buildArchitecture } from './architecture-model.ts';
+import {
+  duplicateSets,
+  type ArchitecturePage,
+  type buildArchitecture,
+} from './architecture-model.ts';
 
 const p = policy.site_health.architecture;
 
+type KindEvidence = DuplicateMetadataEvidence | UnhubbedPageKindEvidence;
+type KindRow = ReturnType<typeof buildArchitecture>['page_kinds'][number];
 /** The bounded sample a finding names: its pages or its page kinds. */
-type Sample = Pick<PageListEvidence, 'pages'> | Pick<PageKindEvidence, 'page_kinds'>;
+type Sample =
+  | Pick<PageListEvidence, 'pages'>
+  | Pick<DuplicateMetadataEvidence, 'page_kinds'>
+  | Pick<UnhubbedPageKindEvidence, 'page_kinds'>;
 const pageSample = (pages: PageListEvidence['pages']) => ({ pages });
-const kindSample = (page_kinds: PageKindEvidence['page_kinds']) => ({ page_kinds });
+const evidencePage = (page: ArchitecturePage) => ({
+  site_url_id: page.id,
+  url: page.url,
+  title: page.title,
+  page_kind: page.kind,
+});
+const kindCounts = (kind: KindRow) => ({
+  page_kind: kind.page_kind,
+  page_count: kind.page_count,
+  duplicate_metadata_count: kind.duplicate_metadata_count,
+});
+
+/** Each kind's duplicate sets, the shared title and description with the pages repeating them. */
+const duplicateSample =
+  (byId: Map<string, ArchitecturePage>) =>
+  (kinds: KindRow[]): Pick<DuplicateMetadataEvidence, 'page_kinds'> => ({
+    page_kinds: kinds.map((kind) => {
+      const sets = duplicateSets(kind.site_url_ids.map((id) => byId.get(id)!));
+      return {
+        ...kindCounts(kind),
+        duplicate_set_count: sets.length,
+        duplicate_sets: sets.slice(0, p.max_evidence_items).map((set) => ({
+          title: set.first.title,
+          description: set.first.description,
+          page_count: set.pages.length,
+          pages: set.pages.slice(0, p.max_evidence_items).map(evidencePage),
+        })),
+      };
+    }),
+  });
+
+/** Each kind with the pages no hub parents. */
+const unhubbedSample =
+  (byId: Map<string, ArchitecturePage>) =>
+  (kinds: KindRow[]): Pick<UnhubbedPageKindEvidence, 'page_kinds'> => ({
+    page_kinds: kinds.map((kind) => ({
+      ...kindCounts(kind),
+      pages: kind.site_url_ids
+        .slice(0, p.max_evidence_items)
+        .map((id) => evidencePage(byId.get(id)!)),
+    })),
+  });
 
 /**
  * The affected pages of each page kind, over every row rather than the bounded
@@ -48,7 +102,7 @@ function evaluation<Row extends { page_kind: string }>(
           ...sample(rows.slice(0, p.max_evidence_items)),
           page_kind_counts: pageKindCounts(rows, pagesOf),
           coverage_state: coverage,
-        } satisfies PageListEvidence | PageKindEvidence),
+        } satisfies PageListEvidence | KindEvidence),
   };
 }
 /** The first two path segments: `/blogs/testimonials/a-review` is `/blogs/testimonials`. */
@@ -152,7 +206,7 @@ export function architectureRules(
           kind.page_count >= p.duplicate_metadata_min_urls &&
           kind.duplicate_metadata_count / kind.page_count >= p.duplicate_metadata_rate,
       ),
-      kindSample,
+      duplicateSample(byId),
       coverage,
       false,
       // The finding is the duplicated pages, as its group counts them.
@@ -186,7 +240,7 @@ export function architectureRules(
             (id) => p.detail_page_kinds.includes(byId.get(id)!.kind) && parents.get(id) === null,
           ),
       ),
-      kindSample,
+      unhubbedSample(byId),
       coverage,
       true,
       (kind) => kind.page_count,

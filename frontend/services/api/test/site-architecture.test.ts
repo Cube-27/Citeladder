@@ -145,6 +145,75 @@ it('keeps observed orphan and duplicate counts under partial coverage but gates 
     0.75,
   );
 });
+it('records the pages each duplicate set shares and the pages of an unhubbed kind', () => {
+  const contact = { title: 'Contact us | Acme', description: 'Get in touch' };
+  const pages = [
+    page('home', '/', 'homepage', { depth: 0 }),
+    page('c1', '/contact', 'about_contact', contact),
+    page('c2', '/pages/contact', 'about_contact', { ...contact, title: ' contact US | acme ' }),
+    page('c3', '/support/contact', 'about_contact', contact),
+    page('a1', '/about', 'about_contact', { title: 'About', description: '' }),
+    page('a2', '/pages/about', 'about_contact', { title: 'About', description: '' }),
+    page('team', '/team', 'about_contact', { title: 'Team', description: '' }),
+    // Under a path no hub page sits at: nothing parents them.
+    page('s1', '/services/install', 'service'),
+    page('s2', '/services/repair', 'service'),
+    page('s3', '/services/supply', 'service'),
+  ];
+  const evaluations = architectureRules(
+    buildArchitecture(pages, 'complete', context),
+    pages,
+    'complete',
+  );
+  const evidence = (id: string) =>
+    record(evaluations.find((row) => row.rule.rule_id === id)!.evidence);
+  const sample = (id: string, kind: string) => ({
+    site_url_id: id,
+    url: pages.find((item) => item.id === id)!.url,
+    title: pages.find((item) => item.id === id)!.title,
+    page_kind: kind,
+  });
+  expect(evidence('architecture.duplicate_metadata_in_page_kind')).toMatchObject({
+    count: 1,
+    page_kind_counts: { about_contact: 5 },
+    page_kinds: [
+      {
+        page_kind: 'about_contact',
+        page_count: 6,
+        duplicate_metadata_count: 5,
+        duplicate_set_count: 2,
+        duplicate_sets: [
+          {
+            title: 'Contact us | Acme',
+            description: 'Get in touch',
+            page_count: 3,
+            pages: [
+              sample('c1', 'about_contact'),
+              sample('c2', 'about_contact'),
+              sample('c3', 'about_contact'),
+            ],
+          },
+          {
+            title: 'About',
+            description: '',
+            page_count: 2,
+            pages: [sample('a1', 'about_contact'), sample('a2', 'about_contact')],
+          },
+        ],
+      },
+    ],
+  });
+  expect(evidence('architecture.unhubbed_page_kind')).toMatchObject({
+    page_kind_counts: { service: 3 },
+    page_kinds: [
+      {
+        page_kind: 'service',
+        page_count: 3,
+        pages: [sample('s1', 'service'), sample('s2', 'service'), sample('s3', 'service')],
+      },
+    ],
+  });
+});
 it('groups pages no link path from the homepage reaches by section, apart from orphans', () => {
   const pages = [
     page('home', '/', 'homepage', { depth: 0, inbound: 1 }),

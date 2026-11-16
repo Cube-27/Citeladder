@@ -33,23 +33,32 @@ function median(values: number[]) {
   if (!sorted.length) return null;
   return sorted.length % 2 ? sorted[middle]! : (sorted[middle - 1]! + sorted[middle]!) / 2;
 }
-function kindRow(kind: string, members: ArchitecturePage[]) {
-  const signatures = new Map<string, number>();
+/** Pages sharing one normalized title and description, largest set first; blank metadata never matches. */
+export function duplicateSets(members: ArchitecturePage[]) {
+  const signatures = new Map<string, { first: ArchitecturePage; pages: ArchitecturePage[] }>();
   for (const page of members) {
     const title = normalized(page.title);
     const description = normalized(page.description);
     if (!title && !description) continue;
     const key = JSON.stringify([title, description]);
-    signatures.set(key, (signatures.get(key) ?? 0) + 1);
+    const set = signatures.get(key);
+    if (set) set.pages.push(page);
+    else signatures.set(key, { first: page, pages: [page] });
   }
+  return [...signatures.values()]
+    .filter((set) => set.pages.length > 1)
+    .sort((a, b) => b.pages.length - a.pages.length || compareText(a.first.url, b.first.url));
+}
+function kindRow(kind: string, members: ArchitecturePage[]) {
   return {
     page_kind: kind,
     page_count: members.length,
     median_depth: median(members.flatMap((page) => (page.depth === null ? [] : [page.depth]))),
     indexable_count: members.filter((page) => page.indexable === true).length,
-    duplicate_metadata_count: [...signatures.values()]
-      .filter((count) => count > 1)
-      .reduce((sum, count) => sum + count, 0),
+    duplicate_metadata_count: duplicateSets(members).reduce(
+      (sum, set) => sum + set.pages.length,
+      0,
+    ),
     orphan_count: members.filter((page) => page.kind !== 'homepage' && page.inbound === 0).length,
     site_url_ids: members.map((page) => page.id),
   };

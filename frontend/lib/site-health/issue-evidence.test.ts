@@ -156,11 +156,38 @@ describe('evidenceFacts', () => {
     expect(
       siteLevelEvidence('architecture.unhubbed_page_kind', {
         count: 1,
-        page_kinds: [{ page_kind: 'product', page_count: 40, duplicate_metadata_count: 2 }],
+        page_kinds: [
+          {
+            page_kind: 'product',
+            page_count: 40,
+            duplicate_metadata_count: 2,
+            pages: [
+              {
+                site_url_id: 'a80abae1-a069-4f97-a5bd-76d3fc7d041b',
+                url: 'https://www.thenetreturn.com/products/net',
+                title: 'Net',
+                page_kind: 'product',
+              },
+            ],
+          },
+        ],
         page_kind_counts: { product: 40 },
         coverage_state: 'complete',
       }),
-    ).toEqual({ kind: 'page_kinds', pageKinds: [{ pageKind: 'product', pageCount: 40 }] });
+    ).toEqual({
+      kind: 'pages',
+      total: 40,
+      pages: [
+        {
+          siteUrlId: 'a80abae1-a069-4f97-a5bd-76d3fc7d041b',
+          url: 'https://www.thenetreturn.com/products/net',
+          title: 'Net',
+          pageKind: 'product',
+          clicksFromHome: null,
+        },
+      ],
+      sections: [],
+    });
     expect(siteLevelEvidence('technical.indexable', { noindex: true })).toBeNull();
   });
 

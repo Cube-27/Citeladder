@@ -2,7 +2,7 @@
  * Site-level findings: architecture rules and sitewide links.
  *
  * Site-level findings are judged over the whole crawl and persisted ONCE,
- * against the homepage, with the pages (or page kinds, or link targets) they
+ * against the homepage, with the pages (or duplicate sets, or link targets) they
  * found in the evidence (`siteLevelFindingSchema`). Shown as an occurrence
  * they read as "the homepage is buried too deeply"; the pages in the evidence
  * are the affected pages. Pure.
@@ -59,6 +59,15 @@ type LinkTarget = Readonly<{
   pages: readonly EvidencePage[];
 }>;
 
+/** Pages of one kind sharing a title and description: how many, and a bounded sample. */
+type DuplicateSet = Readonly<{
+  pageKind: string;
+  title: string;
+  description: string;
+  pageCount: number;
+  pages: readonly EvidencePage[];
+}>;
+
 export type SiteLevelEvidence =
   | Readonly<{
       kind: 'pages';
@@ -67,8 +76,10 @@ export type SiteLevelEvidence =
       sections: readonly EvidenceSection[];
     }>
   | Readonly<{
-      kind: 'page_kinds';
-      pageKinds: readonly Readonly<{ pageKind: string; pageCount: number }>[];
+      kind: 'duplicate_sets';
+      /** Pages repeating another page's metadata, over every set. */
+      total: number;
+      sets: readonly DuplicateSet[];
     }>
   | Readonly<{
       kind: 'link_targets';
@@ -124,22 +135,38 @@ function linkTargets(finding: LinkTargetFinding): LinkTarget[] {
   }));
 }
 
-/** The pages, page kinds or link targets a site-level finding names; `null` for a per-page rule. */
+/** Affected pages over every page kind, not the sample. */
+const countedPages = (counts: Readonly<Record<string, number>>) =>
+  Object.values(counts).reduce((sum, count) => sum + count, 0);
+
+/** The pages, duplicate sets or link targets a site-level finding names; `null` for a per-page rule. */
 export function siteLevelEvidence(ruleId: string, evidence: unknown): SiteLevelEvidence | null {
   const finding = siteLevelFinding(ruleId, evidence);
   if (finding === null) return null;
   switch (finding.rule_id) {
     case 'architecture.duplicate_metadata_in_page_kind':
-    case 'architecture.unhubbed_page_kind': {
-      const duplicates = finding.rule_id === 'architecture.duplicate_metadata_in_page_kind';
       return {
-        kind: 'page_kinds',
-        pageKinds: finding.evidence.page_kinds.map((row) => ({
-          pageKind: row.page_kind,
-          pageCount: duplicates ? row.duplicate_metadata_count : row.page_count,
-        })),
+        kind: 'duplicate_sets',
+        total: countedPages(finding.evidence.page_kind_counts),
+        sets: finding.evidence.page_kinds.flatMap((row) =>
+          row.duplicate_sets.map((set) => ({
+            pageKind: row.page_kind,
+            title: set.title,
+            description: set.description,
+            pageCount: set.page_count,
+            pages: set.pages.map((page) => evidencePage(page, false)),
+          })),
+        ),
       };
-    }
+    case 'architecture.unhubbed_page_kind':
+      return {
+        kind: 'pages',
+        total: countedPages(finding.evidence.page_kind_counts),
+        pages: finding.evidence.page_kinds.flatMap((row) =>
+          row.pages.map((page) => evidencePage(page, false)),
+        ),
+        sections: [],
+      };
     case 'technical.sitewide_broken_link':
     case 'technical.sitewide_link_redirect':
       return { kind: 'link_targets', total: finding.evidence.count, targets: linkTargets(finding) };
@@ -156,6 +183,10 @@ export function siteLevelEvidence(ruleId: string, evidence: unknown): SiteLevelE
 /** A page count in words: `1 page`, `158 pages`. */
 export const pageCountLabel = (count: number) =>
   `${String(count)} ${count === 1 ? 'page' : 'pages'}`;
+
+/** What a duplicate set's pages repeat: their title, else their description. */
+export const sharedText = (set: Pick<DuplicateSet, 'title' | 'description'>) =>
+  set.title || set.description;
 
 /** Where a sitewide link lands, as the reader would fix it: `404`, `/new`, `redirect loop`. */
 export function linkOutcomeLabel(outcome: LinkOutcome, origin: string | null): string {
@@ -181,7 +212,7 @@ export function linkOutcomeLabel(outcome: LinkOutcome, origin: string | null): s
  * - a page list: its sections when it groups pages by path
  *   (`/blogs/testimonials (158 pages)`), otherwise each page's path, with its
  *   depth where depth is the finding;
- * - page kinds: each affected kind;
+ * - duplicate metadata: each shared title and on how many pages;
  * - sitewide links: each link, where it lands, and on how many pages.
  *
  * Empty for a per-page rule.
@@ -191,8 +222,8 @@ export function siteLevelFacts(ruleId: string, evidence: unknown): string[] {
   switch (listed?.kind) {
     case undefined:
       return [];
-    case 'page_kinds':
-      return listed.pageKinds.map((row) => row.pageKind);
+    case 'duplicate_sets':
+      return listed.sets.map((set) => `“${sharedText(set)}” (${pageCountLabel(set.pageCount)})`);
     case 'link_targets':
       return listed.targets.map((target) => {
         const origin = originOf(target.url);

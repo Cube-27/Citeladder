@@ -78,7 +78,24 @@ async function audit(
   const page = await fixtures.page(seed, path, {}, { siteUrlId, observed: true });
   const evaluationId = await fixtures.evaluation(seed, page, SITEMAP, outcome);
   if (outcome === 'satisfied') return page;
-  const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === SITEMAP)!;
+  await fileIssue({ seed, page, evaluationId, ruleId: SITEMAP, evidence: {} });
+  return page;
+}
+
+async function fileIssue({
+  seed,
+  page,
+  evaluationId,
+  ruleId,
+  evidence,
+}: {
+  seed: SiteSeed;
+  page: Awaited<ReturnType<SiteFixtures['page']>>;
+  evaluationId: string;
+  ruleId: string;
+  evidence: unknown;
+}) {
+  const rule = policy.site_health.rule_catalog.find((item) => item.rule_id === ruleId)!;
   await db
     .insertInto('site_issues')
     .values({
@@ -90,12 +107,12 @@ async function audit(
       analysis_id: page.analysisId,
       evaluation_id: evaluationId,
       source_artifact_id: page.artifactId,
-      rule_id: SITEMAP,
+      rule_id: ruleId,
       dimension: rule.dimension,
       category: rule.category,
       severity: rule.severity,
       finding_class: rule.finding_class,
-      evidence: JSON.stringify({}),
+      evidence: JSON.stringify(evidence),
       description: rule.description,
       remediation: rule.remediation,
       analyzer_version: policy.site_health.versions.analyzer,
@@ -103,15 +120,14 @@ async function audit(
       created_at: new Date(),
     })
     .execute();
-  return page;
 }
 
 /** The issue group's id as the Issues list names it. */
-async function groupOf(seed: SiteSeed) {
+async function groupOf(seed: SiteSeed, ruleId = SITEMAP) {
   const response = await request(seed, `/site-crawls/${seed.crawlId}/issues`);
   expect(response.status, await response.clone().text()).toBe(200);
   const page = siteIssuesPageSchema.parse(await response.json());
-  return page.items.find((item) => item.rule_id === SITEMAP)!.group_id;
+  return page.items.find((item) => item.rule_id === ruleId)!.group_id;
 }
 
 async function progress(seed: SiteSeed, groupId: string) {
@@ -190,6 +206,52 @@ describe('Mark fixed (SH-B12)', () => {
     await land(recheck);
     expect(await progress(full, groupId)).toEqual({ affected: 2, fixed: 1, verified: 1, rerun: 0 });
     expect(await stateOf(seed, b.id)).toBe('open');
+  });
+
+  it('counts a site-level finding by the pages its evidence names, not the homepage it is filed on', async () => {
+    const rule = 'architecture.duplicate_metadata_in_page_kind';
+    const seed = await fixtures.crawl('completed');
+    const full = await crawlAt(seed, at(0));
+    const home = await fixtures.page(full, '/', {}, { observed: true });
+    const kind = (page_kind: string, duplicates: number) => ({
+      page_kind,
+      page_count: duplicates + 1,
+      duplicate_metadata_count: duplicates,
+      duplicate_set_count: 1,
+      duplicate_sets: [],
+    });
+    await fileIssue({
+      seed: full,
+      page: home,
+      evaluationId: await fixtures.evaluation(full, home, rule, 'missing'),
+      ruleId: rule,
+      evidence: {
+        count: 3,
+        page_kinds: [kind('about_contact', 5), kind('docs', 5), kind('service', 6)],
+        page_kind_counts: { about_contact: 5, docs: 5, service: 6 },
+        coverage_state: 'complete',
+      },
+    });
+    await land(full);
+    const groupId = await groupOf(full, rule);
+    expect(await progress(full, groupId)).toEqual({
+      affected: 16,
+      fixed: 0,
+      verified: 0,
+      rerun: null,
+    });
+    const marked = await request(
+      full,
+      `/site-crawls/${full.crawlId}/issues/${groupId}/mark-fixed`,
+      'POST',
+    );
+    expect(marked.status, await marked.clone().text()).toBe(200);
+    expect(await progress(full, groupId)).toEqual({
+      affected: 16,
+      fixed: 16,
+      verified: 0,
+      rerun: null,
+    });
   });
 
   it('counts each tracked page at its latest audit, a page verified since the crawl still among M', async () => {
