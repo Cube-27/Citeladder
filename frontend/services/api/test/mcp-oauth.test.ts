@@ -1046,6 +1046,8 @@ function consentDocument(source: string) {
 async function callbackOf(response: Response) {
   expect(response.status).toBe(200);
   expect(response.headers.get('location')).toBeNull();
+  expect(response.headers.get('content-security-policy')).toMatch(/; form-action 'none'$/u);
+  expect(response.headers.get('x-frame-options')).toBe('DENY');
   const page = consentDocument(await response.text());
   expect(page.links).toEqual([page.refresh]);
   return new URL(page.refresh!);

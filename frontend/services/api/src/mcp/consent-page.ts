@@ -261,7 +261,8 @@ export function consentPage(view: ConsentView) {
  * transaction is spent; a refresh is a fresh navigation.
  */
 export function consentReturn(destination: string) {
-  const host = new URL(destination).host;
+  const url = new URL(destination);
+  const host = url.host || url.protocol.slice(0, -1);
   return document(
     `Returning to ${host}`,
     html`<div class="stack">

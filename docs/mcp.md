@@ -27,9 +27,10 @@ route. Browser login establishes identity; /mcp/oauth/consent requires explicit
 approval or denial of the one-time transaction and protects both decisions
 against CSRF. A denial consumes only that validated transaction and returns the
 standard OAuth `access_denied` result to its previously validated redirect.
-Consent HTML has a script-free CSP; form submission permits only its own origin
-and the transaction's registered redirect origin so browser-enforced policy
-preserves the OAuth POST return. The app Worker preserves this response policy.
+Consent HTML has a script-free CSP and its form posts only to its own origin.
+Browsers apply `form-action` to every redirect after a form post, so a decision
+returns a page that refreshes to the client's redirect, with a link as fallback,
+rather than a 303. The app Worker preserves this response policy.
 The MCP issuer, resource, discovery and token endpoints remain on the configured
 protocol origin. Browser consent and login use `FRONTEND_URL`, including when
 the browser moves to the app hostname. A stale consent submission on the old
