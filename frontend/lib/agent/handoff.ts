@@ -273,46 +273,52 @@ export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
 /** Human labels for the references a composer shows as removable chips. */
 export type ContextChip = { key: keyof AgentContextRefs; label: string };
 
+type ChipLabels = Partial<Record<keyof AgentContextRefs, string>>;
+
+/** Each reference's chip in display order: its label, or nothing when the context lacks it. */
+const CHIPS: readonly [
+  keyof AgentContextRefs,
+  (context: AgentContextRefs, labels: ChipLabels) => string | null | undefined,
+][] = [
+  [
+    'url_actions_reference',
+    (c, labels) =>
+      c.url_actions_reference && (labels.url_actions_reference ?? 'Selected URL and its actions'),
+  ],
+  [
+    'action_url_ids',
+    (c) => c.action_url_ids && pluralCount(c.action_url_ids.length, 'selected URL'),
+  ],
+  [
+    'issue_group_reference',
+    (c) =>
+      c.issue_group_reference &&
+      (c.issue_group_reference.site_url_id ? 'Selected page issue' : 'Selected issue group'),
+  ],
+  ['site_facts_reference', (c) => c.site_facts_reference && 'Selected crawl robots policy'],
+  ['output_revision_reference', (c) => c.output_revision_reference && 'Selected document revision'],
+  ['target_url', (c) => c.target_url],
+  // A page named by URL and id is one chip, the URL's.
+  ['target_site_url_id', (c) => (c.target_url ? null : c.target_site_url_id && 'Selected page')],
+  ['opportunity_id', (c) => c.opportunity_id && 'Recommendation'],
+  ['demand_signal_id', (c) => c.demand_signal_id && 'Demand signal'],
+  [
+    'search_intelligence_reference',
+    (c) =>
+      c.search_intelligence_reference &&
+      pluralCount(c.search_intelligence_reference.row_ids.length, 'Keyword Research row'),
+  ],
+];
+
 export function contextChips(
   context: AgentContextRefs,
   /** A read's own words for a reference, where the screen has them. */
-  labels: Partial<Record<keyof AgentContextRefs, string>> = {},
+  labels: ChipLabels = {},
 ): ContextChip[] {
-  const chips: ContextChip[] = [];
-  if (context.url_actions_reference)
-    chips.push({
-      key: 'url_actions_reference',
-      label: labels.url_actions_reference ?? 'Selected URL and its actions',
-    });
-  if (context.action_url_ids)
-    chips.push({
-      key: 'action_url_ids',
-      label: pluralCount(context.action_url_ids.length, 'selected URL'),
-    });
-  if (context.issue_group_reference)
-    chips.push({
-      key: 'issue_group_reference',
-      label: context.issue_group_reference.site_url_id
-        ? 'Selected page issue'
-        : 'Selected issue group',
-    });
-  if (context.site_facts_reference)
-    chips.push({ key: 'site_facts_reference', label: 'Selected crawl robots policy' });
-  if (context.output_revision_reference)
-    chips.push({ key: 'output_revision_reference', label: 'Selected document revision' });
-  if (context.target_url) chips.push({ key: 'target_url', label: context.target_url });
-  else if (context.target_site_url_id)
-    chips.push({ key: 'target_site_url_id', label: 'Selected page' });
-  if (context.opportunity_id) chips.push({ key: 'opportunity_id', label: 'Recommendation' });
-  if (context.demand_signal_id) chips.push({ key: 'demand_signal_id', label: 'Demand signal' });
-  if (context.search_intelligence_reference) {
-    const count = context.search_intelligence_reference.row_ids.length;
-    chips.push({
-      key: 'search_intelligence_reference',
-      label: `${count} Keyword Research ${count === 1 ? 'row' : 'rows'}`,
-    });
-  }
-  return chips;
+  return CHIPS.flatMap(([key, chip]) => {
+    const label = chip(context, labels);
+    return label ? [{ key, label }] : [];
+  });
 }
 
 /** Where a chat started, in the words its context chips use. */

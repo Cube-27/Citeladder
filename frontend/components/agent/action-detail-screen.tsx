@@ -45,7 +45,7 @@ export function ActionDetailScreen() {
     enabled: Boolean(actionId),
   });
   const fallback = (body: ReactNode) => (
-    <PageFrame title="Action" crumb={<Breadcrumb parts={BACK_CRUMB} />}>
+    <PageFrame title="Action" crumb={<Breadcrumb parts={BACK_CRUMB} />} fitted>
       <ReadingColumn>
         <BackLink href="/actions">Back to actions</BackLink>
         {body}
@@ -98,7 +98,11 @@ function ActionPage({
       return next;
     });
   return (
-    <PageFrame title={title} crumb={<Breadcrumb parts={[...listCrumbs(from), { label: title }]} />}>
+    <PageFrame
+      title={title}
+      crumb={<Breadcrumb parts={[...listCrumbs(from), { label: title }]} />}
+      fitted
+    >
       <ReadingColumn>
         <BackLink
           href="/actions"

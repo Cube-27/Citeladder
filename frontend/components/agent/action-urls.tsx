@@ -99,7 +99,7 @@ export function ActionUrls({
 }
 
 /** A URL by its path in the mono face, its last segment strong, so a list of one site's pages reads by what differs. */
-export function UrlPath({ url }: Readonly<{ url: string }>) {
+function UrlPath({ url }: Readonly<{ url: string }>) {
   const path = actionTarget({ target_kind: 'page', target_label: url });
   const home = !path.startsWith('/');
   const cut = path.lastIndexOf('/') + 1;

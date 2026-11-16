@@ -8,13 +8,13 @@ import { cn } from '@/lib/utils';
 /**
  * A record's reading page (the Actions v3 Action and URL pages): one centred
  * prose column with a quiet way back, the h1, labelled sections and a
- * Details card. It ends in room for a dock held over its bottom, and is at
- * least the window's height under the masthead, so that dock sits at the
- * window's foot however short the page.
+ * Details card. Its frame is `fitted`: the column holds the page's end space
+ * itself and is at least the window's height, so a dock after it stays at the
+ * window's foot however short the page and however far it is scrolled.
  */
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-var(--masthead-block-size,56px))] w-full max-w-(--container-prose) min-w-0 flex-col pb-24">
+    <div className="mx-auto flex min-h-dvh w-full max-w-(--container-prose) min-w-0 flex-col pb-[var(--page-end-space)]">
       {children}
     </div>
   );

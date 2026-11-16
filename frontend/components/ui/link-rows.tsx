@@ -8,14 +8,10 @@ import { cn } from '@/lib/utils';
 
 /**
  * Rows that each open a page, in one bordered box: 48px each on fixed
- * columns (an optional tick, the name, two short facts, a chevron), so no row
+ * columns (an optional tick, the name, two 96px facts, a chevron), so no row
  * moves another; a "Show more" (`WorkRowsMore`) closes the box.
  */
-const GRID = 'grid items-center gap-3 px-4';
-const COLUMNS = {
-  plain: 'grid-cols-[minmax(0,1fr)_90px_110px_16px]',
-  ticked: 'grid-cols-[16px_minmax(0,1fr)_90px_110px_16px]',
-} as const;
+const FACT = 'w-24 shrink-0 truncate';
 
 export function LinkRows({
   label,
@@ -51,26 +47,20 @@ export function LinkRow({
   facts: readonly [ReactNode, ReactNode];
 }>) {
   return (
-    <li
-      className={cn(
-        GRID,
-        tick ? COLUMNS.ticked : COLUMNS.plain,
-        'hover:overlay-hover relative h-12',
-      )}
-    >
-      {tick ? <span className="relative z-10 flex">{tick}</span> : null}
+    <li className="hover:overlay-hover relative flex h-12 items-center gap-3 px-4">
+      {tick ? <span className="relative z-10 flex shrink-0">{tick}</span> : null}
       <ProjectLink
         href={href}
         state={state}
-        className="focus-ring min-w-0 truncate rounded-sm before:absolute before:inset-0"
+        className="focus-ring min-w-0 flex-1 truncate rounded-sm before:absolute before:inset-x-0 before:inset-y-0"
       >
         {name}
       </ProjectLink>
-      <span className={textRole('caption', 'text-ink-2 truncate')}>{facts[0]}</span>
-      <span className={textRole('caption', 'text-ink-2 flex truncate tabular-nums')}>
+      <span className={textRole('caption', cn('text-ink-2', FACT))}>{facts[0]}</span>
+      <span className={textRole('caption', cn('text-ink-2 flex tabular-nums', FACT))}>
         {facts[1]}
       </span>
-      <Icon icon={ChevronRight} className="text-ink-2" />
+      <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
     </li>
   );
 }

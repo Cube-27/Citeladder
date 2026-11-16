@@ -23,11 +23,13 @@ import { fromActionSchema, listCrumbs, type FromAction } from '@/lib/agent/actio
 import { actionTarget, pathTail } from '@/lib/agent/action-title';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { ACTION_GROUPING_LABEL } from '@/lib/agent/vocabulary';
-import { actionsQueries } from '@/lib/api/actions';
+import { actionsApi, actionsQueries } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate, formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
+
+type UrlActions = Awaited<ReturnType<typeof actionsApi.urlActions>>;
 
 /**
  * One URL's page (plan v3): the trail (through the Action it was opened
@@ -37,92 +39,102 @@ import { pageKindLabel } from '@/lib/site-health/page-kinds';
 export function ActionUrlScreen() {
   const { siteUrlId = '' } = useParams();
   const scope = useProjectScope();
-  const timeZone = useDisplayTimeZone();
   const parsed = fromActionSchema.safeParse(useLocation().state);
   const from = parsed.success ? parsed.data.fromAction : null;
   const query = useQuery({
     ...actionsQueries.urlActions(scope, siteUrlId),
     enabled: Boolean(siteUrlId),
   });
-  const data = query.data;
-  const path = data ? actionTarget({ target_kind: 'page', target_label: data.url }) : 'URL';
-  const open = data?.items.filter(
-    (item) => item.status === 'open' || item.status === 'in_progress',
-  );
+  const path = query.data
+    ? actionTarget({ target_kind: 'page', target_label: query.data.url })
+    : 'URL';
+  let body = <StateBlock kind="loading" shape={{ kind: 'facts', rows: 3 }} />;
+  if (query.isError)
+    body = (
+      <StateBlock
+        kind="error"
+        {...readErrorProps(query)}
+        title="Couldn't load this URL"
+        fallback="This URL could not be loaded."
+      />
+    );
+  else if (query.data) body = <UrlBody path={path} data={query.data} />;
   return (
     <PageFrame
       title={path}
       crumb={<Breadcrumb parts={[...trail(from), { label: pathTail(path) }]} />}
+      fitted
     >
       <ReadingColumn>
         <BackLink href={from ? `/actions/${from.id}` : '/actions'}>
           {from ? `Back to ${from.title}` : 'Back to actions'}
         </BackLink>
-        {query.isError ? (
-          <StateBlock
-            kind="error"
-            {...readErrorProps(query)}
-            title="Couldn't load this URL"
-            fallback="This URL could not be loaded."
-          />
-        ) : null}
-        {data ? (
-          <>
-            <PageHeading path>{path}</PageHeading>
-            <DetailsCard
-              first
-              facts={[
-                {
-                  label: 'Page type',
-                  value: data.page_kind ? pageKindLabel(data.page_kind) : 'Not classified',
-                },
-                { label: 'Last crawled', value: formatDisplayDate(data.last_crawled_at, timeZone) },
-                { label: 'Open actions', value: `${formatCount(open?.length ?? 0)} on this URL` },
-              ]}
-            />
-            <Labelled title="Actions on this URL">
-              {data.items.length === 0 ? (
-                <StateBlock kind="empty" inline message="No action touches this URL." />
-              ) : (
-                <LinkRows label="Actions on this URL">
-                  {data.items.map((item) => (
-                    <LinkRow
-                      key={item.id}
-                      href={`/actions/${item.id}`}
-                      name={actionTarget(item)}
-                      facts={[
-                        ACTION_GROUPING_LABEL[item.grouping],
-                        <Impact key="impact" band={item.priority_band} />,
-                      ]}
-                    />
-                  ))}
-                </LinkRows>
-              )}
-            </Labelled>
-          </>
-        ) : null}
-        {!data && !query.isError ? (
-          <StateBlock kind="loading" shape={{ kind: 'facts', rows: 3 }} />
-        ) : null}
+        {body}
       </ReadingColumn>
-      <PageDock label="Work on this URL">
-        {/* A URL that could not be read is not handed over: the Agent would refuse it. */}
-        {query.isError ? (
-          <Button variant="primary" disabled>
-            <Icon icon={Sparkles} />
-            Fix this URL with Agent
-          </Button>
-        ) : (
-          <ProjectLink
-            href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}
-            className={buttonClasses('primary')}
-          >
-            <Icon icon={Sparkles} />
-            Fix this URL with Agent
-          </ProjectLink>
-        )}
-      </PageDock>
+      <UrlDock siteUrlId={siteUrlId} unreadable={query.isError} />
     </PageFrame>
+  );
+}
+
+function UrlBody({ path, data }: Readonly<{ path: string; data: UrlActions }>) {
+  const timeZone = useDisplayTimeZone();
+  const open = data.items.filter((item) => item.status === 'open' || item.status === 'in_progress');
+  return (
+    <>
+      <PageHeading path>{path}</PageHeading>
+      <DetailsCard
+        first
+        facts={[
+          {
+            label: 'Page type',
+            value: data.page_kind ? pageKindLabel(data.page_kind) : 'Not classified',
+          },
+          { label: 'Last crawled', value: formatDisplayDate(data.last_crawled_at, timeZone) },
+          { label: 'Open actions', value: `${formatCount(open.length)} on this URL` },
+        ]}
+      />
+      <Labelled title="Actions on this URL">
+        {data.items.length === 0 ? (
+          <StateBlock kind="empty" inline message="No action touches this URL." />
+        ) : (
+          <LinkRows label="Actions on this URL">
+            {data.items.map((item) => (
+              <LinkRow
+                key={item.id}
+                href={`/actions/${item.id}`}
+                name={actionTarget(item)}
+                facts={[
+                  ACTION_GROUPING_LABEL[item.grouping],
+                  <Impact key="impact" band={item.priority_band} />,
+                ]}
+              />
+            ))}
+          </LinkRows>
+        )}
+      </Labelled>
+    </>
+  );
+}
+
+/** "Fix this URL with Agent"; a URL that could not be read is not handed over, as the Agent would refuse it. */
+function UrlDock({ siteUrlId, unreadable }: Readonly<{ siteUrlId: string; unreadable: boolean }>) {
+  return (
+    <PageDock label="Work on this URL">
+      {unreadable ? (
+        <Button variant="primary" disabled>
+          <Icon icon={Sparkles} />
+          Fix this URL with Agent
+        </Button>
+      ) : (
+        <ProjectLink
+          href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}
+          className={buttonClasses('primary')}
+        >
+          <Icon icon={Sparkles} />
+          Fix this URL with Agent
+        </ProjectLink>
+      )}
+    </PageDock>
   );
 }
 

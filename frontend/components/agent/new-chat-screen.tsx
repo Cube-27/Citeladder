@@ -75,9 +75,13 @@ function NewChat({
     typed,
     setTyped,
   );
-  const handoffScope = useHandoffScope({ workspaceId, projectId }, context, action);
-  // Ticked URLs are the attached Action's; they leave with it.
-  const sent = actionId ? context : withoutContext(context, 'action_url_ids');
+  const handoffScope = useHandoffScope({
+    scope: { workspaceId, projectId },
+    context,
+    action,
+    attached: Boolean(actionId),
+  });
+  const sent = handoffScope.context;
   const skill = useSkillChoice({
     value: pinnedId ? undefined : skillId,
     // A skill or Automatic picked from the menu replaces a pinned workflow.

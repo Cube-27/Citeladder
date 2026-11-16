@@ -28,7 +28,7 @@ const RESTORE: Decision = { label: 'Restore', icon: RotateCcw, to: 'open' };
  * In progress → Decline · Mark implemented; Declined → Restore · Accept;
  * Done → none. `declare` marks the slot Mark implemented takes.
  */
-export const DOCK_SLOTS: Record<
+const DOCK_SLOTS: Record<
   ActionDetail['status'],
   readonly [Decision | null, Decision | 'declare' | null]
 > = {

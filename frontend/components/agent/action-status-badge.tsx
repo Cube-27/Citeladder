@@ -1,13 +1,10 @@
-import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
 import {
   ACTION_MEASUREMENT_LABEL,
   ACTION_STATUS_LABEL,
   ACTION_STATUS_TONE,
-  PRIORITY_BAND_LABEL,
-  PRIORITY_BAND_VALUE,
 } from '@/lib/agent/vocabulary';
-import type { ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
+import type { ActionStatus } from '@/lib/api/actions';
 import type { ActionMeasurement } from '@citeladder/contracts/actions';
 
 /**
@@ -28,16 +25,6 @@ export function ActionStatusBadge({
   ) : (
     <StatusMark variant="status" value={tone}>
       {label}
-    </StatusMark>
-  );
-}
-
-/** An Action's priority as High, Medium or Low; an unscored Action says so. */
-export function ActionPriorityBadge({ band }: Readonly<{ band: ActionPriorityBand | null }>) {
-  if (band === null) return <Absence state="not_measured" label="Not scored" />;
-  return (
-    <StatusMark variant="priority" value={PRIORITY_BAND_VALUE[band]}>
-      {PRIORITY_BAND_LABEL[band]}
     </StatusMark>
   );
 }
