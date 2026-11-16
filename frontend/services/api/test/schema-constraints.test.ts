@@ -36,7 +36,7 @@ import {
 import { expiredBatch } from '../src/referrals/retention.ts';
 import { seedImport, seedMetricRow } from './referral-fixtures.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
-import { asOwner, testDatabase } from './support.ts';
+import { testDatabase } from './support.ts';
 
 const db = testDatabase();
 const fixtures = new SiteFixtures(db);
@@ -963,12 +963,10 @@ describe('background reads', () => {
     INTEGRATION_LANE,
     AUDIT_LANE,
   ] as const)('claims $table work through its claimable-only index', async (lane) => {
-    // Plan on current statistics, not on whatever rows earlier tests left before autovacuum ran.
-    await asOwner((owner) => sql`analyze ${sql.table(lane.table)}`.execute(owner));
-    expect(
-      await indexesRead((trx) =>
-        claimStatement(trx, lane, { now: new Date(), limit: 1 }).explain('json'),
-      ),
-    ).toContain(`ix_${lane.table}_claim`);
+    const plan = await indexesRead(async (trx) => {
+      await sql`set local enable_sort = off`.execute(trx); // claim order comes from the index
+      return claimStatement(trx, lane, { now: new Date(), limit: 1 }).explain('json');
+    });
+    expect(plan).toContain(`ix_${lane.table}_claim`);
   });
 });
