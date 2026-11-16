@@ -23,13 +23,11 @@ export function useHandoffScope(
     ...actionsQueries.urlActions(scope, siteUrlId ?? ''),
     enabled: Boolean(siteUrlId),
   });
-  if (siteUrlId && url.data)
-    return {
-      labels: {
-        url_actions_reference: `URL: ${actionTarget({ target_kind: 'page', target_label: url.data.url })}`,
-      },
-      chip: `${pluralCount(url.data.items.length, 'action')} on this URL`,
-    };
+  if (siteUrlId && url.data) {
+    const path = actionTarget({ target_kind: 'page', target_label: url.data.url });
+    const count = pluralCount(url.data.items.length, 'action');
+    return { labels: { url_actions_reference: `URL: ${path} · ${count}` }, chip: undefined };
+  }
   return { labels: {}, chip: groupChip(context, action) };
 }
 

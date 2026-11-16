@@ -8,10 +8,16 @@ import { cn } from '@/lib/utils';
 /**
  * A record's reading page (the Actions v3 Action and URL pages): one centred
  * prose column with a quiet way back, the h1, labelled sections and a
- * Details card. It ends in room for a dock held over its bottom.
+ * Details card. It ends in room for a dock held over its bottom, and is at
+ * least the window's height under the masthead, so that dock sits at the
+ * window's foot however short the page.
  */
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="mx-auto flex w-full max-w-prose min-w-0 flex-col pb-24">{children}</div>;
+  return (
+    <div className="mx-auto flex min-h-[calc(100dvh-var(--masthead-block-size,56px))] w-full max-w-(--container-prose) min-w-0 flex-col pb-24">
+      {children}
+    </div>
+  );
 }
 
 export function BackLink({
@@ -33,8 +39,9 @@ export function BackLink({
   );
 }
 
-export function PageHeading({ children }: Readonly<{ children: string }>) {
-  return <h1 className={textRole('title', 'mb-5 break-words')}>{children}</h1>;
+/** The page's h1: a record's name, or (`path`) an address, set smaller as it runs long. */
+export function PageHeading({ children, path }: Readonly<{ children: string; path?: boolean }>) {
+  return <h1 className={textRole(path ? 'title' : 'display', 'mb-5 break-words')}>{children}</h1>;
 }
 
 /** The row of ways to take the record elsewhere, under its overview. */

@@ -88,9 +88,7 @@ describe('A URL page', () => {
       },
     });
 
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      'acme.test/shop/baby/bb0556',
-    );
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('/shop/…/bb0556');
     const details = screen.getByRole('region', { name: 'Details' });
     expect(
       within(details)
@@ -129,7 +127,11 @@ describe('A URL page', () => {
     const target = new URL(agent.getAttribute('href')!, 'https://app.test');
     expect([target.pathname, Object.fromEntries(target.searchParams)]).toEqual([
       '/agent',
-      { url_actions_id: URL_ID, project: PROJECT },
+      {
+        url_actions_id: URL_ID,
+        prompt: 'Fix every action on this URL, starting with the shared ones.',
+        project: PROJECT,
+      },
     ]);
   });
 

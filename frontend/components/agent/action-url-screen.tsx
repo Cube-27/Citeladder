@@ -25,7 +25,7 @@ import { agentHandoffHref } from '@/lib/agent/handoff';
 import { ACTION_GROUPING_LABEL } from '@/lib/agent/vocabulary';
 import { actionsQueries } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, formatCount, readableUrl } from '@/lib/format';
+import { formatDisplayDate, formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
 
@@ -65,7 +65,7 @@ export function ActionUrlScreen() {
         ) : null}
         {data ? (
           <>
-            <PageHeading>{readableUrl(data.url)}</PageHeading>
+            <PageHeading path>{path}</PageHeading>
             <DetailsCard
               first
               facts={[
@@ -104,7 +104,7 @@ export function ActionUrlScreen() {
       </ReadingColumn>
       <PageDock label="Work on this URL">
         <ProjectLink
-          href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId })}
+          href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}
           className={buttonClasses('primary')}
         >
           <Icon icon={Sparkles} />
@@ -114,6 +114,9 @@ export function ActionUrlScreen() {
     </PageFrame>
   );
 }
+
+/** What the Agent is asked when a URL is handed to it (the approved mockup's words). */
+const URL_ASK = 'Fix every action on this URL, starting with the shared ones.';
 
 /** Actions › goal › grouping › the Action it came from, or Actions alone. */
 function trail(from: FromAction | null): Crumb[] {
