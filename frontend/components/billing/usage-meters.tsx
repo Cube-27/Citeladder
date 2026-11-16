@@ -59,11 +59,10 @@ function nothingUsed(items: readonly UsageItem[]): boolean {
  * resolve has no verified allowance, and showing meters against unverified
  * numbers would be worse than showing none.
  */
-export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>) {
+export function UsageMeters() {
   const workspaceId = useActiveWorkspaceId();
-  const usageQuery = useQuery({ ...billingQueries.usage(workspaceId), enabled });
-  const idle =
-    enabled && usageQuery.data?.status === 'resolved' && nothingUsed(usageQuery.data.items);
+  const usageQuery = useQuery(billingQueries.usage(workspaceId));
+  const idle = usageQuery.data?.status === 'resolved' && nothingUsed(usageQuery.data.items);
 
   return (
     <Section aria-labelledby="usage-title">
@@ -77,14 +76,14 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
         ) : null}
       </SectionHeader>
       <SectionContent>
-        <UsageBody enabled={enabled} query={usageQuery} />
+        <UsageBody query={usageQuery} />
       </SectionContent>
     </Section>
   );
 }
 
-function UsageBody({ enabled, query }: Readonly<{ enabled: boolean; query: UsageRead }>) {
-  if (!enabled || query.isLoading) {
+function UsageBody({ query }: Readonly<{ query: UsageRead }>) {
+  if (query.isLoading) {
     return <StateBlock kind="loading" label="Loading usage…" />;
   }
   if (query.isError || !query.data) {

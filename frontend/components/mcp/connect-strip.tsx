@@ -75,10 +75,8 @@ function useHoverMenu() {
  * Settings and the public site.
  */
 export function ConnectStrip({
-  className,
   surface = 'website',
 }: Readonly<{
-  className?: string;
   /** In the app the strip sits in a page body, so it takes no primary (3.1). */
   surface?: 'website' | 'app';
 }>) {
@@ -96,7 +94,7 @@ export function ConnectStrip({
       as="section"
       gap="compact"
       aria-label="Connect CiteLadder to an AI assistant"
-      className={cn(slipClasses(), 'w-fit max-w-full flex-wrap', className)}
+      className={cn(slipClasses(), 'w-fit max-w-full flex-wrap')}
     >
       <Menu open={menu.open} onOpenChange={menu.setOpen} modal={false}>
         {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}

@@ -6,7 +6,6 @@ import { ActivityChain } from '@/components/agent/activity-chain';
 import { EvidenceChips } from '@/components/agent/evidence-chips';
 import { JUMP_LINK } from '@/components/agent/jump-link';
 import { LiveActivity } from '@/components/agent/live-activity';
-import { MessageTime } from '@/components/agent/message-time';
 import { ProposalCards } from '@/components/agent/proposal-cards';
 import { skillLabel } from '@/components/agent/skill-picker';
 import { threadItems } from '@/components/agent/thread-items';
@@ -18,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { AgentThread, AgentTurn, PastedTextChip, UserTurn } from '@/components/ui/chat-dock';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Disclosure } from '@/components/ui/disclosure';
+import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
@@ -323,7 +323,7 @@ function MessageBubble({
   }));
   return (
     <AgentTurn
-      time={<MessageTime value={message.created_at} />}
+      time={<DisplayTime value={message.created_at} />}
       meta={skill ? `Skill: ${skill}` : undefined}
     >
       {turnParts(message).map((part) => {

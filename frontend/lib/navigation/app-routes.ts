@@ -160,7 +160,10 @@ const screens = {
   context: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
   prompts: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
   prompt: pick(() => import('@/components/prompts/prompt-detail-screen'), 'PromptDetailScreen'),
-  visibility: pick(() => import('@/components/visibility/visibility-screen'), 'VisibilityScreen'),
+  visibility: pick(
+    () => import('@/components/visibility/visibility-dashboard'),
+    'VisibilityDashboard',
+  ),
   runs: pick(() => import('@/components/runs/runs-screen'), 'RunsScreen'),
   run: pick(() => import('@/components/runs/run-detail-screen'), 'RunDetailScreen'),
   aiTraffic: pick(() => import('@/components/ai-traffic/ai-traffic-screen'), 'AiTrafficScreen'),

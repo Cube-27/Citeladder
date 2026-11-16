@@ -1,8 +1,8 @@
 import { AlertTriangle } from 'lucide-react';
 
-import { MessageTime } from '@/components/agent/message-time';
 import type { FailureOutcome } from '@/components/agent/thread-items';
 import type { AgentMessage } from '@/lib/api/agent';
+import { DisplayTime } from '@/components/ui/display-time';
 import { Notice, type NoticeTone } from '@/components/ui/notice';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 
@@ -31,7 +31,7 @@ export function TurnFailure({
 }: Readonly<{ failures: [AgentMessage, ...AgentMessage[]]; outcome: FailureOutcome }>) {
   const latest = failures.at(-1) ?? failures[0];
   const count = failures.length;
-  const time = <MessageTime value={latest.created_at} />;
+  const time = <DisplayTime value={latest.created_at} />;
   const verb = FAILURE_VERB[outcome];
   return (
     <Notice

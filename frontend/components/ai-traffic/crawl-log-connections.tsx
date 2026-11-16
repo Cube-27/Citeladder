@@ -11,7 +11,7 @@ import type { z } from 'zod';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { StateBlock } from '@/components/ui/state-block';
-import { Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog, Dialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { Stack } from '@/components/ui/layout';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -126,11 +126,12 @@ function Connections({
           canManage={canManage}
         />
       ) : null}
-      <RevokeSourceDialog
-        source={revoking}
-        mutation={mutation}
-        onRevoke={(id, onSettled) => model.issueSource({ kind: 'revoke', id }, onSettled)}
-        onClose={() => setRevoking(null)}
+      <ConfirmDialog
+        pending={mutation.isPending}
+        onCancel={() => setRevoking(null)}
+        request={revokeRequest(revoking, (id) =>
+          model.issueSource({ kind: 'revoke', id }, () => setRevoking(null)),
+        )}
       />
       <RotateTokenDialog
         source={rotating}
@@ -181,6 +182,22 @@ function Connections({
     </Section>
   );
 }
+
+/** Revoking stops ingestion for a host, so it is confirmed by name. */
+function revokeRequest(
+  source: z.infer<typeof crawlSourceSchema> | null,
+  onRevoke: (id: string) => void,
+): ConfirmRequest | null {
+  if (!source) return null;
+  return {
+    title: 'Revoke crawl log source',
+    body: `Stop accepting logs for ${source.host}? New batches and uploads for this host are refused. Requests already received stay in your reports.`,
+    confirmLabel: 'Revoke source',
+    destructive: true,
+    onConfirm: () => onRevoke(source.id),
+  };
+}
+
 /**
  * Setup opens only on a read that says collection is available. An unavailable
  * workspace gets the explanation, not a setup it cannot complete; a pending or
@@ -382,50 +399,6 @@ function RotateToken({ source, projectId, workspaceId, onClose }: RotateTokenPro
         />
       ) : null}
       {rotate.isSuccess ? <IssuedToken issued={{ ...rotate.data, setup: source.setup }} /> : null}
-    </Dialog>
-  );
-}
-/** Revoking stops ingestion for a host, so it is confirmed by name. */
-function RevokeSourceDialog({
-  source,
-  mutation,
-  onRevoke,
-  onClose,
-}: Readonly<{
-  source: z.infer<typeof crawlSourceSchema> | null;
-  mutation: ReturnType<typeof useCrawlConnections>['mutation'];
-  onRevoke: (id: string, onSettled: () => void) => void;
-  onClose: () => void;
-}>) {
-  return (
-    <Dialog
-      open={source !== null}
-      onOpenChange={(next) => {
-        if (!next && !mutation.isPending) onClose();
-      }}
-      title="Revoke crawl log source"
-      description={source ? `Stop accepting logs for ${source.host}?` : undefined}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onClose} disabled={mutation.isPending}>
-            Cancel
-          </Button>
-          <Button
-            variant="danger"
-            disabled={!source}
-            pending={mutation.isPending}
-            pendingLabel="Revoking…"
-            onClick={() => source && onRevoke(source.id, onClose)}
-          >
-            Revoke source
-          </Button>
-        </>
-      }
-    >
-      <p className="type-body text-ink-2">
-        New batches and uploads for this host are refused. Requests already received stay in your
-        reports.
-      </p>
     </Dialog>
   );
 }

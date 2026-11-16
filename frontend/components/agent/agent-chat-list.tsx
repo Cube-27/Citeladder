@@ -5,6 +5,7 @@ import { ChevronDown, MessagesSquare, RefreshCw } from 'lucide-react';
 
 import { RailFlyout } from '@/components/layout/sidebar-rail';
 import { Button } from '@/components/ui/button';
+import { DisplayTime } from '@/components/ui/display-time';
 import { Icon } from '@/components/ui/icon';
 import {
   HistoryFailed,
@@ -21,8 +22,6 @@ import { InlineFigure } from '@/components/ui/typography';
 import { CHAT_ORIGIN_LABELS } from '@/lib/agent/handoff';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate } from '@/lib/format';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
 import { useDebounced } from '@/lib/use-debounced';
@@ -108,14 +107,11 @@ function ChatSearch({
 
 /** Where the chat started and when it last moved ("Website · Nov 12, 2026"). */
 function ChatMeta({ chat }: Readonly<{ chat: AgentChatSummary }>) {
-  const timeZone = useDisplayTimeZone();
   return (
     <>
       {CHAT_ORIGIN_LABELS[chat.origin]} ·{' '}
       <InlineFigure>
-        <time dateTime={chat.last_activity_at}>
-          {formatDisplayDate(chat.last_activity_at, timeZone)}
-        </time>
+        <DisplayTime value={chat.last_activity_at} dateOnly />
       </InlineFigure>
     </>
   );

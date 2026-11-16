@@ -1,11 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
 import { ShellFallback } from '@/components/layout/shell-fallback';
 import { policyMutations, policyQueries } from '@/lib/api/policies';
-import { signOutForChangedTerms } from '@/lib/auth/account-transition';
 import { revisionChanged, sessionLacksTerms } from '@/lib/auth/terms-consent';
+import { useSignOutForChangedTerms } from '@/lib/auth/use-sign-out-for-changed-terms';
 import { isWorkspaceFreeRoute } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
 import { StateBlock } from '@/components/ui/state-block';
@@ -38,7 +38,6 @@ function WorkspacePolicy({
   workspaceId,
   children,
 }: Readonly<{ workspaceId: string; children: ReactNode }>) {
-  const cache = useQueryClient();
   const query = useQuery(policyQueries.workspace(workspaceId));
   const accept = useMutation(policyMutations.accept(workspaceId));
   const { refetch } = query;
@@ -54,8 +53,6 @@ function WorkspacePolicy({
       }),
     [mutate, refetch],
   );
-  const leave = useMutation({ mutationFn: () => signOutForChangedTerms(cache) });
-
   const pendingRevision = query.data && !query.data.accepted_at ? query.data.terms_revision : null;
   const recorded = useRef<string | null>(null);
   useEffect(() => {
@@ -66,14 +63,7 @@ function WorkspacePolicy({
   }, [record, pendingRevision]);
 
   const sessionPredatesTerms = sessionLacksTerms(accept.error);
-  const { mutate: signOut } = leave;
-  // Once: leaving clears the cache, and the re-read must not sign out again.
-  const leaving = useRef(false);
-  useEffect(() => {
-    if (!sessionPredatesTerms || leaving.current) return;
-    leaving.current = true;
-    signOut();
-  }, [signOut, sessionPredatesTerms]);
+  const leave = useSignOutForChangedTerms(sessionPredatesTerms);
 
   if (query.data?.accepted_at) return children;
   // Leaving, or re-reading a republished revision, is still loading.
@@ -82,7 +72,7 @@ function WorkspacePolicy({
   if (!failure) return <ShellFallback />;
   const retry = () => {
     if (query.error) void query.refetch();
-    else if (leave.error) signOut();
+    else if (leave.error) leave.mutate();
     else if (pendingRevision) record(pendingRevision);
   };
   return (

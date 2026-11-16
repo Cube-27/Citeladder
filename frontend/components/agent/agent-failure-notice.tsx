@@ -12,14 +12,12 @@ import { useManagedPlan } from '@/lib/billing/entitlement-context';
 export function AgentFailureNotice({
   failure,
   newChatHref,
-  onRetry,
-}: Readonly<{ failure: AgentWriteFailure; newChatHref?: string; onRetry?: () => void }>) {
+}: Readonly<{ failure: AgentWriteFailure; newChatHref?: string }>) {
   const managed = useManagedPlan();
   return (
     <Notice
       kind="mutation"
       notice={failure}
-      onRetry={onRetry}
       recovery={recoveryLink(failure, managed, newChatHref)}
     />
   );

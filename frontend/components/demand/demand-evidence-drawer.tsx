@@ -35,27 +35,6 @@ export function DemandEvidenceDrawer({
   onOpenChange: (open: boolean) => void;
 }>) {
   if (!signal) return null;
-  return (
-    <DemandEvidenceContent
-      signal={signal}
-      policy={policy}
-      open={open}
-      onOpenChange={onOpenChange}
-    />
-  );
-}
-
-function DemandEvidenceContent({
-  signal,
-  policy,
-  open,
-  onOpenChange,
-}: Readonly<{
-  signal: DemandSignal;
-  policy: DemandDetectorPolicy;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-}>) {
   const details = demandEvidenceDetails(signal);
 
   return (
