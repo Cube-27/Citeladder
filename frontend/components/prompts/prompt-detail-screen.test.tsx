@@ -187,12 +187,13 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   );
 
   const states = within(screen.getByLabelText('Answers by state'));
-  const stateCell = (label: string) => states.getByText(label).closest('[data-figure-cell]');
-  expect(stateCell('Mentioned and cited')).toHaveTextContent(/^Mentioned and cited.*1$/);
+  const stateCell = (label: string) =>
+    states.getByText(label).closest('[data-figure-cell]')?.textContent;
+  expect(stateCell('Mentioned and cited')).toMatch(/^Mentioned and cited.*1$/);
   expect(
     states.getByRole('button', { name: 'Basis of Mentioned and cited' }),
   ).toHaveAccessibleDescription('Named you and cited one of your pages.');
-  expect(stateCell('Neither')).toHaveTextContent(/^Neither.*1$/);
+  expect(stateCell('Neither')).toMatch(/^Neither.*1$/);
   expect(states.getByRole('button', { name: 'Basis of Neither' })).toHaveAccessibleDescription(
     'Did not name you or cite your site.',
   );

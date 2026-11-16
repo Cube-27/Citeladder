@@ -207,7 +207,7 @@ function FigureCell({
       data-label-hidden={segment.labelHidden || undefined}
       data-pressable={pressable || undefined}
       data-selected={segment.selected || undefined}
-      className="relative min-w-0"
+      className={cn('relative min-w-0', pressable && 'hover:overlay-hover active:overlay-pressed')}
     >
       <FigureLabel segment={segment} />
       <FigureLead segment={segment} />
@@ -311,7 +311,10 @@ function FigureValueLine({ segment }: FigurePart) {
   const delta = segment.loading || !reportsChange(segment.delta) ? null : segment.delta;
   if (segment.score && !delta) return null;
   return (
-    <dd data-figure-value="" className="flex min-w-0 items-baseline gap-2">
+    <dd
+      data-figure-value=""
+      className={cn('flex min-w-0 items-baseline gap-2', !segment.score && 'min-h-8')}
+    >
       {segment.score ? null : <FigureValue segment={segment} />}
       {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}
       {segment.labelHidden && !segment.loading ? (
@@ -384,8 +387,8 @@ function comparisonText(segment: FigureSegment): ReactNode {
   );
 }
 
-// No underline at rest; it shows on hover and keyboard focus (owner 2026-11-16).
-const LABEL_LINK = 'no-underline hover:underline focus-visible:underline';
+// No underline at rest; globals.css underlines it on hover and keyboard focus (owner 2026-11-16).
+const LABEL_LINK = 'no-underline';
 
 function FigureLabelLink({
   action,

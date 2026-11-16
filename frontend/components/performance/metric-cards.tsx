@@ -76,7 +76,8 @@ function MetricMarker({ mark, plotted }: Readonly<{ mark: MetricMark; plotted: b
         cy={6}
         r={5}
         strokeWidth={2}
-        className={cn(SERIES_STROKE[mark.tone], plotted ? SERIES_FILL[mark.tone] : 'fill-none')}
+        fill={plotted ? undefined : 'none'}
+        className={cn(SERIES_STROKE[mark.tone], plotted && SERIES_FILL[mark.tone])}
       />
     </svg>
   );
