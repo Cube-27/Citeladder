@@ -75,6 +75,12 @@ describe('dates and times', () => {
     expect(formatDisplayDate(at, 'Asia/Kolkata')).toBe('Nov 14, 2026');
     expect(formatDisplayTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM GMT+5:30');
     expect(formatTableTimestamp(at, 'Asia/Kolkata')).toBe('Nov 14, 2026, 05:03 PM');
+    // Formatters are cached per variant and zone: neither borrows the other's.
+    expect(formatTableTimestamp(at, 'Europe/Paris')).toBe('Nov 14, 2026, 12:33 PM');
+    expect(formatDisplayTimestamp(at, 'Europe/Paris')).toBe('Nov 14, 2026, 12:33 PM GMT+1');
+    // An unknown zone falls back to UTC every time.
+    expect(formatTableTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
+    expect(formatTableTimestamp(at, 'Not/A_Zone')).toBe('Nov 14, 2026, 11:33 AM');
     expect(formatTimeZoneNote('Asia/Kolkata', new Date(at))).toBe('Times in GMT+5:30');
     // A zone with daylight saving states the offset of the instant it is asked about.
     expect(formatTimeZoneNote('America/New_York', new Date('2026-07-01T12:00:00Z'))).toBe(

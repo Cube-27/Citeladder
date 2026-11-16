@@ -106,6 +106,22 @@ export function formatWindowDate(isoDay: string): string {
   });
 }
 
+const dateFormats = new Map<string, Intl.DateTimeFormat>();
+
+/**
+ * One cached formatter per variant and zone: zoned formatters are costly and
+ * run per table cell. A bad zone throws on construction and is never cached.
+ */
+function dateFormat(variant: string, options: Intl.DateTimeFormatOptions): Intl.DateTimeFormat {
+  const key = `${variant}\u0000${options.timeZone}`;
+  let format = dateFormats.get(key);
+  if (!format) {
+    format = new Intl.DateTimeFormat('en-US', options);
+    dateFormats.set(key, format);
+  }
+  return format;
+}
+
 function formatInstant({
   timestamp,
   timeZone,
@@ -114,7 +130,7 @@ function formatInstant({
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
   try {
-    return new Intl.DateTimeFormat('en-US', {
+    return dateFormat(zoned ? 'instant-zoned' : 'instant', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -148,7 +164,7 @@ export function formatTableTimestamp(timestamp: string, timeZone: string): strin
  */
 export function formatTimeZoneNote(timeZone: string, at: Date = new Date()): string {
   try {
-    const zone = new Intl.DateTimeFormat('en-US', { timeZone, timeZoneName: 'short' })
+    const zone = dateFormat('zone', { timeZone, timeZoneName: 'short' })
       .formatToParts(at)
       .find((part) => part.type === 'timeZoneName')?.value;
     return `Times in ${zone ?? timeZone}`;
@@ -162,7 +178,7 @@ export function formatDisplayDate(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
   try {
-    return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone }).format(date);
+    return dateFormat('date', { dateStyle: 'medium', timeZone }).format(date);
   } catch {
     return timeZone === 'UTC' ? timestamp : formatDisplayDate(timestamp, 'UTC');
   }
@@ -173,7 +189,7 @@ export function formatDisplayTime(timestamp: string, timeZone: string): string {
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
   try {
-    return new Intl.DateTimeFormat('en-US', {
+    return dateFormat('time', {
       hour: '2-digit',
       minute: '2-digit',
       timeZone,
@@ -189,9 +205,7 @@ export function formatDisplayShortDate(timestamp: string, timeZone: string): str
   const date = new Date(timestamp);
   if (Number.isNaN(date.getTime())) return timestamp;
   try {
-    return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', timeZone }).format(
-      date,
-    );
+    return dateFormat('short-date', { month: 'short', day: 'numeric', timeZone }).format(date);
   } catch {
     return timeZone === 'UTC' ? timestamp : formatDisplayShortDate(timestamp, 'UTC');
   }

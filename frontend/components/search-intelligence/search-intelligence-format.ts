@@ -2,13 +2,20 @@ import { words } from '@/lib/ai-traffic/vocabulary';
 import type { CredentialMode } from '@/lib/api/billing';
 import { formatDisplayDate, formatWindowDate, pluralCount } from '@/lib/format';
 
+const numberFormats = new Map<number, Intl.NumberFormat>();
+
 /** A provider figure, or null when the provider did not report one. */
 export function searchNumber(value: unknown, maximumFractionDigits = 0): string | null {
   if (value === null || value === undefined || value === '' || typeof value === 'boolean')
     return null;
   const number = typeof value === 'number' ? value : Number(value);
   if (!Number.isFinite(number)) return null;
-  return new Intl.NumberFormat('en', { maximumFractionDigits }).format(number);
+  let format = numberFormats.get(maximumFractionDigits);
+  if (!format) {
+    format = new Intl.NumberFormat('en', { maximumFractionDigits });
+    numberFormats.set(maximumFractionDigits, format);
+  }
+  return format.format(number);
 }
 
 type RunCost = {
