@@ -212,3 +212,102 @@ for (const width of [1280, 1600])
 
     expect(shifts).toEqual([]);
   });
+
+/** One issue group across 12 URLs: the detail holds ten, the URL read the rest. */
+const GROUP = action(0, 'aeo');
+const pageUrl = (index: number) => ({
+  site_url_id: `55555555-5555-4555-8555-${String(index + 1).padStart(12, '0')}`,
+  url: `https://acme.test/Categories/Babywear/Baby-Bodysuits/BB0${index}_OFF_WHITE`,
+  page_kind: index === 0 ? 'homepage' : 'product',
+  open_action_count: (index % 4) + 1,
+});
+
+async function stubActionPage(page: Page) {
+  await stubAuthedShell(page);
+  let status = 'open';
+  const detail = () => ({
+    ...GROUP,
+    page_count: 12,
+    status,
+    summary: null,
+    member_measurement: {},
+    declarable_since: '2026-01-01T00:00:00Z',
+    diagnosis: {},
+    members: [],
+    declaration: null,
+    editable_page: false,
+    cohort: null,
+    urls: {
+      whole_site: false,
+      total: 12,
+      items: Array.from({ length: 10 }, (_, index) => pageUrl(index)),
+      next_cursor: 'after-ten',
+    },
+  });
+  await page.route(`**/api/v1/actions/${GROUP.id}`, async (route) => {
+    if (route.request().method() === 'PATCH') {
+      status = ((await route.request().postDataJSON()) as { status: string }).status;
+      return route.fulfill({ json: { ...GROUP, page_count: 12, status, summary: null } });
+    }
+    return route.fulfill({ json: detail() });
+  });
+  await page.route(`**/api/v1/actions/${GROUP.id}/urls?*`, (route) =>
+    route.fulfill({
+      json: { whole_site: false, total: 12, items: [pageUrl(10), pageUrl(11)], next_cursor: null },
+    }),
+  );
+}
+
+for (const width of [1280, 1600])
+  test(`no decision, Show more or tick on an Action page moves its header, Details or dock at ${width}px`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width, height: 900 });
+    await stubActionPage(page);
+    await page.goto(fixtureProjectPath(`/actions/${GROUP.id}`));
+    const urls = page.getByRole('list', { name: 'URLs' });
+    await expect(urls.getByRole('listitem')).toHaveCount(10);
+    await page.evaluate(() => document.fonts.ready);
+    const dock = page.getByRole('toolbar', { name: 'Work on this action' });
+    const parts: Record<string, Locator> = {
+      masthead: page.locator('[data-masthead]'),
+      heading: page.getByRole('heading', { level: 1 }),
+      details: page.getByRole('region', { name: 'Details' }),
+      dock,
+    };
+    const boxes = async () => {
+      const scrolled = await page.evaluate(() => window.scrollY);
+      const out: Record<string, Box> = {};
+      for (const [name, part] of Object.entries(parts)) {
+        const box = await part.boundingBox();
+        // The masthead and dock hold to the viewport; the rest scroll with the page.
+        const top = name === 'masthead' || name === 'dock' ? 0 : scrolled;
+        out[name] = box && [box.x, box.y + top, box.width, box.height];
+      }
+      return out;
+    };
+    const before = await boxes();
+    const shifts: string[] = [];
+    const check = async (step: string) => {
+      const after = await boxes();
+      for (const [name, box] of Object.entries(before))
+        if (moved(box, after[name] ?? null))
+          shifts.push(`${step}: ${name} ${print(box)} -> ${print(after[name] ?? null)}`);
+    };
+
+    await dock.getByRole('button', { name: 'Accept' }).click();
+    await expect(dock.getByRole('button', { name: 'Mark implemented' })).toBeVisible();
+    await check('Accept');
+    await dock.getByRole('button', { name: 'Decline' }).click();
+    await expect(dock.getByRole('button', { name: 'Restore' })).toBeVisible();
+    await check('Decline');
+    await page.getByRole('button', { name: 'Show 2 more' }).click();
+    await expect(urls.getByRole('listitem')).toHaveCount(12);
+    await check('Show more');
+    await urls.getByRole('checkbox').first().click();
+    await expect(dock.getByRole('link', { name: 'Fix 1 selected with Agent' })).toBeVisible();
+    await check('Tick a URL');
+
+    expect(shifts).toEqual([]);
+  });

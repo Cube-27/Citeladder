@@ -217,8 +217,17 @@ export const actionDeclarationSchema = responseObject({
   created_at: z.string(),
 });
 
-/** One URL an Action touches. */
-export const actionUrlSchema = responseObject({ site_url_id: uuid(), url: z.string() });
+/**
+ * One URL an Action touches, with its page type in the crawl that last saw it
+ * (null when that crawl did not classify it) and how many open Actions (New
+ * and In progress) touch it.
+ */
+export const actionUrlSchema = responseObject({
+  site_url_id: uuid(),
+  url: z.string(),
+  page_kind: z.string().nullable(),
+  open_action_count: z.number().int(),
+});
 
 /**
  * A page of an Action's URLs in URL order, `total` over all of them. An issue
@@ -309,10 +318,15 @@ export const actionTreeSchema = responseObject({
 });
 export type ActionTree = z.infer<typeof actionTreeSchema>;
 
-/** Every listed Action touching one URL, by impact. */
+/**
+ * Every listed Action touching one URL, by impact, with the URL's page type
+ * and when a crawl last saw it.
+ */
 export const urlActionsSchema = responseObject({
   site_url_id: uuid(),
   url: z.string(),
+  page_kind: z.string().nullable(),
+  last_crawled_at: z.string(),
   items: z.array(actionItemSchema),
 });
 

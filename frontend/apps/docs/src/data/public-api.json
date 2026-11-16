@@ -1439,9 +1439,17 @@
           },
           "url": {
             "type": "string"
+          },
+          "page_kind": {
+            "type": ["string", "null"]
+          },
+          "open_action_count": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
           }
         },
-        "required": ["site_url_id", "url"],
+        "required": ["site_url_id", "url", "page_kind", "open_action_count"],
         "additionalProperties": false
       },
       "ActionUrlsPage": {
@@ -7556,6 +7564,12 @@
           "url": {
             "type": "string"
           },
+          "page_kind": {
+            "type": ["string", "null"]
+          },
+          "last_crawled_at": {
+            "type": "string"
+          },
           "items": {
             "type": "array",
             "items": {
@@ -7563,7 +7577,7 @@
             }
           }
         },
-        "required": ["site_url_id", "url", "items"],
+        "required": ["site_url_id", "url", "page_kind", "last_crawled_at", "items"],
         "additionalProperties": false
       },
       "VerificationEvent": {

@@ -16,10 +16,12 @@ import { sql } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { utcTextOf, wireUtc } from '../db/timestamps.ts';
 import { notFound } from '../errors.ts';
 import { compareText } from '../text-order.ts';
 import { goalSql, groupingSql, groupKeySql, GROUPING_ORDER } from './action-groupings.ts';
 import { statusView } from './action-status.ts';
+import { pageKindOf } from './action-urls.ts';
 import {
   actionItem,
   LISTED_ACTION,
@@ -184,7 +186,12 @@ export async function actionTree(db: Database, scope: Scope, raw: TreeFilters) {
 export async function urlActions(db: Database, scope: Scope, siteUrlId: string) {
   const url = await db
     .selectFrom('site_urls')
-    .select(['id', 'normalized_url'])
+    .select([
+      'id',
+      'normalized_url',
+      pageKindOf.as('page_kind'),
+      utcTextOf(sql.ref('last_seen_at')).as('last_seen_text'),
+    ])
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('id', '=', siteUrlId)
@@ -206,5 +213,11 @@ export async function urlActions(db: Database, scope: Scope, siteUrlId: string) 
     .orderBy(sql`coalesce(actions.priority_score, -1)`, 'desc')
     .orderBy('actions.id')
     .execute();
-  return { site_url_id: url.id, url: url.normalized_url, items: rows.map(actionItem) };
+  return {
+    site_url_id: url.id,
+    url: url.normalized_url,
+    page_kind: url.page_kind,
+    last_crawled_at: wireUtc(url.last_seen_text),
+    items: rows.map(actionItem),
+  };
 }

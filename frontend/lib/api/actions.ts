@@ -27,7 +27,9 @@ import {
   actionStatusSchema,
   actionsPageSchema,
   actionTreeSchema,
+  actionUrlsPageSchema,
   analyzablePagesSchema,
+  urlActionsSchema,
   type ActionAnalyzeRequest,
   type ActionBulkStatusRequest,
   type ActionDeclarationRequest,
@@ -139,6 +141,23 @@ export const actionsApi = {
       await apiClient.get(`/actions/${actionId}`, options),
       'actions.get',
     ),
+  /** The next page of an Action's URLs, from the cursor the previous page gave. */
+  urls: async (actionId: string, cursor: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      actionUrlsPageSchema,
+      await apiClient.get(
+        withQuery(`/actions/${actionId}/urls`, definedQuery({ cursor })),
+        options,
+      ),
+      'actions.urls',
+    ),
+  /** Every Action touching one of the project's URLs. */
+  urlActions: async (projectId: string, siteUrlId: string, options?: ApiRequestOptions) =>
+    strictValidate(
+      urlActionsSchema,
+      await apiClient.get(`/projects/${projectId}/urls/${siteUrlId}/actions`, options),
+      'actions.urlActions',
+    ),
   updateStatus: async (actionId: string, status: ActionUserStatus, options?: ApiRequestOptions) =>
     strictValidate(
       actionItemSchema,
@@ -249,6 +268,24 @@ export const actionsQueries = {
     queryOptions({
       queryKey: queryKeys.actions.detail(workspaceId, actionId),
       queryFn: ({ signal }) => actionsApi.get(actionId, { signal, workspaceId }),
+    }),
+  /** An Action's URLs past the detail's first page, a page per "Show more", from its cursor. */
+  urls: (workspaceId: string | null, actionId: string, cursor: string) =>
+    infiniteQueryOptions({
+      queryKey: queryKeys.actions.urls(workspaceId, actionId, cursor),
+      initialPageParam: cursor,
+      queryFn: ({ signal, pageParam }) =>
+        actionsApi.urls(actionId, pageParam, { signal, workspaceId }),
+      getNextPageParam: (page) => page.next_cursor ?? undefined,
+    }),
+  urlActions: (scope: ProjectScope, siteUrlId: string) =>
+    queryOptions({
+      queryKey: queryKeys.actions.urlActions(scope, siteUrlId),
+      queryFn: ({ signal }) =>
+        actionsApi.urlActions(scope.projectId, siteUrlId, {
+          signal,
+          workspaceId: scope.workspaceId,
+        }),
     }),
   /** Analyze a page's picker: the latest crawl's content pages matching `search`. */
   analyzablePages: (scope: ProjectScope, search: string) =>

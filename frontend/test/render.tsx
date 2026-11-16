@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react';
 import type { ReactElement, ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
 import { vi } from 'vite-plus/test';
 
 import { UserMenuController } from '@/components/layout/user-menu';
@@ -138,8 +138,8 @@ type ProvidersOptions = Omit<RenderOptions, 'wrapper'> & {
    * what would otherwise hide a consumer that cannot survive without one.
    */
   projectSelection?: Partial<ProjectContextValue> | null;
-  /** Initial in-app location for router-aware component tests. */
-  initialEntries?: string[];
+  /** Initial in-app location (with its history state) for router-aware component tests. */
+  initialEntries?: MemoryRouterProps['initialEntries'];
 };
 
 /**

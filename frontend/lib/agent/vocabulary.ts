@@ -4,7 +4,6 @@
  * An unmapped token renders as nothing (or a neutral fallback where a label is
  * structurally required), never as the raw backend identifier.
  */
-import type { PriorityValue } from '@/components/ui/status-mark';
 import type { ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
 import { formatCount } from '@/lib/format';
 import type {
@@ -15,20 +14,6 @@ import type {
   ActionTreeGroupBy,
 } from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
-
-/** The band the server put an Action's priority score in; the score itself only ranks. */
-export const PRIORITY_BAND_LABEL: Record<ActionPriorityBand, string> = {
-  high: 'High',
-  medium: 'Medium',
-  low: 'Low',
-};
-
-/** A band as the priority badge's value (its tint and bar glyph). */
-export const PRIORITY_BAND_VALUE: Record<ActionPriorityBand, PriorityValue> = {
-  high: 'high',
-  medium: 'medium',
-  low: 'low',
-};
 
 /** The Actions page's goals (plan v3, owner 2026-11-16). */
 export const ACTION_GOAL_LABEL: Record<ActionGoal, string> = {

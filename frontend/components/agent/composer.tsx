@@ -30,6 +30,7 @@ export function Composer({
   chips = [],
   onRemoveChip,
   attachment,
+  scope,
   skill,
   commands,
   onStop,
@@ -50,6 +51,8 @@ export function Composer({
   onRemoveChip?: (chip: ContextChip) => void;
   /** The Action the chat is about, first among the chips: one removable line. */
   attachment?: Readonly<{ label: string; onRemove: () => void }>;
+  /** What the hand-off covers ("201 URLs (first 50 sent)", "4 actions on this URL"): fixed chips after the context. */
+  scope?: readonly string[];
   /** The skill the turn will run, picked or continued: a chip after the Action, and the menu's Skills. */
   skill: SkillChoice;
   commands: ComposerState;
@@ -67,7 +70,14 @@ export function Composer({
         if (canSend) onSubmit();
       }}
       chipsLabel="Context for this request"
-      chips={composerChips({ lead: [attachment, skill.chip], chips, onRemoveChip, commands })}
+      chips={composerChips({
+        attachment,
+        chips,
+        scope,
+        skill: skill.chip,
+        onRemoveChip,
+        commands,
+      })}
       field={
         <>
           <label htmlFor={id} className="sr-only">
@@ -187,34 +197,43 @@ function SubmitControl({
   }
 }
 
-type LeadChip = Readonly<{ label: string; onRemove: () => void }> | undefined;
+type Chip = Readonly<{ label: string; onRemove?: () => void }>;
 
-/** The chip row: the Action and skill first, then context, mentions and pastes; null when empty. */
+/**
+ * The chip row, as the hand-off reads: the Action, its context, what that
+ * covers ("201 URLs (first 50 sent)"), the skill, then mentions and pastes;
+ * null when empty.
+ */
 function composerChips({
-  lead,
+  attachment,
   chips,
+  scope = [],
+  skill,
   onRemoveChip,
   commands,
 }: Readonly<{
-  lead: readonly LeadChip[];
+  attachment: Chip | undefined;
   chips: ContextChip[];
+  scope?: readonly string[];
+  skill: Chip | undefined;
   onRemoveChip?: (chip: ContextChip) => void;
   commands: ComposerState;
 }>) {
-  const leading = lead.filter((chip) => chip !== undefined);
+  const fixed: Chip[] = [
+    ...(attachment ? [attachment] : []),
+    ...chips.map((chip) => ({
+      label: chip.label,
+      onRemove: onRemoveChip ? () => onRemoveChip(chip) : undefined,
+    })),
+    ...scope.map((label) => ({ label })),
+    ...(skill ? [skill] : []),
+  ];
   const { mentions, pastes } = commands;
-  if (leading.length + chips.length + mentions.length + pastes.items.length === 0) return null;
+  if (fixed.length + mentions.length + pastes.items.length === 0) return null;
   return (
     <>
-      {leading.map((chip) => (
+      {fixed.map((chip) => (
         <RemovableChip key={chip.label} label={chip.label} onRemove={chip.onRemove} />
-      ))}
-      {chips.map((chip) => (
-        <RemovableChip
-          key={chip.key}
-          label={chip.label}
-          onRemove={onRemoveChip ? () => onRemoveChip(chip) : undefined}
-        />
       ))}
       {mentions.map((mention) => (
         <RemovableChip

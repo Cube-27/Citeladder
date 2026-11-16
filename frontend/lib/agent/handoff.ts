@@ -14,6 +14,7 @@ import type { AgentChatOrigin, AgentContextRefs } from '@citeladder/contracts/ag
 import type { DatedEvidence } from '@/lib/agent/evidence';
 import { checkKindLabel, checkStateLabel, measurementLegLabel } from '@/lib/agent/vocabulary';
 import type { ActionDetail } from '@/lib/api/actions';
+import { pluralCount } from '@/lib/format';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -34,7 +35,12 @@ const PARAM = {
   factsCrawl: 'facts_crawl_id',
   output: 'output_id',
   revision: 'revision_id',
+  actionUrls: 'action_url_id',
+  urlActions: 'url_actions_id',
 } as const;
+
+/** The most URLs one hand-off names (the server's `action_url_ids` bound). */
+export const HANDOFF_URLS_MAX = 50;
 
 export type AgentHandoff = {
   actionId?: string;
@@ -54,6 +60,10 @@ export type HandoffInput = {
   issueGroup?: { crawlId: string; groupId: string; siteUrlId?: string };
   siteFacts?: { crawlId: string };
   outputRevision?: { outputId: string; revisionId: string };
+  /** URLs ticked on the attached Action (`action_urls`), at most `HANDOFF_URLS_MAX`. */
+  actionUrlIds?: readonly string[];
+  /** One URL with every Action touching it. */
+  urlActionsSiteUrlId?: string;
   prompt?: string | null;
   skillId?: string | null;
   workflowId?: string | null;
@@ -76,6 +86,9 @@ export function agentHandoffHref(input: HandoffInput): string {
   set(PARAM.factsCrawl, input.siteFacts?.crawlId);
   set(PARAM.output, input.outputRevision?.outputId);
   set(PARAM.revision, input.outputRevision?.revisionId);
+  for (const id of input.actionUrlIds?.slice(0, HANDOFF_URLS_MAX) ?? [])
+    params.append(PARAM.actionUrls, id);
+  set(PARAM.urlActions, input.urlActionsSiteUrlId);
   if (input.searchIntelligence && input.searchIntelligence.rowIds.length > 0) {
     params.set(PARAM.dataset, input.searchIntelligence.datasetId);
     for (const row of input.searchIntelligence.rowIds) params.append(PARAM.rows, row);
@@ -106,29 +119,28 @@ export function actionHandoffHref(
     handoff: ActionHandoff;
     editable_page?: boolean;
   }>,
+  /** Only these of the Action's URLs (ticked on its page); none sends the whole Action. */
+  actionUrlIds: readonly string[] = [],
 ): string {
   const { handoff } = action;
+  const base = { actionId: action.id, actionUrlIds };
   if (action.editable_page && action.target_url)
-    return agentHandoffHref({
-      actionId: action.id,
-      targetUrl: action.target_url,
-      workflowId: PAGE_WORKFLOW,
-    });
+    return agentHandoffHref({ ...base, targetUrl: action.target_url, workflowId: PAGE_WORKFLOW });
   switch (handoff.context) {
     case 'opportunity':
       return agentHandoffHref({
-        actionId: action.id,
+        ...base,
         opportunityId: handoff.opportunity_id,
         workflowId: handoff.workflow_id,
       });
     case 'page_url':
       return agentHandoffHref({
-        actionId: action.id,
+        ...base,
         targetUrl: action.target_url,
         workflowId: handoff.workflow_id,
       });
     case 'action':
-      return agentHandoffHref({ actionId: action.id });
+      return agentHandoffHref(base);
     default: {
       const unknownHandoff: never = handoff;
       throw new Error(`Unknown Action handoff: ${JSON.stringify(unknownHandoff)}`);
@@ -180,6 +192,10 @@ function originContext(input: HandoffInput): AgentContextRefs {
       output_id: input.outputRevision.outputId,
       revision_id: input.outputRevision.revisionId,
     };
+  const ticked = [...new Set(input.actionUrlIds ?? [])].slice(0, HANDOFF_URLS_MAX);
+  if (input.actionId && ticked.length > 0) context.action_url_ids = ticked;
+  if (input.urlActionsSiteUrlId)
+    context.url_actions_reference = { site_url_id: input.urlActionsSiteUrlId };
   return context;
 }
 function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
@@ -199,6 +215,12 @@ function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
     revision = uuidParam(params, PARAM.revision);
   if (output && revision)
     context.output_revision_reference = { output_id: output, revision_id: revision };
+  const ticked = [...new Set(params.getAll(PARAM.actionUrls).filter((id) => UUID.test(id)))];
+  // Ticked URLs belong to the attached Action; without one they mean nothing.
+  if (ticked.length > 0 && uuidParam(params, PARAM.action))
+    context.action_url_ids = ticked.slice(0, HANDOFF_URLS_MAX);
+  const urlActions = uuidParam(params, PARAM.urlActions);
+  if (urlActions) context.url_actions_reference = { site_url_id: urlActions };
   return context;
 }
 
@@ -251,32 +273,52 @@ export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
 /** Human labels for the references a composer shows as removable chips. */
 export type ContextChip = { key: keyof AgentContextRefs; label: string };
 
-export function contextChips(context: AgentContextRefs): ContextChip[] {
-  const chips: ContextChip[] = [];
-  if (context.issue_group_reference)
-    chips.push({
-      key: 'issue_group_reference',
-      label: context.issue_group_reference.site_url_id
-        ? 'Selected page issue'
-        : 'Selected issue group',
-    });
-  if (context.site_facts_reference)
-    chips.push({ key: 'site_facts_reference', label: 'Selected crawl robots policy' });
-  if (context.output_revision_reference)
-    chips.push({ key: 'output_revision_reference', label: 'Selected document revision' });
-  if (context.target_url) chips.push({ key: 'target_url', label: context.target_url });
-  else if (context.target_site_url_id)
-    chips.push({ key: 'target_site_url_id', label: 'Selected page' });
-  if (context.opportunity_id) chips.push({ key: 'opportunity_id', label: 'Recommendation' });
-  if (context.demand_signal_id) chips.push({ key: 'demand_signal_id', label: 'Demand signal' });
-  if (context.search_intelligence_reference) {
-    const count = context.search_intelligence_reference.row_ids.length;
-    chips.push({
-      key: 'search_intelligence_reference',
-      label: `${count} Keyword Research ${count === 1 ? 'row' : 'rows'}`,
-    });
-  }
-  return chips;
+type ChipLabels = Partial<Record<keyof AgentContextRefs, string>>;
+
+/** Each reference's chip in display order: its label, or nothing when the context lacks it. */
+const CHIPS: readonly [
+  keyof AgentContextRefs,
+  (context: AgentContextRefs, labels: ChipLabels) => string | null | undefined,
+][] = [
+  [
+    'url_actions_reference',
+    (c, labels) =>
+      c.url_actions_reference && (labels.url_actions_reference ?? 'Selected URL and its actions'),
+  ],
+  [
+    'action_url_ids',
+    (c) => c.action_url_ids && pluralCount(c.action_url_ids.length, 'selected URL'),
+  ],
+  [
+    'issue_group_reference',
+    (c) =>
+      c.issue_group_reference &&
+      (c.issue_group_reference.site_url_id ? 'Selected page issue' : 'Selected issue group'),
+  ],
+  ['site_facts_reference', (c) => c.site_facts_reference && 'Selected crawl robots policy'],
+  ['output_revision_reference', (c) => c.output_revision_reference && 'Selected document revision'],
+  ['target_url', (c) => c.target_url],
+  // A page named by URL and id is one chip, the URL's.
+  ['target_site_url_id', (c) => (c.target_url ? null : c.target_site_url_id && 'Selected page')],
+  ['opportunity_id', (c) => c.opportunity_id && 'Recommendation'],
+  ['demand_signal_id', (c) => c.demand_signal_id && 'Demand signal'],
+  [
+    'search_intelligence_reference',
+    (c) =>
+      c.search_intelligence_reference &&
+      pluralCount(c.search_intelligence_reference.row_ids.length, 'Keyword Research row'),
+  ],
+];
+
+export function contextChips(
+  context: AgentContextRefs,
+  /** A read's own words for a reference, where the screen has them. */
+  labels: ChipLabels = {},
+): ContextChip[] {
+  return CHIPS.flatMap(([key, chip]) => {
+    const label = chip(context, labels);
+    return label ? [{ key, label }] : [];
+  });
 }
 
 /** Where a chat started, in the words its context chips use. */

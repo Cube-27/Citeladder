@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
+import { useLocation } from 'react-router-dom';
 import { X } from 'lucide-react';
 
 import { GoalStrip } from '@/components/agent/actions-goal-strip';
@@ -18,6 +19,7 @@ import { Button, IconButton } from '@/components/ui/button';
 import { Stack } from '@/components/ui/layout';
 import { SelectionDock } from '@/components/ui/selection-dock';
 import { textRole } from '@/components/ui/typography';
+import { listJumpSchema, type ListJump } from '@/lib/agent/action-crumbs';
 import type { ActionStatus, ActionTree } from '@/lib/api/actions';
 import { formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
@@ -32,34 +34,40 @@ import type { ActionGoal } from '@citeladder/contracts/actions';
 export function ActionsScreen() {
   const scope = useProjectScope();
   const view = useActionFilters();
+  const location = useLocation();
   const lead: ActionStatus = view.statuses.includes('open') ? 'open' : (view.statuses[0] ?? 'open');
   const primary = useStatusTree(scope, view, lead);
-  const levels = useOpenLevels(defaultOpen(lead, primary.data));
+  // A breadcrumb on an Action or URL page opens its goal and grouping here.
+  const [arrived] = useState(() => {
+    const parsed = listJumpSchema.safeParse(location.state);
+    return parsed.success && view.groupBy === 'goal' ? parsed.data : null;
+  });
+  const levels = useOpenLevels([...defaultOpen(lead, primary.data), ...jumpKeys(arrived)]);
   const selection = useTreeSelection(JSON.stringify([view.status, view.groupBy, view.filters]));
   const counts = primary.data?.status_counts;
 
-  const pendingJump = useRef<ActionGoal | null>(null);
-  const reveal = (goal: ActionGoal) => {
-    const row = document.getElementById(groupAnchor(lead, goal));
+  const pendingJump = useRef<ListJump | null>(arrived);
+  const reveal = ({ status, goal }: ListJump) => {
+    const row = document.getElementById(groupAnchor(status, goal));
     row?.scrollIntoView({ block: 'start' });
     row?.focus({ preventScroll: true });
+    return row !== null;
   };
-  // A jump from another grouping scrolls once the goal tree has landed.
+  // A jump scrolls once the goal tree holding its row has landed.
   useEffect(() => {
-    const goal = pendingJump.current;
-    if (!goal || primary.data?.group_by !== 'goal' || primary.isPlaceholderData) return;
-    pendingJump.current = null;
-    reveal(goal);
+    const target = pendingJump.current;
+    if (!target || primary.data?.group_by !== 'goal' || primary.isPlaceholderData) return;
+    if (reveal(target)) pendingJump.current = null;
   });
   const jump = (goal: ActionGoal) => {
     const keys = [levelKey.status(lead), levelKey.group(lead, goal)];
     if (view.groupBy === 'goal') {
       flushSync(() => levels.open(keys));
-      reveal(goal);
+      reveal({ status: lead, goal });
       return;
     }
     levels.open(keys);
-    pendingJump.current = goal;
+    pendingJump.current = { status: lead, goal };
     view.setGroupBy('goal');
   };
 
@@ -85,6 +93,16 @@ export function ActionsScreen() {
       </ReportPage>
     </ActionsPageContext>
   );
+}
+
+/** The levels a breadcrumb jump opens: its status, goal and grouping. */
+function jumpKeys(jump: ListJump | null): string[] {
+  if (!jump) return [];
+  return [
+    levelKey.status(jump.status),
+    levelKey.group(jump.status, jump.goal),
+    ...(jump.grouping ? [levelKey.grouping(jump.status, jump.goal, jump.grouping)] : []),
+  ];
 }
 
 /** New (or the one status shown), its first group and that group's first grouping. */

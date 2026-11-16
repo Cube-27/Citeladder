@@ -25,7 +25,7 @@ const SCOPE_BY_KIND: Readonly<Record<string, string>> = {
   category: '1 category',
 };
 
-function scopeLabel(action: Action): string {
+export function scopeLabel(action: Pick<Action, 'target_kind' | 'page_count'>): string {
   if (action.target_kind === 'issue_family') {
     // Unknown (no cohort read) is not the whole site: only a cohort naming no URL is.
     if (action.page_count === null) return 'Not stated';
@@ -34,7 +34,7 @@ function scopeLabel(action: Action): string {
   return SCOPE_BY_KIND[action.target_kind] ?? 'Not stated';
 }
 
-function sourceLabel(action: Action): string {
+export function sourceLabel(action: Pick<Action, 'families' | 'origin'>): string {
   return (
     familyLabel(action.families[0] ?? '') ?? (action.origin === 'agent' ? 'Agent' : 'Not stated')
   );
@@ -42,7 +42,8 @@ function sourceLabel(action: Action): string {
 
 const IMPACT_LEVEL = { high: 3, medium: 2, low: 1 } as const;
 
-function Impact({ band }: Readonly<{ band: Action['priority_band'] }>) {
+/** An Action's impact as three bars and a word; an unscored one says so. */
+export function Impact({ band }: Readonly<{ band: Action['priority_band'] }>) {
   if (!band) return <span className={textRole('caption')}>Not scored</span>;
   return <ImpactBars level={IMPACT_LEVEL[band]}>{IMPACT_LABEL[band]}</ImpactBars>;
 }

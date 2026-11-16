@@ -453,7 +453,7 @@ function AttachedDeclaration({
 }
 
 /** Contextual links are declared one link at a time, from the Website's link review. */
-export const SELECT_IMPLEMENTED_LINKS = {
+const SELECT_IMPLEMENTED_LINKS = {
   label: 'Select implemented links',
   href: '/site?tab=internal-links',
   icon: ListChecks,
