@@ -72,13 +72,11 @@ import { visibilityQueries } from '@/lib/api/visibility-queries';
 import { INITIAL_DASHBOARD_PARAMS } from '@/lib/performance/performance';
 import { navigationMode } from '@/lib/navigation/app-routes';
 import { AgentNav } from '@/components/agent/agent-nav';
-import { ModeSwitch, useModeMemory } from './mode-switch';
-import { DashboardNav, SidebarFootNav, useDestinationMemory } from './sidebar-nav';
+import { ModeSwitch } from './mode-switch';
+import { DashboardNav, SidebarFootNav } from './sidebar-nav';
 
 /** The labelled sidebar as the shell draws it: the switch, the mode's list, the foot. */
 function SidebarNav() {
-  useDestinationMemory();
-  useModeMemory();
   return (
     <div data-sidebar-state="expanded">
       <ModeSwitch rail={false} />
@@ -182,35 +180,29 @@ describe('station navigation', () => {
     expect(screen.queryByRole('link', { name: 'Skills' })).toBeNull();
   });
 
-  it('returns each destination and each mode to the last screen used in it', () => {
-    const chat = '/agent/chats/33333333-3333-4333-8333-333333333331';
-    const action = '/agent/actions/44444444-4444-4444-8444-444444444441';
-    pathname = action;
-    const first = render(<SidebarNav />);
-    first.unmount();
-    pathname = chat;
-    const second = render(<SidebarNav />);
-    // On a chat, New chat opens a new chat.
-    expect(screen.getByRole('link', { name: 'New chat' })).toHaveAttribute(
-      'href',
-      '/agent?project=11111111-1111-4111-8111-111111111111',
-    );
-    second.unmount();
+  it('sends each destination and each mode to its front door, whatever was opened before', () => {
+    pathname = '/agent/actions/44444444-4444-4444-8444-444444444441';
+    render(<SidebarNav />).unmount();
+    pathname = '/agent/chats/33333333-3333-4333-8333-333333333331';
+    render(<SidebarNav />).unmount();
+    pathname = '/site';
+    searchParams = new URLSearchParams('tab=pages');
+    render(<SidebarNav />).unmount();
 
     pathname = '/demand';
+    searchParams = new URLSearchParams();
     render(<SidebarNav />);
     expect(screen.getByRole('link', { name: 'Agent' })).toHaveAttribute(
       'href',
-      `${chat}?project=11111111-1111-4111-8111-111111111111`,
+      '/agent?project=11111111-1111-4111-8111-111111111111',
     );
     expect(screen.getByRole('link', { name: /^Actions/ })).toHaveAttribute(
       'href',
-      `${action}?project=11111111-1111-4111-8111-111111111111`,
+      '/agent/actions?project=11111111-1111-4111-8111-111111111111',
     );
-    // A destination never used keeps its front door.
-    expect(screen.getByRole('link', { name: 'Runs' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Website' })).toHaveAttribute(
       'href',
-      '/runs?project=11111111-1111-4111-8111-111111111111',
+      '/site?project=11111111-1111-4111-8111-111111111111',
     );
   });
 
