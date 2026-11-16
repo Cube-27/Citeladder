@@ -169,7 +169,11 @@ describe('ProductDetailScreen', () => {
 
     expect(await screen.findByRole('heading', { name: 'Acme Road Runner' })).toBeInTheDocument();
     expect(requested).toEqual(['?window=90']);
-    expect(screen.getByText('A daily trainer for road miles.')).toBeInTheDocument();
+    // A listing title that is not the name stays in the product link's name, not its own line.
+    expect(
+      screen.getByRole('link', { name: /^A daily trainer for road miles\.,\s?https:\/\/shop/ }),
+    ).toHaveAttribute('href', 'https://shop.example/products/road');
+    expect(screen.queryByText('A daily trainer for road miles.')).toBeNull();
     const kpis = within(screen.getByRole('group', { name: 'Product metrics' }));
     expect(kpis.getByText('75.0%')).toBeInTheDocument();
     expect(kpis.getByText('$120.00')).toBeInTheDocument();

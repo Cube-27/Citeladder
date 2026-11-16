@@ -17,6 +17,7 @@ import {
 import type { SourceStep } from '@/components/integrations/data-sources';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { ClampText } from '@/components/ui/clamp-text';
 import { Stack } from '@/components/ui/layout';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
@@ -74,7 +75,7 @@ export function OverviewFigures({
   const crawlMissing =
     crawlAvailable && data.crawl.connection === 'not_connected' && onConnectCrawl !== undefined;
   return (
-    <Section variant="group">
+    <Section>
       <SectionHeader>
         <SectionTitle>Key figures</SectionTitle>
         <CrawlNotes crawl={data.crawl} available={crawlAvailable} />
@@ -338,15 +339,17 @@ function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; availa
   const coverage = COVERAGE_NOTE[crawl.coverage] ?? null;
   if (!coverage && !crawl.last_processed_at) return null;
   return (
-    <SectionDescription>
-      {coverage}
-      {coverage && crawl.last_processed_at ? ' ' : null}
-      {crawl.last_processed_at ? (
-        <>
-          Reporting timezone: {crawl.reporting_timezone}. Processed{' '}
-          <DisplayTime value={crawl.last_processed_at} />.
-        </>
-      ) : null}
+    <SectionDescription className="min-w-0">
+      <ClampText>
+        {coverage}
+        {coverage && crawl.last_processed_at ? ' ' : null}
+        {crawl.last_processed_at ? (
+          <>
+            Reporting timezone: {crawl.reporting_timezone}. Processed{' '}
+            <DisplayTime value={crawl.last_processed_at} />.
+          </>
+        ) : null}
+      </ClampText>
     </SectionDescription>
   );
 }
