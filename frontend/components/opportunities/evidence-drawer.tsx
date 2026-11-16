@@ -4,27 +4,35 @@ import type { ReactNode } from 'react';
 import { EarnedPageHandoff } from '@/components/opportunities/earned-page-handoff';
 import { OpportunityEvidenceSection } from '@/components/opportunities/opportunity-evidence-section';
 import { OpportunitySummarySection } from '@/components/opportunities/opportunity-summary-section';
-import { OpportunityTypeBadge } from '@/components/opportunities/opportunity-type-badge';
-import { StatusMark } from '@/components/ui/status-mark';
 import { Drawer } from '@/components/ui/drawer';
-import { Inline, Stack } from '@/components/ui/layout';
+import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail } from '@citeladder/contracts';
-import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { Limitations } from '@/components/ui/passage';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
-/** One Action member's evidence, backed by the persisted detail projection. */
+/**
+ * One Action member's evidence, backed by the persisted detail projection.
+ * The row that opens it already shows the finding's impact, source and date,
+ * so the drawer names the finding once in its header and shows only the rest:
+ * the evidence, the recommended improvement and the handoff.
+ */
 export function EvidenceDrawer({
   opportunityId,
+  title,
+  targetUrl,
   projectId,
   open,
   onOpenChange,
 }: Readonly<{
   opportunityId: string | null;
+  /** The opening row's finding title, so the header names it before the detail loads. */
+  title?: string;
+  /** The Action's target, already shown on the page; evidence naming only it is not repeated. */
+  targetUrl: string | null;
   projectId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -58,30 +66,29 @@ export function EvidenceDrawer({
   } else if (detailQuery.isLoading || !detail) {
     body = <StateBlock kind="loading" />;
   } else {
-    body = <OpportunityDetailBody detail={detail} />;
+    body = <OpportunityDetailBody detail={detail} targetUrl={targetUrl} />;
   }
 
   return (
-    <Drawer open={open} onOpenChange={onOpenChange} title="Evidence detail" width="wide">
+    <Drawer
+      open={open}
+      onOpenChange={onOpenChange}
+      title={detail?.title ?? title ?? 'Finding'}
+      width="wide"
+    >
       {body}
     </Drawer>
   );
 }
 
 /** Everything the drawer shows once a detail for THIS project has loaded. */
-function OpportunityDetailBody({ detail }: Readonly<{ detail: OpportunityDetail }>) {
+function OpportunityDetailBody({
+  detail,
+  targetUrl,
+}: Readonly<{ detail: OpportunityDetail; targetUrl: string | null }>) {
   return (
     <Stack gap="workspace">
-      <Stack>
-        <h2 className={textRole('heading')}>{detail.title}</h2>
-        <Inline className="flex-wrap">
-          <StatusMark variant="priority" value={severityPriority(detail.severity)}>
-            {severityLabel(detail.severity)} impact
-          </StatusMark>
-          <OpportunityTypeBadge type={detail.opportunity_type} />
-        </Inline>
-      </Stack>
-      <OpportunityEvidenceSection detail={detail} />
+      <OpportunityEvidenceSection detail={detail} targetUrl={targetUrl} />
       {detail.remediation ? (
         // The rule's own guidance, plain prose: neither measured evidence nor a model's draft.
         <Stack as="section">

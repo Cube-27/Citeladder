@@ -1,63 +1,16 @@
 import { ClipboardList } from 'lucide-react';
 import { useState } from 'react';
 
-import { ActionSection } from '@/components/agent/action-section';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Dialog } from '@/components/ui/dialog';
 import { Icon } from '@/components/ui/icon';
-import { Inline } from '@/components/ui/layout';
-import { DisplayTime } from '@/components/ui/display-time';
-import { textRole } from '@/components/ui/typography';
-import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
-import { TextLink } from '@/components/ui/text-link';
 import { Textarea } from '@/components/ui/textarea';
-import { actionEvidence, type DatedEvidence } from '@/lib/agent/evidence';
+import { actionEvidence } from '@/lib/agent/evidence';
 import { developerTicket } from '@/lib/agent/handoff';
 import type { ActionDetail } from '@/lib/api/actions';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
-
-const BASIS_LABEL: Record<DatedEvidence['basis'], string> = {
-  observed: 'Observed',
-  inferred: 'Inferred',
-};
-
-/**
- * The Action's records, one ruled row each: what it is (a link to the screen
- * that shows it), whether CiteLadder observed it or a rule inferred it, and
- * the date its persisted record carries.
- */
-export function ActionEvidence({ action }: Readonly<{ action: ActionDetail }>) {
-  const records = actionEvidence(action);
-  if (records.length === 0) return null;
-  return (
-    <ActionSection title="Evidence" id="action-evidence">
-      <ul aria-label="Evidence records" className={ledgerClasses()}>
-        {records.map((item) => (
-          <Inline
-            as="li"
-            gap="meta"
-            key={item.key}
-            className={ledgerItemClasses('items-baseline justify-between')}
-          >
-            {item.href ? (
-              <TextLink href={item.href} text="body">
-                {item.label}
-              </TextLink>
-            ) : (
-              <span className={textRole('body')}>{item.label}</span>
-            )}
-            <span className={textRole('caption', 'tabular-nums')}>
-              {BASIS_LABEL[item.basis]} ·{' '}
-              <DisplayTime value={item.at} dateOnly fallback="date not recorded" />
-            </span>
-          </Inline>
-        ))}
-      </ul>
-    </ActionSection>
-  );
-}
 
 /**
  * "Prepare developer ticket": the Action as copyable Markdown for a developer

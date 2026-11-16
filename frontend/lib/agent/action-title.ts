@@ -46,6 +46,15 @@ function actionTarget(action: TitledAction): string {
 }
 
 /**
+ * A sentence about the Action with its whole target address named short, as
+ * the title names it, so the page reads the full URL once (its Target row).
+ */
+export function withShortTarget(text: string, action: TitledAction): string {
+  if (!httpUrl(action.target_label)) return text;
+  return text.replaceAll(readableUrl(action.target_label), actionTarget(action));
+}
+
+/**
  * An Action's one title, used by the queue, the chat and the Action's page:
  * the work and its target ("Improve internal links: /pricing"), or the target
  * alone when the Action has no known type. `full` gives the whole target, for

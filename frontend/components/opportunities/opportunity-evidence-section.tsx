@@ -9,6 +9,7 @@ import { observedSourcePattern } from '@/lib/opportunities/source-pattern';
 import { formatCount, readableUrl } from '@/lib/format';
 import { keywordGapEvidenceSchema } from '@citeladder/contracts';
 import { wellClasses } from '@/components/ui/slip';
+import { UrlText } from '@/components/ui/table';
 
 function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null;
@@ -54,7 +55,14 @@ function EvidenceHeading() {
   return <h3 className={textRole('subheading')}>Evidence</h3>;
 }
 
-export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
+/**
+ * A finding's evidence. Its address shows only where it differs from the
+ * Action's target (`targetUrl`), which the page already names.
+ */
+export function OpportunityEvidenceSection({
+  detail,
+  targetUrl = null,
+}: Readonly<{ detail: OpportunityDetail; targetUrl?: string | null }>) {
   const evidence = detail.evidence;
   if (detail.rule_id === 'search_keyword_gap')
     return (
@@ -67,10 +75,12 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
       </Stack>
     );
   const promptText = asString(evidence.prompt_text);
-  const url = asString(evidence.url) ?? detail.target_url;
+  const found = asString(evidence.url) ?? detail.target_url;
+  const url = found && targetUrl && readableUrl(found) === readableUrl(targetUrl) ? null : found;
   const theme = asString(evidence.prompt_theme) ?? detail.target_theme;
   const competitors = asStringList(evidence.competitor_names);
   const sourcePattern = observedSourcePattern(evidence.source_pattern);
+  if (!promptText && !url && !theme && competitors.length === 0 && !sourcePattern) return null;
 
   return (
     <Stack as="section">
@@ -82,7 +92,9 @@ export function OpportunityEvidenceSection({ detail }: Readonly<{ detail: Opport
       ) : null}
       {url ? (
         <p className={wellClasses('min-w-0')}>
-          <ClampText className="type-body text-ink">{readableUrl(url)}</ClampText>
+          <span className="type-body text-ink flex min-w-0">
+            <UrlText url={url} />
+          </span>
         </p>
       ) : null}
       {theme ? <OpportunityKvRow label="Topic" value={theme} /> : null}

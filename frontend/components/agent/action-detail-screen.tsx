@@ -11,27 +11,28 @@ import {
 } from '@/components/agent/action-declaration';
 import { AffectedPages } from '@/components/agent/action-affected-pages';
 import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap-evidence';
+import { ActionFindings } from '@/components/agent/action-findings';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
-import { ActionEvidence, DeveloperTicketButton } from '@/components/agent/developer-ticket';
+import { DeveloperTicketButton } from '@/components/agent/developer-ticket';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { ActionSection } from '@/components/agent/action-section';
 import { RecordPage } from '@/components/templates/record-page';
 import type { PageBack } from '@/components/templates/page-frame';
 import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
-import { ACTIONS, ActionButton } from '@/components/ui/actions';
+import { ACTIONS } from '@/components/ui/actions';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
-import { DraftSheet } from '@/components/ui/draft-sheet';
 import { FactList, type Fact } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Menu, MenuContent, MenuItem, MenuLinkItem, MenuTrigger } from '@/components/ui/menu';
 import { ProjectLink } from '@/components/ui/project-link';
+import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
-import { actionTitle } from '@/lib/agent/action-title';
+import { actionTitle, withShortTarget } from '@/lib/agent/action-title';
 import { actionHandoffHref } from '@/lib/agent/handoff';
 import { familyLabel, measurementLegLabel, targetKindLabel } from '@/lib/agent/vocabulary';
 import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';
@@ -48,10 +49,10 @@ const BACK: PageBack = { href: '/agent/actions', label: 'Back to Actions' };
 
 /**
  * One Action (AS7) on the Record template: titled by its work and target
- * (`actionTitle`), its full target and facts in the identity card, the
- * sections read top to bottom (overview with Prepare developer ticket, dated
- * evidence, why, what to do, how it is measured) beside its findings and
- * chats, and its decisions in the sticky action bar.
+ * (`actionTitle`), its full target once in the identity card, the sections
+ * read top to bottom (overview with Prepare developer ticket, its findings
+ * with their evidence, why, what to do, how it is measured) beside its chats,
+ * and its decisions in the sticky action bar.
  */
 export function ActionDetailScreen() {
   const { actionId = '' } = useParams();
@@ -105,12 +106,7 @@ function ActionDetailView({
       title={actionTitle({ ...action, approach: action.diagnosis.approach ?? action.approach })}
       back={{ ...BACK, projectId: action.project_id }}
       identity={<Identity action={action} />}
-      aside={
-        <>
-          <Findings action={action} onOpenEvidence={setEvidenceId} />
-          <LinkedChats action={action} workspaceId={workspaceId} />
-        </>
-      }
+      aside={<LinkedChats action={action} workspaceId={workspaceId} />}
       actionBar={
         <ActionBar
           action={action}
@@ -131,7 +127,7 @@ function ActionDetailView({
       ) : null}
       <Overview action={action} />
       <AffectedPages action={action} />
-      <ActionEvidence action={action} />
+      <ActionFindings action={action} onOpen={setEvidenceId} />
       {action.declaration ? (
         <ActionSection title="Implementation" id="action-implementation">
           <DeclarationStatus
@@ -151,6 +147,8 @@ function ActionDetailView({
       <TextList title="Avoid" id="action-avoid" items={action.diagnosis.donts ?? []} />
       <EvidenceDrawer
         opportunityId={evidenceId}
+        title={action.members.find((member) => member.id === evidenceId)?.title}
+        targetUrl={action.target_url}
         projectId={action.project_id}
         open={evidenceId !== null}
         onOpenChange={(open) => {
@@ -178,27 +176,24 @@ function actionPrompt(action: ActionDetail): string {
 }
 
 /**
- * The work in one message, with the ways to take it elsewhere. An Action the
- * Agent proposed carries the Agent's own words, which no person has accepted,
- * so it is a draft; one found by evidence is filled from that evidence.
+ * The work in one message, its target named short (the Target row holds the
+ * whole address), with the ways to take it elsewhere. An Action the Agent
+ * proposed carries the Agent's own words, captioned as its suggestion.
  */
 function Overview({ action }: Readonly<{ action: ActionDetail }>) {
-  const message = <p className={textRole('body')}>{action.handoff.message}</p>;
-  const tools = (
-    <>
-      <DeveloperTicketButton action={action} />
-      <CopyButton value={actionPrompt(action)}>Copy as prompt</CopyButton>
-    </>
-  );
-  if (action.origin === 'agent')
-    return (
-      <DraftSheet title="Overview" state="draft" actions={tools}>
-        {message}
-      </DraftSheet>
-    );
   return (
-    <ActionSection title="Overview" id="action-overview" actions={tools}>
-      {message}
+    <ActionSection
+      title="Overview"
+      id="action-overview"
+      caption={agentCaption(action)}
+      actions={
+        <>
+          <DeveloperTicketButton action={action} />
+          <CopyButton value={actionPrompt(action)}>Copy as prompt</CopyButton>
+        </>
+      }
+    >
+      <p className={textRole('body')}>{withShortTarget(action.handoff.message, action)}</p>
     </ActionSection>
   );
 }
@@ -213,20 +208,19 @@ function Identity({ action }: Readonly<{ action: ActionDetail }>) {
     {
       label: 'Target',
       value: (
-        // The record's own field: the whole address, wrapping.
         <Stack gap="tight" className="min-w-0">
           {action.target_url ? (
             <TextLink
               variant="external"
               href={action.target_url}
               text="body"
-              className="justify-self-start break-words"
+              className="flex max-w-full min-w-0 items-center justify-self-start"
             >
-              {readableUrl(action.target_label)}
+              <TargetText label={action.target_label} />
             </TextLink>
           ) : (
-            <span className={textRole('body', 'break-words')}>
-              {readableUrl(action.target_label)}
+            <span className={textRole('body', 'flex min-w-0')}>
+              <TargetText label={action.target_label} />
             </span>
           )}
           {kind ? <span className={textRole('caption')}>{kind}</span> : null}
@@ -245,11 +239,21 @@ function Identity({ action }: Readonly<{ action: ActionDetail }>) {
   );
 }
 
+/** An address on one line, cut in the middle with the whole in its tooltip; any other label as written. */
+function TargetText({ label }: Readonly<{ label: string }>) {
+  if (/^https?:\/\//iu.test(label)) return <UrlText url={label} />;
+  return <span className="min-w-0 break-words">{readableUrl(label)}</span>;
+}
+
+/** The caption under a card whose words the agent wrote: suggested, never accepted or rejected. */
+const agentCaption = (action: ActionDetail) =>
+  action.origin === 'agent' ? 'Suggested by the agent' : null;
+
 function WhatToDo({ action }: Readonly<{ action: ActionDetail }>) {
   const todo = steps(action);
   if (todo.length === 0) return null;
   return (
-    <ActionSection title="What to do" id="action-todo">
+    <ActionSection title="What to do" id="action-todo" caption={agentCaption(action)}>
       <Stack as="ol" gap="tight" className="list-inside list-decimal">
         {todo.map((step) => (
           <li key={step} className={textRole('body')}>
@@ -276,44 +280,6 @@ function TextList({
           </li>
         ))}
       </Stack>
-    </ActionSection>
-  );
-}
-
-/** The live findings the Action groups, each with its evidence; or why there are none. */
-function Findings({
-  action,
-  onOpenEvidence,
-}: Readonly<{ action: ActionDetail; onOpenEvidence: (id: string) => void }>) {
-  return (
-    <ActionSection title="Findings" id="action-findings">
-      {action.members.length === 0 ? (
-        <StateBlock
-          kind="empty"
-          inline
-          message={
-            action.evidence_cleared_at
-              ? 'No current evidence targets this Action. Its chats are kept.'
-              : 'No current finding targets this Action.'
-          }
-        />
-      ) : (
-        <LedgerList>
-          {action.members.map((member) => (
-            <LedgerItem
-              key={member.id}
-              title={member.title}
-              links={
-                <ActionButton
-                  action="viewEvidence"
-                  aria-label={`View evidence for ${member.title}`}
-                  onClick={() => onOpenEvidence(member.id)}
-                />
-              }
-            />
-          ))}
-        </LedgerList>
-      )}
     </ActionSection>
   );
 }

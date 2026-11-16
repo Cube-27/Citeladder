@@ -106,6 +106,10 @@ function serve(current: Action, detail: Record<string, unknown> = {}) {
       status = body.status;
       return HttpResponse.json({ ...current, status });
     }),
+    // The drawer's own read is covered by evidence-drawer.test.tsx.
+    http.get(`/api/v1/opportunities/${FINDING}`, () =>
+      HttpResponse.json({ error: { message: 'Not found' } }, { status: 404 }),
+    ),
     http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
       HttpResponse.json({ items: [], next_cursor: null }),
     ),
@@ -156,23 +160,29 @@ describe('An Action page', () => {
     );
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
-    ).toEqual([
-      'Details',
-      'Overview',
-      'Evidence',
-      'What to do',
-      'Measure with',
-      'Avoid',
-      'Findings',
-      'Chats',
-    ]);
+    ).toEqual(['Details', 'Overview', 'Findings', 'What to do', 'Measure with', 'Avoid', 'Chats']);
 
     const overview = screen.getByRole('region', { name: 'Overview' });
-    expect(within(overview).getByText(MESSAGE)).toBeVisible();
+    // The sentence names the page by its path; the Target row holds the address, once.
+    expect(
+      within(overview).getByText('Fix "Missing structured data on owned page" on /pricing.'),
+    ).toBeVisible();
+    expect(document.body.textContent?.match(/acme\.test\/pricing/gu)).toHaveLength(1);
+    // Evidence-found words are no agent suggestion.
+    expect(screen.queryByText('Suggested by the agent')).toBeNull();
     // Each fact once: the finding is listed under Findings, not again in the Overview.
     const findings = within(screen.getByRole('region', { name: 'Findings' }));
-    expect(findings.getByText('Missing structured data on owned page')).toBeVisible();
     expect(within(overview).queryByText('Missing structured data on owned page')).toBeNull();
+    const row = findings.getByRole('button', { name: /^Missing structured data on owned page/u });
+    expect(row).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(row).toHaveTextContent(
+      'Missing structured data on owned pageMedium impactInferredSite · Nov 10, 2026',
+    );
+    await user.click(row);
+    expect(
+      await screen.findByRole('dialog', { name: 'Missing structured data on owned page' }),
+    ).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Close drawer' }));
 
     const details = within(screen.getByRole('region', { name: 'Details' }));
     expect(details.getByRole('heading', { level: 2 })).toHaveTextContent('Details');
@@ -445,19 +455,33 @@ describe('A content-gap Action', () => {
     await user.click(within(section).getByRole('button', { name: 'Show all 25 listed pages' }));
     expect(within(list).getAllByRole('link')).toHaveLength(25);
     expect(within(list).getAllByRole('link')[0]).toHaveAttribute('href', 'https://acme.test/p00');
+
+    // The crawl it was read from follows the finding in Findings, dated as observed.
+    const findings = screen.getByRole('list', { name: 'Findings' });
+    const [finding, crawl] = within(findings).getAllByRole('listitem');
+    expect(finding).toHaveTextContent('Inferred');
+    expect(crawl).toHaveTextContent('Observed · Nov 1, 2026');
   });
 
-  it('prepares a developer ticket as Markdown and lists each record dated and marked inferred or observed', async () => {
+  it('captions an agent-proposed Action’s words as its suggestion', async () => {
+    serve({ ...action, origin: 'agent' });
+    renderDetail();
+
+    const overview = await screen.findByRole('region', { name: 'Overview' });
+    expect(within(overview).getByText('Suggested by the agent')).toBeVisible();
+    expect(
+      within(screen.getByRole('region', { name: 'What to do' })).getByText(
+        'Suggested by the agent',
+      ),
+    ).toBeVisible();
+  });
+
+  it('prepares a developer ticket as Markdown', async () => {
     serve(action);
     const user = userEvent.setup();
     renderDetail();
 
-    const evidence = await screen.findByRole('list', { name: 'Evidence records' });
-    const record = within(evidence).getByRole('listitem');
-    expect(record).toHaveTextContent('Missing structured data on owned page');
-    expect(within(record).getByText(/^Inferred ·/)).toHaveTextContent('Inferred · Nov 10, 2026');
-
-    const overview = screen.getByRole('region', { name: 'Overview' });
+    const overview = await screen.findByRole('region', { name: 'Overview' });
     await user.click(within(overview).getByRole('button', { name: 'Prepare developer ticket' }));
     const dialog = await screen.findByRole('dialog', { name: 'Developer ticket' });
     const markdown = within(dialog).getByRole('textbox', { name: 'Developer ticket Markdown' });
