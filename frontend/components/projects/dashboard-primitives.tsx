@@ -16,9 +16,12 @@ import { formatRate } from '@/lib/visibility/dashboard';
 import { severityLabel, severityPriority } from '@/lib/site-health/issues';
 import { textRole } from '@/components/ui/typography';
 
-/** A change against the previous comparable run, as every Command Center delta reads it. */
+/**
+ * A change against the previous comparable run, as every Command Center delta
+ * reads it. The basis is spoken, not shown: beside the figure it cut the cards.
+ */
 export const VS_PREVIOUS_RUN = {
-  context: 'vs previous',
+  spokenContext: 'compared with the previous run',
   missingReason: 'No comparable run',
 } as const;
 

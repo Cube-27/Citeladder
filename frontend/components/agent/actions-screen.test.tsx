@@ -134,15 +134,14 @@ describe('Actions', () => {
     const pricing = screen.getByRole('link', { name: 'Improve the existing page: /pricing' });
     expect(pricing).toHaveAttribute('href', `/agent/actions/${ACTION}?project=${PROJECT}`);
     const cells = within(pricing.closest('tr')!);
-    // The band, never the raw score; priority is an order, never a hue. Its
-    // column drops below 600, where the subline starts with the same mark.
+    // The band, never the raw score; priority is an order, never a hue. The
+    // identity cell carries the same mark for widths without the column.
     const bands = cells.getAllByText('High').map((mark) => mark.closest('[data-status-tone]'));
     expect(bands.map((mark) => mark?.getAttribute('data-status-tone'))).toEqual([
       'neutral',
       'neutral',
     ]);
     expect(bands[0]?.closest('td')).toBe(pricing.closest('td'));
-    expect(bands[1]?.closest('td')).toHaveClass('hidden');
     expect(screen.queryByText('82.5')).not.toBeInTheDocument();
     // The subline names the target (the page's path), then the work.
     expect(cells.getByText('/pricing')).toBeVisible();

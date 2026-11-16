@@ -342,6 +342,28 @@ describe('An unanswered turn', () => {
     expect(alert).toHaveTextContent('Step limit.');
   });
 
+  it('shows a failure’s contact address once, as an email link', async () => {
+    renderChat(
+      chatWith({ status: 'failed', error_code: 'funding_unavailable' }, [
+        { role: 'user', at: '2026-09-25T10:00:00Z' },
+        {
+          role: 'agent',
+          at: '2026-09-25T10:01:00Z',
+          content:
+            'This workspace has no AI credits available right now. Nothing was saved. To get more, email [contact@citeladder.com](mailto:contact@citeladder.com).',
+          answered: false,
+        },
+      ]),
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('link', { name: 'contact@citeladder.com' })).toHaveAttribute(
+      'href',
+      'mailto:contact@citeladder.com',
+    );
+    expect(alert.textContent?.match(/contact@citeladder\.com/gu)).toHaveLength(1);
+  });
+
   it('collapses the same request failing the same way into one count', async () => {
     renderChat(
       chatWith({ status: 'failed', error_code: 'provider_error' }, [
