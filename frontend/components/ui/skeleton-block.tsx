@@ -2,6 +2,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
 import type { ChartHeight } from '@/components/ui/chart';
 import { figureRowSizes, useStripWidth } from '@/components/ui/figure-rows';
+import { slipClasses } from '@/components/ui/slip';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
@@ -71,6 +72,38 @@ const range = (count: number) => Array.from({ length: count }, (_, index) => ind
 /** A card's title: one 16×160 block. */
 export function TitleBlock() {
   return <SkeletonBlock className="h-4 w-40 max-w-full" />;
+}
+
+/** A widget's card as it loads: its title's line over its body's shape. */
+export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
+  return (
+    <div className={slipClasses('flex h-full flex-col gap-[var(--workspace-gap)]')}>
+      <span className="flex h-6 items-center">
+        <TitleBlock />
+      </span>
+      <ShapeBlocks shape={shape} />
+    </div>
+  );
+}
+
+/** A report as it loads: its meta line's block (16×240) over its cards. */
+export function ReportSkeletonFrame({
+  label,
+  variant,
+  children,
+}: Readonly<{ label: string; variant: string; children: ReactNode }>) {
+  return (
+    <SkeletonFrame
+      label={label}
+      variant={variant}
+      className="flex flex-col gap-[var(--page-top-gap)]"
+    >
+      <span className="flex h-4 items-center">
+        <SkeletonBlock className="w-60 max-w-full" />
+      </span>
+      {children}
+    </SkeletonFrame>
+  );
 }
 
 /** A record's identity card: 40px rows of a name block (30%) and a value block (45%) or a 24px tag. */

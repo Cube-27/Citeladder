@@ -8,13 +8,10 @@ import type {
 } from '@citeladder/contracts/overview';
 import { AppGrid } from '@/components/ui/app-grid';
 import {
-  ShapeBlocks,
-  SkeletonBlock,
-  SkeletonFrame,
-  TitleBlock,
+  ReportSkeletonFrame,
+  WidgetCardBlocks,
   type LoadingShape,
 } from '@/components/ui/skeleton-block';
-import { slipClasses } from '@/components/ui/slip';
 import { projectKeys } from '@/lib/api/query-keys/core';
 import { loneHalves } from '@/lib/overview/layout';
 import { useOptionalProjectContext } from '@/lib/project/project-scope';
@@ -81,14 +78,7 @@ export function OverviewLoading({ widgets }: Readonly<{ widgets?: readonly Overv
   const shown = widgets ?? cached ?? DEFAULT_WIDGETS;
   const lone = loneHalves(shown);
   return (
-    <SkeletonFrame
-      label="Loading the Overview"
-      variant="overview"
-      className="flex flex-col gap-[var(--page-top-gap)]"
-    >
-      <span className="flex h-4 items-center">
-        <SkeletonBlock className="w-60 max-w-full" />
-      </span>
+    <ReportSkeletonFrame label="Loading the Overview" variant="overview">
       <AppGrid layout="halves">
         {shown.map((widget) => (
           <div
@@ -99,15 +89,10 @@ export function OverviewLoading({ widgets }: Readonly<{ widgets?: readonly Overv
               (widget.size === 'full' || lone.has(widget.key)) && 'column-wide:col-span-2',
             )}
           >
-            <div className={slipClasses('flex h-full flex-col gap-[var(--workspace-gap)]')}>
-              <span className="flex h-6 items-center">
-                <TitleBlock />
-              </span>
-              <ShapeBlocks shape={WIDGET_SHAPES[widget.key]} />
-            </div>
+            <WidgetCardBlocks shape={WIDGET_SHAPES[widget.key]} />
           </div>
         ))}
       </AppGrid>
-    </SkeletonFrame>
+    </ReportSkeletonFrame>
   );
 }

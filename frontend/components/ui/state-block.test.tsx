@@ -21,6 +21,7 @@ const isMeasured = (data: Coverage): data is MeasuredCoverage => data.crawled_pa
 function CoverageScreen({ load }: Readonly<{ load: () => Promise<Coverage> }>) {
   const read = screenState(useQuery({ queryKey: ['coverage'], queryFn: load }), {
     subject: 'crawl coverage',
+    shape: { kind: 'figures', count: 1 },
     measured: isMeasured,
     notMeasured: { description: 'Coverage appears after the first crawl finishes.' },
   });
