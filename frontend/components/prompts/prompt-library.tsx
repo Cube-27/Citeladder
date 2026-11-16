@@ -183,6 +183,7 @@ export function PromptLibrary({
   const updateMutation = useMutation(promptsMutations.update(scope));
   const deleteMutation = useMutation(promptsMutations.remove(scope));
   const rowMutation = useMutation(promptsMutations.update(scope));
+  const toggleMutation = useMutation(promptsMutations.setEnabled(scope));
   const importMutation = useMutation(promptsMutations.import(scope, ensurePromptSet));
 
   // A retry of the same request after a failure reuses its key, so a run the
@@ -292,11 +293,10 @@ export function PromptLibrary({
           onEdit: openEdit,
           onDelete: (prompt: Prompt) => setPendingDelete({ kind: 'prompt', prompt }),
           onToggleEnabled: (prompt: Prompt) => {
+            // The switch flips at once, so a second press on a row still saving is ignored.
+            if (busyId === prompt.id) return;
             setBusyId(prompt.id);
-            rowMutation.mutate(
-              { promptId: prompt.id, input: { enabled: !prompt.enabled } },
-              clearBusy,
-            );
+            toggleMutation.mutate({ promptId: prompt.id, enabled: !prompt.enabled }, clearBusy);
           },
           onSetStatus: (prompt: Prompt, status: PromptStatus) => {
             setBusyId(prompt.id);
@@ -304,7 +304,6 @@ export function PromptLibrary({
           },
           onEvidence: (prompt: Prompt, answer: PromptAnswerRef) =>
             evidence.open({ ...answer, promptText: prompt.text }),
-          busyId,
         },
         add: addPrompts,
         topics: { onAdd: openAddTopic, onManage: () => setTopicDialog('manage') },
@@ -373,6 +372,14 @@ export function PromptLibrary({
             fallback="The prompts below are from the last successful read."
             onRetry={retry}
             pending={retrying}
+          />
+        ) : null}
+        {toggleMutation.isError ? (
+          <Notice
+            kind="mutation"
+            notice={mutationNoticeForError(toggleMutation.error, {
+              action: 'turn the prompt on or off',
+            })}
           />
         ) : null}
         <PendingReviewNotice

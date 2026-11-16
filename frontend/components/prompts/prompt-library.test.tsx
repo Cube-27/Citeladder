@@ -254,6 +254,72 @@ describe('PromptLibrary by role', () => {
   );
 });
 
+describe('PromptLibrary enable switch', () => {
+  /** Holds the PATCH open until the test answers it; the sets read reports what was saved. */
+  function holdToggle() {
+    const held: { answer?: (response: Response) => void; setsReads: number } = { setsReads: 0 };
+    let saved = prompt;
+    libraryReads(async () => HttpResponse.json([]));
+    mswServer.use(
+      http.get('/api/v1/prompt-sets', () => {
+        held.setsReads += 1;
+        return HttpResponse.json(makeSetList([makeSet([saved])]));
+      }),
+      http.patch(`/api/v1/prompts/${prompt.id}`, async () => {
+        const response = await new Promise<Response>((resolve) => {
+          held.answer = resolve;
+        });
+        if (response.ok) saved = { ...saved, enabled: !saved.enabled };
+        return response;
+      }),
+    );
+    return held;
+  }
+
+  async function pressSwitch() {
+    const user = userEvent.setup();
+    renderLibrary();
+    const table = await screen.findByRole('table', { name: 'Prompts' });
+    const toggle = within(table).getByRole('switch', { name: 'Disable prompt' });
+    await user.click(toggle);
+    return toggle;
+  }
+
+  it('flips at once and rolls back with the failure when the save fails', async () => {
+    const held = holdToggle();
+    const toggle = await pressSwitch();
+
+    // The save is still held open: the switch shows the new state before it resolves.
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
+    const answer = await vi.waitFor(() => {
+      if (!held.answer) throw new Error('The save was not requested yet.');
+      return held.answer;
+    });
+    answer(HttpResponse.json({ error: { message: 'down' } }, { status: 503 }));
+
+    expect(await screen.findByText(/Could not turn the prompt on or off/)).toBeVisible();
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('keeps the new state once saved and re-reads the library', async () => {
+    const held = holdToggle();
+    const toggle = await pressSwitch();
+    const readsBefore = held.setsReads;
+
+    // The save is still held open: the switch shows the new state before it resolves.
+    await waitFor(() => expect(toggle).toHaveAttribute('aria-checked', 'false'));
+    const answer = await vi.waitFor(() => {
+      if (!held.answer) throw new Error('The save was not requested yet.');
+      return held.answer;
+    });
+    answer(HttpResponse.json({ ...prompt, enabled: false }));
+
+    await waitFor(() => expect(held.setsReads).toBeGreaterThan(readsBefore));
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(screen.queryByText(/Could not turn the prompt on or off/)).toBeNull();
+  });
+});
+
 describe('PromptLibrary topic filter', () => {
   it('filters the table by the topic chosen in the control strip', async () => {
     const topic = {

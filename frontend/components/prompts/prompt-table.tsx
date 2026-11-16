@@ -49,7 +49,6 @@ export type PromptRowActions = Readonly<{
   onSetStatus?: (prompt: Prompt, status: PromptStatus) => void;
   /** Opens the answers the latest run got for a measured prompt. */
   onEvidence?: (prompt: Prompt, answer: PromptAnswerRef) => void;
-  busyId?: string | null;
 }>;
 
 /** Rows per page on the prompt table (client-side; the list arrives whole). */
@@ -186,7 +185,7 @@ function evidenceOpener(
 /** The enabled switch and the actions menu of one editable row. */
 function PromptRowControls({
   prompt,
-  actions: { onEdit, onDelete, onToggleEnabled, onSetStatus, busyId },
+  actions: { onEdit, onDelete, onToggleEnabled, onSetStatus },
   onEvidence,
 }: Readonly<{
   prompt: Prompt;
@@ -200,7 +199,6 @@ function PromptRowControls({
         <Switch
           checked={prompt.enabled}
           label={`${prompt.enabled ? 'Disable' : 'Enable'} prompt`}
-          disabled={busyId === prompt.id}
           onCheckedChange={() => onToggleEnabled(prompt)}
         />
       </TableCell>
