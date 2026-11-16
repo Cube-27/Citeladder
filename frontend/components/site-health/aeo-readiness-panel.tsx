@@ -235,7 +235,8 @@ const READINESS_COLUMNS: readonly DataTableColumn[] = [
   { key: 'dimension', label: 'Dimension', kind: 'identity' },
   { key: 'score', label: 'Score', kind: 'number' },
   { key: 'coverage', label: 'Coverage', kind: 'number' },
-  { key: 'state', label: 'State', kind: 'status' },
+  // The mark never cuts and its reason takes what is left, so the state flexes too.
+  { key: 'state', label: 'State', kind: 'status', width: 'flex' },
 ];
 
 function DimensionDrawer({
