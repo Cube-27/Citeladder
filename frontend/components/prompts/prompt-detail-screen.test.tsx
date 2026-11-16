@@ -230,7 +230,17 @@ it('opens on where the prompt stands: the latest rates and their change', async 
   expect(cell('Visibility')).toMatch(/^Visibility100\.0%.*12\.5 pp/);
   // The period is the label's hint; the value follows it.
   expect(cell('Owned citation rate')).toMatch(/^Owned citation rate.*50\.0%$/);
-  expect(cell('Measured runs')).toMatch(/^Measured runs3/);
+  // The run count names the chart's data table, which is not repeated as a figure.
+  expect(screen.getByText('Show run data (3)')).toBeVisible();
+  // The latest run's date is said once, in the figure hint: the chart and its
+  // run data are the plotted series, not a restatement of it.
+  const latestDate = screen
+    .getAllByText(/Mar 16, 2026/)
+    .filter((element) => !element.closest('details, [data-chart-frame]'));
+  expect(latestDate).toHaveLength(1);
+  expect(latestDate[0]!.closest('[data-figure-cell]')).toBe(
+    figures.getByText('Owned citation rate').closest('[data-figure-cell]'),
+  );
 });
 
 it('says an archived prompt is archived and restores it', async () => {
@@ -271,7 +281,24 @@ it('reads the market from the address and keeps a run without answers unavailabl
     { market: RUN(7) },
     expect.anything(),
   );
-  const trail = within(screen.getByRole('list', { name: 'Runs that measured this prompt' }));
-  expect(trail.getByText('Visibility 50.0% · Owned not measured')).toBeVisible();
-  expect(trail.getByText('Visibility 100.0% · Owned 50.0%')).toBeVisible();
+  // With no comparable run the figure prints its value alone, no "Not measured" beside it.
+  const figures = within(screen.getByRole('group', { name: 'Latest measurement' }));
+  expect(figures.getByText('Visibility').closest('[data-figure-cell]')?.textContent).toMatch(
+    /^Visibility100\.0%$/,
+  );
+  // The run data is collapsed under the chart until the reader opens it.
+  await userEvent.setup().click(screen.getByText('Show run data (3)'));
+  const runs = within(screen.getByRole('table', { name: 'Runs that measured this prompt' }))
+    .getAllByRole('row')
+    .slice(1)
+    .map((row) =>
+      within(row)
+        .getAllByRole('cell')
+        .map((cell) => cell.textContent),
+    );
+  expect(runs).toEqual([
+    [expect.stringMatching(/^Mar 16, 2026/), '100.0%', '50.0%'],
+    [expect.stringMatching(/^Mar 9, 2026/), 'No successful answer', 'Not measured'],
+    [expect.stringMatching(/^Mar 2, 2026/), '50.0%', 'Not measured'],
+  ]);
 });

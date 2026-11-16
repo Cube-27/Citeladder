@@ -74,8 +74,9 @@ describe('Execution evidence drawer', () => {
       runRoute,
     );
 
-    const drawer = await screen.findByRole('dialog', { name: 'Execution evidence' });
-    expect(within(drawer).getByText('Prompt #3')).toBeInTheDocument();
+    // With no prompt text the title is the prompt's number, said once.
+    const drawer = await screen.findByRole('dialog', { name: 'Prompt #3' });
+    expect(within(drawer).getAllByText(/Prompt #3/)).toHaveLength(1);
     // The first import transforms the markdown renderer, so it gets a cold budget.
     const strong = await within(drawer).findByText('Acme Plumbing', {}, { timeout: 15_000 });
     expect(strong.tagName).toBe('STRONG');
@@ -127,15 +128,18 @@ describe('Execution evidence drawer', () => {
     const user = userEvent.setup();
     renderWithProviders(
       <ExecutionEvidenceDrawer
-        execution={{ id: ID, prompt_index: 0 }}
+        execution={{ id: ID, prompt_index: 0, prompt_text: 'best plumber' }}
         open
         onOpenChange={() => {}}
       />,
       runRoute,
     );
 
-    const drawer = await screen.findByRole('dialog', { name: 'Execution evidence' });
+    // The prompt's text is the title, and its number is not printed beside it.
+    const drawer = await screen.findByRole('dialog', { name: 'best plumber' });
     await within(drawer).findByText('From the first engine.', {}, { timeout: 15_000 });
+    expect(within(drawer).getAllByText('best plumber')).toHaveLength(1);
+    expect(within(drawer).queryByText(/Prompt #/)).toBeNull();
     await user.click(await within(drawer).findByRole('button', { name: /^Engine:/u }));
     const options = await screen.findAllByRole('menuitemradio');
     expect(options).toHaveLength(2);
@@ -163,7 +167,7 @@ describe('Execution evidence drawer', () => {
       runRoute,
     );
 
-    const drawer = await screen.findByRole('dialog', { name: 'Execution evidence' });
+    const drawer = await screen.findByRole('dialog', { name: 'Prompt #1' });
     expect(
       await within(drawer).findByText(
         'No AI Overview was shown for this search.',

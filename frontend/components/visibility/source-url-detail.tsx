@@ -69,7 +69,6 @@ export function SourceUrlDetail({
           { label: 'Sources', onClick: onOpenInventory },
           ...(domain ? [{ label: domain, onClick: onBack }] : []),
         ]}
-        current={title}
       />
 
       <Section className="relative" aria-busy={query.isFetching}>

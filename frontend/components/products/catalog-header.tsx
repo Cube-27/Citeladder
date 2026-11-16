@@ -58,7 +58,8 @@ function analyzedLabel(crawl: SiteCrawl): string {
 function crawlSegments(read: CrawlRead): FigureSegment[] {
   if (read.kind !== 'answered') {
     const loading = read.kind === 'pending';
-    const missingLabel = loading ? undefined : "Couldn't load";
+    // The page's one read-failure notice names the failure; a figure says only that it is missing.
+    const missingLabel = loading ? undefined : availabilityLabel('unavailable');
     return [
       { key: 'analyzed', label: 'Pages analyzed', value: null, loading, missingLabel },
       { key: 'site-health', label: 'Website', value: null, loading, missingLabel },
@@ -119,7 +120,7 @@ function CatalogStats({
   // A catalog read still pending or failed says nothing about the counts (invariant 7).
   const missing = {
     loading: catalog.isPending,
-    missingLabel: catalog.isError ? "Couldn't load" : undefined,
+    missingLabel: catalog.isError ? availabilityLabel('unavailable') : undefined,
   };
   const counts = catalog.data;
   const items: FigureSegment[] = [
@@ -158,12 +159,15 @@ export function useCatalogHeader({
   projectId,
   query,
   projection,
+  tableReadFailed = false,
 }: Readonly<{
   workspaceId: string;
   projectId: string;
   query: CommerceQueries['catalog'];
   /** The newest projection progress known (`useCatalogProjection`). */
   projection: CommerceProjection | undefined;
+  /** The page's table already shows a read failure with Retry, so this says none of its own. */
+  tableReadFailed?: boolean;
 }>) {
   const client = useQueryClient();
   const dashboard = useQuery({
@@ -199,6 +203,8 @@ export function useCatalogHeader({
   return {
     /** Opens Add products, for a role that may run it; else undefined. */
     addProducts: canRun ? () => setAdding(true) : undefined,
+    /** Reads the catalog and the Website dashboard again: the page's one Retry covers them. */
+    retryReads: () => void Promise.all([dashboard.refetch(), query.refetch()]),
     actions: (
       <>
         {canRun ? (
@@ -230,7 +236,10 @@ export function useCatalogHeader({
     stats: <CatalogStats catalog={query} projection={projection} crawl={crawl} />,
     notices: (
       <>
-        <CatalogNotices refreshError={discover.error ?? dashboard.error} onRefresh={refresh} />
+        <CatalogNotices
+          refreshError={discover.error ?? (tableReadFailed ? null : dashboard.error)}
+          onRefresh={refresh}
+        />
         <BusinessModelNotice projection={projection} />
       </>
     ),

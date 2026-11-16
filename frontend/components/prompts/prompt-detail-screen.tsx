@@ -11,12 +11,13 @@ import { FigureStrip } from '@/components/ui/figure-strip';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { RungTrail, type TrailStep } from '@/components/ui/rung-trail';
 import { TextLink } from '@/components/ui/text-link';
 import { StepChart } from '@/components/ui/step-chart';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { Absence } from '@/components/ui/absence';
+import { Disclosure } from '@/components/ui/disclosure';
+import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { marketFilter } from '@/components/visibility/visibility-toolbar';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -95,7 +96,6 @@ export function PromptDetailScreen() {
           <ArchivedNotice promptId={history.prompt.id} onRestored={() => void query.refetch()} />
         ) : undefined
       }
-      aside={<MeasurementTrail history={history} />}
     >
       <HistoryCard history={history} />
       <Implementations history={history} />
@@ -155,41 +155,49 @@ function ArchivedNotice({
 }
 
 /**
- * Every run that measured the prompt, newest first, as rungs: a measured run
- * is done, a run with no successful answer is an unavailable rung, and a
- * change in measurement conditions is said on the run that started the new line.
+ * The chart's data as a table, said once: every run that measured the prompt,
+ * newest first. A run with no successful answer is a gap in the line, and a
+ * change in measurement conditions is captioned on the run that started the new line.
  */
-function MeasurementTrail({ history }: Readonly<{ history: PromptHistory }>) {
+function RunData({ points }: Readonly<{ points: PromptHistory['points'] }>) {
   const timeZone = useDisplayTimeZone();
-  if (!history.points.length) return null;
-  const steps: TrailStep[] = history.points
-    .map((point): TrailStep => {
-      const visibility = point.mention_rate;
-      const owned = point.owned_citation_rate;
-      const measured = visibility !== null;
-      const ownedRate = owned === null ? 'Owned not measured' : `Owned ${formatPercent(owned)}`;
-      const rates = measured
-        ? `Visibility ${formatPercent(visibility)} · ${ownedRate}`
-        : 'No successful answer: a gap in the line';
-      return {
-        id: point.audit_id,
-        label: formatDisplayDate(point.completed_at, timeZone),
-        status: measured ? 'done' : 'unavailable',
-        detail: point.comparable_with_previous === false ? `${rates} · New conditions` : rates,
-      };
-    })
-    .reverse();
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Measurements</SectionTitle>
-      </SectionHeader>
-      <SectionContent>
-        <RungTrail label="Runs that measured this prompt" steps={steps} />
-      </SectionContent>
-    </Section>
+    <Disclosure title={`Show run data (${formatCount(points.length)})`}>
+      <DataTable label="Runs that measured this prompt" columns={RUN_DATA_COLUMNS}>
+        {[...points].reverse().map((point) => (
+          <TableRow key={point.audit_id}>
+            <TableCell>
+              <TableCellLines
+                primary={formatDisplayDate(point.completed_at, timeZone)}
+                secondary={point.comparable_with_previous === false ? 'New conditions' : undefined}
+              />
+            </TableCell>
+            <TableCell numeric>
+              {point.mention_rate === null ? (
+                <Absence state="unavailable" label="No successful answer" />
+              ) : (
+                formatPercent(point.mention_rate)
+              )}
+            </TableCell>
+            <TableCell numeric>
+              {point.owned_citation_rate === null ? (
+                <Absence state="not_measured" />
+              ) : (
+                formatPercent(point.owned_citation_rate)
+              )}
+            </TableCell>
+          </TableRow>
+        ))}
+      </DataTable>
+    </Disclosure>
   );
 }
+
+const RUN_DATA_COLUMNS: readonly DataTableColumn[] = [
+  { key: 'date', label: 'Run date', kind: 'identity' },
+  { key: 'visibility', label: 'Visibility', width: 'figure', kind: 'number' },
+  { key: 'owned', label: 'Owned rate', width: 'figure', kind: 'number' },
+];
 
 /**
  * Whether this prompt cites you and how that has moved: the latest run's
@@ -202,6 +210,7 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
   const latest = history.points.at(-1);
   // The server's comparison, the same one the prompt table's Change column reads.
   const baselineAt = history.latest?.comparison?.baseline_at ?? null;
+  const visibilityDelta = history.latest?.visibility_delta;
   return (
     <Section>
       <SectionHeader>
@@ -221,17 +230,14 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
                   key: 'visibility',
                   label: 'Visibility',
                   value: latest.mention_rate === null ? null : formatPercent(latest.mention_rate),
-                  delta: (
-                    <Delta
-                      value={history.latest?.visibility_delta ?? null}
-                      unit=" pp"
-                      missingReason="No comparable run before this one."
-                    />
-                  ),
-                  sub:
-                    history.latest?.visibility_delta != null && baselineAt
-                      ? `vs ${formatDisplayDate(baselineAt, timeZone)}`
-                      : undefined,
+                  ...(visibilityDelta == null
+                    ? {}
+                    : {
+                        delta: <Delta value={visibilityDelta} unit=" pp" />,
+                        sub: baselineAt
+                          ? `vs ${formatDisplayDate(baselineAt, timeZone)}`
+                          : undefined,
+                      }),
                 },
                 {
                   key: 'owned',
@@ -241,11 +247,6 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
                       ? null
                       : formatPercent(latest.owned_citation_rate),
                   sub: formatDisplayDate(latest.completed_at, timeZone),
-                },
-                {
-                  key: 'runs',
-                  label: 'Measured runs',
-                  value: formatCount(history.points.length),
                 },
               ]}
             />
@@ -261,6 +262,7 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
               yMax={100}
               yFormat={formatWholePercent}
             />
+            <RunData points={history.points} />
           </Stack>
         </SectionContent>
       ) : (

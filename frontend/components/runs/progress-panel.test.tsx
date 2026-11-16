@@ -99,6 +99,13 @@ describe('ProgressPanel', () => {
     expect(screen.getByText('Cancelling…')).toBeVisible();
   });
 
+  it('says when the run started by time only: the masthead title carries its day', () => {
+    renderPanel({ status: 'running' });
+
+    expect(screen.getByText('Started 12:00 AM UTC')).toBeVisible();
+    expect(screen.queryByText(/Aug 1, 2026/)).toBeNull();
+  });
+
   it('counts failed answers as finished in the progress percentage', () => {
     renderPanel({ status: 'running', requested_count: 60, completed_count: 40, failed_count: 19 });
 

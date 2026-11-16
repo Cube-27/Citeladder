@@ -3,10 +3,8 @@ import { CheckCircle2, Quote, Search, XCircle } from 'lucide-react';
 import { MeasurementContext } from '@/components/runs/measurement-context';
 import { SurfaceEvidence } from '@/components/runs/surface-evidence';
 import { StatusMark } from '@/components/ui/status-mark';
-import { Tag } from '@/components/ui/tag';
 import { TextLink } from '@/components/ui/text-link';
 import { Label, textRole } from '@/components/ui/typography';
-import { productTransportLabel } from '@/lib/providers/catalog';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { ExecutionEvidence } from '@citeladder/contracts';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
@@ -52,43 +50,17 @@ function Outcome({
   );
 }
 
-function EvidencePromptHeader({
-  evidence,
-  promptText,
-  promptIndex,
-}: Readonly<{
-  evidence: ExecutionEvidence;
-  promptText?: string | null;
-  promptIndex?: number;
-}>) {
+/**
+ * How the answer was measured. The drawer's title is the prompt and the row
+ * that opened it names the engine, so neither is repeated here.
+ */
+function EvidenceMeasurement({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   const engines = useEngineCatalog();
-  const displayPrompt =
-    promptText ||
-    (promptIndex !== undefined
-      ? `Prompt #${promptIndex + 1}`
-      : `Prompt #${evidence.prompt_index + 1}`);
-  const promptBadgeNumber = promptIndex !== undefined ? promptIndex + 1 : evidence.prompt_index + 1;
-  // Null for an observed search surface, whose engine name is already the whole
-  // product fact; the vendor behind it stays on the Settings credential card.
-  const transport = productTransportLabel(evidence.transport_provider);
-
   return (
-    <Stack as="section" gap="item" className="min-w-0">
-      <Inline className="flex-wrap justify-between">
-        <Tag>Prompt #{promptBadgeNumber}</Tag>
-        <Inline className="flex-wrap">
-          <Tag>
-            {engines.label(evidence.logical_engine)}
-            {transport ? ` · ${transport}` : ''}
-          </Tag>
-          <MeasurementContext
-            retrieval={evidence.retrieval_enabled}
-            model={engines.modelLabel(evidence.logical_engine, evidence.transport_model)}
-          />
-        </Inline>
-      </Inline>
-      <p className={textRole('body', 'text-ink')}>{displayPrompt}</p>
-    </Stack>
+    <MeasurementContext
+      retrieval={evidence.retrieval_enabled}
+      model={engines.modelLabel(evidence.logical_engine, evidence.transport_model)}
+    />
   );
 }
 
@@ -367,21 +339,17 @@ function EvidenceFooter({ evidence }: Readonly<{ evidence: ExecutionEvidence }>)
 export function EvidenceCard({
   evidence,
   answerText,
-  promptText,
-  promptIndex,
   isSearchSurface,
   outcome,
 }: Readonly<{
   evidence: ExecutionEvidence;
   answerText?: string | null;
-  promptText?: string | null;
-  promptIndex?: number;
   isSearchSurface?: boolean;
   outcome?: string;
 }>) {
   return (
     <Stack gap="workspace" className="min-w-0">
-      <EvidencePromptHeader evidence={evidence} promptText={promptText} promptIndex={promptIndex} />
+      <EvidenceMeasurement evidence={evidence} />
       <EvidenceMetrics evidence={evidence} />
       <EvidenceAnswer
         answerText={answerText}
