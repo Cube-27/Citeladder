@@ -10,7 +10,8 @@ import type { ReactElement } from 'react';
 import { useLocation } from 'react-router-dom';
 import type { PageDetail } from '@citeladder/contracts';
 
-import { parseAgentHandoff } from '@/lib/agent/handoff';
+import { parseAgentHandoff, type AgentHandoff } from '@/lib/agent/handoff';
+import { AgentPanelProvider, useAgentPanel } from '@/lib/agent/panel-context';
 import { UrlDetail } from './url-detail';
 import {
   CRAWL,
@@ -63,6 +64,25 @@ function allIssues(heading: string): HTMLElement {
 /** The new chat a link would start, as the Agent reads it. */
 function handoffOf(link: HTMLElement) {
   return parseAgentHandoff(new URL(link.getAttribute('href')!, 'http://x').searchParams);
+}
+
+/** The masthead's Ask agent, reduced to what it opens with. */
+function PanelSeedProbe() {
+  const panel = useAgentPanel();
+  return (
+    <>
+      <button type="button" onClick={() => panel?.setOpen(true)}>
+        Open agent panel
+      </button>
+      <output data-testid="panel-seed">{JSON.stringify(panel?.seed ?? null)}</output>
+    </>
+  );
+}
+
+/** The page's own context, as the agent panel opens with it. */
+async function openedSeed(user: ReturnType<typeof userEvent.setup>): Promise<AgentHandoff> {
+  await user.click(screen.getByRole('button', { name: 'Open agent panel' }));
+  return JSON.parse(screen.getByTestId('panel-seed').textContent!) as AgentHandoff;
 }
 
 function LocationDisplay() {
@@ -631,14 +651,22 @@ describe('UrlDetail', () => {
   it('hands the agent the page, or one issue on it, by id and never by evidence', async () => {
     mswServer.use(...handlers(detail()));
     const user = userEvent.setup();
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    renderUrlDetail(
+      <AgentPanelProvider>
+        <UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />
+        <PanelSeedProbe />
+      </AgentPanelProvider>,
+    );
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
 
-    const page = handoffOf(screen.getByRole('link', { name: 'Ask agent about this page' }));
+    // The masthead's Ask agent carries the page; the page draws no second one.
+    expect(screen.queryByRole('link', { name: 'Ask agent about this page' })).toBeNull();
+    const page = await openedSeed(user);
     expect(page.context).toEqual({ target_site_url_id: URL_ID, target_url: 'https://acme.com/' });
     expect(page.prompt).toBe(
       'Review the 2 Website issues on https://acme.com/, worst first, and propose exact page edits for each.',
     );
+    expect(page.skillId).toBe('technical_health');
     const row = screen.getByRole('button', { name: /WebSite schema is missing/ });
     await user.click(row);
     const body = document.getElementById(row.getAttribute('aria-controls')!)!;
@@ -651,10 +679,16 @@ describe('UrlDetail', () => {
 
   it('asks the agent why a page’s audit did not finish, rather than how ready the page is', async () => {
     mswServer.use(...handlers(detail({ analysis_status: 'error', issues: [] })));
-    renderUrlDetail(<UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />);
+    const user = userEvent.setup();
+    renderUrlDetail(
+      <AgentPanelProvider>
+        <UrlDetail crawlId={CRAWL} siteUrlId={URL_ID} />
+        <PanelSeedProbe />
+      </AgentPanelProvider>,
+    );
     await screen.findByRole('heading', { name: 'Best&Less Online', level: 1 });
 
-    const page = handoffOf(screen.getByRole('link', { name: 'Ask agent about this page' }));
+    const page = await openedSeed(user);
     expect(page.prompt).toMatch(/^The Website audit of https:\/\/acme\.com\/ did not complete/);
   });
 

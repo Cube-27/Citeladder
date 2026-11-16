@@ -5,7 +5,8 @@ import { fixedLabel } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { Stack } from '@/components/ui/layout';
 import { OpenRow } from '@/components/ui/list-row';
-import { PartBar, type Part } from '@/components/ui/part-bar';
+import { FigureStrip } from '@/components/ui/figure-strip';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
@@ -78,30 +79,41 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
   const titleId = useId();
   const total = summary.defect_issue_type_count;
   const high = severityCount(summary.severity_counts, 'high');
-  const parts: readonly Part[] = [
-    { label: 'High', value: high, status: 'negative' },
-    { label: 'Medium', value: severityCount(summary.severity_counts, 'medium'), status: 'warning' },
-    { label: 'Low', value: severityCount(summary.severity_counts, 'low'), status: 'neutral' },
-  ];
+  const counts = SEVERITIES.map((severity) => ({
+    ...severity,
+    count: severityCount(summary.severity_counts, severity.key),
+  }));
   return (
     <Section aria-labelledby={titleId}>
       <SectionHeader>
         <SectionTitle id={titleId}>{issueTypesLabel(total)}</SectionTitle>
         <SectionDescription>{attentionLine(high, summary)}</SectionDescription>
       </SectionHeader>
-      {parts.some((part) => part.value > 0) ? (
+      {counts.some((severity) => severity.count > 0) ? (
         <SectionContent>
-          <PartBar
-            parts={parts}
-            legend="row"
-            labelledBy={titleId}
+          <FigureStrip
             label="Issue types by severity"
+            segments={counts.map((severity) => ({
+              key: severity.key,
+              label: (
+                <StatusMark variant="severity" value={severity.key}>
+                  {severity.label}
+                </StatusMark>
+              ),
+              value: formatCount(severity.count),
+            }))}
           />
         </SectionContent>
       ) : null}
     </Section>
   );
 }
+
+const SEVERITIES = [
+  { key: 'high', label: 'High' },
+  { key: 'medium', label: 'Medium' },
+  { key: 'low', label: 'Low' },
+] as const;
 
 function issueTypesLabel(total: number): string {
   if (total === 0) return 'No issue types to fix';
