@@ -118,16 +118,35 @@ export function ChartKey({
   );
 }
 
+/** The tooltip's width (`w-54`), its gap from the crosshair and its least inset from the frame. */
+const TIP_WIDTH = 216;
+const TIP_GAP = 16;
+const TIP_INSET = 8;
+
+/**
+ * Beside the crosshair, flipped to its left where it would run off the frame,
+ * and never closer than 8 to either edge; on whole pixels.
+ */
+export function chartTipLeft(x: number, frameWidth: number) {
+  const right = x + TIP_GAP;
+  const left = right + TIP_WIDTH > frameWidth - TIP_INSET ? x - TIP_GAP - TIP_WIDTH : right;
+  const max = Math.max(TIP_INSET, frameWidth - TIP_INSET - TIP_WIDTH);
+  return Math.round(Math.min(max, Math.max(TIP_INSET, left)));
+}
+
 /** The tooltip: a sheet with the point's label and one mono value per series. */
 export function ChartTipSheet({
   title,
-  left,
+  x,
+  frameWidth,
   top,
   rows,
   note,
 }: Readonly<{
   title: string;
-  left: number;
+  /** The crosshair's position. */
+  x: number;
+  frameWidth: number;
   top: number;
   rows: readonly KeyEntry[];
   note?: string;
@@ -139,7 +158,7 @@ export function ChartTipSheet({
         SHEET_FACE,
         'rounded-card pointer-events-none absolute z-20 flex w-54 flex-col gap-1 p-3',
       )}
-      style={{ left, top }}
+      style={{ left: chartTipLeft(x, frameWidth), top: Math.round(top) }}
     >
       <p className="type-caption tabular-nums">{title}</p>
       {rows.map((row) => (

@@ -32,8 +32,6 @@ import type { TrendEvent, TrendPoint, TrendSeries } from '@/components/ui/step-c
 
 type Line = { name: string; values: readonly (number | null)[]; tone: ChartTone };
 
-const TIP_WIDTH = 216;
-
 /** A line's position tone in the shared key and tooltip: the hue `CHART_STROKE` plots it in. */
 const KEY_TONE: Record<ChartTone, SeriesTone> = {
   1: 'you',
@@ -186,7 +184,8 @@ export function TrendChart({
           <ChartTipSheet
             title={data[active]?.label ?? ''}
             top={scale.padTop}
-            left={tipLeft(scale.x(active), width)}
+            x={scale.x(active)}
+            frameWidth={width}
             rows={lines.map((line) => ({
               name: line.name,
               tone: KEY_TONE[line.tone],
@@ -214,11 +213,6 @@ export function TrendChart({
       />
     </div>
   );
-}
-
-/** Beside the crosshair, flipped to its left where it would run off the plot. */
-function tipLeft(x: number, width: number) {
-  return x + 16 + TIP_WIDTH > width ? x - 16 - TIP_WIDTH : x + 16;
 }
 
 function TrendPlot({
@@ -272,7 +266,7 @@ function TrendPlot({
               className="stroke-rule"
             />
             <text
-              x={scale.padLeft - 10}
+              x={scale.padLeft - 8}
               y={y}
               textAnchor="end"
               dominantBaseline="middle"
