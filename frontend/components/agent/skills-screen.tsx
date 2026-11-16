@@ -116,14 +116,14 @@ function SkillCard({ skill, output }: Readonly<{ skill: AgentSkill; output: stri
       aria-describedby={detailId}
       className={ICON_CARD}
     >
-      <IconCardContent icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles} title={skill.label}>
-        {/* The link's name replaces its content, so what it does is its description. */}
-        <span id={detailId} className="contents">
-          <p className={textRole('body', 'text-ink-2 line-clamp-2')}>{skill.description}</p>
-          {output ? (
-            <p className={textRole('caption', 'text-ink-2')}>{`Output: ${output}`}</p>
-          ) : null}
-        </span>
+      {/* The link's name replaces its content, so what it does is its description. */}
+      <IconCardContent
+        icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles}
+        title={skill.label}
+        detailId={detailId}
+      >
+        <p className={textRole('body', 'text-ink-2 line-clamp-2')}>{skill.description}</p>
+        {output ? <p className={textRole('caption', 'text-ink-2')}>{`Output: ${output}`}</p> : null}
       </IconCardContent>
     </ProjectLink>
   );
