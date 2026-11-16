@@ -49,7 +49,7 @@ export function ChartFrame({
 }
 
 /** A series' key mark: a 12 × 2 rule in its ink, with its marker shape when it has one. */
-export function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: MarkerShape }>) {
+function SeriesSwatch({ tone, shape }: Readonly<{ tone: SeriesTone; shape?: MarkerShape }>) {
   if (shape)
     return (
       <svg

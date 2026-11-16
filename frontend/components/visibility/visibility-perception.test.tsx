@@ -104,7 +104,10 @@ describe('Perception view', () => {
 
   it('states the recommended count briefly, naming advice against only when it occurred', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
-    expect(screen.getByText('2 of 5 answers naming you; 1 advised against')).toBeVisible();
+    const basis = (description: string) => screen.getByRole('button', { description });
+    expect(basis('2 of 5 answers naming you; 1 advised against')).toHaveAccessibleName(
+      /^Basis of /,
+    );
     unmount();
 
     render(
@@ -120,12 +123,14 @@ describe('Perception view', () => {
         })}
       />,
     );
-    expect(screen.getByText('0 of 4 answers naming you')).toBeVisible();
+    expect(basis('0 of 4 answers naming you')).toHaveAccessibleName(/^Basis of /);
   });
 
   it('marks the classified counts unavailable when the brand has no score, never 0 of 0', () => {
     const { unmount } = render(<PerceptionView data={response()} />);
-    expect(screen.getByText('3 of 4 classified mentions')).toBeVisible();
+    expect(
+      screen.getByRole('button', { description: '3 of 4 classified mentions' }),
+    ).toHaveAccessibleName(/^Basis of /);
     unmount();
 
     render(<PerceptionView data={response({ brand: null })} />);

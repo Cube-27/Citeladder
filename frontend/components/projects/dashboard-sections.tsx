@@ -224,7 +224,7 @@ export function ProjectStateCard({ data }: Readonly<{ data: CommandCenter }>) {
         answers: data.measurement.comparison_answers,
       })
     : null;
-  // A partial change names the answers it uses, once, under the first figure.
+  // A partial change names the answers it uses, once, in the first figure's hint.
   const note = basis?.kind === 'matched_subset' ? basis.note : undefined;
   return (
     <WidgetFrame
@@ -289,7 +289,9 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
         segments={[
           {
             key: 'citation-share',
-            label: observed
+            label: 'Owned citation rate',
+            labelHidden: true,
+            caption: observed
               ? `Across ${pluralCount(track.engine_coverage, 'engine')}`
               : 'All engines',
             value:
@@ -398,6 +400,8 @@ export function ProgressProofCard({ data }: Readonly<{ data: CommandCenter }>) {
           {
             key: 'resolved',
             label: 'Resolved actions',
+            labelHidden: true,
+            caption: 'Resolved actions',
             value: formatCount(data.resolved_actions.count),
             sub: 'Since the comparable run',
           },

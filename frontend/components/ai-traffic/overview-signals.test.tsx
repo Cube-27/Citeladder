@@ -83,6 +83,7 @@ const figure = (label: string) =>
   screen.getByText(label).closest('[data-figure-cell]') as HTMLElement;
 /** Why a figure is absent: the label's info hint, heard as its description. */
 const whyAbsent = (label: string) => screen.getByRole('button', { name: `About ${label}` });
+const basis = (label: string) => screen.getByRole('button', { name: `Basis of ${label}` });
 
 it('keeps unavailable, missing, awaiting, incomplete and measured zero distinct', () => {
   const view = renderWithProviders(
@@ -120,9 +121,9 @@ it('keeps failed verification requests and unavailable active bots visible', () 
     'No matching requests were observed in the available logs. Coverage is incomplete. 3 failed verification requests are shown separately.',
   );
   view.rerender(figures({ crawl: { ...crawl, requests: 12, pages: 4, active_bots: null } }));
-  expect(within(figure('Path-level pages')).getByText('Active bots unavailable')).toBeVisible();
+  expect(basis('Path-level pages')).toHaveAccessibleDescription(/Active bots unavailable/);
   view.rerender(figures({ crawl: { ...crawl, requests: 12, pages: 4, active_bots: 2 } }));
-  expect(within(figure('Path-level pages')).getByText('Requested by 2 active bots')).toBeVisible();
+  expect(basis('Path-level pages')).toHaveAccessibleDescription(/Requested by 2 active bots/);
 });
 
 it('shows a measured zero as 0 and a window with no completed run as not run yet', () => {
@@ -143,7 +144,9 @@ it('shows a measured zero as 0 and a window with no completed run as not run yet
     }),
   );
   const cell = within(figure('Tracked citations'));
-  expect(cell.getByText(/No AI Visibility run completed in this window\./)).toBeVisible();
+  expect(basis('Tracked citations')).toHaveAccessibleDescription(
+    /No AI Visibility run completed in this window\./,
+  );
   expect(cell.getByText('Not run yet')).toBeVisible();
   expect(cell.queryByText('0')).not.toBeInTheDocument();
 });
@@ -187,8 +190,9 @@ it("offers GA4's own next step once, under the figures, until a referral snapsho
     }),
   );
   const cell = within(figure('AI referral sessions'));
-  expect(cell.getByText(/GA4 · Synced/)).toBeVisible();
   expect(cell.getByText('0')).toBeVisible();
-  expect(cell.getByText('Jul 22, 2026')).toBeVisible();
+  // The source and its report day are the figure's basis hint.
+  expect(basis('AI referral sessions')).toHaveAccessibleDescription(/GA4 · Synced/);
+  expect(basis('AI referral sessions')).toHaveAccessibleDescription(/Jul 22, 2026/);
   expect(screen.queryByRole('link', { name: 'Connect GA4' })).not.toBeInTheDocument();
 });

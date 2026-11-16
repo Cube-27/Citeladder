@@ -285,9 +285,12 @@ describe('DashboardScreen', () => {
       '/agent/actions?project=00000000-0000-4000-8000-000000000001',
     );
     const proof = within(screen.getByRole('region', { name: 'Progress and report proof' }));
-    expect(proof.getByText('Resolved actions')).toBeVisible();
+    // The card title labels its one figure; the figure's basis is a hint, not a row.
     expect(proof.getByText('2')).toBeVisible();
-    expect(proof.getByText('Since the comparable run')).toBeVisible();
+    expect(
+      proof.getByRole('button', { name: 'Basis of Resolved actions' }),
+    ).toHaveAccessibleDescription('Resolved actions · Since the comparable run');
+    expect(proof.getByText('Since the comparable run', { exact: false })).not.toBeVisible();
     expect(screen.getByText('Evidence-first analytics')).toBeVisible();
     expect(screen.getByText('Growth leaders')).toBeVisible();
     expect(screen.getByText('Analytics')).toBeVisible();
@@ -389,9 +392,18 @@ describe('DashboardScreen', () => {
       </TooltipProvider>,
     );
     const state = within(screen.getByRole('region', { name: 'Project state' }));
-    expect(state.getByText('8 of 12 answers comparable')).toBeVisible();
+    // The note is the first figure's hint, never a visible third row.
+    expect(state.getByRole('button', { name: 'Basis of Visibility' })).toHaveAccessibleDescription(
+      '8 of 12 answers comparable',
+    );
+    expect(state.getByText('8 of 12 answers comparable')).not.toBeVisible();
     const track = within(screen.getByRole('region', { name: 'Owned citation rate' }));
-    expect(track.getByText('8 of 12 answers comparable')).toBeVisible();
+    expect(
+      track.getByRole('button', { name: 'About Owned citation rate' }),
+    ).toHaveAccessibleDescription('Answers that link to a page you own');
+    expect(
+      track.getByRole('button', { name: 'Basis of Owned citation rate' }),
+    ).toHaveAccessibleDescription(/^Across \d+ engines? · 8 of 12 answers comparable$/);
     const movement = within(screen.getByRole('region', { name: 'Movement' }));
     expect(
       movement.getByText(
