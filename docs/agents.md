@@ -446,7 +446,9 @@ The runtime emits display-only events
 - `step`: a model call started;
 - `reply_delta`: the next piece of that call's text;
 - `thinking`: the next piece of its thinking summary;
-- `document_delta`: the document being saved so far, as a throttled snapshot;
+- `document_delta`: the document being saved, throttled: the text added since
+  the last event at offset `from`, or the whole body from `0` when it no longer
+  extends what was sent;
 - `tool`: one call's state (`started`, then `completed`, `unavailable`,
   `refused` or `failed`), keyed by call ID, with the same `target` its saved
   step keeps; a hosted web search is the tool `web_search`.

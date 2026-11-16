@@ -61,7 +61,8 @@ export const agentToolStatusSchema = z.enum([
  * - `step`: a model call started (the heartbeat of a turn).
  * - `reply_delta`: the next piece of that call's answer text; each call's text
  *   is its own segment, kept under the earlier calls' text.
- * - `document_delta`: the document being saved, so far (a snapshot).
+ * - `document_delta`: the document being saved: `text` is its body from offset
+ *   `from` on, so `from: 0` is a full snapshot and a later `from` appends.
  * - `thinking`: the next piece of that call's thinking summary.
  * - `tool`: one call's state, keyed by `call_id`; calls in one step run together.
  *   A provider-hosted web search is the tool `web_search`.
@@ -73,7 +74,8 @@ export const agentTurnEventSchema = z.discriminatedUnion('type', [
     type: z.literal('document_delta'),
     ordinal: z.number().int(),
     title: z.string().nullable(),
-    body: z.string().nullable(),
+    from: z.number().int().nonnegative(),
+    text: z.string().nullable(),
   }),
   z.object({ type: z.literal('thinking'), ordinal: z.number().int(), text: z.string() }),
   z.object({

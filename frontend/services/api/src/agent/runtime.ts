@@ -369,7 +369,12 @@ export class AgentRuntime {
           // An edit's input is not the document, so the edited text is shown once applied.
           const edited = outcome.document ? state.staged.get(outcome.document) : undefined;
           if (call.name === EDIT_DOCUMENT && outcome.ok && edited)
-            events?.document?.({ ordinal, title: edited.payload.title, body: edited.payload.body });
+            events?.document?.({
+              ordinal,
+              title: edited.payload.title,
+              from: 0,
+              text: edited.payload.body,
+            });
           tool(outcome.ok ? 'completed' : 'refused');
           return result(call, outcome.text, !outcome.ok);
         });

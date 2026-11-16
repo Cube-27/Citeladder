@@ -26,11 +26,13 @@ const field = (input: unknown, name: string) => {
 };
 
 /**
- * Turns a streamed `save_document` input into throttled document snapshots.
- * Each event resends the document so far, so a long one is sampled less often:
- * about every 5% once it passes a few thousand characters.
+ * Turns a streamed `save_document` input into throttled document events,
+ * sampled about every 5% once it passes a few thousand characters. Each sends
+ * only the text added since the last; a body that no longer extends the sent
+ * one goes whole, from offset 0.
  */
 export function documentEmitter(ordinal: number, emit: (event: TurnDocument) => void, every = 160) {
+  let sent: string | null = null;
   let sentAt = -1;
   let title: string | null = null;
   return (input: unknown) => {
@@ -38,8 +40,10 @@ export function documentEmitter(ordinal: number, emit: (event: TurnDocument) => 
     const next = field(input, 'title');
     const length = body?.length ?? 0;
     if (next === title && length - sentAt < Math.max(every, length / 20)) return;
+    const from = body !== null && sent !== null && body.startsWith(sent) ? sent.length : 0;
+    sent = body;
     sentAt = length;
     title = next;
-    emit({ ordinal, title: next, body });
+    emit({ ordinal, title: next, from, text: body?.slice(from) ?? null });
   };
 }
