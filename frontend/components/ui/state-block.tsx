@@ -26,8 +26,8 @@ type BlockEmpty = Readonly<{
   inline?: false;
   icon?: LucideIcon;
   heading: string;
-  /** One sentence: what is missing and what to do about it. */
-  description?: string;
+  /** One sentence: what is missing and what to do about it (a closing sentence may hold a link). */
+  description?: ReactNode;
   /**
    * The main action, a Button with no variant of its own (the block draws it
    * primary on the page, secondary inside a card), then at most one
@@ -326,7 +326,7 @@ function EmptyBody({
 }: Readonly<{
   icon?: LucideIcon;
   heading: string;
-  description?: string;
+  description?: ReactNode;
   action?: ReactNode;
   actionNote?: ActionNote;
   headingLevel: HeadingLevel;
