@@ -65,13 +65,17 @@ export function SidebarFrame({
 
 type ScrollEnds = Readonly<{ top: boolean; bottom: boolean }>;
 
-/** Which ends of a list hide more rows, kept current on scroll and resize. */
+/**
+ * Which ends of a list hide more rows, kept current on scroll, on a resize of
+ * the list or of any group in it (a fold, rows arriving) and once the fonts load.
+ */
 function useScrollEnds(ref: RefObject<HTMLElement | null>): ScrollEnds {
   const [ends, setEnds] = useState<ScrollEnds>({ top: false, bottom: false });
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
     const update = () => {
+      // A 1px tolerance: the rounded heights may differ by 1 with nothing hidden.
       const hidden = node.scrollHeight - node.clientHeight;
       const top = hidden > 1 && node.scrollTop > 1;
       const bottom = hidden > 1 && node.scrollTop < hidden - 1;
@@ -83,7 +87,12 @@ function useScrollEnds(ref: RefObject<HTMLElement | null>): ScrollEnds {
     node.addEventListener('scroll', update, { passive: true });
     const observer = new ResizeObserver(update);
     observer.observe(node);
-    if (node.firstElementChild) observer.observe(node.firstElementChild);
+    const content = node.firstElementChild;
+    if (content) {
+      observer.observe(content);
+      for (const group of content.children) observer.observe(group);
+    }
+    void document.fonts?.ready.then(update);
     return () => {
       node.removeEventListener('scroll', update);
       observer.disconnect();

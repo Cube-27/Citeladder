@@ -15,7 +15,9 @@
         masthead's title and the ground in the token colours, at the live
         shell's places, until React replaces #root. The sidebar is 224 from
         1280px, 200 from 900, none below, or the stored width; 56 with no rows
-        when the preference script finds it collapsed. Rows are 32 on a 34
+        when the preference script finds it collapsed. The switcher's and the
+        account's blocks (44, or 40 in the rail) and the switch's 24 above and
+        12 below keep the rows at their hydrated y. Rows are 32 on a 34
         pitch (44 under a coarse pointer). /boot-title.js shows the rows and
         the title on a shell path. -->
     <style>
@@ -85,11 +87,26 @@
       .boot-shell[data-boot-mode='dashboard'] .boot-rows {
         display: flex;
       }
+      .boot-ident {
+        display: flex;
+        align-items: center;
+        padding-inline: 8px;
+      }
+      .boot-switcher,
+      .boot-account {
+        display: block;
+        height: 44px;
+        border-radius: 6px;
+        background: #f1f2f5;
+      }
+      .boot-switcher {
+        flex: 1;
+      }
       .boot-mode {
         flex: none;
         grid-template-columns: 1fr 1fr;
         height: 32px;
-        margin: 12px 8px 0;
+        margin: 24px 8px 12px;
         padding: 2px;
         border-radius: 6px;
         background: #f1f2f5;
@@ -143,7 +160,7 @@
         border-block-start: 1px solid #e4e6eb;
       }
       .boot-account {
-        height: 44px;
+        width: calc(100% - 34px);
       }
       @media (min-width: 1280px) {
         .boot-side {
@@ -163,6 +180,11 @@
       }
       [data-sidebar-rail] .boot-side > :not(.boot-ident) {
         display: none;
+      }
+      [data-sidebar-rail] .boot-switcher {
+        flex: none;
+        width: 40px;
+        height: 40px;
       }
       @media (max-width: 899.98px) {
         .boot-side {
@@ -188,7 +210,7 @@
       [data-theme='dark'] [data-boot-mode='agent'] [data-boot-seg='agent'] {
         color: #eceef2;
       }
-      [data-theme='dark'] .boot-mode {
+      [data-theme='dark'] :is(.boot-mode, .boot-switcher, .boot-account) {
         background: #22252b;
       }
       [data-theme='dark'] [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],

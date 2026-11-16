@@ -22,9 +22,10 @@ const escapeHtml = (text: string) =>
 const row = (label: string) => `<span class="boot-row">${escapeHtml(label)}</span>`;
 
 /**
- * The labelled sidebar's static rows: the ident cell, the mode switch, the
- * Dashboard groups and the foot, at the live sidebar's places. No current
- * mark: which row is current is the bundle's to say.
+ * The labelled sidebar's static rows: the ident cell holding the switcher's
+ * block, the mode switch, the Dashboard groups and the foot with the account's
+ * block, at the live sidebar's places. No current mark: which row is current
+ * is the bundle's to say.
  */
 export function bootSidebarHtml(manifest: RouteManifest): string {
   const groups = manifest.DASHBOARD_SIDEBAR_GROUPS.map(({ group, title }) => {
@@ -34,7 +35,7 @@ export function bootSidebarHtml(manifest: RouteManifest): string {
   });
   const foot = manifest.navDestinations('sidebar:foot').map((entry) => row(entry.label));
   return [
-    '<div class="boot-ident"></div>',
+    '<div class="boot-ident"><span class="boot-switcher"></span></div>',
     '<div class="boot-mode"><span data-boot-seg="dashboard">Dashboard</span><span data-boot-seg="agent">Agent</span></div>',
     `<div class="boot-list"><div class="boot-rows">${groups.join('')}</div></div>`,
     `<div class="boot-foot">${foot.join('')}<span class="boot-account"></span></div>`,
