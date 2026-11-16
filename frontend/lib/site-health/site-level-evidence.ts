@@ -32,7 +32,7 @@ export const siteLevelRules: readonly SiteLevelRule[] = siteLevelRuleSchema.opti
 
 /** Whether an issue's rule is judged over the whole site rather than page by page. */
 export const isSiteLevelRule = (ruleId: string): boolean =>
-  siteLevelRules.some((rule) => rule === ruleId);
+  siteLevelRuleSchema.safeParse(ruleId).success;
 
 type EvidencePage = Readonly<{
   siteUrlId: string;

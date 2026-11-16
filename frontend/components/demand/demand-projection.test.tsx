@@ -335,7 +335,7 @@ describe('DemandProjection', () => {
       within(drawer)
         .getByRole('link', { name: 'Open the Action for ai marketing tools' })
         .getAttribute('href'),
-    ).toContain('/actions/66666666-6666-4666-8666-666666666666');
+    ).toBe(`/actions/66666666-6666-4666-8666-666666666666?project=${project.id}`);
     await user.keyboard('{Escape}');
 
     // An unpromoted signal offers no Action, only the hand-off to the agent.

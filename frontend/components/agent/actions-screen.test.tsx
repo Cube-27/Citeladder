@@ -254,6 +254,35 @@ describe('Actions', () => {
     expect(screen.queryByRole('link', { name: 'Pages without a title' })).toBeNull();
   });
 
+  it('leaves Open uncounted when Issues fail, and keeps product work when the catalog fails', async () => {
+    serve([]);
+    const product = {
+      ...actionItem(MEASURED, 'Organic bodysuit', PROJECT),
+      target_kind: 'product',
+      group: 'products',
+    };
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
+        HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 500 }),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/commerce/catalog`, () =>
+        HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 500 }),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
+        HttpResponse.json(
+          actionsPage([product], { status_counts: { open: 1 }, group_counts: { products: 1 } }),
+        ),
+      ),
+    );
+    renderActions();
+
+    expect(await screen.findByText("Couldn't load Website issues")).toBeVisible();
+    expect(screen.getByRole('radio', { name: /^Open/ }).textContent).toBe('Open');
+    expect(screen.getByRole('radio', { name: /^Done/ }).textContent).toBe('Done (0)');
+    const goals = within(screen.getByRole('group', { name: 'Goals' }));
+    expect(goals.getByRole('button', { name: 'Go to Improve your products, 1' })).toBeVisible();
+  });
+
   it('narrows by Source as URL state', async () => {
     const reads: string[] = [];
     serve(reads);

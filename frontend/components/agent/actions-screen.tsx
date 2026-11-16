@@ -38,15 +38,18 @@ export function ActionsScreen() {
   const filters = useActionFilters();
   const list = useActionsList(scope, filters);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  // The products goal is offered only to a project with a catalog.
   const catalog = useQuery(commerceQueries.catalog(scope));
-  const goals = actionGroupSchema.options.filter(
-    (goal) => goal !== 'products' || (catalog.data?.product_total ?? 0) > 0,
-  );
   const branches =
     filters.groupBy === 'goal'
-      ? goalTree(list.rows, goals, list.actionCounts)
+      ? goalTree(list.rows, actionGroupSchema.options, list.actionCounts)
       : sourceTree(list.rows, ACTION_FAMILIES);
+  // The goal strip offers the products goal to a project with a catalog, or with product work.
+  const goals = actionGroupSchema.options.filter(
+    (goal) =>
+      goal !== 'products' ||
+      (catalog.data?.product_total ?? 0) > 0 ||
+      branches.some((branch) => branch.key === goal),
+  );
   const toggle = (key: string) =>
     setCollapsed((current) => {
       const next = new Set(current);
@@ -60,7 +63,7 @@ export function ActionsScreen() {
     header?.querySelector('button')?.focus({ preventScroll: true });
   };
   const everHadWork =
-    list.issueCount > 0 || Object.values(list.statusCounts ?? {}).some((count) => count > 0);
+    (list.issueCount ?? 0) > 0 || Object.values(list.statusCounts ?? {}).some((count) => count > 0);
 
   return (
     <ReportPage
@@ -124,16 +127,16 @@ export function ActionsScreen() {
   );
 }
 
-/** A status view's count: the project-wide status counts, Open with the Issues defects. */
+/** A status view's count: the project-wide status counts, Open with the Issues defects once known. */
 function viewCount(
   view: ActionListView,
   counts: Readonly<Record<string, number>> | null,
-  issueCount: number,
+  issueCount: number | null,
 ): number | undefined {
   if (!counts) return undefined;
   switch (view) {
     case 'open':
-      return (counts.open ?? 0) + issueCount;
+      return issueCount === null ? undefined : (counts.open ?? 0) + issueCount;
     case 'measuring':
       return (counts.implemented ?? 0) + (counts.measuring ?? 0);
     case 'in_progress':

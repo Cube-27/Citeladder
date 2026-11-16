@@ -264,11 +264,10 @@ content-gap findings are ordinary Actions on it, and a content page's content
 gaps, search demand and link findings share its one Action. Site Health
 defects are not among them: Issues owns them, and the Actions list reads Issues
 groups through the existing Issues reads rather than copying them into Actions
-([IA1](decisions.md#actions-read-issues-in-place)); each such row links to its
-own Issues page. Leftover rows of the retired `issue_family` target kind (and
-their `actions.cohort`, kept until a later schema cleanup) are never listed,
-counted, read or declared. The list is the Dashboard's `/actions`, and every
-link to an Action is `/actions/{id}`. The evidence behind content gaps is in
+([IA1](decisions.md#actions-read-issues-in-place)). Leftover rows of the
+retired `issue_family` target kind (and their `actions.cohort`, kept until a
+later schema cleanup) are never listed, counted, read or declared. Every link
+to an Action is `/actions/{id}`. The evidence behind content gaps is in
 [Content optimization](content-optimization.md).
 
 ## Explicit implementation declaration
@@ -466,12 +465,15 @@ project-wide and unfiltered (the sidebar badge); `group_counts` count every
 group under every filter but the group.
 
 The Actions screen (`/actions`, a Dashboard page) is the home for every
-actionable item in the app (owner, 2026-11-16). Under Open it lists the latest
-crawl's Issues defects exactly as Issues groups them, read through the Issues
-reads; technical-tab issues fall under `fix_site` and content and AEO issues
-under `own_pages`, and each links to that issue open on `/issues`. Issues keep
-their own Mark fixed lifecycle. Every other Action sits under its group, then a
-category set by the frontend Actions config. The status view (Open, In
+actionable item in the app ([IA1](decisions.md#actions-read-issues-in-place)).
+Under Open it lists the latest crawl's Issues defects exactly as Issues groups
+them, read through the Issues reads; technical-tab issues fall under
+`fix_site` and content and AEO issues under `own_pages`, each under its rule's
+own `category`, and each links to that issue open on `/issues`. Issues keep
+their own Mark fixed lifecycle, and Open's count includes them only once their
+read has answered. Every other Action sits under its group, then a category;
+both category vocabularies are in the [frontend Actions config](../frontend/lib/config/agent.ts).
+The status view (Open, In
 progress, Measuring = implemented and measuring, Done, Dismissed), Source,
 Priority and grouping (goal or source) are URL state. Overview's ranked actions
 link to the owning Action at `/actions/{action_id}`, or to the Actions list

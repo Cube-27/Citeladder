@@ -28,10 +28,52 @@ function sameProject(key: unknown, { workspaceId, projectId }: ProjectScope): bo
 }
 
 /**
+ * The latest crawl's Issues defects (a read per Issues tab) with their fix
+ * progress. `count` is null until a summary is read, or when the read failed;
+ * a project without a crawl or without Website access has none.
+ */
+function useIssueReads(scope: ProjectScope) {
+  const dashboard = useQuery(siteHealthQueries.dashboard(scope));
+  const crawlId = dashboard.data?.crawl?.id ?? null;
+  const reads = useQueries({
+    queries: ISSUE_SECTIONS.map(({ value }) => ({
+      ...siteHealthQueries.issues(scope.workspaceId, crawlId ?? '', actionsIssueParams(value)),
+      enabled: crawlId !== null,
+    })),
+  });
+  // Fix progress is a side read: while it loads or fails, rows show no fix line.
+  const fixes = useQuery({
+    ...siteHealthQueries.issueFixes(scope.workspaceId, crawlId ?? ''),
+    enabled: crawlId !== null,
+  });
+
+  const status = httpErrorStatus(dashboard.error);
+  const denied = status === 401 || status === 403;
+  const dashboardFailed = dashboard.isError && !dashboard.data;
+  const summary = reads.find((read) => read.data)?.data?.summary;
+  let count: number | null = null;
+  if (summary) count = Object.values(summary.section_counts).reduce((sum, n) => sum + n, 0);
+  else if (denied || (dashboard.data && crawlId === null)) count = 0;
+  let failed: RetryableRead | undefined = reads.find((read) => read.isError && !read.data);
+  // A project without Website access simply has no Issues rows; any other failure is said.
+  if (dashboardFailed) failed = denied ? undefined : dashboard;
+  return {
+    sections: ISSUE_SECTIONS.flatMap(({ value }, index) => {
+      const page = reads[index]?.data;
+      return page ? [{ section: value, items: page.items }] : [];
+    }),
+    fixes: fixes.data?.items ?? [],
+    count,
+    pending: dashboard.isPending || (crawlId !== null && reads.some((read) => read.isPending)),
+    failed,
+  };
+}
+
+/**
  * The Actions list's reads, none waiting on another but the crawl: the status
- * view's Actions (a read per status it holds), and the latest crawl's Issues
- * defects (a read per Issues tab) with their fix progress. Issues rows belong
- * to the Open view only, but their count is Open's too, so they are always read.
+ * view's Actions (a read per status it holds), and the Issues defects. Issues
+ * rows belong to the Open view only, but their count is Open's too, so they
+ * are always read.
  */
 export function useActionsList(scope: ProjectScope, filters: ListFilters) {
   const family = filters.source === ISSUES_SOURCE ? undefined : filters.source;
@@ -45,38 +87,17 @@ export function useActionsList(scope: ProjectScope, filters: ListFilters) {
           sameProject(query?.queryKey, scope) ? previous : undefined,
       })),
   });
-  const dashboard = useQuery(siteHealthQueries.dashboard(scope));
-  const crawlId = dashboard.data?.crawl?.id ?? null;
-  const issueReads = useQueries({
-    queries: ISSUE_SECTIONS.map(({ value }) => ({
-      ...siteHealthQueries.issues(scope.workspaceId, crawlId ?? '', actionsIssueParams(value)),
-      enabled: crawlId !== null,
-    })),
-  });
-  // Fix progress is a side read: while it loads or fails, rows show no fix line.
-  const fixes = useQuery({
-    ...siteHealthQueries.issueFixes(scope.workspaceId, crawlId ?? ''),
-    enabled: crawlId !== null,
-  });
+  const issueReads = useIssueReads(scope);
 
   const pages = actionReads.flatMap((read) => (read.data ? [read.data] : []));
-  const statusCounts = pages[0]?.status_counts ?? null;
-  const issuePages = issueReads.flatMap((read) => (read.data ? [read.data] : []));
-  const issueCount = issuePages[0]
-    ? Object.values(issuePages[0].summary.section_counts).reduce((sum, count) => sum + count, 0)
-    : 0;
   // A family Source reads only that family's Actions; Issues reads no Actions.
   const showIssues = filters.view === 'open' && family === undefined;
   const showActions = filters.source !== ISSUES_SOURCE;
 
   const issues = showIssues
-    ? issueRows(
-        ISSUE_SECTIONS.flatMap(({ value }, index) => {
-          const page = issueReads[index]?.data;
-          return page ? [{ section: value, items: page.items }] : [];
-        }),
-        fixes.data?.items ?? [],
-      ).filter((row) => !filters.priority || row.priority === filters.priority)
+    ? issueRows(issueReads.sections, issueReads.fixes).filter(
+        (row) => !filters.priority || row.priority === filters.priority,
+      )
     : [];
   const actions = showActions ? actionRows(pages.flatMap((page) => page.items)) : [];
   const actionCounts: Partial<Record<ActionGroup, number>> = {};
@@ -84,26 +105,16 @@ export function useActionsList(scope: ProjectScope, filters: ListFilters) {
     for (const goal of actionGroupSchema.options)
       actionCounts[goal] = pages.reduce((sum, page) => sum + (page.group_counts[goal] ?? 0), 0);
 
-  const issuesPending =
-    showIssues &&
-    (dashboard.isPending || (crawlId !== null && issueReads.some((r) => r.isPending)));
-  // A project without Website access simply has no Issues rows; any other failure is said.
-  const status = httpErrorStatus(dashboard.error);
-  const denied = status === 401 || status === 403;
-  let issuesFailed: RetryableRead | undefined = issueReads.find(
-    (read) => read.isError && !read.data,
-  );
-  if (dashboard.isError && !dashboard.data) issuesFailed = denied ? undefined : dashboard;
   return {
     rows: [...issues, ...actions],
     actionCounts,
-    statusCounts,
-    issueCount,
+    statusCounts: pages[0]?.status_counts ?? null,
+    issueCount: issueReads.count,
     /** More Actions hold this view than one read returns. */
     truncated: showActions && pages.some((page) => page.next_cursor !== null),
-    loading: actionReads.some((read) => read.isPending) || issuesPending,
+    loading: actionReads.some((read) => read.isPending) || (showIssues && issueReads.pending),
     fetching: actionReads.some((read) => read.isFetching && !read.isPending),
     actionsFailed: actionReads.find((read) => read.isError && !read.data),
-    issuesFailed: showIssues ? issuesFailed : undefined,
+    issuesFailed: showIssues ? issueReads.failed : undefined,
   };
 }

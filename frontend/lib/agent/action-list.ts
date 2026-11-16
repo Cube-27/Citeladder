@@ -51,15 +51,17 @@ export type ActionListBranch = Readonly<{
   categories: readonly ActionListCategory[];
 }>;
 
+/** Whether a rule's list (absent: any value) admits one of `values`. */
+const admits = (list: readonly string[] | undefined, ...values: readonly string[]) =>
+  !list || values.some((value) => list.includes(value));
+
 /** An Action's category: the first configured rule that admits it. */
-export function actionCategory(action: Pick<Action, 'target_kind' | 'approach' | 'families'>) {
+function actionCategory(action: Pick<Action, 'target_kind' | 'approach' | 'families'>) {
   const rule = ACTION_CATEGORIES.find(
     (candidate) =>
-      (!candidate.targetKinds ||
-        candidate.targetKinds.some((kind) => kind === action.target_kind)) &&
-      (!candidate.approaches || candidate.approaches.includes(action.approach)) &&
-      (!candidate.families ||
-        candidate.families.some((family) => action.families.includes(family))),
+      admits(candidate.targetKinds, action.target_kind) &&
+      admits(candidate.approaches, action.approach) &&
+      admits(candidate.families, ...action.families),
   );
   return rule?.label ?? ACTION_CATEGORY_FALLBACK;
 }
@@ -114,7 +116,7 @@ export function actionRows(actions: readonly Action[]): ActionListRow[] {
 }
 
 /** A row's Source key: Issues, or the Action's first evidence family. */
-export function rowSource(row: ActionListRow): string {
+function rowSource(row: ActionListRow): string {
   if (row.kind === 'issue') return ISSUES_SOURCE;
   return row.action.families[0] ?? OTHER_SOURCE;
 }
