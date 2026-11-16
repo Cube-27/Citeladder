@@ -401,7 +401,7 @@ export function useOnboardingFlow(transactionKey: string) {
  */
 function revealFirstInvalid(errors: FieldErrors<BrandStepValues>) {
   const fields = Object.values(errors).flatMap((error): HTMLElement[] => {
-    const ref: unknown = error?.ref;
+    const ref = error && 'ref' in error ? error.ref : undefined;
     return ref instanceof HTMLElement ? [ref] : [];
   });
   fields.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));

@@ -1,13 +1,13 @@
 # Node 26 bookworm-slim. The tag keeps Dependabot's digest updates on this
 # image family; a bare digest let it pick the full `node` image.
-FROM node:26-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68 AS dependencies
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS dependencies
 
 ENV PNPM_HOME=/pnpm
 ENV PATH="${PNPM_HOME}:${PATH}"
 WORKDIR /app
 
 # Keep this version in lockstep with packageManager in frontend/package.json.
-RUN npm install --global --ignore-scripts pnpm@12.18.0
+RUN npm install --global --ignore-scripts pnpm@12.21.0
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 COPY frontend/packages/contracts/package.json ./packages/contracts/
 COPY frontend/services/api/package.json ./services/api/
@@ -19,7 +19,7 @@ FROM dependencies AS wrangler
 COPY frontend/scripts/copy-wrangler-runtime.mjs ./scripts/
 RUN node scripts/copy-wrangler-runtime.mjs /wrangler
 
-FROM node:26-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68 AS builder
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS builder
 
 ARG PUBLIC_DOCS_ORIGIN
 ARG PUBLIC_WEBSITE_ORIGIN
@@ -31,14 +31,14 @@ ENV PUBLIC_WEBSITE_ORIGIN=${PUBLIC_WEBSITE_ORIGIN}
 ENV PUBLIC_APP_ORIGIN=${PUBLIC_APP_ORIGIN}
 WORKDIR /app
 
-RUN npm install --global --ignore-scripts pnpm@12.18.0
+RUN npm install --global --ignore-scripts pnpm@12.21.0
 COPY --from=dependencies /app/node_modules ./node_modules
 COPY frontend ./
 RUN pnpm build:docs
 
 # Local Compose only: run the same static-assets Worker production deploys
 # (apps/docs/wrangler.jsonc) over the built output.
-FROM node:26-bookworm-slim@sha256:add5c17c14752c54d2f3d519ec46a3815684d41c33f198bcb09fb998f7dcbf68 AS runtime
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS runtime
 
 ENV NODE_ENV=production     HOME=/tmp     WRANGLER_SEND_METRICS=false
 WORKDIR /app
