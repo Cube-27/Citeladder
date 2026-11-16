@@ -47,7 +47,7 @@ export function SearchableSelect({
   const [highlight, setHighlight] = useState(0);
 
   const selected = options.find((option) => option.value === value);
-  const text = query ?? (selected?.label || value);
+  const text = inputText(query, selected?.label, value);
   const needle = (query ?? '').trim().toLowerCase();
   const filtered = needle ? options.filter((option) => matches(option, needle)) : options;
   const showList = open && filtered.length > 0;
@@ -203,4 +203,9 @@ function optionGridClass(hasLeading: boolean, hasEnd: boolean) {
   if (hasLeading) return 'grid-cols-[auto_minmax(0,1fr)]';
   if (hasEnd) return 'grid-cols-[minmax(0,1fr)_auto]';
   return 'grid-cols-[minmax(0,1fr)]';
+}
+
+/** The query while typing, else the selected option's label, else the raw value. */
+function inputText(query: string | null, selectedLabel: string | undefined, value: string) {
+  return query ?? (selectedLabel || value);
 }
