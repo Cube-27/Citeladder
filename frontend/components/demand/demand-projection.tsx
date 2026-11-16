@@ -9,7 +9,7 @@ import {
 import { Calendar, RefreshCw, Search, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { CollectionPage } from '@/components/templates/collection-page';
+import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { SearchField } from '@/components/ui/search-field';
 import { DemandEvidenceDrawer } from '@/components/demand/demand-evidence-drawer';
@@ -237,7 +237,7 @@ function SearchDemandView({
     );
 
   return (
-    <CollectionPage
+    <ReportPage
       actions={
         // Recomputing is a run; a role without it reads the snapshot as is.
         canRun ? (
@@ -321,7 +321,7 @@ function SearchDemandView({
           }}
         />
       </>
-    </CollectionPage>
+    </ReportPage>
   );
 }
 
@@ -354,7 +354,7 @@ export function DemandProjection() {
       />
     );
   }
-  return <CollectionPage>{demandFallback(latest)}</CollectionPage>;
+  return <ReportPage>{demandFallback(latest)}</ReportPage>;
 }
 
 /** Every non-loaded state of `/demand`, in the order it is decided. */

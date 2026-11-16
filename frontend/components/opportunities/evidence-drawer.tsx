@@ -11,7 +11,7 @@ import { opportunitiesQueries } from '@/lib/api/opportunities';
 import type { OpportunityDetail } from '@citeladder/contracts';
 import { Limitations } from '@/components/ui/passage';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -49,11 +49,9 @@ export function EvidenceDrawer({
     body = (
       <Notice
         kind="read"
-        error={detailQuery.error}
+        {...readErrorProps(detailQuery)}
         fallback="Could not load this opportunity."
         title="Could not load this opportunity"
-        onRetry={() => void detailQuery.refetch()}
-        pending={detailQuery.isFetching}
       />
     );
   } else if (detailQuery.data && !detail) {

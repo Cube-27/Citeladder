@@ -1,9 +1,7 @@
 import type { VisibilityAdsResponse } from '@citeladder/contracts/visibility-ads';
 import { Megaphone } from 'lucide-react';
 
-import { BusyRung } from '@/components/ui/rung-meter';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -24,17 +22,9 @@ import { mergedAdPages, useAds } from '@/lib/visibility/use-ads';
 import { AdOwnershipChip } from '@/components/visibility/ad-ownership-chip';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
-import { Notice } from '@/components/ui/notice';
+import { AnalysisRead } from '@/components/visibility/selection-gate';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-  TitledSection,
-  SectionStack,
-} from '@/components/ui/section';
+import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
@@ -47,38 +37,22 @@ export function VisibilityAds({
 }: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
   const query = useAds(filters, queries);
   const [firstPage, ...laterPages] = query.data?.pages ?? [];
-  if (query.error)
-    return (
-      <Notice
-        kind="read"
-        error={query.error}
-        title="Couldn't load the ads"
-        fallback="Check your connection and try again."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
-  // The selection above has settled on a measured run (`SelectionGate`), so
-  // no page yet is this read still on its way.
-  if (!firstPage) return <AdsLoading />;
   return (
-    <div className="relative">
-      <BusyRung active={query.isFetching && !query.isFetchingNextPage} label="Updating ads" />
-      <AdsView
-        data={mergedAdPages([firstPage, ...laterPages])}
-        onShowMore={query.hasNextPage ? () => void query.fetchNextPage() : undefined}
-        loadingMore={query.isFetchingNextPage}
-      />
-    </div>
-  );
-}
-
-function AdsLoading() {
-  return (
-    <Stack gap="workspace" aria-busy>
-      <Skeleton variant="block" />
-      <Skeleton variant="chart" />
-    </Stack>
+    <AnalysisRead
+      query={query}
+      title="Couldn't load the ads"
+      busyLabel="Updating ads"
+      busy={query.isFetching && !query.isFetchingNextPage}
+      ready={firstPage}
+    >
+      {(page) => (
+        <AdsView
+          data={mergedAdPages([page, ...laterPages])}
+          onShowMore={query.hasNextPage ? () => void query.fetchNextPage() : undefined}
+          loadingMore={query.isFetchingNextPage}
+        />
+      )}
+    </AnalysisRead>
   );
 }
 
@@ -293,15 +267,14 @@ function CreativeList({
   loadingMore: boolean;
 }>) {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Ad creatives</SectionTitle>
-        <SectionDescription>
-          {creatives.items.length < creatives.total
-            ? `The ${creatives.items.length} most frequent of ${creatives.total} creatives, as text.`
-            : 'The ads as text, with where they lead.'}
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Ad creatives"
+      description={
+        creatives.items.length < creatives.total
+          ? `The ${creatives.items.length} most frequent of ${creatives.total} creatives, as text.`
+          : 'The ads as text, with where they lead.'
+      }
+    >
       <SectionContent>
         <Stack>
           {!creatives.items.length ? (
@@ -341,6 +314,6 @@ function CreativeList({
           ) : null}
         </Stack>
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }

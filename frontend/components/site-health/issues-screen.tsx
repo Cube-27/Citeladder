@@ -2,14 +2,14 @@ import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { ProjectLink } from '@/components/ui/project-link';
 
 import { Button } from '@/components/ui/button';
-import { CollectionPage } from '@/components/templates/collection-page';
+import { ReportPage } from '@/components/templates/report-page';
 import { IssuesCatalog } from '@/components/site-health/issues-catalog';
 import { ICONS } from '@/lib/icons';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteHealthDashboard } from '@citeladder/contracts';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { useProjectScope } from '@/lib/project/active-project-scope';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { IssuesSummaryLoading } from '@/components/site-health/issues-summary';
 import { Section } from '@/components/ui/section';
@@ -42,19 +42,19 @@ function IssuesDataRegion({
 }>) {
   if (dashboard.isLoading)
     return (
-      <CollectionPage>
+      <ReportPage>
         <IssuesSummaryLoading />
         <Section>
           <Skeleton variant="table" columns={4} rows={8} label="Loading issues" />
         </Section>
-      </CollectionPage>
+      </ReportPage>
     );
 
   const status = httpErrorStatus(dashboard.error);
   const accessDenied = status === 401 || status === 403;
   if (dashboard.isError && (accessDenied || !dashboard.data)) {
     return (
-      <CollectionPage>
+      <ReportPage>
         <StateBlock
           kind="error"
           error={dashboard.error}
@@ -71,7 +71,7 @@ function IssuesDataRegion({
           onRetry={() => void dashboard.refetch()}
           pending={dashboard.isFetching}
         />
-      </CollectionPage>
+      </ReportPage>
     );
   }
 
@@ -99,30 +99,26 @@ function IssuesLoadedRegion({
         notice={
           <Notice
             kind="read"
-            error={dashboard.error}
+            {...readErrorProps(dashboard)}
             fallback="Could not refresh the latest Website crawl."
             title="Could not refresh the latest Website crawl"
-            onRetry={() => void dashboard.refetch()}
-            pending={dashboard.isFetching}
           />
         }
       />
     ) : (
-      <CollectionPage>
+      <ReportPage>
         <StateBlock
           kind="error"
-          error={dashboard.error}
+          {...readErrorProps(dashboard)}
           fallback="Could not refresh the latest Website crawl."
           title="Could not refresh the latest Website crawl"
-          onRetry={() => void dashboard.refetch()}
-          pending={dashboard.isFetching}
         />
-      </CollectionPage>
+      </ReportPage>
     );
   }
   if (!crawl) {
     return (
-      <CollectionPage>
+      <ReportPage>
         <StateBlock
           kind="empty"
           icon={ICONS.issues}
@@ -134,7 +130,7 @@ function IssuesLoadedRegion({
             </Button>
           }
         />
-      </CollectionPage>
+      </ReportPage>
     );
   }
   return <IssuesCatalog workspaceId={workspaceId} projectId={projectId} crawlId={crawl.id} />;

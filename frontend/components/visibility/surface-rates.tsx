@@ -7,7 +7,7 @@ import { SubsectionHeader } from '@/components/ui/workspace';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { formatPercent } from '@/lib/format';
 import type { AioRate, SurfaceRates } from '@citeladder/contracts';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   Section,
@@ -115,11 +115,9 @@ export function SurfaceRatesPanel({
     return (
       <Notice
         kind="read"
-        error={query.error}
+        {...readErrorProps(query)}
         title="Couldn't load the AI Overview rates"
         fallback="The request failed or timed out."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   if (!data) return <StateBlock kind="loading" label="Loading AI Overview rates…" />;

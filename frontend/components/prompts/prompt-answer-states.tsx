@@ -9,14 +9,7 @@ import { pluralCount } from '@/lib/format';
 import { ANSWER_STATES, competitorGaps, type CompetitorGap } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-  TitledSection,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
@@ -29,21 +22,20 @@ export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricIt
   const gaps = competitorGaps(outcomes);
   return (
     <>
-      <Section>
-        <SectionHeader>
-          <SectionTitle>Mentions and citations</SectionTitle>
-          <SectionDescription>
-            {latest
-              ? 'The latest run that measured this prompt.'
-              : 'No run has measured this prompt in this market yet.'}
-          </SectionDescription>
-        </SectionHeader>
+      <TitledSection
+        title="Mentions and citations"
+        description={
+          latest
+            ? 'The latest run that measured this prompt.'
+            : 'No run has measured this prompt in this market yet.'
+        }
+      >
         {latest ? (
           <SectionContent>
             <LatestRun latest={latest} />
           </SectionContent>
         ) : null}
-      </Section>
+      </TitledSection>
       {outcomes.length ? <EngineTable outcomes={outcomes} /> : null}
       {gaps.length ? <CompetitorGapTable gaps={gaps} /> : null}
     </>

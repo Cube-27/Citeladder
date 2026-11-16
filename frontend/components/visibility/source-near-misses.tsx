@@ -3,6 +3,7 @@ import { Link2Off } from 'lucide-react';
 import type { z } from 'zod';
 
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { readErrorProps } from '@/components/ui/notice';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { NumericCell, SourceName } from '@/components/visibility/source-cells';
@@ -76,11 +77,9 @@ function nearMissState(
   if (query.isError) {
     return {
       kind: 'error',
-      error: query.error,
+      ...readErrorProps(query),
       title: "Couldn't load your pages read but not cited",
       fallback: 'The request failed or timed out.',
-      onRetry: () => void query.refetch(),
-      pending: query.isFetching,
     };
   }
   const data = query.data;

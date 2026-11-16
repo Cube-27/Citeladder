@@ -8,13 +8,13 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import type { FilterBarProps } from '@/components/ui/filter-bar';
 import { Stack } from '@/components/ui/layout';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
-import { SearchField } from '@/components/ui/search-field';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { Absence } from '@/components/ui/absence';
 import { pageKindFilter } from '@/components/site-health/page-kind-select';
 import { PagesTable } from '@/components/site-health/pages-table';
 import { RootErrorsBlock } from '@/components/site-health/root-errors-block';
+import { SubmittedSearch } from '@/components/site-health/submitted-search';
 import { type PagesParams, type PagesSort } from '@/lib/api/site-health';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl } from '@citeladder/contracts';
@@ -190,29 +190,6 @@ function usePagesInventoryState() {
   return { view, setView, pageKind, setPageKind, query, setQuery };
 }
 
-/** The search box: it applies on Enter, so each keystroke is not a request. */
-function PageSearch({
-  query,
-  onApply,
-}: Readonly<{ query: string; onApply: (query: string) => void }>) {
-  const [draft, setDraft] = useState(query);
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(draft.trim());
-      }}
-    >
-      <SearchField
-        value={draft}
-        onValueChange={setDraft}
-        placeholder="Search page URLs…"
-        aria-label="Search pages"
-      />
-    </form>
-  );
-}
-
 type ExportPages = Readonly<{ onExport: () => void; exporting: boolean }>;
 
 /**
@@ -237,7 +214,15 @@ function usePagesToolbar(active: boolean, exportPages: ExportPages | undefined):
         ariaLabel="Page inventory views"
       />
     ),
-    search: <PageSearch key={query} query={query} onApply={setQuery} />,
+    search: (
+      <SubmittedSearch
+        key={query}
+        query={query}
+        onApply={setQuery}
+        placeholder="Search page URLs…"
+        label="Search pages"
+      />
+    ),
     filters: [pageKindFilter({ value: pageKind, onChange: (next) => setPageKind(next) })],
     actions: exportPages ? (
       <Button variant="secondary" onClick={exportPages.onExport} pending={exportPages.exporting}>

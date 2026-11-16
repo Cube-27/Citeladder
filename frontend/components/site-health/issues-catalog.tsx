@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import { CollectionPage } from '@/components/templates/collection-page';
+import { ReportPage } from '@/components/templates/report-page';
 import { Inline } from '@/components/ui/layout';
 import {
   IssueDetailDrawer,
@@ -19,10 +19,11 @@ import {
   type DataTableState,
 } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
+import { readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED } from '@/components/ui/state-block';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { SearchField } from '@/components/ui/search-field';
+import { SubmittedSearch } from '@/components/site-health/submitted-search';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -126,7 +127,7 @@ export function IssuesCatalog({
   const pager = useCatalogPager(cursor, issuesQuery.data?.next_cursor ?? null, catalog.goToPage);
 
   return (
-    <CollectionPage>
+    <ReportPage>
       {notice}
       <IssuesSummary
         query={priorityQuery}
@@ -145,10 +146,12 @@ export function IssuesCatalog({
             />
           ),
           search: (
-            <IssueSearch
+            <SubmittedSearch
               key={filters.query}
               query={filters.query}
               onApply={(query) => updateFilters({ query })}
+              placeholder="Search issues…"
+              label="Search issues"
             />
           ),
           filters: catalogFilters(filters, rows, updateFilters),
@@ -184,7 +187,7 @@ export function IssuesCatalog({
           onClose={() => catalog.selectIssue(null)}
         />
       ) : null}
-    </CollectionPage>
+    </ReportPage>
   );
 }
 
@@ -193,11 +196,9 @@ function tableState(query: ReturnType<typeof useIssuesCatalogQueries>['issuesQue
   if (query.isError && !query.data)
     return {
       kind: 'error',
-      error: query.error,
+      ...readErrorProps(query),
       fallback: READ_FAILED,
       title: "Couldn't load issues for this crawl",
-      onRetry: () => void query.refetch(),
-      pending: query.isFetching,
     } satisfies DataTableState;
   if (!query.data) return { kind: 'loading', label: 'Loading issues…' } satisfies DataTableState;
   if (query.data.items.length === 0)
@@ -372,32 +373,6 @@ function catalogFilters(
 function ruleFilterTitle(rows: readonly SiteIssue[], ruleId: string): string {
   const row = rows.find((issue) => issue.rule_id === ruleId);
   return row ? issueTitle(row) : 'one issue';
-}
-
-function IssueSearch({
-  query,
-  onApply,
-}: Readonly<{ query: string; onApply: (query: string) => void }>) {
-  const [draft, setDraft] = useState(query);
-  return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        onApply(draft);
-      }}
-    >
-      <SearchField
-        value={draft}
-        onValueChange={(value) => {
-          setDraft(value);
-          // An emptied box lists everything again: there is nothing to submit.
-          if (value === '' && query !== '') onApply('');
-        }}
-        placeholder="Search issues…"
-        aria-label="Search issues"
-      />
-    </form>
-  );
 }
 
 /**

@@ -23,7 +23,7 @@ import { useAgentAccess } from '@/lib/agent/use-agent-access';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectContext } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { DraftSheet } from '@/components/ui/draft-sheet';
 import { revisionDraft } from '@/components/agent/revision-draft';
 import { StateBlock } from '@/components/ui/state-block';
@@ -174,11 +174,9 @@ function PanelChat({
       <DockedThread>
         <Notice
           kind="read"
-          error={query.error}
+          {...readErrorProps(query)}
           title="Couldn't load this chat"
           fallback="This chat could not be loaded."
-          onRetry={() => void query.refetch()}
-          pending={query.isFetching}
         />
       </DockedThread>
     );

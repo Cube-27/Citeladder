@@ -15,13 +15,7 @@ import {
   standingSentence,
 } from '@/lib/visibility/source-pages';
 import { pageFormatBasis, urlTypeLabel } from '@/lib/visibility/vocabulary';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 
 type Page = z.infer<typeof visibilitySourceUrlSchema>['page'];
 
@@ -43,11 +37,7 @@ export function SourceUrlPageCard({
   const standing = page?.standing ?? 'untracked';
   const brand = brandVerdict(page?.entities);
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>On this page</SectionTitle>
-        <SectionDescription>{standingSentence(standing)}</SectionDescription>
-      </SectionHeader>
+    <TitledSection title="On this page" description={standingSentence(standing)}>
       <SectionContent>
         <Stack gap="workspace">
           {standing === 'gap' ? <GetListed url={url} actionId={page?.action_id ?? null} /> : null}
@@ -61,7 +51,7 @@ export function SourceUrlPageCard({
           {page ? <PageFacts page={page} /> : null}
         </Stack>
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 

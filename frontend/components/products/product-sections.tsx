@@ -13,13 +13,7 @@ import { formatCount, pluralCount } from '@/lib/format';
 import { formatPosition, formatRate, holderCaption } from '@/lib/products/product-columns';
 import { productHref, type ProductScopeFilters } from '@/lib/products/product-filters';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 
 type Answer = CommerceProductDetail['answers'][number];
 
@@ -37,11 +31,7 @@ function ProductSection({
   children,
 }: Readonly<{ title: string; description: string; empty: string | null; children: ReactNode }>) {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>{title}</SectionTitle>
-        <SectionDescription>{description}</SectionDescription>
-      </SectionHeader>
+    <TitledSection title={title} description={description}>
       <SectionContent>
         {empty === null ? (
           <LedgerList>{children}</LedgerList>
@@ -49,7 +39,7 @@ function ProductSection({
           <StateBlock kind="empty" inline message={empty} />
         )}
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 

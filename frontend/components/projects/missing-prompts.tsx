@@ -9,7 +9,7 @@ import { missingPrompts, promptHistoryHref, type MissingPrompt } from '@/lib/pro
 import { useEngineCatalog } from '@/lib/providers/engines';
 
 import { useLatestPromptMetrics } from '@/components/prompts/use-latest-prompt-measurements';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 
 import { WidgetFrame } from './widget-frame';
 
@@ -51,10 +51,8 @@ function MissingBody({
       <Notice
         kind="read"
         title="Couldn't load prompt results"
-        error={query.error}
+        {...readErrorProps(query)}
         fallback="Prompt results could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   if (query.isPending) return <StateBlock kind="loading" label="Loading prompt results" />;

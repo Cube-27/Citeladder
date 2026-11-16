@@ -12,6 +12,7 @@ import { MetaFooter, SubsectionHeader } from '@/components/ui/workspace';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import type { SearchSurfaceEvidence, SurfaceEntity } from '@citeladder/contracts';
 import { cn } from '@/lib/utils';
+import { pluralCount } from '@/lib/format';
 import { StateBlock } from '@/components/ui/state-block';
 import { wellClasses } from '@/components/ui/slip';
 import { FigureStrip } from '@/components/ui/figure-strip';
@@ -131,11 +132,7 @@ function InlineLinks({ links }: Readonly<{ links: SearchSurfaceEvidence['links']
     <Stack as="section" gap="compact">
       <SubsectionHeader
         title="Inline links"
-        trailing={
-          <span className="type-caption">
-            {links.length} {links.length === 1 ? 'link' : 'links'}
-          </span>
-        }
+        trailing={<span className="type-caption">{pluralCount(links.length, 'link')}</span>}
         description={
           <>
             Links inside the overview&rsquo;s own text. Separate from its references, which are

@@ -8,6 +8,7 @@ import { Label, textRole } from '@/components/ui/typography';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import type { ExecutionEvidence } from '@citeladder/contracts';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
+import { pluralCount } from '@/lib/format';
 
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import type { Highlight } from '@/lib/markdown/highlight';
@@ -298,11 +299,7 @@ function EvidenceCitationsList({
     <Stack as="section">
       <SubsectionHeader
         title="Citations"
-        trailing={
-          <span className="type-caption">
-            {citations.length} {citations.length === 1 ? 'source' : 'sources'}
-          </span>
-        }
+        trailing={<span className="type-caption">{pluralCount(citations.length, 'source')}</span>}
       />
       {citations.length === 0 ? (
         <StateBlock

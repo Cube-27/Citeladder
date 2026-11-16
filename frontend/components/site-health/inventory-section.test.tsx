@@ -147,6 +147,31 @@ describe('InventorySection', () => {
     ).toBeInTheDocument();
   });
 
+  it('lists every page again once the search box is emptied, without Enter', async () => {
+    window.history.replaceState(null, '', '/site');
+    mswServer.use(
+      http.get(PAGES, ({ request }) => {
+        const query = new URL(request.url).searchParams.get('query');
+        return HttpResponse.json({
+          items: [makePageSummary({ title: query ? 'Bags' : 'Homepage' })],
+          next_cursor: null,
+          root_errors: [],
+        });
+      }),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<PagesBrowser />);
+    const search = () => screen.getByRole('searchbox', { name: 'Search pages' });
+    await user.type(await screen.findByRole('searchbox', { name: 'Search pages' }), '/bags{Enter}');
+    expect(await screen.findByText('Bags')).toBeInTheDocument();
+
+    await user.clear(search());
+
+    expect(await screen.findByText('Homepage')).toBeInTheDocument();
+    expect(screen.queryByText('Bags')).not.toBeInTheDocument();
+    expect(new URLSearchParams(window.location.search).get('pages_query')).toBeNull();
+  });
+
   it('draws the discovered pages’ first load inside their table', async () => {
     mswServer.use(
       http.get(INVENTORY, async () => {

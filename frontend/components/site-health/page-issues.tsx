@@ -20,13 +20,7 @@ import {
 } from '@/lib/site-health/issues';
 import { StateBlock } from '@/components/ui/state-block';
 import { cn } from '@/lib/utils';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 
 /** Issues the list shows before "View all". */
 const PREVIEW_COUNT = 5;
@@ -56,10 +50,7 @@ export function PageIssues({
   const advisories = issues.filter((issue) => issue.finding_class !== 'defect');
   return (
     <>
-      <Section>
-        <SectionHeader>
-          <SectionTitle>All issues ({defects.length})</SectionTitle>
-        </SectionHeader>
+      <TitledSection title={`All issues (${defects.length})`}>
         <SectionContent>
           {defects.length === 0 ? (
             <StateBlock
@@ -75,7 +66,7 @@ export function PageIssues({
             <IssueList issues={defects} crawlId={crawlId} />
           )}
         </SectionContent>
-      </Section>
+      </TitledSection>
       {advisories.length > 0 ? <Advisories advisories={advisories} /> : null}
     </>
   );
@@ -169,11 +160,10 @@ function Remediation({ issue }: Readonly<{ issue: PageIssue }>) {
 /** Recommendations: the section head says they are advisories, so the rows never repeat it. */
 function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] }>) {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>{`Advisories (${advisories.length})`}</SectionTitle>
-        <SectionDescription>Recommendations to consider.</SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title={`Advisories (${advisories.length})`}
+      description="Recommendations to consider."
+    >
       <SectionContent>
         <DisclosureList>
           {advisories.map((issue) => (
@@ -184,6 +174,6 @@ function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] 
           ))}
         </DisclosureList>
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }

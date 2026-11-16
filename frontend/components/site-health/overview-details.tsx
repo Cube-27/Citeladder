@@ -27,13 +27,7 @@ import {
 } from '@/components/ui/workspace';
 import { ICONS } from '@/lib/icons';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 
 /**
@@ -206,11 +200,10 @@ function WebFundamentalsCard({
   onOpen,
 }: Readonly<{ data: SiteHealthOverview['web_fundamentals']; onOpen: () => void }>) {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Web fundamentals</SectionTitle>
-        <SectionDescription>What each page’s HTML and response headers show.</SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Web fundamentals"
+      description="What each page’s HTML and response headers show."
+    >
       <SectionContent>
         <Stack gap="workspace">
           {/* One list, one area a row: a 2 × 2 grid of badges left uneven
@@ -230,7 +223,7 @@ function WebFundamentalsCard({
           </Inline>
         </Stack>
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 
@@ -239,13 +232,10 @@ function OpenIssuesTrendCard({
   points,
 }: Readonly<{ points: SiteHealthOverview['open_issue_trend'] }>) {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Open issues over time</SectionTitle>
-        <SectionDescription>
-          Each day&rsquo;s count after that day&rsquo;s crawls and re-audits of your tracked pages.
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Open issues over time"
+      description="Each day’s count after that day’s crawls and re-audits of your tracked pages."
+    >
       <SectionContent>
         <Stack gap="item">
           <StepChart
@@ -267,7 +257,7 @@ function OpenIssuesTrendCard({
           ) : null}
         </Stack>
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 
@@ -284,14 +274,10 @@ const CHANGE_METRIC_LABELS: Record<string, string> = {
 
 function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change_summary'] }>) {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Score change</SectionTitle>
-        <SectionDescription>
-          Site score change against the previous comparable crawl. The Changes tab counts tracked
-          field changes on pages present in both crawls.
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Score change"
+      description="Site score change against the previous comparable crawl. The Changes tab counts tracked field changes on pages present in both crawls."
+    >
       <SectionContent>
         <Stack>
           {data.metrics.map((metric) => (
@@ -310,7 +296,7 @@ function ChangeSummaryCard({ data }: Readonly<{ data: SiteHealthOverview['change
           <CohortCompositionContext reason={data.reason} composition={data.cohort_composition} />
         </Stack>
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 

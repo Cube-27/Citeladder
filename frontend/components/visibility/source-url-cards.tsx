@@ -15,14 +15,7 @@ import type { visibilitySourceUrlSchema } from '@citeladder/contracts/visibility
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { count } from '@/lib/visibility/sources';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-  TitledSection,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 
 type UrlDetail = z.infer<typeof visibilitySourceUrlSchema>;
 
@@ -52,17 +45,13 @@ function SectionCard({
   children: ReactNode | null;
 }>) {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>{title}</SectionTitle>
-        {caption ? <SectionDescription>{caption}</SectionDescription> : null}
-      </SectionHeader>
+    <TitledSection title={title} description={caption}>
       <SectionContent>
         <SectionBody loading={loading} errored={errored} empty={empty}>
           {children}
         </SectionBody>
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 

@@ -7,9 +7,9 @@ import { Inline, Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
 import { ApiError } from '@/lib/api/errors';
 import { siteHealthMutations, siteHealthQueries } from '@/lib/api/site-health-queries';
-import { formatCount } from '@/lib/format';
+import { formatCount, pluralCount } from '@/lib/format';
 import { useWorkspaceCapability } from '@/lib/project/project-scope';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 
 /** The project whose crawl the issue is in: Re-run all refreshes its reads once it lands. */
 export type IssueFixScope = Readonly<{ workspaceId: string; projectId: string }>;
@@ -22,7 +22,7 @@ export function fixedLabel(
   progress: Pick<IssueFixProgress, 'fixed_url_count' | 'affected_url_count'>,
 ) {
   const total = progress.affected_url_count;
-  return `${formatCount(progress.fixed_url_count)} of ${formatCount(total)} ${total === 1 ? 'page' : 'pages'} fixed`;
+  return `${formatCount(progress.fixed_url_count)} of ${pluralCount(total, 'page')} fixed`;
 }
 
 type Notice = { tone: 'info' | 'negative'; text: string };
@@ -53,11 +53,9 @@ export function IssueFixActions({
     return (
       <Notice
         kind="read"
-        error={query.error}
+        {...readErrorProps(query)}
         fallback="Could not load how many pages are fixed."
         title="Could not load how many pages are fixed"
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   const progress = query.data?.items.find((item) => item.group_id === groupId);
@@ -148,7 +146,7 @@ function RerunAllButton({
           onSuccess: (result) =>
             onNotice({
               tone: 'info',
-              text: `Re-auditing ${pagesLabel(result.page_count)}. The progress updates when the audit finishes.`,
+              text: `Re-auditing ${pluralCount(result.page_count, 'page')}. The progress updates when the audit finishes.`,
             }),
           onError: (error) => onNotice({ tone: 'negative', text: rerunErrorMessage(error) }),
         });
@@ -159,13 +157,11 @@ function RerunAllButton({
   );
 }
 
-const pagesLabel = (count: number) => `${formatCount(count)} ${count === 1 ? 'page' : 'pages'}`;
-
 /** What Re-run all would do: null is a site-level finding, which no page re-audit judges. */
 function rerunCaption(count: number | null): string {
   if (count === null) return 'A full crawl re-checks this site-wide issue.';
   if (count === 0) return 'No tracked page with this issue is left to re-audit.';
-  return `Re-run all re-audits ${pagesLabel(count)}, one page fetch each.`;
+  return `Re-run all re-audits ${pluralCount(count, 'page')}, one page fetch each.`;
 }
 
 function rerunErrorMessage(error: unknown): string {

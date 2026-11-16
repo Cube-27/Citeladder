@@ -7,7 +7,7 @@ import {
   type SeriesTone,
 } from '@/components/ui/step-chart-parts';
 import { StateBlock } from '@/components/ui/state-block';
-import { formatShortDate, formatWindowDate } from '@/lib/format';
+import { formatShortDate, formatWindowDate, pluralCount } from '@/lib/format';
 import {
   formatAxisTick,
   formatMetric,
@@ -49,10 +49,6 @@ export type ChartSeries = {
   comparison: PerformanceChartPoint[] | null;
 };
 
-function dayCount(count: number): string {
-  return `${count} ${count === 1 ? 'day' : 'days'}`;
-}
-
 /** Positions on the shared axis: the longer of the selection and its comparison. */
 function positionCount(series: ChartSeries): number {
   return Math.max(series.selected.length, series.comparison?.length ?? 0);
@@ -77,7 +73,7 @@ function chartPoints(series: ChartSeries): TrendPoint[] {
 
 function MetricChart({ series, height }: Readonly<{ series: ChartSeries; height: 'sm' | 'md' }>) {
   const comparing = series.comparison !== null;
-  const label = `${series.label} over ${dayCount(positionCount(series))}${
+  const label = `${series.label} over ${pluralCount(positionCount(series), 'day')}${
     comparing ? ', with comparison period' : ''
   }`;
   return (

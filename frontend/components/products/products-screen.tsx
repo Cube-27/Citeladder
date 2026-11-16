@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
 import { Columns3, Download, PackageOpen } from 'lucide-react';
 
-import { CollectionPage } from '@/components/templates/collection-page';
+import { ReportPage } from '@/components/templates/report-page';
 import { Button } from '@/components/ui/button';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
@@ -145,7 +145,7 @@ function noProducts({
 
 function NoProducts({ header }: Readonly<{ header: ReturnType<typeof useCatalogHeader> }>) {
   return (
-    <CollectionPage actions={header.actions}>
+    <ReportPage actions={header.actions}>
       {header.notices}
       <StateBlock
         kind="empty"
@@ -156,7 +156,7 @@ function NoProducts({ header }: Readonly<{ header: ReturnType<typeof useCatalogH
           header.addProducts ? <Button onClick={header.addProducts}>Add products</Button> : null
         }
       />
-    </CollectionPage>
+    </ReportPage>
   );
 }
 
@@ -224,7 +224,7 @@ function ProductsContent({
   };
   if (noProducts({ catalog, page, filters })) return <NoProducts header={header} />;
   return (
-    <CollectionPage
+    <ReportPage
       actions={header.actions}
       filters={
         <FilterBar
@@ -340,6 +340,6 @@ function ProductsContent({
           busy: page.isFetching,
         }}
       />
-    </CollectionPage>
+    </ReportPage>
   );
 }

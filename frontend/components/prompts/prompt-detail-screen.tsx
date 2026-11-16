@@ -40,13 +40,7 @@ import {
 import { PromptAnswerStates } from './prompt-answer-states';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 
 const BACK = { href: '/prompts', label: 'Back to prompts' } as const;
 
@@ -212,14 +206,10 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
   const baselineAt = history.latest?.comparison?.baseline_at ?? null;
   const visibilityDelta = history.latest?.visibility_delta;
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Visibility and citations</SectionTitle>
-        <SectionDescription>
-          Each point is one run that measured this prompt. A run with no successful answer is a gap,
-          and a change in measurement conditions starts a new line.
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Visibility and citations"
+      description="Each point is one run that measured this prompt. A run with no successful answer is a gap, and a change in measurement conditions starts a new line."
+    >
       {latest ? (
         <SectionContent>
           <Stack gap="workspace">
@@ -272,7 +262,7 @@ function HistoryCard({ history }: Readonly<{ history: PromptHistory }>) {
           message="No run has measured this prompt in this market yet."
         />
       )}
-    </Section>
+    </TitledSection>
   );
 }
 

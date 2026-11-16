@@ -13,8 +13,8 @@ import {
 } from '@/lib/api/integrations';
 import { oauthErrorMessage } from '@/components/integrations/data-sources';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Notice, readErrorProps } from '@/components/ui/notice';
+import { TitledSection } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
 
 /** Display order of connection sub-rows inside a grant card (gsc before ga4). */
@@ -149,26 +149,21 @@ export function IntegrationSettings() {
     <>
       <CallbackNotice notice={notice} />
       {settled ? null : (
-        <Section>
-          <SectionHeader>
-            <SectionTitle>Search and analytics</SectionTitle>
-            <SectionDescription>
-              Google Search Console, Analytics 4 and Bing Webmaster Tools.
-            </SectionDescription>
-          </SectionHeader>
+        <TitledSection
+          title="Search and analytics"
+          description="Google Search Console, Analytics 4 and Bing Webmaster Tools."
+        >
           {connectionsQuery.isError ? (
             <StateBlock
               kind="error"
               title="Couldn't load integrations"
-              error={connectionsQuery.error}
+              {...readErrorProps(connectionsQuery)}
               fallback="Could not load integrations. Check your connection and try again."
-              onRetry={() => void connectionsQuery.refetch()}
-              pending={connectionsQuery.isFetching}
             />
           ) : (
             <StateBlock kind="loading" label="Loading integrations…" />
           )}
-        </Section>
+        </TitledSection>
       )}
       {settled && connections.length === 0 ? (
         <IntegrationsEmptyState workspaceId={workspaceId} />

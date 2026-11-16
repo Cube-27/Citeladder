@@ -30,13 +30,7 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { schedulePauseReason } from '@/lib/runs/status';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 
 const CADENCE_LABELS: Record<AuditScheduleCadence, string> = {
   one_time: 'One time',
@@ -74,13 +68,10 @@ function WorkspaceSchedules({
 
   return (
     <div data-settings-sections="">
-      <Section>
-        <SectionHeader>
-          <SectionTitle>Scheduled audits</SectionTitle>
-          <SectionDescription>
-            Runs use the selected prompt set and your connected engines.
-          </SectionDescription>
-        </SectionHeader>
+      <TitledSection
+        title="Scheduled audits"
+        description="Runs use the selected prompt set and your connected engines."
+      >
         <SectionContent>
           <Stack>
             {schedulesQuery.isError ? (
@@ -119,7 +110,7 @@ function WorkspaceSchedules({
             />
           </Stack>
         </SectionContent>
-      </Section>
+      </TitledSection>
     </div>
   );
 }

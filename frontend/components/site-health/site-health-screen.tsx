@@ -33,7 +33,7 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 import { useSiteHealthScreen } from '@/lib/site-health/use-site-health-screen';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
 export function SiteHealthScreen() {
@@ -221,21 +221,17 @@ function SiteHealthRefreshFailures({
       {screen.dashboardQuery.isError && screen.dashboardQuery.data ? (
         <Notice
           kind="read"
-          error={screen.dashboardQuery.error}
+          {...readErrorProps(screen.dashboardQuery)}
           fallback={READ_FAILED}
           title="Couldn't load the latest Website crawl"
-          onRetry={() => void screen.dashboardQuery.refetch()}
-          pending={screen.dashboardQuery.isFetching}
         />
       ) : null}
       {screen.entitlementQuery.isError && screen.entitlementQuery.data ? (
         <Notice
           kind="read"
-          error={screen.entitlementQuery.error}
+          {...readErrorProps(screen.entitlementQuery)}
           fallback={READ_FAILED}
           title="Couldn't load your Website access"
-          onRetry={() => void screen.entitlementQuery.refetch()}
-          pending={screen.entitlementQuery.isFetching}
         />
       ) : null}
     </>
@@ -453,11 +449,9 @@ function screenBlockingState({
       node: (
         <StateBlock
           kind="error"
-          error={dashboard.error}
+          {...readErrorProps(dashboard)}
           fallback={READ_FAILED}
           title="Couldn't load the latest Website crawl"
-          onRetry={() => void dashboard.refetch()}
-          pending={dashboard.isFetching}
         />
       ),
     };
@@ -467,11 +461,9 @@ function screenBlockingState({
       node: (
         <StateBlock
           kind="error"
-          error={entitlement.error}
+          {...readErrorProps(entitlement)}
           fallback={READ_FAILED}
           title="Couldn't load your Website access"
-          onRetry={() => void entitlement.refetch()}
-          pending={entitlement.isFetching}
         />
       ),
     };

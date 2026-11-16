@@ -16,13 +16,7 @@ import { changeFieldLabel } from '@/lib/site-health/change-fields';
 import { ChangeEvidenceDrawer } from './changes-panel-evidence';
 import { readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 const CLASS_LABELS = {
@@ -101,15 +95,10 @@ export function ChangesPanel({
       ) : null}
       {/* Without a comparable pair the table's own state says why, once. */}
       {counts ? (
-        <Section>
-          <SectionHeader>
-            <SectionTitle>Tracked field changes since the previous crawl</SectionTitle>
-            <SectionDescription>
-              Counts tracked field changes on pages present in both crawls, comparing your latest
-              crawl with the one before it. Expected means the change matches an implementation you
-              declared.
-            </SectionDescription>
-          </SectionHeader>
+        <TitledSection
+          title="Tracked field changes since the previous crawl"
+          description="Counts tracked field changes on pages present in both crawls, comparing your latest crawl with the one before it. Expected means the change matches an implementation you declared."
+        >
           <SectionContent>
             <FigureStrip
               segments={Object.entries(CLASS_LABELS).map(([key, label]) => ({
@@ -119,7 +108,7 @@ export function ChangesPanel({
               }))}
             />
           </SectionContent>
-        </Section>
+        </TitledSection>
       ) : null}
       <DataTable
         label="Website changes"

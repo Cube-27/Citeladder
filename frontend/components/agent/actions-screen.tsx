@@ -11,7 +11,7 @@ import {
 } from '@/components/agent/action-queue';
 import { ActionPriorityBadge } from '@/components/agent/action-status-badge';
 import { AnalyzePageButton } from '@/components/agent/analyze-page-dialog';
-import { CollectionPage } from '@/components/templates/collection-page';
+import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
@@ -61,7 +61,7 @@ export function ActionsScreen() {
     (count) => count > 0,
   );
   return (
-    <CollectionPage
+    <ReportPage
       actions={<AnalyzePageButton />}
       filters={everHadActions ? <FilterBar filters={filters.definitions} /> : undefined}
     >
@@ -75,7 +75,7 @@ export function ActionsScreen() {
           onClear={filters.clear}
         />
       )}
-    </CollectionPage>
+    </ReportPage>
   );
 }
 

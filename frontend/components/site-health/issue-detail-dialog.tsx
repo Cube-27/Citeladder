@@ -22,8 +22,9 @@ import {
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { groupOccurrences, loadedPageCount } from '@/lib/site-health/occurrence-groups';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
+import { pluralCount } from '@/lib/format';
 import { ClampText } from '@/components/ui/clamp-text';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -165,11 +166,9 @@ export function PendingIssueDrawer({
       {detailQuery.isError ? (
         <Notice
           kind="read"
-          error={detailQuery.error}
+          {...readErrorProps(detailQuery)}
           fallback="Could not load this issue."
           title="Could not load this issue"
-          onRetry={() => void detailQuery.refetch()}
-          pending={detailQuery.isFetching}
         />
       ) : (
         <StateBlock kind="loading" label="Loading the issue…" />
@@ -209,11 +208,9 @@ function OccurrenceList({
     return (
       <Notice
         kind="read"
-        error={query.error}
+        {...readErrorProps(query)}
         fallback="Could not load affected URLs."
         title="Could not load affected URLs"
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   // The list no longer waits for this read, so "none" and "not yet" are now
@@ -307,9 +304,7 @@ function SiteLevelList({
             className={ledgerItemClasses('flex-wrap justify-between')}
           >
             <span className={textRole('body')}>{pageKindLabel(row.pageKind)}</span>
-            <span className="type-caption tabular-nums">
-              {row.pageCount} {row.pageCount === 1 ? 'page' : 'pages'}
-            </span>
+            <span className="type-caption tabular-nums">{pluralCount(row.pageCount, 'page')}</span>
           </Inline>
         ))}
       </ul>

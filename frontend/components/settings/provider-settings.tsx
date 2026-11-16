@@ -1,11 +1,5 @@
 import { ProviderList } from '@/components/providers/provider-list';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 
 /**
  * BYOK Provider Settings panel, rendered inside the Settings screen's
@@ -17,17 +11,13 @@ import {
  */
 export function ProviderSettings() {
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Measurement providers</SectionTitle>
-        <SectionDescription>
-          Bring your own credentials. Each provider is entered once and measures every engine listed
-          with it. Saving runs a connection test; stored secrets are never displayed.
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Measurement providers"
+      description="Bring your own credentials. Each provider is entered once and measures every engine listed with it. Saving runs a connection test; stored secrets are never displayed."
+    >
       <SectionContent>
         <ProviderList />
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }

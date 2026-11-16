@@ -22,7 +22,7 @@ import { PAGE_DETAIL_BACK, UrlDetailView } from './url-detail-view';
 import { RecordPage } from '@/components/templates/record-page';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 const HISTORY_LIMIT = 25;
@@ -90,11 +90,9 @@ export function UrlDetail({
       <RecordPage back={PAGE_DETAIL_BACK}>
         <StateBlock
           kind="error"
-          error={detailQuery.error}
+          {...readErrorProps(detailQuery)}
           fallback="Could not load this page. It may not exist in this crawl."
           title="Could not load this page"
-          onRetry={() => void detailQuery.refetch()}
-          pending={detailQuery.isFetching}
         />
       </RecordPage>
     );

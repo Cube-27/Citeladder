@@ -12,7 +12,7 @@ import { textRole } from '@/components/ui/typography';
 import type { AgentChatDetail, AgentMessage } from '@/lib/api/agent';
 import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 
 type Proposal = AgentMessage['proposals'][number];
 type ChatAction = AgentChatDetail['actions'][number];
@@ -97,11 +97,9 @@ function DeclarationProposal({
       {detail.isError ? (
         <Notice
           kind="read"
-          error={detail.error}
+          {...readErrorProps(detail)}
           title="Couldn't load the proposed Action"
           fallback="The proposed Action could not be loaded."
-          onRetry={() => void detail.refetch()}
-          pending={detail.isFetching}
         />
       ) : (
         <p className={textRole('caption')}>

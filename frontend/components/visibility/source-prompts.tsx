@@ -10,6 +10,7 @@ import {
   type EvidenceSubject,
 } from '@/components/runs/execution-evidence-drawer';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import { readErrorProps } from '@/components/ui/notice';
 import { TitledSection } from '@/components/ui/section';
 import { Inline } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
@@ -129,11 +130,9 @@ function promptsState(
   if (query.isError) {
     return {
       kind: 'error',
-      error: query.error,
+      ...readErrorProps(query),
       title: "Couldn't load the tracked answers",
       fallback: 'The request failed or timed out.',
-      onRetry: () => void query.refetch(),
-      pending: query.isFetching,
     };
   }
   // The selection has settled on a measured run (`SelectionGate`), so no data

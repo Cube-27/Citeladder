@@ -36,7 +36,7 @@ import { PromptLibraryDialogs } from './prompt-library-dialogs';
 import { usePromptEvidence, type PromptAnswerRef } from './prompt-evidence';
 import { PromptTable } from './prompt-table';
 import { useLatestPromptMeasurements } from './use-latest-prompt-measurements';
-import { CollectionPage } from '@/components/templates/collection-page';
+import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 
 import { PromptActions, promptFilterControls } from './prompt-toolbar';
@@ -337,14 +337,14 @@ export function PromptLibrary({
   const figuresRead = measurements !== undefined;
   if (awaitingFirstLoad({ promptsLoading: isLoading, hasPrompts, figuresRead })) {
     return (
-      <CollectionPage filters={<FilterBar />}>
+      <ReportPage filters={<FilterBar />}>
         <StateBlock kind="loading" label="Loading prompts…" />
-      </CollectionPage>
+      </ReportPage>
     );
   }
 
   return (
-    <CollectionPage
+    <ReportPage
       actions={<PromptActions add={addPrompts} inEmptyState={!hasPrompts && !failedEmpty} />}
       filters={libraryFilterBar(
         hasPrompts,
@@ -438,6 +438,6 @@ export function PromptLibrary({
           limits={limits}
         />
       </>
-    </CollectionPage>
+    </ReportPage>
   );
 }

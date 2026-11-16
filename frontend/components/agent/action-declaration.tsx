@@ -25,7 +25,7 @@ import {
   localDay,
 } from '@/lib/opportunities/declaration-date';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 
 type Declarable = Pick<
   ActionDetail,
@@ -215,11 +215,9 @@ export function MarkActionImplemented({
     return (
       <Notice
         kind="read"
-        error={action.error}
+        {...readErrorProps(action)}
         title="Couldn't load the Action"
         fallback="The Action could not be loaded to declare it."
-        onRetry={() => void action.refetch()}
-        pending={action.isFetching}
       />
     );
   if (!action.data) return null;
@@ -420,11 +418,9 @@ function AttachedDeclaration({
     return (
       <Notice
         kind="read"
-        error={action.error}
+        {...readErrorProps(action)}
         title="Couldn't load the implementation state"
         fallback="The Action's implementation state could not be loaded."
-        onRetry={() => void action.refetch()}
-        pending={action.isFetching}
       />
     );
   if (!action.data) return null;

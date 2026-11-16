@@ -10,8 +10,6 @@ import { AppGrid } from '@/components/ui/app-grid';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { BusyRung } from '@/components/ui/rung-meter';
-import { Skeleton } from '@/components/ui/skeleton';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -28,17 +26,9 @@ import { useEngineCatalog } from '@/lib/providers/engines';
 import { formatShare } from '@/lib/visibility/perception';
 import { useAccuracy } from '@/lib/visibility/use-accuracy';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
-import { Notice } from '@/components/ui/notice';
+import { AnalysisRead } from '@/components/visibility/selection-gate';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-  TitledSection,
-  SectionStack,
-} from '@/components/ui/section';
+import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
@@ -51,31 +41,16 @@ export function VisibilityAccuracy({
   queries,
 }: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
   const query = useAccuracy(filters, queries);
-  if (query.error)
-    return (
-      <Notice
-        kind="read"
-        error={query.error}
-        title="Couldn't load the fact checks"
-        fallback="Check your connection and try again."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
-  // The selection above has settled on a measured run (`SelectionGate`), so
-  // no data is this read still on its way.
-  if (!query.data)
-    return (
-      <Stack gap="workspace" aria-busy>
-        <Skeleton variant="block" />
-        <Skeleton variant="chart" />
-      </Stack>
-    );
   return (
-    <div className="relative">
-      <BusyRung active={query.isFetching} label="Updating fact checks" />
-      <AccuracyView data={query.data} />
-    </div>
+    <AnalysisRead
+      query={query}
+      title="Couldn't load the fact checks"
+      busyLabel="Updating fact checks"
+      busy={query.isFetching}
+      ready={query.data}
+    >
+      {(data) => <AccuracyView data={data} />}
+    </AnalysisRead>
   );
 }
 
@@ -198,13 +173,10 @@ function ClaimLink({ claim }: Readonly<{ claim: AccuracyClaim }>) {
 function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
   const { label: engineLabel } = useEngineCatalog();
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Contradicted claims</SectionTitle>
-        <SectionDescription>
-          What answers said about you that a confirmed fact contradicts, quoted exactly.
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Contradicted claims"
+      description="What answers said about you that a confirmed fact contradicts, quoted exactly."
+    >
       <SectionContent>
         {!claims.length ? (
           <StateBlock kind="empty" inline message="No contradicted claims in these answers." />
@@ -234,7 +206,7 @@ function ContradictedClaims({ claims }: Readonly<{ claims: AccuracyClaim[] }>) {
           </Stack>
         )}
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 

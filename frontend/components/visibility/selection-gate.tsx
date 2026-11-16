@@ -3,7 +3,10 @@ import type { UseQueryResult } from '@tanstack/react-query';
 
 import type { Visibility } from '@citeladder/contracts';
 import { isMetricsPending } from '@/lib/api/visibility-queries';
-import { Notice } from '@/components/ui/notice';
+import { Stack } from '@/components/ui/layout';
+import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
+import { BusyRung } from '@/components/ui/rung-meter';
+import { Skeleton } from '@/components/ui/skeleton';
 import { StateBlock, screenState } from '@/components/ui/state-block';
 
 /**
@@ -54,4 +57,48 @@ export function SelectionGate({
   });
   if (state.kind === 'state') return <StateBlock {...state.state} />;
   return children(state.data);
+}
+
+/**
+ * One analysis tab's read under a measured selection: a failed read with
+ * Retry, a skeleton until `ready` arrives (the gate above has settled, so no
+ * data is the read still on its way, never an empty finding), then the view.
+ */
+export function AnalysisRead<T>({
+  query,
+  title,
+  busyLabel,
+  busy,
+  ready,
+  children,
+}: Readonly<{
+  query: RetryableRead;
+  title: string;
+  busyLabel: string;
+  busy: boolean;
+  ready: T | undefined;
+  children: (ready: T) => ReactNode;
+}>) {
+  if (query.error)
+    return (
+      <Notice
+        kind="read"
+        {...readErrorProps(query)}
+        title={title}
+        fallback="Check your connection and try again."
+      />
+    );
+  if (ready === undefined)
+    return (
+      <Stack gap="workspace" aria-busy>
+        <Skeleton variant="block" />
+        <Skeleton variant="chart" />
+      </Stack>
+    );
+  return (
+    <div className="relative">
+      <BusyRung active={busy} label={busyLabel} />
+      {children(ready)}
+    </div>
+  );
 }
