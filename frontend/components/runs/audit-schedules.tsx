@@ -81,8 +81,8 @@ function WorkspaceSchedules({
         description="Runs use the selected prompt set and your connected engines."
       >
         <SectionContent>
-          {/* The schedules on the left, the new-schedule form in a 360 panel beside them. */}
-          <Stack className="column-split:grid-cols-[minmax(0,1fr)_360px] items-start">
+          {/* The schedules on the left, the new-schedule form in a third-width panel beside them. */}
+          <Stack className="column-split:grid-cols-[minmax(0,2fr)_minmax(0,1fr)] items-start">
             <Stack>
               {schedulesQuery.isError ? (
                 <Notice
