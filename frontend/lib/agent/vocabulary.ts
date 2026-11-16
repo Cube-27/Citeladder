@@ -60,6 +60,7 @@ const TARGET_KIND_LABEL: Record<ActionTargetKind, string> = {
   query: 'Search query',
   prompt: 'Prompt',
   planned_page: 'Planned page',
+  issue_family: 'Issue across pages',
 };
 
 // Keyed by the contract's kinds, so a kind without a label fails the type check;
@@ -76,6 +77,7 @@ const FAMILY_LABEL: Record<string, string> = {
   sources: 'Sources',
   search_console: 'Search Console',
   search_intelligence: 'Keyword Research',
+  site_health: 'Site Health',
   link_graph: 'Link graph',
   site_changes: 'Site changes',
   commerce: 'Commerce',

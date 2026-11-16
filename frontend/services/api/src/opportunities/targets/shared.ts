@@ -47,8 +47,8 @@ export function cappedPages(selected: string[]): DeclarationTargets {
 
 /**
  * A kind with no behaviour of its own (a product, category, prompt or query):
- * a declaration covers the owned pages its findings name and the read adds
- * nothing.
+ * a declaration covers the owned pages its findings name, the read adds
+ * nothing and the Agent is given only the row.
  */
 export function plainTarget<K extends ActionTargetKind>(kind: K): ActionTargetModule<K> {
   return {
@@ -56,5 +56,6 @@ export function plainTarget<K extends ActionTargetKind>(kind: K): ActionTargetMo
     declarationTargets: async ({ db, action, members }) =>
       cappedPages(await ownedPages(db, action, evidencePages(members))),
     detail: async () => NO_DETAIL,
+    agentContext: async () => ({}),
   };
 }

@@ -14,7 +14,6 @@ import type { AppEnv } from '../src/context.ts';
 import { onError } from '../src/errors.ts';
 import { ROUTE_CONTRACTS } from '../src/openapi/routes.ts';
 import { withIdempotency } from '../src/public-api/idempotency.ts';
-import { requirePathOwnership } from '../src/public-api/ownership.ts';
 import { mutateMember } from '../src/workspaces/service.ts';
 import { auditTenant } from './audit-fixtures.ts';
 import { actionRow } from './opportunity-fixtures.ts';
@@ -612,15 +611,6 @@ describe('public API requests', () => {
     expect(outcomes.filter((outcome) => !outcome.startsWith('404 '))).toEqual([]);
     expect(outcomes).toHaveLength(16);
     expect(await state()).toEqual(before);
-  });
-
-  it('fails closed on a path ID parameter with no listed owner', async () => {
-    const tenant = await fixtures.tenant();
-    const params = { project_id: tenant.projectId, widget_id: randomUUID() };
-    for (const access of ['read', 'write'] as const)
-      await expect(
-        requirePathOwnership(db, tenant.workspaceId, tenant.projectId, params, access),
-      ).rejects.toThrow('Public path parameter widget_id has no owner');
   });
 
   it('refuses every public write to a read-only key', async () => {

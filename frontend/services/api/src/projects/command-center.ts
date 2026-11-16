@@ -8,7 +8,6 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import type { Audits } from '../generated/db-schema.ts';
-import { LIVE_TARGET_KIND } from '../opportunities/actions.ts';
 import { listOpportunities, readOpportunityOrder } from '../opportunities/reads.ts';
 import { currentSiteCrawl } from '../site-health/reads/crawl.ts';
 import { persistedBaseline, type VisibilityComparison } from '../visibility/comparison.ts';
@@ -325,7 +324,6 @@ async function resolvedActions(
     ])
     .where('actions.workspace_id', '=', scope.workspaceId)
     .where('actions.project_id', '=', scope.projectId)
-    .where(LIVE_TARGET_KIND)
     .where('impl.workspace_id', '=', scope.workspaceId)
     .where('impl.project_id', '=', scope.projectId)
     .where('verified.workspace_id', '=', scope.workspaceId)

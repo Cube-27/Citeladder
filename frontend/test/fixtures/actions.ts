@@ -18,6 +18,8 @@ export function actionItem(id: string, label: string, projectId = PROJECT) {
     families: [] as string[],
     approach: 'improve_page',
     group: 'own_pages',
+    goal: 'own_pages',
+    grouping: 'improve_pages',
     skill_id: 'gsc_optimize',
     member_count: 1,
     declarable_member_count: 1,

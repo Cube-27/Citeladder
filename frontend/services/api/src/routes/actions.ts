@@ -18,7 +18,8 @@ import { routeActor } from '../commands/permission.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
 import { readBody } from '../http/body.ts';
-import { getAction, listActions } from '../opportunities/actions.ts';
+import { getAction, getActionUrls, listActions } from '../opportunities/actions.ts';
+import { actionTree, urlActions } from '../opportunities/action-tree.ts';
 import { analyzePage, listAnalyzablePages } from '../page-documents/analyze.ts';
 import { mapped } from './agent.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
@@ -32,7 +33,11 @@ import {
   actionDetailSchema,
   actionItemSchema,
   actionsPageSchema,
+  actionTreeGroupBySchema,
+  actionTreeSchema,
+  actionUrlsPageSchema,
   analyzablePagesSchema,
+  urlActionsSchema,
 } from '@citeladder/contracts/actions';
 import { statusPatch } from './action-contracts.ts';
 
@@ -44,6 +49,18 @@ const o = policy.opportunity.opportunities;
 const actionPath = { action_id: { scalar: { kind: 'uuid' }, required: true } } as const;
 const publicAction = `${policy.api.machine_prefix}/projects/{project_id}/actions/{action_id}`;
 const publicWrite = { exposure: 'both', permission: ACTIONS_WRITE } as const;
+/** The Actions list's filters, which the tree reads under too. */
+const listFilters = {
+  status_filter: { scalar: { kind: 'str' }, alias: 'status' },
+  q: { scalar: { kind: 'str', maxLength: a.ACTION_SEARCH_MAX_CHARS } },
+  target_kind: { scalar: { kind: 'str' } },
+  group: { scalar: { kind: 'str' } },
+  approach: { scalar: { kind: 'str' } },
+  priority: { scalar: { kind: 'str' } },
+  family: { scalar: { kind: 'str' } },
+  ownership: { scalar: { kind: 'str' } },
+  topic: { scalar: { kind: 'str', maxLength: a.ACTION_SEARCH_MAX_CHARS } },
+} as const;
 export const actionRoutes = [
   defineGetRoute({
     family,
@@ -58,13 +75,8 @@ export const actionRoutes = [
           default: a.ACTION_LIST_DEFAULT_LIMIT,
         },
         cursor: { scalar: { kind: 'str' } },
-        status_filter: { scalar: { kind: 'str' }, alias: 'status' },
-        q: { scalar: { kind: 'str', maxLength: a.ACTION_SEARCH_MAX_CHARS } },
-        target_kind: { scalar: { kind: 'str' } },
-        group: { scalar: { kind: 'str' } },
-        approach: { scalar: { kind: 'str' } },
-        priority: { scalar: { kind: 'str' } },
-        family: { scalar: { kind: 'str' } },
+        ...listFilters,
+        grouping: { scalar: { kind: 'str' } },
       },
     },
     response: actionsPageSchema,
@@ -75,6 +87,56 @@ export const actionRoutes = [
         { ...query, status: query.status_filter },
       );
     },
+  }),
+  defineGetRoute({
+    family,
+    authorize: 'active-project',
+    exposure: 'both',
+    path: '/api/v1/projects/{project_id}/actions/tree',
+    params: {
+      path: projectPath,
+      query: {
+        group_by: { scalar: { kind: 'str' }, default: 'goal' },
+        ...listFilters,
+      },
+    },
+    response: actionTreeSchema,
+    async handle({ c, db }, { path, query }) {
+      const groupBy = actionTreeGroupBySchema.safeParse(query.group_by);
+      if (!groupBy.success) throw new ApiError(422, `Unknown group_by: ${query.group_by}`);
+      return actionTree(
+        db,
+        { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id },
+        { ...query, group_by: groupBy.data, status: query.status_filter },
+      );
+    },
+  }),
+  defineGetRoute({
+    family,
+    authorize: 'active-project',
+    exposure: 'both',
+    path: '/api/v1/projects/{project_id}/urls/{site_url_id}/actions',
+    params: {
+      path: { ...projectPath, site_url_id: { scalar: { kind: 'uuid' }, required: true } },
+      query: {},
+    },
+    response: urlActionsSchema,
+    handle: ({ c, db }, { path }) =>
+      urlActions(
+        db,
+        { workspaceId: c.get('workspace').workspaceId, projectId: path.project_id },
+        path.site_url_id,
+      ),
+  }),
+  defineGetRoute({
+    family,
+    exposure: 'both',
+    publicPath: `${publicAction}/urls`,
+    path: '/api/v1/actions/{action_id}/urls',
+    params: { path: actionPath, query: { cursor: { scalar: { kind: 'str' } } } },
+    response: actionUrlsPageSchema,
+    handle: ({ c, db }, { path, query }) =>
+      getActionUrls(db, c.get('workspace').workspaceId, path.action_id, query.cursor ?? null),
   }),
   defineGetRoute({
     family,

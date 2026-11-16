@@ -556,6 +556,10 @@ export const agentContextRefsSchema = z.strictObject({
   prompt_reference: z
     .strictObject({ topic_id: uuid(), prompt_ids: z.array(uuid()).min(1).max(100) })
     .nullish(),
+  // The URLs a user ticked on the chat's Action (its `action_urls`), at most 50.
+  action_url_ids: z.array(uuid()).min(1).max(50).nullish(),
+  // One URL with every Action touching it (the URL page's hand-off).
+  url_actions_reference: z.strictObject({ site_url_id: uuid() }).nullish(),
 });
 /**
  * Typed evidence a new chat starts from. The server resolves and authorizes

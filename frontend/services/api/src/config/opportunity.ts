@@ -250,6 +250,20 @@ export const opportunities = {
       severity: 'low',
       title: 'Page has weak internal-link authority',
     },
+    // One Site Health Issues group (one rule across its pages in the latest
+    // crawl) as one finding: `SITE_ISSUE_FAMILY`. Severity and title are the
+    // group's own Site Health rule's.
+    site_issue_family: {
+      action_path: 'owned',
+      enabled: true,
+      opportunity_type: 'site',
+      remediation:
+        'This issue affects many pages for one cause, usually a shared template or component. Fix that cause once, then let the next comparable crawl confirm every affected page passes.',
+      rule_id: 'site_issue_family',
+      check_kind: 'issue_family',
+      severity: 'high',
+      title: 'A Site Health issue repeats across pages',
+    },
     // A site change is a field that moved between two crawls, not a Site
     // Health rule a crawl evaluates, so no check can read it.
     site_change_potential_regression: {
@@ -378,6 +392,19 @@ export const opportunities = {
     query_page_relevance: 'property_relative_ctr_gap',
     emerging_query: 'emerging_query',
     declining_query: 'declining_query',
+  },
+  // Every Site Health defect and advisory rule becomes one finding per Issues
+  // group (owner 2026-11-16, IA1); diagnostics stay in Issues. The cohort lists
+  // at most `COHORT_PAGES_MAX` pages in URL order, which bounds what a
+  // declaration freezes and a crawl re-reads; the Agent reads `AGENT_PAGES_MAX`.
+  // A defect's value factor lifts it just above an advisory of its severity
+  // without leaving the severity's priority band.
+  SITE_ISSUE_FAMILY: {
+    RULE_ID: 'site_issue_family',
+    FINDING_CLASSES: ['defect', 'advisory'],
+    DEFECT_VALUE_FACTOR: 1.01,
+    COHORT_PAGES_MAX: 500,
+    AGENT_PAGES_MAX: 50,
   },
   SEVERITY_WEIGHTS: {
     critical: 4,

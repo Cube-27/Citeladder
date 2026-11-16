@@ -1,13 +1,16 @@
 import {
   actionHandoffSchema,
   type ActionGroup,
+  type ActionGrouping,
   type ActionHandoff,
   type ActionPriorityBand,
   type ActionTargetKind,
 } from '@citeladder/contracts/actions';
+import type { IssueFamilyCohort } from '@citeladder/contracts/opportunity-evidence';
 
 import { policy } from '../../config.ts';
 import type { ActionGroupRule } from '../../config/actions.ts';
+import { goalOf } from '../../opportunities/action-groupings.ts';
 import { roundScaled } from '../../numbers.ts';
 import { compareText } from '../../text-order.ts';
 import type { NonEmpty } from '../../lists.ts';
@@ -29,6 +32,10 @@ export type ActionMember = {
   source_metric_ids: string[];
   /** What the member's evidence states that a handoff message names. */
   facts: HandoffFacts;
+  /** An issue-family finding's cohort; absent for every other rule. */
+  cohort?: IssueFamilyCohort;
+  /** The Actions page grouping this finding files its Action under (`RULE_GROUPING`). */
+  grouping: ActionGrouping;
 };
 /** The competitors read on an earned page, and a content gap's angle; empty when the rule has none. */
 export type HandoffFacts = Readonly<{ competitors: readonly string[]; angle: string | null }>;
@@ -194,6 +201,11 @@ function group(t: ActionTarget, members: NonEmpty<ActionMember>) {
   return {
     target: t,
     members: ordered,
+    // An issue-family Action holds one family, so its one cohort.
+    cohort: ordered.find((m) => m.cohort)?.cohort ?? null,
+    // The strongest finding files the Action, as it ranks it.
+    goal: goalOf(ordered[0].grouping),
+    grouping: ordered[0].grouping,
     families,
     // The strongest finding ranks the Action. Agreement is not rewarded: most
     // findings on a page come from the one crawl, so a count would double it.

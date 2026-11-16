@@ -112,10 +112,16 @@ agreement gates, so it always surfaces: confidence ranks it between a floor
 and one, and size counts in multiples of the materiality floor, capped.
 
 Site Health owns acquisition and deterministic findings, and its
-[Issues](site-health.md) own each defect end to end: catalog, Ask agent, Mark
-fixed, Re-run all and fix progress. A Site Health defect never becomes an
-Opportunity or an Action ([IA1](decisions.md#actions-read-issues-in-place));
-the crawl family promotes only contextual links and page changes. Demand owns imported
+[Issues](site-health.md) catalog, Mark fixed, Re-run all and fix progress. The
+crawl family promotes one `site_issue_family` finding per Issues group of every
+defect and advisory rule, never a diagnostic and never per page
+([IA1](decisions.md#actions-group-issues)), plus contextual links and page
+changes. A site-level rule's group holds the URLs its evidence names; a
+site-level check reads that rule's evaluation and finding in the next
+comparable crawl, and a crawl that never evaluated the rule reads nothing.
+A live finding of a rule that is no longer an enabled configured rule is a
+leftover: every refresh retires it, even over unchanged sources, and until
+then no Actions read lists its Action. Demand owns imported
 query/page evidence and signals. Visibility owns answer artifacts and measured
 mentions/citations. Opportunity evidence retains their availability and coverage
 rather than replacing missing inputs with zero or a guessed confidence.
@@ -274,13 +280,14 @@ the Search Demand "Act on this" band.
 
 There is one Actions list ([AS1](decisions.md#one-actions-feature-content-gaps-from-content-pages-only)):
 content-gap findings are ordinary Actions on it, and a content page's content
-gaps, search demand and link findings share its one Action. Site Health
-defects are not among them: Issues owns them, and the Actions list reads Issues
-groups through the existing Issues reads rather than copying them into Actions
-([IA1](decisions.md#actions-read-issues-in-place)). Leftover rows of the
-retired `issue_family` target kind (and their `actions.cohort`, kept until a
-later schema cleanup) are never listed, counted, read or declared. Every link
-to an Action is `/actions/{id}`. The evidence behind content gaps is in
+gaps, search demand and link findings share its one Action; its Site Health
+issues are their Issues groups' own `issue_family` Actions
+([IA1](decisions.md#actions-group-issues)). Action sync persists each Action's
+`goal` and `goal_grouping` from `config/actions.ts` (the strongest finding
+files it) and rewrites its `action_urls` (an issue group's cohort, a page
+Action's one URL) in the refresh transaction, so the Actions tree, a grouping's
+next rows and a URL's Actions are indexed reads. A row not synced since then
+reads under the fallback grouping. Every link to an Action is `/actions/{id}`. The evidence behind content gaps is in
 [Content optimization](content-optimization.md).
 
 ## Explicit implementation declaration
@@ -471,14 +478,17 @@ holds it, and each Action lands in exactly one:
 | `own_pages` (Improve your own pages) | everything else: `create_new`, `improve_existing`, `consolidate`, and an undiagnosed Agent-origin Action |
 
 `GET /projects/{id}/actions` filters by `status`, `target_kind`, `group`,
-`approach`, `priority` (the band: high from 30, medium from 20, low below; an
-unscored Action has none) and `family` (Source); an unknown value is a 422.
+`approach`, `priority` (the band: high from 30, medium from 20, low below,
+unscored included), `family` (Source), `grouping`, `ownership` and `topic`; an
+unknown value is a 422. `GET /projects/{id}/actions/tree` reads the whole page
+(status counts, goal strip, first rows per grouping) in a fixed number of
+statements, each grouping carrying this list's cursor for its next rows.
 Each item carries `group` and `priority_band`. `status_counts` stay
 project-wide and unfiltered (the sidebar badge); `group_counts` count every
 group under every filter but the group.
 
 The Actions screen (`/actions`, a Dashboard page) is the home for every
-actionable item in the app ([IA1](decisions.md#actions-read-issues-in-place)).
+actionable item in the app ([IA1](decisions.md#actions-group-issues)).
 Under New it lists the latest crawl's Issues defects exactly as Issues groups
 them, read through the Issues reads; technical-tab issues fall under
 `fix_site` and content and AEO issues under `own_pages`, each under its rule's

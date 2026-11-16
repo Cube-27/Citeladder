@@ -1,12 +1,16 @@
 /** Actions catalog: deterministic decisions over persisted evidence. */
 import {
   actionTargetKindSchema,
+  type ActionGoal,
   type ActionGroup,
+  type ActionGrouping,
   type ActionMeasurement,
   type ActionStatus,
   type ActionTargetKind,
   type ActionUserStatus,
 } from '@citeladder/contracts/actions';
+import type { SourceClass } from '@citeladder/contracts/opportunities';
+import type { IssueSection } from '@citeladder/contracts/site-health';
 import { opportunities } from './opportunity.ts';
 
 /** One group rule: it admits an Action whose target kind and approach are both listed; an absent list admits every value. */
@@ -31,6 +35,84 @@ const ACTION_GROUPS: readonly ActionGroupRule[] = [
   { group: 'fix_site', approaches: ['fix_technical', 'improve_links'] },
 ];
 const ACTION_GROUP_DEFAULT: ActionGroup = 'own_pages';
+
+/**
+ * The Actions page's goals in their fixed order, each with its groupings in
+ * order (plan v3, owner 2026-11-16). Persisted on each Action at sync.
+ */
+const ACTION_GOALS = {
+  read_site: ['seo', 'aeo', 'content'],
+  own_pages: [
+    'prompts',
+    'create_content',
+    'improve_pages',
+    'search_queries',
+    'internal_links',
+    'regressed',
+    'product_pages',
+  ],
+  mentions: ['editorial', 'ugc', 'references', 'other_sources'],
+  wrong_claims: [],
+} as const satisfies Record<ActionGoal, readonly ActionGrouping[]>;
+
+/**
+ * Where an Action's strongest finding files it: a fixed grouping for its rule,
+ * its Site Health rule's Issues section, or its cited page's source class.
+ */
+type GroupingSource =
+  | Readonly<{ kind: 'fixed'; grouping: ActionGrouping }>
+  | Readonly<{ kind: 'issue_section' }>
+  | Readonly<{ kind: 'source_class' }>;
+const fixed = (grouping: ActionGrouping): GroupingSource => ({ kind: 'fixed', grouping });
+
+const RULE_GROUPING: Readonly<Record<string, GroupingSource>> = {
+  site_issue_family: { kind: 'issue_section' },
+  earned_page_acquire_listing: { kind: 'source_class' },
+  brand_absent_high_value_prompt: fixed('prompts'),
+  owned_page_not_cited: fixed('prompts'),
+  confirmed_prompt_decline: fixed('prompts'),
+  low_share_of_voice_theme: fixed('prompts'),
+  content_gap_new_page: fixed('create_content'),
+  search_keyword_gap: fixed('create_content'),
+  content_gap_improve_page: fixed('improve_pages'),
+  search_demand_content_gap: fixed('search_queries'),
+  striking_distance_query: fixed('search_queries'),
+  query_cannibalization: fixed('search_queries'),
+  property_relative_ctr_gap: fixed('search_queries'),
+  emerging_query: fixed('search_queries'),
+  declining_query: fixed('search_queries'),
+  high_traffic_low_visibility: fixed('search_queries'),
+  site_link_near_orphan: fixed('internal_links'),
+  site_contextual_links: fixed('internal_links'),
+  site_link_weak_authority: fixed('internal_links'),
+  site_change_potential_regression: fixed('regressed'),
+  site_change_critical_regression: fixed('regressed'),
+  site_change_metadata_inconsistency: fixed('regressed'),
+  site_change_cosmetic_refresh: fixed('regressed'),
+  product_not_mentioned: fixed('product_pages'),
+  price_mismatch: fixed('product_pages'),
+  losing_position: fixed('product_pages'),
+  merchant_absent: fixed('product_pages'),
+  cited_alternatives_without_uploaded_presence: fixed('product_pages'),
+  catalog_fields_missing: fixed('product_pages'),
+};
+
+/** Site Health Issues sections as "Let AI read your site" groupings. */
+const ISSUE_SECTION_GROUPING = {
+  technical: 'seo',
+  aeo: 'aeo',
+  content: 'content',
+} as const satisfies Record<IssueSection, ActionGrouping>;
+
+/** A cited page's source class as a "Get mentioned elsewhere" grouping; any other class is `other_sources`. */
+const SOURCE_CLASS_GROUPING: Readonly<Partial<Record<SourceClass, ActionGrouping>>> = {
+  editorial_third_party: 'editorial',
+  community: 'ugc',
+  social: 'ugc',
+  video: 'ugc',
+  review_marketplace: 'ugc',
+  institutional: 'references',
+};
 
 export const actions = {
   ACTION_STATUS_OPEN: 'open',
@@ -82,6 +164,7 @@ export const actions = {
     'sources',
     'search_console',
     'search_intelligence',
+    'site_health',
     'link_graph',
     'site_changes',
     'commerce',
@@ -96,6 +179,7 @@ export const actions = {
     earned_page_acquire_listing: 'sources',
     site_link_near_orphan: 'link_graph',
     site_contextual_links: 'link_graph',
+    site_issue_family: 'site_health',
     site_link_weak_authority: 'link_graph',
     site_change_potential_regression: 'site_changes',
     site_change_critical_regression: 'site_changes',
@@ -139,6 +223,18 @@ export const actions = {
         'Do not send outreach from CiteLadder; drafts only.',
       ],
       target_kinds: kinds(),
+    },
+    {
+      // One fix for an issue a shared template or component causes on every page.
+      approach: 'fix_technical',
+      rule_ids: ['site_issue_family'],
+      skill_id: 'technical_health',
+      messages: ['Write one fix that clears "{target}" on every affected page.'],
+      donts: [
+        'Do not fix the affected pages one by one when one shared template or component causes the issue.',
+        'Do not rewrite the page copy to work around a technical defect.',
+      ],
+      target_kinds: kinds('issue_family'),
     },
     {
       approach: 'fix_technical',
@@ -258,6 +354,30 @@ export const actions = {
    * Action whose approach is not diagnosed yet.
    */
   ACTION_GROUP_DEFAULT,
+  ACTION_GOALS,
+  RULE_GROUPING,
+  ISSUE_SECTION_GROUPING,
+  SOURCE_CLASS_GROUPING,
+  SOURCE_CLASS_GROUPING_DEFAULT: 'other_sources' as const satisfies ActionGrouping,
+  /**
+   * An Action no finding files (an Agent row, or one not yet synced since
+   * groupings were persisted): a planned page creates content, anything else
+   * improves a page.
+   */
+  AGENT_KIND_GROUPING: { planned_page: 'create_content' } as Readonly<
+    Partial<Record<string, ActionGrouping>>
+  >,
+  ACTION_GROUPING_FALLBACK: 'improve_pages' as const satisfies ActionGrouping,
+  /** Rows the Actions tree shows per grouping, and each "Show more" page. */
+  ACTION_TREE_PAGE_SIZE: 10,
+  /**
+   * The goal strip flags "Let AI read your site" as blocking while a New
+   * Action of these groupings scores a critical finding (critical × 10).
+   */
+  ACTION_BLOCKING_GROUPINGS: ['seo', 'aeo'] as const satisfies readonly ActionGrouping[],
+  ACTION_BLOCKING_MIN_PRIORITY: 40,
+  /** URLs an Action's detail lists per page. */
+  ACTION_URLS_PAGE_SIZE: 10,
   /**
    * Floors of an Action's priority bands. A crawl or catalog finding scores its
    * severity × 10 (critical 40, high 30, medium 20, low 10), so these keep its
@@ -285,6 +405,13 @@ const unmappedRules = Object.keys(opportunities.OPPORTUNITY_RULES_BY_ID).filter(
 );
 if (unmappedRules.length)
   throw new Error(`Rules without an evidence family: ${unmappedRules.join(', ')}`);
+
+// Every detector files its Actions under a grouping.
+const ungroupedRules = Object.keys(opportunities.OPPORTUNITY_RULES_BY_ID).filter(
+  (rule) => !Object.hasOwn(RULE_GROUPING, rule),
+);
+if (ungroupedRules.length)
+  throw new Error(`Rules without an Actions grouping: ${ungroupedRules.join(', ')}`);
 
 // Every handoff template names known facts, and every branch ends on one that
 // needs only the Action's label, so a message always fills.

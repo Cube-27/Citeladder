@@ -970,15 +970,5 @@ describe('project owner', () => {
         },
       ],
     });
-    // A leftover Action of a retired target kind (issue families, until 2026-11-16) is never summarized.
-    await db
-      .updateTable('actions')
-      .set({ target_kind: 'issue_family', cohort: '{}' })
-      .where('id', '=', actionId)
-      .execute();
-    expect((await commandCenter(db, scope, null)).resolved_actions).toMatchObject({
-      count: 0,
-      evidence: [],
-    });
   }, 60_000);
 });

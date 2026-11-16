@@ -36,6 +36,27 @@ export type VisibilityEvidence = {
   prompt_snapshots: PromptSnapshotEvidence[];
   owned_domains: string[];
 };
+export type SiteEvidence = {
+  crawl_id: string;
+  /**
+   * The crawl's Issues groups of every defect and advisory rule
+   * (`SITE_ISSUE_FAMILY`): each rule's exact affected page count and its
+   * first `COHORT_PAGES_MAX` owned pages in URL order. A site-level rule's
+   * pages are the ones its evidence names; `whole_site` when it names none.
+   */
+  families: {
+    rule_id: string;
+    finding_class: string;
+    severity: string;
+    category: string;
+    page_count: number;
+    whole_site: boolean;
+    issue_ids: string[];
+    pages: { site_url_id: string; url: string }[];
+  }[];
+  coverage: Record<string, unknown>;
+  limitations: string[];
+};
 export type DetectorHit = {
   rule_id: string;
   target: TargetRef;
@@ -46,6 +67,11 @@ export type DetectorHit = {
   source_metric_ids: string[];
   value_factor: number;
   gap_factor: number;
+  /**
+   * The severity and title this finding carries instead of its rule's: an
+   * issue family's are its own Site Health rule's. Absent for every other hit.
+   */
+  finding?: Readonly<{ severity: string; title: string }>;
 };
 type PageEntityEvidence = {
   entity_kind: string;

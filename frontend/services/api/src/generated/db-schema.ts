@@ -66,6 +66,8 @@ export interface Actions {
   effective_status: string;
   evidence_cleared_at: Timestamp | null;
   families: Json;
+  goal: string | null;
+  goal_grouping: string | null;
   group_key: string;
   id: string;
   last_member_opportunity_ids: Generated<Json>;
@@ -92,6 +94,13 @@ export interface ActionStatusEvents {
   next_status: string;
   previous_status: string;
   project_id: string;
+  workspace_id: string;
+}
+
+export interface ActionUrls {
+  action_id: string;
+  project_id: string;
+  site_url_id: string;
   workspace_id: string;
 }
 
@@ -3628,6 +3637,7 @@ export interface DB {
   account_grants: AccountGrants;
   account_policy_acceptances: AccountPolicyAcceptances;
   action_status_events: ActionStatusEvents;
+  action_urls: ActionUrls;
   actions: Actions;
   agent_chats: AgentChats;
   agent_instruction_revisions: AgentInstructionRevisions;

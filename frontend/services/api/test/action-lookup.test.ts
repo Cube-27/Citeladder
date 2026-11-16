@@ -7,7 +7,6 @@ import { readChat } from '../src/agent/reads.ts';
 import { agentTools } from '../src/agent/tool-adapters.ts';
 import { attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
-import { actionRow } from './opportunity-fixtures.ts';
 import { AgentFixtures } from './agent-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
@@ -79,38 +78,40 @@ describe('Finding Actions by name', () => {
     expect(theirs.items.map((item) => item.id)).toEqual([actionId(foreign, promptRule)]);
   });
 
-  it('never lists, counts, reads, changes or declares a leftover Action of a retired target kind', async () => {
+  it('neither lists nor counts an Action whose every live finding has an unconfigured rule', async () => {
     const s = await seed();
-    // Site Health issue families were Actions until 2026-11-16; their rows may remain.
-    const retired = actionRow(
-      { workspace_id: s.workspace_id, project_id: s.project_id },
-      {
-        group_key: 'issue-family:web.viewport_meta',
-        target_kind: 'issue_family',
-        target_label: 'Missing viewport meta tag',
-        priority_score: 300,
-        cohort: '{}',
-      },
-    );
-    await db.insertInto('actions').values(retired).execute();
     const list = `/api/v1/projects/${s.project_id}/actions`;
-    const page = actionsPageSchema.parse(await (await request(s, list)).json());
-    expect([page.items.map((item) => item.id).toSorted(), page.status_counts.open]).toEqual([
-      [...new Set(Object.values(s.actions))].toSorted(),
-      3,
+    const read = async (query = '') =>
+      actionsPageSchema.parse(await (await request(s, `${list}${query}`)).json());
+    const before = await read();
+    expect(before.status_counts.open).toBe(3);
+    // A per-page Site Health finding left live from before its rule was retired (IA1).
+    await db
+      .updateTable('opportunities')
+      .set({ rule_id: 'missing_structured_data' })
+      .where('action_id', '=', actionId(s, pageRule))
+      .execute();
+    const after = await read();
+    expect([after.items.map((item) => item.id).toSorted(), after.status_counts.open]).toEqual([
+      before.items
+        .map((item) => item.id)
+        .filter((id) => id !== actionId(s, pageRule))
+        .toSorted(),
+      2,
     ]);
-    const found = actionsPageSchema.parse(
-      await (await request(s, `${list}?q=viewport&status=any`)).json(),
-    );
-    expect(found.items).toEqual([]);
-    const path = `/api/v1/actions/${retired.id}`;
-    const declaredAt = new Date(Date.now() - 86_400_000).toISOString();
-    expect([
-      (await request(s, path)).status,
-      (await request(s, path, 'PATCH', { status: 'dismissed' })).status,
-      (await request(s, `${path}/declaration`, 'POST', { declared_implemented_at: declaredAt }))
-        .status,
-    ]).toEqual([404, 404, 404]);
+    expect((await read('?q=acme.test/&status=any')).items.map((item) => item.id)).toEqual([
+      actionId(s, otherRule),
+    ]);
+    // One live finding of a configured rule beside the leftover keeps the Action listed.
+    await db
+      .updateTable('opportunities')
+      .set({ action_id: actionId(s, pageRule) })
+      .where('action_id', '=', actionId(s, otherRule))
+      .where('superseded_at', 'is', null)
+      .execute();
+    expect(
+      (await read('?q=acme.test/&status=any')).items.map((item) => item.id).toSorted(),
+    ).toEqual([actionId(s, pageRule), actionId(s, otherRule)].toSorted());
   });
 
   it('lets the Agent find a measuring Action by name with read_actions and search, only in its project', async () => {

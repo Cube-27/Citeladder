@@ -30,7 +30,10 @@ const iso = (date: Date | null) => date?.toISOString() ?? null;
 // First present reference wins; `action_id` can be attached after the chat started, so it ranks last.
 const ORIGIN_REFS: readonly [AgentChatOrigin, readonly string[]][] = [
   ['site_health', ['issue_group_reference', 'site_facts_reference', 'site_health_reference']],
-  ['page', ['target_url', 'target_site_url_id', 'page_snapshot_reference']],
+  [
+    'page',
+    ['target_url', 'target_site_url_id', 'page_snapshot_reference', 'url_actions_reference'],
+  ],
   ['recommendation', ['opportunity_id']],
   ['demand', ['demand_signal_id']],
   ['keyword_research', ['search_intelligence_reference']],

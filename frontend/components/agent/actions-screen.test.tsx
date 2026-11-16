@@ -257,6 +257,8 @@ describe('Actions', () => {
       ...actionItem(MEASURED, 'Organic bodysuit', PROJECT),
       target_kind: 'product',
       group: 'products',
+      goal: 'own_pages',
+      grouping: 'product_pages',
     };
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>

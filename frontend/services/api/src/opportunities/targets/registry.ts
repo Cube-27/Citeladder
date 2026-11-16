@@ -11,6 +11,7 @@ import { policy } from '../../config.ts';
 import type { Database } from '../../db/database.ts';
 import { notFound } from '../../errors.ts';
 import { earnedPageTarget } from './earned-page.ts';
+import { issueFamilyTarget } from './issue-family.ts';
 import {
   ActionTargetError,
   type ActionTarget,
@@ -27,6 +28,7 @@ import { plainTarget } from './shared.ts';
 export { ActionTargetError, type ActionTarget } from './kind.ts';
 export { actionPageUrl } from './page.ts';
 export { plannedPageKey } from './planned-page.ts';
+export { storedCohort } from './issue-family.ts';
 
 const p = policy.opportunity.actions;
 
@@ -38,6 +40,7 @@ const TARGETS: { readonly [K in ActionTargetKind]: ActionTargetModule<K> } = {
   query: plainTarget('query'),
   prompt: plainTarget('prompt'),
   planned_page: plannedPageTarget,
+  issue_family: issueFamilyTarget,
 };
 
 /** A target kind the Agent may name (`AGENT_TARGET_KINDS`). */
@@ -73,7 +76,7 @@ function target(
   };
 }
 
-/** The Action a finding groups into: one per page, prompt, query, product or listing. */
+/** The Action a finding groups into: one per page, prompt, query, product, listing or issue family. */
 export function actionTargetOf(
   member: Pick<ActionMember, 'target' | 'label_hint' | 'title'>,
 ): ActionTarget {
@@ -81,6 +84,8 @@ export function actionTargetOf(
   const key = targetKey(ref);
   const page = (url: string) => target(member, pageKey(url), 'page', { url });
   switch (ref.kind) {
+    case 'issue_family':
+      return target(member, key, 'issue_family');
     case 'earned_page':
       return target(member, `earned:${key}`, 'earned_page', { url: ref.url });
     case 'product':
@@ -148,6 +153,13 @@ export const declarationTargets = (
   website: string,
 ) => moduleOf(action).declarationTargets({ db, action, members, website });
 
-/** What an Action's detail read adds for its kind: whether its page is editable. */
-export const targetDetail = (db: Database, action: TargetAction) =>
-  moduleOf(action).detail({ db, action });
+/** What an Action's detail read adds for its kind: whether its page is editable, its cohort. */
+export const targetDetail = (
+  db: Database,
+  action: TargetAction,
+  declaredMemberIds: readonly string[],
+) => moduleOf(action).detail({ db, action, declaredMemberIds });
+
+/** What an Agent chat on `action` is given beyond the row's own fields. */
+export const targetAgentContext = (db: Database, scope: TargetScope, action: TargetAction) =>
+  moduleOf(action).agentContext({ db, scope, action });

@@ -3,6 +3,7 @@ import type {
   AnalysisEvidence,
   DetectorHit,
   PromptSnapshotEvidence,
+  SiteEvidence,
   VisibilityEvidence,
 } from './evidence.ts';
 import {
@@ -12,6 +13,7 @@ import {
 } from './scoring.ts';
 import { summarizeSourcePattern } from './source-patterns.ts';
 import { compareText } from '../../text-order.ts';
+import { issueGroupId, ruleTitle } from '../../site-health/reads/rules.ts';
 const p = policy.opportunity.opportunities;
 export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
   string,
@@ -101,3 +103,48 @@ export const detectBrandAbsentHighValuePrompt = (e: VisibilityEvidence) =>
   visibilityGaps(e, 'brand_absent_high_value_prompt', true);
 export const detectOwnedPageNotCited = (e: VisibilityEvidence) =>
   visibilityGaps(e, 'owned_page_not_cited', false);
+
+const family = p.SITE_ISSUE_FAMILY;
+
+/**
+ * One finding per Issues group of a defect or advisory rule (IA1): its cohort
+ * counts every affected page and lists the first `COHORT_PAGES_MAX` in URL
+ * order, citing the group's issues. A defect ranks just above an advisory of
+ * its severity.
+ */
+export function detectIssueGroups(e: SiteEvidence): DetectorHit[] {
+  if (!rules[family.RULE_ID]!.enabled) return [];
+  return e.families
+    .toSorted((left, right) => compareText(left.rule_id, right.rule_id))
+    .map((found) => {
+      const label = ruleTitle(found.rule_id);
+      return {
+        rule_id: family.RULE_ID,
+        target: { kind: 'issue_family', rule_id: found.rule_id, label },
+        evidence: {
+          issue_rule_id: found.rule_id,
+          issue_severity: found.severity,
+          category: found.category,
+          cohort: {
+            rule_id: found.rule_id,
+            rule_label: label,
+            finding_class: found.finding_class,
+            crawl_id: e.crawl_id,
+            group_id: issueGroupId(e.crawl_id, found.rule_id, found.finding_class),
+            page_count: found.page_count,
+            whole_site: found.whole_site,
+            pages: found.pages,
+          },
+          coverage: e.coverage,
+          limitations: [...e.limitations],
+        },
+        source_analysis_ids: [],
+        source_issue_ids: sortedUnique(found.issue_ids),
+        source_metric_ids: [],
+        value_factor:
+          p.SITE_VALUE_FACTOR * (found.finding_class === 'defect' ? family.DEFECT_VALUE_FACTOR : 1),
+        gap_factor: p.SITE_GAP_FACTOR,
+        finding: { severity: found.severity, title: label },
+      };
+    });
+}
