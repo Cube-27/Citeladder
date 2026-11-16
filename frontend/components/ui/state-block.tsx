@@ -344,10 +344,7 @@ function EmptyBody({
         <p className={textRole('body', 'text-ink-2 mt-1 max-w-[500px]')}>{description}</p>
       ) : null}
       {action ? (
-        <div
-          data-state-actions=""
-          className="mt-[var(--state-action-gap,16px)] flex flex-wrap items-center justify-center gap-2"
-        >
+        <div className="mt-[var(--state-action-gap,16px)] flex flex-wrap items-center justify-center gap-2">
           {action}
         </div>
       ) : null}

@@ -1762,7 +1762,7 @@ a.focus-ring:active .type-caption {
    masthead's primary takes the secondary face while it shows (StateBlock,
    MastheadPrimary). Both attributes are app-only; the disabled rule below
    outranks these, so a disabled button keeps the one disabled look. */
-[data-state-offer] [data-state-actions] [data-button-variant='secondary'] {
+[data-state-offer] [data-button-variant='secondary'] {
   background-color: var(--color-ink);
   border-color: var(--color-ink);
   box-shadow: none;
@@ -1773,9 +1773,6 @@ a.focus-ring:active .type-caption {
   border-color: var(--color-control-edge);
   box-shadow: var(--shadow-control);
   color: var(--color-ink);
-}
-[data-masthead-demoted] [data-button-variant]:hover {
-  background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
 }
 
 /* Disabled (2.8): one look for every variant, the static tag's grammar (no
