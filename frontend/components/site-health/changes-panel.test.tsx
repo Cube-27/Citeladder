@@ -132,7 +132,7 @@ describe('Website Changes', () => {
         name: 'View evidence: Page content on https://acme.test/guide',
       }),
     );
-    const drawer = await screen.findByRole('dialog', { name: 'Page content' });
+    const drawer = await screen.findByRole('dialog', { name: 'Change evidence' });
     const after = within(drawer).getByRole('region', { name: 'After' });
     expect(after).toHaveTextContent('Word count: 200');
     expect(after).toHaveTextContent('Content delta ratio: 0.5');
@@ -159,7 +159,10 @@ describe('Website Changes', () => {
       name: 'View evidence: HTTP status on https://acme.test/guide',
     });
     await userEvent.click(open);
-    const drawer = await screen.findByRole('dialog', { name: 'HTTP status' });
+    const drawer = await screen.findByRole('dialog', { name: 'Change evidence' });
+    // The row names the field and the page; the drawer holds only their values.
+    expect(within(drawer).queryByText('HTTP status')).toBeNull();
+    expect(within(drawer).queryByText('https://acme.test/guide')).toBeNull();
     expect(within(drawer).getByRole('region', { name: 'Before' })).toHaveTextContent('200');
     expect(within(drawer).getByRole('region', { name: 'After' })).toHaveTextContent('503');
     expect(within(drawer).getByRole('link', { name: 'Previous crawl' })).toHaveAttribute(

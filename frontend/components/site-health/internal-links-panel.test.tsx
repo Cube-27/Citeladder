@@ -349,6 +349,35 @@ describe('Internal links', () => {
       'Consider Anchor 11 when preparing this page for publication.',
     );
     expect(within(drawer).getByRole('button', { name: /Copy HTML/ })).toBeInTheDocument();
+    // The captured passage highlights the anchor, so it is not printed again.
+    expect(within(drawer).queryByText('Suggested anchor text')).toBeNull();
+  });
+
+  it('links a suggestion’s source page to its page detail', async () => {
+    const link = {
+      id: uuid(200),
+      source: page(0, 'Source'),
+      target: page(1, 'Destination'),
+      anchor: 'Anchor',
+      placement: null,
+      usefulness: 0.9,
+      action_id: null,
+      action_status: null,
+    };
+    const current = analysis({ recommendations: [link] });
+    mswServer.use(http.get(endpoint, () => HttpResponse.json(read(current))));
+    renderPanel();
+    const source = await screen.findByRole('link', { name: 'Source' });
+    expect(new URL(source.getAttribute('href')!, 'http://x').pathname).toBe(
+      `/site/crawls/${current.crawl_id}/pages/${link.source.site_url_id}`,
+    );
+    expect(screen.queryByRole('link', { name: 'Destination' })).toBeNull();
+    // With no captured placement the drawer names the anchor itself.
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Review link from Source to Destination' }),
+    );
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('Suggested anchor text')).toBeInTheDocument();
   });
 
   it('distinguishes failed analysis and unknown diagnostic reasons', async () => {

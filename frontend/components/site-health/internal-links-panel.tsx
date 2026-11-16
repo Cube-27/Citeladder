@@ -12,7 +12,8 @@ import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
 import { pageNumberControls, useTablePage } from '@/components/ui/pager';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableRow, UrlText } from '@/components/ui/table';
+import { TextLink } from '@/components/ui/text-link';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import type { ActionStatus } from '@/lib/api/actions';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
@@ -196,7 +197,12 @@ function LinksBody({
           page pairs checked. Suggestions appear as they are found.
         </output>
       ) : null}
-      <LinksTable links={links} emptyReason={emptyReason(analysis)} onSelect={onSelect} />
+      <LinksTable
+        links={links}
+        crawlId={analysis.crawl_id}
+        emptyReason={emptyReason(analysis)}
+        onSelect={onSelect}
+      />
     </>
   );
 }
@@ -220,10 +226,12 @@ function emptyReason(analysis: InternalLinkAnalysis): string {
 
 function LinksTable({
   links,
+  crawlId,
   emptyReason,
   onSelect,
 }: Readonly<{
   links: InternalLink[];
+  crawlId: string;
   emptyReason: string;
   onSelect: (id: string) => void;
 }>) {
@@ -266,10 +274,13 @@ function LinksTable({
       {paged.map((link) => (
         <TableRow key={link.id}>
           <TableCell>
-            <PageCell title={link.source.title} url={link.source.url} />
+            <PageCell
+              page={link.source}
+              href={`/site/crawls/${crawlId}/pages/${link.source.site_url_id}`}
+            />
           </TableCell>
           <TableCell>
-            <PageCell title={link.target.title} url={link.target.url} />
+            <PageCell page={link.target} />
           </TableCell>
           <TableCell>{link.anchor}</TableCell>
           <TableCell className="whitespace-nowrap">
@@ -306,14 +317,26 @@ function NoAction() {
   return <Absence state="not_set" label="No Action yet" />;
 }
 
-function PageCell({ title, url }: Readonly<{ title: string; url: string }>) {
-  const path = new URL(url).pathname;
+/** A page by its title over its path; the source page's title links to its page detail. */
+function PageCell({
+  page,
+  href,
+}: Readonly<{ page: Pick<InternalLink['source'], 'title' | 'url'>; href?: string }>) {
+  const name = page.title || readableUrl(new URL(page.url).pathname);
   return (
     <span className="grid max-w-sm min-w-0">
-      <ClampText tooltip={title || url}>{title || path}</ClampText>
-      <ClampText tooltip={url} className="type-caption">
-        {readableUrl(path)}
-      </ClampText>
+      {href ? (
+        <ClampText tooltip={name}>
+          <TextLink text="body" underline="hover" href={href}>
+            {name}
+          </TextLink>
+        </ClampText>
+      ) : (
+        <ClampText tooltip={name}>{name}</ClampText>
+      )}
+      <span className="type-caption flex min-w-0">
+        <UrlText url={page.url} origin={new URL(page.url).origin} />
+      </span>
     </span>
   );
 }

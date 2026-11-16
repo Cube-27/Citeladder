@@ -81,8 +81,13 @@ export function InternalLinkReview({
           </Stack>
           <PageSummary heading="Add a link to" page={link.target} />
           <Stack as="section">
-            <EditorialSectionHeader title="Suggested anchor text" />
-            <p className="type-body text-ink">{link.anchor}</p>
+            {/* A captured passage already highlights the anchor; say it again only without one. */}
+            {link.placement ? null : (
+              <>
+                <EditorialSectionHeader title="Suggested anchor text" />
+                <p className="type-body text-ink">{link.anchor}</p>
+              </>
+            )}
             <p className="type-caption">
               {link.target.contextual_inbound === null
                 ? 'Existing contextual links to the destination were not measured.'

@@ -461,7 +461,6 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     const dialog = await openIssue(user, 'Pages buried too deeply');
-    expect(within(dialog).getByText('3 pages affected')).toBeInTheDocument();
     const winner = await within(dialog).findByRole('link', { name: /Winner announced/ });
     expect(winner).toHaveAttribute(
       'href',
@@ -715,14 +714,16 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
 
     const typed = await openIssue(user, 'WebSite schema is missing');
-    expect(within(typed).getByText('32 pages affected')).toBeInTheDocument();
-    expect(within(typed).getByText('Product, Category')).toBeInTheDocument();
+    expect(within(typed).getByText('Page kinds').nextElementSibling?.textContent).toBe(
+      'Product, Category',
+    );
+    // The row already says severity, category and the page count; the drawer does not.
+    expect(within(typed).queryByText('32 pages affected')).toBeNull();
+    expect(within(typed).queryByText('High')).toBeNull();
     await user.click(within(typed).getByRole('button', { name: 'Close drawer' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
     const untyped = await openIssue(user, 'Canonical tag is missing');
-    // The count closes the meta line: no page-type list follows it.
-    const meta = within(untyped).getByText('32 pages affected').parentElement;
-    expect(meta?.lastElementChild?.textContent).toBe('32 pages affected');
+    expect(within(untyped).queryByText('Page kinds')).toBeNull();
   });
 });

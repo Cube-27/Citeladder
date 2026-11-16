@@ -4,7 +4,7 @@ import { RecordPage } from '@/components/templates/record-page';
 import type { PageBack } from '@/components/templates/page-frame';
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { Inline, Stack } from '@/components/ui/layout';
-import { textRole } from '@/components/ui/typography';
+import { UrlText } from '@/components/ui/table';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { PageIssues, type RerunControl } from '@/components/site-health/page-issues';
 import { PageKindBadge } from '@/components/site-health/page-kind-badge';
@@ -69,7 +69,6 @@ export function UrlDetailView({
       identity={
         <PageIdentity
           detail={detail}
-          title={title}
           actions={
             <>
               {history}
@@ -94,7 +93,6 @@ export function UrlDetailView({
         issues={detail.issues}
         audited={detail.analysis_status === 'completed'}
         crawlId={detail.crawl_id}
-        rerun={rerun}
       />
       <TechnicalDetails detail={detail} />
     </RecordPage>
@@ -125,28 +123,24 @@ function pagePrompt(detail: PageDetail, count: number): string {
 }
 
 /**
- * The record's identity: its full title (the masthead may cut it), its URL,
+ * The record's identity, under the masthead that holds its title: its URL,
  * kind, audit date and, when it is not done, its status, then the page's
  * secondary actions. The masthead keeps the one primary action.
  */
-function PageIdentity({
-  detail,
-  title,
-  actions,
-}: Readonly<{ detail: PageDetail; title: string; actions: ReactNode }>) {
+function PageIdentity({ detail, actions }: Readonly<{ detail: PageDetail; actions: ReactNode }>) {
   const timeZone = useDisplayTimeZone();
   const facts = [
     {
       label: 'URL',
       value: (
-        // The record's own address wraps: this page is the record.
         <TextLink
           variant="external"
           text="body"
+          underline="hover"
           href={detail.display_url}
-          className="min-w-0 [overflow-wrap:anywhere]"
+          className="flex min-w-0 items-center"
         >
-          {detail.display_url}
+          <UrlText url={detail.display_url} />
         </TextLink>
       ),
     },
@@ -175,7 +169,6 @@ function PageIdentity({
   ];
   return (
     <Stack gap="item" className="min-w-0" data-testid="page-identity">
-      <p className={textRole('heading', 'min-w-0 [overflow-wrap:anywhere]')}>{title}</p>
       <FactList layout="inline" label="Page" facts={facts} />
       <Inline className="flex-wrap">{actions}</Inline>
     </Stack>

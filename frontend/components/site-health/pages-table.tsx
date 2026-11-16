@@ -154,6 +154,7 @@ export function PagesTable({
                   <ClampText lines={1}>
                     <TextLink
                       text="emphasis"
+                      underline="hover"
                       href={`/site/crawls/${page.crawl_id}/pages/${page.site_url_id}`}
                       onClick={(event) => event.stopPropagation()}
                       aria-label={`View ${title} — ${page.display_url}`}
