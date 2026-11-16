@@ -1,9 +1,10 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo } from 'react';
 
 import { Disclosure } from '@/components/ui/disclosure';
 import { textRole } from '@/components/ui/typography';
 import type { LiveTurn } from '@/lib/agent/live-turns';
-import { AGENT_STREAM_THROTTLE_MS } from '@/lib/config/agent';
+import { AGENT_STREAM_REPAINT_MS } from '@/lib/config/agent';
+import { useAdaptiveThrottle } from '@/lib/use-adaptive-throttle';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
 import { DraftSheet } from '@/components/ui/draft-sheet';
@@ -15,7 +16,7 @@ import { DraftSheet } from '@/components/ui/draft-sheet';
  * replaces the whole running turn.
  */
 export function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefined }>) {
-  const live = useThrottled(latest, AGENT_STREAM_THROTTLE_MS);
+  const live = useAdaptiveThrottle(latest, AGENT_STREAM_REPAINT_MS);
   // The turn's sources are known once it is saved; until then only the
   // project's own hosts open directly.
   const knownHosts = useAgentLinkHosts();
@@ -42,26 +43,6 @@ export function LiveReply({ live: latest }: Readonly<{ live: LiveTurn | undefine
       ) : null}
     </>
   );
-}
-
-/**
- * The latest value at most once per `ms`, always ending on the newest: the
- * stream's deltas are an outside clock, and this paces the repaint to it.
- */
-function useThrottled<T>(value: T, ms: number): T {
-  const [shown, setShown] = useState(value);
-  const paintedAt = useRef(0);
-  useEffect(() => {
-    const timer = setTimeout(
-      () => {
-        paintedAt.current = Date.now();
-        setShown(value);
-      },
-      Math.max(0, paintedAt.current + ms - Date.now()),
-    );
-    return () => clearTimeout(timer);
-  }, [value, ms]);
-  return shown;
 }
 
 /** Memoized, so only the segment being written re-renders its Markdown. */

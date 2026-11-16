@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { activitySteps } from '@/components/agent/activity-chain';
 import { LiveReply } from '@/components/agent/live-reply';
@@ -61,9 +61,11 @@ function RunningTurn({
       ? 'Waiting to start…'
       : (liveStepLabel(live) ?? activeStepLabel(currentAttempt(run)));
   // The stream is the freshest record while it lasts; after it drops the run is
-  // polled. The longer record wins, so rows never vanish at the switch.
-  const streamed = activityRows((live?.tools ?? []).map(callStep));
-  const polled = activityRows(currentAttempt(run).map(callStep));
+  // polled. The longer record wins, so rows never vanish at the switch. Text
+  // deltas keep both inputs, so they rebuild no rows.
+  const tools = live?.tools;
+  const streamed = useMemo(() => activityRows((tools ?? []).map(callStep)), [tools]);
+  const polled = useMemo(() => activityRows(currentAttempt(run).map(callStep)), [run]);
   const rows = streamed.length >= polled.length ? streamed : polled;
   const seconds = useElapsedSeconds(live?.startedAt ?? Date.parse(run.created_at));
   return (
@@ -83,12 +85,12 @@ function RunningTurn({
 /** What the newest model call is doing: its running reads, else deciding. */
 function liveStepLabel(live: LiveTurn | undefined) {
   if (!live?.step) return null;
-  const running = activityRows(
-    live.tools.filter((tool) => tool.ordinal === live.step).map(callStep),
-  ).filter((row) => row.state === 'running');
+  const running = live.tools.filter(
+    (tool) => tool.ordinal === live.step && tool.status === 'started',
+  );
   if (running.length > 1) return `Running ${running.length} reads at once…`;
-  if (running[0]) return `${activityLabel(running[0])}…`;
-  return modelStepLabel('working');
+  const [row] = running[0] ? activityRows([callStep(running[0])]) : [];
+  return row ? `${activityLabel(row)}…` : modelStepLabel('working');
 }
 function useElapsedSeconds(since: number) {
   const [now, setNow] = useState(() => Date.now());
