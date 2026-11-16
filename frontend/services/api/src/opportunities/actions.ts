@@ -38,6 +38,7 @@ import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { actionGroup, priorityBand, readHandoff } from '../analysis/opportunities/actions.ts';
 import { record } from '../db/json.ts';
+import { ruleDescription } from '../site-health/reads/rules.ts';
 import { actionUrlsPage, writeActionUrls } from './action-urls.ts';
 import {
   FALLBACK_GOAL,
@@ -128,7 +129,19 @@ const jsonList = (value: unknown): unknown[] => (Array.isArray(value) ? value : 
 const stringList = (value: unknown): string[] =>
   jsonList(value).filter((v): v is string => typeof v === 'string');
 
+/**
+ * The row's secondary line, from config and the row alone: an issue family's
+ * Site Health rule description, else the strongest finding's title as action
+ * sync stored it in the diagnosis; null for an Agent row without findings.
+ */
+function actionSummary(row: ActionRow, cohort: ReturnType<typeof storedCohort>): string | null {
+  if (cohort) return ruleDescription(cohort.rule_id);
+  const diagnosis = actionDetailSchema.shape.diagnosis.safeParse(row.diagnosis);
+  return diagnosis.data?.what_happened?.[0]?.title ?? null;
+}
+
 export function actionItem(row: ActionRow) {
+  const cohort = storedCohort(row);
   return {
     id: row.id,
     project_id: row.project_id,
@@ -148,7 +161,8 @@ export function actionItem(row: ActionRow) {
     skill_id: row.skill_id,
     member_count: jsonList(row.member_opportunity_ids).length,
     declarable_member_count: declarableIds(row).length,
-    page_count: storedCohort(row)?.page_count ?? null,
+    page_count: cohort?.page_count ?? null,
+    summary: actionSummary(row, cohort),
     handoff: readHandoff(record(row.diagnosis).handoff, row.target_label),
     evidence_cleared_at: row.evidence_cleared_at?.toISOString() ?? null,
     created_at: row.created_at.toISOString(),

@@ -116,6 +116,9 @@ export const actionItemSchema = responseObject({
   // An issue-family Action's affected pages (its cohort's count); null for
   // every other target kind.
   page_count: z.number().int().nullable().default(null),
+  // The row's secondary line: an issue family's Site Health rule description,
+  // else the strongest finding's title; null when the Action has neither.
+  summary: z.string().nullable().default(null),
   handoff: actionHandoffSchema,
   evidence_cleared_at: z.string().nullable(),
   created_at: z.string(),

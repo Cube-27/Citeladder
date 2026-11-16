@@ -220,10 +220,13 @@ describe('issue-group Actions', () => {
     const path = `/api/v1/projects/${own.seed.projectId}/urls/${page!.id}/actions`;
     const read = urlActionsSchema.parse(await (await request(own.seed, path)).json());
     const labels = Object.fromEntries((await issueActions(own.seed)).map((a) => [a.id, a]));
-    expect(read.items.map((item) => labels[item.id]?.target_label ?? item.id)).toEqual([
-      'Mobile viewport missing',
-      'Missing structured data',
-      agentPage.id,
+    expect(
+      read.items.map((item) => [labels[item.id]?.target_label ?? item.id, item.summary]),
+    ).toEqual([
+      ['Mobile viewport missing', 'The document declares a mobile viewport.'],
+      ['Missing structured data', 'Page includes JSON-LD or microdata structured data.'],
+      // An Agent Action without findings has no secondary line.
+      [agentPage.id, null],
     ]);
     expect((await request(foreign.seed, path)).status).toBe(404);
     const theirs = `/api/v1/projects/${foreign.seed.projectId}/urls/${page!.id}/actions`;

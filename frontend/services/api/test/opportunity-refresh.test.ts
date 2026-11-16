@@ -11,7 +11,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { editProduct } from '../src/commerce/edits.ts';
-import { attachOrCreateAction } from '../src/opportunities/actions.ts';
+import { actionItem, attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { updateActionStatus } from '../src/opportunities/action-decisions.ts';
 import { policy } from '../src/config.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
@@ -217,17 +217,29 @@ describe('opportunity_refresh', () => {
     // defect, which is its Issues group's own Action, like /a's and /c's.
     const actions = await db
       .selectFrom('actions')
-      .select(['id', 'target_kind', 'target_label', 'member_opportunity_ids'])
+      .selectAll()
       .where('workspace_id', '=', own.workspace_id)
       .orderBy('target_kind')
       .orderBy('target_label')
       .execute();
-    expect(actions.map((row) => [row.target_kind, row.target_label])).toEqual([
-      ['issue_family', 'Missing structured data'],
-      ['issue_family', 'No answer-first content structure'],
-      ['issue_family', 'technical.title_missing'],
-      ['page', URL_B],
-      ['prompt', 'best crm for small teams'],
+    // Each row's secondary line: an issue group's catalog description (none for
+    // a rule the catalog does not define), else its strongest finding's title.
+    expect(
+      actions.map(actionItem).map((item) => [item.target_kind, item.target_label, item.summary]),
+    ).toEqual([
+      [
+        'issue_family',
+        'Missing structured data',
+        'Page includes JSON-LD or microdata structured data.',
+      ],
+      [
+        'issue_family',
+        'No answer-first content structure',
+        'The first block under the first heading is a substantive answer/definitional paragraph.',
+      ],
+      ['issue_family', 'technical.title_missing', null],
+      ['page', URL_B, 'Cited content angle your page does not win'],
+      ['prompt', 'best crm for small teams', 'Brand absent on high-value prompt'],
     ]);
     expect(actions[3]!.member_opportunity_ids).toEqual([gap.id]);
   });

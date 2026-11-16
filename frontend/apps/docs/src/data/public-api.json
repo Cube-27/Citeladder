@@ -386,6 +386,10 @@
               }
             ]
           },
+          "summary": {
+            "default": null,
+            "type": ["string", "null"]
+          },
           "handoff": {
             "$ref": "#/components/schemas/ActionHandoff"
           },
@@ -1029,6 +1033,7 @@
           "member_count",
           "declarable_member_count",
           "page_count",
+          "summary",
           "handoff",
           "evidence_cleared_at",
           "created_at",
@@ -1236,6 +1241,10 @@
               }
             ]
           },
+          "summary": {
+            "default": null,
+            "type": ["string", "null"]
+          },
           "handoff": {
             "$ref": "#/components/schemas/ActionHandoff"
           },
@@ -1270,6 +1279,7 @@
           "member_count",
           "declarable_member_count",
           "page_count",
+          "summary",
           "handoff",
           "evidence_cleared_at",
           "created_at",
