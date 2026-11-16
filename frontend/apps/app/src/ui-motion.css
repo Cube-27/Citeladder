@@ -28,27 +28,42 @@
 }
 
 .dialog-overlay[data-state='open'] {
-  animation: modal-overlay-in var(--motion-slow) var(--ease-standard) both;
+  animation: modal-overlay-in var(--motion-open) var(--ease-standard) both;
 }
 .dialog-overlay[data-state='closed'] {
-  animation: modal-overlay-in var(--motion-normal) var(--ease-exit) reverse both;
+  animation: modal-overlay-in var(--motion-open) var(--ease-exit) reverse both;
 }
 .dialog-panel[data-state='open'] {
-  animation: modal-panel-in var(--motion-slow) var(--ease-standard) both;
+  animation: modal-panel-in var(--motion-open) var(--ease-standard) both;
 }
 .dialog-panel[data-state='closed'] {
-  animation: modal-panel-in var(--motion-normal) var(--ease-exit) reverse both;
+  animation: modal-panel-in var(--motion-open) var(--ease-exit) reverse both;
 }
 
 .tooltip-panel,
 .toast-panel {
   transition:
-    opacity var(--motion-normal) var(--ease-standard),
-    transform var(--motion-normal) var(--ease-standard);
+    opacity var(--motion-open) var(--ease-standard),
+    transform var(--motion-open) var(--ease-standard);
 }
 
-.toast-panel {
-  transition-duration: var(--motion-slow);
+/* The sidebar's content fades in as its column eases to the rail or back.
+   Two names for one fade, so each toggle restarts it; none on first paint. */
+@keyframes sidebar-labelled-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes sidebar-rail-in {
+  from {
+    opacity: 0;
+  }
+}
+[data-sidebar-toggled] [data-sidebar-frame] {
+  animation: sidebar-labelled-in var(--motion-open) var(--ease-standard);
+}
+[data-sidebar-toggled][data-sidebar-state='collapsed'] [data-sidebar-frame] {
+  animation-name: sidebar-rail-in;
 }
 
 .tooltip-panel[data-state='closed'],

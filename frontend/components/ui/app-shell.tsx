@@ -1,4 +1,4 @@
-import { useId, type CSSProperties, type ReactNode } from 'react';
+import { useId, useState, type CSSProperties, type ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 
 import { IconButton } from '@/components/ui/button';
@@ -19,7 +19,7 @@ import { useSidebarCollapsed, useSidebarWidth } from '@/lib/sidebar-width';
  * page tabs, filter bar, sections) belongs to the templates.
  */
 const FRAME =
-  'bg-ground text-ink grid min-h-dvh grid-cols-[minmax(0,1fr)] rail:grid-cols-[var(--sidebar-width-compact)_minmax(0,1fr)] shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)]';
+  'bg-ground text-ink grid min-h-dvh grid-cols-[minmax(0,1fr)] rail:grid-cols-[var(--sidebar-width-compact)_minmax(0,1fr)] shell:grid-cols-[var(--sidebar-width)_minmax(0,1fr)] data-[sidebar-state=collapsed]:rail:grid-cols-[var(--sidebar-rail-width)_minmax(0,1fr)] transition-[grid-template-columns] duration-[var(--motion-open)] ease-[var(--ease-standard)] data-[sidebar-state=collapsed]:ease-[var(--ease-exit)] motion-reduce:transition-none has-[[data-dragging]]:transition-none';
 // The sidebar sits on `chrome`; one hairline divides it from the page in both
 // themes, and the resize handle's line strengthens it on hover, focus and drag.
 const SIDEBAR_COLUMN =
@@ -53,8 +53,21 @@ export function AppShellFrame({
 }: Readonly<{ sidebar: ReactNode; children: ReactNode }>) {
   const sidebarId = useId();
   const { style, state } = useFrameState();
+  // Only a toggle fades the sidebar's content in (ui-motion.css); first paint stays still.
+  const [shownState, setShownState] = useState(state);
+  const [toggled, setToggled] = useState(false);
+  if (shownState !== state) {
+    setShownState(state);
+    setToggled(true);
+  }
   return (
-    <div data-app-surface="" data-sidebar-state={state} className={FRAME} style={style}>
+    <div
+      data-app-surface=""
+      data-sidebar-state={state}
+      data-sidebar-toggled={toggled || undefined}
+      className={FRAME}
+      style={style}
+    >
       <a href="#main" className="skip-link">
         Skip to main content
       </a>
