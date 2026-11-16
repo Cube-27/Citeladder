@@ -137,7 +137,7 @@ export const RELEASE_META_NAME = 'citeladder-release';
 
 // Evidence request/display bounds.
 export const EVIDENCE_LIMIT = 100;
-export const FANOUT_SEARCH_DEBOUNCE_MS = 300;
+export const TABLE_SEARCH_DEBOUNCE_MS = 300;
 
 // Audit launch default; the accepted range arrives in the prompt-set list's `limits`.
 export const DEFAULT_REPETITIONS = 1;

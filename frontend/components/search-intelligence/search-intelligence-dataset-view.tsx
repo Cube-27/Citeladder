@@ -22,6 +22,8 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { Absence } from '@/components/ui/absence';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { TABLE_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
+import { useDebounced } from '@/lib/use-debounced';
 import { evidenceFields, searchNumber } from './search-intelligence-format';
 import { SEARCH_COLUMNS_BY_KIND } from '@/lib/config/search-intelligence';
 import { visibilityRunSourcesHref } from '@/lib/visibility/use-visibility-dashboard';
@@ -53,6 +55,7 @@ export function SearchIntelligenceDatasetView({
   const { workspaceId, projectId } = useProjectScope();
   const [selected, setSelected] = useState<SearchIntelligenceRow | null>(null);
   const [filter, setFilter] = useState('');
+  const search = useDebounced(filter, TABLE_SEARCH_DEBOUNCE_MS);
   const [order, setOrder] = useState<{ sort: string; direction: 'asc' | 'desc' }>({
     sort: 'id',
     direction: 'asc',
@@ -60,7 +63,7 @@ export function SearchIntelligenceDatasetView({
   const minVolume = keywordFilters?.minVolume ?? '';
   const filters = {
     ...order,
-    search: filter,
+    search,
     intent: keywordFilters?.intent ?? '',
     min_volume: minVolume === '' ? undefined : Number(minVolume),
   };
