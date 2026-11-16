@@ -1,5 +1,5 @@
 import { Pause, Play } from 'lucide-react';
-import { type RefObject, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, type RefObject, useEffect, useRef, useState } from 'react';
 
 import { Icon } from '@/components/ui/icon';
 import { textRole } from '@/components/ui/typography';
@@ -52,22 +52,41 @@ const AUTH_SHOWCASE_SLIDES: readonly Slide[] = [
   },
 ];
 
-/** Each slide's window and floating card, placed in the shared stage. */
-const PLACEMENT: Readonly<Record<SlideId, Readonly<{ main: string; accent: string }>>> = {
-  mcp: { main: 'top-0 right-0 w-[82%]', accent: 'bottom-0 left-0 w-[88%]' },
-  search: { main: 'top-[7%] left-0 w-[70%]', accent: 'top-[45%] right-0 w-[40%]' },
-  'site-health': { main: 'top-[22%] left-[3%] w-[94%]', accent: 'top-[7%] right-0 w-[30%]' },
+/** A picture's edges and width, in percent of the stage. */
+type Place = Readonly<
+  Partial<Record<'top' | 'bottom' | 'left' | 'right', number>> & { width: number }
+>;
+
+/**
+ * Each slide's window and floating card, placed in the shared stage. Inline
+ * percentages, not utilities: these are per-picture data, and ten one-off
+ * classes would cost every app page's eager CSS.
+ */
+const PLACEMENT: Readonly<Record<SlideId, Readonly<{ main: Place; accent: Place }>>> = {
+  mcp: { main: { top: 0, right: 0, width: 82 }, accent: { bottom: 0, left: 0, width: 88 } },
+  search: { main: { top: 7, left: 0, width: 70 }, accent: { top: 45, right: 0, width: 40 } },
+  'site-health': {
+    main: { top: 22, left: 3, width: 94 },
+    accent: { top: 7, right: 0, width: 30 },
+  },
 };
 
 const ADVANCE_MS = 7000;
+
+/** The stage's shape: every slide's pictures are placed inside the same box. */
+const STAGE: CSSProperties = { aspectRatio: '5 / 3' };
 
 function ShotPicture({
   shot,
   place,
   upcoming,
-}: Readonly<{ shot: Shot; place: string; upcoming: boolean }>) {
+  over,
+}: Readonly<{ shot: Shot; place: Place; upcoming: boolean; over: boolean }>) {
+  const style = Object.fromEntries(
+    Object.entries(place).map(([edge, percent]) => [edge, `${percent}%`]),
+  );
   return (
-    <picture className={cn('absolute block', place)}>
+    <picture className={cn('absolute block', over && 'z-10')} style={style}>
       <source type="image/avif" srcSet={`/auth/${shot.file}.avif`} />
       {/* Lazy: the panel is hidden below `desktop:`, so phones never fetch it.
           Grayscale: the panel is black and white; the captures predate the
@@ -204,7 +223,7 @@ export function AuthShowcase() {
   return (
     <aside
       ref={root}
-      className="desktop:grid bg-well border-rule sticky top-0 hidden h-dvh min-h-0 content-center gap-[var(--page-top-gap)] overflow-clip border-s px-[var(--flow-gap)] py-[var(--page-top-gap)]"
+      className="desktop:grid bg-well border-rule sticky top-0 hidden h-dvh min-h-0 content-center gap-[var(--page-top-gap)] overflow-hidden border-s px-[var(--content-gutter)]"
       aria-label="CiteLadder features"
       aria-roledescription="carousel"
     >
@@ -218,7 +237,7 @@ export function AuthShowcase() {
             <section
               key={slide.id}
               className={cn(
-                'col-start-1 row-start-1 grid justify-items-center gap-[var(--page-top-gap)] transition-[opacity,visibility] duration-[var(--motion-slow)] motion-reduce:transition-none',
+                'col-start-1 row-start-1 grid justify-items-center gap-[var(--page-top-gap)] transition duration-[var(--motion-open)] motion-reduce:transition-none',
                 current ? 'visible opacity-100' : 'invisible opacity-0',
               )}
               aria-roledescription="slide"
@@ -226,26 +245,27 @@ export function AuthShowcase() {
               aria-hidden={!current}
               inert={!current}
             >
-              {/* Capped by the window's height too, so a short laptop keeps the caption. */}
-              <div className="relative aspect-[5/3] w-full max-w-[min(36rem,calc((100dvh-15rem)*5/3))]">
+              <div className="max-w-narrow relative w-full" style={STAGE}>
                 {seen.has(index) ? (
                   <>
                     <ShotPicture
                       shot={slide.main}
                       place={PLACEMENT[slide.id].main}
                       upcoming={!current}
+                      over={false}
                     />
                     <ShotPicture
                       shot={slide.accent}
-                      place={cn('z-10', PLACEMENT[slide.id].accent)}
+                      place={PLACEMENT[slide.id].accent}
                       upcoming={!current}
+                      over
                     />
                   </>
                 ) : null}
               </div>
-              <div className="grid max-w-104 gap-2 text-center">
+              <div className="max-w-narrow grid gap-2 text-center">
                 <p className={textRole('title', 'text-balance')}>{slide.caption}</p>
-                <p className={textRole('body', 'text-ink-2 text-pretty')}>{slide.line}</p>
+                <p className={textRole('body', 'text-ink-2 text-balance')}>{slide.line}</p>
               </div>
             </section>
           );
@@ -268,7 +288,7 @@ export function AuthShowcase() {
                 <span
                   aria-hidden
                   className={cn(
-                    'rounded-mark block h-2 transition-[width,background-color] duration-[var(--motion-fast)] motion-reduce:transition-none',
+                    'rounded-mark block h-2 transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none',
                     current ? 'bg-ink w-5' : 'bg-control-line w-2',
                   )}
                 />
