@@ -8,7 +8,7 @@ import { record, strings } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import { ApiError } from '../errors.ts';
 import { holdsWrite, mcpPolicy, type McpConfig } from './config.ts';
-import { consentMessage, consentPage } from './consent-page.ts';
+import { consentMessage, consentPage, consentReturn } from './consent-page.ts';
 import {
   completeConsent,
   ConsentExpiredError,
@@ -75,10 +75,7 @@ export function registerConsentRoutes(
       .executeTakeFirstOrThrow();
     const redirect = new URL(row.redirect_uri);
     c.header('x-frame-options', 'DENY');
-    c.header(
-      'content-security-policy',
-      `${mcpPolicy.consent_csp}; form-action 'self' ${redirect.origin}`,
-    );
+    c.header('content-security-policy', `${mcpPolicy.consent_csp}; form-action 'self'`);
     // hono/html escapes every interpolated value; client metadata is untrusted.
     return c.html(
       consentPage({
@@ -148,17 +145,17 @@ export function registerConsentRoutes(
         403,
       );
     try {
-      return c.redirect(
-        await completeConsent(
-          db,
-          config,
-          mcp,
-          transaction,
-          { userId: c.get('user').id, sessionVersion: c.get('user').sessionVersion },
-          decision === 'deny' ? null : consentSelection(form),
-        ),
-        303,
+      const destination = await completeConsent(
+        db,
+        config,
+        mcp,
+        transaction,
+        { userId: c.get('user').id, sessionVersion: c.get('user').sessionVersion },
+        decision === 'deny' ? null : consentSelection(form),
       );
+      c.header('x-frame-options', 'DENY');
+      c.header('content-security-policy', `${mcpPolicy.consent_csp}; form-action 'none'`);
+      return c.html(consentReturn(destination));
     } catch (error) {
       return consentFailure(c, { transaction, error });
     }

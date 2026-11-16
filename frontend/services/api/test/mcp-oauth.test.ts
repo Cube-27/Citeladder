@@ -144,8 +144,7 @@ async function token(clientId: string, values: Record<string, string>, authoriza
 async function grant() {
   const c = await client();
   const transaction = await pending(c.client_id);
-  const approved = await consent(transaction);
-  const destination = new URL(approved.headers.get('location')!);
+  const destination = await callbackOf(await consent(transaction));
   expect(destination.searchParams.get('state')).toBe('bound-state');
   const response = await token(c.client_id, {
     grant_type: 'authorization_code',
@@ -395,10 +394,10 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
   expect((await consent(transaction, [])).status).toBe(400);
   const foreign = await fixtures.tenant();
   expect((await consent(transaction, [foreign.workspaceId])).status).toBe(400);
-  const approved = await consent(transaction);
-  expect(approved.status).toBe(303);
+  const destination = await callbackOf(await consent(transaction));
+  expect(`${destination.origin}${destination.pathname}`).toBe(callback);
   expect((await consent(transaction)).status).toBe(403);
-  const code = new URL(approved.headers.get('location')!).searchParams.get('code')!;
+  const code = destination.searchParams.get('code')!;
   const basic = `Basic ${Buffer.from(`${c.client_id}:${c.client_secret}`).toString('base64')}`;
   const body = {
     grant_type: 'authorization_code',
@@ -435,12 +434,8 @@ it('binds CSRF, explicit selection, PKCE and redirect before a code can be consu
 /** Approve a fresh authorization and return its client and unexchanged code. */
 async function mintedCode() {
   const c = await client();
-  const approved = await consent(await pending(c.client_id));
-  expect(approved.status).toBe(303);
-  return {
-    clientId: c.client_id,
-    code: new URL(approved.headers.get('location')!).searchParams.get('code')!,
-  };
+  const destination = await callbackOf(await consent(await pending(c.client_id)));
+  return { clientId: c.client_id, code: destination.searchParams.get('code')! };
 }
 const credentialEnds = {
   'a password reset': async (userId: string) => {
@@ -541,6 +536,8 @@ it('renders untrusted client metadata inert on the consent page', async () => {
     { headers: { cookie } },
   );
   expect(page.status).toBe(200);
+  // The form posts only here; the callback is reached by a later navigation.
+  expect(page.headers.get('content-security-policy')).toMatch(/; form-action 'self'$/u);
   const body = await page.text();
   expect(body).toContain('&lt;Unverified&gt;');
   expect(body).not.toContain('<Unverified>');
@@ -551,7 +548,7 @@ it('consumes denial without minting a grant and safely binds untrusted registrat
   const c = await client();
   const transaction = await pending(c.client_id);
   const denied = await consent(transaction, [], consentCsrf(config, session, transaction), 'deny');
-  expect(new URL(denied.headers.get('location')!).searchParams.get('error')).toBe('access_denied');
+  expect((await callbackOf(denied)).searchParams.get('error')).toBe('access_denied');
   expect((await consent(transaction)).status).toBe(403);
   for (const redirect of ['http://remote.example/callback', 'javascript://x/%0aalert(1)'])
     await expect(
@@ -1014,11 +1011,17 @@ it('caps tool calls per connection and refuses the next until the window ends', 
 /** What a person sees on a consent page: its form inputs and its visible text. */
 function consentDocument(source: string) {
   const inputs: Record<string, string>[] = [];
+  const links: string[] = [];
+  let refresh: string | undefined;
   let text = '';
   const walk = (node: DefaultTreeAdapterMap['node']) => {
     if (node.nodeName === 'style') return;
-    if (node.nodeName === 'input' && 'attrs' in node)
-      inputs.push(Object.fromEntries(node.attrs.map((attr) => [attr.name, attr.value])));
+    const attrs =
+      'attrs' in node ? Object.fromEntries(node.attrs.map((a) => [a.name, a.value])) : {};
+    if (node.nodeName === 'input') inputs.push(attrs);
+    if (node.nodeName === 'a' && attrs.href) links.push(attrs.href);
+    if (node.nodeName === 'meta' && attrs['http-equiv'] === 'refresh')
+      refresh = /^0; url=(.+)$/u.exec(attrs.content ?? '')?.[1];
     if (node.nodeName === '#text' && 'value' in node) text += node.value;
     if ('childNodes' in node) for (const child of node.childNodes) walk(child);
   };
@@ -1031,8 +1034,21 @@ function consentDocument(source: string) {
     changes: inputs.find((input) => input.name === 'allow_changes'),
     terms: inputs.find((input) => input.name === 'accept_terms'),
     termsRevision: inputs.find((input) => input.name === 'terms_revision')?.value,
+    links,
+    refresh,
     text: text.replace(/\s+/gu, ' '),
   };
+}
+/**
+ * Where a decision hands the browser back: a page, not a redirect, because
+ * `form-action` governs every redirect after the post. Its link repeats the target.
+ */
+async function callbackOf(response: Response) {
+  expect(response.status).toBe(200);
+  expect(response.headers.get('location')).toBeNull();
+  const page = consentDocument(await response.text());
+  expect(page.links).toEqual([page.refresh]);
+  return new URL(page.refresh!);
 }
 async function consentView(transaction: string) {
   const page = await app.request(
@@ -1138,8 +1154,7 @@ it('accepts the shown Terms on the consent page and tells ended access from unre
     accept_terms: 'yes',
     terms_revision: policy.auth.terms_revision,
   });
-  expect(approved.status).toBe(303);
-  expect(new URL(approved.headers.get('location')!).searchParams.get('code')).toBeTruthy();
+  expect((await callbackOf(approved)).searchParams.get('code')).toMatch(/^.{20,}$/u);
   expect(
     await db
       .selectFrom('policy_acceptances')
@@ -1173,7 +1188,7 @@ it('refuses Terms accepted from a page showing an older revision and records not
     accept_terms: 'yes',
     terms_revision: page.termsRevision!,
   });
-  expect(approved.status).toBe(303);
+  expect((await callbackOf(approved)).searchParams.has('code')).toBe(true);
 });
 
 it('explains an expired approval link instead of a bare error', async () => {
@@ -1220,7 +1235,7 @@ async function grantedScope(options: { scope?: string; extra?: Record<string, st
   const transaction = await pending(c.client_id, options.scope);
   const view = await consentView(transaction);
   const approved = await approve(transaction, [tenant.workspaceId], options.extra);
-  const code = new URL(approved.headers.get('location')!).searchParams.get('code')!;
+  const code = (await callbackOf(approved)).searchParams.get('code')!;
   const response = await token(c.client_id, {
     grant_type: 'authorization_code',
     code,
@@ -1265,7 +1280,7 @@ it('never offers changes beyond the scope the client registered', async () => {
   const approved = await approve(transaction, [tenant.workspaceId], { allow_changes: 'yes' });
   const response = await token(registered.client_id, {
     grant_type: 'authorization_code',
-    code: new URL(approved.headers.get('location')!).searchParams.get('code')!,
+    code: (await callbackOf(approved)).searchParams.get('code')!,
     code_verifier: verifier,
     redirect_uri: callback,
   });

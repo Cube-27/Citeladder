@@ -47,11 +47,12 @@ form:not(:has(input[name=workspace_id]:checked)) button[value=approve]{opacity:.
 .alert{background:var(--danger-bg);color:var(--danger);border-radius:12px;padding:12px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}`;
 
-function document(title: string, body: Html) {
+function document(title: string, body: Html, refresh?: string) {
   return html`<!doctype html>
     <html lang="en">
       <head>
         <meta charset="utf-8" />
+        ${refresh ? html`<meta http-equiv="refresh" content="0; url=${refresh}" />` : ''}
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="noindex" />
         <title>${title} · CiteLadder</title>
@@ -250,6 +251,27 @@ export function consentPage(view: ConsentView) {
           <button class="secondary" name="decision" value="deny" formnovalidate>Deny</button>
         </div>
       </form>`,
+  );
+}
+
+/**
+ * The hand-back to the client after a decision. Browsers apply `form-action` to
+ * every redirect after a form post, so a 303 into a client whose callback hops
+ * origins (or uses a native scheme) is silently blocked after the one-time
+ * transaction is spent; a refresh is a fresh navigation.
+ */
+export function consentReturn(destination: string) {
+  const host = new URL(destination).host;
+  return document(
+    `Returning to ${host}`,
+    html`<div class="stack">
+      <h1>Returning to ${host}</h1>
+      <p>If nothing happens, continue below.</p>
+      <p class="actions">
+        <a class="button primary" href="${destination}">Continue to ${host}</a>
+      </p>
+    </div>`,
+    destination,
   );
 }
 
