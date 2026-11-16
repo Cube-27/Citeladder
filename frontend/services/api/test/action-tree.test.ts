@@ -228,6 +228,8 @@ describe('issue-group Actions', () => {
       // An Agent Action without findings has no secondary line.
       [agentPage.id, null],
     ]);
+    expect(read.page_kind).toBe('product');
+    expect(Date.parse(read.last_crawled_at)).toBeGreaterThan(Date.parse('2026-01-01'));
     expect((await request(foreign.seed, path)).status).toBe(404);
     const theirs = `/api/v1/projects/${foreign.seed.projectId}/urls/${page!.id}/actions`;
     expect((await request(foreign.seed, theirs)).status).toBe(404);
@@ -245,6 +247,13 @@ describe('issue-group Actions', () => {
       own.pages.map((page) => page.url),
     ]);
     expect(second.next_cursor).toBeNull();
+    // /p00 also carries the advisory and the Agent's page Action; /p01-/p02 the advisory.
+    expect(first.items.map((url) => [url.page_kind, url.open_action_count])).toEqual([
+      ['product', 3],
+      ['product', 2],
+      ['product', 2],
+      ...Array.from({ length: 7 }, () => ['product', 1]),
+    ]);
     expect((await request(foreign.seed, path)).status).toBe(404);
   });
 });

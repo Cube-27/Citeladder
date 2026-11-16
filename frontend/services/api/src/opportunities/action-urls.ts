@@ -4,7 +4,7 @@
  * the refresh transaction; a cleared Action keeps its last ones, like its last
  * members. A whole-site issue group touches no listed URL.
  */
-import { sql } from 'kysely';
+import { sql, type RawBuilder, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -32,13 +32,26 @@ function urlCursor(actionId: string, cursor: string) {
 }
 
 /**
- * One page of the URLs an Action touches, in URL order, with their total.
+ * A URL's page type in the crawl that last saw it: one probe of
+ * `uq_site_page_analysis_current`; null when that crawl did not classify it.
+ */
+export const pageKindOf = sql<string | null>`(select spa.page_kind from site_page_analyses spa
+  where spa.workspace_id = site_urls.workspace_id and spa.crawl_id = site_urls.last_seen_crawl_id
+    and spa.site_url_id = site_urls.id and spa.is_current)`;
+
+/**
+ * One page of the URLs an Action touches, in URL order, with their total, each
+ * with its page type and how many Actions matching `counted` touch it.
  * `wholeSite` marks an issue group whose rule names no page.
  */
 export async function actionUrlsPage(
   db: Database,
   action: { id: string; workspace_id: string; project_id: string },
-  { cursor, wholeSite }: { cursor: string | null; wholeSite: boolean },
+  {
+    cursor,
+    wholeSite,
+    counted,
+  }: { cursor: string | null; wholeSite: boolean; counted: RawBuilder<SqlBool> },
 ) {
   const after = cursor ? urlCursor(action.id, cursor) : null;
   let query = db
@@ -59,7 +72,18 @@ export async function actionUrlsPage(
       sql<boolean>`(site_urls.normalized_url collate "C", site_urls.id) > (${after.url} collate "C", ${after.siteUrlId}::uuid)`,
     );
   const rows = await query
-    .select(['site_urls.id as site_url_id', 'site_urls.normalized_url as url'])
+    .select([
+      'site_urls.id as site_url_id',
+      'site_urls.normalized_url as url',
+      pageKindOf.as('page_kind'),
+      sql<number>`(select count(*)::int from action_urls touching
+        join actions on actions.workspace_id = touching.workspace_id
+          and actions.id = touching.action_id
+        where touching.workspace_id = action_urls.workspace_id
+          and touching.site_url_id = action_urls.site_url_id and ${counted})`.as(
+        'open_action_count',
+      ),
+    ])
     .orderBy(sql`site_urls.normalized_url collate "C"`)
     .orderBy('site_urls.id')
     .limit(PAGE + 1)

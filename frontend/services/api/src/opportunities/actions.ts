@@ -467,11 +467,15 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
   };
 }
 
+/** A listed Action a reader counts as open: New or In progress. */
+const OPEN_LISTED_ACTION = sql<SqlBool>`${LISTED_ACTION} and actions.effective_status = any(${persistedStatuses(['open', 'in_progress'])}::text[])`;
+
 /** A page of the URLs `action` touches; an issue group naming none is the whole site. */
 function readActionUrls(db: Database, action: ActionRow, cursor: string | null) {
   return actionUrlsPage(db, action, {
     cursor,
     wholeSite: storedCohort(action)?.whole_site ?? false,
+    counted: OPEN_LISTED_ACTION,
   });
 }
 
