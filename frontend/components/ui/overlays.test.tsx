@@ -219,6 +219,37 @@ describe('Menu', () => {
     );
   });
 
+  it('reserves the check gutter on plain rows only in a menu with a checkable row', () => {
+    const lead = (name: string) =>
+      screen.getByRole('menuitem', { name }).querySelector('[data-menu-lead]');
+    const { unmount } = render(
+      <Menu open>
+        <MenuTrigger>Range</MenuTrigger>
+        <MenuContent>
+          <MenuItem>Reset</MenuItem>
+          <MenuRadioGroup value="month">
+            <MenuRadioItem value="week">Week</MenuRadioItem>
+            <MenuRadioItem value="month">Month</MenuRadioItem>
+          </MenuRadioGroup>
+        </MenuContent>
+      </Menu>,
+    );
+    expect(lead('Reset')).toBeInTheDocument();
+    expect(
+      screen.getByRole('menuitemradio', { name: 'Week' }).querySelector('[data-menu-lead]'),
+    ).toBeInTheDocument();
+    unmount();
+    render(
+      <Menu open>
+        <MenuTrigger>Actions</MenuTrigger>
+        <MenuContent>
+          <MenuItem>Reset</MenuItem>
+        </MenuContent>
+      </Menu>,
+    );
+    expect(lead('Reset')).toBeNull();
+  });
+
   it('runs the item reached with the arrow keys and closes', async () => {
     const user = userEvent.setup();
     const onRename = vi.fn();
@@ -259,6 +290,19 @@ describe('Tooltip', () => {
     focusByKeyboard(screen.getByRole('button', { name: 'Generate' }));
     const tip = await screen.findByRole('tooltip');
     expect(tip).toHaveTextContent('Coming soonG');
+  });
+
+  it('lets a long URL wrap inside the bubble', async () => {
+    const url = `https://example.com/${'a'.repeat(200)}`;
+    render(
+      <Tooltip content={url}>
+        <button type="button">Page</button>
+      </Tooltip>,
+    );
+    focusByKeyboard(screen.getByRole('button', { name: 'Page' }));
+    await screen.findByRole('tooltip');
+    const [text] = screen.getAllByText(url);
+    expect(text).toHaveClass('min-w-0', '[overflow-wrap:anywhere]');
   });
 });
 

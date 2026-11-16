@@ -10,10 +10,12 @@ import { cn } from '@/lib/utils';
 /**
  * TextLink — the text link, with the 2px focus ring.
  *
- * A link is always underlined at rest, wherever it stands (a sentence, a
- * table cell, a row title), so it never depends on colour or position alone;
- * text that is not a link is never underlined (an unsafe external URL renders
- * as plain text without one).
+ * A sentence link is underlined at rest (`underline="always"`, the default),
+ * so it never depends on colour alone. A table row title or a metric card's
+ * action label takes `underline="hover"`: `ink` text with no underline at
+ * rest (its place names it as the way in), the 1px current-colour underline
+ * appearing on hover and on keyboard focus. Text that is not a link is never
+ * underlined (an unsafe external URL renders as plain text without one).
  *
  *   tone `ink` (default, the app): `ink` with a `control-line` underline
  *     that turns `ink` on hover.
@@ -48,12 +50,21 @@ const UNDERLINE = {
   ink: 'decoration-control-line hover:decoration-current focus-visible:decoration-current [:root:not([data-public-surface])_&]:decoration-current',
 } as const;
 
-function textLinkClasses({ tone, text }: Readonly<{ tone: TextLinkTone; text: TextLinkText }>) {
-  const recipe = cn(
-    'focus-ring rounded-mark underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
-    TONE[tone],
-    tone === 'prose' ? UNDERLINE.prose : UNDERLINE.ink,
-  );
+export type TextLinkUnderline = 'always' | 'hover';
+
+function textLinkClasses({
+  tone,
+  text,
+  underline,
+}: Readonly<{ tone: TextLinkTone; text: TextLinkText; underline: TextLinkUnderline }>) {
+  const recipe =
+    underline === 'hover'
+      ? 'focus-ring rounded-mark text-ink no-underline decoration-current decoration-1 underline-offset-3 hover:underline focus-visible:underline'
+      : cn(
+          'focus-ring rounded-mark underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
+          TONE[tone],
+          tone === 'prose' ? UNDERLINE.prose : UNDERLINE.ink,
+        );
   return text === 'inherit' ? recipe : textRole(text, recipe);
 }
 
@@ -91,6 +102,8 @@ type TextLinkProps = Readonly<
     TextLinkTarget & {
       tone?: TextLinkTone;
       text?: TextLinkText;
+      /** `hover` for a row title or metric action label: no underline at rest. */
+      underline?: TextLinkUnderline;
       children: ReactNode;
     }
 >;
@@ -134,6 +147,7 @@ export function TextLink({
   variant = 'internal',
   tone = 'ink',
   text = 'body',
+  underline = 'always',
   href,
   projectId,
   asChild = false,
@@ -151,7 +165,7 @@ export function TextLink({
       </span>
     );
   }
-  const classes = cn(textLinkClasses({ tone, text }), className);
+  const classes = cn(textLinkClasses({ tone, text, underline }), className);
   const content = withGlyphs(variant, children);
   if (asChild) {
     return (

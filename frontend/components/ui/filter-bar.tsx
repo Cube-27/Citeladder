@@ -7,7 +7,7 @@ import {
   focusFieldOnEntry,
   type FilterDefinition,
 } from '@/components/ui/all-filters';
-import { FIELD_BOX } from '@/components/ui/input';
+import { SOFT_FIELD_BOX } from '@/components/ui/input';
 import {
   Menu,
   MenuContent,
@@ -188,7 +188,7 @@ export function FilterTrigger({
       data-active={active || undefined}
       data-fit={fit || undefined}
       className={cn(
-        FIELD_BOX,
+        SOFT_FIELD_BOX,
         'focus-input flex min-w-0 shrink-0 items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-45',
         fit ? 'w-auto max-w-full' : 'shell:w-[var(--filter-width)]',
         className,

@@ -134,7 +134,6 @@ export function ConnectStrip({
         </MenuTrigger>
         <MenuContent
           align="start"
-          width="trigger"
           onPointerEnter={menu.enter}
           onPointerLeave={menu.leave}
           onCloseAutoFocus={(event) => {

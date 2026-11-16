@@ -644,8 +644,9 @@
   --color-raised: #ffffff;
   --color-rule: #e4e6eb;
   --color-control-line: #838995;
-  /* A labelled button's soft edge: its words name it, so the edge needs no
-     3:1 (WCAG 1.4.11); fields and toggles keep `control-line`. */
+  /* The soft edge of a labelled button and of a search or filter control: its
+     words or icon name it, so the edge needs no 3:1 (WCAG 1.4.11); form
+     fields, checkboxes, radios and switches keep `control-line`. */
   --color-control-edge: #d5d8df;
   --color-ink: #16181d;
   --color-ink-2: #565c69;
@@ -728,8 +729,9 @@
   --radius-control: 6px;
   --radius-card: 8px;
   --radius-overlay: 12px;
+  /* One resting shadow: a control rests at a card's lift. */
   --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05);
-  --shadow-control: 0 1px 2px rgb(16 24 40 / 0.06);
+  --shadow-control: var(--shadow-card);
   --shadow-pop: 0 4px 12px rgb(16 24 40 / 0.1), 0 1px 2px rgb(16 24 40 / 0.06);
   --shadow-sheet: 0 16px 40px rgb(16 24 40 / 0.18);
   /* The accent mark ("you, here"). */

@@ -1,21 +1,30 @@
 import { useId, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
-import { X } from 'lucide-react';
+import { ArrowRight, X } from 'lucide-react';
 
 import { ProjectLink } from '@/components/ui/project-link';
 import { cn } from '@/lib/utils';
 
-/**
- * The tag face: 24px tall, never wider than its container. In the app it is
- * `caption-strong` in `ink` at radius 4; a static tag is a `well` fill with no
- * edge, so it never looks operable; a tag you can operate (`OPERABLE_TAG`)
- * carries the soft control edge and shadow, a draft the dashed control line.
- * The website keeps its `caption`, radius 2 and `surface` face with a hairline.
- */
-const TAG_FACE =
-  'type-caption type-caption-strong text-ink bg-well border-transparent [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:border-rule border inline-flex min-h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-1 rounded-mark px-2 normal-nums whitespace-nowrap';
+const TAG_SHAPE =
+  'type-caption border inline-flex min-h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-1 rounded-mark px-2 normal-nums whitespace-nowrap [[data-public-surface]_&]:bg-surface [[data-public-surface]_&]:border-rule [[data-public-surface]_&]:text-ink';
 
-/** The labelled control's soft edge: this tag can be operated (a link, a remove, an expander). */
-const OPERABLE_TAG = 'bg-surface border-control-edge shadow-control';
+/**
+ * The two tag looks, 24px tall, 12/16, radius 4, never wider than their
+ * container. A static tag is a `well` fill with no edge in `ink-2`, so it
+ * never looks operable. The website keeps its radius 2 `surface` face with a
+ * hairline.
+ */
+export const TAG_STATIC = cn(TAG_SHAPE, 'bg-well border-transparent text-ink-2');
+
+/**
+ * A tag you can operate (a link, a remove, an expander): `surface` with the
+ * soft control edge and shadow, `ink` text, the 6% ink hover. A link tag ends
+ * in a 12px arrow (`ArrowRight` for an app route).
+ */
+const OPERABLE_FACE = cn(TAG_SHAPE, 'bg-surface border-control-edge shadow-control text-ink');
+export const TAG_OPERABLE = cn(
+  OPERABLE_FACE,
+  '[:root:not([data-public-surface])_&]:hover:overlay-hover',
+);
 
 /**
  * What a tag is for. A status is a `StatusMark`, never
@@ -55,10 +64,9 @@ function TagShell({
       {...span}
       data-tag-kind={kind}
       className={cn(
-        TAG_FACE,
+        // A removable tag's operable part is its remove button, which takes the hover.
+        kind === 'removable' ? cn(OPERABLE_FACE, 'pe-0.5') : TAG_STATIC,
         kind === 'draft' && 'bg-surface border-control-line border-dashed',
-        kind === 'removable' && OPERABLE_TAG,
-        kind === 'removable' && 'pe-0.5',
         className,
       )}
     >
@@ -112,14 +120,11 @@ export function RecordTag({
     <ProjectLink
       href={href}
       data-tag-kind="record"
-      className={cn(
-        TAG_FACE,
-        OPERABLE_TAG,
-        'focus-ring hover:overlay-hover align-middle no-underline',
-      )}
+      className={cn(TAG_OPERABLE, 'focus-ring align-middle no-underline')}
     >
       <span className="min-w-0 truncate">{label}</span>
       {/* Read as two words; flex layout drops the space visually. */} {status}
+      <ArrowRight className="size-3 shrink-0" aria-hidden />
     </ProjectLink>
   );
 }
@@ -142,7 +147,7 @@ export function TagGroup({ labels }: Readonly<{ labels: readonly string[] }>) {
       {labels.length > 2 ? (
         <button
           type="button"
-          className={cn(TAG_FACE, OPERABLE_TAG, 'focus-ring hover:overlay-hover shrink-0')}
+          className={cn(TAG_OPERABLE, 'focus-ring shrink-0')}
           aria-expanded={expanded}
           aria-controls={id}
           aria-label={expanded ? undefined : `+${labels.length - 2} more tags`}

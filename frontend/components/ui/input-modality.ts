@@ -44,7 +44,7 @@ function set(next: InputModality) {
 
 const TEXT_FIELD =
   'input:not([type=button], [type=checkbox], [type=radio], [type=range], [type=reset], [type=submit]), textarea, select, [contenteditable]:not([contenteditable=false])';
-const OVERLAY = 'dialog, [role=dialog], [role=alertdialog]';
+const OVERLAY = 'dialog, [role=dialog], [role=alertdialog], [role=menu]';
 
 function textField(target: EventTarget | null): HTMLElement | null {
   return target instanceof HTMLElement && target.matches(TEXT_FIELD) ? target : null;

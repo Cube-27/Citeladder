@@ -27,10 +27,14 @@ import { cn } from '@/lib/utils';
  */
 const Provided = createContext(false);
 
-/** The tooltip's sheet: the pop face (`raised`, 1px `rule`, radius 8, `shadow-pop`). Help hints share it. */
+/**
+ * The tooltip's sheet: the pop face (`raised`, 1px `rule`, radius 8,
+ * `shadow-pop`), a block at most 288px wide. Help hints share it. A tooltip
+ * shows the full value, so it is the one place a URL may break anywhere.
+ */
 export const TOOLTIP_SHEET = cn(
   POP_FACE,
-  'tooltip-panel z-modal type-caption inline-flex max-w-72 items-center gap-2 px-2 py-1',
+  'tooltip-panel z-modal type-caption block max-w-72 min-w-0 px-2 py-1 [overflow-wrap:anywhere]',
 );
 
 /** True when a clamped or truncated element is not showing all of its text. */
@@ -99,9 +103,19 @@ export function Tooltip({
         {children}
       </TooltipPrimitive.Trigger>
       <TooltipPrimitive.Portal>
-        <TooltipPrimitive.Content side={side} sideOffset={8} className={TOOLTIP_SHEET}>
-          {content}
-          {shortcut ? <span className="type-code text-ink-2">{shortcut}</span> : null}
+        <TooltipPrimitive.Content
+          side={side}
+          sideOffset={8}
+          avoidCollisions
+          collisionPadding={8}
+          className={TOOLTIP_SHEET}
+        >
+          <span className="flex items-baseline gap-2">
+            <span data-tooltip-text="" className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+              {content}
+            </span>
+            {shortcut ? <span className="type-code text-ink-2 shrink-0">{shortcut}</span> : null}
+          </span>
         </TooltipPrimitive.Content>
       </TooltipPrimitive.Portal>
     </TooltipPrimitive.Root>

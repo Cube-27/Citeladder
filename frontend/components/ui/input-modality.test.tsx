@@ -80,6 +80,9 @@ describe('Focus that did not come from the keyboard', () => {
           <input aria-label="Email" />
           <button type="button">Send</button>
         </dialog>
+        <div role="menu" aria-label="Page kind">
+          <input aria-label="Search page kinds" />
+        </div>
       </>,
     );
     const email = screen.getByRole('textbox', { name: 'Email' });
@@ -100,6 +103,11 @@ describe('Focus that did not come from the keyboard', () => {
     // A press into a page field keeps its ring; only an overlay's field is quiet.
     await user.click(page);
     expect([quiet(page), quiet(email)]).toEqual([false, false]);
+
+    // A menu's search box shows the caret only, as a dialog's field does.
+    const search = screen.getByRole('textbox', { name: 'Search page kinds' });
+    await user.click(search);
+    expect(quiet(search)).toBe(true);
   });
 
   it('keeps the tooltip closed when the browser restores focus on returning to the tab', async () => {
