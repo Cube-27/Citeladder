@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react';
 
 import { Pressable, type PressableProps } from '@/components/ui/pressable';
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
+import { StateDot, type StateDotTone } from '@/components/ui/state-dot';
 import { textRole } from '@/components/ui/typography';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -12,22 +13,6 @@ import { cn } from '@/lib/utils';
  * tree line, every row 40px tall, so opening a level or a count changing only
  * moves what is below it.
  */
-
-/** A work item's state as a small ring: open, half-filled active, filled done, washed declined. */
-export type TreeDotTone = 'open' | 'active' | 'done' | 'declined';
-
-const DOT: Record<TreeDotTone, string> = {
-  open: 'border-ink-2',
-  active: 'border-warning bg-[conic-gradient(var(--color-warning)_0_50%,transparent_0)]',
-  done: 'border-positive bg-positive',
-  declined: 'border-negative bg-negative-wash',
-};
-
-function TreeDot({ tone }: Readonly<{ tone: TreeDotTone }>) {
-  return (
-    <span aria-hidden className={cn('size-3 shrink-0 rounded-full border-[1.5px]', DOT[tone])} />
-  );
-}
 
 function TreeChevron({ open }: Readonly<{ open: boolean }>) {
   return (
@@ -42,12 +27,12 @@ function TreeChevron({ open }: Readonly<{ open: boolean }>) {
 }
 
 /** A count in a small box, wide enough for three digits so a changing count moves nothing. */
-export function CountBox({ count }: Readonly<{ count: number }>) {
+function CountBox({ count }: Readonly<{ count: number }>) {
   return (
     <span
       className={textRole(
         'captionStrong',
-        'border-rule inline-flex h-5 min-w-[3.5ch] shrink-0 items-center justify-center rounded-sm border px-1 tabular-nums',
+        'border-rule inline-flex h-5 min-w-[4ch] shrink-0 items-center justify-center rounded-sm border px-1 tabular-nums',
       )}
     >
       {formatCount(count)}
@@ -65,10 +50,11 @@ export function TreeStatusRow({
   count,
   className,
   ...props
-}: Readonly<ToggleProps & { tone: TreeDotTone; name: string; count: string }>) {
+}: Readonly<ToggleProps & { tone: StateDotTone; name: string; count: string }>) {
   return (
     <Pressable
       {...props}
+      data-tree-row=""
       aria-expanded={open}
       className={cn(
         textRole('subheading'),
@@ -77,7 +63,7 @@ export function TreeStatusRow({
       )}
     >
       <TreeChevron open={open} />
-      <TreeDot tone={tone} />
+      <StateDot tone={tone} />
       {name}
       <span className={textRole('body', 'text-ink-2 min-w-[4ch] tabular-nums')}>{count}</span>
     </Pressable>
@@ -96,6 +82,7 @@ export function TreeGroupRow({
   return (
     <Pressable
       {...props}
+      data-tree-row=""
       aria-expanded={open}
       className={cn(
         textRole('subheading'),
@@ -131,7 +118,12 @@ export function TreeGroupingRow({
         !open && 'text-ink-2',
       )}
     >
-      <Pressable {...props} aria-expanded={open} className={cn('absolute inset-0', className)} />
+      <Pressable
+        {...props}
+        data-tree-row=""
+        aria-expanded={open}
+        className={cn('absolute inset-0', className)}
+      />
       <TreeChevron open={open} />
       <span className="relative flex">{tick}</span>
       <span className="pointer-events-none min-w-0 truncate">{name}</span>
@@ -154,7 +146,7 @@ export function TreeLine({ children }: Readonly<{ children: ReactNode }>) {
 
 /** A level's rows under one grouping: aligned past the grouping's chevron. */
 export function TreeLeaf({ children }: Readonly<{ children: ReactNode }>) {
-  return <div className="pb-2 pl-6">{children}</div>;
+  return <div className="ms-6 pb-2">{children}</div>;
 }
 
 /** An empty level in the rows' rhythm. */

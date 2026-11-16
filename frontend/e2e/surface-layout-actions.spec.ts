@@ -196,7 +196,8 @@ for (const width of [1280, 1600])
     await toggle(/^In progress, /);
     await check('Close a status');
 
-    await aeoRows.getByRole('button', { name: 'Show 10 more' }).click();
+    // Only AEO holds more than ten; its Show more sits in the rows box, under the table.
+    await page.getByRole('button', { name: 'Show 10 more' }).click();
     await expect(aeoRows.getByRole('row')).toHaveCount(21);
     await check('Show more');
 

@@ -337,6 +337,9 @@ export type ActionUserStatus = z.infer<typeof actionUserStatusSchema>;
 export const actionStatusUpdateRequestSchema = z.strictObject({ status: actionUserStatusSchema });
 export type ActionStatusUpdateRequest = z.input<typeof actionStatusUpdateRequestSchema>;
 
+/** A topic filter's longest value: the persisted theme's column width. */
+export const ACTION_TOPIC_MAX_CHARS = 255;
+
 /** The list filters a bulk change reaches through: the Actions list's own. */
 export const actionBulkFilterSchema = z.strictObject({
   status: actionStatusSchema,
@@ -348,7 +351,7 @@ export const actionBulkFilterSchema = z.strictObject({
   // A ticked grouping of the tree, under its group's key when not by goal.
   grouping: actionGroupingSchema.optional(),
   ownership: actionOwnershipSchema.optional(),
-  topic: z.string().max(200).optional(),
+  topic: z.string().max(ACTION_TOPIC_MAX_CHARS).optional(),
 });
 
 /**

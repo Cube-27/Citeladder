@@ -12,8 +12,8 @@ import {
   TreeLoading,
   TreeQuiet,
   TreeStatusRow,
-  type TreeDotTone,
 } from '@/components/ui/work-tree';
+import type { StateDotTone } from '@/components/ui/state-dot';
 import type { GroupingRef, TreeGroup, TreeGrouping } from '@/lib/agent/action-tree';
 import { ACTION_GROUPING_LABEL, ACTION_STATUS_LABEL, treeGroupLabel } from '@/lib/agent/vocabulary';
 import type { ActionStatus, ActionTree } from '@/lib/api/actions';
@@ -32,7 +32,7 @@ export const levelKey = {
 /** The id of a group's row, which the goal strip jumps to. */
 export const groupAnchor = (status: ActionStatus, group: string) => `actions-${status}-${group}`;
 
-const TONE: Record<ActionStatus, TreeDotTone> = {
+const TONE: Record<ActionStatus, StateDotTone> = {
   open: 'open',
   in_progress: 'active',
   done: 'done',

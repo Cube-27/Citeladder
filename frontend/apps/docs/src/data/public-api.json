@@ -46,7 +46,7 @@
           },
           "topic": {
             "type": "string",
-            "maxLength": 200
+            "maxLength": 255
           }
         },
         "required": ["status"],
@@ -11969,7 +11969,7 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "maxLength": 200
+                  "maxLength": 255
                 },
                 {
                   "type": "null"
@@ -12096,7 +12096,7 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "maxLength": 200
+                  "maxLength": 255
                 },
                 {
                   "type": "null"

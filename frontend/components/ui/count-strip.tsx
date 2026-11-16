@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Pressable } from '@/components/ui/pressable';
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
+import { StateDot } from '@/components/ui/state-dot';
 import { textRole } from '@/components/ui/typography';
 
 /**
@@ -45,7 +46,7 @@ export function CountStripCell({
   return (
     <div
       data-count-cell=""
-      className="bg-surface hover:overlay-hover relative grid h-[76px] min-w-0 content-between px-4 py-3"
+      className="bg-surface hover:overlay-hover relative flex h-[76px] min-w-0 flex-col justify-between px-4 py-3"
     >
       <Pressable aria-label={pressLabel} onClick={onPress} className="absolute inset-0" />
       <span
@@ -61,7 +62,7 @@ export function CountStripCell({
       <span
         className={textRole('label', 'pointer-events-none flex items-center gap-2 tabular-nums')}
       >
-        <span aria-hidden className="border-warning size-3 shrink-0 rounded-full border-[1.5px]" />
+        <StateDot tone="due" />
         {value ??
           (failed ? (
             <span className={textRole('body', 'text-ink-2')}>Unavailable</span>

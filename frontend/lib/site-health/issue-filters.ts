@@ -157,15 +157,6 @@ export const ISSUE_PRIORITY_PARAMS: IssuesParams = {
   finding_class: 'defect',
 };
 
-/** The Issues screen's address with one issue open on its tab, as the catalog writes it. */
-export function issueHref(section: IssueSection, groupId: string): string {
-  const params = new URLSearchParams();
-  const tab = sectionCodec.serialize(section);
-  if (tab) params.set('section', tab);
-  params.set('issue', groupId);
-  return `/issues?${params.toString()}`;
-}
-
 /**
  * Every URL key this module owns, as a `setUrlParams` patch. Params it does
  * not name (an inbound `campaign=`, say) survive untouched.

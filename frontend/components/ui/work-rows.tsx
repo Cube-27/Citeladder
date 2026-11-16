@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
  * source fold away.
  */
 const GRID =
-  'grid grid-cols-[20px_minmax(0,1fr)_120px] desktop:grid-cols-[20px_minmax(0,1fr)_92px_120px_110px] items-center gap-3 px-4';
+  'grid grid-cols-[20px_1fr_120px] desktop:grid-cols-[20px_1fr_92px_120px_110px] items-center gap-3 px-4';
 const WIDE = 'hidden desktop:block';
 
 export function WorkRows({
@@ -70,14 +70,14 @@ export function WorkRow({
   source: string;
 }>) {
   return (
-    <tr className={cn(GRID, 'border-rule hover:overlay-hover relative h-14 border-t')}>
+    <tr className={cn(GRID, 'border-rule hover:overlay-hover relative min-h-14 border-t')}>
       <td className="relative z-10 flex">{tick}</td>
       <td className="min-w-0">
         <TextLink
           href={href}
           text="label"
           underline="hover"
-          className="block truncate after:absolute after:inset-0"
+          className="block truncate before:absolute before:inset-x-0 before:inset-y-0"
         >
           {title}
         </TextLink>
@@ -98,6 +98,7 @@ export function WorkRowsMore({
 }: Readonly<{ onClick: () => void; disabled: boolean; children: string }>) {
   return (
     <Pressable
+      data-tree-row=""
       onClick={onClick}
       disabled={disabled}
       className={textRole(
