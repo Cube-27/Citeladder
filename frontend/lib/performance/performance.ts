@@ -26,6 +26,7 @@ import type {
 import {
   availabilityLabel,
   formatCount,
+  formatCountry,
   formatMean,
   formatWindowDate,
   percentText,
@@ -410,10 +411,12 @@ export function toggleSort(current: string, key: string): string {
   return `-${key}`;
 }
 
-/** Display a dimension row's value; DAYS renders its ISO key as a date. */
+/** Display a dimension row's value: a day's ISO key as a date, a country's code as its name. */
 export function formatDimensionValue(
   dimension: PerformanceDimension,
   displayValue: string,
 ): string {
-  return dimension === 'day' ? formatWindowDate(displayValue) : displayValue;
+  if (dimension === 'day') return formatWindowDate(displayValue);
+  if (dimension === 'country') return formatCountry(displayValue);
+  return displayValue;
 }
