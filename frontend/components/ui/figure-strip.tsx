@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type ComponentProps,
+  type CSSProperties,
   type ReactNode,
 } from 'react';
 import type { LucideIcon } from 'lucide-react';
@@ -204,9 +205,10 @@ function FigureCell({
       data-figure-kind={leadKind}
       // A narrow row's labels may take two lines, so every label in it reserves two.
       data-label-lines={narrow && !segment.labelHidden ? 2 : undefined}
-      data-label-hidden={segment.labelHidden || undefined}
       data-pressable={pressable || undefined}
       data-selected={segment.selected || undefined}
+      // The cell's share of its row: `flex-basis` in globals.css reads `--row`.
+      style={{ '--row': rowSize } as CSSProperties}
       className={cn('relative min-w-0', pressable && 'hover:overlay-hover active:overlay-pressed')}
     >
       <FigureLabel segment={segment} />
@@ -258,7 +260,7 @@ function FigureLabel({ segment }: FigurePart) {
   else text = <span className="min-w-0">{segment.label}</span>;
   const hint = segment.loading ? null : <FigureHint segment={segment} />;
   return (
-    <dt className="type-body text-ink-2 flex min-w-0 items-start justify-between gap-2">
+    <dt className="type-body text-ink-2 mb-1 flex min-w-0 items-start justify-between gap-2">
       <span className="flex min-w-0 items-center gap-2 self-center">{text}</span>
       {segment.marker || hint ? (
         <span className={cn('flex shrink-0 items-center gap-2', pressableLayer(segment))}>
@@ -313,7 +315,10 @@ function FigureValueLine({ segment }: FigurePart) {
   return (
     <dd
       data-figure-value=""
-      className={cn('flex min-w-0 items-baseline gap-2', !segment.score && 'min-h-8')}
+      className={cn(
+        'flex min-w-0 items-baseline gap-2 whitespace-nowrap',
+        !segment.score && 'min-h-8',
+      )}
     >
       {segment.score ? null : <FigureValue segment={segment} />}
       {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}

@@ -2370,7 +2370,6 @@ label {
    apart with no edge and no divider. A card is two rows (label and its hint,
    then value and Delta): 88 tall, 96 for a score's ring. */
 [data-figure-cell] {
-  --row: 1;
   flex: 0 0 calc((100% - (var(--row) - 1) * 16px) / var(--row));
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2382,7 +2381,6 @@ label {
   overflow-wrap: normal;
   word-break: normal;
   hyphens: manual;
-  margin-bottom: 4px;
 }
 [data-figure-cell][data-label-lines='2'] > dt {
   min-height: calc(2 * var(--text-body-sm--line-height));
@@ -2390,7 +2388,6 @@ label {
 [data-figure-cell] > [data-figure-value] {
   grid-row: 2;
   grid-column: -2;
-  white-space: nowrap;
 }
 /* An absent value is its word at body size on the value's 32px line. */
 [data-figure-value] [data-absence] {
@@ -2428,21 +2425,6 @@ label {
 [data-figure-kind='score'] > [data-figure-value] {
   grid-row: 3;
 }
-[data-row-size='2'] {
-  --row: 2;
-}
-[data-row-size='3'] {
-  --row: 3;
-}
-[data-row-size='4'] {
-  --row: 4;
-}
-[data-row-size='5'] {
-  --row: 5;
-}
-[data-row-size='6'] {
-  --row: 6;
-}
 /* The edge is an inset shadow, so 16 padding makes an 88 card (96 with a ring). */
 :root:not([data-public-surface]) :is([data-figure-cell], [data-figure-lead]) {
   padding: 16px;
@@ -2467,7 +2449,6 @@ label {
 [data-figure-cell][data-pressable] {
   --fp: 12px 16px;
   --fe: 1px solid var(--color-control-edge);
-  transition: background-color var(--motion-fast) var(--ease-standard);
 }
 :root:not([data-public-surface]) [data-figure-cell][data-selected] {
   background-color: var(--color-well);
