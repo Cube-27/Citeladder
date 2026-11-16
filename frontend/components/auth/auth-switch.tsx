@@ -26,7 +26,8 @@ function extent(element: HTMLElement) {
   return {
     open: { height: `${element.offsetHeight}px`, marginTop: '0px', opacity: 1 },
     shut: { height: '0px', marginTop: `${-gap}px`, opacity: 0 },
-    duration: Number.parseFloat(style.getPropertyValue('--motion-open')) || 0,
+    opening: Number.parseFloat(style.getPropertyValue('--motion-open')) || 0,
+    closing: Number.parseFloat(style.getPropertyValue('--motion-close')) || 0,
     enter: style.getPropertyValue('--ease-standard').trim(),
     exit: style.getPropertyValue('--ease-exit').trim(),
   };
@@ -34,10 +35,10 @@ function extent(element: HTMLElement) {
 
 /** Grow or shrink the field, clipped, as its column opens or closes around it. */
 function resize(element: HTMLElement, grow: boolean, fill: FillMode): Animation {
-  const { open, shut, duration, enter, exit } = extent(element);
+  const { open, shut, opening, closing, enter, exit } = extent(element);
   element.style.overflow = 'hidden';
   const animation = element.animate(grow ? [shut, open] : [open, shut], {
-    duration,
+    duration: grow ? opening : closing,
     easing: (grow ? enter : exit) || undefined,
     fill,
   });
