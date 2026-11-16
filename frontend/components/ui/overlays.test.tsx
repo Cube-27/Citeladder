@@ -122,13 +122,23 @@ describe('Dialog', () => {
 describe('Drawer', () => {
   it('renders a labelled contextual sheet with a shared close action', () => {
     render(
-      <Drawer open onOpenChange={() => {}} title="Evidence" description="Persisted sources">
+      <Drawer
+        open
+        onOpenChange={() => {}}
+        title="Evidence"
+        description="Persisted sources"
+        footer={<button type="button">Save</button>}
+      >
         <p>Source details</p>
       </Drawer>,
     );
     expect(screen.getByRole('dialog', { name: 'Evidence' })).toBeInTheDocument();
     expect(screen.getByText('Persisted sources')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close drawer' })).toBeInTheDocument();
+    // The footer's actions sit at its end.
+    const footer = screen.getByRole('button', { name: 'Save' }).parentElement;
+    expect(footer?.tagName).toBe('FOOTER');
+    expect(footer).toHaveClass('justify-end');
   });
 
   it('closes from Escape or the scrim and restores focus to the opening control', async () => {

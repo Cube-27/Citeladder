@@ -53,17 +53,12 @@ function useRevealSelected(selected: string | null) {
  * items take focus themselves, so the frame is no tab stop.
  */
 function StripFrame({
-  fill = false,
   children,
 }: Readonly<{
-  fill?: boolean;
   children: (ref: RefObject<HTMLDivElement | null>, region: ScrollRegionProps) => ReactNode;
 }>) {
   return (
-    <ScrollFrame
-      stepper="row-end"
-      className={cn('inline-flex max-w-full shrink-0', fill && 'flex w-full')}
-    >
+    <ScrollFrame stepper="row-end" className="inline-flex max-w-full shrink-0">
       {children}
     </ScrollFrame>
   );
@@ -144,17 +139,13 @@ const ActiveTabContext = createContext<string | null>(null);
 type TabStripProps<T extends string> = {
   items: readonly TabItem<T>[];
   ariaLabel: string;
-  className?: string;
   onIntent?: (value: T) => void;
-  /** Items share the strip's full width (a card head). */
-  fill?: boolean;
 };
 
 export type TabsProps<T extends string> = TabStripProps<T> & {
   value: T;
   onValueChange: (value: T) => void;
   children?: ReactNode;
-  rootClassName?: string;
   /** Section tabs over their panel: one workspace gap between strip and panel. */
   spaced?: boolean;
 };
@@ -225,15 +216,13 @@ export function HeldTabRow({ labels }: Readonly<{ labels: readonly string[] }>) 
 function TabStrip<T extends string>({
   items,
   ariaLabel,
-  className,
   onIntent,
-  fill = false,
   kind = 'section',
 }: Readonly<TabStripProps<T> & { kind?: Exclude<TabKind, 'segment'> }>) {
   const active = useContext(ActiveTabContext);
   const strip = useRevealSelected(active);
   return (
-    <StripFrame fill={fill}>
+    <StripFrame>
       {(ref, region) => (
         <TabsPrimitive.List
           {...region}
@@ -242,7 +231,7 @@ function TabStrip<T extends string>({
             strip.current = node;
           }}
           aria-label={ariaLabel}
-          className={cn(TAB_STRIP, 'gap-1', fill && 'flex w-full', className)}
+          className={cn(TAB_STRIP, 'gap-1')}
         >
           {items.map((item) => (
             <TabsPrimitive.Trigger
@@ -254,11 +243,7 @@ function TabStrip<T extends string>({
                 onIntent?.(item.value);
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
               }}
-              className={tabFace({
-                kind,
-                selected: item.value === active,
-                className: fill ? 'min-w-max flex-1 basis-0' : undefined,
-              })}
+              className={tabFace({ kind, selected: item.value === active })}
             >
               {item.label}
               {item.count === undefined ? null : <ControlCount count={item.count} />}
@@ -275,7 +260,6 @@ export function Tabs<T extends string>({
   value,
   onValueChange,
   children,
-  rootClassName,
   spaced = false,
   ...bar
 }: Readonly<TabsProps<T>>) {
@@ -283,7 +267,7 @@ export function Tabs<T extends string>({
     <TabsRoot
       value={value}
       onValueChange={onValueChange}
-      className={cn(spaced && 'grid min-w-0 gap-[var(--workspace-gap)]', rootClassName)}
+      className={cn(spaced && 'grid min-w-0 gap-[var(--workspace-gap)]')}
     >
       <TabStrip {...bar} />
       {children}

@@ -41,8 +41,6 @@ const COLUMN_WIDTH = {
   metric: { kind: 'steps', steps: 40 },
   /** A status badge or a short label. */
   status: { kind: 'steps', steps: 32 },
-  /** A status badge and its short label on one line ("Medium · Web fundamentals"). */
-  statusLabel: { kind: 'steps', steps: 64 },
   /** A category badge longer than a status ("Striking distance", a purpose). */
   category: { kind: 'steps', steps: 44 },
   /** A date or a date-time, in the mono data face ("Jan 1, 2026, 12:00 AM"). */

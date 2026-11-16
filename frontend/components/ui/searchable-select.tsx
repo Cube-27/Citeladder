@@ -21,8 +21,6 @@ export function SearchableSelect({
   onChange,
   renderLeading,
   renderOptionEnd,
-  unknownValueFallback,
-  inputClassName,
   'aria-describedby': ariaDescribedBy,
   'aria-invalid': ariaInvalid,
   'aria-required': ariaRequired,
@@ -38,8 +36,6 @@ export function SearchableSelect({
   onChange: (value: string) => void;
   renderLeading?: SelectOptionRenderer;
   renderOptionEnd?: SelectOptionRenderer;
-  unknownValueFallback?: (value: string) => string;
-  inputClassName?: string;
   'aria-describedby'?: string;
   'aria-invalid'?: boolean;
   'aria-required'?: boolean;
@@ -51,7 +47,7 @@ export function SearchableSelect({
   const [highlight, setHighlight] = useState(0);
 
   const selected = options.find((option) => option.value === value);
-  const text = inputText(query, selected?.label, unknownValueFallback, value);
+  const text = query ?? (selected?.label || value);
   const needle = (query ?? '').trim().toLowerCase();
   const filtered = needle ? options.filter((option) => matches(option, needle)) : options;
   const showList = open && filtered.length > 0;
@@ -104,7 +100,7 @@ export function SearchableSelect({
         value={text}
         disabled={disabled}
         placeholder={placeholder}
-        className={cn(renderLeading && selected && 'pl-10', inputClassName)}
+        className={cn(renderLeading && selected && 'pl-10')}
         onFocus={() => {
           setOpen(true);
           setQuery('');
@@ -207,15 +203,4 @@ function optionGridClass(hasLeading: boolean, hasEnd: boolean) {
   if (hasLeading) return 'grid-cols-[auto_minmax(0,1fr)]';
   if (hasEnd) return 'grid-cols-[minmax(0,1fr)_auto]';
   return 'grid-cols-[minmax(0,1fr)]';
-}
-
-function inputText(
-  query: string | null,
-  selectedLabel: string | undefined,
-  unknownValueFallback: ((value: string) => string) | undefined,
-  value: string,
-) {
-  if (query !== null) return query;
-  if (selectedLabel) return selectedLabel;
-  return unknownValueFallback ? unknownValueFallback(value) : value;
 }

@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import type { ChartHeight } from '@/components/ui/chart';
 import {
   MarkerMark,
   SERIES_FILL,
@@ -16,9 +17,7 @@ const FRAME_HEIGHT = {
   sm: 'min-h-[var(--chart-height-sm)]',
   md: 'min-h-[var(--chart-height-md)]',
   lg: 'min-h-[var(--chart-height-lg)]',
-} as const;
-
-export type FrameHeight = keyof typeof FRAME_HEIGHT;
+} as const satisfies Record<ChartHeight, string>;
 
 /**
  * ChartFrame — the box every chart and every state standing in for it share
@@ -32,7 +31,7 @@ export function ChartFrame({
   summary,
   children,
 }: Readonly<{
-  height?: FrameHeight;
+  height?: ChartHeight;
   /** One or two sentences: what the chart shows and where it ends. */
   summary?: string;
   children: ReactNode;

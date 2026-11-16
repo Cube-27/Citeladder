@@ -1,4 +1,4 @@
-import { useId, useState, type ComponentPropsWithoutRef, type ReactNode } from 'react';
+import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { ArrowRight, X } from 'lucide-react';
 
 import { ProjectLink } from '@/components/ui/project-link';
@@ -123,36 +123,5 @@ export function RecordTag({
       {/* Read as two words; flex layout drops the space visually. */} {status}
       <ArrowRight className="size-3 shrink-0" aria-hidden />
     </ProjectLink>
-  );
-}
-
-/** Two tags and a "+n" control that expands the rest in place, for touch and keyboard. */
-export function TagGroup({ labels }: Readonly<{ labels: readonly string[] }>) {
-  const [expanded, setExpanded] = useState(false);
-  const id = useId();
-  const visible = expanded ? labels : labels.slice(0, 2);
-  return (
-    // Folded, the two tags give way so "+n" stays on their line; open, the tags wrap.
-    <div className={cn('flex min-w-0 items-center gap-1', expanded && 'flex-wrap')}>
-      <span id={id} className="contents">
-        {visible.map((label, index) => (
-          <Tag key={`${index}:${label}`} className={expanded ? undefined : 'shrink'}>
-            {label}
-          </Tag>
-        ))}
-      </span>
-      {labels.length > 2 ? (
-        <button
-          type="button"
-          className={cn(TAG_OPERABLE, 'focus-ring shrink-0')}
-          aria-expanded={expanded}
-          aria-controls={id}
-          aria-label={expanded ? undefined : `+${labels.length - 2} more tags`}
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? 'Show less' : `+${labels.length - 2}`}
-        </button>
-      ) : null}
-    </div>
   );
 }

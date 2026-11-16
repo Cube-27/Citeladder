@@ -14,8 +14,7 @@ import { SHEET_FACE } from '@/components/ui/slip';
  * on the scrim. The header (eyebrow,
  * the section title at 500, 22/28, description) and the footer are fixed behind 1px
  * `line` rules; only the body scrolls, with `modal-padding` and 16px between
- * blocks. `footerStart` holds a delete or secondary action on the left,
- * `footer` the actions on the right.
+ * blocks. `footer` holds the actions on the right.
  */
 export function Drawer({
   open,
@@ -25,13 +24,10 @@ export function Drawer({
   description,
   children,
   footer,
-  footerStart,
   body = 'scroll',
-  bodyLabel,
   closeLabel = 'Close drawer',
   side = 'right',
   hideHeader = false,
-  onAfterClose,
   width = 'narrow',
 }: Readonly<{
   open: boolean;
@@ -41,22 +37,17 @@ export function Drawer({
   description?: ReactNode;
   children: ReactNode;
   footer?: ReactNode;
-  footerStart?: ReactNode;
   /**
    * `scroll`: the body scrolls as one padded column. `dock`: the body is a
    * docked thread — its thread scrolls in its own padded region and a
    * composer docks under it, so the body itself neither scrolls nor pads.
    */
   body?: 'scroll' | 'dock';
-  /** Names a scrolling content region when it has independent navigation. */
-  bodyLabel?: string;
   closeLabel?: string;
   /** `left` is the app's navigation sheet on a narrow screen. */
   side?: 'left' | 'right';
   /** Keeps the accessible title but removes the visible header. */
   hideHeader?: boolean;
-  /** Runs after focus returns to the drawer's opener. */
-  onAfterClose?: () => void;
   /**
    * `narrow` (default, 560) for one item's fields; `wide` (640) for evidence
    * that sets an answer beside its sources. The `left` navigation sheet is
@@ -65,7 +56,6 @@ export function Drawer({
   width?: 'narrow' | 'wide';
 }>) {
   const returnFocus = useReturnFocus(open);
-  const Body = bodyLabel ? 'section' : 'div';
   const close = (
     <DialogPrimitive.Close asChild>
       <IconButton
@@ -83,10 +73,7 @@ export function Drawer({
         <DialogPrimitive.Overlay className={cn('drawer-overlay', SCRIM)} />
         <DialogPrimitive.Content
           {...(description ? {} : { 'aria-describedby': undefined })}
-          onCloseAutoFocus={(event) => {
-            returnFocus(event);
-            onAfterClose?.();
-          }}
+          onCloseAutoFocus={returnFocus}
           data-side={side}
           className={cn(
             SHEET_FACE,
@@ -102,8 +89,7 @@ export function Drawer({
             hidden={hideHeader}
             close={close}
           />
-          <Body
-            aria-label={bodyLabel}
+          <div
             className={cn(
               'min-h-0 flex-1',
               body === 'dock'
@@ -112,11 +98,10 @@ export function Drawer({
             )}
           >
             {children}
-          </Body>
-          {footer || footerStart ? (
-            <footer className="border-rule flex items-center justify-between gap-2 border-t px-[var(--card-padding)] py-4">
-              <div className="flex items-center gap-2">{footerStart}</div>
-              <div className="flex items-center gap-2">{footer}</div>
+          </div>
+          {footer ? (
+            <footer className="border-rule flex items-center justify-end gap-2 border-t px-[var(--card-padding)] py-4">
+              {footer}
             </footer>
           ) : null}
         </DialogPrimitive.Content>

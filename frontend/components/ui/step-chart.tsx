@@ -1,13 +1,7 @@
 import { useId, useState, type ComponentProps, type KeyboardEvent } from 'react';
 
-import { CHART_HEIGHT_PX, chartPath, useChartWidth } from '@/components/ui/chart';
-import {
-  ChartFrame,
-  ChartKey,
-  ChartTable,
-  ChartTipSheet,
-  type FrameHeight,
-} from '@/components/ui/chart-frame';
+import { CHART_HEIGHT_PX, chartPath, useChartWidth, type ChartHeight } from '@/components/ui/chart';
+import { ChartFrame, ChartKey, ChartTable, ChartTipSheet } from '@/components/ui/chart-frame';
 import {
   AXIS_TEXT,
   EndLabels,
@@ -137,7 +131,7 @@ export function StepChart({
   events?: readonly TrendEvent[];
   /** What the chart shows, e.g. "Mention rate over time". */
   label: string;
-  height?: FrameHeight;
+  height?: ChartHeight;
   yMin?: number;
   yMax?: number;
   /** An axis tick: `42` as `42%`. */

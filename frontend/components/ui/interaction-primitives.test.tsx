@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vite-plus/test';
 import { Button } from './button';
 import { Checkbox } from './checkbox';
 import { ChipInput, type ChipItem } from './chip-input';
-import { CsvImportFileInput, CsvImportTrigger } from './csv-import';
+import { CsvImportFileInput } from './csv-import';
 import { RadioGroup } from './radio-group';
 import { SearchField } from './search-field';
 import { Select } from './select';
@@ -231,16 +231,6 @@ describe('authenticated interaction primitives', () => {
     await user.keyboard('{Backspace}');
     expect(screen.queryByText('Trail shoes, waterproof')).not.toBeInTheDocument();
     expect(screen.getByText('Running shoes')).toBeInTheDocument();
-  });
-
-  it('allows selecting the same CSV file again', () => {
-    const onSelect = vi.fn();
-    render(<CsvImportTrigger accessibleLabel="Import products" onSelect={onSelect} />);
-    const input = screen.getByLabelText('Import products');
-    const file = new File(['name\nExample'], 'products.csv', { type: 'text/csv' });
-    fireEvent.change(input, { target: { files: [file] } });
-    fireEvent.change(input, { target: { files: [file] } });
-    expect(onSelect).toHaveBeenCalledTimes(2);
   });
 
   it('resets the CSV field after forwarding its selected file', () => {

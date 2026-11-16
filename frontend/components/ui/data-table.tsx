@@ -75,7 +75,6 @@ export function DataTable({
   pager,
   busy,
   minWidth,
-  pinFirstColumn = true,
   selection,
   footer,
   label,
@@ -101,8 +100,6 @@ export function DataTable({
   /** A background refetch while the current rows stay on screen. */
   busy?: Readonly<{ active: boolean; label: string }>;
   minWidth?: TableMinWidth;
-  /** Keep the identity column (and the selection box) in view while the table scrolls sideways. */
-  pinFirstColumn?: boolean;
   selection?: DataTableSelection;
   /** A note in the footer bar (a source, a period, the time zone). */
   footer?: ReactNode;
@@ -117,9 +114,9 @@ export function DataTable({
 }>) {
   const headingId = useId();
   const level = useContext(StateHeadingLevelContext);
-  const parts = dataTableParts({ title, label, headingId, columns, selection, pinFirstColumn });
+  const parts = dataTableParts({ title, label, headingId, columns, selection });
   const paging = pagingLayout(pager, pageSize, reserveRows);
-  const scroll = useScrollFrame({ label: parts.regionLabel, start: !pinFirstColumn });
+  const scroll = useScrollFrame({ label: parts.regionLabel, start: false });
   useFlexibleColumnCheck({ columns, title, label });
   const replacing = replacingState(state);
   const steppers = <ScrollSteppers state={scroll} />;
@@ -186,20 +183,17 @@ function dataTableParts({
   headingId,
   columns,
   selection,
-  pinFirstColumn,
 }: Readonly<{
   title?: string;
   label?: string;
   headingId: string;
   columns: readonly DataTableColumn[];
   selection?: DataTableSelection;
-  pinFirstColumn: boolean;
 }>) {
   const naming = title
     ? { ariaLabelledBy: headingId, ariaLabel: undefined }
     : { ariaLabelledBy: undefined, ariaLabel: label };
-  let pinned: 0 | 1 | 2 = 0;
-  if (pinFirstColumn) pinned = selection ? 2 : 1;
+  const pinned: 1 | 2 = selection ? 2 : 1;
   return {
     colSpan: columns.length + (selection ? 1 : 0),
     regionLabel: title ?? label ?? 'Table',
@@ -297,7 +291,7 @@ function DataTableFrame({
   minWidth: CSSProperties;
   layout: ReturnType<typeof columnLayout>;
   naming: { ariaLabelledBy?: string; ariaLabel?: string };
-  pinned: 0 | 1 | 2;
+  pinned: 1 | 2;
   children: ReactNode;
 }>) {
   usePinnedPadding(scroll.ref, pinned);
@@ -305,7 +299,7 @@ function DataTableFrame({
     <div
       data-data-table-frame=""
       {...layout}
-      data-pinned={pinned || undefined}
+      data-pinned={pinned}
       hidden={hidden}
       className="isolate min-w-0"
       style={minWidth}

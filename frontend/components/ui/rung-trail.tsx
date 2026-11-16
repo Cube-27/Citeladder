@@ -10,18 +10,9 @@ import { cn } from '@/lib/utils';
  * The one state set every step takes: pending
  * (`rule` rung), running (the live ink rung), done (ink rung, check),
  * failed (crimson rung, cross), unavailable (`well` rung and its word), unknown (hollow
- * rung, question glyph; never read as unavailable), awaiting your decision
- * (dashed rung, with the decision buttons) and decided (solid ink rung).
+ * rung, question glyph; never read as unavailable).
  */
-export type RungStatus =
-  | 'pending'
-  | 'running'
-  | 'done'
-  | 'failed'
-  | 'unavailable'
-  | 'unknown'
-  | 'awaiting'
-  | 'decided';
+export type RungStatus = 'pending' | 'running' | 'done' | 'failed' | 'unavailable' | 'unknown';
 
 export type TrailStep = Readonly<{
   /** Stable key; the label when omitted. */
@@ -32,8 +23,6 @@ export type TrailStep = Readonly<{
   detail?: string | null;
   /** Elapsed or finishing time, already formatted ("0:42"). */
   time?: string;
-  /** The decision buttons of an `awaiting` step. */
-  actions?: ReactNode;
 }>;
 
 /** The word a screen reader hears after each label. */
@@ -44,8 +33,6 @@ const STATUS_WORD = {
   failed: 'Failed',
   unavailable: 'Unavailable',
   unknown: 'Unknown',
-  awaiting: 'Awaiting your decision',
-  decided: 'Decided',
 } as const satisfies Record<RungStatus, string>;
 
 function rungFace(status: RungStatus) {
@@ -55,7 +42,6 @@ function rungFace(status: RungStatus) {
     case 'running':
       return 'bg-ink animate-live-rung';
     case 'done':
-    case 'decided':
       return 'bg-ink';
     case 'failed':
       return 'bg-negative';
@@ -63,8 +49,6 @@ function rungFace(status: RungStatus) {
       return 'bg-well';
     case 'unknown':
       return 'border border-control-line';
-    case 'awaiting':
-      return 'border border-dashed border-control-line';
     default: {
       const unreachable: never = status;
       return unreachable;
@@ -73,8 +57,7 @@ function rungFace(status: RungStatus) {
 }
 
 function StepGlyph({ status }: Readonly<{ status: RungStatus }>) {
-  if (status === 'done' || status === 'decided')
-    return <Icon icon={Check} className="text-ink-2 my-0" />;
+  if (status === 'done') return <Icon icon={Check} className="text-ink-2 my-0" />;
   if (status === 'failed') return <Icon icon={X} className="text-negative my-0" />;
   if (status === 'unknown') return <Icon icon={CircleHelp} className="text-ink-2 my-0" />;
   return null;
@@ -202,7 +185,6 @@ function RungRow({
             {STATUS_WORD.unavailable}
           </span>
         ) : null}
-        {step.actions ? <span className="flex flex-wrap gap-2 pt-2">{step.actions}</span> : null}
       </span>
       <span className="type-caption min-w-[6ch] text-right tabular-nums">{step.time}</span>
     </li>

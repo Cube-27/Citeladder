@@ -64,18 +64,13 @@ describe('RungTrail', () => {
     expect(failed).not.toHaveAttribute('aria-current');
   });
 
-  it('keeps unknown apart from unavailable and offers an awaiting step its decision', () => {
+  it('keeps unknown apart from unavailable', () => {
     render(
       <RungTrail
         label="Agent activity"
         steps={[
           { label: 'Read traffic', status: 'unavailable' },
           { label: 'Read page', status: 'unknown' },
-          {
-            label: 'Mark implemented',
-            status: 'awaiting',
-            actions: <button type="button">Approve</button>,
-          },
         ]}
       />,
     );
@@ -84,13 +79,8 @@ describe('RungTrail', () => {
     expect(items.map((item) => item.getAttribute('data-rung-status'))).toEqual([
       'unavailable',
       'unknown',
-      'awaiting',
     ]);
     expect(items[0]).toHaveTextContent('Read traffic, Unavailable');
     expect(items[1]).toHaveTextContent('Read page, Unknown');
-    expect(screen.getByRole('button', { name: 'Approve' }).closest('li')).toHaveAttribute(
-      'data-rung-status',
-      'awaiting',
-    );
   });
 });

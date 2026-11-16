@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 
+import type { ChartHeight } from '@/components/ui/chart';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
@@ -29,8 +30,6 @@ export type LoadingShape =
   | Readonly<{ kind: 'figures'; count?: number }>
   | Readonly<{ kind: 'chart'; height?: ChartHeight }>
   | Readonly<{ kind: 'thread' }>;
-
-export type ChartHeight = 'sm' | 'md' | 'lg';
 
 const CHART_HEIGHT: Record<ChartHeight, string> = {
   sm: 'h-[var(--chart-height-sm)]',
@@ -84,13 +83,12 @@ function cellWidth(columns: number, cell: number): string {
 export function TableBlocks({
   columns = 4,
   rows = 5,
-  head = true,
-}: Readonly<{ columns?: number; rows?: number; head?: boolean }>) {
+}: Readonly<{ columns?: number; rows?: number }>) {
   const cells = range(Math.max(1, columns));
   const width = (cell: number) => cellWidth(columns, cell);
   return (
     <span className="grid">
-      {head ? <span className="bg-well block h-[var(--table-header-height)] rounded-sm" /> : null}
+      <span className="bg-well block h-[var(--table-header-height)] rounded-sm" />
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4 px-4">
           {cells.map((cell) => (

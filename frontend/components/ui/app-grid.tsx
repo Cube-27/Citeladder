@@ -11,12 +11,10 @@ import { cn } from '@/lib/utils';
  * In the main column the breakpoints are the column's width, so a wider
  * sidebar stacks a grid (`column-split:`/`column-wide:` in globals.css); the
  * px below are the viewport widths they match at the default sidebar.
- * A KPI row is one row from 981px (4 across at the owner's 982px,
- * never 2 × 2, never 2 + 1) and one column on a phone:
+ * A KPI row is one row from 981px (never 2 × 2, never 2 + 1) and one
+ * column on a phone:
  *
- *   `quarters`    — four equal (a KPI row).
- *   `fifths`      — five equal (a five-figure KPI row).
- *   `pair`        — two equal (a two-figure KPI row).
+ *   `pair`      — two equal (a two-figure KPI row).
  *   `thirds`      — three equal: one row from 981px, never 2 + 1.
  *   `main-aside`  — 2fr + 1fr (a chart beside a ranked list or facts);
  *                   stacks below 1280px.
@@ -24,21 +22,16 @@ import { cn } from '@/lib/utils';
  *   `table-chart` — 5fr + 4fr: a table of several figure columns beside
  *                   its history chart, so every row keeps its name and the
  *                   chart keeps room for its lines; stacks below 1280px.
- *   `list-detail` — a selectable list beside the selected item's evidence,
- *                   from 981px; the columns align to the top.
  *   `slips`       — as many slips as fit, each at least 280 (two at 982).
  *
  * Grids never nest a second AppGrid and never set widths on their children.
  */
 const LAYOUT = {
-  quarters: 'column-split:grid-cols-4',
-  fifths: 'column-split:grid-cols-5',
   pair: 'column-split:grid-cols-2',
   thirds: 'column-split:grid-cols-3',
   'main-aside': 'column-wide:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]',
   halves: 'column-wide:grid-cols-2',
   'table-chart': 'column-wide:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]',
-  'list-detail': 'column-split:grid-cols-[var(--pane-list-detail)] items-start',
   slips: 'grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]',
 } as const;
 
