@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { StatusMark } from '@/components/ui/status-mark';
+import { ImpactBars } from '@/components/ui/impact-bars';
 import { textRole } from '@/components/ui/typography';
 import { WorkRow, WorkRows, WorkRowsMore } from '@/components/ui/work-rows';
 import { actionTarget } from '@/lib/agent/action-title';
@@ -37,13 +37,11 @@ function sourceLabel(action: Action): string {
   );
 }
 
+const IMPACT_LEVEL = { high: 3, medium: 2, low: 1 } as const;
+
 function Impact({ band }: Readonly<{ band: Action['priority_band'] }>) {
   if (!band) return <span className={textRole('caption')}>Not scored</span>;
-  return (
-    <StatusMark variant="priority" value={band}>
-      {IMPACT_LABEL[band]}
-    </StatusMark>
-  );
+  return <ImpactBars level={IMPACT_LEVEL[band]}>{IMPACT_LABEL[band]}</ImpactBars>;
 }
 
 /**
