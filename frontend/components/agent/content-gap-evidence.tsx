@@ -12,7 +12,6 @@ import { promptHistoryHref } from '@/lib/prompts/history';
 import { classificationBadgeValue, classificationLabel } from '@/lib/runs/status';
 import { citationClassificationSchema } from '@citeladder/contracts/audits';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
-import { ActionSection } from '@/components/agent/action-section';
 
 /** A finding with the content-gap evidence the Action read returned for it. */
 export type GapMember = Readonly<{ id: string; evidence: ContentGapEvidence }>;
@@ -36,15 +35,13 @@ export function contentGapMembers(action: ActionDetail): GapMember[] {
  */
 export function ContentGapWhy({ members }: Readonly<{ members: readonly GapMember[] }>) {
   return (
-    <ActionSection title="Why this matters" id="action-why">
-      <ul className={ledgerClasses()}>
-        {members.map((member) => (
-          <li key={member.id} className={ledgerItemClasses()}>
-            <GapAngle evidence={member.evidence} />
-          </li>
-        ))}
-      </ul>
-    </ActionSection>
+    <ul className={ledgerClasses()}>
+      {members.map((member) => (
+        <li key={member.id} className={ledgerItemClasses()}>
+          <GapAngle evidence={member.evidence} />
+        </li>
+      ))}
+    </ul>
   );
 }
 

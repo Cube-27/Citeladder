@@ -25,6 +25,8 @@ export type PageFrameSlots = Readonly<{
   title?: string;
   /** A record page's back link to its collection. */
   back?: PageBack;
+  /** A breadcrumb drawn in the masthead instead of the title; the body holds the h1. */
+  crumb?: ReactNode;
   /** The masthead's own actions: secondary first, then at most one primary. */
   actions?: ReactNode;
   /** The page tabs (40): the page's sub-views. */
@@ -50,6 +52,7 @@ export type PageFrameSlots = Readonly<{
 export function PageFrame({
   title,
   back,
+  crumb,
   actions,
   tabs,
   filters,
@@ -74,6 +77,7 @@ export function PageFrame({
       >
         <Masthead
           title={resolved}
+          crumb={crumb}
           lead={
             <>
               {shell?.sidebarToggle}

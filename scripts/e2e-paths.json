@@ -59,7 +59,14 @@
   {
     "sources": [
       "frontend/components/agent/actions-*.tsx",
+      "frontend/components/agent/action-detail-screen.tsx",
+      "frontend/components/agent/action-dock.tsx",
+      "frontend/components/agent/action-facts.tsx",
+      "frontend/components/agent/action-page-parts.tsx",
+      "frontend/components/agent/action-urls.tsx",
       "frontend/components/agent/use-action*.ts",
+      "frontend/components/ui/breadcrumb.tsx",
+      "frontend/components/ui/link-rows.tsx",
       "frontend/components/templates/report-page.tsx",
       "frontend/components/ui/all-filters.tsx",
       "frontend/components/ui/count-strip.tsx",

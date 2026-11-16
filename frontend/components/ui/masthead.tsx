@@ -43,10 +43,13 @@ export function Masthead({
   search,
   actions,
   end,
+  crumb,
 }: Readonly<{
   title: string;
   /** Before the title: the menu button, a record's back link. */
   lead?: ReactNode;
+  /** A trail of where the page sits, drawn instead of the title; the page then carries its own h1. */
+  crumb?: ReactNode;
   /** The shell's search trigger, first at the right. */
   search?: ReactNode;
   /** The page's own actions: secondary first, then at most one primary. */
@@ -74,20 +77,22 @@ export function Masthead({
       {/* Below `rail` the title side keeps its content's minimum; the actions give way. */}
       <div data-masthead-title="" className="rail:min-w-0 me-2 flex flex-1 items-center gap-2">
         {lead}
-        <Tooltip content={title} side="bottom" describe={false} shouldOpen={isTextCut}>
-          <h1
-            ref={heading}
-            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Only a cut title takes focus, so a keyboard reader can open the tooltip holding the full name.
-            tabIndex={cut ? 0 : undefined}
-            className={textRole(
-              'title',
-              // One line at every width, never under 112px; the fold keeps it min(360px, 40%) (`rowDeficit`).
-              cn('not-rail:w-0 not-rail:flex-1 min-w-28 truncate', cut && 'focus-ring'),
-            )}
-          >
-            {title}
-          </h1>
-        </Tooltip>
+        {crumb ?? (
+          <Tooltip content={title} side="bottom" describe={false} shouldOpen={isTextCut}>
+            <h1
+              ref={heading}
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Only a cut title takes focus, so a keyboard reader can open the tooltip holding the full name.
+              tabIndex={cut ? 0 : undefined}
+              className={textRole(
+                'title',
+                // One line at every width, never under 112px; the fold keeps it min(360px, 40%) (`rowDeficit`).
+                cn('not-rail:w-0 not-rail:flex-1 min-w-28 truncate', cut && 'focus-ring'),
+              )}
+            >
+              {title}
+            </h1>
+          </Tooltip>
+        )}
       </div>
       <div
         data-masthead-end=""

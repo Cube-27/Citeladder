@@ -33,7 +33,13 @@ export const actionKeys = {
   /** Analyze a page's picker: the latest crawl's content pages matching a search. */
   analyzePages: (scope: ProjectScope, search: string) =>
     actions.read('analyze-pages', scope, search),
+  /** Every Action touching one URL: the URL page's read. */
+  urlActions: (scope: ProjectScope, siteUrlId: string) =>
+    actions.read('url-actions', scope, siteUrlId),
   // An Action page knows only its id; the workspace follows it.
   detail: (workspaceId: string | null, actionId: string) =>
     ['actions', 'detail', actionId, workspaceId] as const,
+  /** An Action's URLs past the detail's first page, from the detail's cursor. */
+  urls: (workspaceId: string | null, actionId: string, cursor: string) =>
+    ['actions', 'urls', actionId, workspaceId, cursor] as const,
 };

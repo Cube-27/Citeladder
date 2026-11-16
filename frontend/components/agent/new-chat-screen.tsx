@@ -9,6 +9,7 @@ import { useSkillChoice } from '@/components/agent/skill-picker';
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { useCreateChat } from '@/components/agent/use-chat-turns';
 import { useComposerCommands } from '@/components/agent/use-composer-commands';
+import { useHandoffScope } from '@/components/agent/handoff-scope';
 import { ThreadPage } from '@/components/templates/thread-page';
 import { Stack } from '@/components/ui/layout';
 import { textRole } from '@/components/ui/typography';
@@ -68,12 +69,15 @@ function NewChat({
   );
   const failure = create.failure;
   const commands = useComposerCommands({ workspaceId, projectId });
-  const { actionId, message, attachment, unavailable } = useAttachedAction(
+  const { actionId, action, message, attachment, unavailable } = useAttachedAction(
     workspaceId,
     handoff.actionId,
     typed,
     setTyped,
   );
+  const handoffScope = useHandoffScope({ workspaceId, projectId }, context, action);
+  // Ticked URLs are the attached Action's; they leave with it.
+  const sent = actionId ? context : withoutContext(context, 'action_url_ids');
   const skill = useSkillChoice({
     value: pinnedId ? undefined : skillId,
     // A skill or Automatic picked from the menu replaces a pinned workflow.
@@ -97,7 +101,7 @@ function NewChat({
           skillId: pinnedId ? undefined : skillId,
           workflowId: pinnedId,
           actionId,
-          context,
+          context: sent,
         }),
     );
   const pending = create.pending || commands.resolving;
@@ -137,7 +141,8 @@ function NewChat({
             placeholder="Ask a question or describe the work"
             attachment={attachment}
             skill={skill}
-            chips={contextChips(context)}
+            scope={handoffScope.chip}
+            chips={contextChips(sent, handoffScope.labels)}
             commands={commands}
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}
           />
@@ -194,7 +199,13 @@ function useAttachedAction(
           },
         }
       : undefined;
-  return { actionId, message, attachment, unavailable: attached.isError };
+  return {
+    actionId,
+    action: actionId ? attached.data : undefined,
+    message,
+    attachment,
+    unavailable: attached.isError,
+  };
 }
 
 /**

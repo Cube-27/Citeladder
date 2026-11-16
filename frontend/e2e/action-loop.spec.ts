@@ -150,6 +150,11 @@ const declaration = {
 
 test('declaring an Action implemented shows comparable verification', async ({ page }) => {
   let declarationBody: Record<string, unknown> | null = null;
+  let accepted = false;
+  const status = () => {
+    if (declarationBody) return 'done';
+    return accepted ? 'in_progress' : 'open';
+  };
 
   await stubAuthedShell(page, [], [project]);
   await page.route(`**/api/v1/projects/${PROJECT}/logos/refresh`, (route) =>
@@ -176,11 +181,15 @@ test('declaring an Action implemented shows comparable verification', async ({ p
       },
     }),
   );
-  await page.route(`**/api/v1/actions/${ACTION}`, (route) =>
-    route.fulfill({
+  await page.route(`**/api/v1/actions/${ACTION}`, (route) => {
+    if (route.request().method() === 'PATCH') {
+      accepted = true;
+      return route.fulfill({ json: { ...action, status: status() } });
+    }
+    return route.fulfill({
       json: {
         ...action,
-        status: declarationBody ? 'done' : 'open',
+        status: status(),
         measurement: declarationBody ? 'verified' : null,
         diagnosis: { approach: 'earned_placement', families: { sources: 'observed' } },
         members: [
@@ -194,8 +203,8 @@ test('declaring an Action implemented shows comparable verification', async ({ p
         declarable_since: new Date(Date.now() - 30 * 86_400_000).toISOString(),
         declaration: declarationBody ? declaration : null,
       },
-    }),
-  );
+    });
+  });
   await page.route(`**/api/v1/projects/${PROJECT}/agent/chats?*`, (route) =>
     route.fulfill({ json: { items: [], next_cursor: null } }),
   );
@@ -204,6 +213,8 @@ test('declaring an Action implemented shows comparable verification', async ({ p
     return route.fulfill({ status: 201, json: declaration });
   });
   await page.goto(`/actions/${ACTION}?project=${PROJECT}`);
+  // A New Action is accepted first; In progress offers Mark implemented.
+  await page.getByRole('button', { name: 'Accept' }).click();
   await page.getByRole('button', { name: 'Mark implemented' }).click();
   await page
     .getByRole('dialog', { name: 'Mark implemented' })

@@ -20,20 +20,52 @@ export function SelectionDock({
   children: ReactNode;
 }>) {
   return (
-    <div className="pointer-events-none sticky bottom-5 z-10 h-0">
+    <DockLayer>
       {summary === null ? null : (
-        <div
-          role="toolbar"
-          aria-label={label}
-          className={cn(
-            POP_FACE,
-            'pointer-events-auto absolute bottom-0 left-1/2 flex -translate-x-1/2 items-center gap-1 p-2',
-          )}
-        >
+        <DockBar label={label}>
           <span className={textRole('body', 'px-2 whitespace-nowrap tabular-nums')}>{summary}</span>
           {children}
-        </div>
+        </DockBar>
       )}
+    </DockLayer>
+  );
+}
+
+/**
+ * A page dock's fixed slots from `rail` up, so a status change swaps labels and
+ * nothing in the dock moves; below it the dock fits the screen and the
+ * primary's label cuts.
+ */
+export const DOCK_SLOT = {
+  decision: 'rail:w-28',
+  wide: 'rail:w-44',
+  primary: 'min-w-0 shrink truncate rail:w-64',
+} as const;
+
+/** A record page's decisions in the same held bar, always shown and always the same size. */
+export function PageDock({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <DockLayer>
+      <DockBar label={label}>{children}</DockBar>
+    </DockLayer>
+  );
+}
+
+function DockLayer({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="pointer-events-none sticky bottom-5 z-10 h-0">{children}</div>;
+}
+
+function DockBar({ label, children }: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <div
+      role="toolbar"
+      aria-label={label}
+      className={cn(
+        POP_FACE,
+        'pointer-events-auto absolute bottom-0 left-1/2 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 p-2',
+      )}
+    >
+      {children}
     </div>
   );
 }

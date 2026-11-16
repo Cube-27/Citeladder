@@ -81,6 +81,28 @@ describe('agent handoff', () => {
     expect(handoff).toEqual({ actionId: undefined, prompt: undefined, context: {} });
   });
 
+  it('sends the Actions pages’ scopes: ticked URLs of an Action, or one URL with its Actions', () => {
+    const ticked = parse(agentHandoffHref({ actionId: ACTION, actionUrlIds: [PAGE, ROW, PAGE] }));
+    expect(ticked).toEqual({
+      actionId: ACTION,
+      prompt: undefined,
+      context: { action_url_ids: [PAGE, ROW] },
+    });
+    expect(contextChips(ticked.context)).toEqual([
+      { key: 'action_url_ids', label: '2 selected URLs' },
+    ]);
+    // Ticked URLs without their Action name nothing; one URL needs no Action.
+    expect(parse(`/agent?action_url_id=${PAGE}`).context).toEqual({});
+    const one = parse(agentHandoffHref({ urlActionsSiteUrlId: PAGE }));
+    expect(one.context).toEqual({ url_actions_reference: { site_url_id: PAGE } });
+    expect(
+      contextChips(one.context, { url_actions_reference: 'URL: /shop/p01' }).map((c) => c.label),
+    ).toEqual(['URL: /shop/p01']);
+    expect(
+      agentHandoff({ actionId: ACTION, actionUrlIds: [PAGE], urlActionsSiteUrlId: ROW }).context,
+    ).toEqual({ action_url_ids: [PAGE], url_actions_reference: { site_url_id: ROW } });
+  });
+
   it('removes a page as one chip whether named by URL or id', () => {
     const context = { target_url: 'https://acme.test/a', target_site_url_id: PAGE };
     expect(contextChips(context)).toEqual([{ key: 'target_url', label: 'https://acme.test/a' }]);

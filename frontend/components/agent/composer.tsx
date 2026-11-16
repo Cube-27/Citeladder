@@ -30,6 +30,7 @@ export function Composer({
   chips = [],
   onRemoveChip,
   attachment,
+  scope,
   skill,
   commands,
   onStop,
@@ -50,6 +51,8 @@ export function Composer({
   onRemoveChip?: (chip: ContextChip) => void;
   /** The Action the chat is about, first among the chips: one removable line. */
   attachment?: Readonly<{ label: string; onRemove: () => void }>;
+  /** What of the Action the turn covers ("201 URLs (first 50 sent)"): a fixed chip after it. */
+  scope?: string;
   /** The skill the turn will run, picked or continued: a chip after the Action, and the menu's Skills. */
   skill: SkillChoice;
   commands: ComposerState;
@@ -67,7 +70,12 @@ export function Composer({
         if (canSend) onSubmit();
       }}
       chipsLabel="Context for this request"
-      chips={composerChips({ lead: [attachment, skill.chip], chips, onRemoveChip, commands })}
+      chips={composerChips({
+        lead: [attachment, scope ? { label: scope } : undefined, skill.chip],
+        chips,
+        onRemoveChip,
+        commands,
+      })}
       field={
         <>
           <label htmlFor={id} className="sr-only">
@@ -187,7 +195,7 @@ function SubmitControl({
   }
 }
 
-type LeadChip = Readonly<{ label: string; onRemove: () => void }> | undefined;
+type LeadChip = Readonly<{ label: string; onRemove?: () => void }> | undefined;
 
 /** The chip row: the Action and skill first, then context, mentions and pastes; null when empty. */
 function composerChips({

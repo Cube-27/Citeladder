@@ -162,6 +162,7 @@ const screens = {
   chat: pick(() => import('@/components/agent/chat-screen'), 'ChatScreen'),
   actions: pick(() => import('@/components/agent/actions-list-screen'), 'ActionsScreen'),
   action: pick(() => import('@/components/agent/action-detail-screen'), 'ActionDetailScreen'),
+  actionUrl: pick(() => import('@/components/agent/action-url-screen'), 'ActionUrlScreen'),
   skills: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
   context: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
   prompts: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
@@ -320,8 +321,17 @@ export const APP_ROUTES = [
     title: 'Action',
     collection: '/actions',
     screen: screens.action,
-    // Status and Priority (tags), Target, Source.
-    loading: cards([facts(4, [0, 1])]),
+    // The Details card: Status, Impact, Scope, Source, Grouping.
+    loading: cards([facts(5)]),
+  }),
+  page({
+    path: '/actions/urls/:siteUrlId',
+    width: 'narrow',
+    title: 'URL',
+    collection: '/actions',
+    screen: screens.actionUrl,
+    // The Details card: Page type, Last crawled, Open actions.
+    loading: cards([facts(3)]),
   }),
   page({
     path: '/agent',

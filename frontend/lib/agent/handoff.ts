@@ -34,7 +34,12 @@ const PARAM = {
   factsCrawl: 'facts_crawl_id',
   output: 'output_id',
   revision: 'revision_id',
+  actionUrls: 'action_url_id',
+  urlActions: 'url_actions_id',
 } as const;
+
+/** The most URLs one hand-off names (the server's `action_url_ids` bound). */
+export const HANDOFF_URLS_MAX = 50;
 
 export type AgentHandoff = {
   actionId?: string;
@@ -54,6 +59,10 @@ export type HandoffInput = {
   issueGroup?: { crawlId: string; groupId: string; siteUrlId?: string };
   siteFacts?: { crawlId: string };
   outputRevision?: { outputId: string; revisionId: string };
+  /** URLs ticked on the attached Action (`action_urls`), at most `HANDOFF_URLS_MAX`. */
+  actionUrlIds?: readonly string[];
+  /** One URL with every Action touching it. */
+  urlActionsSiteUrlId?: string;
   prompt?: string | null;
   skillId?: string | null;
   workflowId?: string | null;
@@ -76,6 +85,9 @@ export function agentHandoffHref(input: HandoffInput): string {
   set(PARAM.factsCrawl, input.siteFacts?.crawlId);
   set(PARAM.output, input.outputRevision?.outputId);
   set(PARAM.revision, input.outputRevision?.revisionId);
+  for (const id of input.actionUrlIds?.slice(0, HANDOFF_URLS_MAX) ?? [])
+    params.append(PARAM.actionUrls, id);
+  set(PARAM.urlActions, input.urlActionsSiteUrlId);
   if (input.searchIntelligence && input.searchIntelligence.rowIds.length > 0) {
     params.set(PARAM.dataset, input.searchIntelligence.datasetId);
     for (const row of input.searchIntelligence.rowIds) params.append(PARAM.rows, row);
@@ -106,29 +118,28 @@ export function actionHandoffHref(
     handoff: ActionHandoff;
     editable_page?: boolean;
   }>,
+  /** Only these of the Action's URLs (ticked on its page); none sends the whole Action. */
+  actionUrlIds: readonly string[] = [],
 ): string {
   const { handoff } = action;
+  const base = { actionId: action.id, actionUrlIds };
   if (action.editable_page && action.target_url)
-    return agentHandoffHref({
-      actionId: action.id,
-      targetUrl: action.target_url,
-      workflowId: PAGE_WORKFLOW,
-    });
+    return agentHandoffHref({ ...base, targetUrl: action.target_url, workflowId: PAGE_WORKFLOW });
   switch (handoff.context) {
     case 'opportunity':
       return agentHandoffHref({
-        actionId: action.id,
+        ...base,
         opportunityId: handoff.opportunity_id,
         workflowId: handoff.workflow_id,
       });
     case 'page_url':
       return agentHandoffHref({
-        actionId: action.id,
+        ...base,
         targetUrl: action.target_url,
         workflowId: handoff.workflow_id,
       });
     case 'action':
-      return agentHandoffHref({ actionId: action.id });
+      return agentHandoffHref(base);
     default: {
       const unknownHandoff: never = handoff;
       throw new Error(`Unknown Action handoff: ${JSON.stringify(unknownHandoff)}`);
@@ -180,6 +191,10 @@ function originContext(input: HandoffInput): AgentContextRefs {
       output_id: input.outputRevision.outputId,
       revision_id: input.outputRevision.revisionId,
     };
+  const ticked = [...new Set(input.actionUrlIds ?? [])].slice(0, HANDOFF_URLS_MAX);
+  if (input.actionId && ticked.length > 0) context.action_url_ids = ticked;
+  if (input.urlActionsSiteUrlId)
+    context.url_actions_reference = { site_url_id: input.urlActionsSiteUrlId };
   return context;
 }
 function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
@@ -199,6 +214,12 @@ function parsedOriginContext(params: URLSearchParams): AgentContextRefs {
     revision = uuidParam(params, PARAM.revision);
   if (output && revision)
     context.output_revision_reference = { output_id: output, revision_id: revision };
+  const ticked = [...new Set(params.getAll(PARAM.actionUrls).filter((id) => UUID.test(id)))];
+  // Ticked URLs belong to the attached Action; without one they mean nothing.
+  if (ticked.length > 0 && uuidParam(params, PARAM.action))
+    context.action_url_ids = ticked.slice(0, HANDOFF_URLS_MAX);
+  const urlActions = uuidParam(params, PARAM.urlActions);
+  if (urlActions) context.url_actions_reference = { site_url_id: urlActions };
   return context;
 }
 
@@ -251,8 +272,22 @@ export function parseAgentHandoff(params: URLSearchParams): AgentHandoff {
 /** Human labels for the references a composer shows as removable chips. */
 export type ContextChip = { key: keyof AgentContextRefs; label: string };
 
-export function contextChips(context: AgentContextRefs): ContextChip[] {
+export function contextChips(
+  context: AgentContextRefs,
+  /** A read's own words for a reference, where the screen has them. */
+  labels: Partial<Record<keyof AgentContextRefs, string>> = {},
+): ContextChip[] {
   const chips: ContextChip[] = [];
+  if (context.url_actions_reference)
+    chips.push({
+      key: 'url_actions_reference',
+      label: labels.url_actions_reference ?? 'Selected URL and its actions',
+    });
+  if (context.action_url_ids)
+    chips.push({
+      key: 'action_url_ids',
+      label: `${context.action_url_ids.length} selected ${context.action_url_ids.length === 1 ? 'URL' : 'URLs'}`,
+    });
   if (context.issue_group_reference)
     chips.push({
       key: 'issue_group_reference',
