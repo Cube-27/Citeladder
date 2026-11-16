@@ -430,13 +430,20 @@ function IssueCount({
   findingView,
 }: Readonly<{ summary: Summary; crawlSummary?: Summary; findingView: FindingClass }>) {
   if (!crawlSummary) return <CountLine summary={summary} findingView={findingView} />;
+  // At least 2, so the sizers print plurals: "0 pages" is wider than "1 page".
+  const bound = {
+    ...crawlSummary,
+    defect_issue_type_count: Math.max(2, crawlSummary.defect_issue_type_count),
+    advisory_issue_type_count: Math.max(2, crawlSummary.advisory_issue_type_count),
+    affected_url_count: Math.max(2, crawlSummary.affected_url_count),
+  };
   return (
     <span className="grid">
       <CountLine summary={summary} findingView={findingView} className="col-start-1 row-start-1" />
       {(['defect', 'advisory'] as const).map((view) => (
         <CountLine
           key={view}
-          summary={crawlSummary}
+          summary={bound}
           findingView={view}
           sizer
           className="invisible col-start-1 row-start-1"
