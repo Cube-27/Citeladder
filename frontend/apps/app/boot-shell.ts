@@ -17,7 +17,7 @@ export const BOOT_SIDEBAR_MARKER = '<!-- boot-sidebar -->';
 export const BOOT_TITLE_FILE = 'boot-title.js';
 
 const escapeHtml = (text: string) =>
-  text.replace(/[&<>"']/gu, (char) => `&#${char.charCodeAt(0)};`);
+  text.replace(/[&<>"']/gu, (char) => `&#${char.codePointAt(0)};`);
 
 const row = (label: string) => `<span class="boot-row">${escapeHtml(label)}</span>`;
 
@@ -74,7 +74,7 @@ try {
     shell.dataset.bootMode = path === '/agent' || path.startsWith('/agent/') ? 'agent' : 'dashboard';
     const heading = shell.querySelector('.boot-title');
     if (heading) heading.textContent = title;
-    document.title = title + ' \\u00b7 CiteLadder';
+    document.title = title + ' · CiteLadder';
   }
   try {
     const width = Number(localStorage.getItem('citeladder:app:sidebar-width'));

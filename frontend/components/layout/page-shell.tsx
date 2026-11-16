@@ -61,15 +61,15 @@ export const RESERVED_CONTROLS: FilterBarProps = {};
  * the route's real tab labels and held filter row, then its first screen's
  * shapes on cards, so the page arrives without moving them.
  */
-export function RouteLoadingScreen({ label }: Readonly<{ label?: string }>) {
-  const { tabs, filters, shapes } = routeLoading(useLocation().pathname ?? '');
+export function RouteLoadingScreen() {
+  const { tabs, filters, shapes } = routeLoading(useLocation().pathname);
   return (
     <PageFrame
       tabs={tabs ? <HeldTabRow labels={tabs} /> : undefined}
       filters={filters ? <FilterBar {...RESERVED_CONTROLS} /> : undefined}
     >
       <SkeletonFrame
-        label={label ?? 'Loading…'}
+        label="Loading…"
         variant="route"
         className="flex flex-col gap-[var(--workspace-gap)]"
       >
