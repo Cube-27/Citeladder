@@ -25,7 +25,7 @@ afterAll(() => mswServer.close());
 describe('A follow-up with an Action link', () => {
   it('is sent with the link as a mention, keeping what was typed while it resolved', async () => {
     const ACTION = '88888888-8888-4888-8888-888888888888';
-    const link = `${window.location.origin}/agent/actions/${ACTION}`;
+    const link = `${window.location.origin}/actions/${ACTION}`;
     const bodies: unknown[] = [];
     let release!: () => void;
     const held = new Promise<void>((resolve) => {

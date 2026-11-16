@@ -545,13 +545,12 @@ sends it. The workspace loads as its own chunk, only for a page chat.
 
 ## Workspace and handoffs
 
-Agent mode holds New chat, Actions, Skills, Context and the chat history under
-`/agent`. Actions (`/agent/actions`) is the one list of the project's work,
-[content gaps](content-optimization.md) included (AS1), its rows grouped
-under collapsible headers (fix the site, own pages, mentions elsewhere,
-products; AS2) with every filter in one All filters menu (AS6; the groups and
+Agent mode holds New chat, Skills, Context and the chat history under
+`/agent`. Actions (`/actions`) is a Dashboard page: the one list of the
+project's work, [content gaps](content-optimization.md) and Issues defects
+included (AS1), grouped by goal and category (AS2; the groups, categories and
 filters are in [Opportunities](opportunities.md)); a row opens the Action's
-page, `/agent/actions/{id}`. Every composer has a + menu: **Skills** sets the
+page, `/actions/{id}`, or an Issues row its issue on `/issues`. Every composer has a + menu: **Skills** sets the
 next turn's skill, shown as a removable chip, and **Actions** lists the
 project's top open Actions, each starting a chat on it, and the whole list.
 Typing `/` opens the menu on the skills and `@` mentions up to five of the

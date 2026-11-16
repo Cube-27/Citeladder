@@ -39,43 +39,6 @@ const row = {
   updated_at: '2026-08-28T00:00:00Z',
 };
 
-const handoff = {
-  opportunity_id: OPPORTUNITY,
-  pathway: 'earned',
-  source_class: 'editorial',
-  canonical_domain: 'example.org',
-  suggested_role: 'Earned Media',
-  suggested_skill_id: 'article',
-  target_url: null,
-  target_theme: 'analytics',
-  representative_citations: [{ url: 'https://example.org/tools', title: 'Analytics tools' }],
-  affected_themes: ['analytics'],
-  observed_competitors: ['Rival'],
-  coverage: { eligible_answers: 4, observed_answers: 2 },
-  limitations: ['Human review and outreach are required.'],
-  truncated: false,
-  source_analysis_ids: [SNAPSHOT],
-  snapshot_versions: { source_taxonomy: 'source-taxonomy-2' },
-};
-
-function detail() {
-  return {
-    ...row,
-    remediation: 'Prepare a transparent expert-contribution brief.',
-    evidence: { audit_id: SNAPSHOT },
-    source_analysis_ids: [SNAPSHOT],
-    source_issue_ids: [],
-    source_metric_ids: [SNAPSHOT],
-    source_traffic_ids: [],
-    analyzer_version: 'opp-analyzer-7',
-    rule_version: 'opp-rules-8',
-    formula_version: 'opp-formula-3',
-    content_handoff: handoff,
-    superseded_by_id: null,
-    superseded_at: null,
-  };
-}
-
 const verificationResult = {
   state: 'available',
   legs: {
@@ -234,14 +197,11 @@ test('declaring an Action implemented shows comparable verification', async ({ p
   await page.route(`**/api/v1/projects/${PROJECT}/agent/chats?*`, (route) =>
     route.fulfill({ json: { items: [], next_cursor: null } }),
   );
-  await page.route(`**/api/v1/opportunities/${OPPORTUNITY}`, (route) =>
-    route.fulfill({ json: detail() }),
-  );
   await page.route(`**/api/v1/actions/${ACTION}/declaration`, async (route) => {
     declarationBody = (await route.request().postDataJSON()) as Record<string, unknown>;
     return route.fulfill({ status: 201, json: declaration });
   });
-  await page.goto(`/agent/actions/${ACTION}?project=${PROJECT}`);
+  await page.goto(`/actions/${ACTION}?project=${PROJECT}`);
   await page.getByRole('button', { name: 'Mark implemented' }).click();
   await page
     .getByRole('dialog', { name: 'Mark implemented' })
@@ -286,20 +246,19 @@ test('Action filters restore through URL history and reload', async ({ page }) =
     }),
   );
 
-  await page.goto(`/agent/actions?project=${PROJECT}&status=dismissed`);
-  await expect(page.getByText('No Actions match these filters')).toBeVisible();
+  await page.goto(`/actions?project=${PROJECT}&status=dismissed`);
+  await expect(page.getByText('No dismissed Actions')).toBeVisible();
   await page.reload();
-  await expect(page.getByText('No Actions match these filters')).toBeVisible();
+  await expect(page.getByText('No dismissed Actions')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Status: Dismissed' }).click();
-  await page.getByRole('menuitemradio', { name: 'Open and in progress' }).click();
+  await page.getByRole('radio', { name: /^Open/ }).click();
   await expect(page.getByRole('button', { name: 'Get mentioned elsewhere, 1' })).toBeVisible();
-  // The row is titled by its work; the target is its second line.
-  await expect(page.getByRole('link', { name: 'Earn a placement' })).toBeVisible();
-  await expect(page.getByText('example.org/tools')).toBeVisible();
+  // The row is titled by its target; the work is its second line.
+  await expect(page.getByRole('link', { name: 'example.org/tools' })).toBeVisible();
+  await expect(page.getByText('Earn a placement · 1 finding')).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.has('status')).toBe(false);
 
   // A row opens its Action.
-  await page.getByText('example.org/tools').click();
-  await expect(page).toHaveURL(new RegExp(`/agent/actions/${ACTION}`));
+  await page.getByText('Earn a placement · 1 finding').click();
+  await expect(page).toHaveURL(new RegExp(`/actions/${ACTION}`));
 });

@@ -196,7 +196,7 @@ describe('ChatScreen', () => {
     const cited = within(await screen.findByRole('list', { name: 'Cited evidence' }));
     expect(cited.getByRole('link', { name: 'Action' })).toHaveAttribute(
       'href',
-      expect.stringContaining(`/agent/actions/${ACTION}`),
+      expect.stringContaining(`/actions/${ACTION}`),
     );
     const next = within(await screen.findByRole('navigation', { name: 'Next steps' }));
     const href = new URL(

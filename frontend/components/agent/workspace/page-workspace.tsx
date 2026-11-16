@@ -95,8 +95,8 @@ function workspaceHeader(detail: AgentChatDetail, output: AgentOutput) {
   return {
     title: `Actions › ${shortUrlTitle(label)}`,
     back: actionId
-      ? { href: `/agent/actions/${actionId}`, label: 'Back to the Action' }
-      : { href: '/agent/actions', label: 'Back to Actions' },
+      ? { href: `/actions/${actionId}`, label: 'Back to the Action' }
+      : { href: '/actions', label: 'Back to Actions' },
   };
 }
 

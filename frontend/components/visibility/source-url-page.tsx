@@ -68,7 +68,7 @@ function GetListed({ url, actionId }: Readonly<{ url: string; actionId: string |
       {actionId ? (
         <>
           <Button variant="primary" asChild>
-            <ProjectLink href={`/agent/actions/${actionId}`}>Open the Action</ProjectLink>
+            <ProjectLink href={`/actions/${actionId}`}>Open the Action</ProjectLink>
           </Button>
           <Button variant="secondary" asChild>
             <ProjectLink href={agentHandoffHref({ actionId })}>Draft the request</ProjectLink>

@@ -63,7 +63,7 @@ function ActionsSubmenu({
         {/* Mounted with the submenu, so the Actions are read only once reached for. */}
         <TopActions scope={scope} />
         <MenuSeparator />
-        <PromptMenuLink href="/agent/actions" label="All Actions" />
+        <PromptMenuLink href="/actions" label="All Actions" />
       </MenuSubContent>
     </MenuSub>
   );

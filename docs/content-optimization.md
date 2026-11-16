@@ -50,7 +50,7 @@ content page's Site Health findings and content gaps share it. Issues is
 unchanged (CO11): Site Health issues on content pages still appear there.
 There are no scores or grades (CO14).
 
-An Action opens at `/agent/actions/:actionId`. The Action read returns each
+An Action opens at `/actions/:actionId`. The Action read returns each
 content-gap finding's stored evidence (`content_gap_evidence`), and **Why this
 matters** renders it only, with no further read: the angle, the cited pages
 with title, site and classification, the counts and the run's window, and a

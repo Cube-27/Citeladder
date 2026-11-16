@@ -70,11 +70,7 @@ const ROUTE_PREFETCHERS: Readonly<Partial<Record<AppRoutePath, RoutePrefetcher>>
     const { actionsQueries } = await import('@/lib/api/actions');
     warmQuery(client, actionsQueries.list(scope));
   },
-  // The grouped list's reads, one per group.
-  '/agent/actions': async (client, scope) => {
-    const { actionsQueries } = await import('@/lib/api/actions');
-    for (const read of actionsQueries.groupPreviews(scope, {})) warmQuery(client, read);
-  },
+  '/actions': prefetchActions,
   '/agent/skills': async (client, { workspaceId }) => {
     const { agentQueries } = await import('@/lib/api/agent');
     warmQuery(client, agentQueries.skills(workspaceId));
@@ -242,6 +238,29 @@ async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
   const key = siteHealthQueries.issues(workspaceId, crawlId, params).queryKey;
   if (client.getQueryData(key) === undefined) client.setQueryData(key, page);
   warmSummary(crawlId);
+}
+
+/**
+ * Warm the Actions list's Open view: its Actions read and the crawl its Issues
+ * rows come from, then each Issues tab's defects once that crawl is cached.
+ */
+async function prefetchActions(client: QueryClient, scope: ProjectScope) {
+  const [{ actionsQueries }, { siteHealthQueries }, { actionsIssueParams, ISSUE_SECTIONS }] =
+    await Promise.all([
+      import('@/lib/api/actions'),
+      import('@/lib/api/site-health-queries'),
+      import('@/lib/site-health/issue-filters'),
+    ]);
+  for (const read of actionsQueries.statusView(scope, 'open', {})) warmQuery(client, read);
+  const dashboard = siteHealthQueries.dashboard(scope);
+  warmQuery(client, dashboard);
+  const crawlId = client.getQueryData(dashboard.queryKey)?.crawl?.id;
+  if (!crawlId) return;
+  for (const { value } of ISSUE_SECTIONS)
+    warmQuery(
+      client,
+      siteHealthQueries.issues(scope.workspaceId, crawlId, actionsIssueParams(value)),
+    );
 }
 
 /**

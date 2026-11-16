@@ -129,7 +129,7 @@ export function actionItem(action: Opportunity): ReorderItem {
         <TextLink
           text="body"
           className="flex min-w-0"
-          href={action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions'}
+          href={action.action_id ? `/actions/${action.action_id}` : '/actions'}
         >
           <ClampText>{action.title}</ClampText>
         </TextLink>

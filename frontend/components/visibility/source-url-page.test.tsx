@@ -58,7 +58,7 @@ describe('what a cited page means for you', () => {
     expect(within(quote).getByText('Globex', { selector: 'mark' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Open the Action' })).toHaveAttribute(
       'href',
-      expect.stringContaining(`/agent/actions/${ACTION}`),
+      expect.stringContaining(`/actions/${ACTION}`),
     );
     expect(
       screen.getByText('Searched 4,200 characters of readable text; no form of the name matched.'),

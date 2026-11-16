@@ -18,7 +18,6 @@ import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/actio
 import { ActionSection } from '@/components/agent/action-section';
 import { RecordPage } from '@/components/templates/record-page';
 import type { PageBack } from '@/components/templates/page-frame';
-import { EvidenceDrawer } from '@/components/opportunities/evidence-drawer';
 import { ACTIONS } from '@/components/ui/actions';
 import { Button, buttonClasses } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -44,7 +43,7 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionTitle } from '@/components/ui/section';
 
-const BACK: PageBack = { href: '/agent/actions', label: 'Back to Actions' };
+const BACK: PageBack = { href: '/actions', label: 'Back to Actions' };
 
 /**
  * One Action (AS7) on the Record template: titled by its work and target
@@ -94,7 +93,6 @@ function ActionDetailView({
   action,
   workspaceId,
 }: Readonly<{ action: ActionDetail; workspaceId: string }>) {
-  const [evidenceId, setEvidenceId] = useState<string | null>(null);
   // Set once this page declares the Action, so its new status takes focus.
   const [declared, setDeclared] = useState(false);
   // Owned here, not by the bar, so a failure notice renders in the column.
@@ -125,7 +123,7 @@ function ActionDetailView({
         />
       ) : null}
       <Overview action={action} />
-      <ActionFindings action={action} onOpen={setEvidenceId} />
+      <ActionFindings action={action} />
       {action.declaration ? (
         <ActionSection title="Implementation" id="action-implementation">
           <DeclarationStatus
@@ -143,16 +141,6 @@ function ActionDetailView({
         items={(action.diagnosis.measure_with ?? []).map(measurementLegLabel).filter(isText)}
       />
       <TextList title="Avoid" id="action-avoid" items={action.diagnosis.donts ?? []} />
-      <EvidenceDrawer
-        opportunityId={evidenceId}
-        title={action.members.find((member) => member.id === evidenceId)?.title}
-        targetUrl={action.target_url}
-        projectId={action.project_id}
-        open={evidenceId !== null}
-        onOpenChange={(open) => {
-          if (!open) setEvidenceId(null);
-        }}
-      />
     </RecordPage>
   );
 }

@@ -86,7 +86,7 @@ const ROUTES = [
   '/settings?tab=providers',
   '/settings?tab=connections',
   '/billing',
-  '/agent/actions',
+  '/actions',
   '/agent/skills',
   '/agent/context',
 ] as const;

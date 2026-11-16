@@ -49,22 +49,21 @@ describe('pasted Action links', () => {
   const projectId = '11111111-1111-4111-8111-111111111111';
   const ACTION_A = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const ACTION_B = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-  const link = (id: string, project = projectId) =>
-    `${origin}/agent/actions/${id}?project=${project}`;
+  const link = (id: string, project = projectId) => `${origin}/actions/${id}?project=${project}`;
 
   it('finds links to this project’s Action pages on this origin, once each', () => {
     const text = [
       `Find (${link(ACTION_A)}).`,
       `again ${link(ACTION_A)}`,
-      `${origin}/agent/actions/${ACTION_B.toUpperCase()}`,
+      `${origin}/actions/${ACTION_B.toUpperCase()}`,
       `${link(ACTION_B, '22222222-2222-4222-8222-222222222222')}`,
-      `https://evil.example/agent/actions/${ACTION_B}`,
+      `https://evil.example/actions/${ACTION_B}`,
       `${origin}/agent/chats/${ACTION_B}`,
     ].join(' ');
 
     expect(actionLinks(text, { origin, projectId })).toEqual([
       { url: link(ACTION_A), actionId: ACTION_A },
-      { url: `${origin}/agent/actions/${ACTION_B.toUpperCase()}`, actionId: ACTION_B },
+      { url: `${origin}/actions/${ACTION_B.toUpperCase()}`, actionId: ACTION_B },
     ]);
   });
 

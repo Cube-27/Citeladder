@@ -284,7 +284,7 @@ describe('DashboardScreen', () => {
     expect(ranked.getByRole('heading', { name: 'No open actions' })).toBeVisible();
     expect(ranked.getByRole('link', { name: 'View all' })).toHaveAttribute(
       'href',
-      '/agent/actions?project=00000000-0000-4000-8000-000000000001',
+      '/actions?project=00000000-0000-4000-8000-000000000001',
     );
     const proof = within(screen.getByRole('region', { name: 'Progress and report proof' }));
     // The card title labels its one figure; the figure's basis is a hint, not a row.
@@ -322,7 +322,7 @@ describe('DashboardScreen', () => {
     const ranked = within(screen.getByRole('region', { name: 'Ranked actions' }));
     expect(ranked.getByRole('link', { name: 'Publish a comparison page' })).toHaveAttribute(
       'href',
-      '/agent/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
+      '/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
     );
     expect(ranked.getByText('/pricing · 3 evidence items')).toBeVisible();
     // The badge carries the priority; the score is not repeated beside it.
@@ -432,7 +432,7 @@ describe('DashboardScreen', () => {
       next_action: {
         kind: 'opportunity',
         title: 'Publish a comparison page',
-        href: '/agent/actions/00000000-0000-4000-8000-0000000000d1',
+        href: '/actions/00000000-0000-4000-8000-0000000000d1',
         opportunity_id: '00000000-0000-4000-8000-0000000000c1',
       },
       actions: [
@@ -459,7 +459,7 @@ describe('DashboardScreen', () => {
     expect(next.getByText('High')).toBeVisible();
     expect(next.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
       'href',
-      '/agent/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
+      '/actions/00000000-0000-4000-8000-0000000000d1?project=00000000-0000-4000-8000-000000000001',
     );
   });
   it("lists prompts where answers named a competitor but not the brand, with each prompt's Action", () => {
@@ -512,7 +512,7 @@ describe('DashboardScreen', () => {
     ]);
     expect(section.getByRole('link', { name: 'Open Action for crm for agencies' })).toHaveAttribute(
       'href',
-      '/agent/actions/00000000-0000-4000-8000-0000000000b2?project=00000000-0000-4000-8000-000000000001',
+      '/actions/00000000-0000-4000-8000-0000000000b2?project=00000000-0000-4000-8000-000000000001',
     );
     expect(section.getByRole('link', { name: 'best crm' })).toHaveAttribute(
       'href',

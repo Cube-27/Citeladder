@@ -6,22 +6,22 @@ order: 210
 updated: '2026-11-16'
 ---
 
-An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query or visibility prompt. Multiple findings can support the same Action. Site Health issues are not Actions: you fix and track them in [Site Health **Issues**](/site-health/).
+An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query or visibility prompt. Multiple findings can support the same Action. Site Health issues are not Actions: the Actions list shows them, but you fix and track them in [Site Health **Issues**](/site-health/).
 
 This gives your team one place to understand the diagnosis, start Agent work and track implementation.
 
 ## Choose what to work on
 
-Open **Agent → Actions**. The list groups your open work:
+Open **Actions** in the sidebar. It lists everything you can act on across CiteLadder, website issues included, grouped by goal:
 
-| Group                      | What it holds                                                                                           |
-| -------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Fix how AI reads your site | Page signals that regressed between crawls, and internal links                                          |
-| Improve your own pages     | Pages to improve, pages to create (including [content gaps](/content-optimization/)) and pages to merge |
-| Get mentioned elsewhere    | Cited pages that list your competitors but not you                                                      |
-| Improve your products      | Products and categories                                                                                 |
+| Goal                    | What it holds                                                                                                                                                                 |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Let AI read your site   | Technical website issues, page signals that regressed between crawls, and internal links                                                                                      |
+| Improve your own pages  | Content and AEO website issues, prompts you don't appear in, pages to improve, create or merge (including [content gaps](/content-optimization/)) and search queries |
+| Get mentioned elsewhere | Cited pages that list your competitors but not you                                                                                                                            |
+| Improve your products   | Products and categories                                                                                                                                                       |
 
-Each group shows how many Actions it holds and its top five by priority. Choose a group's heading to fold it, or **Show all** to list every Action in that group. Choose **All filters** to narrow the list by status, group, action type, priority, target type or source; the filters stay in the page address, so you can share the view. Choose a row to open the Action's detail.
+Each goal holds categories, and each shows how many items it holds; choose a heading to fold it. The cells above the list count each goal and take you to it. Choose a status (**Open**, **In progress**, **Measuring**, **Done** or **Dismissed**), narrow by **Source** or **Priority**, or group by source instead; the view stays in the page address, so you can share it. A website issue row opens that issue in Issues, where you mark it fixed; any other row opens the Action's detail.
 
 Every page that the Sources URL table shows as a **Gap** becomes a "Get mentioned elsewhere" Action after its next refresh, whatever kind of page it is.
 

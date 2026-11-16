@@ -201,7 +201,13 @@ describe('prefetchRoute', () => {
   it.each([
     ['/search-intelligence', [searchIntelligenceQueries.readiness(PROJECT).queryKey]],
     ['/agent', [actionsQueries.list(PROJECT).queryKey]],
-    ['/agent/actions', actionsQueries.groupPreviews(PROJECT, {}).map((read) => read.queryKey)],
+    [
+      '/actions',
+      [
+        ...actionsQueries.statusView(PROJECT, 'open', {}).map((read) => read.queryKey),
+        siteHealthQueries.dashboard(PROJECT).queryKey,
+      ],
+    ],
     ['/agent/skills', [agentQueries.skills(PROJECT.workspaceId).queryKey]],
     [
       '/agent/context',

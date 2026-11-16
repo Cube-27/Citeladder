@@ -167,7 +167,7 @@ descriptive and never scores. [Earned sources](earned-sources.md) is the
 authority for the inspection and the rule; a declaration against it targets
 the publisher page and never an owned `SiteUrl`.
 
-The Agent's [Actions screens](../frontend/components/agent/actions-screen.tsx)
+The [Actions screens](../frontend/components/agent/actions-screen.tsx)
 render that contract; they never reclassify domains or fabricate task prose.
 There is no separate Opportunities screen.
 
@@ -264,10 +264,11 @@ content-gap findings are ordinary Actions on it, and a content page's content
 gaps, search demand and link findings share its one Action. Site Health
 defects are not among them: Issues owns them, and the Actions list reads Issues
 groups through the existing Issues reads rather than copying them into Actions
-([IA1](decisions.md#actions-read-issues-in-place)). Leftover rows of the
-retired `issue_family` target kind (and their `actions.cohort`, kept until a
-later schema cleanup) are never listed, counted, read or declared. Every link
-to an Action is `/agent/actions/{id}`. The evidence behind content gaps is in
+([IA1](decisions.md#actions-read-issues-in-place)); each such row links to its
+own Issues page. Leftover rows of the retired `issue_family` target kind (and
+their `actions.cohort`, kept until a later schema cleanup) are never listed,
+counted, read or declared. The list is the Dashboard's `/actions`, and every
+link to an Action is `/actions/{id}`. The evidence behind content gaps is in
 [Content optimization](content-optimization.md).
 
 ## Explicit implementation declaration
@@ -454,7 +455,7 @@ holds it, and each Action lands in exactly one:
 |---|---|
 | `products` (Improve your products) | product and category targets, any approach |
 | `earned` (Get mentioned elsewhere) | `earned_placement` |
-| `fix_site` (Fix how AI reads your site) | `fix_technical`, `improve_links` |
+| `fix_site` (Let AI read your site) | `fix_technical`, `improve_links` |
 | `own_pages` (Improve your own pages) | everything else: `create_new`, `improve_existing`, `consolidate`, and an undiagnosed Agent-origin Action |
 
 `GET /projects/{id}/actions` filters by `status`, `target_kind`, `group`,
@@ -462,14 +463,20 @@ holds it, and each Action lands in exactly one:
 unscored Action has none) and `family` (Source); an unknown value is a 422.
 Each item carries `group` and `priority_band`. `status_counts` stay
 project-wide and unfiltered (the sidebar badge); `group_counts` count every
-group under every filter but the group. The screen shows each group under a
-collapsible header row with its count, its top five Actions by priority and
-"Show all N", which sets the group filter and pages that group with a cursor.
-Every filter (Status, Group, Action type, Priority, Target type, Source) is
-shareable URL state in one All filters menu (AS6), and a row opens its Action.
-Overview's ranked actions link to the owning Action at
-`/agent/actions/{action_id}`, or to the Actions list when an Opportunity has no
-Action yet; an Opportunity's member evidence opens in a drawer on that detail.
+group under every filter but the group.
+
+The Actions screen (`/actions`, a Dashboard page) is the home for every
+actionable item in the app (owner, 2026-11-16). Under Open it lists the latest
+crawl's Issues defects exactly as Issues groups them, read through the Issues
+reads; technical-tab issues fall under `fix_site` and content and AEO issues
+under `own_pages`, and each links to that issue open on `/issues`. Issues keep
+their own Mark fixed lifecycle. Every other Action sits under its group, then a
+category set by the frontend Actions config. The status view (Open, In
+progress, Measuring = implemented and measuring, Done, Dismissed), Source,
+Priority and grouping (goal or source) are URL state. Overview's ranked actions
+link to the owning Action at `/actions/{action_id}`, or to the Actions list
+when an Opportunity has no Action yet; an Action's findings are listed on that
+detail with no drawer.
 
 Declaration and verification rows are append-only. Deleting their owning
 workspace/project follows the baseline cascade; nullable crawl/audit references

@@ -105,10 +105,6 @@ function serve(current: Action, detail: Record<string, unknown> = {}) {
       status = body.status;
       return HttpResponse.json({ ...current, status });
     }),
-    // The drawer's own read is covered by evidence-drawer.test.tsx.
-    http.get(`/api/v1/opportunities/${FINDING}`, () =>
-      HttpResponse.json({ error: { message: 'Not found' } }, { status: 404 }),
-    ),
     http.get(`/api/v1/projects/${PROJECT}/agent/chats`, () =>
       HttpResponse.json({ items: [], next_cursor: null }),
     ),
@@ -125,9 +121,9 @@ function serve(current: Action, detail: Record<string, unknown> = {}) {
 function renderDetail(actionId = ACTION) {
   renderWithProviders(
     <Routes>
-      <Route path="/agent/actions/:actionId" element={<ActionDetailScreen />} />
+      <Route path="/actions/:actionId" element={<ActionDetailScreen />} />
     </Routes>,
-    { initialEntries: [`/agent/actions/${actionId}`], projectSelection: selection },
+    { initialEntries: [`/actions/${actionId}`], projectSelection: selection },
   );
 }
 
@@ -155,7 +151,7 @@ describe('An Action page', () => {
     ).toBeVisible();
     expect(screen.getByRole('link', { name: 'Back to Actions' })).toHaveAttribute(
       'href',
-      `/agent/actions?project=${PROJECT}`,
+      `/actions?project=${PROJECT}`,
     );
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent),
@@ -172,16 +168,12 @@ describe('An Action page', () => {
     // Each fact once: the finding is listed under Findings, not again in the Overview.
     const findings = within(screen.getByRole('region', { name: 'Findings' }));
     expect(within(overview).queryByText('Missing structured data on owned page')).toBeNull();
-    const row = findings.getByRole('button', { name: /^Missing structured data on owned page/u });
-    expect(row).toHaveAttribute('aria-haspopup', 'dialog');
+    // A finding is a plain item: its evidence opens no drawer.
+    const [row] = findings.getAllByRole('listitem');
     expect(row).toHaveTextContent(
       'Missing structured data on owned pageMedium impactInferredSite · Nov 10, 2026',
     );
-    await user.click(row);
-    expect(
-      await screen.findByRole('dialog', { name: 'Missing structured data on owned page' }),
-    ).toBeVisible();
-    await user.click(screen.getByRole('button', { name: 'Close drawer' }));
+    expect(within(row!).queryByRole('button')).toBeNull();
 
     const details = within(screen.getByRole('region', { name: 'Details' }));
     expect(details.getByRole('heading', { level: 2 })).toHaveTextContent('Details');

@@ -33,7 +33,7 @@ describe('Navigation row', () => {
           <NavLink
             item={{
               label: 'Actions',
-              href: '/agent/actions',
+              href: '/actions',
               icon: ListChecks,
               badge: 'open-actions',
               scope: 'project',
@@ -46,7 +46,7 @@ describe('Navigation row', () => {
     );
 
     await vi.waitFor(() => expect(sink).toHaveBeenCalledTimes(1));
-    expect(screen.getByRole('link', { name: 'Actions' })).toHaveAttribute('href', '/agent/actions');
+    expect(screen.getByRole('link', { name: 'Actions' })).toHaveAttribute('href', '/actions');
     const [url, init] = sink.mock.calls[0]!;
     expect(url).toBe('/api/v1/client-errors');
     expect(JSON.parse(String(init.body))).toMatchObject({

@@ -84,11 +84,11 @@ async function openDialog() {
   const user = userEvent.setup();
   renderWithProviders(
     <Routes>
-      <Route path="/agent/actions" element={<AnalyzePageButton />} />
+      <Route path="/actions" element={<AnalyzePageButton />} />
       <Route path="/agent/chats/:chatId" element={<ChatRoute />} />
     </Routes>,
     {
-      initialEntries: ['/agent/actions'],
+      initialEntries: ['/actions'],
       projectSelection: {
         activeProjectId: PROJECT,
         activeProject: makeProject({ id: PROJECT }),

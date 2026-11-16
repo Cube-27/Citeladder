@@ -30,6 +30,10 @@ export const pageListRules: readonly SiteLevelRule[] = siteLevelRuleSchema.extra
 /** Every rule whose finding is persisted once for the site. */
 export const siteLevelRules: readonly SiteLevelRule[] = siteLevelRuleSchema.options;
 
+/** Whether an issue's rule is judged over the whole site rather than page by page. */
+export const isSiteLevelRule = (ruleId: string): boolean =>
+  siteLevelRules.some((rule) => rule === ruleId);
+
 type EvidencePage = Readonly<{
   siteUrlId: string;
   url: string;

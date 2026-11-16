@@ -39,7 +39,7 @@ describe('app route manifest', () => {
   it('lands a project switch on the collection of a record the next project lacks', () => {
     expect(projectSwitchPathname('/runs/r1')).toBe('/runs');
     expect(projectSwitchPathname('/agent/chats/c1')).toBe('/agent');
-    expect(projectSwitchPathname('/agent/actions/a1')).toBe('/agent/actions');
+    expect(projectSwitchPathname('/actions/a1')).toBe('/actions');
     expect(projectSwitchPathname('/site/crawls/c1/pages/p1')).toBe('/site');
     expect(projectSwitchPathname('/performance')).toBe('/performance');
   });
@@ -61,10 +61,10 @@ describe('app route manifest', () => {
   it.each([
     ['/agent', 'agent'],
     ['/agent/chats/c1', 'agent'],
-    ['/agent/actions', 'agent'],
-    ['/agent/actions/a1', 'agent'],
     ['/agent/skills', 'agent'],
     ['/agent/context', 'agent'],
+    ['/actions', 'dashboard'],
+    ['/actions/a1', 'dashboard'],
     ['/projects', 'dashboard'],
     ['/site/crawls/c1/pages/p1', 'dashboard'],
     ['/products/overview', 'dashboard'],

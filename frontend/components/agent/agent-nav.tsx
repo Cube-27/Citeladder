@@ -16,8 +16,7 @@ const ChatsFlyout = lazy(() =>
 );
 
 /**
- * Agent mode's list: the "New chat" button; Actions (with the open count),
- * Skills and Context; then the chats.
+ * Agent mode's list: the "New chat" button; Skills and Context; then the chats.
  */
 export function AgentNav() {
   const { location } = useDestinations();
@@ -36,7 +35,7 @@ export function AgentNav() {
   );
 }
 
-/** Agent mode in the rail: New chat, Actions, Skills and Context as links, then Chats. */
+/** Agent mode in the rail: New chat, Skills and Context as links, then Chats. */
 export function AgentRail() {
   const { isActive, href } = useDestinations();
   const { activeWorkspaceId, activeProjectId } = useProjectContext();

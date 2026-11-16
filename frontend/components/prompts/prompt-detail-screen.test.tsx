@@ -183,7 +183,7 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   );
   expect(screen.getByRole('link', { name: 'reviews.example/crm' })).toHaveAttribute(
     'href',
-    `/agent/actions/${EARNED}?project=${PROJECT}`,
+    `/actions/${EARNED}?project=${PROJECT}`,
   );
 
   const states = within(screen.getByLabelText('Answers by state'));
@@ -211,7 +211,7 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   expect(cells(/Gemini API/)).toEqual(['0', '1', unmeasured, unmeasured, unmeasured, unmeasured]);
   expect(screen.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
     'href',
-    `/agent/actions/${ACTION}?project=${PROJECT}`,
+    `/actions/${ACTION}?project=${PROJECT}`,
   );
 });
 

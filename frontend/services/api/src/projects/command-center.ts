@@ -247,7 +247,7 @@ function nextAction({
     return {
       kind: 'opportunity',
       title: action.title,
-      href: action.action_id ? `/agent/actions/${action.action_id}` : '/agent/actions',
+      href: action.action_id ? `/actions/${action.action_id}` : '/actions',
       opportunity_id: action.id,
     };
   if (!crawled) return step('crawl', 'Run the first site crawl', '/site');

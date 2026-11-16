@@ -97,7 +97,7 @@ it('shows where you stand on each page and links a gap to its Action', () => {
   expect(within(gap!).getByText('Gap')).toBeVisible();
   expect(within(gap!).getByRole('link', { name: 'Action' })).toHaveAttribute(
     'href',
-    `/agent/actions/${ACTION}?project=${PROJECT}`,
+    `/actions/${ACTION}?project=${PROJECT}`,
   );
   expect(within(unread!).getByText('Not read')).toBeVisible();
   expect(within(unread!).queryByRole('link', { name: 'Action' })).toBeNull();

@@ -118,7 +118,7 @@ export function InternalLinkReview({
               </ProjectLink>
             </Button>
             {link.action_id ? (
-              <ActionButton action="openAction" href={`/agent/actions/${link.action_id}`} />
+              <ActionButton action="openAction" href={`/actions/${link.action_id}`} />
             ) : null}
           </Inline>
           <p className="type-caption">

@@ -100,7 +100,7 @@ export function NextAction({ data }: Readonly<{ data: CommandCenter }>) {
   const copy = NEXT_ACTION_COPY[data.next_action.kind];
   const step = data.next_action;
   // An opportunity whose Action is not created yet links to the Actions list.
-  const listOnly = step.kind === 'opportunity' && step.href === '/agent/actions';
+  const listOnly = step.kind === 'opportunity' && step.href === '/actions';
   return (
     <WidgetFrame
       id="next-action"

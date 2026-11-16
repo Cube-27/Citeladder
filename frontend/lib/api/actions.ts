@@ -17,7 +17,6 @@ import {
   actionAnalyzeResultSchema,
   actionDeclarationSchema,
   actionDetailSchema,
-  actionGroupSchema,
   actionItemSchema,
   actionStatusSchema,
   actionsPageSchema,
@@ -30,7 +29,7 @@ import {
 } from '@citeladder/contracts/actions';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
-import { ACTIONS_GROUP_PREVIEW_ROWS, AGENT_MENTION_SEARCH_LIMIT } from '@/lib/config/agent';
+import { ACTIONS_LIST_READ_LIMIT, AGENT_MENTION_SEARCH_LIMIT } from '@/lib/config/agent';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 
 export type Action = z.infer<typeof actionItemSchema>;
@@ -41,6 +40,16 @@ export type { ActionGroup, ActionPriorityBand };
 export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
 export type MeasurementLeg = ActionDeclaration['legs'][number];
 export type AnalyzablePage = z.infer<typeof analyzablePagesSchema>['items'][number];
+
+/** The Actions list's status views and the statuses each holds; Measuring holds declared work too. */
+export const ACTION_LIST_VIEWS = {
+  open: ['open'],
+  in_progress: ['in_progress'],
+  measuring: ['implemented', 'measuring'],
+  done: ['done'],
+  dismissed: ['dismissed'],
+} as const satisfies Record<string, readonly ActionStatus[]>;
+export type ActionListView = keyof typeof ACTION_LIST_VIEWS;
 
 export type ActionsParams = {
   cursor?: string;
@@ -151,12 +160,16 @@ function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
 export const actionsQueries = {
   list: actionListQuery,
   /**
-   * The grouped Actions list: each group's top Actions under the filters,
-   * one read per group in the list's order. Each carries every group's count.
+   * One status view of the Actions list: a read per status it holds (Measuring
+   * holds two), each the server's largest page under the Source and Priority filters.
    */
-  groupPreviews: (scope: ProjectScope, params: Omit<ActionsParams, 'group' | 'limit' | 'cursor'>) =>
-    actionGroupSchema.options.map((group) =>
-      actionListQuery(scope, { ...params, group, limit: ACTIONS_GROUP_PREVIEW_ROWS }),
+  statusView: (
+    scope: ProjectScope,
+    view: ActionListView,
+    params: Pick<ActionsParams, 'priority' | 'family'>,
+  ) =>
+    ACTION_LIST_VIEWS[view].map((status) =>
+      actionListQuery(scope, { ...params, status, limit: ACTIONS_LIST_READ_LIMIT }),
     ),
   /**
    * The Actions the Agent composer's `@` menu offers for typed text: any

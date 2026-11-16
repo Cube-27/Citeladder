@@ -16,7 +16,7 @@ export function ActionChip({
   const url = /^https?:\/\//iu.test(action.target_label);
   return (
     <RecordTag
-      href={`/agent/actions/${action.id}`}
+      href={`/actions/${action.id}`}
       label={`${prefix}${url ? readableUrl(action.target_label) : action.target_label}`}
       labelKind={url ? 'url' : 'text'}
       status={<ActionStatusBadge status={action.status} />}

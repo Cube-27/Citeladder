@@ -375,7 +375,7 @@ export function RankedActionsCard({
       id="ranked-actions"
       title="Ranked actions"
       description={actions.length ? 'Shared order · drag or use the arrow controls.' : undefined}
-      link={{ href: '/agent/actions', label: 'View all' }}
+      link={{ href: '/actions', label: 'View all' }}
     >
       {actions.length ? (
         <ReorderList items={actions.map(actionItem)} pending={pending} onMove={onMove} />

@@ -192,7 +192,7 @@ function EvidenceDrawer({
       {selected ? (
         <Inline className="flex-wrap">
           {selected.action_id ? (
-            <ActionButton action="openAction" href={`/agent/actions/${selected.action_id}`} />
+            <ActionButton action="openAction" href={`/actions/${selected.action_id}`} />
           ) : null}
           <Button variant="secondary" asChild className="w-fit">
             <ProjectLink href={agentHandoffHref(rowsHandoff(selected.dataset_id, [selected]))}>
@@ -295,7 +295,7 @@ function datasetSummary(dataset: SearchIntelligenceDataset) {
       {actions ? (
         <p className={textRole('caption')}>
           Gaps with real search volume where a competitor ranks in the top 10 become{' '}
-          <TextLink href="/agent/actions">Actions</TextLink>. Open a row to see its Action.
+          <TextLink href="/actions">Actions</TextLink>. Open a row to see its Action.
         </p>
       ) : null}
     </>

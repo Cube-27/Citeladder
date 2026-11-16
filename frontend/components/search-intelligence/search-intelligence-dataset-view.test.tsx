@@ -234,7 +234,7 @@ it('links a missing keyword that became an Action', async () => {
   );
   expect(screen.getByRole('link', { name: 'Open Action' })).toHaveAttribute(
     'href',
-    expect.stringContaining(`/agent/actions/${actionId}`),
+    expect.stringContaining(`/actions/${actionId}`),
   );
 });
 
