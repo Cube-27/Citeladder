@@ -529,6 +529,70 @@ describe('IssuesCatalog', () => {
     );
   });
 
+  it('lists duplicate metadata by the pages sharing it, each linking to its page', async () => {
+    const rule = 'architecture.duplicate_metadata_in_page_kind';
+    const contact = (id: string, path: string) => ({
+      site_url_id: id,
+      url: `https://acme.com${path}`,
+      title: 'Contact us | Acme',
+      page_kind: 'about_contact',
+    });
+    serveIssues([issue({ rule_id: rule, affected_url_count: 3 })]);
+    mswServer.use(
+      http.get(`${ISSUES}/${ISSUE_A}`, () =>
+        HttpResponse.json(
+          issueDetail({
+            rule_id: rule,
+            affected_url_count: 3,
+            occurrences: [
+              occurrence({
+                rule_id: rule,
+                evidence: {
+                  count: 1,
+                  page_kind_counts: { about_contact: 3 },
+                  coverage_state: 'complete',
+                  page_kinds: [
+                    {
+                      page_kind: 'about_contact',
+                      page_count: 4,
+                      duplicate_metadata_count: 3,
+                      duplicate_set_count: 1,
+                      duplicate_sets: [
+                        {
+                          title: 'Contact us | Acme',
+                          description: '',
+                          page_count: 3,
+                          pages: [
+                            contact('dddddddd-2222-4111-8111-111111111111', '/contact'),
+                            contact('dddddddd-3333-4111-8111-111111111111', '/pages/contact'),
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+              }),
+            ],
+          }),
+        ),
+      ),
+    );
+    const user = userEvent.setup();
+    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
+
+    const dialog = await openIssue(user, 'WebSite schema is missing');
+    expect(
+      await within(dialog).findByText('These 3 pages share “Contact us | Acme”'),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText('About / Contact, including:')).toBeInTheDocument();
+    const links = within(dialog).getAllByRole('link', { name: /Contact us \| Acme/ });
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      `/site/crawls/${CRAWL}/pages/dddddddd-2222-4111-8111-111111111111`,
+      `/site/crawls/${CRAWL}/pages/dddddddd-3333-4111-8111-111111111111`,
+    ]);
+    expect(within(dialog).getByText('Showing 2 of 3 pages.')).toBeInTheDocument();
+  });
+
   it('applies a severity filter as a server param (not a client filter)', async () => {
     const seen = serveIssues();
     const user = userEvent.setup();

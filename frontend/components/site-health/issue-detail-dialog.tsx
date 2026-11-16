@@ -16,13 +16,13 @@ import { originOf, sitePath } from '@/lib/site-health/evidence-values';
 import {
   linkOutcomeLabel,
   pageCountLabel,
+  sharedText,
   siteLevelEvidence,
   type SiteLevelEvidence,
 } from '@/lib/site-health/site-level-evidence';
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { groupOccurrences, loadedPageCount } from '@/lib/site-health/occurrence-groups';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
-import { pluralCount } from '@/lib/format';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -294,22 +294,8 @@ function SiteLevelList({
   evidence,
   crawlId,
 }: Readonly<{ evidence: SiteLevelEvidence; crawlId: string }>) {
-  if (evidence.kind === 'page_kinds') {
-    return (
-      <ul className={ledgerClasses()}>
-        {evidence.pageKinds.map((row) => (
-          <Inline
-            as="li"
-            key={row.pageKind}
-            className={ledgerItemClasses('flex-wrap justify-between')}
-          >
-            <span className={textRole('body')}>{pageKindLabel(row.pageKind)}</span>
-            <span className="type-caption tabular-nums">{pluralCount(row.pageCount, 'page')}</span>
-          </Inline>
-        ))}
-      </ul>
-    );
-  }
+  if (evidence.kind === 'duplicate_sets')
+    return <DuplicateSetList evidence={evidence} crawlId={crawlId} />;
   if (evidence.kind === 'link_targets')
     return <LinkTargetList evidence={evidence} crawlId={crawlId} />;
   if (evidence.pages.length === 0)
@@ -364,6 +350,76 @@ function SiteLevelList({
       {hidden > 0 ? (
         <p className="type-caption">
           Showing {evidence.pages.length} of {evidence.total} pages.
+        </p>
+      ) : null}
+    </Stack>
+  );
+}
+
+/**
+ * Duplicate metadata, one row per set of pages sharing a title and
+ * description: what they share, how many share it, and the pages.
+ */
+function DuplicateSetList({
+  evidence,
+  crawlId,
+}: Readonly<{
+  evidence: Extract<SiteLevelEvidence, { kind: 'duplicate_sets' }>;
+  crawlId: string;
+}>) {
+  if (evidence.sets.length === 0)
+    return (
+      <StateBlock
+        kind="empty"
+        inline
+        message={
+          evidence.total === 0
+            ? 'No affected URLs found.'
+            : 'This finding did not record which pages it affects.'
+        }
+      />
+    );
+  const shown = evidence.sets.reduce((sum, set) => sum + set.pages.length, 0);
+  return (
+    <Stack gap="item">
+      <ul className={ledgerClasses()}>
+        {evidence.sets.map((set) => (
+          <Stack
+            as="li"
+            gap="tight"
+            key={set.pages[0]?.siteUrlId ?? `${set.pageKind}:${sharedText(set)}`}
+            className={ledgerItemClasses()}
+          >
+            <ClampText className={textRole('body')}>
+              {`These ${pageCountLabel(set.pageCount)} share “${sharedText(set)}”`}
+            </ClampText>
+            {set.title.trim() && set.description ? (
+              <ClampText className="type-caption">{set.description}</ClampText>
+            ) : null}
+            <span className="type-caption">
+              {pageKindLabel(set.pageKind)}
+              {set.pages.length < set.pageCount ? ', including:' : ':'}
+            </span>
+            {/* Each page link is its own row, at least 24 high, so stacked targets never touch (WCAG 2.5.8). */}
+            <Stack as="ul" gap="item">
+              {set.pages.map((page) => (
+                <li key={page.siteUrlId} className="flex min-h-6 min-w-0 items-center">
+                  <AffectedPageLink
+                    crawlId={crawlId}
+                    siteUrlId={page.siteUrlId}
+                    title={page.title}
+                    url={page.url}
+                    pageKind={page.pageKind}
+                  />
+                </li>
+              ))}
+            </Stack>
+          </Stack>
+        ))}
+      </ul>
+      {shown < evidence.total ? (
+        <p className="type-caption">
+          Showing {shown} of {evidence.total} pages.
         </p>
       ) : null}
     </Stack>

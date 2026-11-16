@@ -41,11 +41,46 @@ const unreachablePagesEvidenceSchema = pageListEvidenceSchema.extend({
   ),
 });
 
-/** A finding about page kinds, each with its page and duplicate-metadata counts. */
-const pageKindEvidenceSchema = z.object({
+/** One affected page kind, with its page and duplicate-metadata counts. */
+const pageKindShape = {
+  page_kind: z.string(),
+  page_count: count(),
+  duplicate_metadata_count: count(),
+};
+
+/**
+ * Page kinds whose pages repeat each other's title and description, each with
+ * its first `max_evidence_items` duplicate sets and of each set the first
+ * `max_evidence_items` pages; the counts are over every set and page.
+ */
+const duplicateMetadataEvidenceSchema = z.object({
   ...architectureShape,
   page_kinds: z.array(
-    z.object({ page_kind: z.string(), page_count: count(), duplicate_metadata_count: count() }),
+    z.object({
+      ...pageKindShape,
+      // Evidence is append-only: findings recorded before sets were stored have no
+      // count, and no sets; a recorded kind always has at least one set.
+      duplicate_set_count: count().optional(),
+      duplicate_sets: z
+        .array(
+          z.object({
+            title: z.string(),
+            description: z.string(),
+            page_count: count(),
+            pages: z.array(evidencePageSchema),
+          }),
+        )
+        .default([]),
+    }),
+  ),
+});
+
+/** Detail page kinds no hub page parents, each with its first `max_evidence_items` pages. */
+const unhubbedPageKindEvidenceSchema = z.object({
+  ...architectureShape,
+  page_kinds: z.array(
+    // Append-only, like the sets above: older findings carry no pages.
+    z.object({ ...pageKindShape, pages: z.array(evidencePageSchema).default([]) }),
   ),
 });
 
@@ -83,7 +118,8 @@ const sitewideLinkEvidenceSchema = z.object({
 });
 
 export type PageListEvidence = z.input<typeof pageListEvidenceSchema>;
-export type PageKindEvidence = z.input<typeof pageKindEvidenceSchema>;
+export type DuplicateMetadataEvidence = z.input<typeof duplicateMetadataEvidenceSchema>;
+export type UnhubbedPageKindEvidence = z.input<typeof unhubbedPageKindEvidenceSchema>;
 export type SitewideLinkEvidence = z.input<typeof sitewideLinkEvidenceSchema>;
 
 /** The rules whose finding is persisted once for the site. */
@@ -116,11 +152,12 @@ export const siteLevelFindingSchema = z.discriminatedUnion('rule_id', [
     evidence: unreachablePagesEvidenceSchema,
   }),
   z.object({
-    rule_id: siteLevelRuleSchema.extract([
-      'architecture.duplicate_metadata_in_page_kind',
-      'architecture.unhubbed_page_kind',
-    ]),
-    evidence: pageKindEvidenceSchema,
+    rule_id: siteLevelRuleSchema.extract(['architecture.duplicate_metadata_in_page_kind']),
+    evidence: duplicateMetadataEvidenceSchema,
+  }),
+  z.object({
+    rule_id: siteLevelRuleSchema.extract(['architecture.unhubbed_page_kind']),
+    evidence: unhubbedPageKindEvidenceSchema,
   }),
   z.object({
     rule_id: siteLevelRuleSchema.extract([

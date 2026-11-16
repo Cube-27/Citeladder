@@ -367,8 +367,8 @@ const LEAD_BY_RULE: Readonly<Record<string, string>> = {
   'architecture.unreachable_from_home': 'Unreachable sections:',
   'technical.sitewide_broken_link': 'Broken links shared by most pages:',
   'technical.sitewide_link_redirect': 'Links shared by most pages that redirect:',
-  'architecture.duplicate_metadata_in_page_kind': 'Affected page kinds:',
-  'architecture.unhubbed_page_kind': 'Affected page kinds:',
+  'architecture.duplicate_metadata_in_page_kind': 'Metadata repeated across pages:',
+  'architecture.unhubbed_page_kind': 'Affected pages:',
 };
 
 /** The label to print before a rule's facts, when the facts need one. */

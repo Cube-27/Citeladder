@@ -118,6 +118,33 @@ describe('evidenceFacts', () => {
     ).toEqual(['noindex, nofollow']);
   });
 
+  it('names each duplicate set by its shared title, else its description, and its page count', () => {
+    const set = (title: string, description: string, pageCount: number) => ({
+      title,
+      description,
+      page_count: pageCount,
+      pages: [],
+    });
+    expect(
+      evidenceFacts('architecture.duplicate_metadata_in_page_kind', {
+        count: 1,
+        page_kind_counts: { about_contact: 5 },
+        coverage_state: 'complete',
+        page_kinds: [
+          {
+            page_kind: 'about_contact',
+            page_count: 6,
+            duplicate_metadata_count: 5,
+            duplicate_set_count: 2,
+            duplicate_sets: [
+              set('Contact us | Acme', 'Get in touch', 3),
+              set('  ', 'About Acme', 2),
+            ],
+          },
+        ],
+      }),
+    ).toEqual(['“Contact us | Acme” (3 pages)', '“About Acme” (2 pages)']);
+  });
   it('reads a site-level architecture finding as the pages it names', () => {
     const evidence = {
       count: 11,
@@ -156,11 +183,38 @@ describe('evidenceFacts', () => {
     expect(
       siteLevelEvidence('architecture.unhubbed_page_kind', {
         count: 1,
-        page_kinds: [{ page_kind: 'product', page_count: 40, duplicate_metadata_count: 2 }],
+        page_kinds: [
+          {
+            page_kind: 'product',
+            page_count: 40,
+            duplicate_metadata_count: 2,
+            pages: [
+              {
+                site_url_id: 'a80abae1-a069-4f97-a5bd-76d3fc7d041b',
+                url: 'https://www.thenetreturn.com/products/net',
+                title: 'Net',
+                page_kind: 'product',
+              },
+            ],
+          },
+        ],
         page_kind_counts: { product: 40 },
         coverage_state: 'complete',
       }),
-    ).toEqual({ kind: 'page_kinds', pageKinds: [{ pageKind: 'product', pageCount: 40 }] });
+    ).toEqual({
+      kind: 'pages',
+      total: 40,
+      pages: [
+        {
+          siteUrlId: 'a80abae1-a069-4f97-a5bd-76d3fc7d041b',
+          url: 'https://www.thenetreturn.com/products/net',
+          title: 'Net',
+          pageKind: 'product',
+          clicksFromHome: null,
+        },
+      ],
+      sections: [],
+    });
     expect(siteLevelEvidence('technical.indexable', { noindex: true })).toBeNull();
   });
 
