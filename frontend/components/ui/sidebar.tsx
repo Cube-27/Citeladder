@@ -50,8 +50,8 @@ export function SidebarFrame({
         >
           {ident}
         </div>
-        {/* `page-pad` above and below the switch; the list below adds its own 12. */}
-        <div className="labelled:pt-[var(--page-pad)] labelled:pb-[calc(var(--page-pad)-0.75rem)] shrink-0 px-2 pt-1">
+        {/* `page-pad-block` above the switch, level with the first row; 12 below it. */}
+        <div className="labelled:pt-[var(--page-pad-block)] labelled:pb-3 shrink-0 px-2 pt-1">
           {mode}
         </div>
         {nav}
