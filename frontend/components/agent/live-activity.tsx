@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { activitySteps } from '@/components/agent/activity-chain';
+import { activitySteps, STEP_CARD } from '@/components/agent/activity-chain';
 import { LiveReply } from '@/components/agent/live-reply';
 import { AgentTurn } from '@/components/ui/chat-dock';
 import { FoldedTrail } from '@/components/ui/rung-trail';
@@ -67,12 +67,14 @@ function RunningTurn({
   const seconds = useElapsedSeconds(live?.startedAt ?? Date.parse(run.created_at));
   return (
     <AgentTurn inProgress>
-      <FoldedTrail
-        live={{ status, seconds }}
-        label="Agent activity"
-        steps={activitySteps(rows)}
-        empty="Nothing read yet."
-      />
+      <div className={STEP_CARD}>
+        <FoldedTrail
+          live={{ status, seconds }}
+          label="Agent activity"
+          steps={activitySteps(rows)}
+          empty="Nothing read yet."
+        />
+      </div>
       <LiveReply live={live} />
     </AgentTurn>
   );

@@ -325,6 +325,8 @@ describe('An unanswered turn', () => {
     expect(screen.queryByRole('button', { name: 'Copy reply' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Edit last request' })).toBeEnabled();
+    // The error is a notice, not a heading, so the thread's levels under the page's h1 never skip.
+    expect(screen.queryAllByRole('heading').map((heading) => heading.tagName)).toEqual([]);
   });
 
   it('shows a run stopped at its step limit as a warning', async () => {
