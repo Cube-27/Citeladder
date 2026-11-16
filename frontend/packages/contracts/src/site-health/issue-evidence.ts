@@ -58,15 +58,18 @@ const duplicateMetadataEvidenceSchema = z.object({
   page_kinds: z.array(
     z.object({
       ...pageKindShape,
-      duplicate_set_count: count(),
-      duplicate_sets: z.array(
-        z.object({
-          title: z.string(),
-          description: z.string(),
-          page_count: count(),
-          pages: z.array(evidencePageSchema),
-        }),
-      ),
+      // Evidence is append-only: findings recorded before sets were stored read as "not recorded".
+      duplicate_set_count: count().default(0),
+      duplicate_sets: z
+        .array(
+          z.object({
+            title: z.string(),
+            description: z.string(),
+            page_count: count(),
+            pages: z.array(evidencePageSchema),
+          }),
+        )
+        .default([]),
     }),
   ),
 });
@@ -74,7 +77,10 @@ const duplicateMetadataEvidenceSchema = z.object({
 /** Detail page kinds no hub page parents, each with its first `max_evidence_items` pages. */
 const unhubbedPageKindEvidenceSchema = z.object({
   ...architectureShape,
-  page_kinds: z.array(z.object({ ...pageKindShape, pages: z.array(evidencePageSchema) })),
+  page_kinds: z.array(
+    // Append-only, like the sets above: older findings carry no pages.
+    z.object({ ...pageKindShape, pages: z.array(evidencePageSchema).default([]) }),
+  ),
 });
 
 /** Where a sitewide link goes wrong: an HTTP status (null when unanswered), a redirect, or a loop. */
