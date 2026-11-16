@@ -22,8 +22,8 @@ import { useProjectScope } from '@/lib/project/active-project-scope';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 
 /**
- * New chat: the greeting and composer at the top of the thread column with
- * "What should I work on?" beneath it. Skills and the project's top Actions are in the
+ * New chat: the centred greeting and composer in the middle of the thread
+ * column with "What should I work on?" beneath it. Skills and the project's top Actions are in the
  * composer's + menu. An evidence-screen handoff arrives as typed references
  * in the URL and is shown as removable context before the first message is
  * sent. A chat opened on an Action is about that Action alone: it is one
@@ -104,10 +104,10 @@ function NewChat({
 
   return (
     <ThreadPage>
-      {/* The greeting, composer and briefing start at the top of the thread
-          column, where a chat's first turn will be. */}
-      <Stack gap="section">
-        <h2 className={textRole('title')}>What can I help with?</h2>
+      {/* The greeting, composer and briefing sit centred in the thread's
+          scrolling region; taller than it, they start at the top and scroll. */}
+      <Stack gap="section" className="my-auto">
+        <h2 className={textRole('title', 'text-center')}>What can I help with?</h2>
         {unavailable ? (
           <Notice tone="negative">
             This Action is unavailable. The chat will start without it.

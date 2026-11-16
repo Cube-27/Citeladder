@@ -780,12 +780,6 @@
   mask-image: none;
 }
 
-/* The thread is up to 1040 wide; its running text keeps a 760px measure,
-   while tables, documents, evidence and proposals take the full width. */
-[data-thread] :is(p, li, blockquote, h2, h3, h4) {
-  max-width: 760px;
-}
-
 /* Below the shell breakpoint the website's main gutter narrows to space-6. */
 @media (max-width: 1279px) {
   :root[data-public-surface] {

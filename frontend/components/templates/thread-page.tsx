@@ -6,9 +6,8 @@ import { PageFrame, type PageFrameSlots } from './page-frame';
  * Thread: the masthead, then the thread across the main column up to
  * 1040px, centred, scrolling in its own region with the composer docked
  * under it, so the window, the masthead and the composer never move as the
- * thread grows. Paragraphs keep a 760px measure (`data-thread`, globals.css);
- * tables, documents, evidence and proposals use the thread's width. The chat
- * list is the Agent-mode sidebar. `scrollRef` reaches the scrolling region;
+ * thread grows. Every turn, its prose included, spans the thread's width, so
+ * its edges meet the composer's. The chat list is the Agent-mode sidebar. `scrollRef` reaches the scrolling region;
  * `scrollLabel` names it when it holds a conversation.
  */
 export function ThreadPage({
