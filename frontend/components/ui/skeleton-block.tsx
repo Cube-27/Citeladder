@@ -27,7 +27,8 @@ export type LoadingShape =
   | Readonly<{ kind: 'card'; lines?: number }>
   | Readonly<{ kind: 'table'; columns?: number }>
   | Readonly<{ kind: 'figures'; count?: number }>
-  | Readonly<{ kind: 'chart'; height?: ChartHeight }>;
+  | Readonly<{ kind: 'chart'; height?: ChartHeight }>
+  | Readonly<{ kind: 'thread' }>;
 
 export type ChartHeight = 'sm' | 'md' | 'lg';
 
@@ -48,6 +49,8 @@ export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
       return <FigureBlocks count={shape.count} />;
     case 'chart':
       return <SkeletonBlock className={cn('w-full', CHART_HEIGHT[shape.height ?? 'md'])} />;
+    case 'thread':
+      return <ThreadBlocks />;
     default: {
       const exhaustive: never = shape;
       return exhaustive;
@@ -112,6 +115,21 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
           <SkeletonBlock className="h-6 w-16" />
         </span>
       ))}
+    </span>
+  );
+}
+
+/** A chat: user turns (right, 60%, 48 high) alternating with replies (left, 80%, 72 high), 24 apart. */
+export function ThreadBlocks() {
+  return (
+    <span data-thread-blocks="" className="grid gap-6">
+      {range(3).map((index) =>
+        index % 2 === 0 ? (
+          <SkeletonBlock key={index} className="h-12 w-3/5 justify-self-end rounded-lg" />
+        ) : (
+          <SkeletonBlock key={index} className="h-[72px] w-4/5 justify-self-start rounded-md" />
+        ),
+      )}
     </span>
   );
 }

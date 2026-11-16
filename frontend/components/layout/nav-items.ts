@@ -2,39 +2,43 @@ import type { LucideIcon } from 'lucide-react';
 
 import { ICONS } from '@/lib/icons';
 import {
+  DASHBOARD_SIDEBAR_GROUPS,
   MODE_HOMES,
   navDestinations,
   type NavDestination,
-  type SidebarGroup,
 } from '@/lib/navigation/app-routes';
 
 /** A manifest nav entry with its glyph resolved, ready to render as a link. */
 export type NavItem = Omit<NavDestination, 'icon'> & { icon: LucideIcon };
 
+type DashboardGroup = (typeof DASHBOARD_SIDEBAR_GROUPS)[number];
+
 /** A Dashboard group: its label (null draws the rows ungrouped) and its rail glyph. */
-export type NavGroup = Readonly<{
-  group: SidebarGroup;
-  title: 'Analyze' | 'Commerce' | 'Track' | null;
-  /** The collapsed rail's one button for the group. */
-  icon: LucideIcon;
-  items: readonly NavItem[];
-}>;
+export type NavGroup = Readonly<
+  DashboardGroup & {
+    /** The collapsed rail's one button for the group. */
+    icon: LucideIcon;
+    items: readonly NavItem[];
+  }
+>;
 
 function navItems(placement: Parameters<typeof navDestinations>[0]): readonly NavItem[] {
   return navDestinations(placement).map((entry) => ({ ...entry, icon: ICONS[entry.icon] }));
 }
 
-function group(id: SidebarGroup, title: NavGroup['title'], icon: LucideIcon): NavGroup {
-  return { group: id, title, icon, items: navItems(`sidebar:${id}`) };
-}
+const GROUP_ICONS = {
+  overview: ICONS.overview,
+  analyze: ICONS.site,
+  commerce: ICONS.products,
+  track: ICONS.visibility,
+} satisfies Record<DashboardGroup['group'], LucideIcon>;
 
 /** Dashboard mode: Overview and Actions ungrouped, then Analyze, Commerce and Track. */
-export const DASHBOARD_GROUPS: readonly NavGroup[] = [
-  group('overview', null, ICONS.overview),
-  group('analyze', 'Analyze', ICONS.site),
-  group('commerce', 'Commerce', ICONS.products),
-  group('track', 'Track', ICONS.visibility),
-];
+export const DASHBOARD_GROUPS: readonly NavGroup[] = DASHBOARD_SIDEBAR_GROUPS.map((entry) => ({
+  ...entry,
+  icon: GROUP_ICONS[entry.group],
+  items: navItems(`sidebar:${entry.group}`),
+}));
 
 const agentEntries = navItems('sidebar:agent');
 

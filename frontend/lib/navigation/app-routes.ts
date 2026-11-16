@@ -5,10 +5,12 @@
  * from it, so adding or renaming a screen is one edit here.
  *
  * Data only: no React at runtime and no static domain import. Each screen is a
- * `() => import()` so the shell's boot download carries none of them.
+ * `() => import()` so the shell's boot download carries none of them. The
+ * build loads this file in Node (apps/app/boot-shell.ts): type imports only.
  */
 import type { ComponentType } from 'react';
 
+import type { LoadingShape } from '@/components/ui/skeleton-block';
 import type { IconName } from '@/lib/icons';
 
 /**
@@ -24,6 +26,14 @@ type RouteScope = 'public' | 'workspace' | 'project';
  * above the account in both.
  */
 export type SidebarGroup = 'overview' | 'analyze' | 'commerce' | 'track' | 'agent' | 'foot';
+
+/** Dashboard mode's groups in order, with their labels (null draws the rows ungrouped). */
+export const DASHBOARD_SIDEBAR_GROUPS = [
+  { group: 'overview', title: null },
+  { group: 'analyze', title: 'Analyze' },
+  { group: 'commerce', title: 'Commerce' },
+  { group: 'track', title: 'Track' },
+] as const satisfies readonly { group: SidebarGroup; title: string | null }[];
 
 /**
  * Where a nav entry is listed: a sidebar group (the command palette lists the
@@ -48,6 +58,17 @@ type NavEntry = {
 
 type Screen = () => Promise<{ default: ComponentType }>;
 
+/**
+ * What a shell route draws before its page can (RouteLoadingScreen): its real
+ * tab labels, a held filter row, then its first screen's shapes in order, so
+ * nothing moves when the page arrives.
+ */
+export type RouteLoading = Readonly<{
+  tabs?: readonly string[];
+  filters?: boolean;
+  shapes: readonly LoadingShape[];
+}>;
+
 export type AppRouteRecord = {
   /** A React Router pattern; `:name` segments match one path segment. */
   path: string;
@@ -65,6 +86,8 @@ export type AppRouteRecord = {
   /** The URL carries a single-use bearer credential (an email or invitation link). */
   credentialInUrl?: true;
   nav?: readonly NavEntry[];
+  /** A shell route's loading frame; without one it draws two cards. */
+  loading?: RouteLoading;
 };
 
 /** Pick one named export of a lazily loaded module as the route's screen. */
@@ -152,6 +175,12 @@ const screens = {
 
 const credential = { credentialInUrl: true } as const;
 
+const card = { kind: 'card' } satisfies LoadingShape;
+const chart = { kind: 'chart' } satisfies LoadingShape;
+const table = (columns: number): LoadingShape => ({ kind: 'table', columns });
+const figures = (count?: number): LoadingShape => ({ kind: 'figures', count });
+const RECORD_LOADING: RouteLoading = { shapes: [card, card] };
+
 export const APP_ROUTES = [
   // Public: no session.
   flow('/verify-email', 'public', screens.mailbox, credential),
@@ -170,12 +199,17 @@ export const APP_ROUTES = [
     path: '/projects',
     title: 'Overview',
     screen: screens.projects,
+    loading: { shapes: [figures(3), card] },
     nav: [listed('Overview', 'overview', 'overview')],
   }),
   page({
     path: '/site',
     title: 'Website',
     screen: screens.site,
+    loading: {
+      tabs: ['Overview', 'Pages', 'Architecture', 'AEO readiness', 'Internal links', 'Changes'],
+      shapes: [figures(), table(6)],
+    },
     nav: [listed('Website', 'site', 'analyze')],
   }),
   page({
@@ -183,29 +217,38 @@ export const APP_ROUTES = [
     title: 'Page detail',
     collection: '/site',
     screen: screens.pageDetail,
+    loading: RECORD_LOADING,
   }),
   page({
     path: '/issues',
     title: 'Issues',
     screen: screens.issues,
+    loading: { filters: true, shapes: [table(4)] },
     nav: [listed('Issues', 'issues', 'analyze')],
   }),
   page({
     path: '/performance',
     title: 'Performance',
     screen: screens.performance,
+    // No tab row: its range toolbar is the filter row.
+    loading: { filters: true, shapes: [figures(4), chart] },
     nav: [listed('Performance', 'performance', 'analyze')],
   }),
   page({
     path: '/demand',
     title: 'Search Demand',
     screen: screens.demand,
+    loading: { filters: true, shapes: [table(8)] },
     nav: [listed('Search Demand', 'demand', 'analyze')],
   }),
   page({
     path: '/search-intelligence',
     title: 'Keyword Research',
     screen: screens.keywords,
+    loading: {
+      tabs: ['Overview', 'Keywords', 'Competitors', 'Backlinks'],
+      shapes: [figures(5), table(6)],
+    },
     nav: [listed('Keyword Research', 'searchIntelligence', 'analyze')],
   }),
   // Commerce: Shopping, then the Products table. Shopping is declared before
@@ -214,12 +257,14 @@ export const APP_ROUTES = [
     path: '/products/overview',
     title: 'Shopping',
     screen: screens.shoppingOverview,
+    loading: { shapes: [figures(4), table(4)] },
     nav: [listed('Shopping', 'reports', 'commerce')],
   }),
   page({
     path: '/products',
     title: 'Products',
     screen: screens.products,
+    loading: { filters: true, shapes: [table(4)] },
     nav: [listed('Products', 'products', 'commerce')],
   }),
   page({
@@ -227,11 +272,13 @@ export const APP_ROUTES = [
     title: 'Product',
     collection: '/products',
     screen: screens.product,
+    loading: RECORD_LOADING,
   }),
   page({
     path: '/agent/actions',
     title: 'Actions',
     screen: screens.actions,
+    loading: { filters: true, shapes: [table(5)] },
     // Listed in both modes; it is an Agent route, so opening it switches to Agent mode.
     nav: [
       {
@@ -247,11 +294,13 @@ export const APP_ROUTES = [
     title: 'Action',
     collection: '/agent/actions',
     screen: screens.action,
+    loading: RECORD_LOADING,
   }),
   page({
     path: '/agent',
     title: 'Agent',
     screen: screens.newChat,
+    loading: { shapes: [card] },
     // Agent mode draws it as its "New chat" button, first in the list.
     nav: [{ label: 'New chat', icon: 'newChat', placements: ['sidebar:agent'] }],
   }),
@@ -260,23 +309,36 @@ export const APP_ROUTES = [
     title: 'Chat',
     collection: '/agent',
     screen: screens.chat,
+    loading: { shapes: [{ kind: 'thread' }] },
   }),
   page({
     path: '/agent/skills',
     title: 'Skills',
     screen: screens.skills,
+    loading: { shapes: [table(4)] },
     nav: [listed('Skills', 'skills', 'agent')],
   }),
   page({
     path: '/agent/context',
     title: 'Context',
     screen: screens.context,
+    loading: {
+      tabs: [
+        'Company',
+        'Audience & Offerings',
+        'Business map',
+        'Competitors',
+        'Agent instructions',
+      ],
+      shapes: [card],
+    },
     nav: [listed('Context', 'context', 'agent')],
   }),
   page({
     path: '/prompts',
     title: 'Prompts',
     screen: screens.prompts,
+    loading: { filters: true, shapes: [table(8)] },
     nav: [listed('Prompts', 'prompts', 'track')],
   }),
   page({
@@ -284,17 +346,24 @@ export const APP_ROUTES = [
     title: 'Prompt',
     collection: '/prompts',
     screen: screens.prompt,
+    loading: RECORD_LOADING,
   }),
   page({
     path: '/visibility',
     title: 'AI Visibility',
     screen: screens.visibility,
+    loading: {
+      tabs: ['Trends', 'Sources', 'Perception', 'Ads', 'Query fanouts'],
+      filters: true,
+      shapes: [figures(), chart],
+    },
     nav: [listed('AI Visibility', 'visibility', 'track')],
   }),
   page({
     path: '/runs',
     title: 'Runs',
     screen: screens.runs,
+    loading: { shapes: [table(5)] },
     nav: [listed('Runs', 'runs', 'track')],
   }),
   page({
@@ -302,11 +371,16 @@ export const APP_ROUTES = [
     title: 'Run',
     collection: '/runs',
     screen: screens.run,
+    loading: { shapes: [card, table(7)] },
   }),
   page({
     path: '/ai-traffic',
     title: 'AI Traffic',
     screen: screens.aiTraffic,
+    loading: {
+      tabs: ['Overview', 'Crawlers', 'Referrals', 'Pages', 'Activity'],
+      shapes: [figures(3), chart],
+    },
     nav: [listed('AI Traffic', 'aiTraffic', 'track')],
   }),
 
@@ -316,6 +390,10 @@ export const APP_ROUTES = [
     title: 'Settings',
     scope: 'workspace',
     screen: screens.settings,
+    loading: {
+      tabs: ['Account', 'Workspace', 'Providers', 'Integrations', 'MCP connections', 'API keys'],
+      shapes: [card, card],
+    },
     nav: [
       {
         label: 'Integrations',
@@ -345,6 +423,7 @@ export const APP_ROUTES = [
     title: 'Billing',
     scope: 'workspace',
     screen: screens.billing,
+    loading: { shapes: [card, table(5)] },
     nav: [{ label: 'Billing', icon: 'billing', placements: ['account'] }],
   }),
   page({
@@ -403,6 +482,11 @@ const FALLBACK_TITLE = 'CiteLadder';
 /** The page header and document title for a pathname. */
 export function resolveTitle(pathname: string): string {
   return sectionRoute(pathname)?.title ?? FALLBACK_TITLE;
+}
+
+/** The loading frame for a pathname: its section's, else two cards. */
+export function routeLoading(pathname: string): RouteLoading {
+  return sectionRoute(pathname)?.loading ?? RECORD_LOADING;
 }
 
 /** Whether the path is one of the application shell's titled pages. */
