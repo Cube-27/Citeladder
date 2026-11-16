@@ -15,8 +15,6 @@ const twMerge = extendTailwindMerge({
             // The type ladder's rungs — without these, `text-body-sm` +
             // `text-negative` would collapse to the colour and the text would
             // lose its size.
-            'display-2xl',
-            'display-xl',
             'display-lg',
             'display-md',
             'title',

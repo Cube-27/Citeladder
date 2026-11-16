@@ -190,14 +190,6 @@
         "usage": "Tint behind ink: the highlighter mark and your own brand's citation pill or table row."
       },
       {
-        "name": "on-accent",
-        "value": {
-          "light": "#111111",
-          "dark": "#111111"
-        },
-        "usage": "Text on an accent fill (the own-brand citation number). Always dark: white on Flare fails contrast."
-      },
-      {
         "name": "focus",
         "value": {
           "light": "{ink}",
@@ -268,30 +260,6 @@
           "dark": "#14243d"
         },
         "usage": "Background of info callouts."
-      },
-      {
-        "name": "data-1",
-        "value": {
-          "light": "{accent}",
-          "dark": "{accent}"
-        },
-        "usage": "First chart series: your brand."
-      },
-      {
-        "name": "data-2",
-        "value": {
-          "light": "{ink}",
-          "dark": "{ink}"
-        },
-        "usage": "Second chart series: the leading competitor or the total."
-      },
-      {
-        "name": "data-3",
-        "value": {
-          "light": "#7a7a7a",
-          "dark": "#8c8c8c"
-        },
-        "usage": "Third chart series. Past three series, draw the rest as one \"Other\" series in line-control and label it."
       },
       {
         "name": "data-other",
@@ -468,38 +436,6 @@
           "dark": "{paper}"
         },
         "usage": "The app's chrome: the sidebar and the masthead, a step off the ground. The website has no chrome, so it aliases the ground; the app binds its value."
-      },
-      {
-        "name": "positive-swatch",
-        "value": {
-          "light": "{positive}",
-          "dark": "{positive}"
-        },
-        "usage": "A positive dot or bar segment (3:1 on every fill), always beside its word. The website aliases its text tone; the app binds its value."
-      },
-      {
-        "name": "negative-swatch",
-        "value": {
-          "light": "{negative}",
-          "dark": "{negative}"
-        },
-        "usage": "A negative dot or bar segment (3:1 on every fill), always beside its word. The website aliases its text tone; the app binds its value."
-      },
-      {
-        "name": "warning-swatch",
-        "value": {
-          "light": "{warning}",
-          "dark": "{warning}"
-        },
-        "usage": "A warning dot or bar segment (3:1 on every fill), always beside its word. The website aliases its text tone; the app binds its value."
-      },
-      {
-        "name": "info-swatch",
-        "value": {
-          "light": "{info}",
-          "dark": "{info}"
-        },
-        "usage": "An info dot or bar segment (3:1 on every fill), always beside its word. The website aliases its text tone; the app binds its value."
       }
     ]
   },
@@ -509,24 +445,6 @@
         "name": "Display",
         "family": "display",
         "styles": [
-          {
-            "name": "display-2xl",
-            "fontSize": "44px",
-            "lineHeight": "48px",
-            "fontWeight": 400,
-            "letterSpacing": "-0.01em",
-            "sample": "Get cited when buyers ask AI",
-            "usage": "The docs H1, one per page; 36/42 from 768 to 1023px. The marketing H1 (landing hero, platform, pricing, articles) is the site title, 48/52 from 768px up and 32/38 below, with no tracking on the display face."
-          },
-          {
-            "name": "display-xl",
-            "fontSize": "36px",
-            "lineHeight": "42px",
-            "fontWeight": 400,
-            "letterSpacing": "-0.01em",
-            "sample": "Measure, diagnose, improve",
-            "usage": "Website section headings (h2). 28/34 below 768px."
-          },
           {
             "name": "display-lg",
             "fontSize": "32px",

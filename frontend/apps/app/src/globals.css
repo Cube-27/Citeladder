@@ -20,8 +20,7 @@
    row. `desktop:` (981px) is the
    width at which a component's own internals (a form's two columns, a
    table's secondary columns, a list beside its detail) stop stacking.
-   `sm:`/`md:`/`lg:`/`xl:` (640, 768, 1024, 1280) and `2xl:` (1440) are the
-   website's.
+   `sm:`/`md:`/`lg:`/`xl:` (640, 768, 1024, 1280) are the website's.
 
    The shell's navigation: from `rail:` (900px) the
    sidebar column shows, labelled, unless the reader collapsed it to the 56px
@@ -111,7 +110,6 @@
   --color-accent: #e8501a;
   --color-accent-ink: #b53a0c;
   --color-accent-soft: #ffe6da;
-  --color-on-accent: #111111;
   --color-focus: var(--color-ink);
   --color-positive: #0b6e69;
   --color-positive-soft: #d6f2ef;
@@ -121,9 +119,6 @@
   --color-warning-soft: #fff0d1;
   --color-info: #1f5fbf;
   --color-info-soft: #e3edfc;
-  --color-data-1: var(--color-accent);
-  --color-data-2: var(--color-ink);
-  --color-data-3: #7a7a7a;
   --color-data-other: #c2c2c2;
   --color-scrim: rgb(17 17 17 / 32%);
   --color-chart-grid: #ececec;
@@ -145,14 +140,9 @@
   --color-negative-wash: var(--color-negative-soft);
   --color-warning-wash: var(--color-warning-soft);
   --color-info-wash: var(--color-info-soft);
-  /* The app's chrome (sidebar, masthead) and status swatches (a dot or a bar
-     segment, always beside its word). The website has neither, so they alias
-     its own roles; the app binds its values below. */
+  /* The app's chrome (sidebar, masthead). The website has none, so it aliases
+     the paper; the app binds its value below. */
   --color-chrome: var(--color-paper);
-  --color-positive-swatch: var(--color-positive);
-  --color-negative-swatch: var(--color-negative);
-  --color-warning-swatch: var(--color-warning);
-  --color-info-swatch: var(--color-info);
   /* Data: you are the accent, rivals one to four in rank order (ink, then
      cool hues only), a fifth and later are `data-other`. */
   --color-data-you: var(--color-accent);
@@ -176,14 +166,6 @@
      Sizes and leading are rem, the system's px ÷ 16, so they follow the
      reader's text size; spacing stays px. */
   --text-*: initial;
-  --text-display-2xl: 2.75rem;
-  --text-display-2xl--line-height: 3rem;
-  --text-display-2xl--font-weight: 400;
-  --text-display-2xl--letter-spacing: -0.01em;
-  --text-display-xl: 2.25rem;
-  --text-display-xl--line-height: 2.625rem;
-  --text-display-xl--font-weight: 400;
-  --text-display-xl--letter-spacing: -0.01em;
   --text-display-lg: 2rem;
   --text-display-lg--line-height: 2.375rem;
   --text-display-lg--font-weight: 400;
@@ -329,8 +311,6 @@
   /* The Flow template's one column (sign-in, setup, the workspace chooser). */
   --container-flow: 480px;
 
-  --breakpoint-2xl: 1440px;
-
   /* Motion: 120ms ease-out for hover and colour, 200ms ease-out for menus,
      dialogs and sheets entering, 150ms ease-in for leaving. */
   --motion-fast: 120ms;
@@ -471,7 +451,6 @@
   --color-accent: #ff6a33;
   --color-accent-ink: #ff9466;
   --color-accent-soft: #3b1a0c;
-  --color-on-accent: #111111;
   --color-positive: #4fd1c5;
   --color-positive-soft: #0e2e2b;
   --color-negative: #ff7387;
@@ -480,7 +459,6 @@
   --color-warning-soft: #3a2a0a;
   --color-info: #7fb0ff;
   --color-info-soft: #14243d;
-  --color-data-3: #8c8c8c;
   --color-data-other: #4a4a4a;
   --color-scrim: rgb(0 0 0 / 64%);
   --color-chart-grid: #262626;
@@ -519,16 +497,12 @@
   --color-accent-wash: #3a2218;
   --color-positive: #63e17b;
   --color-positive-wash: #15291d;
-  --color-positive-swatch: #3fbf74;
   --color-negative: #ff7f96;
   --color-negative-wash: #33181e;
-  --color-negative-swatch: #f0566f;
   --color-warning: #f0b849;
   --color-warning-wash: #2e2511;
-  --color-warning-swatch: #e0a530;
   --color-info: #8fb1ff;
   --color-info-wash: #1a2540;
-  --color-info-swatch: #6f9bff;
   --color-data-rival-2: #6fb3e8;
   --color-data-rival-3: #997bf0;
   --color-data-rival-4: #4fc4b5;
@@ -647,16 +621,12 @@
      (scripts/design-system-contrast.mjs). */
   --color-positive: #186c3f;
   --color-positive-wash: #e3f4ea;
-  --color-positive-swatch: #1c9450;
   --color-negative: #c22445;
   --color-negative-wash: #fce8ec;
-  --color-negative-swatch: #dc3655;
   --color-warning: #8a5a00;
   --color-warning-wash: #fdf1cf;
-  --color-warning-swatch: #b47a00;
   --color-info: #2558c9;
   --color-info-wash: #e6edfc;
-  --color-info-swatch: #3b73e6;
   --color-data-rival-2: #2f6fb0;
   --color-data-rival-3: #5733a8;
   --color-data-rival-4: #17807a;
@@ -682,9 +652,6 @@
   --color-negative-soft: var(--color-negative-wash);
   --color-warning-soft: var(--color-warning-wash);
   --color-info-soft: var(--color-info-wash);
-  --color-data-1: var(--color-data-you);
-  --color-data-2: var(--color-data-rival-1);
-  --color-data-3: var(--color-data-rival-2);
 
   /* Type (2.1): eight sizes (12 13 14 16 20 24 28 32), one line height each;
      weights 400, 500 and 600. Numbers are the sans face's tabular numerals.
