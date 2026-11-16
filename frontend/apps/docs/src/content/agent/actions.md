@@ -21,7 +21,7 @@ Open **Actions** in the sidebar. It lists everything you can act on across CiteL
 | Get mentioned elsewhere | Cited pages that list your competitors but not you                                                                                                                   |
 | Improve your products   | Products and categories                                                                                                                                              |
 
-Each goal holds categories, and each shows how many items it holds; choose a heading to fold it. The cells above the list count each goal and take you to it. Choose a status (**Open**, **In progress**, **Measuring**, **Done** or **Dismissed**), narrow by **Source** or **Priority**, or group by source instead; the view stays in the page address, so you can share it. A website issue row opens that issue in Issues, where you mark it fixed; any other row opens the Action's detail.
+Each goal holds categories, and each shows how many items it holds; choose a heading to fold it. The cells above the list count each goal and take you to it. Choose a status (**New**, **In progress**, **Done** or **Declined**), narrow by **Source** or **Priority**, or group by source instead; the view stays in the page address, so you can share it. A website issue row opens that issue in Issues, where you mark it fixed; any other row opens the Action's detail.
 
 Every page that the Sources URL table shows as a **Gap** becomes a "Get mentioned elsewhere" Action after its next refresh, whatever kind of page it is.
 
@@ -57,18 +57,16 @@ When the page is live, choose **Mark implemented** in the workspace to declare t
 
 ## Understand status
 
-| Status      | Meaning                                                            |
-| ----------- | ------------------------------------------------------------------ |
-| Open        | Available work that has not been dismissed or declared implemented |
-| In progress | An open Action has a linked chat with an output                    |
-| Dismissed   | A user has set the Action aside                                    |
-| Implemented | A user has explicitly declared the work implemented                |
-| Measuring   | Later readings have arrived, but not every check is met yet        |
-| Done        | Every expected check has a met reading                             |
+| Status      | Meaning                                                                            |
+| ----------- | ---------------------------------------------------------------------------------- |
+| New         | Work CiteLadder found that nobody has accepted or declined yet                     |
+| In progress | Someone chose **Accept**, or started **Work with the agent** on a New Action       |
+| Done        | Someone chose **Mark implemented**; its measurement shows beside it                |
+| Declined    | Someone chose **Decline**; **Restore** puts it back in New, **Accept** in progress |
 
-A generated draft does not mean the work has shipped. Dismissal is not implementation. A later conflicting observation can move previously verified work back into measuring.
+A Done Action is **Measuring** until every expected check has a met reading, then **Verified**. A later conflicting observation moves verified work back to measuring; the Action stays Done.
 
-You can dismiss or reopen eligible Actions. Declared work follows its measurement lifecycle; you cannot set it to another status at will.
+**Accept** and **Decline** work on a New Action, **Decline** on one in progress, and **Restore** or **Accept** on a declined one. An Action in progress cannot go back to New. A chat output, such as a generated draft, never changes the status: it does not mean the work has shipped. Declining is not implementation, and Done is final.
 
 ## Declare implementation
 

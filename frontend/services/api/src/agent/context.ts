@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
 import { withContentRules } from '../page-documents/content-rules.ts';
+import { statusView } from '../opportunities/action-status.ts';
 import { authorize } from './access.ts';
 import { agentPolicy, AgentError, type Scope, type Json } from './contracts.ts';
 
@@ -73,8 +74,8 @@ export async function buildManifest(
       actionSchema.parse({
         id: row.id,
         target_label: row.target_label,
-        // The status the Actions list shows, so the model never calls a measuring Action open.
-        status: row.effective_status,
+        // The status and measurement the Actions list shows, so the model never calls a Done Action open.
+        ...statusView(row.effective_status),
         skill_id: row.skill_id,
         target_kind: row.target_kind,
         target_url: row.target_url,

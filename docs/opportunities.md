@@ -235,21 +235,34 @@ its remediation, the reading that would measure each finding once declared
 (`member_measurement`), and the earliest go-live time a declaration accepts
 (`declarable_since`).
 
-The Action, not the Opportunity, owns workflow status. A user stores only `open`
-or `dismissed` through `PATCH /api/v1/actions/{action_id}`, and each change
-appends an [ActionStatusEvent](../frontend/services/api/src/opportunities/actions.ts).
-`in_progress` is never a stored decision: an open Action reads as in progress
-while a linked chat has an output, so the Agent sets no status. A declaration
-stores `implemented` (with its status event); `measuring` and `done` are derived
-from the verifier's observations of that declaration — the latest observation
-decides: one that verified every expected check reads as done, any other reads
-as measuring, so a later contradiction reopens measurement — and the verifier
-never writes the stored decision. A user cannot overwrite a declared state.
-The status readers see is persisted on `actions.effective_status` (indexed with
-the project for the list filter and the shell's status counts): the status
-decision and declaration, the Agent output writer and the verifier each
-recompute it in their own transaction (`refreshActionStatus`), and every read,
-filter and count selects that column instead of deriving it per request.
+The Action, not the Opportunity, owns workflow status (owner 2026-11-16). Users
+see four statuses:
+
+| Status      | Stored `status`          | Set by                                                                         |
+| ----------- | ------------------------ | ------------------------------------------------------------------------------ |
+| New         | `open`                   | sync or Agent creation; Restore from Declined                                  |
+| In progress | `in_progress`            | Accept (from New or Declined); Work with Agent on a New Action                 |
+| Done        | `implemented`            | Mark implemented (the declaration), from New or In progress                    |
+| Declined    | `dismissed`              | Decline (from New or In progress)                                              |
+
+Every other move is refused (422): In progress never returns to New, and Done is
+final. `PATCH /api/v1/actions/{action_id}` takes one decision and
+`POST /api/v1/projects/{project_id}/actions/status` takes up to 100 named ids or
+the first 100 Actions a list filter matches (Accept all), in one transaction,
+skipping illegal moves and other workspaces' ids and returning the counts. Each
+change appends an [ActionStatusEvent](../frontend/services/api/src/opportunities/action-decisions.ts);
+a chat started on a New Action accepts it in the chat's transaction. A chat
+output never changes status. Under Done, measurement continues as a badge, not
+a status: the latest verifier observation of the declaration decides — verified
+when it met every expected check, otherwise measuring, so a later contradiction
+reopens measurement — and the verifier never writes the stored decision.
+`actions.effective_status` (indexed with the project) persists `open`,
+`in_progress`, `dismissed`, `implemented`, `measuring` or `done` (verified);
+`ACTION_STATUS_VIEW` in `config/actions.ts` maps each to the user status and
+measurement every read, filter and count shows. The status decision,
+declaration and verifier each recompute it in their own transaction
+(`refreshActionStatus`), and every read selects that column instead of deriving
+it per request.
 Recompute stamps each Opportunity's `action_id`; the Opportunity list and MCP
 `status` filter resolve through that Action, and the command center counts an
 Action resolved at its first verified observation. Action sync restamps live
@@ -288,7 +301,7 @@ and the expected checks. Caller-supplied checks or targets are rejected,
 because a declaration that chose its own expectation could declare itself
 verified. The Action row is locked and one Action carries at most one
 declaration; a same-key replay returns it, and same-key conflicting input is
-rejected. The user must reopen a dismissed Action first.
+rejected. The user must restore or accept a declined Action first.
 
 The declaration is the Action's recorded deployment step (BL4). Its go-live
 time is when the fix shipped, so the deployment and the baseline share one
@@ -341,7 +354,7 @@ theme, or a visibility finding with no prompt — gets no check: the project-wid
 reasons the Action never touched, and site-wide clicks include every other
 page. A site change (`site_change_*`) gets none either: it is a field that
 moved between two crawls, not a Site Health rule a crawl evaluates. The
-declaration still records the work, and the Action reads as implemented with
+declaration still records the work, and the Action reads as Done with
 nothing to measure.
 When the go-live time is earlier than evidence that already exists, the latest
 crawl, audit and Search Console window are queued for this declaration at once.
@@ -349,7 +362,7 @@ Replay checks both the persisted project/Action identity and the original
 request values after workspace-scoped Action authorization, including unique-key
 insert-conflict recovery. A valid retry returns the original declaration without
 requiring a new snapshot, resolving targets again, or repeating side effects.
-Dismissing an Action or producing Agent output for it does not declare it. The
+Declining an Action or producing Agent output for it does not declare it. The
 chat's own measurement plan is free text and does not add checks.
 
 Contextual-link declarations freeze only the explicitly selected links, including
@@ -466,15 +479,14 @@ group under every filter but the group.
 
 The Actions screen (`/actions`, a Dashboard page) is the home for every
 actionable item in the app ([IA1](decisions.md#actions-read-issues-in-place)).
-Under Open it lists the latest crawl's Issues defects exactly as Issues groups
+Under New it lists the latest crawl's Issues defects exactly as Issues groups
 them, read through the Issues reads; technical-tab issues fall under
 `fix_site` and content and AEO issues under `own_pages`, each under its rule's
 own `category`, and each links to that issue open on `/issues`. Issues keep
-their own Mark fixed lifecycle, and Open's count includes them only once their
+their own Mark fixed lifecycle, and New's count includes them only once their
 read has answered. Every other Action sits under its group, then a category;
 both category vocabularies are in the [frontend Actions config](../frontend/lib/config/agent.ts).
-The status view (Open, In
-progress, Measuring = implemented and measuring, Done, Dismissed), Source,
+The status view (New, In progress, Done, Declined), Source,
 Priority and grouping (goal or source) are URL state. Overview's ranked actions
 link to the owning Action at `/actions/{action_id}`, or to the Actions list
 when an Opportunity has no Action yet; an Action's findings are listed on that

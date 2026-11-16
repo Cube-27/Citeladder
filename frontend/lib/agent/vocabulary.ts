@@ -6,7 +6,7 @@
  */
 import type { PriorityValue } from '@/components/ui/status-mark';
 import type { ActionGroup, ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
-import type { ActionTargetKind } from '@citeladder/contracts/actions';
+import type { ActionMeasurement, ActionTargetKind } from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 
 /** The band the server put an Action's priority score in; the score itself only ranks. */
@@ -32,24 +32,25 @@ export const ACTION_GROUP_LABEL: Record<ActionGroup, string> = {
 };
 
 export const ACTION_STATUS_LABEL: Record<ActionStatus, string> = {
-  open: 'Open',
+  open: 'New',
   in_progress: 'In progress',
-  implemented: 'Implemented',
-  measuring: 'Measuring',
   done: 'Done',
-  dismissed: 'Dismissed',
+  dismissed: 'Declined',
 };
 
 /** Badge tone per status; meaning is always carried by the label too. */
-export const ACTION_STATUS_TONE: Record<ActionStatus, 'neutral' | 'info' | 'success' | 'warning'> =
-  {
-    open: 'neutral',
-    in_progress: 'info',
-    implemented: 'info',
-    measuring: 'warning',
-    done: 'success',
-    dismissed: 'neutral',
-  };
+export const ACTION_STATUS_TONE: Record<ActionStatus, 'neutral' | 'info' | 'success'> = {
+  open: 'neutral',
+  in_progress: 'info',
+  done: 'success',
+  dismissed: 'neutral',
+};
+
+/** A Done Action's measurement underneath its status. */
+export const ACTION_MEASUREMENT_LABEL: Record<ActionMeasurement, string> = {
+  measuring: 'Measuring',
+  verified: 'Verified',
+};
 
 const TARGET_KIND_LABEL: Record<ActionTargetKind, string> = {
   page: 'Page',

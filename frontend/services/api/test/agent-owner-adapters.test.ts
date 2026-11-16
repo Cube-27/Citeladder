@@ -343,6 +343,17 @@ describe('Agent bindings to the evidence and Action owners', () => {
       skillId: 'content',
       message: 'Write a buyer guide',
     });
+    // Work with Agent on a New Action accepts it, with its status event.
+    const handedOff = await db
+      .selectFrom('actions')
+      .innerJoin('action_status_events as e', 'e.action_id', 'actions.id')
+      .select(['actions.status', 'actions.effective_status', 'e.previous_status'])
+      .where('actions.id', '=', action.id)
+      .execute();
+    expect([action.status, handedOff]).toEqual([
+      'open',
+      [{ status: 'in_progress', effective_status: 'in_progress', previous_status: 'open' }],
+    ]);
     const drafted = await execute([save('First draft')]);
     expect(opened[0]).toContain(action.id);
     const draft = drafted.outputs[0]!;

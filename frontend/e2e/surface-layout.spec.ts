@@ -222,7 +222,7 @@ test('choosing a filter never moves the table below it', async ({ page }) => {
   ]);
   await page.goto(fixtureProjectPath('/actions'));
   const table = page.getByRole('region', { name: 'Actions' });
-  await expect(table.getByText('No open Actions')).toBeVisible();
+  await expect(table.getByText('No new Actions')).toBeVisible();
   const top = async () => Math.round((await table.boundingBox())!.y);
   const before = await top();
   await page.getByRole('button', { name: /^Priority/ }).click();
@@ -245,6 +245,7 @@ test('on a phone the Actions table fills its card and the row title link fills i
     target_prompt_id: null,
     origin: 'evidence',
     status: 'open',
+    measurement: null,
     priority_score: 140,
     priority_band: 'high',
     families: ['sources'],

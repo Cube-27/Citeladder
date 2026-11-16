@@ -11,7 +11,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createApp } from '../src/app.ts';
 import { editProduct } from '../src/commerce/edits.ts';
-import { updateActionStatus, attachOrCreateAction } from '../src/opportunities/actions.ts';
+import { attachOrCreateAction } from '../src/opportunities/actions.ts';
+import { updateActionStatus } from '../src/opportunities/action-decisions.ts';
 import { policy } from '../src/config.ts';
 import { loadWorkerSettings } from '../src/config/analytics.ts';
 import { record } from '../src/db/json.ts';

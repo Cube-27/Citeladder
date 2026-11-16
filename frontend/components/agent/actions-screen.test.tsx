@@ -78,7 +78,8 @@ const page = {
 };
 const measured = {
   ...actionItem(MEASURED, 'https://acme.test/pricing', PROJECT),
-  status: 'measuring',
+  status: 'done',
+  measurement: 'measuring',
 };
 
 /**
@@ -140,12 +141,12 @@ function serve(reads: string[]) {
       const status = params.get('status');
       const family_ = params.get('family');
       const all = status === 'open' ? [prompt, page] : [];
-      const rows = (status === 'measuring' ? [measured] : all).filter(
+      const rows = (status === 'done' ? [measured] : all).filter(
         (row) => !family_ || row.families.includes(family_),
       );
       return HttpResponse.json(
         actionsPage(rows, {
-          status_counts: { open: 3, in_progress: 1, implemented: 2, measuring: 1, done: 4 },
+          status_counts: { open: 3, in_progress: 1, done: 4, dismissed: 2 },
           group_counts: { own_pages: rows.filter((row) => row.group === 'own_pages').length },
         }),
       );
@@ -233,28 +234,24 @@ describe('Actions', () => {
     renderActions();
 
     await screen.findByRole('link', { name: 'Pages without a title' });
-    // Open counts the Issues defects too; Measuring holds declared work as well.
+    // New counts the Issues defects too.
     expect(screen.getAllByRole('radio').map((radio) => radio.textContent)).toEqual([
-      'Open (6)',
+      'New (6)',
       'In progress (1)',
-      'Measuring (3)',
       'Done (4)',
-      'Dismissed (0)',
+      'Declined (2)',
     ]);
     expect(reads).toEqual(['status=open&limit=200']);
 
-    await user.click(screen.getByRole('radio', { name: /^Measuring/ }));
+    await user.click(screen.getByRole('radio', { name: /^Done/ }));
     expect(await screen.findByRole('link', { name: '/pricing' })).toBeVisible();
-    expect(window.location.search).toBe('?status=measuring');
-    expect(reads.slice(1).sort()).toEqual([
-      'status=implemented&limit=200',
-      'status=measuring&limit=200',
-    ]);
-    // Issues rows have their own lifecycle: they are listed under Open only.
+    expect(window.location.search).toBe('?status=done');
+    expect(reads.slice(1)).toEqual(['status=done&limit=200']);
+    // Issues rows have their own lifecycle: they are listed under New only.
     expect(screen.queryByRole('link', { name: 'Pages without a title' })).toBeNull();
   });
 
-  it('leaves Open uncounted when Issues fail, and keeps product work when the catalog fails', async () => {
+  it('leaves New uncounted when Issues fail, and keeps product work when the catalog fails', async () => {
     serve([]);
     const product = {
       ...actionItem(MEASURED, 'Organic bodysuit', PROJECT),
@@ -277,7 +274,7 @@ describe('Actions', () => {
     renderActions();
 
     expect(await screen.findByText("Couldn't load Website issues")).toBeVisible();
-    expect(screen.getByRole('radio', { name: /^Open/ }).textContent).toBe('Open');
+    expect(screen.getByRole('radio', { name: /^New/ }).textContent).toBe('New');
     expect(screen.getByRole('radio', { name: /^Done/ }).textContent).toBe('Done (0)');
     const goals = within(screen.getByRole('group', { name: 'Goals' }));
     expect(goals.getByRole('button', { name: 'Go to Improve your products, 1' })).toBeVisible();

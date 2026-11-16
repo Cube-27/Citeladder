@@ -1,18 +1,20 @@
 /**
  * The Action status a reader sees, persisted on `actions.effective_status`.
  *
- * A user stores `open` or `dismissed` and a declaration stores
- * `implemented`; the rest is derived: an open Action reads as in progress
- * while a linked chat has an output, and an implemented one reads as
- * measuring once the verifier observed its declaration and as done while the
- * latest observation, which folds every check's own latest reading, verified
- * every check.
+ * A user decision stores `open`, `in_progress` or `dismissed` and a
+ * declaration stores `implemented`, which reads as measuring once the
+ * verifier observed it and as done (verified) while the latest observation,
+ * which folds every check's own latest reading, verified every check. A chat
+ * output never changes it. `ACTION_STATUS_VIEW` maps each persisted value to
+ * the status a user sees (New, In progress, Done, Declined) and its
+ * measurement badge.
  *
  * Each writer that changes one of those inputs (a status decision or
- * declaration, an Agent output attached to the Action, a verification
- * observation) calls `refreshActionStatus` in its own transaction, so every
- * read, filter and count selects one indexed column instead of re-deriving it.
+ * declaration, a verification observation) calls `refreshActionStatus` in its
+ * own transaction, so every read, filter and count selects one indexed column
+ * instead of re-deriving it.
  */
+import { actionStatusSchema, type ActionStatus } from '@citeladder/contracts/actions';
 import { sql, type RawBuilder, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
@@ -21,6 +23,23 @@ import { ApiError } from '../errors.ts';
 import { compareText } from '../text-order.ts';
 
 const a = policy.opportunity.actions;
+type StatusView = (typeof a.ACTION_STATUS_VIEW)[keyof typeof a.ACTION_STATUS_VIEW];
+const VIEWS = new Map<string, StatusView>(Object.entries(a.ACTION_STATUS_VIEW));
+
+/** The status and measurement badge a persisted effective status reads as. */
+export function statusView(effective: string): StatusView {
+  const view = VIEWS.get(effective);
+  if (!view) throw new Error(`Unknown persisted action status: ${effective}`);
+  return view;
+}
+
+/** The persisted effective statuses that read as one of `statuses`, sorted. */
+export function persistedStatuses(statuses: readonly ActionStatus[]): string[] {
+  return Object.entries(a.ACTION_STATUS_VIEW)
+    .filter(([, view]) => statuses.includes(view.status))
+    .map(([persisted]) => persisted)
+    .sort(compareText);
+}
 
 /** The effective status of the `actions` row being updated, from its inputs. */
 function derivedStatus(): RawBuilder<string> {
@@ -39,11 +58,6 @@ function derivedStatus(): RawBuilder<string> {
     limit 1
   )`;
   return sql<string>`case
-    when actions.status = ${a.ACTION_STATUS_OPEN}
-      and exists (select 1 from agent_outputs where agent_outputs.action_id = actions.id
-        and agent_outputs.workspace_id = actions.workspace_id
-        and agent_outputs.project_id = actions.project_id)
-      then ${a.ACTION_STATUS_IN_PROGRESS}::varchar
     when actions.status = ${a.ACTION_STATUS_IMPLEMENTED}
       then coalesce(${measured}, ${a.ACTION_STATUS_IMPLEMENTED}::varchar)
     else actions.status
@@ -84,13 +98,13 @@ export async function refreshActionStatus(
  * Opportunities whose Action has `status`; by default the work queue. A row
  * recomputed before Actions existed has no Action and stays in the queue.
  */
-export function opportunityStatusClause(status: string | null): RawBuilder<SqlBool> {
+export function opportunityStatusClause(status: ActionStatus | null): RawBuilder<SqlBool> {
   if (status) {
     return sql<SqlBool>`opportunities.action_id in (
       select actions.id from actions
       where actions.workspace_id = opportunities.workspace_id
         and actions.project_id = opportunities.project_id
-        and actions.effective_status = ${status}
+        and actions.effective_status in (${sql.join(persistedStatuses([status]))})
     )`;
   }
   const active = [...a.ACTION_ACTIVE_STATUSES].sort(compareText);
@@ -102,8 +116,9 @@ export function opportunityStatusClause(status: string | null): RawBuilder<SqlBo
   ))`;
 }
 
-export function validateStatus(status: string): void {
-  if (!a.ACTION_STATUSES.includes(status)) {
-    throw new ApiError(422, `unknown action status: ${status}`);
-  }
+/** `status` as a user status; an unknown one is a 422, never an empty list. */
+export function validateStatus(status: string): ActionStatus {
+  const parsed = actionStatusSchema.safeParse(status);
+  if (!parsed.success) throw new ApiError(422, `unknown action status: ${status}`);
+  return parsed.data;
 }

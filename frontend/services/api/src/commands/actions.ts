@@ -6,10 +6,14 @@ import type { Database } from '../db/database.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import { parseUuid } from '../http/uuid.ts';
-import { updateActionStatus } from '../opportunities/actions.ts';
+import { bulkUpdateActionStatus, updateActionStatus } from '../opportunities/action-decisions.ts';
 import { declarationView } from '../opportunities/declaration-view.ts';
 import { declareAction as declareOwnedAction } from '../opportunities/declarations.ts';
-import type { actionDeclarationRequestSchema } from '@citeladder/contracts/actions';
+import type {
+  ActionBulkStatusRequest,
+  ActionUserStatus,
+  actionDeclarationRequestSchema,
+} from '@citeladder/contracts/actions';
 import { permission, type Authorized } from './permission.ts';
 
 export const ACTIONS_WRITE = permission({ capability: 'write', scope: 'actions:write' });
@@ -27,10 +31,25 @@ export function setActionStatus(
   actor: Writer,
   projectId: string | null,
   actionId: string,
-  status: string,
+  status: ActionUserStatus,
 ) {
   const scope = scopeOf(actor, projectId);
   return updateActionStatus(db, scope, actionId, status, actor.userId);
+}
+
+/** Accept or Decline many Actions of one project, or Restore them. */
+export function setActionStatuses(
+  db: Database,
+  actor: Writer,
+  projectId: string,
+  input: ActionBulkStatusRequest,
+) {
+  return bulkUpdateActionStatus(
+    db,
+    { workspaceId: actor.workspaceId, projectId },
+    input,
+    actor.userId,
+  );
 }
 
 /** A repeated key replays the recorded declaration (`created: false`). */

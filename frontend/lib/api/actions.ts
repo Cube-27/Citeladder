@@ -41,11 +41,10 @@ export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
 export type MeasurementLeg = ActionDeclaration['legs'][number];
 export type AnalyzablePage = z.infer<typeof analyzablePagesSchema>['items'][number];
 
-/** The Actions list's status views and the statuses each holds; Measuring holds declared work too. */
+/** The Actions list's status views and the statuses each holds. */
 export const ACTION_LIST_VIEWS = {
   open: ['open'],
   in_progress: ['in_progress'],
-  measuring: ['implemented', 'measuring'],
   done: ['done'],
   dismissed: ['dismissed'],
 } as const satisfies Record<string, readonly ActionStatus[]>;

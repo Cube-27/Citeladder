@@ -6,18 +6,17 @@ import { setUrlParams, stringUrlCodec, useUrlState } from '@/lib/navigation/url-
 import { actionPriorityBandSchema } from '@citeladder/contracts/actions';
 
 /**
- * The Actions list's view, all URL state: the status view (Open by default),
+ * The Actions list's view, all URL state: the status view (New by default),
  * the Source and Priority filters, and whether the tree groups by goal or by
  * source.
  */
 
 /** The status views in the segmented control's order, with their labels. */
 export const ACTION_LIST_VIEW_OPTIONS = [
-  { value: 'open', label: 'Open' },
+  { value: 'open', label: 'New' },
   { value: 'in_progress', label: 'In progress' },
-  { value: 'measuring', label: 'Measuring' },
   { value: 'done', label: 'Done' },
-  { value: 'dismissed', label: 'Dismissed' },
+  { value: 'dismissed', label: 'Declined' },
 ] as const satisfies readonly { value: ActionListView; label: string }[];
 
 const ALL = 'all';

@@ -94,8 +94,8 @@ async function eligibility(db: Database, scope: Scope, actionId: string): Promis
     .where('action_id', '=', actionId)
     .executeTakeFirst();
   if (declared) return { kind: 'refused', reason: 'It is already declared implemented.' };
-  if (action.status !== policy.opportunity.actions.ACTION_STATUS_OPEN)
-    return { kind: 'refused', reason: 'Only an open Action can be declared.' };
+  if (!policy.opportunity.actions.ACTION_DECLARABLE_STATUSES.includes(action.status))
+    return { kind: 'refused', reason: 'Only a new or in-progress Action can be declared.' };
   const { members } = await declarableMembers(db, action);
   if (!members.length) return { kind: 'refused', reason: 'No finding targets it.' };
   if (members.some((member) => ruleCheckKind(member.rule_id) === 'contextual_link'))

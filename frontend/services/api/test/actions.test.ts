@@ -104,6 +104,103 @@ describe('Action routes', () => {
     expect(detail.members.map((member) => member.id)).toEqual([s.members[pageRule]]);
   });
 
+  it('applies each legal status decision with one event, refuses an illegal one, and counts four statuses', async () => {
+    const s = await seed();
+    const list = `/api/v1/projects/${s.project_id}/actions`;
+    const patch = async (status: string) => {
+      const response = await request(s, actionPath(s), 'PATCH', { status });
+      const body = (await response.json()) as { status?: string };
+      return [response.status, response.ok ? body.status : null];
+    };
+    expect(await patch('in_progress')).toEqual([200, 'in_progress']); // Accept
+    expect(await patch('open')).toEqual([422, null]); // In progress cannot go back to New
+    expect(await patch('dismissed')).toEqual([200, 'dismissed']); // Decline
+    expect(await patch('open')).toEqual([200, 'open']); // Restore
+    expect(await patch('dismissed')).toEqual([200, 'dismissed']); // Decline a New one
+    expect(await patch('in_progress')).toEqual([200, 'in_progress']); // Accept a declined one
+    const events = await db
+      .selectFrom('action_status_events')
+      .select(['previous_status', 'next_status'])
+      .where('workspace_id', '=', s.workspace_id)
+      .execute();
+    expect(events.map((e) => `${e.previous_status}>${e.next_status}`).sort()).toEqual([
+      'dismissed>in_progress',
+      'dismissed>open',
+      'in_progress>dismissed',
+      'open>dismissed',
+      'open>in_progress',
+    ]);
+    expect((await pageBody(await request(s, list))).status_counts).toEqual({
+      open: 2,
+      in_progress: 1,
+      done: 0,
+      dismissed: 0,
+    });
+    // Mark implemented moves In progress to Done, which no decision changes.
+    expect((await declare(s, 'accepted')).status).toBe(201);
+    expect(await patch('dismissed')).toEqual([422, null]);
+    const done = await pageBody(await request(s, `${list}?status=done`));
+    expect(done.items.map((row) => [row.id, row.status])).toEqual([[actionId(s), 'done']]);
+    expect(done.status_counts).toEqual({ open: 2, in_progress: 0, done: 1, dismissed: 0 });
+  });
+
+  it('changes the named or filtered Actions in bulk, never another workspace’s', async () => {
+    const s = await seed();
+    const foreign = await seed();
+    const path = `/api/v1/projects/${s.project_id}/actions/status`;
+    const bulk = async (body: unknown, as = s) => {
+      const response = await request(as, path, 'POST', body);
+      return [response.status, response.ok ? await response.json() : null];
+    };
+    const statuses = async (t: ActionSeed) =>
+      Object.fromEntries(
+        (
+          await db
+            .selectFrom('actions')
+            .select(['id', 'status'])
+            .where('workspace_id', '=', t.workspace_id)
+            .execute()
+        ).map((row) => [row.id, row.status]),
+      );
+    const theirs = await statuses(foreign);
+
+    // Another workspace's id is skipped, never updated.
+    const named = [actionId(s), actionId(s, otherRule), actionId(foreign)];
+    expect(await bulk({ ids: named, to: 'dismissed' })).toEqual([
+      200,
+      { updated: 2, skipped: 1, truncated: false },
+    ]);
+    // Accept all: every New Action the filter matches, here the one left.
+    expect(await bulk({ filter: { status: 'open' }, to: 'in_progress' })).toEqual([
+      200,
+      { updated: 1, skipped: 0, truncated: false },
+    ]);
+    // In progress cannot be restored to New: matched, skipped.
+    expect(await bulk({ filter: { status: 'in_progress' }, to: 'open' })).toEqual([
+      200,
+      { updated: 0, skipped: 1, truncated: false },
+    ]);
+    expect(await statuses(s)).toEqual({
+      [actionId(s)]: 'dismissed',
+      [actionId(s, otherRule)]: 'dismissed',
+      [actionId(s, promptRule)]: 'in_progress',
+    });
+    expect(await eventCount(s)).toBe(3);
+
+    // Neither ids and a filter together, nor more than 100 ids.
+    expect((await bulk({ ids: [actionId(s)], filter: { status: 'open' }, to: 'open' }))[0]).toBe(
+      422,
+    );
+    const many = Array.from({ length: 101 }, () => randomUUID());
+    expect((await bulk({ ids: many, to: 'dismissed' }))[0]).toBe(422);
+    // Another workspace cannot reach this project, by ids or by filter.
+    expect((await bulk({ ids: [actionId(s)], to: 'open' }, foreign))[0]).toBe(404);
+    expect((await bulk({ filter: { status: 'dismissed' }, to: 'open' }, foreign))[0]).toBe(404);
+    expect(await statuses(foreign)).toEqual(theirs);
+    expect(await eventCount(foreign)).toBe(0);
+    expect((await statuses(s))[actionId(s)]).toBe('dismissed');
+  });
+
   it('returns the persisted handoff message on the list and the detail, or one about the label', async () => {
     const s = await seed();
     const list = `/api/v1/projects/${s.project_id}/actions`;
@@ -209,9 +306,10 @@ describe('Action routes', () => {
           .where('id', '=', actionId(s))
           .executeTakeFirstOrThrow()
       ).effective_status;
-    // The output writer's transaction persists in-progress.
+    // A chat output on a New Action leaves it New: only a decision moves it.
     await actionFixture<string>('revision', s.workspace_id, s.project_id, actionId(s));
-    expect(await stored()).toBe('in_progress');
+    expect(await stored()).toBe('open');
+    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('open');
     // A declaration persists implemented in its own transaction.
     const declared = await declarationBody(await declare(s, 'persisted'));
     expect(await stored()).toBe('implemented');
@@ -237,10 +335,13 @@ describe('Action routes', () => {
         idempotency_key: randomUUID(),
       })
       .execute();
-    const page = await pageBody(await request(s, `${list}?status=implemented`));
-    expect(page.items.map((row) => [row.id, row.status])).toEqual([[actionId(s), 'implemented']]);
-    expect(page.status_counts).toMatchObject({ open: 2, implemented: 1, done: 0 });
-    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
+    // Done, still measuring: the unrecorded verification is not read.
+    const page = await pageBody(await request(s, `${list}?status=done`));
+    expect(page.items.map((row) => [row.id, row.status, row.measurement])).toEqual([
+      [actionId(s), 'done', 'measuring'],
+    ]);
+    expect(page.status_counts).toEqual({ open: 2, in_progress: 0, done: 1, dismissed: 0 });
+    expect((await request(s, `${list}?status=implemented`)).status).toBe(422);
   });
 
   it('rejects unauthenticated, foreign and viewer writes without disclosing or mutating rows', async () => {
@@ -286,7 +387,7 @@ describe('Action routes', () => {
 
   it('freezes targets and checks, preserves microseconds, and replays before resolving changed evidence', async () => {
     const s = await seed();
-    for (const status of ['implemented', 'in_progress', 'done'])
+    for (const status of ['implemented', 'measuring', 'done'])
       expect((await request(s, actionPath(s), 'PATCH', { status })).status).toBe(422);
     expect((await declare(s, 'injected', pageRule, { expected_checks: [] })).status).toBe(422);
     expect((await declare(s, 'injected', pageRule, { target_site_url_ids: [] })).status).toBe(422);
@@ -428,7 +529,7 @@ describe('Action routes', () => {
     expect((await declare(s, 'foreign-members')).status).toBe(409);
   });
 
-  it('accepts only a revision of this Action and derives in-progress from its output', async () => {
+  it('accepts only a revision of this Action', async () => {
     const s = await seed();
     const draft = await actionFixture<string>(
       'revision',
@@ -436,7 +537,6 @@ describe('Action routes', () => {
       s.project_id,
       actionId(s),
     );
-    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('in_progress');
     expect(
       (await declare(s, 'foreign-output', otherRule, { output_revision_id: draft })).status,
     ).toBe(409);
@@ -662,7 +762,7 @@ describe('Action routes', () => {
     expect(body.expected_checks).toEqual([]);
     expect(body.checks).toEqual([]);
     expect(body.member_opportunity_ids).toEqual([s.members[pageRule]]);
-    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
+    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('done');
   });
 
   it('declares an earned listing on the publisher page and measures the prompts that cited it', async () => {
@@ -731,7 +831,10 @@ describe('Action routes', () => {
       // The verifier refreshes the Action in the transaction that appends its observation.
       await refreshActionStatus(db, s.workspace_id, actionId(s));
       const detail = await detailBody(await request(s, actionPath(s)));
-      expect(detail.status).toBe(index === 0 ? 'done' : 'measuring');
+      expect([detail.status, detail.measurement]).toEqual([
+        'done',
+        index === 0 ? 'verified' : 'measuring',
+      ]);
       expect(detail.declaration!.state).toBe(kind);
       expect(detail.declaration!.verification_events).toHaveLength(index + 1);
       expect(detail.declaration!.legs[0]).toMatchObject({
@@ -816,7 +919,7 @@ describe('Declaration ordering', () => {
     expect(unavailable.expected_checks[0]).toMatchObject({ kind: 'visibility_metric' });
     expect(unavailable.expected_checks[0]).not.toHaveProperty('baseline_metric_snapshot_id');
     expect((await detailBody(await request(late, actionPath(late, promptRule)))).status).toBe(
-      'implemented',
+      'done',
     );
   });
 
@@ -881,7 +984,7 @@ describe('Declaration ordering', () => {
     expect(body.resolved_before_snapshot_id).toBe(resolving);
     expect(body.expected_checks).toEqual([]);
     expect(await verifications(s)).toBe(0);
-    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
+    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('done');
   });
 
   it('never declares another workspace’s Action or its findings', async () => {

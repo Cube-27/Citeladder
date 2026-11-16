@@ -7,6 +7,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
+import { actionUserStatusSchema } from '@citeladder/contracts/actions';
 import { logicalEngineSchema } from '@citeladder/contracts/providers';
 import { promptCohortSchema } from '@citeladder/contracts/project';
 import { recordSecurityEvent } from '../auth/security-events.ts';
@@ -293,13 +294,13 @@ const writeDefinitions = {
   update_action_status: direct('update_action_status', ACTIONS_WRITE, {
     title: 'Update an Action status',
     description:
-      'Dismiss one Action the user does not want to act on, or reopen a dismissed one. Runs at once. To record that the work was done, use prepare_declare_implemented instead.',
+      'Accept one Action the user will work on, decline one they do not want, or restore a declined one to New. Runs at once; an in-progress Action can be declined but not moved back to New, and a done one cannot change. To record that the work was done, use prepare_declare_implemented instead.',
     schema: z.strictObject({
       ...project,
       action_id: uuid.describe('An Action id from read_actions.'),
-      status: z
-        .enum(policy.opportunity.actions.ACTION_USER_STATUSES)
-        .describe('dismissed hides the Action from the open list; open restores it.'),
+      status: actionUserStatusSchema.describe(
+        'in_progress accepts the Action; dismissed declines it; open restores a declined one.',
+      ),
     }),
     annotations: hints(false, true),
     run: async (trx, actor, args) => {

@@ -424,6 +424,7 @@ describe('ChatScreen', () => {
               target_prompt_id: null,
               origin: 'evidence',
               status: 'open',
+              measurement: null,
               priority_score: 1,
               priority_band: 'low',
               families: [],

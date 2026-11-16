@@ -20,6 +20,7 @@ import { findWorkspaceMember, memberCan, rolesWith } from '../auth/workspace.ts'
 import { appLink, recordPath } from './links.ts';
 import { containsPattern } from '../db/like.ts';
 import { LISTED_ACTION } from '../opportunities/actions.ts';
+import { statusView } from '../opportunities/action-status.ts';
 
 // A tool call that authorizes several reads checks grant and membership once.
 // Only a principal minted for one call shares its check; any other is live.
@@ -326,7 +327,7 @@ async function searchActions({
       row.id,
       row.project_id,
       row.target_label || 'Action',
-      `Status: ${row.effective_status}. ${row.approach ?? ''}`.trim(),
+      `Status: ${statusView(row.effective_status).status}. ${row.approach ?? ''}`.trim(),
     );
 }
 async function searchPrompts({

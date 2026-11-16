@@ -136,12 +136,12 @@ describe('Finding Actions by name', () => {
     // Without status any a title search keeps the work queue.
     expect((await read('read_actions', { query: 'SHOPS' })).items).toEqual([]);
     expect((await read('read_actions', { query: 'shops', status: 'any' })).items).toMatchObject([
-      { id: measuring.id, status: 'measuring' },
+      { id: measuring.id, status: 'done', measurement: 'measuring' },
     ]);
     // Search covers every status, the work queue first, and says each status.
     expect((await read('search', { query: 'school uniform' })).results).toMatchObject([
       { id: `citeladder://action/${open.id}`, text: 'Status: open.' },
-      { id: `citeladder://action/${measuring.id}`, text: 'Status: measuring.' },
+      { id: `citeladder://action/${measuring.id}`, text: 'Status: done.' },
     ]);
   });
 
@@ -180,10 +180,7 @@ describe('Finding Actions by name', () => {
     const { actions } = await readChat(db, scope, run.chat_id);
     expect(new Map(actions.map((action) => [action.id, action]))).toEqual(
       new Map([
-        [
-          mentioned.id,
-          { id: mentioned.id, target_label: 'School uniform guide', status: 'measuring' },
-        ],
+        [mentioned.id, { id: mentioned.id, target_label: 'School uniform guide', status: 'done' }],
         [cited.id, { id: cited.id, target_label: 'Returns policy', status: 'open' }],
       ]),
     );

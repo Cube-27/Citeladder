@@ -184,7 +184,7 @@ describe('Actions in a chat', () => {
         },
       ],
       actions: [
-        { id: cited, target_label: 'School uniforms', status: 'measuring' },
+        { id: cited, target_label: 'School uniforms', status: 'done' },
         { id: uncited, target_label: 'Returns policy', status: 'open' },
       ],
     });
@@ -199,7 +199,7 @@ describe('Actions in a chat', () => {
       />,
     );
 
-    const chips = await screen.findAllByRole('link', { name: 'School uniforms Measuring' });
+    const chips = await screen.findAllByRole('link', { name: 'School uniforms Done' });
     // Once in the reply: not inside a longer word or code.
     expect(chips).toHaveLength(1);
     expect(chips[0]?.getAttribute('href')).toMatch(new RegExp(`^/actions/${cited}`, 'u'));
@@ -207,7 +207,7 @@ describe('Actions in a chat', () => {
     // An Action this reply did not cite stays text.
     expect(screen.queryByRole('link', { name: /Returns policy/u })).not.toBeInTheDocument();
     const mentions = screen.getByRole('list', { name: 'Mentioned Actions' });
-    expect(within(mentions).getByRole('link')).toHaveAccessibleName('@School uniforms Measuring');
+    expect(within(mentions).getByRole('link')).toHaveAccessibleName('@School uniforms Done');
   });
 });
 

@@ -8,7 +8,12 @@ import { agentBindings } from '../agent/bindings.ts';
 import { agentPolicy } from '../agent/contracts.ts';
 import { runView } from '../agent/reads.ts';
 import { requestProjectOf } from '../auth/actor.ts';
-import { ACTIONS_WRITE, declareAction, setActionStatus } from '../commands/actions.ts';
+import {
+  ACTIONS_WRITE,
+  declareAction,
+  setActionStatus,
+  setActionStatuses,
+} from '../commands/actions.ts';
 import { routeActor } from '../commands/permission.ts';
 import { policy } from '../config.ts';
 import { ApiError } from '../errors.ts';
@@ -20,6 +25,8 @@ import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
 import {
   actionAnalyzeRequestSchema,
   actionAnalyzeResultSchema,
+  actionBulkStatusRequestSchema,
+  actionBulkStatusResultSchema,
   actionDeclarationRequestSchema,
   actionDeclarationSchema,
   actionDetailSchema,
@@ -145,6 +152,23 @@ export const actionRoutes = [
         chat_id: started.chatId,
         run: started.run ? runView(started.run) : null,
       };
+    },
+  }),
+  definePostRoute({
+    family,
+    authorize: 'active-project',
+    ...publicWrite,
+    path: '/api/v1/projects/{project_id}/actions/status',
+    params: { path: projectPath, query: {} },
+    body: actionBulkStatusRequestSchema,
+    response: actionBulkStatusResultSchema,
+    async handle({ c, db }, { path }) {
+      return setActionStatuses(
+        db,
+        routeActor(c, ACTIONS_WRITE),
+        path.project_id,
+        await readBody(c, actionBulkStatusRequestSchema),
+      );
     },
   }),
   definePostRoute({

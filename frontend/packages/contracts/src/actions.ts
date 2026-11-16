@@ -12,9 +12,15 @@ import { contentGapFindingEvidenceSchema } from './opportunity-evidence.ts';
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
 
-import { actionStatusSchema } from './action-status.ts';
+import { actionMeasurementSchema, actionStatusSchema } from './action-status.ts';
 
-export { ACTION_STATUS_ANY, actionStatusSchema } from './action-status.ts';
+export {
+  ACTION_STATUS_ANY,
+  actionMeasurementSchema,
+  actionStatusSchema,
+  type ActionMeasurement,
+  type ActionStatus,
+} from './action-status.ts';
 
 // How the Action hands off into the Agent (AS3): the message a new chat opens
 // with, filled from the Action's own evidence, and a workflow (`workflows.json`
@@ -65,6 +71,7 @@ export const actionItemSchema = responseObject({
   target_prompt_id: uuid().nullable(),
   origin: z.enum(['evidence', 'agent']),
   status: actionStatusSchema,
+  measurement: actionMeasurementSchema.nullable(),
   priority_score: z.number().nullable(),
   // Null while the Action has no score.
   priority_band: actionPriorityBandSchema.nullable(),
@@ -191,18 +198,61 @@ export const actionDetailSchema = actionItemSchema.extend({
 export const actionsPageSchema = responseObject({
   items: z.array(actionItemSchema),
   next_cursor: z.string().nullable(),
-  // Project-wide, unfiltered.
+  // Project-wide, unfiltered: one count per status (New, In progress, Done, Declined).
   status_counts: z.record(z.string(), z.number().int()),
   // Under every filter but the group: what each group holds now.
   group_counts: z.record(actionGroupSchema, z.number().int()),
 });
 
-/** The statuses a user may store; the rest are derived or declared. */
-export const actionUserStatusSchema = actionStatusSchema.extract(['open', 'dismissed']);
+/**
+ * The statuses a user decision stores: `in_progress` (Accept), `dismissed`
+ * (Decline) and `open` (Restore). Done is only declared.
+ */
+export const actionUserStatusSchema = actionStatusSchema.extract([
+  'open',
+  'in_progress',
+  'dismissed',
+]);
 export type ActionUserStatus = z.infer<typeof actionUserStatusSchema>;
 
 export const actionStatusUpdateRequestSchema = z.strictObject({ status: actionUserStatusSchema });
 export type ActionStatusUpdateRequest = z.input<typeof actionStatusUpdateRequestSchema>;
+
+/** The list filters a bulk change reaches through: the Actions list's own. */
+export const actionBulkFilterSchema = z.strictObject({
+  status: actionStatusSchema,
+  q: z.string().max(200).optional(),
+  target_kind: actionTargetKindSchema.optional(),
+  group: actionGroupSchema.optional(),
+  approach: z.string().optional(),
+  priority: actionPriorityBandSchema.optional(),
+  family: z.string().optional(),
+});
+
+/**
+ * One status decision on many Actions: the ticked ids, or every Action the
+ * filter matches (Accept all), at most 100 either way. A legal transition is
+ * applied; the rest are skipped.
+ */
+export const actionBulkStatusRequestSchema = z
+  .strictObject({
+    ids: z.array(uuid()).min(1).max(100).optional(),
+    filter: actionBulkFilterSchema.optional(),
+    to: actionUserStatusSchema,
+  })
+  .refine((body) => (body.ids === undefined) !== (body.filter === undefined), {
+    message: 'Name either ids or a filter',
+  });
+export type ActionBulkStatusRequest = z.input<typeof actionBulkStatusRequestSchema>;
+
+export const actionBulkStatusResultSchema = responseObject({
+  updated: z.number().int(),
+  // Named or matched but not moved: unknown, another workspace's, already
+  // there, or no legal transition to `to`.
+  skipped: z.number().int(),
+  // The filter matched more than one change takes; repeat it for the rest.
+  truncated: z.boolean(),
+});
 
 /**
  * An implementation declaration, the Action's recorded deployment step. Targets

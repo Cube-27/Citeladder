@@ -709,6 +709,18 @@ rebuild dont we already have issues ?", and "its fine if its duplicated but
 the final page URL remains the same … actions is basically home for all
 actions in the app".
 
+## Action statuses: New, In progress, Done, Declined
+
+| ID | Decision |
+|---|---|
+| AS10 | An Action reads as one of four statuses. New (stored `open`) → In progress by Accept or by Work with Agent on a New Action; New → Declined (stored `dismissed`) by Decline; Declined → New by Restore and → In progress by Accept; In progress → Declined by Decline; In progress → Done by Mark implemented (the declaration). Done is final for the user: measurement continues underneath and shows as a badge (measuring, verified), never as a separate status, and a later contradiction shows in that badge. A chat output never changes status by itself. Accept and Decline also work in bulk, and Accept all accepts every New Action under the current filter, server-side and bounded. The Issues page is unchanged. |
+
+Source: owner, in chat, 16 November 2026, approving the Actions v3 plan:
+"accepting anything moves it from open to in progress and marking implemented
+moves it to done, nothing will change in issues page … u have to make sure of
+layout shift and data flow now while building", and of the plan's design:
+"yes that is exactly correct".
+
 ## Backlog closure
 
 The owner went through the backlog item by item and closed it into three tiers.

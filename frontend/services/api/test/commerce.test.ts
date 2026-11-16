@@ -16,7 +16,7 @@ import { freezeCommerceContext } from '../src/commerce/audit-context.ts';
 import { enqueue } from './referral-fixtures.ts';
 import { actionRow, opportunityRow } from './opportunity-fixtures.ts';
 import { prompt } from './prompt-fixtures.ts';
-import { updateActionStatus } from '../src/opportunities/actions.ts';
+import { updateActionStatus } from '../src/opportunities/action-decisions.ts';
 import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
 

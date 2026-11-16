@@ -22,6 +22,7 @@ import { active } from './queue.ts';
 import { workspaceChat } from './messages.ts';
 import { manifestSchema } from './context.ts';
 import { pageFetchView } from '../page-documents/reads.ts';
+import { statusView } from '../opportunities/action-status.ts';
 import { openTargetChoice } from './target-adapter.ts';
 import { stepTarget } from './sources.ts';
 
@@ -189,7 +190,7 @@ async function referencedActions(
     .where('id', 'in', [...ids])
     .orderBy('id')
     .execute();
-  return rows;
+  return rows.map((row) => ({ ...row, status: statusView(row.status).status }));
 }
 
 export async function readChat(

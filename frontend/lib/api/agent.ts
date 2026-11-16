@@ -379,6 +379,9 @@ export const agentMutations = {
       }) => agentApi.createChat(vars.projectId, vars.input, vars.idempotencyKey, { workspaceId }),
       onSuccess: async (accepted, vars, _result, { client }) => {
         void refreshAgentChatLists(client, vars.projectId);
+        // A chat started on a New Action accepts it: its status and counts move.
+        if (vars.input.action_id)
+          void client.invalidateQueries({ queryKey: queryKeys.actions.all });
         await client.prefetchQuery(agentQueries.chat(workspaceId, accepted.chat_id));
       },
     }),

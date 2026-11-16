@@ -13,6 +13,7 @@ import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
 import { ApiError } from '../errors.ts';
 import { getLogger } from '../logging.ts';
+import { statusView } from '../opportunities/action-status.ts';
 import { enqueueTask } from '../queue/enqueue.ts';
 import { payloadString } from '../queue/executor.ts';
 import type { QueueTask } from '../queue/task-queue.ts';
@@ -48,7 +49,7 @@ async function attachActions(db: Database, scope: LinkScope, analysis: InternalL
   for (const link of analysis.recommendations) {
     const action = actions.find((item) => item.target_url === link.source.url);
     link.action_id = action?.id ?? null;
-    link.action_status = action?.status ?? null;
+    link.action_status = action ? statusView(action.status).status : null;
   }
 }
 

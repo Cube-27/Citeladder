@@ -8,6 +8,7 @@ import { currentIssueFilter } from '../site-health/reads/page-rows.ts';
 import type { DB } from '../generated/db-schema.ts';
 import { parseUuid } from '../http/uuid.ts';
 import { getAction } from '../opportunities/actions.ts';
+import { statusView } from '../opportunities/action-status.ts';
 import { getExecutionEvidence } from '../visibility/execution.ts';
 import { authorizedWorkspaceIds, authorizeProject } from './data.ts';
 import { businessContext } from './context.ts';
@@ -450,7 +451,7 @@ async function attachActionStatus(
         .executeTakeFirst()
     : undefined;
   // No Action row is an unknown status, never an open one.
-  row.status = status?.status ?? null;
+  row.status = status ? statusView(status.status).status : null;
   row.provenance = {
     analyzer_version: row.analyzer_version,
     rule_version: row.rule_version,

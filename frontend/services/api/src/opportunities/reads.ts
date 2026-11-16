@@ -55,7 +55,9 @@ function filtered(db: Database, scope: Scope, filters: OpportunityFilters) {
     .where('opportunities.superseded_at', 'is', null);
   if (filters.type) query = query.where('opportunities.opportunity_type', '=', filters.type);
   if (filters.severity) query = query.where('opportunities.severity', '=', filters.severity);
-  query = query.where(opportunityStatusClause(filters.status));
+  query = query.where(
+    opportunityStatusClause(filters.status === null ? null : validateStatus(filters.status)),
+  );
   if (filters.rule_id) query = query.where('opportunities.rule_id', '=', filters.rule_id);
   if (filters.min_priority !== null)
     query = query.where('opportunities.priority_score', '>=', filters.min_priority);

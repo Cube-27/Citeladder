@@ -10,6 +10,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
+import { statusView } from '../opportunities/action-status.ts';
 import { catalogApplicability, UNCATEGORIZED_KEY } from './projection-facts.ts';
 import { ApiError } from '../errors.ts';
 
@@ -240,6 +241,7 @@ export async function buyerPrompts(db: Database, scope: CommerceScope, id?: stri
   );
 }
 
+/** Persisted statuses the target's list leaves out: verified and declined. */
 const SETTLED_ACTION_STATUSES = ['done', 'dismissed'];
 
 /** Live commerce Opportunities keyed to the target, by the Action that holds them. */
@@ -267,5 +269,5 @@ export async function targetActions(
   // under its highest-priority title.
   const byAction = new Map<string, (typeof rows)[number]>();
   for (const row of rows) if (!byAction.has(row.id)) byAction.set(row.id, row);
-  return [...byAction.values()];
+  return [...byAction.values()].map((row) => ({ ...row, status: statusView(row.status).status }));
 }

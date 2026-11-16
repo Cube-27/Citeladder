@@ -1,6 +1,6 @@
 /** The one read catalogue shared by hosted MCP and the in-app Agent. */
 import { z } from 'zod';
-import { ACTION_STATUS_ANY } from '@citeladder/contracts/action-status';
+import { ACTION_STATUS_ANY, actionStatusSchema } from '@citeladder/contracts/action-status';
 import { verificationSchema } from '@citeladder/contracts/ai-traffic';
 import { analyticsSelectionSchema } from '@citeladder/contracts/mcp-app';
 import { performanceDimensionSchema } from '@citeladder/contracts/performance';
@@ -462,7 +462,7 @@ export const definitions = {
   read_actions: projectTool({
     title: 'Read Actions',
     description:
-      'List the work CiteLadder recommends to improve visibility, highest priority first. By default it lists only open and in-progress Actions; pass status any to list every status (implemented, measuring, done and dismissed too), and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to dismiss or reopen one, and prepare_declare_implemented when its work is done.',
+      'List the work CiteLadder recommends to improve visibility, highest priority first. Statuses: open (New), in_progress (accepted), done (declared implemented; its measurement is measuring or verified) and dismissed (Declined). By default it lists only open and in-progress Actions; pass status any to list every status, and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, measurement, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to accept, decline or restore one, and prepare_declare_implemented when its work is done.',
     schema: z.strictObject({
       ...project,
       action_id: optional(
@@ -470,7 +470,7 @@ export const definitions = {
       ),
       status: optional(
         z
-          .enum([...policy.opportunity.actions.ACTION_STATUSES, ACTION_STATUS_ANY])
+          .enum([...actionStatusSchema.options, ACTION_STATUS_ANY])
           .describe(
             'Keep only Actions with this status; any keeps every status. Omitted: open and in progress only.',
           ),
