@@ -3,13 +3,13 @@ import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
+import { ReportPage } from '@/components/templates/report-page';
 import { EntitlementProvider } from '@/lib/billing/entitlement-context';
 import { mswServer } from '@/test/msw-server';
 import { focusByKeyboard } from '@/test/keyboard-focus';
 import { renderWithProviders } from '@/test/render';
 
 import { AppShell } from './app-shell';
-import { ListScreen } from './page-shell';
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
@@ -21,9 +21,9 @@ function renderShell() {
   return renderWithProviders(
     <EntitlementProvider>
       <AppShell>
-        <ListScreen title="Website">
+        <ReportPage title="Website">
           <p>Page content</p>
-        </ListScreen>
+        </ReportPage>
       </AppShell>
     </EntitlementProvider>,
     { initialEntries: ['/site'] },

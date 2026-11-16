@@ -39,9 +39,8 @@ export type PageFrameSlots = Readonly<{
  * under the masthead (the main column's side padding too), level with the
  * sidebar's mode switch, with `--page-pad` again below it. A filter row under
  * tabs sits 24 below them, and the body 12 below it. The masthead's
- * menu button, search and "Ask agent" come from the shell; `end` replaces
- * "Ask agent" (the Agent's History button). Geometry is tokens only; a page
- * passes content into the slots and sets none of its own.
+ * menu button, search and "Ask agent" come from the shell. Geometry is tokens
+ * only; a page passes content into the slots and sets none of its own.
  */
 export function PageFrame({
   title,
@@ -49,9 +48,8 @@ export function PageFrame({
   actions,
   tabs,
   filters,
-  end,
   children,
-}: PageFrameSlots & Readonly<{ end?: ReactNode; children: ReactNode }>) {
+}: PageFrameSlots & Readonly<{ children: ReactNode }>) {
   const resolved = useRouteTitle(title);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
@@ -72,7 +70,7 @@ export function PageFrame({
           }
           search={shell?.searchTrigger}
           actions={actions}
-          end={end ?? shell?.agentTrigger}
+          end={shell?.agentTrigger}
         />
         {tabs ? (
           <div
