@@ -45,15 +45,19 @@ export type VisibilityTab =
   | 'ads'
   | 'query-fanout';
 
-/** The ordered tab definitions (id + human label) rendered by the tablist. */
+/**
+ * The ordered tab definitions (id + human label) rendered by the tablist.
+ * Accuracy is last: it shows once the brand-facts read answers, which the
+ * loading tab row cannot know, so its arrival moves no other tab.
+ */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
   // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
   { id: 'trends', label: 'Trends' },
   { id: 'sources', label: 'Sources' },
   { id: 'perception', label: 'Perception' },
-  { id: 'accuracy', label: 'Accuracy' },
   { id: 'ads', label: 'Ads' },
   { id: 'query-fanout', label: 'Query fanouts' },
+  { id: 'accuracy', label: 'Accuracy' },
 ] as const;
 
 /** The tabs a workspace sees: Accuracy only inside the fact-checking pilot. */
