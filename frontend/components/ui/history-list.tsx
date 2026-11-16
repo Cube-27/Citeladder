@@ -32,7 +32,7 @@ export function HistoryNotice({ children }: Readonly<{ children: ReactNode }>) {
 /** A failed read of the list: its sentence on the rows' 12px inset, then its Retry. */
 export function HistoryFailed({ message, retry }: Readonly<{ message: string; retry: ReactNode }>) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-2 ps-3">
+    <div className="flex min-w-0 items-center justify-between gap-2 pl-3">
       <p className={textRole('body', 'text-ink-2 min-w-0')}>{message}</p>
       {retry}
     </div>
