@@ -104,10 +104,10 @@ function DialogHeader({
         </span>
       ) : null}
       <div className="min-w-0">
-        <DialogPrimitive.Title className="type-heading">{title}</DialogPrimitive.Title>
+        <DialogPrimitive.Title className="type-heading text-balance">{title}</DialogPrimitive.Title>
         {description ? (
           <DialogPrimitive.Description asChild>
-            <div className="text-body-sm text-ink-2 mt-1 text-pretty">{description}</div>
+            <div className="text-body-sm text-ink-2 mt-1">{description}</div>
           </DialogPrimitive.Description>
         ) : null}
       </div>

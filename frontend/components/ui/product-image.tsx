@@ -19,7 +19,8 @@ export function ProductImage({ src }: Readonly<{ src: string }>) {
         src={src}
         alt=""
         loading="lazy"
-        className="size-full object-contain [:root:not([data-theme='dark'])_&]:mix-blend-multiply"
+        data-product-photo=""
+        className="size-full object-contain"
         onError={() => setFailed(true)}
       />
     </span>
