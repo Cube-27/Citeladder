@@ -66,6 +66,7 @@ export function Delta({
   unit = '',
   missingReason,
   context,
+  spokenContext,
   className,
 }: Readonly<{
   /** The signed change, or null when there is nothing to compare against. */
@@ -80,6 +81,8 @@ export function Delta({
   missingReason?: string;
   /** The basis the change is measured against, e.g. "vs Nov 7", in `ink-2`. */
   context?: string;
+  /** The basis for screen readers only, where a visible one would crowd the figure. */
+  spokenContext?: string;
   className?: string;
 }>) {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -100,6 +103,7 @@ export function Delta({
         {unit}
       </span>
       {context ? <span className="text-ink-2 ms-0.5 font-normal">{context}</span> : null}
+      {spokenContext ? <span className="sr-only">{` ${spokenContext}`}</span> : null}
     </span>
   );
 }

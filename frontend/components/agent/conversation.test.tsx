@@ -325,6 +325,8 @@ describe('An unanswered turn', () => {
     expect(screen.queryByRole('button', { name: 'Copy reply' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Edit last request' })).toBeEnabled();
+    // The error is a notice, not a heading, so the thread's levels under the page's h1 never skip.
+    expect(screen.queryAllByRole('heading').map((heading) => heading.tagName)).toEqual([]);
   });
 
   it('shows a run stopped at its step limit as a warning', async () => {
@@ -338,6 +340,28 @@ describe('An unanswered turn', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Warning: Hit the step limit at');
     expect(alert).toHaveTextContent('Step limit.');
+  });
+
+  it('shows a failure’s contact address once, as an email link', async () => {
+    renderChat(
+      chatWith({ status: 'failed', error_code: 'funding_unavailable' }, [
+        { role: 'user', at: '2026-09-25T10:00:00Z' },
+        {
+          role: 'agent',
+          at: '2026-09-25T10:01:00Z',
+          content:
+            'This workspace has no AI credits available right now. Nothing was saved. To get more, email [contact@citeladder.com](mailto:contact@citeladder.com).',
+          answered: false,
+        },
+      ]),
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(within(alert).getByRole('link', { name: 'contact@citeladder.com' })).toHaveAttribute(
+      'href',
+      'mailto:contact@citeladder.com',
+    );
+    expect(alert.textContent?.match(/contact@citeladder\.com/gu)).toHaveLength(1);
   });
 
   it('collapses the same request failing the same way into one count', async () => {

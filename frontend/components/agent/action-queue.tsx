@@ -1,9 +1,9 @@
-import { ActionStatusBadge } from '@/components/agent/action-status-badge';
+import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import type { DataTableState } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell } from '@/components/ui/table';
+import { TableCell, UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { actionTitle } from '@/lib/agent/action-title';
@@ -26,7 +26,7 @@ import {
   type ActionsParams,
   type ActionStatus,
 } from '@/lib/api/actions';
-import { pluralCount } from '@/lib/format';
+import { pluralCount, readableUrl } from '@/lib/format';
 import {
   setUrlParams,
   stringUrlCodec,
@@ -209,11 +209,29 @@ function workSummary(action: Action): string {
     .join(' · ');
 }
 
+/** The kinds whose rows of one kind of work read alike: a page or a product. */
+const NAMED_TARGETS = new Set(['page', 'earned_page', 'product']);
+
+/** A page target by its path (the whole address in the tooltip); a product by its name. */
+function TargetName({ action }: Readonly<{ action: Action }>) {
+  const url = action.target_url ?? action.target_label;
+  let origin: string | null = null;
+  try {
+    if (/^https?:\/\//iu.test(url)) origin = new URL(url).origin;
+  } catch {
+    origin = null;
+  }
+  if (origin) return <UrlText url={url} origin={origin} />;
+  return <span className="min-w-0 truncate">{readableUrl(action.target_label)}</span>;
+}
+
 /**
  * A row's Action cell: its title (the work and its target, one line, linked
  * to its Action, the whole target in the tooltip), its status beside it only
  * in the work queue and only when it is not Open (the queue is nearly all
- * Open), then the work summary.
+ * Open), then a subline that tells the rows apart: the target, then the work
+ * summary. Below the desktop breakpoint the Priority column folds into the
+ * subline's start.
  */
 export function ActionTargetCell({
   action,
@@ -237,7 +255,20 @@ export function ActionTargetCell({
             <ActionStatusBadge status={action.status} />
           ) : null}
         </Inline>
-        <ClampText className={textRole('caption')}>{workSummary(action)}</ClampText>
+        <Inline gap="tight" className={textRole('caption', 'min-w-0 flex-nowrap')}>
+          <span className="desktop:hidden contents">
+            <ActionPriorityBadge band={action.priority_band} />
+          </span>
+          {NAMED_TARGETS.has(action.target_kind) ? (
+            <>
+              <span className="flex max-w-1/2 min-w-0 shrink-0">
+                <TargetName action={action} />
+              </span>
+              <span aria-hidden>·</span>
+            </>
+          ) : null}
+          <ClampText className="min-w-0 flex-1">{workSummary(action)}</ClampText>
+        </Inline>
       </Stack>
     </TableCell>
   );

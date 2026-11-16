@@ -100,16 +100,23 @@ export function OpenRow({
   title,
   meta,
   caption,
+  opens,
   onOpen,
 }: Readonly<{
   number?: number;
   title: ReactNode;
   meta?: ReactNode;
   caption?: ReactNode;
+  /** What the row opens over the page, announced before it is pressed. */
+  opens?: 'dialog';
   onOpen: () => void;
 }>) {
   return (
-    <Pressable onClick={onOpen} className={cn(listRowClasses(), pressableRowClasses)}>
+    <Pressable
+      onClick={onOpen}
+      aria-haspopup={opens}
+      className={cn(listRowClasses(), pressableRowClasses)}
+    >
       <span className="grid min-w-0 flex-1 gap-1">
         <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
           {number === undefined ? null : (

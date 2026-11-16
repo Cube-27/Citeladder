@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
@@ -25,18 +25,72 @@ vi.mock('@/lib/api/opportunities', () => ({
   },
 }));
 
-vi.mock('@/components/opportunities/opportunity-evidence-section', () => ({
-  OpportunityEvidenceSection: () => null,
-}));
-vi.mock('@/components/opportunities/opportunity-summary-section', () => ({
-  OpportunitySummarySection: () => null,
-}));
-
 import { EvidenceDrawer } from './evidence-drawer';
+
+const TARGET = 'https://acme.test/pricing';
+
+/** A loaded finding of this project; its evidence names `url`. */
+function finding(url: string) {
+  return {
+    id: OPPORTUNITY,
+    project_id: PROJECT,
+    rule_id: 'missing_structured_data',
+    title: 'Missing structured data on owned page',
+    severity: 'medium',
+    opportunity_type: 'site',
+    target_url: TARGET,
+    target_theme: null,
+    target_prompt_id: null,
+    created_at: '2026-11-10T10:00:00Z',
+    remediation: 'Add schema.org structured data.',
+    evidence: { url, crawl_id: OPPORTUNITY, site_url_id: OPPORTUNITY },
+    content_handoff: { pathway: 'owned', limitations: [] },
+  };
+}
+
+function renderDrawer() {
+  renderWithProviders(
+    <EvidenceDrawer
+      opportunityId={OPPORTUNITY}
+      title="Missing structured data on owned page"
+      targetUrl={TARGET}
+      projectId={PROJECT}
+      open
+      onOpenChange={vi.fn()}
+    />,
+    projectRoute,
+  );
+}
 
 beforeEach(() => {
   queryState.data = null;
   queryState.error = null;
+});
+
+describe('EvidenceDrawer anatomy', () => {
+  it('names the finding once in its header and repeats neither the target nor the row', async () => {
+    queryState.data = finding(TARGET);
+    renderDrawer();
+
+    const drawer = await screen.findByRole('dialog', {
+      name: 'Missing structured data on owned page',
+    });
+    expect(await within(drawer).findByText('Add schema.org structured data.')).toBeVisible();
+    expect(within(drawer).getAllByText('Missing structured data on owned page')).toHaveLength(1);
+    expect(drawer).not.toHaveTextContent('acme.test');
+    expect(drawer).not.toHaveTextContent('Medium impact');
+    expect(within(drawer).queryByRole('link', { name: 'View page' })).toBeNull();
+    expect(within(drawer).queryByText('Supporting result')).toBeNull();
+  });
+
+  it('shows the evidence address where it differs from the target', async () => {
+    queryState.data = finding('https://acme.test/pricing/compare');
+    renderDrawer();
+
+    const drawer = await screen.findByRole('dialog');
+    expect(await within(drawer).findByText('Evidence')).toBeVisible();
+    expect(drawer).toHaveTextContent('https://acme.test/pricing/compare');
+  });
 });
 
 describe('EvidenceDrawer authorization and recovery', () => {
@@ -49,6 +103,7 @@ describe('EvidenceDrawer authorization and recovery', () => {
     renderWithProviders(
       <EvidenceDrawer
         opportunityId={OPPORTUNITY}
+        targetUrl={null}
         projectId={PROJECT}
         open
         onOpenChange={vi.fn()}
@@ -67,6 +122,7 @@ describe('EvidenceDrawer authorization and recovery', () => {
     renderWithProviders(
       <EvidenceDrawer
         opportunityId={OPPORTUNITY}
+        targetUrl={null}
         projectId={PROJECT}
         open
         onOpenChange={onOpenChange}

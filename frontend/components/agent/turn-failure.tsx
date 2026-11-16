@@ -4,6 +4,7 @@ import { MessageTime } from '@/components/agent/message-time';
 import type { FailureOutcome } from '@/components/agent/thread-items';
 import type { AgentMessage } from '@/lib/api/agent';
 import { Notice, type NoticeTone } from '@/components/ui/notice';
+import { ContentMarkdown } from '@/lib/markdown/markdown';
 
 const FAILURE_VERB: Record<FailureOutcome, string> = {
   failed: 'Failed',
@@ -48,7 +49,9 @@ export function TurnFailure({
         )
       }
     >
-      {latest.content}
+      {/* Persisted message text is Markdown (a contact address is a mailto link); the
+          reply renderer keeps only safe URLs. */}
+      <ContentMarkdown markdown={latest.content} density="compact" />
     </Notice>
   );
 }

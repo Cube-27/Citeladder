@@ -134,12 +134,17 @@ describe('Actions', () => {
     const pricing = screen.getByRole('link', { name: 'Improve the existing page: /pricing' });
     expect(pricing).toHaveAttribute('href', `/agent/actions/${ACTION}?project=${PROJECT}`);
     const cells = within(pricing.closest('tr')!);
-    // The band, never the raw score; priority is an order, never a hue.
-    expect(cells.getByText('High').closest('[data-status-tone]')).toHaveAttribute(
-      'data-status-tone',
+    // The band, never the raw score; priority is an order, never a hue. The
+    // identity cell carries the same mark for widths without the column.
+    const bands = cells.getAllByText('High').map((mark) => mark.closest('[data-status-tone]'));
+    expect(bands.map((mark) => mark?.getAttribute('data-status-tone'))).toEqual([
       'neutral',
-    );
+      'neutral',
+    ]);
+    expect(bands[0]?.closest('td')).toBe(pricing.closest('td'));
     expect(screen.queryByText('82.5')).not.toBeInTheDocument();
+    // The subline names the target (the page's path), then the work.
+    expect(cells.getByText('/pricing')).toBeVisible();
     expect(cells.getByText('Page · 1 finding in Website, Search Console')).toBeVisible();
     // An Open row in the queue names no status; one in progress does.
     expect(cells.queryByText('Open')).not.toBeInTheDocument();
@@ -183,6 +188,8 @@ describe('Actions', () => {
     expect(
       within(row).getByText('Issue across pages · 179 pages · 1 finding in Website'),
     ).toBeVisible();
+    // The title names the issue; the subline does not say it again.
+    expect(within(row).queryByText('Missing viewport meta tag')).toBeNull();
   });
 
   it('sets every filter from All filters as URL state and reads the list through it', async () => {

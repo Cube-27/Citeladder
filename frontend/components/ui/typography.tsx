@@ -18,10 +18,8 @@ import { cn } from '@/lib/utils';
 const TEXT_ROLES = {
   /** Flow headings, full-page notices. Display 28/36 500. */
   display: 'type-display',
-  /** The masthead's page title. Display 24/32 600. One per view. */
+  /** The masthead's page title and the new-chat greeting. Display 20/28 400. */
   title: 'type-title',
-  /** The new-chat greeting. Sans 24/32 600. */
-  headingLg: 'type-heading-lg',
   /** Card, section, dialog and drawer titles. Sans 16/24 600. */
   heading: 'type-heading',
   /** Group heads inside a card, widget titles, field-group legends. Sans 14/20 600. */

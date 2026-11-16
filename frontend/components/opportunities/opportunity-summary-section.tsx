@@ -1,9 +1,6 @@
-import { OpportunityKvRow } from '@/components/opportunities/opportunity-kv-row';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import type { OpportunityDetail } from '@citeladder/contracts';
-import { formatAudited } from '@/lib/site-health/status';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { ledgerClasses } from '@/components/ui/workspace';
 import { Inline, Stack } from '@/components/ui/layout';
 
@@ -28,30 +25,20 @@ function SourceLink({
 }
 
 /**
- * Customer-useful source links for the finding. Persistence provenance stays
- * in the API for auditability but is not product copy.
+ * The result a finding came from, where it is not the page itself: the
+ * visibility review and the prompt. The finding's date is on the row that
+ * opens it and its page is the Action's target, so neither repeats here.
+ * Persistence provenance stays in the API for auditability but is not copy.
  */
 export function OpportunitySummarySection({ detail }: Readonly<{ detail: OpportunityDetail }>) {
-  const timeZone = useDisplayTimeZone();
-  const evidence = detail.evidence;
-  const auditId = asString(evidence.audit_id);
-  const crawlId = asString(evidence.crawl_id);
-  const siteUrlId = asString(evidence.site_url_id);
-
+  const auditId = asString(detail.evidence.audit_id);
+  if (!auditId && !detail.target_prompt_id) return null;
   return (
     <Stack as="section">
       <h3 className={textRole('subheading')}>Supporting result</h3>
       <div className={ledgerClasses()}>
-        <OpportunityKvRow label="Found" value={formatAudited(detail.created_at, timeZone)} />
         {auditId ? (
           <SourceLink label="Visibility review" href={`/runs/${auditId}`} linkText="View result" />
-        ) : null}
-        {crawlId && siteUrlId ? (
-          <SourceLink
-            label="Website page"
-            href={`/site/crawls/${crawlId}/pages/${siteUrlId}`}
-            linkText="View page"
-          />
         ) : null}
         {detail.target_prompt_id ? (
           <SourceLink label="Question" href="/prompts" linkText="Open prompt library" />

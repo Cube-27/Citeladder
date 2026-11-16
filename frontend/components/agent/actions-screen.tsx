@@ -85,7 +85,7 @@ export function ActionsScreen() {
 // by the work and its target (`actionTitle`) over its sources.
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Action', kind: 'identity' },
-  { key: 'priority', label: 'Priority', kind: 'status', order: 'descending' },
+  { key: 'priority', label: 'Priority', kind: 'status', order: 'descending', desktopOnly: true },
 ];
 
 type ListProps = Readonly<{
@@ -308,7 +308,7 @@ function ActionRow({
   return (
     <TableRow onClick={open} className="cursor-pointer">
       <ActionTargetCell action={action} status={status} />
-      <TableCell>
+      <TableCell desktopOnly>
         <ActionPriorityBadge band={action.priority_band} />
       </TableCell>
     </TableRow>

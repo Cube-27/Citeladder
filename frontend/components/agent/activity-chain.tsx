@@ -1,15 +1,18 @@
 import { FoldedTrail, type TrailStep } from '@/components/ui/rung-trail';
+import { STEP_SLIP } from '@/components/ui/slip';
 import { activityLabel, activitySummary, type ActivityRow } from '@/lib/agent/activity';
 
-/** A saved turn's activity; nothing when no step is visible. */
+/** A saved turn's activity, in its step slip; nothing when no step is visible. */
 export function ActivityChain({ rows }: Readonly<{ rows: readonly ActivityRow[] }>) {
   if (rows.length === 0) return null;
   return (
-    <FoldedTrail
-      summary={activitySummary(rows)}
-      label="Agent activity"
-      steps={activitySteps(rows)}
-    />
+    <div className={STEP_SLIP}>
+      <FoldedTrail
+        summary={activitySummary(rows)}
+        label="Agent activity"
+        steps={activitySteps(rows)}
+      />
+    </div>
   );
 }
 

@@ -266,11 +266,13 @@ describe('DashboardScreen', () => {
     expect(state.getByText('#2')).toBeVisible();
     expect(state.queryByText('Brand rank')).not.toBeInTheDocument();
     // Rank is better when it falls, so climbing one place reads as an improvement.
+    // The basis is spoken, never shown beside the figure.
     const rankChange = state
-      .getAllByText('vs previous')
+      .getAllByText('compared with the previous run')
       .map((context) => context.closest('[data-outcome]'))
-      .find((delta) => delta?.textContent === 'down −1vs previous');
+      .find((delta) => delta?.textContent === 'down −1 compared with the previous run');
     expect(rankChange).toHaveAttribute('data-outcome', 'improved');
+    expect(screen.queryByText('vs previous')).toBeNull();
     expect(
       within(screen.getByRole('region', { name: 'Owned citation rate' })).getByText('32.5%'),
     ).toBeVisible();
