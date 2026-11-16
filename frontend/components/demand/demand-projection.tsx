@@ -277,9 +277,11 @@ function SearchDemandView({
           // What the table holds, and over which window, closes the row.
           status={
             // Each piece wraps to its own line on a narrow screen, never overprinting.
-            <span
+            <Inline
+              as="span"
+              gap="status"
               data-demand-status=""
-              className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1 whitespace-normal"
+              className="items-baseline whitespace-normal"
             >
               <span>
                 <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
@@ -290,7 +292,7 @@ function SearchDemandView({
                 <span className="tabular-nums">{windowLabel}</span>
               </Inline>
               <DemandLatentDemand snapshot={snapshot} />
-            </span>
+            </Inline>
           }
         />
       }
