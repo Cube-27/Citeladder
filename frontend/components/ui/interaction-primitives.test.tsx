@@ -117,6 +117,35 @@ describe('authenticated interaction primitives', () => {
     expect(list.scrollLeft).toBe(0);
   });
 
+  it('scrolls the page on PageDown from a tab and keeps the selection', async () => {
+    const user = userEvent.setup();
+    const onValueChange = vi.fn();
+    const page = document.scrollingElement ?? document.documentElement;
+    Object.defineProperty(page, 'clientHeight', { value: 1000, configurable: true });
+    const scrollBy = vi.fn();
+    page.scrollBy = scrollBy;
+    render(
+      <Tabs
+        value="one"
+        onValueChange={onValueChange}
+        ariaLabel="Views"
+        items={[
+          { value: 'one', label: 'One' },
+          { value: 'two', label: 'Two' },
+          { value: 'three', label: 'Three' },
+        ]}
+      />,
+    );
+    const one = screen.getByRole('tab', { name: 'One' });
+    one.focus();
+    await user.keyboard('{PageDown}');
+    await user.keyboard('{PageUp}');
+    expect(onValueChange).not.toHaveBeenCalled();
+    expect(one).toHaveFocus();
+    expect(one).toHaveAttribute('data-state', 'active');
+    expect(scrollBy.mock.calls).toEqual([[{ top: 900 }], [{ top: -900 }]]);
+  });
+
   it('exposes checkbox and radio state', async () => {
     const onCheck = vi.fn();
     const onRadio = vi.fn();
