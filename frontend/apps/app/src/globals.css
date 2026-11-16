@@ -311,14 +311,16 @@
   /* The Flow template's one column (sign-in, setup, the workspace chooser). */
   --container-flow: 480px;
 
-  /* Motion: 120ms ease-out for hover and colour, 200ms ease-out for menus,
-     dialogs and sheets entering, 150ms ease-in for leaving. */
+  /* Motion: hover and colour over --motion-fast. Whatever opens closes over
+     the same --motion-open, easing out as it opens and in as it closes. */
   --motion-fast: 120ms;
+  --motion-open: 200ms;
+  --ease-standard: ease-out;
+  --ease-exit: ease-in;
+  /* The website's steps (and the app's draft edge); app open/close never uses them. */
   --motion-normal: 150ms;
   --motion-slow: 200ms;
   --motion-menu: 200ms;
-  --ease-standard: ease-out;
-  --ease-exit: ease-in;
   /* The website's shared nav popup: it opens over --motion-menu and
      closes over 100ms on a decelerating curve; menus inside it fade over
      --motion-fast, unblur over 180ms and settle in 160ms steps of 20ms. */
@@ -1829,14 +1831,13 @@ samp {
 
 .menu-panel {
   transition:
-    opacity var(--motion-slow) var(--ease-standard),
-    transform var(--motion-slow) var(--ease-standard);
+    opacity var(--motion-open) var(--ease-standard),
+    transform var(--motion-open) var(--ease-standard);
 }
 
 .menu-panel[data-state="closed"] {
   opacity: 0;
   transform: translateY(-2px);
-  transition-duration: var(--motion-normal);
   transition-timing-function: var(--ease-exit);
 }
 
@@ -1872,19 +1873,19 @@ samp {
 }
 
 .drawer-overlay[data-state="open"] {
-  animation: modal-overlay-in var(--motion-slow) var(--ease-standard) both;
+  animation: modal-overlay-in var(--motion-open) var(--ease-standard) both;
 }
 
 .drawer-overlay[data-state="closed"] {
-  animation: drawer-overlay-out var(--motion-normal) var(--ease-exit) both;
+  animation: drawer-overlay-out var(--motion-open) var(--ease-exit) both;
 }
 
 .drawer-panel[data-state="open"] {
-  animation: drawer-panel-in var(--motion-slow) var(--ease-standard) both;
+  animation: drawer-panel-in var(--motion-open) var(--ease-standard) both;
 }
 
 .drawer-panel[data-state="closed"] {
-  animation: drawer-panel-out var(--motion-normal) var(--ease-exit) both;
+  animation: drawer-panel-out var(--motion-open) var(--ease-exit) both;
 }
 
 .drawer-panel[data-side="left"] {

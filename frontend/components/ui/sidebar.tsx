@@ -37,20 +37,27 @@ export function SidebarFrame({
   foot,
 }: Readonly<{ ident: ReactNode; mode: ReactNode; nav: ReactNode; foot: ReactNode }>) {
   return (
-    <div className="flex h-full flex-col overflow-hidden">
+    <div className="h-full overflow-hidden">
+      {/* In the shell's column the content keeps the width the column eases
+          to (less its 1px border), so a collapse never rewraps a label. */}
       <div
-        data-sidebar-ident-cell=""
-        className="border-rule flex h-[var(--masthead-height)] shrink-0 items-center border-b px-2 in-data-[nav-drawer]:pe-12"
+        data-sidebar-frame=""
+        className="rail:in-data-[sidebar-state=expanded]:w-[calc(var(--sidebar-width-compact)-1px)] shell:in-data-[sidebar-state=expanded]:w-[calc(var(--sidebar-width)-1px)] rail:in-data-[sidebar-state=collapsed]:w-[calc(var(--sidebar-rail-width)-1px)] flex h-full flex-col"
       >
-        {ident}
-      </div>
-      {/* `page-pad` above and below the switch; the list below adds its own 12. */}
-      <div className="labelled:pt-[var(--page-pad)] labelled:pb-[calc(var(--page-pad)-0.75rem)] shrink-0 px-2 pt-1">
-        {mode}
-      </div>
-      {nav}
-      <div className="border-rule labelled:gap-0.5 labelled:py-2 flex shrink-0 flex-col border-t px-2 py-1">
-        {foot}
+        <div
+          data-sidebar-ident-cell=""
+          className="border-rule flex h-[var(--masthead-height)] shrink-0 items-center border-b px-2 in-data-[nav-drawer]:pe-12"
+        >
+          {ident}
+        </div>
+        {/* `page-pad` above and below the switch; the list below adds its own 12. */}
+        <div className="labelled:pt-[var(--page-pad)] labelled:pb-[calc(var(--page-pad)-0.75rem)] shrink-0 px-2 pt-1">
+          {mode}
+        </div>
+        {nav}
+        <div className="border-rule labelled:gap-0.5 labelled:py-2 flex shrink-0 flex-col border-t px-2 py-1">
+          {foot}
+        </div>
       </div>
     </div>
   );
@@ -385,17 +392,19 @@ type SidebarTextLine = { line: string; text: string };
  * domain, an email), on hover and keyboard focus: the row's
  * `data-sidebar-text` lines are measured only as the tooltip is about to
  * open, and it opens only when one is cut. `inRail` also opens it in the
- * rail, where the row shows no text at all. The row's accessible name already
- * holds the text, so it is not repeated as a description.
+ * rail, where the row shows no text at all; `inRail="only"` opens it there
+ * alone. The row's accessible name already holds the text, so it is not
+ * repeated as a description.
  */
 export function SidebarTextTooltip({
   inRail = false,
   children,
-}: Readonly<{ inRail?: boolean; children: ReactNode }>) {
+}: Readonly<{ inRail?: boolean | 'only'; children: ReactNode }>) {
   const [lines, setLines] = useState<readonly SidebarTextLine[]>([]);
   const openWhenCut = (trigger: HTMLElement) => {
     const parts = [...trigger.querySelectorAll<HTMLElement>('[data-sidebar-text]')];
-    if (!(inRail && isRail(trigger)) && !parts.some(isTextCut)) return false;
+    const rail = inRail !== false && isRail(trigger);
+    if (!rail && (inRail === 'only' || !parts.some(isTextCut))) return false;
     const next = parts
       .map((part) => ({
         line: part.dataset.sidebarText ?? '',

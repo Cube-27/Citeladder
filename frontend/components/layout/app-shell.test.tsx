@@ -178,28 +178,21 @@ describe('AppShell resizable sidebar', () => {
     expect(analyze).toHaveFocus();
   });
 
-  it('shows the whole account email in a tooltip when the sidebar cuts it', async () => {
-    // The full, labelled sidebar (from 1280px), where the email shows as text.
-    vi.spyOn(window, 'matchMedia').mockImplementation(
-      (query) =>
-        ({
-          matches: true,
-          media: query,
-          addEventListener: () => {},
-          removeEventListener: () => {},
-        }) as unknown as MediaQueryList,
-    );
+  it('names the account in a tooltip only in the rail, never over the labelled collapse toggle', async () => {
+    const user = userEvent.setup();
     renderShell();
-    const account = screen.getByRole('button', { name: 'Account menu for test.user@example.test' });
-
-    // Uncut, the row's own text says it all.
-    focusByKeyboard(account);
-    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
-    act(() => account.blur());
-
+    const account = () =>
+      screen.getByRole('button', { name: 'Account menu for test.user@example.test' });
     // jsdom lays nothing out; report every line as wider than the sidebar.
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
-    focusByKeyboard(account);
+
+    // Labelled, even a cut email opens no tooltip beside the collapse toggle.
+    focusByKeyboard(account());
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+    act(() => account().blur());
+
+    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    focusByKeyboard(account());
     expect(await screen.findByRole('tooltip')).toHaveTextContent('test.user@example.test');
   });
 });

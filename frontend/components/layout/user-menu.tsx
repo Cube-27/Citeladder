@@ -113,7 +113,8 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
           <Avatar name={email} />
         </MenuTrigger>
       ) : (
-        <SidebarTextTooltip inRail>
+        // Labelled, a tooltip would cover the collapse toggle beside the row.
+        <SidebarTextTooltip inRail="only">
           <MenuTrigger asChild>
             <SidebarIdentButton
               aria-label={label}
