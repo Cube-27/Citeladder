@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
  */
 export function ReadingColumn({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-(--container-prose) min-w-0 flex-col pb-[var(--page-end-space)]">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[var(--container-prose)] min-w-0 flex-col pb-[var(--page-end-space)]">
       {children}
     </div>
   );
@@ -31,7 +31,7 @@ export function BackLink({
       state={state}
       className={textRole(
         'body',
-        'text-ink-2 hover:text-ink focus-ring mb-3 self-start truncate rounded-sm',
+        'text-ink-2 hover:text-ink focus-ring self-start truncate rounded-sm',
       )}
     >
       ← {children}
@@ -41,7 +41,9 @@ export function BackLink({
 
 /** The page's h1: a record's name, or (`path`) an address, set smaller as it runs long. */
 export function PageHeading({ children, path }: Readonly<{ children: string; path?: boolean }>) {
-  return <h1 className={textRole(path ? 'title' : 'display', 'mb-5 break-words')}>{children}</h1>;
+  return (
+    <h1 className={textRole(path ? 'title' : 'display', 'mt-3 mb-5 break-words')}>{children}</h1>
+  );
 }
 
 /** The row of ways to take the record elsewhere, under its overview. */
@@ -87,16 +89,21 @@ export function DetailsCard({
   return (
     <section
       aria-labelledby={id}
-      className={cn('border-rule rounded-card border px-4 py-4', first ? 'mt-0' : 'mt-6')}
+      className={cn(
+        'border-rule rounded-card flex flex-col gap-3 border px-4 py-4',
+        first ? 'mt-0' : 'mt-6',
+      )}
     >
-      <h2 id={id} className={textRole('label', 'mb-3')}>
+      <h2 id={id} className={textRole('label')}>
         Details
       </h2>
-      <dl className="grid grid-cols-[120px_minmax(0,1fr)] gap-y-3">
+      <dl className="flex flex-col gap-3">
         {facts.map((fact) => (
-          <div key={fact.label} className="contents">
-            <dt className={textRole('body', 'text-ink-2')}>{fact.label}</dt>
-            <dd className={textRole('body', 'flex min-w-0 items-center gap-2')}>{fact.value}</dd>
+          <div key={fact.label} className="flex">
+            <dt className={textRole('body', 'text-ink-2 w-30 shrink-0')}>{fact.label}</dt>
+            <dd className={textRole('body', 'flex min-w-0 flex-1 items-center gap-2')}>
+              {fact.value}
+            </dd>
           </div>
         ))}
       </dl>
