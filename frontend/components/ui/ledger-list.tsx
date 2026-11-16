@@ -9,7 +9,8 @@ import { cn } from '@/lib/utils';
  * varied for a DataTable (observed patterns, audit schedules, the evidence
  * on a card): each item is a row with its title, the facts that describe it
  * at the row's end, an optional caption and a line of links. The title and
- * caption stay on one line (the whole text in a tooltip). Rows are 8 above
+ * caption stay on one line (the whole text in a tooltip). An `action` sits at
+ * the row's end, centred on its lines (Resume on a schedule). Rows are 8 above
  * and 8 below an inset hairline between rows; every row
  * tints on hover as a reading aid, like a table row. A page passes content,
  * never geometry.
@@ -38,6 +39,7 @@ export function LedgerItem({
   meta,
   caption,
   links,
+  action,
 }: Readonly<{
   /** What the row is, in a sentence or a name: the row's first read. */
   title: ReactNode;
@@ -47,16 +49,11 @@ export function LedgerItem({
   caption?: ReactNode;
   /** The row's links or secondary actions, on one wrapping line under it. */
   links?: ReactNode;
+  /** One control at the row's end, centred across the row's lines. */
+  action?: ReactNode;
 }>) {
-  return (
-    <li
-      data-ledger-item=""
-      className={cn(
-        // It bleeds 12 past the list, so its text starts on the card's padding.
-        '-mx-3 grid min-w-0 gap-1 px-3 py-2',
-        'hover:overlay-hover transition-colors duration-[var(--motion-fast)]',
-      )}
-    >
+  const text = (
+    <>
       <div className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <ClampText className={textRole('body', 'flex-[1_1_15rem]')}>{title}</ClampText>
         {meta === undefined ? null : <div className="flex shrink-0 items-center gap-2">{meta}</div>}
@@ -64,6 +61,26 @@ export function LedgerItem({
       {caption === undefined ? null : <ClampText className="type-caption">{caption}</ClampText>}
       {links === undefined ? null : (
         <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1">{links}</div>
+      )}
+    </>
+  );
+  return (
+    <li
+      data-ledger-item=""
+      className={cn(
+        // It bleeds 12 past the list, so its text starts on the card's padding.
+        '-mx-3 min-w-0 px-3 py-2',
+        action === undefined ? 'grid gap-1' : 'flex items-center gap-4',
+        'hover:overlay-hover transition-colors duration-[var(--motion-fast)]',
+      )}
+    >
+      {action === undefined ? (
+        text
+      ) : (
+        <>
+          <div className="grid min-w-0 flex-1 gap-1">{text}</div>
+          <div className="shrink-0">{action}</div>
+        </>
       )}
     </li>
   );

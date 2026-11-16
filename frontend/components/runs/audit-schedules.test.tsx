@@ -156,6 +156,10 @@ describe('AuditSchedules', () => {
     renderWithProviders(<RoutedSchedules projectId={projectId} promptSets={[]} />);
 
     expect(await screen.findByText(/Paused/)).toBeVisible();
+    // Its prompt set is gone from the project, so the row names it as removed.
+    expect(screen.getByRole('listitem')).toHaveTextContent(
+      'Weekly · Removed prompt set · Brand visibility · ChatGPT API',
+    );
     await user.click(screen.getByRole('button', { name: 'Resume' }));
 
     await waitFor(() =>
@@ -172,12 +176,13 @@ describe('AuditSchedules', () => {
     listSchedules.mockResolvedValue([
       {
         id: '44444444-4444-4444-8444-444444444444',
+        prompt_set_id: '22222222-2222-4222-8222-222222222222',
         cadence: 'weekly',
         engines: ['chatgpt'],
         enabled: false,
         failure_count: 3,
         last_error: 'funded_budget_exhausted',
-        audit_scope: 'brand',
+        audit_scope: 'commerce',
         next_run_at: null,
       } as never,
     ]);
@@ -197,6 +202,10 @@ describe('AuditSchedules', () => {
     );
 
     expect(await screen.findByText(/Paused/)).toBeVisible();
+    // A paused row still names its prompt set, scope and engines, then why it paused.
+    expect(screen.getByRole('listitem')).toHaveTextContent(
+      "Weekly · Core prompts · Commerce AI Shelf · ChatGPT APIPausedThis month's included budget is used up",
+    );
     expect(screen.queryByRole('button', { name: 'Resume' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Schedule audit' })).toBeNull();
     expect(screen.queryByRole('combobox', { name: 'Cadence' })).toBeNull();
