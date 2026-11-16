@@ -65,7 +65,7 @@ export function StatusSection({
         tone={TONE[status]}
         name={ACTION_STATUS_LABEL[status]}
         count={shown}
-        aria-label={`${ACTION_STATUS_LABEL[status]}${shown ? `, ${shown}` : ''}`}
+        aria-label={[ACTION_STATUS_LABEL[status], shown].filter(Boolean).join(', ')}
         onClick={() => levels.toggle(levelKey.status(status))}
       />
       {open ? <StatusBody status={status} tree={tree} /> : null}

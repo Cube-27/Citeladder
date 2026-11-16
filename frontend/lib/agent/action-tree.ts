@@ -63,7 +63,7 @@ export function groupingParams({
   };
 }
 
-const OPEN: readonly ActionStatus[] = ['open', 'in_progress'];
+const OPEN: ReadonlySet<ActionStatus> = new Set(['open', 'in_progress']);
 
 /**
  * `tree` (the `from` status's) with the ticked Actions and whole ticked
@@ -104,7 +104,7 @@ export function moveOut({
     return count > 0 ? [{ ...group, count, groupings: kept }] : [];
   });
   if (moved === 0) return tree;
-  const sign = Number(OPEN.includes(to)) - Number(OPEN.includes(from));
+  const sign = Number(OPEN.has(to)) - Number(OPEN.has(from));
   return {
     ...tree,
     status_counts: {

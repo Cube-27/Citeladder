@@ -41,7 +41,9 @@ export function GoalStrip({
             hint={<InfoHint label={`About ${label}`}>{ACTION_GOAL_HINT[goal]}</InfoHint>}
             value={phrase}
             failed={failed}
-            pressLabel={`Go to ${label}${phrase ? `, ${phrase}` : ''}${entry?.blocking ? ', blocking' : ''}`}
+            pressLabel={[`Go to ${label}`, phrase, entry?.blocking ? 'blocking' : null]
+              .filter(Boolean)
+              .join(', ')}
             onPress={() => onJump(goal)}
           />
         );

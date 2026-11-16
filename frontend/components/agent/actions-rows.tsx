@@ -73,16 +73,18 @@ export function GroupingRows({
     ...(extra.data?.pages.flatMap((page) => page.items) ?? []).filter((item) => !seen.has(item.id)),
   ];
   const rest = grouping.count - rows.length;
+  // The tree's count can drift from the list read; its last page ends "Show more".
+  const exhausted = extra.isSuccess && !extra.hasNextPage;
   const showMore = () => {
     if (!more) setMore(true);
     else void extra.fetchNextPage();
   };
   return (
     <WorkRows
-      label={`${grouping.count} actions`}
+      label={pluralCount(grouping.count, 'action')}
       heads={['Action', 'Scope', 'Impact', 'Source']}
       more={
-        rest > 0 && cursor !== null ? (
+        rest > 0 && cursor !== null && !exhausted ? (
           <WorkRowsMore onClick={showMore} disabled={extra.isFetching}>
             {extra.isFetching
               ? 'Loading…'

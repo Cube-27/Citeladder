@@ -133,18 +133,35 @@ export function useBulkDecision(scope: ProjectScope, view: ActionsView, selectio
   const bulk = useMutation(actionsMutations.bulkStatus(scope));
   const decide = async (to: ActionUserStatus) => {
     const { rows, groupings } = selection;
+    // Every request is built before the list changes, so a bad filter changes nothing.
+    const filters = [...groupings.values()].flatMap((ref) => {
+      const parsed = actionBulkFilterSchema.safeParse(
+        groupingParams({ ref, groupBy: view.groupBy, filters: view.filters }),
+      );
+      return parsed.success ? [parsed.data] : [];
+    });
+    if (filters.length !== groupings.size) {
+      toast.notify("Couldn't change these actions", 'Nothing was changed.', { tone: 'negative' });
+      return;
+    }
+    const bodies = [
+      ...filters.map((filter) => ({ to, filter })),
+      ...chunks([...rows.keys()], ACTION_BULK_MAX).map((chunk) => ({ to, ids: chunk })),
+    ];
     const statuses = new Set<ActionStatus>(
       [...rows.values(), ...groupings.values()].map((ref) => ref.status),
     );
     const ids = new Set(rows.keys());
     const keys = new Set(groupings.keys());
-    for (const from of statuses) {
-      const key = actionsQueries.tree(scope, treeParams(view, from)).queryKey;
-      await client.cancelQueries({ queryKey: key });
+    const trees = [...statuses].map((from) => ({
+      from,
+      key: actionsQueries.tree(scope, treeParams(view, from)).queryKey,
+    }));
+    await Promise.all(trees.map(({ key }) => client.cancelQueries({ queryKey: key })));
+    for (const { from, key } of trees)
       client.setQueryData(key, (tree) =>
         tree ? moveOut({ tree, from, to, ids, groupings: keys }) : tree,
       );
-    }
     client.setQueriesData<InfiniteData<ActionsPage>>(
       { queryKey: queryKeys.actions.read('grouping-rows', scope) },
       (data) =>
@@ -157,15 +174,6 @@ export function useBulkDecision(scope: ProjectScope, view: ActionsView, selectio
         },
     );
     selection.clear();
-    const bodies = [
-      ...[...groupings.values()].map((ref) => ({
-        to,
-        filter: actionBulkFilterSchema.parse(
-          groupingParams({ ref, groupBy: view.groupBy, filters: view.filters }),
-        ),
-      })),
-      ...chunks([...ids], ACTION_BULK_MAX).map((chunk) => ({ to, ids: chunk })),
-    ];
     try {
       const results = await Promise.all(bodies.map((body) => bulk.mutateAsync(body)));
       const updated = results.reduce((sum, result) => sum + result.updated, 0);

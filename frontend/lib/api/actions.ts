@@ -32,7 +32,6 @@ import {
   type ActionBulkStatusRequest,
   type ActionDeclarationRequest,
   type ActionPriorityBand,
-  type ActionTree,
   type ActionTreeGroupBy,
   type ActionUserStatus,
 } from '@citeladder/contracts/actions';
@@ -45,7 +44,11 @@ export type Action = z.infer<typeof actionItemSchema>;
 export type ActionsPage = z.infer<typeof actionsPageSchema>;
 export type ActionDetail = z.infer<typeof actionDetailSchema>;
 export type ActionStatus = z.infer<typeof actionStatusSchema>;
-export type { ActionPriorityBand, ActionTree, ActionTreeGroupBy };
+export type {
+  ActionPriorityBand,
+  ActionTree,
+  ActionTreeGroupBy,
+} from '@citeladder/contracts/actions';
 export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
 export type MeasurementLeg = ActionDeclaration['legs'][number];
 export type AnalyzablePage = z.infer<typeof analyzablePagesSchema>['items'][number];
