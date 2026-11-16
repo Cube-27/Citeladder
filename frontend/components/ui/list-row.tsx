@@ -99,13 +99,15 @@ export function OptionRow({
  * leading number, the title on one line, the item's meta after it (wrapping
  * under the title when the row is narrow), an optional caption, and a
  * trailing chevron that says at rest that the row opens. The whole row is the
- * target; it owns its padding, gaps and hover state.
+ * target; it owns its padding, gaps and hover state. `stacked`: titles that
+ * read alike on one line take the row's width and two lines, the meta under.
  */
 export function OpenRow({
   number,
   title,
   meta,
   caption,
+  layout = 'inline',
   opens,
   onOpen,
 }: Readonly<{
@@ -113,10 +115,12 @@ export function OpenRow({
   title: ReactNode;
   meta?: ReactNode;
   caption?: ReactNode;
+  layout?: 'inline' | 'stacked';
   /** What the row opens over the page, announced before it is pressed. */
   opens?: 'dialog';
   onOpen: () => void;
 }>) {
+  const stacked = layout === 'stacked';
   return (
     <Pressable
       onClick={onOpen}
@@ -128,10 +132,18 @@ export function OpenRow({
           {number === undefined ? null : (
             <span className="type-caption w-6 shrink-0 tabular-nums">{number}</span>
           )}
-          {/* The title keeps 15rem before the meta wraps under it. */}
-          <ClampText className={textRole('body', 'text-ink flex-[1_1_15rem]')}>{title}</ClampText>
-          {meta}
+          {/* Inline, the title keeps 15rem before the meta wraps under it. */}
+          <ClampText
+            lines={stacked ? 2 : 1}
+            className={textRole('body', cn('text-ink', stacked ? 'flex-1' : 'flex-[1_1_15rem]'))}
+          >
+            {title}
+          </ClampText>
+          {stacked ? null : meta}
         </span>
+        {stacked && meta ? (
+          <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">{meta}</span>
+        ) : null}
         {caption ? <ClampText className="type-caption">{caption}</ClampText> : null}
       </span>
       <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />

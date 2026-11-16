@@ -39,7 +39,9 @@ export function DeveloperTicketButton({ action }: Readonly<{ action: ActionDetai
             <Button variant="secondary" onClick={() => setOpen(false)}>
               Close
             </Button>
-            <CopyButton value={ticket}>Copy Markdown</CopyButton>
+            <CopyButton variant="primary" value={ticket}>
+              Copy Markdown
+            </CopyButton>
           </>
         }
       >
