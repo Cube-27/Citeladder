@@ -185,7 +185,13 @@ function ProductsContent({
   const promptSets = useQuery(promptsQueries.sets(scope));
   const engines = useEngineCatalog();
   const discovery = useCompetitorDiscovery(projectId);
-  const header = useCatalogHeader({ workspaceId, projectId, query: catalog, projection });
+  const header = useCatalogHeader({
+    workspaceId,
+    projectId,
+    query: catalog,
+    projection,
+    tableReadFailed: page.isError,
+  });
   const columns = useProductColumns();
   const canRun = useWorkspaceCapability('run');
   const [checked, setChecked] = useState<ReadonlySet<string>>(new Set());
@@ -285,6 +291,10 @@ function ProductsContent({
       ) : null}
       <ProductsTable
         query={page}
+        onRetry={() => {
+          void page.refetch();
+          header.retryReads();
+        }}
         scope={filters}
         empty={empty}
         description={

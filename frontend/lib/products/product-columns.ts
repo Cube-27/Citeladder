@@ -48,8 +48,8 @@ export type ProductCell =
   | Readonly<{ kind: 'value'; text: string; note?: string }>
   | Readonly<{ kind: 'missing'; state: MissingState; note?: string }>;
 
-/** No answer in scope; no catalog price; nothing listed (no merchant); does not apply. */
-type MissingState = 'unavailable' | 'unknown' | 'none' | 'not_applicable';
+/** No answer in scope; no catalog price; nothing listed (no merchant); no price quoted; does not apply. */
+type MissingState = 'unavailable' | 'unknown' | 'none' | 'not_mentioned' | 'not_applicable';
 
 const missing = (state: MissingState, note?: string): ProductCell => ({
   kind: 'missing',
@@ -71,9 +71,11 @@ const measured = (value: number | null, format: (value: number) => string): Prod
  * counted beside it, even when none was in its own currency.
  */
 function mentionedPrice(row: CommerceProductRow): ProductCell {
-  const { median, currency, other_currency } = row.mentioned_price;
+  const { median, currency, quoted, other_currency } = row.mentioned_price;
   const note = other_currency ? `+${formatCount(other_currency)} in other currencies` : undefined;
-  if (median === null) return missing('unavailable', note);
+  // With no quote the median is not a price, so it can never print as "$0.00".
+  if (median === null || quoted === 0)
+    return missing(row.appearances ? 'not_mentioned' : 'unavailable', note);
   return { kind: 'value', text: formatAmount(median, currency), ...(note ? { note } : {}) };
 }
 

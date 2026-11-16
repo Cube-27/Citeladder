@@ -251,9 +251,11 @@ describe('CatalogHeader', () => {
       />,
     );
 
-    await waitFor(() => expect(statValue('Website')).toHaveTextContent("Couldn't load"));
-    expect(statValue('Pages analyzed')).toHaveTextContent("Couldn't load");
+    await waitFor(() => expect(statValue('Website')).toHaveTextContent('Unavailable'));
+    expect(statValue('Pages analyzed')).toHaveTextContent('Unavailable');
     expect(screen.queryByText('Not run yet')).not.toBeInTheDocument();
+    // With no other notice on the page, the header names the failure itself.
+    expect(screen.getByRole('button', { name: 'Refresh again' })).toBeInTheDocument();
     const refresh = screen.getByRole('button', { name: 'Refresh from Website' });
 
     getDashboard.mockResolvedValue(crawl());
@@ -276,8 +278,24 @@ describe('CatalogHeader', () => {
     getDashboard.mockRejectedValue(new ApiError('Bad request', 400, ''));
     await act(() => queryClient.invalidateQueries({ queryKey: DASHBOARD_KEY }));
 
-    await waitFor(() => expect(statValue('Website')).toHaveTextContent("Couldn't load"));
+    await waitFor(() => expect(statValue('Website')).toHaveTextContent('Unavailable'));
     expect(screen.queryByText('Not run yet')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh from Website' })).toBeInTheDocument();
+  });
+
+  it('leaves a failed read to the table when the table already reports one', async () => {
+    getDashboard.mockRejectedValue(new ApiError('Internal error', 500, ''));
+    renderWithProviders(
+      <CatalogHeaderHost
+        workspaceId={WORKSPACE_ID}
+        projectId={PROJECT_ID}
+        query={catalogQuery({ isError: true, data: undefined })}
+        tableReadFailed
+      />,
+    );
+
+    await waitFor(() => expect(statValue('Website')).toHaveTextContent('Unavailable'));
+    expect(statValue('Products')).toHaveTextContent('Unavailable');
+    expect(screen.queryByRole('button', { name: 'Refresh again' })).toBeNull();
   });
 });

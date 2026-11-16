@@ -91,6 +91,8 @@ export function MissingValue({
   switch (cell.state) {
     case 'none':
       return <Absence state="none" />;
+    case 'not_mentioned':
+      return <Absence state="none" label="Not mentioned" />;
     case 'not_applicable':
       return <Absence state="not_applicable" />;
     case 'unknown':
@@ -147,9 +149,12 @@ export function ProductsTable({
   selectable = true,
   empty,
   description,
+  onRetry = () => void query.refetch(),
 }: Readonly<{
   /** What an empty page says: none yet, or none matching the filters. */
   empty: ProductsEmpty;
+  /** A failed read's one Retry: the page's other reads may have failed with it. */
+  onRetry?: () => void;
   /** One caption line over the table (the chosen category's own page). */
   description?: ReactNode;
   /** The reader's rows per page: the footprint the table reserves. */
@@ -232,7 +237,7 @@ export function ProductsTable({
         onAllChange: (next) => onCheck(owned, next),
         noun: 'products on this page',
       }}
-      state={tableState(query, empty)}
+      state={tableState({ query, empty, onRetry })}
       pager={pager}
     >
       {rows.map((row) => (
@@ -290,7 +295,15 @@ const EMPTY_COPY = {
   },
 } as const satisfies Record<ProductFilters['source'], { heading: string; description: string }>;
 
-function tableState(query: UseQueryResult<CommerceProductPage>, empty: ProductsEmpty) {
+function tableState({
+  query,
+  empty,
+  onRetry,
+}: Readonly<{
+  query: UseQueryResult<CommerceProductPage>;
+  empty: ProductsEmpty;
+  onRetry: () => void;
+}>) {
   if (query.isPending) return { kind: 'loading', label: 'Loading products' } as const;
   if (query.isError)
     return {
@@ -298,7 +311,7 @@ function tableState(query: UseQueryResult<CommerceProductPage>, empty: ProductsE
       title: "Couldn't load products",
       error: query.error,
       fallback: 'Products could not be loaded.',
-      onRetry: () => void query.refetch(),
+      onRetry,
       pending: query.isFetching,
     } as const;
   if (query.data.items.length) return undefined;
