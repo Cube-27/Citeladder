@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom';
 import { type ComponentProps, type ReactNode, useId, useState } from 'react';
 
-import { FlowBlock } from '@/components/templates/flow-page';
+import { AuthSwitchLink, AuthSwitchOnly } from '@/components/auth/auth-switch';
+import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import {
+  AuthBlock,
   AuthButton,
   AuthDivider,
   AuthForm,
@@ -16,6 +18,7 @@ import { Icon } from '@/components/ui/icon';
 import { Input } from '@/components/ui/input';
 import { PasswordField, type PasswordFieldProps } from '@/components/ui/password-field';
 import { TextLink } from '@/components/ui/text-link';
+import { textRole } from '@/components/ui/typography';
 import { authApi } from '@/lib/api/auth';
 import { safeAuthReturnPath } from '@/lib/auth/auth-return-path';
 import { ApiError } from '@/lib/api/errors';
@@ -165,11 +168,12 @@ function GoogleEntry({
 }
 
 /**
- * Sign-in, sign-up and the mailbox screens as one Flow block: the title and
- * line, Continue with Google and the "or" rule (when the form authenticates),
- * the form's one alert directly above the first field, the fields, the
- * Turnstile slot (when challenged) and the submit, the agreement line, and the
- * switch under the card. An error about one field is that field's own error.
+ * Sign-in, sign-up and the mailbox screens, centred under the logo: the title
+ * and line, the form's one alert directly above the first field, the fields,
+ * the Turnstile slot (when challenged) and the full-width submit, then the
+ * "or" rule and Continue with Google (when the form authenticates), the switch
+ * to the other form and the agreement line. An error about one field is that
+ * field's own error; the heading also names the document.
  */
 export function AuthFormShell({
   title,
@@ -220,35 +224,34 @@ export function AuthFormShell({
   const consent = useConsentGate(showForm ? terms : undefined, showForm ? verification : undefined);
   const notice = error ? <Notice tone="negative">{error}</Notice> : null;
 
+  useDocumentTitle(title);
+  // Only sign-in and sign-up switch to each other with motion.
+  const switching = showForm && terms !== undefined;
+
   return (
-    <FlowBlock
+    <AuthBlock
       title={title}
       sub={description}
       after={
-        showFooter ? (
-          <>
-            {footerPrompt}{' '}
-            <TextLink asChild text="inherit">
-              <Link to={footerHref}>{footerLabel}</Link>
-            </TextLink>
-          </>
-        ) : undefined
+        <>
+          {showFooter ? (
+            <p className={textRole('body', 'text-ink-2')}>
+              {footerPrompt}{' '}
+              <TextLink asChild text="inherit">
+                {switching ? (
+                  <AuthSwitchLink to={footerHref}>{footerLabel}</AuthSwitchLink>
+                ) : (
+                  <Link to={footerHref}>{footerLabel}</Link>
+                )}
+              </TextLink>
+            </p>
+          ) : null}
+          {consent.terms ? (
+            <TermsNotice id={consent.noticeId} signup={consent.terms.signup} />
+          ) : null}
+        </>
       }
     >
-      {showForm ? null : notice}
-
-      {consent.terms ? (
-        <>
-          <GoogleEntry
-            revision={consent.terms.revision}
-            signup={consent.terms.signup}
-            termsNoticeId={consent.noticeId}
-            verification={consent.verification}
-          />
-          {showForm ? <AuthDivider /> : null}
-        </>
-      ) : null}
-
       {showForm ? (
         <AuthEmailForm
           consent={consent}
@@ -260,10 +263,22 @@ export function AuthFormShell({
           {notice}
           {children}
         </AuthEmailForm>
-      ) : null}
+      ) : (
+        notice
+      )}
 
-      {consent.terms ? <TermsNotice id={consent.noticeId} signup={consent.terms.signup} /> : null}
-    </FlowBlock>
+      {consent.terms ? (
+        <>
+          {showForm ? <AuthDivider /> : null}
+          <GoogleEntry
+            revision={consent.terms.revision}
+            signup={consent.terms.signup}
+            termsNoticeId={consent.noticeId}
+            verification={consent.verification}
+          />
+        </>
+      ) : null}
+    </AuthBlock>
   );
 }
 
@@ -300,7 +315,15 @@ function AuthEmailForm({
     <AuthForm onSubmit={handleSubmit}>
       {children}
 
-      {consent.verification ? <AuthHumanCheck widget={consent.verification} /> : null}
+      {consent.verification ? (
+        consent.terms?.signup ? (
+          <AuthSwitchOnly>
+            <AuthHumanCheck widget={consent.verification} />
+          </AuthSwitchOnly>
+        ) : (
+          <AuthHumanCheck widget={consent.verification} />
+        )
+      ) : null}
 
       {/* Not `pending`: Button's pending sets `disabled`, which drops focus to
           the document. The changed label says it is working. */}

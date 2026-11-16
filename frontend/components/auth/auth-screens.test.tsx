@@ -247,10 +247,10 @@ describe('account entry', () => {
     await user.click(signIn);
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('The Terms changed.');
-    // A form-level alert sits directly above the first field, under the Google way in.
+    // A form-level alert sits directly above the first field; the Google way in follows the form.
     expect([
-      follows(screen.getByRole('button', { name: 'Continue with Google' }), alert),
       follows(alert, screen.getByLabelText(/^Email address/)),
+      follows(signIn, screen.getByRole('button', { name: 'Continue with Google' })),
     ]).toEqual([true, true]);
     await user.click(screen.getByRole('button', { name: 'Continue' }));
 

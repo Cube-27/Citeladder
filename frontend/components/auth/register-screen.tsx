@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 
 import { AuthEmailField, AuthFormShell, AuthPasswordField } from '@/components/auth/auth-form';
+import { AuthSwitchOnly } from '@/components/auth/auth-switch';
 import { TextLink } from '@/components/ui/text-link';
 import { authApi } from '@/lib/api/auth';
 import { websiteHref } from '@/lib/config/app-link';
@@ -131,13 +132,15 @@ export function RegisterScreen({
         autoComplete="new-password"
         placeholder={passwordHint}
       />
-      <AuthPasswordField
-        label="Confirm password"
-        error={errors.confirmPassword?.message}
-        inputProps={register('confirmPassword')}
-        autoComplete="new-password"
-        placeholder="Re-enter your password"
-      />
+      <AuthSwitchOnly>
+        <AuthPasswordField
+          label="Confirm password"
+          error={errors.confirmPassword?.message}
+          inputProps={register('confirmPassword')}
+          autoComplete="new-password"
+          placeholder="Re-enter your password"
+        />
+      </AuthSwitchOnly>
     </AuthFormShell>
   );
 }
