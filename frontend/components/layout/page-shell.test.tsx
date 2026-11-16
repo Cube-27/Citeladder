@@ -91,7 +91,7 @@ describe('ListScreen', () => {
     const order = [
       screen.getByRole('heading', { level: 1, name: 'AI Visibility' }),
       screen.getByRole('tablist', { name: 'Views' }).closest('[data-page-band]'),
-      screen.getByRole('button', { name: /^All filters/u }).closest('[data-page-band]'),
+      screen.getByRole('button', { name: 'Engine: All' }).closest('[data-page-band]'),
       screen.getByText('Table'),
     ];
     expect(order.map((node) => node?.getAttribute('data-page-band') ?? node?.tagName)).toEqual([

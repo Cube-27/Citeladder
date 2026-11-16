@@ -74,7 +74,7 @@ describe('AiReferralsScreen', () => {
     expect(
       await screen.findByRole('region', { name: 'Connect Google Analytics 4' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^All filters/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: /^Chart interval:/ })).toBeVisible();
   });
 
   it('opens on the last 30 days and renders persisted referral measurement by source', async () => {
@@ -169,7 +169,7 @@ describe('AiReferralsScreen', () => {
     expect(
       await screen.findByText(/no sessions matched a known AI source in this window/i),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^All filters/ })).toBeVisible();
+    expect(screen.getByRole('button', { name: /^Chart interval:/ })).toBeVisible();
     expect(screen.queryByText('Other')).not.toBeInTheDocument();
   });
 

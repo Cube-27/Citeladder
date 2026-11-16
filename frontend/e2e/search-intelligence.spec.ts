@@ -4,10 +4,16 @@ import type { SearchIntelligenceDataset } from '../lib/api/search-intelligence';
 
 const id = (value: number) => `33333333-3333-4333-8333-${String(value).padStart(12, '0')}`;
 
-/** Picks a saved scope or market from the control row's All filters. */
+/** Picks a saved scope or market from its filter in the control row (in All filters when grouped). */
 async function chooseSaved(page: Page, label: string, option: string) {
-  await page.getByRole('button', { name: /^All filters/ }).click();
-  await page.getByRole('menuitem', { name: new RegExp(`^${label}:`) }).click();
+  const name = new RegExp(`^${label}:`);
+  const all = page.getByRole('button', { name: /^All filters/ });
+  if (await all.isVisible()) {
+    await all.click();
+    await page.getByRole('menuitem', { name }).click();
+  } else {
+    await page.getByRole('button', { name }).click();
+  }
   await page.getByRole('menuitemradio', { name: option }).click();
 }
 const target = {

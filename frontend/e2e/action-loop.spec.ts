@@ -291,8 +291,7 @@ test('Action filters restore through URL history and reload', async ({ page }) =
   await page.reload();
   await expect(page.getByText('No Actions match these filters')).toBeVisible();
 
-  await page.getByRole('button', { name: 'All filters (1)' }).click();
-  await page.getByRole('menuitem', { name: /^Status/ }).click();
+  await page.getByRole('button', { name: 'Status: Dismissed' }).click();
   await page.getByRole('menuitemradio', { name: 'Open and in progress' }).click();
   await expect(page.getByRole('button', { name: 'Get mentioned elsewhere, 1' })).toBeVisible();
   // The row is titled by its work; the target is its second line.

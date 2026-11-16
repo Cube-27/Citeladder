@@ -521,13 +521,13 @@ describe('AI Traffic state and navigation', () => {
     expect(await screen.findByRole('heading', { name: 'Connect a traffic source' })).toBeVisible();
     expect(screen.getByRole('link', { name: 'Connect Google Analytics 4' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'Key figures' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^All filters/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Period:/ })).not.toBeInTheDocument();
 
     const user = userEvent.setup();
     await user.click(screen.getByRole('tab', { name: 'Activity' }));
     expect(await screen.findByRole('heading', { name: 'Connect a traffic source' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Export CSV' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^All filters/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Period:/ })).not.toBeInTheDocument();
     expect(screen.queryByText(/^Times in /)).not.toBeInTheDocument();
   });
   it('persists tab selection, renders accessible activity and exports the selected filters', async () => {
@@ -666,16 +666,18 @@ describe('AI Traffic state and navigation', () => {
     expect(
       await within(activityTable).findByRole('heading', { name: 'No matching requests' }),
     ).toBeVisible();
-    await user.click(screen.getByRole('button', { name: /^All filters/ }));
-    await user.click(screen.getByRole('menuitem', { name: /^Status code/ }));
+    const statusTrigger = screen.getByRole('button', { name: /^Status code:/ });
+    await user.click(statusTrigger);
     const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
-    // A partly typed code narrows nothing, so the menu does not report it.
+    // A partly typed code narrows nothing, so the trigger does not report it.
     fireEvent.change(statusField, { target: { value: '40' } });
-    expect(screen.getByRole('menuitem', { name: /^Status code/ })).toHaveTextContent('Any status');
+    expect(statusTrigger).toHaveTextContent('Any status');
     fireEvent.change(statusField, { target: { value: '404' } });
-    expect(screen.getByRole('menuitem', { name: /^Status code/ })).toHaveTextContent('404');
-    await user.keyboard('{Escape}{Escape}');
-    expect(await screen.findByRole('button', { name: 'All filters (1)' })).toBeVisible();
+    expect(statusTrigger).toHaveTextContent('404');
+    await user.keyboard('{Escape}');
+    expect(await screen.findByRole('button', { name: 'Status code: 404' })).toHaveAttribute(
+      'data-active',
+    );
     await user.click(screen.getByRole('button', { name: 'Export CSV' }));
     await waitFor(() => expect(exportStatus).toBe('404'));
     // The narrowing emptied the table: none match, and Clear filters undoes it.
@@ -688,21 +690,24 @@ describe('AI Traffic state and navigation', () => {
     await user.keyboard('{Escape}');
     await user.click(screen.getByRole('tab', { name: 'Pages' }));
     await screen.findByRole('table', { name: 'Path-level AI Traffic with separate signal units' });
-    await user.click(screen.getByRole('button', { name: /^All filters/ }));
-    await user.click(screen.getByRole('menuitem', { name: /^Resource class/ }));
+    await user.click(screen.getByRole('button', { name: /^Resource class:/ }));
     const pageOption = await screen.findByRole('menuitemradio', { name: 'Page' });
     pageOption.focus();
     await user.keyboard('{Enter}');
     await waitFor(() =>
       expect(new URLSearchParams(window.location.search).get('resource')).toBe('page'),
     );
-    await user.click(await screen.findByRole('button', { name: /^All filters/ }));
-    await user.click(screen.getByRole('menuitem', { name: /^Folder/ }));
+    await user.click(await screen.findByRole('button', { name: /^Folder:/ }));
     fireEvent.change(await screen.findByRole('textbox', { name: 'Folder' }), {
       target: { value: '/page' },
     });
-    await user.keyboard('{Escape}{Escape}');
-    expect(await screen.findByRole('button', { name: 'All filters (2)' })).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(await screen.findByRole('button', { name: 'Folder: /page' })).toHaveAttribute(
+      'data-active',
+    );
+    expect(screen.getByRole('button', { name: 'Resource class: Page' })).toHaveAttribute(
+      'data-active',
+    );
     // Pages sort from their column headers, like every other table.
     // A column no row measures (referrals here) is left out, so sort by requests.
     await user.click(screen.getByRole('button', { name: /^Requests/ }));
