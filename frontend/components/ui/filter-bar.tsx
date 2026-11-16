@@ -224,6 +224,8 @@ export function FilterTrigger({
       type="button"
       data-active={active || undefined}
       data-fit={fit || undefined}
+      // Spelled out, so the name holds the value even where only the label prints.
+      aria-label={value === undefined ? undefined : `${label}: ${value}`}
       className={cn(
         SOFT_FIELD_BOX,
         'focus-input flex min-w-0 shrink-0 items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-45',
@@ -234,14 +236,11 @@ export function FilterTrigger({
     >
       {shown ? (
         <span data-filter-text="" className="min-w-0 truncate">
-          <span className={hideLabel ? 'sr-only' : 'text-ink-2'}>{label}:</span>{' '}
+          {hideLabel ? null : <span className="text-ink-2">{label}: </span>}
           {fit ? <SizedValue value={value} sizeTo={sizeTo} /> : <TriggerValue value={value} />}
         </span>
       ) : (
-        <span className="truncate">
-          {label}
-          {value === undefined ? null : <span className="sr-only">{`: ${value}`}</span>}
-        </span>
+        <span className="truncate">{label}</span>
       )}
       <ChevronDown className="text-ink-2 ms-auto size-4 shrink-0" aria-hidden />
     </button>

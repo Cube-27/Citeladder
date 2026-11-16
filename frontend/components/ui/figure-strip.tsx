@@ -108,10 +108,9 @@ export function figureRows({
   if (count <= 0) return [];
   const fits = (perRow: number) => cellWidth(width, perRow) >= FIGURE_MIN_WIDTH;
   if (count <= 2) return [count];
-  if (count === 3 && !lead && cellWidth(width, 3) >= PLAIN_THREE_MIN_WIDTH) return [3];
-  if (width < NARROW_STRIP) return count === 3 && !fits(2) ? [1, 1, 1] : balancedPairs(count);
+  if (count === 3) return rowsOfThree(width, lead);
+  if (width < NARROW_STRIP) return balancedPairs(count);
   if (count <= 6 && fits(count)) return [count];
-  if (count === 3) return [1, 1, 1];
   for (let cap = rowCap(count); cap >= 3; cap -= 1) {
     if (fits(cap)) return balancedRows(count, cap);
   }
@@ -122,6 +121,13 @@ export function figureRows({
     pairs[pairs.length - 1] = 3;
   }
   return [...pairs].sort((a, b) => b - a);
+}
+
+/** Three figures: one row while each cell keeps its minimum, else stacked (2 + 1 in a narrow strip with room for two). */
+function rowsOfThree(width: number, lead: boolean): number[] {
+  if (cellWidth(width, 3) >= (lead ? FIGURE_MIN_WIDTH : PLAIN_THREE_MIN_WIDTH)) return [3];
+  if (width < NARROW_STRIP && cellWidth(width, 2) >= FIGURE_MIN_WIDTH) return balancedPairs(3);
+  return [1, 1, 1];
 }
 
 /** Rows of two, an odd figure last on its own. */
