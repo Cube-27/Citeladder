@@ -277,8 +277,9 @@ test('on a phone the Actions table fills its card and the row title link fills i
     const cell = table.querySelector('tbody td:has(a[href])')!;
     const box = cell.getBoundingClientRect();
     const title = cell.querySelector('[data-row-title]')!;
-    // The far corner of the cell, away from the link's text, still opens the Action.
-    const corner = document.elementFromPoint(box.right - 2, box.bottom - 2);
+    // The cell's bottom padding at its far end, clear of the link's text and of
+    // the card's rounded corner, still opens the Action.
+    const corner = document.elementFromPoint(box.right - 16, box.bottom - 3);
     return {
       tableWidth: Math.round(table.getBoundingClientRect().width),
       cardInner: section.clientWidth,
