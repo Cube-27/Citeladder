@@ -7,7 +7,7 @@ import { ApiError } from '@/lib/api/errors';
 import { Avatar } from './avatar';
 import { Button } from './button';
 import { Delta } from './delta';
-import { choiceFilter } from './all-filters';
+import { choiceFilter, rangeFilter, singleFilter } from './all-filters';
 import { FilterBar, FilterTrigger } from './filter-bar';
 import { DataTable } from './data-table';
 import { Meter } from './meter';
@@ -62,9 +62,12 @@ describe('Delta', () => {
     // A falling rank is an improvement under lower-is-better.
     expect(fall).toHaveAttribute('data-outcome', 'improved');
 
-    // +0.04 rounds to a displayed 0.0: flat, a printed 0, spoken as no change.
-    rerender(<Delta value={0.04} />);
-    expect(container.textContent).toBe('no change 0');
+    // +0.04 rounds to a displayed 0.0: flat, a signed ±0 with its unit, spoken as no change.
+    rerender(<Delta value={0.04} unit=" pp" />);
+    const flat = container.querySelector('[data-direction]');
+    expect(flat).toHaveAttribute('data-direction', 'flat');
+    expect(flat?.textContent).toBe('no change±0 pp');
+    expect(flat ? spokenText(flat) : null).toBe('no change');
 
     rerender(
       <TooltipProvider>
@@ -398,6 +401,37 @@ describe('FilterBar and FilterTrigger', () => {
     rerender(<FilterBar filters={[...four, filter('Status')]} />);
     expect(screen.getByRole('button', { name: 'Status: All' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+  });
+  it('prints only the label of a filter at its every value, and the value once set or for a real default', () => {
+    const status = (value: string | null) =>
+      singleFilter({
+        id: 'status',
+        label: 'Status',
+        allLabel: 'All statuses',
+        value,
+        options: [{ value: 'open', label: 'Open' }],
+        onChange: () => undefined,
+      });
+    const period = rangeFilter({
+      value: '30d',
+      defaultValue: '30d',
+      options: [
+        { value: '30d', label: 'Last 30 days' },
+        { value: '7d', label: 'Last 7 days' },
+      ],
+      onChange: () => undefined,
+    });
+    const { rerender } = render(<FilterBar filters={[status(null), period]} />);
+    // The name keeps the value the trigger no longer prints.
+    const idle = screen.getByRole('button', { name: 'Status: All statuses' });
+    expect(idle.querySelector('[data-filter-value]')).toBeNull();
+    const range = screen.getByRole('button', { name: 'Period: Last 30 days' });
+    expect(range.querySelector('[data-filter-value]')?.textContent).toBe('Last 30 days');
+
+    rerender(<FilterBar filters={[status('open'), period]} />);
+    const set = screen.getByRole('button', { name: 'Status: Open' });
+    expect(set).toHaveAttribute('data-active');
+    expect(set.querySelector('[data-filter-value]')?.textContent).toBe('Open');
   });
   it('names a trigger by its visible value', () => {
     render(<FilterTrigger label="Surface" value="ChatGPT" hideLabel active />);

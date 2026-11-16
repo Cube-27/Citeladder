@@ -10,8 +10,9 @@ import { cn } from '@/lib/utils';
  * Colour follows meaning, not direction: `higher-is-better` paints a rise
  * `positive`, `lower-is-better` (rank, latency, errors) paints it
  * `negative`, and `neutral` stays `ink-2` because the movement is a fact,
- * not a verdict. A displayed zero is flat: `0` in `ink-2`. The sign is a true
- * minus; it is shown, and the hidden word ("down 1.2") is what is spoken.
+ * not a verdict. A displayed zero is flat and signed like every other change:
+ * `±0` plus its unit ("±0 pp") in `ink-2`, spoken "no change". The sign is a
+ * true minus; it is shown, and the hidden word ("down 1.2") is what is spoken.
  *
  * The direction is decided from the value the reader SEES, after rounding, so
  * a movement of +0.04 never claims a direction it does not show.
@@ -57,7 +58,7 @@ function roundedChange(value: number, precision: number) {
 const DELTA_FACE =
   'type-caption inline-flex items-baseline gap-1 font-medium tabular-nums whitespace-nowrap [[data-public-surface]_&]:font-mono [[data-public-surface]_&]:font-normal';
 
-const SIGN = { up: '+', down: '−', flat: '' } as const satisfies Record<Direction, string>;
+const SIGN = { up: '+', down: '−', flat: '±' } as const satisfies Record<Direction, string>;
 
 export function Delta({
   value,
@@ -96,12 +97,21 @@ export function Delta({
       data-outcome={outcome}
       className={cn(DELTA_FACE, OUTCOME_INK[outcome], className)}
     >
-      <span className="sr-only">{`${SPOKEN[direction]} `}</span>
-      <span>
-        <span aria-hidden>{SIGN[direction]}</span>
-        {magnitude.toFixed(direction === 'flat' ? 0 : precision)}
-        {unit}
-      </span>
+      {direction === 'flat' ? (
+        <>
+          <span className="sr-only">{SPOKEN.flat}</span>
+          <span aria-hidden>{`${SIGN.flat}0${unit}`}</span>
+        </>
+      ) : (
+        <>
+          <span className="sr-only">{`${SPOKEN[direction]} `}</span>
+          <span>
+            <span aria-hidden>{SIGN[direction]}</span>
+            {magnitude.toFixed(precision)}
+            {unit}
+          </span>
+        </>
+      )}
       {context ? <span className="text-ink-2 ms-0.5 font-normal">{context}</span> : null}
       {spokenContext ? <span className="sr-only">{` ${spokenContext}`}</span> : null}
     </span>
