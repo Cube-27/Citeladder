@@ -3,8 +3,14 @@
  * follows an active turn. Reads never run the agent, so the UI polls the
  * persisted chat until the run reaches a terminal state.
  */
-/** Streamed reply text repaints at most this often, so Markdown is not re-parsed per token. */
-export const AGENT_STREAM_THROTTLE_MS = 50;
+/**
+ * Streamed reply text waits twice its last repaint's duration before the next,
+ * within these bounds, so Markdown is not re-parsed per token and a long reply
+ * repaints less often.
+ */
+export const AGENT_STREAM_REPAINT_MS = { floor: 50, cap: 250 } as const;
+/** Live-turn listeners hear once a frame; a hidden tab pauses frames, so this timeout backs them up. */
+export const AGENT_STREAM_NOTIFY_FALLBACK_MS = 100;
 
 export const AGENT_CHAT_PAGE_SIZE = 30;
 /** How many of an issue family's pages a developer ticket lists before "and N more". */

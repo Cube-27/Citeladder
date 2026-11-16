@@ -1,9 +1,17 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vite-plus/test';
 
 import { agentTurnEventSchema } from '@citeladder/contracts/agent';
 import { activityRows, callStep } from './activity';
-import { applyTurnEvent, liveTurn, startLiveTurn, useLiveTurn, type TurnEvent } from './live-turns';
+import {
+  applyTurnEvent,
+  liveTurn,
+  onLiveTurnClosed,
+  startLiveTurn,
+  useLiveDocumentBody,
+  useLiveTurn,
+  type TurnEvent,
+} from './live-turns';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -153,8 +161,8 @@ it('tracks each parallel call by its id and target, and keeps the newest documen
       // A frame from before targets were sent reads as no target.
       { type: 'tool', ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'started' },
       { type: 'tool', ordinal: 1, call_id: 'b', tool: 'read_performance', status: 'unavailable' },
-      { type: 'document_delta', ordinal: 2, title: 'Plan', body: 'Draft' },
-      { type: 'document_delta', ordinal: 2, title: 'Plan', body: 'Draft with more' },
+      { type: 'document_delta', ordinal: 2, title: 'Plan', from: 0, text: 'Draft' },
+      { type: 'document_delta', ordinal: 2, title: 'Plan', from: 5, text: ' with more' },
     ].map((event) => agentTurnEventSchema.parse(event)),
   );
   expect(turn.tools).toEqual([
@@ -174,4 +182,141 @@ it('tracks each parallel call by its id and target, and keeps the newest documen
     ['Read', 'search performance', 'no data yet'],
   ]);
   expect(turn.document).toEqual({ title: 'Plan', body: 'Draft with more' });
+});
+
+it('rebuilds the document from deltas, resets it on a full snapshot and ignores a gap', () => {
+  const doc = (from: number, text: string): TurnEvent => ({
+    type: 'document_delta',
+    ordinal: 2,
+    title: 'Plan',
+    from,
+    text,
+  });
+  expect(fold([doc(0, 'One'), doc(3, ' two'), doc(7, ' three')]).document?.body).toBe(
+    'One two three',
+  );
+  expect(fold([doc(0, 'One'), doc(3, ' two'), doc(0, 'Rewritten')]).document?.body).toBe(
+    'Rewritten',
+  );
+  expect(fold([doc(0, 'One'), doc(9, ' lost'), doc(3, ' two')]).document?.body).toBe('One two');
+});
+
+/** A stream the test feeds frame by frame and closes. */
+function fedStream() {
+  const encoder = new TextEncoder();
+  let feed!: ReadableStreamDefaultController<Uint8Array>;
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      feed = controller;
+    },
+  });
+  return {
+    response: new Response(body, { status: 200, headers: { 'content-type': 'text/event-stream' } }),
+    send: (...events: TurnEvent[]) =>
+      feed.enqueue(encoder.encode(events.map((e) => `data: ${JSON.stringify(e)}\n\n`).join(''))),
+    close: () => feed.close(),
+  };
+}
+
+/**
+ * Frames run only when the test runs them and the fallback timeout never
+ * fires; `requested` resolves when the store asks for its next frame.
+ */
+function heldFrames(stream: ReturnType<typeof fedStream>) {
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+  const frames: FrameRequestCallback[] = [];
+  let asked = () => {};
+  vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => {
+    asked();
+    return frames.push(callback);
+  });
+  vi.stubGlobal('cancelAnimationFrame', () => undefined);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(() => Promise.resolve(stream.response)),
+  );
+  const requested = () =>
+    new Promise<void>((resolve) => {
+      asked = resolve;
+    });
+  return { frames, requested };
+}
+
+const closed = () =>
+  new Promise<void>((resolve) => {
+    const stop = onLiveTurnClosed(() => {
+      stop();
+      resolve();
+    });
+  });
+
+it('tells listeners once a frame, and at once with the folded events when the stream closes', async () => {
+  const run = '22222222-2222-4222-8222-222222222204';
+  const stream = fedStream();
+  const { frames, requested } = heldFrames(stream);
+  startLiveTurn(CHAT, run, null);
+  let renders = 0;
+  const { result } = renderHook(() => {
+    renders += 1;
+    return useLiveTurn(run);
+  });
+  const events: TurnEvent[] = [
+    { type: 'step', ordinal: 1 },
+    { type: 'reply_delta', ordinal: 1, text: 'Hel' },
+    { type: 'reply_delta', ordinal: 1, text: 'lo' },
+  ];
+
+  const asked = requested();
+  stream.send(...events);
+  await asked;
+  expect(renders).toBe(1);
+  act(() => frames[0]?.(0));
+  expect(renders).toBe(2);
+
+  const last: TurnEvent = { type: 'reply_delta', ordinal: 1, text: '!' };
+  const ended = closed();
+  await act(async () => {
+    stream.send(last);
+    stream.close();
+    await ended;
+  });
+  expect(frames).toHaveLength(2);
+  expect(result.current).toEqual({
+    ...fold([...events, last]),
+    startedAt: expect.any(Number),
+    connected: false,
+  });
+});
+
+it('re-renders a document reader only when the streamed body changes', async () => {
+  const run = '22222222-2222-4222-8222-222222222205';
+  const stream = fedStream();
+  const { frames, requested } = heldFrames(stream);
+  startLiveTurn(CHAT, run, null);
+  const renders = { body: 0, turn: 0 };
+  const body = renderHook(() => {
+    renders.body += 1;
+    return useLiveDocumentBody(run);
+  });
+  renderHook(() => {
+    renders.turn += 1;
+    return useLiveTurn(run);
+  });
+  const paint = async (event: TurnEvent) => {
+    const asked = requested();
+    stream.send(event);
+    await asked;
+    act(() => frames.at(-1)?.(0));
+  };
+
+  await paint({ type: 'reply_delta', ordinal: 1, text: 'Writing' });
+  expect(renders).toEqual({ body: 1, turn: 2 });
+  await paint({ type: 'document_delta', ordinal: 1, title: 'Plan', from: 0, text: 'Draft' });
+  expect(renders).toEqual({ body: 2, turn: 3 });
+  expect(body.result.current).toBe('Draft');
+  const ended = closed();
+  await act(async () => {
+    stream.close();
+    await ended;
+  });
 });

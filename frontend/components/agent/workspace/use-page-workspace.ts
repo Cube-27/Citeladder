@@ -2,7 +2,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { useState } from 'react';
 
 import { agentWriteFailure, isOutputConflict } from '@/lib/agent/errors';
-import { useLiveTurn } from '@/lib/agent/live-turns';
+import { useLiveDocumentBody } from '@/lib/agent/live-turns';
 import { isRunActive } from '@/lib/agent/run-state';
 import { actionsQueries } from '@/lib/api/actions';
 import {
@@ -117,7 +117,7 @@ function pageStatus(revision: AgentRevision, streaming: boolean, editing: boolea
  */
 export function usePageText(detail: AgentChatDetail, revision: AgentRevision, draft: PageDraft) {
   const run = isRunActive(detail.latest_run) ? detail.latest_run : null;
-  const streamed = useLiveTurn(run?.id ?? null)?.document?.body ?? null;
+  const streamed = useLiveDocumentBody(run?.id);
   const streaming = run !== null && streamed !== null;
   const shown = streaming ? streamed : revision.body;
   const editing = draft.draft !== null;

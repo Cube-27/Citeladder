@@ -1,5 +1,5 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useState, type KeyboardEvent } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ChevronDown, MessagesSquare, RefreshCw } from 'lucide-react';
 
@@ -20,6 +20,7 @@ import { RailFlyoutSlot } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
 import { InlineFigure } from '@/components/ui/typography';
 import { CHAT_ORIGIN_LABELS } from '@/lib/agent/handoff';
+import { isChatLiveTurnConnected, onLiveTurnClosed } from '@/lib/agent/live-turns';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
 import { useProjectHref } from '@/lib/navigation/project-destination';
@@ -40,12 +41,17 @@ function useChatList() {
       { q: needle },
     ),
     enabled: Boolean(activeWorkspaceId && activeProjectId),
-    // Several chats can run at once; their markers clear as each turn ends.
+    // Several chats can run at once; their markers clear as each turn ends. A
+    // turn this tab streams is read again when its stream closes, not polled.
     refetchInterval: (query) =>
-      query.state.data?.pages.some((page) => page.items.some((chat) => chat.running))
+      query.state.data?.pages.some((page) =>
+        page.items.some((chat) => chat.running && !isChatLiveTurnConnected(chat.id)),
+      )
         ? AGENT_CHAT_LIST_POLL_MS
         : false,
   });
+  const { refetch } = chats;
+  useEffect(() => onLiveTurnClosed(() => void refetch()), [refetch]);
   const rows = chats.data?.pages.flatMap((page) => page.items) ?? [];
   let state: 'loading' | 'error' | 'filtered' | 'ready' = needle ? 'filtered' : 'ready';
   if (chats.isPending) state = 'loading';

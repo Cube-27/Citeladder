@@ -111,7 +111,7 @@ describe('served Agent cutover on PostgreSQL', () => {
         target: null,
       })),
       { type: 'step', ordinal: 2 },
-      { type: 'document_delta', ordinal: 2, title: 'Document', body: 'Outline body' },
+      { type: 'document_delta', ordinal: 2, title: 'Document', from: 0, text: 'Outline body' },
       ...(['started', 'completed'] as const).map((status) => ({
         type: 'tool',
         ordinal: 2,

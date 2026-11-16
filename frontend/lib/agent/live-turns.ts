@@ -11,7 +11,11 @@ import type { z } from 'zod';
 
 import { agentTurnEventSchema } from '@citeladder/contracts/agent';
 import { retryAfterSeconds } from '@citeladder/contracts/retry-after';
-import { AGENT_RUN_RETRY, AGENT_STREAM_IDLE_MS } from '@/lib/config/agent';
+import {
+  AGENT_RUN_RETRY,
+  AGENT_STREAM_IDLE_MS,
+  AGENT_STREAM_NOTIFY_FALLBACK_MS,
+} from '@/lib/config/agent';
 import { API_BASE_URL } from '@/lib/config/operational';
 import { readSseResponse, streamHeaders } from '@/lib/sse/use-event-stream';
 
@@ -58,16 +62,41 @@ function appended(segments: readonly Written[], { ordinal, text }: Written): Wri
     : [...segments, { ordinal, text }];
 }
 
-// Turns this tab is showing; only the most recent few are kept.
+// Turns this tab is showing, with each run's chat; only the most recent few are kept.
 const KEEP = 20;
 const turns = new Map<string, LiveTurn>();
+const chatOf = new Map<string, string>();
 const listeners = new Set<() => void>();
+const closeListeners = new Set<() => void>();
+let frame: number | undefined;
+let fallback: ReturnType<typeof setTimeout> | undefined;
+
+function notify() {
+  if (frame !== undefined) cancelAnimationFrame(frame);
+  clearTimeout(fallback);
+  frame = undefined;
+  fallback = undefined;
+  for (const listener of listeners) listener();
+}
+
+/** Listeners hear once a frame however many events arrive; a hidden tab pauses frames, so a timeout backs them up. */
+function notifyNextFrame() {
+  if (fallback !== undefined) return;
+  frame = requestAnimationFrame(notify);
+  fallback = setTimeout(notify, AGENT_STREAM_NOTIFY_FALLBACK_MS);
+}
 
 function update(runId: string, change: (turn: LiveTurn) => LiveTurn) {
   const current = turns.get(runId);
-  if (!current) return;
-  turns.set(runId, change(current));
-  for (const listener of listeners) listener();
+  if (current) turns.set(runId, change(current));
+}
+
+/** `from: 0` replaces the body; a delta that does not continue it is dropped until the next full snapshot. */
+function withDocument(turn: LiveTurn, event: Extract<TurnEvent, { type: 'document_delta' }>) {
+  if (event.from === 0) return { ...turn, document: { title: event.title, body: event.text } };
+  const body = turn.document?.body;
+  if (body?.length !== event.from) return turn;
+  return { ...turn, document: { title: event.title, body: body + (event.text ?? '') } };
 }
 
 /** Folds one stream event into the turn's live view. */
@@ -80,7 +109,7 @@ export function applyTurnEvent(turn: LiveTurn, event: TurnEvent): LiveTurn {
     case 'thinking':
       return { ...turn, thinking: appended(turn.thinking, event) };
     case 'document_delta':
-      return { ...turn, document: { title: event.title, body: event.body } };
+      return withDocument(turn, event);
     case 'tool': {
       const tool = {
         ordinal: event.ordinal,
@@ -174,9 +203,10 @@ async function runStream(url: string, workspaceId: string | null, runId: string)
       continue;
     }
     if (!response.ok) return;
-    await read(response, controller, (event) =>
-      update(runId, (turn) => applyTurnEvent(turn, event)),
-    );
+    await read(response, controller, (event) => {
+      update(runId, (turn) => applyTurnEvent(turn, event));
+      notifyNextFrame();
+    });
     return;
   }
 }
@@ -185,17 +215,40 @@ async function runStream(url: string, workspaceId: string | null, runId: string)
 export function startLiveTurn(chatId: string, runId: string, workspaceId: string | null) {
   if (turns.has(runId)) return;
   turns.set(runId, liveTurn(Date.now()));
-  for (const stale of [...turns.keys()].slice(0, Math.max(0, turns.size - KEEP)))
+  chatOf.set(runId, chatId);
+  for (const stale of [...turns.keys()].slice(0, Math.max(0, turns.size - KEEP))) {
     turns.delete(stale);
+    chatOf.delete(stale);
+  }
   void runStream(`${API_BASE_URL}/agent/chats/${chatId}/runs/${runId}/run`, workspaceId, runId)
     .catch(() => undefined)
-    .finally(() => update(runId, (turn) => ({ ...turn, connected: false })));
-  for (const listener of listeners) listener();
+    .finally(() => {
+      // Flushed at once, so the close and the last event are never left for a frame.
+      update(runId, (turn) => ({ ...turn, connected: false }));
+      notify();
+      for (const listener of closeListeners) listener();
+    });
+  notify();
 }
 
 /** Whether this tab holds an open stream for the run, so polling can wait. */
 export function isLiveTurnConnected(runId: string | null | undefined) {
   return Boolean(runId && turns.get(runId)?.connected);
+}
+
+/** Whether this tab holds an open stream for a turn of the chat. */
+export function isChatLiveTurnConnected(chatId: string) {
+  for (const [runId, chat] of chatOf)
+    if (chat === chatId && isLiveTurnConnected(runId)) return true;
+  return false;
+}
+
+/** Calls `listener` each time one of this tab's streams closes; returns the unsubscribe. */
+export function onLiveTurnClosed(listener: () => void) {
+  closeListeners.add(listener);
+  return () => {
+    closeListeners.delete(listener);
+  };
 }
 
 function subscribe(listener: () => void) {
@@ -211,6 +264,15 @@ export function useLiveTurnConnected(runId: string | null | undefined): boolean 
     subscribe,
     () => (runId ? turns.get(runId)?.connected : undefined),
     () => undefined,
+  );
+}
+
+/** The streamed document's body, so its reader re-renders only when the body changes. */
+export function useLiveDocumentBody(runId: string | null | undefined): string | null {
+  return useSyncExternalStore(
+    subscribe,
+    () => (runId ? (turns.get(runId)?.document?.body ?? null) : null),
+    () => null,
   );
 }
 
