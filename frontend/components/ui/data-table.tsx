@@ -56,7 +56,8 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
  *            blank rows, so the pager never moves between pages.
  *   states — loading keeps the head and draws a page of block rows; a filter
  *            that empties a table keeps the head; an empty, not-measured or
- *            failed read replaces the whole table, head included. A page
+ *            failed read replaces the whole table, head included (inside
+ *            its footprint under `reserveRows`). A page
  *            that knows from its data that nothing was measured passes the
  *            not-measured state; the table never guesses it from its cells.
  *   zone   — a table with a `date` column states its time zone once, in
@@ -110,8 +111,9 @@ export function DataTable({
   label?: string;
   /**
    * One of several views of the same table (its tabs or filters): keep the
-   * pager and a full page of rows even when this view fits on one page, so
-   * switching views never moves what follows.
+   * pager and a full page of rows even when this view fits on one page, and
+   * hold that footprint under an empty or failed view, so switching views
+   * never moves what follows.
    */
   reserveRows?: boolean;
 }>) {
@@ -143,36 +145,68 @@ export function DataTable({
         actions={actions}
         steppers={footed ? null : steppers}
       />
-      {replacing ? (
-        <ReplacingState state={replacing} level={title ? nextLevel(level) : level} />
-      ) : null}
-      <DataTableFrame
-        hidden={replacing !== null}
-        scroll={scroll}
-        minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
-        layout={columnLayout(columns, Boolean(selection))}
-        naming={parts.naming}
-        pinned={parts.pinned}
-      >
-        <DataTableColumns columns={columns} selection={selection} />
-        <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
-          <DataTableBody
-            colSpan={parts.colSpan}
-            state={replacing ? undefined : state}
-            pageSize={paging.pageSize}
-            rowCount={rowCount}
-            rowLines={rowLines}
-          >
-            {state === undefined ? children : null}
-          </DataTableBody>
-        </TableTitleLinesContext>
-      </DataTableFrame>
-      <DataTableFoot
-        footer={note}
-        pager={replacing ? undefined : paging.pager}
-        steppers={footed ? steppers : null}
-      />
+      <HeldFootprint state={replacing} level={stateLevel(title, level)} held={reserveRows}>
+        <DataTableFrame
+          hidden={dropsTable(replacing, reserveRows)}
+          scroll={scroll}
+          minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
+          layout={columnLayout(columns, Boolean(selection))}
+          naming={parts.naming}
+          pinned={parts.pinned}
+        >
+          <DataTableColumns columns={columns} selection={selection} />
+          <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
+            <DataTableBody
+              colSpan={parts.colSpan}
+              state={replacing ? undefined : state}
+              pageSize={paging.pageSize}
+              rowCount={rowCount}
+              rowLines={rowLines}
+            >
+              {state === undefined ? children : null}
+            </DataTableBody>
+          </TableTitleLinesContext>
+        </DataTableFrame>
+        <DataTableFoot
+          footer={note}
+          pager={dropsTable(replacing, reserveRows) ? undefined : paging.pager}
+          steppers={footed ? steppers : null}
+        />
+      </HeldFootprint>
     </section>
+  );
+}
+
+/**
+ * A state that takes the table's place. In a table that reserves its rows it
+ * lies over the unseen frame and footer, so it keeps their footprint.
+ */
+function HeldFootprint({
+  state,
+  level,
+  held,
+  children,
+}: Readonly<{
+  state: ComponentProps<typeof StateBlock> | null;
+  level: 1 | 2 | 3;
+  held: boolean;
+  children: ReactNode;
+}>) {
+  const block = state ? <ReplacingState state={state} level={level} /> : null;
+  if (!block || !held)
+    return (
+      <>
+        {block}
+        {children}
+      </>
+    );
+  return (
+    <div className="grid min-w-0">
+      <div className="col-start-1 row-start-1 min-w-0">{block}</div>
+      <div inert className="col-start-1 row-start-1 min-w-0" style={{ visibility: 'hidden' }}>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -225,7 +259,14 @@ function TimeZoneNote() {
 }
 
 /** A state under the table's own title takes the next level. */
-const nextLevel = (level: 1 | 2 | 3) => (level === 1 ? 2 : 3);
+const stateLevel = (title: string | undefined, level: 1 | 2 | 3): 1 | 2 | 3 => {
+  if (!title) return level;
+  return level === 1 ? 2 : 3;
+};
+
+/** Whether a state drops the table and its pager, rather than holding their footprint. */
+const dropsTable = (replacing: ReturnType<typeof replacingState>, reserveRows: boolean) =>
+  replacing !== null && !reserveRows;
 
 /**
  * The state that takes the table's place, head included: an empty,

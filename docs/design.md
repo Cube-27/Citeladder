@@ -295,7 +295,11 @@ grids measure the column instead of the viewport (`column-split`,
 `column-wide`), so a wider sidebar stacks them.
 
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
-and empty states keep their footprint; a pending button keeps its label's box.
+and empty states keep their footprint: a table with views (`reserveRows`) keeps
+a full page of rows and its pager in every view and state, a filter trigger and
+a count hold their widest value's width, and a pending button keeps its
+label's box. A page the window scrolls ends in `--page-end-space` (a third of
+the viewport), so content shrinking near the bottom never pulls the scroll.
 
 ## Elevation & Depth
 

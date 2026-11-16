@@ -43,7 +43,9 @@ export type PageFrameSlots = Readonly<{
  * only; a page passes content into the slots and sets none of its own. A
  * narrow route (its manifest `width`) centres the whole frame, title and
  * actions included, in the chat's `max-w-thread`; `fill` keeps a workbench
- * across the main column.
+ * across the main column. A page the window scrolls ends in
+ * `--page-end-space` of empty space; a `fitted` one (a thread, a workbench)
+ * fills the window and scrolls inside itself, so it has none.
  */
 export function PageFrame({
   title,
@@ -52,8 +54,9 @@ export function PageFrame({
   tabs,
   filters,
   fill,
+  fitted,
   children,
-}: PageFrameSlots & Readonly<{ fill?: true; children: ReactNode }>) {
+}: PageFrameSlots & Readonly<{ fill?: true; fitted?: true; children: ReactNode }>) {
   const pathname = useLocation().pathname ?? '';
   const resolved = useRouteTitle(title, pathname);
   const width = fill ? 'full' : routeWidth(pathname);
@@ -66,6 +69,7 @@ export function PageFrame({
         className={cn(
           'flex min-w-0 flex-1 flex-col',
           width === 'narrow' && 'max-w-thread mx-auto w-full',
+          !fitted && 'pb-[var(--page-end-space)]',
         )}
       >
         <Masthead

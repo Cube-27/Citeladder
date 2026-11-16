@@ -123,9 +123,23 @@ export function tabClasses(selected: boolean, className?: string) {
  * The count a tab, segment or filter chip carries after its label, in
  * brackets ("All signals (107)"), in tabular numerals and `ink-2`. Its text
  * leads with a space, so an accessible name reads "All signals (107)".
+ * `upTo`, the most it can read, holds that width, so a filter that changes
+ * the count never resizes the control.
  */
-export function ControlCount({ count }: Readonly<{ count: number }>) {
-  return <span className="text-ink-2 tabular-nums">{` (${formatCount(count)})`}</span>;
+export function ControlCount({ count, upTo }: Readonly<{ count: number; upTo?: number }>) {
+  const text = ` (${formatCount(count)})`;
+  if (upTo === undefined || upTo <= count)
+    return <span className="text-ink-2 tabular-nums">{text}</span>;
+  return (
+    <span className="text-ink-2 inline-grid text-start tabular-nums">
+      <span className="col-start-1 row-start-1">{text}</span>
+      <span
+        aria-hidden
+        data-size={` (${formatCount(upTo)})`}
+        className="invisible col-start-1 row-start-1 after:content-[attr(data-size)]"
+      />
+    </span>
+  );
 }
 
 type TabItem<T extends string> = {
@@ -345,6 +359,8 @@ export type SegmentedOption<T extends string> = Readonly<{
   value: T;
   label: string;
   count?: number;
+  /** The most `count` can read; its width is held (`ControlCount`). */
+  countUpTo?: number;
   detail?: string;
   hint?: ReactNode;
 }>;
@@ -454,7 +470,9 @@ export function SegmentedControl<T extends string>({
                   {option.detail ? (
                     <span className="text-ink-2 font-normal">{` · ${option.detail}`}</span>
                   ) : null}
-                  {option.count === undefined ? null : <ControlCount count={option.count} />}
+                  {option.count === undefined ? null : (
+                    <ControlCount count={option.count} upTo={option.countUpTo} />
+                  )}
                 </button>
               );
               if (!option.hint) return segment;

@@ -60,6 +60,7 @@ test('browser-sensitive frontend paths select E2E without escalating every front
   assert.deepEqual(selectE2EFiles(['frontend/components/templates/page-frame.tsx']), [
     'e2e/geometry-census.spec.ts',
     'e2e/shell.spec.ts',
+    'e2e/surface-layout-issues.spec.ts',
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.ts']), ['e2e/shell.spec.ts']);
   assert.deepEqual(selectE2EFiles(['frontend/e2e/shell.spec.mjs']), []);
@@ -220,6 +221,7 @@ test('every app E2E spec is selected by the product sources it exercises', () =>
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/components/site-health/issues-screen.tsx']), [
     'e2e/site-health-recovery.spec.ts',
+    'e2e/surface-layout-issues.spec.ts',
   ]);
   assert.deepEqual(selectE2EFiles(['frontend/components/agent/workspace/page-editor.tsx']), [
     'e2e/action-loop.spec.ts',
@@ -256,6 +258,7 @@ test('a fixture or helper change selects every spec that imports it', () => {
     'e2e/self-serve-auth.spec.ts',
     'e2e/shell.spec.ts',
     'e2e/site-health-recovery.spec.ts',
+    'e2e/surface-layout-issues.spec.ts',
     'e2e/surface-layout.spec.ts',
     'e2e/visibility.spec.ts',
   ];
