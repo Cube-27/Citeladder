@@ -126,16 +126,14 @@ function RankingTable({
     <DataTable
       title="Ranking"
       description="By appearances in the window's answers."
-      toolbar={{
-        view: (
-          <SegmentedControl
-            ariaLabel="Ranking shown"
-            value={ranking}
-            options={RANKINGS}
-            onChange={setRanking}
-          />
-        ),
-      }}
+      actions={
+        <SegmentedControl
+          ariaLabel="Ranking shown"
+          value={ranking}
+          options={RANKINGS}
+          onChange={setRanking}
+        />
+      }
       columns={[
         { key: 'name', label: brands ? 'Brand' : 'Product', kind: 'identity' },
         ...METRIC_COLUMNS,

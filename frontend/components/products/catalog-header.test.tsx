@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 import { ApiError } from '@/lib/api/errors';
 import { queryKeys } from '@/lib/api/query-keys';
-import { renderWithProviders } from '@/test/render';
+import { renderWithProviders, selectionAs } from '@/test/render';
 
 import { useCatalogHeader } from './catalog-header';
 
@@ -237,6 +237,41 @@ describe('CatalogHeader', () => {
     );
     expect(statValue('Website')).toHaveTextContent('Not run yet');
     expect(statValue('Pages analyzed')).toHaveTextContent('Not run yet');
+  });
+
+  it('gives an empty catalog its actions once, in the state block, and only to a role that runs', async () => {
+    getDashboard.mockResolvedValue({ crawl: null });
+    function EmptyHost() {
+      const { empty } = useCatalogHeader({
+        workspaceId: WORKSPACE_ID,
+        projectId: PROJECT_ID,
+        query: catalogQuery(),
+        projection: { applicability: 'unknown', in_flight: 0, failed: 0 } as never,
+      });
+      return (
+        <>
+          <header>{empty.dialog}</header>
+          <section aria-label="Empty">{empty.actions}</section>
+          {empty.businessModelUnconfirmed ? <p>unconfirmed</p> : null}
+        </>
+      );
+    }
+    const { unmount } = renderWithProviders(<EmptyHost />, {
+      projectSelection: selectionAs('member'),
+    });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Run Website crawl' })).toBeEnabled(),
+    );
+    expect(screen.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Add products',
+      'Run Website crawl',
+    ]);
+    expect(screen.getByText('unconfirmed')).toBeInTheDocument();
+    unmount();
+
+    renderWithProviders(<EmptyHost />, { projectSelection: selectionAs('viewer') });
+    expect(await screen.findByText('unconfirmed')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button')).toEqual([]);
   });
 
   it('never reads a failed Site Health read as no crawl, and Refresh reads it again', async () => {

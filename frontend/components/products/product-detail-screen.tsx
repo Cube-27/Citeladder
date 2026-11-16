@@ -4,15 +4,13 @@ import { MessageSquareOff } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 
 import { RecordPage } from '@/components/templates/record-page';
-import { AppGrid } from '@/components/ui/app-grid';
-import { ClampText } from '@/components/ui/clamp-text';
 import { FilterControls } from '@/components/ui/filter-bar';
 import type { FilterDefinition } from '@/components/ui/all-filters';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ProductImage } from '@/components/ui/product-image';
+import { UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
-import { InlineFigure, textRole } from '@/components/ui/typography';
 import type { CommerceCatalog, CommerceProductDetail } from '@citeladder/contracts/commerce-suite';
 import { commerceQueries } from '@/lib/api/commerce';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
@@ -51,8 +49,8 @@ import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components
 import { FigureStrip } from '@/components/ui/figure-strip';
 import type { LoadingShape } from '@/components/ui/skeleton-block';
 
-/** The product's identity card as it loads: its caption, description and URL. */
-const PRODUCT_IDENTITY = { kind: 'facts', rows: 3 } satisfies LoadingShape;
+/** The product's identity card as it loads: its one row. */
+const PRODUCT_IDENTITY = { kind: 'facts', rows: 1 } satisfies LoadingShape;
 
 /** The KPIs, in the plan's order; merchants have their own section below. */
 const KPIS = [
@@ -201,15 +199,16 @@ function HolderDetail({
       identity={<ProductIdentity detail={data} scope={projectScope} filters={filters} />}
     >
       <ProductKpis detail={data} />
+      {/* Each list takes the full row: beside the competing list, the short ones sat over a third empty. */}
       {named ? (
-        <AppGrid layout="pair">
+        <>
           <CompetingProducts detail={data} scope={scopeFilters} />
           <Merchants detail={data} />
           <SeenIn detail={data} scope={scopeFilters} />
           <Sources detail={data} />
-        </AppGrid>
+          <FanOutQueries detail={data} />
+        </>
       ) : null}
-      {named ? <FanOutQueries detail={data} /> : null}
       {named || data.prompts.length > 0 ? <PromptMetrics detail={data} /> : null}
       {named ? (
         <Answers detail={data} />
@@ -233,22 +232,12 @@ function HolderDetail({
   );
 }
 
-/** A product URL without its origin, so a cut line keeps the path's end. */
-function urlTail(url: string) {
-  try {
-    const parsed = new URL(url);
-    const tail = `${parsed.pathname}${parsed.search}${parsed.hash}`;
-    return tail === '/' ? url : tail;
-  } catch {
-    return url;
-  }
-}
-
 /**
- * The record's identity card (the masthead names it): who holds it, image,
- * description and a link to its page, with the page's filters and a catalog
- * product's Edit and Archive, or Add to tracking for a product the answers
- * showed, at its head's right; below 640 they drop under the link.
+ * The record's identity card, one row (the masthead names it): an info hint
+ * holding who holds it, the answers it is read from and a listing title that
+ * differs from the name, then the image and the link to its page; the page's
+ * filters and a catalog product's Edit and Archive, or Add to tracking for a
+ * product the answers showed, sit at the row's end and wrap under it.
  */
 function ProductIdentity({
   detail,
@@ -260,25 +249,22 @@ function ProductIdentity({
   filters: readonly FilterDefinition[];
 }>) {
   const { product } = detail;
+  const listingTitle =
+    product.description && product.description.trim() !== product.name.trim()
+      ? product.description
+      : null;
   const card = (notices: ReactNode, actions: ReactNode) => (
     <Section aria-label="Product">
       <Stack gap="workspace">
-        <Inline gap="compact" className="flex-wrap items-start">
-          {product.image_url ? <ProductImage src={product.image_url} /> : null}
-          <Stack gap="item" className="min-w-0 flex-[1_1_20rem]">
-            <Stack gap="tight" className="min-w-0">
-              <span className="type-caption text-ink-2">
-                {holderCaption(product)} · From{' '}
-                <InlineFigure>{formatCount(detail.executions)}</InlineFigure>
-                {detail.executions === 1 ? ' answer' : ' answers'} in the last{' '}
-                <InlineFigure>{detail.window_days}</InlineFigure> days
-              </span>
-              {product.description ? (
-                <ClampText lines={2} className={textRole('body', 'text-ink max-w-[72ch]')}>
-                  {product.description}
-                </ClampText>
-              ) : null}
-            </Stack>
+        <Inline gap="compact" className="flex-wrap items-center">
+          <Inline gap="item" className="min-w-0 flex-[1_1_20rem] items-center">
+            <InfoHint label="About this product">
+              {holderCaption(product)} · From {formatCount(detail.executions)}
+              {detail.executions === 1 ? ' answer' : ' answers'} in the last {detail.window_days}{' '}
+              days.
+              {listingTitle ? ` Listing title: ${listingTitle}` : null}
+            </InfoHint>
+            {product.image_url ? <ProductImage src={product.image_url} /> : null}
             {product.url ? (
               <TextLink
                 variant="external"
@@ -286,14 +272,14 @@ function ProductIdentity({
                 text="caption"
                 className="flex max-w-full min-w-0"
               >
-                {/* Cut from the start: the path's end names the product. */}
-                <ClampText tooltip={product.url} className="text-left [direction:rtl]">
-                  <bdi dir="ltr">{urlTail(product.url)}</bdi>
-                </ClampText>
+                {listingTitle ? <span className="sr-only">{listingTitle}, </span> : null}
+                <UrlText url={product.url} />
               </TextLink>
-            ) : null}
-          </Stack>
-          <Inline gap="item" className="flex-wrap items-start">
+            ) : (
+              <span className="type-caption text-ink-2">{holderCaption(product)}</span>
+            )}
+          </Inline>
+          <Inline gap="item" className="ms-auto flex-wrap items-center">
             <FilterControls filters={filters} align="end" />
             {actions}
           </Inline>

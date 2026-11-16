@@ -42,7 +42,7 @@ import { useWorkspaceCapability } from '@/lib/project/project-context';
 
 import { BulkActions } from './bulk-actions';
 import { categoryFilter, productScopeFilters } from './product-scope-filters';
-import { useCatalogHeader } from './catalog-header';
+import { ConfirmBusinessModelLink, useCatalogHeader } from './catalog-header';
 import { ProductsTable, type ProductsEmpty } from './products-table';
 
 const SOURCES: readonly { value: CommerceProductSource; label: string }[] = [
@@ -143,18 +143,29 @@ function noProducts({
   return catalog.data?.product_total === 0 && page.data?.items.length === 0;
 }
 
-function NoProducts({ header }: Readonly<{ header: ReturnType<typeof useCatalogHeader> }>) {
+/** The page's one empty state carries its actions; the masthead repeats none of them. */
+function NoProducts({ empty }: Readonly<{ empty: ReturnType<typeof useCatalogHeader>['empty'] }>) {
+  const lead = empty.actions
+    ? 'Add your products or run a Website crawl so CiteLadder can track how AI answers mention and price them.'
+    : 'A workspace owner, admin or member can add products or run a Website crawl so CiteLadder can track how AI answers mention and price them.';
   return (
-    <ReportPage actions={header.actions}>
-      {header.notices}
+    <ReportPage actions={empty.dialog}>
+      {empty.notices}
       <StateBlock
         kind="empty"
         icon={PackageOpen}
         heading="No products yet"
-        description="Add your products so CiteLadder can track how AI answers mention and price them."
-        action={
-          header.addProducts ? <Button onClick={header.addProducts}>Add products</Button> : null
+        description={
+          empty.businessModelUnconfirmed ? (
+            <>
+              {lead} Website pages become products once your business model is confirmed.{' '}
+              <ConfirmBusinessModelLink />
+            </>
+          ) : (
+            lead
+          )
         }
+        action={empty.actions}
       />
     </ReportPage>
   );
@@ -222,7 +233,7 @@ function ProductsContent({
       csv.rows,
     );
   };
-  if (noProducts({ catalog, page, filters })) return <NoProducts header={header} />;
+  if (noProducts({ catalog, page, filters })) return <NoProducts empty={header.empty} />;
   return (
     <ReportPage
       actions={header.actions}

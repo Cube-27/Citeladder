@@ -35,10 +35,32 @@ export function SearchIntelligenceCompetitors({
   competitors: SearchIntelligenceReadiness['competitors'];
   onOpen: (dataset: SearchIntelligenceDataset) => void;
 }>) {
+  const rows = competitors.map((competitor) => {
+    const footprint = datasets.find(
+      (item) =>
+        item.dataset_kind === 'footprint' &&
+        matchesCompetitor(item.target_origin, competitor.registrable_domain),
+    );
+    const comparisons = new Map(
+      COMPARISON_KINDS.map((kind) => [
+        kind,
+        datasets.find(
+          (item) =>
+            item.dataset_kind === kind &&
+            matchesCompetitor(item.comparison_origin, competitor.registrable_domain),
+        ),
+      ]),
+    );
+    const fetched = Boolean(footprint) || [...comparisons.values()].some(Boolean);
+    return { competitor, footprint, comparisons, fetched };
+  });
+  // Nothing fetched for any competitor: the table says so once, not in every cell.
+  const noneFetched = rows.length > 0 && !rows.some((row) => row.fetched);
   return (
     <DataTable
       title="Competitive footprint"
-      columns={COMPETITOR_COLUMNS}
+      description={noneFetched ? 'Competitive footprint not fetched yet' : undefined}
+      columns={noneFetched ? COMPETITOR_COLUMNS.slice(0, 1) : COMPETITOR_COLUMNS}
       rowLines={2}
       state={
         competitors.length
@@ -52,27 +74,29 @@ export function SearchIntelligenceCompetitors({
             }
       }
     >
-      {competitors.map((competitor) => {
-        const footprint = datasets.find(
-          (item) =>
-            item.dataset_kind === 'footprint' &&
-            matchesCompetitor(item.target_origin, competitor.registrable_domain),
+      {rows.map(({ competitor, footprint, comparisons, fetched }) => {
+        const identity = (
+          <TableCell>
+            <TableCellLines
+              title
+              primary={competitor.label}
+              secondary={footprint?.target_hostname ?? competitor.hostname}
+            />
+          </TableCell>
         );
-        const comparison = (kind: string) =>
-          datasets.find(
-            (item) =>
-              item.dataset_kind === kind &&
-              matchesCompetitor(item.comparison_origin, competitor.registrable_domain),
+        if (noneFetched) return <TableRow key={competitor.identity}>{identity}</TableRow>;
+        if (!fetched)
+          return (
+            <TableRow key={competitor.identity}>
+              {identity}
+              <TableCell colSpan={COMPETITOR_COLUMNS.length - 1}>
+                <SearchValue value={null} fetched={false} />
+              </TableCell>
+            </TableRow>
           );
         return (
           <TableRow key={competitor.identity}>
-            <TableCell>
-              <TableCellLines
-                title
-                primary={competitor.label}
-                secondary={footprint?.target_hostname ?? competitor.hostname}
-              />
-            </TableCell>
+            {identity}
             <TableCell numeric>
               <SearchValue
                 value={footprint?.summary.organic_keywords}
@@ -86,7 +110,7 @@ export function SearchIntelligenceCompetitors({
               />
             </TableCell>
             {COMPARISON_KINDS.map((kind) => {
-              const dataset = comparison(kind);
+              const dataset = comparisons.get(kind);
               return (
                 <TableCell numeric key={kind}>
                   {dataset ? (

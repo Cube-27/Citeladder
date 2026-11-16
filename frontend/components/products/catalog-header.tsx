@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { RefreshCw } from 'lucide-react';
 
 import { StatusMark } from '@/components/ui/status-mark';
 import { Absence } from '@/components/ui/absence';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { TextLink } from '@/components/ui/text-link';
 import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
 import { followCatalogAnalysis } from '@/lib/api/commerce';
@@ -200,9 +203,23 @@ export function useCatalogHeader({
     noCrawl ? startDiscovery() : void Promise.all([dashboard.refetch(), query.refetch()]);
   // Importing products and starting a crawl are runs; re-reading is not.
   const canRun = useWorkspaceCapability('run');
+  const refreshBusy = discover.isPending || dashboard.isPending;
+  const refreshLabel = noCrawl ? 'Run Website crawl' : 'Refresh from Website';
+  const dialog = canRun ? (
+    <AddProductsDialog
+      workspaceId={workspaceId}
+      projectId={projectId}
+      open={adding}
+      onOpenChange={setAdding}
+    />
+  ) : null;
+  const refreshNotice = (
+    <CatalogNotices
+      refreshError={discover.error ?? (tableReadFailed ? null : dashboard.error)}
+      onRefresh={refresh}
+    />
+  );
   return {
-    /** Opens Add products, for a role that may run it; else undefined. */
-    addProducts: canRun ? () => setAdding(true) : undefined,
     /** Reads the catalog and the Website dashboard again: the page's one Retry covers them. */
     retryReads: () => void Promise.all([dashboard.refetch(), query.refetch()]),
     actions: (
@@ -214,49 +231,57 @@ export function useCatalogHeader({
         ) : null}
         {canRun || !noCrawl ? (
           <MastheadPrimary>
-            <Button
-              variant="primary"
-              disabled={discover.isPending || dashboard.isPending}
-              onClick={refresh}
-            >
-              {noCrawl ? 'Run Website crawl' : 'Refresh from Website'}
+            <Button variant="primary" disabled={refreshBusy} onClick={refresh}>
+              {refreshLabel}
             </Button>
           </MastheadPrimary>
         ) : null}
-        {canRun ? (
-          <AddProductsDialog
-            workspaceId={workspaceId}
-            projectId={projectId}
-            open={adding}
-            onOpenChange={setAdding}
-          />
-        ) : null}
+        {dialog}
       </>
     ),
+    /**
+     * The empty catalog's pieces: its state block carries the actions, so the
+     * masthead keeps only the dialog they open.
+     */
+    empty: {
+      dialog,
+      actions: canRun ? (
+        <>
+          <Button onClick={() => setAdding(true)}>Add products</Button>
+          <Button variant="quiet" disabled={refreshBusy} onClick={refresh}>
+            <Icon icon={RefreshCw} />
+            {refreshLabel}
+          </Button>
+        </>
+      ) : null,
+      notices: refreshNotice,
+      businessModelUnconfirmed: businessModelUnconfirmed(projection),
+    },
     stats: <CatalogStats catalog={query} projection={projection} crawl={crawl} />,
     notices: (
       <>
-        <CatalogNotices
-          refreshError={discover.error ?? (tableReadFailed ? null : dashboard.error)}
-          onRefresh={refresh}
-        />
-        <BusinessModelNotice projection={projection} />
+        {refreshNotice}
+        {businessModelUnconfirmed(projection) ? (
+          <Notice tone="warning" title="Business model unconfirmed">
+            Website pages become catalog products once your business model is confirmed as one that
+            sells products. <ConfirmBusinessModelLink />
+          </Notice>
+        ) : null}
       </>
     ),
   };
 }
 
-/** A projection waiting on the business model says so in a sentence, not a figure. */
-function BusinessModelNotice({
-  projection,
-}: Readonly<{ projection: CommerceProjection | undefined }>) {
-  if (projection?.applicability !== 'unknown' || projection.in_flight || projection.failed)
-    return null;
+function businessModelUnconfirmed(projection: CommerceProjection | undefined): boolean {
+  return projection?.applicability === 'unknown' && !projection.in_flight && !projection.failed;
+}
+
+/** Where the business model is set: the business map on Context. */
+export function ConfirmBusinessModelLink() {
   return (
-    <Notice tone="warning" title="Business model unconfirmed">
-      Website pages become catalog products once your business model is confirmed as one that sells
-      products.
-    </Notice>
+    <TextLink href="/agent/context?tab=map" text="inherit">
+      Confirm your business model in Context
+    </TextLink>
   );
 }
 
