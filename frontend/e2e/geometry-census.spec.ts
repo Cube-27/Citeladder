@@ -236,7 +236,7 @@ function measure({ route }: { route: string }) {
       add('tree-row.height', element, element.getBoundingClientRect().height);
       continue;
     }
-    if (element.closest('[data-count-cell]')) {
+    if (element.matches('[data-count-cell] > button')) {
       add('count-cell.height', element, element.getBoundingClientRect().height);
       continue;
     }

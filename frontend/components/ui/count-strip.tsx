@@ -67,7 +67,7 @@ export function CountStripCell({
           (failed ? (
             <span className={textRole('body', 'text-ink-2')}>Unavailable</span>
           ) : (
-            <SkeletonBlock className="h-4 w-28" />
+            <SkeletonBlock className="h-4 w-24" />
           ))}
       </span>
     </div>

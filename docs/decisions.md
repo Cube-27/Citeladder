@@ -863,3 +863,15 @@ owns the library's behavior; Commerce keeps filing its prompts in its own set.
 
 Source: owner, 15 November 2026, answering "You described the page as a
 library of all prompts", choosing "All sets in one library".
+
+## The Actions tree's geometry raises the eager CSS budget
+
+The app's eager CSS gzip budget rises from 22,243 B to 22,339 B
+(`frontend/scripts/bundle-budget.json`). The 96 B pay for the Actions v3 tree's
+own rules, which Tailwind compiles into the eager stylesheet: the five-column
+row grid at two breakpoints, the 76px goal cell, the strip hairline, the tree
+indents and the selection dock's offset. They stay classes, because the design
+system does not allow literal inline geometry.
+
+Source: owner, 16 November 2026, on PR #933 after the cuts left it 80 B over,
+choosing "Raise budget +96 B".

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 import { Pressable, type PressableProps } from '@/components/ui/pressable';
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
@@ -16,11 +16,11 @@ import { cn } from '@/lib/utils';
 
 function TreeChevron({ open }: Readonly<{ open: boolean }>) {
   return (
-    <ChevronRight
+    <ChevronDown
       aria-hidden
       className={cn(
         'text-ink-2 size-3.5 shrink-0 transition-transform duration-[var(--motion-fast)]',
-        open && 'rotate-90',
+        !open && '-rotate-90',
       )}
     />
   );
@@ -32,7 +32,7 @@ function CountBox({ count }: Readonly<{ count: number }>) {
     <span
       className={textRole(
         'captionStrong',
-        'border-rule inline-flex h-5 min-w-[4ch] shrink-0 items-center justify-center rounded-sm border px-1 tabular-nums',
+        'border-rule inline-flex h-5 min-w-7 shrink-0 items-center justify-center rounded-sm border px-1 tabular-nums',
       )}
     >
       {formatCount(count)}
@@ -65,7 +65,7 @@ export function TreeStatusRow({
       <TreeChevron open={open} />
       <StateDot tone={tone} />
       {name}
-      <span className={textRole('body', 'text-ink-2 min-w-[4ch] tabular-nums')}>{count}</span>
+      <span className={textRole('body', 'text-ink-2 min-w-7 tabular-nums')}>{count}</span>
     </Pressable>
   );
 }
