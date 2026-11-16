@@ -15,7 +15,13 @@ type ToastOptions = Readonly<{
   action?: Readonly<{ label: string; onClick: () => void }>;
 }>;
 
-type ToastMessage = ToastOptions & { id: number; title: string; description?: string };
+/** `open` turns false when the toast closes; it leaves once its close animation ends. */
+type ToastMessage = ToastOptions & {
+  id: number;
+  open: boolean;
+  title: string;
+  description?: string;
+};
 type ToastApi = { notify: (title: string, description?: string, options?: ToastOptions) => void };
 
 const ToastContext = createContext<ToastApi>({ notify: () => undefined });
@@ -48,11 +54,20 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
   const notify = useCallback((title: string, description?: string, options?: ToastOptions) => {
     nextMessageId.current += 1;
     const id = nextMessageId.current;
-    setMessages((current) =>
-      current.some((message) => message.title === title && message.description === description)
-        ? current
-        : [...current, { ...options, id, title, description }].slice(-MAX_TOASTS),
-    );
+    setMessages((current) => {
+      const shown = current.filter((message) => message.open);
+      if (shown.some((message) => message.title === title && message.description === description))
+        return current;
+      const closing = new Set(
+        shown.slice(0, Math.max(0, shown.length + 1 - MAX_TOASTS)).map(({ id }) => id),
+      );
+      return [
+        ...current.map((message) =>
+          closing.has(message.id) ? { ...message, open: false } : message,
+        ),
+        { ...options, id, open: true, title, description },
+      ];
+    });
   }, []);
   const value = useMemo(() => ({ notify }), [notify]);
 
@@ -68,8 +83,18 @@ export function ToastProvider({ children }: Readonly<{ children: ReactNode }>) {
               key={message.id}
               type={tone === 'negative' ? 'foreground' : 'background'}
               duration={tone === 'negative' || message.action ? Infinity : TOAST_DURATION_MS}
+              forceMount
+              open={message.open}
               onOpenChange={(open) => {
                 if (!open)
+                  setMessages((current) =>
+                    current.map((item) =>
+                      item.id === message.id ? { ...item, open: false } : item,
+                    ),
+                  );
+              }}
+              onAnimationEnd={(event) => {
+                if (event.target === event.currentTarget && !message.open)
                   setMessages((current) => current.filter((item) => item.id !== message.id));
               }}
               className={cn(
