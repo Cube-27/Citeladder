@@ -517,6 +517,18 @@ describe('the Actions tree', () => {
     expect(morePage.items.map((item) => item.target_label)).toEqual(
       prompts.slice(10, 20).map((p) => p.target_label),
     );
+    // As the page sends it: one status's tree, then that grouping's next rows.
+    const newOnly = actionTreeSchema.parse(
+      await (await request(seed, `${base}/tree?status=open&group_by=what_to_do`)).json(),
+    );
+    const newMore = newOnly.groups[0]!.groupings.find((g) => g.grouping === 'prompts')!;
+    const newPage = await request(
+      seed,
+      `${base}?approach=&status=open&grouping=prompts&cursor=${newMore.next_cursor}&limit=10`,
+    );
+    expect(
+      actionsPageSchema.parse(await newPage.json()).items.map((item) => item.target_label),
+    ).toEqual(prompts.slice(10, 20).map((p) => p.target_label));
 
     // A list filter narrows the strip and the tree alike: no Action has this topic.
     const products = actionTreeSchema.parse(
