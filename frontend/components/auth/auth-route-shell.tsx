@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-import { FlowPage } from '@/components/templates/flow-page';
+import { AuthPage } from '@/components/templates/auth-page';
 import { TextLink } from '@/components/ui/text-link';
 import { websiteHref } from '@/lib/config/app-link';
 import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
@@ -9,15 +9,11 @@ import { PARENT_COMPANY } from '@/lib/marketing-content/legal';
 const COPYRIGHT_YEAR = new Date().getFullYear();
 
 /**
- * Account access (sign-in, sign-up and the mailbox screens): a Flow page,
+ * Account access (sign-in, sign-up and the mailbox screens): an Auth page,
  * closed by the copyright and legal links.
  */
 export function AuthRouteShell({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <FlowPage label="Account access" footer={<AuthLegalFooter />}>
-      {children}
-    </FlowPage>
-  );
+  return <AuthPage footer={<AuthLegalFooter />}>{children}</AuthPage>;
 }
 
 function AuthLegalFooter() {
