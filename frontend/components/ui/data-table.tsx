@@ -65,6 +65,7 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
 export function DataTable({
   title,
   description,
+  actions,
   toolbar,
   columns,
   children,
@@ -84,6 +85,8 @@ export function DataTable({
   title?: string;
   /** One caption line under the title row: what the figures are. */
   description?: ReactNode;
+  /** A view switch at the head's end, centred on the title (a `SegmentedControl`). */
+  actions?: ReactNode;
   toolbar?: FilterBarProps;
   columns: readonly DataTableColumn[];
   /** The page's `TableRow`s. Ignored while `state` is set. */
@@ -137,6 +140,7 @@ export function DataTable({
         level={level}
         toolbar={toolbar}
         description={description}
+        actions={actions}
         steppers={footed ? null : steppers}
       />
       {replacing ? (
@@ -387,6 +391,7 @@ function DataTableHeader({
   level,
   toolbar,
   description,
+  actions,
   steppers,
 }: Readonly<{
   title?: string;
@@ -394,36 +399,53 @@ function DataTableHeader({
   level: 1 | 2 | 3;
   toolbar?: FilterBarProps;
   description?: ReactNode;
+  actions?: ReactNode;
   steppers: ReactNode;
 }>) {
-  if (!title && !toolbar && !description) {
+  if (!title && !toolbar && !description && !actions) {
     return steppers ? <div className="flex justify-end px-4 pt-2">{steppers}</div> : null;
   }
   // The level a block in this place takes: h2 on the page, h3 inside a section.
   const Heading = level === 3 ? 'h3' : 'h2';
   return (
-    <header className="grid min-w-0 gap-1 px-4 py-3">
+    <header className={cn('min-w-0 px-4 py-3', actions && '@container')}>
       <div
-        data-data-table-header=""
-        className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
+        className={cn(
+          'grid min-w-0 gap-x-4 gap-y-1',
+          actions && '@[600px]:grid-cols-[minmax(0,1fr)_auto]',
+        )}
       >
-        {title ? (
-          <Heading id={headingId} className={textRole('heading', 'min-w-0 shrink-0 truncate')}>
-            {title}
-          </Heading>
+        <div
+          data-data-table-header=""
+          className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
+        >
+          {title ? (
+            <Heading id={headingId} className={textRole('heading', 'min-w-0 shrink-0 truncate')}>
+              {title}
+            </Heading>
+          ) : null}
+          {toolbar ? (
+            <div className="min-w-0 flex-1">
+              <FilterBar {...toolbar} />
+            </div>
+          ) : null}
+          {steppers ? <div className={cn(!toolbar && 'rail:ms-auto')}>{steppers}</div> : null}
+        </div>
+        {description ? (
+          <p
+            data-data-table-description=""
+            className="type-caption max-w-[72ch] @[600px]:col-start-1"
+          >
+            {description}
+          </p>
         ) : null}
-        {toolbar ? (
-          <div className="min-w-0 flex-1">
-            <FilterBar {...toolbar} />
+        {/* Centred on the title row from a 600px card; under the caption below it. */}
+        {actions ? (
+          <div className="flex min-w-0 items-center gap-2 @[600px]:col-start-2 @[600px]:row-start-1">
+            {actions}
           </div>
         ) : null}
-        {steppers ? <div className={cn(!toolbar && 'rail:ms-auto')}>{steppers}</div> : null}
       </div>
-      {description ? (
-        <p data-data-table-description="" className="type-caption max-w-[72ch]">
-          {description}
-        </p>
-      ) : null}
     </header>
   );
 }
