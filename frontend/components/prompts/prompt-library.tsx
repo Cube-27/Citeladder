@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import { promptsMutations } from '@/lib/api/prompts';
+import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import type { PromptGenerateRequest } from '@citeladder/contracts/prompt-requests';
 import { mutationNoticeForError, type MutationNotice } from '@/lib/api/mutation-notice';
 import { topicsQueries } from '@/lib/api/topics';
@@ -57,6 +58,27 @@ function mutationFailure(
   return update.isError
     ? mutationNoticeForError(update.error, { action: 'save the prompt' })
     : undefined;
+}
+
+/**
+ * A prompt's enable switch. The new state shows at once, so a second press on a
+ * row whose save is still in flight is ignored; rows save independently.
+ */
+function usePromptToggle(scope: ProjectScope) {
+  const mutation = useMutation(promptsMutations.setEnabled(scope));
+  const [saving, setSaving] = useState<ReadonlySet<string>>(new Set());
+  const settle = (id: string) =>
+    setSaving((current) => new Set([...current].filter((other) => other !== id)));
+  const press = (prompt: Prompt) => {
+    if (saving.has(prompt.id)) return;
+    setSaving((current) => new Set(current).add(prompt.id));
+    // Per-call promise: mutate's own callbacks fire only for the latest of overlapping calls.
+    void mutation
+      .mutateAsync({ promptId: prompt.id, enabled: !prompt.enabled })
+      .catch(() => undefined)
+      .finally(() => settle(prompt.id));
+  };
+  return { press, mutation };
 }
 
 /** A failed enable switch; the switch itself has already rolled back. */
@@ -164,7 +186,6 @@ export function PromptLibrary({
   const [builderOpen, setBuilderOpen] = useState(false);
   const [builderStep, setBuilderStep] = useState<BuilderStep>('business');
   const [builderOffering, setBuilderOffering] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
   const [topicDialog, setTopicDialog] = useState<TopicDialog | null>(null);
   const hasCompetitors = project.competitors.length > 0;
 
@@ -189,12 +210,11 @@ export function PromptLibrary({
     setFormOpen(false);
     setEditing(undefined);
   };
-  const clearBusy = { onSettled: () => setBusyId(null) };
   const createMutation = useMutation(promptsMutations.create(scope, ensurePromptSet));
   const updateMutation = useMutation(promptsMutations.update(scope));
   const deleteMutation = useMutation(promptsMutations.remove(scope));
   const rowMutation = useMutation(promptsMutations.update(scope));
-  const toggleMutation = useMutation(promptsMutations.setEnabled(scope));
+  const toggle = usePromptToggle(scope);
   const importMutation = useMutation(promptsMutations.import(scope, ensurePromptSet));
 
   // A retry of the same request after a failure reuses its key, so a run the
@@ -245,8 +265,7 @@ export function PromptLibrary({
   const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
   const confirmDelete = (pending: PendingDelete) => {
     if (pending.kind === 'topic') return topicMutations.remove.mutate(pending.topic);
-    setBusyId(pending.prompt.id);
-    deleteMutation.mutate(pending.prompt.id, clearBusy);
+    deleteMutation.mutate(pending.prompt.id);
   };
 
   // Status -> topic -> search/filters, preserving order.
@@ -303,16 +322,9 @@ export function PromptLibrary({
         rows: {
           onEdit: openEdit,
           onDelete: (prompt: Prompt) => setPendingDelete({ kind: 'prompt', prompt }),
-          onToggleEnabled: (prompt: Prompt) => {
-            // The switch flips at once, so a second press on a row still saving is ignored.
-            if (busyId === prompt.id) return;
-            setBusyId(prompt.id);
-            toggleMutation.mutate({ promptId: prompt.id, enabled: !prompt.enabled }, clearBusy);
-          },
-          onSetStatus: (prompt: Prompt, status: PromptStatus) => {
-            setBusyId(prompt.id);
-            rowMutation.mutate({ promptId: prompt.id, input: { status } }, clearBusy);
-          },
+          onToggleEnabled: toggle.press,
+          onSetStatus: (prompt: Prompt, status: PromptStatus) =>
+            rowMutation.mutate({ promptId: prompt.id, input: { status } }),
           onEvidence: (prompt: Prompt, answer: PromptAnswerRef) =>
             evidence.open({ ...answer, promptText: prompt.text }),
         },
@@ -385,7 +397,7 @@ export function PromptLibrary({
             pending={retrying}
           />
         ) : null}
-        <ToggleFailure toggle={toggleMutation} />
+        <ToggleFailure toggle={toggle.mutation} />
         <PendingReviewNotice
           count={review.candidates.length}
           hidden={builderOpen || !canWrite}
