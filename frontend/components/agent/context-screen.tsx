@@ -190,7 +190,14 @@ function ProfileTab({
 
 /** The profile's loading or read error, in the one query-state footprint. */
 function ProfileState({ profile }: Readonly<{ profile: ProfileRead }>) {
-  if (profile.isPending) return <StateBlock kind="loading" label="Loading company facts…" />;
+  if (profile.isPending)
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading company facts…"
+        shape={{ kind: 'facts', rows: 5 }}
+      />
+    );
   return (
     <StateBlock
       kind="error"
@@ -215,7 +222,8 @@ function BrandFactsTab({
   projectId: string;
 }>) {
   const mayEdit = useWorkspaceCapability('write');
-  if (facts.isPending) return <StateBlock kind="loading" label="Loading brand facts…" />;
+  if (facts.isPending)
+    return <StateBlock kind="loading" label="Loading brand facts…" shape={{ kind: 'list' }} />;
   return (
     <Section aria-labelledby="brand-facts">
       <SectionHeader>

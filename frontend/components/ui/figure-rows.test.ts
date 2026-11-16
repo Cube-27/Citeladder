@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test';
 
-import { figureRows } from './figure-strip';
+import { figureRows } from './figure-rows';
 
 // Widths: a phone (358); the narrow-strip edge (480); a full main column at
 // 982 (734), 1366 (1100), 1440 (1168) and 1280 (1008); a half at 1366 (563);

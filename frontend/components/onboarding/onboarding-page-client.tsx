@@ -126,7 +126,14 @@ function ProjectSetupLoading({
     return () => window.clearTimeout(timer);
   }, [attempt]);
 
-  if (!stalled) return <StateBlock kind="loading" label="Loading your workspace…" />;
+  if (!stalled)
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading your workspace…"
+        shape={{ kind: 'facts', rows: 2 }}
+      />
+    );
   return (
     <ProjectSetupBlocked
       title="Your workspace is taking longer to load"

@@ -120,7 +120,14 @@ export function SurfaceRatesPanel({
         fallback="The request failed or timed out."
       />
     );
-  if (!data) return <StateBlock kind="loading" label="Loading AI Overview rates…" />;
+  if (!data)
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading AI Overview rates…"
+        shape={{ kind: 'figures', count: 4 }}
+      />
+    );
   // These rates are RETAINED across a surface or run change, the same way
   // the sources and evidence panels retain theirs, so the reader is not
   // handed a skeleton for every round trip. Retained numbers carry no

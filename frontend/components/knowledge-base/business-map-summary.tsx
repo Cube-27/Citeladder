@@ -145,6 +145,7 @@ export function BusinessMapSummary({
 }: Readonly<{ projectId: string; workspaceId: string; profile: BrandProfile }>) {
   const read = screenState(useQuery(projectQueries.businessMap({ workspaceId, projectId })), {
     subject: 'the business map',
+    shape: { kind: 'list' },
   });
   const edit = (
     <Button asChild variant="secondary">

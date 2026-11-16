@@ -38,7 +38,7 @@ export function SkillsScreen() {
         fallback="Skills could not be loaded."
       />
     );
-  else if (!query.data) body = <StateBlock kind="loading" />;
+  else if (!query.data) body = <StateBlock kind="loading" shape={{ kind: 'list' }} />;
   else body = <SkillGroups skills={query.data.skills} />;
 
   return (

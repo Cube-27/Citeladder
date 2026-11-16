@@ -1,6 +1,9 @@
 import { useLocation } from 'react-router-dom';
 
+import { OverviewLoading } from '@/components/projects/overview-loading';
 import { PageFrame } from '@/components/templates/page-frame';
+import { ReportPage } from '@/components/templates/report-page';
+import { NewChatLoading, ThreadPageLoading } from '@/components/templates/thread-page';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { HeldTabRow } from '@/components/ui/tabs';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
@@ -18,26 +21,44 @@ export const RESERVED_CONTROLS: FilterBarProps = {};
  * RouteLoadingScreen — the frame a route shows before its own page can draw,
  * from its manifest entry (`routeLoading`): the masthead titled from the path,
  * the route's real tab labels and held filter row, then its first screen's
- * shapes on cards, so the page arrives without moving them.
+ * shapes on cards; the Overview's widget grid, a chat and a new chat in their
+ * own templates. The page arrives without moving them.
  */
 export function RouteLoadingScreen() {
-  const { tabs, filters, shapes } = routeLoading(useLocation().pathname);
-  return (
-    <PageFrame
-      tabs={tabs ? <HeldTabRow labels={tabs} /> : undefined}
-      filters={filters ? <FilterBar {...RESERVED_CONTROLS} /> : undefined}
-    >
-      <SkeletonFrame
-        label="Loading…"
-        variant="route"
-        className="flex flex-col gap-[var(--workspace-gap)]"
-      >
-        {shapes.map((shape, index) => (
-          <ShapeCard key={index} shape={shape} />
-        ))}
-      </SkeletonFrame>
-    </PageFrame>
-  );
+  const loading = routeLoading(useLocation().pathname);
+  switch (loading.kind) {
+    case 'overview':
+      return (
+        <ReportPage>
+          <OverviewLoading />
+        </ReportPage>
+      );
+    case 'thread':
+      return <ThreadPageLoading />;
+    case 'new-chat':
+      return <NewChatLoading />;
+    case 'cards':
+      return (
+        <PageFrame
+          tabs={loading.tabs ? <HeldTabRow labels={loading.tabs} /> : undefined}
+          filters={loading.filters ? <FilterBar {...RESERVED_CONTROLS} /> : undefined}
+        >
+          <SkeletonFrame
+            label="Loading…"
+            variant="route"
+            className="flex flex-col gap-[var(--workspace-gap)]"
+          >
+            {loading.shapes.map((shape, index) => (
+              <ShapeCard key={index} shape={shape} />
+            ))}
+          </SkeletonFrame>
+        </PageFrame>
+      );
+    default: {
+      const exhaustive: never = loading;
+      return exhaustive;
+    }
+  }
 }
 
 const CARD = 'bg-surface border-rule rounded-card shadow-card min-w-0 border';
@@ -55,8 +76,9 @@ function ShapeCard({ shape }: Readonly<{ shape: LoadingShape }>) {
           {blocks}
         </div>
       );
-    case 'card':
     case 'chart':
+    case 'facts':
+    case 'list':
       return (
         <div data-loading-shape={shape.kind} className={cn(CARD, 'p-[var(--card-padding)]')}>
           {blocks}

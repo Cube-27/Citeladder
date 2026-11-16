@@ -62,7 +62,7 @@ export function EvidenceDrawer({
       </Notice>
     );
   } else if (detailQuery.isLoading || !detail) {
-    body = <StateBlock kind="loading" />;
+    body = <StateBlock kind="loading" shape={{ kind: 'list' }} />;
   } else {
     body = <OpportunityDetailBody detail={detail} targetUrl={targetUrl} />;
   }

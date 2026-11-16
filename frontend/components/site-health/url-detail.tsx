@@ -82,7 +82,11 @@ export function UrlDetail({
   if (detailQuery.isLoading)
     return (
       <RecordPage back={PAGE_DETAIL_BACK}>
-        <StateBlock kind="loading" label="Loading page detail…" />
+        <StateBlock
+          kind="loading"
+          label="Loading page detail…"
+          shape={{ kind: 'facts', rows: 3, tagRows: [1] }}
+        />
       </RecordPage>
     );
   if (detailQuery.isError || !detailQuery.data) {

@@ -111,7 +111,8 @@ function SuggestionsTab({
 >) {
   const { query, page } = suggestions;
   if (page) return <SuggestionsPanel page={page} {...props} />;
-  if (!query.isError) return <StateBlock kind="loading" label="Loading suggestions…" />;
+  if (!query.isError)
+    return <StateBlock kind="loading" label="Loading suggestions…" shape={{ kind: 'list' }} />;
   return (
     <StateBlock
       kind="error"

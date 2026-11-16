@@ -14,14 +14,14 @@ test('the first-load indicator keeps pulsing until the workspace answers', async
   });
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.goto(fixtureProjectPath('/projects'));
-  // The shell is drawn at once; the route's own loading frame holds its place.
+  // The shell is drawn at once; the Overview's own loading frame holds its place.
   const indicator = page
-    .locator('[data-skeleton="route"]')
-    .getByRole('status', { name: 'Loading…' });
+    .locator('[data-skeleton="overview"]')
+    .getByRole('status', { name: 'Loading the Overview' });
   try {
     await expect(indicator).toBeVisible();
     // Its skeleton blocks shimmer; still blocks would read as stuck.
-    const block = page.locator('[data-skeleton="route"] [data-skeleton-block]').first();
+    const block = page.locator('[data-skeleton="overview"] [data-skeleton-block]').first();
     const shimmer = () => block.evaluate((element) => getComputedStyle(element).backgroundPosition);
     const initial = await shimmer();
     await expect.poll(shimmer).not.toBe(initial);

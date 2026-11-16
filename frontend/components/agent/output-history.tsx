@@ -49,7 +49,8 @@ export function OutputHistory({
         fallback="Revision history could not be loaded."
       />
     );
-  if (!query.data) return <StateBlock kind="loading" label="Loading revisions…" />;
+  if (!query.data)
+    return <StateBlock kind="loading" label="Loading revisions…" shape={{ kind: 'list' }} />;
   const revisions = [...query.data.items].sort((a, b) => b.number - a.number);
   const current = revisions.find((revision) => revision.id === latestRevisionId);
   const toggle = (id: string, mode: 'view' | 'compare') =>

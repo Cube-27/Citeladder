@@ -37,7 +37,8 @@ export function RestorePlan({ workspaceId }: Readonly<{ workspaceId: string }>) 
       />
     );
   const catalog = catalogQuery.data;
-  if (!catalog) return <StateBlock kind="loading" label="Loading plans…" />;
+  if (!catalog)
+    return <StateBlock kind="loading" label="Loading plans…" shape={{ kind: 'list' }} />;
   return (
     <Stack gap="workspace">
       <CheckoutStatus checkout={checkout} />

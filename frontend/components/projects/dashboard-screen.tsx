@@ -16,11 +16,10 @@ import { OverviewLayoutMenu } from './overview-layout-menu';
 import { OverviewStart, needsStart } from './overview-start';
 import { OverviewWidgetView, widgetShows } from './overview-widget';
 import { useCommandCenterActions } from './use-command-center-actions';
-import { AppGrid } from '@/components/ui/app-grid';
 import { Notice, readErrorProps } from '@/components/ui/notice';
-import { Skeleton } from '@/components/ui/skeleton';
-import { slipClasses } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
+
+import { OverviewLoading } from './overview-loading';
 
 export function DashboardScreen({
   onEditProject,
@@ -33,7 +32,7 @@ export function DashboardScreen({
   const layout = useQuery(projectQueries.overviewLayout(scope));
   useWarmWidgets(project, layout.data?.widgets);
 
-  if (commandCenter.isLoading) return <DashboardLoading />;
+  if (commandCenter.isLoading) return <DashboardLoading widgets={layout.data?.widgets} />;
   if (commandCenter.isError || !commandCenter.data)
     return (
       <ReportPage>
@@ -67,23 +66,11 @@ function useWarmWidgets(project: Project, widgets: readonly OverviewWidget[] | u
   }, [client, project, widgets]);
 }
 
-/** Widgets the loading shape holds a place for: the default layout's first two rows. */
-const LOADING_WIDGETS = 4;
-
-/** The widget grid's shape: a card per widget with its figures, so nothing moves when they land. */
-function DashboardLoading() {
+/** The widget grid's shape: a card per widget with its body's shape, so nothing moves when they land. */
+function DashboardLoading({ widgets }: Readonly<{ widgets?: readonly OverviewWidget[] }>) {
   return (
     <ReportPage>
-      <AppGrid layout="halves" aria-busy="true">
-        {Array.from({ length: LOADING_WIDGETS }, (_, index) => (
-          <div key={index} className={slipClasses()}>
-            <Skeleton
-              variant={index % 2 ? 'block' : 'stat'}
-              label={index === 0 ? 'Loading the Overview' : undefined}
-            />
-          </div>
-        ))}
-      </AppGrid>
+      <OverviewLoading widgets={widgets} />
     </ReportPage>
   );
 }

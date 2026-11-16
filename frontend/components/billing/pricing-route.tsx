@@ -380,7 +380,10 @@ function PricingState({
       />
     );
   }
-  if (!workspaceName) return <StateBlock kind="loading" label="Loading workspace…" />;
+  if (!workspaceName)
+    return (
+      <StateBlock kind="loading" label="Loading workspace…" shape={{ kind: 'facts', rows: 2 }} />
+    );
   return (
     <>
       {canBuy ? null : (

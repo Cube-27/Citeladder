@@ -1,6 +1,8 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
 import type { ChartHeight } from '@/components/ui/chart';
+import { figureRowSizes, useStripWidth } from '@/components/ui/figure-rows';
+import { slipClasses } from '@/components/ui/slip';
 import { LOADING_INDICATOR_DELAY_MS } from '@/lib/config/operational';
 import { cn } from '@/lib/utils';
 
@@ -23,12 +25,18 @@ export function SkeletonBlock({ className }: Readonly<{ className?: string }>) {
 /** Unequal widths, so a text block does not read as a ruled form. */
 export const TEXT_WIDTHS = ['w-full', 'w-4/5', 'w-3/5'] as const;
 
-/** The shapes a read's loading state takes: the shape of the page part it stands for. */
+/**
+ * The shapes a read's loading state takes: the shape of the page part it
+ * stands for, never a stack of text lines. A table's `desktopOnly` columns
+ * (its last ones) leave below the `desktop` width, as the loaded table's do;
+ * `tagRows` are the fact rows that show a tag.
+ */
 export type LoadingShape =
-  | Readonly<{ kind: 'card'; lines?: number }>
-  | Readonly<{ kind: 'table'; columns?: number }>
+  | Readonly<{ kind: 'table'; columns?: number; desktopOnly?: number }>
   | Readonly<{ kind: 'figures'; count?: number }>
   | Readonly<{ kind: 'chart'; height?: ChartHeight }>
+  | Readonly<{ kind: 'facts'; rows?: number; tagRows?: readonly number[] }>
+  | Readonly<{ kind: 'list'; rows?: number }>
   | Readonly<{ kind: 'thread' }>;
 
 const CHART_HEIGHT: Record<ChartHeight, string> = {
@@ -40,14 +48,16 @@ const CHART_HEIGHT: Record<ChartHeight, string> = {
 /** A loading shape's blocks, without a frame of its own. */
 export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   switch (shape.kind) {
-    case 'card':
-      return <CardBlocks lines={shape.lines} />;
     case 'table':
-      return <TableBlocks columns={shape.columns} />;
+      return <TableBlocks columns={shape.columns} desktopOnly={shape.desktopOnly} />;
     case 'figures':
       return <FigureBlocks count={shape.count} />;
     case 'chart':
       return <SkeletonBlock className={cn('w-full', CHART_HEIGHT[shape.height ?? 'md'])} />;
+    case 'facts':
+      return <FactBlocks rows={shape.rows} tagRows={shape.tagRows} />;
+    case 'list':
+      return <ListBlocks rows={shape.rows} />;
     case 'thread':
       return <ThreadBlocks />;
     default: {
@@ -59,13 +69,73 @@ export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
 
 const range = (count: number) => Array.from({ length: count }, (_, index) => index);
 
-/** A card body: a title block (16×160), then text blocks at 100/80/60%, 12 apart. */
-export function CardBlocks({ lines = 3 }: Readonly<{ lines?: number }>) {
+/** A card's title: one 16×160 block. */
+function TitleBlock() {
+  return <SkeletonBlock className="h-4 w-40 max-w-full" />;
+}
+
+/** A widget's card as it loads: its title's line over its body's shape. */
+export function WidgetCardBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
   return (
-    <span className="grid gap-3">
-      <SkeletonBlock className="h-4 w-40 max-w-full" />
-      {range(lines).map((index) => (
-        <SkeletonBlock key={index} className={TEXT_WIDTHS[index % TEXT_WIDTHS.length]} />
+    <div className={slipClasses('flex h-full flex-col gap-[var(--workspace-gap)]')}>
+      <span className="flex h-6 items-center">
+        <TitleBlock />
+      </span>
+      <ShapeBlocks shape={shape} />
+    </div>
+  );
+}
+
+/** A report as it loads: its meta line's block (16×240) over its cards. */
+export function ReportSkeletonFrame({
+  label,
+  variant,
+  children,
+}: Readonly<{ label: string; variant: string; children: ReactNode }>) {
+  return (
+    <SkeletonFrame
+      label={label}
+      variant={variant}
+      className="flex flex-col gap-[var(--page-top-gap)]"
+    >
+      <span className="flex h-4 items-center">
+        <SkeletonBlock className="w-60 max-w-full" />
+      </span>
+      {children}
+    </SkeletonFrame>
+  );
+}
+
+/** A record's identity card: 40px rows of a name block (30%) and a value block (45%) or a 24px tag. */
+function FactBlocks({
+  rows = 3,
+  tagRows = [],
+}: Readonly<{ rows?: number; tagRows?: readonly number[] }>) {
+  return (
+    <span className="grid">
+      {range(rows).map((row) => (
+        <span key={row} className="flex h-10 items-center gap-4">
+          <SkeletonBlock className="h-3.5 w-[30%]" />
+          {tagRows.includes(row) ? (
+            <SkeletonBlock className="h-6 w-16" />
+          ) : (
+            <SkeletonBlock className="h-3.5 w-[45%]" />
+          )}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+/** A list: 48px rows of a 32 tile and one block at 50%. */
+function ListBlocks({ rows = 3 }: Readonly<{ rows?: number }>) {
+  return (
+    <span className="grid">
+      {range(rows).map((row) => (
+        <span key={row} className="flex h-12 items-center gap-3">
+          <SkeletonBlock className="size-8 shrink-0" />
+          <SkeletonBlock className="h-3.5 w-1/2" />
+        </span>
       ))}
     </span>
   );
@@ -79,13 +149,18 @@ function cellWidth(columns: number, cell: number): string {
   return cell === 0 ? 'w-2/5' : 'flex-1';
 }
 
-/** A table: a head row on `well` at the table head's height, then 40px rows of cell blocks. */
+/**
+ * A table: the loaded head's height on `well`, then 40px rows of cell blocks,
+ * one per visible column; the last `desktopOnly` cells show from the `desktop` width.
+ */
 export function TableBlocks({
   columns = 4,
+  desktopOnly = 0,
   rows = 5,
-}: Readonly<{ columns?: number; rows?: number }>) {
+}: Readonly<{ columns?: number; desktopOnly?: number; rows?: number }>) {
   const cells = range(Math.max(1, columns));
-  const width = (cell: number) => cellWidth(columns, cell);
+  const width = (cell: number) =>
+    cn(cellWidth(columns, cell), cell >= columns - desktopOnly && 'desktop:block hidden');
   return (
     <span className="grid">
       <span className="bg-well block h-[var(--table-header-height)] rounded-sm" />
@@ -100,39 +175,66 @@ export function TableBlocks({
   );
 }
 
-/** Metric cards: a label block (14×96) over a value block (24×64) in each frame. */
+/**
+ * Metric cards in FigureStrip's rows (`figureRows`) and cells, so they take
+ * its card on the ground and its edgeless cell inside a card (globals.css):
+ * a 12px label block at 40% on the label's line over a 24×56 value block on
+ * the value's, 88 tall as a card.
+ */
 export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
+  const { ref, width } = useStripWidth<HTMLSpanElement>();
+  const sizes = figureRowSizes({ count, width });
   return (
-    <span className="grid grid-cols-[repeat(auto-fit,minmax(10rem,1fr))] gap-4">
-      {range(count).map((index) => (
-        <span
-          key={index}
-          className="bg-surface border-rule rounded-card shadow-card grid gap-2 border p-4"
-        >
-          <SkeletonBlock className="h-3.5 min-h-3.5 w-24" />
-          <SkeletonBlock className="h-6 w-16" />
+    <span ref={ref} className="flex min-w-0 flex-wrap gap-4">
+      {sizes.map((size, index) => (
+        <span key={index} data-figure-cell="" style={{ '--row': size } as CSSProperties}>
+          <span className="mb-1 flex h-5 items-center">
+            <SkeletonBlock className="w-2/5" />
+          </span>
+          <span className="flex h-8 items-center">
+            <SkeletonBlock className="h-6 w-14" />
+          </span>
         </span>
       ))}
     </span>
   );
 }
 
-/** A chat: user turns (right, 60%, 48 high) alternating with replies (left, 80%, 72 high), 24 apart. */
-function ThreadBlocks() {
-  // Own spans: cn() does not merge the named radii over SkeletonBlock's rounded-sm.
+/** A block at a named radius: cn() does not merge the named radii over SkeletonBlock's rounded-sm. */
+function RoundBlock({ className }: Readonly<{ className: string }>) {
   return (
-    <span className="grid gap-[var(--page-top-gap)]">
-      {range(3).map((index) => (
-        <span
-          key={index}
-          aria-hidden
-          data-skeleton-block=""
-          className={cn(
-            'skeleton-block bg-well block',
-            index % 2 === 0 ? 'rounded-card ms-auto h-12 w-3/5' : 'rounded-control min-h-18 w-4/5',
-          )}
-        />
-      ))}
+    <span aria-hidden data-skeleton-block="" className={cn('skeleton-block bg-well', className)} />
+  );
+}
+
+/**
+ * A chat, inset like AgentThread: the person's turn on the right (40 high,
+ * 45%, radius 8), then the reply's two paragraph blocks on the left, no card.
+ */
+function ThreadBlocks() {
+  return (
+    <span className="grid gap-[var(--card-padding)] px-4">
+      <RoundBlock className="rounded-card ms-auto block h-10 w-[45%]" />
+      <span className="grid gap-2">
+        <SkeletonBlock className="h-4 w-full" />
+        <SkeletonBlock className="h-4 w-[70%]" />
+      </span>
+    </span>
+  );
+}
+
+/**
+ * The composer's card (ComposerFrame): `surface` at radius 8 on `shadow-pop`,
+ * an 8 inset, the one-line field's 30, then the 32 control row with the
+ * round Send block at its end. No text.
+ */
+export function ComposerBlocks() {
+  return (
+    <span className="bg-surface border-rule rounded-card shadow-pop grid gap-1 border p-2">
+      <span className="block h-[30px]" />
+      <span className="flex h-[var(--control-md)] items-center justify-end">
+        <RoundBlock className="block size-8 rounded-full" />
+      </span>
     </span>
   );
 }

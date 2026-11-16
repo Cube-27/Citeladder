@@ -94,7 +94,13 @@ export function UrlPanel({
       title={page ? <UrlText url={page.display_path} /> : 'Path-level AI Traffic'}
       description="Requests, sessions and citations are counted separately."
     >
-      {query.isLoading ? <StateBlock kind="loading" label="Loading URL evidence…" /> : null}
+      {query.isLoading ? (
+        <StateBlock
+          kind="loading"
+          label="Loading URL evidence…"
+          shape={{ kind: 'facts', rows: 5 }}
+        />
+      ) : null}
       {query.isError ? (
         <StateBlock
           kind="error"

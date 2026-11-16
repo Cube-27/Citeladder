@@ -95,7 +95,11 @@ function Notices({ read }: Readonly<{ read: LinksRead }>) {
       {failure ? <Notice kind="mutation" notice={failure} /> : null}
       {read.query.isPending ? (
         <Section>
-          <StateBlock kind="loading" label="Loading internal links…" />
+          <StateBlock
+            kind="loading"
+            label="Loading internal links…"
+            shape={{ kind: 'table', columns: 5 }}
+          />
         </Section>
       ) : null}
     </>

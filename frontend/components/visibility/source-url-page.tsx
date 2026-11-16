@@ -32,7 +32,7 @@ export function SourceUrlPageCard({
   page,
   loading,
 }: Readonly<{ url: string; page: Page | undefined; loading: boolean }>) {
-  if (loading) return <Skeleton variant="block" />;
+  if (loading) return <Skeleton variant="facts" />;
   if (page === undefined) return null;
   const standing = page?.standing ?? 'untracked';
   const brand = brandVerdict(page?.entities);

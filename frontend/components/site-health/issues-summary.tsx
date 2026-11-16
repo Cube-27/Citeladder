@@ -68,7 +68,7 @@ export function IssuesSummaryLoading() {
         <Skeleton variant="text" lines={2} label="Loading the issue summary" />
       </Section>
       <Section>
-        <Skeleton variant="block" rows={3} label="Loading the issue summary" />
+        <Skeleton variant="list" rows={3} label="Loading the issue summary" />
       </Section>
     </Stack>
   );

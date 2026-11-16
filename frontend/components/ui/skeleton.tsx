@@ -1,5 +1,4 @@
 import {
-  CardBlocks,
   FigureBlocks,
   ShapeBlocks,
   SkeletonBlock,
@@ -19,7 +18,8 @@ type SkeletonProps = Readonly<{
     | Readonly<{ variant?: 'text'; lines?: 1 | 2 | 3 }>
     | Readonly<{ variant: 'table'; columns: number; rows?: number }>
     | Readonly<{ variant: 'stat'; count?: number }>
-    | Readonly<{ variant: 'block'; rows?: number }>
+    | Readonly<{ variant: 'facts'; rows?: number }>
+    | Readonly<{ variant: 'list'; rows?: number }>
     | Readonly<{ variant: 'chart'; height?: ChartHeight }>
   );
 
@@ -32,7 +32,8 @@ type SkeletonProps = Readonly<{
  *   `text`  — two or three blocks of unequal width.
  *   `table` — the real column count: a head row and `rows` rows (40).
  *   `stat`  — `count` metric cards: a label block over a value block.
- *   `block` — a card body: a title block over `rows` text blocks.
+ *   `facts` — `rows` name and value rows (40), a record's identity.
+ *   `list`  — `rows` rows (48) of a tile and one block.
  *   `chart` — one block at the chart's height.
  *
  * The blocks are drawing, not content: only the verb is announced, after a beat.
@@ -55,8 +56,10 @@ function SkeletonBody(props: SkeletonProps) {
       return <TableBlocks columns={props.columns} rows={props.rows} />;
     case 'stat':
       return <FigureBlocks count={props.count ?? 4} />;
-    case 'block':
-      return <CardBlocks lines={props.rows} />;
+    case 'facts':
+      return <ShapeBlocks shape={{ kind: 'facts', rows: props.rows }} />;
+    case 'list':
+      return <ShapeBlocks shape={{ kind: 'list', rows: props.rows }} />;
     case 'chart':
       return <ShapeBlocks shape={{ kind: 'chart', height: props.height }} />;
     case 'text':

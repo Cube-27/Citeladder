@@ -74,7 +74,11 @@ export function PromptDetailScreen() {
   if (!query.data)
     return (
       <RecordPage back={BACK} filters={filters}>
-        <StateBlock kind="loading" label="Loading this prompt…" />
+        <StateBlock
+          kind="loading"
+          label="Loading this prompt…"
+          shape={{ kind: 'figures', count: 2 }}
+        />
       </RecordPage>
     );
   const history = query.data;

@@ -170,7 +170,8 @@ function CompetitorRows({
         fallback="Competitors could not be loaded."
       />
     );
-  if (query.isPending) return <StateBlock kind="loading" label="Loading competitors" />;
+  if (query.isPending)
+    return <StateBlock kind="loading" label="Loading competitors" shape={{ kind: 'list' }} />;
   if (!rows.length) {
     return (
       <StateBlock

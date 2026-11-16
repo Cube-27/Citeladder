@@ -218,7 +218,7 @@ function SeedsReadState({ read }: Readonly<{ read: UseQueryResult<SeedQueries> }
       fallback="The request failed or timed out."
     />
   ) : (
-    <StateBlock kind="loading" label="Loading your search data" />
+    <StateBlock kind="loading" label="Loading your search data" shape={{ kind: 'list' }} />
   );
 }
 

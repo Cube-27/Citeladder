@@ -84,7 +84,9 @@ export function UsageMeters() {
 
 function UsageBody({ query }: Readonly<{ query: UsageRead }>) {
   if (query.isLoading) {
-    return <StateBlock kind="loading" label="Loading usage…" />;
+    return (
+      <StateBlock kind="loading" label="Loading usage…" shape={{ kind: 'table', columns: 4 }} />
+    );
   }
   if (query.isError || !query.data) {
     return (

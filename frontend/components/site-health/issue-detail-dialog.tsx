@@ -171,7 +171,7 @@ export function PendingIssueDrawer({
           title="Could not load this issue"
         />
       ) : (
-        <StateBlock kind="loading" label="Loading the issue…" />
+        <StateBlock kind="loading" label="Loading the issue…" shape={{ kind: 'list' }} />
       )}
     </Drawer>
   );
@@ -218,7 +218,7 @@ function OccurrenceList({
   // true told the reader an issue affected nothing, a moment before showing
   // them the pages it affects.
   if (query.isPending || !detail) {
-    return <Skeleton variant="block" rows={3} label="Loading affected pages" />;
+    return <Skeleton variant="list" rows={3} label="Loading affected pages" />;
   }
   if (detail.occurrences.length === 0)
     return <StateBlock kind="empty" inline message="No affected URLs found." />;

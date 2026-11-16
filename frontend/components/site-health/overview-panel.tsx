@@ -9,7 +9,11 @@ import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { CRAWL_STATES } from '@/lib/site-health/status';
 import { readErrorProps } from '@/components/ui/notice';
+import type { LoadingShape } from '@/components/ui/skeleton-block';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
+
+/** The details open with the AEO readiness by pillar table: Pillar, Score, Coverage. */
+const PILLAR_TABLE = { kind: 'table', columns: 3 } satisfies LoadingShape;
 
 /**
  * Overview shares the screen's single polling dashboard while a crawl runs.
@@ -38,7 +42,7 @@ export function OverviewPanel({
     return (
       <Stack gap="workspace" className="min-w-0" data-testid="site-health-overview">
         <StateBlock kind="loading" label="Loading Overview" shape={{ kind: 'figures' }} />
-        <StateBlock kind="loading" label="Loading Overview details" />
+        <StateBlock kind="loading" label="Loading Overview details" shape={PILLAR_TABLE} />
       </Stack>
     );
   let overviewBody: ReactNode = null;
@@ -61,7 +65,9 @@ export function OverviewPanel({
   } else if (data) {
     overviewBody = <OverviewDetails data={data} />;
   } else if (terminal && overview.isLoading) {
-    overviewBody = <StateBlock kind="loading" label="Loading Overview details" />;
+    overviewBody = (
+      <StateBlock kind="loading" label="Loading Overview details" shape={PILLAR_TABLE} />
+    );
   }
 
   return (

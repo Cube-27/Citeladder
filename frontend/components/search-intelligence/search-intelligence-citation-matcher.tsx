@@ -76,7 +76,7 @@ export function SearchIntelligenceCitationMatcher({
         title="Visibility audits could not be loaded"
       />
     );
-  if (audits.isPending) return <Skeleton variant="block" />;
+  if (audits.isPending) return <Skeleton variant="list" />;
   // Only an audit with answers can have cited sources.
   const answered = audits.data.filter((audit) => audit.completed_count > 0);
   if (!answered.length)

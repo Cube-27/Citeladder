@@ -366,7 +366,7 @@ describe('SiteHealthScreen — loading frames', () => {
     // The crawl is known but its Overview is not: still loading, no scores.
     dashboard.release();
     expect(await screen.findByRole('button', { name: 'Run new crawl' })).toBeVisible();
-    expect(loadingShapes()).toEqual(['figures', 'card']);
+    expect(loadingShapes()).toEqual(['figures', 'table']);
     expect(screen.queryByTestId('overview-metrics')).not.toBeInTheDocument();
 
     snapshot.release();

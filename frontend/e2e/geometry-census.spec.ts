@@ -581,9 +581,7 @@ async function census(
           requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
         }),
     );
-    await expect(page.locator('[data-state-block="loading"], [data-skeleton="route"]')).toHaveCount(
-      0,
-    );
+    await expect(page.locator('[data-state-block="loading"], [data-skeleton]')).toHaveCount(0);
     records.push(...(await page.evaluate(measure, { route: `${label} @${width}` })));
   }
   return records;
