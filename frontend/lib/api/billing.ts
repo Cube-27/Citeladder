@@ -18,7 +18,7 @@ import {
   skipToken,
   type QueryClient,
 } from '@tanstack/react-query';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 
@@ -61,15 +61,16 @@ export type UsageItem = BillingUsage['items'][number];
 export type { CredentialMode, SelfServePlanKey };
 
 /** Customer evidence required to let the server determine GST/export status. */
-export type BillingCustomerDetails = {
-  billing_name: string;
-  billing_address_line1: string;
-  billing_city: string;
-  billing_state_code: string;
-  billing_postal_code: string;
-  customer_gstin: string;
-  export_eligibility_attested: boolean;
-};
+export const billingCustomerDetailsSchema = z.object({
+  billing_name: z.string(),
+  billing_address_line1: z.string(),
+  billing_city: z.string(),
+  billing_state_code: z.string(),
+  billing_postal_code: z.string(),
+  customer_gstin: z.string(),
+  export_eligibility_attested: z.boolean(),
+});
+export type BillingCustomerDetails = z.infer<typeof billingCustomerDetailsSchema>;
 
 export function emptyBillingCustomerDetails(): BillingCustomerDetails {
   return {
