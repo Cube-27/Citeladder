@@ -27,7 +27,8 @@ export type LoadingShape =
   | Readonly<{ kind: 'card'; lines?: number }>
   | Readonly<{ kind: 'table'; columns?: number }>
   | Readonly<{ kind: 'figures'; count?: number }>
-  | Readonly<{ kind: 'chart'; height?: ChartHeight }>;
+  | Readonly<{ kind: 'chart'; height?: ChartHeight }>
+  | Readonly<{ kind: 'thread' }>;
 
 export type ChartHeight = 'sm' | 'md' | 'lg';
 
@@ -48,6 +49,8 @@ export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
       return <FigureBlocks count={shape.count} />;
     case 'chart':
       return <SkeletonBlock className={cn('w-full', CHART_HEIGHT[shape.height ?? 'md'])} />;
+    case 'thread':
+      return <ThreadBlocks />;
     default: {
       const exhaustive: never = shape;
       return exhaustive;
@@ -111,6 +114,26 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
           <SkeletonBlock className="h-3.5 min-h-3.5 w-24" />
           <SkeletonBlock className="h-6 w-16" />
         </span>
+      ))}
+    </span>
+  );
+}
+
+/** A chat: user turns (right, 60%, 48 high) alternating with replies (left, 80%, 72 high), 24 apart. */
+function ThreadBlocks() {
+  // Own spans: cn() does not merge the named radii over SkeletonBlock's rounded-sm.
+  return (
+    <span className="grid gap-[var(--page-top-gap)]">
+      {range(3).map((index) => (
+        <span
+          key={index}
+          aria-hidden
+          data-skeleton-block=""
+          className={cn(
+            'skeleton-block bg-well block',
+            index % 2 === 0 ? 'rounded-card ms-auto h-12 w-3/5' : 'rounded-control min-h-18 w-4/5',
+          )}
+        />
       ))}
     </span>
   );

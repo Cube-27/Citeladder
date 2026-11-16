@@ -181,6 +181,22 @@ export function TabRow<T extends string>({ items, ariaLabel, onIntent }: TabRowP
 }
 
 /**
+ * A route's tab labels while its page loads: the page strip's face and row,
+ * not operable and hidden from assistive technology, the first one current.
+ */
+export function HeldTabRow({ labels }: Readonly<{ labels: readonly string[] }>) {
+  return (
+    <div aria-hidden data-held-tabs="" className={cn(TAB_STRIP, 'pointer-events-none gap-1')}>
+      {labels.map((label, index) => (
+        <span key={label} className={tabFace({ kind: 'page', selected: index === 0 })}>
+          {label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
  * The strip: Radix tabs, so Left and Right move and select and Tab leaves the
  * list. Must be rendered inside a `TabsRoot` (or a `Tabs`).
  */

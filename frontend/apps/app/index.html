@@ -11,20 +11,34 @@
         reader never sees a light frame. The cookie name must match
         THEME_COOKIE in lib/theme/theme.ts, which owns the preference. -->
     <script src="/theme-preference.js"></script>
-    <!-- First paint is the shell (STA-07): the sidebar, the masthead band and
-        the ground in the token colours, until React replaces #root. The
-        sidebar is 224 from 1280px, 200 from 900, none below; 56 when the
-        preference script finds the sidebar collapsed. -->
+    <!-- First paint is the shell (STA-02, STA-07): the sidebar's rows, the
+        masthead's title and the ground in the token colours, at the live
+        shell's places, until React replaces #root. The sidebar is 224 from
+        1280px, 200 from 900, none below, or the stored width; 56 with no rows
+        when the preference script finds it collapsed. Rows are 32 on a 34
+        pitch (44 under a coarse pointer). /boot-title.js shows the rows and
+        the title on a shell path. -->
     <style>
       .boot-shell {
         position: fixed;
         inset: 0;
         display: flex;
         background: #f5f6f8;
+        color: #565c69;
+        font:
+          500 0.875rem/1.25rem var(--font-face-sans),
+          system-ui,
+          sans-serif;
+      }
+      .boot-shell * {
+        box-sizing: border-box;
       }
       .boot-side {
         flex: none;
-        width: 200px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        width: var(--boot-side-width, 200px);
         background: #fbfbfc;
         border-inline-end: 1px solid #e4e6eb;
       }
@@ -32,30 +46,154 @@
         flex: 1;
         min-width: 0;
       }
-      .boot-mast {
+      .boot-mast,
+      .boot-ident {
+        flex: none;
         height: 56px;
         background: #fbfbfc;
         border-block-end: 1px solid #e4e6eb;
       }
+      .boot-mast {
+        display: flex;
+        align-items: center;
+        padding-inline: 24px;
+      }
+      .boot-title {
+        overflow: hidden;
+        color: #16181d;
+        font:
+          400 1.25rem/1.75rem var(--font-face-display),
+          var(--font-face-sans),
+          system-ui,
+          sans-serif;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      .boot-mode,
+      .boot-list,
+      .boot-foot,
+      .boot-rows {
+        display: none;
+      }
+      .boot-shell[data-boot-mode] .boot-mode {
+        display: grid;
+      }
+      .boot-shell[data-boot-mode] .boot-list {
+        display: block;
+      }
+      .boot-shell[data-boot-mode] .boot-foot,
+      .boot-shell[data-boot-mode='dashboard'] .boot-rows {
+        display: flex;
+      }
+      .boot-mode {
+        flex: none;
+        grid-template-columns: 1fr 1fr;
+        height: 32px;
+        margin: 12px 8px 0;
+        padding: 2px;
+        border-radius: 6px;
+        background: #f1f2f5;
+      }
+      .boot-mode span {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 4px;
+      }
+      [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],
+      [data-boot-mode='agent'] [data-boot-seg='agent'] {
+        background: #ffffff;
+        color: #16181d;
+      }
+      .boot-list {
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        padding: 12px 8px;
+      }
+      .boot-rows {
+        flex-direction: column;
+        gap: 16px;
+      }
+      .boot-group,
+      .boot-foot {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .boot-row,
+      .boot-group-title {
+        display: block;
+        height: 32px;
+        overflow: hidden;
+        line-height: 32px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+      }
+      .boot-row {
+        padding-inline: 32px 8px;
+      }
+      .boot-group-title {
+        padding-inline: 8px;
+        font-size: 0.75rem;
+      }
+      .boot-foot {
+        flex: none;
+        padding: 8px;
+        border-block-start: 1px solid #e4e6eb;
+      }
+      .boot-account {
+        height: 44px;
+      }
       @media (min-width: 1280px) {
         .boot-side {
-          width: 224px;
+          width: var(--boot-side-width, 224px);
+        }
+      }
+      @media (pointer: coarse) {
+        .boot-mode,
+        .boot-row,
+        .boot-group-title {
+          height: 44px;
+          line-height: 44px;
         }
       }
       [data-sidebar-rail] .boot-side {
         width: 56px;
       }
+      [data-sidebar-rail] .boot-side > :not(.boot-ident) {
+        display: none;
+      }
       @media (max-width: 899.98px) {
         .boot-side {
           display: none;
         }
+        .boot-mast {
+          padding-inline: 68px 16px;
+        }
       }
       [data-theme='dark'] .boot-shell {
         background: #0f1114;
+        color: #a5abb8;
       }
-      [data-theme='dark'] :is(.boot-side, .boot-mast) {
+      [data-theme='dark'] :is(.boot-side, .boot-mast, .boot-ident) {
         background: #131519;
         border-color: #2b2e36;
+      }
+      [data-theme='dark'] .boot-foot {
+        border-color: #2b2e36;
+      }
+      [data-theme='dark'] .boot-title,
+      [data-theme='dark'] [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],
+      [data-theme='dark'] [data-boot-mode='agent'] [data-boot-seg='agent'] {
+        color: #eceef2;
+      }
+      [data-theme='dark'] .boot-mode {
+        background: #22252b;
+      }
+      [data-theme='dark'] [data-boot-mode='dashboard'] [data-boot-seg='dashboard'],
+      [data-theme='dark'] [data-boot-mode='agent'] [data-boot-seg='agent'] {
+        background: #181a1f;
       }
     </style>
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -71,10 +209,14 @@
   <body>
     <div id="root">
       <div class="boot-shell" aria-hidden="true">
-        <div class="boot-side"></div>
-        <div class="boot-main"><div class="boot-mast"></div></div>
+        <div class="boot-side"><!-- boot-sidebar --></div>
+        <div class="boot-main">
+          <div class="boot-mast"><span class="boot-title"></span></div>
+        </div>
       </div>
     </div>
+    <!-- Generated at build from the route manifest (apps/app/boot-shell.ts). -->
+    <script src="/boot-title.js"></script>
     <!-- Below the support matrix, this fills #root with an "Update your
         browser" notice before the app shell runs, and main.tsx stays out. -->
     <script src="/browser-support.js"></script>

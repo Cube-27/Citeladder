@@ -1,0 +1,91 @@
+/**
+ * The first paint before the bundle (STA-02), built from the route manifest:
+ * index.html's `.boot-shell` gets the sidebar's rows at build, and
+ * `/boot-title.js`, a same-origin classic script (the CSP allows no inline
+ * script), titles the masthead and the document from the path, shows the
+ * mode's rows and applies the stored sidebar width.
+ */
+import type * as Manifest from '../../lib/navigation/app-routes.ts';
+
+export type RouteManifest = Pick<
+  typeof Manifest,
+  'APP_ROUTES' | 'DASHBOARD_SIDEBAR_GROUPS' | 'navDestinations'
+>;
+
+/** Where index.html takes the sidebar's rows. */
+export const BOOT_SIDEBAR_MARKER = '<!-- boot-sidebar -->';
+export const BOOT_TITLE_FILE = 'boot-title.js';
+
+const escapeHtml = (text: string) =>
+  text.replace(/[&<>"']/gu, (char) => `&#${char.codePointAt(0)};`);
+
+const row = (label: string) => `<span class="boot-row">${escapeHtml(label)}</span>`;
+
+/**
+ * The labelled sidebar's static rows: the ident cell, the mode switch, the
+ * Dashboard groups and the foot, at the live sidebar's places. No current
+ * mark: which row is current is the bundle's to say.
+ */
+export function bootSidebarHtml(manifest: RouteManifest): string {
+  const groups = manifest.DASHBOARD_SIDEBAR_GROUPS.map(({ group, title }) => {
+    const head = title ? `<span class="boot-group-title">${escapeHtml(title)}</span>` : '';
+    const rows = manifest.navDestinations(`sidebar:${group}`).map((entry) => row(entry.label));
+    return `<div class="boot-group">${head}${rows.join('')}</div>`;
+  });
+  const foot = manifest.navDestinations('sidebar:foot').map((entry) => row(entry.label));
+  return [
+    '<div class="boot-ident"></div>',
+    '<div class="boot-mode"><span data-boot-seg="dashboard">Dashboard</span><span data-boot-seg="agent">Agent</span></div>',
+    `<div class="boot-list"><div class="boot-rows">${groups.join('')}</div></div>`,
+    `<div class="boot-foot">${foot.join('')}<span class="boot-account"></span></div>`,
+  ].join('');
+}
+
+/**
+ * `/boot-title.js`. It resolves the path as `resolveTitle` and `hasPageTitle`
+ * do (the route, else the deepest parameter-free route above it). The storage
+ * keys are lib/sidebar-width.ts's.
+ */
+export function bootTitleScript(manifest: RouteManifest): string {
+  const routes = manifest.APP_ROUTES.map((route) => [
+    route.path,
+    route.shell && route.title ? route.title : null,
+  ]);
+  return `// Generated at build from lib/navigation/app-routes.ts by apps/app/boot-shell.ts.
+try {
+  const routes = ${JSON.stringify(routes)};
+  const path = location.pathname;
+  const parts = (value) => value.split('/').filter(Boolean);
+  const have = parts(path);
+  const matches = (pattern) => {
+    const want = parts(pattern);
+    return want.length === have.length && want.every((part, i) => part[0] === ':' || part === have[i]);
+  };
+  let route = routes.find(([pattern]) => matches(pattern));
+  if (!route) {
+    for (const entry of routes) {
+      if (entry[0].includes(':') || !path.startsWith(entry[0] + '/')) continue;
+      if (!route || entry[0].length > route[0].length) route = entry;
+    }
+  }
+  const shell = document.querySelector('.boot-shell');
+  const title = route ? route[1] : null;
+  if (shell && title) {
+    shell.dataset.bootMode = path === '/agent' || path.startsWith('/agent/') ? 'agent' : 'dashboard';
+    const heading = shell.querySelector('.boot-title');
+    if (heading) heading.textContent = title;
+    document.title = title + ' · CiteLadder';
+  }
+  try {
+    const width = Number(localStorage.getItem('citeladder:app:sidebar-width'));
+    if (shell && width > 0) {
+      shell.style.setProperty('--boot-side-width', Math.min(480, Math.max(200, Math.round(width))) + 'px');
+    }
+  } catch {
+    // Storage blocked: the boot sidebar keeps the default width, as the shell does.
+  }
+} catch {
+  // The boot shell stays untitled; the bundle titles the page.
+}
+`;
+}

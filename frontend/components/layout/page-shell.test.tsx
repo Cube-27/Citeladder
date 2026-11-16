@@ -6,16 +6,43 @@ import { choiceFilter } from '@/components/ui/all-filters';
 import { TabsRoot } from '@/components/ui/tabs';
 import { ListScreen, RouteLoadingScreen } from './page-shell';
 
-describe('ListScreen', () => {
-  it("names the route in the loading frame's header", () => {
-    render(
-      <MemoryRouter initialEntries={['/performance']}>
-        <RouteLoadingScreen label="Loading performance…" />
+describe('RouteLoadingScreen', () => {
+  it.each([
+    {
+      path: '/visibility',
+      title: 'AI Visibility',
+      tabs: ['Trends', 'Sources', 'Perception', 'Ads', 'Query fanouts'],
+      filters: true,
+      shapes: ['figures', 'chart'],
+    },
+    {
+      path: '/site/crawls',
+      title: 'Website',
+      tabs: ['Overview', 'Pages', 'Architecture', 'AEO readiness', 'Internal links', 'Changes'],
+      filters: false,
+      shapes: ['figures', 'table'],
+    },
+    { path: '/issues', title: 'Issues', tabs: [], filters: true, shapes: ['table'] },
+    { path: '/agent/chats/1', title: 'Chat', tabs: [], filters: false, shapes: ['thread'] },
+    { path: '/pricing', title: 'Pricing', tabs: [], filters: false, shapes: ['card', 'card'] },
+  ])('draws $path in its loaded frame', ({ path, title, tabs, filters, shapes }) => {
+    const { container } = render(
+      <MemoryRouter initialEntries={[path]}>
+        <RouteLoadingScreen />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('heading', { level: 1, name: 'Performance' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
+    const held = container.querySelector('[data-held-tabs]');
+    expect([...(held?.children ?? [])].map((tab) => tab.textContent)).toEqual(tabs);
+    if (held) expect(held).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByRole('tab')).toBeNull();
+    expect(container.querySelector('[data-page-band="filters"]') !== null).toBe(filters);
+    const drawn = [...container.querySelectorAll<HTMLElement>('[data-loading-shape]')];
+    expect(drawn.map((node) => node.dataset.loadingShape)).toEqual(shapes);
   });
+});
 
+describe('ListScreen', () => {
   it('draws the header, then the controls, then the content', () => {
     render(
       <MemoryRouter initialEntries={['/prompts']}>
