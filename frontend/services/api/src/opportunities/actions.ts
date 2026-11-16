@@ -13,7 +13,6 @@ import {
   actionStatusSchema,
   measurementLegSchema,
   type ActionGroup,
-  type ActionPriorityBand,
   type ActionStatus,
 } from '@citeladder/contracts/actions';
 import { sql, type Selectable, type SqlBool } from 'kysely';
@@ -40,7 +39,14 @@ import { acquireProjectLock } from '../prompts/locks.ts';
 import { actionGroup, priorityBand, readHandoff } from '../analysis/opportunities/actions.ts';
 import { record } from '../db/json.ts';
 import { actionUrlsPage, writeActionUrls } from './action-urls.ts';
-import { FALLBACK_GOAL, goalOf, groupingSql, ownershipSql, topicSql } from './action-groupings.ts';
+import {
+  FALLBACK_GOAL,
+  goalOf,
+  groupingSql,
+  impactSql,
+  ownershipSql,
+  topicSql,
+} from './action-groupings.ts';
 import {
   ActionTargetError,
   isAgentTargetKind,
@@ -267,14 +273,6 @@ export function parseFilters(filters: ActionFilterInput) {
   };
 }
 
-/** A priority band as a score range; the low band also holds unscored Actions. */
-function bandRange(band: ActionPriorityBand): { from: number | null; below: number | null } {
-  const floors = a.ACTION_PRIORITY_BANDS;
-  if (band === 'high') return { from: floors.high, below: null };
-  if (band === 'medium') return { from: floors.medium, below: floors.high };
-  return { from: null, below: floors.medium };
-}
-
 /** The listed Actions under every filter but the group: the group counts read under it too. */
 function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof parseFilters>) {
   let filtered = listed(db, scope);
@@ -294,18 +292,8 @@ function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof 
     filtered = filtered.where(
       sql<SqlBool>`actions.families @> ${JSON.stringify([filters.family])}::jsonb`,
     );
-  if (filters.priority) {
-    const { from, below } = bandRange(filters.priority);
-    if (from !== null) filtered = filtered.where('priority_score', '>=', from);
-    // The low band holds unscored Actions too, as the Actions tree files them.
-    if (below !== null)
-      filtered = filtered.where((eb) =>
-        eb.or([
-          eb('priority_score', '<', below),
-          ...(from === null ? [eb('priority_score', 'is', null)] : []),
-        ]),
-      );
-  }
+  // The tree's Impact band: the low band holds unscored Actions too.
+  if (filters.priority) filtered = filtered.where(impactSql, '=', filters.priority);
   return filtered;
 }
 

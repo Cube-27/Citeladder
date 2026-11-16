@@ -104,22 +104,52 @@ export function evidencePages(finding: SiteLevelFinding): Page[] {
   }
 }
 
+type SiteLevelRow = {
+  id: string;
+  rule_id: string;
+  finding_class: string;
+  severity: string;
+  category: string;
+  site_url_id: string;
+  url: string;
+  evidence: unknown;
+};
+
+/**
+ * `row`'s group: the owned pages it names merged into those of the group an
+ * earlier finding of its rule started, in URL order. Naming none, it is the
+ * whole site, kept on the page it is filed on.
+ */
+function siteLevelFamily(found: Family | undefined, row: SiteLevelRow, named: Page[]): Family {
+  const earlier = found && !found.whole_site ? found.pages : [];
+  const merged = new Map([...earlier, ...named].map((page) => [page.site_url_id, page] as const));
+  const sorted = [...merged.values()].sort(
+    (left, right) =>
+      compareText(left.url, right.url) || compareText(left.site_url_id, right.site_url_id),
+  );
+  const wholeSite = sorted.length === 0;
+  return {
+    rule_id: row.rule_id,
+    finding_class: row.finding_class,
+    severity: row.severity,
+    category: row.category,
+    page_count: wholeSite
+      ? 0
+      : Math.max(sorted.length, siteLevelScope(row.rule_id, row.evidence)?.affected ?? 0),
+    whole_site: wholeSite,
+    issue_ids: [...(found?.issue_ids ?? []), row.id],
+    pages: wholeSite
+      ? [{ site_url_id: row.site_url_id, url: row.url }]
+      : sorted.slice(0, family.COHORT_PAGES_MAX),
+  };
+}
+
 /**
  * Each site-level rule's group: the owned pages its evidence names, deduplicated
- * in URL order, and the count it records over every page. A finding naming no
- * owned page is the whole site, kept on the page it is filed on.
+ * in URL order, and the count it records over every page.
  */
 async function siteLevelFamilies(db: Database, crawl: ViewCrawl): Promise<Family[]> {
-  const { rows } = await sql<{
-    id: string;
-    rule_id: string;
-    finding_class: string;
-    severity: string | null;
-    category: string | null;
-    site_url_id: string;
-    url: string;
-    evidence: unknown;
-  }>`
+  const { rows } = await sql<SiteLevelRow>`
     select i.id, i.rule_id, i.finding_class, i.severity, i.category, i.site_url_id,
       u.normalized_url as url, i.evidence
     from site_issues i
@@ -150,33 +180,11 @@ async function siteLevelFamilies(db: Database, crawl: ViewCrawl): Promise<Family
   const families = new Map<string, Family>();
   for (const { row, pages } of named) {
     const key = `${row.rule_id}\u0000${row.finding_class}`;
-    const listed = new Map<string, Page>();
-    for (const page of pages) {
-      const url = owned.get(page.site_url_id);
-      if (url !== undefined) listed.set(page.site_url_id, { site_url_id: page.site_url_id, url });
-    }
-    const found = families.get(key);
-    const merged = new Map((found?.pages ?? []).map((p) => [p.site_url_id, p] as const));
-    for (const [id, page] of listed) merged.set(id, page);
-    const sorted = [...merged.values()].sort(
-      (left, right) =>
-        compareText(left.url, right.url) || compareText(left.site_url_id, right.site_url_id),
-    );
-    const wholeSite = sorted.length === 0;
-    families.set(key, {
-      rule_id: row.rule_id,
-      finding_class: row.finding_class,
-      severity: row.severity ?? '',
-      category: row.category ?? '',
-      page_count: wholeSite
-        ? 0
-        : Math.max(sorted.length, siteLevelScope(row.rule_id, row.evidence)?.affected ?? 0),
-      whole_site: wholeSite,
-      issue_ids: [...(found?.issue_ids ?? []), row.id],
-      pages: wholeSite
-        ? [{ site_url_id: row.site_url_id, url: row.url }]
-        : sorted.slice(0, family.COHORT_PAGES_MAX),
+    const owns = pages.flatMap(({ site_url_id }) => {
+      const url = owned.get(site_url_id);
+      return url === undefined ? [] : [{ site_url_id, url }];
     });
+    families.set(key, siteLevelFamily(families.get(key), row, owns));
   }
   return [...families.values()];
 }
