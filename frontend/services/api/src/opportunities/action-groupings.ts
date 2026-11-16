@@ -42,10 +42,14 @@ export const impactSql = sql<string>`(case
   when actions.priority_score >= ${a.ACTION_PRIORITY_BANDS.medium} then 'medium'
   else 'low' end)`;
 
-/** The prompt theme of the Action's strongest live finding; '' when it has none. */
+/**
+ * The theme of the Action's strongest live finding; '' when it has none. An
+ * issue family's `target_theme` is its rule's label, not a topic.
+ */
 export const topicSql = sql<string>`coalesce((select o.target_theme from opportunities o
   where o.workspace_id = actions.workspace_id and o.action_id = actions.id
     and o.superseded_at is null and o.target_theme is not null
+    and o.rule_id <> ${policy.opportunity.opportunities.SITE_ISSUE_FAMILY.RULE_ID}
   order by o.priority_score desc nulls last, o.id limit 1), '')`;
 
 /** What to do: the diagnosed approach; '' for an Agent row not diagnosed yet. */

@@ -205,9 +205,13 @@ const groupSql = sql<ActionGroup>`(case ${sql.join(
   sql` `,
 )} else ${a.ACTION_GROUP_DEFAULT} end)`;
 
-/** Every approach a diagnosis can store: the tree's and the default's. */
+/** Every approach a diagnosis can store (the tree's and the default's), and an undiagnosed Agent Action's ''. */
 const KNOWN_APPROACHES = [
-  ...new Set([...a.APPROACH_TREE.map((branch) => branch.approach), a.DEFAULT_APPROACH.approach]),
+  ...new Set([
+    ...a.APPROACH_TREE.map((branch) => branch.approach),
+    a.DEFAULT_APPROACH.approach,
+    '',
+  ]),
 ];
 
 /**
@@ -272,11 +276,7 @@ function bandRange(band: ActionPriorityBand): { from: number | null; below: numb
 }
 
 /** The listed Actions under every filter but the group: the group counts read under it too. */
-export function filteredActions(
-  db: Database,
-  scope: Scope,
-  filters: ReturnType<typeof parseFilters>,
-) {
+function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof parseFilters>) {
   let filtered = listed(db, scope);
   if (filters.grouping) filtered = filtered.where(groupingSql, '=', filters.grouping);
   if (filters.ownership) filtered = filtered.where(ownershipSql, '=', filters.ownership);
@@ -289,7 +289,7 @@ export function filteredActions(
     );
   if (filters.q) filtered = filtered.where('target_label', 'ilike', containsPattern(filters.q));
   if (filters.target_kind) filtered = filtered.where('target_kind', '=', filters.target_kind);
-  if (filters.approach) filtered = filtered.where('approach', '=', filters.approach);
+  if (filters.approach !== null) filtered = filtered.where('approach', '=', filters.approach);
   if (filters.family)
     filtered = filtered.where(
       sql<SqlBool>`actions.families @> ${JSON.stringify([filters.family])}::jsonb`,

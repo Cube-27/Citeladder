@@ -204,6 +204,10 @@ describe('issue-group Actions', () => {
       ids(own.pages.slice(0, 3)),
       ids(own.pages),
     ]);
+    // A rule's label is no topic: both groups fall under no topic.
+    const path = `/api/v1/projects/${own.seed.projectId}/actions/tree?group_by=topic`;
+    const byTopic = actionTreeSchema.parse(await (await request(own.seed, path)).json());
+    expect(byTopic.groups.map((group) => [group.key, group.count])).toEqual([['', 2]]);
   });
 
   it('lists every Action touching a URL, and never another workspace’s URL', async () => {
@@ -475,6 +479,29 @@ describe('the Actions tree', () => {
       ['high', 24],
       ['low', 2],
     ]);
+    // Undiagnosed Actions group under the empty approach, and page under it too.
+    const byApproach = actionTreeSchema.parse(
+      await (await request(seed, `${base}/tree?group_by=what_to_do`)).json(),
+    );
+    expect(byApproach.groups.map((group) => [group.key, group.count])).toEqual([['', 26]]);
+    const more = byApproach.groups[0]!.groupings.find((g) => g.grouping === 'prompts')!;
+    const morePage = actionsPageSchema.parse(
+      await (
+        await request(
+          seed,
+          `${base}?grouping=prompts&approach=&limit=10&cursor=${more.next_cursor}`,
+        )
+      ).json(),
+    );
+    expect(morePage.items.map((item) => item.target_label)).toEqual(
+      prompts.slice(10, 20).map((p) => p.target_label),
+    );
+
+    // The list's `group` filter narrows the tree too: no product Action here.
+    const products = actionTreeSchema.parse(
+      await (await request(seed, `${base}/tree?group=products`)).json(),
+    );
+    expect([products.goals.map((goal) => goal.count), products.groups]).toEqual([[0, 0, 0, 0], []]);
     expect((await request(seed, `${base}/tree?group_by=colour`)).status).toBe(422);
     expect((await request(own.seed, `${base}/tree`)).status).toBe(404);
   });

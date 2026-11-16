@@ -22,9 +22,9 @@ import { goalSql, groupingSql, groupKeySql, GROUPING_ORDER } from './action-grou
 import { statusView } from './action-status.ts';
 import {
   actionItem,
-  filteredActions,
   LISTED_ACTION,
   listCursor,
+  matchingActions,
   parseFilters,
   type ActionRow,
 } from './actions.ts';
@@ -70,8 +70,7 @@ function groupRank(groupBy: ActionTreeGroupBy): (key: string) => number {
 
 export async function actionTree(db: Database, scope: Scope, raw: TreeFilters) {
   const { group_by: groupBy, ...rest } = raw;
-  const filters = parseFilters({ ...rest, grouping: null });
-  const filtered = filteredActions(db, scope, filters);
+  const filtered = matchingActions(db, scope, { ...rest, grouping: null });
   const key = groupKeySql(groupBy);
   const priority = sql<number>`coalesce(actions.priority_score, -1)`;
   const [statuses, counts, blocking, rows] = await Promise.all([

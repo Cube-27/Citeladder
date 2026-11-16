@@ -257,7 +257,8 @@ export const actionDetailSchema = actionItemSchema.extend({
   editable_page: z.boolean().default(false),
   // An issue-family Action's cohort without its pages, with when its crawl
   // completed: the declared cohort once declared, else the latest refresh's.
-  // Null for every other target kind. Its URLs page through `urls`.
+  // Null for every other target kind. `urls` pages the group's current URLs,
+  // which a later refresh can change after a declaration froze this cohort.
   cohort: issueFamilyCohortSchema
     .omit({ pages: true })
     .extend({ crawl_completed_at: z.string().nullable() })
