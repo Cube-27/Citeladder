@@ -8,7 +8,6 @@ import {
   formatMoney,
   headlinePrice,
   isPurchasable,
-  providerMarketingStates,
 } from './catalog';
 
 function plan(overrides: Partial<CatalogPlan> = {}): CatalogPlan {
@@ -157,73 +156,6 @@ describe('isPurchasable', () => {
         expiry_days: 30,
       }),
     ).toBe(false);
-  });
-});
-
-describe('providerMarketingState', () => {
-  it('projects planned providers as coming-soon with no route', () => {
-    const states = providerMarketingStates(
-      catalog({
-        providers: [
-          {
-            key: 'provider.openai',
-            label: 'ChatGPT',
-            availability: 'available',
-            unavailable_reason: null,
-            adapter_shipped: true,
-            grant_key: 'provider.openai',
-            issuable: true,
-            routes: [
-              {
-                logical_engine: 'chatgpt',
-                transport_provider: 'openai',
-                model: 'gpt-5',
-              },
-            ],
-          },
-          {
-            key: 'provider.grok',
-            label: 'Grok',
-            availability: 'unavailable',
-            unavailable_reason: 'adapter_not_shipped',
-            adapter_shipped: false,
-            grant_key: 'provider.grok',
-            issuable: true,
-            routes: [],
-          },
-        ],
-      }),
-    );
-
-    expect(states[0]).toMatchObject({ label: 'ChatGPT', shipped: true, comingSoon: false });
-    expect(states[1]).toMatchObject({
-      label: 'Grok',
-      shipped: false,
-      comingSoon: true,
-      reason: 'adapter_not_shipped',
-    });
-  });
-
-  // A shipped adapter with no published route is still not connectable — a
-  // logo must never imply capability the catalog does not back.
-  it('treats an adapter with no route as coming-soon', () => {
-    const [state] = providerMarketingStates(
-      catalog({
-        providers: [
-          {
-            key: 'provider.perplexity',
-            label: 'Perplexity',
-            availability: 'available',
-            unavailable_reason: null,
-            adapter_shipped: true,
-            grant_key: 'provider.perplexity',
-            issuable: true,
-            routes: [],
-          },
-        ],
-      }),
-    );
-    expect(state?.comingSoon).toBe(true);
   });
 });
 

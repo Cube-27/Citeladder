@@ -5,7 +5,6 @@ import {
   endOfDayInZone,
   readTimeZonePreference,
   resolveDisplayTimeZone,
-  resolveServerDisplayTimeZone,
   saveTimeZonePreference,
 } from './display-timezone';
 import {
@@ -37,15 +36,13 @@ describe('display timezone', () => {
     expect(resolveDisplayTimeZone('not/a-zone', 'Asia/Kolkata')).toBe('UTC');
   });
 
-  it('keeps a selected named zone fixed and uses only an explicit cookie on the server', () => {
+  it('keeps a selected named zone fixed and reads only an explicit cookie choice', () => {
     expect(resolveDisplayTimeZone('America/New_York', 'Asia/Kolkata')).toBe('America/New_York');
     expect(resolveDisplayTimeZone('UTC', 'Asia/Kolkata')).toBe('UTC');
-    expect(resolveServerDisplayTimeZone('')).toBe('UTC');
-    expect(resolveServerDisplayTimeZone(`${DISPLAY_TIME_ZONE_COOKIE}=auto`)).toBe('UTC');
-    expect(resolveServerDisplayTimeZone(`${DISPLAY_TIME_ZONE_COOKIE}=Asia%2FKolkata`)).toBe(
+    expect(readTimeZonePreference('')).toBe('auto');
+    expect(readTimeZonePreference(`${DISPLAY_TIME_ZONE_COOKIE}=Asia%2FKolkata`)).toBe(
       'Asia/Kolkata',
     );
-    expect(resolveServerDisplayTimeZone(`${DISPLAY_TIME_ZONE_COOKIE}=bad%2Fzone`)).toBe('UTC');
     expect(readTimeZonePreference(`${DISPLAY_TIME_ZONE_COOKIE}=bad%2Fzone`)).toBe('UTC');
   });
 

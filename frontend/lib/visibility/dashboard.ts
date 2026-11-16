@@ -14,7 +14,6 @@ import { AUDIT_STATES } from '@/lib/runs/status';
 import type {
   AuditStatus,
   LogicalEngine,
-  RankingRow,
   Visibility,
   VisibilityEngine,
 } from '@citeladder/contracts';
@@ -234,12 +233,3 @@ export type PromptOption = {
   /** The frozen prompt text (display label). */
   label: string;
 };
-
-/** Rankings already arrive sorted by SOV desc from B6; keep that order stable. */
-export function sortedRankings(rankings: readonly RankingRow[]): RankingRow[] {
-  return rankings
-    .slice()
-    .sort(
-      (a, b) => (b.share_of_voice ?? 0) - (a.share_of_voice ?? 0) || a.name.localeCompare(b.name),
-    );
-}

@@ -18,6 +18,7 @@ import { Select } from '@/components/ui/select';
 import { textRole } from '@/components/ui/typography';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { formatCount, pluralCount } from '@/lib/format';
+import { isRecord } from '@/lib/utils';
 import type { SearchDatasetSelectionRequest } from '@citeladder/contracts/search-intelligence-requests';
 import type {
   ResearchScope,
@@ -315,8 +316,7 @@ export function HistoryScopeNotice({
 }
 
 function hostOf(target: unknown): string {
-  const origin =
-    typeof target === 'object' && target ? (target as { origin?: unknown }).origin : '';
+  const origin = isRecord(target) ? target.origin : '';
   try {
     return new URL(String(origin)).hostname;
   } catch {

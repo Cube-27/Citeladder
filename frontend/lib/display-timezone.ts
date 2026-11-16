@@ -34,11 +34,6 @@ export function resolveDisplayTimeZone(preference: string, deviceTimeZone?: stri
   return deviceTimeZone && validTimeZone(deviceTimeZone) ? deviceTimeZone : 'UTC';
 }
 
-/** A server may use an explicit cookie; Auto has no server-side device zone. */
-export function resolveServerDisplayTimeZone(cookieHeader: string): string {
-  return resolveDisplayTimeZone(readTimeZonePreference(cookieHeader));
-}
-
 function detectDeviceTimeZone(): string | undefined {
   try {
     return Intl.DateTimeFormat().resolvedOptions().timeZone;

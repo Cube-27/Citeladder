@@ -29,6 +29,7 @@ import {
   API_RETRY_BACKOFF_MS,
   getApiRequestTimeoutMs,
 } from '@/lib/config/operational';
+import { isRecord } from '@/lib/utils';
 import { ApiError, isAbortError, isTimeoutError } from './errors';
 
 export type ApiRequestOptions = {
@@ -329,29 +330,22 @@ async function readErrorBody(response: Response): Promise<ErrorPayload> {
   }
 }
 
-function objectRecord(value: unknown): Record<string, unknown> | null {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
 function envelopePayload(value: unknown): Omit<ErrorPayload, 'raw'> | null {
-  const block = objectRecord(value);
-  const message = block && stringField(block.message);
+  if (!isRecord(value)) return null;
+  const message = stringField(value.message);
   return message
     ? {
         message,
-        code: stringField(block.code),
-        retryable: typeof block.retryable === 'boolean' ? block.retryable : undefined,
-        requestId: stringField(block.request_id),
+        code: stringField(value.code),
+        retryable: typeof value.retryable === 'boolean' ? value.retryable : undefined,
+        requestId: stringField(value.request_id),
       }
     : null;
 }
 
 function extractFromPayload(payload: unknown, fallback: string): Omit<ErrorPayload, 'raw'> {
-  const record = objectRecord(payload);
-  if (!record) return { message: fallback };
-  return envelopePayload(record.error) ?? { message: fallback };
+  if (!isRecord(payload)) return { message: fallback };
+  return envelopePayload(payload.error) ?? { message: fallback };
 }
 
 /** A non-empty trimmed string field, or undefined. */

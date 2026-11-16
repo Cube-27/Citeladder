@@ -9,6 +9,7 @@ import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import type { DemandSignal } from '@/lib/api/demand';
 import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
+import { isRecord } from '@/lib/utils';
 
 type SignalType =
   | 'striking_distance'
@@ -167,8 +168,8 @@ export function competingPages(signal: DemandSignal): CompetingPage[] {
   const pages = signal.evidence.pages;
   if (!Array.isArray(pages)) return [];
   return pages.filter((page): page is CompetingPage => {
-    if (typeof page !== 'object' || page === null) return false;
-    const { url, impressions, share } = page as Partial<CompetingPage>;
+    if (!isRecord(page)) return false;
+    const { url, impressions, share } = page;
     return (
       typeof url === 'string' &&
       typeof impressions === 'number' &&

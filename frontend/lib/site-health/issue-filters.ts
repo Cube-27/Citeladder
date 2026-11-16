@@ -18,6 +18,7 @@ import { useCallback, useMemo, useState } from 'react';
 import type { IssueSection, IssueSort } from '@citeladder/contracts';
 import type { IssuesParams } from '@/lib/api/site-health';
 import { ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
+import { isOneOf } from '@/lib/utils';
 import {
   optionalStringUrlCodec,
   setUrlParams,
@@ -85,7 +86,7 @@ const SEVERITY_CHOICE_LABELS: Readonly<Record<IssueSeverityChoice, string>> = {
 };
 
 function isSeverityClass(value: string): value is (typeof SEVERITY_CLASSES)[number] {
-  return (SEVERITY_CLASSES as readonly string[]).includes(value);
+  return isOneOf(SEVERITY_CLASSES, value);
 }
 
 /** The severity choices on offer, the unfiltered one naming what it leaves unfiltered. */

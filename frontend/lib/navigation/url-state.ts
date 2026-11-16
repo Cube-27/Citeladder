@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
+import { isOneOf } from '@/lib/utils';
 
 export type UrlCodec<T> = {
   parse: (raw: string | null) => T;
@@ -210,7 +211,7 @@ export function useUrlState<T>(
 
 export function stringUrlCodec<T extends string>(allowed: readonly T[], fallback: T): UrlCodec<T> {
   return {
-    parse: (raw) => (allowed.includes(raw as T) ? (raw as T) : fallback),
+    parse: (raw) => (isOneOf(allowed, raw) ? raw : fallback),
     serialize: (value) => (value === fallback ? null : value),
   };
 }

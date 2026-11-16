@@ -7,7 +7,6 @@ import {
   formatRate,
   formatScore,
   isDashboardStatus,
-  sortedRankings,
   toRunOptions,
   visibleEngines,
 } from './dashboard';
@@ -127,29 +126,5 @@ describe('visibility dashboard helpers', () => {
     expect(visibleEngines(visibility, 'claude', order).map((e) => e.logical_engine)).toEqual([
       'claude',
     ]);
-  });
-
-  it('sorts rankings by share-of-voice descending', () => {
-    const rows = sortedRankings([
-      {
-        name: 'Comp',
-        is_brand: false,
-        mention_rate: 0.2,
-        citation_rate: null,
-        share_of_voice: 0.2,
-        mention_count: 1,
-        avg_position: null,
-      },
-      {
-        name: 'Acme',
-        is_brand: true,
-        mention_rate: 0.6,
-        citation_rate: null,
-        share_of_voice: 0.6,
-        mention_count: 3,
-        avg_position: null,
-      },
-    ]);
-    expect(rows.map((r) => r.name)).toEqual(['Acme', 'Comp']);
   });
 });

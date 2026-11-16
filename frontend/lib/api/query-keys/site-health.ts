@@ -6,6 +6,7 @@
  * 'crawl', crawlId, resource, workspaceId, ...]`, the workspace after the
  * resource so a crawl's prefix reaches every workspace's copy.
  */
+import { isRecord } from '@/lib/utils';
 import { scopedKeys, type ProjectScope } from './scope';
 import type { ListFilters } from './shared';
 
@@ -115,7 +116,6 @@ export const siteHealthKeys = {
    */
   isFirstPage: (queryKey: readonly unknown[]): boolean => {
     const filters = queryKey.at(-1);
-    if (typeof filters !== 'object' || filters === null) return true;
-    return (filters as { cursor?: unknown }).cursor == null;
+    return !isRecord(filters) || filters.cursor == null;
   },
 };

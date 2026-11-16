@@ -4,7 +4,6 @@ import { ApiError } from '@/lib/api/errors';
 
 import {
   brandStepSchema,
-  deriveDomain,
   normalizeWebsiteUrl,
   onboardingErrorMessage,
   type BrandStepValues,
@@ -31,19 +30,6 @@ describe('normalizeWebsiteUrl', () => {
 
   it('is empty for empty input rather than producing "https://"', () => {
     expect(normalizeWebsiteUrl('   ')).toBe('');
-  });
-});
-
-describe('deriveDomain', () => {
-  it('strips scheme, www and path', () => {
-    expect(deriveDomain('https://www.acme.com/pricing')).toBe('acme.com');
-    expect(deriveDomain('acme.co.uk')).toBe('acme.co.uk');
-  });
-
-  it('returns empty for input that cannot parse', () => {
-    expect(deriveDomain('')).toBe('');
-    expect(deriveDomain('   ')).toBe('');
-    expect(deriveDomain('ftp://acme.com')).toBe('');
   });
 });
 

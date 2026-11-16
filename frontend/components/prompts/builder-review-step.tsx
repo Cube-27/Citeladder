@@ -15,11 +15,11 @@ import {
   segmentCoverage,
   topicCoverage,
   type CoverageRow,
-  type CoverageState,
+  type PlannedCoverage,
 } from '@/lib/prompts/builder-run';
 
 const STATE: Record<
-  CoverageState,
+  PlannedCoverage,
   { label: string; badge: 'success' | 'warning' | 'danger' | 'info' }
 > = {
   on_target: { label: 'On target', badge: 'success' },

@@ -61,6 +61,18 @@ export function ownValue<V>(table: Readonly<Record<string, V>>, key: string): V 
   return Object.hasOwn(table, key) ? table[key] : undefined;
 }
 
+/** A non-null, non-array object. */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+export function isOneOf<T extends string | number>(
+  allowed: readonly T[],
+  value: unknown,
+): value is T {
+  return allowed.some((item) => item === value);
+}
+
 /**
  * Two-letter avatar initials from an email address, taken from the local part
  * (before the `@`) and upper-cased. Falls back to the raw value when there is
