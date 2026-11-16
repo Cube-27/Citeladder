@@ -52,7 +52,8 @@ const ROW = {
   // A fixed 160px label column, so every value starts at the same edge.
   ruled:
     'grid min-h-[var(--table-row-height)] grid-cols-[160px_minmax(0,1fr)] items-center gap-x-4 py-2',
-  inline: 'flex items-center gap-2',
+  // A row never outgrows the list, so a long value cuts instead of scrolling the page.
+  inline: 'flex min-w-0 max-w-full items-center gap-2',
   spread: 'flex flex-wrap items-center justify-between gap-x-4 gap-y-1',
   columns: 'grid min-w-0 gap-1',
   record:
@@ -61,7 +62,7 @@ const ROW = {
 
 const TERM = {
   ruled: 'text-body-sm text-ink-2',
-  inline: textRole('body', 'text-ink-2'),
+  inline: textRole('body', 'text-ink-2 shrink-0'),
   spread: textRole('body', 'text-ink-2'),
   columns: textRole('body', 'text-ink-2'),
   record: textRole('body', 'text-ink min-w-0'),
@@ -69,7 +70,7 @@ const TERM = {
 
 const DETAIL = {
   ruled: 'text-body-sm text-ink min-w-0 tabular-nums',
-  inline: textRole('body', 'text-ink-2'),
+  inline: textRole('body', 'text-ink-2 min-w-0'),
   // A spread row's value is a right-aligned amount or count (a quote line),
   // so its tabular digits line up with the total under it.
   spread: textRole('body', 'text-ink tabular-nums'),
@@ -90,7 +91,7 @@ const RULED_FROM = 4;
 const ONE_LINE: Record<FactLayout, string | null> = {
   ruled:
     '[[data-public-surface]_&]:overflow-visible [[data-public-surface]_&]:whitespace-normal [[data-public-surface]_&]:[overflow-wrap:anywhere]',
-  inline: null,
+  inline: 'min-w-0 truncate',
   spread: null,
   columns: 'min-w-0',
   record: null,

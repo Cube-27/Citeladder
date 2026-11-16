@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 
 import { RecordPage } from '@/components/templates/record-page';
 import type { PageBack } from '@/components/templates/page-frame';
-import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { Inline, Stack } from '@/components/ui/layout';
+import { useAgentPanelSeed } from '@/lib/agent/panel-context';
 import { UrlText } from '@/components/ui/table';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { PageIssues, type RerunControl } from '@/components/site-health/page-issues';
@@ -62,6 +62,8 @@ export function UrlDetailView({
   children?: ReactNode;
 }>) {
   const title = pageDisplayTitle(detail.title, detail.display_url);
+  // The masthead's Ask agent opens seeded with this page.
+  useAgentPanelSeed(pageHandoff(detail));
   return (
     <RecordPage
       title={title}
@@ -73,7 +75,6 @@ export function UrlDetailView({
             <>
               {history}
               {detail.url_hash ? <TrafficUrlButton urlHash={detail.url_hash} /> : null}
-              <AskAgentLink handoff={pageHandoff(detail)} aria-label="Ask agent about this page" />
             </>
           }
         />
