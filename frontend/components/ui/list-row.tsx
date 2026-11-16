@@ -1,5 +1,11 @@
-import { Check, ChevronRight } from 'lucide-react';
-import type { ComponentPropsWithoutRef, FormEvent, ReactNode } from 'react';
+import { Check, ChevronDown, ChevronRight } from 'lucide-react';
+import {
+  useId,
+  useState,
+  type ComponentPropsWithoutRef,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Icon } from '@/components/ui/icon';
@@ -130,6 +136,59 @@ export function OpenRow({
       </span>
       <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
     </Pressable>
+  );
+}
+
+/** A ruled list of `DisclosureRow`s. */
+export function DisclosureList({ children }: Readonly<{ children: ReactNode }>) {
+  return <ul className="divide-rule grid min-w-0 divide-y">{children}</ul>;
+}
+
+/**
+ * A row that opens in place (an issue on a page): the title over a subline of
+ * its facts, 56 tall, with a chevron at the end and `aria-expanded`. Open, its
+ * body sits under it on `well` (12 down, 16 across, radius 6). Like `OpenRow`
+ * it bleeds 12 past its list, so every row's text starts on one edge.
+ */
+export function DisclosureRow({
+  title,
+  meta,
+  children,
+}: Readonly<{
+  title: ReactNode;
+  meta: ReactNode;
+  /** Rendered only while open. */
+  children: ReactNode;
+}>) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  return (
+    <li className="grid min-w-0">
+      <Pressable
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(!open)}
+        className={cn(listRowClasses(), pressableRowClasses, 'min-h-14')}
+      >
+        <span className="grid min-w-0 flex-1 gap-1">
+          <ClampText className={textRole('label', 'text-ink')}>{title}</ClampText>
+          <span className={textRole('caption', 'text-ink-2 flex flex-wrap items-center gap-3')}>
+            {meta}
+          </span>
+        </span>
+        <Icon
+          icon={ChevronDown}
+          className={cn('text-ink-2 shrink-0 transition-transform', open && 'rotate-180')}
+        />
+      </Pressable>
+      <div
+        id={panelId}
+        hidden={!open}
+        className="bg-well rounded-control mb-2 grid min-w-0 gap-3 px-4 py-3"
+      >
+        {open ? children : null}
+      </div>
+    </li>
   );
 }
 

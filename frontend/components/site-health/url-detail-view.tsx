@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import { RecordPage } from '@/components/templates/record-page';
 import type { PageBack } from '@/components/templates/page-frame';
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { UrlText } from '@/components/ui/table';
 import { InternalLinksCard } from '@/components/site-health/internal-links-card';
 import { PageIssues, type RerunControl } from '@/components/site-health/page-issues';
@@ -170,7 +170,7 @@ function PageIdentity({ detail, actions }: Readonly<{ detail: PageDetail; action
   return (
     <Stack gap="item" className="min-w-0" data-testid="page-identity">
       <FactList layout="inline" label="Page" facts={facts} />
-      <div className="flex min-w-0 flex-wrap gap-2">{actions}</div>
+      <Inline className="flex-wrap">{actions}</Inline>
     </Stack>
   );
 }

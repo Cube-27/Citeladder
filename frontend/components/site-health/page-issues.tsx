@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { ChevronDown } from 'lucide-react';
 
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
@@ -8,9 +8,8 @@ import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Pressable } from '@/components/ui/pressable';
+import { DisclosureList, DisclosureRow } from '@/components/ui/list-row';
 import { StatusMark } from '@/components/ui/status-mark';
-import { textRole } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import type { PageIssue } from '@citeladder/contracts';
 import {
@@ -91,13 +90,13 @@ function IssueList({
   const shown = expanded ? issues : issues.slice(0, PREVIEW_COUNT);
   return (
     <Stack gap="item">
-      <IssueRows>
+      <DisclosureList>
         {shown.map((issue) => (
           <IssueRow key={issue.occurrence_id} issue={issue}>
             <IssueBody issue={issue} crawlId={crawlId} />
           </IssueRow>
         ))}
-      </IssueRows>
+      </DisclosureList>
       {issues.length > PREVIEW_COUNT ? (
         <Button variant="quiet" className="w-fit" onClick={() => setExpanded(!expanded)}>
           <Icon icon={ChevronDown} className={cn(expanded && 'rotate-180')} />
@@ -108,66 +107,24 @@ function IssueList({
   );
 }
 
-/**
- * The rows' one grid: on a wide card title, severity, category and chevron
- * are columns every row shares (subgrid), so peers line up to the pixel; on a
- * narrow one severity and category drop to a subline under the title.
- */
-function IssueRows({ children }: Readonly<{ children: ReactNode }>) {
-  return (
-    <div className="@container min-w-0">
-      <ul className="divide-rule grid min-w-0 divide-y @[36rem]:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
-        {children}
-      </ul>
-    </div>
-  );
-}
-
-const WIDE_CELL = '@[36rem]:row-start-1';
-
-/** One issue: a disclosure row (40 tall, 56 with its subline) that opens its body in place. */
+/** One issue: its title over its severity and category, opening its body in place. */
 function IssueRow({ issue, children }: Readonly<{ issue: PageIssue; children: ReactNode }>) {
-  const [open, setOpen] = useState(false);
-  const panelId = useId();
   return (
-    <li className="grid min-w-0 @[36rem]:col-span-full @[36rem]:grid-cols-subgrid">
-      <Pressable
-        aria-expanded={open}
-        aria-controls={panelId}
-        onClick={() => setOpen(!open)}
-        className="focus-ring rounded-control hover:overlay-hover active:overlay-pressed grid min-h-14 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-2 text-start @[36rem]:col-span-full @[36rem]:min-h-10 @[36rem]:grid-cols-subgrid"
-      >
-        <span className={textRole('label', `text-ink col-start-1 min-w-0 truncate ${WIDE_CELL}`)}>
-          {issue.issue_title}
-        </span>
-        <span className="col-start-1 row-start-2 flex min-w-0 items-center gap-3 @[36rem]:contents">
+    <DisclosureRow
+      title={issue.issue_title}
+      meta={
+        <>
           {issue.finding_class === 'defect' ? (
-            <span className={`@[36rem]:col-start-2 ${WIDE_CELL}`}>
-              <StatusMark variant="severity" value={issue.severity}>
-                {severityLabel(issue.severity)}
-              </StatusMark>
-            </span>
+            <StatusMark variant="severity" value={issue.severity}>
+              {severityLabel(issue.severity)}
+            </StatusMark>
           ) : null}
-          <span className={textRole('caption', `text-ink-2 @[36rem]:col-start-3 ${WIDE_CELL}`)}>
-            {dimensionLabel(issue.dimension)}
-          </span>
-        </span>
-        <Icon
-          icon={ChevronDown}
-          className={cn(
-            'text-ink-2 col-start-2 row-span-2 row-start-1 transition-transform @[36rem]:col-start-4 @[36rem]:row-span-1',
-            open && 'rotate-180',
-          )}
-        />
-      </Pressable>
-      <div
-        id={panelId}
-        hidden={!open}
-        className="bg-well rounded-control mb-3 grid min-w-0 gap-3 px-4 py-3 @[36rem]:col-span-full"
-      >
-        {open ? children : null}
-      </div>
-    </li>
+          <span>{dimensionLabel(issue.dimension)}</span>
+        </>
+      }
+    >
+      {children}
+    </DisclosureRow>
   );
 }
 
@@ -187,7 +144,7 @@ function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: str
           ))}
         </Inline>
       ) : null}
-      <div className="flex flex-wrap gap-2">
+      <Inline className="flex-wrap">
         <AskAgentLink
           handoff={{
             issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: issue.site_url_id },
@@ -198,7 +155,7 @@ function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: str
         <CopyButton value={buildFixPrompt(head)} variant="secondary" className="w-fit">
           Copy fix prompt
         </CopyButton>
-      </div>
+      </Inline>
     </>
   );
 }
@@ -218,14 +175,14 @@ function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] 
         <SectionDescription>Recommendations to consider.</SectionDescription>
       </SectionHeader>
       <SectionContent>
-        <IssueRows>
+        <DisclosureList>
           {advisories.map((issue) => (
             <IssueRow key={issue.occurrence_id} issue={issue}>
               <Remediation issue={issue} />
               <IssueEvidence occurrence={issue} />
             </IssueRow>
           ))}
-        </IssueRows>
+        </DisclosureList>
       </SectionContent>
     </Section>
   );
