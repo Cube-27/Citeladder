@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { cursorPageSchema } from './site-health.ts';
+import { cursorPageSchema } from './site-health/pagination.ts';
 import { pageEntitySchema } from './source-pages.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
