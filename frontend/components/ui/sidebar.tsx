@@ -256,14 +256,16 @@ export function sidebarRailButtonClasses(current: boolean) {
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
-    : 'bg-well rounded-control grid h-[var(--nav-row-height)] grid-cols-2 p-0.5';
+    : 'bg-well rounded-control flex h-[var(--nav-row-height)] p-0.5';
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   // The rail's one accent mark is the current destination's; the mode takes the tile only.
   if (rail) return cn(RAIL_BUTTON, current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST);
+  // Each segment is as wide as its label plus 12 a side, and the two share
+  // what is left, so Dashboard's is wider than Agent's; a narrow sidebar cuts the label.
   return cn(
-    'focus-ring type-label relative flex h-full w-full items-center justify-center gap-2 rounded-sm transition-colors [&_svg]:size-4',
+    'focus-ring type-label relative flex h-full min-w-0 flex-auto items-center justify-center gap-2 rounded-sm px-3 transition-colors [&_svg]:size-4',
     current ? 'bg-surface text-ink shadow-card' : AT_REST,
   );
 }
