@@ -12,7 +12,17 @@ import {
   PRICING_RETURN_PATH,
 } from '@/lib/config/billing';
 import { z } from 'zod';
-import { billingCustomerDetailsSchema } from '@/lib/api/billing';
+
+/** Customer evidence the server needs to determine GST/export status; drafts may be empty. */
+export const billingCustomerDetailsSchema = z.object({
+  billing_name: z.string(),
+  billing_address_line1: z.string(),
+  billing_city: z.string(),
+  billing_state_code: z.string(),
+  billing_postal_code: z.string(),
+  customer_gstin: z.string(),
+  export_eligibility_attested: z.boolean(),
+});
 
 export const pendingIntentKindSchema = z.enum(['checkout', 'addon', 'topup']);
 

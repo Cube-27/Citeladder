@@ -18,8 +18,9 @@ import {
   skipToken,
   type QueryClient,
 } from '@tanstack/react-query';
-import { z } from 'zod';
+import type { z } from 'zod';
 
+import type { billingCustomerDetailsSchema } from '@/lib/billing/pending-pricing-intent';
 import { getBootstrapReadTimeoutMs } from '@/lib/config/operational';
 
 import { apiClient, type ApiRequestOptions } from './client';
@@ -51,7 +52,6 @@ export type BillingCatalog = z.infer<typeof billingCatalogSchema>;
 export type CatalogPlan = BillingCatalog['plans'][number];
 export type CatalogAddon = BillingCatalog['addons'][number];
 export type CatalogTopup = BillingCatalog['topups'][number];
-export type CatalogProvider = BillingCatalog['providers'][number];
 export type BillingEntitlement = z.infer<typeof billingEntitlementSchema>;
 export type BillingUsage = z.infer<typeof billingUsageSchema>;
 export type BillingQuote = z.infer<typeof resolvedQuoteSchema>;
@@ -60,16 +60,6 @@ export type WorkspaceEntitlement = z.infer<typeof workspaceEntitlementSchema>;
 export type UsageItem = BillingUsage['items'][number];
 export type { CredentialMode, SelfServePlanKey };
 
-/** Customer evidence required to let the server determine GST/export status. */
-export const billingCustomerDetailsSchema = z.object({
-  billing_name: z.string(),
-  billing_address_line1: z.string(),
-  billing_city: z.string(),
-  billing_state_code: z.string(),
-  billing_postal_code: z.string(),
-  customer_gstin: z.string(),
-  export_eligibility_attested: z.boolean(),
-});
 export type BillingCustomerDetails = z.infer<typeof billingCustomerDetailsSchema>;
 
 export function emptyBillingCustomerDetails(): BillingCustomerDetails {
