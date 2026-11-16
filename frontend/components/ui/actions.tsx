@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { CheckCircle2, Copy, Plus, Rocket, Sparkles } from 'lucide-react';
+import { CheckCircle2, Copy, Plug, Plus, Rocket, Sparkles } from 'lucide-react';
 
 import {
   Button,
@@ -32,7 +32,7 @@ export const ACTIONS = {
   markImplemented: { label: 'Mark implemented', variant: 'secondary', icon: CheckCircle2 },
   runCrawl: { label: 'Run new crawl', variant: 'secondary' },
   connectGoogle: { label: 'Connect Google', variant: 'secondary' },
-  connectCrawlLogs: { label: 'Connect crawl logs', variant: 'secondary' },
+  connectCrawlLogs: { label: 'Connect crawl logs', variant: 'secondary', icon: Plug },
   copy: { label: 'Copy', variant: 'secondary', icon: Copy },
   revoke: { label: 'Revoke', variant: 'danger' },
 } as const satisfies Record<string, ActionPreset>;

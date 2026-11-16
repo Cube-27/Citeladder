@@ -12,6 +12,7 @@ import { TrafficSetupState } from './traffic-setup';
 const project = makeProject({
   id: '88888888-8888-4888-8888-888888888888',
   workspace_id: '11111111-1111-4111-8111-111111111111',
+  website_url: 'https://www.example.test',
 });
 const capability = vi.hoisted(() => ({ manage: true }));
 vi.mock('@/lib/project/project-context', () => ({
@@ -53,27 +54,8 @@ it('says the crawler catalog failed inside the activity table instead of showing
     http.get(root + '/ai-traffic/activity', () =>
       HttpResponse.json({
         items: [
-          {
-            id: '33333333-3333-4333-8333-333333333333',
-            source_id: '44444444-4444-4444-8444-444444444444',
-            batch_id: '55555555-5555-4555-8555-555555555555',
-            occurred_at: '2026-10-01T00:00:00Z',
-            host: 'example.test',
-            display_path: '/guide',
-            identity: 'exact',
-            identity_reason: null,
-            url_hash: null,
-            folder: '/guide',
-            resource_class: 'page',
-            method: 'GET',
-            status_code: 200,
-            bot_id: 'openai_oai_searchbot',
-            catalog_version: '1',
-            verification: 'verified',
-            verification_reason: null,
-            verification_basis: null,
-            ip_range_snapshot_id: null,
-          },
+          activityRow('33333333-3333-4333-8333-333333333333', 'example.test', '/guide'),
+          activityRow('66666666-6666-4666-8666-666666666666', 'cdn.other.test', '/guide'),
         ],
         next_cursor: null,
       }),
@@ -83,6 +65,7 @@ it('says the crawler catalog failed inside the activity table instead of showing
     <TabsRoot value="activity" onValueChange={() => {}}>
       <TrafficActivity {...scope} />
     </TabsRoot>,
+    { projectSelection: { activeProject: project } },
   );
   const table = await screen.findByRole('region', { name: 'Retained automated request activity' });
   // The failure is the table's state, in the table's place.
@@ -106,9 +89,39 @@ it('says the crawler catalog failed inside the activity table instead of showing
     ),
   );
   await view.queryClient.refetchQueries({ predicate: (q) => q.queryKey.includes('catalog') });
-  expect(await within(table).findByRole('cell', { name: 'OAI-SearchBot' })).toBeVisible();
+  expect((await within(table).findAllByRole('cell', { name: 'OAI-SearchBot' }))[0]).toBeVisible();
   expect(within(table).queryByRole('alert')).not.toBeInTheDocument();
+  // The project's own host drops from the path; a foreign host stays printed.
+  const paths = within(table)
+    .getAllByRole('row')
+    .slice(1)
+    .map((row) => within(row).getAllByRole('cell')[2]!.textContent);
+  expect(paths).toEqual(['/guide', 'cdn.other.test/guide']);
 });
+
+function activityRow(id: string, host: string, path: string) {
+  return {
+    id,
+    source_id: '44444444-4444-4444-8444-444444444444',
+    batch_id: '55555555-5555-4555-8555-555555555555',
+    occurred_at: '2026-10-01T00:00:00Z',
+    host,
+    display_path: path,
+    identity: 'exact',
+    identity_reason: null,
+    url_hash: null,
+    folder: '/guide',
+    resource_class: 'page',
+    method: 'GET',
+    status_code: 200,
+    bot_id: 'openai_oai_searchbot',
+    catalog_version: '1',
+    verification: 'verified',
+    verification_reason: null,
+    verification_basis: null,
+    ip_range_snapshot_id: null,
+  };
+}
 
 function serveNoSources(tab: 'crawlers' | 'activity') {
   mswServer.use(
@@ -149,7 +162,7 @@ it.each([
   renderWithProviders(<TrafficSetupState ga4Missing={input.ga4Missing} crawlAvailable />);
   expect(screen.getByRole('heading', { name: input.heading })).toBeVisible();
   // GA4 is connected from Referrals, which sets it up in place.
-  const ga4 = screen.queryByRole('link', { name: 'Connect GA4' });
+  const ga4 = screen.queryByRole('link', { name: 'Connect Google Analytics 4' });
   if (input.ga4Missing) expect(ga4?.getAttribute('href')).toMatch(/tab=referrals/);
   else expect(ga4).toBeNull();
   await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
@@ -175,7 +188,9 @@ it.each(['crawlers', 'activity'] as const)(
       </TabsRoot>
     );
     const user = userEvent.setup();
-    const view = renderWithProviders(table({ range: '30d' }));
+    const view = renderWithProviders(table({ range: '30d' }), {
+      projectSelection: { activeProject: project },
+    });
     expect(await screen.findByText(/No matching requests/)).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Clear filters' })).not.toBeInTheDocument();
     view.rerender(table({ range: '30d', folder: '/blog' }));

@@ -27,47 +27,38 @@ import { FactList } from '@/components/ui/facts';
 type Leg = z.infer<typeof trafficLegSchema>;
 type UrlEvidenceData = z.infer<typeof aiTrafficUrlSchema>;
 
-/** A leg in a table cell: its count, or its absence with why in the tooltip. */
+/**
+ * A leg in a table cell: its count, or its absence word with why in the
+ * tooltip. Partial coverage is the row's Coverage mark, not part of the count.
+ */
 export function TrafficLeg({ leg, unit }: Readonly<{ leg: Leg; unit: string }>) {
   const detail = trafficLegExplanation(leg, unit);
-  if (leg.value === null) return <LegAbsence leg={leg} narrow reason={detail} />;
+  if (leg.value === null) return <LegAbsence leg={leg} reason={detail} />;
   const qualified =
     !['value', 'zero'].includes(leg.state) ||
     Boolean(leg.reason) ||
     Boolean(leg.coverage && leg.coverage !== 'complete');
-  const value = (
-    <>
-      {formatCount(leg.value)}
-      {leg.coverage === 'partial' ? <span className="type-caption block">Partial</span> : null}
-    </>
-  );
   return qualified ? (
     <Tooltip content={detail}>
       <Pressable
         type="button"
-        className="w-auto text-center tabular-nums"
+        className="w-auto text-right tabular-nums"
         aria-label={`${formatCount(leg.value)} ${unit}`}
       >
-        {value}
+        {formatCount(leg.value)}
       </Pressable>
     </Tooltip>
   ) : (
-    <span className="tabular-nums">{value}</span>
+    formatCount(leg.value)
   );
 }
 /** A leg with no value, as the absence it is; an unknown leg keeps its own word. */
-function LegAbsence({
-  leg,
-  narrow,
-  reason,
-}: Readonly<{ leg: Pick<Leg, 'state'>; narrow?: boolean; reason?: string }>) {
-  if (leg.state === 'not_connected')
-    return <Absence state="not_connected" narrow={narrow} reason={reason} />;
+function LegAbsence({ leg, reason }: Readonly<{ leg: Pick<Leg, 'state'>; reason?: string }>) {
+  if (leg.state === 'not_connected') return <Absence state="not_connected" reason={reason} />;
   return (
     <Absence
       state="unavailable"
       label={leg.state === 'unknown' ? 'Unknown' : undefined}
-      narrow={narrow}
       reason={reason}
     />
   );
@@ -76,7 +67,14 @@ export function UrlPanel({
   urlHash,
   onClose,
   filters = {},
-}: Readonly<{ urlHash: string | null; onClose: () => void; filters?: TrafficFilters }>) {
+  fromRow = false,
+}: Readonly<{
+  urlHash: string | null;
+  onClose: () => void;
+  filters?: TrafficFilters;
+  /** Opened from a Pages row, which already shows each count: the drawer leaves them out. */
+  fromRow?: boolean;
+}>) {
   const { workspaceId, projectId } = useProjectScope();
   const query = useQuery(aiTrafficQueries.url({ workspaceId, projectId }, urlHash, filters));
   const catalog = useQuery({
@@ -106,7 +104,9 @@ export function UrlPanel({
           onRetry={() => query.refetch()}
         />
       ) : null}
-      {data ? <UrlEvidence data={data} projectId={projectId} botLabel={botLabel} /> : null}
+      {data ? (
+        <UrlEvidence data={data} projectId={projectId} botLabel={botLabel} fromRow={fromRow} />
+      ) : null}
     </Drawer>
   );
 }
@@ -137,10 +137,12 @@ function UrlEvidence({
   data,
   projectId,
   botLabel,
+  fromRow,
 }: Readonly<{
   data: UrlEvidenceData;
   projectId: string;
   botLabel: (botId: string) => string;
+  fromRow: boolean;
 }>) {
   const page = data.page;
   if (!page)
@@ -187,11 +189,26 @@ function UrlEvidence({
         {formatWindowDate(data.window_start)} – {formatWindowDate(data.window_end)} · Path-level
         identity
       </p>
+      {fromRow ? (
+        <p className={textRole('caption')}>
+          Sources:{' '}
+          {rows.flatMap((row, index) =>
+            row.link
+              ? [
+                  index ? ' · ' : null,
+                  <PanelLink key={row.name} to={row.link.to}>
+                    {row.link.label}
+                  </PanelLink>,
+                ]
+              : [],
+          )}
+        </p>
+      ) : null}
       <FactList
         layout="record"
         label="Page record"
         facts={[
-          ...rows.map((row) => ({
+          ...(fromRow ? [] : rows).map((row) => ({
             key: row.name,
             label: row.name,
             value: row.value,

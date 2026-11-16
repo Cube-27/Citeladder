@@ -7,6 +7,7 @@ import { renderWithProviders } from '@/test/render';
 import { makeProject } from '@/test/fixtures/project';
 import { focusByKeyboard } from '@/test/keyboard-focus';
 import { TrafficPages } from './pages-view';
+import { TrafficUrlButton } from './url-panel';
 
 const WORKSPACE = '11111111-1111-4111-8111-111111111111';
 const PROJECT = '88888888-8888-4888-8888-888888888888';
@@ -107,19 +108,22 @@ it('keeps inventory, zero, partial values and distinct unavailable reasons reada
   const row = await screen.findByRole('row', { name: /long-page/ });
   expect(within(row).getAllByRole('cell', { name: '0' })).toHaveLength(2);
   expect(within(row).getByRole('cell', { name: '1' })).toBeVisible();
+  // A partial count stays a bare number; its coverage is the row's Coverage mark.
   const partial = within(row).getByRole('button', {
     name: '12 citations',
   });
-  expect(partial).toHaveTextContent('12Partial');
-  // A missing value is its absence's kind, with why on focus.
+  expect(partial.textContent).toBe('12');
+  const coverageCell = (cells: HTMLElement[]) => cells[4]!.textContent;
+  expect(coverageCell(within(row).getAllByRole('cell'))).toBe('Partial');
+  // A missing value is its absence's word, with why on focus.
   const missing = within(row).getByRole('button', { name: 'Not connected' });
-  expect(missing).toHaveTextContent('–');
+  expect(missing.textContent).toBe('Not connected');
   focusByKeyboard(missing);
   expect(await screen.findByRole('tooltip')).toHaveTextContent('requests: Not connected');
   await user.keyboard('{Escape}');
-  expect(within(row).getAllByRole('cell').at(-1)).toHaveTextContent('–Unavailable');
+  expect(within(row).getAllByRole('cell').at(-1)?.textContent).toBe('Unavailable');
   const second = screen.getByRole('row', { name: /\/second/ });
-  expect(within(second).getAllByRole('cell').at(-1)).toHaveTextContent('0 / –Unavailable');
+  expect(within(second).getAllByRole('cell').at(-1)?.textContent).toBe('0 / Unavailable');
   expect(screen.getByText(/Crawl coverage unknown · 200 known pages/)).toBeVisible();
 });
 
@@ -221,6 +225,37 @@ it('never shows one workspace’s rows while another workspace’s page loads', 
 
   releaseOther();
   expect(await within(table).findByRole('row', { name: /other-workspace/ })).toBeVisible();
+});
+
+it('lists each count with its qualifiers when the drawer opens from outside the table', async () => {
+  const row = {
+    ...pathRow('guide'),
+    crawl: { state: 'value', value: 3, coverage: 'partial', reason: null },
+  };
+  mswServer.use(
+    http.get(`${PAGES}/${row.url_hash}`, () =>
+      HttpResponse.json({
+        page: row,
+        window_start: '2026-01-01',
+        window_end: '2026-01-28',
+        crawls: [],
+        referrals: [],
+        citations: [],
+        provenance: { crawl_id: null, formula_version: '1', bounded: false },
+      }),
+    ),
+  );
+  const user = userEvent.setup();
+  renderWithProviders(<TrafficUrlButton urlHash={row.url_hash} />, {
+    projectSelection: { activeProject: project },
+  });
+  await user.click(screen.getByRole('button', { name: 'View AI Traffic' }));
+  const panel = await screen.findByRole('dialog', { name: '/guide' });
+  const record = async (name: string) =>
+    (await within(panel).findByText(name, { selector: 'dt' })).nextElementSibling?.textContent;
+  expect(await record('Crawler requests')).toBe('3Partial coverageCrawlers');
+  expect(await record('Tracked citations')).toBe('Not connectedVisibility');
+  expect(within(panel).queryByText(/^Sources:/)).not.toBeInTheDocument();
 });
 
 it('keeps the drawer’s crawler when a path is opened from it', async () => {

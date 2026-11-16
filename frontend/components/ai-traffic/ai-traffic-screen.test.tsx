@@ -519,7 +519,7 @@ describe('AI Traffic state and navigation', () => {
     );
     renderWithProviders(<AiTrafficScreen />, { projectSelection: { activeProject: project } });
     expect(await screen.findByRole('heading', { name: 'Connect a traffic source' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Connect GA4' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Connect Google Analytics 4' })).toBeVisible();
     expect(screen.queryByRole('heading', { name: 'Key figures' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^All filters/ })).not.toBeInTheDocument();
 
@@ -720,18 +720,13 @@ describe('AI Traffic state and navigation', () => {
         window.location.origin,
       ).searchParams.get('project'),
     ).toBe(project.id);
-    // One row per metric: its value or one absence word, then its source; each state once.
+    // Opened from its row, which already shows each count: the drawer names only their sources.
     const record = (name: string) =>
-      within(panel).getByText(name, { selector: 'dt' }).nextElementSibling?.textContent;
-    expect(record('Crawler requests')).toBe(
-      '3Flagged by a data-quality check · Partial coverageCrawlers',
+      within(panel).queryByText(name, { selector: 'dt' })?.nextElementSibling?.textContent;
+    expect(within(panel).getByText(/^Sources:/)).toHaveTextContent(
+      'Sources: Crawlers · Referrals · Visibility · Website',
     );
-    expect(record('AI referral sessions')).toBe('UnavailableReferrals');
-    expect(record('Key events (GA4)')).toBe(
-      '2Flagged by a data-quality check · Partial coverage · A newer GA4 import is still being processed',
-    );
-    expect(record('Tracked citations')).toBe('Not connectedVisibility');
-    expect(record('Open Website findings')).toBe('UnavailableWebsite');
+    expect(record('Crawler requests')).toBeUndefined();
     expect(record('First and last observations')).toBe('None');
     mswServer.use(
       http.get(
@@ -741,7 +736,7 @@ describe('AI Traffic state and navigation', () => {
     );
     await view.queryClient.refetchQueries({ predicate: (q) => q.queryKey.includes('url') });
     await waitFor(() =>
-      expect(within(panel).queryByText('Crawler requests')).not.toBeInTheDocument(),
+      expect(within(panel).queryByText('First and last observations')).not.toBeInTheDocument(),
     );
   }, 20_000);
   it('leads with Referrals and drops crawl-only views when crawl logs are unavailable', async () => {
