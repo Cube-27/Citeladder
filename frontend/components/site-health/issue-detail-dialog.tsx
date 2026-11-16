@@ -167,8 +167,8 @@ export function PendingIssueDrawer({
         <Notice
           kind="read"
           {...readErrorProps(detailQuery)}
-          fallback="Could not load this issue."
-          title="Could not load this issue"
+          fallback="Couldn't load this issue."
+          title="Couldn't load this issue"
         />
       ) : (
         <StateBlock kind="loading" label="Loading the issue…" shape={{ kind: 'list' }} />
@@ -209,8 +209,8 @@ function OccurrenceList({
       <Notice
         kind="read"
         {...readErrorProps(query)}
-        fallback="Could not load affected URLs."
-        title="Could not load affected URLs"
+        fallback="Couldn't load affected URLs."
+        title="Couldn't load affected URLs"
       />
     );
   // The list no longer waits for this read, so "none" and "not yet" are now

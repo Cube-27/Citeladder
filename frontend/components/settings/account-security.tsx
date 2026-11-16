@@ -1,7 +1,14 @@
 import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useQuery, useMutation, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { useForm, useWatch } from 'react-hook-form';
 import { authApi, authQueries } from '@/lib/api/auth';
-import { authFormPolicy, passwordHint } from '@/lib/config/auth';
+import {
+  authErrorMessage,
+  changePasswordFormSchema,
+  type ChangePasswordFormValues,
+} from '@/lib/auth/forms';
+import { passwordHint } from '@/lib/config/auth';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { restartAt } from '@/lib/auth/account-transition';
@@ -72,6 +79,63 @@ function GroupHead({ title, caption }: Readonly<{ title: string; caption: string
   );
 }
 
+/**
+ * Validated in the form, not by the browser's bubble: each failing field says
+ * why under itself and takes focus. A rejected change (a wrong current
+ * password) is said under Current password.
+ */
+function PasswordForm({ form }: Readonly<{ form: ReturnType<typeof usePasswordForm> }>) {
+  const {
+    register,
+    formState: { errors },
+  } = form.fields;
+  return (
+    <form noValidate onSubmit={(event) => void form.submit(event)}>
+      <Stack gap="workspace">
+        <PasswordField
+          label="Current password"
+          autoComplete="current-password"
+          placeholder="Current password"
+          error={errors.current?.message}
+          inputProps={register('current')}
+        />
+        <PasswordField
+          label="New password"
+          autoComplete="new-password"
+          placeholder={passwordHint}
+          error={errors.password?.message}
+          inputProps={register('password')}
+        />
+        <Inline className="flex-wrap">
+          <Button type="submit" variant="primary" disabled={form.change.isPending}>
+            Change password and sign out
+          </Button>
+        </Inline>
+      </Stack>
+    </form>
+  );
+}
+
+function usePasswordForm() {
+  const client = useQueryClient();
+  const fields = useForm<ChangePasswordFormValues>({
+    resolver: zodResolver(changePasswordFormSchema),
+    defaultValues: { current: '', password: '' },
+  });
+  const change = useMutation({
+    mutationFn: (values: ChangePasswordFormValues) =>
+      authApi.mailbox('change-password', {
+        current_password: values.current,
+        password: values.password,
+      }),
+    onSuccess: () => restartAt(client, '/login'),
+    onError: (error) =>
+      fields.setError('current', { message: authErrorMessage(error) }, { shouldFocus: true }),
+  });
+  const submit = fields.handleSubmit((values) => change.mutate(values));
+  return { fields, change, submit };
+}
+
 /** One danger alert per failed request, keyed by the request's name. */
 function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Error | null>> }>) {
   return Object.entries(errors).map(([name, error]) =>
@@ -90,18 +154,15 @@ function ErrorAlerts({ errors }: Readonly<{ errors: Readonly<Record<string, Erro
  * sections. Place it inside `SectionStack`.
  */
 export default function AccountSecurity() {
-  const [current, setCurrent] = useState('');
-  const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState<'sign-out' | 'disconnect' | null>(null);
   const client = useQueryClient();
   const security = useQuery(authQueries.security());
+  const passwordForm = usePasswordForm();
+  const current = useWatch({ control: passwordForm.fields.control, name: 'current' });
   const mutation = useMutation({
-    // All end every session, this device's included (a sign-out is always everywhere).
-    mutationFn: async (operation: 'change-password' | 'sign-out' | 'disconnect') => {
-      if (operation === 'sign-out') return authApi.logout();
-      if (operation === 'disconnect') return authApi.logoutAndDisconnect();
-      await authApi.mailbox(operation, { current_password: current, password });
-    },
+    // Both end every session, this device's included (a sign-out is always everywhere).
+    mutationFn: (operation: 'sign-out' | 'disconnect') =>
+      operation === 'sign-out' ? authApi.logout() : authApi.logoutAndDisconnect(),
     onSuccess: () => restartAt(client, '/login'),
   });
   const setup = useMutation({
@@ -121,59 +182,26 @@ export default function AccountSecurity() {
           <SectionTitle id="settings-sign-in-title">Sign-in</SectionTitle>
           <SectionDescription>How you sign in to CiteLadder.</SectionDescription>
         </SectionHeader>
-        <Stack gap="item">
+        <Stack gap="section">
           <SignInMethods security={security} />
-          <GroupHead title="Password" caption="Changing it signs you out everywhere." />
-          {hasPassword ? (
-            <Stack
-              as="form"
-              gap="workspace"
-              onSubmit={(event) => {
-                event.preventDefault();
-                mutation.mutate('change-password');
-              }}
-            >
-              <PasswordField
-                label="Current password"
-                autoComplete="current-password"
-                placeholder="Current password"
-                inputProps={{
-                  value: current,
-                  onChange: (event) => setCurrent(event.target.value),
-                  required: true,
-                }}
-              />
-              <PasswordField
-                label="New password"
-                autoComplete="new-password"
-                placeholder={passwordHint}
-                inputProps={{
-                  value: password,
-                  onChange: (event) => setPassword(event.target.value),
-                  required: true,
-                  minLength: authFormPolicy.passwordMinLength,
-                  maxLength: authFormPolicy.passwordMaxLength,
-                }}
-              />
-              <Inline className="flex-wrap">
-                <Button type="submit" variant="primary" disabled={mutation.isPending}>
-                  Change password and sign out
+          <Stack gap="workspace">
+            <GroupHead title="Password" caption="Changing it signs you out everywhere." />
+            {hasPassword ? (
+              <PasswordForm form={passwordForm} />
+            ) : (
+              <Inline>
+                <Button
+                  variant="secondary"
+                  disabled={!security.data || setup.isPending}
+                  onClick={() => setup.mutate()}
+                >
+                  Email password setup link
                 </Button>
               </Inline>
-            </Stack>
-          ) : (
-            <Inline>
-              <Button
-                variant="secondary"
-                disabled={!security.data || setup.isPending}
-                onClick={() => setup.mutate()}
-              >
-                Email password setup link
-              </Button>
-            </Inline>
-          )}
+            )}
+          </Stack>
           {canLinkGoogle ? (
-            <>
+            <Stack gap="workspace">
               <GroupHead
                 title="Google sign-in"
                 caption="Enter your current password above, then connect Google."
@@ -186,7 +214,7 @@ export default function AccountSecurity() {
                   onClick={() => link.mutate()}
                 />
               </Inline>
-            </>
+            </Stack>
           ) : null}
           {setup.isSuccess && <Notice tone="info">{setup.data.message}</Notice>}
           <ErrorAlerts errors={{ setup: setup.error, session: mutation.error, link: link.error }} />

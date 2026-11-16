@@ -339,7 +339,7 @@ function AnalysisStrip({
     >
       {selectedError ? (
         <Notice tone="warning">
-          Could not load the monitored-page count — progress totals may be approximate until it
+          Couldn&apos;t load the monitored-page count — progress totals may be approximate until it
           refreshes.
         </Notice>
       ) : null}

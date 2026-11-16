@@ -54,8 +54,8 @@ export function IssueFixActions({
       <Notice
         kind="read"
         {...readErrorProps(query)}
-        fallback="Could not load how many pages are fixed."
-        title="Could not load how many pages are fixed"
+        fallback="Couldn't load how many pages are fixed."
+        title="Couldn't load how many pages are fixed"
       />
     );
   const progress = query.data?.items.find((item) => item.group_id === groupId);

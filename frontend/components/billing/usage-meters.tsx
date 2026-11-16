@@ -94,7 +94,7 @@ function UsageBody({ query }: Readonly<{ query: UsageRead }>) {
         kind="read"
         title="Couldn't load usage"
         {...readErrorProps(query)}
-        fallback="Could not load usage. Check your connection and retry."
+        fallback="Couldn't load usage. Check your connection and retry."
       />
     );
   }

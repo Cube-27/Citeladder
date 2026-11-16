@@ -95,8 +95,8 @@ export function UrlDetail({
         <StateBlock
           kind="error"
           {...readErrorProps(detailQuery)}
-          fallback="Could not load this page. It may not exist in this crawl."
-          title="Could not load this page"
+          fallback="Couldn't load this page. It may not exist in this crawl."
+          title="Couldn't load this page"
         />
       </RecordPage>
     );

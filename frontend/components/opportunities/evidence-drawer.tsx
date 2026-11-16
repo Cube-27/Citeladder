@@ -50,8 +50,8 @@ export function EvidenceDrawer({
       <Notice
         kind="read"
         {...readErrorProps(detailQuery)}
-        fallback="Could not load this opportunity."
-        title="Could not load this opportunity"
+        fallback="Couldn't load this opportunity."
+        title="Couldn't load this opportunity"
       />
     );
   } else if (detailQuery.data && !detail) {

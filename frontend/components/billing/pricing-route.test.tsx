@@ -98,13 +98,25 @@ const scaleSubscription = {
 
 describe('app pricing continuation', () => {
   it.each([
-    [null, 'Test Workspace has no plan yet. Compare plans on the public pricing page.'],
-    [scaleSubscription, 'Test Workspace is on Scale. Compare plans on the public pricing page.'],
+    [
+      null,
+      'Choose a plan',
+      'Test Workspace has no plan yet. Compare plans on the public pricing page.',
+    ],
+    [
+      scaleSubscription,
+      'Change plan',
+      'Test Workspace is on Scale. Compare plans on the public pricing page.',
+    ],
     // An ended plan is neither the current plan nor "no plan yet".
-    [{ ...scaleSubscription, status: 'expired' }, 'Compare plans on the public pricing page.'],
+    [
+      { ...scaleSubscription, status: 'expired' },
+      'Choose a plan',
+      'Compare plans on the public pricing page.',
+    ],
   ])(
     'names the current plan and offers public pricing once when nothing is chosen (%#)',
-    async (subscription, sentence) => {
+    async (subscription, heading, sentence) => {
       const scaleCatalog = {
         ...catalog,
         plans: [{ ...PLAN, key: 'tier_3', name: 'Scale' }],
@@ -115,8 +127,8 @@ describe('app pricing continuation', () => {
         http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
       );
       renderWithProviders(<PricingRoute />);
-      expect(await screen.findByRole('heading', { name: 'Choose a plan' })).toBeVisible();
       expect(await screen.findByText(sentence)).toBeVisible();
+      expect(screen.getByRole('heading', { name: heading })).toBeVisible();
       expect(screen.getAllByRole('link', { name: 'View public pricing' })).toHaveLength(1);
       expect(screen.queryByText(/^Workspace:/u)).toBeNull();
     },

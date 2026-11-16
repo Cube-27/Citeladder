@@ -277,7 +277,7 @@ export function performanceNotices({
     messages.push({
       key: 'readiness',
       tone: 'warning',
-      text: 'Could not load data readiness. Check your connection and try again.',
+      text: "Couldn't load data readiness. Check your connection and try again.",
     });
   if (sync.outcome === 'failed')
     messages.push({

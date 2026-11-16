@@ -36,6 +36,21 @@ export const registerFormSchema = z
     path: ['confirmPassword'],
   });
 
+export const changePasswordFormSchema = z.object({
+  current: z.string().min(1, 'Enter your current password.'),
+  password: z
+    .string()
+    .min(
+      authFormPolicy.passwordMinLength,
+      `Use at least ${authFormPolicy.passwordMinLength} characters.`,
+    )
+    .max(
+      authFormPolicy.passwordMaxLength,
+      `Use at most ${authFormPolicy.passwordMaxLength} characters.`,
+    ),
+});
+
+export type ChangePasswordFormValues = z.infer<typeof changePasswordFormSchema>;
 export type LoginFormValues = z.infer<typeof loginFormSchema>;
 export type RegisterFormValues = z.infer<typeof registerFormSchema>;
 

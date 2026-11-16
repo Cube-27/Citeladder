@@ -406,7 +406,7 @@ function PricingState({
         <StateBlock
           kind="empty"
           headingLevel={2}
-          heading="Choose a plan"
+          heading={currentPlan.kind === 'plan' ? 'Change plan' : 'Choose a plan'}
           description={`${currentPlanSentence(workspaceName, currentPlan)}Compare plans on the public pricing page.`}
           action={
             <Button asChild>

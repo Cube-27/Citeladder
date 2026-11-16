@@ -188,6 +188,7 @@ describe('AI Traffic state and navigation', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
+    await screen.findByRole('heading', { name: 'No crawl logs connected' });
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
     await user.click(await screen.findByRole('radio', { name: /Upload file/ }));
     expect(screen.getByText(/First, create an upload source/)).toBeVisible();
@@ -243,6 +244,7 @@ describe('AI Traffic state and navigation', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
+    await screen.findByRole('heading', { name: 'No crawl logs connected' });
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     await user.click(within(dialog).getByRole('radio', { name: /Amazon CloudFront/ }));
@@ -318,6 +320,7 @@ describe('AI Traffic state and navigation', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
+    await screen.findByRole('heading', { name: 'No crawl logs connected' });
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     await user.click(within(dialog).getByRole('radio', { name: /Google Cloud/ }));
@@ -360,6 +363,7 @@ describe('AI Traffic state and navigation', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
+    await screen.findByRole('heading', { name: 'No crawl logs connected' });
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     const option = await within(dialog).findByRole('radio', { name: /Google Cloud/ });
@@ -449,6 +453,7 @@ describe('AI Traffic state and navigation', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<CrawlLogConnections />);
+    await screen.findByRole('heading', { name: 'No crawl logs connected' });
     await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     const create = within(dialog).getByRole('button', { name: 'Create source' });

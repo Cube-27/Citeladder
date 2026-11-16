@@ -38,7 +38,7 @@ export function WorkspaceSetup() {
           kind="error"
           error={failure}
           title="Couldn't load workspace setup"
-          fallback="We could not load workspace setup."
+          fallback="Couldn't load workspace setup."
           onRetry={() => (terms.error ? void terms.refetch() : leave.mutate())}
           pending={terms.isFetching || leave.isPending}
         />

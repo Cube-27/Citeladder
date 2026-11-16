@@ -30,8 +30,8 @@ type NoticeContent = Readonly<{
   heading: string;
   /** A glyph for this notice in place of its tone's (not found: a search). */
   icon?: LucideIcon;
-  /** The card's label, in place of the tone's word ("Not found"). */
-  label?: string;
+  /** The card's label in place of the tone's word; `null` for none (not found). */
+  label?: string | null;
   /** The sentence: what happened and, when the reader can fix it, the one next step. */
   children?: ReactNode;
   /** The ways forward, primary first. */
@@ -64,7 +64,7 @@ function NoticeBlock({
       data-notice-tone={tone}
       className="bg-surface border-rule rounded-card shadow-card flex w-full flex-col gap-4 border p-[var(--page-top-gap)]"
     >
-      <p className={textRole('captionStrong')}>{label ?? word}</p>
+      {label === null ? null : <p className={textRole('captionStrong')}>{label ?? word}</p>}
       <div className="flex flex-col gap-2">
         {heading ? (
           <div className="flex items-start gap-2">

@@ -70,7 +70,7 @@ export function ChatScreen() {
         }
         failed={
           <ThreadPage title={query.data.chat.title}>
-            <IslandUnavailable message="The page workspace could not load. Reload the page to try again." />
+            <IslandUnavailable message="Couldn't load the page workspace. Reload the page to try again." />
           </ThreadPage>
         }
       >

@@ -292,7 +292,7 @@ function PlanOffers({
           kind="error"
           title="Couldn't load plans"
           {...readErrorProps(catalogRead)}
-          fallback="Could not load the plan catalog."
+          fallback="Couldn't load the plan catalog."
         />
       </Section>
     );
