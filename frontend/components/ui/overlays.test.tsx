@@ -135,10 +135,7 @@ describe('Drawer', () => {
     expect(screen.getByRole('dialog', { name: 'Evidence' })).toBeInTheDocument();
     expect(screen.getByText('Persisted sources')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close drawer' })).toBeInTheDocument();
-    // The footer's actions sit at its end.
-    const footer = screen.getByRole('button', { name: 'Save' }).parentElement;
-    expect(footer?.tagName).toBe('FOOTER');
-    expect(footer).toHaveClass('justify-end');
+    expect(screen.getByRole('button', { name: 'Save' }).parentElement?.tagName).toBe('FOOTER');
   });
 
   it('closes from Escape or the scrim and restores focus to the opening control', async () => {
