@@ -301,56 +301,59 @@ export function TreeItemForm({
   );
 }
 
-/** A card's list of `ItemRow`s, which lay out by its width rather than the window's. */
+/**
+ * A card's list of `ItemRow`s, which lay out by its width rather than the
+ * window's. It bleeds to the card's edges, so the hairlines span the card and
+ * each row's own padding lines its text up with the card head.
+ */
 export function ItemList({ children }: Readonly<{ children: ReactNode }>) {
-  return <ul className="divide-rule @container divide-y">{children}</ul>;
+  return <ul className="divide-rule @container -mx-[var(--card-padding)] divide-y">{children}</ul>;
 }
 
 /**
  * A two-line item in a list its card frames (a data source and its
- * property): a tile, the title over one caption line, the item's state, then
- * its actions. At least 56 tall, 12 down, a hairline between items. Below a
- * 640px list the state and actions drop under the text, left-aligned.
+ * property), one grid: a 20px icon, the text column (the title, which wraps
+ * and never cuts, over one caption line), the item's status, then its
+ * actions; 12 down, 16 across, 12 between parts. Below a 640px list the
+ * actions wrap to a third line under the text, left-aligned with it.
  */
 export function ItemRow({
-  media,
+  icon,
   title,
-  meta,
-  state,
+  caption,
+  status,
   actions,
   ...props
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'li'>, 'className' | 'children' | 'title'> & {
-    media: ReactNode;
+    icon: ReactNode;
     title: ReactNode;
-    meta: ReactNode;
-    state: ReactNode;
+    caption: ReactNode;
+    status: ReactNode;
     actions: ReactNode;
   }
 >) {
   return (
     <li
       {...props}
-      className="flex min-h-14 flex-col gap-2 py-3 @[640px]:flex-row @[640px]:items-center @[640px]:gap-3"
+      className="grid grid-cols-[20px_minmax(0,1fr)_fit-content(40%)] items-center gap-3 px-[var(--card-padding)] py-3 @[640px]:grid-cols-[20px_minmax(0,1fr)_fit-content(40%)_auto]"
     >
-      <div className="flex min-w-0 items-center gap-3 @[640px]:flex-[1_1_16rem]">
-        {media}
-        <div className="grid min-w-0">
-          <p className={textRole('label', 'text-ink truncate')}>{title}</p>
-          <div className={textRole('caption', 'text-ink-2 flex min-w-0 flex-wrap gap-x-1')}>
-            {meta}
-          </div>
+      <span className="flex size-5 items-center justify-center self-start">{icon}</span>
+      <div className="grid min-w-0 gap-0.5">
+        <p className={textRole('label', 'text-ink')}>{title}</p>
+        <div
+          data-item-caption=""
+          className={textRole('caption', 'text-ink-2 flex min-w-0 items-baseline gap-1')}
+        >
+          {caption}
         </div>
       </div>
-      <div
-        className={textRole(
-          'caption',
-          'text-ink-2 flex min-w-0 items-center gap-2 @[640px]:max-w-[40%]',
-        )}
-      >
-        {state}
+      <div className={textRole('caption', 'text-ink-2 flex min-w-0 items-center gap-2')}>
+        {status}
       </div>
-      <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+      <div className="col-[2/-1] flex flex-wrap items-center gap-2 @[640px]:col-auto">
+        {actions}
+      </div>
     </li>
   );
 }

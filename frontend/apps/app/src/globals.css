@@ -1686,13 +1686,10 @@ a.focus-ring:active .type-caption {
    (Stack, PageSections, SectionStack, AppGrid) names its gap in
    `data-rhythm-gap`, so the section adds only the difference. */
 @layer components {
-  /* Settings (3.4): one card per group across the column. At every width the
-     card's head sits on top and the body below it at full card width; each
-     body block (a field column) stops at 640. Tables, and meters or plan
-     grids marked `data-settings-wide`, take the card's full width. */
-  [data-settings-sections]
-    .surface-section:not(.surface-section .surface-section)
-    > :not(header:first-child, [data-settings-wide], :has([data-data-table-frame])) {
+  /* Settings (3.4): one card per group across the column, its head on top
+     and every block (lists, tables, notices, button rows) at full card
+     width. Only a form field (text input, textarea, select) stops at 640. */
+  [data-settings-sections] .surface-section [data-form-field] {
     max-width: var(--container-form);
   }
   .surface-section {

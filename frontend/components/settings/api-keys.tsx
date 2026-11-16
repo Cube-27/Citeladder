@@ -35,6 +35,7 @@ import { useProjectContext } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
+import { StatusMark } from '@/components/ui/status-mark';
 import { TextLink } from '@/components/ui/text-link';
 
 const API_BASE_URL = `${API_HOST_ORIGIN}/v1`;
@@ -49,11 +50,29 @@ const SCOPES: readonly { value: ApiKeyScope; label: string }[] = [
   { value: 'actions:write', label: 'Update actions and record implementations' },
 ];
 
-const STATE_LABELS: Record<ApiKey['state'], string> = {
-  active: 'Active',
-  expired: 'Expired',
-  revoked: 'Revoked',
-};
+/** A key's state as its one status mark: Active positive, Expired warning, Revoked neutral. */
+function KeyStateMark({ state }: Readonly<{ state: ApiKey['state'] }>) {
+  switch (state) {
+    case 'active':
+      return (
+        <StatusMark variant="status" value="success">
+          Active
+        </StatusMark>
+      );
+    case 'expired':
+      return (
+        <StatusMark variant="status" value="warning">
+          Expired
+        </StatusMark>
+      );
+    case 'revoked':
+      return <StatusMark>Revoked</StatusMark>;
+    default: {
+      const unreachable: never = state;
+      return unreachable;
+    }
+  }
+}
 
 function KeyRow({
   apiKey,
@@ -76,7 +95,7 @@ function KeyRow({
             {apiKey.name}
           </ClampText>
           <ClampText lines={1} className={textRole('caption')}>
-            <code>{apiKey.prefix}…</code> · {STATE_LABELS[apiKey.state]} ·{' '}
+            <code>{apiKey.prefix}…</code> ·{' '}
             {apiKey.created_by_email ? `Created by ${apiKey.created_by_email} · ` : null}
             Created <DisplayTime value={apiKey.created_at} dateOnly />
             {apiKey.expires_at ? (
@@ -87,6 +106,9 @@ function KeyRow({
             ) : null}
           </ClampText>
         </div>
+      </TableCell>
+      <TableCell>
+        <KeyStateMark state={apiKey.state} />
       </TableCell>
       <TableCell>
         <ClampText>{apiKey.scopes.join(', ')}</ClampText>
@@ -108,6 +130,7 @@ function KeyRow({
 
 const KEY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'key', label: 'Key', kind: 'identity' },
+  { key: 'status', label: 'Status', kind: 'status' },
   { key: 'scopes', label: 'Access', kind: 'text', width: 'name' },
   { key: 'projects', label: 'Projects', kind: 'text', width: 'status' },
   { key: 'used', label: 'Last used', kind: 'date' },

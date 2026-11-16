@@ -1,51 +1,51 @@
-import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
+import { StateBlock } from '@/components/ui/state-block';
+import { ICONS } from '@/lib/icons';
 import { integrationsApi } from '@/lib/api/integrations';
 import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
- * Settings → Integrations when the workspace has no connections yet. It is the
- * same card shape as the Crawl logs card below it — title left, connect
- * actions right — so the page's buttons share one column.
+ * Settings → Integrations when the workspace has no connections yet: the
+ * page's empty state, Connect Google its main action and Connect Bing the
+ * supporting one.
  *
- * Both CTAs are full-page navigations to the same-origin OAuth start
- * endpoints (302s — never apiClient fetches): one Google consent links Search
- * Console + Analytics 4 on a shared grant; Bing needs its own consent because
- * a Google token cannot authorize Bing Webmaster Tools (the Bing account
- * itself may still have been created with a Google ID).
+ * Both are full-page navigations to the same-origin OAuth start endpoints
+ * (302s — never apiClient fetches): one Google consent links Search Console +
+ * Analytics 4 on a shared grant; Bing needs its own consent because a Google
+ * token cannot authorize Bing Webmaster Tools (the Bing account itself may
+ * still have been created with a Google ID).
  */
 export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: string }>) {
   // Connecting is a credential action, offered only to a role that may take it.
   const canManage = useWorkspaceCapability('manage_credentials');
   return (
-    <Section data-testid="integrations-empty-state">
-      <SectionHeader
-        actions={
-          canManage ? (
-            <>
-              <Button
-                variant="secondary"
-                onClick={() => hardNavigate(integrationsApi.oauthStartUrl('bing', workspaceId))}
-              >
-                Connect Bing
-              </Button>
-              <ActionButton
-                action="connectGoogle"
-                onClick={() => hardNavigate(integrationsApi.oauthStartUrl('gsc', workspaceId))}
-              />
-            </>
-          ) : undefined
-        }
-      >
-        <SectionTitle>No integrations connected</SectionTitle>
-        <SectionDescription>
-          {canManage
-            ? 'One Google consent connects Search Console and Analytics 4. Bing Webmaster Tools needs its own sign-in.'
-            : 'A workspace Owner or Admin can connect Google Search Console, Analytics 4 and Bing Webmaster Tools.'}
-        </SectionDescription>
-      </SectionHeader>
-    </Section>
+    <StateBlock
+      kind="empty"
+      icon={ICONS.connect}
+      heading="No integrations connected"
+      description={
+        canManage
+          ? 'One Google consent connects Search Console and Analytics 4. Bing Webmaster Tools needs its own sign-in.'
+          : 'A workspace Owner or Admin can connect Google Search Console, Analytics 4 and Bing Webmaster Tools.'
+      }
+      action={
+        canManage ? (
+          <>
+            <Button onClick={() => hardNavigate(integrationsApi.oauthStartUrl('gsc', workspaceId))}>
+              Connect Google
+            </Button>
+            <Button
+              variant="quiet"
+              onClick={() => hardNavigate(integrationsApi.oauthStartUrl('bing', workspaceId))}
+            >
+              <Icon icon={ICONS.connect} />
+              Connect Bing
+            </Button>
+          </>
+        ) : undefined
+      }
+    />
   );
 }

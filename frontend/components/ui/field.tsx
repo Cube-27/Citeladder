@@ -42,7 +42,10 @@ export function Field({
   const message = error ?? hint;
 
   return (
-    <div className={cn('flex min-w-0 flex-col gap-1 [[data-public-surface]_&]:gap-2', className)}>
+    <div
+      data-form-field=""
+      className={cn('flex min-w-0 flex-col gap-1 [[data-public-surface]_&]:gap-2', className)}
+    >
       <label htmlFor={id} className="type-label [[data-public-surface]_&]:font-normal">
         {label}
         {/* Seen only: the control itself tells assistive tech it is required. */}

@@ -257,6 +257,42 @@ describe('IntegrationSettings — grant cards', () => {
     );
   });
 
+  it('gives a long property id and the sync date their own cut boxes, never one', async () => {
+    const longRef = `sc-domain:${'a'.repeat(100)}.example.com`.padEnd(120, 'x');
+    const longGsc = connection({ account_ref: longRef });
+    mockList([longGsc]);
+    mswServer.use(
+      http.get('/api/v1/integrations/:connectionId/mappings', () =>
+        HttpResponse.json([
+          {
+            id: MAPPING_ID,
+            workspace_id: WS,
+            connection_id: CONN_GSC,
+            provider: 'gsc',
+            property_ref: longRef,
+            project_id: activeProject.id,
+            status: 'active',
+            created_at: '2026-07-20T00:00:00Z',
+            updated_at: '2026-07-20T00:00:00Z',
+          },
+        ]),
+      ),
+    );
+    renderSettings();
+
+    const row = await screen.findByTestId('connection-row-gsc');
+    const property = await within(row).findByText(longRef);
+    const synced = within(row).getByText(/^Last synced/);
+    // Two sibling boxes, each cut on its own: neither holds the other's text.
+    expect(property).not.toContainElement(synced);
+    expect(synced).not.toContainElement(property);
+    expect(property.parentElement).toBe(synced.parentElement);
+    expect(property).toHaveClass('truncate');
+    expect(synced).toHaveClass('truncate');
+    // The source name is never cut.
+    expect(within(row).getByText('Google Search Console')).not.toHaveClass('truncate');
+  });
+
   it('Reconnect hard-navigates to the family OAuth start endpoint', async () => {
     const ue = userEvent.setup();
     mockList([gscConnection, ga4Connection, bingConnection]);

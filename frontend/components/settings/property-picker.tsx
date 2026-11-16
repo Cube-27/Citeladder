@@ -15,7 +15,8 @@ import {
 } from '@/lib/api/integrations';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
-import { InlineFigure, textRole } from '@/components/ui/typography';
+import { ClampText } from '@/components/ui/clamp-text';
+import { textRole } from '@/components/ui/typography';
 import { activeMappingFor, ownPropertiesFirst } from '@/components/integrations/data-sources';
 import { PROVIDER_META } from '@/components/settings/grant-model';
 import { Notice } from '@/components/ui/notice';
@@ -141,19 +142,14 @@ export function SelectedPropertyMark({
   if (mappings.isPending) return null;
   if (mappings.isError) return <Absence state="unavailable" label="Property unavailable" />;
   const selected = activeMappingFor(mappings.data, activeProject?.id ?? null)?.property_ref ?? '';
-  const provider = connection.provider;
   if (!selected)
     return (
       <StatusMark variant="status" value="warning">
         No property selected
       </StatusMark>
     );
-  // A GA4 property is a number; a Search Console property is a site.
-  return (
-    <span className={textRole('body', 'min-w-0 truncate')} title={selected}>
-      {provider === 'ga4' ? <InlineFigure>{selected}</InlineFigure> : selected}
-    </span>
-  );
+  // An id in the code face, cut to its share of the caption with the whole in a tooltip.
+  return <ClampText className={textRole('code', 'text-ink-2')}>{selected}</ClampText>;
 }
 
 /**
