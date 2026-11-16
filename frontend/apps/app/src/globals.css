@@ -2321,8 +2321,10 @@ label {
 
 /* Every body row tints on hover as one piece: the tint is on the cells, so
    the pinned first cell's opaque fill takes it too. Blank filler rows and a
-   state row do not answer the pointer. */
-:root:not([data-public-surface]) .table-frame tbody > tr:not([data-table-state], [aria-hidden='true']):hover > * {
+   state row do not answer the pointer. A soft-edged field (`SOFT_FIELD_EDGE`)
+   takes the same tint. */
+:root:not([data-public-surface]) .table-frame tbody > tr:not([data-table-state], [aria-hidden='true']):hover > *,
+:root:not([data-public-surface]) .soft-field:hover {
   background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
 }
 :root:not([data-public-surface]) .table-frame tbody > tr[aria-selected='true'] > * {
