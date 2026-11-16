@@ -6,12 +6,18 @@ import { ChevronDown, MessagesSquare, RefreshCw } from 'lucide-react';
 import { RailFlyout } from '@/components/layout/sidebar-rail';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { HistoryList, HistoryNotice, HistoryRow, HistoryRows } from '@/components/ui/history-list';
+import {
+  HistoryFailed,
+  HistoryList,
+  HistoryNotice,
+  HistoryRow,
+  HistoryRows,
+} from '@/components/ui/history-list';
 import { MenuItem, MenuLinkItem } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { RailFlyoutSlot } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
-import { InlineFigure, textRole } from '@/components/ui/typography';
+import { InlineFigure } from '@/components/ui/typography';
 import { CHAT_ORIGIN_LABELS } from '@/lib/agent/handoff';
 import { agentQueries, type AgentChatSummary } from '@/lib/api/agent';
 import { AGENT_CHAT_LIST_POLL_MS, AGENT_CHAT_SEARCH_DEBOUNCE_MS } from '@/lib/config/agent';
@@ -69,16 +75,18 @@ function chatListNotice(list: ChatList): string | null {
 
 const LOAD_FAILED = "Couldn't load chats.";
 
-/** A failed read of the list, on the rows' 12px inset, with Retry for that read. */
+/** A failed read of the list, with Retry for that read. */
 function ChatListError({ onRetry }: Readonly<{ onRetry: () => void }>) {
   return (
-    <div className="flex min-w-0 items-center justify-between gap-2 ps-3">
-      <p className={textRole('body', 'text-ink-2 min-w-0')}>{LOAD_FAILED}</p>
-      <Button variant="quiet" onClick={onRetry}>
-        <Icon icon={RefreshCw} />
-        Retry
-      </Button>
-    </div>
+    <HistoryFailed
+      message={LOAD_FAILED}
+      retry={
+        <Button variant="quiet" onClick={onRetry}>
+          <Icon icon={RefreshCw} />
+          Retry
+        </Button>
+      }
+    />
   );
 }
 

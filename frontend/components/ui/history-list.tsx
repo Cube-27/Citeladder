@@ -24,9 +24,19 @@ export function HistoryList({
   );
 }
 
-/** A sentence standing in for the rows (none yet, none match, a failed read). */
+/** A sentence standing in for the rows (none yet, none match). */
 export function HistoryNotice({ children }: Readonly<{ children: ReactNode }>) {
   return <p className={textRole('caption')}>{children}</p>;
+}
+
+/** A failed read of the list: its sentence on the rows' 12px inset, then its Retry. */
+export function HistoryFailed({ message, retry }: Readonly<{ message: string; retry: ReactNode }>) {
+  return (
+    <div className="flex min-w-0 items-center justify-between gap-2 ps-3">
+      <p className={textRole('body', 'text-ink-2 min-w-0')}>{message}</p>
+      {retry}
+    </div>
+  );
 }
 
 export function HistoryRows({ label, children }: Readonly<{ label: string; children: ReactNode }>) {

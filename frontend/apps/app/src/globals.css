@@ -747,7 +747,7 @@
   --table-row-height: 36px;
 
   /* Anatomy (2.3): masthead 56, page tabs 40, then 24 to the first content,
-     or 24 to the filter row and 12 from it to the first card; sidebar 224 from 1280, 200 from 900, a 56 rail of 40px
+     or 24 to the filter row and 12 from it to the first card (`PageFrame`); sidebar 224 from 1280, 200 from 900, a 56 rail of 40px
      buttons when collapsed. Content fills the main column inside a 24 gutter
      (16 below 900). The current navigation item sits on a 7% ink tile (2.8). */
   --masthead-height: 56px;
@@ -780,8 +780,6 @@
   --modal-padding: 16px;
   --workspace-gap: 16px;
   --page-top-gap: 24px;
-  /* From the filter row to the card it filters (24 above the row, `PageFrame`). */
-  --filter-row-gap: 12px;
   --page-section-gap: 32px;
   --flow-gap: 48px;
 }
@@ -1762,34 +1760,21 @@ a.focus-ring:active .type-caption {
 /* One primary per view (STA-03): an empty state on the page that offers an
    action draws its main (secondary) button with the ink fill, and the
    masthead's primary takes the secondary face while it shows (StateBlock,
-   MastheadPrimary). Disabled buttons keep the one disabled look below. */
-:root:not([data-public-surface])
-  [data-state-offer]
-  [data-state-actions]
-  [data-button-variant='secondary']:not(:disabled, [aria-disabled='true']) {
+   MastheadPrimary). Both attributes are app-only; the disabled rule below
+   outranks these, so a disabled button keeps the one disabled look. */
+[data-state-offer] [data-state-actions] [data-button-variant='secondary'] {
   background-color: var(--color-ink);
   border-color: var(--color-ink);
   box-shadow: none;
   color: var(--color-on-ink);
 }
-:root:not([data-public-surface])
-  [data-state-offer]
-  [data-state-actions]
-  [data-button-variant='secondary']:not(:disabled, [aria-disabled='true']):hover {
-  background-color: var(--color-ink-hover);
-  background-image: none;
-}
-:root:not([data-public-surface])
-  [data-masthead-demoted]
-  [data-button-variant='primary']:not(:disabled, [aria-disabled='true']) {
+[data-masthead-demoted] [data-button-variant] {
   background-color: var(--color-surface);
   border-color: var(--color-control-edge);
   box-shadow: var(--shadow-control);
   color: var(--color-ink);
 }
-:root:not([data-public-surface])
-  [data-masthead-demoted]
-  [data-button-variant='primary']:not(:disabled, [aria-disabled='true']):is(:hover, [data-state='open']) {
+[data-masthead-demoted] [data-button-variant]:hover {
   background-image: linear-gradient(var(--color-state-hover), var(--color-state-hover));
 }
 

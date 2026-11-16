@@ -92,7 +92,7 @@ export function PageFrame({
           data-page-body=""
           className={cn(
             'flex min-w-0 flex-1 flex-col',
-            filters ? 'pt-[var(--filter-row-gap)]' : 'pt-[var(--page-top-gap)]',
+            filters ? 'pt-3' : 'pt-[var(--page-top-gap)]',
           )}
         >
           {children}
