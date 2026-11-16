@@ -76,29 +76,50 @@ export async function actionUrlsPage(
       'site_urls.id as site_url_id',
       'site_urls.normalized_url as url',
       pageKindOf.as('page_kind'),
-      sql<number>`(select count(*)::int from action_urls touching
-        join actions on actions.workspace_id = touching.workspace_id
-          and actions.id = touching.action_id
-        where touching.workspace_id = action_urls.workspace_id
-          and touching.site_url_id = action_urls.site_url_id and ${counted})`.as(
-        'open_action_count',
-      ),
     ])
     .orderBy(sql`site_urls.normalized_url collate "C"`)
     .orderBy('site_urls.id')
     .limit(PAGE + 1)
     .execute();
   const items = rows.slice(0, PAGE);
+  const counts = await countsByUrl(db, action, {
+    siteUrlIds: items.map((row) => row.site_url_id),
+    counted,
+  });
   const last = items.at(-1);
   return {
     whole_site: wholeSite,
     total,
-    items,
+    items: items.map((row) => ({ ...row, open_action_count: counts.get(row.site_url_id) ?? 0 })),
     next_cursor:
       rows.length > PAGE && last
         ? encodeKeysetCursor('action-urls', { action_id: action.id }, [last.url, last.site_url_id])
         : null,
   };
+}
+
+/** How many Actions matching `counted` touch each URL: one group-by over `ix_action_urls_site_url`. */
+async function countsByUrl(
+  db: Database,
+  scope: { workspace_id: string; project_id: string },
+  { siteUrlIds, counted }: { siteUrlIds: string[]; counted: RawBuilder<SqlBool> },
+) {
+  if (siteUrlIds.length === 0) return new Map<string, number>();
+  const rows = await db
+    .selectFrom('action_urls')
+    .innerJoin('actions', (join) =>
+      join
+        .onRef('actions.workspace_id', '=', 'action_urls.workspace_id')
+        .onRef('actions.id', '=', 'action_urls.action_id'),
+    )
+    .select(['action_urls.site_url_id', sql<number>`count(*)::int`.as('count')])
+    .where('action_urls.workspace_id', '=', scope.workspace_id)
+    .where('action_urls.project_id', '=', scope.project_id)
+    .where('action_urls.site_url_id', 'in', siteUrlIds)
+    .where(counted)
+    .groupBy('action_urls.site_url_id')
+    .execute();
+  return new Map(rows.map((row) => [row.site_url_id, row.count]));
 }
 
 /** What one synced Action says about its URLs. */

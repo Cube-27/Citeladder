@@ -14,6 +14,7 @@ import type { AgentChatOrigin, AgentContextRefs } from '@citeladder/contracts/ag
 import type { DatedEvidence } from '@/lib/agent/evidence';
 import { checkKindLabel, checkStateLabel, measurementLegLabel } from '@/lib/agent/vocabulary';
 import type { ActionDetail } from '@/lib/api/actions';
+import { pluralCount } from '@/lib/format';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -286,7 +287,7 @@ export function contextChips(
   if (context.action_url_ids)
     chips.push({
       key: 'action_url_ids',
-      label: `${context.action_url_ids.length} selected ${context.action_url_ids.length === 1 ? 'URL' : 'URLs'}`,
+      label: pluralCount(context.action_url_ids.length, 'selected URL'),
     });
   if (context.issue_group_reference)
     chips.push({

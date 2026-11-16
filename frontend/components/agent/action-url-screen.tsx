@@ -12,7 +12,7 @@ import {
 import { Impact } from '@/components/agent/actions-rows';
 import { PageFrame } from '@/components/templates/page-frame';
 import { Breadcrumb, type Crumb } from '@/components/ui/breadcrumb';
-import { buttonClasses } from '@/components/ui/button';
+import { Button, buttonClasses } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { LinkRow, LinkRows } from '@/components/ui/link-rows';
 import { ProjectLink } from '@/components/ui/project-link';
@@ -20,7 +20,7 @@ import { PageDock } from '@/components/ui/selection-dock';
 import { StateBlock } from '@/components/ui/state-block';
 import { readErrorProps } from '@/components/ui/notice';
 import { fromActionSchema, listCrumbs, type FromAction } from '@/lib/agent/action-crumbs';
-import { actionTarget } from '@/lib/agent/action-title';
+import { actionTarget, pathTail } from '@/lib/agent/action-title';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { ACTION_GROUPING_LABEL } from '@/lib/agent/vocabulary';
 import { actionsQueries } from '@/lib/api/actions';
@@ -50,7 +50,10 @@ export function ActionUrlScreen() {
     (item) => item.status === 'open' || item.status === 'in_progress',
   );
   return (
-    <PageFrame title={path} crumb={<Breadcrumb parts={[...trail(from), { label: tail(path) }]} />}>
+    <PageFrame
+      title={path}
+      crumb={<Breadcrumb parts={[...trail(from), { label: pathTail(path) }]} />}
+    >
       <ReadingColumn>
         <BackLink href={from ? `/actions/${from.id}` : '/actions'}>
           {from ? `Back to ${from.title}` : 'Back to actions'}
@@ -103,13 +106,21 @@ export function ActionUrlScreen() {
         ) : null}
       </ReadingColumn>
       <PageDock label="Work on this URL">
-        <ProjectLink
-          href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}
-          className={buttonClasses('primary')}
-        >
-          <Icon icon={Sparkles} />
-          Fix this URL with Agent
-        </ProjectLink>
+        {/* A URL that could not be read is not handed over: the Agent would refuse it. */}
+        {query.isError ? (
+          <Button variant="primary" disabled>
+            <Icon icon={Sparkles} />
+            Fix this URL with Agent
+          </Button>
+        ) : (
+          <ProjectLink
+            href={agentHandoffHref({ urlActionsSiteUrlId: siteUrlId, prompt: URL_ASK })}
+            className={buttonClasses('primary')}
+          >
+            <Icon icon={Sparkles} />
+            Fix this URL with Agent
+          </ProjectLink>
+        )}
       </PageDock>
     </PageFrame>
   );
@@ -122,10 +133,4 @@ const URL_ASK = 'Fix every action on this URL, starting with the shared ones.';
 function trail(from: FromAction | null): Crumb[] {
   if (!from) return [{ label: 'Actions', href: '/actions' }];
   return [...listCrumbs(from), { label: from.title, href: `/actions/${from.id}` }];
-}
-
-/** The trail's last step: the path's last segment ("…/BB0556_OFF_WHITE"). */
-function tail(path: string): string {
-  const cut = path.lastIndexOf('/');
-  return cut > 0 ? `…${path.slice(cut)}` : path;
 }

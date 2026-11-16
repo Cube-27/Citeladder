@@ -31,6 +31,12 @@ function pagePath(url: URL): string {
   return `/${segments[0]}/…/${segments.at(-1)}`;
 }
 
+/** A path as its last segment ("…/BB0556_OFF_WHITE"): a breadcrumb's or chip's short name for a URL. */
+export function pathTail(path: string): string {
+  const cut = path.lastIndexOf('/');
+  return cut > 0 ? `…${path.slice(cut)}` : path;
+}
+
 /**
  * The target as a title names it: your own page by its path; another site's
  * page by its host and tail ("thecoffeecompass.net/…/best-subscriptions");

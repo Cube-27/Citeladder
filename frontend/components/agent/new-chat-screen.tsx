@@ -141,7 +141,7 @@ function NewChat({
             placeholder="Ask a question or describe the work"
             attachment={attachment}
             skill={skill}
-            scope={handoffScope.chip}
+            scope={handoffScope.facts}
             chips={contextChips(sent, handoffScope.labels)}
             commands={commands}
             onRemoveChip={(chip) => setContext((current) => withoutContext(current, chip.key))}

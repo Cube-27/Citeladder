@@ -46,19 +46,25 @@ beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
-function renderUrl(state?: unknown) {
+function renderUrl(state?: unknown, found = true) {
   mswServer.use(
     http.get(`/api/v1/projects/${PROJECT}/urls/${URL_ID}/actions`, () =>
-      HttpResponse.json({
-        site_url_id: URL_ID,
-        url: 'https://acme.test/shop/baby/bb0556',
-        page_kind: 'product',
-        last_crawled_at: NOW,
-        items: [
-          item(FROM, 'Form controls missing accessible names', 'open'),
-          item('33333333-3333-4333-8333-333333333333', 'Meta description too long', 'dismissed'),
-        ],
-      }),
+      found
+        ? HttpResponse.json({
+            site_url_id: URL_ID,
+            url: 'https://acme.test/shop/baby/bb0556',
+            page_kind: 'product',
+            last_crawled_at: NOW,
+            items: [
+              item(FROM, 'Form controls missing accessible names', 'open'),
+              item(
+                '33333333-3333-4333-8333-333333333333',
+                'Meta description too long',
+                'dismissed',
+              ),
+            ],
+          })
+        : HttpResponse.json({ error: { message: 'Not found' } }, { status: 404 }),
     ),
   );
   renderWithProviders(
@@ -141,5 +147,13 @@ describe('A URL page', () => {
       'href',
       `/actions?project=${PROJECT}`,
     );
+    expect(await screen.findByRole('link', { name: 'Fix this URL with Agent' })).toBeVisible();
+  });
+
+  it('hands nothing to the Agent when the URL cannot be read', async () => {
+    renderUrl(undefined, false);
+    expect(await screen.findByText("Couldn't load this URL")).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Fix this URL with Agent' })).toBeDisabled();
+    expect(screen.queryByRole('link', { name: 'Fix this URL with Agent' })).toBeNull();
   });
 });

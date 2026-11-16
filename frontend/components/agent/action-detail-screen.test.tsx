@@ -179,7 +179,7 @@ afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 describe('An issue-group Action page', () => {
-  it('lists its first 10 URLs, then appends 11–12 from the URL read with Show 10 more', async () => {
+  it('lists its first 10 URLs, then appends 11–12 from the URL read with Show 2 more', async () => {
     const { cursors } = serve(group, GROUP_URLS);
     const user = userEvent.setup();
     renderDetail();

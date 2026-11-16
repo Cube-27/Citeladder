@@ -1,23 +1,26 @@
 import { useQuery } from '@tanstack/react-query';
 import type { AgentContextRefs } from '@citeladder/contracts/agent';
 
-import { actionTarget } from '@/lib/agent/action-title';
+import { actionTarget, pathTail } from '@/lib/agent/action-title';
 import { HANDOFF_URLS_MAX } from '@/lib/agent/handoff';
 import { actionsQueries, type Action } from '@/lib/api/actions';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
-import { formatCount, pluralCount } from '@/lib/format';
+import { useDisplayTimeZone } from '@/lib/display-timezone';
+import { formatCount, formatDisplayDate, pluralCount } from '@/lib/format';
 
 /**
  * What a hand-off from the Actions pages covers, in the chips' words: one URL
- * by its path with how many Actions touch it (the URL page's read, already
- * cached when the page sent it), or an issue group's URL count and how many
- * of them the Agent is sent. Ticked URLs name themselves (`contextChips`).
+ * by its last segment, then how many Actions touch it and its crawl (the URL
+ * page's read, already cached when the page sent it), or an issue group's URL
+ * count and how many of them the Agent is sent. Ticked URLs name themselves
+ * (`contextChips`).
  */
 export function useHandoffScope(
   scope: ProjectScope,
   context: AgentContextRefs,
   action: Pick<Action, 'target_kind' | 'page_count'> | undefined,
-) {
+): { labels: Partial<Record<keyof AgentContextRefs, string>>; facts: string[] } {
+  const timeZone = useDisplayTimeZone();
   const siteUrlId = context.url_actions_reference?.site_url_id;
   const url = useQuery({
     ...actionsQueries.urlActions(scope, siteUrlId ?? ''),
@@ -25,13 +28,19 @@ export function useHandoffScope(
   });
   if (siteUrlId && url.data) {
     const path = actionTarget({ target_kind: 'page', target_label: url.data.url });
-    const count = pluralCount(url.data.items.length, 'action');
-    return { labels: { url_actions_reference: `URL: ${path} · ${count}` }, chip: undefined };
+    return {
+      labels: { url_actions_reference: `URL: ${pathTail(path)}` },
+      facts: [
+        `${pluralCount(url.data.items.length, 'action')} on this URL`,
+        `Crawl of ${formatDisplayDate(url.data.last_crawled_at, timeZone)}`,
+      ],
+    };
   }
-  return { labels: {}, chip: groupChip(context, action) };
+  const group = groupFact(context, action);
+  return { labels: {}, facts: group ? [group] : [] };
 }
 
-function groupChip(
+function groupFact(
   context: AgentContextRefs,
   action: Pick<Action, 'target_kind' | 'page_count'> | undefined,
 ): string | undefined {

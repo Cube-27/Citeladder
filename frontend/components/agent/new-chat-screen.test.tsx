@@ -621,6 +621,47 @@ describe('NewChatScreen', () => {
     expect(bodies).toEqual([{ message: 'Work on Pricing page.', context: {} }]);
   });
 
+  it('names what an Actions page hands over: one URL with its Actions and crawl, or an issue group’s URLs', async () => {
+    captureChats();
+    mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/urls/${PAGE}/actions`, () =>
+        HttpResponse.json({
+          site_url_id: PAGE,
+          url: 'https://acme.test/shop/baby/bb0556',
+          page_kind: 'product',
+          last_crawled_at: '2026-11-14T10:00:00Z',
+          items: [actionItem(PRICING, 'Pricing page'), actionItem(BLOG, 'Blog')],
+        }),
+      ),
+      http.get(`/api/v1/actions/${PRICING}`, () =>
+        HttpResponse.json({
+          ...actionDetail(PRICING, 'Form controls missing accessible names'),
+          target_kind: 'issue_family',
+          page_count: 201,
+        }),
+      ),
+    );
+    const chips = async (first: string) => {
+      const list = within(await screen.findByRole('list', { name: 'Context for this request' }));
+      await list.findByText(first);
+      return list.getAllByRole('listitem').map((chip) => chip.firstChild?.textContent);
+    };
+
+    const { unmount } = renderNewChat(`?url_actions_id=${PAGE}`);
+    expect(await chips('URL: …/bb0556')).toEqual([
+      'URL: …/bb0556',
+      '2 actions on this URL',
+      'Crawl of Nov 14, 2026',
+    ]);
+    unmount();
+    renderNewChat(`?action_id=${PRICING}`);
+    expect(await chips('201 URLs (first 50 sent)')).toEqual([
+      'Action: Form controls missing accessible names · Issue across pages',
+      '201 URLs (first 50 sent)',
+      'Skill: From attached Action',
+    ]);
+  });
+
   it('attaches an Action picked from the + menu, its message written to edit or send', async () => {
     const bodies = captureChats([actionItem(PRICING, 'Pricing page')]);
     serveAction();
