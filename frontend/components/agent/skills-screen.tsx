@@ -1,24 +1,34 @@
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight } from 'lucide-react';
+import {
+  BarChart3,
+  FileText,
+  Link2,
+  ListChecks,
+  ListTodo,
+  type LucideIcon,
+  Megaphone,
+  MessageSquareText,
+  PenLine,
+  Search,
+  Sparkles,
+  Stethoscope,
+  Wrench,
+} from 'lucide-react';
 import { useId } from 'react';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
 import { ReportPage } from '@/components/templates/report-page';
 import { ProjectLink } from '@/components/ui/project-link';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Icon } from '@/components/ui/icon';
-import { Tag } from '@/components/ui/tag';
-import { Inline, Stack } from '@/components/ui/layout';
+import { ICON_CARD, IconCardContent } from '@/components/ui/icon-card';
 import { textRole } from '@/components/ui/typography';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { agentHandoffHref } from '@/lib/agent/handoff';
 import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
-import { pluralCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import { slipClasses } from '@/components/ui/slip';
 
 /**
  * The skills the agent can apply: name, one sentence and what each produces.
@@ -52,18 +62,20 @@ export function SkillsScreen() {
   );
 }
 
-/**
- * What a skill produces, by the catalog's own name for it ("LinkedIn post",
- * "FAQ"), never lowercased. An output kind the catalog does not name shows
- * no badge rather than a placeholder.
- */
-function OutputBadge({ label }: Readonly<{ label: string | undefined }>) {
-  return label ? (
-    <p className="flex">
-      <Tag>{`Output: ${label}`}</Tag>
-    </p>
-  ) : null;
-}
+/** A skill's icon, by the catalog's output kind (`config/agent-skills.ts`). */
+const OUTPUT_ICONS: Readonly<Record<string, LucideIcon>> = {
+  plan: ListTodo,
+  measurement: BarChart3,
+  research: Search,
+  prompt_plan: MessageSquareText,
+  page_edits: PenLine,
+  link_plan: Link2,
+  technical_fix: Wrench,
+  diagnosis: Stethoscope,
+  earned_brief: Megaphone,
+  content: FileText,
+  page: ListChecks,
+};
 
 function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
   const { outputKind } = useAgentCatalog();
@@ -77,13 +89,14 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
       {[...groups].map(([group, rows]) => (
         <Section key={group} variant="group" aria-label={group}>
           <SectionHeader>
-            <SectionTitle level={2}>{group}</SectionTitle>
-            <SectionDescription>{pluralCount(rows.length, 'skill')}</SectionDescription>
+            <SectionTitle level={2}>
+              {group} <span className="text-ink-2">({rows.length})</span>
+            </SectionTitle>
           </SectionHeader>
-          <AppGrid as="ul" layout="slips">
+          <AppGrid as="ul" layout="pair">
             {rows.map((skill) => (
-              <li key={skill.id} className="flex">
-                <SkillSlip skill={skill} output={outputKind(skill.output_kind)?.label} />
+              <li key={skill.id} className="flex min-w-0">
+                <SkillCard skill={skill} output={outputKind(skill.output_kind)?.label} />
               </li>
             ))}
           </AppGrid>
@@ -93,29 +106,25 @@ function SkillGroups({ skills }: Readonly<{ skills: AgentSkill[] }>) {
   );
 }
 
-/** A skill as a slip that starts a chat with it: the underlined title and a chevron say so at rest. */
-function SkillSlip({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
+/** A skill as a wide card that starts a chat with it: icon tile, name, two lines and its output. */
+function SkillCard({ skill, output }: Readonly<{ skill: AgentSkill; output: string | undefined }>) {
   const detailId = useId();
   return (
     <ProjectLink
       href={agentHandoffHref({ skillId: skill.id })}
       aria-label={`Start a chat with ${skill.label}`}
       aria-describedby={detailId}
-      className={slipClasses('focus-ring w-full', { opens: true })}
+      className={ICON_CARD}
     >
-      <Stack gap="item">
-        <Inline className="justify-between">
-          <h3 className={textRole('subheading', 'underline decoration-1 underline-offset-3')}>
-            {skill.label}
-          </h3>
-          <Icon icon={ChevronRight} className="text-ink-2 shrink-0" />
-        </Inline>
+      <IconCardContent icon={OUTPUT_ICONS[skill.output_kind] ?? Sparkles} title={skill.label}>
         {/* The link's name replaces its content, so what it does is its description. */}
-        <div id={detailId} className="contents">
-          <p className={textRole('body', 'text-ink-2')}>{skill.description}</p>
-          <OutputBadge label={output} />
-        </div>
-      </Stack>
+        <span id={detailId} className="contents">
+          <p className={textRole('body', 'text-ink-2 line-clamp-2')}>{skill.description}</p>
+          {output ? (
+            <p className={textRole('caption', 'text-ink-2')}>{`Output: ${output}`}</p>
+          ) : null}
+        </span>
+      </IconCardContent>
     </ProjectLink>
   );
 }
