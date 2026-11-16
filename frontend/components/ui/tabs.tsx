@@ -1,6 +1,7 @@
 import {
   createContext,
   useContext,
+  useEffect,
   useRef,
   type ButtonHTMLAttributes,
   type ReactNode,
@@ -23,6 +24,27 @@ import { cn } from '@/lib/utils';
  */
 const TAB_STRIP =
   'rule-below relative inline-flex max-w-full shrink-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden';
+
+/** Past the edge fade, so the cue never covers the item it reveals. */
+const REVEAL_PADDING = 32;
+
+/**
+ * Keeps the strip's current item in view, on mount and on every selection:
+ * it scrolls only the strip sideways, never the page.
+ */
+function useRevealSelected(selected: string | null) {
+  const strip = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const list = strip.current;
+    const item = list?.querySelector<HTMLElement>('[aria-selected="true"], [aria-checked="true"]');
+    if (!list || !item) return;
+    const start = item.offsetLeft - REVEAL_PADDING;
+    const end = item.offsetLeft + item.offsetWidth + REVEAL_PADDING - list.clientWidth;
+    if (list.scrollLeft > start) list.scrollLeft = Math.max(0, start);
+    else if (list.scrollLeft < end) list.scrollLeft = end;
+  }, [selected]);
+  return strip;
+}
 
 /**
  * The strip's `ScrollFrame`: the edge that hides more items fades, and one
@@ -209,12 +231,16 @@ function TabStrip<T extends string>({
   kind = 'section',
 }: Readonly<TabStripProps<T> & { kind?: Exclude<TabKind, 'segment'> }>) {
   const active = useContext(ActiveTabContext);
+  const strip = useRevealSelected(active);
   return (
     <StripFrame fill={fill}>
       {(ref, region) => (
         <TabsPrimitive.List
           {...region}
-          ref={ref}
+          ref={(node) => {
+            ref.current = node;
+            strip.current = node;
+          }}
           aria-label={ariaLabel}
           className={cn(TAB_STRIP, 'gap-1', fill && 'flex w-full', className)}
         >
@@ -344,6 +370,7 @@ export function SegmentedControl<T extends string>({
   trailing?: ReactNode;
 }>) {
   const buttonsRef = useRef<Array<HTMLButtonElement | null>>([]);
+  const strip = useRevealSelected(value);
   // With an off-list `value` nothing is checked; fall back to the first option
   // so the group stays reachable by keyboard.
   const selectedIndex = options.findIndex((option) => option.value === value);
@@ -362,7 +389,10 @@ export function SegmentedControl<T extends string>({
       {(ref, region) => (
         <div
           {...region}
-          ref={ref}
+          ref={(node) => {
+            ref.current = node;
+            strip.current = node;
+          }}
           data-segmented-track=""
           className={cn(TAB_STRIP, 'gap-4', className)}
         >

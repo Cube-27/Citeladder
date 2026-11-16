@@ -50,6 +50,8 @@ export function InfoHint({ label, children }: Readonly<{ label: string; children
           role="tooltip"
           side="top"
           sideOffset={8}
+          avoidCollisions
+          collisionPadding={8}
           // Focus stays on the button; returning it there on close would reopen the tip.
           onOpenAutoFocus={(event) => event.preventDefault()}
           onCloseAutoFocus={(event) => event.preventDefault()}

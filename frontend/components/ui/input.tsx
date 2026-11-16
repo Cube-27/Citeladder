@@ -4,19 +4,33 @@ import type { LucideIcon } from 'lucide-react';
 import { Icon } from '@/components/ui/icon';
 import { cn } from '@/lib/utils';
 
-/**
- * The field frame every text control shares (Input, SearchField, Select's
- * trigger, ChipInput, Textarea, the composer): `surface` with the 1px
- * `control-line` edge (3:1), the control radius, at least `control-md`
- * tall so a larger reader text size grows it instead of clipping. Focus is
- * the shared 2px ink outline; an invalid field turns its line crimson
- * (globals.css `.focus-input`/`.focus-frame`). The website keeps its soft
- * hairline edge.
- */
-export const FIELD_EDGE =
-  'bg-surface border border-control-line [[data-public-surface]_&]:border-rule [[data-public-surface]_&]:shadow-edge [[data-public-surface]_&]:hover:border-control-line';
+const PUBLIC_EDGE =
+  '[[data-public-surface]_&]:border-rule [[data-public-surface]_&]:shadow-edge [[data-public-surface]_&]:hover:border-control-line';
 
-export const FIELD_BOX = `${FIELD_EDGE} type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[border-color,outline-color] duration-[var(--motion-fast)]`;
+/**
+ * The form field's edge (Input, ChipInput, Textarea, the composer): `surface`
+ * with the 1px `control-line` edge (3:1), since an empty field has no words
+ * to name its box. Focus is the shared 2px ink outline; an invalid field
+ * turns its line crimson (globals.css `.focus-input`/`.focus-frame`).
+ */
+export const FIELD_EDGE = `bg-surface border border-control-line ${PUBLIC_EDGE}`;
+
+/**
+ * The soft edge of a search or filter control (SearchField, FilterTrigger,
+ * Select's trigger, SearchableSelect): 1px `control-edge` with
+ * `shadow-control`, since its icon and words name it. Hover is the 6% ink
+ * tint, never a darker edge; focus and invalid are FIELD_EDGE's. The website
+ * keeps its hairline edge.
+ */
+const SOFT_FIELD_EDGE = `bg-surface border border-control-edge shadow-control [:root:not([data-public-surface])_&]:hover:overlay-hover ${PUBLIC_EDGE}`;
+
+const FIELD_SHAPE =
+  'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[border-color,outline-color] duration-[var(--motion-fast)]';
+
+/** A form field's box: FIELD_EDGE, the control radius, at least `control-md` tall. */
+export const FIELD_BOX = `${FIELD_EDGE} ${FIELD_SHAPE}`;
+/** A search or filter control's box: the soft edge on the same shape. */
+export const SOFT_FIELD_BOX = `${SOFT_FIELD_EDGE} ${FIELD_SHAPE}`;
 
 /**
  * A field fills its column (`fill`) unless its role is narrower: `quantity`
@@ -40,12 +54,15 @@ export function Input({
   endContent,
   endContentFlush = false,
   width = 'fill',
+  edge = 'line',
   ref,
   ...props
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'input'>, 'size' | 'width'> & {
     /** The field's width role; see `inputWidths`. */
     width?: keyof typeof inputWidths;
+    /** `soft` for a search or filter field (SOFT_FIELD_EDGE); a form field keeps `line`. */
+    edge?: 'line' | 'soft';
     /** Leading content inside the field box. */
     startContent?: ReactNode;
     /** Trailing content inside the field box. */
@@ -65,7 +82,7 @@ export function Input({
         ref={ref}
         className={cn(
           'focus-input',
-          FIELD_BOX,
+          edge === 'soft' ? SOFT_FIELD_BOX : FIELD_BOX,
           'placeholder:text-ink-2 disabled:cursor-not-allowed disabled:opacity-60',
           inputWidths[width],
           containerClassName,
@@ -80,7 +97,7 @@ export function Input({
     <div
       className={cn(
         'focus-frame flex items-center gap-2',
-        FIELD_BOX,
+        edge === 'soft' ? SOFT_FIELD_BOX : FIELD_BOX,
         props.disabled && 'cursor-not-allowed opacity-60',
         endContentFlush && 'pe-1',
         containerClassName,

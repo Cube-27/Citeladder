@@ -5,8 +5,12 @@ import {
   useContext,
   useEffect,
   useId,
+  useLayoutEffect,
+  useState,
   type ComponentPropsWithoutRef,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -20,8 +24,10 @@ import { POP_FACE } from '@/components/ui/slip';
 export const MENU_PANEL = cn(POP_FACE, 'menu-panel z-modal focus-ring overflow-hidden p-1');
 
 /**
- * One 32px row, which never shrinks when a long menu scrolls: `radius-sm`, 8px padding, 14/20 `ink`, a 16px lead column for
- * an icon or a check so labels align. Hover and keyboard highlight take the
+ * One 32px row, which never shrinks when a long menu scrolls: `radius-mark`,
+ * 4/8 padding, 14/20 `ink`, a 16px lead column for an icon or a check. In a
+ * menu with a checkable row, every row reserves that column (`Lead`), so
+ * labels align whether checked or not. Hover and keyboard highlight take the
  * hover overlay; keyboard focus adds the shared 2px ring, which the
  * panel's 4px inset holds. A row a script focused as the pointer moved draws
  * no ring once the reader has pressed (`input-modality.ts`). `danger` is `negative` text with a `negative-soft`
@@ -32,7 +38,7 @@ export function menuItemClasses({
   className,
 }: Readonly<{ danger?: boolean; className?: string }> = {}) {
   return cn(
-    'focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-control px-2 text-left transition-colors select-none',
+    'focus-ring type-body relative flex min-h-[var(--control-md)] w-full shrink-0 cursor-pointer items-center gap-2 rounded-mark px-2 py-1 text-left transition-colors select-none',
     'data-[disabled]:cursor-not-allowed data-[disabled]:opacity-60',
     danger
       ? 'text-negative data-[highlighted]:bg-negative-wash hover:bg-negative-wash data-[disabled]:hover:bg-transparent [&_svg]:text-negative'
@@ -117,7 +123,7 @@ export function MenuSubTrigger({
       aria-label={value ? `${children}: ${value}` : undefined}
       {...props}
     >
-      {icon ? <Lead>{icon}</Lead> : null}
+      <Lead>{icon}</Lead>
       <span className="shrink-0">{children}</span>
       {value ? (
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
@@ -145,53 +151,72 @@ export function MenuSubContent({
         )}
         {...props}
       >
-        {children}
+        <GutterScope>{children}</GutterScope>
       </MenuPrimitive.SubContent>
     </MenuPrimitive.Portal>
   );
 }
 
 /**
- * Menu width is a role, never a number: unset a menu is at least 224px and
- * hugs its items; `trigger` matches the control that opened it, for a menu
- * that reads as that control's list.
+ * A menu opens below its trigger (flipping only without room), its left edge
+ * on the trigger's (`end` where a caller passes it), at least as wide as the
+ * trigger and at most 320px; it hugs its items between.
  */
 export function MenuContent({
   align = 'start',
+  side = 'bottom',
   sideOffset = 4,
   collisionPadding = 8,
-  width,
   children,
   ...props
-}: Readonly<
-  Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.Content>, 'className'> & {
-    width?: 'trigger';
-  }
->) {
+}: Readonly<Omit<ComponentPropsWithoutRef<typeof MenuPrimitive.Content>, 'className'>>) {
   if (useContext(MenuNested)) return <MenuSubContent>{children}</MenuSubContent>;
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Content
         align={align}
+        side={side}
         sideOffset={sideOffset}
         collisionPadding={collisionPadding}
         className={cn(
           MENU_PANEL,
-          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] flex-col overflow-auto',
-          width === 'trigger' ? 'w-[var(--radix-dropdown-menu-trigger-width)] min-w-0' : 'min-w-56',
+          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] max-w-80 min-w-[var(--radix-dropdown-menu-trigger-width)] flex-col overflow-auto',
         )}
         {...props}
       >
-        {children}
+        <GutterScope>{children}</GutterScope>
       </MenuPrimitive.Content>
     </MenuPrimitive.Portal>
   );
 }
 
-/** The lead column: a 16px icon slot, kept empty when the item has none. */
-function Lead({ children }: Readonly<{ children?: ReactNode }>) {
+/** True while the panel holds a checkable row: then every row reserves the lead column. */
+const CheckGutter = createContext(false);
+/** How a checkable row tells its panel it is there. */
+const ReserveGutter = createContext<Dispatch<SetStateAction<number>> | null>(null);
+
+/** One panel's check gutter: on while any checkable or radio row is mounted in it. */
+function GutterScope({ children }: Readonly<{ children: ReactNode }>) {
+  const [rows, setRows] = useState(0);
   return (
-    <span className="text-ink-2 flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+    <ReserveGutter value={setRows}>
+      <CheckGutter value={rows > 0}>{children}</CheckGutter>
+    </ReserveGutter>
+  );
+}
+
+/**
+ * The lead column: a 16px slot for an icon, held empty in a menu with a
+ * checkable row so every label starts at one x, and absent otherwise.
+ */
+function Lead({ children }: Readonly<{ children?: ReactNode }>) {
+  const gutter = useContext(CheckGutter);
+  if (!children && !gutter) return null;
+  return (
+    <span
+      data-menu-lead=""
+      className="text-ink-2 flex size-4 shrink-0 items-center justify-center [&_svg]:size-4"
+    >
       {children}
     </span>
   );
@@ -226,7 +251,7 @@ export function MenuItem({
 >) {
   return (
     <MenuPrimitive.Item className={menuItemClasses({ danger, className })} {...props}>
-      {icon ? <Lead>{icon}</Lead> : null}
+      <Lead>{icon}</Lead>
       <span className={cn('min-w-0 truncate', value ? 'shrink-0' : 'flex-1')}>{children}</span>
       {value ? (
         <span className="text-ink-2 ms-auto min-w-0 truncate ps-4 text-end">{value}</span>
@@ -255,8 +280,14 @@ export function MenuLinkItem({
 }
 
 function Indicator() {
+  const reserve = useContext(ReserveGutter);
+  useLayoutEffect(() => {
+    if (!reserve) return undefined;
+    reserve((rows) => rows + 1);
+    return () => reserve((rows) => rows - 1);
+  }, [reserve]);
   return (
-    <span className="text-ink flex size-4 shrink-0 items-center justify-center">
+    <span data-menu-lead="" className="text-ink flex size-4 shrink-0 items-center justify-center">
       <MenuPrimitive.ItemIndicator>
         <Check className="size-4" aria-hidden />
       </MenuPrimitive.ItemIndicator>

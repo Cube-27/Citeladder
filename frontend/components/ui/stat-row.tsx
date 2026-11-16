@@ -164,7 +164,7 @@ function Stat({ segment }: Readonly<{ segment: StatSegment }>) {
           onClick={segment.onSelect}
           aria-label={segment.actionLabel}
           aria-pressed={segment.selected}
-          className="focus-ring absolute inset-0 rounded-[inherit]"
+          className="focus-ring rounded-control absolute inset-0"
         />
       ) : null}
     </div>

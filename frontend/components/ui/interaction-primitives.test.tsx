@@ -81,7 +81,7 @@ describe('authenticated interaction primitives', () => {
     expect(screen.getByRole('combobox', { name: 'Severity' })).toHaveTextContent('High');
   });
 
-  it('uses Radix keyboard selection and panel wiring for Tabs', async () => {
+  it('uses Radix keyboard selection and panel wiring for Tabs, scrolling the strip to the selected tab', async () => {
     const user = userEvent.setup();
     function Harness() {
       const [value, setValue] = useState<'one' | 'two'>('one');
@@ -101,10 +101,20 @@ describe('authenticated interaction primitives', () => {
       );
     }
     render(<Harness />);
+    const list = screen.getByRole('tablist');
+    const two = screen.getByRole('tab', { name: 'Two' });
+    Object.defineProperty(list, 'clientWidth', { value: 100 });
+    Object.defineProperty(list, 'scrollLeft', { value: 0, writable: true });
+    Object.defineProperty(two, 'offsetLeft', { value: 300 });
+    Object.defineProperty(two, 'offsetWidth', { value: 60 });
     screen.getByRole('tab', { name: 'One' }).focus();
     await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Two' })).toHaveAttribute('data-state', 'active');
+    expect(two).toHaveAttribute('data-state', 'active');
     expect(screen.getByRole('tabpanel')).toHaveTextContent('Second panel');
+    // The strip, never the page, scrolls to the tab's end plus 32 past the edge fade.
+    expect(list.scrollLeft).toBe(292);
+    await user.keyboard('{ArrowLeft}');
+    expect(list.scrollLeft).toBe(0);
   });
 
   it('exposes checkbox and radio state', async () => {

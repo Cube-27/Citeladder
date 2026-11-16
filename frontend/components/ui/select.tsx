@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 
-import { FIELD_BOX } from '@/components/ui/input';
+import { SOFT_FIELD_BOX } from '@/components/ui/input';
 import { MENU_PANEL, menuItemClasses } from '@/components/ui/menu';
 import { cn } from '@/lib/utils';
 
@@ -51,8 +51,8 @@ type SelectOption<T extends string> = {
 
 /**
  * Select — a closed trigger that opens a listbox (Radix: arrows move, Enter
- * picks, Escape closes, disabled options are skipped). The trigger looks
- * exactly like Input with a `chevron-down`, and is as wide as its widest
+ * picks, Escape closes, disabled options are skipped). The trigger is the
+ * soft-edged field (`SOFT_FIELD_BOX`) with a `chevron-down`, and is as wide as its widest
  * option, so a pick never resizes it. The list is the menu panel with 32px
  * rows (48px with a description); the selected row shows a check in a
  * reserved slot, so nothing shifts. For long lists use `SearchableSelect`.
@@ -108,8 +108,8 @@ export function Select<T extends string>({
         id={id}
         className={cn(
           'focus-input',
-          FIELD_BOX,
-          'data-[placeholder]:text-ink-2 data-[state=open]:border-focus flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60',
+          SOFT_FIELD_BOX,
+          'data-[placeholder]:text-ink-2 flex w-auto min-w-0 items-center justify-between gap-2 text-start disabled:cursor-not-allowed disabled:opacity-60',
           className,
         )}
       >
