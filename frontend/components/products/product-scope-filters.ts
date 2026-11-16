@@ -1,4 +1,4 @@
-import { choiceFilter, rangeFilter, type FilterDefinition } from '@/components/ui/all-filters';
+import { rangeFilter, singleFilter, type FilterDefinition } from '@/components/ui/all-filters';
 import {
   PRODUCT_DEFAULT_WINDOW,
   PRODUCT_WINDOW_DAYS,
@@ -8,8 +8,6 @@ import { formatCount } from '@/lib/format';
 import { nestedCategories } from '@/lib/products/category-tree';
 import type { useEngineCatalog } from '@/lib/providers/engines';
 import type { CommerceCatalog } from '@citeladder/contracts/commerce-suite';
-
-const EVERY = '__all__';
 
 /** The reporting window every product page reads. */
 export function windowFilter(
@@ -21,32 +19,6 @@ export function windowFilter(
     defaultValue: PRODUCT_DEFAULT_WINDOW,
     options: PRODUCT_WINDOW_DAYS.map((days) => ({ value: days, label: `Last ${days} days` })),
     onChange,
-  });
-}
-
-/** One optional id among named options, "All …" when none. */
-function everyFilter({
-  id,
-  label,
-  allLabel,
-  value,
-  options,
-  onChange,
-}: Readonly<{
-  id: string;
-  label: string;
-  allLabel: string;
-  value: string | null;
-  options: readonly { value: string; label: string }[];
-  onChange: (value: string | null) => void;
-}>): FilterDefinition {
-  return choiceFilter({
-    id,
-    label,
-    value: value ?? EVERY,
-    defaultValue: EVERY,
-    groups: [{ options: [{ value: EVERY, label: allLabel }, ...options] }],
-    onChange: (next) => onChange(next === EVERY ? null : next),
   });
 }
 
@@ -74,7 +46,7 @@ export function productScopeFilters({
 }>): FilterDefinition[] {
   return [
     windowFilter(scope.filters.window, scope.setWindow),
-    everyFilter({
+    singleFilter({
       id: 'engine',
       label: 'Engine',
       allLabel: 'All engines',
@@ -82,7 +54,7 @@ export function productScopeFilters({
       options: engines.order.map((key) => ({ value: key, label: engines.label(key) })),
       onChange: scope.setEngine,
     }),
-    everyFilter({
+    singleFilter({
       id: 'prompt-set',
       label: 'Prompt set',
       allLabel: 'All prompt sets',
@@ -115,7 +87,7 @@ export function categoryFilter(
     }
     return chain.map((row) => names.get(row)).join(' › ');
   };
-  return everyFilter({
+  return singleFilter({
     id: 'category',
     label: 'Category',
     allLabel: catalog ? `All categories · ${formatCount(catalog.product_total)}` : 'All categories',

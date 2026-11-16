@@ -1,5 +1,5 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 
 import { agentWriteFailure, isOutputConflict } from '@/lib/agent/errors';
 import { useLiveTurn } from '@/lib/agent/live-turns';
@@ -13,26 +13,13 @@ import {
   type AgentOutput,
   type AgentRevision,
 } from '@/lib/api/agent';
+import { useMediaQuery } from '@/lib/use-media-query';
 
 export type RailTab = 'suggestions' | 'outline' | 'seo';
 export type StackTab = 'page' | RailTab | 'chat';
 
 /** Below 1024px the rail becomes tabs under the page (E1). */
 const NARROW_QUERY = '(max-width: 1023px)';
-
-function subscribeNarrow(onChange: () => void) {
-  const media = globalThis.matchMedia?.(NARROW_QUERY);
-  media?.addEventListener('change', onChange);
-  return () => media?.removeEventListener('change', onChange);
-}
-
-function useNarrowWorkspace(): boolean {
-  return useSyncExternalStore(
-    subscribeNarrow,
-    () => globalThis.matchMedia?.(NARROW_QUERY).matches ?? false,
-    () => false,
-  );
-}
 
 const EDIT_CONFLICT =
   'The page changed since you started editing, so your edits were not saved. Copy what you need, then discard them to see the latest version.';
@@ -147,7 +134,7 @@ export function usePageText(detail: AgentChatDetail, revision: AgentRevision, dr
  * where the page, each rail panel and the chat are tabs of their own.
  */
 export function useWorkspaceTabs() {
-  const narrow = useNarrowWorkspace();
+  const narrow = useMediaQuery(NARROW_QUERY);
   const [stackTab, setStackTab] = useState<StackTab>('page');
   const [railTab, setRailTab] = useState<RailTab>('suggestions');
   return {

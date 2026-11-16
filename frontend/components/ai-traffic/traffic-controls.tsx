@@ -10,6 +10,7 @@ import {
   choiceFilter,
   menuFieldKeys,
   rangeFilter,
+  singleFilter,
   type FilterDefinition,
 } from '@/components/ui/all-filters';
 import { MenuItem } from '@/components/ui/menu';
@@ -76,32 +77,6 @@ export function trafficFilters(props: TrafficControlsProps): FilterDefinition[] 
   return FILTER_BUILDERS.flatMap((build) => build(props) ?? []);
 }
 
-/** A choice filter whose unset value is `null` in the URL and "All …" in the menu. */
-function optionalChoice({
-  id,
-  label,
-  allLabel,
-  value,
-  options,
-  onChange,
-}: Readonly<{
-  id: string;
-  label: string;
-  allLabel: string;
-  value: string | null;
-  options: readonly { value: string; label: string }[];
-  onChange: (value: string | null) => void;
-}>): FilterDefinition {
-  return choiceFilter({
-    id,
-    label,
-    value: value ?? '',
-    defaultValue: '',
-    groups: [{ options: [{ value: '', label: allLabel }, ...options] }],
-    onChange: (picked) => onChange(picked || null),
-  });
-}
-
 /** The reporting window every tab reads. */
 function trafficRangeFilter({ model }: TrafficControlsProps) {
   return rangeFilter({
@@ -128,7 +103,7 @@ function verificationFilter({ model, crawlAvailable }: TrafficControlsProps) {
 function purposeFilter({ model }: TrafficControlsProps) {
   if (model.tab !== 'crawlers') return null;
   const purposes = new Set(model.catalog.data?.bots.map((bot) => bot.purpose));
-  return optionalChoice({
+  return singleFilter({
     id: 'purpose',
     label: 'Crawler purpose',
     allLabel: 'All purposes',
@@ -140,7 +115,7 @@ function purposeFilter({ model }: TrafficControlsProps) {
 
 function botFilter({ model }: TrafficControlsProps) {
   if (model.tab !== 'activity') return null;
-  return optionalChoice({
+  return singleFilter({
     id: 'bot',
     label: 'Bot',
     allLabel: 'All bots',
@@ -152,7 +127,7 @@ function botFilter({ model }: TrafficControlsProps) {
 
 function resourceFilter({ model }: TrafficControlsProps) {
   if (model.tab === 'overview') return null;
-  return optionalChoice({
+  return singleFilter({
     id: 'resource',
     label: 'Resource class',
     allLabel: 'All resources',

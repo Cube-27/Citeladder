@@ -1,5 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
@@ -9,7 +9,7 @@ import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { authQueries } from '@/lib/api/auth';
-import { signOutForChangedTerms } from '@/lib/auth/account-transition';
+import { useSignOutForChangedTerms } from '@/lib/auth/use-sign-out-for-changed-terms';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { workspaceMutations } from '@/lib/api/workspaces';
 import { workspaceDestination } from '@/lib/navigation/project-destination';
@@ -27,18 +27,8 @@ const FORM_ID = 'workspace-setup-form';
  * decision on it: it ends, and the sign-in form asks for the decision.
  */
 export function WorkspaceSetup() {
-  const queryClient = useQueryClient();
   const terms = useQuery(authQueries.terms());
-  const leave = useMutation({ mutationFn: () => signOutForChangedTerms(queryClient) });
-  const sessionPredatesTerms = terms.isSuccess && !terms.data.accepted_at;
-  const { mutate: signOut } = leave;
-  // Once: leaving clears the cache, and the re-read must not sign out again.
-  const leaving = useRef(false);
-  useEffect(() => {
-    if (!sessionPredatesTerms || leaving.current) return;
-    leaving.current = true;
-    signOut();
-  }, [signOut, sessionPredatesTerms]);
+  const leave = useSignOutForChangedTerms(terms.isSuccess && !terms.data.accepted_at);
 
   const failure = terms.error ?? leave.error;
   if (failure)
@@ -49,7 +39,7 @@ export function WorkspaceSetup() {
           error={failure}
           title="Couldn't load workspace setup"
           fallback="We could not load workspace setup."
-          onRetry={() => (terms.error ? void terms.refetch() : signOut())}
+          onRetry={() => (terms.error ? void terms.refetch() : leave.mutate())}
           pending={terms.isFetching || leave.isPending}
         />
       </FlowPage>

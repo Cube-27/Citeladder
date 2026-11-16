@@ -108,10 +108,7 @@ function MetricChart({ series, height }: Readonly<{ series: ChartSeries; height:
   );
 }
 
-export function PerformanceChart({
-  series,
-  className,
-}: Readonly<{ series: readonly ChartSeries[]; className?: string }>) {
+export function PerformanceChart({ series }: Readonly<{ series: readonly ChartSeries[] }>) {
   const plotted = series.filter((entry) => entry.selected.length > 0);
   if (!series.length)
     return <StateBlock kind="empty" inline message="Select a figure above to chart it." />;
@@ -120,7 +117,7 @@ export function PerformanceChart({
   const height = plotted.length === 1 ? 'md' : 'sm';
   return (
     <SeriesTonesContext value={METRIC_TONES}>
-      <Stack gap="workspace" className={className}>
+      <Stack gap="workspace">
         {plotted.map((entry) => (
           <MetricChart key={entry.key} series={entry} height={height} />
         ))}

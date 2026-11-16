@@ -3,7 +3,6 @@ import {
   useEffect,
   useRef,
   useState,
-  useSyncExternalStore,
   type FocusEvent,
   type KeyboardEvent,
   type ReactNode,
@@ -28,6 +27,7 @@ import {
 } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { ControlCount } from '@/components/ui/tabs';
+import { useMediaQuery } from '@/lib/use-media-query';
 
 /** One choice in a filter's submenu. */
 type FilterOption<T extends string = string> = Readonly<{ value: T; label: string }>;
@@ -137,6 +137,34 @@ export function rangeFilter<T extends string>({
   });
 }
 
+const EVERY = '__all__';
+
+/** A single-choice filter whose unset value is `null` and reads "All …" in the menu. */
+export function singleFilter({
+  id,
+  label,
+  allLabel,
+  value,
+  options,
+  onChange,
+}: Readonly<{
+  id: string;
+  label: string;
+  allLabel: string;
+  value: string | null;
+  options: readonly FilterOption<string>[];
+  onChange: (value: string | null) => void;
+}>): FilterDefinition {
+  return choiceFilter({
+    id,
+    label,
+    value: value ?? EVERY,
+    defaultValue: EVERY,
+    groups: [{ options: [{ value: EVERY, label: allLabel }, ...options] }],
+    onChange: (next) => onChange(next === EVERY ? null : next),
+  });
+}
+
 /**
  * A multi-select filter for All filters: a check per option, any number on,
  * none on meaning unfiltered. The submenu stays open while the reader picks.
@@ -224,7 +252,7 @@ export function AllFilters({
   /** The button's edge the menu lines up with: `end` for a button at its row's far right. */
   align?: 'start' | 'end';
 }>) {
-  const narrow = useNarrowViewport();
+  const narrow = useMediaQuery(NARROW_QUERY);
   if (filters.length === 0) return null;
   const active = activeFilterCount(filters);
   return (
@@ -269,20 +297,6 @@ export function AllFilters({
 
 /** Below this width a submenu cannot stand beside the menu (two 224px panels). */
 const NARROW_QUERY = '(max-width: 639px)';
-
-function subscribeNarrow(onChange: () => void) {
-  const media = globalThis.matchMedia?.(NARROW_QUERY);
-  media?.addEventListener('change', onChange);
-  return () => media?.removeEventListener('change', onChange);
-}
-
-function useNarrowViewport(): boolean {
-  return useSyncExternalStore(
-    subscribeNarrow,
-    () => globalThis.matchMedia?.(NARROW_QUERY).matches ?? false,
-    () => false,
-  );
-}
 
 /**
  * The phone form: the menu lists the filters; choosing one shows its options

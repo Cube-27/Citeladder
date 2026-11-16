@@ -9,14 +9,11 @@ import { parseAbsoluteHttpUrl } from '@/lib/safe-http-url';
  * Pages a web search returned, kept apart from the CiteLadder records a reply
  * cites: they are outside observations, not project data.
  */
-export function WebSources({
-  sources,
-  label = 'Web sources',
-}: Readonly<{ sources: readonly AgentWebSource[]; label?: string }>) {
+export function WebSources({ sources }: Readonly<{ sources: readonly AgentWebSource[] }>) {
   if (sources.length === 0) return null;
   return (
-    <Stack as="section" gap="tight" aria-label={label}>
-      <span className={textRole('body', 'text-ink-2')}>{label}</span>
+    <Stack as="section" gap="tight" aria-label="Web sources">
+      <span className={textRole('body', 'text-ink-2')}>Web sources</span>
       <Stack as="ul" gap="tight">
         {sources.map((source) => (
           <li key={source.url} className="min-w-0">
