@@ -12,7 +12,7 @@ import { textRole } from '@/components/ui/typography';
  * The title is plain `ink` at rest and underlines on hover and focus-visible.
  */
 export const ICON_CARD = slipClasses(
-  'group focus-ring-inset hover:overlay-hover flex w-full items-start gap-4 no-underline',
+  'focus-ring-inset hover:overlay-hover flex w-full items-start gap-4 no-underline decoration-transparent hover:decoration-current focus-visible:decoration-current',
 );
 
 export function IconCardContent({
@@ -25,12 +25,10 @@ export function IconCardContent({
       <span aria-hidden data-icon-tile="" className="shrink-0">
         <Glyph className="text-ink-2 size-5" />
       </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
+      {/* The title's underline takes the card's decoration colour: clear at rest, ink on hover and focus. */}
+      <span className="flex min-w-0 flex-1 flex-col gap-1 decoration-inherit">
         <h3
-          className={textRole(
-            'label',
-            'text-ink underline-offset-3 group-hover:underline group-focus-visible:underline',
-          )}
+          className={textRole('label', 'text-ink underline-offset-3 underline decoration-inherit')}
         >
           {title}
         </h3>
