@@ -94,26 +94,28 @@ export async function getVisibility(
   // A named run is read in its own market: comparisons stay inside it.
   const scope = { ...requested, marketId: run.marketId };
   const view = await runView(db, scope, run, query);
-  const comparison = await compareSelection(
-    db,
-    scope,
-    {
-      auditId: run.auditId,
+  const [comparison, gaps] = await Promise.all([
+    compareSelection(
+      db,
+      scope,
+      {
+        auditId: run.auditId,
+        workspaceId: scope.workspaceId,
+        configuration: run.configuration,
+        completedAt: run.completedAt,
+        analyzerVersion: run.analyzerVersion,
+        scoringRuleVersion: run.scoringRuleVersion,
+        metrics: view.metrics,
+      },
+      { cohort: query.cohort, engine: query.logicalEngine, baselineId: query.baselineId },
+    ),
+    competitorGaps(db, {
       workspaceId: scope.workspaceId,
-      configuration: run.configuration,
-      completedAt: run.completedAt,
-      analyzerVersion: run.analyzerVersion,
-      scoringRuleVersion: run.scoringRuleVersion,
-      metrics: view.metrics,
-    },
-    { cohort: query.cohort, engine: query.logicalEngine, baselineId: query.baselineId },
-  );
-  const gaps = await competitorGaps(db, {
-    workspaceId: scope.workspaceId,
-    auditIds: [run.auditId],
-    cohort: query.cohort,
-    engine: query.logicalEngine,
-  });
+      auditIds: [run.auditId],
+      cohort: query.cohort,
+      engine: query.logicalEngine,
+    }),
+  ]);
   applyRankingComparison(view.response.rankings, comparison, gaps);
   return { ...view.response, comparison };
 }

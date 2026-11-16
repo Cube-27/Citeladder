@@ -198,23 +198,25 @@ export async function readChat(
   chatId: string,
 ) {
   const { chat, scope } = await chatIn(db, workspace, chatId);
-  const messages = await db
-    .selectFrom('agent_messages')
-    .selectAll()
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('chat_id', '=', chat.id)
-    .orderBy('sequence')
-    .execute();
-  const run = await db
-    .selectFrom('agent_runs')
-    .selectAll()
-    .where('workspace_id', '=', scope.workspaceId)
-    .where('chat_id', '=', chat.id)
-    .orderBy('created_at', 'desc')
-    .orderBy('id', 'desc')
-    .limit(1)
-    .executeTakeFirst();
-  const documents = await chatDocuments(db, chat);
+  const [messages, run, documents] = await Promise.all([
+    db
+      .selectFrom('agent_messages')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('chat_id', '=', chat.id)
+      .orderBy('sequence')
+      .execute(),
+    db
+      .selectFrom('agent_runs')
+      .selectAll()
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('chat_id', '=', chat.id)
+      .orderBy('created_at', 'desc')
+      .orderBy('id', 'desc')
+      .limit(1)
+      .executeTakeFirst(),
+    chatDocuments(db, chat),
+  ]);
   // Each document's latest generating reply, where the thread places it.
   const generated = documents.length
     ? await db

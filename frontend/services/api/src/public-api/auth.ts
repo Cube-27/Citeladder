@@ -39,14 +39,16 @@ export function apiKeyAuth(
     const key = await resolveCaller(db, config.auth.apiKeyPepper, c.req.header('authorization'));
     await spendBudget(db, budget('public_api_key'), key.id);
     await spendBudget(db, budget('public_api_workspace'), key.workspace_id);
-    const member = await findWorkspaceMember(db, key.created_by_user_id, key.workspace_id);
-    // A key acts as its creator, so it stops when an operator disables them,
-    // exactly as their sessions and MCP connections do.
-    const creator = await db
-      .selectFrom('users')
-      .select(['is_active', 'registration_origin', 'email_verified_at'])
-      .where('id', '=', key.created_by_user_id)
-      .executeTakeFirst();
+    const [member, creator] = await Promise.all([
+      findWorkspaceMember(db, key.created_by_user_id, key.workspace_id),
+      // A key acts as its creator, so it stops when an operator disables them,
+      // exactly as their sessions and MCP connections do.
+      db
+        .selectFrom('users')
+        .select(['is_active', 'registration_origin', 'email_verified_at'])
+        .where('id', '=', key.created_by_user_id)
+        .executeTakeFirst(),
+    ]);
     if (member === undefined || !creator?.is_active || requiresEmailVerification(creator))
       throw new ApiError(401, 'This API key no longer has workspace access', {
         code: 'invalid_api_key',

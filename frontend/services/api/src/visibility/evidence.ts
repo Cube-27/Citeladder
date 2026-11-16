@@ -208,8 +208,10 @@ export async function getVisibilityEvidence(
   const truncated = rows.length > options.limit;
   const shown = rows.slice(0, options.limit);
   const ids = shown.map((row) => row.analysis_id);
-  const mentions = await mentionsByAnalysis(db, selection.workspaceId, ids);
-  const citations = await citationsByAnalysis(db, selection.workspaceId, ids);
+  const [mentions, citations] = await Promise.all([
+    mentionsByAnalysis(db, selection.workspaceId, ids),
+    citationsByAnalysis(db, selection.workspaceId, ids),
+  ]);
   // One label per prompt; a prompt renamed within the selection shows one text.
   const prompts = new Map<string, string>();
   for (const option of promptChoices) prompts.set(option.identity, option.text);
@@ -276,34 +278,36 @@ async function mentionsByAnalysis(
 ): Promise<Map<string, Mention[]>> {
   const grouped = new Map<string, Mention[]>();
   if (analysisIds.length === 0) return grouped;
-  const brand = await db
-    .selectFrom('brand_mentions')
-    .select([
-      'analysis_id',
-      'brand_name as name',
-      'first_offset',
-      'artifact_id',
-      'analyzer_version',
-    ])
-    .where('workspace_id', '=', workspaceId)
-    .where('analysis_id', 'in', [...analysisIds])
-    .orderBy('created_at')
-    .orderBy('id')
-    .execute();
-  const competitor = await db
-    .selectFrom('competitor_mentions')
-    .select([
-      'analysis_id',
-      'competitor_name as name',
-      'first_offset',
-      'artifact_id',
-      'analyzer_version',
-    ])
-    .where('workspace_id', '=', workspaceId)
-    .where('analysis_id', 'in', [...analysisIds])
-    .orderBy('created_at')
-    .orderBy('id')
-    .execute();
+  const [brand, competitor] = await Promise.all([
+    db
+      .selectFrom('brand_mentions')
+      .select([
+        'analysis_id',
+        'brand_name as name',
+        'first_offset',
+        'artifact_id',
+        'analyzer_version',
+      ])
+      .where('workspace_id', '=', workspaceId)
+      .where('analysis_id', 'in', [...analysisIds])
+      .orderBy('created_at')
+      .orderBy('id')
+      .execute(),
+    db
+      .selectFrom('competitor_mentions')
+      .select([
+        'analysis_id',
+        'competitor_name as name',
+        'first_offset',
+        'artifact_id',
+        'analyzer_version',
+      ])
+      .where('workspace_id', '=', workspaceId)
+      .where('analysis_id', 'in', [...analysisIds])
+      .orderBy('created_at')
+      .orderBy('id')
+      .execute(),
+  ]);
   for (const [kind, rows] of [
     ['brand', brand],
     ['competitor', competitor],
