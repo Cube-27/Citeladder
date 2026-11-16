@@ -317,7 +317,7 @@ export function declareAction(
       if (!stored) throw replayConflict();
       return { row: stored, created: false };
     }
-    await recordStatus(trx, action, a.ACTION_STATUS_IMPLEMENTED, userId);
+    await recordStatus(trx, [action], a.ACTION_STATUS_IMPLEMENTED, userId);
     // Nothing reads a declaration resolved before go-live.
     if (!resolvedBefore) await verifyExistingEvidence(trx, row, declaredAt);
     return { row, created: true };

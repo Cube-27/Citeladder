@@ -38,7 +38,7 @@ export async function updateActionStatus(
       throw new ApiError(422, 'A declared Action cannot be changed');
     if (!allowed(action.status, status))
       throw new ApiError(422, `An Action cannot move from ${action.status} to ${status}`);
-    await recordStatus(trx, action, status, userId);
+    await recordStatus(trx, [action], status, userId);
   });
   return actionItem(await requireAction(db, scope, actionId));
 }
@@ -58,13 +58,10 @@ export async function bulkUpdateActionStatus(
 ) {
   return inTransaction(db, async (trx) => {
     await acquireProjectLock(trx, scope.projectId);
-    let named = 0;
     let candidates: string[];
     let truncated = false;
     if (input.ids) {
-      const ids = [...new Set(input.ids)];
-      named = ids.length;
-      candidates = ids;
+      candidates = [...new Set(input.ids)];
     } else if (input.filter) {
       const rows = await matchingActions(trx, scope, input.filter)
         .select('id')
@@ -74,29 +71,28 @@ export async function bulkUpdateActionStatus(
         .execute();
       truncated = rows.length > a.ACTION_BULK_MAX;
       candidates = rows.slice(0, a.ACTION_BULK_MAX).map((row) => row.id);
-      named = candidates.length;
     } else {
       throw new ApiError(422, 'Name either ids or a filter');
     }
-    const locked = candidates.length
-      ? await trx
+    if (!candidates.length) return { updated: 0, skipped: 0, truncated };
+    // A filtered change locks through its filter again, so an Action a single
+    // decision moved out of it since the read above is skipped, not changed.
+    const reach = input.filter
+      ? matchingActions(trx, scope, input.filter)
+      : trx
           .selectFrom('actions')
-          .selectAll()
           .where('workspace_id', '=', scope.workspaceId)
           .where('project_id', '=', scope.projectId)
-          .where('id', 'in', candidates)
-          .where(LIVE_TARGET_KIND)
-          .orderBy('id')
-          .forUpdate()
-          .execute()
-      : [];
-    let updated = 0;
-    for (const action of locked) {
-      if (!allowed(action.status, input.to)) continue;
-      await recordStatus(trx, action, input.to, userId);
-      updated += 1;
-    }
-    return { updated, skipped: named - updated, truncated };
+          .where(LIVE_TARGET_KIND);
+    const locked = await reach
+      .selectAll()
+      .where('id', 'in', candidates)
+      .orderBy('id')
+      .forUpdate()
+      .execute();
+    const moving = locked.filter((action) => allowed(action.status, input.to));
+    await recordStatus(trx, moving, input.to, userId);
+    return { updated: moving.length, skipped: candidates.length - moving.length, truncated };
   });
 }
 
@@ -115,5 +111,5 @@ export async function acceptForAgent(db: Database, scope: Scope, actionId: strin
     .forNoKeyUpdate()
     .executeTakeFirst();
   if (action?.status === a.ACTION_STATUS_OPEN)
-    await recordStatus(db, action, a.ACTION_STATUS_IN_PROGRESS, userId);
+    await recordStatus(db, [action], a.ACTION_STATUS_IN_PROGRESS, userId);
 }

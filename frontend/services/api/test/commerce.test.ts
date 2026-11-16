@@ -643,5 +643,12 @@ describe('decisions and persisted reads', () => {
       t.userId,
     );
     expect((await call<CommerceProductDetail>(path)).body.actions).toEqual([]);
+    // Done while still measuring leaves the list too.
+    await db
+      .updateTable('actions')
+      .set({ status: 'implemented', effective_status: 'measuring' })
+      .where('id', '=', action.id)
+      .execute();
+    expect((await call<CommerceProductDetail>(path)).body.actions).toEqual([]);
   });
 });

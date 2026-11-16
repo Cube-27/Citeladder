@@ -10,7 +10,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
-import { statusView } from '../opportunities/action-status.ts';
+import { persistedStatuses, statusView } from '../opportunities/action-status.ts';
 import { catalogApplicability, UNCATEGORIZED_KEY } from './projection-facts.ts';
 import { ApiError } from '../errors.ts';
 
@@ -241,8 +241,8 @@ export async function buyerPrompts(db: Database, scope: CommerceScope, id?: stri
   );
 }
 
-/** Persisted statuses the target's list leaves out: verified and declined. */
-const SETTLED_ACTION_STATUSES = ['done', 'dismissed'];
+/** Persisted statuses the target's list leaves out: Done (measuring or verified) and Declined. */
+const SETTLED_ACTION_STATUSES = persistedStatuses(['done', 'dismissed']);
 
 /** Live commerce Opportunities keyed to the target, by the Action that holds them. */
 export async function targetActions(
@@ -260,7 +260,6 @@ export async function targetActions(
     .where('o.opportunity_type', '=', 'commerce')
     .where('o.target_key', '=', `${target.kind}:${target.id}`)
     .where('o.superseded_at', 'is', null)
-    // The status readers see: `done` exists only there, never as a stored decision.
     .where('a.effective_status', 'not in', SETTLED_ACTION_STATUSES)
     .orderBy('o.priority_score', 'desc')
     .orderBy('a.id')

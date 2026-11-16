@@ -67,8 +67,8 @@ function derivedStatus(): RawBuilder<string> {
 }
 
 /**
- * Recompute one Action's persisted effective status inside the caller's
- * transaction. The row is locked first so the recompute, a separate
+ * Recompute the Actions' persisted effective status inside the caller's
+ * transaction. The rows are locked first so the recompute, a separate
  * statement, reads every input committed before it, including a concurrent
  * writer's that held the lock. `FOR NO KEY UPDATE` serializes refreshers
  * without conflicting with the key-share lock a writer's own foreign key to
@@ -78,53 +78,65 @@ function derivedStatus(): RawBuilder<string> {
 export async function refreshActionStatus(
   db: Database,
   workspaceId: string,
-  actionId: string,
+  ...actionIds: string[]
 ): Promise<void> {
+  if (!actionIds.length) return;
   await db
     .selectFrom('actions')
     .select('id')
     .where('workspace_id', '=', workspaceId)
-    .where('id', '=', actionId)
+    .where('id', 'in', actionIds)
+    .orderBy('id')
     .forNoKeyUpdate()
     .execute();
   await db
     .updateTable('actions')
     .set({ effective_status: derivedStatus() })
     .where('workspace_id', '=', workspaceId)
-    .where('id', '=', actionId)
+    .where('id', 'in', actionIds)
     .where(sql<SqlBool>`effective_status is distinct from ${derivedStatus()}`)
     .execute();
 }
 
-/** Store `status` with its event and refresh the effective status; caller holds the row lock. */
+type StatusRow = Pick<Selectable<Actions>, 'id' | 'workspace_id' | 'project_id' | 'status'>;
+
+/**
+ * Store `status` on one workspace's Actions with an event each and refresh
+ * their effective status; the caller holds the row locks.
+ */
 export async function recordStatus(
   db: Database,
-  action: Pick<Selectable<Actions>, 'id' | 'workspace_id' | 'project_id' | 'status'>,
+  actions: readonly StatusRow[],
   status: string,
   userId: string,
 ) {
-  if (action.status === status) return;
+  const moving = actions.filter((action) => action.status !== status);
+  const [first] = moving;
+  if (!first) return;
+  const ids = moving.map((action) => action.id);
   const now = new Date();
   await db
     .updateTable('actions')
     .set({ status, updated_at: now })
-    .where('workspace_id', '=', action.workspace_id)
-    .where('id', '=', action.id)
+    .where('workspace_id', '=', first.workspace_id)
+    .where('id', 'in', ids)
     .execute();
   await db
     .insertInto('action_status_events')
-    .values({
-      id: randomUUID(),
-      workspace_id: action.workspace_id,
-      project_id: action.project_id,
-      action_id: action.id,
-      previous_status: action.status,
-      next_status: status,
-      changed_by_user_id: userId,
-      created_at: now,
-    })
+    .values(
+      moving.map((action) => ({
+        id: randomUUID(),
+        workspace_id: action.workspace_id,
+        project_id: action.project_id,
+        action_id: action.id,
+        previous_status: action.status,
+        next_status: status,
+        changed_by_user_id: userId,
+        created_at: now,
+      })),
+    )
     .execute();
-  await refreshActionStatus(db, action.workspace_id, action.id);
+  await refreshActionStatus(db, first.workspace_id, ...ids);
 }
 
 /**
