@@ -109,7 +109,7 @@ export function SearchIntelligenceRows({
       {columns.map((column) => (
         <TableCell key={column.field} numeric={column.numeric}>
           {column === columns[0] ? (
-            <TextLink asChild text="body">
+            <TextLink asChild text="body" underline="hover">
               <Pressable
                 type="button"
                 className="flex max-w-full min-w-0 text-left"
