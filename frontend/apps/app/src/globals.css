@@ -363,7 +363,6 @@
      rung pulsing its opacity every 1.2s. Rung meters fill one rung at a
      time (`steps()`), never on a curve. */
   --motion-pulse: 1200ms;
-  --motion-loader-delay: 300ms;
   --animate-live-rung: live-rung var(--motion-pulse) ease-in-out infinite;
   --z-index-sticky: 20;
   --z-index-overlay: 40;
@@ -414,8 +413,6 @@
   /* The main column's gutter: 32 from 1280px, 24 below (rebound below). */
   --content-gutter: 32px;
   --content-max-width: var(--container-app);
-  /* A list beside its selected item's detail. */
-  --pane-list-detail: minmax(18rem, 0.9fr) minmax(0, 2fr);
   /* App rhythm: header → 32 → controls → 16 → content; cards gap 16; card
      padding 24. */
   --page-section-gap: 32px;
@@ -1597,13 +1594,6 @@ a.focus-ring:active .type-caption {
   background: var(--color-well);
 }
 
-/* A Panel that lands inside a container is a sunken inset, so it takes the
-   inset's 12 down and 16 across rather than a container's 16 all round. */
-:where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
-  .surface-panel.surface-inset {
-  padding-block: calc(var(--spacing) * 3);
-}
-
 /* A card never sits in a card (2.4). Inside a card, a dialog or a drawer, a
    card or a slip steps down to the inset, and a card section to a plain group
    (no fill, edge, shadow or padding of its own). */
@@ -1857,20 +1847,6 @@ input:is(:autofill, :-webkit-autofill) {
   }
 }
 
-/* A loader is held back 300ms: either the content arrives and no loader ever
-   existed, or the wait is real and the loader appears once and stays. */
-@keyframes citeladder-loading-appear {
-  to {
-    opacity: 1;
-  }
-}
-
-.loading-delayed {
-  opacity: 0;
-  animation: citeladder-loading-appear var(--motion-fast) var(--ease-standard)
-    var(--motion-loader-delay) forwards;
-}
-
 /* Box shadows disappear in forced colours; retain a system-colour boundary. */
 @media (forced-colors: active) {
   [data-button-variant='primary'],
@@ -1903,15 +1879,6 @@ samp {
   transition-timing-function: var(--ease-exit);
 }
 
-@keyframes drawer-overlay-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
 @keyframes drawer-overlay-out {
   from {
     opacity: 1;
@@ -1924,7 +1891,7 @@ samp {
 @keyframes drawer-panel-in {
   from {
     opacity: 0;
-    transform: translateX(100%);
+    transform: translateX(var(--drawer-offset, 100%));
   }
   to {
     opacity: 1;
@@ -1939,34 +1906,12 @@ samp {
   }
   to {
     opacity: 0;
-    transform: translateX(100%);
-  }
-}
-
-@keyframes drawer-panel-in-left {
-  from {
-    opacity: 0;
-    transform: translateX(-100%);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes drawer-panel-out-left {
-  from {
-    opacity: 1;
-    transform: translateX(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-100%);
+    transform: translateX(var(--drawer-offset, 100%));
   }
 }
 
 .drawer-overlay[data-state="open"] {
-  animation: drawer-overlay-in var(--motion-slow) var(--ease-standard) both;
+  animation: modal-overlay-in var(--motion-slow) var(--ease-standard) both;
 }
 
 .drawer-overlay[data-state="closed"] {
@@ -1981,12 +1926,8 @@ samp {
   animation: drawer-panel-out var(--motion-normal) var(--ease-exit) both;
 }
 
-.drawer-panel[data-side="left"][data-state="open"] {
-  animation-name: drawer-panel-in-left;
-}
-
-.drawer-panel[data-side="left"][data-state="closed"] {
-  animation-name: drawer-panel-out-left;
+.drawer-panel[data-side="left"] {
+  --drawer-offset: -100%;
 }
 
 @starting-style {
@@ -2002,12 +1943,6 @@ samp {
   50% {
     opacity: 0.35;
   }
-}
-
-/* A live-activity dot: it pulses its opacity like the live rung, never a ping. */
-.activity-dot {
-  border-radius: var(--radius-full);
-  animation: live-rung var(--motion-pulse) ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2051,10 +1986,7 @@ samp {
   scroll-margin-top: calc(var(--marketing-nav-offset) + 1.5rem);
 }
 
-/* Fixed chrome respects the home indicator and notch on mobile. */
-.safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
+/* Fixed chrome respects the notch on mobile. */
 .safe-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -2074,9 +2006,6 @@ label {
     color: black !important;
   }
 }
-
-/* r3 data */
-/* Tables, scroll frames and skeletons (round 3, builder A2). */
 
 [data-data-table-frame] {
   /* A table's identity column never narrows past about 25 characters of row
@@ -2370,7 +2299,6 @@ label {
   );
 }
 
-/* r3 a2 figures */
 /* FigureStrip (`figureRows`): a wrapping row of figures 16 apart, each as wide
    as its row's share, so the strip is never wider than its container. On the
    ground each figure is a metric card; inside a card the figures are cells 16
