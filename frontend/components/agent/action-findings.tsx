@@ -51,6 +51,7 @@ export function ActionFindings({
             <li key={member.id}>
               <OpenRow
                 title={member.title}
+                layout="stacked"
                 opens="dialog"
                 meta={
                   <>

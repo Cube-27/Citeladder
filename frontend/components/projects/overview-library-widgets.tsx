@@ -42,7 +42,7 @@ function WidgetCard({
 }: Readonly<{
   id: OverviewWidgetKey;
   href: string;
-  /** `figure` for a number widget, which centres its figures. */
+  /** `figure` for a number widget: its figures under the head, its link at the foot. */
   fill?: 'figure';
   children: ReactNode;
 }>) {

@@ -323,7 +323,7 @@ export function Track({ data }: Readonly<{ data: CommandCenter }>) {
  */
 export function Movement({ data }: Readonly<{ data: CommandCenter }>) {
   return (
-    <WidgetFrame id="movement" title="Movement">
+    <WidgetFrame id="movement" title="Movement" fill={data.movements.length ? 'chart' : 'list'}>
       {data.movements.length ? (
         <MovementChart movements={data.movements} />
       ) : (

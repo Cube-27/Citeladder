@@ -18,7 +18,7 @@ import { SettingsPage } from '@/components/templates/settings-page';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
 import { Stack } from '@/components/ui/layout';
-import { Notice, readErrorProps } from '@/components/ui/notice';
+import { readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
 import type { BrandProfile, Project } from '@citeladder/contracts';
@@ -177,12 +177,6 @@ function ProfileTab({
   return (
     <Stack gap="workspace">
       <ProfileSaveNotices form={form} />
-      {form.empty && !form.dirty ? (
-        <Notice tone="info">
-          No company facts yet. The agent and prompt generation read them before any evidence. Start
-          with what you sell, then save.
-        </Notice>
-      ) : null}
       {children}
     </Stack>
   );
