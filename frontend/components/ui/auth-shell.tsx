@@ -1,16 +1,57 @@
 import { ChevronRight, type LucideIcon } from 'lucide-react';
-import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react';
+import { cloneElement, useId, type ComponentProps, type ReactElement, type ReactNode } from 'react';
 
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { LogoMark } from '@/components/ui/logo-mark';
+import { textRole } from '@/components/ui/typography';
+import { websiteHref } from '@/lib/config/app-link';
 import type { Turnstile } from '@/lib/turnstile/use-turnstile';
 import { cn } from '@/lib/utils';
 
 /*
- * The parts of a Flow page's forms (sign-in, sign-up, the mailbox screens,
- * the workspace chooser): the frame and the heading are the Flow template's
- * (components/templates/flow-page.tsx).
+ * The parts of account access's forms (sign-in, sign-up, the mailbox screens,
+ * the workspace chooser). Sign-in, sign-up and the mailbox screens sit in the
+ * Auth template (components/templates/auth-page.tsx) under AuthBlock's head;
+ * the chooser and setup use the Flow template's frame and heading.
  */
+
+/**
+ * One account-access screen in the Auth template's column: the logo (linking
+ * to the website's home) centred over the title and its line, the body 16
+ * below, then the closing lines (`after`: the switch to the other form and the
+ * agreement line), centred. The title is the page's one `h1`.
+ */
+export function AuthBlock({
+  title,
+  sub,
+  after,
+  children,
+}: Readonly<{ title: string; sub?: ReactNode; after?: ReactNode; children: ReactNode }>) {
+  const headingId = useId();
+  return (
+    <div className="flex flex-col gap-4 text-center">
+      <section aria-labelledby={headingId} className="flex flex-col gap-4 text-start">
+        <header className="flex flex-col items-center gap-2 text-center">
+          <a
+            href={websiteHref('/')}
+            aria-label="CiteLadder home"
+            className="focus-ring text-ink rounded-control inline-flex p-1"
+          >
+            <LogoMark size={28} />
+          </a>
+          {/* Takes focus by script (tabIndex -1) when a flow moves to a new step. */}
+          <h1 id={headingId} tabIndex={-1} className={textRole('display', 'text-balance')}>
+            {title}
+          </h1>
+          {sub ? <p className={textRole('body', 'text-ink-2')}>{sub}</p> : null}
+        </header>
+        {children}
+      </section>
+      {after}
+    </div>
+  );
+}
 
 /** The form's full-width action: the submit, or "Continue with Google". */
 export function AuthButton(props: Readonly<Omit<ButtonProps, 'className'>>) {

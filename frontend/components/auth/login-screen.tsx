@@ -8,6 +8,7 @@ import {
   AuthPasswordField,
   AuthRecoveryLinks,
 } from '@/components/auth/auth-form';
+import { AuthSwitchOnly } from '@/components/auth/auth-switch';
 import { Stack } from '@/components/ui/layout';
 import { authApi } from '@/lib/api/auth';
 import {
@@ -120,15 +121,17 @@ export function LoginScreen({
           autoComplete="current-password"
           placeholder="••••••••"
         />
-        <AuthRecoveryLinks
-          links={[
-            { href: withAuthReturnPath('/forgot-password', returnTo), label: 'Forgot password?' },
-            {
-              href: withAuthReturnPath('/resend-verification', returnTo),
-              label: 'Resend verification email',
-            },
-          ]}
-        />
+        <AuthSwitchOnly>
+          <AuthRecoveryLinks
+            links={[
+              { href: withAuthReturnPath('/forgot-password', returnTo), label: 'Forgot password?' },
+              {
+                href: withAuthReturnPath('/resend-verification', returnTo),
+                label: 'Resend verification email',
+              },
+            ]}
+          />
+        </AuthSwitchOnly>
       </Stack>
     </AuthFormShell>
   );
