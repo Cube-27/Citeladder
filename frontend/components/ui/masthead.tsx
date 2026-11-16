@@ -32,8 +32,9 @@ export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
  * does it take keyboard focus and show the full name in the tooltip. Its
  * accessible name is always the full name. Below `rail` the row is the menu
  * button, the title, the primary and one "More" menu holding the search, the
- * secondary actions and "Ask agent". A button label is never cut: a row too
- * full folds its actions into More, the primary last.
+ * secondary actions and "Ask agent". A button label is never cut: a row that
+ * would squeeze the title under min(360px, 40% of the masthead) (or its whole
+ * text, if shorter) folds its actions into More, the primary last.
  */
 export function Masthead({
   title,
@@ -79,7 +80,7 @@ export function Masthead({
             tabIndex={cut ? 0 : undefined}
             className={textRole(
               'title',
-              // One line at every width, keeping 112px; a row too full for it folds behind More.
+              // One line at every width, never under 112px; the fold keeps it min(360px, 40%) (`rowDeficit`).
               cn('not-rail:w-0 not-rail:flex-1 min-w-28 truncate', cut && 'focus-ring'),
             )}
           >
