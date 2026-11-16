@@ -1,0 +1,214 @@
+import { expect, test, type Locator, type Page, type Route } from '@playwright/test';
+
+import { FIXTURE_PROJECT, fixtureProjectPath, stubAuthedShell } from './helpers/app-fixture';
+
+const BASE = `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions`;
+
+function action(index: number, grouping: string) {
+  const id = String(index + 1).padStart(12, '0');
+  return {
+    id: `00000000-0000-4000-8000-${id}`,
+    project_id: FIXTURE_PROJECT.id,
+    target_kind: 'issue_family',
+    // Titles of every length: a long one must cut, never widen its column.
+    target_label: `${grouping} fix ${index + 1}${index % 3 === 0 ? ' where the structured data names a different organisation than the page footer' : ''}`,
+    target_url: null,
+    target_prompt_id: null,
+    origin: 'evidence',
+    status: 'open',
+    measurement: null,
+    priority_score: 90 - index,
+    priority_band: ['high', 'medium', 'low'][index % 3],
+    families: ['site_health'],
+    approach: 'fix_technical',
+    goal: 'read_site',
+    grouping,
+    skill_id: 'site_fix',
+    member_count: 1,
+    declarable_member_count: 1,
+    page_count: index % 4 === 0 ? 0 : 1200 - index,
+    handoff: { context: 'action', message: 'Fix it.' },
+    evidence_cleared_at: null,
+    created_at: '2026-11-14T00:00:00Z',
+    updated_at: '2026-11-14T00:00:00Z',
+  };
+}
+
+/** The New AEO grouping holds 23 Actions; Accept takes ticked ones out. */
+const accepted = new Set<string>();
+const aeo = () =>
+  Array.from({ length: 23 }, (_, index) => action(index, 'aeo')).filter(
+    (item) => !accepted.has(item.id),
+  );
+const seo = Array.from({ length: 3 }, (_, index) => action(40 + index, 'seo'));
+
+function grouping(name: string, items: ReturnType<typeof action>[]) {
+  return {
+    grouping: name,
+    count: items.length,
+    items: items.slice(0, 10),
+    next_cursor: items.length > 10 ? 'next-10' : null,
+  };
+}
+
+function tree(route: Route) {
+  const params = new URL(route.request().url()).searchParams;
+  const groupBy = params.get('group_by') ?? 'goal';
+  const open = params.get('status') === 'open';
+  const rows = open ? aeo() : aeo().slice(0, 2);
+  const groupings = [grouping('aeo', rows), grouping('seo', seo)];
+  const total = rows.length + seo.length;
+  return route.fulfill({
+    json: {
+      group_by: groupBy,
+      // A move changes counts by a digit; their width is reserved.
+      status_counts: {
+        open: aeo().length + 3,
+        in_progress: 9 + accepted.size,
+        done: 120,
+        dismissed: 8,
+      },
+      goals: [
+        // Open work (New and In progress): an Accept moves nothing between goals.
+        { goal: 'read_site', count: 35, blocking: true },
+        { goal: 'own_pages', count: 0, blocking: false },
+        { goal: 'mentions', count: 0, blocking: false },
+        { goal: 'wrong_claims', count: 0, blocking: false },
+      ],
+      groups:
+        groupBy === 'goal'
+          ? [{ key: 'read_site', count: total, groupings }]
+          : [{ key: 'high', count: total, groupings }],
+    },
+  });
+}
+
+async function stubActions(page: Page) {
+  await stubAuthedShell(page);
+  await page.route(`${BASE}/tree?*`, tree);
+  await page.route(`${BASE}?*`, (route) => {
+    const cursor = new URL(route.request().url()).searchParams.get('cursor');
+    const rest = aeo().slice(cursor === 'next-10' ? 10 : 20);
+    return route.fulfill({
+      json: {
+        items: rest.slice(0, 10),
+        next_cursor: rest.length > 10 ? 'next-20' : null,
+        status_counts: {},
+      },
+    });
+  });
+  await page.route(`${BASE}/status`, async (route) => {
+    const body = (await route.request().postDataJSON()) as { ids?: string[] };
+    for (const id of body.ids ?? []) accepted.add(id);
+    return route.fulfill({
+      json: { updated: body.ids?.length ?? 0, skipped: 0, truncated: false },
+    });
+  });
+}
+
+type Box = readonly number[] | null;
+
+/** The bands above and beside what a click on the tree changes: x, y, width and height. */
+async function layout(page: Page): Promise<Record<string, Box>> {
+  const parts: Record<string, Locator> = {
+    masthead: page.locator('[data-masthead]'),
+    toolbar: page.locator('[data-filter-bar]'),
+    goals: page.getByRole('group', { name: 'Goals' }),
+    firstGroup: page.locator('[data-tree-group]').first(),
+  };
+  const scrolled = await page.evaluate(() => window.scrollY);
+  const boxes: Record<string, Box> = {};
+  for (const [name, part] of Object.entries(parts)) {
+    const box = (await part.count()) >= 1 ? await part.boundingBox() : null;
+    const top = name === 'masthead' ? 0 : scrolled;
+    boxes[name] = box && [box.x, box.y + top, box.width, box.height];
+  }
+  return boxes;
+}
+
+/** Within a pixel, for subpixel rounding. */
+function moved(before: Box, after: Box): boolean {
+  if (!before || !after) return before !== after;
+  return before.some((value, index) => Math.abs(value - (after[index] ?? Infinity)) > 1);
+}
+
+const print = (box: Box) => (box ? box.map(Math.round).join(',') : 'absent');
+
+for (const width of [1280, 1600])
+  test(`no click on the Actions page moves the toolbar, goal strip or first goal at ${width}px`, async ({
+    page,
+  }) => {
+    accepted.clear();
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.setViewportSize({ width, height: 900 });
+    await stubActions(page);
+    await page.goto(fixtureProjectPath('/actions'));
+    const aeoRows = page.getByRole('table', { name: /^\d+ actions$/ }).first();
+    await expect(aeoRows.getByRole('row')).toHaveCount(11);
+    await page.evaluate(() => document.fonts.ready);
+    const settled = async () => {
+      await expect(page.getByRole('menu')).toHaveCount(0);
+      return layout(page);
+    };
+    const before = await settled();
+    const shifts: string[] = [];
+    const check = async (step: string) => {
+      const after = await settled();
+      for (const [name, box] of Object.entries(before)) {
+        const next = after[name] ?? null;
+        if (moved(box, next)) shifts.push(`${step}: ${name} ${print(box)} -> ${print(next)}`);
+      }
+    };
+    const choose = async (trigger: RegExp, option: string) => {
+      await page.locator('[data-filter-bar]').getByRole('button', { name: trigger }).click();
+      await page.getByRole('menuitemradio', { name: option }).click();
+    };
+    const toggle = (name: RegExp) => page.getByRole('button', { name }).first().click();
+
+    await choose(/^Status/, 'New');
+    await expect(page.getByRole('button', { name: /^Done, / })).toHaveCount(0);
+    await check('Status New');
+    await choose(/^Status/, 'All statuses');
+    await expect(page.getByRole('button', { name: /^Done, / })).toBeVisible();
+    await check('Status all');
+
+    await choose(/^Group by/, 'Impact');
+    await expect(page.getByRole('button', { name: /^High impact, / })).toBeVisible();
+    await check('Group by impact');
+    await choose(/^Group by/, 'Goal');
+    await expect(page.getByRole('button', { name: /^Let AI read your site, / })).toBeVisible();
+    await check('Group by goal');
+
+    await toggle(/^AEO, /);
+    await expect(page.getByRole('table')).toHaveCount(0);
+    await check('Close a grouping');
+    await toggle(/^AEO, /);
+    await expect(aeoRows.getByRole('row')).toHaveCount(11);
+    await check('Open a grouping');
+    await toggle(/^SEO, /);
+    await check('Open a second grouping');
+    await toggle(/^Let AI read your site, /);
+    await check('Close a goal');
+    await toggle(/^Let AI read your site, /);
+    await check('Open a goal');
+    await toggle(/^In progress, /);
+    await check('Open a status');
+    await toggle(/^In progress, /);
+    await check('Close a status');
+
+    // Only AEO holds more than ten; its Show more sits in the rows box, under the table.
+    await page.getByRole('button', { name: 'Show 10 more' }).click();
+    await expect(aeoRows.getByRole('row')).toHaveCount(21);
+    await check('Show more');
+
+    await aeoRows.getByRole('checkbox').first().click();
+    const bar = page.getByRole('toolbar', { name: 'Selected actions' });
+    await expect(bar).toBeVisible();
+    await check('Tick a row');
+    await bar.getByRole('button', { name: 'Accept' }).click();
+    await expect(bar).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^AEO, 22/ })).toBeVisible();
+    await check('Accept a row');
+
+    expect(shifts).toEqual([]);
+  });

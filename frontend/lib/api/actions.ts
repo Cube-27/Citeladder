@@ -6,7 +6,12 @@
  * persisted projections; the writes are the user's workflow decision and
  * the implementation declaration.
  */
-import { mutationOptions, queryOptions, type QueryClient } from '@tanstack/react-query';
+import {
+  infiniteQueryOptions,
+  mutationOptions,
+  queryOptions,
+  type QueryClient,
+} from '@tanstack/react-query';
 import type { z } from 'zod';
 
 import { apiClient, type ApiRequestOptions } from './client';
@@ -15,40 +20,63 @@ import type { ProjectScope } from './query-keys/scope';
 import {
   ACTION_STATUS_ANY,
   actionAnalyzeResultSchema,
+  actionBulkStatusResultSchema,
   actionDeclarationSchema,
   actionDetailSchema,
   actionItemSchema,
   actionStatusSchema,
   actionsPageSchema,
+  actionTreeSchema,
   analyzablePagesSchema,
   type ActionAnalyzeRequest,
+  type ActionBulkStatusRequest,
   type ActionDeclarationRequest,
-  type ActionGroup,
   type ActionPriorityBand,
+  type ActionTreeGroupBy,
   type ActionUserStatus,
 } from '@citeladder/contracts/actions';
 import { strictValidate } from '@citeladder/contracts/validation';
 import { definedQuery, withQuery } from './shared';
-import { ACTIONS_LIST_READ_LIMIT, AGENT_MENTION_SEARCH_LIMIT } from '@/lib/config/agent';
+import { ACTIONS_GROUPING_PAGE_SIZE, AGENT_MENTION_SEARCH_LIMIT } from '@/lib/config/agent';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 
 export type Action = z.infer<typeof actionItemSchema>;
 export type ActionsPage = z.infer<typeof actionsPageSchema>;
 export type ActionDetail = z.infer<typeof actionDetailSchema>;
 export type ActionStatus = z.infer<typeof actionStatusSchema>;
-export type { ActionGroup, ActionPriorityBand };
+export type {
+  ActionPriorityBand,
+  ActionTree,
+  ActionTreeGroupBy,
+} from '@citeladder/contracts/actions';
 export type ActionDeclaration = z.infer<typeof actionDeclarationSchema>;
 export type MeasurementLeg = ActionDeclaration['legs'][number];
 export type AnalyzablePage = z.infer<typeof analyzablePagesSchema>['items'][number];
 
-/** The Actions list's status views and the statuses each holds. */
-export const ACTION_LIST_VIEWS = {
-  open: ['open'],
-  in_progress: ['in_progress'],
-  done: ['done'],
-  dismissed: ['dismissed'],
-} as const satisfies Record<string, readonly ActionStatus[]>;
-export type ActionListView = keyof typeof ACTION_LIST_VIEWS;
+/** The Actions page's filters beside its status and grouping. */
+export type ActionTreeFilters = Readonly<{ priority?: ActionPriorityBand; family?: string }>;
+
+/** One tree read: a status, what it groups by first, and the filters. */
+export type ActionTreeParams = ActionTreeFilters &
+  Readonly<{ status: ActionStatus; group_by: ActionTreeGroupBy }>;
+
+/** The page's first read with nothing in its address: New, by goal. The route prefetch warms it. */
+export const DEFAULT_ACTION_TREE = {
+  status: 'open',
+  group_by: 'goal',
+} as const satisfies ActionTreeParams;
+
+/** One tree grouping's rows: the tree's filters, its group's own filter and the grouping. */
+export type ActionGroupingParams = Readonly<{
+  status: ActionStatus;
+  grouping: string;
+  /** The tree's Impact filter, or an Impact group's band. */
+  priority?: string;
+  family?: string;
+  approach?: string;
+  ownership?: string;
+  topic?: string;
+}>;
 
 export type ActionsParams = {
   cursor?: string;
@@ -58,12 +86,13 @@ export type ActionsParams = {
   /** Text the Action's label contains. */
   q?: string;
   target_kind?: string;
-  group?: ActionGroup;
   approach?: string;
   priority?: ActionPriorityBand;
   /** An evidence family: the Action's Source. */
   family?: string;
 };
+
+type Query = Readonly<Record<string, string | undefined>>;
 
 export const actionsApi = {
   list: async (projectId: string, params?: ActionsParams, options?: ApiRequestOptions) =>
@@ -74,6 +103,35 @@ export const actionsApi = {
         options,
       ),
       'actions.list',
+    ),
+  /** The tree's grouping rows or any filtered page: the list read with free-form filters. */
+  page: async (projectId: string, query: Query, options?: ApiRequestOptions) =>
+    strictValidate(
+      actionsPageSchema,
+      await apiClient.get(
+        withQuery(`/projects/${projectId}/actions`, definedQuery(query)),
+        options,
+      ),
+      'actions.page',
+    ),
+  tree: async (projectId: string, params: ActionTreeParams, options?: ApiRequestOptions) =>
+    strictValidate(
+      actionTreeSchema,
+      await apiClient.get(
+        withQuery(`/projects/${projectId}/actions/tree`, definedQuery(params)),
+        options,
+      ),
+      'actions.tree',
+    ),
+  bulkStatus: async (
+    projectId: string,
+    body: ActionBulkStatusRequest,
+    options?: ApiRequestOptions,
+  ) =>
+    strictValidate(
+      actionBulkStatusResultSchema,
+      await apiClient.post(`/projects/${projectId}/actions/status`, body, options),
+      'actions.bulkStatus',
     ),
   get: async (actionId: string, options?: ApiRequestOptions) =>
     strictValidate(
@@ -143,7 +201,6 @@ function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
       status: request.status ?? null,
       q: request.q ?? null,
       targetKind: request.target_kind ?? null,
-      group: request.group ?? null,
       approach: request.approach ?? null,
       priority: request.priority ?? null,
       family: request.family ?? null,
@@ -158,18 +215,26 @@ function actionListQuery(scope: ProjectScope, params?: ActionsParams) {
 /** Action reads: the work queue, the composer's mention pool and one Action. */
 export const actionsQueries = {
   list: actionListQuery,
-  /**
-   * One status view of the Actions list: a read per status it holds (Measuring
-   * holds two), each the server's largest page under the Source and Priority filters.
-   */
-  statusView: (
-    scope: ProjectScope,
-    view: ActionListView,
-    params: Pick<ActionsParams, 'priority' | 'family'>,
-  ) =>
-    ACTION_LIST_VIEWS[view].map((status) =>
-      actionListQuery(scope, { ...params, status, limit: ACTIONS_LIST_READ_LIMIT }),
-    ),
+  /** The Actions page under one status: counts, goals and each grouping's first rows. */
+  tree: (scope: ProjectScope, params: ActionTreeParams) =>
+    queryOptions({
+      queryKey: queryKeys.actions.tree(scope, params),
+      queryFn: ({ signal }) =>
+        actionsApi.tree(scope.projectId, params, { signal, workspaceId: scope.workspaceId }),
+    }),
+  /** A grouping's rows past the tree's first page, a page per "Show more", from the tree's cursor. */
+  groupingRows: (scope: ProjectScope, params: ActionGroupingParams, cursor: string) =>
+    infiniteQueryOptions({
+      queryKey: queryKeys.actions.groupingRows(scope, params, cursor),
+      initialPageParam: cursor,
+      queryFn: ({ signal, pageParam }) =>
+        actionsApi.page(
+          scope.projectId,
+          { ...params, cursor: pageParam, limit: String(ACTIONS_GROUPING_PAGE_SIZE) },
+          { signal, workspaceId: scope.workspaceId },
+        ),
+      getNextPageParam: (page) => page.next_cursor ?? undefined,
+    }),
   /**
    * The Actions the Agent composer's `@` menu offers for typed text: any
    * status, so an Action being measured or done is still found by name.
@@ -218,6 +283,13 @@ export const actionsMutations = {
         actionsApi.updateStatus(vars.actionId, vars.status, { workspaceId }),
       // The refresh runs in the background: the control settles on the write.
       onSuccess: (_action, _vars, _result, { client }) => void refreshActions(client),
+    }),
+  /** One decision on the ticked Actions, or on every Action a filter matches (Accept all). */
+  bulkStatus: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: (body: ActionBulkStatusRequest) =>
+        actionsApi.bulkStatus(scope.projectId, body, { workspaceId: scope.workspaceId }),
+      onSettled: (_result, _error, _body, _context, { client }) => void refreshActions(client),
     }),
   /**
    * A declaration closes the Action's work; one naming internal-link

@@ -5,14 +5,11 @@ import {
   actionDetailSchema,
   actionGoalSchema,
   actionGroupingSchema,
-  actionGroupSchema,
   actionOwnershipSchema,
   actionItemSchema,
   actionPriorityBandSchema,
-  actionsPageSchema,
   actionStatusSchema,
   measurementLegSchema,
-  type ActionGroup,
   type ActionStatus,
 } from '@citeladder/contracts/actions';
 import { sql, type Selectable, type SqlBool } from 'kysely';
@@ -36,7 +33,7 @@ import { declarationView } from './declaration-view.ts';
 import { memberMeasurementLeg } from './checks/registry.ts';
 import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
-import { actionGroup, priorityBand, readHandoff } from '../analysis/opportunities/actions.ts';
+import { priorityBand, readHandoff } from '../analysis/opportunities/actions.ts';
 import { record } from '../db/json.ts';
 import { ruleDescription } from '../site-health/reads/rules.ts';
 import { actionUrlsPage, writeActionUrls } from './action-urls.ts';
@@ -155,7 +152,6 @@ export function actionItem(row: ActionRow) {
     priority_band: priorityBand(row.priority_score),
     families: stringList(row.families),
     approach: row.approach,
-    group: actionGroup(row),
     goal: actionGoalSchema.parse(row.goal ?? FALLBACK_GOAL),
     grouping: actionGroupingSchema.parse(row.goal_grouping ?? a.ACTION_GROUPING_FALLBACK),
     skill_id: row.skill_id,
@@ -212,19 +208,6 @@ function cursorPosition(cursor: string, filters: Record<string, unknown>) {
   }
 }
 
-const AND = sql` and `;
-/** `actionGroup` as SQL over the stored target kind and approach: the same rules in the same order. */
-const groupSql = sql<ActionGroup>`(case ${sql.join(
-  a.ACTION_GROUPS.map((rule) => {
-    const tests = [
-      rule.target_kinds ? sql`actions.target_kind in (${sql.join(rule.target_kinds)})` : null,
-      rule.approaches ? sql`actions.approach in (${sql.join(rule.approaches)})` : null,
-    ].filter((test) => test !== null);
-    return sql`when ${sql.join(tests, AND)} then ${rule.group}`;
-  }),
-  sql` `,
-)} else ${a.ACTION_GROUP_DEFAULT} end)`;
-
 /** Every approach a diagnosis can store (the tree's and the default's), and an undiagnosed Agent Action's ''. */
 const KNOWN_APPROACHES = [
   ...new Set([
@@ -243,7 +226,6 @@ type ActionListFilters = {
   /** Text the Action's label contains, case-insensitively. */
   q?: string | null;
   target_kind?: string | null;
-  group?: string | null;
   approach?: string | null;
   priority?: string | null;
   family?: string | null;
@@ -280,14 +262,13 @@ export function parseFilters(filters: ActionFilterInput) {
     status,
     q: filters.q?.trim() || null,
     target_kind: known('target kind', filters.target_kind, a.ACTION_TARGET_KINDS),
-    group: known('group', filters.group, actionGroupSchema.options),
     approach: known('approach', filters.approach, KNOWN_APPROACHES),
     priority: known('priority', filters.priority, actionPriorityBandSchema.options),
     family: known('source', filters.family, a.EVIDENCE_FAMILIES),
   };
 }
 
-/** The listed Actions under every filter but the group: the group counts read under it too. */
+/** The listed Actions every list filter matches. */
 function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof parseFilters>) {
   let filtered = listed(db, scope);
   if (filters.grouping) filtered = filtered.where(groupingSql, '=', filters.grouping);
@@ -311,11 +292,9 @@ function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof 
   return filtered;
 }
 
-/** The listed Actions every list filter matches, the group included: a bulk change's reach. */
+/** The listed Actions every list filter matches: a bulk change's reach. */
 export function matchingActions(db: Database, scope: Scope, raw: ActionFilterInput) {
-  const filters = parseFilters(raw);
-  const filtered = filteredActions(db, scope, filters);
-  return filters.group ? filtered.where(groupSql, '=', filters.group) : filtered;
+  return filteredActions(db, scope, parseFilters(raw));
 }
 
 /** The list read's cursor after `last` under `filters`, as the tree hands it to "Show more". */
@@ -334,16 +313,14 @@ export async function listActions(db: Database, scope: Scope, raw: ActionListFil
   const filters = parseFilters(raw);
   const priority = sql<number>`coalesce(actions.priority_score, -1)`;
   const fingerprint = { project_id: scope.projectId, ...filters };
-  const filtered = filteredActions(db, scope, filters);
-  let query = filtered.selectAll();
-  if (filters.group) query = query.where(groupSql, '=', filters.group);
+  let query = filteredActions(db, scope, filters).selectAll();
   if (raw.cursor) {
     const { score, id } = cursorPosition(raw.cursor, fingerprint);
     query = query.where((eb) =>
       eb.or([eb(priority, '<', score), eb.and([eb(priority, '=', score), eb('id', '>', id)])]),
     );
   }
-  const [rows, counts, groups] = await Promise.all([
+  const [rows, counts] = await Promise.all([
     query
       .orderBy(priority, 'desc')
       .orderBy('id')
@@ -352,11 +329,6 @@ export async function listActions(db: Database, scope: Scope, raw: ActionListFil
     listed(db, scope)
       .select(['effective_status as status', sql<number>`count(*)::int`.as('count')])
       .groupBy('effective_status')
-      .execute(),
-    filtered
-      .select([groupSql.as('group'), sql<number>`count(*)::int`.as('count')])
-      // By position: the CASE binds its values afresh in each clause.
-      .groupBy(sql`1`)
       .execute(),
   ]);
   const page = rows.slice(0, raw.limit);
@@ -371,14 +343,6 @@ export async function listActions(db: Database, scope: Scope, raw: ActionListFil
           .filter((row) => statusView(row.status).status === status)
           .reduce((sum, row) => sum + row.count, 0),
       ]),
-    ),
-    group_counts: actionsPageSchema.shape.group_counts.parse(
-      Object.fromEntries(
-        actionGroupSchema.options.map((id) => [
-          id,
-          groups.find((row) => row.group === id)?.count ?? 0,
-        ]),
-      ),
     ),
   };
 }

@@ -41,12 +41,6 @@ export const actionHandoffSchema = z.discriminatedUnion('context', [
 ]);
 export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
 
-// The Actions list's groups, derived at read time from the target kind and
-// approach (services/api config `ACTION_GROUPS`): fix how AI reads your site,
-// improve your own pages, get mentioned elsewhere, improve your products.
-export const actionGroupSchema = z.enum(['fix_site', 'own_pages', 'earned', 'products']);
-export type ActionGroup = z.infer<typeof actionGroupSchema>;
-
 // The Actions page's goals, in their fixed order, and the groupings under them
 // (plan v3, owner 2026-11-16), persisted on each Action at sync
 // (services/api config `ACTION_GOALS`). No producer files `wrong_claims` yet.
@@ -104,7 +98,6 @@ export const actionItemSchema = responseObject({
   priority_band: actionPriorityBandSchema.nullable(),
   families: z.array(z.string()),
   approach: z.string(),
-  group: actionGroupSchema,
   // Where the Actions page files it, as action sync persisted it.
   goal: actionGoalSchema,
   grouping: actionGroupingSchema,
@@ -285,10 +278,11 @@ export const actionOwnershipSchema = z.enum(['owned', 'earned']);
 
 /**
  * The Actions page in one persisted read (plan v3). `status_counts` are
- * project-wide in the four statuses; `goals` count each goal under the
- * current filters, in fixed order, `blocking` when a critical SEO or AEO
- * Action is New. Each group (by `group_by`: a goal, an approach, a priority
- * band with unscored Actions in `low`, `owned`/`earned`, or a topic, '' for none) holds its
+ * project-wide in the four statuses; `goals` count each goal's open Actions
+ * (New and In progress) under the other filters whatever the status filter,
+ * in fixed order, `blocking` when a critical SEO or AEO Action is New. Each
+ * group (by `group_by`: a goal, an approach, a priority band with unscored
+ * Actions in `low`, `owned`/`earned`, or a topic, '' for none) holds its
  * groupings, each with its count and first rows by impact; `next_cursor` is
  * the list read's cursor for the next rows of exactly that grouping.
  */
@@ -327,8 +321,6 @@ export const actionsPageSchema = responseObject({
   next_cursor: z.string().nullable(),
   // Project-wide, unfiltered: one count per status (New, In progress, Done, Declined).
   status_counts: z.record(z.string(), z.number().int()),
-  // Under every filter but the group: what each group holds now.
-  group_counts: z.record(actionGroupSchema, z.number().int()),
 });
 
 /**
@@ -345,25 +337,32 @@ export type ActionUserStatus = z.infer<typeof actionUserStatusSchema>;
 export const actionStatusUpdateRequestSchema = z.strictObject({ status: actionUserStatusSchema });
 export type ActionStatusUpdateRequest = z.input<typeof actionStatusUpdateRequestSchema>;
 
+/** A topic filter's longest value: the persisted theme's column width. */
+export const ACTION_TOPIC_MAX_CHARS = 255;
+
 /** The list filters a bulk change reaches through: the Actions list's own. */
 export const actionBulkFilterSchema = z.strictObject({
   status: actionStatusSchema,
   q: z.string().max(200).optional(),
   target_kind: actionTargetKindSchema.optional(),
-  group: actionGroupSchema.optional(),
   approach: z.string().optional(),
   priority: actionPriorityBandSchema.optional(),
   family: z.string().optional(),
+  // A ticked grouping of the tree, under its group's key when not by goal.
+  grouping: actionGroupingSchema.optional(),
+  ownership: actionOwnershipSchema.optional(),
+  topic: z.string().max(ACTION_TOPIC_MAX_CHARS).optional(),
 });
 
 /**
  * One status decision on many Actions: the ticked ids, or every Action the
- * filter matches (Accept all), at most 100 either way. A legal transition is
- * applied; the rest are skipped.
+ * filter matches (Accept all), at most `ACTION_BULK_MAX` either way. A legal
+ * transition is applied; the rest are skipped.
  */
+export const ACTION_BULK_MAX = 100;
 export const actionBulkStatusRequestSchema = z
   .strictObject({
-    ids: z.array(uuid()).min(1).max(100).optional(),
+    ids: z.array(uuid()).min(1).max(ACTION_BULK_MAX).optional(),
     filter: actionBulkFilterSchema.optional(),
     to: actionUserStatusSchema,
   })

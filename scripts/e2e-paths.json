@@ -21,6 +21,7 @@
       "frontend/components/layout/page-shell.tsx",
       "frontend/components/templates/**",
       "frontend/components/ui/app-shell.tsx",
+      "frontend/components/ui/count-strip.tsx",
       "frontend/components/ui/data-table.tsx",
       "frontend/components/ui/figure-strip.tsx",
       "frontend/components/ui/filter-bar.tsx",
@@ -32,6 +33,8 @@
       "frontend/components/ui/table.tsx",
       "frontend/components/ui/tabs.tsx",
       "frontend/components/ui/tag.tsx",
+      "frontend/components/ui/work-rows.tsx",
+      "frontend/components/ui/work-tree.tsx",
       "frontend/e2e/helpers/app-fixture.ts"
     ],
     "frontendE2E": ["e2e/geometry-census.spec.ts"]
@@ -52,6 +55,24 @@
       "frontend/lib/site-health/issue-filters.ts"
     ],
     "frontendE2E": ["e2e/surface-layout-issues.spec.ts"]
+  },
+  {
+    "sources": [
+      "frontend/components/agent/actions-*.tsx",
+      "frontend/components/agent/use-action*.ts",
+      "frontend/components/templates/report-page.tsx",
+      "frontend/components/ui/all-filters.tsx",
+      "frontend/components/ui/count-strip.tsx",
+      "frontend/components/ui/filter-bar.tsx",
+      "frontend/components/ui/impact-bars.tsx",
+      "frontend/components/ui/selection-dock.tsx",
+      "frontend/components/ui/state-dot.tsx",
+      "frontend/components/ui/work-rows.tsx",
+      "frontend/components/ui/work-tree.tsx",
+      "frontend/lib/agent/action-tree.ts",
+      "frontend/lib/api/actions.ts"
+    ],
+    "frontendE2E": ["e2e/surface-layout-actions.spec.ts"]
   },
   {
     "sources": ["frontend/components/ui/command-palette.tsx"],

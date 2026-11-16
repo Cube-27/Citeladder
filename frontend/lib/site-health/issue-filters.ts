@@ -17,7 +17,6 @@ import { useCallback, useMemo, useState } from 'react';
 
 import type { IssueSection, IssueSort } from '@citeladder/contracts';
 import type { IssuesParams } from '@/lib/api/site-health';
-import { ACTIONS_ISSUE_READ_LIMIT } from '@/lib/config/agent';
 import { ISSUE_PAGE_LIMIT } from '@/lib/config/site-health';
 import { isOneOf } from '@/lib/utils';
 import {
@@ -157,23 +156,6 @@ export const ISSUE_PRIORITY_PARAMS: IssuesParams = {
   limit: PRIORITY_ISSUE_COUNT,
   finding_class: 'defect',
 };
-
-/**
- * The Actions list's read of one Issues tab: every defect the tab lists, in
- * the Issues order (worst first). The Actions screen and its route prefetch share it.
- */
-export function actionsIssueParams(section: IssueSection): IssuesParams {
-  return { section, finding_class: 'defect', limit: ACTIONS_ISSUE_READ_LIMIT };
-}
-
-/** The Issues screen's address with one issue open on its tab, as the catalog writes it. */
-export function issueHref(section: IssueSection, groupId: string): string {
-  const params = new URLSearchParams();
-  const tab = sectionCodec.serialize(section);
-  if (tab) params.set('section', tab);
-  params.set('issue', groupId);
-  return `/issues?${params.toString()}`;
-}
 
 /**
  * Every URL key this module owns, as a `setUrlParams` patch. Params it does

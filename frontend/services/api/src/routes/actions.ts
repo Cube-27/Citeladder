@@ -24,6 +24,7 @@ import { analyzePage, listAnalyzablePages } from '../page-documents/analyze.ts';
 import { mapped } from './agent.ts';
 import { defineGetRoute, definePatchRoute, definePostRoute } from './define.ts';
 import {
+  ACTION_TOPIC_MAX_CHARS,
   actionAnalyzeRequestSchema,
   actionAnalyzeResultSchema,
   actionBulkStatusRequestSchema,
@@ -54,12 +55,11 @@ const listFilters = {
   status_filter: { scalar: { kind: 'str' }, alias: 'status' },
   q: { scalar: { kind: 'str', maxLength: a.ACTION_SEARCH_MAX_CHARS } },
   target_kind: { scalar: { kind: 'str' } },
-  group: { scalar: { kind: 'str' } },
   approach: { scalar: { kind: 'str' } },
   priority: { scalar: { kind: 'str' } },
   family: { scalar: { kind: 'str' } },
   ownership: { scalar: { kind: 'str' } },
-  topic: { scalar: { kind: 'str', maxLength: a.ACTION_SEARCH_MAX_CHARS } },
+  topic: { scalar: { kind: 'str', maxLength: ACTION_TOPIC_MAX_CHARS } },
 } as const;
 export const actionRoutes = [
   defineGetRoute({

@@ -185,8 +185,7 @@ async function familyAction(seed: SiteSeed) {
   await recomputeOpportunities(db, scopeOf(seed));
   const page = await listActions(db, scopeOf(seed), {
     status: null,
-    target_kind: null,
-    group: 'fix_site',
+    target_kind: 'issue_family',
     limit: 50,
     cursor: null,
   });
@@ -238,13 +237,13 @@ afterAll(async () => {
 });
 
 describe('an issue family', () => {
-  it('is one Action in Fix how AI reads your site, with its cohort and page count', async () => {
+  it('is one Action in Let AI read your site, with its cohort and page count', async () => {
     const items = await familyAction(own.seed);
     expect(items.map((item) => [item.target_kind, item.target_label, item.page_count])).toEqual([
       ['issue_family', 'Mobile viewport missing', PAGES],
     ]);
     expect(items[0]).toMatchObject({
-      group: 'fix_site',
+      goal: 'read_site',
       approach: 'fix_technical',
       member_count: 1,
       priority_band: 'high',

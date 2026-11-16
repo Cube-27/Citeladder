@@ -170,6 +170,10 @@ const FIGURE_CARD_HEIGHT_SCORE = 96;
 const FIGURE_CARD_STACKED_SCORE_LESS_LABEL = 100;
 /** A pressable cell inside a card is a control: padded 12 by 16. */
 const FIGURE_PRESSABLE_PADDING_Y = 12;
+/** A work tree's status, group and grouping rows and its Show more line (Actions v3). */
+const TREE_ROW_HEIGHT = 40;
+/** A count strip's cell, pressable as a whole (the Actions goal strip). */
+const COUNT_CELL_HEIGHT = 76;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
 /** A metric card's icon tile is a 40px square, centred on the label and value lines. */
@@ -224,6 +228,16 @@ function measure({ route }: { route: string }) {
     // A switch is its own 32×20 track (components/ui/switch.tsx), measured as `switch.height`.
     if (element.getAttribute('role') === 'switch') {
       add('switch.height', element, element.getBoundingClientRect().height);
+      continue;
+    }
+    // A work tree's level rows and a count strip's cells are whole-row targets
+    // (components/ui/work-tree.tsx, count-strip.tsx), measured as their own roles.
+    if (element.matches('[data-tree-row]')) {
+      add('tree-row.height', element, element.getBoundingClientRect().height);
+      continue;
+    }
+    if (element.matches('[data-count-cell] > button')) {
+      add('count-cell.height', element, element.getBoundingClientRect().height);
       continue;
     }
     const style = getComputedStyle(element);
@@ -774,6 +788,8 @@ async function expectOneGeometry(page: Page) {
 
   expectOneValue(records, 'button.height', CONTROL_HEIGHT);
   expectOneValue(records, 'switch.height', SWITCH_HEIGHT);
+  expectOneValue(records, 'tree-row.height', TREE_ROW_HEIGHT);
+  expectOneValue(records, 'count-cell.height', COUNT_CELL_HEIGHT);
   expectOneValue(records, 'input.height', CONTROL_HEIGHT);
   expectOneValue(records, 'select.height', CONTROL_HEIGHT);
   expectOneValue(records, 'page-tab.height', PAGE_TABS_HEIGHT);

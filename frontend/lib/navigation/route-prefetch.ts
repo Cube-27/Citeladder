@@ -240,27 +240,10 @@ async function prefetchIssues(client: QueryClient, scope: ProjectScope) {
   warmSummary(crawlId);
 }
 
-/**
- * Warm the Actions list's Open view: its Actions read and the crawl its Issues
- * rows come from, then each Issues tab's defects once that crawl is cached.
- */
+/** Warm the Actions page's one read: the New tree, grouped by goal. */
 async function prefetchActions(client: QueryClient, scope: ProjectScope) {
-  const [{ actionsQueries }, { siteHealthQueries }, { actionsIssueParams, ISSUE_SECTIONS }] =
-    await Promise.all([
-      import('@/lib/api/actions'),
-      import('@/lib/api/site-health-queries'),
-      import('@/lib/site-health/issue-filters'),
-    ]);
-  for (const read of actionsQueries.statusView(scope, 'open', {})) warmQuery(client, read);
-  const dashboard = siteHealthQueries.dashboard(scope);
-  warmQuery(client, dashboard);
-  const crawlId = client.getQueryData(dashboard.queryKey)?.crawl?.id;
-  if (!crawlId) return;
-  for (const { value } of ISSUE_SECTIONS)
-    warmQuery(
-      client,
-      siteHealthQueries.issues(scope.workspaceId, crawlId, actionsIssueParams(value)),
-    );
+  const { actionsQueries, DEFAULT_ACTION_TREE } = await import('@/lib/api/actions');
+  warmQuery(client, actionsQueries.tree(scope, DEFAULT_ACTION_TREE));
 }
 
 /**

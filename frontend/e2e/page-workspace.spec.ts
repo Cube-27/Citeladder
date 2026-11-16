@@ -37,7 +37,6 @@ const action = {
   priority_band: 'high',
   families: ['search_console'],
   approach: 'improve_page',
-  group: 'own_pages',
   goal: 'own_pages',
   grouping: 'improve_pages',
   skill_id: 'content_refresh',
