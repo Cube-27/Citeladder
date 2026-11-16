@@ -82,7 +82,7 @@ function WorkspaceSchedules({
       >
         <SectionContent>
           {/* The schedules on the left, the new-schedule form in a 360 panel beside them. */}
-          <Stack className="column-split:grid-cols-[minmax(0,1fr)_360px] column-split:items-start">
+          <Stack className="column-split:grid-cols-[minmax(0,1fr)_360px] items-start">
             <Stack>
               {schedulesQuery.isError ? (
                 <Notice
