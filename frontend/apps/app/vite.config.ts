@@ -1,8 +1,15 @@
 import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
-import { defineConfig, type ViteUserConfig, loadEnv } from 'vite-plus';
+import { defineConfig, type Plugin, type ViteUserConfig, loadEnv } from 'vite-plus';
 
+import {
+  BOOT_SIDEBAR_MARKER,
+  BOOT_TITLE_FILE,
+  bootSidebarHtml,
+  bootTitleScript,
+  type RouteManifest,
+} from './boot-shell.ts';
 import { createServerProxy } from './server-proxy.ts';
 import { publicApiOrigin, publicOrigins } from '../../lib/config/public-origins.ts';
 import { TURNSTILE_TEST_SITE_KEY } from '../../lib/config/turnstile.ts';
@@ -32,6 +39,44 @@ function turnstileSiteKey(
       environment.PUBLIC_TURNSTILE_SITE_KEY ||
       TURNSTILE_TEST_SITE_KEY,
   );
+}
+
+/**
+ * The boot shell's sidebar rows (index.html) and `/boot-title.js`, from the
+ * route manifest. Node loads the manifest itself (type imports only), so the
+ * config bundle never follows its lazy screen imports.
+ */
+function bootShell(): Plugin {
+  let manifest: Promise<RouteManifest> | undefined;
+  const load = (): Promise<RouteManifest> => {
+    manifest ??= import(
+      /* @vite-ignore */ new URL('../../lib/navigation/app-routes.ts', import.meta.url).href
+    );
+    return manifest;
+  };
+  return {
+    name: 'citeladder:boot-shell',
+    async transformIndexHtml(html) {
+      if (!html.includes(BOOT_SIDEBAR_MARKER))
+        throw new Error('index.html lost its boot-sidebar marker');
+      return html.replace(BOOT_SIDEBAR_MARKER, bootSidebarHtml(await load()));
+    },
+    configureServer(server) {
+      server.middlewares.use(`/${BOOT_TITLE_FILE}`, (_request, response, next) => {
+        load().then((routes) => {
+          response.setHeader('Content-Type', 'text/javascript; charset=utf-8');
+          response.end(bootTitleScript(routes));
+        }, next);
+      });
+    },
+    async generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: BOOT_TITLE_FILE,
+        source: bootTitleScript(await load()),
+      });
+    },
+  };
 }
 
 /** The build's commit, when CI names one; the reporter treats absence as `development`. */
@@ -85,6 +130,7 @@ export default defineConfig(({ command, isPreview, mode }): ViteUserConfig => {
           return html.replace(BRAND_FONTS_MARKER, brandFontHead('app'));
         },
       },
+      bootShell(),
       {
         name: 'citeladder:report-empty-public-values',
         // `configResolved` rather than the factory body: `define` above has
