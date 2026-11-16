@@ -76,8 +76,13 @@ const ADVANCE_MS = 7000;
 /** The stage's shape: every slide's pictures are placed inside the same box. */
 const STAGE: CSSProperties = { aspectRatio: '5 / 3' };
 
-/** Inline: a filter utility would pull Tailwind's whole filter stack into eager CSS. */
+/*
+ * Inline, like the placement: the filter and the slides' fade would each add
+ * utilities no other app page uses to the eager CSS.
+ */
 const MONO: CSSProperties = { filter: 'saturate(0)' };
+const SHOWN: CSSProperties = { opacity: 1 };
+const HIDDEN: CSSProperties = { opacity: 0 };
 
 function ShotPicture({
   shot,
@@ -242,8 +247,9 @@ export function AuthShowcase() {
               key={slide.id}
               className={cn(
                 'col-start-1 row-start-1 grid justify-items-center gap-[var(--page-top-gap)] transition duration-[var(--motion-open)] motion-reduce:transition-none',
-                current ? 'visible opacity-100' : 'invisible opacity-0',
+                current ? 'visible' : 'invisible',
               )}
+              style={current ? SHOWN : HIDDEN}
               aria-roledescription="slide"
               aria-label={`${index + 1} of ${count}: ${slide.name}`}
               aria-hidden={!current}
@@ -293,7 +299,7 @@ export function AuthShowcase() {
                   aria-hidden
                   className={cn(
                     'rounded-mark block h-2 transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none',
-                    current ? 'bg-ink w-5' : 'bg-control-line w-2',
+                    current ? 'bg-ink w-5' : 'bg-control-line size-2',
                   )}
                 />
               </button>
