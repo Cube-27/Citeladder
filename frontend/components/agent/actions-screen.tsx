@@ -19,7 +19,7 @@ import { SegmentedControl } from '@/components/ui/tabs';
 import { textRole } from '@/components/ui/typography';
 import { goalTree, sourceTree, type ActionListBranch } from '@/lib/agent/action-list';
 import { ACTION_FAMILIES, ACTION_GROUP_LABEL } from '@/lib/agent/vocabulary';
-import type { ActionGroup, ActionListView } from '@/lib/api/actions';
+import { ACTION_LIST_VIEWS, type ActionGroup, type ActionListView } from '@/lib/api/actions';
 import { commerceQueries } from '@/lib/api/commerce';
 import { formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
@@ -134,20 +134,9 @@ function viewCount(
   issueCount: number | null,
 ): number | undefined {
   if (!counts) return undefined;
-  switch (view) {
-    case 'open':
-      return issueCount === null ? undefined : (counts.open ?? 0) + issueCount;
-    case 'measuring':
-      return (counts.implemented ?? 0) + (counts.measuring ?? 0);
-    case 'in_progress':
-    case 'done':
-    case 'dismissed':
-      return counts[view] ?? 0;
-    default: {
-      const unreachable: never = view;
-      return unreachable;
-    }
-  }
+  const total = ACTION_LIST_VIEWS[view].reduce((sum, status) => sum + (counts[status] ?? 0), 0);
+  if (view !== 'open') return total;
+  return issueCount === null ? undefined : total + issueCount;
 }
 
 /** One cell per goal with how much it holds; a cell jumps to its goal in the tree. */

@@ -10,7 +10,6 @@ import {
   type ActionPriorityBand,
   type ActionsPage,
 } from '@/lib/api/actions';
-import type { RetryableRead } from '@/components/ui/notice';
 import { httpErrorStatus } from '@/lib/api/errors';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
@@ -34,39 +33,46 @@ function sameProject(key: unknown, { workspaceId, projectId }: ProjectScope): bo
  */
 function useIssueReads(scope: ProjectScope) {
   const dashboard = useQuery(siteHealthQueries.dashboard(scope));
-  const crawlId = dashboard.data?.crawl?.id ?? null;
+  // Empty until the dashboard names a crawl; the reads below wait for one.
+  const crawlId = dashboard.data?.crawl?.id ?? '';
+  const crawled = crawlId !== '';
   const reads = useQueries({
     queries: ISSUE_SECTIONS.map(({ value }) => ({
-      ...siteHealthQueries.issues(scope.workspaceId, crawlId ?? '', actionsIssueParams(value)),
-      enabled: crawlId !== null,
+      ...siteHealthQueries.issues(scope.workspaceId, crawlId, actionsIssueParams(value)),
+      enabled: crawled,
     })),
   });
   // Fix progress is a side read: while it loads or fails, rows show no fix line.
   const fixes = useQuery({
-    ...siteHealthQueries.issueFixes(scope.workspaceId, crawlId ?? ''),
-    enabled: crawlId !== null,
+    ...siteHealthQueries.issueFixes(scope.workspaceId, crawlId),
+    enabled: crawled,
   });
 
   const status = httpErrorStatus(dashboard.error);
-  const denied = status === 401 || status === 403;
-  const dashboardFailed = dashboard.isError && !dashboard.data;
-  const summary = reads.find((read) => read.data)?.data?.summary;
-  let count: number | null = null;
-  if (summary) count = Object.values(summary.section_counts).reduce((sum, n) => sum + n, 0);
-  else if (denied || (dashboard.data && crawlId === null)) count = 0;
-  let failed: RetryableRead | undefined = reads.find((read) => read.isError && !read.data);
   // A project without Website access simply has no Issues rows; any other failure is said.
-  if (dashboardFailed) failed = denied ? undefined : dashboard;
+  const denied = status === 401 || status === 403;
+  const summary = reads.find((read) => read.data)?.data?.summary;
+  const none = denied || (dashboard.isSuccess && !crawled);
+  const dashboardFailed = dashboard.isError && !dashboard.data && !denied;
   return {
     sections: ISSUE_SECTIONS.flatMap(({ value }, index) => {
       const page = reads[index]?.data;
       return page ? [{ section: value, items: page.items }] : [];
     }),
     fixes: fixes.data?.items ?? [],
-    count,
-    pending: dashboard.isPending || (crawlId !== null && reads.some((read) => read.isPending)),
-    failed,
+    count: issueCount(summary?.section_counts, none),
+    pending: dashboard.isPending || (crawled && reads.some((read) => read.isPending)),
+    failed: dashboardFailed ? dashboard : reads.find((read) => read.isError && !read.data),
   };
+}
+
+/** Every Issues tab's defect count once a summary is read; zero for a project with none; else unknown. */
+function issueCount(
+  sectionCounts: Readonly<Record<string, number>> | undefined,
+  none: boolean,
+): number | null {
+  if (sectionCounts) return Object.values(sectionCounts).reduce((sum, count) => sum + count, 0);
+  return none ? 0 : null;
 }
 
 /**

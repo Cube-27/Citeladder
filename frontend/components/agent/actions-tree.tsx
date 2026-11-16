@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { StatusMark } from '@/components/ui/status-mark';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
@@ -30,10 +30,11 @@ import { issueTitle } from '@/lib/site-health/issues';
 import { isSiteLevelRule } from '@/lib/site-health/site-level-evidence';
 
 // The server orders Actions by priority and Issues by severity; neither column sorts.
+// Below desktop both fold away, the priority mark into the row's caption.
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'action', label: 'Action', kind: 'identity' },
-  { key: 'priority', label: 'Priority', kind: 'status' },
-  { key: 'source', label: 'Source', width: 'category', priority: 'low' },
+  { key: 'priority', label: 'Priority', kind: 'status', desktopOnly: true },
+  { key: 'source', label: 'Source', width: 'category', desktopOnly: true },
 ];
 
 /** The id of a branch's header row, which the goal strip jumps to. */
@@ -247,11 +248,16 @@ function ListRow({ row }: Readonly<{ row: ActionListRow }>) {
               {face.title}
             </TextLink>
           </ClampText>
-          <ClampText className={textRole('caption')}>{face.caption}</ClampText>
+          <Inline gap="tight" className={textRole('caption', 'min-w-0 flex-nowrap')}>
+            <span className="desktop:hidden contents">{face.mark}</span>
+            <ClampText className="min-w-0 flex-1">{face.caption}</ClampText>
+          </Inline>
         </Stack>
       </TableCell>
-      <TableCell>{face.mark}</TableCell>
-      <TableCell className={textRole('caption')}>{rowSourceLabel(row)}</TableCell>
+      <TableCell desktopOnly>{face.mark}</TableCell>
+      <TableCell desktopOnly className={textRole('caption')}>
+        {rowSourceLabel(row)}
+      </TableCell>
     </TableRow>
   );
 }

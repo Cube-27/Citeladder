@@ -252,7 +252,10 @@ test('Action filters restore through URL history and reload', async ({ page }) =
   await expect(page.getByText('No dismissed Actions')).toBeVisible();
 
   await page.getByRole('radio', { name: /^Open/ }).click();
-  await expect(page.getByRole('button', { name: 'Get mentioned elsewhere, 1' })).toBeVisible();
+  // The tree's goal header, not the goal strip's "Go to …" cell.
+  await expect(
+    page.getByRole('button', { name: 'Get mentioned elsewhere, 1', exact: true }),
+  ).toBeVisible();
   // The row is titled by its target; the work is its second line.
   await expect(page.getByRole('link', { name: 'example.org/tools' })).toBeVisible();
   await expect(page.getByText('Earn a placement · 1 finding')).toBeVisible();
