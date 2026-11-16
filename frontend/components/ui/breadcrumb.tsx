@@ -14,7 +14,8 @@ export type Crumb = Readonly<{ label: string; href?: string; state?: unknown }>;
 export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
   const current = parts.at(-1);
   return (
-    <nav aria-label="Breadcrumb" className="flex min-w-0 flex-1">
+    // As the masthead's title: under `rail` it adds no width of its own, so a long trail cuts.
+    <nav aria-label="Breadcrumb" className="not-rail:w-0 flex min-w-28 flex-1">
       <ol className={textRole('body', 'text-ink-2 flex min-w-0 items-center gap-2')}>
         {parts.slice(0, -1).map((part) => (
           <Fragment key={part.label}>
