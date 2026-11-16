@@ -163,6 +163,7 @@ function linksControls({
         label: 'Action status',
         value: params.get('links_status') ?? '',
         defaultValue: '',
+        defaultIsEvery: true,
         groups: [
           {
             options: [

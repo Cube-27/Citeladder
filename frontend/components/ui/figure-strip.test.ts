@@ -12,8 +12,10 @@ describe('figureRows', () => {
     [4, 358, [2, 2]],
     [5, 358, [2, 2, 1]],
     [6, 358, [2, 2, 2]],
+    [3, 400, [2, 1]],
+    [3, 420, [3]],
     [2, 480, [2]],
-    [3, 480, [1, 1, 1]],
+    [3, 480, [3]],
     [4, 480, [2, 2]],
     [5, 480, [3, 2]],
     [6, 480, [2, 2, 2]],
@@ -37,13 +39,20 @@ describe('figureRows', () => {
     [8, 734, [4, 4]],
     [8, 563, [3, 3, 2]],
   ])('lays %i figures in %ipx as %j', (count, width, rows) => {
-    expect(figureRows(count, width)).toEqual(rows);
+    expect(figureRows({ count, width })).toEqual(rows);
+  });
+
+  it('keeps three plain figures on a row down to 128px cells, three with a lead to 160px', () => {
+    // A half card at 1366 (507): 158px cells.
+    expect(figureRows({ count: 3, width: 507 })).toEqual([3]);
+    expect(figureRows({ count: 3, width: 507, lead: true })).toEqual([1, 1, 1]);
+    expect(figureRows({ count: 3, width: 734, lead: true })).toEqual([3]);
   });
 
   it('holds two a row below 480px, and leaves no figure alone from 480px unless three stack', () => {
     for (let count = 2; count <= 8; count += 1) {
       for (const width of [1168, 1008, 734, 563, 480, 369, 358, 234]) {
-        const rows = figureRows(count, width);
+        const rows = figureRows({ count, width });
         expect(rows.reduce((sum, size) => sum + size, 0)).toBe(count);
         if (width < 480) expect(Math.max(...rows)).toBeLessThanOrEqual(2);
         else if (!(count === 3 && rows.length === 3)) expect(rows).not.toContain(1);

@@ -37,6 +37,7 @@ export function useExecutionFilters(executions: readonly Execution[]): Readonly<
         label: 'Engine',
         value: engine,
         defaultValue: ALL,
+        defaultIsEvery: true,
         groups: [
           {
             options: [
@@ -52,6 +53,7 @@ export function useExecutionFilters(executions: readonly Execution[]): Readonly<
         label: 'Status',
         value: status,
         defaultValue: ALL,
+        defaultIsEvery: true,
         groups: [
           {
             options: [

@@ -57,6 +57,7 @@ function typeFilter(urls: boolean, { value, options, onChange }: TypeChoice): Fi
     label: urls ? 'URL type' : 'Domain type',
     value: value ?? ALL,
     defaultValue: ALL,
+    defaultIsEvery: true,
     groups: [
       {
         options: [
@@ -80,6 +81,7 @@ function standingFilter({ value, onChange }: StandingChoice): FilterDefinition {
     label: 'Standing',
     value: value ?? ALL,
     defaultValue: ALL,
+    defaultIsEvery: true,
     groups: [
       {
         options: [
@@ -100,6 +102,7 @@ function domainFilter({ value, options, onChange }: DomainChoice): FilterDefinit
     label: 'Domain',
     value: value ?? ALL,
     defaultValue: ALL,
+    defaultIsEvery: true,
     groups: [
       {
         options: [

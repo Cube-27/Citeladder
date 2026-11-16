@@ -16,6 +16,7 @@ import {
   MenuRadioItem,
   MenuTrigger,
 } from '@/components/ui/menu';
+import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 /**
@@ -34,9 +35,9 @@ export type FilterBarProps = Readonly<{
   search?: ReactNode;
   /**
    * Every filter of the list, after the search: period, market, engine, kind,
-   * status and typed values alike, each its own trigger ("Page kind: All page
-   * kinds"), in this order. Beside a search, more than four share the one All
-   * filters menu.
+   * status and typed values alike, each its own trigger ("Page kind ▾" until
+   * set, then "Page kind: Article"), in this order. Beside a search, more than
+   * four share the one All filters menu.
    */
   filters?: readonly FilterDefinition[];
   /**
@@ -142,7 +143,7 @@ export function FilterControls({
   return <FilterMenu filter={only} align={align} />;
 }
 
-/** One filter as its own trigger ("Label: Value") that opens its options. */
+/** One filter as its own trigger ("Label" or "Label: Value") that opens its options. */
 function FilterMenu({
   filter,
   align = 'start',
@@ -153,6 +154,7 @@ function FilterMenu({
         <FilterTrigger
           label={filter.label}
           value={filter.valueLabel}
+          labelOnly={filter.isDefault && filter.defaultIsEvery === true}
           active={!filter.isDefault}
           sizeTo={
             filter.kind === 'choice'
@@ -172,17 +174,21 @@ function FilterMenu({
  * FilterTrigger — the button that opens a single-choice menu (`FilterChoice`),
  * drawn on the Select trigger recipe at the one filter width.
  *
- * The accessible name always contains the visible value, so a voice user can
- * say what is on screen.
+ * The accessible name always contains the label and the current value, so a
+ * voice user can say what is on screen and a reader hears what is filtered.
  *
- *   - `label` names the filter ("Surface"). With a `value` it prints as a
- *     muted prefix ("Surface: All surfaces"); `hideLabel` keeps it for
- *     assistive tech only, so the name still contains the visible value.
+ *   - `label` names the filter ("Status"). With a `value` it prints as a
+ *     muted prefix ("Status: Open"); `hideLabel` keeps it for assistive tech
+ *     only, so the name still contains the visible value.
+ *   - `labelOnly`: a filter at its every value ("All statuses") prints only
+ *     its label ("Status ▾"), as wide as the label; the value is spoken only.
+ *     A real default (a period, a market, an engine) never sets it.
  *   - `active` marks a choice moved off its default (`data-active`); the
  *     value says how.
- *   - `sizeTo` lists every value the trigger can show. The trigger then takes
- *     the width of the longest of them instead of the one filter width, so it
- *     fits its content and still never resizes when the choice changes.
+ *   - `sizeTo` lists every value the trigger can show. The value then takes
+ *     the width of the longest of them, at most 160px, instead of the one
+ *     filter width, so it never resizes between two values. A longer value
+ *     ends in an ellipsis and shows whole in a tooltip.
  *
  * Use it as `<MenuTrigger asChild><FilterTrigger …/></MenuTrigger>`; it
  * forwards the ref and the trigger's props to the button.
@@ -191,6 +197,7 @@ export function FilterTrigger({
   label,
   value,
   hideLabel = false,
+  labelOnly = false,
   active = false,
   sizeTo,
   className,
@@ -199,21 +206,26 @@ export function FilterTrigger({
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'button'>, 'children'> & {
     label: string;
-    value?: ReactNode;
+    value?: string;
     hideLabel?: boolean;
+    /** Print the label alone; the value stays in the accessible name. */
+    labelOnly?: boolean;
     active?: boolean;
-    /** Every value the trigger can show; it takes the longest one's width. */
+    /** Every value the trigger can show; the value takes the longest one's width. */
     sizeTo?: readonly string[];
     ref?: Ref<HTMLButtonElement>;
   }
 >) {
   const fit = sizeTo !== undefined && sizeTo.length > 0;
-  return (
+  const shown = value !== undefined && !labelOnly;
+  const button = (
     <button
       ref={ref}
       type="button"
       data-active={active || undefined}
       data-fit={fit || undefined}
+      // Spelled out, so the name holds the value even where only the label prints.
+      aria-label={value === undefined ? undefined : `${label}: ${value}`}
       className={cn(
         SOFT_FIELD_BOX,
         'focus-input flex min-w-0 shrink-0 items-center gap-2 text-left disabled:cursor-not-allowed disabled:opacity-45',
@@ -222,47 +234,59 @@ export function FilterTrigger({
       )}
       {...props}
     >
-      {fit ? (
-        // Every option is laid in the same cell, unseen, so the cell is as
-        // wide as the longest and the visible value never resizes the trigger.
-        // The sizers draw their text as generated content: it adds no
-        // readable text and no accessible name.
-        <span className="grid min-w-0">
-          {/* Only the longest labels can set the width; a long option list
-              (every tracked prompt) must not become one node per option. */}
-          {[...new Set(sizeTo)]
-            .sort((a, b) => b.length - a.length)
-            .slice(0, 6)
-            .map((size) => (
-              <span
-                key={size}
-                aria-hidden
-                data-size={hideLabel ? size : `${label}: ${size}`}
-                className="invisible col-start-1 row-start-1 whitespace-nowrap after:content-[attr(data-size)]"
-              />
-            ))}
-          <span className="col-start-1 row-start-1 flex min-w-0">
-            <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
-          </span>
+      {shown ? (
+        <span data-filter-text="" className="min-w-0 truncate">
+          {hideLabel ? null : <span className="text-ink-2">{label}: </span>}
+          {fit ? <SizedValue value={value} sizeTo={sizeTo} /> : <TriggerValue value={value} />}
         </span>
       ) : (
-        <FilterTriggerText label={label} value={value} hideLabel={hideLabel} />
+        <span className="truncate">{label}</span>
       )}
       <ChevronDown className="text-ink-2 ms-auto size-4 shrink-0" aria-hidden />
     </button>
   );
+  // Always wrapped, so moving off the default keeps the same button (and its focus).
+  return (
+    <Tooltip content={value} describe={false} shouldOpen={valueIsCut}>
+      {button}
+    </Tooltip>
+  );
 }
 
-function FilterTriggerText({
-  label,
-  value,
-  hideLabel,
-}: Readonly<{ label: string; value?: ReactNode; hideLabel: boolean }>) {
-  if (value === undefined || value === null) return <span className="truncate">{label}</span>;
+function valueIsCut(trigger: HTMLElement): boolean {
+  return [...trigger.querySelectorAll('[data-filter-text], [data-filter-value]')].some(isTextCut);
+}
+
+function TriggerValue({ value, className }: Readonly<{ value: string; className?: string }>) {
   return (
-    <span className="min-w-0 truncate">
-      <span className={hideLabel ? 'sr-only' : 'text-ink-2'}>{label}:</span>{' '}
-      <span className="text-ink">{value}</span>
+    <span data-filter-value="" className={cn('text-ink min-w-0', className)}>
+      {value}
+    </span>
+  );
+}
+
+/**
+ * Every option is laid in the same cell, unseen, so the value is as wide as
+ * the longest (at most 160px) and never resizes between two values. The
+ * sizers draw their text as generated content: no readable text, no name.
+ */
+function SizedValue({ value, sizeTo }: Readonly<{ value: string; sizeTo: readonly string[] }>) {
+  return (
+    <span className="inline-grid max-w-40 min-w-0 align-top">
+      {/* Only the longest labels can set the width; a long option list
+          (every tracked prompt) must not become one node per option. */}
+      {[...new Set(sizeTo)]
+        .sort((a, b) => b.length - a.length)
+        .slice(0, 6)
+        .map((size) => (
+          <span
+            key={size}
+            aria-hidden
+            data-size={size}
+            className="invisible col-start-1 row-start-1 min-w-0 overflow-hidden after:content-[attr(data-size)]"
+          />
+        ))}
+      <TriggerValue value={value} className="col-start-1 row-start-1 truncate" />
     </span>
   );
 }

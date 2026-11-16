@@ -68,6 +68,8 @@ export type FigureSegment = Readonly<
 
 /** The narrowest a figure's cell may be before the strip takes fewer per row. */
 const FIGURE_MIN_WIDTH = 160;
+/** Three plain figures share one row down to this cell width, their labels on two lines. */
+const PLAIN_THREE_MIN_WIDTH = 128;
 /** Below this strip width a row holds at most two figures. */
 const NARROW_STRIP = 480;
 /** The gap between figures, in both directions. */
@@ -93,16 +95,22 @@ const cellWidth = (width: number, perRow: number) => (width - FIGURE_GAP * (perR
  * come from the count, never the width alone: 2 to 4, and 5 or 6 when each
  * cell keeps 160px, sit on one row; otherwise 5 are 3 + 2, 6 are 3 + 3, 7 are
  * 4 + 3 and 8 are 4 + 4, and narrower cells take fewer (4 become 2 + 2, 3
- * stack). Below a 480px strip a row holds at most two and an odd last figure
- * takes the full row; wider, no row holds one figure alone unless three stack.
+ * stack). Three plain figures stay on one row while each keeps 128px (a strip
+ * of 416px); three with an icon tile or a ring (`lead`) keep the 160 minimum.
+ * Below a 480px strip a row holds at most two and an odd last figure takes the
+ * full row; wider, no row holds one figure alone unless three stack.
  */
-export function figureRows(count: number, width: number): number[] {
+export function figureRows({
+  count,
+  width,
+  lead = false,
+}: Readonly<{ count: number; width: number; lead?: boolean }>): number[] {
   if (count <= 0) return [];
   const fits = (perRow: number) => cellWidth(width, perRow) >= FIGURE_MIN_WIDTH;
   if (count <= 2) return [count];
-  if (width < NARROW_STRIP) return count === 3 && !fits(2) ? [1, 1, 1] : balancedPairs(count);
+  if (count === 3) return rowsOfThree(width, lead);
+  if (width < NARROW_STRIP) return balancedPairs(count);
   if (count <= 6 && fits(count)) return [count];
-  if (count === 3) return [1, 1, 1];
   for (let cap = rowCap(count); cap >= 3; cap -= 1) {
     if (fits(cap)) return balancedRows(count, cap);
   }
@@ -113,6 +121,13 @@ export function figureRows(count: number, width: number): number[] {
     pairs[pairs.length - 1] = 3;
   }
   return [...pairs].sort((a, b) => b - a);
+}
+
+/** Three figures: one row while each cell keeps its minimum, else stacked (2 + 1 in a narrow strip with room for two). */
+function rowsOfThree(width: number, lead: boolean): number[] {
+  if (cellWidth(width, 3) >= (lead ? FIGURE_MIN_WIDTH : PLAIN_THREE_MIN_WIDTH)) return [3];
+  if (width < NARROW_STRIP && cellWidth(width, 2) >= FIGURE_MIN_WIDTH) return balancedPairs(3);
+  return [1, 1, 1];
 }
 
 /** Rows of two, an odd figure last on its own. */
@@ -141,9 +156,12 @@ function useWidth() {
  * card they are cells with no edges (globals.css "r3 a2 figures"). Rows come
  * from `figureRows`. A card is two rows: the label with its marker and one
  * info hint (caption, basis and comparison joined with " · "), then the value
- * with its Delta; 88 tall. An icon tile sits at the left of both rows; a
- * score's ScoreRing does too, with its Delta as the second row (96). A score is
- * only ever a ring, never a bar. A figure with `action` makes its label the link.
+ * with its Delta at the card's foot, so a row's values share one baseline
+ * when a label wraps; 88 tall. An icon tile sits centred at the left of both
+ * rows. A score's ScoreRing does too, its label and Delta beside it (96);
+ * under 240px the label takes the first row and the ring and Delta the second.
+ * A score is only ever a ring, never a bar. A figure with `action` makes its
+ * label the link.
  *
  * A figure with `onSelect` is pressable: the whole card is the target, named
  * by `actionLabel`; `selected` makes it a toggle (`aria-pressed`).
@@ -161,7 +179,11 @@ export function FigureStrip({
   lead?: ReactNode;
 }>) {
   const { ref, width } = useWidth();
-  const rows = figureRows(segments.length, width);
+  const rows = figureRows({
+    count: segments.length,
+    width,
+    lead: segments.some((segment) => segment.score || segment.icon),
+  });
   const sizes = rows.flatMap((size) => Array.from({ length: size }, () => size));
   return (
     <div ref={ref} data-figure-strip-frame="" className="grid min-w-0 gap-4">
@@ -198,6 +220,13 @@ function FigureCell({
   let leadKind: 'score' | 'icon' | undefined;
   if (segment.score) leadKind = 'score';
   else if (segment.icon) leadKind = 'icon';
+  const parts = (
+    <>
+      <FigureLabel segment={segment} />
+      <FigureLead segment={segment} />
+      <FigureValueLine segment={segment} />
+    </>
+  );
   return (
     <div
       data-figure-cell=""
@@ -211,9 +240,12 @@ function FigureCell({
       style={{ '--row': rowSize } as CSSProperties}
       className={cn('relative min-w-0', pressable && 'hover:overlay-hover active:overlay-pressed')}
     >
-      <FigureLabel segment={segment} />
-      <FigureLead segment={segment} />
-      <FigureValueLine segment={segment} />
+      {leadKind === 'score' ? (
+        // The cell is the size container; its layout lives one level in.
+        <div data-figure-score-body="">{parts}</div>
+      ) : (
+        parts
+      )}
       {pressable ? (
         <button
           type="button"

@@ -20,6 +20,7 @@ export function pageKindFilter({
     label: 'Page kind',
     value,
     defaultValue: '',
+    defaultIsEvery: true,
     groups: [{ options: OPTIONS }],
     onChange,
   });

@@ -671,7 +671,7 @@ describe('AI Traffic state and navigation', () => {
     const statusField = await screen.findByRole('spinbutton', { name: 'Response status' });
     // A partly typed code narrows nothing, so the trigger does not report it.
     fireEvent.change(statusField, { target: { value: '40' } });
-    expect(statusTrigger).toHaveTextContent('Any status');
+    expect(statusTrigger).toHaveAccessibleName('Status code: Any status');
     fireEvent.change(statusField, { target: { value: '404' } });
     expect(statusTrigger).toHaveTextContent('404');
     await user.keyboard('{Escape}');

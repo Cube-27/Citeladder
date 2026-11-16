@@ -146,6 +146,7 @@ function folderFilter({ model }: TrafficControlsProps): FilterDefinition | null 
     label: 'Folder',
     valueLabel: folder || 'Any folder',
     isDefault: !folder,
+    defaultIsEvery: true,
     content: <FolderField model={model} />,
   };
 }
@@ -160,6 +161,7 @@ function statusFilter({ model }: TrafficControlsProps): FilterDefinition | null 
     label: 'Status code',
     valueLabel: code === undefined ? 'Any status' : String(code),
     isDefault: code === undefined,
+    defaultIsEvery: true,
     content: <StatusField model={model} />,
   };
 }

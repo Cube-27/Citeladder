@@ -58,6 +58,7 @@ function singleChoice(
     label,
     value,
     defaultValue: 'all',
+    defaultIsEvery: true,
     groups: [
       { options: SINGLE_CHOICES.map((choice) => ({ value: choice, label: labels[choice] })) },
     ],

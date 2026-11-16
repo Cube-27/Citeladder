@@ -164,6 +164,8 @@ const FIGURE_STRIP_HEIGHT_SPREAD = 0;
 /** A metric card is two rows: 16 + label 20 + 4 + value 32 + 16; a score's 64 ring makes 96. */
 const FIGURE_CARD_HEIGHT = 88;
 const FIGURE_CARD_HEIGHT_SCORE = 96;
+/** Under 240px a score card stacks its label over the ring: 16 + label + 4 + 64 + 16. */
+const FIGURE_CARD_STACKED_SCORE_LESS_LABEL = 100;
 /** A pressable cell inside a card is a control: padded 12 by 16. */
 const FIGURE_PRESSABLE_PADDING_Y = 12;
 /** The Icon atom's one glyph size. */
@@ -469,7 +471,17 @@ function measure({ route }: { route: string }) {
       element,
       padding,
     );
-    if (padding !== 16 || element.matches('[data-label-lines="2"]')) continue;
+    // Under 240px a score card stacks its label over the ring, so it grows by the label.
+    const stackedScore =
+      element.matches('[data-figure-kind="score"]') && element.clientWidth - 2 * padding < 240;
+    const label = element.querySelector('dt');
+    if (padding === 16 && stackedScore && label)
+      add(
+        'figure-card.height.score-stacked-less-label',
+        element,
+        element.getBoundingClientRect().height - label.getBoundingClientRect().height,
+      );
+    if (padding !== 16 || element.matches('[data-label-lines="2"]') || stackedScore) continue;
     const role = element.matches('[data-figure-kind="score"]')
       ? 'figure-card.height.score'
       : 'figure-card.height';
@@ -794,6 +806,7 @@ async function expectOneGeometry(page: Page) {
   // The fixtures may hold no score ring or pressable cell; when they do, each has one value.
   for (const [role, expected] of [
     ['figure-card.height.score', FIGURE_CARD_HEIGHT_SCORE],
+    ['figure-card.height.score-stacked-less-label', FIGURE_CARD_STACKED_SCORE_LESS_LABEL],
     ['figure-cell.pressable-padding-y', FIGURE_PRESSABLE_PADDING_Y],
   ] as const)
     expect
