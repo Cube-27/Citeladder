@@ -58,7 +58,9 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
       <SectionHeader>
         <SectionTitle id="company-facts">Company facts</SectionTitle>
         <SectionDescription>
-          The canonical facts used across CiteLadder, including by the agent.
+          {form.empty && !form.dirty
+            ? 'No company facts yet. The agent and prompt generation read them first. Start with what you sell.'
+            : 'The canonical facts used across CiteLadder, including by the agent.'}
         </SectionDescription>
       </SectionHeader>
       <Stack gap="workspace">

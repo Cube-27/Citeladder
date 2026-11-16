@@ -27,8 +27,11 @@ function renderWithSets(sets: Parameters<typeof makeSetList>[0]) {
 }
 
 describe('LaunchAuditButton', () => {
-  it('waits for an active prompt on every page, says why and does not open', async () => {
-    renderWithSets([makeSet([makePrompt({ status: 'archived' })])]);
+  it.each([
+    ['an empty library', []],
+    ['only archived prompts', [makeSet([makePrompt({ status: 'archived' })])]],
+  ])('with %s, waits for an active prompt, says why and does not open', async (_, sets) => {
+    renderWithSets(sets);
 
     const button = await screen.findByRole('button', {
       name: 'Launch run',
