@@ -1732,7 +1732,6 @@ a.focus-ring:active .type-caption {
   border-color: var(--color-control-edge);
   box-shadow: none;
   color: color-mix(in srgb, var(--color-ink-2) 60%, transparent);
-  opacity: 1;
 }
 
 :disabled:focus-visible,
