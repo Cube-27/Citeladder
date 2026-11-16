@@ -509,9 +509,9 @@ describe('the Actions tree', () => {
       prompts.slice(10, 20).map((p) => p.target_label),
     );
 
-    // The list's `group` filter narrows the tree too: no product Action here.
+    // A list filter narrows the strip and the tree alike: no Action has this topic.
     const products = actionTreeSchema.parse(
-      await (await request(seed, `${base}/tree?group=products`)).json(),
+      await (await request(seed, `${base}/tree?topic=products`)).json(),
     );
     expect([products.goals.map((goal) => goal.count), products.groups]).toEqual([[0, 0, 0, 0], []]);
     expect((await request(seed, `${base}/tree?group_by=colour`)).status).toBe(422);
