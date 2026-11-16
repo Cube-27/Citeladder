@@ -54,17 +54,21 @@ export function useCut(
  *
  * `lines={2}` survives only for a `TableCellLines` title in a three-line row.
  * `tooltip` overrides the tooltip content, e.g. a full URL behind a path.
+ * `rowTitle` marks a table row's title: in the identity column it takes two
+ * lines on a phone, and its link is the whole cell (globals.css).
  */
 export function ClampText({
   children,
   lines = 1,
   tooltip,
   className,
+  rowTitle = false,
 }: Readonly<{
   children: ReactNode;
   lines?: 1 | 2;
   tooltip?: ReactNode;
   className?: string;
+  rowTitle?: boolean;
 }>) {
   const ref = useRef<HTMLSpanElement>(null);
   const cut = useCut(ref);
@@ -81,6 +85,7 @@ export function ClampText({
       <span
         ref={ref}
         data-truncated={cut || undefined}
+        data-row-title={rowTitle || undefined}
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a cut value is a tab stop so its full text (the tooltip) is reachable by keyboard.
         tabIndex={cut ? 0 : undefined}
         className={cn(

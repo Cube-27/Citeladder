@@ -2092,6 +2092,69 @@ label {
   background-color: var(--color-well);
 }
 
+/* DataTable column widths (`DataTableColumns`): each fixed column at its
+   floor. Below `desktop:` a desktop-only column collapses (a full-row cell
+   still spans it); below `rail:` every column but the identity sits at its
+   floor and the identity column takes the rest, so the table fills its card. */
+[data-data-table-frame] col {
+  width: var(--col-width, auto);
+}
+@media (max-width: 980px) {
+  [data-data-table-frame] col[data-desktop-only] {
+    width: 0;
+  }
+}
+@media (max-width: 899px) {
+  [data-data-table-frame] col:not([data-identity-col], [data-desktop-only]) {
+    width: var(--col-floor, var(--col-width, auto));
+  }
+  [data-data-table-frame] col[data-identity-col] {
+    width: auto;
+  }
+  /* A phone shows the words that tell rows apart: the title takes two lines. */
+  [data-pinned='1'] tbody > tr > :nth-child(1) [data-row-title],
+  [data-pinned='2'] tbody > tr > :nth-child(2) [data-row-title] {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+}
+
+/* The identity cell's link is the whole cell to the pointer (its ::after
+   over the pinned, positioned cell); its focus ring is the whole-row inset
+   ring. The cell's other controls and cut values stay above it. */
+[data-pinned='1'] tbody > tr:not([data-table-state]) > :nth-child(1),
+[data-pinned='2'] tbody > tr:not([data-table-state]) > :nth-child(2) {
+  & > a[href]::after,
+  & [data-row-title] a[href]::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  & > a[href]:focus-visible,
+  & [data-row-title] a[href]:focus-visible {
+    outline: none;
+  }
+  & :is(button, a[href], input, [data-truncated]):not(
+      [data-row-title],
+      [data-row-title] a[href],
+      & > a[href]
+    ) {
+    position: relative;
+    z-index: 1;
+  }
+}
+:root:not([data-input-modality='pointer']) [data-pinned='1'] tbody > tr > :nth-child(1),
+:root:not([data-input-modality='pointer']) [data-pinned='2'] tbody > tr > :nth-child(2) {
+  & > a[href]:focus-visible::after,
+  & [data-row-title] a[href]:focus-visible::after {
+    outline: 2px solid var(--color-focus);
+    outline-offset: -2px;
+  }
+}
+
 /* A StateBlock on the page is a card, padded 24. Inside a container (a card,
    section, slip, table or dialog) it draws no second frame: padding 16, and
    the gaps under the icon tile and above the actions step down to 8 and 12. */

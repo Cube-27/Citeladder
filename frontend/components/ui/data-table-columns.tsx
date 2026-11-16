@@ -1,11 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, type CSSProperties } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { HintedTableHead, SortableTableHead } from '@/components/ui/table-heads';
 import { TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 
 /**
  * A column's width, by what the column holds — never a number a page picks:
@@ -45,6 +44,8 @@ const COLUMN_WIDTH = {
   category: { kind: 'steps', steps: 44 },
   /** A date or a date-time, in the mono data face ("Jan 1, 2026, 12:00 AM"). */
   date: { kind: 'steps', steps: 56 },
+  /** A labelled date-time with its zone ("Accepted: Nov 15, 2026, 02:44 AM UTC"). */
+  stamp: { kind: 'steps', steps: 68 },
   /** A second text column beside the flexible one (an engine, a role). */
   name: { kind: 'steps', steps: 56 },
   /** A row's trailing link or icon control. */
@@ -193,15 +194,58 @@ function steps(count: number) {
   return `calc(var(--spacing) * ${count})`;
 }
 
-function columnWidth(width: DataTableColumnWidth): string | undefined {
-  const role = COLUMN_WIDTH[width];
+/** A head label's width per character: the caption face averages under 0.6em a glyph. */
+const HEAD_CHAR_EM = 0.6;
+/** A sort glyph or an order mark after the label: 4 apart, 12 wide. */
+const HEAD_MARK_PX = 16;
+/** A cell's inline padding: 12 a side, 16 at the table's first and last edge. */
+const CELL_PAD_PX = 12;
+const EDGE_PAD_PX = 16;
+/** A date-time on one line ("Sep 30, 2026, 12:59 PM") with its padding: dates never cut. */
+const DATE_FLOOR_STEPS = 48;
+
+type ColumnEdge = Readonly<{ first: boolean; last: boolean }>;
+
+/** The head label (or its sublabel) on one line in `caption-strong`, with its glyph and padding. */
+function labelFloor(column: DataTableColumn, edge: ColumnEdge): string | null {
+  if (column.hideLabel || columnKind(column) === 'actions') return null;
+  const chars = Math.max(column.label.length, column.sublabel?.length ?? 0);
+  const mark = column.sort || column.order ? HEAD_MARK_PX : 0;
+  const pad = (edge.first ? EDGE_PAD_PX : CELL_PAD_PX) + (edge.last ? EDGE_PAD_PX : CELL_PAD_PX);
+  return `calc(${chars} * ${HEAD_CHAR_EM} * var(--text-caption) + ${mark + pad}px)`;
+}
+
+/**
+ * The narrowest a column may be: its role's steps (a flexible column the
+ * identity minimum), a date's full width, and never less than its head label.
+ */
+function columnFloor(column: DataTableColumn, edge: ColumnEdge): string {
+  const role = COLUMN_WIDTH[widthOf(column)];
+  const parts = [role.kind === 'steps' ? steps(role.steps) : 'var(--data-table-identity-min)'];
+  if (columnKind(column) === 'date') parts.push(steps(DATE_FLOOR_STEPS));
+  const label = labelFloor(column, edge);
+  if (label) parts.push(label);
+  return `max(${parts.join(', ')})`;
+}
+
+/** Each shown column with its edge: the select column, when present, is the first edge. */
+function withEdges(columns: readonly DataTableColumn[], selection: boolean) {
+  return columns.map((column, index) => ({
+    column,
+    edge: { first: !selection && index === 0, last: index === columns.length - 1 },
+  }));
+}
+
+/** A column's `col` width: a fixed role at its floor, a share of the table, or what is left. */
+function columnWidth(column: DataTableColumn, edge: ColumnEdge): string | undefined {
+  const role = COLUMN_WIDTH[widthOf(column)];
   switch (role.kind) {
     case 'rest':
       return undefined;
     case 'share':
       return `${role.share * 100}%`;
     case 'steps':
-      return steps(role.steps);
+      return columnFloor(column, edge);
     default: {
       const unknownRole: never = role;
       return unknownRole;
@@ -210,10 +254,9 @@ function columnWidth(width: DataTableColumnWidth): string | undefined {
 }
 
 /**
- * The narrowest the table may be so that no column is squeezed: every fixed
- * column at its width and every flexible one (`flex`, `lead`) at least the
- * identity minimum, which keeps a row's name readable; below it the frame
- * scrolls sideways with the first column pinned. `floor` is the page's own
+ * The narrowest the table may be so that no column is squeezed: the sum of
+ * the column floors (`columnFloor`) and the select column; below it the frame
+ * scrolls sideways with the identity column pinned. `floor` is the page's own
  * minimum (`minWidth`). The narrow layout leaves out `desktopOnly` columns.
  */
 export function columnsMinWidth({
@@ -227,26 +270,32 @@ export function columnsMinWidth({
   floor: string | undefined;
   desktop: boolean;
 }>): string {
-  let fixedSteps = selection ? SELECT_STEPS : 0;
-  let rest = 0;
-  let share = 0;
-  for (const column of columns) {
-    if (column.desktopOnly && !desktop) continue;
+  const shown = columns.filter((column) => desktop || !column.desktopOnly);
+  const fixed = selection ? [steps(SELECT_STEPS)] : [];
+  const rest: string[] = [];
+  const shares: { share: number; min: string }[] = [];
+  for (const { column, edge } of withEdges(shown, selection)) {
     const role = COLUMN_WIDTH[widthOf(column)];
-    if (role.kind === 'steps') fixedSteps += role.steps;
-    else if (role.kind === 'share') share += role.share;
-    else rest += 1;
+    const min = columnFloor(column, edge);
+    if (role.kind === 'steps') fixed.push(min);
+    else if (role.kind === 'share') shares.push({ share: role.share, min });
+    else rest.push(min);
   }
-  const parts = [
-    `calc((${steps(fixedSteps)} + ${rest} * var(--data-table-identity-min)) / ${1 - share})`,
-  ];
-  // A share column is a share of the table: the table is wide enough that the share holds the minimum.
-  if (share > 0) parts.push(`calc(var(--data-table-identity-min) / ${share})`);
+  const share = shares.reduce((sum, part) => sum + part.share, 0);
+  // A fixed layout splits what is left evenly, so each flexible column needs the widest floor.
+  const restMin = rest.length > 0 ? `${rest.length} * max(${rest.join(', ')})` : '0px';
+  const parts = [`calc((${fixed.join(' + ') || '0px'} + ${restMin}) / ${1 - share})`];
+  // A share column is a share of the table: the table is wide enough that the share holds its floor.
+  for (const part of shares) parts.push(`calc(${part.min} / ${part.share})`);
   if (floor) parts.push(floor);
   return `max(${parts.join(', ')})`;
 }
 
-/** The column widths and the header row, with the select-all column first. */
+/**
+ * The column widths and the header row, with the select-all column first.
+ * The width is a custom property so the narrow layout (globals.css) can give
+ * the identity column the rest and collapse a `desktopOnly` column.
+ */
 export function DataTableColumns({
   columns,
   selection,
@@ -254,12 +303,13 @@ export function DataTableColumns({
   return (
     <>
       <colgroup>
-        {selection ? <col style={{ width: steps(SELECT_STEPS) }} /> : null}
-        {columns.map((column) => (
+        {selection ? <col style={colWidth(steps(SELECT_STEPS), steps(SELECT_STEPS))} /> : null}
+        {withEdges(columns, Boolean(selection)).map(({ column, edge }, index) => (
           <col
             key={column.key}
-            style={{ width: columnWidth(widthOf(column)) }}
-            className={cn(column.desktopOnly && 'hidden desktop:table-column')}
+            style={colWidth(columnWidth(column, edge), columnFloor(column, edge))}
+            data-identity-col={index === 0 || undefined}
+            data-desktop-only={column.desktopOnly || undefined}
           />
         ))}
       </colgroup>
@@ -274,6 +324,9 @@ export function DataTableColumns({
     </>
   );
 }
+
+const colWidth = (width: string | undefined, floor: string) =>
+  ({ '--col-width': width, '--col-floor': floor }) as CSSProperties;
 
 function SelectAllHead({ selection }: Readonly<{ selection: DataTableSelection }>) {
   return (
@@ -311,8 +364,8 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
       />
     );
   }
-  // The columns are fixed, so a label longer than its role wraps under
-  // itself instead of painting over the next header.
+  // The column's floor fits its label on one line; wrapping is the fallback
+  // for a face wider than the floor's estimate, never an overlap.
   const hidden = column.hideLabel || columnKind(column) === 'actions';
   return (
     <TableHead

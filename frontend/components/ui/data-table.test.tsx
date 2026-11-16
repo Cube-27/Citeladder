@@ -356,20 +356,42 @@ describe('DataTable', () => {
     expect(steps()).toEqual(['start']);
   });
 
-  it('never lets the fixed columns squeeze the identity column below its minimum', () => {
-    const minWidths = (props: Pick<DataTableProps, 'columns' | 'minWidth'>) => {
+  it('sets every column a floor and the table a minimum of their sum, so nothing squeezes', () => {
+    // The CSS lengths at the app's tokens: 4px steps, a 200px identity minimum, 12px captions.
+    const TOKENS: Record<string, number> = {
+      '--spacing': 4,
+      '--data-table-identity-min': 200,
+      '--text-caption': 12,
+      '--table-min-width-sm': 576,
+    };
+    const px = (css: string) =>
+      Number(
+        new Function(
+          `return ${css
+            .replaceAll(/var\((--[\w-]+)\)/gu, (_, name: string) => String(TOKENS[name]))
+            .replaceAll('px', '')
+            .replaceAll('max(', 'Math.max(')
+            .replaceAll('calc(', '(')}`,
+        )(),
+      ).toFixed(1);
+    const layout = (props: Pick<DataTableProps, 'columns' | 'minWidth'>) => {
       const { container, unmount } = render(<DataTable label="Keys" {...props} />);
       const frame = container.querySelector<HTMLElement>('[data-data-table-frame]')!;
-      const result = [
-        frame.style.getPropertyValue('--data-table-min'),
-        frame.style.getPropertyValue('--data-table-min-desktop'),
-      ];
+      const result = {
+        narrow: px(frame.style.getPropertyValue('--data-table-min')),
+        desktop: px(frame.style.getPropertyValue('--data-table-min-desktop')),
+        cols: [...container.querySelectorAll<HTMLElement>('col')].map((col) => {
+          const width = col.style.getPropertyValue('--col-width');
+          if (!width) return 'rest';
+          return width.endsWith('%') ? width : px(width);
+        }),
+      };
       unmount();
       return result;
     };
-    // The API keys table: the key's name beside 168 steps of fixed columns, one desktop-only.
+    // The API keys table: the key's name beside fixed columns, one desktop-only.
     expect(
-      minWidths({
+      layout({
         columns: [
           { key: 'name', label: 'Key' },
           { key: 'scopes', label: 'Access', width: 'name' },
@@ -378,22 +400,38 @@ describe('DataTable', () => {
           { key: 'revoke', label: 'Revoke', width: 'action' },
         ],
       }),
-    ).toEqual([
-      'max(calc((calc(var(--spacing) * 136) + 1 * var(--data-table-identity-min)) / 1))',
-      'max(calc((calc(var(--spacing) * 168) + 1 * var(--data-table-identity-min)) / 1))',
-    ]);
+    ).toEqual({
+      narrow: '744.0',
+      desktop: '872.0',
+      cols: ['rest', '224.0', '128.0', '224.0', '96.0'],
+    });
+    // A sorted head wider than its figure role, a date in a figure role, and
+    // two flexible columns that split what is left evenly, each at the wider floor.
+    expect(
+      layout({
+        columns: [
+          { key: 'keyword', label: 'Keyword' },
+          {
+            key: 'traffic',
+            label: 'Est. monthly traffic',
+            kind: 'number',
+            sort: { active: false, descending: false, onSort: () => undefined },
+          },
+          { key: 'seen', label: 'Seen', kind: 'date', width: 'figure' },
+          { key: 'breakdown', label: 'Folder and resource breakdown' },
+        ],
+      }),
+    ).toEqual({ narrow: '849.6', desktop: '849.6', cols: ['rest', '184.0', '192.0', 'rest'] });
     // A quarter-width lead holds the minimum too, over the page's own floor.
     expect(
-      minWidths({
+      layout({
         columns: [
           { key: 'dimension', label: 'Query', width: 'lead' },
           { key: 'clicks', label: 'Clicks', kind: 'number' },
         ],
         minWidth: 'sm',
-      })[0],
-    ).toBe(
-      'max(calc((calc(var(--spacing) * 28) + 0 * var(--data-table-identity-min)) / 0.75), calc(var(--data-table-identity-min) / 0.25), var(--table-min-width-sm))',
-    );
+      }).narrow,
+    ).toBe('800.0');
   });
 
   it('warns in development when no column can absorb the width', () => {

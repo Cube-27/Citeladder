@@ -23,7 +23,6 @@ import {
 
 import { Icon } from '@/components/ui/icon';
 import { Spinner } from '@/components/ui/spinner';
-import { ClampText } from '@/components/ui/clamp-text';
 import { cn } from '@/lib/utils';
 
 /**
@@ -205,8 +204,8 @@ function PriorityBars({ filled }: Readonly<{ filled: 1 | 2 | 3 }>) {
  * StatusMark — the only way to show a status, priority or severity: a chip
  * 24 high with radius 4, the tone's wash as its fill, the tone's text
  * colour, a glyph and a word, so a column of marks reads as a pattern and
- * every mark still says its state. A running state draws the live rung. A
- * word too long for its cell is cut, with the whole word in a tooltip.
+ * every mark still says its state. A running state draws the live rung. It
+ * is never cut: it sizes to its word, and its column's floor makes room.
  */
 export function StatusMark(props: Readonly<StatusMarkProps>) {
   const {
@@ -223,13 +222,13 @@ export function StatusMark(props: Readonly<StatusMarkProps>) {
       {...attributes}
       data-status-tone={tone}
       className={cn(
-        'type-caption inline-flex font-medium h-[var(--tag-height)] max-w-full min-w-0 shrink-0 items-center gap-1 rounded-sm px-1 align-middle whitespace-nowrap',
+        'type-caption inline-flex font-medium h-[var(--tag-height)] shrink-0 items-center gap-1 rounded-sm px-2 align-middle whitespace-nowrap',
         TONE_CHIP[tone],
         className,
       )}
     >
       <MarkGlyph glyph={glyph} />
-      <ClampText className="min-w-0 pe-1">{children}</ClampText>
+      <span>{children}</span>
     </span>
   );
 }
