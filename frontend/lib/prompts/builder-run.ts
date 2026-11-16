@@ -135,17 +135,17 @@ export function runRequest(
   };
 }
 
-export type CoverageState = 'on_target' | 'short' | 'empty' | 'not_planned';
+export type PlannedCoverage = 'on_target' | 'short' | 'empty' | 'not_planned';
 export type CoverageRow = {
   key: string;
   label: string;
   /** What the request planned for this row; 0 when it planned none. */
   target: number;
   actual: number;
-  state: CoverageState;
+  state: PlannedCoverage;
 };
 
-function coverageState(target: number, actual: number): CoverageState {
+function coverageState(target: number, actual: number): PlannedCoverage {
   if (actual >= target) return target === 0 && actual === 0 ? 'not_planned' : 'on_target';
   return actual === 0 ? 'empty' : 'short';
 }

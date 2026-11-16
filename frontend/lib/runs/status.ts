@@ -142,8 +142,10 @@ export function classificationBadgeValue(
       return 'owned';
     case 'competitor':
       return 'competitor';
-    default:
+    case 'third_party':
       return 'third-party';
+    default:
+      return classification satisfies never;
   }
 }
 
@@ -169,7 +171,9 @@ export function classificationLabel(classification: CitationClassification): str
       return 'Owned (unintended)';
     case 'competitor':
       return 'Competitor';
-    default:
+    case 'third_party':
       return 'Third-party';
+    default:
+      return classification satisfies never;
   }
 }
