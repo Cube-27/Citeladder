@@ -247,7 +247,7 @@ export function ActionTargetCell({
       {/* Title over its caption, 4 apart, as `TableCellLines` binds them. */}
       <Stack gap="tight" className="min-w-0">
         <Inline className="min-w-0 flex-nowrap">
-          <ClampText tooltip={actionTitle(action, { full: true })}>
+          <ClampText rowTitle tooltip={actionTitle(action, { full: true })}>
             <TextLink href={`/agent/actions/${action.id}`} text="body" underline="hover">
               {actionTitle(action)}
             </TextLink>

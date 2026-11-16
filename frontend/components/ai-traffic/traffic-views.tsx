@@ -50,7 +50,7 @@ const COVERAGE_COLUMNS: readonly DataTableColumn[] = [
 
 const ACTIVITY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'observed', label: 'Observed', width: 'date', kind: 'date' },
-  { key: 'bot', label: 'Bot', width: 'status' },
+  { key: 'bot', label: 'Bot', width: 'category' },
   { key: 'path', label: 'Host and path' },
   { key: 'resource', label: 'Resource', width: 'status' },
   { key: 'status', label: 'Status', width: 'figure', kind: 'number' },

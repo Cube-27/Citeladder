@@ -232,6 +232,74 @@ test('choosing a filter never moves the table below it', async ({ page }) => {
   expect(await top()).toBe(before);
 });
 
+test('on a phone the Actions table fills its card and the row title link fills its cell', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const action = {
+    id: '00000000-0000-4000-8000-0000000000a1',
+    project_id: FIXTURE_PROJECT.id,
+    target_kind: 'earned_page',
+    target_label: 'example.org/tools/best-coffee-subscriptions-for-beginners',
+    target_url: 'https://example.org/tools/best-coffee-subscriptions-for-beginners',
+    target_prompt_id: null,
+    origin: 'evidence',
+    status: 'open',
+    priority_score: 140,
+    priority_band: 'high',
+    families: ['sources'],
+    approach: 'earned_placement',
+    group: 'earned',
+    skill_id: 'earned_authority',
+    member_count: 1,
+    declarable_member_count: 1,
+    handoff: { context: 'action', message: 'Draft a request to be listed.' },
+    evidence_cleared_at: null,
+    created_at: '2026-08-28T00:00:00Z',
+    updated_at: '2026-08-28T00:00:00Z',
+  };
+  await stubAuthedShell(page, [
+    [
+      `**/api/v1/projects/${FIXTURE_PROJECT.id}/actions?*`,
+      {
+        items: [action],
+        next_cursor: null,
+        status_counts: { open: 1 },
+        group_counts: { fix_site: 0, own_pages: 0, earned: 1, products: 0 },
+      },
+    ],
+  ]);
+  await page.goto(fixtureProjectPath('/agent/actions'));
+  const card = page.getByRole('region', { name: 'Actions' });
+  await expect(card.getByRole('link', { name: /^Earn a placement/ })).toBeVisible();
+  const geometry = await card.evaluate((section) => {
+    const table = section.querySelector('table')!;
+    const cell = table.querySelector('tbody td:has(a[href])')!;
+    const box = cell.getBoundingClientRect();
+    const title = cell.querySelector('[data-row-title]')!;
+    // The cell's bottom padding at its far end, clear of the link's text and of
+    // the card's rounded corner, still opens the Action.
+    const corner = document.elementFromPoint(box.right - 16, box.bottom - 3);
+    return {
+      tableWidth: Math.round(table.getBoundingClientRect().width),
+      cardInner: section.clientWidth,
+      cornerIsLink: corner?.closest('a[href]') != null,
+      titleLines: Math.round(
+        title.getBoundingClientRect().height /
+          Number.parseFloat(getComputedStyle(title).lineHeight),
+      ),
+      cellAtLeast44: box.height >= 44,
+    };
+  });
+  expect(geometry).toEqual({
+    tableWidth: geometry.cardInner,
+    cardInner: geometry.cardInner,
+    cornerIsLink: true,
+    titleLines: 2,
+    cellAtLeast44: true,
+  });
+});
+
 test('invalid field edges survive keyboard focus in both themes', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await stubAuthedShell(page, [['**/api/v1/brand-discovery-catalog', catalog]], []);

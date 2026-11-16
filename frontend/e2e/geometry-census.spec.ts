@@ -549,6 +549,18 @@ function measure({ route }: { route: string }) {
     const cell = row.querySelector('td');
     if (cell) add('table-cell.padding-y', cell, px(getComputedStyle(cell).paddingTop));
   }
+  // A head label is never cut: its column's floor fits it (screen-reader-only
+  // labels and the select-all box are not drawn text).
+  for (const head of all('.table-frame thead th')) {
+    const drawn = [head, ...head.querySelectorAll('*')].filter(
+      (node) => node.clientWidth > 1 && !node.closest('[role="checkbox"]'),
+    );
+    add(
+      'table-head.cut',
+      head,
+      Math.max(0, ...drawn.map((node) => node.scrollWidth - node.clientWidth)),
+    );
+  }
   return records;
 }
 
@@ -797,6 +809,7 @@ async function expectOneGeometry(page: Page) {
   expect.soft(framePaddings.filter((value) => value !== QUERY_STATE_FRAME_PADDING)).toEqual([]);
   expectOneValue(records, 'table-row.height.two-lines', TABLE_ROW_HEIGHT_TWO_LINES);
   expectOneValue(records, 'table-cell.padding-y', TABLE_CELL_PADDING_Y);
+  expectOneValue(records, 'table-head.cut', 0);
   expectOneValue(records, 'data-table-header.height', DATA_TABLE_HEADER_HEIGHT);
   expectOneValue(records, 'figure-cell.padding-y', FIGURE_CELL_PADDING_Y);
   expectOneValue(records, 'figure-strip.height-spread', FIGURE_STRIP_HEIGHT_SPREAD);

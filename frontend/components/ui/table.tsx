@@ -299,7 +299,7 @@ export function TableCellLines({
   return (
     // The title and its caption are one fact: 4 apart.
     <span data-cell-lines="" className="grid min-w-0 gap-1">
-      <ClampText lines={titleLines} className={title ? textRole('body') : undefined}>
+      <ClampText rowTitle lines={titleLines} className={title ? textRole('body') : undefined}>
         {primary}
       </ClampText>
       {secondary ? (
@@ -366,7 +366,7 @@ export function TableRowHeader({
 }: Readonly<{ children: ReactNode; className?: string }>) {
   return (
     <th scope="row" className={cn(cellClasses({}), 'type-body', className)}>
-      {isPlainText(children) ? <ClampText>{children}</ClampText> : children}
+      {isPlainText(children) ? <ClampText rowTitle>{children}</ClampText> : children}
     </th>
   );
 }

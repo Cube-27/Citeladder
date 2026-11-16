@@ -2092,6 +2092,52 @@ label {
   background-color: var(--color-well);
 }
 
+/* DataTable column widths (`DataTableColumns`): each fixed column at its
+   floor. Below `desktop:` a desktop-only column collapses (a full-row cell
+   still spans it); below `rail:` every column but the identity sits at its
+   floor and the identity column takes the rest, so the table fills its card. */
+[data-data-table-frame] col {
+  width: var(--col-width, auto);
+}
+@media (max-width: 980px) {
+  [data-data-table-frame] col[data-desktop-only] {
+    width: 0;
+  }
+}
+@media (max-width: 899px) {
+  [data-data-table-frame] col:not([data-identity-col], [data-desktop-only]) {
+    width: var(--col-floor);
+  }
+  [data-data-table-frame] col[data-identity-col] {
+    width: auto;
+  }
+  /* A phone shows the words that tell rows apart: the title takes two lines. */
+  :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) [data-row-title] {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    white-space: normal;
+    overflow-wrap: break-word;
+  }
+}
+
+/* The identity cell's title link is the whole (pinned, positioned) cell to
+   the pointer, with the inset ring; the cell's other controls stay above it. */
+:is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) {
+  & [data-row-title] a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+  }
+  & [data-row-title] a:focus-visible {
+    outline-offset: -2px;
+  }
+  & :is(a, button, input, [data-truncated]):not([data-row-title], [data-row-title] a) {
+    position: relative;
+    z-index: 1;
+  }
+}
+
 /* A StateBlock on the page is a card, padded 24. Inside a container (a card,
    section, slip, table or dialog) it draws no second frame: padding 16, and
    the gaps under the icon tile and above the actions step down to 8 and 12. */
