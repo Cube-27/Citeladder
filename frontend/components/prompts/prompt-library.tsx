@@ -59,6 +59,17 @@ function mutationFailure(
     : undefined;
 }
 
+/** A failed enable switch; the switch itself has already rolled back. */
+function ToggleFailure({ toggle }: Readonly<{ toggle: { isError: boolean; error: unknown } }>) {
+  if (!toggle.isError) return null;
+  return (
+    <Notice
+      kind="mutation"
+      notice={mutationNoticeForError(toggle.error, { action: 'turn the prompt on or off' })}
+    />
+  );
+}
+
 /**
  * Whether the library still shows its first-load frame. Prompts often arrive
  * with the project, before the latest run's figures; a run adds four columns,
@@ -374,14 +385,7 @@ export function PromptLibrary({
             pending={retrying}
           />
         ) : null}
-        {toggleMutation.isError ? (
-          <Notice
-            kind="mutation"
-            notice={mutationNoticeForError(toggleMutation.error, {
-              action: 'turn the prompt on or off',
-            })}
-          />
-        ) : null}
+        <ToggleFailure toggle={toggleMutation} />
         <PendingReviewNotice
           count={review.candidates.length}
           hidden={builderOpen || !canWrite}
