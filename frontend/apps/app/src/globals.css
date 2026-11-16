@@ -432,17 +432,11 @@
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
-  /* The row's 1px rule comes out of the row, not on top of it: a cell
-     holding a 24px title line is still `table-row-height` tall. */
-  --table-cell-padding-bottom: calc(var(--table-cell-padding-y) - 1px);
   --table-min-width-sm: 36rem;
   /* Under the 734px main column of the 982px window (200 sidebar, two 24 gutters). */
   --table-min-width-md: 44rem;
   --table-min-width-lg: 64rem;
   --table-min-width-xl: 76rem;
-  /* A table's identity column never narrows past this (about 20 characters
-     of row name); below it the table scrolls with that column pinned. */
-  --table-identity-min: 10rem;
   /* The app shell's top bar: the sidebar's project switcher cell and
      the PageHeader are one sticky 56px bar at the top of the window, the
      `row-app` title row with space-2 above and below and a 1px `line` rule
@@ -451,11 +445,6 @@
      filters → content). */
   --page-header-band: calc(var(--row-app) + 16px);
   --page-band-gap: 8px;
-  /* What a screen that fills the viewport (the Agent thread) leaves for the
-     header: the top bar, the gap under it and the bottom gutter. */
-  --route-chrome-height: calc(
-    var(--page-header-band) + var(--page-section-gap) + var(--content-gutter)
-  );
   /* Website gutters: 20 below 768px, 40 to 1279px, 64 from 1280px. */
   --site-gutter: 20px;
   --marketing-nav-offset: calc(var(--nav-height) + 8px + env(safe-area-inset-top, 0px));
@@ -758,8 +747,6 @@
   --sidebar-rail-width: 56px;
   --rail-button: 40px;
   --nav-current-fill: color-mix(in srgb, var(--color-ink) 7%, transparent);
-  /* The Workbench's side rail beside its editor. */
-  --workbench-rail-width: 320px;
   /* What a Thread page leaves for its own scrolling region: the masthead (as
      drawn: below `rail` its actions take a second row, `Masthead`), the 24
      above the first content and the main column's foot. */
