@@ -353,12 +353,13 @@ export const actionBulkFilterSchema = z.strictObject({
 
 /**
  * One status decision on many Actions: the ticked ids, or every Action the
- * filter matches (Accept all), at most 100 either way. A legal transition is
- * applied; the rest are skipped.
+ * filter matches (Accept all), at most `ACTION_BULK_MAX` either way. A legal
+ * transition is applied; the rest are skipped.
  */
+export const ACTION_BULK_MAX = 100;
 export const actionBulkStatusRequestSchema = z
   .strictObject({
-    ids: z.array(uuid()).min(1).max(100).optional(),
+    ids: z.array(uuid()).min(1).max(ACTION_BULK_MAX).optional(),
     filter: actionBulkFilterSchema.optional(),
     to: actionUserStatusSchema,
   })

@@ -155,7 +155,7 @@ function GroupingSection({
   const key = levelKey.grouping(refOf.status, refOf.groupKey, refOf.grouping);
   const open = levels.isOpen(key);
   const label = ACTION_GROUPING_LABEL[grouping.grouping];
-  const some = grouping.items.some((item) => selection.hasRow(item.id, refOf.status));
+  const some = selection.hasRowIn(refOf);
   const whole = selection.hasGrouping(refOf);
   return (
     <div>

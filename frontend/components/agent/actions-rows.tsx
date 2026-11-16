@@ -26,8 +26,11 @@ const SCOPE_BY_KIND: Readonly<Record<string, string>> = {
 };
 
 function scopeLabel(action: Action): string {
-  if (action.target_kind === 'issue_family')
-    return action.page_count ? pluralCount(action.page_count, 'URL') : 'Whole site';
+  if (action.target_kind === 'issue_family') {
+    // Unknown (no cohort read) is not the whole site: only a cohort naming no URL is.
+    if (action.page_count === null) return 'Not stated';
+    return action.page_count > 0 ? pluralCount(action.page_count, 'URL') : 'Whole site';
+  }
   return SCOPE_BY_KIND[action.target_kind] ?? 'Not stated';
 }
 
@@ -110,9 +113,9 @@ function ActionRow({ action, refOf }: Readonly<{ action: Action; refOf: Grouping
       tick={
         <Checkbox
           aria-label={`Select ${title}`}
-          checked={whole || selection.hasRow(action.id, refOf.status)}
+          checked={whole || selection.hasRow(action.id)}
           disabled={whole}
-          onCheckedChange={() => selection.toggleRow(action.id, refOf.status)}
+          onCheckedChange={() => selection.toggleRow(action.id, refOf)}
         />
       }
       href={`/actions/${action.id}`}

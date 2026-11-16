@@ -258,6 +258,7 @@ test('a fixture or helper change selects every spec that imports it', () => {
     'e2e/self-serve-auth.spec.ts',
     'e2e/shell.spec.ts',
     'e2e/site-health-recovery.spec.ts',
+    'e2e/surface-layout-actions.spec.ts',
     'e2e/surface-layout-issues.spec.ts',
     'e2e/surface-layout.spec.ts',
     'e2e/visibility.spec.ts',

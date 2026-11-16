@@ -21,10 +21,10 @@ const selection = {
 };
 
 const id = (n: number) => `33333333-3333-4333-8333-3333333333${String(n).padStart(2, '0')}`;
-const fix = (n: number, grouping: string) => ({
+const fix = (n: number, grouping: string, pages: number | null = n) => ({
   ...actionItem(id(n), `Fix ${n}`, PROJECT),
   target_kind: 'issue_family',
-  page_count: n,
+  page_count: pages,
   approach: 'fix_technical',
   goal: 'read_site',
   grouping,
@@ -46,7 +46,12 @@ type Item = ReturnType<typeof fix> | typeof prompt;
 /** The project's New Actions as the server holds them; a bulk Accept moves rows out. */
 function serve() {
   const state = {
-    aeo: Array.from({ length: 12 }, (_, i) => fix(i + 1, 'aeo')) as Item[],
+    aeo: [
+      // A cohort naming no URL is the whole site; an unread one is unknown.
+      fix(1, 'aeo', 0),
+      fix(2, 'aeo', null),
+      ...Array.from({ length: 10 }, (_, i) => fix(i + 3, 'aeo')),
+    ] as Item[],
     accepted: 0,
   };
   const seo = [fix(20, 'seo')];
@@ -159,6 +164,11 @@ describe('Actions', () => {
       'Go to Fix wrong claims AI makes about your brand, 0 claims to correct',
     ]);
     expect(rowTitles('12 actions')).toEqual(Array.from({ length: 10 }, (_, i) => `Fix ${i + 1}`));
+    const scopes = within(screen.getByRole('table', { name: '12 actions' }))
+      .getAllByRole('row')
+      .slice(1, 4)
+      .map((row) => within(row).getAllByRole('cell')[2]?.textContent);
+    expect(scopes).toEqual(['Whole site', 'Not stated', '3 URLs']);
 
     await user.click(screen.getByRole('button', { name: 'Show 2 more' }));
     await waitFor(() =>
@@ -208,5 +218,22 @@ describe('Actions', () => {
     await waitFor(() => expect(bulks).toEqual([{ to: 'in_progress', ids: [id(2)] }]));
     await waitFor(() => expect(rowTitles('11 actions')).toContain('Fix 11'));
     expect(names()).toEqual(settled);
+  });
+
+  it('a ticked grouping covers its ticked rows: counted once and sent by its filter alone', async () => {
+    const { bulks } = serve();
+    const user = userEvent.setup();
+    renderActions();
+
+    await screen.findByRole('table', { name: '12 actions' });
+    await user.click(screen.getByRole('checkbox', { name: 'Select Fix 2' }));
+    await user.click(screen.getByRole('checkbox', { name: 'Select every action in AEO' }));
+    const bar = screen.getByRole('toolbar', { name: 'Selected actions' });
+    expect(within(bar).getByText('12 selected')).toBeVisible();
+    await user.click(within(bar).getByRole('button', { name: 'Accept' }));
+
+    await waitFor(() =>
+      expect(bulks).toEqual([{ to: 'in_progress', filter: { status: 'open', grouping: 'aeo' } }]),
+    );
   });
 });

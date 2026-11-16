@@ -16,14 +16,15 @@ export function GoalStrip({
   onJump,
 }: Readonly<{
   goals: ActionTree['goals'] | undefined;
-  /** The read failed: counts say unavailable instead of loading. */
+  /** The read failed: counts say unavailable instead of loading or last known. */
   failed: boolean;
   onJump: (goal: ActionGoal) => void;
 }>) {
   return (
     <CountStrip label="Goals">
       {actionGoalSchema.options.map((goal) => {
-        const entry = goals?.find((candidate) => candidate.goal === goal);
+        // A failed refresh says Unavailable rather than showing the last counts as current.
+        const entry = failed ? undefined : goals?.find((candidate) => candidate.goal === goal);
         const label = ACTION_GOAL_LABEL[goal];
         const phrase = entry ? goalCountPhrase(goal, entry.count) : null;
         return (

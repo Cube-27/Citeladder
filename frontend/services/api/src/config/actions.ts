@@ -1,5 +1,6 @@
 /** Actions catalog: deterministic decisions over persisted evidence. */
 import {
+  ACTION_BULK_MAX,
   actionTargetKindSchema,
   type ActionGoal,
   type ActionGrouping,
@@ -134,8 +135,8 @@ export const actions = {
   /** Stored statuses Mark implemented accepts: New and In progress, never Declined. */
   ACTION_DECLARABLE_STATUSES: ['in_progress', 'open'],
   ACTION_ACTIVE_STATUSES: ['in_progress', 'open'],
-  /** The most Actions one bulk status change names or reaches through its filter. */
-  ACTION_BULK_MAX: 100,
+  /** The most Actions one bulk status change names or reaches through its filter: the contract's bound. */
+  ACTION_BULK_MAX,
   /** The longest text the Actions list searches labels for. */
   ACTION_SEARCH_MAX_CHARS: 200,
   EVIDENCE_FAMILIES: [

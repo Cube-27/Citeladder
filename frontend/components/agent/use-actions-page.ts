@@ -16,11 +16,13 @@ import {
 import { queryKeys } from '@/lib/api/query-keys';
 import type { ProjectScope } from '@/lib/api/query-keys/scope';
 import { pluralCount } from '@/lib/format';
-import { actionBulkFilterSchema, type ActionUserStatus } from '@citeladder/contracts/actions';
+import {
+  ACTION_BULK_MAX,
+  actionBulkFilterSchema,
+  type ActionUserStatus,
+} from '@citeladder/contracts/actions';
 
 export type ActionsView = ReturnType<typeof useActionFilters>;
-
-const BULK_MAX_IDS = 100;
 
 const treeParams = (view: ActionsView, status: ActionStatus): ActionTreeParams => ({
   ...view.filters,
@@ -76,35 +78,39 @@ export function useOpenLevels(defaults: readonly string[]) {
   };
 }
 
-/** The ticked rows and groupings, kept only while the view they were ticked in stays. */
+/**
+ * The ticked rows (each under its grouping) and groupings, kept only while
+ * the view they were ticked in stays. A ticked grouping covers its ticked
+ * rows, so they are neither counted nor sent twice.
+ */
 export function useTreeSelection(viewKey: string) {
-  const [state, setState] = useState({
+  const empty = () => ({
     viewKey,
-    rows: new Map<string, ActionStatus>(),
+    rows: new Map<string, GroupingRef>(),
     groupings: new Map<string, GroupingRef & { count: number }>(),
   });
-  const current =
-    state.viewKey === viewKey ? state : { ...state, rows: new Map(), groupings: new Map() };
-  const toggleRow = (id: string, status: ActionStatus) =>
-    setState({ ...current, viewKey, rows: toggled(current.rows, id, status) });
-  const toggleGrouping = (ref: GroupingRef, count: number) =>
-    setState({
-      ...current,
-      viewKey,
-      groupings: toggled(current.groupings, groupingKey(ref), { ...ref, count }),
-    });
-  const covered = (id: string, status: ActionStatus) => current.rows.get(id) === status;
-  let size = [...current.groupings.values()].reduce((sum, ref) => sum + ref.count, 0);
-  size += current.rows.size;
+  const [state, setState] = useState(empty);
+  const current = state.viewKey === viewKey ? state : empty();
+  const hasGrouping = (ref: GroupingRef) => current.groupings.has(groupingKey(ref));
+  const rows = new Map([...current.rows].filter(([, ref]) => !hasGrouping(ref)));
+  const size = [...current.groupings.values()].reduce((sum, ref) => sum + ref.count, rows.size);
   return {
-    rows: current.rows,
+    /** Ticked rows outside every ticked grouping: the ones a decision names by id. */
+    rows,
     groupings: current.groupings,
     size,
-    hasRow: covered,
-    hasGrouping: (ref: GroupingRef) => current.groupings.has(groupingKey(ref)),
-    toggleRow,
-    toggleGrouping,
-    clear: () => setState({ viewKey, rows: new Map(), groupings: new Map() }),
+    hasRow: (id: string) => current.rows.has(id),
+    hasRowIn: (ref: GroupingRef) =>
+      [...rows.values()].some((row) => groupingKey(row) === groupingKey(ref)),
+    hasGrouping,
+    toggleRow: (id: string, ref: GroupingRef) =>
+      setState({ ...current, rows: toggled(current.rows, id, ref) }),
+    toggleGrouping: (ref: GroupingRef, count: number) =>
+      setState({
+        ...current,
+        groupings: toggled(current.groupings, groupingKey(ref), { ...ref, count }),
+      }),
+    clear: () => setState(empty()),
   };
 }
 
@@ -127,10 +133,9 @@ export function useBulkDecision(scope: ProjectScope, view: ActionsView, selectio
   const bulk = useMutation(actionsMutations.bulkStatus(scope));
   const decide = async (to: ActionUserStatus) => {
     const { rows, groupings } = selection;
-    const statuses = new Set<ActionStatus>([
-      ...rows.values(),
-      ...[...groupings.values()].map((ref) => ref.status),
-    ]);
+    const statuses = new Set<ActionStatus>(
+      [...rows.values(), ...groupings.values()].map((ref) => ref.status),
+    );
     const ids = new Set(rows.keys());
     const keys = new Set(groupings.keys());
     for (const from of statuses) {
@@ -141,7 +146,7 @@ export function useBulkDecision(scope: ProjectScope, view: ActionsView, selectio
       );
     }
     client.setQueriesData<InfiniteData<ActionsPage>>(
-      { queryKey: queryKeys.actions.resource(scope.projectId, 'grouping-rows') },
+      { queryKey: queryKeys.actions.read('grouping-rows', scope) },
       (data) =>
         data && {
           ...data,
@@ -159,12 +164,17 @@ export function useBulkDecision(scope: ProjectScope, view: ActionsView, selectio
           groupingParams({ ref, groupBy: view.groupBy, filters: view.filters }),
         ),
       })),
-      ...chunks([...ids], BULK_MAX_IDS).map((chunk) => ({ to, ids: chunk })),
+      ...chunks([...ids], ACTION_BULK_MAX).map((chunk) => ({ to, ids: chunk })),
     ];
     try {
       const results = await Promise.all(bodies.map((body) => bulk.mutateAsync(body)));
       const updated = results.reduce((sum, result) => sum + result.updated, 0);
-      toast.notify(`${pluralCount(updated, 'action')} moved to ${ACTION_STATUS_LABEL[to]}`);
+      toast.notify(
+        `${pluralCount(updated, 'action')} moved to ${ACTION_STATUS_LABEL[to]}`,
+        results.some((result) => result.truncated)
+          ? 'More are in these groupings: select them again for the rest.'
+          : undefined,
+      );
     } catch {
       toast.notify("Couldn't change these actions", 'The list shows their current status.', {
         tone: 'negative',

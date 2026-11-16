@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { flushSync } from 'react-dom';
 import { X } from 'lucide-react';
 
@@ -37,12 +38,29 @@ export function ActionsScreen() {
   const selection = useTreeSelection(JSON.stringify([view.status, view.groupBy, view.filters]));
   const counts = primary.data?.status_counts;
 
-  const jump = (goal: ActionGoal) => {
-    if (view.groupBy !== 'goal') view.setGroupBy('goal');
-    flushSync(() => levels.open([levelKey.status(lead), levelKey.group(lead, goal)]));
+  const pendingJump = useRef<ActionGoal | null>(null);
+  const reveal = (goal: ActionGoal) => {
     const row = document.getElementById(groupAnchor(lead, goal));
     row?.scrollIntoView({ block: 'start' });
     row?.focus({ preventScroll: true });
+  };
+  // A jump from another grouping scrolls once the goal tree has landed.
+  useEffect(() => {
+    const goal = pendingJump.current;
+    if (!goal || primary.data?.group_by !== 'goal' || primary.isPlaceholderData) return;
+    pendingJump.current = null;
+    reveal(goal);
+  });
+  const jump = (goal: ActionGoal) => {
+    const keys = [levelKey.status(lead), levelKey.group(lead, goal)];
+    if (view.groupBy === 'goal') {
+      flushSync(() => levels.open(keys));
+      reveal(goal);
+      return;
+    }
+    levels.open(keys);
+    pendingJump.current = goal;
+    view.setGroupBy('goal');
   };
 
   return (
