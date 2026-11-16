@@ -621,6 +621,28 @@ describe('public API requests', () => {
       await expect(
         requirePathOwnership(db, tenant.workspaceId, tenant.projectId, params, access),
       ).rejects.toThrow('Public path parameter widget_id has no owner');
+    // Every path ID a public route declares has one, so no public call reaches that throw.
+    const names = new Set(
+      ROUTE_CONTRACTS.filter((contract) => contract.exposure === 'public').flatMap((contract) =>
+        [...contract.path.matchAll(/\{([a-z_]+_id)\}/gu)].map((match) => match[1]!),
+      ),
+    );
+    const unowned = [];
+    for (const name of names) {
+      const ids = { project_id: tenant.projectId, [name]: randomUUID() };
+      const outcome = await requirePathOwnership(
+        db,
+        tenant.workspaceId,
+        tenant.projectId,
+        ids,
+        'read',
+      ).then(
+        () => '',
+        (error: Error) => error.message,
+      );
+      if (outcome.includes('has no owner')) unowned.push(name);
+    }
+    expect([names.has('site_url_id'), unowned]).toEqual([true, []]);
   });
 
   it('refuses every public write to a read-only key', async () => {

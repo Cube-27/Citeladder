@@ -102,6 +102,16 @@ describe('Finding Actions by name', () => {
     expect((await read('?q=acme.test/&status=any')).items.map((item) => item.id)).toEqual([
       actionId(s, otherRule),
     ]);
+    // One live finding of a configured rule beside the leftover keeps the Action listed.
+    await db
+      .updateTable('opportunities')
+      .set({ action_id: actionId(s, pageRule) })
+      .where('action_id', '=', actionId(s, otherRule))
+      .where('superseded_at', 'is', null)
+      .execute();
+    expect(
+      (await read('?q=acme.test/&status=any')).items.map((item) => item.id).toSorted(),
+    ).toEqual([actionId(s, pageRule), actionId(s, otherRule)].toSorted());
   });
 
   it('lets the Agent find a measuring Action by name with read_actions and search, only in its project', async () => {

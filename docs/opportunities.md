@@ -117,7 +117,8 @@ crawl family promotes one `site_issue_family` finding per Issues group of every
 defect and advisory rule, never a diagnostic and never per page
 ([IA1](decisions.md#actions-group-issues)), plus contextual links and page
 changes. A site-level rule's group holds the URLs its evidence names; a
-site-level check reads that rule's one finding in the next comparable crawl.
+site-level check reads that rule's evaluation and finding in the next
+comparable crawl, and a crawl that never evaluated the rule reads nothing.
 A live finding of a rule that is no longer an enabled configured rule is a
 leftover: every refresh retires it, even over unchanged sources, and until
 then no Actions read lists its Action. Demand owns imported

@@ -128,9 +128,11 @@ async function siteLevelFamilies(db: Database, crawl: ViewCrawl): Promise<Family
     where ${viewIssuesSql(crawl)} and ${siteLevelRule}
       and i.finding_class = any(${[...family.FINDING_CLASSES]}::text[])
     order by i.rule_id collate "C", i.finding_class, i.id`.execute(db);
-  const named = rows.map((row) => {
+  // An `architecture.%` rule the site-level contract does not know names no pages
+  // this can read; it is skipped, never shown as the whole site.
+  const named = rows.flatMap((row) => {
     const finding = siteLevelFinding(row.rule_id, row.evidence);
-    return { row, pages: finding ? evidencePages(finding) : [] };
+    return finding ? [{ row, pages: evidencePages(finding) }] : [];
   });
   const ids = parseUuids(named.flatMap(({ pages }) => pages.map((page) => page.site_url_id)));
   const owned = new Map(
@@ -154,7 +156,7 @@ async function siteLevelFamilies(db: Database, crawl: ViewCrawl): Promise<Family
       if (url !== undefined) listed.set(page.site_url_id, { site_url_id: page.site_url_id, url });
     }
     const found = families.get(key);
-    const merged = new Map([...(found?.pages ?? []).map((p) => [p.site_url_id, p] as const)]);
+    const merged = new Map((found?.pages ?? []).map((p) => [p.site_url_id, p] as const));
     for (const [id, page] of listed) merged.set(id, page);
     const sorted = [...merged.values()].sort(
       (left, right) =>

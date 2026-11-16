@@ -18,7 +18,7 @@ type ProjectOf = (db: Database, workspaceId: string, id: string) => Promise<stri
 
 /** A table carrying `workspace_id` and `project_id` itself. */
 const scoped =
-  (table: 'audits' | 'actions' | 'site_crawls'): ProjectOf =>
+  (table: 'audits' | 'actions' | 'site_crawls' | 'site_urls'): ProjectOf =>
   async (db, workspaceId, id) =>
     (
       await db
@@ -62,6 +62,7 @@ const OWNERS: Readonly<Record<string, { resource: string; project: ProjectOf } |
     audit_id: { resource: 'Audit', project: scoped('audits') },
     action_id: { resource: 'Action', project: scoped('actions') },
     crawl_id: { resource: 'Crawl', project: scoped('site_crawls') },
+    site_url_id: { resource: 'URL', project: scoped('site_urls') },
     topic_id: BY_OWNER,
     competitor_id: BY_OWNER,
     candidate_id: BY_OWNER,

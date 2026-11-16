@@ -56,6 +56,15 @@ const DIAGNOSTIC: Rule = {
   category: 'security',
 };
 
+// Read as site-level, but no site-level evidence contract knows it.
+const UNKNOWN_SITE_LEVEL: Rule = {
+  rule_id: 'architecture.fixture_unknown',
+  finding_class: 'defect',
+  severity: 'high',
+  dimension: 'technical',
+  category: 'architecture',
+};
+
 /** One crawled page failing each of `rules`, with its evaluations and current issues. */
 async function failingPage(trx: Database, seed: SiteSeed, path: string, rules: readonly Rule[]) {
   const fixtures = new SiteFixtures(trx);
@@ -118,14 +127,19 @@ async function failingPage(trx: Database, seed: SiteSeed, path: string, rules: r
   return { id: page.id, url: `https://example.test${path}` };
 }
 
-/** A crawl with a defect on 12 pages, an advisory on 3 of them and a diagnostic on 2. */
+/** A crawl with a defect on 12 pages, an advisory on 3 of them, a diagnostic on 2, an unknown site-level rule on 1. */
 async function crawledProject() {
   return db.transaction().execute(async (trx) => {
     const seed = await new SiteFixtures(trx).crawl();
     seeds.push(seed);
     const pages = [];
     for (let index = 0; index < 12; index += 1) {
-      const rules = [DEFECT, ...(index < 3 ? [ADVISORY] : []), ...(index < 2 ? [DIAGNOSTIC] : [])];
+      const rules = [
+        DEFECT,
+        ...(index < 3 ? [ADVISORY] : []),
+        ...(index < 2 ? [DIAGNOSTIC] : []),
+        ...(index < 1 ? [UNKNOWN_SITE_LEVEL] : []),
+      ];
       // NOSONAR -- One transaction: fixture statements run in order.
       pages.push(await failingPage(trx, seed, `/p${String(index).padStart(2, '0')}`, rules));
     }
@@ -177,7 +191,7 @@ afterAll(async () => {
 });
 
 describe('issue-group Actions', () => {
-  it('files one Action per defect and advisory group, never a diagnostic, with its URLs', async () => {
+  it('files one Action per defect and advisory group, never a diagnostic or unknown site-level rule, with its URLs', async () => {
     const actions = await issueActions(own.seed);
     expect(
       actions.map((row) => [row.target_label, row.goal, row.goal_grouping, row.priority_score]),

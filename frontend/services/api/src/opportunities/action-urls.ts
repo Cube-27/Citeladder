@@ -104,15 +104,15 @@ export async function writeActionUrls(trx: Database, scope: Scope, synced: Actio
       : []
     ).map((row) => [row.normalized_url, row.id]),
   );
+  const urlIds = (s: ActionUrlSource): string[] => {
+    // A whole-site group's one page is where its finding is filed, not a URL it touches.
+    if (s.cohort)
+      return s.cohort.whole_site ? [] : parseUuids(s.cohort.pages.map((page) => page.site_url_id));
+    const id = s.kind === 'page' && s.url ? owned.get(s.url) : undefined;
+    return id ? [id] : [];
+  };
   const rows = synced.flatMap((s) => {
-    const ids = s.cohort
-      ? s.cohort.whole_site
-        ? []
-        : parseUuids(s.cohort.pages.map((page) => page.site_url_id))
-      : [s.kind === 'page' && s.url ? owned.get(s.url) : undefined].filter(
-          (id): id is string => id !== undefined,
-        );
-    return [...new Set(ids)].map((site_url_id) => ({
+    return [...new Set(urlIds(s))].map((site_url_id) => ({
       workspace_id: scope.workspaceId,
       project_id: scope.projectId,
       action_id: s.actionId,
@@ -131,6 +131,7 @@ export async function writeActionUrls(trx: Database, scope: Scope, synced: Actio
   // Cohort pages come from evidence; only this project's existing URLs are kept.
   for (let start = 0; start < rows.length; start += INSERT_BATCH) {
     const batch = rows.slice(start, start + INSERT_BATCH);
+    // NOSONAR -- One transaction: batches run in order.
     await sql`insert into action_urls (workspace_id, project_id, action_id, site_url_id)
       select v.workspace_id, v.project_id, v.action_id, v.site_url_id
       from (values ${sql.join(
@@ -140,6 +141,6 @@ export async function writeActionUrls(trx: Database, scope: Scope, synced: Actio
         ),
       )}) as v(workspace_id, project_id, action_id, site_url_id)
       join site_urls u on u.workspace_id = v.workspace_id and u.project_id = v.project_id
-        and u.id = v.site_url_id`.execute(trx); // NOSONAR -- One transaction: batches run in order.
+        and u.id = v.site_url_id`.execute(trx);
   }
 }

@@ -39,7 +39,7 @@ import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { actionGroup, priorityBand, readHandoff } from '../analysis/opportunities/actions.ts';
 import { record } from '../db/json.ts';
-import { actionUrlsPage } from './action-urls.ts';
+import { actionUrlsPage, writeActionUrls } from './action-urls.ts';
 import { FALLBACK_GOAL, goalOf, groupingSql, ownershipSql, topicSql } from './action-groupings.ts';
 import {
   ActionTargetError,
@@ -105,12 +105,10 @@ export async function attachOrCreateAction(
     .where('group_key', '=', identity.key)
     .executeTakeFirstOrThrow();
   // A page Action's one URL, as action sync writes it for evidence rows.
-  if (action.target_kind === 'page' && action.target_url)
-    await sql`insert into action_urls (workspace_id, project_id, action_id, site_url_id)
-      select u.workspace_id, u.project_id, ${action.id}::uuid, u.id from site_urls u
-      where u.workspace_id = ${scope.workspaceId} and u.project_id = ${scope.projectId}
-        and u.normalized_url = ${action.target_url}
-      on conflict do nothing`.execute(db);
+  if (action.target_kind === 'page')
+    await writeActionUrls(db, scope, [
+      { actionId: action.id, kind: action.target_kind, url: action.target_url, cohort: null },
+    ]);
   return action;
 }
 /** Where an Action no finding files sits on the Actions page (`AGENT_KIND_GROUPING`). */
@@ -159,17 +157,15 @@ export const CONFIGURED_RULES = Object.values(
   .filter((rule) => rule.enabled)
   .map((rule) => rule.rule_id);
 
-const liveMember = (configured: boolean) => sql`exists (select 1 from opportunities o
-  where o.workspace_id = actions.workspace_id and o.action_id = actions.id
-    and o.superseded_at is null
-    and ${configured ? sql`` : sql`not`} (o.rule_id = any(${CONFIGURED_RULES}::text[])))`;
-
 /**
  * Not an Action whose every live finding has an unconfigured rule (such as a
  * per-page Site Health finding from before IA1): the next refresh retires
  * those findings and clears the Action, and until then no list or count shows it.
+ * One probe of `ix_opportunities_live_action`; no live finding reads as true.
  */
-export const NOT_LEFTOVER_ACTION = sql<SqlBool>`(not ${liveMember(false)} or ${liveMember(true)})`;
+export const NOT_LEFTOVER_ACTION = sql<SqlBool>`coalesce((select bool_or(o.rule_id = any(${CONFIGURED_RULES}::text[]))
+  from opportunities o where o.workspace_id = actions.workspace_id and o.action_id = actions.id
+    and o.superseded_at is null), true)`;
 
 /** An Action the list shows: its evidence still stands, or the Agent made it. Search shows the same. */
 export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT}) and ${NOT_LEFTOVER_ACTION}`;

@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { ApiError } from '../errors.ts';
 import { withoutQuery } from '../mcp/evidence-site.ts';
 import { urlActions } from '../opportunities/action-tree.ts';
 import { AgentError, type Json, type Scope } from './contracts.ts';
@@ -57,8 +58,10 @@ export async function actionScopes(
   const action: Record<string, Json> =
     ticked && actionId ? { selected_urls: await selectedUrls(db, scope, actionId, ticked) } : {};
   if (!one) return { action, sections: {} };
-  const found = await urlActions(db, scope, one.site_url_id).catch(() => {
-    throw new AgentError('agent_context_unavailable');
+  const found = await urlActions(db, scope, one.site_url_id).catch((error: unknown) => {
+    if (error instanceof ApiError && error.status === 404)
+      throw new AgentError('agent_context_unavailable');
+    throw error;
   });
   return {
     action,

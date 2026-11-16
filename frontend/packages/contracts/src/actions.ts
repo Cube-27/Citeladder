@@ -284,7 +284,7 @@ export const actionOwnershipSchema = z.enum(['owned', 'earned']);
  * project-wide in the four statuses; `goals` count each goal under the
  * current filters, in fixed order, `blocking` when a critical SEO or AEO
  * Action is New. Each group (by `group_by`: a goal, an approach, a priority
- * band or `unscored`, `owned`/`earned`, or a topic, '' for none) holds its
+ * band with unscored Actions in `low`, `owned`/`earned`, or a topic, '' for none) holds its
  * groupings, each with its count and first rows by impact; `next_cursor` is
  * the list read's cursor for the next rows of exactly that grouping.
  */

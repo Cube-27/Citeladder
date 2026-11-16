@@ -131,14 +131,29 @@ async function readSiteLevel(
     .where('id', '=', crawlId)
     .executeTakeFirst();
   const empty = { failing: [], passing: 0, not_applicable: 0, uncovered: 0 };
-  if (!crawl?.after)
-    return {
-      ...outcome(ctx.reading, 'unavailable', 'cohort_not_analyzed'),
-      pages: { ...empty, unread: check.site_url_ids.length },
-    };
+  const unread = {
+    ...outcome(ctx.reading, 'unavailable', 'cohort_not_analyzed'),
+    pages: { ...empty, unread: check.site_url_ids.length },
+  };
+  if (!crawl?.after) return unread;
+  // A crawl that never evaluated the rule (no architecture pass, a page rerun) says nothing of it.
+  const evaluations = await ctx.db
+    .selectFrom('site_rule_evaluations as e')
+    .innerJoin('site_page_analyses as a', (join) =>
+      join.onRef('a.workspace_id', '=', 'e.workspace_id').onRef('a.id', '=', 'e.analysis_id'),
+    )
+    .select(['e.id', 'e.outcome'])
+    .where('e.workspace_id', '=', d.workspace_id)
+    .where('a.project_id', '=', d.project_id)
+    .where('a.crawl_id', '=', crawlId)
+    .where('e.rule_id', '=', check.rule_id)
+    .execute();
+  const answered = evaluations.filter((row) => ANSWERED.has(row.outcome));
+  if (!answered.length) return unread;
+  for (const row of answered) ctx.result.rule_evaluation_ids.add(row.id);
   const found = await ctx.scope
     .selectFrom(ctx.db, 'site_issues')
-    .select(['evaluation_id', 'evidence'])
+    .select('evidence')
     .where('project_id', '=', d.project_id)
     .where('crawl_id', '=', crawlId)
     .where('rule_id', '=', check.rule_id)
@@ -149,7 +164,6 @@ async function readSiteLevel(
       ...outcome(ctx.reading, 'met'),
       pages: { ...empty, passing: check.site_url_ids.length, unread: 0 },
     };
-  for (const row of found) ctx.result.rule_evaluation_ids.add(row.evaluation_id);
   const named = new Set(
     found.flatMap((row) => {
       const finding = siteLevelFinding(check.rule_id, row.evidence);

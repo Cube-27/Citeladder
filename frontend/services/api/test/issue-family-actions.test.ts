@@ -25,15 +25,30 @@ const HOUR = 3_600_000;
 const seeds: SiteSeed[] = [];
 
 type Page = { id: string; url: string };
+type Rule = Readonly<{ rule_id: string; category: string; scope: string }>;
+const VIEWPORT: Rule = { rule_id: RULE, category: 'mobile', scope: 'page' };
+// A site-level rule: judged once per crawl, filed on the root, naming its pages.
+const ORPHANS: Rule = {
+  rule_id: 'architecture.orphan_pages',
+  category: 'architecture',
+  scope: 'graph',
+};
 
-/** One page's reading of the rule in `seed.crawlId`, fetched at `fetchedAt`. */
+/** One page's reading of `rule` (the viewport by default) in `seed.crawlId`, fetched at `fetchedAt`. */
 async function readPage(
   trx: Database,
   fixtures: SiteFixtures,
   seed: SiteSeed,
   path: string,
-  options: { outcome: string; fetchedAt: Date; siteUrlId?: string },
+  options: {
+    outcome: string;
+    fetchedAt: Date;
+    siteUrlId?: string;
+    rule?: Rule;
+    evidence?: unknown;
+  },
 ) {
+  const { rule = VIEWPORT, evidence = {} } = options;
   const page = await fixtures.page(seed, path, { has_html: true }, options);
   const evaluationId = randomUUID();
   await trx
@@ -43,18 +58,18 @@ async function readPage(
       workspace_id: seed.workspaceId,
       analysis_id: page.analysisId,
       source_artifact_id: page.artifactId,
-      rule_id: RULE,
+      rule_id: rule.rule_id,
       dimension: 'technical',
-      category: 'mobile',
+      category: rule.category,
       severity: 'high',
       weight: 1,
       outcome: options.outcome,
-      evidence: '{}',
+      evidence: JSON.stringify(evidence),
       analyzer_version: 'v1',
       rule_version: 'v1',
       extractor_version: '',
       finding_class: 'defect',
-      scope: 'page',
+      scope: rule.scope,
       display_applicability: true,
       score_applicability: false,
       reason_code: '',
@@ -80,12 +95,12 @@ async function readPage(
         analysis_id: page.analysisId,
         evaluation_id: evaluationId,
         source_artifact_id: page.artifactId,
-        rule_id: RULE,
+        rule_id: rule.rule_id,
         dimension: 'technical',
-        category: 'mobile',
+        category: rule.category,
         severity: 'high',
         finding_class: 'defect',
-        evidence: '{}',
+        evidence: JSON.stringify(evidence),
         description: '',
         remediation: 'Add a viewport meta tag.',
         analyzer_version: 'v1',
@@ -476,6 +491,89 @@ describe('an issue family', () => {
     const detail = await getAction(db, seed.workspaceId, action.id);
     expect(detail.declaration?.checks).toMatchObject([
       { state: 'unmet', reason: 'still_failing', source_id: partial },
+    ]);
+  });
+
+  it('of a site-level rule reads nothing from a crawl that never evaluated it, and verified once one passes it', async () => {
+    const crawled = new Date(Date.now() - 2 * HOUR);
+    const project = await db.transaction().execute(async (trx) => {
+      const fixtures = new SiteFixtures(trx);
+      const seed = await fixtures.crawl();
+      seeds.push(seed);
+      await trx
+        .updateTable('site_crawls')
+        .set({ completed_at: crawled })
+        .where('id', '=', seed.crawlId)
+        .execute();
+      const pages: Page[] = [];
+      for (const name of ['/orphan-a', '/orphan-b']) {
+        // NOSONAR -- One transaction: fixture statements run in order.
+        const page = await fixtures.page(seed, name, { has_html: true }, { fetchedAt: crawled });
+        pages.push({ id: page.id, url: `https://example.test${name}` });
+      }
+      const evidence = {
+        count: 2,
+        page_kind_counts: { other: 2 },
+        coverage_state: 'complete',
+        pages: pages.map((page) => ({
+          site_url_id: page.id,
+          url: page.url,
+          title: '',
+          page_kind: 'other',
+          depth_from_home: null,
+        })),
+      };
+      const root = await readPage(trx, fixtures, seed, '/', {
+        outcome: 'missing',
+        fetchedAt: crawled,
+        rule: ORPHANS,
+        evidence,
+      });
+      return { seed, pages, rootId: root.id };
+    });
+    const { action, row } = await declareFamily(project);
+    expect([...(row.target_site_url_ids as string[])].sort()).toEqual(
+      project.pages.map((page) => page.id).sort(),
+    );
+
+    /** A later crawl reading the root: `outcome` of the orphan rule, or (null) no orphan evaluation. */
+    const later = (outcome: string | null) =>
+      db.transaction().execute(async (trx) => {
+        const fixtures = new SiteFixtures(trx);
+        const crawlId = await fixtures.sibling(project.seed);
+        await readPage(trx, fixtures, { ...project.seed, crawlId }, '/', {
+          outcome: outcome ?? 'satisfied',
+          fetchedAt: new Date(),
+          siteUrlId: project.rootId,
+          rule: outcome === null ? VIEWPORT : ORPHANS,
+        });
+        await enqueueImplementationVerification(trx, {
+          workspaceId: project.seed.workspaceId,
+          projectId: project.seed.projectId,
+          triggerKind: 'site_crawl',
+          triggerId: crawlId,
+        });
+        return crawlId;
+      });
+    const read = async () => {
+      await drainWorkspace(db, project.seed.workspaceId, { owner: `sl-${randomUUID()}` });
+      return (await getAction(db, project.seed.workspaceId, action.id)).declaration;
+    };
+
+    const unevaluated = await later(null);
+    expect((await read())?.checks).toMatchObject([
+      {
+        state: 'unavailable',
+        reason: 'cohort_not_analyzed',
+        source_id: unevaluated,
+        pages: { failing: [], passing: 0, unread: 2 },
+      },
+    ]);
+    const passed = await later('satisfied');
+    const declaration = await read();
+    expect([declaration?.state, declaration?.checks]).toMatchObject([
+      'verified',
+      [{ state: 'met', source_id: passed, pages: { failing: [], passing: 2, unread: 0 } }],
     ]);
   });
 });
