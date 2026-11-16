@@ -145,16 +145,9 @@ export function DataTable({
         actions={actions}
         steppers={footed ? null : steppers}
       />
-      <HeldFootprint
-        state={
-          replacing ? (
-            <ReplacingState state={replacing} level={title ? nextLevel(level) : level} />
-          ) : null
-        }
-        held={reserveRows}
-      >
+      <HeldFootprint state={replacing} level={stateLevel(title, level)} held={reserveRows}>
         <DataTableFrame
-          hidden={replacing !== null && !reserveRows}
+          hidden={dropsTable(replacing, reserveRows)}
           scroll={scroll}
           minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
           layout={columnLayout(columns, Boolean(selection))}
@@ -176,7 +169,7 @@ export function DataTable({
         </DataTableFrame>
         <DataTableFoot
           footer={note}
-          pager={replacing && !reserveRows ? undefined : paging.pager}
+          pager={dropsTable(replacing, reserveRows) ? undefined : paging.pager}
           steppers={footed ? steppers : null}
         />
       </HeldFootprint>
@@ -190,19 +183,26 @@ export function DataTable({
  */
 function HeldFootprint({
   state,
+  level,
   held,
   children,
-}: Readonly<{ state: ReactNode; held: boolean; children: ReactNode }>) {
-  if (!state || !held)
+}: Readonly<{
+  state: ComponentProps<typeof StateBlock> | null;
+  level: 1 | 2 | 3;
+  held: boolean;
+  children: ReactNode;
+}>) {
+  const block = state ? <ReplacingState state={state} level={level} /> : null;
+  if (!block || !held)
     return (
       <>
-        {state}
+        {block}
         {children}
       </>
     );
   return (
     <div className="grid min-w-0">
-      <div className="col-start-1 row-start-1 min-w-0">{state}</div>
+      <div className="col-start-1 row-start-1 min-w-0">{block}</div>
       <div inert className="col-start-1 row-start-1 min-w-0" style={{ visibility: 'hidden' }}>
         {children}
       </div>
@@ -259,7 +259,14 @@ function TimeZoneNote() {
 }
 
 /** A state under the table's own title takes the next level. */
-const nextLevel = (level: 1 | 2 | 3) => (level === 1 ? 2 : 3);
+const stateLevel = (title: string | undefined, level: 1 | 2 | 3): 1 | 2 | 3 => {
+  if (!title) return level;
+  return level === 1 ? 2 : 3;
+};
+
+/** Whether a state drops the table and its pager, rather than holding their footprint. */
+const dropsTable = (replacing: ReturnType<typeof replacingState>, reserveRows: boolean) =>
+  replacing !== null && !reserveRows;
 
 /**
  * The state that takes the table's place, head included: an empty,
