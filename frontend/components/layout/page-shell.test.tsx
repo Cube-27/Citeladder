@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { ReportPage } from '@/components/templates/report-page';
+import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { choiceFilter } from '@/components/ui/all-filters';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { TabRow, TabsRoot } from '@/components/ui/tabs';
@@ -90,6 +92,26 @@ describe('RouteLoadingScreen', () => {
 });
 
 describe('PageFrame', () => {
+  it('narrows a reading route’s page, masthead included, unless a workbench fills it', () => {
+    const widthAt = (path: string, page: ReactNode) => {
+      const { container, unmount } = render(
+        <MemoryRouter initialEntries={[path]}>{page}</MemoryRouter>,
+      );
+      const frame = container.querySelector('[data-masthead]')?.closest('[data-page-width]');
+      const width = frame?.getAttribute('data-page-width');
+      unmount();
+      return width;
+    };
+    const report = <ReportPage>body</ReportPage>;
+    expect([
+      widthAt('/settings', report),
+      widthAt('/agent/actions/a1', report),
+      widthAt('/site', report),
+      widthAt('/agent/chats/c1', <WorkbenchPage>body</WorkbenchPage>),
+      widthAt('/issues', <RouteLoadingScreen />),
+    ]).toEqual(['narrow', 'narrow', 'full', 'full', 'narrow']);
+  });
+
   it('stacks the masthead, the page tabs band, the filter bar band, then the content', () => {
     const choice = (id: string) =>
       choiceFilter({

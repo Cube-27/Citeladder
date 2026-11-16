@@ -12,10 +12,11 @@ import { cn } from '@/lib/utils';
 /**
  * The masthead's rule and fill: a layer behind it as wide as the main column
  * (its size container plus both gutters), so content scrolling under it never
- * shows beside it and its hairline meets the sidebar's ident cell.
+ * shows beside it and its hairline meets the sidebar's ident cell. Centred on
+ * the masthead, so a narrow page's masthead still draws it column-wide.
  */
 const BAR_LAYER =
-  'before:bg-chrome before:border-rule before:absolute before:inset-y-0 before:-start-[var(--content-gutter)] before:-z-10 before:w-[calc(100cqw+2*var(--content-gutter))] before:border-b';
+  'before:bg-chrome before:border-rule before:absolute before:inset-y-0 before:inset-x-[calc(50%_-_50cqw_-_var(--content-gutter))] before:-z-10 before:border-b';
 
 /** A masthead control that keeps its text label wherever it is drawn (search, "Ask agent"). */
 export const MASTHEAD_LABELLED = 'shrink-0 justify-start';
