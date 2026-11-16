@@ -118,6 +118,33 @@ describe('evidenceFacts', () => {
     ).toEqual(['noindex, nofollow']);
   });
 
+  it('names each duplicate set by its shared title, else its description, and its page count', () => {
+    const set = (title: string, description: string, pageCount: number) => ({
+      title,
+      description,
+      page_count: pageCount,
+      pages: [],
+    });
+    expect(
+      evidenceFacts('architecture.duplicate_metadata_in_page_kind', {
+        count: 1,
+        page_kind_counts: { about_contact: 5 },
+        coverage_state: 'complete',
+        page_kinds: [
+          {
+            page_kind: 'about_contact',
+            page_count: 6,
+            duplicate_metadata_count: 5,
+            duplicate_set_count: 2,
+            duplicate_sets: [
+              set('Contact us | Acme', 'Get in touch', 3),
+              set('  ', 'About Acme', 2),
+            ],
+          },
+        ],
+      }),
+    ).toEqual(['“Contact us | Acme” (3 pages)', '“About Acme” (2 pages)']);
+  });
   it('reads a site-level architecture finding as the pages it names', () => {
     const evidence = {
       count: 11,

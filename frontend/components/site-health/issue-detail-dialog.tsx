@@ -393,7 +393,7 @@ function DuplicateSetList({
             <ClampText className={textRole('body')}>
               {`These ${pageCountLabel(set.pageCount)} share “${sharedText(set)}”`}
             </ClampText>
-            {set.title && set.description ? (
+            {set.title.trim() && set.description ? (
               <ClampText className="type-caption">{set.description}</ClampText>
             ) : null}
             <span className="type-caption">

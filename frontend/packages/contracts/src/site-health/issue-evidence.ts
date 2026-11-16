@@ -58,8 +58,9 @@ const duplicateMetadataEvidenceSchema = z.object({
   page_kinds: z.array(
     z.object({
       ...pageKindShape,
-      // Evidence is append-only: findings recorded before sets were stored read as "not recorded".
-      duplicate_set_count: count().default(0),
+      // Evidence is append-only: findings recorded before sets were stored have no
+      // count, and no sets; a recorded kind always has at least one set.
+      duplicate_set_count: count().optional(),
       duplicate_sets: z
         .array(
           z.object({

@@ -186,7 +186,7 @@ export const pageCountLabel = (count: number) =>
 
 /** What a duplicate set's pages repeat: their title, else their description. */
 export const sharedText = (set: Pick<DuplicateSet, 'title' | 'description'>) =>
-  set.title || set.description;
+  set.title.trim() || set.description;
 
 /** Where a sitewide link lands, as the reader would fix it: `404`, `/new`, `redirect loop`. */
 export function linkOutcomeLabel(outcome: LinkOutcome, origin: string | null): string {
