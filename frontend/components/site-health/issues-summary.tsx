@@ -6,7 +6,7 @@ import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { Stack } from '@/components/ui/layout';
 import { OpenRow } from '@/components/ui/list-row';
 import { FigureStrip } from '@/components/ui/figure-strip';
-import { cn } from '@/lib/utils';
+import { StatusMark } from '@/components/ui/status-mark';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
@@ -95,13 +95,10 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
             label="Issue types by severity"
             segments={counts.map((severity) => ({
               key: severity.key,
-              label: severity.label,
-              marker: (
-                <span
-                  aria-hidden
-                  data-severity-swatch={severity.key}
-                  className={cn('rounded-mark size-2 shrink-0', severity.swatch)}
-                />
+              label: (
+                <StatusMark variant="severity" value={severity.key}>
+                  {severity.label}
+                </StatusMark>
               ),
               value: formatCount(severity.count),
             }))}
@@ -112,11 +109,10 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
   );
 }
 
-/** Each severity's figure, its swatch in the hue of its StatusMark. */
 const SEVERITIES = [
-  { key: 'high', label: 'High', swatch: 'bg-negative' },
-  { key: 'medium', label: 'Medium', swatch: 'bg-warning' },
-  { key: 'low', label: 'Low', swatch: 'bg-ink-2' },
+  { key: 'high', label: 'High' },
+  { key: 'medium', label: 'Medium' },
+  { key: 'low', label: 'Low' },
 ] as const;
 
 function issueTypesLabel(total: number): string {

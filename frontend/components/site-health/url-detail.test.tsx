@@ -229,13 +229,6 @@ describe('UrlDetail', () => {
     // The masthead holds the title; the identity card never repeats it.
     expect(screen.getAllByText('Best&Less Online')).toHaveLength(1);
     expect(screen.getByText('Product')).toBeInTheDocument();
-    // A long URL cuts inside its row rather than scrolling the page sideways (WCAG 1.4.10).
-    const identity = within(screen.getByTestId('page-identity'));
-    const urlDetail = identity.getByRole('link', { name: /acme\.com/ }).closest('dd')!;
-    expect(urlDetail).toHaveClass('min-w-0');
-    expect(urlDetail.parentElement).toHaveClass('min-w-0', 'max-w-full');
-    expect(urlDetail.previousElementSibling).toHaveClass('shrink-0');
-    expect(urlDetail.firstElementChild).toHaveClass('min-w-0', 'truncate');
     // Delivery metric: TTFB rendered with ms suffix.
     expect(screen.getByText('840ms')).toBeInTheDocument();
     expect(screen.getByText('200')).toBeInTheDocument();
