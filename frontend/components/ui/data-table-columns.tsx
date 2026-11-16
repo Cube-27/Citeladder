@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { HintedTableHead, SortableTableHead } from '@/components/ui/table-heads';
-import { TableHead, TableHeader, TableRow, WIDE_ONLY_CELL } from '@/components/ui/table';
+import { TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
@@ -114,11 +114,6 @@ export type DataTableColumn = Readonly<{
    * `desktopOnly` to `TableCell` too.
    */
   desktopOnly?: boolean;
-  /**
-   * Dropped below 600, where the row shows the value in its identity cell;
-   * the page's cells for it take `WIDE_ONLY_CELL`.
-   */
-  wideOnly?: boolean;
 }>;
 
 /**
@@ -266,10 +261,7 @@ export function DataTableColumns({
           <col
             key={column.key}
             style={{ width: columnWidth(widthOf(column)) }}
-            className={cn(
-              column.desktopOnly && 'hidden desktop:table-column',
-              column.wideOnly && 'hidden min-[600px]:table-column',
-            )}
+            className={cn(column.desktopOnly && 'hidden desktop:table-column')}
           />
         ))}
       </colgroup>
@@ -299,7 +291,6 @@ function SelectAllHead({ selection }: Readonly<{ selection: DataTableSelection }
 
 function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
   const numeric = columnKind(column) === 'number';
-  const wide = column.wideOnly ? WIDE_ONLY_CELL : undefined;
   if (column.sort) {
     return (
       <SortableTableHead
@@ -308,7 +299,6 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
         sublabel={column.sublabel}
         hint={column.hint}
         desktopOnly={column.desktopOnly}
-        className={wide}
         {...column.sort}
       />
     );
@@ -320,7 +310,6 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
         hint={column.hint}
         numeric={numeric}
         desktopOnly={column.desktopOnly}
-        className={wide}
       />
     );
   }
@@ -331,7 +320,7 @@ function ColumnHead({ column }: Readonly<{ column: DataTableColumn }>) {
     <TableHead
       numeric={numeric}
       desktopOnly={column.desktopOnly}
-      className={cn('whitespace-normal', wide)}
+      className="whitespace-normal"
       aria-sort={column.order}
     >
       {hidden ? <span className="sr-only">{column.label || 'Actions'}</span> : column.label}

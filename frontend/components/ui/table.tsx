@@ -185,9 +185,6 @@ export function TableFillerRows({
  */
 const desktopOnlyClasses = 'hidden desktop:table-cell';
 
-/** A column a phone drops below 600 (its cells say so with this class); its row carries the value elsewhere. */
-export const WIDE_ONLY_CELL = 'hidden min-[600px]:table-cell';
-
 type CellOptions = { numeric?: boolean; desktopOnly?: boolean };
 
 export function TableHead({

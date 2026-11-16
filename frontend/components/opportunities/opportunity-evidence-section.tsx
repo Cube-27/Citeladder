@@ -74,13 +74,9 @@ export function OpportunityEvidenceSection({
         <KeywordGapEvidence evidence={evidence} />
       </Stack>
     );
-  const promptText = asString(evidence.prompt_text);
-  const found = asString(evidence.url) ?? detail.target_url;
-  const url = found && targetUrl && readableUrl(found) === readableUrl(targetUrl) ? null : found;
-  const theme = asString(evidence.prompt_theme) ?? detail.target_theme;
-  const competitors = asStringList(evidence.competitor_names);
-  const sourcePattern = observedSourcePattern(evidence.source_pattern);
-  if (!promptText && !url && !theme && competitors.length === 0 && !sourcePattern) return null;
+  const parts = evidenceParts(detail, targetUrl);
+  if (!Object.values(parts).some(Boolean)) return null;
+  const { promptText, url, theme, competitors, sourcePattern } = parts;
 
   return (
     <Stack as="section">
@@ -98,19 +94,37 @@ export function OpportunityEvidenceSection({
         </p>
       ) : null}
       {theme ? <OpportunityKvRow label="Topic" value={theme} /> : null}
-      {competitors.length > 0 ? (
-        <Stack gap="tight">
-          <span className="type-caption">Competitors mentioned</span>
-          <Inline className="flex-wrap">
-            {competitors.map((name) => (
-              <StatusMark key={name} variant="classification" value="competitor">
-                {name}
-              </StatusMark>
-            ))}
-          </Inline>
-        </Stack>
-      ) : null}
+      {competitors ? <CompetitorsMentioned names={competitors} /> : null}
       {sourcePattern ? <OpportunitySourcePattern pattern={sourcePattern} /> : null}
+    </Stack>
+  );
+}
+
+/** What a finding's evidence states, each part null when it states nothing new. */
+function evidenceParts(detail: OpportunityDetail, targetUrl: string | null) {
+  const { evidence } = detail;
+  const found = asString(evidence.url) ?? detail.target_url;
+  const competitors = asStringList(evidence.competitor_names);
+  return {
+    promptText: asString(evidence.prompt_text),
+    url: found && targetUrl && readableUrl(found) === readableUrl(targetUrl) ? null : found,
+    theme: asString(evidence.prompt_theme) ?? detail.target_theme,
+    competitors: competitors.length > 0 ? competitors : null,
+    sourcePattern: observedSourcePattern(evidence.source_pattern),
+  };
+}
+
+function CompetitorsMentioned({ names }: Readonly<{ names: readonly string[] }>) {
+  return (
+    <Stack gap="tight">
+      <span className="type-caption">Competitors mentioned</span>
+      <Inline className="flex-wrap">
+        {names.map((name) => (
+          <StatusMark key={name} variant="classification" value="competitor">
+            {name}
+          </StatusMark>
+        ))}
+      </Inline>
     </Stack>
   );
 }

@@ -230,7 +230,8 @@ function TargetName({ action }: Readonly<{ action: Action }>) {
  * to its Action, the whole target in the tooltip), its status beside it only
  * in the work queue and only when it is not Open (the queue is nearly all
  * Open), then a subline that tells the rows apart: the target, then the work
- * summary. Below 600 the Priority column folds into the subline's start.
+ * summary. Below the desktop breakpoint the Priority column folds into the
+ * subline's start.
  */
 export function ActionTargetCell({
   action,
@@ -254,8 +255,8 @@ export function ActionTargetCell({
             <ActionStatusBadge status={action.status} />
           ) : null}
         </Inline>
-        <span className={textRole('caption', 'flex min-w-0 items-center gap-1')}>
-          <span className="contents min-[600px]:hidden">
+        <Inline gap="tight" className={textRole('caption', 'min-w-0 flex-nowrap')}>
+          <span className="desktop:hidden contents">
             <ActionPriorityBadge band={action.priority_band} />
           </span>
           {NAMED_TARGETS.has(action.target_kind) ? (
@@ -267,7 +268,7 @@ export function ActionTargetCell({
             </>
           ) : null}
           <ClampText className="min-w-0 flex-1">{workSummary(action)}</ClampText>
-        </span>
+        </Inline>
       </Stack>
     </TableCell>
   );

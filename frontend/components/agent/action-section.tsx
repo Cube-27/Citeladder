@@ -24,12 +24,12 @@ export function ActionSection({
   return (
     <Section aria-labelledby={id}>
       <SectionHeader actions={actions}>
-        <div className="grid min-w-0 gap-1">
+        <Stack gap="tight" className="min-w-0">
           <SectionTitle id={id} level={2}>
             {title}
           </SectionTitle>
           {caption ? <p className={textRole('caption', 'text-ink-2')}>{caption}</p> : null}
-        </div>
+        </Stack>
       </SectionHeader>
       <SectionContent>
         <Stack gap="workspace" className="min-w-0">

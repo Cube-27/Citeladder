@@ -22,16 +22,11 @@ export function HintedTableHead({
   hint,
   numeric,
   desktopOnly,
-  className,
-}: Readonly<{ label: string; hint: string; className?: string } & HeadOptions>) {
+}: Readonly<{ label: string; hint: string } & HeadOptions>) {
   // Like a plain header, a label longer than its column wraps under itself
   // instead of painting over the next header.
   return (
-    <TableHead
-      numeric={numeric}
-      desktopOnly={desktopOnly}
-      className={cn('whitespace-normal', className)}
-    >
+    <TableHead numeric={numeric} desktopOnly={desktopOnly} className="whitespace-normal">
       <Tooltip content={hint}>
         <button
           type="button"

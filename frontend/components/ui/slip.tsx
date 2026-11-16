@@ -29,6 +29,9 @@ export function slipClasses(className?: string, { opens = false }: { opens?: boo
   return cn('surface-slip p-[var(--card-padding)]', SLIP_FACE, opens && OPENS_ON_CLICK, className);
 }
 
+/** A reply's tool-step group: a slip 12 down and 16 across, apart from the prose on the ground. */
+export const STEP_SLIP = cn('surface-slip min-w-0 px-4 py-3', SLIP_FACE);
+
 /** A well, on whatever element the material needs (`blockquote`, `pre`, `dl`, `fieldset`). */
 export function wellClasses(className?: string) {
   return cn('surface-well bg-well rounded-control p-[var(--card-padding)]', className);
