@@ -11,7 +11,6 @@ import type {
   BillingCatalog,
   CatalogAddon,
   CatalogPlan,
-  CatalogProvider,
   CatalogTopup,
   CredentialMode,
   SelfServePlanKey,
@@ -141,39 +140,6 @@ export function newPlanCheckoutClosed(catalog: BillingCatalog): boolean {
     selfServeCheckoutComingSoon(catalog) &&
     !catalog.plans.some((plan) => plan.funded_checkout_available)
   );
-}
-
-export type ProviderMarketingState = {
-  key: string;
-  label: string;
-  /** True only when an adapter ships AND the catalog exposes a route. */
-  shipped: boolean;
-  comingSoon: boolean;
-  reason: string | null;
-};
-
-/**
- * How a provider should be presented on marketing and settings surfaces.
- *
- * "Shipped" requires both a shipped adapter and at least one published route.
- * A logo alone is never evidence of capability: Grok, Perplexity and Copilot
- * are catalog entries with no route, so they project as coming-soon and can
- * never resolve to a connectable transport.
- */
-function providerMarketingState(provider: CatalogProvider): ProviderMarketingState {
-  const shipped =
-    provider.availability === 'available' && provider.adapter_shipped && provider.routes.length > 0;
-  return {
-    key: provider.key,
-    label: provider.label,
-    shipped,
-    comingSoon: !shipped,
-    reason: provider.unavailable_reason,
-  };
-}
-
-export function providerMarketingStates(catalog: BillingCatalog): ProviderMarketingState[] {
-  return catalog.providers.map(providerMarketingState);
 }
 
 /**

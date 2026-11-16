@@ -10,13 +10,10 @@ import {
   formatAudited,
   formatIssueCount,
   formatScore,
-  isAnalysisTerminal,
   crawlPollInterval,
   isCrawlStalled,
   isDiscoveryProvisional,
   isDiscoveryTerminal,
-  isErrorRow,
-  isSampleMode,
   crawlProgressVersion,
   statusLabel,
 } from './status';
@@ -98,16 +95,12 @@ describe('polling / cancel / terminal predicates', () => {
   });
 
   it('is not stalled when the crawl is terminal or absent', () => {
-    const now = Date.parse('2026-07-29T12:00:00Z');
-    expect(isCrawlStalled(null, now)).toBe(false);
+    expect(isCrawlStalled(null)).toBe(false);
     expect(
-      isCrawlStalled(
-        {
-          status: 'completed',
-          counters: { activity: { state: 'stalled' } },
-        } as never,
-        now,
-      ),
+      isCrawlStalled({
+        status: 'completed',
+        counters: { activity: { state: 'stalled' } },
+      } as never),
     ).toBe(false);
   });
 
@@ -139,11 +132,9 @@ describe('polling / cancel / terminal predicates', () => {
     ).toBe(CRAWL_POLL_MS);
   });
 
-  it('recognises terminal discovery / analysis sub-states', () => {
+  it('recognises terminal discovery sub-states', () => {
     expect(isDiscoveryTerminal('sample_completed')).toBe(true);
     expect(isDiscoveryTerminal('running')).toBe(false);
-    expect(isAnalysisTerminal('partially_completed')).toBe(true);
-    expect(isAnalysisTerminal('pending')).toBe(false);
   });
 });
 
@@ -182,7 +173,6 @@ describe('discovery provisional / sample-mode copy', () => {
 
   it('renders sample copy for Free (never a total or "so far")', () => {
     const sample = { ...base, sample_mode: true, inventory_complete: true, visible_url_count: 10 };
-    expect(isSampleMode(sample)).toBe(true);
     expect(discoveryProgressLabel(sample)).toBe('10 sample pages');
     expect(discoveryProgressLabel(sample)).not.toContain('so far');
     expect(discoveryProgressLabel(sample)).not.toContain('discovered');
@@ -370,14 +360,6 @@ describe('crawlFailureCopy (B1)', () => {
 });
 
 describe('badge mapping', () => {
-  it('classifies error/blocked rows explicitly (not zero scores)', () => {
-    expect(isErrorRow('failed')).toBe(true);
-    expect(isErrorRow('error')).toBe(true);
-    expect(isErrorRow('blocked')).toBe(true);
-    expect(isErrorRow('cancelled')).toBe(true);
-    expect(isErrorRow('completed')).toBe(false);
-  });
-
   it('reads a crawl that only missed unreachable links as completed', () => {
     expect(
       crawlDisplayStatus({ status: 'partially_completed', partial_reason: 'discovery_incomplete' }),

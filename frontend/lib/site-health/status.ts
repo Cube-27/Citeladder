@@ -17,7 +17,6 @@
  *   - missing / not-yet-analysed scores render an explicit not-measured label.
  */
 import type {
-  CrawlAnalysisStatus,
   CrawlDiscoveryStatus,
   CrawlOverallStatus,
   PageAnalysisStatus,
@@ -111,14 +110,6 @@ const TERMINAL_DISCOVERY: ReadonlySet<CrawlDiscoveryStatus> = new Set<CrawlDisco
   'cancelled',
 ]);
 
-/** Analysis sub-states that are terminal. */
-const TERMINAL_ANALYSIS: ReadonlySet<CrawlAnalysisStatus> = new Set<CrawlAnalysisStatus>([
-  'completed',
-  'partially_completed',
-  'failed',
-  'cancelled',
-]);
-
 /**
  * Poll cadence for an active crawl, backed off by how long it has been running.
  *
@@ -157,20 +148,13 @@ function _sinceMs(iso: string | null | undefined, now: number): number | null {
  * True only when the backend reports expired-lease evidence for an active
  * crawl. Elapsed client time is deliberately not an input.
  */
-export function isCrawlStalled(
-  crawl: Pick<SiteCrawl, 'status' | 'counters'> | null,
-  _now: number = Date.now(),
-): boolean {
+export function isCrawlStalled(crawl: Pick<SiteCrawl, 'status' | 'counters'> | null): boolean {
   if (!crawl || !CRAWL_STATES[crawl.status].active) return false;
   return crawl.counters.activity.state === 'stalled';
 }
 
 export function isDiscoveryTerminal(status: CrawlDiscoveryStatus): boolean {
   return TERMINAL_DISCOVERY.has(status);
-}
-
-export function isAnalysisTerminal(status: CrawlAnalysisStatus): boolean {
-  return TERMINAL_ANALYSIS.has(status);
 }
 
 /**
@@ -184,11 +168,6 @@ export function isDiscoveryProvisional(
 ): boolean {
   if (crawl.sample_mode) return false;
   return !crawl.inventory_complete && !TERMINAL_DISCOVERY.has(crawl.discovery_status);
-}
-
-/** True when the crawl is a server-selected sample crawl. */
-export function isSampleMode(crawl: Pick<SiteCrawl, 'sample_mode'>): boolean {
-  return crawl.sample_mode;
 }
 
 /**
@@ -352,13 +331,6 @@ export function pageStatusBadgeValue(status: PageAnalysisStatus): StatusValue {
       // not_selected / pending / running
       return 'info';
   }
-}
-
-/** True when a page row is an explicit error/blocked state (not a zero score). */
-export function isErrorRow(status: PageAnalysisStatus): boolean {
-  return (
-    status === 'failed' || status === 'error' || status === 'blocked' || status === 'cancelled'
-  );
 }
 
 /** True when the URL itself could not be fetched or analyzed, so its linking pages need the fix. */

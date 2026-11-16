@@ -78,16 +78,6 @@ export function normalizeWebsiteUrl(value: string): string {
   return trimmed.includes('://') ? trimmed : `https://${trimmed}`;
 }
 
-export function deriveDomain(value: string): string {
-  try {
-    const url = new URL(normalizeWebsiteUrl(value));
-    if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
-    return url.hostname.toLowerCase().replace(/^www\./, '');
-  } catch {
-    return '';
-  }
-}
-
 export function onboardingErrorMessage(error: unknown): string {
   const { status, code } = humanizeApiError(error);
   if (status === 403) {
