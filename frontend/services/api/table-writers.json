@@ -3,7 +3,7 @@
   "tables": {
     "account_grants": ["src/entitlements/grants.ts"],
     "account_policy_acceptances": ["src/workspaces/policies.ts"],
-    "action_status_events": ["src/opportunities/actions.ts"],
+    "action_status_events": ["src/opportunities/action-status.ts"],
     "actions": [
       "src/opportunities/action-status.ts",
       "src/opportunities/action-sync.ts",

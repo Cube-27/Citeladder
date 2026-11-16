@@ -250,7 +250,7 @@ final. `PATCH /api/v1/actions/{action_id}` takes one decision and
 `POST /api/v1/projects/{project_id}/actions/status` takes up to 100 named ids or
 the first 100 Actions a list filter matches (Accept all), in one transaction,
 skipping illegal moves and other workspaces' ids and returning the counts. Each
-change appends an [ActionStatusEvent](../frontend/services/api/src/opportunities/action-decisions.ts);
+change appends an [ActionStatusEvent](../frontend/services/api/src/opportunities/action-status.ts);
 a chat started on a New Action accepts it in the chat's transaction. A chat
 output never changes status. Under Done, measurement continues as a badge, not
 a status: the latest verifier observation of the declaration decides — verified

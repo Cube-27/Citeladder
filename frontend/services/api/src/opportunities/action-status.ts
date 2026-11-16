@@ -14,12 +14,14 @@
  * own transaction, so every read, filter and count selects one indexed column
  * instead of re-deriving it.
  */
+import { randomUUID } from 'node:crypto';
 import { actionStatusSchema, type ActionStatus } from '@citeladder/contracts/actions';
-import { sql, type RawBuilder, type SqlBool } from 'kysely';
+import { sql, type RawBuilder, type Selectable, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { ApiError } from '../errors.ts';
+import type { Actions } from '../generated/db-schema.ts';
 import { compareText } from '../text-order.ts';
 
 const a = policy.opportunity.actions;
@@ -92,6 +94,37 @@ export async function refreshActionStatus(
     .where('id', '=', actionId)
     .where(sql<SqlBool>`effective_status is distinct from ${derivedStatus()}`)
     .execute();
+}
+
+/** Store `status` with its event and refresh the effective status; caller holds the row lock. */
+export async function recordStatus(
+  db: Database,
+  action: Pick<Selectable<Actions>, 'id' | 'workspace_id' | 'project_id' | 'status'>,
+  status: string,
+  userId: string,
+) {
+  if (action.status === status) return;
+  const now = new Date();
+  await db
+    .updateTable('actions')
+    .set({ status, updated_at: now })
+    .where('workspace_id', '=', action.workspace_id)
+    .where('id', '=', action.id)
+    .execute();
+  await db
+    .insertInto('action_status_events')
+    .values({
+      id: randomUUID(),
+      workspace_id: action.workspace_id,
+      project_id: action.project_id,
+      action_id: action.id,
+      previous_status: action.status,
+      next_status: status,
+      changed_by_user_id: userId,
+      created_at: now,
+    })
+    .execute();
+  await refreshActionStatus(db, action.workspace_id, action.id);
 }
 
 /**

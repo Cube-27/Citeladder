@@ -1,10 +1,10 @@
 /**
  * A user's status decisions on Actions: Accept (`in_progress`), Decline
  * (`dismissed`) and Restore (`open`), one at a time or in bulk, each appending
- * an `action_status_events` row in the caller's transaction. Work with Agent
- * on a New Action accepts it. Done is only declared (`declarations.ts`).
+ * an `action_status_events` row in the caller's transaction (`recordStatus`).
+ * Work with Agent on a New Action accepts it. Done is only declared
+ * (`declarations.ts`).
  */
-import { randomUUID } from 'node:crypto';
 import type { ActionBulkStatusRequest, ActionUserStatus } from '@citeladder/contracts/actions';
 import { sql } from 'kysely';
 
@@ -13,14 +13,8 @@ import { inTransaction, type Database } from '../db/database.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
-import { refreshActionStatus } from './action-status.ts';
-import {
-  actionItem,
-  LIVE_TARGET_KIND,
-  matchingActions,
-  requireAction,
-  type ActionRow,
-} from './actions.ts';
+import { recordStatus } from './action-status.ts';
+import { actionItem, LIVE_TARGET_KIND, matchingActions, requireAction } from './actions.ts';
 import type { Scope } from './sources.ts';
 
 const a = policy.opportunity.actions;
@@ -28,37 +22,6 @@ const TRANSITIONS = new Map<string, readonly string[]>(Object.entries(a.ACTION_T
 
 /** Whether a user decision may move an Action stored as `from` to `to`. */
 const allowed = (from: string, to: string) => TRANSITIONS.get(from)?.includes(to) ?? false;
-
-/** Store `status` with its event and refresh the effective status; caller holds the row lock. */
-export async function recordStatus(
-  db: Database,
-  action: ActionRow,
-  status: string,
-  userId: string,
-) {
-  if (action.status === status) return;
-  const now = new Date();
-  await db
-    .updateTable('actions')
-    .set({ status, updated_at: now })
-    .where('workspace_id', '=', action.workspace_id)
-    .where('id', '=', action.id)
-    .execute();
-  await db
-    .insertInto('action_status_events')
-    .values({
-      id: randomUUID(),
-      workspace_id: action.workspace_id,
-      project_id: action.project_id,
-      action_id: action.id,
-      previous_status: action.status,
-      next_status: status,
-      changed_by_user_id: userId,
-      created_at: now,
-    })
-    .execute();
-  await refreshActionStatus(db, action.workspace_id, action.id);
-}
 
 /** One decision; repeating the current status is a no-op, an illegal move a 422. */
 export async function updateActionStatus(

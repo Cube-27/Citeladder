@@ -11,7 +11,7 @@ import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { currentSiteCrawlQuery } from '../site-health/reads/crawl.ts';
 import { declarableMembers, requireAction, type ActionRow } from './actions.ts';
-import { recordStatus } from './action-decisions.ts';
+import { recordStatus } from './action-status.ts';
 import { declarationChecks } from './declaration-checks.ts';
 import { ruleCheckKind } from './checks/registry.ts';
 import { declarationTargets } from './targets/registry.ts';
