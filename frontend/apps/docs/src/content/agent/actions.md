@@ -14,12 +14,12 @@ This gives your team one place to understand the diagnosis, start Agent work and
 
 Open **Actions** in the sidebar. It lists everything you can act on across CiteLadder, website issues included, grouped by goal:
 
-| Goal                    | What it holds                                                                                                                                                                 |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Let AI read your site   | Technical website issues, page signals that regressed between crawls, and internal links                                                                                      |
+| Goal                    | What it holds                                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Let AI read your site   | Technical website issues, page signals that regressed between crawls, and internal links                                                                             |
 | Improve your own pages  | Content and AEO website issues, prompts you don't appear in, pages to improve, create or merge (including [content gaps](/content-optimization/)) and search queries |
-| Get mentioned elsewhere | Cited pages that list your competitors but not you                                                                                                                            |
-| Improve your products   | Products and categories                                                                                                                                                       |
+| Get mentioned elsewhere | Cited pages that list your competitors but not you                                                                                                                   |
+| Improve your products   | Products and categories                                                                                                                                              |
 
 Each goal holds categories, and each shows how many items it holds; choose a heading to fold it. The cells above the list count each goal and take you to it. Choose a status (**Open**, **In progress**, **Measuring**, **Done** or **Dismissed**), narrow by **Source** or **Priority**, or group by source instead; the view stays in the page address, so you can share it. A website issue row opens that issue in Issues, where you mark it fixed; any other row opens the Action's detail.
 

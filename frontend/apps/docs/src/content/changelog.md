@@ -8,13 +8,15 @@ updated: '2026-11-16'
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
 
-## November 16, 2026: Site Health issues stay in Issues
+## November 16, 2026: One Actions list, with Site Health issues kept in Issues
 
 A Site Health issue no longer becomes an Action, either on one page or across many pages. You find, fix, hand off and verify each issue in **Site Health → Issues**, so one issue never has two statuses. Actions keep content gaps, internal links, signals that regressed between crawls, prompts, search, earned pages and products. Website-issue Actions created before this change no longer appear in Actions, MCP or the API.
 
-**For your team:** work on website issues from **Issues**, with **Ask agent** or **Copy fix prompt**.
+**Actions** is now in the Dashboard sidebar at `/actions`. It lists everything you can act on, open website issues included, grouped by goal and then category, with Open, In progress, Measuring, Done and Dismissed views. A website issue row opens that issue in Issues. An Action's page lists its findings in place, with no side panel.
 
-[Site Health](/site-health/)
+**For your team:** start from **Actions**; work on website issues from **Issues**, with **Ask agent** or **Copy fix prompt**.
+
+[Choose what to work on](/agent/actions/#choose-what-to-work-on)
 
 ## November 12, 2026: Clearer Site Health issues
 
