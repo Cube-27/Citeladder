@@ -415,7 +415,7 @@ describe('NewChatScreen', () => {
 
   it('searches every status by the typed text once @ is typed, and shows each status', async () => {
     // Out of the work queue, so only a search across every status finds it.
-    const measuring = { ...actionItem(PRICING, 'School uniforms'), status: 'measuring' };
+    const measuring = { ...actionItem(PRICING, 'School uniforms'), status: 'done' };
     const reads: string[] = [];
     mswServer.use(
       // Ahead of the base handlers, so it answers the Actions reads.
@@ -437,9 +437,7 @@ describe('NewChatScreen', () => {
     await vi.waitFor(() => expect(reads).toEqual(['limit=10']));
 
     await user.type(message, '@uniform');
-    expect(
-      await screen.findByRole('option', { name: /School uniforms\s*Measuring/u }),
-    ).toBeVisible();
+    expect(await screen.findByRole('option', { name: /School uniforms\s*Done/u })).toBeVisible();
     expect(reads.at(-1)).toBe('status=any&q=uniform&limit=20');
   });
 

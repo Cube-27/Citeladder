@@ -36,6 +36,7 @@ const action: Action = {
   target_prompt_id: null,
   origin: 'evidence',
   status: 'open',
+  measurement: null,
   priority_score: 82.5,
   priority_band: 'high',
   families: ['site_changes'],
@@ -184,7 +185,7 @@ describe('An Action page', () => {
       'Source',
     ]);
     expect(details.getAllByRole('definition').map((value) => value.textContent)).toEqual([
-      'Open',
+      'New',
       'High',
       'https://acme.test/pricing (opens in a new tab)Page',
       'Site changes',
@@ -222,15 +223,16 @@ describe('An Action page', () => {
     ).toHaveAttribute('href', stored);
   });
 
-  it('offers Dismiss, Mark implemented and Work with the agent in the action bar', async () => {
+  it('offers Decline, Accept, Restore, Mark implemented and Work with the agent in the action bar', async () => {
     const patches = serve(action);
     const user = userEvent.setup();
     renderDetail();
 
     const bar = within(await screen.findByRole('group', { name: 'Work on this Action' }));
-    // More holds Dismiss and Mark implemented where the bar is too narrow for them (CSS).
+    // More holds the decisions and Mark implemented where the bar is too narrow for them (CSS).
     expect(bar.getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'Dismiss',
+      'Decline',
+      'Accept',
       'Mark implemented',
       'More',
     ]);
@@ -245,21 +247,37 @@ describe('An Action page', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     // Pressed from the keyboard, the change keeps focus on its button and is announced.
-    bar.getByRole('button', { name: 'Dismiss' }).focus();
+    bar.getByRole('button', { name: 'Decline' }).focus();
     await user.keyboard('{Enter}');
-    const reopen = await bar.findByRole('button', { name: 'Reopen' });
-    expect(reopen).toHaveFocus();
+    const restore = await bar.findByRole('button', { name: 'Restore' });
+    expect(restore).toHaveFocus();
     expect(bar.getByRole('status')).toHaveTextContent(
-      'Action dismissed. Reopen puts it back in the queue.',
+      'Action declined. Restore puts it back in New.',
     );
     expect(patches).toEqual([{ status: 'dismissed' }]);
-    // A dismissed Action is not declared, so only Reopen and the Agent remain.
+    // A declined Action is not declared: Restore, Accept and the Agent remain.
     expect(bar.queryByRole('button', { name: 'Mark implemented' })).toBeNull();
+    expect(bar.getByRole('button', { name: 'Accept' })).toBeVisible();
 
     await user.keyboard('{Enter}');
-    expect(await bar.findByRole('button', { name: 'Dismiss' })).toHaveFocus();
-    expect(bar.getByRole('status')).toHaveTextContent('Action reopened.');
-    expect(patches).toEqual([{ status: 'dismissed' }, { status: 'open' }]);
+    expect(await bar.findByRole('button', { name: 'Decline' })).toHaveFocus();
+    expect(bar.getByRole('status')).toHaveTextContent('Action restored to New.');
+
+    // Accepted, it is in progress: focus moves to the Decline that replaces Accept.
+    bar.getByRole('button', { name: 'Accept' }).focus();
+    await user.keyboard('{Enter}');
+    expect(await bar.findByText('Action accepted. It is in progress.')).toBeInTheDocument();
+    expect(bar.getByRole('button', { name: 'Decline' })).toHaveFocus();
+    expect(bar.getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Decline',
+      'Mark implemented',
+      'More',
+    ]);
+    expect(patches).toEqual([
+      { status: 'dismissed' },
+      { status: 'open' },
+      { status: 'in_progress' },
+    ]);
   });
 });
 

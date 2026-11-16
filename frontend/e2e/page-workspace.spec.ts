@@ -32,6 +32,7 @@ const action = {
   target_prompt_id: null,
   origin: 'evidence',
   status: 'open',
+  measurement: null,
   priority_score: 80,
   priority_band: 'high',
   families: ['search_console'],

@@ -258,7 +258,7 @@ function MeasurementPreview({ action }: Readonly<{ action: Declarable }>) {
 }
 
 /**
- * Whether an Action can be declared now: still open, with a finding to
+ * Whether an Action can be declared now: New or In progress, with a finding to
  * declare. A recrawl that resolved every finding leaves the last set, which
  * the server freezes; with none there is nothing to declare, and it refuses.
  */

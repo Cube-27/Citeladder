@@ -112,7 +112,8 @@ describe('a document naming another page than its Action, on PostgreSQL', () => 
     expect(await actionOf(pricingOutput.action_id!)).toEqual({
       target_kind: 'page',
       target_label: 'https://acme.example/pricing',
-      effective_status: 'in_progress',
+      // An output never moves its Action: it stays New until a decision.
+      effective_status: 'open',
     });
     // The chat keeps the Action it was opened for.
     expect(afterLink.chat.action_id).toBe(guideAction);

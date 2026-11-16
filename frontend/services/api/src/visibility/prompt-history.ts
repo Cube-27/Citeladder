@@ -8,7 +8,6 @@
  * never zero. Implementation markers are when a user said the work went live;
  * nothing here claims the work moved a rate.
  */
-import { actionStatusSchema } from '@citeladder/contracts/actions';
 import type {
   promptHistoryImplementationSchema,
   promptHistoryPointSchema,
@@ -19,6 +18,7 @@ import { sql } from 'kysely';
 import type { z } from 'zod';
 
 import { frozenComparisonKey } from '../analysis/comparison.ts';
+import { statusView } from '../opportunities/action-status.ts';
 import { policy } from '../config.ts';
 import { notFound } from '../errors.ts';
 import type { Database } from '../db/database.ts';
@@ -217,7 +217,7 @@ async function implementationMarkers(
     implementation_event_id: row.id,
     action_id: row.action_id,
     title: row.target_label,
-    status: actionStatusSchema.parse(row.status),
+    status: statusView(row.status).status,
     implemented_at: wireUtc(row.implemented_at),
   }));
 }

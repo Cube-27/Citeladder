@@ -55,7 +55,7 @@ export function ProposalCards({
 }
 
 const PENDING: ReadonlySet<ChatAction['status']> = new Set(['open', 'in_progress']);
-const DECLARED: ReadonlySet<ChatAction['status']> = new Set(['implemented', 'measuring', 'done']);
+const DECLARED: ReadonlySet<ChatAction['status']> = new Set(['done']);
 
 /**
  * "Mark … implemented?": the existing declaration dialog, opened with what the

@@ -11,11 +11,12 @@ import {
   measurementLegSchema,
   type ActionGroup,
   type ActionPriorityBand,
+  type ActionStatus,
 } from '@citeladder/contracts/actions';
 import { sql, type Selectable, type SqlBool } from 'kysely';
 
 import { policy } from '../config.ts';
-import { inTransaction, type Database } from '../db/database.ts';
+import type { Database } from '../db/database.ts';
 import { containsPattern } from '../db/like.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
 import type { Actions } from '../generated/db-schema.ts';
@@ -26,7 +27,7 @@ import {
   InvalidCursorError,
 } from '../http/keyset-cursor.ts';
 import { parseUuid } from '../http/uuid.ts';
-import { refreshActionStatus, validateStatus } from './action-status.ts';
+import { persistedStatuses, statusView, validateStatus } from './action-status.ts';
 import { OPPORTUNITY_COLUMNS, projectItem } from './projection.ts';
 import type { Scope } from './sources.ts';
 import { declarationView } from './declaration-view.ts';
@@ -102,7 +103,7 @@ const jsonList = (value: unknown): unknown[] => (Array.isArray(value) ? value : 
 const stringList = (value: unknown): string[] =>
   jsonList(value).filter((v): v is string => typeof v === 'string');
 
-function actionItem(row: ActionRow) {
+export function actionItem(row: ActionRow) {
   return {
     id: row.id,
     project_id: row.project_id,
@@ -111,7 +112,7 @@ function actionItem(row: ActionRow) {
     target_url: row.target_url,
     target_prompt_id: row.target_prompt_id,
     origin: actionItemSchema.shape.origin.parse(row.origin),
-    status: actionStatusSchema.parse(row.effective_status),
+    ...statusView(row.effective_status),
     priority_score: row.priority_score,
     priority_band: priorityBand(row.priority_score),
     families: stringList(row.families),
@@ -187,7 +188,7 @@ type ActionListFilters = {
   status: string | null;
   /** Text the Action's label contains, case-insensitively. */
   q?: string | null;
-  target_kind: string | null;
+  target_kind?: string | null;
   group?: string | null;
   approach?: string | null;
   priority?: string | null;
@@ -208,11 +209,14 @@ function known<T extends string>(
   return match;
 }
 
-function parseFilters(filters: ActionListFilters) {
-  if (filters.status !== null && filters.status !== ACTION_STATUS_ANY)
-    validateStatus(filters.status);
+type ActionFilterInput = Omit<ActionListFilters, 'limit' | 'cursor'>;
+
+function parseFilters(filters: ActionFilterInput) {
+  let status: ActionStatus | typeof ACTION_STATUS_ANY | null = ACTION_STATUS_ANY;
+  if (filters.status !== ACTION_STATUS_ANY)
+    status = filters.status === null ? null : validateStatus(filters.status);
   return {
-    status: filters.status,
+    status,
     q: filters.q?.trim() || null,
     target_kind: known('target kind', filters.target_kind, a.ACTION_TARGET_KINDS),
     group: known('group', filters.group, actionGroupSchema.options),
@@ -237,7 +241,7 @@ function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof 
     filtered = filtered.where(
       'effective_status',
       'in',
-      filters.status ? [filters.status] : a.ACTION_ACTIVE_STATUSES,
+      filters.status ? persistedStatuses([filters.status]) : a.ACTION_ACTIVE_STATUSES,
     );
   if (filters.q) filtered = filtered.where('target_label', 'ilike', containsPattern(filters.q));
   if (filters.target_kind) filtered = filtered.where('target_kind', '=', filters.target_kind);
@@ -252,6 +256,13 @@ function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof 
     if (below !== null) filtered = filtered.where('priority_score', '<', below);
   }
   return filtered;
+}
+
+/** The listed Actions every list filter matches, the group included: a bulk change's reach. */
+export function matchingActions(db: Database, scope: Scope, raw: ActionFilterInput) {
+  const filters = parseFilters(raw);
+  const filtered = filteredActions(db, scope, filters);
+  return filters.group ? filtered.where(groupSql, '=', filters.group) : filtered;
 }
 
 export async function listActions(db: Database, scope: Scope, raw: ActionListFilters) {
@@ -291,10 +302,14 @@ export async function listActions(db: Database, scope: Scope, raw: ActionListFil
       rows.length > raw.limit && last
         ? encodeKeysetCursor('actions', fingerprint, [String(last.priority_score ?? -1), last.id])
         : null,
-    status_counts: {
-      ...Object.fromEntries(a.ACTION_STATUSES.map((status) => [status, 0])),
-      ...Object.fromEntries(counts.map((row) => [row.status, row.count])),
-    },
+    status_counts: Object.fromEntries(
+      actionStatusSchema.options.map((status) => [
+        status,
+        counts
+          .filter((row) => statusView(row.status).status === status)
+          .reduce((sum, row) => sum + row.count, 0),
+      ]),
+    ),
     group_counts: actionsPageSchema.shape.group_counts.parse(
       Object.fromEntries(
         actionGroupSchema.options.map((id) => [
@@ -418,50 +433,4 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     ),
     declaration: declaration ? await declarationView(db, declaration) : null,
   };
-}
-
-export async function recordStatus(
-  db: Database,
-  action: ActionRow,
-  status: string,
-  userId: string,
-) {
-  if (action.status === status) return;
-  const now = new Date();
-  await db
-    .updateTable('actions')
-    .set({ status, updated_at: now })
-    .where('workspace_id', '=', action.workspace_id)
-    .where('id', '=', action.id)
-    .execute();
-  await db
-    .insertInto('action_status_events')
-    .values({
-      id: randomUUID(),
-      workspace_id: action.workspace_id,
-      project_id: action.project_id,
-      action_id: action.id,
-      previous_status: action.status,
-      next_status: status,
-      changed_by_user_id: userId,
-      created_at: now,
-    })
-    .execute();
-  await refreshActionStatus(db, action.workspace_id, action.id);
-}
-
-export async function updateActionStatus(
-  db: Database,
-  scope: RecordScope,
-  actionId: string,
-  status: string,
-  userId: string,
-) {
-  await inTransaction(db, async (trx) => {
-    const action = await requireAction(trx, scope, actionId, true);
-    if (!a.ACTION_USER_STATUSES.includes(action.status))
-      throw new ApiError(422, 'A declared Action cannot be changed');
-    await recordStatus(trx, action, status, userId);
-  });
-  return actionItem(await requireAction(db, scope, actionId));
 }

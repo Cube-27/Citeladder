@@ -93,7 +93,7 @@
     {
       "name": "read_actions",
       "title": "Read Actions",
-      "description": "List the work CiteLadder recommends to improve visibility, highest priority first. By default it lists only open and in-progress Actions; pass status any to list every status (implemented, measuring, done and dismissed too), and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to dismiss or reopen one, and prepare_declare_implemented when its work is done.",
+      "description": "List the work CiteLadder recommends to improve visibility, highest priority first. Statuses: open (New), in_progress (accepted), done (declared implemented; its measurement is measuring or verified) and dismissed (Declined). By default it lists only open and in-progress Actions; pass status any to list every status, and query to find Actions whose title contains that text. Each item has its id, target (page, prompt or source), status, measurement, priority score, approach and link, and status_counts counts every status. Items come in pages; pass next_cursor for more. Pass action_id for one Action in full: its diagnosis, each finding with its remediation, the measured outcome and any declaration. Use update_action_status to accept, decline or restore one, and prepare_declare_implemented when its work is done.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -109,7 +109,7 @@
           },
           "status": {
             "type": "string",
-            "enum": ["open", "in_progress", "implemented", "measuring", "done", "dismissed", "any"],
+            "enum": ["open", "in_progress", "done", "dismissed", "any"],
             "description": "Keep only Actions with this status; any keeps every status. Omitted: open and in progress only."
           },
           "query": {
@@ -2313,7 +2313,7 @@
     {
       "name": "update_action_status",
       "title": "Update an Action status",
-      "description": "Dismiss one Action the user does not want to act on, or reopen a dismissed one. Runs at once. To record that the work was done, use prepare_declare_implemented instead.",
+      "description": "Accept one Action the user will work on, decline one they do not want, or restore a declined one to New. Runs at once; an in-progress Action can be declined but not moved back to New, and a done one cannot change. To record that the work was done, use prepare_declare_implemented instead.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -2329,8 +2329,8 @@
           },
           "status": {
             "type": "string",
-            "enum": ["dismissed", "open"],
-            "description": "dismissed hides the Action from the open list; open restores it."
+            "enum": ["open", "in_progress", "dismissed"],
+            "description": "in_progress accepts the Action; dismissed declines it; open restores a declined one."
           }
         },
         "required": ["project_id", "action_id", "status"],

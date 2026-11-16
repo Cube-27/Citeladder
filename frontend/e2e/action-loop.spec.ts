@@ -65,6 +65,7 @@ const action = {
   target_prompt_id: null,
   origin: 'evidence',
   status: 'open',
+  measurement: null,
   priority_score: 140,
   priority_band: 'high',
   families: ['sources'],
@@ -180,6 +181,7 @@ test('declaring an Action implemented shows comparable verification', async ({ p
       json: {
         ...action,
         status: declarationBody ? 'done' : 'open',
+        measurement: declarationBody ? 'verified' : null,
         diagnosis: { approach: 'earned_placement', families: { sources: 'observed' } },
         members: [
           {
@@ -247,11 +249,11 @@ test('Action filters restore through URL history and reload', async ({ page }) =
   );
 
   await page.goto(`/actions?project=${PROJECT}&status=dismissed`);
-  await expect(page.getByText('No dismissed Actions')).toBeVisible();
+  await expect(page.getByText('No declined Actions')).toBeVisible();
   await page.reload();
-  await expect(page.getByText('No dismissed Actions')).toBeVisible();
+  await expect(page.getByText('No declined Actions')).toBeVisible();
 
-  await page.getByRole('radio', { name: /^Open/ }).click();
+  await page.getByRole('radio', { name: /^New/ }).click();
   // The tree's goal header, not the goal strip's "Go to …" cell.
   await expect(
     page.getByRole('button', { name: 'Get mentioned elsewhere, 1', exact: true }),

@@ -10,7 +10,8 @@ import { epochMicros, isoformat, parseDatetime, toUtc } from '../http/datetimes.
 import { record } from '../db/json.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { currentSiteCrawlQuery } from '../site-health/reads/crawl.ts';
-import { declarableMembers, recordStatus, requireAction, type ActionRow } from './actions.ts';
+import { declarableMembers, requireAction, type ActionRow } from './actions.ts';
+import { recordStatus } from './action-status.ts';
 import { declarationChecks } from './declaration-checks.ts';
 import { ruleCheckKind } from './checks/registry.ts';
 import { declarationTargets } from './targets/registry.ts';
@@ -233,8 +234,8 @@ export function declareAction(
     const existing = await replay(trx, action, key, input, declaredAt);
     if (existing) return { row: existing, created: false };
     boundDeclaredAt(declaredAt, now);
-    if (action.status !== a.ACTION_STATUS_OPEN)
-      throw declarationConflict('Only an open Action can be declared implemented');
+    if (!a.ACTION_DECLARABLE_STATUSES.includes(action.status))
+      throw declarationConflict('Only a new or in-progress Action can be declared implemented');
     await checkedRevision(trx, action, input.output_revision_id);
     const { members, resolved: membersResolved } = await declarableMembers(trx, action);
     if (!members.length) throw declarationConflict('No finding targets this Action');
@@ -316,7 +317,7 @@ export function declareAction(
       if (!stored) throw replayConflict();
       return { row: stored, created: false };
     }
-    await recordStatus(trx, action, a.ACTION_STATUS_IMPLEMENTED, userId);
+    await recordStatus(trx, [action], a.ACTION_STATUS_IMPLEMENTED, userId);
     // Nothing reads a declaration resolved before go-live.
     if (!resolvedBefore) await verifyExistingEvidence(trx, row, declaredAt);
     return { row, created: true };

@@ -127,7 +127,7 @@ export function ActionsScreen() {
   );
 }
 
-/** A status view's count: the project-wide status counts, Open with the Issues defects once known. */
+/** A status view's count: the project-wide status counts, New with the Issues defects once known. */
 function viewCount(
   view: ActionListView,
   counts: Readonly<Record<string, number>> | null,
@@ -214,9 +214,8 @@ function treeState({
 }
 
 const EMPTY_VIEW: Record<ActionListView, string> = {
-  open: 'No open Actions',
+  open: 'No new Actions',
   in_progress: 'No Actions in progress',
-  measuring: 'No Actions being measured',
   done: 'No Actions done yet',
-  dismissed: 'No dismissed Actions',
+  dismissed: 'No declined Actions',
 };

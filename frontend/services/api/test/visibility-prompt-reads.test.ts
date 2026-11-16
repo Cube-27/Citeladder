@@ -522,7 +522,7 @@ describe('GET /visibility/prompts/{prompt_id}/history', () => {
         implementation_event_id: earnedDeclaration.id,
         action_id: earned.id,
         title: 'reviews.example/crm',
-        status: 'implemented',
+        status: 'done',
         implemented_at: '2026-03-05T12:00:00Z',
       },
     ]);

@@ -2,7 +2,10 @@
 import {
   actionTargetKindSchema,
   type ActionGroup,
+  type ActionMeasurement,
+  type ActionStatus,
   type ActionTargetKind,
+  type ActionUserStatus,
 } from '@citeladder/contracts/actions';
 import { opportunities } from './opportunity.ts';
 
@@ -41,12 +44,37 @@ export const actions = {
   ACTION_ORIGIN_EVIDENCE: 'evidence',
   ACTION_ORIGIN_AGENT: 'agent',
   ACTION_STATUS_IN_PROGRESS: 'in_progress',
+  ACTION_STATUS_DISMISSED: 'dismissed',
   ACTION_STATUS_IMPLEMENTED: 'implemented',
   ACTION_STATUS_MEASURING: 'measuring',
   ACTION_STATUS_DONE: 'done',
-  ACTION_STATUSES: ['open', 'in_progress', 'implemented', 'measuring', 'done', 'dismissed'],
-  ACTION_USER_STATUSES: ['dismissed', 'open'],
+  /**
+   * The status a user sees for each persisted effective status, and the
+   * measurement badge a Done Action carries (owner 2026-11-16).
+   */
+  ACTION_STATUS_VIEW: {
+    open: { status: 'open', measurement: null },
+    in_progress: { status: 'in_progress', measurement: null },
+    dismissed: { status: 'dismissed', measurement: null },
+    implemented: { status: 'done', measurement: 'measuring' },
+    measuring: { status: 'done', measurement: 'measuring' },
+    done: { status: 'done', measurement: 'verified' },
+  } as const satisfies Record<
+    string,
+    { status: ActionStatus; measurement: ActionMeasurement | null }
+  >,
+  /** Stored status → the stored statuses a user decision may move it to. */
+  ACTION_TRANSITIONS: {
+    open: ['in_progress', 'dismissed'],
+    in_progress: ['dismissed'],
+    dismissed: ['open', 'in_progress'],
+    implemented: [],
+  } as const satisfies Record<string, readonly ActionUserStatus[]>,
+  /** Stored statuses Mark implemented accepts: New and In progress, never Declined. */
+  ACTION_DECLARABLE_STATUSES: ['in_progress', 'open'],
   ACTION_ACTIVE_STATUSES: ['in_progress', 'open'],
+  /** The most Actions one bulk status change names or reaches through its filter. */
+  ACTION_BULK_MAX: 100,
   /** The longest text the Actions list searches labels for. */
   ACTION_SEARCH_MAX_CHARS: 200,
   EVIDENCE_FAMILIES: [

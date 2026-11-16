@@ -6,6 +6,7 @@ import { subjectXactLock } from '../db/advisory-lock.ts';
 import type { Database } from '../db/database.ts';
 import { notFound } from '../errors.ts';
 import { jsonObject } from '../db/json.ts';
+import { acceptForAgent } from '../opportunities/action-decisions.ts';
 import { authorize } from './access.ts';
 import {
   agentPolicy,
@@ -521,7 +522,9 @@ export class AgentStore {
         .execute();
     });
   }
-  private createChat(db: Database, scope: Scope, input: TurnInput) {
+  private async createChat(db: Database, scope: Scope, input: TurnInput) {
+    // Work with Agent on a New Action accepts it (owner 2026-11-16).
+    if (input.actionId) await acceptForAgent(db, scope, input.actionId, scope.userId);
     const now = new Date();
     return db
       .insertInto('agent_chats')

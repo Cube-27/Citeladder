@@ -16,6 +16,78 @@
   ],
   "components": {
     "schemas": {
+      "ActionBulkFilter": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/ActionStatus"
+          },
+          "q": {
+            "type": "string",
+            "maxLength": 200
+          },
+          "target_kind": {
+            "$ref": "#/components/schemas/ActionTargetKind"
+          },
+          "group": {
+            "$ref": "#/components/schemas/ActionGroup"
+          },
+          "approach": {
+            "type": "string"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/ActionPriorityBand"
+          },
+          "family": {
+            "type": "string"
+          }
+        },
+        "required": ["status"],
+        "additionalProperties": false
+      },
+      "ActionBulkStatusRequest": {
+        "type": "object",
+        "properties": {
+          "ids": {
+            "minItems": 1,
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          "filter": {
+            "$ref": "#/components/schemas/ActionBulkFilter"
+          },
+          "to": {
+            "$ref": "#/components/schemas/ActionUserStatus"
+          }
+        },
+        "required": ["to"],
+        "additionalProperties": false
+      },
+      "ActionBulkStatusResult": {
+        "type": "object",
+        "properties": {
+          "updated": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "skipped": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": ["updated", "skipped", "truncated"],
+        "additionalProperties": false
+      },
       "ActionDeclaration": {
         "type": "object",
         "properties": {
@@ -246,6 +318,16 @@
           },
           "status": {
             "$ref": "#/components/schemas/ActionStatus"
+          },
+          "measurement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionMeasurement"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "priority_score": {
             "type": ["number", "null"]
@@ -855,6 +937,7 @@
           "target_prompt_id",
           "origin",
           "status",
+          "measurement",
           "priority_score",
           "priority_band",
           "families",
@@ -978,6 +1061,16 @@
           "status": {
             "$ref": "#/components/schemas/ActionStatus"
           },
+          "measurement": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ActionMeasurement"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "priority_score": {
             "type": ["number", "null"]
           },
@@ -1038,6 +1131,7 @@
           "target_prompt_id",
           "origin",
           "status",
+          "measurement",
           "priority_score",
           "priority_band",
           "families",
@@ -1052,6 +1146,10 @@
           "updated_at"
         ],
         "additionalProperties": false
+      },
+      "ActionMeasurement": {
+        "type": "string",
+        "enum": ["measuring", "verified"]
       },
       "ActionPriorityBand": {
         "type": "string",
@@ -1098,7 +1196,15 @@
       },
       "ActionStatus": {
         "type": "string",
-        "enum": ["open", "in_progress", "implemented", "measuring", "done", "dismissed"]
+        "enum": ["open", "in_progress", "done", "dismissed"]
+      },
+      "ActionTargetKind": {
+        "type": "string",
+        "enum": ["page", "earned_page", "product", "category", "query", "prompt", "planned_page"]
+      },
+      "ActionUserStatus": {
+        "type": "string",
+        "enum": ["open", "in_progress", "dismissed"]
       },
       "AdOwnership": {
         "type": "string",
@@ -11572,6 +11678,56 @@
                 },
                 "required": ["status"],
                 "additionalProperties": false
+              }
+            }
+          }
+        },
+        "x-citeladder-scope": "actions:write"
+      }
+    },
+    "/v1/projects/{project_id}/actions/status": {
+      "post": {
+        "tags": ["actions"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionBulkStatusResult"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 255
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ActionBulkStatusRequest"
               }
             }
           }

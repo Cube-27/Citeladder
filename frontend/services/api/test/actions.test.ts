@@ -1,13 +1,7 @@
 /** Action cutover: real routes, authorization, concurrency and frozen evidence. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { afterAll, describe, expect, it } from 'vitest';
-import { createApp } from '../src/app.ts';
-import {
-  actionDetailSchema,
-  actionsPageSchema,
-  actionDeclarationSchema,
-} from '@citeladder/contracts/actions';
+import { describe, expect, it } from 'vitest';
 import { searchConsoleState } from '../src/opportunities/measurement-legs.ts';
 import { refreshActionStatus } from '../src/opportunities/action-status.ts';
 import { syncActions } from '../src/opportunities/action-sync.ts';
@@ -16,67 +10,23 @@ import { declarationChecks } from '../src/opportunities/declaration-checks.ts';
 import { CHECKS, memberMeasurementLeg } from '../src/opportunities/checks/registry.ts';
 import type { OpportunityRow } from '../src/opportunities/projection.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
+import {
+  actionId,
+  actionPath,
+  actionRoutes,
+  boundary,
+  day,
+  declarationBody,
+  detailBody,
+  nextDay,
+  otherRule,
+  pageBody,
+  pageRule,
+  promptRule,
+} from './action-routes-support.ts';
 import { actionRow, opportunityRow, snapshotRow } from './opportunity-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
 
-const config = testConfig();
-const db = testDatabase(config);
-const app = createApp(config, db);
-const seeds: ActionSeed[] = [];
-// Inside the declaration window, which is relative to now.
-const day = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
-const nextDay = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-const boundary = `${day}T15:00:00.123456Z`;
-const pageRule = 'site_link_near_orphan';
-const otherRule = 'site_link_weak_authority';
-const promptRule = 'brand_absent_high_value_prompt';
-async function seed() {
-  const s = await actionFixture<ActionSeed>('seed');
-  seeds.push(s);
-  return s;
-}
-const pageBody = async (response: Response) => actionsPageSchema.parse(await response.json());
-const detailBody = async (response: Response) => actionDetailSchema.parse(await response.json());
-const declarationBody = async (response: Response) =>
-  actionDeclarationSchema.parse(await response.json());
-const actionId = (s: ActionSeed, rule = pageRule) => s.actions[rule]!;
-const actionPath = (s: ActionSeed, rule = pageRule) => `/api/v1/actions/${actionId(s, rule)}`;
-async function request(s: ActionSeed, path: string, method = 'GET', body?: unknown, key?: string) {
-  const headers: Record<string, string> = {
-    cookie: `${config.session.cookieName}=${await sessionToken({ sub: s.user_id, ver: 0 })}`,
-    'x-workspace-id': s.workspace_id,
-    'content-type': 'application/json',
-  };
-  if (key !== undefined) headers['Idempotency-Key'] = key;
-  return app.request(path, {
-    method,
-    headers,
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-}
-const declare = (s: ActionSeed, key: string, rule = pageRule, extra = {}) =>
-  request(
-    s,
-    `${actionPath(s, rule)}/declaration`,
-    'POST',
-    { declared_implemented_at: boundary, ...extra },
-    key,
-  );
-async function eventCount(s: ActionSeed) {
-  const row = await db
-    .selectFrom('action_status_events')
-    .select(sql<number>`count(*)::int`.as('n'))
-    .where('workspace_id', '=', s.workspace_id)
-    .executeTakeFirstOrThrow();
-  return row.n;
-}
-afterAll(async () => {
-  for (const s of seeds) {
-    await db.deleteFrom('workspaces').where('id', '=', s.workspace_id).execute();
-    await db.deleteFrom('users').where('id', '=', s.user_id).execute();
-  }
-  await db.destroy();
-});
+const { app, db, seed, request, declare, eventCount } = actionRoutes();
 
 describe('Action routes', () => {
   it('pages a priority queue, scopes cursors and counts, and records each status transition once', async () => {
@@ -209,9 +159,10 @@ describe('Action routes', () => {
           .where('id', '=', actionId(s))
           .executeTakeFirstOrThrow()
       ).effective_status;
-    // The output writer's transaction persists in-progress.
+    // A chat output on a New Action leaves it New: only a decision moves it.
     await actionFixture<string>('revision', s.workspace_id, s.project_id, actionId(s));
-    expect(await stored()).toBe('in_progress');
+    expect(await stored()).toBe('open');
+    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('open');
     // A declaration persists implemented in its own transaction.
     const declared = await declarationBody(await declare(s, 'persisted'));
     expect(await stored()).toBe('implemented');
@@ -237,10 +188,13 @@ describe('Action routes', () => {
         idempotency_key: randomUUID(),
       })
       .execute();
-    const page = await pageBody(await request(s, `${list}?status=implemented`));
-    expect(page.items.map((row) => [row.id, row.status])).toEqual([[actionId(s), 'implemented']]);
-    expect(page.status_counts).toMatchObject({ open: 2, implemented: 1, done: 0 });
-    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
+    // Done, still measuring: the unrecorded verification is not read.
+    const page = await pageBody(await request(s, `${list}?status=done`));
+    expect(page.items.map((row) => [row.id, row.status, row.measurement])).toEqual([
+      [actionId(s), 'done', 'measuring'],
+    ]);
+    expect(page.status_counts).toEqual({ open: 2, in_progress: 0, done: 1, dismissed: 0 });
+    expect((await request(s, `${list}?status=implemented`)).status).toBe(422);
   });
 
   it('rejects unauthenticated, foreign and viewer writes without disclosing or mutating rows', async () => {
@@ -286,7 +240,7 @@ describe('Action routes', () => {
 
   it('freezes targets and checks, preserves microseconds, and replays before resolving changed evidence', async () => {
     const s = await seed();
-    for (const status of ['implemented', 'in_progress', 'done'])
+    for (const status of ['implemented', 'measuring', 'done'])
       expect((await request(s, actionPath(s), 'PATCH', { status })).status).toBe(422);
     expect((await declare(s, 'injected', pageRule, { expected_checks: [] })).status).toBe(422);
     expect((await declare(s, 'injected', pageRule, { target_site_url_ids: [] })).status).toBe(422);
@@ -428,7 +382,7 @@ describe('Action routes', () => {
     expect((await declare(s, 'foreign-members')).status).toBe(409);
   });
 
-  it('accepts only a revision of this Action and derives in-progress from its output', async () => {
+  it('accepts only a revision of this Action', async () => {
     const s = await seed();
     const draft = await actionFixture<string>(
       'revision',
@@ -436,7 +390,6 @@ describe('Action routes', () => {
       s.project_id,
       actionId(s),
     );
-    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('in_progress');
     expect(
       (await declare(s, 'foreign-output', otherRule, { output_revision_id: draft })).status,
     ).toBe(409);
@@ -662,7 +615,7 @@ describe('Action routes', () => {
     expect(body.expected_checks).toEqual([]);
     expect(body.checks).toEqual([]);
     expect(body.member_opportunity_ids).toEqual([s.members[pageRule]]);
-    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
+    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('done');
   });
 
   it('declares an earned listing on the publisher page and measures the prompts that cited it', async () => {
@@ -731,7 +684,10 @@ describe('Action routes', () => {
       // The verifier refreshes the Action in the transaction that appends its observation.
       await refreshActionStatus(db, s.workspace_id, actionId(s));
       const detail = await detailBody(await request(s, actionPath(s)));
-      expect(detail.status).toBe(index === 0 ? 'done' : 'measuring');
+      expect([detail.status, detail.measurement]).toEqual([
+        'done',
+        index === 0 ? 'verified' : 'measuring',
+      ]);
       expect(detail.declaration!.state).toBe(kind);
       expect(detail.declaration!.verification_events).toHaveLength(index + 1);
       expect(detail.declaration!.legs[0]).toMatchObject({
@@ -816,7 +772,7 @@ describe('Declaration ordering', () => {
     expect(unavailable.expected_checks[0]).toMatchObject({ kind: 'visibility_metric' });
     expect(unavailable.expected_checks[0]).not.toHaveProperty('baseline_metric_snapshot_id');
     expect((await detailBody(await request(late, actionPath(late, promptRule)))).status).toBe(
-      'implemented',
+      'done',
     );
   });
 
@@ -881,7 +837,7 @@ describe('Declaration ordering', () => {
     expect(body.resolved_before_snapshot_id).toBe(resolving);
     expect(body.expected_checks).toEqual([]);
     expect(await verifications(s)).toBe(0);
-    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('implemented');
+    expect((await detailBody(await request(s, actionPath(s)))).status).toBe('done');
   });
 
   it('never declares another workspace’s Action or its findings', async () => {

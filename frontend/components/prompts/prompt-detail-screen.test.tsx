@@ -86,7 +86,7 @@ function history(latestStates: PromptHistory['points'][number]['answer_states'])
         implementation_event_id: RUN(8),
         action_id: EARNED,
         title: 'reviews.example/crm',
-        status: 'measuring',
+        status: 'done',
         implemented_at: '2026-03-05T12:00:00Z',
       },
     ],

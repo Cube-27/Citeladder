@@ -4,7 +4,6 @@ import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import type { AgentOutputRevisions, AgentOutputs as OutputTable } from '../generated/db-schema.ts';
 import type { WebSource } from '../models/conversation.ts';
-import { refreshActionStatus } from '../opportunities/action-status.ts';
 import { recheckOpen } from '../page-documents/suggestions.ts';
 import { authorize } from './access.ts';
 import {
@@ -134,15 +133,12 @@ export async function saveAgentOutput(
       .returningAll()
       .executeTakeFirstOrThrow());
   await attach(db, chat, output, payload, input.userId);
-  // The attach may have linked the output to an Action; an open one now reads as in progress.
-  const { action_id: actionId } = await db
+  await db
     .updateTable('agent_outputs')
     .set({ updated_at: now, format_id: payload.format_id ?? output.format_id })
     .where('workspace_id', '=', chat.workspace_id)
     .where('id', '=', output.id)
-    .returning('action_id')
-    .executeTakeFirstOrThrow();
-  if (actionId) await refreshActionStatus(db, chat.workspace_id, actionId);
+    .execute();
   const revision = await appendRevision(db, chat, output, current?.revision ?? null, {
     author: 'agent',
     run_id: input.runId,
@@ -248,8 +244,6 @@ export async function createFetchedDocument(
     })
     .returningAll()
     .executeTakeFirstOrThrow();
-  // An open Action now reads as in progress, as it does for any document.
-  if (output.action_id) await refreshActionStatus(db, chat.workspace_id, output.action_id);
   const revision = await appendRevision(db, chat, output, null, {
     author: 'fetch',
     author_user_id: null,

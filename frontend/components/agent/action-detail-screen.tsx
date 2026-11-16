@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQuery } from '@tanstack/react-query';
-import { MoreHorizontal, RotateCcw, XCircle, type LucideIcon } from 'lucide-react';
+import { Check, MoreHorizontal, RotateCcw, XCircle, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
@@ -33,7 +33,13 @@ import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { actionTitle, withShortTarget } from '@/lib/agent/action-title';
 import { actionHandoffHref } from '@/lib/agent/handoff';
 import { familyLabel, measurementLegLabel, targetKindLabel } from '@/lib/agent/vocabulary';
-import { actionsMutations, actionsQueries, type ActionDetail } from '@/lib/api/actions';
+import {
+  actionsMutations,
+  actionsQueries,
+  type ActionDetail,
+  type ActionStatus,
+} from '@/lib/api/actions';
+import type { ActionUserStatus } from '@citeladder/contracts/actions';
 import { agentQueries } from '@/lib/api/agent';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { readableUrl } from '@/lib/format';
@@ -189,7 +195,10 @@ function Identity({ action }: Readonly<{ action: ActionDetail }>) {
   const sources = action.families.map(familyLabel).filter(isText);
   const kind = targetKindLabel(action.target_kind);
   const facts: Fact[] = [
-    { label: 'Status', value: <ActionStatusBadge status={action.status} /> },
+    {
+      label: 'Status',
+      value: <ActionStatusBadge status={action.status} measurement={action.measurement} />,
+    },
     { label: 'Priority', value: <ActionPriorityBadge band={action.priority_band} /> },
     {
       label: 'Target',
@@ -272,22 +281,35 @@ function TextList({
 
 const isText = (value: string | null): value is string => Boolean(value);
 
-const STATUS_CHANGED = {
-  dismissed: 'Action dismissed. Reopen puts it back in the queue.',
-  open: 'Action reopened.',
-} as const;
+const STATUS_CHANGED: Record<ActionUserStatus, string> = {
+  in_progress: 'Action accepted. It is in progress.',
+  dismissed: 'Action declined. Restore puts it back in New.',
+  open: 'Action restored to New.',
+};
+
+const ACCEPT = { label: 'Accept', icon: Check, to: 'in_progress' } as const;
+const DECLINE = { label: 'Decline', icon: XCircle, to: 'dismissed' } as const;
+const RESTORE = { label: 'Restore', icon: RotateCcw, to: 'open' } as const;
+
+/** The status decisions each status offers (owner 2026-11-16); Done offers none. */
+const DECISIONS: Record<ActionStatus, readonly BarDecision[]> = {
+  open: [DECLINE, ACCEPT],
+  in_progress: [DECLINE],
+  dismissed: [RESTORE, ACCEPT],
+  done: [],
+};
 
 /** Shown from the rail breakpoint up; below it the control lives in More. */
 const WIDE_ONLY = 'hidden rail:inline-flex';
 
 /**
  * The page's decisions in the record's sticky action bar, on one row at
- * every width: Dismiss (quiet; Reopen once dismissed), Mark implemented
- * (secondary) while the Action can be declared, and Work with the agent, the
- * page's one primary, last. Below the rail breakpoint Dismiss and Mark
- * implemented fold into More. A declared Action keeps only the Agent. An
- * Agent output is declared from its chat, which names the exact revision
- * shipped; here Mark implemented declares work done outside CiteLadder.
+ * every width: Decline / Restore (quiet) and Accept as the status allows,
+ * Mark implemented (secondary) while the Action can be declared, and Work
+ * with the agent, the page's one primary, last. Below the rail breakpoint the
+ * decisions and Mark implemented fold into More. A declared Action keeps only
+ * the Agent. An Agent output is declared from its chat, which names the exact
+ * revision shipped; here Mark implemented declares work done outside CiteLadder.
  */
 function ActionBar({
   action,
@@ -301,8 +323,8 @@ function ActionBar({
   workspaceId: string;
   dismissing: boolean;
   /** The status this page last set, so its result is announced. */
-  changed: 'open' | 'dismissed' | null;
-  onStatus: (status: 'open' | 'dismissed') => void;
+  changed: ActionUserStatus | null;
+  onStatus: (status: ActionUserStatus) => void;
   onDeclared: () => void;
 }>) {
   const mayWrite = useWorkspaceCapability('write');
@@ -315,37 +337,40 @@ function ActionBar({
     revision: null,
     onDeclared,
   });
-  const dismissed = action.status === 'dismissed';
-  const status = {
-    label: dismissed ? 'Reopen' : 'Dismiss',
-    icon: dismissed ? RotateCcw : XCircle,
-    run: () => {
-      if (!dismissing) onStatus(dismissed ? 'open' : 'dismissed');
-    },
+  const decisions = undeclared ? DECISIONS[action.status] : [];
+  const decide = (to: ActionUserStatus) => {
+    if (!dismissing) onStatus(to);
   };
   let declare: Declare = null;
   if (declarable) declare = linkRoute ? 'links' : 'dialog';
   return (
     <Inline as="fieldset" aria-label="Work on this Action" className="flex-1">
-      {/* Announced, not drawn: the status mark and this button's label show the change. */}
+      {/* Announced, not drawn: the status mark shows the change. */}
       <output className="sr-only">{changed ? STATUS_CHANGED[changed] : null}</output>
       <span className="me-auto" />
-      {undeclared ? (
-        // Never `disabled` while pending: that drops focus to the page, and
-        // the same button (now Reopen or Dismiss) keeps it once the change lands.
+      {decisions.map((decision, slot) => (
+        // Keyed by slot from the end, so the pressed button stays mounted as the
+        // decision that replaces it and keeps focus (Accept becomes Decline);
+        // never `disabled` while pending, which drops it.
         <Button
-          variant="quiet"
+          key={decisions.length - slot}
+          variant={decision.to === 'in_progress' ? 'secondary' : 'quiet'}
           className={WIDE_ONLY}
           aria-disabled={dismissing || undefined}
-          onClick={status.run}
+          onClick={() => decide(decision.to)}
         >
-          <Icon icon={status.icon} />
-          {status.label}
+          <Icon icon={decision.icon} />
+          {decision.label}
         </Button>
-      ) : null}
+      ))}
       <WideDeclare declare={declare} onStart={markImplemented.start} />
       {undeclared ? (
-        <BarMore declare={declare} onStart={markImplemented.start} status={status} />
+        <BarMore
+          declare={declare}
+          onStart={markImplemented.start}
+          decisions={decisions}
+          onDecide={decide}
+        />
       ) : null}
       {/* The named action, in its primary place: this bar is where it is decided. */}
       <ProjectLink href={actionHandoffHref(action)} className={buttonClasses('primary')}>
@@ -360,7 +385,7 @@ function ActionBar({
 /** How Mark implemented declares here: by picking links, by its dialog, or not at all. */
 type Declare = 'links' | 'dialog' | null;
 
-type BarStatus = Readonly<{ label: string; icon: LucideIcon; run: () => void }>;
+type BarDecision = Readonly<{ label: string; icon: LucideIcon; to: ActionUserStatus }>;
 
 /** Mark implemented in the bar, from the rail breakpoint up. */
 function WideDeclare({ declare, onStart }: Readonly<{ declare: Declare; onStart: () => void }>) {
@@ -374,12 +399,18 @@ function WideDeclare({ declare, onStart }: Readonly<{ declare: Declare; onStart:
   );
 }
 
-/** Below the rail breakpoint: Mark implemented and Dismiss (or Reopen), folded into More. */
+/** Below the rail breakpoint: Mark implemented and the status decisions, folded into More. */
 function BarMore({
   declare,
   onStart,
-  status,
-}: Readonly<{ declare: Declare; onStart: () => void; status: BarStatus }>) {
+  decisions,
+  onDecide,
+}: Readonly<{
+  declare: Declare;
+  onStart: () => void;
+  decisions: readonly BarDecision[];
+  onDecide: (to: ActionUserStatus) => void;
+}>) {
   return (
     <Menu modal={false}>
       <MenuTrigger asChild>
@@ -402,9 +433,15 @@ function BarMore({
             {ACTIONS.markImplemented.label}
           </MenuItem>
         ) : null}
-        <MenuItem icon={<Icon icon={status.icon} />} onSelect={status.run}>
-          {status.label}
-        </MenuItem>
+        {decisions.map((decision) => (
+          <MenuItem
+            key={decision.to}
+            icon={<Icon icon={decision.icon} />}
+            onSelect={() => onDecide(decision.to)}
+          >
+            {decision.label}
+          </MenuItem>
+        ))}
       </MenuContent>
     </Menu>
   );
