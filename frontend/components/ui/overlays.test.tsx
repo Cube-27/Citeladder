@@ -328,7 +328,7 @@ describe('InfoHint', () => {
 });
 
 describe('ToastProvider', () => {
-  it('closes a plain notification after its time but keeps one with an action until dismissed', () => {
+  it('closes a plain notification after its time, leaving once its exit animation ends, but keeps one with an action', () => {
     vi.useFakeTimers();
     function Harness() {
       const { notify } = useToast();
@@ -351,6 +351,9 @@ describe('ToastProvider', () => {
     );
     fireEvent.click(screen.getByRole('button', { name: 'Notify' }));
     act(() => vi.advanceTimersByTime(60_000));
+    const saved = screen.getByText('Prompt saved').closest('li')!;
+    expect(saved).toHaveAttribute('data-state', 'closed');
+    fireEvent.animationEnd(saved);
     expect(screen.queryByText('Prompt saved')).not.toBeInTheDocument();
     expect(screen.getByText('Prompt archived')).toBeInTheDocument();
     vi.useRealTimers();
@@ -388,6 +391,7 @@ describe('ToastProvider', () => {
     expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(2);
 
     await user.click(screen.getAllByRole('button', { name: 'Dismiss notification' })[0]!);
+    fireEvent.animationEnd(screen.getByText('First notification').closest('li')!);
     await waitFor(() =>
       expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(1),
     );
@@ -425,6 +429,7 @@ describe('ToastProvider', () => {
       </ToastProvider>,
     );
     await user.click(screen.getByRole('button', { name: 'Notify four times' }));
+    fireEvent.animationEnd(screen.getByText('Run queued').closest('li')!);
     expect(screen.queryByText('Run queued')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Dismiss notification' })).toHaveLength(3);
 
