@@ -1,12 +1,18 @@
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useState, type KeyboardEvent } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ChevronDown, MessagesSquare } from 'lucide-react';
+import { ChevronDown, MessagesSquare, RefreshCw } from 'lucide-react';
 
 import { RailFlyout } from '@/components/layout/sidebar-rail';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
-import { HistoryList, HistoryNotice, HistoryRow, HistoryRows } from '@/components/ui/history-list';
+import {
+  HistoryFailed,
+  HistoryList,
+  HistoryNotice,
+  HistoryRow,
+  HistoryRows,
+} from '@/components/ui/history-list';
 import { MenuItem, MenuLinkItem } from '@/components/ui/menu';
 import { SearchField } from '@/components/ui/search-field';
 import { RailFlyoutSlot } from '@/components/ui/sidebar';
@@ -55,16 +61,33 @@ function useChatList() {
     more: chats.hasNextPage
       ? { busy: chats.isFetchingNextPage, load: () => void chats.fetchNextPage() }
       : null,
+    retry: () => void chats.refetch(),
   };
 }
 
 type ChatList = ReturnType<typeof useChatList>;
 
-/** The sentence standing in for the rows: none yet, none match, or a failed read. */
+/** The sentence standing in for the rows: none yet or none match (a failed read is `ChatListError`). */
 function chatListNotice(list: ChatList): string | null {
-  if (list.state === 'error') return "Couldn't load chats. Reload to try again.";
-  if (list.state === 'loading' || list.rows.length > 0) return null;
+  if (list.state === 'error' || list.state === 'loading' || list.rows.length > 0) return null;
   return list.state === 'filtered' ? 'No chats match this search.' : 'No chats yet.';
+}
+
+const LOAD_FAILED = "Couldn't load chats.";
+
+/** A failed read of the list, with Retry for that read. */
+function ChatListError({ onRetry }: Readonly<{ onRetry: () => void }>) {
+  return (
+    <HistoryFailed
+      message={LOAD_FAILED}
+      retry={
+        <Button variant="quiet" onClick={onRetry}>
+          <Icon icon={RefreshCw} />
+          Retry
+        </Button>
+      }
+    />
+  );
 }
 
 function ChatSearch({
@@ -117,6 +140,7 @@ export function ChatSection() {
       }
     >
       {notice ? <HistoryNotice>{notice}</HistoryNotice> : null}
+      {list.state === 'error' ? <ChatListError onRetry={list.retry} /> : null}
       {list.rows.length > 0 ? (
         <HistoryRows label="Chats">
           {list.rows.map((chat) => {
@@ -161,6 +185,23 @@ export function ChatsFlyout() {
         <RailFlyoutSlot>
           <HistoryNotice>{notice}</HistoryNotice>
         </RailFlyoutSlot>
+      ) : null}
+      {list.state === 'error' ? (
+        <>
+          <RailFlyoutSlot>
+            <HistoryNotice>{LOAD_FAILED}</HistoryNotice>
+          </RailFlyoutSlot>
+          <MenuItem
+            icon={<Icon icon={RefreshCw} />}
+            // Retrying keeps the flyout open for the list it loads.
+            onSelect={(event) => {
+              event.preventDefault();
+              list.retry();
+            }}
+          >
+            Retry
+          </MenuItem>
+        </>
       ) : null}
       {list.rows.map((chat) => {
         const href = `/agent/chats/${chat.id}`;

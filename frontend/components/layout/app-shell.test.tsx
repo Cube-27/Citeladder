@@ -87,6 +87,9 @@ describe('AppShell resizable sidebar', () => {
     expect(handle).toHaveAttribute('aria-valuenow', '232');
     expect(sidebarWidth()).toBe('232px');
 
+    await user.keyboard('{ArrowLeft}');
+    expect(handle).toHaveAttribute('aria-valuenow', '216');
+
     await user.keyboard('{End}');
     expect(handle).toHaveAttribute('aria-valuenow', '400');
     expect(handle).toHaveAttribute('aria-valuemax', '400');

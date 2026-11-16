@@ -1,4 +1,13 @@
-import { createContext, useContext, useEffect, useId, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import { MoreHorizontal } from 'lucide-react';
 
@@ -24,12 +33,44 @@ export const MastheadPrimarySlot = createContext<HTMLElement | null | undefined>
  * The page's one primary action, wherever the actions component renders it:
  * drawn in the masthead's primary slot after the secondary actions, so it
  * stays in view when they fold behind More. Outside a masthead it
- * renders in place.
+ * renders in place. While a page-level empty state offers the view's main
+ * action, the control keeps its place but takes the secondary face (globals.css).
  */
 export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>) {
   const slot = useContext(MastheadPrimarySlot);
+  const demoted = useContext(PageEmptyOffer)?.shown ?? false;
   if (slot === undefined) return children;
-  return slot ? createPortal(children, slot) : null;
+  const control = (
+    <span data-demoted={demoted ? '' : undefined} className="contents">
+      {children}
+    </span>
+  );
+  return slot ? createPortal(control, slot) : null;
+}
+
+/** The page-level empty states now offering the view's main action, and how one registers. */
+const PageEmptyOffer = createContext<Readonly<{
+  shown: boolean;
+  register: () => () => void;
+}> | null>(null);
+
+/**
+ * Counts the page-level empty states that offer an action (`StateBlock`),
+ * so the masthead's primary steps down while one shows: one primary per view.
+ */
+export function PageEmptyOfferProvider({ children }: Readonly<{ children: ReactNode }>) {
+  const [count, setCount] = useState(0);
+  const register = useCallback(() => {
+    setCount((current) => current + 1);
+    return () => setCount((current) => current - 1);
+  }, []);
+  const value = useMemo(() => ({ shown: count > 0, register }), [count, register]);
+  return <PageEmptyOffer.Provider value={value}>{children}</PageEmptyOffer.Provider>;
+}
+
+/** Registers a page-level empty state's offer until the returned release runs; null outside a page. */
+export function usePageEmptyOfferRegister() {
+  return useContext(PageEmptyOffer)?.register ?? null;
 }
 
 /** One row of More: a folded control it presses, or a folded menu it opens as a submenu. */
@@ -297,11 +338,20 @@ function useFoldStage(header: HTMLElement | null, steps: number, controls: numbe
   return stage;
 }
 
-/** How many px the row lacks: the title squeezed under its minimum, plus controls past the edge. */
+/** The room the title keeps before actions fold: 360px or 40% of the masthead, or its whole text if shorter. */
+const TITLE_RESERVE = 360;
+const TITLE_SHARE = 0.4;
+
+/** How many px the row lacks: the title squeezed under its reserve, plus controls past the edge. */
 function rowDeficit(header: HTMLElement): number {
   const title = header.querySelector<HTMLElement>('[data-masthead-title]');
+  const heading = title?.querySelector<HTMLElement>('h1');
   const end = header.querySelector<HTMLElement>('[data-masthead-end]');
-  const squeezed = title ? Math.max(0, title.scrollWidth - title.clientWidth) : 0;
+  const overflow = title ? Math.max(0, title.scrollWidth - title.clientWidth) : 0;
+  const reserve = heading
+    ? Math.min(TITLE_RESERVE, TITLE_SHARE * header.clientWidth, heading.scrollWidth)
+    : 0;
+  const squeezed = Math.max(overflow, reserve - (heading?.clientWidth ?? 0));
   const edge =
     header.getBoundingClientRect().right - Number.parseFloat(getComputedStyle(header).paddingRight);
   const past = end ? Math.max(0, end.getBoundingClientRect().right - edge) : 0;

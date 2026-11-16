@@ -5,6 +5,7 @@ import { PageTitleContext } from '@/components/layout/page-title-context';
 import { ShellContext } from '@/components/layout/shell-context';
 import { NavMenuButton } from '@/components/ui/app-shell';
 import { Masthead, MastheadBack } from '@/components/ui/masthead';
+import { PageEmptyOfferProvider } from '@/components/ui/masthead-actions';
 import { resolveTitle } from '@/lib/navigation/app-routes';
 import { cn } from '@/lib/utils';
 
@@ -34,7 +35,8 @@ export type PageFrameSlots = Readonly<{
 
 /**
  * The anatomy every shell page shares: the masthead, then the optional page
- * tabs and filter bar bands, then the body 24 below them. The masthead's
+ * tabs, the filter row 24 below them (or the masthead), then the body: 12
+ * under the filter row, else 24 under the tabs or masthead. The masthead's
  * menu button, search and "Ask agent" come from the shell; `end` replaces
  * "Ask agent" (the Agent's History button). Geometry is tokens only; a page
  * passes content into the slots and sets none of its own.
@@ -52,43 +54,51 @@ export function PageFrame({
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
-      <Masthead
-        title={resolved}
-        lead={
-          <>
-            {navDrawer ? (
-              <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} />
-            ) : null}
-            {back ? (
-              <MastheadBack href={back.href} label={back.label} projectId={back.projectId} />
-            ) : null}
-          </>
-        }
-        search={shell?.searchTrigger}
-        actions={actions}
-        end={end ?? shell?.agentTrigger}
-      />
-      {tabs ? (
+    <PageEmptyOfferProvider>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Masthead
+          title={resolved}
+          lead={
+            <>
+              {navDrawer ? (
+                <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} />
+              ) : null}
+              {back ? (
+                <MastheadBack href={back.href} label={back.label} projectId={back.projectId} />
+              ) : null}
+            </>
+          }
+          search={shell?.searchTrigger}
+          actions={actions}
+          end={end ?? shell?.agentTrigger}
+        />
+        {tabs ? (
+          <div
+            data-page-band="tabs"
+            className="flex min-h-[var(--page-tabs-height)] min-w-0 items-end overflow-x-auto"
+          >
+            {tabs}
+          </div>
+        ) : null}
+        {filters ? (
+          <div
+            data-page-band="filters"
+            className="flex min-w-0 items-center pt-[var(--page-top-gap)]"
+          >
+            {filters}
+          </div>
+        ) : null}
         <div
-          data-page-band="tabs"
-          className="flex min-h-[var(--page-tabs-height)] min-w-0 items-end overflow-x-auto"
+          data-page-body=""
+          className={cn(
+            'flex min-w-0 flex-1 flex-col',
+            filters ? 'pt-3' : 'pt-[var(--page-top-gap)]',
+          )}
         >
-          {tabs}
+          {children}
         </div>
-      ) : null}
-      {filters ? (
-        <div
-          data-page-band="filters"
-          className="flex min-h-[var(--filter-bar-height)] min-w-0 items-center"
-        >
-          {filters}
-        </div>
-      ) : null}
-      <div data-page-body="" className="flex min-w-0 flex-1 flex-col pt-[var(--page-top-gap)]">
-        {children}
       </div>
-    </div>
+    </PageEmptyOfferProvider>
   );
 }
 

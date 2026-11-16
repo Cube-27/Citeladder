@@ -118,9 +118,13 @@ const MASTHEAD_HEIGHT = 56;
  * 34 pitch): rows, not controls, and their labels never wrap.
  */
 const NAV_ROW_HEIGHT = 32;
-/** Masthead, page tabs and filter bar stack flush; the body starts 24 below them. */
+/**
+ * Masthead, page tabs and filter band stack flush; the filter row sits 24 into
+ * its band. The body starts 24 below the bands, or 12 below a filter row.
+ */
 const BAND_GAP = 0;
 const BODY_TOP_GAP = 24;
+const FILTERED_BODY_TOP_GAP = 12;
 /** The content band's cards stand 16 apart (a titled group adds its own 32). */
 const CONTENT_GAP = 16;
 /** Neighbouring slips sit on the grid, one grid gap apart. */
@@ -306,8 +310,16 @@ function measure({ route }: { route: string }) {
   bandGap('[data-masthead]', 'band.gap');
   bandGap('[data-page-band="tabs"]', 'band.gap');
   bandGap('[data-page-band="filters"]', 'band.gap');
-  for (const body of all('[data-page-body]'))
-    add('body.top-gap', body, px(getComputedStyle(body).paddingTop));
+  for (const body of all('[data-page-body]')) {
+    const filtered = body.previousElementSibling?.matches('[data-page-band="filters"]');
+    add(
+      filtered ? 'body.filtered-top-gap' : 'body.top-gap',
+      body,
+      px(getComputedStyle(body).paddingTop),
+    );
+  }
+  for (const band of all('[data-page-band="filters"]'))
+    add('filters.top-gap', band, px(getComputedStyle(band).paddingTop));
   // Content rhythm: the gap between consecutive cards of the content band (a
   // titled group sets its own 32 above it).
   for (const region of all('[data-page-content]')) {
@@ -710,6 +722,8 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'masthead.bottom', MASTHEAD_HEIGHT);
   expectOneValue(records, 'band.gap', BAND_GAP);
   expectOneValue(records, 'body.top-gap', BODY_TOP_GAP);
+  expectOneValue(records, 'filters.top-gap', BODY_TOP_GAP);
+  expectOneValue(records, 'body.filtered-top-gap', FILTERED_BODY_TOP_GAP);
   expectOneValue(records, 'content.gap', CONTENT_GAP);
   expectOneValue(records, 'section.rule', SECTION_RULE);
   expectOneValue(records, 'section.inset-top', SECTION_INSET_TOP);

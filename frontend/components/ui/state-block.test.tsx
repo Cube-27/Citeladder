@@ -1,11 +1,15 @@
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { ApiError } from '@/lib/api/errors';
 
+import { Button } from './button';
 import { Card } from './card';
+import { Masthead } from './masthead';
+import { MastheadPrimary, PageEmptyOfferProvider } from './masthead-actions';
 import { StateBlock, screenState } from './state-block';
 
 type Coverage = Readonly<{ crawled_pages: number | null }>;
@@ -106,6 +110,43 @@ describe('StateBlock empty states', () => {
     );
     expect(screen.getByRole('heading', { level: 2, name: 'No prompts yet' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Add prompt' })).toBeInTheDocument();
+  });
+
+  it('holds the view primary on the page, stepping the masthead primary down only while it shows', () => {
+    const view = (state: ReactNode) => (
+      <PageEmptyOfferProvider>
+        <Masthead
+          title="Prompts"
+          actions={
+            <MastheadPrimary>
+              <Button variant="primary">Run audit</Button>
+            </MastheadPrimary>
+          }
+        />
+        {state}
+      </PageEmptyOfferProvider>
+    );
+    const demoted = () =>
+      screen.getByRole('button', { name: 'Run audit' }).closest('[data-demoted]') !== null;
+    const offered = () =>
+      screen.getByRole('button', { name: 'Add prompts' }).closest('[data-state-offer]') !== null;
+    const empty = (
+      <StateBlock kind="empty" heading="No prompts yet" action={<Button>Add prompts</Button>} />
+    );
+
+    const { rerender } = render(view(empty));
+    expect([offered(), demoted()]).toEqual([true, true]);
+
+    // Inside a card the block is compact: its action stays secondary beside the masthead's primary.
+    rerender(view(<Card>{empty}</Card>));
+    expect([offered(), demoted()]).toEqual([false, false]);
+
+    rerender(view(empty));
+    expect(demoted()).toBe(true);
+    rerender(view(<StateBlock kind="loading" />));
+    expect(demoted()).toBe(false);
+    rerender(view(<StateBlock kind="empty" heading="No prompts yet" />));
+    expect(demoted()).toBe(false);
   });
 
   it("keeps the page's level inside a Card that renders no title of its own", () => {

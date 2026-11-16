@@ -295,6 +295,21 @@ describe('CommandPalette', () => {
     await waitFor(() => expect(document.activeElement).toBe(outside));
   });
 
+  it('returns focus to the search trigger when opened with nothing focused', async () => {
+    const user = userEvent.setup();
+    renderPalette(<Palette />);
+    expect(document.activeElement).toBe(document.body);
+
+    await user.keyboard('{Control>}k{/Control}');
+    await screen.findByRole('listbox');
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /search or jump to/i })).toHaveFocus(),
+    );
+  });
+
   it('gives the dialog an accessible name without a visible heading', async () => {
     await open();
     expect(screen.getByRole('dialog', { name: /command palette/i })).toBeInTheDocument();

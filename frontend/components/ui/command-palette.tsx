@@ -11,6 +11,7 @@ import {
   scopedNavigationDestination,
   useSelectProject,
 } from '@/lib/navigation/project-destination';
+import { PALETTE_LAUNCHER } from '@/components/ui/command-palette-launcher';
 import { returnTargetFor, SCRIM } from '@/components/ui/dialog';
 import { pluralCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -109,8 +110,10 @@ export function CommandPalette({
     const target = returnFocusTo.current;
     returnFocusTo.current = null;
     // The element may have unmounted while the palette was open (switching
-    // project re-renders the shell), or be folded behind More.
-    returnTargetFor(target)?.focus();
+    // project re-renders the shell), or be folded behind More. Opened from
+    // <body> or from a vanished element, focus goes to the masthead's search.
+    const opener = target === document.body ? null : returnTargetFor(target);
+    (opener ?? returnTargetFor(document.querySelector<HTMLElement>(PALETTE_LAUNCHER)))?.focus();
   }, []);
 
   // Opening resets the palette. Done in the handler, not an effect — the reset

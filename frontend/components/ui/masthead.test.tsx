@@ -15,6 +15,9 @@ function EmptyEnd() {
 }
 
 const TITLE = 'https://www.example.com/blog/how-to-choose-a-crm-for-a-small-agency';
+/** A 90-character record title. */
+const RECORD =
+  'Keyword research for small agency CRM buyers comparing pricing, onboarding and migrations';
 
 describe('Masthead', () => {
   it('lets a cut title take focus and shows the full title in its tooltip', async () => {
@@ -75,6 +78,32 @@ describe('Masthead', () => {
     rerender(<Masthead title="Website" actions={<Button>Export</Button>} end={<EmptyEnd />} />);
     expect(await screen.findByRole('button', { name: 'Export' })).toBeVisible();
     expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
+  });
+
+  it('folds the actions before the title keeps less than min(360px, 40%) of the masthead', async () => {
+    const user = userEvent.setup();
+    render(<Masthead title={RECORD} actions={<Button>Export</Button>} />);
+    const header = document.querySelector<HTMLElement>('[data-masthead]')!;
+    const heading = screen.getByRole('heading', { level: 1, name: RECORD });
+    Object.defineProperty(heading, 'scrollWidth', { configurable: true, value: 720 });
+    const fit = (masthead: number, title: number) => {
+      Object.defineProperty(header, 'clientWidth', { configurable: true, value: masthead });
+      Object.defineProperty(heading, 'clientWidth', { configurable: true, value: title });
+      act(() => emitResize(header));
+    };
+
+    // At 1366 the title keeps 400px, past its 360 reserve: Export stays in the row.
+    fit(1366, 400);
+    expect(screen.queryByRole('button', { name: 'More' })).toBeNull();
+
+    // At 982 Export would leave it 200 of its 360: Export folds behind More.
+    fit(982, 200);
+    const menu = await openMore(user, await screen.findByRole('button', { name: 'More' }));
+    expect(
+      within(menu)
+        .getAllByRole('menuitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Export']);
   });
 
   it('offers a folded menu as a submenu and, in a row too full, the primary first', async () => {

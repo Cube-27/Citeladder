@@ -19,6 +19,9 @@ function isMacPlatform() {
 
 type CommandPaletteLaunch = { trigger: HTMLElement };
 
+/** The masthead's search trigger: where focus returns when the palette was opened from nowhere. */
+export const PALETTE_LAUNCHER = '[data-palette-launcher]';
+
 export function CommandPaletteTrigger({
   className,
   onOpen,
@@ -41,6 +44,7 @@ export function CommandPaletteTrigger({
           );
         }
       }}
+      data-palette-launcher=""
       aria-label="Search or jump to"
       aria-keyshortcuts="Meta+K Control+K"
       className={cn('text-ink-2 text-left', MASTHEAD_LABELLED, className)}

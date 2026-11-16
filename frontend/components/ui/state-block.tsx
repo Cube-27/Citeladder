@@ -1,7 +1,8 @@
-import { createContext, useContext, type ReactNode } from 'react';
+import { createContext, useContext, useLayoutEffect, useRef, type ReactNode } from 'react';
 import { CircleDashed, Inbox, type LucideIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { usePageEmptyOfferRegister } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
 import { textRole } from '@/components/ui/typography';
@@ -29,7 +30,8 @@ type BlockEmpty = Readonly<{
   description?: string;
   /**
    * The main action, a Button with no variant of its own (the block draws it
-   * secondary), then at most one supporting `quiet` Button or `TextLink`.
+   * primary on the page, secondary inside a card), then at most one
+   * supporting `quiet` Button with an icon, or a `TextLink`.
    */
   action?: ReactNode;
   actionNote?: ActionNote;
@@ -62,7 +64,7 @@ type FilteredEmpty = Readonly<{
 type NotMeasuredCopy = Readonly<{
   /** One sentence: what measures this and when it appears. */
   description: string;
-  /** The main action, a Button with no variant of its own. */
+  /** The main action, a Button with no variant of its own (primary on the page, secondary inside a card). */
   action?: ReactNode;
 }>;
 
@@ -172,12 +174,23 @@ export function screenState<T, M extends T>(
  * shape of what loads; empty is one centred group (icon tile, headline,
  * sentence, actions); a failed read is a Notice that names what failed, with
  * one Retry. Callers choose the state, never the geometry or the button look.
+ *
+ * An empty or not-measured block on the page that offers an action holds the
+ * view's one primary: its main action takes the ink fill and the masthead's
+ * primary steps down while it shows (globals.css, `MastheadPrimary`).
  */
 export function StateBlock(props: StateBlockProps) {
   if (props.kind === 'empty' && props.inline) return <InlineEmptyView {...props} />;
+  return <FramedState {...props} />;
+}
+
+function FramedState(props: Exclude<StateBlockProps, InlineEmpty>) {
+  const ref = useRef<HTMLDivElement>(null);
+  usePageOffer(ref, (props.kind === 'empty' || props.kind === 'not_measured') && !!props.action);
   const framed = props.kind !== 'error' && !(props.kind === 'loading' && isFigures(props.shape));
   return (
     <div
+      ref={ref}
       data-state-block={props.kind}
       data-state-frame={framed ? '' : undefined}
       className="state-block min-w-0"
@@ -185,6 +198,28 @@ export function StateBlock(props: StateBlockProps) {
       <BlockBody {...props} />
     </div>
   );
+}
+
+/** The containers a StateBlock steps down inside (globals.css, `[data-state-frame]`). */
+const STATE_CONTAINERS =
+  ".surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'], [data-data-table]";
+
+/**
+ * Marks a block on the page that offers an action (`data-state-offer`, its
+ * button drawn primary) and registers it with the page while it is mounted.
+ */
+function usePageOffer(ref: Readonly<{ current: HTMLElement | null }>, offers: boolean) {
+  const register = usePageEmptyOfferRegister();
+  useLayoutEffect(() => {
+    const node = ref.current;
+    if (!offers || !node || node.closest(STATE_CONTAINERS)) return;
+    node.dataset.stateOffer = '';
+    const release = register?.();
+    return () => {
+      delete node.dataset.stateOffer;
+      release?.();
+    };
+  }, [ref, offers, register]);
 }
 
 /** Metric cards are their own frames, so a figures row draws no card around them. */
