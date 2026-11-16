@@ -380,8 +380,8 @@ describe('FilterBar and FilterTrigger', () => {
       );
     expect(follows).toEqual([true, true, true, true]);
   });
-  it('puts two or more filters behind All filters, counting the changed ones', () => {
-    const filter = (id: string, value: string) =>
+  it('draws each filter as its own trigger unless a search shares the row with more than four', () => {
+    const filter = (id: string, value = 'all') =>
       choiceFilter({
         id,
         label: id,
@@ -397,9 +397,19 @@ describe('FilterBar and FilterTrigger', () => {
         ],
         onChange: () => undefined,
       });
-    render(<FilterBar filters={[filter('Kind', 'one'), filter('Engine', 'all')]} />);
+    const search = <input type="search" aria-label="Search" />;
+    const four = [filter('Kind', 'one'), filter('Engine'), filter('Period'), filter('Market')];
+    const { rerender } = render(<FilterBar search={search} filters={four} />);
+    expect(screen.getByRole('button', { name: 'Kind: One' })).toHaveAttribute('data-active');
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+
+    rerender(<FilterBar search={search} filters={[...four, filter('Status')]} />);
     expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Kind: One' })).toBeNull();
+
+    rerender(<FilterBar filters={[...four, filter('Status')]} />);
+    expect(screen.getByRole('button', { name: 'Status: All' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
   });
   it('names a trigger by its visible value', () => {
     render(<FilterTrigger label="Surface" value="ChatGPT" hideLabel active />);

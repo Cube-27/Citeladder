@@ -69,7 +69,6 @@ export type FilterBarProps = Readonly<{
 export function FilterBar({ view, search, filters, status, actions }: FilterBarProps) {
   // A search takes every spare pixel of its line, so the count needs no push.
   const searched = Boolean(search);
-  const grouped = searched && (filters?.length ?? 0) > FILTERS_BESIDE_SEARCH;
   return (
     <fieldset
       data-filter-bar=""
@@ -80,18 +79,7 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
       {search ? (
         <div className="rail:flex-[1_1_200px] rail:min-w-[200px] min-w-0">{search}</div>
       ) : null}
-      {filters && grouped ? (
-        <div className="flex min-w-0 shrink-0">
-          <AllFilters filters={filters} />
-        </div>
-      ) : null}
-      {filters && !grouped
-        ? filters.map((filter) => (
-            <div key={filter.id} className="flex min-w-0 shrink-0">
-              <FilterMenu filter={filter} />
-            </div>
-          ))
-        : null}
+      {filters ? <RowFilters filters={filters} searched={searched} /> : null}
       {status === undefined ? null : (
         <output
           aria-live="polite"
@@ -120,6 +108,24 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
 
 /** Beside a search, the most filters the row shows as their own triggers. */
 const FILTERS_BESIDE_SEARCH = 4;
+
+/** The row's filters: each its own trigger, or All filters beside a search with more than four. */
+function RowFilters({
+  filters,
+  searched,
+}: Readonly<{ filters: readonly FilterDefinition[]; searched: boolean }>) {
+  if (searched && filters.length > FILTERS_BESIDE_SEARCH)
+    return (
+      <div className="flex min-w-0 shrink-0">
+        <AllFilters filters={filters} />
+      </div>
+    );
+  return filters.map((filter) => (
+    <div key={filter.id} className="flex min-w-0 shrink-0">
+      <FilterMenu filter={filter} />
+    </div>
+  ));
+}
 
 /**
  * FilterControls — filters outside a control row (a record header's): a lone
