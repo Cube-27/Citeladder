@@ -1,23 +1,26 @@
-import { useRef, useState, type Ref } from 'react';
-import { ChevronDown, ChevronUp, RefreshCw } from 'lucide-react';
+import { useId, useState, type ReactNode } from 'react';
+import { ChevronDown } from 'lucide-react';
 
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { askAgentPrompt, buildFixPrompt } from '@/components/site-health/issue-detail-dialog';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
-import { IssueMetadata } from '@/components/site-health/issue-metadata';
-import { AppGrid } from '@/components/ui/app-grid';
 import { Tag } from '@/components/ui/tag';
 import { Button } from '@/components/ui/button';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Inline, Stack } from '@/components/ui/layout';
-import { OpenRow } from '@/components/ui/list-row';
-import { Pager } from '@/components/ui/pager';
+import { Pressable } from '@/components/ui/pressable';
+import { StatusMark } from '@/components/ui/status-mark';
 import { textRole } from '@/components/ui/typography';
-import { insetClasses, ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { Icon } from '@/components/ui/icon';
 import type { PageIssue } from '@citeladder/contracts';
-import { scoreRoleLabels, severityRank } from '@/lib/site-health/issues';
+import {
+  dimensionLabel,
+  scoreRoleLabels,
+  severityLabel,
+  severityRank,
+} from '@/lib/site-health/issues';
 import { StateBlock } from '@/components/ui/state-block';
+import { cn } from '@/lib/utils';
 import {
   Section,
   SectionContent,
@@ -28,40 +31,30 @@ import {
 
 /** Issues the list shows before "View all". */
 const PREVIEW_COUNT = 5;
-/** Issue cards side by side in the details. */
-const CARDS_PER_VIEW = 2;
 
 /** Re-audits the page; omitted for a role that may not run one. */
 export type RerunControl = Readonly<{ onRerun: () => void; busy: boolean }>;
 
 /**
- * A page's findings, in the order a site owner works through them: every
- * issue on one numbered list, worst first, then the issues one or two at a
- * time with what to do about each, then the advisories apart. Choosing an
- * issue in the list brings its card into view.
+ * A page's findings, said once: every issue on one list, worst first, each
+ * row opening in place to its fix, its evidence and the ways to act on it;
+ * then the advisories apart. The masthead's "Re-audit this page" is the one
+ * re-audit action.
  */
 export function PageIssues({
   issues,
   audited,
   crawlId,
-  rerun,
 }: Readonly<{
   issues: readonly PageIssue[];
   /** No issues before the audit finishes means "not checked yet", not "clean". */
   audited: boolean;
   crawlId: string;
-  rerun?: RerunControl;
 }>) {
   const defects = issues
     .filter((issue) => issue.finding_class === 'defect')
     .sort((a, b) => severityRank(a.severity) - severityRank(b.severity));
   const advisories = issues.filter((issue) => issue.finding_class !== 'defect');
-  const [start, setStart] = useState(0);
-  const details = useRef<HTMLDivElement>(null);
-  const show = (index: number) => {
-    setStart(index - (index % CARDS_PER_VIEW));
-    details.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
-  };
   return (
     <>
       <Section>
@@ -80,49 +73,34 @@ export function PageIssues({
               }
             />
           ) : (
-            <IssueList issues={defects} onSelect={show} />
+            <IssueList issues={defects} crawlId={crawlId} />
           )}
         </SectionContent>
       </Section>
-      {defects.length > 0 ? (
-        <IssueDetails
-          ref={details}
-          issues={defects}
-          start={Math.min(start, defects.length - 1)}
-          onStart={setStart}
-          crawlId={crawlId}
-          rerun={rerun}
-        />
-      ) : null}
       {advisories.length > 0 ? <Advisories advisories={advisories} /> : null}
     </>
   );
 }
 
-/** The numbered list: the first few, then all of them on request. */
+/** The issue list: the first few, then all of them on request. */
 function IssueList({
   issues,
-  onSelect,
-}: Readonly<{ issues: readonly PageIssue[]; onSelect: (index: number) => void }>) {
+  crawlId,
+}: Readonly<{ issues: readonly PageIssue[]; crawlId: string }>) {
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? issues : issues.slice(0, PREVIEW_COUNT);
   return (
     <Stack gap="item">
-      <ol className={ledgerClasses()}>
-        {shown.map((issue, index) => (
-          <li key={issue.occurrence_id} className={ledgerItemClasses()}>
-            <OpenRow
-              number={index + 1}
-              title={issue.issue_title}
-              meta={<IssueMetadata issue={issue} />}
-              onOpen={() => onSelect(index)}
-            />
-          </li>
+      <IssueRows>
+        {shown.map((issue) => (
+          <IssueRow key={issue.occurrence_id} issue={issue}>
+            <IssueBody issue={issue} crawlId={crawlId} />
+          </IssueRow>
         ))}
-      </ol>
+      </IssueRows>
       {issues.length > PREVIEW_COUNT ? (
         <Button variant="quiet" className="w-fit" onClick={() => setExpanded(!expanded)}>
-          <Icon icon={expanded ? ChevronUp : ChevronDown} />
+          <Icon icon={ChevronDown} className={cn(expanded && 'rotate-180')} />
           {expanded ? 'Show fewer issues' : `View all ${issues.length} issues`}
         </Button>
       ) : null}
@@ -130,131 +108,108 @@ function IssueList({
   );
 }
 
-/** The issues as cards, two at a time, with their place in the list. */
-function IssueDetails({
-  ref,
-  issues,
-  start,
-  onStart,
-  crawlId,
-  rerun,
-}: Readonly<{
-  ref: Ref<HTMLDivElement>;
-  issues: readonly PageIssue[];
-  start: number;
-  onStart: (start: number) => void;
-  crawlId: string;
-  rerun?: RerunControl;
-}>) {
-  const shown = issues.slice(start, start + CARDS_PER_VIEW);
-  // One card headed "Issue details", its pager in the head; each issue is an
-  // inset inside it, so no card sits inside a card.
+/**
+ * The rows' one grid: on a wide card title, severity, category and chevron
+ * are columns every row shares (subgrid), so peers line up to the pixel; on a
+ * narrow one severity and category drop to a subline under the title.
+ */
+function IssueRows({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div ref={ref} className="min-w-0 scroll-mt-24">
-      <Section aria-labelledby="page-issue-details">
-        <SectionHeader
-          actions={
-            <Pager
-              hideWhenSinglePage
-              range={{
-                from: start + 1,
-                to: start + shown.length,
-                total: issues.length,
-                noun: 'issues',
-              }}
-              canPrev={start > 0}
-              canNext={start + CARDS_PER_VIEW < issues.length}
-              onPrev={() => onStart(Math.max(0, start - CARDS_PER_VIEW))}
-              onNext={() => onStart(start + CARDS_PER_VIEW)}
-            />
-          }
-        >
-          <SectionTitle id="page-issue-details">Issue details</SectionTitle>
-        </SectionHeader>
-        <SectionContent>
-          <AppGrid layout="pair">
-            {shown.map((issue, offset) => (
-              <IssueCard
-                key={issue.occurrence_id}
-                issue={issue}
-                position={start + offset + 1}
-                total={issues.length}
-                crawlId={crawlId}
-                rerun={rerun}
-              />
-            ))}
-          </AppGrid>
-        </SectionContent>
-      </Section>
+    <div className="@container min-w-0">
+      <ul className="divide-rule grid min-w-0 divide-y @[36rem]:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+        {children}
+      </ul>
     </div>
   );
 }
 
-/**
- * One issue on this page: how severe, what it is, how to fix it, what the
- * crawl saw, which scores it holds down, and the three ways to act on it.
- */
-function IssueCard({
-  issue,
-  position,
-  total,
-  crawlId,
-  rerun,
-}: Readonly<{
-  issue: PageIssue;
-  position: number;
-  total: number;
-  crawlId: string;
-  rerun?: RerunControl;
-}>) {
-  const head = { ...issue, title: issue.issue_title, affected_url_count: 1 };
-  const scores = scoreRoleLabels(issue.score_roles);
+const WIDE_CELL = '@[36rem]:row-start-1';
+
+/** One issue: a disclosure row (40 tall, 56 with its subline) that opens its body in place. */
+function IssueRow({ issue, children }: Readonly<{ issue: PageIssue; children: ReactNode }>) {
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
   return (
-    <section aria-label={issue.issue_title} className={insetClasses()}>
-      <Stack gap="compact">
-        <Inline className="flex-wrap justify-between">
-          <IssueMetadata issue={issue} />
-          <span className="type-caption tabular-nums">
-            {position}/{total}
-          </span>
-        </Inline>
-        <h3 className={textRole('subheading')}>{issue.issue_title}</h3>
-        {issue.remediation ? (
-          <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
-        ) : null}
-        <IssueEvidence occurrence={issue} />
-        {scores.length > 0 ? (
-          <Inline as="p" className="flex-wrap">
-            <span className="type-caption">Counts toward</span>
-            {scores.map((score) => (
-              <Tag key={score}>{score}</Tag>
-            ))}
-          </Inline>
-        ) : null}
-        <Inline className="flex-wrap">
-          <AskAgentLink
-            handoff={{
-              issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: issue.site_url_id },
-              prompt: askAgentPrompt(head, issue.display_url),
-              skillId: 'technical_health',
-            }}
-          />
-          <CopyButton value={buildFixPrompt(head)} variant="secondary" className="w-fit">
-            Copy fix prompt
-          </CopyButton>
-          {rerun ? (
-            <Button variant="quiet" onClick={rerun.onRerun} disabled={rerun.busy}>
-              <Icon icon={RefreshCw} />
-              Re-audit to verify
-            </Button>
+    <li className="grid min-w-0 @[36rem]:col-span-full @[36rem]:grid-cols-subgrid">
+      <Pressable
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => setOpen(!open)}
+        className="focus-ring rounded-control hover:overlay-hover active:overlay-pressed grid min-h-14 min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-2 text-start @[36rem]:col-span-full @[36rem]:min-h-10 @[36rem]:grid-cols-subgrid"
+      >
+        <span className={textRole('label', `text-ink col-start-1 min-w-0 truncate ${WIDE_CELL}`)}>
+          {issue.issue_title}
+        </span>
+        <span className="col-start-1 row-start-2 flex min-w-0 items-center gap-3 @[36rem]:contents">
+          {issue.finding_class === 'defect' ? (
+            <span className={`@[36rem]:col-start-2 ${WIDE_CELL}`}>
+              <StatusMark variant="severity" value={issue.severity}>
+                {severityLabel(issue.severity)}
+              </StatusMark>
+            </span>
           ) : null}
-        </Inline>
-      </Stack>
-    </section>
+          <span className={textRole('caption', `text-ink-2 @[36rem]:col-start-3 ${WIDE_CELL}`)}>
+            {dimensionLabel(issue.dimension)}
+          </span>
+        </span>
+        <Icon
+          icon={ChevronDown}
+          className={cn(
+            'text-ink-2 col-start-2 row-span-2 row-start-1 transition-transform @[36rem]:col-start-4 @[36rem]:row-span-1',
+            open && 'rotate-180',
+          )}
+        />
+      </Pressable>
+      <div
+        id={panelId}
+        hidden={!open}
+        className="bg-well rounded-control mb-3 grid min-w-0 gap-3 px-4 py-3 @[36rem]:col-span-full"
+      >
+        {open ? children : null}
+      </div>
+    </li>
   );
 }
 
-/** Recommendations, labelled as the catalog labels them, never with a severity. */
+/** What the row does not say: the fix, the evidence, the scores it holds down and the actions. */
+function IssueBody({ issue, crawlId }: Readonly<{ issue: PageIssue; crawlId: string }>) {
+  const head = { ...issue, title: issue.issue_title, affected_url_count: 1 };
+  const scores = scoreRoleLabels(issue.score_roles);
+  return (
+    <>
+      <Remediation issue={issue} />
+      <IssueEvidence occurrence={issue} />
+      {scores.length > 0 ? (
+        <Inline as="p" className="flex-wrap">
+          <span className="type-caption">Counts toward</span>
+          {scores.map((score) => (
+            <Tag key={score}>{score}</Tag>
+          ))}
+        </Inline>
+      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <AskAgentLink
+          handoff={{
+            issueGroup: { crawlId, groupId: issue.group_id, siteUrlId: issue.site_url_id },
+            prompt: askAgentPrompt(head, issue.display_url),
+            skillId: 'technical_health',
+          }}
+        />
+        <CopyButton value={buildFixPrompt(head)} variant="secondary" className="w-fit">
+          Copy fix prompt
+        </CopyButton>
+      </div>
+    </>
+  );
+}
+
+function Remediation({ issue }: Readonly<{ issue: PageIssue }>) {
+  return issue.remediation ? (
+    <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
+  ) : null;
+}
+
+/** Recommendations: the section head says they are advisories, so the rows never repeat it. */
 function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] }>) {
   return (
     <Section>
@@ -263,22 +218,14 @@ function Advisories({ advisories }: Readonly<{ advisories: readonly PageIssue[] 
         <SectionDescription>Recommendations to consider.</SectionDescription>
       </SectionHeader>
       <SectionContent>
-        <Stack gap="item">
-          <ol className={ledgerClasses()}>
-            {advisories.map((issue) => (
-              <Stack as="li" gap="tight" key={issue.occurrence_id} className={ledgerItemClasses()}>
-                <Inline className="flex-wrap items-start justify-between">
-                  <span className={textRole('body', 'min-w-0')}>{issue.issue_title}</span>
-                  <Tag>Advisory</Tag>
-                </Inline>
-                <IssueEvidence occurrence={issue} />
-                {issue.remediation ? (
-                  <p className="type-body text-ink whitespace-pre-line">{issue.remediation}</p>
-                ) : null}
-              </Stack>
-            ))}
-          </ol>
-        </Stack>
+        <IssueRows>
+          {advisories.map((issue) => (
+            <IssueRow key={issue.occurrence_id} issue={issue}>
+              <Remediation issue={issue} />
+              <IssueEvidence occurrence={issue} />
+            </IssueRow>
+          ))}
+        </IssueRows>
       </SectionContent>
     </Section>
   );
