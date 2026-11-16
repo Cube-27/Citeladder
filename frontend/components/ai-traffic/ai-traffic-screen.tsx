@@ -73,7 +73,7 @@ export function AiTrafficScreen() {
         }}
       >
         <ReportPage tabs={<TabRow {...tabs} />}>
-          <StateBlock kind="loading" label="Loading AI Traffic…" />
+          <StateBlock kind="loading" label="Loading AI Traffic…" shape={{ kind: 'figures' }} />
         </ReportPage>
       </TabsRoot>
     );
@@ -133,7 +133,7 @@ function TrafficDataView({
       <ReportPage {...frame}>
         <Stack gap="workspace" className="min-w-0">
           <StateBlock kind="loading" label="Loading AI Traffic…" shape={{ kind: 'figures' }} />
-          <StateBlock kind="loading" label="Loading AI Traffic…" />
+          <StateBlock kind="loading" label="Loading AI Traffic…" shape={{ kind: 'chart' }} />
         </Stack>
       </ReportPage>
     );

@@ -338,7 +338,7 @@ export function PromptLibrary({
   if (awaitingFirstLoad({ promptsLoading: isLoading, hasPrompts, figuresRead })) {
     return (
       <ReportPage filters={<FilterBar />}>
-        <StateBlock kind="loading" label="Loading prompts…" />
+        <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 7 }} />
       </ReportPage>
     );
   }

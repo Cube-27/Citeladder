@@ -14,6 +14,7 @@ import { newProjectDestination } from '@/lib/navigation/project-destination';
 
 import { ProjectEditPanel } from './project-edit-panel';
 import { DashboardScreen } from './dashboard-screen';
+import { OverviewLoading } from './overview-loading';
 import { StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -55,7 +56,7 @@ export function ProjectsScreen() {
   if (projects.length === 0 && !projectsSettled) {
     return (
       <ReportPage>
-        <StateBlock kind="loading" label="Loading your projects…" />
+        <OverviewLoading />
       </ReportPage>
     );
   }

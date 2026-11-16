@@ -59,15 +59,19 @@ type NavEntry = {
 type Screen = () => Promise<{ default: ComponentType }>;
 
 /**
- * What a shell route draws before its page can (RouteLoadingScreen): its real
- * tab labels, a held filter row, then its first screen's shapes in order, so
- * nothing moves when the page arrives.
+ * What a shell route draws before its page can (RouteLoadingScreen), so
+ * nothing moves when the page arrives: `cards` is its real tab labels, a held
+ * filter row, then its first screen's shapes in order; `overview`, `thread`
+ * and `new-chat` are those screens' own loading layouts.
  */
-export type RouteLoading = Readonly<{
-  tabs?: readonly string[];
-  filters?: boolean;
-  shapes: readonly LoadingShape[];
-}>;
+export type RouteLoading =
+  | Readonly<{
+      kind: 'cards';
+      tabs?: readonly string[];
+      filters?: boolean;
+      shapes: readonly LoadingShape[];
+    }>
+  | Readonly<{ kind: 'overview' | 'thread' | 'new-chat' }>;
 
 export type AppRouteRecord = {
   /** A React Router pattern; `:name` segments match one path segment. */
@@ -86,7 +90,7 @@ export type AppRouteRecord = {
   /** The URL carries a single-use bearer credential (an email or invitation link). */
   credentialInUrl?: true;
   nav?: readonly NavEntry[];
-  /** A shell route's loading frame; without one it draws two cards. */
+  /** A shell route's loading frame; without one it draws a record's. */
   loading?: RouteLoading;
 };
 
@@ -178,11 +182,24 @@ const screens = {
 
 const credential = { credentialInUrl: true } as const;
 
-const card = { kind: 'card' } satisfies LoadingShape;
 const chart = { kind: 'chart' } satisfies LoadingShape;
-const table = (columns: number): LoadingShape => ({ kind: 'table', columns });
+const table = (columns: number, desktopOnly?: number): LoadingShape => ({
+  kind: 'table',
+  columns,
+  desktopOnly,
+});
 const figures = (count?: number): LoadingShape => ({ kind: 'figures', count });
-const RECORD_LOADING: RouteLoading = { shapes: [card, card] };
+const facts = (rows: number, tagRows?: readonly number[]): LoadingShape => ({
+  kind: 'facts',
+  rows,
+  tagRows,
+});
+const cards = (
+  shapes: readonly LoadingShape[],
+  frame: Readonly<{ tabs?: readonly string[]; filters?: boolean }> = {},
+): RouteLoading => ({ kind: 'cards', shapes, ...frame });
+/** A record: its identity card. */
+const RECORD_LOADING = cards([facts(3)]);
 
 export const APP_ROUTES = [
   // Public: no session.
@@ -202,17 +219,16 @@ export const APP_ROUTES = [
     path: '/projects',
     title: 'Overview',
     screen: screens.projects,
-    loading: { shapes: [figures(3), card] },
+    loading: { kind: 'overview' },
     nav: [listed('Overview', 'overview', 'overview')],
   }),
   page({
     path: '/site',
     title: 'Website',
     screen: screens.site,
-    loading: {
+    loading: cards([figures(), table(6)], {
       tabs: ['Overview', 'Pages', 'Architecture', 'AEO readiness', 'Internal links', 'Changes'],
-      shapes: [figures(), table(6)],
-    },
+    }),
     nav: [listed('Website', 'site', 'analyze')],
   }),
   page({
@@ -220,13 +236,14 @@ export const APP_ROUTES = [
     title: 'Page detail',
     collection: '/site',
     screen: screens.pageDetail,
-    loading: RECORD_LOADING,
+    // URL, Kind (a tag) and Audited, then the page's scores.
+    loading: cards([facts(3, [1]), figures(3)]),
   }),
   page({
     path: '/issues',
     title: 'Issues',
     screen: screens.issues,
-    loading: { filters: true, shapes: [table(4)] },
+    loading: cards([table(4)], { filters: true }),
     nav: [listed('Issues', 'issues', 'analyze')],
   }),
   page({
@@ -234,24 +251,23 @@ export const APP_ROUTES = [
     title: 'Performance',
     screen: screens.performance,
     // No tab row: its range toolbar is the filter row.
-    loading: { filters: true, shapes: [figures(4), chart] },
+    loading: cards([figures(4), chart], { filters: true }),
     nav: [listed('Performance', 'performance', 'analyze')],
   }),
   page({
     path: '/demand',
     title: 'Search Demand',
     screen: screens.demand,
-    loading: { filters: true, shapes: [table(8)] },
+    loading: cards([table(8)], { filters: true }),
     nav: [listed('Search Demand', 'demand', 'analyze')],
   }),
   page({
     path: '/search-intelligence',
     title: 'Keyword Research',
     screen: screens.keywords,
-    loading: {
+    loading: cards([figures(5), table(6)], {
       tabs: ['Overview', 'Keywords', 'Competitors', 'Backlinks'],
-      shapes: [figures(5), table(6)],
-    },
+    }),
     nav: [listed('Keyword Research', 'searchIntelligence', 'analyze')],
   }),
   // Commerce: Shopping, then the Products table. Shopping is declared before
@@ -260,14 +276,14 @@ export const APP_ROUTES = [
     path: '/products/overview',
     title: 'Shopping',
     screen: screens.shoppingOverview,
-    loading: { shapes: [figures(4), table(4)] },
+    loading: cards([figures(4), table(4)]),
     nav: [listed('Shopping', 'reports', 'commerce')],
   }),
   page({
     path: '/products',
     title: 'Products',
     screen: screens.products,
-    loading: { filters: true, shapes: [table(4)] },
+    loading: cards([table(4)], { filters: true }),
     nav: [listed('Products', 'products', 'commerce')],
   }),
   page({
@@ -275,13 +291,15 @@ export const APP_ROUTES = [
     title: 'Product',
     collection: '/products',
     screen: screens.product,
-    loading: RECORD_LOADING,
+    // The product's identity, then its six KPIs.
+    loading: cards([facts(3), figures(6)]),
   }),
   page({
     path: '/agent/actions',
     title: 'Actions',
     screen: screens.actions,
-    loading: { filters: true, shapes: [table(5)] },
+    // Action and Priority; Priority is desktop-only.
+    loading: cards([table(2, 1)], { filters: true }),
     // Listed in both modes; it is an Agent route, so opening it switches to Agent mode.
     nav: [
       {
@@ -297,13 +315,14 @@ export const APP_ROUTES = [
     title: 'Action',
     collection: '/agent/actions',
     screen: screens.action,
-    loading: RECORD_LOADING,
+    // Status and Priority (tags), Target, Source.
+    loading: cards([facts(4, [0, 1])]),
   }),
   page({
     path: '/agent',
     title: 'Agent',
     screen: screens.newChat,
-    loading: { shapes: [card] },
+    loading: { kind: 'new-chat' },
     // Agent mode draws it as its "New chat" button, first in the list.
     nav: [{ label: 'New chat', icon: 'newChat', placements: ['sidebar:agent'] }],
   }),
@@ -312,20 +331,21 @@ export const APP_ROUTES = [
     title: 'Chat',
     collection: '/agent',
     screen: screens.chat,
-    loading: { shapes: [{ kind: 'thread' }] },
+    loading: { kind: 'thread' },
   }),
   page({
     path: '/agent/skills',
     title: 'Skills',
     screen: screens.skills,
-    loading: { shapes: [table(4)] },
+    loading: cards([table(4)]),
     nav: [listed('Skills', 'skills', 'agent')],
   }),
   page({
     path: '/agent/context',
     title: 'Context',
     screen: screens.context,
-    loading: {
+    // The Company facts form's five fields.
+    loading: cards([facts(5)], {
       tabs: [
         'Company',
         'Audience & Offerings',
@@ -333,15 +353,14 @@ export const APP_ROUTES = [
         'Competitors',
         'Agent instructions',
       ],
-      shapes: [card],
-    },
+    }),
     nav: [listed('Context', 'context', 'agent')],
   }),
   page({
     path: '/prompts',
     title: 'Prompts',
     screen: screens.prompts,
-    loading: { filters: true, shapes: [table(8)] },
+    loading: cards([table(8)], { filters: true }),
     nav: [listed('Prompts', 'prompts', 'track')],
   }),
   page({
@@ -349,24 +368,25 @@ export const APP_ROUTES = [
     title: 'Prompt',
     collection: '/prompts',
     screen: screens.prompt,
-    loading: RECORD_LOADING,
+    // Titled by the prompt itself: no identity card, its visibility figures first.
+    loading: cards([figures(2), chart]),
   }),
   page({
     path: '/visibility',
     title: 'AI Visibility',
     screen: screens.visibility,
-    loading: {
+    // Accuracy, shown only to the fact-checking pilot, is last and arrives after.
+    loading: cards([figures(), chart], {
       tabs: ['Trends', 'Sources', 'Perception', 'Ads', 'Query fanouts'],
       filters: true,
-      shapes: [figures(), chart],
-    },
+    }),
     nav: [listed('AI Visibility', 'visibility', 'track')],
   }),
   page({
     path: '/runs',
     title: 'Runs',
     screen: screens.runs,
-    loading: { shapes: [table(5)] },
+    loading: cards([table(5)]),
     nav: [listed('Runs', 'runs', 'track')],
   }),
   page({
@@ -374,16 +394,15 @@ export const APP_ROUTES = [
     title: 'Run',
     collection: '/runs',
     screen: screens.run,
-    loading: { shapes: [card, table(7)] },
+    loading: cards([facts(3), table(7)]),
   }),
   page({
     path: '/ai-traffic',
     title: 'AI Traffic',
     screen: screens.aiTraffic,
-    loading: {
+    loading: cards([figures(3), chart], {
       tabs: ['Overview', 'Crawlers', 'Referrals', 'Pages', 'Activity'],
-      shapes: [figures(3), chart],
-    },
+    }),
     nav: [listed('AI Traffic', 'aiTraffic', 'track')],
   }),
 
@@ -393,10 +412,10 @@ export const APP_ROUTES = [
     title: 'Settings',
     scope: 'workspace',
     screen: screens.settings,
-    loading: {
+    // Account's Profile card: the identity row, then two facts.
+    loading: cards([facts(3)], {
       tabs: ['Account', 'Workspace', 'Providers', 'Integrations', 'MCP connections', 'API keys'],
-      shapes: [card, card],
-    },
+    }),
     nav: [
       {
         label: 'Integrations',
@@ -426,7 +445,8 @@ export const APP_ROUTES = [
     title: 'Billing',
     scope: 'workspace',
     screen: screens.billing,
-    loading: { shapes: [card, table(5)] },
+    // The current plan (its access tag), then usage.
+    loading: cards([facts(3, [1]), table(5)]),
     nav: [{ label: 'Billing', icon: 'billing', placements: ['account'] }],
   }),
   page({
@@ -487,7 +507,7 @@ export function resolveTitle(pathname: string): string {
   return sectionRoute(pathname)?.title ?? FALLBACK_TITLE;
 }
 
-/** The loading frame for a pathname: its section's, else two cards. */
+/** The loading frame for a pathname: its section's, else a record's. */
 export function routeLoading(pathname: string): RouteLoading {
   return sectionRoute(pathname)?.loading ?? RECORD_LOADING;
 }

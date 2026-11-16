@@ -79,7 +79,7 @@ export type StateBlockProps =
       kind: 'loading';
       /** What is loading, announced to assistive technology. */
       label?: string;
-      /** The shape of the page part that loads; a card body by default. */
+      /** The shape of the page part that loads; give one wherever the block draws (a table draws its own rows). */
       shape?: LoadingShape;
     }>
   | Readonly<{
@@ -117,6 +117,8 @@ export const READ_FAILED = 'The request failed or timed out.';
 type Subject = Readonly<{
   /** What the read loads, in a sentence: "the business map" → "Couldn't load the business map". */
   subject: string;
+  /** The loading shape of what the read fills. */
+  shape: LoadingShape;
 }>;
 
 type MeasuredOptions<T, M extends T> = Subject &
@@ -146,7 +148,10 @@ export function screenState<T, M extends T>(
   options: Subject | MeasuredOptions<T, M>,
 ): ScreenState<T> {
   if (read.status === 'pending') {
-    return { kind: 'state', state: { kind: 'loading', label: `Loading ${options.subject}…` } };
+    return {
+      kind: 'state',
+      state: { kind: 'loading', label: `Loading ${options.subject}…`, shape: options.shape },
+    };
   }
   if (read.status === 'error') {
     return {
@@ -262,7 +267,7 @@ function BlockBody(props: Exclude<StateBlockProps, InlineEmpty>) {
   const containerLevel = useContext(StateHeadingLevelContext);
   switch (props.kind) {
     case 'loading': {
-      const shape = props.shape ?? { kind: 'card' };
+      const shape = props.shape ?? { kind: 'list' };
       return (
         <SkeletonFrame label={props.label ?? 'Loading…'} variant={shape.kind}>
           <ShapeBlocks shape={shape} />

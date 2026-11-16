@@ -160,7 +160,7 @@ export function CostDetails({
         onRetry={onRetry}
       />
     );
-  if (pending) content = <Skeleton variant="block" />;
+  if (pending) content = <Skeleton variant="list" />;
   return (
     <Drawer
       open={open}

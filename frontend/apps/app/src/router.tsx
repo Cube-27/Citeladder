@@ -30,7 +30,15 @@ function manifestRoute(route: AppRouteRecord): RouteObject {
       return null;
     },
     element: (
-      <Suspense fallback={route.shell ? <RouteLoadingScreen /> : <StateBlock kind="loading" />}>
+      <Suspense
+        fallback={
+          route.shell ? (
+            <RouteLoadingScreen />
+          ) : (
+            <StateBlock kind="loading" shape={{ kind: 'facts', rows: 2 }} />
+          )
+        }
+      >
         <Screen />
       </Suspense>
     ),

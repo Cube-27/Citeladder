@@ -161,7 +161,14 @@ export function BuilderBusinessStep({
 }>) {
   const listMax = limits.context_list_max_entries;
   const { draft, profile, map } = business;
-  if (business.loading) return <StateBlock kind="loading" label="Loading your business details" />;
+  if (business.loading)
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading your business details"
+        shape={{ kind: 'facts', rows: 5 }}
+      />
+    );
   if (business.loadError || !draft || !profile || !map)
     return (
       <StateBlock

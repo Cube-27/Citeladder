@@ -55,7 +55,8 @@ function MissingBody({
         fallback="Prompt results could not be loaded."
       />
     );
-  if (query.isPending) return <StateBlock kind="loading" label="Loading prompt results" />;
+  if (query.isPending)
+    return <StateBlock kind="loading" label="Loading prompt results" shape={{ kind: 'list' }} />;
   if (query.data.length === 0)
     return <StateBlock kind="empty" inline message="No measured run yet." />;
   if (rows.length === 0)

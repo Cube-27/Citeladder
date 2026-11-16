@@ -42,7 +42,13 @@ function SignInMethods({
 }: Readonly<{ security: UseQueryResult<Awaited<ReturnType<typeof authApi.security>>> }>) {
   return (
     <>
-      {security.isPending && <StateBlock kind="loading" label="Loading sign-in methods…" />}
+      {security.isPending && (
+        <StateBlock
+          kind="loading"
+          label="Loading sign-in methods…"
+          shape={{ kind: 'facts', rows: 2 }}
+        />
+      )}
       {security.isError && (
         <Notice
           kind="read"

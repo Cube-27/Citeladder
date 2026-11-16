@@ -1,6 +1,55 @@
 import type { ReactNode, RefObject } from 'react';
 
+import {
+  ComposerBlocks,
+  ShapeBlocks,
+  SkeletonBlock,
+  SkeletonFrame,
+} from '@/components/ui/skeleton-block';
+
 import { PageFrame, type PageFrameSlots } from './page-frame';
+
+/**
+ * A chat as it loads, in the loaded chat's frame: the thread column with the
+ * person's turn and the reply's paragraphs, then the docked composer's card
+ * (ComposerDock's 8 above and 16 below).
+ */
+export function ThreadPageLoading({ label = 'Loading the chat…' }: Readonly<{ label?: string }>) {
+  return (
+    <ThreadPage
+      composer={
+        <div className="shrink-0 pt-2 pb-4">
+          <ComposerBlocks />
+        </div>
+      }
+    >
+      <SkeletonFrame label={label} variant="thread">
+        <ShapeBlocks shape={{ kind: 'thread' }} />
+      </SkeletonFrame>
+    </ThreadPage>
+  );
+}
+
+/**
+ * The new chat as it loads: the greeting's block (20×240) over the
+ * composer's card, in the thread column.
+ */
+export function NewChatLoading() {
+  return (
+    <ThreadPage>
+      <SkeletonFrame
+        label="Loading the Agent…"
+        variant="new-chat"
+        className="flex flex-col gap-[var(--page-section-gap)]"
+      >
+        <span className="flex h-7 items-center">
+          <SkeletonBlock className="h-5 w-60 max-w-full" />
+        </span>
+        <ComposerBlocks />
+      </SkeletonFrame>
+    </ThreadPage>
+  );
+}
 
 /**
  * Thread: the masthead, then the thread across the main column up to

@@ -74,7 +74,7 @@ function SectionBody({
   children: ReactNode | null;
 }>) {
   if (errored) return null;
-  if (loading) return <Skeleton variant="block" />;
+  if (loading) return <Skeleton variant="list" />;
   if (children) return <>{children}</>;
   return <StateBlock kind="empty" inline message={empty} />;
 }

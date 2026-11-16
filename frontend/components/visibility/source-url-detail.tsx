@@ -83,7 +83,7 @@ export function SourceUrlDetail({
               fallback="The request failed or timed out."
             />
           ) : null}
-          {pending ? <Skeleton variant="block" /> : null}
+          {pending ? <Skeleton variant="facts" /> : null}
           {data ? <Overview data={data} /> : null}
         </SectionContent>
       </Section>

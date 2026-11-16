@@ -49,6 +49,10 @@ import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionHeader, SectionStack, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
+import type { LoadingShape } from '@/components/ui/skeleton-block';
+
+/** The product's identity card as it loads: its caption, description and URL. */
+const PRODUCT_IDENTITY = { kind: 'facts', rows: 3 } satisfies LoadingShape;
 
 /** The KPIs, in the plan's order; merchants have their own section below. */
 const KPIS = [
@@ -90,7 +94,7 @@ export function ProductDetailScreen() {
   if (!catalog.data)
     return (
       <RecordPage back={back}>
-        <StateBlock kind="loading" label="Loading product" />
+        <StateBlock kind="loading" label="Loading product" shape={PRODUCT_IDENTITY} />
       </RecordPage>
     );
   const category = catalog.data.categories.find((row) => row.id === targetId);
@@ -184,7 +188,7 @@ function HolderDetail({
   if (!detail.data)
     return (
       <RecordPage back={back}>
-        <StateBlock kind="loading" label="Loading product" />
+        <StateBlock kind="loading" label="Loading product" shape={PRODUCT_IDENTITY} />
       </RecordPage>
     );
   const data = detail.data;

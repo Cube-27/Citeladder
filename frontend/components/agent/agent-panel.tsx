@@ -183,7 +183,7 @@ function PanelChat({
   if (!query.data)
     return (
       <DockedThread>
-        <StateBlock kind="loading" label="Loading chat…" />
+        <StateBlock kind="loading" label="Loading chat…" shape={{ kind: 'thread' }} />
       </DockedThread>
     );
   if (query.data.chat.project_id !== projectId)

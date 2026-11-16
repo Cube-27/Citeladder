@@ -51,7 +51,8 @@ function AiReferralsDataRegion({
   range,
   query,
 }: Omit<React.ComponentProps<typeof AiReferralsContent>, 'controls' | 'notice' | 'tabs'>) {
-  if (query.isLoading) return <StateBlock kind="loading" label="Loading AI referrals…" />;
+  if (query.isLoading)
+    return <StateBlock kind="loading" label="Loading AI referrals…" shape={{ kind: 'chart' }} />;
   if (query.isError) {
     return (
       <StateBlock

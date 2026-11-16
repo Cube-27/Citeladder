@@ -326,7 +326,10 @@ function ApiKeysBody({
   projectNames: ReadonlyMap<string, string>;
   onRevoke: (key: ApiKey) => void;
 }>) {
-  if (query.isPending) return <StateBlock kind="loading" label="Loading API keys…" />;
+  if (query.isPending)
+    return (
+      <StateBlock kind="loading" label="Loading API keys…" shape={{ kind: 'table', columns: 6 }} />
+    );
   if (query.isError)
     return (
       <StateBlock

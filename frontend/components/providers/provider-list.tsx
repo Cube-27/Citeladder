@@ -49,7 +49,7 @@ export function ProviderList({
     );
   }
   if (catalogQuery.isLoading || connectionsQuery.isLoading) {
-    return <StateBlock kind="loading" label="Loading providers…" />;
+    return <StateBlock kind="loading" label="Loading providers…" shape={{ kind: 'list' }} />;
   }
 
   const groups = buildProviderGroups(

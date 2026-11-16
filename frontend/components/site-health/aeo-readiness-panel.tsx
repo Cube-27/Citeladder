@@ -136,7 +136,13 @@ export function AeoReadinessPanel({
   const [detailKey, setDetailKey] = useState<string | null>(null);
 
   if (readiness.isLoading) {
-    return <StateBlock kind="loading" label="Loading AEO readiness" />;
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading AEO readiness"
+        shape={{ kind: 'table', columns: 4 }}
+      />
+    );
   }
   if (readiness.isError)
     return (

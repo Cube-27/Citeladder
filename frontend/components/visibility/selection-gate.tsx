@@ -50,6 +50,7 @@ export function SelectionGate({
   }
   const state = screenState(query, {
     subject: 'the selected measurement',
+    shape: { kind: 'figures' },
     measured: isMeasured,
     notMeasured: {
       description: 'Results appear here once a run in this selection finishes measuring.',
@@ -91,7 +92,7 @@ export function AnalysisRead<T>({
   if (ready === undefined)
     return (
       <Stack gap="workspace" aria-busy>
-        <Skeleton variant="block" />
+        <Skeleton variant="list" />
         <Skeleton variant="chart" />
       </Stack>
     );

@@ -53,7 +53,7 @@ export function WorkspaceChooser() {
   if (workspaces.length === 0 || only)
     return (
       <ChooserFrame>
-        <StateBlock kind="loading" label="Loading your workspaces…" />
+        <StateBlock kind="loading" label="Loading your workspaces…" shape={{ kind: 'list' }} />
       </ChooserFrame>
     );
 

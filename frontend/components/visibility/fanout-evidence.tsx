@@ -197,7 +197,10 @@ export function FanoutEvidence({
 
   // Pending, not merely loading: a read still waiting on its scope fetches
   // nothing and has no items, which is not "no searches recorded".
-  if (query.isPending) return <StateBlock kind="loading" label="Loading evidence…" />;
+  if (query.isPending)
+    return (
+      <StateBlock kind="loading" label="Loading evidence…" shape={{ kind: 'table', columns: 3 }} />
+    );
   if (query.isError)
     return (
       <StateBlock

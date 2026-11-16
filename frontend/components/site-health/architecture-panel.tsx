@@ -76,7 +76,13 @@ export function ArchitecturePanel({
   );
 
   if (architecture.isLoading) {
-    return <StateBlock kind="loading" label="Loading the observed architecture" />;
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading the observed architecture"
+        shape={{ kind: 'figures', count: 3 }}
+      />
+    );
   }
   if (architecture.isError)
     return (

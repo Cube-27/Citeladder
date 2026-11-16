@@ -112,7 +112,8 @@ function DiscoveryState({
   properties: readonly IntegrationProperty[] | undefined;
   noun: string;
 }>) {
-  if (pending) return <StateBlock kind="loading" label={`Loading ${noun}s…`} />;
+  if (pending)
+    return <StateBlock kind="loading" label={`Loading ${noun}s…`} shape={{ kind: 'list' }} />;
   if (error)
     return (
       <Notice

@@ -50,7 +50,9 @@ export function InsightStrip({
           fallback="The request failed or timed out."
         />
       ) : null}
-      {query.isLoading ? <StateBlock kind="loading" label="Loading observed patterns…" /> : null}
+      {query.isLoading ? (
+        <StateBlock kind="loading" label="Loading observed patterns…" shape={{ kind: 'list' }} />
+      ) : null}
       {/* Coverage limits are this card's own caveat, said in the card rather
           than as a banner that repeats the key figures' connect buttons. */}
       {data && !data.patterns.length ? (

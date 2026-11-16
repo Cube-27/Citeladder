@@ -87,7 +87,13 @@ export function AgentInstructionsCard({
           project.
         </SectionDescription>
       </SectionHeader>
-      {query.isPending ? <StateBlock kind="loading" label="Loading agent instructions…" /> : null}
+      {query.isPending ? (
+        <StateBlock
+          kind="loading"
+          label="Loading agent instructions…"
+          shape={{ kind: 'facts', rows: 1 }}
+        />
+      ) : null}
       {query.isError ? (
         <StateBlock
           kind="error"

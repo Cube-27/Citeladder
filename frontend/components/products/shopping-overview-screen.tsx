@@ -381,7 +381,14 @@ export function OverviewSections({
   query: UseQueryResult<Overview>;
   windowDays: ProductWindowDays;
 }>) {
-  if (query.isPending) return <StateBlock kind="loading" label="Loading the Shopping overview" />;
+  if (query.isPending)
+    return (
+      <StateBlock
+        kind="loading"
+        label="Loading the Shopping overview"
+        shape={{ kind: 'figures', count: 2 }}
+      />
+    );
   if (query.isError)
     return (
       <StateBlock

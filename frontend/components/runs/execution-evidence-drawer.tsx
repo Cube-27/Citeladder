@@ -56,7 +56,7 @@ function EvidenceLoading() {
   return (
     <Stack gap="workspace" aria-label="Loading execution evidence">
       <Skeleton lines={1} />
-      <Skeleton variant="block" />
+      <Skeleton variant="facts" />
       <Skeleton variant="chart" />
     </Stack>
   );

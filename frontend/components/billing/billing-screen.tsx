@@ -187,7 +187,11 @@ export function BillingScreen() {
   if (entitlementLoading || entitlementQuery.isLoading) {
     return (
       <SettingsPage>
-        <StateBlock kind="loading" label="Loading billing…" />
+        <StateBlock
+          kind="loading"
+          label="Loading billing…"
+          shape={{ kind: 'facts', rows: 3, tagRows: [1] }}
+        />
       </SettingsPage>
     );
   }
@@ -296,7 +300,7 @@ function PlanOffers({
   if (catalogRead.isLoading || !catalog)
     return (
       <Section aria-label="Plans">
-        <StateBlock kind="loading" label="Loading plans…" />
+        <StateBlock kind="loading" label="Loading plans…" shape={{ kind: 'list' }} />
       </Section>
     );
   const subscription = entitlement?.subscription ?? null;

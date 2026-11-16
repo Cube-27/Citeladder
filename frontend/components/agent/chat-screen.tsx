@@ -5,7 +5,7 @@ import { ChatConversation, ReplyComposer, useChatThread } from '@/components/age
 import { OutputPane } from '@/components/agent/output-pane';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail } from '@/components/agent/use-chat-turns';
-import { ThreadPage } from '@/components/templates/thread-page';
+import { ThreadPage, ThreadPageLoading } from '@/components/templates/thread-page';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { ActionButton } from '@/components/ui/actions';
 import { ComposerDock } from '@/components/ui/chat-dock';
@@ -46,12 +46,7 @@ export function ChatScreen() {
         />
       </ThreadPage>
     );
-  if (!query.data)
-    return (
-      <ThreadPage>
-        <StateBlock kind="loading" />
-      </ThreadPage>
-    );
+  if (!query.data) return <ThreadPageLoading />;
   if (query.data.chat.project_id !== projectId)
     return (
       <ThreadPage>
@@ -66,7 +61,11 @@ export function ChatScreen() {
         defects="surface"
         loading={
           <ThreadPage title={query.data.chat.title}>
-            <StateBlock kind="loading" label="Loading the page workspace…" />
+            <StateBlock
+              kind="loading"
+              label="Loading the page workspace…"
+              shape={{ kind: 'list' }}
+            />
           </ThreadPage>
         }
         failed={

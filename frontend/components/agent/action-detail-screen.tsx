@@ -76,7 +76,7 @@ export function ActionDetailScreen() {
   if (!query.data)
     return (
       <RecordPage back={BACK}>
-        <StateBlock kind="loading" />
+        <StateBlock kind="loading" shape={{ kind: 'facts', rows: 4, tagRows: [0, 1] }} />
       </RecordPage>
     );
   if (query.data.project_id !== projectId)

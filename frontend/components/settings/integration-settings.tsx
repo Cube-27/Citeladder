@@ -142,7 +142,8 @@ export function IntegrationSettings() {
   const connections = connectionsQuery.data ?? [];
   const grants = groupIntoGrants(connections);
 
-  if (!workspaceId) return <StateBlock kind="loading" label="Loading your workspace…" />;
+  if (!workspaceId)
+    return <StateBlock kind="loading" label="Loading your workspace…" shape={{ kind: 'list' }} />;
 
   const settled = !connectionsQuery.isLoading && !connectionsQuery.isError;
   return (
@@ -161,7 +162,7 @@ export function IntegrationSettings() {
               fallback="Could not load integrations. Check your connection and try again."
             />
           ) : (
-            <StateBlock kind="loading" label="Loading integrations…" />
+            <StateBlock kind="loading" label="Loading integrations…" shape={{ kind: 'list' }} />
           )}
         </TitledSection>
       )}

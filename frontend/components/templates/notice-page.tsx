@@ -55,7 +55,8 @@ function NoticeBlock({
   actions,
 }: Omit<NoticeContent, 'heading'> & Readonly<{ heading: string | null }>) {
   // One loader for a wait that passes through several owners: it hands over without a blank beat.
-  if (tone === 'loading') return <StateBlock kind="loading" label={heading ?? undefined} />;
+  if (tone === 'loading')
+    return <StateBlock kind="loading" label={heading ?? undefined} shape={{ kind: 'list' }} />;
   const [glyph, ink, word] = TONE[tone];
   const mark = <Icon icon={icon ?? glyph} className={cn('mt-1 size-5 shrink-0', ink)} />;
   return (

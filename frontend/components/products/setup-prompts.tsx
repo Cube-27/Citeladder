@@ -266,7 +266,8 @@ function PromptRows({
         fallback="Buyer prompts could not be loaded."
       />
     );
-  if (query.isPending) return <StateBlock kind="loading" label="Loading prompts" />;
+  if (query.isPending)
+    return <StateBlock kind="loading" label="Loading prompts" shape={{ kind: 'list' }} />;
   if (!rows.length) {
     return (
       <StateBlock

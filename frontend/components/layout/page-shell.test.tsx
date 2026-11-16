@@ -8,7 +8,50 @@ import { FilterBar } from '@/components/ui/filter-bar';
 import { TabRow, TabsRoot } from '@/components/ui/tabs';
 import { RouteLoadingScreen } from './page-shell';
 
+function renderAt(path: string) {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <RouteLoadingScreen />
+    </MemoryRouter>,
+  );
+}
+
 describe('RouteLoadingScreen', () => {
+  it('places the Overview’s default widgets as the grid does, each with its body’s shape', () => {
+    const { container } = renderAt('/projects');
+    const widgets = [...container.querySelectorAll<HTMLElement>('[data-loading-widget]')];
+    expect(widgets.map((widget) => widget.dataset.loadingWidget)).toEqual([
+      'project_state',
+      'citation_share',
+      'movement',
+      'next_action',
+      'missing_prompts',
+      'ranked_actions',
+      'progress_proof',
+      'company_facts',
+    ]);
+    expect(widgets.map((widget) => widget.className.includes('col-span-2'))).toEqual([
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+    ]);
+    expect(widgets[0]?.querySelectorAll('[data-figure-cell]')).toHaveLength(3);
+    expect(widgets[1]?.querySelectorAll('[data-figure-cell]')).toHaveLength(1);
+  });
+
+  it('draws a chat as its thread over the docked composer, never as cards', () => {
+    const { container } = renderAt('/agent/chats/1');
+    expect(screen.getByRole('heading', { level: 1, name: 'Chat' })).toBeInTheDocument();
+    expect(container.querySelector('[data-thread] [data-skeleton="thread"]')).not.toBeNull();
+    expect(container.querySelector('.shadow-pop')).not.toBeNull();
+    expect(container.querySelector('[data-loading-shape]')).toBeNull();
+  });
+
   it.each([
     {
       path: '/visibility',
@@ -25,14 +68,16 @@ describe('RouteLoadingScreen', () => {
       shapes: ['figures', 'table'],
     },
     { path: '/issues', title: 'Issues', tabs: [], filters: true, shapes: ['table'] },
-    { path: '/agent/chats/1', title: 'Chat', tabs: [], filters: false, shapes: ['thread'] },
-    { path: '/pricing', title: 'Pricing', tabs: [], filters: false, shapes: ['card', 'card'] },
+    {
+      path: '/products/p1',
+      title: 'Product',
+      tabs: [],
+      filters: false,
+      shapes: ['facts', 'figures'],
+    },
+    { path: '/pricing', title: 'Pricing', tabs: [], filters: false, shapes: ['facts'] },
   ])('draws $path in its loaded frame', ({ path, title, tabs, filters, shapes }) => {
-    const { container } = render(
-      <MemoryRouter initialEntries={[path]}>
-        <RouteLoadingScreen />
-      </MemoryRouter>,
-    );
+    const { container } = renderAt(path);
     expect(screen.getByRole('heading', { level: 1, name: title })).toBeInTheDocument();
     const held = container.querySelector('[data-held-tabs]');
     expect([...(held?.children ?? [])].map((tab) => tab.textContent)).toEqual(tabs);
