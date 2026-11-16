@@ -17,6 +17,7 @@ import type { Project } from '@citeladder/contracts';
 import { BUYER_TYPE_CHOICES, MARKET_SCOPE_CHOICES } from '@/lib/project/identity-facets';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
 
+import { SaveFoot } from './save-foot';
 import type { BrandProfileForm } from './use-brand-profile-form';
 import { Notice } from '@/components/ui/notice';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -31,6 +32,18 @@ export function ProfileSaveNotices({ form }: Readonly<{ form: BrandProfileForm }
       />
     );
   return form.notice ? <Notice tone="positive">{form.notice}</Notice> : null;
+}
+
+/** The profile's one save, shared by the Company and Audience cards. */
+function ProfileSaveFoot({ form }: Readonly<{ form: BrandProfileForm }>) {
+  return (
+    <SaveFoot
+      label="Save brand knowledge"
+      changed={form.dirty}
+      saving={form.saving}
+      onSave={form.save}
+    />
+  );
 }
 
 /**
@@ -104,6 +117,7 @@ export function CompanyFactsCard({ form }: Readonly<{ form: BrandProfileForm }>)
           )}
         </Field>
       </Stack>
+      <ProfileSaveFoot form={form} />
     </Section>
   );
 }
@@ -182,6 +196,7 @@ export function AudienceCard({ form }: Readonly<{ form: BrandProfileForm }>) {
           disabled={saving}
         />
       </Stack>
+      <ProfileSaveFoot form={form} />
     </Section>
   );
 }

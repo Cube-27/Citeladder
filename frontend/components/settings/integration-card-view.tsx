@@ -12,7 +12,6 @@ import {
   type GrantModel,
 } from '@/components/settings/grant-model';
 import { StatusMark } from '@/components/ui/status-mark';
-import { Tag } from '@/components/ui/tag';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { GoogleMark } from '@/components/ui/google-glyph';
@@ -117,7 +116,7 @@ function GrantHeader({
             {label}
           </StatusMark>
         ) : (
-          <Tag data-testid={`grant-status-${family}`}>{label}</Tag>
+          <StatusMark data-testid={`grant-status-${family}`}>{label}</StatusMark>
         )}
       </SectionTitleLine>
       <SectionDescription>{meta.blurb}</SectionDescription>
@@ -277,7 +276,7 @@ function ConnectedCard({
   return (
     <Section data-testid={`grant-card-${family}`}>
       <GrantHeader family={family} grant={grant} actions={actions} />
-      <SectionContent data-settings-wide="">
+      <SectionContent>
         <Stack gap="compact">
           <GrantAlert family={family} status={grant.status} />
           <ItemList>

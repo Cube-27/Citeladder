@@ -44,7 +44,7 @@ export const PENDING_PRICING_INTENT_MAX_AGE_MS = 60 * 60 * 1000;
  * wins over these.
  */
 export const USAGE_METER_WARNING_RATIO = 0.8;
-export const USAGE_METER_CRITICAL_RATIO = 0.95;
+export const USAGE_METER_CRITICAL_RATIO = 1;
 
 export const RAZORPAY_CHECKOUT_SCRIPT = 'https://checkout.razorpay.com/v1/checkout.js';
 export const CHECKOUT_POLL_INTERVAL_MS = 2_000;

@@ -5,9 +5,7 @@ import { PageFrame, PageSections, type PageFrameSlots } from './page-frame';
 /**
  * Settings: the masthead, page tabs, then one card per group across the full
  * main column. Each card's head sits on top and its body below at full card
- * width, every field column capped at 640 (globals.css). A table, and any
- * child marked `data-settings-wide` (usage meters, a plan grid), takes the
- * card's full width.
+ * width; only a form field stops at 640 (globals.css).
  */
 export function SettingsPage({
   children,

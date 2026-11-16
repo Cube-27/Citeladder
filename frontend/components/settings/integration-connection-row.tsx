@@ -24,7 +24,8 @@ import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatCount, formatShortDate, formatTableTimestamp } from '@/lib/format';
 import { DisplayTime } from '@/components/ui/display-time';
 import { isSyncInFlight, pollSyncRun, SYNC_RUN_STATES } from '@/lib/integrations/status';
-import { Icon, IconTile } from '@/components/ui/icon';
+import { ClampText } from '@/components/ui/clamp-text';
+import { Icon } from '@/components/ui/icon';
 import { Inline } from '@/components/ui/layout';
 import { ItemRow } from '@/components/ui/list-row';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -179,9 +180,7 @@ function MarkLine({ mark, text }: Readonly<{ mark: ReactNode; text: ReactNode }>
   return (
     <>
       {mark}
-      <span className="min-w-0 truncate" title={typeof text === 'string' ? text : undefined}>
-        {text}
-      </span>
+      <ClampText>{text}</ClampText>
     </>
   );
 }
@@ -321,15 +320,15 @@ function ConnectionRowView({
   return (
     <ItemRow
       data-testid={`connection-row-${connection.provider}`}
-      media={<IconTile icon={SourceIcon} />}
+      icon={<Icon icon={SourceIcon} className="text-ink-2" />}
       title={label}
-      meta={<SyncLine connection={connection} />}
-      state={
+      caption={
         <>
           <SelectedPropertyMark connection={connection} />
-          {status}
+          <SyncLine connection={connection} />
         </>
       }
+      status={status}
       actions={
         <ConnectionActions
           connection={connection}
@@ -349,24 +348,32 @@ function ConnectionRowView({
   );
 }
 
+const CaptionDot = () => (
+  <span aria-hidden className="shrink-0">
+    ·
+  </span>
+);
+
 /**
- * When the source last synced and how much history it holds. The connection
- * is the workspace's, so its sync is too; the card's foot names the zone.
+ * When the source last synced and how much history it holds, each its own
+ * cut piece of the caption. The connection is the workspace's, so its sync
+ * is too; the card's foot names the zone.
  */
 function SyncLine({ connection }: Readonly<{ connection: IntegrationConnection }>) {
   const timeZone = useDisplayTimeZone();
   const lastSynced = connection.last_synced_at;
   return (
     <>
-      <span className="whitespace-nowrap">
+      <CaptionDot />
+      <ClampText>
         Last synced{' '}
         {lastSynced ? (
           <time dateTime={lastSynced}>{formatTableTimestamp(lastSynced, timeZone)}</time>
         ) : (
           'never'
-        )}{' '}
-        ·
-      </span>
+        )}
+      </ClampText>
+      <CaptionDot />
       <Inline as="span" gap="tight">
         <span className="shrink-0">History</span>
         <BackfillHistory workspaceId={connection.workspace_id} connectionId={connection.id} />

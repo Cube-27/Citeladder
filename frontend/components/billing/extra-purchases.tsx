@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
 import { ControlRow } from '@/components/ui/control-row';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
@@ -31,17 +33,77 @@ function clampQuantity(value: number, entry: CatalogAddon | CatalogTopup): numbe
   return Math.min(entry.quantity_max, Math.max(entry.quantity_min, Math.trunc(value)));
 }
 
+type Extra = CatalogAddon | CatalogTopup;
+
+/** Why an extra cannot be bought, or null when it can. */
+function gateReason(entry: Extra): string | null {
+  if (isPurchasable(entry) || !entry.unavailable_reason) return null;
+  return billingReasonMessage(entry.unavailable_reason);
+}
+
+/** One reason every gated extra shares (two or more), said once under the section head. */
+function sharedGateReason(entries: readonly Extra[]): string | null {
+  const reasons = entries.map(gateReason).filter((reason) => reason !== null);
+  const [first] = reasons;
+  if (first === undefined || reasons.length < 2 || reasons.length !== entries.length) return null;
+  return reasons.every((reason) => reason === first) ? first : null;
+}
+
+/**
+ * Buy. While the catalog gates it, it is `aria-disabled` rather than
+ * disabled, so it stays focusable and its reason reaches a tooltip and
+ * `aria-describedby`; a shared reason is the section's caption.
+ */
+function BuyButton({
+  name,
+  disabled,
+  reason,
+  reasonId,
+  onBuy,
+}: Readonly<{
+  name: string;
+  disabled: boolean;
+  reason: string | null;
+  reasonId: string | null;
+  onBuy: () => void;
+}>) {
+  const ownReasonId = useId();
+  if (!reason)
+    return (
+      <Button variant="secondary" disabled={disabled} onClick={onBuy}>
+        Buy {name}
+      </Button>
+    );
+  return (
+    <>
+      <Tooltip content={reason} describe={false}>
+        <Button variant="secondary" aria-disabled="true" aria-describedby={reasonId ?? ownReasonId}>
+          Buy {name}
+        </Button>
+      </Tooltip>
+      {reasonId ? null : (
+        <span id={ownReasonId} hidden>
+          {reason}
+        </span>
+      )}
+    </>
+  );
+}
+
 function ExtraRow({
   entry,
   kind,
   catalog,
   disabled,
+  sharedReasonId,
   onBuy,
 }: Readonly<{
-  entry: CatalogAddon | CatalogTopup;
+  entry: Extra;
   kind: 'addon' | 'topup';
   catalog: BillingCatalog;
   disabled: boolean;
+  /** The section caption's id when it already says why this extra is gated. */
+  sharedReasonId: string | null;
   onBuy: ExtraPurchase;
 }>) {
   // Kept as typed text and clamped when read: clamping each keystroke turns
@@ -52,7 +114,6 @@ function ExtraRow({
   const inputId = `extra-quantity-${entry.key}`;
   return (
     <ControlRow
-      boxed
       controls={
         <>
           <label htmlFor={inputId} className="sr-only">
@@ -70,13 +131,13 @@ function ExtraRow({
             onBlur={() => setTyped(String(quantity))}
             width="quantity"
           />
-          <Button
-            variant="secondary"
+          <BuyButton
+            name={entry.name}
             disabled={!purchasable || disabled}
-            onClick={() => onBuy(kind, entry.key, quantity)}
-          >
-            Buy {entry.name}
-          </Button>
+            reason={gateReason(entry)}
+            reasonId={sharedReasonId}
+            onBuy={() => onBuy(kind, entry.key, quantity)}
+          />
         </>
       }
     >
@@ -88,9 +149,6 @@ function ExtraRow({
           : ''}
         usable for {entry.expiry_days} days or until your plan ends, whichever is first
       </span>
-      {!purchasable && entry.unavailable_reason ? (
-        <span className="type-caption">{billingReasonMessage(entry.unavailable_reason)}</span>
-      ) : null}
     </ControlRow>
   );
 }
@@ -168,8 +226,14 @@ export function ExtraPurchases({
 }>) {
   const { addons, topups } = extrasForPlan(catalog, planKey);
   const grants = activeExtraGrants(entitlement);
+  const sharedReasonId = useId();
+  const sharedReason = sharedGateReason([...addons, ...topups]);
   // Purchases still in force stay listed even when the catalogue offers nothing more to buy.
   if (addons.length === 0 && topups.length === 0 && grants.length === 0) return null;
+  const extras = [
+    ...addons.map((entry) => ({ entry, kind: 'addon' as const })),
+    ...topups.map((entry) => ({ entry, kind: 'topup' as const })),
+  ];
   return (
     <Section aria-labelledby="extras-title">
       <SectionHeader>
@@ -177,28 +241,28 @@ export function ExtraPurchases({
         <SectionDescription>
           One-time purchases. They work only while your paid plan is active and never renew.
         </SectionDescription>
+        {sharedReason ? (
+          <p id={sharedReasonId} className={textRole('caption', 'text-ink-2')}>
+            {sharedReason}
+          </p>
+        ) : null}
       </SectionHeader>
       <Stack as={SectionContent} gap="compact">
-        {addons.map((entry) => (
-          <ExtraRow
-            key={entry.key}
-            entry={entry}
-            kind="addon"
-            catalog={catalog}
-            disabled={disabled}
-            onBuy={onBuy}
-          />
-        ))}
-        {topups.map((entry) => (
-          <ExtraRow
-            key={entry.key}
-            entry={entry}
-            kind="topup"
-            catalog={catalog}
-            disabled={disabled}
-            onBuy={onBuy}
-          />
-        ))}
+        {extras.length > 0 ? (
+          <AppGrid layout="slips">
+            {extras.map(({ entry, kind }) => (
+              <ExtraRow
+                key={entry.key}
+                entry={entry}
+                kind={kind}
+                catalog={catalog}
+                disabled={disabled}
+                sharedReasonId={sharedReason ? sharedReasonId : null}
+                onBuy={onBuy}
+              />
+            ))}
+          </AppGrid>
+        ) : null}
         <ActiveExtras grants={grants} />
       </Stack>
     </Section>

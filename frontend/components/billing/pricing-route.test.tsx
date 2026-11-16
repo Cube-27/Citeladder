@@ -36,6 +36,25 @@ const catalog = {
   providers: [],
 };
 
+const PLAN = {
+  key: 'tier_1',
+  name: 'Starter',
+  description: 'Starter plan',
+  cadence: 'monthly',
+  self_serve: true,
+  contact_only: false,
+  contact_url: null,
+  base_price: { currency: 'USD', amount_minor: 4900 },
+  funded_total_price: null,
+  checkout_available: true,
+  funded_checkout_available: false,
+  unavailable_reason: 'funded_not_priced',
+  capabilities: [],
+  trial_availability: 'unavailable',
+  trial_unavailable_reason: 'trial_unavailable',
+  trial_days: null,
+};
+
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
 afterEach(() => {
   mswServer.resetHandlers();
@@ -52,19 +71,76 @@ const signedInUser = {
   updated_at: '2026-01-01T00:00:00Z',
 };
 
+function entitlement(subscription: unknown) {
+  return {
+    billing_account_id: '11111111-1111-4111-8111-111111111111',
+    status: 'resolved',
+    errors: [],
+    registry_revision: 'registry-v8',
+    entitlement_lifecycle_version: 1,
+    resolved_at: '2026-08-01T00:00:00Z',
+    valid_until: null,
+    subscription,
+    trial_grant: null,
+    capabilities: [],
+    grants: [],
+  };
+}
+
+const scaleSubscription = {
+  catalog_key: 'tier_3',
+  status: 'active',
+  current_period_end: '2026-09-01T00:00:00Z',
+  cancel_at_period_end: false,
+  resumable_until: null,
+  scheduled_change: null,
+};
+
 describe('app pricing continuation', () => {
-  it('offers the public pricing page once, from the empty state, when nothing is chosen', async () => {
+  it.each([
+    [null, 'Test Workspace has no plan yet. Compare plans on the public pricing page.'],
+    [scaleSubscription, 'Test Workspace is on Scale. Compare plans on the public pricing page.'],
+    // An ended plan is neither the current plan nor "no plan yet".
+    [{ ...scaleSubscription, status: 'expired' }, 'Compare plans on the public pricing page.'],
+  ])(
+    'names the current plan and offers public pricing once when nothing is chosen (%#)',
+    async (subscription, sentence) => {
+      const scaleCatalog = {
+        ...catalog,
+        plans: [{ ...PLAN, key: 'tier_3', name: 'Scale' }],
+      };
+      mswServer.use(
+        http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(scaleCatalog)),
+        http.get('/api/v1/billing/entitlement', () => HttpResponse.json(entitlement(subscription))),
+        http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
+      );
+      renderWithProviders(<PricingRoute />);
+      expect(await screen.findByRole('heading', { name: 'Choose a plan' })).toBeVisible();
+      expect(await screen.findByText(sentence)).toBeVisible();
+      expect(screen.getAllByRole('link', { name: 'View public pricing' })).toHaveLength(1);
+      expect(screen.queryByText(/^Workspace:/u)).toBeNull();
+    },
+  );
+
+  it('stops naming a plan once a refetch of the entitlement fails', async () => {
     mswServer.use(
-      http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),
+      http.get('/api/v1/billing/workspace-catalog', () =>
+        HttpResponse.json({ ...catalog, plans: [{ ...PLAN, key: 'tier_3', name: 'Scale' }] }),
+      ),
+      http.get('/api/v1/billing/entitlement', () =>
+        HttpResponse.json(entitlement(scaleSubscription)),
+      ),
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
     );
-    renderWithProviders(<PricingRoute />);
-    expect(await screen.findByRole('heading', { name: 'No plan chosen yet' })).toBeVisible();
-    expect(
-      screen.getByText(/has no plan yet\. Compare plans on the public pricing page\./u),
-    ).toBeVisible();
-    expect(screen.getAllByRole('link', { name: 'View public pricing' })).toHaveLength(1);
-    expect(screen.queryByText(/^Workspace:/u)).toBeNull();
+    const { queryClient } = renderWithProviders(<PricingRoute />);
+    expect(await screen.findByText(/is on Scale\./u)).toBeVisible();
+
+    mswServer.use(
+      http.get('/api/v1/billing/entitlement', () => new HttpResponse(null, { status: 500 })),
+    );
+    await queryClient.refetchQueries({ type: 'active' });
+    expect(await screen.findByText('Compare plans on the public pricing page.')).toBeVisible();
+    expect(screen.queryByText(/is on Scale/u)).toBeNull();
   });
 
   it('keeps the public pricing link in the masthead when the workspace read fails', async () => {
@@ -190,29 +266,7 @@ describe('app pricing continuation', () => {
       total_price: money(4900),
       expires_at: '2026-12-01T12:00:00Z',
     };
-    const planCatalog = {
-      ...catalog,
-      plans: [
-        {
-          key: 'tier_1',
-          name: 'Starter',
-          description: 'Starter plan',
-          cadence: 'monthly',
-          self_serve: true,
-          contact_only: false,
-          contact_url: null,
-          base_price: money(4900),
-          funded_total_price: null,
-          checkout_available: true,
-          funded_checkout_available: false,
-          unavailable_reason: 'funded_not_priced',
-          capabilities: [],
-          trial_availability: 'unavailable',
-          trial_unavailable_reason: 'trial_unavailable',
-          trial_days: null,
-        },
-      ],
-    };
+    const planCatalog = { ...catalog, plans: [PLAN] };
     mswServer.use(
       http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(planCatalog)),
       http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),

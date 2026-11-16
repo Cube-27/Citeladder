@@ -109,9 +109,10 @@ it('lists a key by name, prefix, scopes and projects without its ID', async () =
   renderTab();
   const row = (await screen.findByText('Acme')).closest('tr');
   expect(row).toHaveTextContent(
-    'CI exportcl_live_Ab12Cd34… · Active · Created by ana@example.test · Created Oct 1, 2026',
+    'CI exportcl_live_Ab12Cd34… · Created by ana@example.test · Created Oct 1, 2026',
   );
-  expect(row).toHaveTextContent('read, audits:runAcmeNot used yet');
+  // The state is the Status column's mark, not caption text.
+  expect(row).toHaveTextContent('Activeread, audits:runAcmeNot used yet');
   expect(row?.textContent).not.toContain(KEY);
   expect(screen.getByText('1 of 50,200 keys in use')).toBeInTheDocument();
 });

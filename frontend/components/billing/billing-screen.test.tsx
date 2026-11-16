@@ -412,22 +412,19 @@ describe('BillingScreen', () => {
   it('distinguishes an unknown usage allowance from zero', async () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
-
     renderWithProviders(<BillingScreen />);
-
-    // A finite row shows the real ratio…
-    // The digits sit in their own figure-face span, so a line is matched whole.
-    const line = (pattern: RegExp) => (_content: string, element: Element | null) =>
-      element?.tagName === 'SPAN' && pattern.test(element.textContent ?? '');
-    expect(await screen.findByText(line(/^42 of 100 prompts$/))).toBeInTheDocument();
-    // …and an `unknown` row says so rather than rendering a zero meter.
-    expect(screen.getByText('Not available')).toBeInTheDocument();
-    expect(screen.queryByText(line(/0 of 0 credits/))).toBeNull();
-    expect(screen.queryByText('Nothing used yet this period.')).toBeNull();
-    expect(screen.getByRole('progressbar', { name: 'Prompts' })).toBeInTheDocument();
+    // A finite row shows the real figures…
+    const table = await screen.findByRole('table', { name: 'Usage limits' });
+    const [, prompts, runs] = within(table).getAllByRole('row');
+    expect(prompts?.textContent).toBe('Prompts4210058');
+    // …and an `unknown` row says so rather than rendering a zero.
+    expect(runs?.textContent).toMatch(/^Prompt runs.*Not available/u);
+    expect(runs?.textContent).not.toMatch(/\b0\b/u);
+    expect(within(table).getAllByRole('meter')).toHaveLength(1);
+    expect(screen.queryByText('No usage yet this period')).toBeNull();
   });
 
-  it('lists the limits in a table instead of empty meters when nothing is used', async () => {
+  it('drops the usage meters and says so when nothing is used', async () => {
     entitlementValue = resolvedEntitlement();
     const idle = (prompts: object = { resets_at: '2026-12-01T00:00:00Z' }) => ({
       ...USAGE,
@@ -441,24 +438,25 @@ describe('BillingScreen', () => {
     const view = renderWithProviders(<BillingScreen />);
 
     const table = await screen.findByRole('table', { name: 'Usage limits' });
-    expect(screen.getByText('Nothing used yet this period.')).toBeVisible();
+    expect(screen.getByText('No usage yet this period')).toBeVisible();
     const rows = within(table).getAllByRole('row');
     expect(rows.map((row) => row.textContent?.replace(/Resets .+\./u, ''))).toEqual([
-      'QuotaLimit',
-      'Prompts50,200',
-      'ProjectsUnlimited',
-      'AI creditsNot included',
+      'QuotaUsedAllowanceRemaining',
+      'Prompts050,20050,200',
+      'Projects0Unlimited–Not applicable',
+      'AI credits0Not included–Not applicable',
     ]);
-    // The reset date stays with its quota rather than leaving with the meter.
+    // The reset date stays with its quota.
     expect(rows[1]?.textContent).toMatch(/Resets .+\./u);
-    expect(screen.queryByRole('progressbar')).toBeNull();
+    expect(within(table).queryByRole('meter')).toBeNull();
 
-    // A held reservation is usage, so it keeps the meters.
+    // A held reservation is usage, so the same table gains its meters.
     view.unmount();
     mswServer.use(usageHandler(idle({ reserved: 3, remaining: 50197 })));
     renderWithProviders(<BillingScreen />);
-    expect(await screen.findByRole('progressbar', { name: 'Prompts' })).toBeInTheDocument();
-    expect(screen.queryByRole('table', { name: 'Usage limits' })).toBeNull();
+    const held = await screen.findByRole('table', { name: 'Usage limits' });
+    expect(within(held).getByRole('meter', { name: 'Prompts' })).toBeInTheDocument();
+    expect(screen.queryByText('No usage yet this period')).toBeNull();
   });
 
   it('requires the cancellation dialog before mutating', async () => {

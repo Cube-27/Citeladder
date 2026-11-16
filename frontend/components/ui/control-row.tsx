@@ -1,50 +1,34 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
 import { slipClasses } from '@/components/ui/slip';
 
 /**
- * A row that offers something and the controls that act on it: an optional
- * leading mark (an `IconTile`), the text column, and the controls at the end.
- * Below `desktop` the controls drop under the text, aligned to the row's end,
- * so a long name never squeezes its buttons. The text column's anatomy (a
- * `Stack` of title and captions) is the caller's; the alignment, the gaps and
- * the stacking are the row's.
- *
- *   `boxed` — a standalone offer on the section's surface (a plan, an add-on,
- *             a plan change): an actionable object, so a slip, padding 16.
- *   unboxed — a row inside a card that already frames it (a connection).
+ * An offer and the controls that act on it (a plan, an add-on, a plan
+ * change): a slip, padding 16, its text on top and its controls in a foot
+ * pinned to the bottom, 16 below the text. Laid side by side in a `slips`
+ * grid, the cards of a row share a height, so every foot (and every button)
+ * sits on one line. The text's anatomy (title and captions) is the caller's.
  */
 export function ControlRow({
-  media,
   children,
   controls,
-  boxed = false,
   ...props
 }: Readonly<
   Omit<ComponentPropsWithoutRef<'div'>, 'className' | 'children'> & {
-    media?: ReactNode;
     children: ReactNode;
     controls: ReactNode;
-    boxed?: boolean;
   }
 >) {
   return (
     <div
       {...props}
       data-control-row=""
-      className={cn(
-        'desktop:flex-row desktop:items-center flex flex-col justify-between gap-[var(--compact-gap)]',
-        boxed && slipClasses(),
-      )}
+      className={slipClasses('flex h-full flex-col gap-[var(--compact-gap)]')}
     >
-      <div className="flex min-w-0 flex-1 items-start gap-[var(--compact-gap)]">
-        {media}
-        <div className="grid min-w-0 flex-1 gap-1">{children}</div>
+      <div className="min-w-0 flex-1">
+        <div className="grid min-w-0 gap-1">{children}</div>
       </div>
-      <div className="desktop:self-auto flex shrink-0 flex-wrap items-center gap-2 self-end">
-        {controls}
-      </div>
+      <div className="mt-2 flex flex-wrap items-center justify-end gap-2">{controls}</div>
     </div>
   );
 }

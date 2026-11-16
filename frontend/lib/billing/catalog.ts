@@ -16,8 +16,20 @@ import type {
   CredentialMode,
   SelfServePlanKey,
 } from '@/lib/api/billing';
-import type { moneySchema } from '@citeladder/contracts/billing';
+import type { moneySchema, SubscriptionStatus } from '@citeladder/contracts/billing';
 import type { z } from 'zod';
+
+/**
+ * Subscription states in which the workspace HAS a plan to change, cancel or
+ * extend. Anything else — no subscription, ended, unpaid — is offered a new
+ * subscription instead; `pending` is offered neither while it verifies.
+ */
+export const SUBSCRIBED_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
+  'active',
+  'trialing',
+  'past_due',
+  'cancel_scheduled',
+]);
 
 export type Money = z.infer<typeof moneySchema>;
 
