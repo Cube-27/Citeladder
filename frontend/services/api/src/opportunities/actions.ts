@@ -131,7 +131,7 @@ function actionItem(row: ActionRow) {
  * A row of a target kind Actions still have: retired kinds' leftover rows
  * (`issue_family`, owner 2026-11-16) are never read or acted on.
  */
-const LIVE_TARGET_KIND = sql<SqlBool>`actions.target_kind in (${sql.join(a.ACTION_TARGET_KINDS)})`;
+export const LIVE_TARGET_KIND = sql<SqlBool>`actions.target_kind in (${sql.join(a.ACTION_TARGET_KINDS)})`;
 
 /**
  * An Action the list shows: its evidence still stands, or the Agent made it,

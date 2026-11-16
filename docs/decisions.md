@@ -698,14 +698,16 @@ content gaps drawn only from content pages and tracked prompts (AS5).
 
 | ID | Decision |
 |---|---|
-| IA1 | Site Health Issues own every defect end to end: the catalog, Ask agent, Mark fixed, Re-run all and fix progress. A Site Health defect never becomes an Opportunity or an Action, so one defect never has two lifecycles. The Actions list reads Issues groups directly from the existing Issues reads, beside prompts, search and every other actionable item; it does not rebuild them. A content page's Action keeps its content gaps, search and link findings, never its Site Health defects. |
+| IA1 | Site Health Issues own every defect end to end: the catalog, Ask agent, Mark fixed, Re-run all and fix progress. A Site Health defect never becomes an Opportunity or an Action, so one defect never has two lifecycles. The Actions list reads Issues groups directly from the existing Issues reads, beside prompts, search and every other actionable item; it does not rebuild them, and each opens its own Issues page. A content page's Action keeps its content gaps, search and link findings, never its Site Health defects. |
 
 Source: owner, in chat, 16 November 2026: "issues page i understand because it
 finally leads to a single page and i can ask agent to fix a single page or
 groups of pages but actions is still confusing, action should actually contain
 issues exactly as it is and other issues too like prompts, search anything
 actionable", and on rebuilding issues as Actions: "why does this needs a
-rebuild dont we already have issues ?"
+rebuild dont we already have issues ?", and "its fine if its duplicated but
+the final page URL remains the same … actions is basically home for all
+actions in the app".
 
 ## Backlog closure
 

@@ -104,7 +104,7 @@ describe('Action routes', () => {
     expect(detail.members.map((member) => member.id)).toEqual([s.members[pageRule]]);
   });
 
-  it('never lists, counts, reads or declares a leftover Action of a retired target kind', async () => {
+  it('never lists, counts, reads, changes or declares a leftover Action of a retired target kind', async () => {
     const s = await seed();
     // Site Health issue families were Actions until 2026-11-16; their rows may remain.
     const retired = actionRow(
@@ -124,6 +124,10 @@ describe('Action routes', () => {
       3,
     ]);
     expect((await request(s, `/api/v1/actions/${retired.id}`)).status).toBe(404);
+    const dismissed = await request(s, `/api/v1/actions/${retired.id}`, 'PATCH', {
+      status: 'dismissed',
+    });
+    expect(dismissed.status).toBe(404);
     const declared = await request(
       s,
       `/api/v1/actions/${retired.id}/declaration`,
