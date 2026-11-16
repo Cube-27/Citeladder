@@ -342,11 +342,13 @@ function EmptyBody({
       >
         <Glyph className="size-4" />
       </span>
-      <Heading className={textRole('heading', 'mt-[var(--state-title-gap,16px)]')}>
+      <Heading className={textRole('heading', 'mt-[var(--state-title-gap,16px)] text-balance')}>
         {heading}
       </Heading>
       {description ? (
-        <p className={textRole('body', 'text-ink-2 mt-1 max-w-[500px]')}>{description}</p>
+        <p className={textRole('body', 'text-ink-2 mt-1 max-w-[500px] text-balance')}>
+          {description}
+        </p>
       ) : null}
       {action ? (
         <div className="mt-[var(--state-action-gap,16px)] flex flex-wrap items-center justify-center gap-2">

@@ -484,12 +484,13 @@
 :root[data-theme='dark']:not([data-public-surface]) {
   /* Each layer steps lighter than the one beneath, so it reads without its
      shadow; the well is a tint over the card, lighter than it. */
-  --color-ground: #0f1114;
+  --color-ground: #0c0e11;
   --color-chrome: #131519;
   --color-surface: #181a1f;
-  --color-well: #22252b;
+  --color-well: #26292f;
   --color-raised: #1f2228;
-  --color-rule: #2b2e36;
+  /* Ink at a fixed alpha, so a hairline steps evenly over every layer. */
+  --color-rule: rgb(236 238 242 / 10%);
   --color-control-line: #727886;
   --color-control-edge: #393d47;
   --color-ink: #eceef2;
@@ -519,8 +520,10 @@
   --color-scrim: rgb(0 0 0 / 60%);
   --shadow-card: none;
   --shadow-control: 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-pop: 0 4px 12px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-sheet: 0 16px 40px rgb(0 0 0 / 0.55);
+  /* Black barely shows on a near-black ground, so an overlay also reads by a
+     lit top edge (inset: a child that fills the top would cover it). */
+  --shadow-pop: inset 0 1px 0 rgb(255 255 255 / 5%), 0 4px 12px rgb(0 0 0 / 0.3);
+  --shadow-sheet: inset 0 1px 0 rgb(255 255 255 / 5%), 0 16px 40px rgb(0 0 0 / 0.45);
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -601,6 +604,8 @@
    the one without `data-public-surface`; the website and docs keep the
    system's values above. */
 :root:not([data-public-surface]) {
+  /* Inherited: no paragraph ends on a lone word; nowrap rows keep one line. */
+  text-wrap: pretty;
   --table-ground: var(--color-ground);
   /* Layers (2.4): ground, chrome, card, inset, overlay; each a fill step. */
   --color-ground: #f5f6f8;
@@ -608,7 +613,7 @@
   --color-surface: #ffffff;
   --color-well: #f1f2f5;
   --color-raised: #ffffff;
-  --color-rule: #e4e6eb;
+  --color-rule: rgb(22 24 29 / 11%);
   --color-control-line: #838995;
   /* The soft edge of a labelled button and of a search or filter control: its
      words or icon name it, so the edge needs no 3:1 (WCAG 1.4.11); form
@@ -1432,13 +1437,17 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: 400;
   }
 
-  /* Lucide icons draw at one stroke: 1.75 on the website, 1.5 in the app,
-     at every size. */
+  /* Lucide icons draw at 1.75, so a 16px glyph matches the label beside it.
+     The stroke scales with the box, so the app's 12-14px glyphs take 2. */
   .lucide {
     stroke-width: 1.75;
   }
-  :root:not([data-public-surface]) .lucide {
-    stroke-width: 1.5;
+  :root:not([data-public-surface]) .lucide:is(.size-3, .size-3\.5) {
+    stroke-width: 2;
+  }
+  /* ProductImage: in light a shot's white backdrop melts into its tile. */
+  :root:not([data-theme='dark']) [data-product-photo] {
+    mix-blend-mode: multiply;
   }
 
   /* The pointer affordance, declared once for the whole app. Keyed on ROLE as
@@ -1596,43 +1605,6 @@ a.focus-ring:active .type-caption {
   line-height: var(--text-label--line-height);
   font-weight: 500;
   letter-spacing: 0;
-}
-
-/* Public CTAs: the website's buttons are control-md; the page size (hero,
-   sections, the closing band) is 40px with the label role. */
-[data-public-surface] .marketing-cta-button {
-  height: auto;
-  min-height: var(--control-md);
-  padding-inline: 1rem;
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
-  font-weight: 500;
-  transition-property: transform, background-color, color, border-color, box-shadow;
-}
-
-[data-public-surface] .marketing-cta-button[data-button-size='marketing'] {
-  min-height: 40px;
-  padding-inline: 16px;
-  font-size: var(--text-label);
-  line-height: var(--text-label--line-height);
-}
-
-@media (max-width: 540px) {
-  [data-public-surface] .marketing-cta-button {
-    flex: none;
-    align-self: center;
-    width: max-content;
-    max-width: 100%;
-    white-space: normal;
-    text-align: center;
-  }
-
-  [data-public-surface] .marketing-cta-button.w-full {
-    align-self: stretch;
-    width: 100%;
-    white-space: normal;
-    text-align: center;
-  }
 }
 
 /* Text entry belongs to the field frame. Auxiliary buttons keep their own

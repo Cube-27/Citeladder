@@ -53,6 +53,13 @@ test('timing must consume motion and easing roles', () => {
     ),
     [],
   );
+  // A scroll timeline maps scroll to progress 1:1, so only its `linear` passes.
+  assert.deepEqual(
+    rules(
+      '.a { animation: fade linear both; animation-timeline: scroll(self inline); } .b { animation: fade 1s ease both; animation-timeline: view(); }',
+    ),
+    ['css-motion'],
+  );
 });
 
 test('outlines belong to the shared focus rule', () => {

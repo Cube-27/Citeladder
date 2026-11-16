@@ -181,7 +181,7 @@ export function SessionGuard({
     // UI unmounted, explain the state, and retry only `auth.me`.
     if (isError && httpErrorStatus(error) !== 401) {
       const notice = (
-        <div className="grid min-h-[60vh] place-items-center p-[var(--page-section-gap)]">
+        <div className="grid min-h-[60dvh] place-items-center p-[var(--page-section-gap)]">
           <Notice
             tone="warning"
             className="max-w-lg"

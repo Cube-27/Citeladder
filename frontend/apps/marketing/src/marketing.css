@@ -28,6 +28,45 @@
 @source '../../../components/ui';
 @source '../../../lib';
 
+/* Public CTAs: the website's buttons are control-md; the page size (hero,
+   sections, the closing band) is 40px with the label role. Only the website
+   renders them, so they sit here, straight after the shared globals, rather
+   than in the app's stylesheet. */
+[data-public-surface] .marketing-cta-button {
+  height: auto;
+  min-height: var(--control-md);
+  padding-inline: 1rem;
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+  font-weight: 500;
+  transition-property: transform, background-color, color, border-color, box-shadow;
+}
+
+[data-public-surface] .marketing-cta-button[data-button-size='marketing'] {
+  min-height: 40px;
+  padding-inline: 16px;
+  font-size: var(--text-label);
+  line-height: var(--text-label--line-height);
+}
+
+@media (max-width: 540px) {
+  [data-public-surface] .marketing-cta-button {
+    flex: none;
+    align-self: center;
+    width: max-content;
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+
+  [data-public-surface] .marketing-cta-button.w-full {
+    align-self: stretch;
+    width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+}
+
 /* ── Motion ─────────────────────────────────────────────────────────────── */
 
 /* Page to page, the site cross-fades (the browser's default root fade) while

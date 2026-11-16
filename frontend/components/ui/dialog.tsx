@@ -104,7 +104,7 @@ function DialogHeader({
         </span>
       ) : null}
       <div className="min-w-0">
-        <DialogPrimitive.Title className="type-heading">{title}</DialogPrimitive.Title>
+        <DialogPrimitive.Title className="type-heading text-balance">{title}</DialogPrimitive.Title>
         {description ? (
           <DialogPrimitive.Description asChild>
             <div className="text-body-sm text-ink-2 mt-1">{description}</div>
@@ -117,7 +117,7 @@ function DialogHeader({
 
 /**
  * Dialog — a modal panel for one short task, centred across the scrim with its
- * top edge fixed at 12vh, so content that changes inside it (a tab, a picked
+ * top edge fixed at 12dvh, so content that changes inside it (a tab, a picked
  * file) grows or shrinks it downward and nothing above moves: the sheet face
  * (`raised`, 1px `rule` edge, radius 12, `shadow-sheet`), 16 padding and gaps, 480 wide
  * (640 `wide`; the overlay widths are 480, 560 and 640).
@@ -171,7 +171,7 @@ export function Dialog({
           onCloseAutoFocus={returnFocus}
           className={cn(
             SHEET_FACE,
-            'dialog-panel z-modal fixed top-[12vh] left-1/2 flex max-h-[calc(88dvh-1.5rem)] w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden',
+            'dialog-panel z-modal fixed top-[12dvh] left-1/2 flex max-h-[calc(88dvh-1.5rem)] w-[calc(100vw-3rem)] -translate-x-1/2 flex-col overflow-hidden',
             !danger && width === 'wide' ? 'max-w-form' : 'max-w-flow',
           )}
         >

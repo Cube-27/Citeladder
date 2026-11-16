@@ -141,6 +141,50 @@
   box-shadow: inset 0 0 0 1px var(--color-site-well-edge);
 }
 
+/* On a phone the table fades at the edge it can scroll towards, as the app's
+   tables do. The scroll position drives the fade (no script on the page); a
+   table that fits, or a browser without scroll timelines, draws no fade. A
+   mask clips the focus ring, so a focused table drops it. */
+@property --cl-wtable-fade-start {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@property --cl-wtable-fade-end {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes cl-wtable-fade {
+  0% {
+    --cl-wtable-fade-start: 0px;
+    --cl-wtable-fade-end: 24px;
+  }
+  5% {
+    --cl-wtable-fade-start: 24px;
+  }
+  95% {
+    --cl-wtable-fade-end: 24px;
+  }
+  100% {
+    --cl-wtable-fade-start: 24px;
+    --cl-wtable-fade-end: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  .cl-wtable:not(:focus-visible) {
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      black var(--cl-wtable-fade-start),
+      black calc(100% - var(--cl-wtable-fade-end)),
+      transparent
+    );
+    animation: cl-wtable-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
 .cl-wtable table {
   width: 100%;
   min-width: 720px;
