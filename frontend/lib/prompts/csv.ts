@@ -56,9 +56,6 @@ const codePoints = (value: string) => Array.from(value);
 const TRUE_VALUES = new Set(['1', 'true', 'yes', 'y', 't']);
 const FALSE_VALUES = new Set(['0', 'false', 'no', 'n', 'f']);
 
-const VALID_INTENTS = new Set<string>(promptIntentSchema.options);
-const VALID_STAGES = new Set<string>(buyerStageSchema.options);
-
 type ParsedPromptRow = {
   /** 1-based source row number (excludes the header) for user feedback. */
   line: number;
@@ -146,13 +143,15 @@ function asBool(value: string | undefined, fallback: boolean): boolean {
 /** An unknown intent is internal vocabulary gone stale: it defaults silently. */
 function normalizeIntent(value: string | undefined): PromptIntent {
   const normalized = (value ?? '').trim().toLowerCase();
-  return VALID_INTENTS.has(normalized) ? (normalized as PromptIntent) : '';
+  const parsed = promptIntentSchema.safeParse(normalized);
+  return parsed.success ? parsed.data : '';
 }
 
 /** An unknown buyer stage is left unset, like an unknown intent. */
 function normalizeStage(value: string | undefined): BuyerStage {
   const normalized = (value ?? '').trim().toLowerCase();
-  return VALID_STAGES.has(normalized) ? (normalized as BuyerStage) : '';
+  const parsed = buyerStageSchema.safeParse(normalized);
+  return parsed.success ? parsed.data : '';
 }
 
 /** An explicit cohort is kept; a blank or missing one is left to the backend. */

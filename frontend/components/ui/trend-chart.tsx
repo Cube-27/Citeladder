@@ -421,10 +421,10 @@ function placedEvents(
   events: readonly TrendEvent[],
   scale: TrendScale,
 ) {
-  const stamps = data.map((point) => point.timestamp);
-  if (stamps.length < 2 || stamps.includes(undefined)) return [];
-  const first = Math.min(...(stamps as number[]));
-  const span = Math.max(...(stamps as number[])) - first;
+  const stamps = data.flatMap((point) => (point.timestamp === undefined ? [] : [point.timestamp]));
+  if (stamps.length < 2 || stamps.length < data.length) return [];
+  const first = Math.min(...stamps);
+  const span = Math.max(...stamps) - first;
   if (span <= 0) return [];
   return events.flatMap((event) => {
     const offset = event.timestamp - first;

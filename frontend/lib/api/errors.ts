@@ -107,7 +107,7 @@ function isStructuredParseFailure(error: Error): boolean {
 export function httpErrorStatus(error: unknown): number | undefined {
   if (error instanceof ApiError) return error.status > 0 ? error.status : undefined;
   if (typeof error === 'object' && error !== null && 'status' in error) {
-    const status = (error as { status: unknown }).status;
+    const { status } = error;
     return typeof status === 'number' && Number.isFinite(status) && status > 0 ? status : undefined;
   }
   return undefined;

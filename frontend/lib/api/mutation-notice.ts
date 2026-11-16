@@ -34,8 +34,7 @@ export type MutationNotice = {
 /** True when the failure class is transient (retrying can succeed). */
 export function isTransientMutationError(error: unknown): boolean {
   if (typeof error === 'object' && error !== null && 'retryable' in error) {
-    const retryable = (error as { retryable: unknown }).retryable;
-    if (typeof retryable === 'boolean') return retryable;
+    if (typeof error.retryable === 'boolean') return error.retryable;
   }
   const status = httpErrorStatus(error);
   // No status = network-class failure (offline, DNS, the A3 timeout ApiError).
