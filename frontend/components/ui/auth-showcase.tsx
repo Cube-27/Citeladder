@@ -76,6 +76,9 @@ const ADVANCE_MS = 7000;
 /** The stage's shape: every slide's pictures are placed inside the same box. */
 const STAGE: CSSProperties = { aspectRatio: '5 / 3' };
 
+/** Inline: a filter utility would pull Tailwind's whole filter stack into eager CSS. */
+const MONO: CSSProperties = { filter: 'saturate(0)' };
+
 function ShotPicture({
   shot,
   place,
@@ -99,7 +102,8 @@ function ShotPicture({
         loading="lazy"
         decoding="async"
         fetchPriority={upcoming ? 'low' : 'auto'}
-        className="border-rule rounded-card block h-auto w-full border grayscale"
+        className="border-rule rounded-card block h-auto w-full border"
+        style={MONO}
       />
     </picture>
   );
