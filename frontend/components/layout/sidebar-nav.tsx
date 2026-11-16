@@ -1,12 +1,6 @@
-import { useEffect } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
 import { SidebarNavGroup, SidebarScrollList } from '@/components/ui/sidebar';
-import {
-  rememberDestinationRoute,
-  rememberedDestinationRoute,
-  routeToRemember,
-} from '@/lib/navigation/destination-memory';
 import { scopedNavigationDestination } from '@/lib/navigation/project-destination';
 import { setGroupFolded, useGroupFolded } from '@/lib/navigation/sidebar-folds';
 import { useRouteIntent } from '@/lib/navigation/use-route-intent';
@@ -17,46 +11,23 @@ import {
   DASHBOARD_GROUPS,
   FOOT_NAV_ITEMS,
   isNavItemActive,
-  SIDEBAR_ITEMS,
   type NavGroup,
   type NavItem,
 } from './nav-items';
 import { RailGroupMenu, RailLink } from './sidebar-rail';
 
 /**
- * Remembers the screen in use under the current destination, so its row can
- * return there later (owner, 2026-11-15). The shell mounts it once.
- */
-export function useDestinationMemory() {
-  const { pathname = '', search = '' } = useLocation();
-  const searchParams = useSearchParams()[0];
-  const { activeProjectId } = useProjectContext();
-  useEffect(() => {
-    if (!activeProjectId) return;
-    const current = SIDEBAR_ITEMS.find((item) => isNavItemActive(pathname, searchParams, item));
-    if (current)
-      rememberDestinationRoute(current.href, activeProjectId, routeToRemember(pathname, search));
-  }, [activeProjectId, pathname, search, searchParams]);
-}
-
-/**
- * Whether a destination is current, and where its row goes: a row that is
- * not current returns to the last screen used under it for this project; the
- * current row goes to the destination's front door. Scoped to the active
- * project or workspace.
+ * Whether a destination is current, and where its row goes: always the
+ * destination's front door (owner, 2026-11-16: no remembered screens), scoped
+ * to the active project or workspace.
  */
 export function useDestinations() {
   const { pathname = '', search = '' } = useLocation();
   const searchParams = useSearchParams()[0];
   const { activeProjectId, activeWorkspaceId } = useProjectContext();
   const isActive = (item: Pick<NavItem, 'href'>) => isNavItemActive(pathname, searchParams, item);
-  const href = (item: NavItem) => {
-    const target =
-      (!isActive(item) && item.scope === 'project'
-        ? rememberedDestinationRoute(item.href, activeProjectId)
-        : null) ?? item.href;
-    return scopedNavigationDestination(target, item.scope, activeProjectId, activeWorkspaceId);
-  };
+  const href = (item: NavItem) =>
+    scopedNavigationDestination(item.href, item.scope, activeProjectId, activeWorkspaceId);
   return { isActive, href, location: `${pathname}${search}` };
 }
 

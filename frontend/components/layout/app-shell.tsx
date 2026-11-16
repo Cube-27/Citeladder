@@ -15,12 +15,12 @@ import { navigationMode, resolveTitle } from '@/lib/navigation/app-routes';
 import { useProjectContext } from '@/lib/project/project-context';
 import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 
-import { ModeSwitch, useModeMemory } from './mode-switch';
+import { ModeSwitch } from './mode-switch';
 import { resolveCommandGroups } from './nav-items';
 import { PageTitleContext } from './page-title-context';
 import { ProjectSwitcher } from './project-switcher';
 import { ShellContext } from './shell-context';
-import { DashboardNav, DashboardRail, SidebarFootNav, useDestinationMemory } from './sidebar-nav';
+import { DashboardNav, DashboardRail, SidebarFootNav } from './sidebar-nav';
 import { UserMenuTrigger } from './user-menu';
 import { useRouteAnnouncement } from './use-route-announcement';
 
@@ -40,8 +40,6 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
     title: titleOverride ?? resolveTitle(pathname),
     projectName: activeProject?.name ?? null,
   });
-  useDestinationMemory();
-  useModeMemory();
   useCollapseShortcut();
   // The drawer is open for the location it was opened on, so any navigation
   // (a destination, the project switcher) closes it.

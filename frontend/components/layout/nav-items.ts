@@ -56,7 +56,7 @@ export const FOOT_NAV_ITEMS = navItems('sidebar:foot');
 /** The account menu's workspace and account links. */
 export const ACCOUNT_MENU_ITEMS = navItems('account');
 
-/** Every sidebar row in either mode, for marking the current one and remembering screens. */
+/** Every sidebar row in either mode, for marking the current one. */
 export const SIDEBAR_ITEMS: readonly NavItem[] = [
   ...DASHBOARD_GROUPS.flatMap((entry) => entry.items),
   NEW_CHAT_ITEM,

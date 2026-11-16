@@ -225,9 +225,9 @@ and Agent. Dashboard navigation follows the product loop: Overview, Analyze,
 Act (Actions with its open and in-progress count), Track, then Integrations. A
 destination is current on its path and every path below it, whatever tab the
 screen shows; a destination that names a query parameter (a settings tab) also
-needs it. The mode switch returns to the last route used in each mode for the
-project during the browser session; the Agent mode's navigation and its API
-modules load only in that mode.
+needs it. Every destination and mode link goes to its front door; the app
+remembers no previously opened screen (owner, 2026-11-16). The Agent mode's
+navigation and its API modules load only in that mode.
 
 Navigation names the document `Screen · Project · CiteLadder` from the
 manifest's title, moves focus to the main region when the path changes (not
