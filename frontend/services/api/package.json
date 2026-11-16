@@ -54,7 +54,7 @@
     "@node-rs/argon2": "^2.2.2",
     "csv-parse": "^7.0.3",
     "fast-xml-parser": "^5.12.0",
-    "fontkit": "^2.0.4",
+    "fontkit": "^3.0.0",
     "hono": "^4.13.16",
     "ipaddr.js": "^2.5.0",
     "jose": "^6.2.15",
