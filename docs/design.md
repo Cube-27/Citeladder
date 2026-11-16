@@ -217,6 +217,7 @@ spacing:
   container-site: 1320px
   container-app: 1440px
   container-thread: 1040px
+  container-page-narrow: 1040px
   container-prose: 720px
   container-narrow: 560px
   container-form: 640px

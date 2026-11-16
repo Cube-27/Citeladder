@@ -52,8 +52,8 @@ export function NewChatLoading() {
 }
 
 /**
- * Thread: the masthead, then the thread across the main column up to
- * 1040px, centred, scrolling in its own region with the composer docked
+ * Thread: the masthead, then the thread across the page (the Agent's routes
+ * are narrow, `max-w-page-narrow`), scrolling in its own region with the composer docked
  * under it, so the window, the masthead and the composer never move as the
  * thread grows. Every turn, its prose included, spans the thread's width, so
  * its edges meet the composer's. The chat list is the Agent-mode sidebar. `scrollRef` reaches the scrolling region;
@@ -85,12 +85,12 @@ export function ThreadPage({
           <div
             data-page-content=""
             data-thread=""
-            className="max-w-thread mx-auto flex min-h-full w-full min-w-0 flex-col gap-[var(--workspace-gap)]"
+            className="flex min-h-full w-full min-w-0 flex-col gap-[var(--workspace-gap)]"
           >
             {children}
           </div>
         </section>
-        {composer ? <div className="max-w-thread mx-auto w-full min-w-0">{composer}</div> : null}
+        {composer ? <div className="w-full min-w-0">{composer}</div> : null}
       </div>
     </PageFrame>
   );

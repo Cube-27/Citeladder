@@ -92,6 +92,8 @@ export type AppRouteRecord = {
   nav?: readonly NavEntry[];
   /** A shell route's loading frame; without one it draws a record's. */
   loading?: RouteLoading;
+  /** A reading page (`narrow`) sits centred in `max-w-page-narrow`; else it fills the main column. */
+  width?: 'narrow';
 };
 
 /** Pick one named export of a lazily loaded module as the route's screen. */
@@ -241,6 +243,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/issues',
+    width: 'narrow',
     title: 'Issues',
     screen: screens.issues,
     loading: cards([table(4)], { filters: true }),
@@ -296,6 +299,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent/actions',
+    width: 'narrow',
     title: 'Actions',
     screen: screens.actions,
     // Action and Priority; Priority is desktop-only.
@@ -312,6 +316,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent/actions/:actionId',
+    width: 'narrow',
     title: 'Action',
     collection: '/agent/actions',
     screen: screens.action,
@@ -320,6 +325,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent',
+    width: 'narrow',
     title: 'Agent',
     screen: screens.newChat,
     loading: { kind: 'new-chat' },
@@ -328,6 +334,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent/chats/:chatId',
+    width: 'narrow',
     title: 'Chat',
     collection: '/agent',
     screen: screens.chat,
@@ -335,6 +342,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent/skills',
+    width: 'narrow',
     title: 'Skills',
     screen: screens.skills,
     loading: cards([table(4)]),
@@ -342,6 +350,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/agent/context',
+    width: 'narrow',
     title: 'Context',
     screen: screens.context,
     // The Company facts form's five fields.
@@ -409,6 +418,7 @@ export const APP_ROUTES = [
   // The workspace's own pages, inside the shell.
   page({
     path: '/settings',
+    width: 'narrow',
     title: 'Settings',
     scope: 'workspace',
     screen: screens.settings,
@@ -442,6 +452,7 @@ export const APP_ROUTES = [
   }),
   page({
     path: '/billing',
+    width: 'narrow',
     title: 'Billing',
     scope: 'workspace',
     screen: screens.billing,
@@ -510,6 +521,11 @@ export function resolveTitle(pathname: string): string {
 /** The loading frame for a pathname: its section's, else a record's. */
 export function routeLoading(pathname: string): RouteLoading {
   return sectionRoute(pathname)?.loading ?? RECORD_LOADING;
+}
+
+/** A page's width: its section's, else the main column's. */
+export function routeWidth(pathname: string): 'narrow' | 'full' {
+  return sectionRoute(pathname)?.width ?? 'full';
 }
 
 /** Whether the path is one of the application shell's titled pages. */

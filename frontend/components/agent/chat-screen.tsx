@@ -6,6 +6,7 @@ import { OutputPane } from '@/components/agent/output-pane';
 import { useFollowLatest } from '@/components/agent/use-follow-latest';
 import { useChatDetail } from '@/components/agent/use-chat-turns';
 import { ThreadPage, ThreadPageLoading } from '@/components/templates/thread-page';
+import { WorkbenchPage } from '@/components/templates/workbench-page';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
 import { ActionButton } from '@/components/ui/actions';
 import { ComposerDock } from '@/components/ui/chat-dock';
@@ -60,18 +61,18 @@ export function ChatScreen() {
         label="Page workspace"
         defects="surface"
         loading={
-          <ThreadPage title={query.data.chat.title}>
+          <WorkbenchPage title={query.data.chat.title}>
             <StateBlock
               kind="loading"
               label="Loading the page workspace…"
               shape={{ kind: 'list' }}
             />
-          </ThreadPage>
+          </WorkbenchPage>
         }
         failed={
-          <ThreadPage title={query.data.chat.title}>
+          <WorkbenchPage title={query.data.chat.title}>
             <IslandUnavailable message="Couldn't load the page workspace. Reload the page to try again." />
-          </ThreadPage>
+          </WorkbenchPage>
         }
       >
         <PageWorkspace

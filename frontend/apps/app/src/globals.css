@@ -298,11 +298,14 @@
 
   /* Containers: `max-w-site` (website sections, navbar, footer), `max-w-app`
      (an app page's content), `max-w-thread` (the Agent thread and its
-     composer), `max-w-prose` (articles, legal, docs) and `max-w-narrow`
-     (section headers, auth cards, onboarding, empty states). */
+     composer), `max-w-page-narrow` (a narrow route's whole page, masthead
+     included: the route manifest's `width: 'narrow'`), `max-w-prose`
+     (articles, legal, docs) and `max-w-narrow` (section headers, auth cards,
+     onboarding, empty states). */
   --container-site: 1320px;
   --container-app: 1440px;
   --container-thread: 1040px;
+  --container-page-narrow: 1040px;
   --container-prose: 720px;
   --container-narrow: 560px;
   /* The app's measures: reading at 720 (`prose`), forms at 640; the page
@@ -727,7 +730,8 @@
       var(--page-section-gap)
   );
   /* No page cap: the page fills the main column, so collapsing the sidebar
-     grows it. Measures (form, prose, Thread) live in the templates. */
+     grows it. A narrow route's page and the measures (form, prose, Thread)
+     live in the templates. */
   --content-max-width: none;
   --content-gutter: 24px;
 

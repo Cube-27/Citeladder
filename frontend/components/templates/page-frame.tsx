@@ -6,7 +6,7 @@ import { ShellContext } from '@/components/layout/shell-context';
 import { NavMenuButton } from '@/components/ui/app-shell';
 import { Masthead, MastheadBack } from '@/components/ui/masthead';
 import { PageEmptyOfferProvider } from '@/components/ui/masthead-actions';
-import { resolveTitle } from '@/lib/navigation/app-routes';
+import { resolveTitle, routeWidth } from '@/lib/navigation/app-routes';
 import { cn } from '@/lib/utils';
 
 /** A record page's way back to the collection it belongs to. */
@@ -40,7 +40,9 @@ export type PageFrameSlots = Readonly<{
  * `--page-pad-block` again below it; a filter row under tabs takes that space,
  * and the body sits 12 below the filter row. The masthead's
  * menu button, search and "Ask agent" come from the shell. Geometry is tokens
- * only; a page passes content into the slots and sets none of its own.
+ * only; a page passes content into the slots and sets none of its own. A
+ * narrow route (its manifest `width`) centres the whole frame in
+ * `max-w-page-narrow`; `fill` keeps a workbench across the main column.
  */
 export function PageFrame({
   title,
@@ -48,14 +50,23 @@ export function PageFrame({
   actions,
   tabs,
   filters,
+  fill,
   children,
-}: PageFrameSlots & Readonly<{ children: ReactNode }>) {
-  const resolved = useRouteTitle(title);
+}: PageFrameSlots & Readonly<{ fill?: true; children: ReactNode }>) {
+  const pathname = useLocation().pathname ?? '';
+  const resolved = useRouteTitle(title, pathname);
+  const width = fill ? 'full' : routeWidth(pathname);
   const shell = useContext(ShellContext);
   const navDrawer = shell?.navDrawer;
   return (
     <PageEmptyOfferProvider>
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div
+        data-page-width={width}
+        className={cn(
+          'flex min-w-0 flex-1 flex-col',
+          width === 'narrow' && 'max-w-page-narrow mx-auto w-full',
+        )}
+      >
         <Masthead
           title={resolved}
           lead={
@@ -120,8 +131,7 @@ export function PageSections({
 }
 
 /** The route's title, announced by the shell when a page overrides it. */
-function useRouteTitle(title: string | undefined) {
-  const pathname = useLocation().pathname ?? '';
+function useRouteTitle(title: string | undefined, pathname: string) {
   const setTitle = useContext(PageTitleContext);
   useLayoutEffect(() => {
     if (!setTitle || title === undefined) return;
