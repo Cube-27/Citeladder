@@ -13,9 +13,10 @@ import type {
 import type { MutationNotice } from '@/lib/api/mutation-notice';
 import type { PromptFormValues } from '@/lib/prompts/forms';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
+import { ConfirmDialog } from '@/components/ui/dialog';
 
 import { CandidateReviewPanel } from './candidate-review';
-import { ConfirmDeleteDialog, type PendingDelete } from './confirm-delete-dialog';
+import { deleteRequest, type PendingDelete } from './confirm-delete-dialog';
 import { CsvImportDialog } from './csv-import-dialog';
 import { PromptBuilder, type BuilderStep } from './prompt-builder';
 import { PromptFormDialog } from './prompt-form-dialog';
@@ -91,13 +92,12 @@ export function PromptLibraryDialogs({
   limits,
 }: Readonly<PromptLibraryDialogsProps>) {
   const deleteDialog = (
-    <ConfirmDeleteDialog
-      pending={pendingDelete}
-      onCancel={() => setPendingDelete(null)}
-      onConfirm={() => {
+    <ConfirmDialog
+      request={deleteRequest(pendingDelete, () => {
         if (pendingDelete) confirmDelete(pendingDelete);
         setPendingDelete(null);
-      }}
+      })}
+      onCancel={() => setPendingDelete(null)}
     />
   );
   // The forms enforce the server's bounds, so they open once the list has listed them.

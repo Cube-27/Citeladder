@@ -1,5 +1,4 @@
-import { Button } from '@/components/ui/button';
-import { Dialog } from '@/components/ui/dialog';
+import type { ConfirmRequest } from '@/components/ui/dialog';
 import type { Prompt, Topic } from '@citeladder/contracts';
 
 export type PendingDelete = { kind: 'prompt'; prompt: Prompt } | { kind: 'topic'; topic: Topic };
@@ -22,32 +21,11 @@ function copy(pending: PendingDelete) {
 }
 
 /** Deletion states its effect before it happens; a stray click no longer unfiles a topic. */
-export function ConfirmDeleteDialog({
-  pending,
-  onCancel,
-  onConfirm,
-}: Readonly<{ pending: PendingDelete | null; onCancel: () => void; onConfirm: () => void }>) {
-  const text = pending ? copy(pending) : null;
-  return (
-    <Dialog
-      open={pending !== null}
-      onOpenChange={(open) => {
-        if (!open) onCancel();
-      }}
-      title={text?.title ?? ''}
-      description={text?.description}
-      footer={
-        <>
-          <Button variant="secondary" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button variant="danger" onClick={onConfirm}>
-            Delete
-          </Button>
-        </>
-      }
-    >
-      {null}
-    </Dialog>
-  );
+export function deleteRequest(
+  pending: PendingDelete | null,
+  onConfirm: () => void,
+): ConfirmRequest | null {
+  if (!pending) return null;
+  const { title, description } = copy(pending);
+  return { title, body: description, confirmLabel: 'Delete', destructive: true, onConfirm };
 }
