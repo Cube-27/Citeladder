@@ -331,7 +331,7 @@
           "light": "{line}",
           "dark": "{line}"
         },
-        "usage": "The soft edge of a control its visible words name: secondary and danger buttons, link-buttons, operable tags, menu triggers, pagers, with shadow-control under it. No 3:1 needed (WCAG 1.4.11). The website aliases its own role here; the app binds #d5d8df light and #393d47 dark."
+        "usage": "The soft edge of a control its visible words name: secondary and danger buttons, link-buttons, operable tags, menu triggers, pagers, with shadow-control under it. No 3:1 needed (WCAG 1.4.11). The website aliases its own role here; the app binds #d5d8df light and #3c3c3c dark."
       },
       {
         "name": "ink-2",
