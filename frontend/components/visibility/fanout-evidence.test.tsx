@@ -161,4 +161,22 @@ describe('Fanout grouping', () => {
     expect(await screen.findByText('Best CRM?')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Group by: Prompt' })).toBeVisible();
   });
+
+  it('keeps a cut surface list on one line, its whole list in a tooltip and a tab stop', async () => {
+    vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
+    // jsdom lays nothing out: report every value as wider than its line, the frame as fitting.
+    vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      return this.hasAttribute('data-scroll-content') ? 0 : 1000;
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<Panel projectId={A} />);
+
+    const surfaces = screen.getByText('ChatGPT API');
+    expect(surfaces).toHaveAttribute('data-truncated');
+    expect(surfaces).toHaveAttribute('tabindex', '0');
+    await user.hover(surfaces);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('ChatGPT API');
+  });
 });

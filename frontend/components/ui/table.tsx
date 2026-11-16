@@ -12,6 +12,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { ClampText, useCut } from '@/components/ui/clamp-text';
 import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
+import { Tag } from '@/components/ui/tag';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
 import { textRole } from '@/components/ui/typography';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
@@ -310,9 +311,12 @@ export function TableCellLines({
   );
 }
 
-/** The word on your own row, the rare accent-coloured word. */
+/**
+ * The word on your own row: a static tag in `ink` at 500. The row's accent
+ * edge and series swatch mark it, so no accent text sits beside red deltas.
+ */
 export function YouTag() {
-  return <span className="type-label text-accent-text shrink-0">You</span>;
+  return <Tag className="text-ink font-medium">You</Tag>;
 }
 
 /** A row's trailing buttons, end-aligned at the button gap (`rowActions` column). */
