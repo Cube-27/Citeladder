@@ -74,8 +74,9 @@ function mentionedPrice(row: CommerceProductRow): ProductCell {
   const { median, currency, quoted, other_currency } = row.mentioned_price;
   const note = other_currency ? `+${formatCount(other_currency)} in other currencies` : undefined;
   // With no quote the median is not a price, so it can never print as "$0.00".
+  // Quotes only in other currencies were mentioned: they stay counted in the note.
   if (median === null || quoted === 0)
-    return missing(row.appearances ? 'not_mentioned' : 'unavailable', note);
+    return missing(row.appearances && !other_currency ? 'not_mentioned' : 'unavailable', note);
   return { kind: 'value', text: formatAmount(median, currency), ...(note ? { note } : {}) };
 }
 

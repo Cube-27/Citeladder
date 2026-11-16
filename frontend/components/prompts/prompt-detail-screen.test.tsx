@@ -286,6 +286,8 @@ it('reads the market from the address and keeps a run without answers unavailabl
   expect(figures.getByText('Visibility').closest('[data-figure-cell]')?.textContent).toMatch(
     /^Visibility100\.0%$/,
   );
+  // The run data is collapsed under the chart until the reader opens it.
+  await userEvent.setup().click(screen.getByText('Show run data (3)'));
   const runs = within(screen.getByRole('table', { name: 'Runs that measured this prompt' }))
     .getAllByRole('row')
     .slice(1)
