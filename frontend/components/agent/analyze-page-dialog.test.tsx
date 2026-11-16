@@ -9,7 +9,7 @@ import { makeProject } from '@/test/fixtures/project';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
-import { AnalyzePageButton } from './analyze-page-dialog';
+import { AnalyzePageDialog } from './analyze-page-dialog';
 
 vi.mock('@/lib/billing/entitlement-context', () => ({
   useManagedPlan: () => false,
@@ -84,7 +84,7 @@ async function openDialog() {
   const user = userEvent.setup();
   renderWithProviders(
     <Routes>
-      <Route path="/actions" element={<AnalyzePageButton />} />
+      <Route path="/actions" element={<AnalyzePageDialog onClose={() => {}} />} />
       <Route path="/agent/chats/:chatId" element={<ChatRoute />} />
     </Routes>,
     {
@@ -96,7 +96,6 @@ async function openDialog() {
       },
     },
   );
-  await user.click(screen.getByRole('button', { name: 'Analyze a page' }));
   return { user, dialog: await screen.findByRole('dialog', { name: 'Analyze a page' }) };
 }
 

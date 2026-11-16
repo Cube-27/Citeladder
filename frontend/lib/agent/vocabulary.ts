@@ -5,8 +5,15 @@
  * structurally required), never as the raw backend identifier.
  */
 import type { PriorityValue } from '@/components/ui/status-mark';
-import type { ActionGroup, ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
-import type { ActionMeasurement, ActionTargetKind } from '@citeladder/contracts/actions';
+import type { ActionPriorityBand, ActionStatus } from '@/lib/api/actions';
+import { formatCount } from '@/lib/format';
+import type {
+  ActionGoal,
+  ActionGrouping,
+  ActionMeasurement,
+  ActionTargetKind,
+  ActionTreeGroupBy,
+} from '@citeladder/contracts/actions';
 import type { ContentGapEvidence } from '@citeladder/contracts/opportunity-evidence';
 
 /** The band the server put an Action's priority score in; the score itself only ranks. */
@@ -23,13 +30,83 @@ export const PRIORITY_BAND_VALUE: Record<ActionPriorityBand, PriorityValue> = {
   low: 'low',
 };
 
-/** The Actions list's goals, in the order the list shows them (AS2). */
-export const ACTION_GROUP_LABEL: Record<ActionGroup, string> = {
-  fix_site: 'Let AI read your site',
+/** The Actions page's goals (plan v3, owner 2026-11-16). */
+export const ACTION_GOAL_LABEL: Record<ActionGoal, string> = {
+  read_site: 'Let AI read your site',
   own_pages: 'Improve your own pages',
-  earned: 'Get mentioned elsewhere',
-  products: 'Improve your products',
+  mentions: 'Get mentioned elsewhere',
+  wrong_claims: 'Fix wrong claims AI makes about your brand',
 };
+
+/** What a goal strip cell counts, singular and plural ("17 fixes open"). */
+const GOAL_COUNT_PHRASE: Record<ActionGoal, readonly [string, string]> = {
+  read_site: ['fix open', 'fixes open'],
+  own_pages: ['action on your pages', 'actions on your pages'],
+  mentions: ['placement to win', 'placements to win'],
+  wrong_claims: ['claim to correct', 'claims to correct'],
+};
+
+export function goalCountPhrase(goal: ActionGoal, count: number): string {
+  const [one, many] = GOAL_COUNT_PHRASE[goal];
+  return `${formatCount(count)} ${count === 1 ? one : many}`;
+}
+
+/** What each goal's info mark explains. */
+export const ACTION_GOAL_HINT: Record<ActionGoal, string> = {
+  read_site: 'Site Health defects and advisories that stop AI reading or trusting your pages.',
+  own_pages: 'Prompts you miss, pages to create or improve, search queries and internal links.',
+  mentions: 'Pages AI cites for your prompts that name competitors and not you.',
+  wrong_claims: 'Claims AI answers make about your brand that your own pages contradict.',
+};
+
+export const ACTION_GROUPING_LABEL: Record<ActionGrouping, string> = {
+  seo: 'SEO',
+  aeo: 'AEO',
+  content: 'Content',
+  prompts: "Prompts you don't appear in",
+  create_content: 'Create content',
+  improve_pages: 'Improve existing pages',
+  search_queries: 'Search queries',
+  internal_links: 'Internal links',
+  regressed: 'Regressed since the last crawl',
+  product_pages: 'Product pages',
+  editorial: 'Editorial',
+  ugc: 'UGC',
+  references: 'Wikis & references',
+  other_sources: 'Other',
+};
+
+/** The Actions page's Impact label for a priority band ("Low / Moderate / High"). */
+export const IMPACT_LABEL: Record<ActionPriorityBand, string> = {
+  high: 'High',
+  medium: 'Moderate',
+  low: 'Low',
+};
+
+const OWNERSHIP_LABEL: Record<string, string> = { owned: 'Owned', earned: 'Earned' };
+
+/** A tree group's heading under what the page groups by first. */
+export function treeGroupLabel(groupBy: ActionTreeGroupBy, key: string): string {
+  switch (groupBy) {
+    case 'goal':
+      return isActionGoal(key) ? ACTION_GOAL_LABEL[key] : key;
+    case 'what_to_do':
+      return approachLabel(key) ?? 'Not diagnosed yet';
+    case 'impact':
+      return isPriorityBand(key) ? `${IMPACT_LABEL[key]} impact` : 'Not scored';
+    case 'ownership':
+      return OWNERSHIP_LABEL[key] ?? key;
+    case 'topic':
+      return key || 'No topic';
+    default: {
+      const unreachable: never = groupBy;
+      return unreachable;
+    }
+  }
+}
+
+const isActionGoal = (key: string): key is ActionGoal => Object.hasOwn(ACTION_GOAL_LABEL, key);
+const isPriorityBand = (key: string): key is ActionPriorityBand => Object.hasOwn(IMPACT_LABEL, key);
 
 export const ACTION_STATUS_LABEL: Record<ActionStatus, string> = {
   open: 'New',

@@ -549,10 +549,10 @@ sends it. The workspace loads as its own chunk, only for a page chat.
 
 Agent mode holds New chat, Skills, Context and the chat history under
 `/agent`. Actions (`/actions`) is a Dashboard page: the one list of the
-project's work, [content gaps](content-optimization.md) and Issues defects
-included (AS1), grouped by goal and category (AS2; the groups, categories and
-filters are in [Opportunities](opportunities.md)); a row opens the Action's
-page, `/actions/{id}`, or an Issues row its issue on `/issues`. Every composer has a + menu: **Skills** sets the
+project's work, [content gaps](content-optimization.md) and Site Health
+issue groups included (AS1), by status, goal and grouping (AS2; the tree and
+its filters are in [Opportunities](opportunities.md)); a row opens the
+Action's page, `/actions/{id}`. Every composer has a + menu: **Skills** sets the
 next turn's skill, shown as a removable chip, and **Actions** lists the
 project's top open Actions, each starting a chat on it, and the whole list.
 Typing `/` opens the menu on the skills and `@` mentions up to five of the

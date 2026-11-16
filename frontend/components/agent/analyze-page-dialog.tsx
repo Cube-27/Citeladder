@@ -25,28 +25,16 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Spinner } from '@/components/ui/spinner';
 
+type TopicChoice = Readonly<{ topic: Topic; prompts: readonly Prompt[] }>;
+
 /**
- * Analyze a page (CO6): the Actions header's button and its dialog. Pick one
+ * Analyze a page (CO6), from the Actions page's Create action menu. Pick one
  * of the latest crawl's content pages, a topic that has prompts and the
  * prompts to optimize the page for; Generate action creates or reuses the
  * page's Action and opens the new chat, which reads the live page first.
+ * Mount it only while open, so each opening starts from empty choices.
  */
-export function AnalyzePageButton() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        Analyze a page
-      </Button>
-      {/* Mounted only while open, so each opening starts from empty choices. */}
-      {open ? <AnalyzePageDialog onClose={() => setOpen(false)} /> : null}
-    </>
-  );
-}
-
-type TopicChoice = Readonly<{ topic: Topic; prompts: readonly Prompt[] }>;
-
-function AnalyzePageDialog({ onClose }: Readonly<{ onClose: () => void }>) {
+export function AnalyzePageDialog({ onClose }: Readonly<{ onClose: () => void }>) {
   const { workspaceId, projectId } = useProjectScope();
   const scope = { workspaceId, projectId };
   const [page, setPage] = useState<AnalyzablePage | null>(null);

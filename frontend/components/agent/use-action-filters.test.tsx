@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it } from 'vite-plus/test';
 
 import { setUrlStateRouter } from '@/lib/navigation/url-state';
 
-import { useActionFilters } from './action-queue';
+import { useActionFilters } from './use-action-filters';
 
 function Probe() {
   const filters = useActionFilters();
@@ -18,11 +18,11 @@ function Probe() {
 afterEach(() => setUrlStateRouter(null));
 
 describe('useActionFilters', () => {
-  it('clears both filters at once, keeping the status view, under a router whose navigations land later', async () => {
+  it('clears both filters at once, keeping the status and grouping, under a router whose navigations land later', async () => {
     globalThis.history.replaceState(
       null,
       '',
-      '/actions?project=p1&status=dismissed&priority=high&source=site_health',
+      '/actions?project=p1&status=dismissed&group_by=impact&impact=high&source=site_health',
     );
     // A loader makes each navigation asynchronous, as the app's private routes are.
     const router = createBrowserRouter([
@@ -33,7 +33,9 @@ describe('useActionFilters', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: 'Clear filters' }));
 
-    await waitFor(() => expect(globalThis.location.search).toBe('?project=p1&status=dismissed'));
+    await waitFor(() =>
+      expect(globalThis.location.search).toBe('?project=p1&status=dismissed&group_by=impact'),
+    );
     expect(router.state.navigation.state).toBe('idle');
     router.dispose();
   });

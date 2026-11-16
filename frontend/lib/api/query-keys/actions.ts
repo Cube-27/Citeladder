@@ -14,7 +14,6 @@ export const actionKeys = {
       status: string | null;
       q: string | null;
       targetKind: string | null;
-      group: string | null;
       approach: string | null;
       priority: string | null;
       family: string | null;
@@ -22,6 +21,15 @@ export const actionKeys = {
       limit: number;
     },
   ) => actions.read('list', scope, filters),
+  /** The Actions page's tree under one status, grouping and filter set. */
+  tree: (scope: ProjectScope, params: Readonly<Record<string, string | undefined>>) =>
+    actions.read('tree', scope, params),
+  /** A tree grouping's rows past its first ten, from the cursor the tree gave. */
+  groupingRows: (
+    scope: ProjectScope,
+    params: Readonly<Record<string, string | undefined>>,
+    cursor: string,
+  ) => actions.read('grouping-rows', scope, params, cursor),
   /** Analyze a page's picker: the latest crawl's content pages matching a search. */
   analyzePages: (scope: ProjectScope, search: string) =>
     actions.read('analyze-pages', scope, search),

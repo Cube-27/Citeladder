@@ -29,9 +29,6 @@
           "target_kind": {
             "$ref": "#/components/schemas/ActionTargetKind"
           },
-          "group": {
-            "$ref": "#/components/schemas/ActionGroup"
-          },
           "approach": {
             "type": "string"
           },
@@ -40,6 +37,16 @@
           },
           "family": {
             "type": "string"
+          },
+          "grouping": {
+            "$ref": "#/components/schemas/ActionGrouping"
+          },
+          "ownership": {
+            "$ref": "#/components/schemas/ActionOwnership"
+          },
+          "topic": {
+            "type": "string",
+            "maxLength": 200
           }
         },
         "required": ["status"],
@@ -350,9 +357,6 @@
           },
           "approach": {
             "type": "string"
-          },
-          "group": {
-            "$ref": "#/components/schemas/ActionGroup"
           },
           "goal": {
             "$ref": "#/components/schemas/ActionGoal"
@@ -1026,7 +1030,6 @@
           "priority_band",
           "families",
           "approach",
-          "group",
           "goal",
           "grouping",
           "skill_id",
@@ -1052,10 +1055,6 @@
       "ActionGoal": {
         "type": "string",
         "enum": ["read_site", "own_pages", "mentions", "wrong_claims"]
-      },
-      "ActionGroup": {
-        "type": "string",
-        "enum": ["fix_site", "own_pages", "earned", "products"]
       },
       "ActionGrouping": {
         "type": "string",
@@ -1206,9 +1205,6 @@
           "approach": {
             "type": "string"
           },
-          "group": {
-            "$ref": "#/components/schemas/ActionGroup"
-          },
           "goal": {
             "$ref": "#/components/schemas/ActionGoal"
           },
@@ -1272,7 +1268,6 @@
           "priority_band",
           "families",
           "approach",
-          "group",
           "goal",
           "grouping",
           "skill_id",
@@ -1290,6 +1285,10 @@
       "ActionMeasurement": {
         "type": "string",
         "enum": ["measuring", "verified"]
+      },
+      "ActionOwnership": {
+        "type": "string",
+        "enum": ["owned", "earned"]
       },
       "ActionPriorityBand": {
         "type": "string",
@@ -1317,21 +1316,9 @@
               "minimum": -9007199254740991,
               "maximum": 9007199254740991
             }
-          },
-          "group_counts": {
-            "type": "object",
-            "propertyNames": {
-              "$ref": "#/components/schemas/ActionGroup"
-            },
-            "additionalProperties": {
-              "type": "integer",
-              "minimum": -9007199254740991,
-              "maximum": 9007199254740991
-            },
-            "required": ["fix_site", "own_pages", "earned", "products"]
           }
         },
-        "required": ["items", "next_cursor", "status_counts", "group_counts"],
+        "required": ["items", "next_cursor", "status_counts"],
         "additionalProperties": false
       },
       "ActionStatus": {
@@ -11943,14 +11930,6 @@
             }
           },
           {
-            "name": "group",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": ["string", "null"]
-            }
-          },
-          {
             "name": "approach",
             "in": "query",
             "required": false,
@@ -12071,14 +12050,6 @@
           },
           {
             "name": "target_kind",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": ["string", "null"]
-            }
-          },
-          {
-            "name": "group",
             "in": "query",
             "required": false,
             "schema": {

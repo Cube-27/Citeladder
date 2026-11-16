@@ -2,7 +2,6 @@
 import {
   actionTargetKindSchema,
   type ActionGoal,
-  type ActionGroup,
   type ActionGrouping,
   type ActionMeasurement,
   type ActionStatus,
@@ -13,28 +12,8 @@ import type { SourceClass } from '@citeladder/contracts/opportunities';
 import type { IssueSection } from '@citeladder/contracts/site-health';
 import { opportunities } from './opportunity.ts';
 
-/** One group rule: it admits an Action whose target kind and approach are both listed; an absent list admits every value. */
-export type ActionGroupRule = Readonly<{
-  group: ActionGroup;
-  target_kinds?: readonly ActionTargetKind[];
-  approaches?: readonly string[];
-}>;
-
 /** An approach branch's target kinds, checked against the contract's; none admits every kind. */
 const kinds = (...listed: ActionTargetKind[]): ActionTargetKind[] => listed;
-
-/**
- * The Actions list's groups (AS2), derived at read time from the stored
- * target kind and approach; no column holds them. An Action belongs to the
- * FIRST rule that admits it, else to `ACTION_GROUP_DEFAULT`, so each Action
- * lands in exactly one group.
- */
-const ACTION_GROUPS: readonly ActionGroupRule[] = [
-  { group: 'products', target_kinds: ['product', 'category'] },
-  { group: 'earned', approaches: ['earned_placement'] },
-  { group: 'fix_site', approaches: ['fix_technical', 'improve_links'] },
-];
-const ACTION_GROUP_DEFAULT: ActionGroup = 'own_pages';
 
 /**
  * The Actions page's goals in their fixed order, each with its groupings in
@@ -347,13 +326,6 @@ export const actions = {
     target_kinds: kinds(),
   },
   AGENT_ORIGIN_DEFAULT_SKILL: 'content_create',
-  ACTION_GROUPS,
-  /**
-   * Every Action no group rule admits: creating, improving or merging your
-   * own pages (pages, planned pages, queries, prompts), and an Agent-origin
-   * Action whose approach is not diagnosed yet.
-   */
-  ACTION_GROUP_DEFAULT,
   ACTION_GOALS,
   RULE_GROUPING,
   ISSUE_SECTION_GROUPING,

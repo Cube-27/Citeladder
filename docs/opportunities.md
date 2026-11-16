@@ -173,7 +173,7 @@ descriptive and never scores. [Earned sources](earned-sources.md) is the
 authority for the inspection and the rule; a declaration against it targets
 the publisher page and never an owned `SiteUrl`.
 
-The [Actions screens](../frontend/components/agent/actions-screen.tsx)
+The [Actions screens](../frontend/components/agent/actions-list-screen.tsx)
 render that contract; they never reclassify domains or fabricate task prose.
 There is no separate Opportunities screen.
 
@@ -465,39 +465,25 @@ the causality notice is shown: a met check shows the change is live and
 measured; it does not prove this Action caused any movement, and other changes
 can overlap.
 
-The Actions list is grouped (AS2). Each Action's `group` is derived at read
-time from its stored target kind and approach by `ACTION_GROUPS` in the
-[Actions config](../frontend/services/api/src/config/actions.ts); no column
-holds it, and each Action lands in exactly one:
-
-| Group | Admits |
-|---|---|
-| `products` (Improve your products) | product and category targets, any approach |
-| `earned` (Get mentioned elsewhere) | `earned_placement` |
-| `fix_site` (Let AI read your site) | `fix_technical`, `improve_links` |
-| `own_pages` (Improve your own pages) | everything else: `create_new`, `improve_existing`, `consolidate`, and an undiagnosed Agent-origin Action |
-
-`GET /projects/{id}/actions` filters by `status`, `target_kind`, `group`,
-`approach`, `priority` (the band: high from 30, medium from 20, low below,
-unscored included), `family` (Source), `grouping`, `ownership` and `topic`; an
-unknown value is a 422. `GET /projects/{id}/actions/tree` reads the whole page
-(status counts, goal strip, first rows per grouping) in a fixed number of
-statements, each grouping carrying this list's cursor for its next rows.
-Each item carries `group` and `priority_band`. `status_counts` stay
-project-wide and unfiltered (the sidebar badge); `group_counts` count every
-group under every filter but the group.
+Each Action's goal and grouping are persisted at sync (`ACTION_GOALS` in the
+[Actions config](../frontend/services/api/src/config/actions.ts)).
+`GET /projects/{id}/actions` filters by `status`, `target_kind`, `approach`,
+`priority` (the band: high from 30, medium from 20, low below, unscored
+included), `family` (Source), `grouping`, `ownership` and `topic`; an unknown
+value is a 422, and `status_counts` stay project-wide and unfiltered (the
+sidebar badge). `GET /projects/{id}/actions/tree` reads the whole page under
+one status in a fixed number of statements: the status counts, the goal
+strip's open counts (New and In progress under the other filters, whatever the
+status filter), and each grouping's count, first ten rows and this list's
+cursor for its next rows. A bulk change's filter takes the same fields.
 
 The Actions screen (`/actions`, a Dashboard page) is the home for every
-actionable item in the app ([IA1](decisions.md#actions-group-issues)).
-Under New it lists the latest crawl's Issues defects exactly as Issues groups
-them, read through the Issues reads; technical-tab issues fall under
-`fix_site` and content and AEO issues under `own_pages`, each under its rule's
-own `category`, and each links to that issue open on `/issues`. Issues keep
-their own Mark fixed lifecycle, and New's count includes them only once their
-read has answered. Every other Action sits under its group, then a category;
-both category vocabularies are in the [frontend Actions config](../frontend/lib/config/agent.ts).
-The status view (New, In progress, Done, Declined), Source,
-Priority and grouping (goal or source) are URL state. Overview's ranked actions
+actionable item in the app ([IA1](decisions.md#actions-group-issues)): status,
+then goal (or what the page groups by), then grouping, then the Actions, each
+open status from its own tree read and never from the Issues reads. Statuses,
+group-by, Impact and Source are URL state. Ticked rows or groupings are
+accepted or declined in bulk, moving out of their status at once and settled
+by the refetch. Overview's ranked actions
 link to the owning Action at `/actions/{action_id}`, or to the Actions list
 when an Opportunity has no Action yet; an Action's findings are listed on that
 detail with no drawer.

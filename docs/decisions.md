@@ -680,11 +680,11 @@ The Actions simplification plan built them (#699, #700, #701 and #703) and has b
 | ID | Decision |
 |---|---|
 | AS1 | One Actions list. No per-surface screens; `actions.surface` and the Content screen are removed. Content-gap findings are ordinary Actions. |
-| AS2 | The list is grouped. Group headings show open counts; each group shows its top items by priority with "Show all N". |
+| AS2 | The list is a tree: status (New, In progress, Done, Declined), then goal, then grouping, then Actions by impact; each grouping shows ten, then "Show N more" ten at a time (owner, 16 November 2026: "max rows will be 10 visible rest will go in show more"). |
 | AS3 | "Work with the agent" opens a new Agent chat with the Action attached and a prefilled, editable message; the user never has to type to start. |
 | AS4 | Every page in the URLs Gap filter is already actionable ("Draft a request to be listed") and is listed on the Actions page (one definition of "gap"). |
 | AS5 | Content gaps use only competitors' and editors' content pages as evidence (articles, guides, comparisons, listicles, reviews, case studies), never their product, category, collection or home pages, and only answers to tracked prompts. |
-| AS6 | The Actions list keeps today's table and adds an **All filters** button (one menu, a submenu per filter). |
+| AS6 | The Actions list has one control row: statuses, **All filters** (one menu, a submenu per filter) and Group by, then Create action and Accept all at its end (owner, 16 November 2026, approving the v3 design: "yes that is exactly correct"). |
 | AS7 | The Action detail page is one centered column, not a grid of boxes, with Dismiss, Mark implemented and Work with the agent in a bar floating at the bottom. |
 | AS8 | AI visibility tabs drop their second row of filter selects: every filter moves into one shared **All filters** menu at the far right of the tabs row (a submenu per filter, search for long lists, a count of filters changed from their defaults, URL state), which the Actions list reuses. Sources' Domains/URLs switch moves to the start of the table toolbar; on Trends, Brand and competitors and Over time split the row evenly, and a faint dashed connector joins runs across a comparability break. |
 

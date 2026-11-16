@@ -41,7 +41,6 @@ const action: Action = {
   priority_band: 'high',
   families: ['site_changes'],
   approach: 'fix_technical',
-  group: 'fix_site',
   goal: 'own_pages',
   grouping: 'regressed',
   skill_id: 'technical_health',

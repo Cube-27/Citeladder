@@ -54,7 +54,6 @@ const listFilters = {
   status_filter: { scalar: { kind: 'str' }, alias: 'status' },
   q: { scalar: { kind: 'str', maxLength: a.ACTION_SEARCH_MAX_CHARS } },
   target_kind: { scalar: { kind: 'str' } },
-  group: { scalar: { kind: 'str' } },
   approach: { scalar: { kind: 'str' } },
   priority: { scalar: { kind: 'str' } },
   family: { scalar: { kind: 'str' } },

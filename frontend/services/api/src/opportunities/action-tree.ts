@@ -1,6 +1,6 @@
 /**
- * The Actions page as persisted reads (plan v3): the tree (status counts, goal
- * strip, and per group and grouping its count and first rows by impact) and
+ * The Actions page as persisted reads (plan v3): the tree (status counts, the
+ * goal strip's open counts, and per group and grouping its count and first rows by impact) and
  * every Action touching one URL. Each is a fixed number of SQL statements over
  * the Actions' persisted goal, grouping and `action_urls`; nothing is derived
  * from evidence, and no read triggers work.
@@ -73,7 +73,7 @@ export async function actionTree(db: Database, scope: Scope, raw: TreeFilters) {
   const filtered = matchingActions(db, scope, { ...rest, grouping: null });
   const key = groupKeySql(groupBy);
   const priority = sql<number>`coalesce(actions.priority_score, -1)`;
-  const [statuses, counts, blocking, rows] = await Promise.all([
+  const [statuses, counts, open, blocking, rows] = await Promise.all([
     db
       .selectFrom('actions')
       .where('workspace_id', '=', scope.workspaceId)
@@ -83,14 +83,14 @@ export async function actionTree(db: Database, scope: Scope, raw: TreeFilters) {
       .groupBy('effective_status')
       .execute(),
     filtered
-      .select([
-        key.as('key'),
-        goalSql.as('goal'),
-        groupingSql.as('grouping'),
-        sql<number>`count(*)::int`.as('count'),
-      ])
+      .select([key.as('key'), groupingSql.as('grouping'), sql<number>`count(*)::int`.as('count')])
       // By position: each expression binds its values afresh in each clause.
-      .groupBy([sql`1`, sql`2`, sql`3`])
+      .groupBy([sql`1`, sql`2`])
+      .execute(),
+    // The goal strip counts open work (New and In progress, owner 2026-11-16) whatever the status filter.
+    matchingActions(db, scope, { ...rest, grouping: null, status: null })
+      .select([goalSql.as('goal'), sql<number>`count(*)::int`.as('count')])
+      .groupBy(sql`1`)
       .execute(),
     db
       .selectFrom('actions')
@@ -146,7 +146,7 @@ export async function actionTree(db: Database, scope: Scope, raw: TreeFilters) {
     ),
     goals: actionGoalSchema.options.map((goal) => ({
       goal,
-      count: counts.filter((row) => row.goal === goal).reduce((sum, row) => sum + row.count, 0),
+      count: open.find((row) => row.goal === goal)?.count ?? 0,
       blocking: goal === 'read_site' && blocking !== undefined,
     })),
     groups: [...groups.values()]

@@ -13,7 +13,7 @@ import {
 
 import { siteHealthDashboardSchema } from '@citeladder/contracts/site-health';
 
-import { actionsQueries } from '@/lib/api/actions';
+import { actionsQueries, DEFAULT_ACTION_TREE } from '@/lib/api/actions';
 import { agentQueries } from '@/lib/api/agent';
 import { commerceQueries } from '@/lib/api/commerce';
 import { demandApi, demandQueries } from '@/lib/api/demand';
@@ -201,13 +201,7 @@ describe('prefetchRoute', () => {
   it.each([
     ['/search-intelligence', [searchIntelligenceQueries.readiness(PROJECT).queryKey]],
     ['/agent', [actionsQueries.list(PROJECT).queryKey]],
-    [
-      '/actions',
-      [
-        ...actionsQueries.statusView(PROJECT, 'open', {}).map((read) => read.queryKey),
-        siteHealthQueries.dashboard(PROJECT).queryKey,
-      ],
-    ],
+    ['/actions', [actionsQueries.tree(PROJECT, DEFAULT_ACTION_TREE).queryKey]],
     ['/agent/skills', [agentQueries.skills(PROJECT.workspaceId).queryKey]],
     [
       '/agent/context',

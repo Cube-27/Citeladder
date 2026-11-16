@@ -70,7 +70,6 @@ const action = {
   priority_band: 'high',
   families: ['sources'],
   approach: 'earned_placement',
-  group: 'earned',
   goal: 'mentions',
   grouping: 'editorial',
   skill_id: 'earned_authority',
@@ -174,7 +173,6 @@ test('declaring an Action implemented shows comparable verification', async ({ p
         items: [action],
         next_cursor: null,
         status_counts: { open: 1 },
-        group_counts: { fix_site: 0, own_pages: 0, earned: 1, products: 0 },
       },
     }),
   );
@@ -221,16 +219,29 @@ test('declaring an Action implemented shows comparable verification', async ({ p
 
 test('Action filters restore through URL history and reload', async ({ page }) => {
   await stubAuthedShell(page, [], [project]);
-  await page.route(`**/api/v1/projects/${PROJECT}/actions*`, (route) => {
-    const params = new URL(route.request().url()).searchParams;
-    const dismissed = params.get('status') === 'dismissed';
-    const group = params.get('group');
+  await page.route(`**/api/v1/projects/${PROJECT}/actions/tree*`, (route) => {
+    const dismissed = new URL(route.request().url()).searchParams.get('status') === 'dismissed';
     return route.fulfill({
       json: {
-        items: dismissed || (group && group !== 'earned') ? [] : [action],
-        next_cursor: null,
-        status_counts: { open: 1, dismissed: 0 },
-        group_counts: { fix_site: 0, own_pages: 0, earned: dismissed ? 0 : 1, products: 0 },
+        group_by: 'goal',
+        status_counts: { open: 1, in_progress: 0, done: 0, dismissed: 0 },
+        goals: [
+          { goal: 'read_site', count: 0, blocking: false },
+          { goal: 'own_pages', count: 0, blocking: false },
+          { goal: 'mentions', count: 1, blocking: false },
+          { goal: 'wrong_claims', count: 0, blocking: false },
+        ],
+        groups: dismissed
+          ? []
+          : [
+              {
+                key: 'mentions',
+                count: 1,
+                groupings: [
+                  { grouping: 'editorial', count: 1, items: [action], next_cursor: null },
+                ],
+              },
+            ],
       },
     });
   });
@@ -251,21 +262,22 @@ test('Action filters restore through URL history and reload', async ({ page }) =
   );
 
   await page.goto(`/actions?project=${PROJECT}&status=dismissed`);
-  await expect(page.getByText('No declined Actions')).toBeVisible();
+  await expect(page.getByText('No declined actions')).toBeVisible();
   await page.reload();
-  await expect(page.getByText('No declined Actions')).toBeVisible();
+  await expect(page.getByText('No declined actions')).toBeVisible();
 
-  await page.getByRole('radio', { name: /^New/ }).click();
-  // The tree's goal header, not the goal strip's "Go to …" cell.
+  await page.getByRole('button', { name: 'Status: Declined' }).click();
+  await page.getByRole('menuitemradio', { name: 'New' }).click();
+  // The tree's goal row, not the goal strip's "Go to …" cell.
   await expect(
     page.getByRole('button', { name: 'Get mentioned elsewhere, 1', exact: true }),
   ).toBeVisible();
   // The row is titled by its target; the work is its second line.
   await expect(page.getByRole('link', { name: 'example.org/tools' })).toBeVisible();
-  await expect(page.getByText('Earn a placement · 1 finding')).toBeVisible();
-  await expect.poll(() => new URL(page.url()).searchParams.has('status')).toBe(false);
+  await expect(page.getByText('Earn a placement', { exact: true })).toBeVisible();
+  await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBe('open');
 
-  // A row opens its Action; its title link covers the whole identity cell.
+  // A row opens its Action.
   await page.getByRole('link', { name: 'example.org/tools' }).click();
   await expect(page).toHaveURL(new RegExp(`/actions/${ACTION}`));
 });

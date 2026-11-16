@@ -80,6 +80,11 @@ describe('Action status decisions', () => {
       200,
       { updated: 2, skipped: 1, truncated: false },
     ]);
+    // A ticked grouping reaches only its own Actions; the one left is not in SEO.
+    expect(await bulk({ filter: { status: 'open', grouping: 'seo' }, to: 'in_progress' })).toEqual([
+      200,
+      { updated: 0, skipped: 0, truncated: false },
+    ]);
     // Accept all: every New Action the filter matches, here the one left.
     expect(await bulk({ filter: { status: 'open' }, to: 'in_progress' })).toEqual([
       200,
