@@ -120,16 +120,21 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
 }
 
 /** A chat: user turns (right, 60%, 48 high) alternating with replies (left, 80%, 72 high), 24 apart. */
-export function ThreadBlocks() {
+function ThreadBlocks() {
+  // Own spans: cn() does not merge the named radii over SkeletonBlock's rounded-sm.
   return (
-    <span data-thread-blocks="" className="grid gap-6">
-      {range(3).map((index) =>
-        index % 2 === 0 ? (
-          <SkeletonBlock key={index} className="h-12 w-3/5 justify-self-end rounded-lg" />
-        ) : (
-          <SkeletonBlock key={index} className="h-[72px] w-4/5 justify-self-start rounded-md" />
-        ),
-      )}
+    <span className="grid gap-[var(--page-top-gap)]">
+      {range(3).map((index) => (
+        <span
+          key={index}
+          aria-hidden
+          data-skeleton-block=""
+          className={cn(
+            'skeleton-block bg-well block',
+            index % 2 === 0 ? 'rounded-card ms-auto h-12 w-3/5' : 'rounded-control min-h-18 w-4/5',
+          )}
+        />
+      ))}
     </span>
   );
 }

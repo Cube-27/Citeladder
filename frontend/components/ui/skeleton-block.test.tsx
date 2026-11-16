@@ -7,11 +7,7 @@ describe('ShapeBlocks', () => {
   it('draws a thread as a user turn, a reply and a user turn, alternating sides', () => {
     const { container } = render(<ShapeBlocks shape={{ kind: 'thread' }} />);
     const blocks = [...container.querySelectorAll('[data-skeleton-block]')];
-    expect(blocks.map((block) => block.classList.contains('justify-self-end'))).toEqual([
-      true,
-      false,
-      true,
-    ]);
+    expect(blocks.map((block) => block.classList.contains('ms-auto'))).toEqual([true, false, true]);
     expect(blocks.every((block) => block.getAttribute('aria-hidden') === 'true')).toBe(true);
   });
 });
