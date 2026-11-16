@@ -1330,11 +1330,16 @@
       },
       "ActionTargetKind": {
         "type": "string",
-        "enum": ["page", "earned_page", "product", "category", "query", "prompt", "planned_page"]
-      },
-      "ActionUserStatus": {
-        "type": "string",
-        "enum": ["open", "in_progress", "dismissed"]
+        "enum": [
+          "page",
+          "earned_page",
+          "product",
+          "category",
+          "query",
+          "prompt",
+          "planned_page",
+          "issue_family"
+        ]
       },
       "ActionTree": {
         "type": "object",
@@ -1465,6 +1470,10 @@
         },
         "required": ["whole_site", "total", "items", "next_cursor"],
         "additionalProperties": false
+      },
+      "ActionUserStatus": {
+        "type": "string",
+        "enum": ["open", "in_progress", "dismissed"]
       },
       "AdOwnership": {
         "type": "string",

@@ -363,7 +363,7 @@ function urlFilter(value: string | null | undefined) {
 }
 
 /**
- * The issue family's one reference snippet in the crawl's persisted catalog
+ * The rule's one reference snippet in the crawl's persisted catalog
  * (`site-health/issue-catalog.ts`): redacted markup of the failing element and
  * its label context on the first affected page, or null when none was kept.
  */
