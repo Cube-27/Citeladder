@@ -117,8 +117,8 @@ function cellWidth(columns: number, cell: number): string {
 }
 
 /**
- * A table: a 36px head row on `well`, then 40px rows of cell blocks, one per
- * visible column; the last `desktopOnly` cells show from the `desktop` width.
+ * A table: the loaded head's height on `well`, then 40px rows of cell blocks,
+ * one per visible column; the last `desktopOnly` cells show from the `desktop` width.
  */
 export function TableBlocks({
   columns = 4,
@@ -130,7 +130,7 @@ export function TableBlocks({
     cn(cellWidth(columns, cell), cell >= columns - desktopOnly && 'desktop:block hidden');
   return (
     <span className="grid">
-      <span className="bg-well block h-9 rounded-sm" />
+      <span className="bg-well block h-[var(--table-header-height)] rounded-sm" />
       {range(rows).map((row) => (
         <span key={row} className="flex h-10 items-center gap-4 px-4">
           {cells.map((cell) => (
