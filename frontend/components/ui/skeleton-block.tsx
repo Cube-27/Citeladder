@@ -70,7 +70,7 @@ export function ShapeBlocks({ shape }: Readonly<{ shape: LoadingShape }>) {
 const range = (count: number) => Array.from({ length: count }, (_, index) => index);
 
 /** A card's title: one 16×160 block. */
-export function TitleBlock() {
+function TitleBlock() {
   return <SkeletonBlock className="h-4 w-40 max-w-full" />;
 }
 
