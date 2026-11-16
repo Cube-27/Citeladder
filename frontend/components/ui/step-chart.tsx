@@ -22,6 +22,7 @@ import {
 import {
   labelledIndexes,
   linePoints,
+  onGrid,
   trendScale,
   type TrendScale,
 } from '@/components/ui/trend-geometry';
@@ -64,7 +65,6 @@ type Line = {
   shape: MarkerShape;
 };
 
-const TIP_WIDTH = 216;
 /** Markers are drawn while every one still has room. */
 const MARKER_LIMIT = 40;
 /** At most four gridlines, the floor included. */
@@ -180,9 +180,11 @@ export function StepChart({
   };
   const labelText = (line: Pick<Line, 'name' | 'values'>) =>
     toned.length === 1 ? latestText(line) : `${line.name} ${latestText(line)}`;
-  const gutter = Math.min(
-    Math.round(width * 0.35),
-    Math.max(...toned.map((line) => labelText(line).length)) * LABEL_CHAR_WIDTH + 16,
+  const gutter = onGrid(
+    Math.min(
+      width * 0.35,
+      Math.max(...toned.map((line) => labelText(line).length)) * LABEL_CHAR_WIDTH + 16,
+    ),
   );
   const scaleFor = (padRight: number) =>
     trendScale({
@@ -353,7 +355,8 @@ function StepChartTip({
     <ChartTipSheet
       title={point.label}
       top={scale.padTop}
-      left={tipLeft(scale.x(active), width)}
+      x={scale.x(active)}
+      frameWidth={width}
       note={point.versionChange?.note}
       rows={lines.map((line) => ({
         name: line.name,
@@ -464,11 +467,6 @@ function lastMeasured(values: readonly (number | null)[]) {
   for (let index = values.length - 1; index >= 0; index -= 1)
     if (values[index] !== null) return index;
   return -1;
-}
-
-/** Beside the crosshair, flipped to its left where it would run off the plot. */
-function tipLeft(x: number, width: number) {
-  return x + 16 + TIP_WIDTH > width ? x - 16 - TIP_WIDTH : x + 16;
 }
 
 function StepPlot({

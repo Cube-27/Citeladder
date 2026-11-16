@@ -1,9 +1,12 @@
 import { chartTicks } from '@/components/ui/chart';
 
-/** The fixed insets around the plot: 24 right, 10 above, 30 under it for the dates. */
+/** The fixed insets around the plot: 24 right, 12 above, 32 under it for the dates. */
 const PAD_RIGHT = 24;
-const PAD_TOP = 10;
-const PAD_BOTTOM = 30;
+const PAD_TOP = 12;
+const PAD_BOTTOM = 32;
+
+/** Spacing sits on the 4px grid, at the nearest step. */
+export const onGrid = (value: number) => Math.round(value / 4) * 4;
 /** The least room between two date labels on the x axis. */
 const LABEL_SPACING = 64;
 /**
@@ -97,7 +100,7 @@ export function trendScale({
   maxTicks?: number;
 }>): TrendScale {
   const { ticks, bottom, top } = domainOf(lines, yMin, yMax, tickCount, maxTicks);
-  const padLeft = Math.round(tickWidth(ticks) * 7.4) + 14;
+  const padLeft = onGrid(tickWidth(ticks) * 7.4 + 14);
   const plotWidth = Math.max(1, width - padLeft - padRight);
   const plotHeight = Math.max(1, height - PAD_TOP - PAD_BOTTOM);
   const fractions = timeFractions(timestamps) ?? evenFractions(timestamps.length);

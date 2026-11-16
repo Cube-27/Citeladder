@@ -4,6 +4,7 @@ import {
   useEffect,
   useRef,
   type ButtonHTMLAttributes,
+  type KeyboardEvent,
   type ReactNode,
   type RefObject,
 } from 'react';
@@ -209,9 +210,34 @@ export function HeldTabRow({ labels }: Readonly<{ labels: readonly string[] }>) 
   );
 }
 
+const PAGE_KEY: Readonly<Record<string, number>> = { PageUp: -1, PageDown: 1 };
+
+function scrollParent(from: HTMLElement): Element {
+  for (let node = from.parentElement; node; node = node.parentElement) {
+    const { overflowY } = getComputedStyle(node);
+    if ((overflowY === 'auto' || overflowY === 'scroll') && node.scrollHeight > node.clientHeight) {
+      return node;
+    }
+  }
+  return document.scrollingElement ?? document.documentElement;
+}
+
 /**
- * The strip: Radix tabs, so Left and Right move and select and Tab leaves the
- * list. Must be rendered inside a `TabsRoot` (or a `Tabs`).
+ * PageUp and PageDown scroll the page by a viewport, as they do from the body;
+ * Radix's roving focus would otherwise jump to the first or last tab.
+ */
+function pageKeyScrollsPage(event: KeyboardEvent<HTMLElement>) {
+  const direction = PAGE_KEY[event.key];
+  if (direction === undefined) return;
+  event.preventDefault();
+  const scroller = scrollParent(event.currentTarget);
+  scroller.scrollBy({ top: direction * 0.9 * scroller.clientHeight });
+}
+
+/**
+ * The strip: Radix tabs, so the arrows, Home and End move and select and Tab
+ * leaves the list; PageUp and PageDown scroll the page instead. Must be
+ * rendered inside a `TabsRoot` (or a `Tabs`).
  */
 function TabStrip<T extends string>({
   items,
@@ -239,6 +265,7 @@ function TabStrip<T extends string>({
               value={item.value}
               disabled={item.disabled}
               onMouseEnter={() => onIntent?.(item.value)}
+              onKeyDown={pageKeyScrollsPage}
               onFocus={(event) => {
                 onIntent?.(item.value);
                 event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
@@ -307,6 +334,8 @@ const ARROW_DELTA: Readonly<Record<string, number>> = {
   ArrowUp: -1,
 };
 
+const EDGE_KEY: Readonly<Record<string, 'first' | 'last'>> = { Home: 'first', End: 'last' };
+
 /**
  * One choice of a SegmentedControl. A filter choice may carry the number of
  * rows it keeps (`count`), a short status after its label (`detail`, muted)
@@ -324,8 +353,9 @@ export type SegmentedOption<T extends string> = Readonly<{
  * SegmentedControl — a view switch for two to four exclusive views with no
  * panel (a date range, a metric, a filter), in the Tabs face: the current
  * segment carries the accent underline. Radiogroup semantics: one tab stop at
- * the checked option, and the arrow keys move focus and selection, wrapping
- * at both ends.
+ * the checked option; the arrow keys move focus and selection, wrapping at
+ * both ends, Home and End go to the first and last, and PageUp and PageDown
+ * keep the browser's page scroll.
  *
  * `trailing` is a control that shares the track but is NOT one of the
  * choices (Performance's "More", which opens the range dialog): it sits
@@ -360,13 +390,14 @@ export function SegmentedControl<T extends string>({
   const selectedIndex = options.findIndex((option) => option.value === value);
   const tabStop = selectedIndex === -1 ? 0 : selectedIndex;
 
-  const move = (from: number, delta: number) => {
-    const next = (from + delta + options.length) % options.length;
+  const select = (next: number) => {
     const option = options[next];
     if (!option) return;
     onChange(option.value);
     buttonsRef.current[next]?.focus();
   };
+  const move = (from: number, delta: number) =>
+    select((from + delta + options.length) % options.length);
 
   return (
     <StripFrame>
@@ -408,10 +439,12 @@ export function SegmentedControl<T extends string>({
                     event.currentTarget.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
                   }
                   onKeyDown={(event) => {
+                    const edge = EDGE_KEY[event.key];
                     const delta = ARROW_DELTA[event.key];
-                    if (delta === undefined) return;
+                    if (edge === undefined && delta === undefined) return;
                     event.preventDefault();
-                    move(index, delta);
+                    if (edge) select(edge === 'first' ? 0 : options.length - 1);
+                    else if (delta !== undefined) move(index, delta);
                   }}
                   className={tabFace({ kind: 'segment', selected })}
                 >

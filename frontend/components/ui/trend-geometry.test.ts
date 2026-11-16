@@ -60,4 +60,16 @@ describe('trendScale', () => {
     const scale = scaleOf(2, 160);
     expect([scale.x(0), scale.x(1)]).toEqual([36, 136]);
   });
+
+  it('puts the tick gutter and the top inset on the 4px grid', () => {
+    // Five characters measure 51px; the gutter snaps to 52.
+    const scale = trendScale({
+      width: 400,
+      height: 200,
+      lines: [[1]],
+      timestamps: [0],
+      tickWidth: () => 5,
+    });
+    expect([scale.padLeft, scale.padTop, scale.plotHeight]).toEqual([52, 12, 156]);
+  });
 });

@@ -1484,6 +1484,14 @@ a.focus-ring:active .type-caption {
   outline-offset: 2px;
 }
 
+/* The ring's colour and width hold at rest too, so a `transition-colors`
+   control never fades its ring in from its text colour (an `ink-2` ring on
+   a sidebar row) and the resting outline reads as the same 2px ring. */
+:where(:root:not([data-public-surface]) *) {
+  outline-color: var(--color-focus);
+  outline-width: 2px;
+}
+
 /* After a press (`data-input-modality="pointer"`, kept by
    components/ui/input-modality.ts) nothing but a text field draws the ring:
    browsers ring a clicked tab by heuristic, a menu row a script focused as
@@ -1976,15 +1984,18 @@ label {
 }
 
 /* DataTable is a card: surface, a rule edge, radius 8 and the card shadow.
-   Inside another container it draws no second card: it bleeds to the
-   container's edges, so its first and last cells still align with the
-   container's padding. */
+   It clips its own corners, so a head well meets the rounded edge with no
+   radius of its own (`clip`, not `hidden`: no scroll container, so sticky
+   heads still pin). Inside another container it draws no second card: it
+   bleeds to the container's edges, so its first and last cells still align
+   with the container's padding. */
 :root:not([data-public-surface]) [data-data-table] {
   --table-ground: var(--color-surface);
   background: var(--color-surface);
   border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
+  overflow: clip;
 }
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
@@ -1994,16 +2005,10 @@ label {
   border-radius: 0;
   box-shadow: none;
   background: transparent;
+  overflow: visible;
 }
 :root:not([data-public-surface]) :where([role='dialog']) [data-data-table] {
   --table-ground: var(--color-raised);
-}
-/* The head row's well meets the card's rounded top when no header bar is above it. */
-:root:not([data-public-surface]) [data-data-table]:not(:has(> header)) thead tr > :first-child {
-  border-start-start-radius: calc(var(--radius-card) - 1px);
-}
-:root:not([data-public-surface]) [data-data-table]:not(:has(> header)) thead tr > :last-child {
-  border-start-end-radius: calc(var(--radius-card) - 1px);
 }
 /* The footer bar closes the card under a rule, like a sheet's footer. */
 [data-data-table-foot] {
