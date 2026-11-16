@@ -731,12 +731,14 @@
   --nav-row-height: 32px;
   --table-row-height: 36px;
 
-  /* Anatomy (2.3): masthead 56, page tabs 40, then 24 to the first content,
-     or 24 to the filter row and 12 from it to the first card (`PageFrame`); sidebar 224 from 1280, 200 from 900, a 56 rail of 40px
+  /* Anatomy (2.3): masthead 56; `page-pad` to the first row, level with the
+     mode switch; page tabs 32, then 24 to the first content or to the filter
+     row; 12 from a filter row under tabs to the first card, `page-pad` from a
+     first filter row (`PageFrame`); sidebar 224 from 1280, 200 from 900, a 56 rail of 40px
      buttons when collapsed. Content fills the main column inside a 24 gutter
      (16 below 900). The current navigation item sits on a 7% ink tile (2.8). */
   --masthead-height: 56px;
-  --page-tabs-height: 40px;
+  --page-tabs-height: 32px;
   --filter-bar-height: 48px;
   --sidebar-width: 224px;
   --sidebar-width-compact: 200px;
@@ -747,7 +749,7 @@
      drawn: below `rail` its actions take a second row, `Masthead`), the 24
      above the first content and the main column's foot. */
   --route-chrome-height: calc(
-    var(--masthead-block-size, var(--masthead-height)) + var(--page-top-gap) +
+    var(--masthead-block-size, var(--masthead-height)) + var(--page-pad) +
       var(--page-section-gap)
   );
   /* No page cap: the page fills the main column, so collapsing the sidebar
@@ -765,6 +767,12 @@
   --page-top-gap: 24px;
   --page-section-gap: 32px;
   --flow-gap: 48px;
+  /* One padding for the page's edges and the sidebar head: the main column's
+     left, right and top (masthead to the first row, its tabs or filters) and
+     the space above and below the sidebar's Dashboard | Agent switch. The
+     switch, the tabs and a filter row are all one control high, so the first
+     row and the switch share a centre line: 24 + 32 / 2 = 40. */
+  --page-pad: var(--content-gutter);
 }
 
 @media (max-width: 899px) {

@@ -44,7 +44,10 @@ export function SidebarFrame({
       >
         {ident}
       </div>
-      <div className="labelled:pt-3 shrink-0 px-2 pt-1">{mode}</div>
+      {/* `page-pad` above and below the switch; the list below adds its own 12. */}
+      <div className="labelled:pt-[var(--page-pad)] labelled:pb-[calc(var(--page-pad)-0.75rem)] shrink-0 px-2 pt-1">
+        {mode}
+      </div>
       {nav}
       <div className="border-rule labelled:gap-0.5 labelled:py-2 flex shrink-0 flex-col border-t px-2 py-1">
         {foot}

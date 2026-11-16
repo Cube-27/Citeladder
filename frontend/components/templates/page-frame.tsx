@@ -35,8 +35,10 @@ export type PageFrameSlots = Readonly<{
 
 /**
  * The anatomy every shell page shares: the masthead, then the optional page
- * tabs, the filter row 24 below them (or the masthead), then the body: 12
- * under the filter row, else 24 under the tabs or masthead. The masthead's
+ * tabs and filter row, then the body. The first of them sits `--page-pad`
+ * under the masthead (the main column's side padding too), level with the
+ * sidebar's mode switch, with `--page-pad` again below it. A filter row under
+ * tabs sits 24 below them, and the body 12 below it. The masthead's
  * menu button, search and "Ask agent" come from the shell; `end` replaces
  * "Ask agent" (the Agent's History button). Geometry is tokens only; a page
  * passes content into the slots and sets none of its own.
@@ -75,7 +77,7 @@ export function PageFrame({
         {tabs ? (
           <div
             data-page-band="tabs"
-            className="flex min-h-[var(--page-tabs-height)] min-w-0 items-end overflow-x-auto"
+            className="flex min-w-0 items-end overflow-x-auto pt-[var(--page-pad)]"
           >
             {tabs}
           </div>
@@ -83,7 +85,10 @@ export function PageFrame({
         {filters ? (
           <div
             data-page-band="filters"
-            className="flex min-w-0 items-center pt-[var(--page-top-gap)]"
+            className={cn(
+              'flex min-w-0 items-center',
+              tabs ? 'pt-[var(--page-top-gap)]' : 'pt-[var(--page-pad)]',
+            )}
           >
             {filters}
           </div>
@@ -92,7 +97,7 @@ export function PageFrame({
           data-page-body=""
           className={cn(
             'flex min-w-0 flex-1 flex-col',
-            filters ? 'pt-3' : 'pt-[var(--page-top-gap)]',
+            filters && tabs ? 'pt-3' : 'pt-[var(--page-pad)]',
           )}
         >
           {children}
