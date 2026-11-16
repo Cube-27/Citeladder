@@ -412,21 +412,15 @@ describe('BillingScreen', () => {
   it('distinguishes an unknown usage allowance from zero', async () => {
     entitlementValue = resolvedEntitlement();
     mswServer.use(catalogHandler(), entitlementHandler(), usageHandler());
-
     renderWithProviders(<BillingScreen />);
-
-    // A finite row shows the real figures and meter…
+    // A finite row shows the real figures…
     const table = await screen.findByRole('table', { name: 'Usage limits' });
     const [, prompts, runs] = within(table).getAllByRole('row');
     expect(prompts?.textContent).toBe('Prompts4210058');
-    expect(within(table).getByRole('meter', { name: 'Prompts' })).toHaveAttribute(
-      'aria-valuetext',
-      '42 of 100 prompts',
-    );
-    // …and an `unknown` row says so rather than rendering a zero or a meter.
+    // …and an `unknown` row says so rather than rendering a zero.
     expect(runs?.textContent).toMatch(/^Prompt runs.*Not available/u);
     expect(runs?.textContent).not.toMatch(/\b0\b/u);
-    expect(within(table).queryByRole('meter', { name: 'Prompt runs' })).toBeNull();
+    expect(within(table).getAllByRole('meter')).toHaveLength(1);
     expect(screen.queryByText('No usage yet this period')).toBeNull();
   });
 

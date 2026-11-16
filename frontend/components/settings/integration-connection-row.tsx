@@ -26,6 +26,7 @@ import { DisplayTime } from '@/components/ui/display-time';
 import { isSyncInFlight, pollSyncRun, SYNC_RUN_STATES } from '@/lib/integrations/status';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
+import { Inline } from '@/components/ui/layout';
 import { ItemRow } from '@/components/ui/list-row';
 import { Tooltip } from '@/components/ui/tooltip';
 
@@ -373,10 +374,10 @@ function SyncLine({ connection }: Readonly<{ connection: IntegrationConnection }
         )}
       </ClampText>
       <CaptionDot />
-      <span className="flex min-w-0 items-baseline gap-1">
+      <Inline as="span" gap="tight">
         <span className="shrink-0">History</span>
         <BackfillHistory workspaceId={connection.workspace_id} connectionId={connection.id} />
-      </span>
+      </Inline>
     </>
   );
 }

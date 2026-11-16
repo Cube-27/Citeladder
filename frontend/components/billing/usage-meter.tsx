@@ -3,12 +3,14 @@ import type { ReactNode } from 'react';
 import { USAGE_METER_CRITICAL_RATIO, USAGE_METER_WARNING_RATIO } from '@/lib/config/billing';
 import type { UsageItem } from '@/lib/api/billing';
 import { Absence } from '@/components/ui/absence';
+import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { DisplayTime } from '@/components/ui/display-time';
 import { InfoHint } from '@/components/ui/info-hint';
+import { Inline } from '@/components/ui/layout';
+import { CellMeter, type MeterTone } from '@/components/ui/meter';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { formatCount } from '@/lib/format';
-import { cn } from '@/lib/utils';
 
 /**
  * Usage limits: one table for every state, a row per quota.
@@ -95,10 +97,10 @@ function UsageRow({ item, metered }: Readonly<{ item: UsageItem; metered: boolea
   return (
     <TableRow>
       <TableCell>
-        <span className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 truncate">{label}</span>
+        <Inline as="span">
+          <ClampText>{label}</ClampText>
           {note ? <InfoHint label={`About ${label}`}>{note}</InfoHint> : null}
-        </span>
+        </Inline>
       </TableCell>
       <TableCell numeric>{figures.used}</TableCell>
       <TableCell numeric>{figures.allowance}</TableCell>
@@ -148,27 +150,16 @@ function timingNote(item: UsageItem, unit: string): ReactNode {
   );
 }
 
-type Band = 'normal' | 'warning' | 'critical';
-
-const BAND_FILL = {
-  normal: 'bg-ink',
-  warning: 'bg-warning',
-  critical: 'bg-negative',
-} as const satisfies Record<Band, string>;
-
-function bandOf(consumed: number, allowance: number): Band {
-  if (allowance <= 0) return consumed > 0 ? 'critical' : 'normal';
+/** `ink` below 80% of the allowance, `warning` from it, `negative` at the limit. */
+function toneOf(consumed: number, allowance: number): MeterTone {
+  if (allowance <= 0) return consumed > 0 ? 'negative' : 'ink';
   const ratio = consumed / allowance;
-  if (ratio >= USAGE_METER_CRITICAL_RATIO) return 'critical';
+  if (ratio >= USAGE_METER_CRITICAL_RATIO) return 'negative';
   if (ratio >= USAGE_METER_WARNING_RATIO) return 'warning';
-  return 'normal';
+  return 'ink';
 }
 
-/**
- * A finite quota's use against its allowance: a 120px bar, 8 tall, `ink` on
- * a `well` track; `warning` from 80% and `negative` at the limit. Any other
- * row has no bar, and the cell says why.
- */
+/** A finite quota's use against its allowance; any other row has no bar, and the cell says why. */
 function UsageBar({
   item,
   label,
@@ -179,25 +170,14 @@ function UsageBar({
   const consumed = item.consumed ?? 0;
   if (item.limit_state === 'unlimited' || (allowance === 0 && consumed === 0))
     return <Absence state="not_applicable" narrow />;
-  const shown = Math.min(consumed, allowance);
-  const band = bandOf(consumed, allowance);
   return (
-    <div // NOSONAR -- a native <meter> cannot draw the token fill
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A native <meter> cannot draw the token fill.
-      role="meter"
-      aria-label={label}
-      aria-valuemin={0}
-      aria-valuemax={allowance}
-      aria-valuenow={shown}
-      aria-valuetext={`${formatCount(consumed)} of ${formatCount(allowance)} ${unit}`}
-      data-meter-band={band}
-      className="bg-well block h-2 w-30 overflow-hidden rounded-sm"
-    >
-      <span
-        className={cn('block h-full', BAND_FILL[band])}
-        style={{ width: `${allowance > 0 ? (shown / allowance) * 100 : 100}%` }}
-      />
-    </div>
+    <CellMeter
+      label={label}
+      value={consumed}
+      max={allowance}
+      valueText={`${formatCount(consumed)} of ${formatCount(allowance)} ${unit}`}
+      tone={toneOf(consumed, allowance)}
+    />
   );
 }
 

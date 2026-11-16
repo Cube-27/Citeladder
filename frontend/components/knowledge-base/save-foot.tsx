@@ -3,6 +3,7 @@ import { useId } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { SectionFoot } from '@/components/ui/section';
 import { Tooltip } from '@/components/ui/tooltip';
 
 const NO_CHANGES = 'No changes to save';
@@ -22,7 +23,7 @@ export function SaveFoot({
   const reasonId = useId();
   const idle = !changed && !saving;
   return (
-    <div className="mt-4 flex justify-end">
+    <SectionFoot>
       {idle ? (
         <>
           <Tooltip content={NO_CHANGES} describe={false}>
@@ -53,6 +54,6 @@ export function SaveFoot({
           Save
         </Button>
       )}
-    </div>
+    </SectionFoot>
   );
 }

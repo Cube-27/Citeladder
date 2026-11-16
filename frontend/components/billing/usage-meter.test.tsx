@@ -103,18 +103,18 @@ describe('UsageTable', () => {
     const row = renderRow(item({ allowance: 0, consumed: 2, remaining: 0 }));
     const meter = within(row).getByRole('meter');
     expect(meter).toHaveAttribute('aria-valuetext', '2 of 0 prompts');
-    expect(meter).toHaveAttribute('data-meter-band', 'critical');
+    expect(meter).toHaveAttribute('data-meter-tone', 'negative');
   });
 
   it.each([
-    [79, 'normal'],
+    [79, 'ink'],
     [80, 'warning'],
     [99, 'warning'],
-    [100, 'critical'],
-    [150, 'critical'],
-  ])('bands %i of 100 used as %s', (consumed, band) => {
+    [100, 'negative'],
+    [150, 'negative'],
+  ])('tones %i of 100 used as %s', (consumed, tone) => {
     const row = renderRow(item({ allowance: 100, consumed, remaining: 0 }));
-    expect(within(row).getByRole('meter')).toHaveAttribute('data-meter-band', band);
+    expect(within(row).getByRole('meter')).toHaveAttribute('data-meter-tone', tone);
   });
 
   it('never overfills the bar past full', () => {

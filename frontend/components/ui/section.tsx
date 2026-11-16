@@ -114,6 +114,11 @@ export function SectionDescription({
   );
 }
 
+/** A form card's foot: its actions right-aligned, 16 below the body. */
+export function SectionFoot({ children }: Readonly<{ children: ReactNode }>) {
+  return <div className="mt-4 flex flex-wrap justify-end gap-2">{children}</div>;
+}
+
 /** The section's body. */
 export function SectionContent({
   children,

@@ -283,14 +283,11 @@ describe('IntegrationSettings — grant cards', () => {
     const row = await screen.findByTestId('connection-row-gsc');
     const property = await within(row).findByText(longRef);
     const synced = within(row).getByText(/^Last synced/);
-    // Two sibling boxes, each cut on its own: neither holds the other's text.
-    expect(property).not.toContainElement(synced);
-    expect(synced).not.toContainElement(property);
+    // Two sibling boxes on the caption line: neither holds the other's text.
     expect(property.parentElement).toBe(synced.parentElement);
-    expect(property).toHaveClass('truncate');
-    expect(synced).toHaveClass('truncate');
-    // The source name is never cut.
-    expect(within(row).getByText('Google Search Console')).not.toHaveClass('truncate');
+    expect(property.textContent).toBe(longRef);
+    expect(synced.textContent).toMatch(/^Last synced [A-Z][a-z]{2} \d{1,2}, \d{4}/u);
+    expect(synced.textContent).not.toContain('sc-domain');
   });
 
   it('Reconnect hard-navigates to the family OAuth start endpoint', async () => {

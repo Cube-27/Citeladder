@@ -100,6 +100,8 @@ describe('app pricing continuation', () => {
   it.each([
     [null, 'Test Workspace has no plan yet. Compare plans on the public pricing page.'],
     [scaleSubscription, 'Test Workspace is on Scale. Compare plans on the public pricing page.'],
+    // An ended plan is neither the current plan nor "no plan yet".
+    [{ ...scaleSubscription, status: 'expired' }, 'Compare plans on the public pricing page.'],
   ])(
     'names the current plan and offers public pricing once when nothing is chosen (%#)',
     async (subscription, sentence) => {

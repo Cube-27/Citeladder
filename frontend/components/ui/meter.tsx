@@ -126,6 +126,38 @@ export function Meter({
 }
 
 /**
+ * A quota's use in a table cell: a 120px bar, 8 tall, radius 4, the tone's
+ * fill on a `well` track, no label of its own (the row names it). The fill
+ * clamps at full; `valueText` says the real figures.
+ */
+export function CellMeter({
+  label,
+  value,
+  max,
+  valueText,
+  tone,
+}: Readonly<{ label: string; value: number; max: number; valueText: string; tone: MeterTone }>) {
+  const shown = Math.min(max, Math.max(0, value));
+  // A zero allowance with any use is at its limit: a full bar.
+  const percent = max > 0 ? (shown / max) * 100 : 100;
+  return (
+    <div // NOSONAR -- a native <meter> cannot draw the token fill
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- A native <meter> cannot draw the token fill.
+      role="meter"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={max}
+      aria-valuenow={shown}
+      aria-valuetext={valueText}
+      data-meter-tone={tone}
+      className="bg-well block h-2 w-30 overflow-hidden rounded-sm"
+    >
+      <span className={cn('block h-full', METER_FILL[tone])} style={{ width: `${percent}%` }} />
+    </div>
+  );
+}
+
+/**
  * One row of a distribution: the bucket's name, its track and its figure, in
  * three columns every row of the list shares, so the tracks start and end on
  * one line. The fill takes the series' data tone.

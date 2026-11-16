@@ -22,9 +22,13 @@ import {
   type BillingCatalog,
   type BillingEntitlement,
 } from '@/lib/api/billing';
-import { catalogItemName, catalogPlanByKey, newPlanCheckoutClosed } from '@/lib/billing/catalog';
+import {
+  catalogItemName,
+  catalogPlanByKey,
+  newPlanCheckoutClosed,
+  SUBSCRIBED_STATUSES,
+} from '@/lib/billing/catalog';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
-import type { SubscriptionStatus } from '@citeladder/contracts/billing';
 import { useEntitlement } from '@/lib/billing/entitlement-context';
 import { useSubscriptionCheckout } from '@/lib/billing/use-subscription-checkout';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -33,18 +37,6 @@ import { MastheadPrimary } from '@/components/ui/masthead-actions';
 import { Notice, readErrorProps, type RetryableRead } from '@/components/ui/notice';
 import { Section } from '@/components/ui/section';
 import { StateBlock } from '@/components/ui/state-block';
-
-/**
- * Subscription states in which the workspace HAS a plan to change, cancel or
- * extend. Anything else — no subscription, ended, unpaid — is offered a new
- * subscription instead; `pending` is offered neither while it verifies.
- */
-const SUBSCRIBED_STATUSES: ReadonlySet<SubscriptionStatus> = new Set([
-  'active',
-  'trialing',
-  'past_due',
-  'cancel_scheduled',
-]);
 
 type Checkout = ReturnType<typeof useSubscriptionCheckout>;
 

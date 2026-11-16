@@ -28,6 +28,7 @@ import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import {
   catalogPlanByKey,
   checkoutSelection,
+  SUBSCRIBED_STATUSES,
   formatMoney,
   headlinePrice,
   isPurchasable,
@@ -324,9 +325,12 @@ function currentPlanRead(
   entitlement: BillingEntitlement | undefined,
   catalog: BillingCatalog | undefined,
 ): CurrentPlanRead {
-  if (!entitlement) return { kind: 'unknown' };
+  // An unresolved entitlement claims nothing, and only a live subscription is
+  // the current plan: pending, ended or unpaid ones are neither a plan nor none.
+  if (entitlement?.status !== 'resolved') return { kind: 'unknown' };
   const subscription = entitlement.subscription;
   if (!subscription) return { kind: 'none' };
+  if (!SUBSCRIBED_STATUSES.has(subscription.status)) return { kind: 'unknown' };
   const plan = catalog ? catalogPlanByKey(catalog, subscription.catalog_key) : undefined;
   return { kind: 'plan', name: plan?.name ?? subscription.catalog_key };
 }
