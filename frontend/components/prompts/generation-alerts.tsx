@@ -3,8 +3,8 @@ import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import type { PromptGenerateResponse } from '@citeladder/contracts';
 import { admissionDropSummary } from '@/lib/prompts/admission';
 import { Notice } from '@/components/ui/notice';
+import { pluralCount } from '@/lib/format';
 
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
 const SHORTFALL: Record<NonNullable<PromptGenerateResponse['shortfall_reason']>, string> = {
   deadline: 'Drafting stopped at the time limit; generate again for more.',
   model_error: 'The AI provider failed partway, so the set is smaller; generate again for more.',
@@ -19,10 +19,10 @@ export function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerat
       .filter((id): id is string => id != null),
   ).size;
   const duplicates = result.dropped_duplicates
-    ? `; ${plural(result.dropped_duplicates, 'duplicate')} skipped`
+    ? `; ${pluralCount(result.dropped_duplicates, 'duplicate')} skipped`
     : '';
   const gated = result.quality_rejected
-    ? `; ${plural(result.quality_rejected, 'weak suggestion')} removed by quality checks`
+    ? `; ${pluralCount(result.quality_rejected, 'weak suggestion')} removed by quality checks`
     : '';
   // Say so when the request could not be filled, rather than letting a short
   // set read as the number that was asked for.
@@ -36,9 +36,9 @@ export function GenerateResultAlert({ result }: Readonly<{ result: PromptGenerat
       : '';
   return (
     <Notice tone={result.quality_gate === 'unavailable' || stopped ? 'warning' : 'info'}>
-      Drafted {plural(total, 'suggestion')}
+      Drafted {pluralCount(total, 'suggestion')}
       {shortfall}
-      {topicCount ? ` across ${plural(topicCount, 'topic')}` : ''}
+      {topicCount ? ` across ${pluralCount(topicCount, 'topic')}` : ''}
       {duplicates}
       {gated}. Accept the ones worth tracking.{drops ? ` ${drops}` : ''}
       {stopped}

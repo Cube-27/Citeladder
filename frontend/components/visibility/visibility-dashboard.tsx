@@ -26,6 +26,7 @@ import {
   useVisibilityFilters,
   useVisibilityQueries,
 } from '@/lib/visibility/use-visibility-dashboard';
+import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionStack } from '@/components/ui/section';
 
@@ -77,11 +78,9 @@ function DashboardState({
     return (
       <StateBlock
         kind="error"
-        error={auditsQuery.error}
+        {...readErrorProps(auditsQuery)}
         title="Couldn't load this project's runs"
         fallback="Check your connection and try again."
-        onRetry={() => void auditsQuery.refetch()}
-        pending={auditsQuery.isFetching}
       />
     );
   return null;

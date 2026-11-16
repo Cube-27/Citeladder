@@ -8,6 +8,7 @@ import { httpErrorStatus } from '@/lib/api/client';
 import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import type { SiteCrawl, SiteHealthDashboard } from '@citeladder/contracts';
 import { CRAWL_STATES } from '@/lib/site-health/status';
+import { readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
 /**
@@ -52,11 +53,9 @@ export function OverviewPanel({
     overviewBody = (
       <StateBlock
         kind="error"
-        error={overview.error}
+        {...readErrorProps(overview)}
         fallback={READ_FAILED}
         title="Couldn't load the Website overview"
-        onRetry={() => void overview.refetch()}
-        pending={overview.isFetching}
       />
     );
   } else if (data) {

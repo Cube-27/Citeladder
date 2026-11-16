@@ -22,7 +22,7 @@ import {
   ledgerClasses,
   ledgerItemClasses,
 } from '@/components/ui/workspace';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 
@@ -142,11 +142,9 @@ export function AeoReadinessPanel({
     return (
       <StateBlock
         kind="error"
-        error={readiness.error}
+        {...readErrorProps(readiness)}
         fallback="Retry in a moment."
         title="Couldn't load AEO readiness"
-        onRetry={() => void readiness.refetch()}
-        pending={readiness.isFetching}
       />
     );
   if (!readiness.data || readiness.data.crawl_id === null) {

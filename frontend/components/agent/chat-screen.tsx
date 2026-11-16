@@ -14,7 +14,7 @@ import { textRole } from '@/components/ui/typography';
 import type { AgentChatDetail } from '@/lib/api/agent';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 /** A chat working on a page (`optimize_page`) has this document, and opens as its workspace (E1). */
@@ -40,11 +40,9 @@ export function ChatScreen() {
       <ThreadPage>
         <StateBlock
           kind="error"
-          error={query.error}
+          {...readErrorProps(query)}
           title="Couldn't load this chat"
           fallback="This chat could not be loaded."
-          onRetry={() => void query.refetch()}
-          pending={query.isFetching}
         />
       </ThreadPage>
     );

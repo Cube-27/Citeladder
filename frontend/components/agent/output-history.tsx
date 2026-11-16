@@ -14,7 +14,7 @@ import { agentWriteFailure } from '@/lib/agent/errors';
 import { agentMutations, agentQueries, type AgentRevision } from '@/lib/api/agent';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown } from '@/lib/markdown/markdown';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 type View = { id: string; mode: 'view' | 'compare' } | null;
@@ -44,11 +44,9 @@ export function OutputHistory({
     return (
       <Notice
         kind="read"
-        error={query.error}
+        {...readErrorProps(query)}
         title="Couldn't load the revision history"
         fallback="Revision history could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   if (!query.data) return <StateBlock kind="loading" label="Loading revisions…" />;

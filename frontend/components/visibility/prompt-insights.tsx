@@ -8,7 +8,7 @@ import type { ObservedCompetitor } from '@citeladder/contracts';
 import { Button } from '@/components/ui/button';
 import { visibilityMutations } from '@/lib/api/visibility-queries';
 import { useActiveWorkspaceId, useWorkspaceCapability } from '@/lib/project/project-context';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -71,11 +71,9 @@ function SuggestionRows({
       {suggestionsQuery.isError ? (
         <Notice
           kind="read"
-          error={suggestionsQuery.error}
+          {...readErrorProps(suggestionsQuery)}
           title="Couldn't load competitor suggestions"
           fallback="The request failed or timed out."
-          onRetry={() => void suggestionsQuery.refetch()}
-          pending={suggestionsQuery.isFetching}
         />
       ) : null}
       {suggestionsQuery.data?.length ? (

@@ -3,6 +3,7 @@ import { Globe } from 'lucide-react';
 
 import { AppGrid } from '@/components/ui/app-grid';
 import type { DataTableState } from '@/components/ui/data-table';
+import { readErrorProps } from '@/components/ui/notice';
 import { Stack } from '@/components/ui/layout';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { SourceDomainDetail } from '@/components/visibility/source-domain-detail';
@@ -407,11 +408,9 @@ function tableState({
   if (query.isError) {
     return {
       kind: 'error',
-      error: query.error,
+      ...readErrorProps(query),
       title: "Couldn't load the sources",
       fallback: 'Check your connection and try again.',
-      onRetry: () => void query.refetch(),
-      pending: query.isFetching,
     };
   }
   // The selection has settled on a measured run (`SelectionGate`), so no data

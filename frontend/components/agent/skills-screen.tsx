@@ -3,7 +3,7 @@ import { ChevronRight } from 'lucide-react';
 import { useId } from 'react';
 
 import { useAgentCatalog } from '@/components/agent/use-agent-catalog';
-import { CollectionPage } from '@/components/templates/collection-page';
+import { ReportPage } from '@/components/templates/report-page';
 import { ProjectLink } from '@/components/ui/project-link';
 import { AppGrid } from '@/components/ui/app-grid';
 import { Icon } from '@/components/ui/icon';
@@ -16,6 +16,7 @@ import { skillGroupLabel } from '@/lib/agent/vocabulary';
 import { agentQueries, type AgentSkill } from '@/lib/api/agent';
 import { pluralCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
+import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { slipClasses } from '@/components/ui/slip';
 
@@ -32,24 +33,22 @@ export function SkillsScreen() {
     body = (
       <StateBlock
         kind="error"
-        error={query.error}
+        {...readErrorProps(query)}
         title="Couldn't load skills"
         fallback="Skills could not be loaded."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   else if (!query.data) body = <StateBlock kind="loading" />;
   else body = <SkillGroups skills={query.data.skills} />;
 
   return (
-    <CollectionPage>
+    <ReportPage>
       {/* The template has no description slot, so the route's intro is the body's first child. */}
       <p className={textRole('body', 'text-ink-2')}>
         The agent picks a skill when a task needs one, or choose one here or type / in the composer.
       </p>
       {body}
-    </CollectionPage>
+    </ReportPage>
   );
 }
 

@@ -12,6 +12,7 @@ import {
   CHANGE_EVIDENCE_TEXT_LIMIT,
 } from '@/lib/config/site-health';
 import { changeFieldLabel } from '@/lib/site-health/change-fields';
+import { pluralCount } from '@/lib/format';
 
 function boundedText(value: string) {
   return value.length > CHANGE_EVIDENCE_TEXT_LIMIT
@@ -24,12 +25,7 @@ function ChangeValue({ value, depth = 0 }: Readonly<{ value: unknown; depth?: nu
   if (Array.isArray(value)) {
     // An observed empty list is not an absent value.
     if (!value.length) return <>0 items</>;
-    if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT)
-      return (
-        <>
-          {value.length} {value.length === 1 ? 'item' : 'items'}
-        </>
-      );
+    if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT) return <>{pluralCount(value.length, 'item')}</>;
     return (
       <ul className={treeBranchClasses()}>
         {value.slice(0, CHANGE_EVIDENCE_LIMIT).map((item, index) => (
@@ -93,12 +89,7 @@ function changeFieldValue(key: string, value: unknown) {
 function ChangeRecord({ value, depth }: Readonly<{ value: object; depth: number }>) {
   const fields = Object.entries(value);
   if (!fields.length) return <>Not present</>;
-  if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT)
-    return (
-      <>
-        {fields.length} {fields.length === 1 ? 'field' : 'fields'}
-      </>
-    );
+  if (depth >= CHANGE_EVIDENCE_DEPTH_LIMIT) return <>{pluralCount(fields.length, 'field')}</>;
   // Comparison outcomes precede capture details in the bounded content record.
   const rank = (key: string) => {
     const index = CONTENT_FIELD_ORDER.indexOf(key);

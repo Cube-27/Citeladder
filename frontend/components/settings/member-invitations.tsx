@@ -11,7 +11,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
-import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
+import { TitledSection } from '@/components/ui/section';
 import { Select } from '@/components/ui/select';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableActionsCell, TableCell, TableRow, TableTime } from '@/components/ui/table';
@@ -179,15 +179,14 @@ export function PendingInvitations({
   if (!read.isLoading && !read.isError && invitations.length === 0) return null;
   return (
     // The table is the named region; the section only heads it.
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Pending invitations</SectionTitle>
-        <SectionDescription>
-          {invitations.length
-            ? `${pluralCount(invitations.length, 'invitation')} not yet accepted. Resend a link or revoke it.`
-            : 'Invitations not yet accepted.'}
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Pending invitations"
+      description={
+        invitations.length
+          ? `${pluralCount(invitations.length, 'invitation')} not yet accepted. Resend a link or revoke it.`
+          : 'Invitations not yet accepted.'
+      }
+    >
       <DataTable
         label="Pending invitations"
         columns={INVITATION_COLUMNS}
@@ -223,7 +222,7 @@ export function PendingInvitations({
           </TableRow>
         ))}
       </DataTable>
-    </Section>
+    </TitledSection>
   );
 }
 

@@ -24,6 +24,7 @@ import type {
   SiteArchitecture,
 } from '@citeladder/contracts';
 import { formatCount, formatPercent } from '@/lib/format';
+import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   Section,
@@ -81,11 +82,9 @@ export function ArchitecturePanel({
     return (
       <StateBlock
         kind="error"
-        error={architecture.error}
+        {...readErrorProps(architecture)}
         fallback="Couldn't load the site architecture."
         title="Couldn't load the site architecture"
-        onRetry={() => void architecture.refetch()}
-        pending={architecture.isFetching}
       />
     );
   if (!architecture.data || architecture.data.state === 'unavailable') {

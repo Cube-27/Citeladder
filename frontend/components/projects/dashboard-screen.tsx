@@ -17,7 +17,7 @@ import { OverviewStart, needsStart } from './overview-start';
 import { OverviewWidgetView, widgetShows } from './overview-widget';
 import { useCommandCenterActions } from './use-command-center-actions';
 import { AppGrid } from '@/components/ui/app-grid';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Skeleton } from '@/components/ui/skeleton';
 import { slipClasses } from '@/components/ui/slip';
 import { StateBlock } from '@/components/ui/state-block';
@@ -39,11 +39,9 @@ export function DashboardScreen({
       <ReportPage>
         <StateBlock
           kind="error"
-          error={commandCenter.error}
+          {...readErrorProps(commandCenter)}
           title="Couldn't load the Overview"
           fallback="The Overview's figures could not be loaded."
-          onRetry={() => void commandCenter.refetch()}
-          pending={commandCenter.isFetching}
         />
       </ReportPage>
     );
@@ -108,11 +106,9 @@ function DashboardData({
       <ReportPage>
         <StateBlock
           kind="error"
-          error={layout.query.error}
+          {...readErrorProps(layout.query)}
           title="Couldn't load the Overview layout"
           fallback="The Overview layout could not be loaded."
-          onRetry={() => void layout.query.refetch()}
-          pending={layout.query.isFetching}
         />
       </ReportPage>
     );

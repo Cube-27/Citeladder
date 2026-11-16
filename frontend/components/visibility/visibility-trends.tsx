@@ -25,7 +25,7 @@ import { coverageSummary } from '@/lib/visibility/coverage';
 import { formatDisplayDate, pluralCount } from '@/lib/format';
 import { VISIBILITY_METRICS } from '@/lib/config/visibility';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import {
   Section,
   SectionContent,
@@ -311,11 +311,9 @@ function MeasurementHistoryBody({
     return (
       <Notice
         kind="read"
-        error={query.error}
+        {...readErrorProps(query)}
         title="Couldn't load the history"
         fallback="Check your connection and try again."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   return <HistoryLineChart points={query.data ?? []} busy={query.isFetching} {...chart} />;

@@ -45,7 +45,7 @@ import {
   type StackTab,
 } from './use-page-workspace';
 import { WorkspaceChat } from './workspace-chat';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 
 const ASK_REQUEST = 'Suggest how to improve this passage.';
@@ -115,11 +115,9 @@ function SuggestionsTab({
   return (
     <StateBlock
       kind="error"
-      error={query.error}
+      {...readErrorProps(query)}
       title="Couldn't load the suggestions"
       fallback="The suggestions could not be loaded."
-      onRetry={() => void query.refetch()}
-      pending={query.isFetching}
     />
   );
 }

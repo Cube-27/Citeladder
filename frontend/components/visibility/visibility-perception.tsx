@@ -8,10 +8,8 @@ import type { ComponentProps } from 'react';
 
 import { AppGrid } from '@/components/ui/app-grid';
 import { StatusMark } from '@/components/ui/status-mark';
-import { BusyRung } from '@/components/ui/rung-meter';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
-import { Skeleton } from '@/components/ui/skeleton';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
@@ -28,17 +26,9 @@ import {
 import { usePerception } from '@/lib/visibility/use-perception';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import type { SourceQueries } from '@/lib/visibility/use-source-analysis';
-import { Notice } from '@/components/ui/notice';
+import { AnalysisRead } from '@/components/visibility/selection-gate';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-  TitledSection,
-  SectionStack,
-} from '@/components/ui/section';
+import { Section, SectionContent, TitledSection, SectionStack } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 /**
@@ -51,34 +41,16 @@ export function VisibilityPerception({
   queries,
 }: Readonly<{ filters: SourceFilters; queries: SourceQueries }>) {
   const query = usePerception(filters, queries);
-  if (query.error)
-    return (
-      <Notice
-        kind="read"
-        error={query.error}
-        title="Couldn't load perception"
-        fallback="Check your connection and try again."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
-      />
-    );
-  // The selection above has settled on a measured run (`SelectionGate`), so
-  // no data is this read still on its way, never "no mentions".
-  if (!query.data) return <PerceptionLoading />;
   return (
-    <div className="relative">
-      <BusyRung active={query.isFetching} label="Updating perception" />
-      <PerceptionView data={query.data} />
-    </div>
-  );
-}
-
-function PerceptionLoading() {
-  return (
-    <Stack gap="workspace" aria-busy>
-      <Skeleton variant="block" />
-      <Skeleton variant="chart" />
-    </Stack>
+    <AnalysisRead
+      query={query}
+      title="Couldn't load perception"
+      busyLabel="Updating perception"
+      busy={query.isFetching}
+      ready={query.data}
+    >
+      {(data) => <PerceptionView data={data} />}
+    </AnalysisRead>
   );
 }
 
@@ -280,13 +252,10 @@ function QuoteLink({ quote }: Readonly<{ quote: PerceptionQuote }>) {
 function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
   const { label: engineLabel } = useEngineCatalog();
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Criticism in answers</SectionTitle>
-        <SectionDescription>
-          Negative points about you, quoted exactly as the answer put them.
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Criticism in answers"
+      description="Negative points about you, quoted exactly as the answer put them."
+    >
       <SectionContent>
         {!quotes.length ? (
           <StateBlock
@@ -310,7 +279,7 @@ function NegativeQuotes({ quotes }: Readonly<{ quotes: PerceptionQuote[] }>) {
           </Stack>
         )}
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 

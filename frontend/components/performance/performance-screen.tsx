@@ -25,7 +25,7 @@ import { Stack } from '@/components/ui/layout';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCount, formatWindowDate } from '@/lib/format';
+import { formatWindowDate, pluralCount } from '@/lib/format';
 import { ChartNoAxesColumn } from 'lucide-react';
 import { integrationsQueries } from '@/lib/api/integrations';
 import {
@@ -137,7 +137,7 @@ function coverageSummary(coverage: PerformanceDashboard['coverage']): string | n
   if (!coverage.earliest_date || !coverage.latest_date) return null;
   return `Imported history ${formatWindowDate(coverage.earliest_date)} – ${formatWindowDate(
     coverage.latest_date,
-  )} · ${formatCount(coverage.covered_days)} ${coverage.covered_days === 1 ? 'day' : 'days'}`;
+  )} · ${pluralCount(coverage.covered_days, 'day')}`;
 }
 
 /**

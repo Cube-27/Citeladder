@@ -7,7 +7,7 @@ import { PartBar, type Part } from '@/components/ui/part-bar';
 import { StepChart, type TrendSeries } from '@/components/ui/step-chart';
 import { seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
 import type { useSourceSeries } from '@/lib/visibility/use-source-analysis';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import {
   Section,
@@ -72,11 +72,9 @@ function UsagePlot({
     return (
       <Notice
         kind="read"
-        error={query.error}
+        {...readErrorProps(query)}
         title="Couldn't load source usage"
         fallback="The request failed or timed out."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   }
@@ -212,11 +210,9 @@ function TypesMix({
     return (
       <Notice
         kind="read"
-        error={query.error}
+        {...readErrorProps(query)}
         title="Couldn't load source types"
         fallback="The request failed or timed out."
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   }

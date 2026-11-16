@@ -7,7 +7,7 @@ import type { PageDetail } from '@citeladder/contracts';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { StateBlock } from '@/components/ui/state-block';
-import { formatCount, formatPercent } from '@/lib/format';
+import { formatCount, formatPercent, pluralCount } from '@/lib/format';
 import { ClampText } from '@/components/ui/clamp-text';
 
 /**
@@ -66,7 +66,7 @@ export function InternalLinksCard({
   return (
     <Stack gap="workspace" className="min-w-0">
       <p className={textRole('caption')}>
-        {`Modelled over ${formatCount(links.source_page_count)} ${links.source_page_count === 1 ? 'page' : 'pages'} crawled${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
+        {`Modelled over ${pluralCount(links.source_page_count, 'page')} crawled${links.observed_crawl_incomplete ? '; this crawl is incomplete or sampled' : ''}`}
       </p>
       <FactList layout="ruled" label="Internal link measurements" facts={metrics} />
       <AppGrid layout="halves">

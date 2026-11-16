@@ -26,7 +26,7 @@ import { formatRate } from '@/lib/visibility/dashboard';
 import { formatNet, formatShare } from '@/lib/visibility/perception';
 import { hostOf, pathOf } from '@/lib/visibility/sources';
 import { toChartPoints } from '@/lib/visibility/trends';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
@@ -84,10 +84,8 @@ function Loaded<T>({
       <Notice
         kind="read"
         title={`Couldn't load ${subject}`}
-        error={failed.error}
+        {...readErrorProps(failed)}
         fallback={fallback}
-        onRetry={() => void failed.refetch()}
-        pending={failed.isFetching}
       />
     );
   if (query.data === undefined) return <StateBlock kind="loading" label={`Loading ${subject}`} />;

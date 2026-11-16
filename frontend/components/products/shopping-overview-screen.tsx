@@ -35,13 +35,7 @@ import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
 const WIDEST_WINDOW = PRODUCT_WINDOW_DAYS.at(-1) ?? '90';
@@ -342,26 +336,25 @@ function CategoryShelf({
     },
   ];
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Category shelf</SectionTitle>
-        <SectionDescription>
-          {shelf ? (
-            <>
-              Latest Commerce run, <DisplayTime value={shelf.measured_at} dateOnly />, from{' '}
-              {pluralCount(shelf.successful_execution_count, 'answer')} and{' '}
-              {pluralCount(shelf.recognized_slot_count, 'recognized recommendation')}.
-            </>
-          ) : (
-            <>
-              No Commerce run has measured this category yet.{' '}
-              <TextLink href={targetHref(categoryId)} text="inherit" underline="hover">
-                Set up its shopping prompts
-              </TextLink>
-            </>
-          )}
-        </SectionDescription>
-      </SectionHeader>
+    <TitledSection
+      title="Category shelf"
+      description={
+        shelf ? (
+          <>
+            Latest Commerce run, <DisplayTime value={shelf.measured_at} dateOnly />, from{' '}
+            {pluralCount(shelf.successful_execution_count, 'answer')} and{' '}
+            {pluralCount(shelf.recognized_slot_count, 'recognized recommendation')}.
+          </>
+        ) : (
+          <>
+            No Commerce run has measured this category yet.{' '}
+            <TextLink href={targetHref(categoryId)} text="inherit" underline="hover">
+              Set up its shopping prompts
+            </TextLink>
+          </>
+        )
+      }
+    >
       <SectionContent>
         <FigureStrip
           segments={segments.map(({ label, sub, value }) => ({
@@ -372,7 +365,7 @@ function CategoryShelf({
           }))}
         />
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 

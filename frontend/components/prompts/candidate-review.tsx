@@ -13,8 +13,7 @@ import type { PromptCandidate, Topic } from '@citeladder/contracts';
 import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-quality';
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 import { Notice } from '@/components/ui/notice';
-
-const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+import { pluralCount } from '@/lib/format';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'suggestion', label: 'Suggestion' },
@@ -75,7 +74,7 @@ export function CandidateReview({
       {error ? <Notice tone="negative">{error}</Notice> : null}
       {notice ? <Notice tone="positive">{notice}</Notice> : null}
       <DataTable
-        title={`Review ${plural(candidates.length, 'suggestion')}`}
+        title={`Review ${pluralCount(candidates.length, 'suggestion')}`}
         toolbar={{
           status: <span className="type-caption tabular-nums">{selected.length} selected</span>,
           actions: (

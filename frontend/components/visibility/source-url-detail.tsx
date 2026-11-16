@@ -16,7 +16,7 @@ import {
   useSourceUrl,
   type SourceQueries,
 } from '@/lib/visibility/use-source-analysis';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionContent, SectionHeader, SectionTitle } from '@/components/ui/section';
 import { FigureStrip } from '@/components/ui/figure-strip';
 
@@ -78,11 +78,9 @@ export function SourceUrlDetail({
           {query.isError ? (
             <Notice
               kind="read"
-              error={query.error}
+              {...readErrorProps(query)}
               title="Couldn't load this source"
               fallback="The request failed or timed out."
-              onRetry={() => void query.refetch()}
-              pending={query.isFetching}
             />
           ) : null}
           {pending ? <Skeleton variant="block" /> : null}

@@ -9,7 +9,7 @@ import {
   useLaunchReadiness,
 } from '@/components/runs/launch-audit-button';
 import { RunsTable } from '@/components/runs/runs-table';
-import { CollectionPage } from '@/components/templates/collection-page';
+import { ReportPage } from '@/components/templates/report-page';
 import { FilterBar } from '@/components/ui/filter-bar';
 import { Spinner } from '@/components/ui/spinner';
 import { SegmentedControl } from '@/components/ui/tabs';
@@ -108,14 +108,14 @@ export function RunsScreen() {
 
   if (runsQuery.isLoading) {
     return (
-      <CollectionPage actions={actions} filters={filters}>
+      <ReportPage actions={actions} filters={filters}>
         <StateBlock kind="loading" label="Loading runs…" shape={{ kind: 'table' }} />
-      </CollectionPage>
+      </ReportPage>
     );
   }
 
   return (
-    <CollectionPage actions={actions} filters={filters}>
+    <ReportPage actions={actions} filters={filters}>
       <RunsContent
         read={runsQuery}
         audits={audits}
@@ -130,7 +130,7 @@ export function RunsScreen() {
       {readiness.kind === 'ready' ? (
         <AuditSchedules projectId={projectId} promptSets={project.prompt_sets} />
       ) : null}
-    </CollectionPage>
+    </ReportPage>
   );
 }
 

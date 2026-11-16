@@ -10,13 +10,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { treeBranchClasses } from '@/components/ui/workspace';
 import type { ArchitectureNode } from '@citeladder/contracts';
 import { StateBlock } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { SectionContent, TitledSection } from '@/components/ui/section';
 import { formatCount, readableUrl, sharedOrigin } from '@/lib/format';
 
 /**
@@ -93,15 +87,16 @@ export function HierarchyCard({
     [cut, roots, grouped],
   );
   return (
-    <Section>
-      <SectionHeader>
-        <SectionTitle>Observed hierarchy</SectionTitle>
-        <SectionDescription>
+    <TitledSection
+      title="Observed hierarchy"
+      description={
+        <>
           Each page sits under its parent in the URL path unless its breadcrumb or the site’s
           structure says otherwise. Pages with no known parent sit at the top.
           {origin ? ` Paths are on ${readableUrl(origin)}.` : ''}
-        </SectionDescription>
-      </SectionHeader>
+        </>
+      }
+    >
       <SectionContent>
         {roots.length === 0 ? (
           <StateBlock kind="empty" inline message="No hierarchy nodes were measured." />
@@ -127,7 +122,7 @@ export function HierarchyCard({
           </Stack>
         )}
       </SectionContent>
-    </Section>
+    </TitledSection>
   );
 }
 

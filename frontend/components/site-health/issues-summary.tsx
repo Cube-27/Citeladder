@@ -9,9 +9,9 @@ import { PartBar, type Part } from '@/components/ui/part-bar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
-import { formatCount } from '@/lib/format';
+import { formatCount, pluralCount } from '@/lib/format';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
-import { Notice } from '@/components/ui/notice';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED } from '@/components/ui/state-block';
 import {
   Section,
@@ -42,11 +42,9 @@ export function IssuesSummary({
     return (
       <Notice
         kind="read"
-        error={query.error}
+        {...readErrorProps(query)}
         fallback={READ_FAILED}
         title="Couldn't load the issue summary"
-        onRetry={() => void query.refetch()}
-        pending={query.isFetching}
       />
     );
   if (!query.data) return <IssuesSummaryLoading />;
@@ -107,14 +105,14 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
 
 function issueTypesLabel(total: number): string {
   if (total === 0) return 'No issue types to fix';
-  return `${formatCount(total)} ${total === 1 ? 'issue type' : 'issue types'}`;
+  return pluralCount(total, 'issue type');
 }
 
 /** How many are high severity, and how many pages the issue types reach. */
 function attentionLine(high: number, summary: SiteIssuesPage['summary']): string {
   const pages = summary.affected_url_count;
   if (summary.defect_issue_type_count === 0) return 'This crawl found nothing to fix.';
-  return `${formatCount(high)} high severity · ${formatCount(pages)} ${pages === 1 ? 'page' : 'pages'} affected`;
+  return `${formatCount(high)} high severity · ${pluralCount(pages, 'page')} affected`;
 }
 
 /** The first sentence of a rule's fix, so a priority line stays one line of advice. */
