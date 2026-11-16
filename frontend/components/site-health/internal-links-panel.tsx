@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Absence } from '@/components/ui/absence';
 import type { InternalLink, InternalLinkAnalysis } from '@citeladder/contracts/site-health';
 
@@ -10,14 +9,13 @@ import { Icon } from '@/components/ui/icon';
 import { Section } from '@/components/ui/section';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { Stack } from '@/components/ui/layout';
-import { pageNumberControls, useTablePage } from '@/components/ui/pager';
+import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { ACTION_STATUS_LABEL } from '@/lib/agent/vocabulary';
 import type { ActionStatus } from '@/lib/api/actions';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import { formatCount, readableUrl } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { internalLinkStateNotice } from '@/lib/site-health/status';
@@ -235,8 +233,8 @@ function LinksTable({
   emptyReason: string;
   onSelect: (id: string) => void;
 }>) {
-  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
-  const pagination = useTablePage(links.length, pageSize);
+  const pagination = useResizableTablePage(links.length);
+  const { pageSize } = pagination;
   const paged = links.slice(pagination.from - 1, pagination.to);
   return (
     <DataTable
@@ -259,13 +257,7 @@ function LinksTable({
                 total: links.length,
                 noun: 'suggestions',
               },
-              pageSize: {
-                value: pageSize,
-                onChange: (size) => {
-                  setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
-                  pagination.setPage(1);
-                },
-              },
+              pageSize: pagination.pageSizeControl,
               ...pageNumberControls(pagination.page, pagination.pageCount, pagination.setPage),
             }
           : undefined

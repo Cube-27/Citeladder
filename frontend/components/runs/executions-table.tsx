@@ -1,9 +1,6 @@
-import { useState } from 'react';
-
 import { useExecutionFilters } from '@/components/runs/executions-filters';
 import { StatusMark } from '@/components/ui/status-mark';
-import { pageNumberControls, useTablePage } from '@/components/ui/pager';
-import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
+import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { FileSearch } from 'lucide-react';
 import { IconButton } from '@/components/ui/button';
 import { TitledSection } from '@/components/ui/section';
@@ -51,13 +48,10 @@ export function ExecutionsTable({
 }>) {
   const engines = useEngineCatalog();
   const filters = useExecutionFilters(executions);
-  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
-  const { page, setPage, pageCount, from, to } = useTablePage(filters.rows.length, pageSize);
-  const [pagedFilter, setPagedFilter] = useState(filters.key);
-  if (pagedFilter !== filters.key) {
-    setPagedFilter(filters.key);
-    setPage(1);
-  }
+  const { page, setPage, pageCount, from, to, pageSize, pageSizeControl } = useResizableTablePage(
+    filters.rows.length,
+    filters.key,
+  );
   const pageRows = filters.rows.slice(from - 1, to);
   const unmatched: DataTableState | undefined =
     executions.length > 0 && filters.rows.length === 0
@@ -82,13 +76,7 @@ export function ExecutionsTable({
         pageSize={pageCount > 1 ? pageSize : undefined}
         pager={{
           range: { from, to, total: filters.rows.length, noun: 'executions' },
-          pageSize: {
-            value: pageSize,
-            onChange: (size) => {
-              setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
-              setPage(1);
-            },
-          },
+          pageSize: pageSizeControl,
           ...pageNumberControls(page, pageCount, setPage),
         }}
       >

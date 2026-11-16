@@ -46,11 +46,30 @@ const evidence: VisibilityEvidenceResponse = {
   ],
 };
 
-function Panel({ projectId }: Readonly<{ projectId: string }>) {
+/** Fifteen distinct searches: one more page than the table's ten rows. */
+const manySearches: VisibilityEvidenceResponse = {
+  truncated: false,
+  items: evidence.items.map((item) => ({
+    ...item,
+    search_query_count: 15,
+    search_events: Array.from({ length: 15 }, (_, index) => ({
+      sequence: index,
+      query: `query ${String(index + 1).padStart(2, '0')}`,
+      call_id: '',
+      call_sequence: 0,
+      query_sequence: index,
+    })),
+  })),
+};
+
+function Panel({
+  projectId,
+  data = evidence,
+}: Readonly<{ projectId: string; data?: VisibilityEvidenceResponse }>) {
   const query = useQuery({
     queryKey: ['test-evidence', projectId],
-    queryFn: async () => evidence,
-    initialData: evidence,
+    queryFn: async () => data,
+    initialData: data,
   });
   const project = useMemo(() => makeProject({ id: projectId }), [projectId]);
   // The project route's gate hands the panel its project; a switch is a new one.
@@ -146,6 +165,19 @@ describe('Fanout evidence scope', () => {
         '1 distinct searches and 1 total occurrences in the searches shown below',
       ),
     ).toBeInTheDocument();
+  });
+});
+
+describe('Fanout paging', () => {
+  it('goes back to the first page when the reader searches', async () => {
+    vi.spyOn(visibilityApi, 'getFanoutSummary').mockReturnValue(new Promise(() => {}));
+    const user = userEvent.setup();
+    renderWithProviders(<Panel projectId={A} data={manySearches} />);
+    await user.click(screen.getByRole('button', { name: 'Next page' }));
+    expect(screen.getByText('11–15 of 15')).toBeVisible();
+
+    await user.type(screen.getByLabelText('Filter searches by text'), 'query');
+    expect(screen.getByText('1–10 of 15')).toBeVisible();
   });
 });
 

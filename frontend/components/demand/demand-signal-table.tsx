@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 import { ClampText } from '@/components/ui/clamp-text';
@@ -9,12 +9,11 @@ import { TextLink } from '@/components/ui/text-link';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline } from '@/components/ui/layout';
-import { pageNumberControls, useTablePage } from '@/components/ui/pager';
+import { pageNumberControls, useResizableTablePage } from '@/components/ui/pager';
 import { TableActionsCell, TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
-import { TABLE_DEFAULT_PAGE_SIZE, isTablePageSize, type TablePageSize } from '@/lib/config/tables';
 import {
   numericMetric,
   signalPage,
@@ -110,13 +109,10 @@ export function DemandSignalTable({
   /** Clears the tab and search when they hid every signal; the head stays. */
   onClearFilters: () => void;
 }>) {
-  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
-  const { page, setPage, pageCount, from, to } = useTablePage(rows.length, pageSize);
-  const [pagedFilter, setPagedFilter] = useState(filterKey);
-  if (pagedFilter !== filterKey) {
-    setPagedFilter(filterKey);
-    setPage(1);
-  }
+  const { page, setPage, pageCount, from, to, pageSize, pageSizeControl } = useResizableTablePage(
+    rows.length,
+    filterKey,
+  );
 
   const pageRows = rows.slice(from - 1, to);
   // Paging never moves the layout: a short last page keeps a full page's
@@ -136,13 +132,7 @@ export function DemandSignalTable({
       pageSize={pageCount > 1 ? pageSize : undefined}
       pager={{
         range: { from, to, total: rows.length, noun: 'signals' },
-        pageSize: {
-          value: pageSize,
-          onChange: (size) => {
-            setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
-            setPage(1);
-          },
-        },
+        pageSize: pageSizeControl,
         ...pageNumberControls(page, pageCount, setPage),
       }}
     >

@@ -3,7 +3,12 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button, IconButton } from '@/components/ui/button';
 import { Select } from '@/components/ui/select';
-import { TABLE_PAGE_SIZE_OPTIONS } from '@/lib/config/tables';
+import {
+  TABLE_DEFAULT_PAGE_SIZE,
+  TABLE_PAGE_SIZE_OPTIONS,
+  isTablePageSize,
+  type TablePageSize,
+} from '@/lib/config/tables';
 import { formatCount } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -193,14 +198,38 @@ export function Pager({
  * Page state for an offset-paged list, with clamp-only reconciliation: when
  * the underlying list shrinks (filters, deletes, polling refetches) the page
  * clamps into range instead of resetting, so a background refetch never yanks
- * the reader back to page 1.
+ * the reader back to page 1. A new `resetKey` (the reader's filter or search)
+ * goes back to page 1.
  */
-export function useTablePage(total: number, pageSize: number) {
+export function useTablePage(
+  total: number,
+  { pageSize, resetKey }: Readonly<{ pageSize: number; resetKey?: string }>,
+) {
   const [page, setPage] = useState(1);
+  const [pagedKey, setPagedKey] = useState(resetKey);
+  if (pagedKey !== resetKey) {
+    setPagedKey(resetKey);
+    setPage(1);
+  }
   const safePageSize = Math.max(1, pageSize);
   const pageCount = Math.max(1, Math.ceil(total / safePageSize));
   const safePage = Math.max(1, Math.min(page, pageCount));
   const from = total === 0 ? 0 : (safePage - 1) * safePageSize + 1;
   const to = Math.min(total, safePage * safePageSize);
   return { page: safePage, setPage, pageCount, from, to };
+}
+
+/** {@link useTablePage} with the reader's rows-per-page choice, which goes back to page 1. */
+export function useResizableTablePage(total: number, resetKey?: string) {
+  const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
+  const pagination = useTablePage(total, { pageSize, resetKey });
+  const { setPage } = pagination;
+  const pageSizeControl: PagerPageSize = {
+    value: pageSize,
+    onChange: (size) => {
+      setPageSize(isTablePageSize(size) ? size : TABLE_DEFAULT_PAGE_SIZE);
+      setPage(1);
+    },
+  };
+  return { ...pagination, pageSize, pageSizeControl };
 }

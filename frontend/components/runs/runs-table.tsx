@@ -88,7 +88,9 @@ export function RunsTable({
   const timeZone = useDisplayTimeZone();
   const [sort, setSort] = useState<Sort>({ key: 'created', descending: true });
   const sorted = sortAudits(audits, sort);
-  const { page, setPage, pageCount, from, to } = useTablePage(sorted.length, PAGE_SIZE);
+  const { page, setPage, pageCount, from, to } = useTablePage(sorted.length, {
+    pageSize: PAGE_SIZE,
+  });
   const pagedAudits = sorted.slice(from - 1, to);
   const onSort = (key: SortKey) => {
     setSort((current) =>

@@ -99,7 +99,9 @@ export function PromptTable({
   );
   const shelf = prompts.some((prompt) => commerceSetIds?.has(prompt.prompt_set_id));
   const measuredColumns = measured ? measuredColumnsFor({ compared, shelf }) : [];
-  const { page, setPage, pageCount, from, to } = useTablePage(prompts.length, PAGE_SIZE);
+  const { page, setPage, pageCount, from, to } = useTablePage(prompts.length, {
+    pageSize: PAGE_SIZE,
+  });
   const pagedPrompts = prompts.slice(from - 1, to);
 
   return (
