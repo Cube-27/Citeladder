@@ -214,6 +214,7 @@ function engineFilter(
     label: 'Surface',
     value: engine,
     defaultValue: 'all',
+    defaultIsEvery: true,
     valueLabel: engine === 'all' ? 'All surfaces' : catalog.label(engine),
     groups: [
       { options: [{ value: 'all', label: 'All surfaces' }] },
@@ -233,6 +234,7 @@ function promptFilter({ promptOptions, promptId, onChangePrompt }: ToolbarProps)
     label: 'Prompt',
     value: promptId ?? EVERY_PROMPT,
     defaultValue: EVERY_PROMPT,
+    defaultIsEvery: true,
     groups: [
       {
         options: [
@@ -252,6 +254,7 @@ function outcomeFilter({ outcome, onChangeOutcome }: ToolbarProps): FilterDefini
     label: 'Answer outcome',
     value: outcome ?? 'all',
     defaultValue: 'all',
+    defaultIsEvery: true,
     groups: [{ options: ANSWER_OUTCOMES }],
     onChange: (value) => onChangeOutcome(value === 'all' ? null : value),
   });

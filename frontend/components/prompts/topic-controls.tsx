@@ -60,6 +60,7 @@ export function topicFilter({
     label: 'Topic',
     valueLabel: selected?.label ?? 'All topics',
     isDefault: selectedTopicId === null,
+    defaultIsEvery: true,
     content: (
       <>
         <MenuLabel>Topic</MenuLabel>

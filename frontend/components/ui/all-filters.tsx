@@ -47,6 +47,12 @@ type FilterBase = Readonly<{
   valueLabel: string;
   /** Whether the filter is at its unfiltered value; the others are counted on the button. */
   isDefault: boolean;
+  /**
+   * Whether the unfiltered value is every option ("All statuses"), so the
+   * trigger shows only the label there. A real default (a period, a market)
+   * leaves it off: it always prints, since it is what the data is filtered by.
+   */
+  defaultIsEvery?: boolean;
 }>;
 
 /**
@@ -83,12 +89,15 @@ export function choiceFilter<T extends string>({
   onChange,
   searchable,
   valueLabel,
+  defaultIsEvery = false,
 }: Readonly<{
   id: string;
   label: string;
   value: T;
   /** The unfiltered value. */
   defaultValue: T;
+  /** The unfiltered value is every option ("All statuses"); see `FilterDefinition`. */
+  defaultIsEvery?: boolean;
   groups: readonly FilterOptionGroup<T>[];
   onChange: (value: T) => void;
   searchable?: boolean;
@@ -103,6 +112,7 @@ export function choiceFilter<T extends string>({
     value,
     valueLabel: valueLabel ?? options.find((option) => option.value === value)?.label ?? label,
     isDefault: value === defaultValue,
+    defaultIsEvery,
     groups,
     searchable,
     onChange: (raw) => {
@@ -160,6 +170,7 @@ export function singleFilter({
     label,
     value: value ?? EVERY,
     defaultValue: EVERY,
+    defaultIsEvery: true,
     groups: [{ options: [{ value: EVERY, label: allLabel }, ...options] }],
     onChange: (next) => onChange(next === EVERY ? null : next),
   });
@@ -194,6 +205,7 @@ export function manyFilter<T extends string>({
     label,
     valueLabel: picked.length > 1 ? `${picked.length} selected` : (only?.label ?? allLabel),
     isDefault: picked.length === 0,
+    defaultIsEvery: true,
     content: (
       <>
         <MenuLabel>{label}</MenuLabel>

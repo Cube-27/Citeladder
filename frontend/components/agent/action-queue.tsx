@@ -89,6 +89,7 @@ function allFilter<T extends string>({
     label,
     value,
     defaultValue: ALL,
+    defaultIsEvery: true,
     groups: [{ options: [{ value: ALL, label: allLabel }, ...options] }],
     onChange,
   });

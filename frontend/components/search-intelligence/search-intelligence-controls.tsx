@@ -112,6 +112,7 @@ export function keywordFilters({
       label: 'Min. search volume',
       valueLabel: minVolume || 'Any volume',
       isDefault: minVolume === '',
+      defaultIsEvery: true,
       content: (
         <Input
           aria-label="Minimum search volume"
@@ -134,6 +135,7 @@ export function keywordFilters({
       label: 'Intent',
       value: intent || 'any',
       defaultValue: 'any',
+      defaultIsEvery: true,
       groups: [{ options: INTENT_OPTIONS }],
       onChange: (value) => setIntent(value === 'any' ? '' : value),
     }),
