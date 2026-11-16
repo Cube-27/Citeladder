@@ -100,3 +100,31 @@ export function ClampText({
     </Tooltip>
   );
 }
+
+/**
+ * A URL's text as two spans for a one-line flex row: the head gives way first
+ * (`/blog/…/last-segment`), the tail only once the head is gone, so the text
+ * never overflows. Together they hold the text once, read and copied whole.
+ */
+export function UrlCutParts({ text }: Readonly<{ text: string }>) {
+  const { head, tail } = splitUrlTail(text);
+  return (
+    <>
+      {head ? <span className="min-w-0 truncate">{head}</span> : null}
+      <span className={cn('max-w-full min-w-0 truncate', head && 'shrink-0')}>{tail}</span>
+    </>
+  );
+}
+
+/** The tail is the last path segment (with its query); the head is everything before it. */
+function splitUrlTail(text: string): { head: string; tail: string } {
+  const cut = text.replace(/\/$/u, '').lastIndexOf('/');
+  if (cut <= 0) return { head: '', tail: text };
+  const tail = text.slice(cut);
+  // A tail longer than half a typical cell keeps the head cut instead.
+  if (tail.length > URL_TAIL_MAX) return { head: '', tail: text };
+  return { head: text.slice(0, cut), tail };
+}
+
+/** Characters of a URL's last segment that stay whole while the head is cut. */
+const URL_TAIL_MAX = 32;

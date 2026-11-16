@@ -83,6 +83,74 @@ function chatDetail(): AgentChatDetail {
   };
 }
 
+const LONG_URL = (n: number) =>
+  `https://www.bestandless.com.au/Categories/Kids/Kids-Underwear-%2526-Socks/Boys-Underwear-Multipack-Collection/boys-trunks-${n}`;
+const LIMITS = { mentions_max: 5, attachments_max: 3, attachment_max_chars: 40000 };
+
+for (const width of [1440, 390]) {
+  test(`a turn with long URL chips stays inside the thread at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 844 });
+    const current = chatDetail();
+    current.latest_run!.status = 'succeeded';
+    const urlActions = [1, 2, 3, 4].map((n) => ({
+      id: `88888888-8888-4888-8888-00000000000${n}`,
+      target_label: LONG_URL(n),
+      status: 'open' as const,
+    }));
+    current.actions = [
+      {
+        id: '88888888-8888-4888-8888-000000000000',
+        target_label: 'Form controls missing accessible names',
+        status: 'open',
+      },
+      ...urlActions,
+    ];
+    const [request, reply] = current.messages.slice(-2);
+    request!.content = `Fix these pages ${LONG_URL(9)}`;
+    request!.mentions = current.actions.map(({ id, target_label }) => ({
+      kind: 'action',
+      id,
+      label: target_label,
+    }));
+    reply!.content = `Read Actions and the project overview.\n\n\`${LONG_URL(5)}\``;
+    current.messages = [request!, reply!];
+    await stubAuthedShell(page, [
+      ['**/api/v1/agent/skills', { skills: SKILLS, limits: LIMITS }],
+      [`**/api/v1/projects/${FIXTURE_PROJECT.id}/actions*`, actionsPage()],
+      [`**/api/v1/projects/${FIXTURE_PROJECT.id}/agent/chats?*`, { items: [], next_cursor: null }],
+    ]);
+    await page.route(`**/api/v1/agent/chats/${CHAT}`, (route) => route.fulfill({ json: current }));
+    await page.goto(fixtureProjectPath(`/agent/chats/${CHAT}`));
+    const chips = page.getByRole('list', { name: 'Mentioned Actions' }).getByRole('link');
+    await expect(chips).toHaveCount(5);
+    const thread = page.getByRole('region', { name: 'Agent conversation' });
+    expect(
+      await thread.evaluate((element) => element.scrollWidth - element.clientWidth),
+    ).toBeLessThanOrEqual(0);
+    // Each chip is one line inside the bubble, which stays inside the thread;
+    // a URL chip keeps its tail visible and is named by the whole, readable URL.
+    const threadBox = (await thread.boundingBox())!;
+    const bubble = (await page
+      .getByText(/^Fix these pages/)
+      .locator('..')
+      .boundingBox())!;
+    expect(bubble.x + bubble.width).toBeLessThanOrEqual(threadBox.x + threadBox.width);
+    for (const chip of await chips.all()) {
+      const box = (await chip.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(bubble.x);
+      expect(box.x + box.width).toBeLessThanOrEqual(bubble.x + bubble.width);
+      expect(box.height).toBeLessThan(40);
+    }
+    await expect(chips.nth(1)).toHaveAccessibleName(
+      /^@https:\/\/www\.bestandless\.com\.au\/Categories\/Kids\/Kids-Underwear-&-Socks\/.*\/boys-trunks-1\b/,
+    );
+    const tail = chips.nth(1).getByText('/boys-trunks-1', { exact: true });
+    const tailBox = (await tail.boundingBox())!;
+    expect(await tail.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    expect(tailBox.x + tailBox.width).toBeLessThanOrEqual(bubble.x + bubble.width);
+  });
+}
+
 for (const width of [1280, 390]) {
   test(`new chat keeps one composer and follow-ups stay after the result at ${width}px`, async ({
     page,

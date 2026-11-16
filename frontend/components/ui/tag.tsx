@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import { ArrowRight, X } from 'lucide-react';
 
+import { UrlCutParts } from '@/components/ui/clamp-text';
 import { ProjectLink } from '@/components/ui/project-link';
 import { cn } from '@/lib/utils';
 
@@ -106,20 +107,28 @@ export function Tag(props: TagProps) {
 /**
  * RecordTag — the `record` tag: one record named inside text, linking to its
  * screen in this project, its label cutting before the optional status after
- * it (a `StatusMark`).
+ * it (a `StatusMark`). A `url` label cuts its middle and keeps its tail; the
+ * link's name is the whole label either way.
  */
 export function RecordTag({
   href,
   label,
+  labelKind = 'text',
   status,
-}: Readonly<{ href: string; label: string; status?: ReactNode }>) {
+}: Readonly<{ href: string; label: string; labelKind?: 'text' | 'url'; status?: ReactNode }>) {
   return (
     <ProjectLink
       href={href}
       data-tag-kind="record"
       className={cn(TAG_OPERABLE, 'focus-ring align-middle no-underline')}
     >
-      <span className="min-w-0 truncate">{label}</span>
+      {labelKind === 'url' ? (
+        <span className="flex min-w-0">
+          <UrlCutParts text={label} />
+        </span>
+      ) : (
+        <span className="min-w-0 truncate">{label}</span>
+      )}
       {/* Read as two words; flex layout drops the space visually. */} {status}
       <ArrowRight className="size-3 shrink-0" aria-hidden />
     </ProjectLink>
