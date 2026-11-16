@@ -371,7 +371,7 @@ describe('FilterBar and FilterTrigger', () => {
       );
     expect(follows).toEqual([true, true, true, true]);
   });
-  it('draws each filter as its own trigger unless a search shares the row with more than four', () => {
+  it('draws each filter as its own trigger unless the row is full or a search shares it with more than four', () => {
     const filter = (id: string, value = 'all') =>
       choiceFilter({
         id,
@@ -400,6 +400,18 @@ describe('FilterBar and FilterTrigger', () => {
 
     rerender(<FilterBar filters={[...four, filter('Status')]} />);
     expect(screen.getByRole('button', { name: 'Status: All' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+
+    // Products: a view, a search and actions fill the row, so its filters group.
+    const view = <button type="button">My catalog</button>;
+    const actions = <button type="button">Export</button>;
+    rerender(<FilterBar view={view} search={search} filters={four} actions={actions} />);
+    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Kind: One' })).toBeNull();
+
+    // AI Traffic: filters and an action without a search keep their own triggers.
+    rerender(<FilterBar filters={four} actions={actions} />);
+    expect(screen.getByRole('button', { name: 'Kind: One' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
   });
   it('prints only the label of a filter at its every value, and the value once set or for a real default', () => {

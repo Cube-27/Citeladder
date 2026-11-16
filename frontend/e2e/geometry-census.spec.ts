@@ -119,15 +119,17 @@ const MASTHEAD_HEIGHT = 56;
  */
 const NAV_ROW_HEIGHT = 32;
 /**
- * Masthead, page tabs and filter band stack flush. One padding (`--page-pad`,
- * 24) sits left, right and above the first row, and above and below the
- * sidebar's mode switch, so the first row and the switch share a centre line
- * (24 + 32 / 2 = 40 under the masthead). A filter row under tabs sits 24 in,
- * and the body 12 below it; otherwise the body starts 24 below.
+ * Masthead, page tabs and filter band stack flush. The main column is padded
+ * 24 left and right (`--page-pad-inline`) and 16 above and below the first
+ * row (`--page-pad-block`), as is the sidebar's mode switch, so the first row
+ * and the switch share a centre line (16 + 32 / 2 = 32 under the masthead).
+ * A filter row under tabs sits 16 below them and the body 12 below it;
+ * otherwise the body starts 16 below.
  */
 const BAND_GAP = 0;
-const PAGE_PAD = 24;
-const BODY_TOP_GAP = 24;
+const PAGE_PAD_INLINE = 24;
+const PAGE_PAD_BLOCK = 16;
+const BODY_TOP_GAP = PAGE_PAD_BLOCK;
 const FILTERED_BODY_TOP_GAP = 12;
 /** The content band's cards stand 16 apart (a titled group adds its own 32). */
 const CONTENT_GAP = 16;
@@ -333,7 +335,7 @@ function measure({ route }: { route: string }) {
       add('band.first-top-gap', band, px(getComputedStyle(band).paddingTop));
     else if (band.matches('[data-page-band="filters"]') && underTabs(band))
       add('filters.top-gap', band, px(getComputedStyle(band).paddingTop));
-  // The main column's side padding equals its top padding (`--page-pad`).
+  // The main column's side padding (`--page-pad-inline`).
   for (const main of all('[data-main-column]')) {
     const style = getComputedStyle(main);
     add('main.padding-x', main, px(style.paddingLeft));
@@ -790,8 +792,8 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'band.gap', BAND_GAP);
   expectOneValue(records, 'body.top-gap', BODY_TOP_GAP);
   expectOneValue(records, 'filters.top-gap', BODY_TOP_GAP);
-  expectOneValue(records, 'band.first-top-gap', PAGE_PAD);
-  expectOneValue(records, 'main.padding-x', PAGE_PAD);
+  expectOneValue(records, 'band.first-top-gap', PAGE_PAD_BLOCK);
+  expectOneValue(records, 'main.padding-x', PAGE_PAD_INLINE);
   expectOneValue(records, 'first-row.centre-offset', 0);
   expectOneValue(records, 'body.filtered-top-gap', FILTERED_BODY_TOP_GAP);
   expectOneValue(records, 'content.gap', CONTENT_GAP);

@@ -26,7 +26,7 @@ const SIDEBAR_COLUMN =
   'bg-chrome border-rule rail:block z-sticky sticky top-0 hidden h-dvh min-w-0 border-r';
 // The `main` container the `column-split:`/`column-wide:` variants measure.
 const MAIN_INSET =
-  '@container/main min-w-0 px-[var(--content-gutter)] pb-[var(--page-section-gap)]';
+  '@container/main min-w-0 px-[var(--page-pad-inline)] pb-[var(--page-section-gap)]';
 const PAGE = 'flex w-full max-w-[var(--content-max-width)] min-w-0 flex-col';
 
 /**

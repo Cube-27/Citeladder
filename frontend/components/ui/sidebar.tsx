@@ -18,6 +18,7 @@ import {
 
 import { IconButton } from '@/components/ui/button';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
+import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 import { cn } from '@/lib/utils';
 
 /**
@@ -50,8 +51,8 @@ export function SidebarFrame({
         >
           {ident}
         </div>
-        {/* `page-pad` above and below the switch; the list below adds its own 12. */}
-        <div className="labelled:pt-[var(--page-pad)] labelled:pb-[calc(var(--page-pad)-0.75rem)] shrink-0 px-2 pt-1">
+        {/* `page-pad-block` above the switch, level with the first row; 12 below it. */}
+        <div className="labelled:pt-[var(--page-pad-block)] labelled:pb-3 shrink-0 px-2 pt-1">
           {mode}
         </div>
         {nav}
@@ -115,7 +116,8 @@ function revealCurrent(list: HTMLElement) {
  * The labelled list between the pinned parts: the one region that scrolls.
  * It fades at the end it can scroll towards (a mask on the list, globals.css)
  * and shows the current row on load and whenever `revealKey` (the location)
- * changes. Groups sit 16 apart.
+ * changes. Sections sit 16 apart; groups closer (`[data-sidebar-group]`,
+ * globals.css).
  */
 export function SidebarScrollList({
   label,
@@ -161,7 +163,7 @@ export function SidebarNavGroup({
 }>) {
   const listId = useId();
   return (
-    <div className="flex flex-col gap-0.5">
+    <div data-sidebar-group="" className="flex flex-col gap-0.5">
       {title ? (
         <button
           type="button"
@@ -254,14 +256,16 @@ export function sidebarRailButtonClasses(current: boolean) {
 export function sidebarModeTrackClasses(rail: boolean) {
   return rail
     ? 'flex flex-col items-center'
-    : 'bg-well rounded-control grid h-[var(--nav-row-height)] grid-cols-2 p-0.5';
+    : 'bg-well rounded-control flex h-[var(--nav-row-height)] p-0.5';
 }
 
 export function sidebarModeSegmentClasses(current: boolean, rail: boolean) {
   // The rail's one accent mark is the current destination's; the mode takes the tile only.
   if (rail) return cn(RAIL_BUTTON, current ? 'text-ink bg-[var(--nav-current-fill)]' : AT_REST);
+  // Each segment is as wide as its label plus 12 a side, and the two share
+  // what is left, so Dashboard's is wider than Agent's; a narrow sidebar cuts the label.
   return cn(
-    'focus-ring type-label relative flex h-full w-full items-center justify-center gap-2 rounded-sm transition-colors [&_svg]:size-4',
+    'focus-ring type-label relative flex h-full min-w-0 flex-auto items-center justify-center gap-2 rounded-sm px-3 transition-colors [&_svg]:size-4',
     current ? 'bg-surface text-ink shadow-card' : AT_REST,
   );
 }
@@ -347,28 +351,28 @@ export function SidebarIdentButton({
   );
 }
 
-/** Collapse the sidebar to its rail, or open it again (hidden in the drawer). */
-export function SidebarCollapseToggle({
-  collapsed,
-  onToggle,
-  shortcut,
-}: Readonly<{ collapsed: boolean; onToggle: () => void; shortcut: string }>) {
+/**
+ * Collapse the sidebar to its rail, or open it again: the masthead's first
+ * item, before the title. Below 900px, where the menu button opens the
+ * drawer instead, it is hidden.
+ */
+export function SidebarCollapseToggle() {
+  const collapsed = useSidebarCollapsed();
   return (
     <IconButton
       icon={collapsed ? PanelLeftOpen : PanelLeftClose}
       label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      shortcut={shortcut}
-      tooltipSide="right"
+      shortcut={COLLAPSE_SHORTCUT}
+      tooltipSide="bottom"
       aria-keyshortcuts="Meta+Backslash Control+Backslash"
       aria-pressed={collapsed}
-      onClick={onToggle}
-      className={cn(
-        'in-data-[nav-drawer]:hidden shrink-0',
-        collapsed && 'size-[var(--rail-button)] [&_svg]:size-5',
-      )}
+      onClick={() => setSidebarCollapsed(!collapsed)}
+      className="rail:inline-flex hidden shrink-0"
     />
   );
 }
+
+const COLLAPSE_SHORTCUT = 'Ctrl \\';
 
 /** True while the trigger sits in the collapsed rail, where only its tooltip names it. */
 function isRail(trigger: HTMLElement) {
