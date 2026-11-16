@@ -119,6 +119,20 @@ function rawTiming(value) {
   return found;
 }
 
+/**
+ * An animation in a block whose timeline is a scroll position, not time: its
+ * progress follows the scroll 1:1, so `linear` there is not a motion curve.
+ */
+function scrollDriven(decl) {
+  if (!decl.prop.toLowerCase().startsWith('animation')) return false;
+  return (decl.parent?.nodes ?? []).some(
+    (node) =>
+      node.type === 'decl' &&
+      node.prop.toLowerCase() === 'animation-timeline' &&
+      /\b(?:scroll|view)\(/.test(node.value),
+  );
+}
+
 /** A layer that draws a 1px token-coloured ring or rule rather than depth. */
 function hairlineLayer(nodes) {
   const words = nodes.filter((node) => node.type === 'word').map((node) => node.value);
@@ -177,7 +191,12 @@ const PROPERTY_FAMILIES = [
   },
   {
     matches: (property) => MOTION_PROPERTY.test(property),
-    finding: (property, value) => listedFinding('css-motion', property, rawTiming(value)),
+    finding: (property, value, decl) =>
+      listedFinding(
+        'css-motion',
+        property,
+        rawTiming(value).filter((found) => !(found === 'linear' && scrollDriven(decl))),
+      ),
   },
   {
     matches: (property) => OUTLINE_PROPERTY.test(property),

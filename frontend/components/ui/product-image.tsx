@@ -6,6 +6,9 @@ import { useState } from 'react';
  * cropped, since a product shot is the evidence). An image that fails to load
  * draws nothing rather than a broken icon. Decorative when the header names
  * the product beside it, so its alt text is empty.
+ *
+ * In light, multiply melts a retailer shot's white backdrop into the tile; in
+ * dark it would sink the photo, so the white shot stays a light chip there.
  */
 export function ProductImage({ src }: Readonly<{ src: string }>) {
   const [failed, setFailed] = useState(false);
@@ -16,7 +19,7 @@ export function ProductImage({ src }: Readonly<{ src: string }>) {
         src={src}
         alt=""
         loading="lazy"
-        className="size-full object-contain"
+        className="size-full object-contain [:root:not([data-theme='dark'])_&]:mix-blend-multiply"
         onError={() => setFailed(true)}
       />
     </span>

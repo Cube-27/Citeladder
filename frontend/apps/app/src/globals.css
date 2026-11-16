@@ -484,12 +484,13 @@
 :root[data-theme='dark']:not([data-public-surface]) {
   /* Each layer steps lighter than the one beneath, so it reads without its
      shadow; the well is a tint over the card, lighter than it. */
-  --color-ground: #0f1114;
+  --color-ground: #0c0e11;
   --color-chrome: #131519;
   --color-surface: #181a1f;
-  --color-well: #22252b;
+  --color-well: #26292f;
   --color-raised: #1f2228;
-  --color-rule: #2b2e36;
+  /* Ink at a fixed alpha, so a hairline steps evenly over every layer. */
+  --color-rule: rgb(236 238 242 / 10%);
   --color-control-line: #727886;
   --color-control-edge: #393d47;
   --color-ink: #eceef2;
@@ -519,8 +520,12 @@
   --color-scrim: rgb(0 0 0 / 60%);
   --shadow-card: none;
   --shadow-control: 0 1px 2px rgb(0 0 0 / 0.35);
-  --shadow-pop: 0 4px 12px rgb(0 0 0 / 0.4), 0 1px 2px rgb(0 0 0 / 0.3);
-  --shadow-sheet: 0 16px 40px rgb(0 0 0 / 0.55);
+  /* Black barely shows on a near-black ground, so an overlay also reads by a
+     lit top edge (inset: a child that fills the top would cover it). */
+  --shadow-pop:
+    inset 0 1px 0 rgb(255 255 255 / 5%), 0 4px 12px rgb(0 0 0 / 0.3),
+    0 1px 2px rgb(0 0 0 / 0.25);
+  --shadow-sheet: inset 0 1px 0 rgb(255 255 255 / 5%), 0 16px 40px rgb(0 0 0 / 0.45);
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -608,7 +613,7 @@
   --color-surface: #ffffff;
   --color-well: #f1f2f5;
   --color-raised: #ffffff;
-  --color-rule: #e4e6eb;
+  --color-rule: rgb(22 24 29 / 11%);
   --color-control-line: #838995;
   /* The soft edge of a labelled button and of a search or filter control: its
      words or icon name it, so the edge needs no 3:1 (WCAG 1.4.11); form
@@ -1135,6 +1140,15 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     line-height: var(--text-code--line-height);
     font-weight: 400;
   }
+  /* Only the wrap style: the longhand keeps a `truncate` or nowrap row on
+     one line. Titles balance their lines; paragraphs avoid a lone last word. */
+  :root:not([data-public-surface])
+    :is(.type-display, .type-title, .type-heading, .type-subheading) {
+    text-wrap-style: balance;
+  }
+  :root:not([data-public-surface]) :is(p:is(.type-body, .type-prose, .type-caption), .prose-content p) {
+    text-wrap-style: pretty;
+  }
   .type-control-file::file-selector-button {
     font-family: var(--font-sans);
     font-size: var(--text-label);
@@ -1432,13 +1446,20 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-weight: 400;
   }
 
-  /* Lucide icons draw at one stroke: 1.75 on the website, 1.5 in the app,
-     at every size. */
+  /* Lucide strokes scale with the box, so the app sets weight by size to
+     match the text beside it: 2 at 12-14px, 1.75 at 16px, 1.5 above. The
+     website draws 1.75 at every size. */
   .lucide {
     stroke-width: 1.75;
   }
   :root:not([data-public-surface]) .lucide {
     stroke-width: 1.5;
+  }
+  :root:not([data-public-surface]) .lucide.size-4 {
+    stroke-width: 1.75;
+  }
+  :root:not([data-public-surface]) .lucide:is(.size-3, .size-3\.5) {
+    stroke-width: 2;
   }
 
   /* The pointer affordance, declared once for the whole app. Keyed on ROLE as

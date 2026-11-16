@@ -106,7 +106,8 @@ const APP_PAIRS = [
     minimum: 4.5,
   })),
   { inks: [color('accent-text')], surfaces: [...APP_FILLS, color('accent-wash')], minimum: 4.5 },
-  { inks: [color('ink-2')], surfaces: [color('rule')], minimum: 4.5 },
+  // The rule is a translucent ink, so it is checked over every fill it can sit on.
+  { inks: [color('ink-2')], surfaces: [color('rule')], over: APP_FILLS, minimum: 4.5 },
   {
     inks: [color('accent'), color('control-line'), ...APP_SERIES, color('data-other')],
     surfaces: APP_FILLS,

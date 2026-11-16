@@ -362,7 +362,7 @@ export function CommandPalette({
                           onMouseMove={() => highlight(index)}
                           onClick={() => runCommand(command)}
                           className={cn(
-                            'type-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-control px-2 text-left',
+                            'type-body text-ink flex min-h-[var(--control-md)] w-full items-center gap-2 rounded-mark px-2 text-left',
                             isActive && 'overlay-hover',
                           )}
                         >
