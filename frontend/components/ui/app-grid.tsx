@@ -27,8 +27,6 @@ import { cn } from '@/lib/utils';
  *   `list-detail` — a selectable list beside the selected item's evidence,
  *                   from 981px; the columns align to the top.
  *   `slips`       — as many slips as fit, each at least 280 (two at 982).
- *   `cells`       — as many small cells (meters) as fit, each at least 220,
- *                   so a column drops before a label could break.
  *
  * Grids never nest a second AppGrid and never set widths on their children.
  */
@@ -42,7 +40,6 @@ const LAYOUT = {
   'table-chart': 'column-wide:grid-cols-[minmax(0,5fr)_minmax(0,4fr)]',
   'list-detail': 'column-split:grid-cols-[var(--pane-list-detail)] items-start',
   slips: 'grid-cols-[repeat(auto-fill,minmax(min(100%,17.5rem),1fr))]',
-  cells: 'grid-cols-[repeat(auto-fill,minmax(min(100%,13.75rem),1fr))]',
 } as const;
 
 export type AppGridLayout = keyof typeof LAYOUT;

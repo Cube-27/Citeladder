@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { X } from 'lucide-react';
 
+import { AppGrid } from '@/components/ui/app-grid';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { ControlRow } from '@/components/ui/control-row';
@@ -89,35 +90,40 @@ export function PlanChanges({
         </SectionDescription>
       </SectionHeader>
       <Stack as={SectionContent} gap="compact">
-        {options.map((option) => (
-          <ControlRow
-            key={option.key}
-            boxed
-            controls={
-              option.direction === 'upgrade' ? (
-                <Button
-                  variant="secondary"
-                  disabled={held || !option.plan.checkout_available}
-                  onClick={() => controls.upgrade(option.key)}
-                >
-                  Upgrade to {option.plan.name}
-                </Button>
-              ) : (
-                <Button variant="secondary" disabled={held} onClick={() => setDowngradeTo(option)}>
-                  Downgrade to {option.plan.name}
-                </Button>
-              )
-            }
-          >
-            <span className={textRole('body')}>{option.plan.name}</span>
-            {option.plan.base_price ? (
-              <span className={textRole('caption')}>
-                {formatMoney(option.plan.base_price, catalog.currency_minor_units)} / month before
-                tax
-              </span>
-            ) : null}
-          </ControlRow>
-        ))}
+        <AppGrid layout="slips">
+          {options.map((option) => (
+            <ControlRow
+              key={option.key}
+              controls={
+                option.direction === 'upgrade' ? (
+                  <Button
+                    variant="secondary"
+                    disabled={held || !option.plan.checkout_available}
+                    onClick={() => controls.upgrade(option.key)}
+                  >
+                    Upgrade to {option.plan.name}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    disabled={held}
+                    onClick={() => setDowngradeTo(option)}
+                  >
+                    Downgrade to {option.plan.name}
+                  </Button>
+                )
+              }
+            >
+              <span className={textRole('body')}>{option.plan.name}</span>
+              {option.plan.base_price ? (
+                <span className={textRole('caption')}>
+                  {formatMoney(option.plan.base_price, catalog.currency_minor_units)} / month before
+                  tax
+                </span>
+              ) : null}
+            </ControlRow>
+          ))}
+        </AppGrid>
         {options.some(
           (option) => option.direction === 'upgrade' && !option.plan.checkout_available,
         ) ? (

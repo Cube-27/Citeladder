@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
@@ -17,13 +17,16 @@ import { InlineFigure, textRole } from '@/components/ui/typography';
 import { Value } from '@/components/ui/value';
 import {
   billingDetailsError,
+  billingQueries,
   emptyBillingCustomerDetails,
   refreshBilling,
   type BillingCatalog,
   type BillingCustomerDetails,
+  type BillingEntitlement,
 } from '@/lib/api/billing';
 import { useWorkspaceCatalog } from '@/lib/billing/use-workspace-catalog';
 import {
+  catalogPlanByKey,
   checkoutSelection,
   formatMoney,
   headlinePrice,
@@ -311,6 +314,38 @@ function BillingErrorNotice({
   return <Notice tone="negative">{message}</Notice>;
 }
 
+/** The workspace's plan as Billing names it; unknown until the entitlement is read. */
+type CurrentPlanRead =
+  | Readonly<{ kind: 'unknown' }>
+  | Readonly<{ kind: 'none' }>
+  | Readonly<{ kind: 'plan'; name: string }>;
+
+function currentPlanRead(
+  entitlement: BillingEntitlement | undefined,
+  catalog: BillingCatalog | undefined,
+): CurrentPlanRead {
+  if (!entitlement) return { kind: 'unknown' };
+  const subscription = entitlement.subscription;
+  if (!subscription) return { kind: 'none' };
+  const plan = catalog ? catalogPlanByKey(catalog, subscription.catalog_key) : undefined;
+  return { kind: 'plan', name: plan?.name ?? subscription.catalog_key };
+}
+
+function currentPlanSentence(workspaceName: string, plan: CurrentPlanRead): string {
+  switch (plan.kind) {
+    case 'unknown':
+      return '';
+    case 'none':
+      return `${workspaceName} has no plan yet. `;
+    case 'plan':
+      return `${workspaceName} is on ${plan.name}. `;
+    default: {
+      const unreachable: never = plan;
+      return unreachable;
+    }
+  }
+}
+
 function PricingState({
   workspaceName,
   canBuy,
@@ -319,6 +354,7 @@ function PricingState({
   catalogRead,
   selection,
   offered,
+  currentPlan,
 }: Readonly<{
   workspaceName: string | null;
   canBuy: boolean;
@@ -327,6 +363,7 @@ function PricingState({
   catalogRead: RetryableRead & Readonly<{ isError: boolean }>;
   selection: Selection | null;
   offered: boolean | undefined;
+  currentPlan: CurrentPlanRead;
 }>) {
   if (workspaceError) {
     return (
@@ -362,8 +399,8 @@ function PricingState({
         <StateBlock
           kind="empty"
           headingLevel={2}
-          heading="No plan chosen yet"
-          description={`${workspaceName} has no plan yet. Compare plans on the public pricing page.`}
+          heading="Choose a plan"
+          description={`${currentPlanSentence(workspaceName, currentPlan)}Compare plans on the public pricing page.`}
           action={
             <Button asChild>
               <a href={websitePricing}>View public pricing</a>
@@ -383,6 +420,11 @@ export default function PricingRoute() {
   const canBuy = useWorkspaceCapability('manage_billing');
   const queryClient = useQueryClient();
   const catalogQuery = useWorkspaceCatalog(activeWorkspaceId, country);
+  // The same read Billing's current plan names its plan from.
+  const entitlementQuery = useQuery({
+    ...billingQueries.entitlement(activeWorkspaceId),
+    retry: false,
+  });
   const checkout = useSubscriptionCheckout();
   const resetPrepared = checkout.resetPrepared;
   useEffect(() => {
@@ -447,6 +489,7 @@ export default function PricingRoute() {
         catalogRead={catalogQuery}
         selection={selection}
         offered={offered}
+        currentPlan={currentPlanRead(entitlementQuery.data, catalog)}
       />
       <SelectedPurchase
         selection={selection}

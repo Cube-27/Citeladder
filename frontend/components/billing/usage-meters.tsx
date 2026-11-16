@@ -7,14 +7,9 @@ import {
   SectionHeader,
   SectionTitle,
 } from '@/components/ui/section';
-import { ExpiryLine, UsageMeter, usageLabel } from '@/components/billing/usage-meter';
-import { Absence } from '@/components/ui/absence';
-import { AppGrid } from '@/components/ui/app-grid';
-import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
-import { Stack } from '@/components/ui/layout';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { UsageTable } from '@/components/billing/usage-meter';
+import { textRole } from '@/components/ui/typography';
 import { billingQueries, type billingApi, type UsageItem } from '@/lib/api/billing';
-import { formatCount } from '@/lib/format';
 import { useActiveWorkspaceId } from '@/lib/project/project-context';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -75,13 +70,13 @@ export function UsageMeters({ enabled = true }: Readonly<{ enabled?: boolean }>)
       <SectionHeader>
         <SectionTitle id="usage-title">Usage</SectionTitle>
         <SectionDescription>
-          {idle
-            ? 'Nothing used yet this period.'
-            : 'Measured against the allowances your active grants provide.'}
+          Measured against the allowances your active grants provide.
         </SectionDescription>
+        {idle ? (
+          <p className={textRole('caption', 'text-ink-2')}>No usage yet this period</p>
+        ) : null}
       </SectionHeader>
-      {/* The meters take the card's full width at every size (Settings template). */}
-      <SectionContent data-settings-wide="">
+      <SectionContent>
         <UsageBody enabled={enabled} query={usageQuery} />
       </SectionContent>
     </Section>
@@ -116,53 +111,5 @@ function UsageBody({ enabled, query }: Readonly<{ enabled: boolean; query: Usage
       <StateBlock kind="empty" inline message="No measurable allowances on this account yet." />
     );
   }
-  if (nothingUsed(items)) return <QuotaTable items={items} />;
-  return (
-    <AppGrid layout="cells">
-      {items.map((item) => (
-        <UsageMeter key={item.key} item={item} />
-      ))}
-    </AppGrid>
-  );
-}
-
-const QUOTA_COLUMNS: readonly DataTableColumn[] = [
-  { key: 'quota', label: 'Quota' },
-  { key: 'limit', label: 'Limit', width: 'figure', kind: 'number' },
-];
-
-/** With nothing used, a meter per quota is an empty bar each; the limits read as one table. */
-function QuotaTable({ items }: Readonly<{ items: readonly UsageItem[] }>) {
-  return (
-    <DataTable label="Usage limits" columns={QUOTA_COLUMNS}>
-      {items.map((item) => (
-        <QuotaRow key={item.key} item={item} />
-      ))}
-    </DataTable>
-  );
-}
-
-/** The quota's name over its reset or expiry, and its limit. */
-function QuotaRow({ item }: Readonly<{ item: UsageItem }>) {
-  const { label, unit } = usageLabel(item);
-  return (
-    <TableRow>
-      <TableCell>
-        <Stack gap="tight">
-          <span>{label}</span>
-          <ExpiryLine item={item} unit={unit} />
-        </Stack>
-      </TableCell>
-      <TableCell numeric>
-        <QuotaLimit item={item} />
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function QuotaLimit({ item }: Readonly<{ item: UsageItem }>) {
-  if (item.limit_state === 'unlimited') return <>Unlimited</>;
-  const allowance = item.allowance ?? 0;
-  if (allowance === 0) return <Absence state="not_applicable" label="Not included" />;
-  return <>{formatCount(allowance)}</>;
+  return <UsageTable items={items} />;
 }

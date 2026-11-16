@@ -55,7 +55,6 @@ export function PlanRow({
   );
   return (
     <ControlRow
-      boxed
       data-tier={plan.key}
       controls={
         plan.contact_only ? (

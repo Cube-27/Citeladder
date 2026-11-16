@@ -81,4 +81,51 @@ describe('ExtraPurchases', () => {
     expect(within(active).queryByText('+5 projects')).toBeNull();
     expect(screen.queryByRole('button', { name: /^Buy / })).toBeNull();
   });
+
+  const extra = (key: string, name: string, reason: string | null) => ({
+    key,
+    name,
+    description: '',
+    unit_price: reason ? null : { currency: 'USD', amount_minor: 1900 },
+    quantity_min: 1,
+    quantity_max: 20,
+    availability: reason ? 'unavailable' : 'available',
+    unavailable_reason: reason,
+    grants_per_unit: [{ key: 'project_slots', value: 1 }],
+    eligible_plan_keys: ['tier_1'],
+    expiry_days: 30,
+  });
+  const gatedCatalog = (addons: unknown[]) =>
+    billingCatalogSchema.parse({ ...EMPTY_CATALOG, addons });
+  const CLOSED = 'Checkout is not available for this purchase yet.';
+
+  it.each([
+    [
+      'a shared reason once, under the head',
+      [extra('a', 'Seats', 'checkout_unavailable'), extra('b', 'Markets', 'checkout_unavailable')],
+      1,
+    ],
+    [
+      'each reason on its own button',
+      [extra('a', 'Seats', 'checkout_unavailable'), extra('b', 'Markets', null)],
+      0,
+    ],
+  ])('describes a gated Buy with %s', (_case, addons, captions) => {
+    render(
+      <ExtraPurchases
+        catalog={gatedCatalog(addons)}
+        planKey="tier_1"
+        entitlement={null}
+        disabled={false}
+        onBuy={() => undefined}
+      />,
+    );
+    const seats = screen.getByRole('button', { name: 'Buy Seats' });
+    expect(seats).toBeDisabled();
+    expect(seats).toHaveAccessibleDescription(CLOSED);
+    // The visible reason is a caption only when every gated extra shares it.
+    expect(screen.queryAllByText(CLOSED, { selector: 'p' })).toHaveLength(captions);
+    const markets = screen.getByRole('button', { name: 'Buy Markets' });
+    expect(markets).toHaveAccessibleDescription(captions ? CLOSED : '');
+  });
 });

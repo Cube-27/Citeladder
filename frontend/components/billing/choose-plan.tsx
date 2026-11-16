@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { BillingCountryInput } from '@/components/billing/billing-account-details';
 import { BillingDetailsForm } from '@/components/billing/billing-details-form';
 import { PlanRow } from '@/components/billing/plan-row';
+import { AppGrid } from '@/components/ui/app-grid';
 import { ExternalHttpLink } from '@/components/ui/external-http-link';
 import { Stack } from '@/components/ui/layout';
 import {
@@ -129,7 +130,7 @@ export function ChoosePlan({
         />
         <BillingCountryInput country={country} setCountry={setCountry} />
         <BillingDetailsForm country={country} details={details} setDetails={setDetails} />
-        <Stack gap="compact">
+        <AppGrid layout="slips">
           {catalog.plans.map((plan) => (
             <PlanRow
               key={plan.key}
@@ -146,7 +147,7 @@ export function ChoosePlan({
               }}
             />
           ))}
-        </Stack>
+        </AppGrid>
       </Stack>
     </Section>
   );
