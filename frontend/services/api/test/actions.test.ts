@@ -1,13 +1,7 @@
 /** Action cutover: real routes, authorization, concurrency and frozen evidence. */
 import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
-import { afterAll, describe, expect, it } from 'vitest';
-import { createApp } from '../src/app.ts';
-import {
-  actionDetailSchema,
-  actionsPageSchema,
-  actionDeclarationSchema,
-} from '@citeladder/contracts/actions';
+import { describe, expect, it } from 'vitest';
 import { searchConsoleState } from '../src/opportunities/measurement-legs.ts';
 import { refreshActionStatus } from '../src/opportunities/action-status.ts';
 import { syncActions } from '../src/opportunities/action-sync.ts';
@@ -16,67 +10,23 @@ import { declarationChecks } from '../src/opportunities/declaration-checks.ts';
 import { CHECKS, memberMeasurementLeg } from '../src/opportunities/checks/registry.ts';
 import type { OpportunityRow } from '../src/opportunities/projection.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
+import {
+  actionId,
+  actionPath,
+  actionRoutes,
+  boundary,
+  day,
+  declarationBody,
+  detailBody,
+  nextDay,
+  otherRule,
+  pageBody,
+  pageRule,
+  promptRule,
+} from './action-routes-support.ts';
 import { actionRow, opportunityRow, snapshotRow } from './opportunity-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
 
-const config = testConfig();
-const db = testDatabase(config);
-const app = createApp(config, db);
-const seeds: ActionSeed[] = [];
-// Inside the declaration window, which is relative to now.
-const day = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
-const nextDay = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-const boundary = `${day}T15:00:00.123456Z`;
-const pageRule = 'site_link_near_orphan';
-const otherRule = 'site_link_weak_authority';
-const promptRule = 'brand_absent_high_value_prompt';
-async function seed() {
-  const s = await actionFixture<ActionSeed>('seed');
-  seeds.push(s);
-  return s;
-}
-const pageBody = async (response: Response) => actionsPageSchema.parse(await response.json());
-const detailBody = async (response: Response) => actionDetailSchema.parse(await response.json());
-const declarationBody = async (response: Response) =>
-  actionDeclarationSchema.parse(await response.json());
-const actionId = (s: ActionSeed, rule = pageRule) => s.actions[rule]!;
-const actionPath = (s: ActionSeed, rule = pageRule) => `/api/v1/actions/${actionId(s, rule)}`;
-async function request(s: ActionSeed, path: string, method = 'GET', body?: unknown, key?: string) {
-  const headers: Record<string, string> = {
-    cookie: `${config.session.cookieName}=${await sessionToken({ sub: s.user_id, ver: 0 })}`,
-    'x-workspace-id': s.workspace_id,
-    'content-type': 'application/json',
-  };
-  if (key !== undefined) headers['Idempotency-Key'] = key;
-  return app.request(path, {
-    method,
-    headers,
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-}
-const declare = (s: ActionSeed, key: string, rule = pageRule, extra = {}) =>
-  request(
-    s,
-    `${actionPath(s, rule)}/declaration`,
-    'POST',
-    { declared_implemented_at: boundary, ...extra },
-    key,
-  );
-async function eventCount(s: ActionSeed) {
-  const row = await db
-    .selectFrom('action_status_events')
-    .select(sql<number>`count(*)::int`.as('n'))
-    .where('workspace_id', '=', s.workspace_id)
-    .executeTakeFirstOrThrow();
-  return row.n;
-}
-afterAll(async () => {
-  for (const s of seeds) {
-    await db.deleteFrom('workspaces').where('id', '=', s.workspace_id).execute();
-    await db.deleteFrom('users').where('id', '=', s.user_id).execute();
-  }
-  await db.destroy();
-});
+const { app, db, seed, request, declare, eventCount } = actionRoutes();
 
 describe('Action routes', () => {
   it('pages a priority queue, scopes cursors and counts, and records each status transition once', async () => {
@@ -102,111 +52,6 @@ describe('Action routes', () => {
     await request(s, actionPath(s), 'PATCH', { status: 'open' });
     const detail = await detailBody(await request(s, actionPath(s)));
     expect(detail.members.map((member) => member.id)).toEqual([s.members[pageRule]]);
-  });
-
-  it('applies each legal status decision with one event, refuses an illegal one, and counts four statuses', async () => {
-    const s = await seed();
-    const list = `/api/v1/projects/${s.project_id}/actions`;
-    const patch = async (status: string) => {
-      const response = await request(s, actionPath(s), 'PATCH', { status });
-      const body = (await response.json()) as { status?: string };
-      return [response.status, response.ok ? body.status : null];
-    };
-    expect(await patch('in_progress')).toEqual([200, 'in_progress']); // Accept
-    expect(await patch('open')).toEqual([422, null]); // In progress cannot go back to New
-    expect(await patch('dismissed')).toEqual([200, 'dismissed']); // Decline
-    expect(await patch('open')).toEqual([200, 'open']); // Restore
-    expect(await patch('dismissed')).toEqual([200, 'dismissed']); // Decline a New one
-    expect(await patch('in_progress')).toEqual([200, 'in_progress']); // Accept a declined one
-    const events = await db
-      .selectFrom('action_status_events')
-      .select(['previous_status', 'next_status'])
-      .where('workspace_id', '=', s.workspace_id)
-      .execute();
-    expect(events.map((e) => `${e.previous_status}>${e.next_status}`).sort()).toEqual([
-      'dismissed>in_progress',
-      'dismissed>open',
-      'in_progress>dismissed',
-      'open>dismissed',
-      'open>in_progress',
-    ]);
-    expect((await pageBody(await request(s, list))).status_counts).toEqual({
-      open: 2,
-      in_progress: 1,
-      done: 0,
-      dismissed: 0,
-    });
-    // Mark implemented moves In progress to Done, which no decision changes.
-    expect((await declare(s, 'accepted')).status).toBe(201);
-    expect(await patch('dismissed')).toEqual([422, null]);
-    const done = await pageBody(await request(s, `${list}?status=done`));
-    expect(done.items.map((row) => [row.id, row.status])).toEqual([[actionId(s), 'done']]);
-    expect(done.status_counts).toEqual({ open: 2, in_progress: 0, done: 1, dismissed: 0 });
-  });
-
-  it('changes the named or filtered Actions in bulk, never another workspace’s', async () => {
-    const s = await seed();
-    const foreign = await seed();
-    const path = `/api/v1/projects/${s.project_id}/actions/status`;
-    const bulk = async (body: unknown, as = s) => {
-      const response = await request(as, path, 'POST', body);
-      return [response.status, response.ok ? await response.json() : null];
-    };
-    const statuses = async (t: ActionSeed) =>
-      Object.fromEntries(
-        (
-          await db
-            .selectFrom('actions')
-            .select(['id', 'status'])
-            .where('workspace_id', '=', t.workspace_id)
-            .execute()
-        ).map((row) => [row.id, row.status]),
-      );
-    const theirs = await statuses(foreign);
-
-    // Another workspace's id is skipped, never updated.
-    const named = [actionId(s), actionId(s, otherRule), actionId(foreign)];
-    expect(await bulk({ ids: named, to: 'dismissed' })).toEqual([
-      200,
-      { updated: 2, skipped: 1, truncated: false },
-    ]);
-    // Accept all: every New Action the filter matches, here the one left.
-    expect(await bulk({ filter: { status: 'open' }, to: 'in_progress' })).toEqual([
-      200,
-      { updated: 1, skipped: 0, truncated: false },
-    ]);
-    // In progress cannot be restored to New: matched, skipped.
-    expect(await bulk({ filter: { status: 'in_progress' }, to: 'open' })).toEqual([
-      200,
-      { updated: 0, skipped: 1, truncated: false },
-    ]);
-    expect(await statuses(s)).toEqual({
-      [actionId(s)]: 'dismissed',
-      [actionId(s, otherRule)]: 'dismissed',
-      [actionId(s, promptRule)]: 'in_progress',
-    });
-    expect(await eventCount(s)).toBe(3);
-
-    // Two changes racing over the same Actions in opposite orders: each moves once.
-    const raced = await Promise.all([
-      bulk({ ids: [actionId(s), actionId(s, otherRule)], to: 'open' }),
-      bulk({ ids: [actionId(s, otherRule), actionId(s)], to: 'open' }),
-    ]);
-    expect(raced.map(([, body]) => (body as { updated: number }).updated).sort()).toEqual([0, 2]);
-    expect(await eventCount(s)).toBe(5);
-
-    // Neither ids and a filter together, nor more than 100 ids.
-    expect((await bulk({ ids: [actionId(s)], filter: { status: 'open' }, to: 'open' }))[0]).toBe(
-      422,
-    );
-    const many = Array.from({ length: 101 }, () => randomUUID());
-    expect((await bulk({ ids: many, to: 'dismissed' }))[0]).toBe(422);
-    // Another workspace cannot reach this project, by ids or by filter.
-    expect((await bulk({ ids: [actionId(s)], to: 'open' }, foreign))[0]).toBe(404);
-    expect((await bulk({ filter: { status: 'dismissed' }, to: 'open' }, foreign))[0]).toBe(404);
-    expect(await statuses(foreign)).toEqual(theirs);
-    expect(await eventCount(foreign)).toBe(0);
-    expect((await statuses(s))[actionId(s)]).toBe('open');
   });
 
   it('returns the persisted handoff message on the list and the detail, or one about the label', async () => {

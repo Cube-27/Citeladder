@@ -219,6 +219,20 @@ test('choosing a filter never moves the table below it', async ({ page }) => {
         group_counts: { fix_site: 0, own_pages: 0, earned: 0, products: 0 },
       },
     ],
+    // No crawl yet, so no Website issues: an unstubbed read would land its
+    // error notice above the table after the first measurement.
+    [
+      `**/api/v1/projects/${FIXTURE_PROJECT.id}/site-health`,
+      {
+        project_id: FIXTURE_PROJECT.id,
+        crawl: null,
+        score_summary: null,
+        phase: 'empty',
+        snapshot_id: null,
+        quota: { used: 0, limit: 50 },
+        root_errors: [],
+      },
+    ],
   ]);
   await page.goto(fixtureProjectPath('/actions'));
   const table = page.getByRole('region', { name: 'Actions' });
