@@ -127,7 +127,7 @@ describe('StateBlock empty states', () => {
       </PageEmptyOfferProvider>
     );
     const demoted = () =>
-      screen.getByRole('button', { name: 'Run audit' }).closest('[data-masthead-demoted]') !== null;
+      screen.getByRole('button', { name: 'Run audit' }).closest('[data-demoted]') !== null;
     const offered = () =>
       screen.getByRole('button', { name: 'Add prompts' }).closest('[data-state-offer]') !== null;
     const empty = (

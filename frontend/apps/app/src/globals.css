@@ -1752,10 +1752,9 @@ a.focus-ring:active .type-caption {
 [data-state-offer] [data-button-variant='secondary'] {
   background-color: var(--color-ink);
   border-color: var(--color-ink);
-  box-shadow: none;
   color: var(--color-on-ink);
 }
-[data-masthead-demoted] [data-button-variant] {
+[data-demoted] [data-button-variant] {
   background-color: var(--color-surface);
   border-color: var(--color-control-edge);
   box-shadow: var(--shadow-control);

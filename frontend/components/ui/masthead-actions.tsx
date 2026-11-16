@@ -41,7 +41,7 @@ export function MastheadPrimary({ children }: Readonly<{ children: ReactNode }>)
   const demoted = useContext(PageEmptyOffer)?.shown ?? false;
   if (slot === undefined) return children;
   const control = (
-    <span data-masthead-demoted={demoted ? '' : undefined} className="contents">
+    <span data-demoted={demoted ? '' : undefined} className="contents">
       {children}
     </span>
   );
