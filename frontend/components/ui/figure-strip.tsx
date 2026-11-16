@@ -392,23 +392,26 @@ function comparisonText(segment: FigureSegment): ReactNode {
   );
 }
 
-// No underline at rest; globals.css underlines it on hover and keyboard focus (owner 2026-11-16).
-const LABEL_LINK = 'no-underline';
-
+// No underline at rest, underlined on hover and focus (owner 2026-11-16), in the label's ink-2.
 function FigureLabelLink({
   action,
   children,
 }: Readonly<{ action: FigureLink; children: ReactNode }>) {
   if (action.onSelect)
     return (
-      <TextLink asChild tone="muted" className={LABEL_LINK}>
+      <TextLink asChild underline="hover" className="text-ink-2">
         <button type="button" onClick={action.onSelect}>
           {children}
         </button>
       </TextLink>
     );
   return (
-    <TextLink href={action.href} projectId={action.projectId} tone="muted" className={LABEL_LINK}>
+    <TextLink
+      href={action.href}
+      projectId={action.projectId}
+      underline="hover"
+      className="text-ink-2"
+    >
       {children}
     </TextLink>
   );

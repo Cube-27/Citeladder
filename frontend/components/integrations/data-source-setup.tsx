@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import type { LucideIcon } from 'lucide-react';
+import { Plug, type LucideIcon } from 'lucide-react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 
@@ -157,6 +157,7 @@ function ConnectButton({
   if (family === 'google') return <ActionButton action="connectGoogle" onClick={onConnect} />;
   return (
     <Button variant="secondary" onClick={onConnect}>
+      <Icon icon={Plug} />
       Connect {FAMILY_META[family].title}
     </Button>
   );

@@ -276,17 +276,23 @@ function SearchDemandView({
           }
           // What the table holds, and over which window, closes the row.
           status={
-            <>
+            // Each piece wraps to its own line on a narrow screen, never overprinting.
+            <Inline
+              as="span"
+              gap="status"
+              data-demand-status=""
+              className="items-baseline whitespace-normal"
+            >
               <span>
                 <InlineFigure>{formatCount(snapshot.signals.length)}</InlineFigure>
                 {snapshot.signals.length === 1 ? ' signal observed' : ' signals observed'}
               </span>
-              <Inline as="span" gap="tight">
+              <Inline as="span" gap="tight" className="shrink-0">
                 <Icon icon={Calendar} />
                 <span className="tabular-nums">{windowLabel}</span>
               </Inline>
               <DemandLatentDemand snapshot={snapshot} />
-            </>
+            </Inline>
           }
         />
       }

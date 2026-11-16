@@ -285,6 +285,62 @@ export function sharedOrigin(values: readonly string[]): string | null {
   return rest.every((origin) => origin === first) ? first : null;
 }
 
+/** ISO 3166-1 alpha-3 to alpha-2, each pair run together: Search Console reports alpha-3. */
+const ALPHA3_TO_ALPHA2 = new Map(
+  `AFGAF ALAAX ALBAL DZADZ ASMAS ANDAD AGOAO AIAAI ATAAQ ATGAG ARGAR ARMAM ABWAW AUSAU AUTAT
+  AZEAZ BHSBS BHRBH BGDBD BRBBB BLRBY BELBE BLZBZ BENBJ BMUBM BTNBT BOLBO BESBQ BIHBA BWABW
+  BVTBV BRABR IOTIO BRNBN BGRBG BFABF BDIBI CPVCV KHMKH CMRCM CANCA CYMKY CAFCF TCDTD CHLCL
+  CHNCN CXRCX CCKCC COLCO COMKM COGCG CODCD COKCK CRICR CIVCI HRVHR CUBCU CUWCW CYPCY CZECZ
+  DNKDK DJIDJ DMADM DOMDO ECUEC EGYEG SLVSV GNQGQ ERIER ESTEE SWZSZ ETHET FLKFK FROFO FJIFJ
+  FINFI FRAFR GUFGF PYFPF ATFTF GABGA GMBGM GEOGE DEUDE GHAGH GIBGI GRCGR GRLGL GRDGD GLPGP
+  GUMGU GTMGT GGYGG GINGN GNBGW GUYGY HTIHT HMDHM VATVA HNDHN HKGHK HUNHU ISLIS INDIN IDNID
+  IRNIR IRQIQ IRLIE IMNIM ISRIL ITAIT JAMJM JPNJP JEYJE JORJO KAZKZ KENKE KIRKI PRKKP KORKR
+  KWTKW KGZKG LAOLA LVALV LBNLB LSOLS LBRLR LBYLY LIELI LTULT LUXLU MACMO MDGMG MWIMW MYSMY
+  MDVMV MLIML MLTMT MHLMH MTQMQ MRTMR MUSMU MYTYT MEXMX FSMFM MDAMD MCOMC MNGMN MNEME MSRMS
+  MARMA MOZMZ MMRMM NAMNA NRUNR NPLNP NLDNL NCLNC NZLNZ NICNI NERNE NGANG NIUNU NFKNF MKDMK
+  MNPMP NORNO OMNOM PAKPK PLWPW PSEPS PANPA PNGPG PRYPY PERPE PHLPH PCNPN POLPL PRTPT PRIPR
+  QATQA REURE ROURO RUSRU RWARW BLMBL SHNSH KNAKN LCALC MAFMF SPMPM VCTVC WSMWS SMRSM STPST
+  SAUSA SENSN SRBRS SYCSC SLESL SGPSG SXMSX SVKSK SVNSI SLBSB SOMSO ZAFZA SGSGS SSDSS ESPES
+  LKALK SDNSD SURSR SJMSJ SWESE CHECH SYRSY TWNTW TJKTJ TZATZ THATH TLSTL TGOTG TKLTK TONTO
+  TTOTT TUNTN TURTR TKMTM TCATC TUVTV UGAUG UKRUA AREAE GBRGB USAUS UMIUM URYUY UZBUZ VUTVU
+  VENVE VNMVN VGBVG VIRVI WLFWF ESHEH YEMYE ZMBZM ZWEZW XKKXK`
+    .split(/\s+/u)
+    .map((pair) => [pair.slice(0, 3), pair.slice(3)] as const),
+);
+
+let regionNames: Intl.DisplayNames | undefined;
+
+/** A country code as its English name ("usa" → "United States"); an unknown code upper-case. */
+export function formatCountry(code: string): string {
+  const upper = code.trim().toUpperCase();
+  const alpha2 = ALPHA3_TO_ALPHA2.get(upper) ?? (/^[A-Z]{2}$/u.test(upper) ? upper : null);
+  if (!alpha2) return upper;
+  regionNames ??= new Intl.DisplayNames(['en'], { type: 'region' });
+  return regionNames.of(alpha2) ?? upper;
+}
+
+/**
+ * A URL's origin when it is on the project's own site (ignoring `www.`), so
+ * its cell prints the path alone; null for a foreign host, which stays printed.
+ */
+export function ownOrigin(url: string, website: string | null | undefined): string | null {
+  try {
+    return isOwnHost(new URL(url).host, website) ? originOf(url) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Whether a host is the project website's own, ignoring `www.`. */
+export function isOwnHost(host: string, website: string | null | undefined): boolean {
+  const bare = (value: string) => value.toLowerCase().replace(/^www\./u, '');
+  try {
+    return Boolean(website) && bare(host) === bare(new URL(website ?? '').host);
+  } catch {
+    return false;
+  }
+}
+
 /** A URL as its cell prints it: readable, without the column's shared origin. */
 export function urlCellText(value: string, origin: string | null): string {
   const readable = readableUrl(value);

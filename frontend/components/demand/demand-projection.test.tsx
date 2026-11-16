@@ -330,7 +330,7 @@ describe('DemandProjection', () => {
 
     // The promoted signal's evidence opens its Action.
     await user.click(await findSignalRow('ai marketing tools'));
-    const drawer = await screen.findByRole('dialog', { name: 'Signal evidence' });
+    const drawer = await screen.findByRole('dialog', { name: 'ai marketing tools' });
     expect(
       within(drawer)
         .getByRole('link', { name: 'Open the Action for ai marketing tools' })
@@ -340,7 +340,7 @@ describe('DemandProjection', () => {
 
     // An unpromoted signal offers no Action, only the hand-off to the agent.
     await user.click(await findSignalRow('school fees'));
-    const other = await screen.findByRole('dialog', { name: 'Signal evidence' });
+    const other = await screen.findByRole('dialog', { name: 'school fees' });
     expect(within(other).getByRole('link', { name: /Ask agent/ })).toBeVisible();
     expect(within(other).queryByRole('link', { name: /^Open the Action/ })).not.toBeInTheDocument();
   });
@@ -353,7 +353,7 @@ describe('DemandProjection', () => {
     row.focus();
     await user.keyboard('{Enter}');
 
-    const drawer = await screen.findByRole('dialog', { name: 'Signal evidence' });
+    const drawer = await screen.findByRole('dialog', { name: 'school fees' });
     expect(within(drawer).getByRole('region', { name: 'Reading' })).toHaveTextContent(
       'Earns many impressions but few clicks',
     );
@@ -367,11 +367,11 @@ describe('DemandProjection', () => {
     const selection = window.getSelection()!;
     selection.selectAllChildren(row);
     fireEvent.click(row);
-    expect(screen.queryByRole('dialog', { name: 'Signal evidence' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('dialog', { name: 'school fees' })).not.toBeInTheDocument();
 
     selection.removeAllRanges();
     await user.click(row);
-    expect(await screen.findByRole('dialog', { name: 'Signal evidence' })).toBeVisible();
+    expect(await screen.findByRole('dialog', { name: 'school fees' })).toBeVisible();
   });
 
   it('keeps a signal’s priority rank stable when a filter hides the signals above it', async () => {
@@ -616,8 +616,10 @@ describe('DemandProjection', () => {
 
     fireEvent.click(await findSignalRow('ai marketing tools'));
 
-    const drawer = await screen.findByRole('dialog', { name: 'Signal evidence' });
-    expect(within(drawer).getByText('Search Console performance')).toBeInTheDocument();
+    const drawer = await screen.findByRole('dialog', { name: 'ai marketing tools' });
+    // The row already shows the figures; the drawer does not repeat them.
+    expect(within(drawer).queryByText('Search Console performance')).not.toBeInTheDocument();
+    expect(within(drawer).queryByText('Avg. position')).not.toBeInTheDocument();
     const provenance = within(drawer).getByRole('region', { name: 'Provenance' });
     expect(provenance).toHaveTextContent('Search Console rows3');
     expect(provenance).toHaveTextContent('Source imports');

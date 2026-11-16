@@ -4,15 +4,16 @@ import type { aiTrafficPagesSchema } from '@citeladder/contracts/ai-traffic';
 import { SearchX } from 'lucide-react';
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, TableRow, TableTime } from '@/components/ui/table';
+import { StatusMark } from '@/components/ui/status-mark';
+import { TableCell, TableRow, TableTime, UrlText } from '@/components/ui/table';
 import { Stack } from '@/components/ui/layout';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
 import type { TrafficPagesSort } from '@/lib/config/crawl-logs';
 import { DisplayTime } from '@/components/ui/display-time';
 import { aiTrafficQueries, type TrafficTableScope } from '@/lib/api/ai-traffic';
-import { formatCount, formatPercent } from '@/lib/format';
+import { formatCount, formatPercent, ownOrigin } from '@/lib/format';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { UrlPanel, TrafficLeg, trafficLegExplanation } from './url-panel';
 
@@ -51,6 +52,13 @@ const PAGE_COLUMNS: readonly DataTableColumn[] = [
     kind: 'number',
     hint: 'Tracked citations of this path in AI answers.',
   },
+  {
+    key: 'coverage',
+    label: 'Coverage',
+    kind: 'status',
+    width: 'category',
+    hint: 'Whether a figure in this row counts only part of the window.',
+  },
   { key: 'key-events', label: 'Key events', kind: 'number', priority: 'low' },
   {
     key: 'findings',
@@ -68,6 +76,7 @@ const ABSENT: Readonly<Record<string, (row: PageRow) => boolean>> = {
   crawl: (row) => row.crawl.value === null,
   referrals: (row) => row.referrals.value === null,
   citations: (row) => row.citations.value === null,
+  coverage: (row) => !partialCoverage(row),
   findings: (row) => row.findings.value === null,
   'key-events': (row) => row.key_events === null,
   'last-crawl': (row) => row.last_crawl === null,
@@ -165,6 +174,7 @@ export function TrafficPages({
       <UrlPanel
         urlHash={urlHash}
         onClose={() => setUrlHash(null)}
+        fromRow
         // A path opened from the crawler drawer keeps that crawler's evidence.
         filters={{
           range: filters.range,
@@ -178,7 +188,14 @@ export function TrafficPages({
 
 /** A value the row does not have, with why on hover and focus. */
 function Unavailable({ reason }: Readonly<{ reason: string }>) {
-  return <Absence state="unavailable" narrow reason={reason} />;
+  return <Absence state="unavailable" reason={reason} />;
+}
+
+/** Whether any of the row's counted signals covers only part of the window. */
+function partialCoverage(row: PageRow): boolean {
+  return [row.crawl, row.referrals, row.citations, row.findings].some(
+    (leg) => leg.value !== null && leg.coverage === 'partial',
+  );
 }
 
 function TrafficErrors({ page }: Readonly<{ page: PageRow }>) {
@@ -208,6 +225,11 @@ const CELLS: Readonly<Record<string, (row: PageRow) => ReactNode>> = {
   citations: (r) => (
     <TableCell numeric>
       <TrafficLeg leg={r.citations} unit="citations" />
+    </TableCell>
+  ),
+  coverage: (r) => (
+    <TableCell>
+      {partialCoverage(r) ? <StatusMark tone="warning">Partial</StatusMark> : null}
     </TableCell>
   ),
   'key-events': (r) => (
@@ -249,21 +271,23 @@ function TrafficPageRow({
   columns: readonly DataTableColumn[];
   onOpen: (hash: string) => void;
 }>) {
+  const { project } = useProjectScope();
   return (
     <TableRow>
       <TableCell>
-        {/* The path opens its evidence: underlined at rest, cut at its end. */}
-        <ClampText tooltip={r.canonical_url}>
-          <TextLink asChild text="inherit">
-            <Pressable
-              onClick={() => onOpen(r.url_hash)}
-              className="w-auto"
-              aria-label={`View AI Traffic for ${r.canonical_url}`}
-            >
-              {r.display_path}
-            </Pressable>
-          </TextLink>
-        </ClampText>
+        {/* The path opens its evidence; a cut keeps its start and tail. */}
+        <TextLink asChild text="inherit" underline="hover">
+          <Pressable
+            onClick={() => onOpen(r.url_hash)}
+            className="flex w-auto max-w-full min-w-0"
+            aria-label={`View AI Traffic for ${r.canonical_url}`}
+          >
+            <UrlText
+              url={r.canonical_url}
+              origin={ownOrigin(r.canonical_url, project.website_url)}
+            />
+          </Pressable>
+        </TextLink>
       </TableCell>
       {columns.map((column) => (
         <Fragment key={column.key}>{CELLS[column.key]?.(r)}</Fragment>

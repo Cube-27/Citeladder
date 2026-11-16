@@ -1,8 +1,11 @@
 import { useState, type ReactNode } from 'react';
 import { ChevronRight } from 'lucide-react';
 
+import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
+import { Pressable } from '@/components/ui/pressable';
 import { Tag } from '@/components/ui/tag';
+import { TextLink } from '@/components/ui/text-link';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
 import { InfoHint } from '@/components/ui/info-hint';
 import { Inline } from '@/components/ui/layout';
@@ -48,7 +51,7 @@ export const SIGNAL_COLUMN_COUNT = COLUMNS.length;
  * A signal type as a `category` tag: a kind of finding, not a status or a
  * severity, so it has no glyph and no tone. Its meaning lives in the legend.
  */
-export function SignalChip({ signalType }: Readonly<{ signalType: string }>) {
+function SignalChip({ signalType }: Readonly<{ signalType: string }>) {
   return <Tag>{signalTypeMeta(signalType).label}</Tag>;
 }
 
@@ -182,7 +185,19 @@ function SignalRow({
             always says whether the row is about a query or a page. */}
         <TableCellLines
           title
-          primary={subject.primary}
+          primary={
+            <TextLink asChild text="body" underline="hover">
+              <Pressable
+                className="flex w-auto max-w-full min-w-0 text-left"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  inspect();
+                }}
+              >
+                <ClampText>{subject.primary}</ClampText>
+              </Pressable>
+            </TextLink>
+          }
           secondary={subject.secondary}
           secondaryTooltip={signalPage(signal)}
         />

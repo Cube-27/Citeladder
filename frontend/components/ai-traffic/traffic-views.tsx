@@ -13,13 +13,14 @@ import {
 } from '@/lib/api/ai-traffic';
 import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
 import { coverageLabel, reasonLabel, words } from '@/lib/ai-traffic/vocabulary';
-import { formatCount, formatMean, formatWindowDate } from '@/lib/format';
+import { formatCount, formatMean, formatWindowDate, isOwnHost } from '@/lib/format';
+import { useProjectScope } from '@/lib/project/active-project-scope';
 import { CalendarX, SearchX } from 'lucide-react';
 import { TabPanel } from '@/components/ui/tabs';
 import { Absence } from '@/components/ui/absence';
 import { Pressable } from '@/components/ui/pressable';
 import { TextLink } from '@/components/ui/text-link';
-import { TableRow, TableCell, TableCellLines, TableTime } from '@/components/ui/table';
+import { TableRow, TableCell, TableCellLines, TableTime, UrlText } from '@/components/ui/table';
 import { CrawlLogConnections } from './crawl-log-connections';
 import { InsightStrip } from './insight-strip';
 import { OverviewFigures, RequestsByPurpose, overviewMeasured } from './overview-signals';
@@ -224,6 +225,7 @@ export function TrafficActivity(scope: CrawlTableScope) {
   const { workspaceId, projectId, filters } = scope;
   // The screen's controls read the same entry, so this adds no request.
   const catalog = useQuery(aiTrafficQueries.catalog({ workspaceId, projectId }));
+  const website = useProjectScope().project.website_url;
   const { page, table } = useCursorTableQuery({
     workspaceId,
     scopeId: projectId,
@@ -259,13 +261,14 @@ export function TrafficActivity(scope: CrawlTableScope) {
                 {catalog.data?.bots.find((b) => b.bot_id === r.bot_id)?.label ?? r.bot_id}
               </TableCell>
               <TableCell>
-                <CellLines
-                  lines={[
-                    r.host + r.display_path,
-                    r.identity === 'non_joinable'
-                      ? 'Redacted; non-joinable'
-                      : 'Path-level identity',
-                  ]}
+                {/* The path alone on the project's own host; a foreign host stays printed. */}
+                <TableCellLines
+                  primary={
+                    <UrlText
+                      url={isOwnHost(r.host, website) ? r.display_path : r.host + r.display_path}
+                    />
+                  }
+                  secondary={r.identity === 'non_joinable' ? 'Redacted; non-joinable' : null}
                 />
               </TableCell>
               <TableCell>{words(r.resource_class)}</TableCell>

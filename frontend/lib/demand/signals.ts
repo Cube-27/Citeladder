@@ -136,7 +136,7 @@ export function signalTarget(signal: DemandSignal): string {
   return signal.topic_cluster || signal.page_url || '';
 }
 
-export function signalTargetKind(signal: DemandSignal): 'Page' | 'Query' {
+function signalTargetKind(signal: DemandSignal): 'Page' | 'Query' {
   return signal.evidence.target_kind === 'page' ? 'Page' : 'Query';
 }
 

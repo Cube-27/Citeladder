@@ -3,6 +3,7 @@ import { Unplug } from 'lucide-react';
 
 import { ActionButton, ACTIONS } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
 import { StateBlock } from '@/components/ui/state-block';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -38,11 +39,15 @@ export function TrafficSetupState({
           description="AI Traffic shows visits from AI answers and AI crawler requests once GA4 or your crawl logs are connected."
           action={
             <>
+              {/* The Overview's first figures need GA4, so it is the one primary. */}
               <Button asChild>
-                <ProjectLink href="/ai-traffic?tab=referrals">Connect GA4</ProjectLink>
+                <ProjectLink href="/ai-traffic?tab=referrals">
+                  Connect Google Analytics 4
+                </ProjectLink>
               </Button>
               {crawlAvailable ? (
                 <Button variant="quiet" onClick={() => setOpen(true)} disabled={!canManage}>
+                  <Icon icon={ACTIONS.connectCrawlLogs.icon} />
                   {ACTIONS.connectCrawlLogs.label}
                 </Button>
               ) : null}

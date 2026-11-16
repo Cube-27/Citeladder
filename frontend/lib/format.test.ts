@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vite-plus/test';
 
 import {
   formatCount,
+  formatCountry,
   formatDisplayDate,
   formatDisplayTimestamp,
   formatPercent,
   formatTableTimestamp,
   formatTimeZoneNote,
+  isOwnHost,
+  ownOrigin,
   readableUrl,
   sharedOrigin,
   shortUrlTitle,
@@ -81,7 +84,29 @@ describe('dates and times', () => {
   });
 });
 
+describe('formatCountry', () => {
+  it('names a Search Console alpha-3 code in any case and prints an unknown code upper-case', () => {
+    expect(['usa', 'CAN', 'gbr', 'deu', 'xkk', 'zzz', 'qqq'].map(formatCountry)).toEqual([
+      'United States',
+      'Canada',
+      'United Kingdom',
+      'Germany',
+      'Kosovo',
+      'ZZZ',
+      'QQQ',
+    ]);
+  });
+});
+
 describe('URL cells', () => {
+  it('keeps the origin only for a host other than the project’s own', () => {
+    expect(ownOrigin('https://acme.test/guide', 'https://www.acme.test')).toBe('https://acme.test');
+    expect(ownOrigin('https://other.test/guide', 'https://acme.test')).toBeNull();
+    expect(ownOrigin('https://acme.test/guide', null)).toBeNull();
+    expect(isOwnHost('WWW.acme.test', 'https://acme.test/')).toBe(true);
+    expect(isOwnHost('acme.test.evil.test', 'https://acme.test/')).toBe(false);
+  });
+
   it('drops the origin a whole column shares and keeps it when the origins differ', () => {
     const urls = ['https://www.shop.test/journal/a', 'https://www.shop.test/'];
     const origin = sharedOrigin(urls);

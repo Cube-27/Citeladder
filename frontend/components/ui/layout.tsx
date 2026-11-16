@@ -50,7 +50,8 @@ export function Stack({
 /**
  * The horizontal rungs: the `Stack` ladder, plus `meta` — a wrapping line of
  * facts (a footer's timestamps, a row's counts), 16 between facts and 4
- * between wrapped lines.
+ * between wrapped lines — and `status`, a toolbar's wrapping status pieces,
+ * 8 between pieces and 4 between wrapped lines.
  */
 const INLINE_GAP = {
   workspace: 'gap-[var(--workspace-gap)]',
@@ -58,6 +59,7 @@ const INLINE_GAP = {
   item: 'gap-2',
   tight: 'gap-1',
   meta: 'flex-wrap gap-x-4 gap-y-1',
+  status: 'flex-wrap gap-x-2 gap-y-1',
 } as const;
 
 export type InlineGap = keyof typeof INLINE_GAP;

@@ -3,12 +3,9 @@ import { ProjectLink } from '@/components/ui/project-link';
 import { ArrowUpRight, ShieldCheck, Split } from 'lucide-react';
 
 import { SignalInsight } from '@/components/demand/demand-signal-insight';
-import { SignalChip } from '@/components/demand/demand-signal-table';
-import { Tag } from '@/components/ui/tag';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { Drawer } from '@/components/ui/drawer';
-import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { DemandDetectorPolicy } from '@citeladder/contracts';
 import type { DemandSignal } from '@/lib/api/demand';
@@ -16,18 +13,15 @@ import {
   competingPages,
   demandSignalHandoffHref,
   numericMetric,
-  safePageUrl,
   signalTarget,
-  signalTargetKind,
 } from '@/lib/demand/signals';
 import { DisplayTime } from '@/components/ui/display-time';
-import { formatCount, formatMean, formatPercent } from '@/lib/format';
+import { formatCount, formatPercent } from '@/lib/format';
 import { textRole } from '@/components/ui/typography';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import { wellClasses } from '@/components/ui/slip';
-import { FigureStrip } from '@/components/ui/figure-strip';
 
 export function DemandEvidenceDrawer({
   signal,
@@ -68,7 +62,8 @@ function DemandEvidenceContent({
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Signal evidence"
+      eyebrow="Signal evidence"
+      title={details.target}
       footer={
         <Inline className="flex-wrap justify-between">
           {signal.action_id ? (
@@ -90,69 +85,9 @@ function DemandEvidenceContent({
         </Inline>
       }
     >
+      {/* The row already shows the kind, signal, page and figures: the drawer adds what it lacks. */}
       <Stack gap="workspace">
-        <Stack>
-          <Inline className="flex-wrap">
-            <Tag>{details.targetKind}</Tag>
-            <SignalChip signalType={signal.signal_type} />
-          </Inline>
-          <h2 className={textRole('heading', 'break-words')}>{details.target}</h2>
-          {details.linkablePageUrl && (
-            <Inline className="type-caption">
-              <span className={textRole('emphasis', 'shrink-0')}>Landing page</span>
-              <TextLink
-                variant="external"
-                text="caption"
-                href={details.linkablePageUrl}
-                className="min-w-0"
-              >
-                <span className="truncate">{details.linkablePageUrl}</span>
-              </TextLink>
-            </Inline>
-          )}
-        </Stack>
-
         <SignalInsight signal={signal} policy={policy} />
-
-        <Stack as="section">
-          <h3 className={textRole('body', 'text-ink-2')}>Search Console performance</h3>
-          <FigureStrip
-            segments={[
-              {
-                key: 'impressions',
-                label: 'Impressions',
-                value:
-                  typeof details.metrics.impressions === 'number'
-                    ? formatCount(details.metrics.impressions)
-                    : null,
-              },
-              {
-                key: 'clicks',
-                label: 'Clicks',
-                value:
-                  typeof details.metrics.clicks === 'number'
-                    ? formatCount(details.metrics.clicks)
-                    : null,
-              },
-              {
-                key: 'ctr',
-                label: 'CTR',
-                value:
-                  typeof details.metrics.ctr === 'number'
-                    ? formatPercent(details.metrics.ctr)
-                    : null,
-              },
-              {
-                key: 'position',
-                label: 'Avg. position',
-                value:
-                  typeof details.metrics.position === 'number'
-                    ? formatMean(details.metrics.position)
-                    : null,
-              },
-            ]}
-          />
-        </Stack>
 
         {/* Cannibalization only. Bounded by the rule itself: each competing
             page holds at least a 10% share, so there are never more than 10. */}
@@ -200,16 +135,6 @@ function DemandEvidenceContent({
                   {formatPercent(details.cohortMedianCtr)}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-ink-2">This query’s CTR</span>
-                {numericMetric(signal, 'ctr') !== null ? (
-                  <span className={textRole('emphasis', 'text-ink-2 tabular-nums')}>
-                    {formatPercent(numericMetric(signal, 'ctr'))}
-                  </span>
-                ) : (
-                  <Absence state="not_measured" />
-                )}
-              </div>
             </Stack>
           </Stack>
         )}
@@ -250,14 +175,11 @@ function demandEvidenceDetails(signal: DemandSignal) {
   const evidence = signal.evidence;
   const rawBand = evidence.position_band;
   return {
-    targetKind: signalTargetKind(signal),
     target: signalTarget(signal),
-    metrics: signal.metrics,
     pages: competingPages(signal),
     cohortMedianCtr: numericMetric(signal, 'cohort_median_ctr'),
     positionBand:
       typeof rawBand === 'number' && Number.isFinite(rawBand) ? Math.floor(rawBand) : null,
-    linkablePageUrl: safePageUrl(signal.page_url),
     metricRowCount: sourceCount(evidence.source_metric_row_ids),
     artifactCount: sourceCount(evidence.source_artifact_ids),
   };
