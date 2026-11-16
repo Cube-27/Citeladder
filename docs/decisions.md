@@ -713,7 +713,7 @@ actions in the app".
 
 | ID | Decision |
 |---|---|
-| AS10 | An Action reads as one of four statuses. New (stored `open`) → In progress by Accept or by Work with Agent on a New Action; New → Declined (stored `dismissed`) by Decline; Declined → New by Restore and → In progress by Accept; In progress → Declined by Decline; In progress → Done by Mark implemented (the declaration). Done is final for the user: measurement continues underneath and shows as a badge (measuring, verified), never as a separate status, and a later contradiction shows in that badge. A chat output never changes status by itself. Accept and Decline also work in bulk, and Accept all accepts every New Action under the current filter, server-side and bounded. The Issues page is unchanged. |
+| AS10 | An Action reads as one of four statuses. New (stored `open`) → In progress by Accept or by Work with Agent on a New Action; New → Declined (stored `dismissed`) by Decline; Declined → New by Restore and → In progress by Accept; In progress → Declined by Decline; New or In progress → Done by Mark implemented (the declaration). Done is final for the user: measurement continues underneath and shows as a badge (measuring, verified), never as a separate status, and a later contradiction shows in that badge. A chat output never changes status by itself. Accept and Decline also work in bulk, and Accept all accepts every New Action under the current filter, server-side and bounded. The Issues page is unchanged. |
 
 Source: owner, in chat, 16 November 2026, approving the Actions v3 plan:
 "accepting anything moves it from open to in progress and marking implemented

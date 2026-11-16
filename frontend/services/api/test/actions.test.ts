@@ -187,6 +187,14 @@ describe('Action routes', () => {
     });
     expect(await eventCount(s)).toBe(3);
 
+    // Two changes racing over the same Actions in opposite orders: each moves once.
+    const raced = await Promise.all([
+      bulk({ ids: [actionId(s), actionId(s, otherRule)], to: 'open' }),
+      bulk({ ids: [actionId(s, otherRule), actionId(s)], to: 'open' }),
+    ]);
+    expect(raced.map(([, body]) => (body as { updated: number }).updated).sort()).toEqual([0, 2]);
+    expect(await eventCount(s)).toBe(5);
+
     // Neither ids and a filter together, nor more than 100 ids.
     expect((await bulk({ ids: [actionId(s)], filter: { status: 'open' }, to: 'open' }))[0]).toBe(
       422,
@@ -198,7 +206,7 @@ describe('Action routes', () => {
     expect((await bulk({ filter: { status: 'dismissed' }, to: 'open' }, foreign))[0]).toBe(404);
     expect(await statuses(foreign)).toEqual(theirs);
     expect(await eventCount(foreign)).toBe(0);
-    expect((await statuses(s))[actionId(s)]).toBe('dismissed');
+    expect((await statuses(s))[actionId(s)]).toBe('open');
   });
 
   it('returns the persisted handoff message on the list and the detail, or one about the label', async () => {

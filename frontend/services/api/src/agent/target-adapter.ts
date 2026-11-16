@@ -1,7 +1,6 @@
 import type { Selectable } from 'kysely';
 import type { Database } from '../db/database.ts';
 import type { AgentOutputs } from '../generated/db-schema.ts';
-import { refreshActionStatus } from '../opportunities/action-status.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { attachOrCreateAction } from '../opportunities/actions.ts';
 import {
@@ -137,9 +136,6 @@ export async function chooseOutputTarget(
   );
   if (!target) throw new AgentError('output_conflict');
   await setOutputAction(db, chat, output.id, target);
-  // The Action it left may read as open again; the one it joined, as in progress.
-  await refreshActionStatus(db, chat.workspace_id, proposal.action.id);
-  await refreshActionStatus(db, chat.workspace_id, target.id);
 }
 
 /**

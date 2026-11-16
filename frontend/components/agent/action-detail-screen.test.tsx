@@ -263,9 +263,11 @@ describe('An Action page', () => {
     expect(await bar.findByRole('button', { name: 'Decline' })).toHaveFocus();
     expect(bar.getByRole('status')).toHaveTextContent('Action restored to New.');
 
-    // Accepted, it is in progress: Decline and Mark implemented stay, Accept goes.
-    await user.click(bar.getByRole('button', { name: 'Accept' }));
+    // Accepted, it is in progress: focus moves to the Decline that replaces Accept.
+    bar.getByRole('button', { name: 'Accept' }).focus();
+    await user.keyboard('{Enter}');
     expect(await bar.findByText('Action accepted. It is in progress.')).toBeInTheDocument();
+    expect(bar.getByRole('button', { name: 'Decline' })).toHaveFocus();
     expect(bar.getAllByRole('button').map((button) => button.textContent)).toEqual([
       'Decline',
       'Mark implemented',

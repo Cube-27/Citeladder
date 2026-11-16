@@ -12,6 +12,7 @@ import { policy } from '../config.ts';
 import { inTransaction, type Database } from '../db/database.ts';
 import type { RecordScope } from '../db/workspace-scope.ts';
 import { ApiError } from '../errors.ts';
+import { acquireProjectLock } from '../prompts/locks.ts';
 import { refreshActionStatus } from './action-status.ts';
 import {
   actionItem,
@@ -81,9 +82,10 @@ export async function updateActionStatus(
 
 /**
  * One decision on the named Actions or on the first `ACTION_BULK_MAX` the
- * filter matches, highest priority first, in one transaction. Rows are locked
- * in id order so concurrent bulk changes cannot deadlock; an Action outside
- * the project's workspace is never read, so it is only ever counted skipped.
+ * filter matches, highest priority first, in one transaction. The project lock
+ * comes first, as in the refresh that locks every Action row in no set order,
+ * so the two cannot deadlock; an Action outside the project's workspace is
+ * never read, so it is only ever counted skipped.
  */
 export async function bulkUpdateActionStatus(
   db: Database,
@@ -92,6 +94,7 @@ export async function bulkUpdateActionStatus(
   userId: string,
 ) {
   return inTransaction(db, async (trx) => {
+    await acquireProjectLock(trx, scope.projectId);
     let named = 0;
     let candidates: string[];
     let truncated = false;

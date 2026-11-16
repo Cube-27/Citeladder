@@ -349,10 +349,11 @@ function ActionBar({
       <output className="sr-only">{changed ? STATUS_CHANGED[changed] : null}</output>
       <span className="me-auto" />
       {decisions.map((decision, slot) => (
-        // Keyed by slot, so Decline and Restore are one button that keeps focus
-        // across the change; never `disabled` while pending, which drops it.
+        // Keyed by slot from the end, so the pressed button stays mounted as the
+        // decision that replaces it and keeps focus (Accept becomes Decline);
+        // never `disabled` while pending, which drops it.
         <Button
-          key={slot}
+          key={decisions.length - slot}
           variant={decision.to === 'in_progress' ? 'secondary' : 'quiet'}
           className={WIDE_ONLY}
           aria-disabled={dismissing || undefined}
