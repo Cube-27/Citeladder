@@ -469,7 +469,10 @@ function measure({ route }: { route: string }) {
       element,
       padding,
     );
-    if (padding !== 16 || element.matches('[data-label-lines="2"]')) continue;
+    // Under 240px a score card stacks its label over the ring, so it grows by the label.
+    const stackedScore =
+      element.matches('[data-figure-kind="score"]') && element.clientWidth - 2 * padding < 240;
+    if (padding !== 16 || element.matches('[data-label-lines="2"]') || stackedScore) continue;
     const role = element.matches('[data-figure-kind="score"]')
       ? 'figure-card.height.score'
       : 'figure-card.height';
