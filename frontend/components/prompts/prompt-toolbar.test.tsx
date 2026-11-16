@@ -70,7 +70,7 @@ describe('promptFilterControls', () => {
 });
 
 describe('promptFilterControls filters', () => {
-  it('offers Enabled and Branded as one choice each in All filters, counting a chosen one', async () => {
+  it('offers Enabled and Branded as one choice each, marking a chosen one', async () => {
     const user = userEvent.setup();
     function Harness() {
       const [filters, setFilters] = useState(emptyFilters);
@@ -90,8 +90,7 @@ describe('promptFilterControls filters', () => {
     render(<Harness />);
     await chooseFilterOption(user, 'Branded', 'Branded only');
     await user.keyboard('{Escape}');
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
-    expect(await openFilterRow(user, 'Branded', 'Branded only')).toBeVisible();
-    expect(screen.getByRole('menuitem', { name: 'Enabled: All' })).toBeVisible();
+    expect(await openFilterRow(user, 'Branded', 'Branded only')).toHaveAttribute('data-active');
+    expect(await openFilterRow(user, 'Enabled', 'All')).not.toHaveAttribute('data-active');
   });
 });

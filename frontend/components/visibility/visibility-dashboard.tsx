@@ -39,7 +39,7 @@ export function VisibilityDashboard() {
     queries.auditsQuery.isError,
     queries.hasRuns,
   );
-  // The Sources filters are listed in the page's All filters but stay owned
+  // The Sources filters are listed in the page's control row but stay owned
   // by the Sources panel; the provider spans both.
   return <VisibilityWorkspace filters={filters} queries={queries} state={state} />;
 }
@@ -135,7 +135,7 @@ function VisibilityWorkspace({
 }
 
 /**
- * The page's All filters: the filters every tab shares (measurement, surface,
+ * The page's filters: the filters every tab shares (measurement, surface,
  * prompts, period). A tab's table keeps its own in its toolbar.
  */
 function useVisibilityPageFilters({

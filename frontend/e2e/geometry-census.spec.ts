@@ -101,7 +101,7 @@ const TAG_HEIGHT = 24;
 const TEXT_CONTROL_PADDING_X = 12;
 const ICON_CONTROL_PADDING_X = 0;
 /** A page's tab row (`--page-tabs-height`); section tab rows are one control high. */
-const PAGE_TABS_HEIGHT = 40;
+const PAGE_TABS_HEIGHT = 32;
 /** Tabs are text on a hairline with 12 each side and 4 between; segments no padding and 16 between. */
 const TAB_PADDING_X = 12;
 const TAB_GAP = 4;
@@ -119,10 +119,14 @@ const MASTHEAD_HEIGHT = 56;
  */
 const NAV_ROW_HEIGHT = 32;
 /**
- * Masthead, page tabs and filter band stack flush; the filter row sits 24 into
- * its band. The body starts 24 below the bands, or 12 below a filter row.
+ * Masthead, page tabs and filter band stack flush. One padding (`--page-pad`,
+ * 24) sits left, right and above the first row, and above and below the
+ * sidebar's mode switch, so the first row and the switch share a centre line
+ * (24 + 32 / 2 = 40 under the masthead). A filter row under tabs sits 24 in,
+ * and the body 12 below it; otherwise the body starts 24 below.
  */
 const BAND_GAP = 0;
+const PAGE_PAD = 24;
 const BODY_TOP_GAP = 24;
 const FILTERED_BODY_TOP_GAP = 12;
 /** The content band's cards stand 16 apart (a titled group adds its own 32). */
@@ -310,16 +314,57 @@ function measure({ route }: { route: string }) {
   bandGap('[data-masthead]', 'band.gap');
   bandGap('[data-page-band="tabs"]', 'band.gap');
   bandGap('[data-page-band="filters"]', 'band.gap');
+  const underTabs = (element: Element) =>
+    element.previousElementSibling?.matches('[data-page-band="tabs"]') === true;
   for (const body of all('[data-page-body]')) {
-    const filtered = body.previousElementSibling?.matches('[data-page-band="filters"]');
+    const filters = body.previousElementSibling;
+    const filteredUnderTabs =
+      filters?.matches('[data-page-band="filters"]') === true && underTabs(filters);
     add(
-      filtered ? 'body.filtered-top-gap' : 'body.top-gap',
+      filteredUnderTabs ? 'body.filtered-top-gap' : 'body.top-gap',
       body,
       px(getComputedStyle(body).paddingTop),
     );
   }
-  for (const band of all('[data-page-band="filters"]'))
-    add('filters.top-gap', band, px(getComputedStyle(band).paddingTop));
+  for (const band of all('[data-page-band]'))
+    if (band.previousElementSibling?.matches('[data-masthead]'))
+      add('band.first-top-gap', band, px(getComputedStyle(band).paddingTop));
+    else if (band.matches('[data-page-band="filters"]') && underTabs(band))
+      add('filters.top-gap', band, px(getComputedStyle(band).paddingTop));
+  // The main column's side padding equals its top padding (`--page-pad`).
+  for (const main of all('[data-main-column]')) {
+    const style = getComputedStyle(main);
+    add('main.padding-x', main, px(style.paddingLeft));
+    add('main.padding-x', main, px(style.paddingRight));
+  }
+  // The page's first control row is centred level with the labelled sidebar's
+  // Dashboard | Agent switch, each measured from its column's masthead edge
+  // (the page frame's top plus the masthead, so a scrolled page still counts).
+  const modeSwitch = document.querySelector(
+    '[data-sidebar-state="expanded"] nav[aria-label="Mode"]',
+  );
+  const identCell = document.querySelector('[data-sidebar-ident-cell]');
+  const masthead = document.querySelector('[data-masthead]');
+  const firstBand = masthead?.nextElementSibling;
+  const firstRow = firstBand?.matches('[data-page-band="filters"]')
+    ? firstBand.querySelector('[data-filter-bar] > *')
+    : firstBand?.matches('[data-page-band="tabs"]')
+      ? firstBand.firstElementChild
+      : null;
+  if (modeSwitch && identCell && masthead?.parentElement && firstRow && visible(firstRow)) {
+    const centre = (element: Element) => {
+      const rect = element.getBoundingClientRect();
+      return rect.top + rect.height / 2;
+    };
+    const mainEdge =
+      masthead.parentElement.getBoundingClientRect().top + masthead.getBoundingClientRect().height;
+    const sideEdge = identCell.getBoundingClientRect().bottom;
+    add(
+      'first-row.centre-offset',
+      firstRow,
+      centre(firstRow) - mainEdge - (centre(modeSwitch) - sideEdge),
+    );
+  }
   // Content rhythm: the gap between consecutive cards of the content band (a
   // titled group sets its own 32 above it).
   for (const region of all('[data-page-content]')) {
@@ -723,6 +768,9 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'band.gap', BAND_GAP);
   expectOneValue(records, 'body.top-gap', BODY_TOP_GAP);
   expectOneValue(records, 'filters.top-gap', BODY_TOP_GAP);
+  expectOneValue(records, 'band.first-top-gap', PAGE_PAD);
+  expectOneValue(records, 'main.padding-x', PAGE_PAD);
+  expectOneValue(records, 'first-row.centre-offset', 0);
   expectOneValue(records, 'body.filtered-top-gap', FILTERED_BODY_TOP_GAP);
   expectOneValue(records, 'content.gap', CONTENT_GAP);
   expectOneValue(records, 'section.rule', SECTION_RULE);

@@ -197,8 +197,8 @@ function activeFilterCount(filters: readonly FilterDefinition[]): number {
 
 /**
  * AllFilters — every filter of a list behind one button, after the search in
- * its control row (`FilterBar` draws it from its `filters` when there are two
- * or more; a lone filter is its own trigger, `FilterControls`). The menu
+ * its control row (`FilterBar` draws it when a search shares the row with more
+ * than four filters; otherwise each filter is its own trigger). The menu
  * opens toward the content from the button's edge on that side (`align`):
  * `start` (the default), so the menu and its submenus open to the right and
  * never over the sidebar; `end` for a button at its row's far right. The

@@ -355,7 +355,7 @@ function CategoryShelf({
           ) : (
             <>
               No Commerce run has measured this category yet.{' '}
-              <TextLink href={targetHref(categoryId)} text="inherit">
+              <TextLink href={targetHref(categoryId)} text="inherit" underline="hover">
                 Set up its shopping prompts
               </TextLink>
             </>

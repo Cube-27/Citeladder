@@ -192,32 +192,32 @@ describe('Actions', () => {
     expect(within(row).queryByText('Missing viewport meta tag')).toBeNull();
   });
 
-  it('sets every filter from All filters as URL state and reads the list through it', async () => {
+  it('sets every filter from its own trigger as URL state and reads the list through it', async () => {
     const reads: string[] = [];
     serveActions(reads);
     const user = userEvent.setup();
     renderActions();
     await screen.findByRole('button', { name: 'Improve your own pages, 7' });
-    // The separate selects are gone: one menu holds every filter.
     expect(screen.queryByRole('combobox')).toBeNull();
 
-    const pick = async (filterIndex: number, optionIndex: number) => {
-      await user.click(screen.getByRole('button', { name: /^All filters/ }));
-      await user.keyboard(
-        `${'{ArrowDown}'.repeat(filterIndex + 1)}{ArrowRight}${'{ArrowDown}'.repeat(optionIndex)}{Enter}`,
-      );
+    const pick = async (filter: string, option: string) => {
+      await user.click(screen.getByRole('button', { name: new RegExp(`^${filter}:`) }));
+      await user.click(await screen.findByRole('menuitemradio', { name: option }));
     };
-    // Priority (the fourth filter): High.
-    await pick(3, 1);
-    expect(await screen.findByRole('button', { name: 'All filters (1)' })).toBeVisible();
+    await pick('Priority', 'High');
+    expect(await screen.findByRole('button', { name: 'Priority: High' })).toHaveAttribute(
+      'data-active',
+    );
     expect(window.location.search).toBe('?priority=high');
     expect(reads.at(-1)).toBe('priority=high&group=products&limit=5');
 
-    // Status (the first): Dismissed, which holds nothing here.
-    await pick(0, 6);
+    // Dismissed holds nothing here.
+    await pick('Status', 'Dismissed');
     expect(await screen.findByText('No Actions match these filters')).toBeVisible();
     expect(window.location.search).toBe('?priority=high&status=dismissed');
-    expect(screen.getByRole('button', { name: 'All filters (2)' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Status: Dismissed' })).toHaveAttribute(
+      'data-active',
+    );
 
     // Clear filters returns to the whole work queue.
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
@@ -239,7 +239,7 @@ describe('Actions', () => {
     renderActions();
 
     expect(await screen.findByRole('heading', { name: 'No current Actions' })).toBeVisible();
-    expect(screen.queryByRole('button', { name: /^All filters/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Status:/ })).toBeNull();
   });
 
   it('opens the Action detail from anywhere on its row', async () => {

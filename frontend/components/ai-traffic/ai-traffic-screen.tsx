@@ -107,7 +107,7 @@ function TrafficDataView({
   const ga4 = useSourceStep(workspaceId, projectId, 'ga4');
   const sources = useCrawlSources(projectId, workspaceId);
   const idle = trafficIdle({ tab, ga4, sources: sources.data, overview: summary.data });
-  // Every narrowing in All filters after the tabs; Export, on the tabs that
+  // Every narrowing in the filter row after the tabs; Export, on the tabs that
   // list rows, ends that tab's filter bar, so the masthead is the same on every
   // tab. A view that has never had anything to show offers neither.
   const frame = {

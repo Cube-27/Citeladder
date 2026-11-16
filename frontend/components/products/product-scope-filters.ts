@@ -51,7 +51,7 @@ function everyFilter({
 }
 
 /**
- * The scope every product page filters by, in All filters: the window, the
+ * The scope every product page filters by: the window, the
  * engine and the prompt set the answers came from.
  */
 export function productScopeFilters({

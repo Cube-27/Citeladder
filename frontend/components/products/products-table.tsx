@@ -120,7 +120,7 @@ export function ProductName({
   scope: ProductScopeFilters;
 }>) {
   const name = (
-    <TextLink href={productHref(row.holder_id, scope)} text="inherit">
+    <TextLink href={productHref(row.holder_id, scope)} text="inherit" underline="hover">
       {row.name}
     </TextLink>
   );

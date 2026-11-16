@@ -136,7 +136,7 @@ function BrandName({
   // keyboard focus as well as on hover; a name that fits shows no tooltip.
   return (
     <Tooltip content={row.name} describe={false} shouldOpen={nameIsCut}>
-      <TextLink asChild text="inherit">
+      <TextLink asChild text="inherit" underline="hover">
         <Pressable
           aria-pressed={selected}
           aria-label={

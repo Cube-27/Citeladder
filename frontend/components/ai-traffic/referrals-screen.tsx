@@ -84,7 +84,7 @@ function referralsControls({
       </>
     ) : null,
     // The same control row as the other AI Traffic tabs: the window and the
-    // chart interval in All filters, the live note at the row's end.
+    // chart interval as filters, the live note at the row's end.
     filters: [
       rangeFilter({
         value: range,

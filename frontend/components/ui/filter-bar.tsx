@@ -34,9 +34,9 @@ export type FilterBarProps = Readonly<{
   search?: ReactNode;
   /**
    * Every filter of the list, after the search: period, market, engine, kind,
-   * status and typed values alike. Two or more share the one All filters
-   * menu; a lone filter is its own trigger ("Page kind: All page kinds"),
-   * since a menu holding one entry is a click with nothing to choose.
+   * status and typed values alike, each its own trigger ("Page kind: All page
+   * kinds"), in this order. Beside a search, more than four share the one All
+   * filters menu.
    */
   filters?: readonly FilterDefinition[];
   /**
@@ -52,14 +52,17 @@ export type FilterBarProps = Readonly<{
 
 /**
  * FilterBar — the control row at the top of every list and report page, in
- * one order on every page: the view, the search, All filters, then the count
- * and the action at the row's end. Every control is 32px and 8 apart. From
- * 900px it is one row: two or more filters already share All filters (with
- * the count of active ones) and the search (200 at least) takes the spare
- * width. When the row cannot hold everything, the count and the actions wrap
- * as whole units to a second line, the actions at its right end; nothing
- * shrinks below its label. Below 900px the bar stacks into one full-width
- * column in the same order.
+ * one order on every page: the view, the search, the filters, then the count
+ * and the action at the row's end. Every control is 32px and 8 apart.
+ *
+ * Each filter is its own trigger: the row has room for them. Only a row that
+ * also holds a search and more than `FILTERS_BESIDE_SEARCH` filters groups
+ * them in All filters (with the count of active ones), so the search keeps
+ * its width. From 900px it is one row and the search (200 at least) takes the
+ * spare width; when the row cannot hold everything, controls wrap as whole
+ * units, the actions at the line's right end, and nothing shrinks below its
+ * label. Below 900px the bar stacks into one full-width column in the same
+ * order.
  *
  * `status` is a polite live region, so a filtered result count is announced.
  */
@@ -76,11 +79,7 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
       {search ? (
         <div className="rail:flex-[1_1_200px] rail:min-w-[200px] min-w-0">{search}</div>
       ) : null}
-      {filters ? (
-        <div className="flex min-w-0 shrink-0">
-          <FilterControls filters={filters} />
-        </div>
-      ) : null}
+      {filters ? <RowFilters filters={filters} searched={searched} /> : null}
       {status === undefined ? null : (
         <output
           aria-live="polite"
@@ -107,11 +106,31 @@ export function FilterBar({ view, search, filters, status, actions }: FilterBarP
   );
 }
 
+/** Beside a search, the most filters the row shows as their own triggers. */
+const FILTERS_BESIDE_SEARCH = 4;
+
+/** The row's filters: each its own trigger, or All filters beside a search with more than four. */
+function RowFilters({
+  filters,
+  searched,
+}: Readonly<{ filters: readonly FilterDefinition[]; searched: boolean }>) {
+  if (searched && filters.length > FILTERS_BESIDE_SEARCH)
+    return (
+      <div className="flex min-w-0 shrink-0">
+        <AllFilters filters={filters} />
+      </div>
+    );
+  return filters.map((filter) => (
+    <div key={filter.id} className="flex min-w-0 shrink-0">
+      <FilterMenu filter={filter} />
+    </div>
+  ));
+}
+
 /**
- * FilterControls — a list's filters as its control row draws them: a lone
- * filter as its own trigger that opens its options, two or more behind All
- * filters. `align` is the edge the menu lines up with (`end` at a row's far
- * right).
+ * FilterControls — filters outside a control row (a record header's): a lone
+ * filter as its own trigger, two or more behind All filters. `align` is the
+ * edge the menu lines up with (`end` at a row's far right).
  */
 export function FilterControls({
   filters,
@@ -120,22 +139,30 @@ export function FilterControls({
   const [only, ...rest] = filters;
   if (!only) return null;
   if (rest.length > 0) return <AllFilters filters={filters} align={align} />;
+  return <FilterMenu filter={only} align={align} />;
+}
+
+/** One filter as its own trigger ("Label: Value") that opens its options. */
+function FilterMenu({
+  filter,
+  align = 'start',
+}: Readonly<{ filter: FilterDefinition; align?: 'start' | 'end' }>) {
   return (
     <Menu>
       <MenuTrigger asChild>
         <FilterTrigger
-          label={only.label}
-          value={only.valueLabel}
-          active={!only.isDefault}
+          label={filter.label}
+          value={filter.valueLabel}
+          active={!filter.isDefault}
           sizeTo={
-            only.kind === 'choice'
-              ? only.groups.flatMap((group) => group.options.map((option) => option.label))
-              : [only.valueLabel]
+            filter.kind === 'choice'
+              ? filter.groups.flatMap((group) => group.options.map((option) => option.label))
+              : [filter.valueLabel]
           }
         />
       </MenuTrigger>
       <MenuContent align={align} onFocus={focusFieldOnEntry}>
-        {only.kind === 'choice' ? <ChoiceOptions filter={only} /> : only.content}
+        {filter.kind === 'choice' ? <ChoiceOptions filter={filter} /> : filter.content}
       </MenuContent>
     </Menu>
   );
@@ -244,8 +271,7 @@ function FilterTriggerText({
  * FilterChoice — a single choice of how one card draws (a chart's plotted
  * metric), in that card's header actions: the trigger names the choice by
  * its visible value (`label` stays for assistive tech), the menu lists the
- * options. A list's filters are never this: they live in its row's All
- * filters.
+ * options. A list's filters are never this: they live in its control row.
  */
 export function FilterChoice<T extends string>({
   label,

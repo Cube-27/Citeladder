@@ -105,7 +105,7 @@ it('diffs two observations line by line across line-ending styles', async () => 
   renderWithProviders(<RobotsHistory workspaceId={WORKSPACE} projectId={PROJECT} />);
 
   // Options list the placeholder, then observations newest first.
-  await screen.findByRole('button', { name: 'All filters' });
+  await screen.findByRole('button', { name: /^Before:/ });
   await pickObservation(user, 'Before', 2);
   await pickObservation(user, 'After', 1);
 

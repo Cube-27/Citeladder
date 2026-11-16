@@ -214,7 +214,6 @@ describe('Internal links', () => {
     }));
     mswServer.use(http.get(endpoint, () => HttpResponse.json({ ...read(analysis()), history })));
     renderPanel();
-    await screen.findByRole('button', { name: /^All filters/ });
     await openFilterOptions(userEvent.setup(), 'Saved analysis');
     const labels = (await screen.findAllByRole('menuitemradio')).map((option) =>
       option.textContent?.split(' · ').at(-1),

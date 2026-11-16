@@ -247,7 +247,7 @@ export function ActionTargetCell({
       <Stack gap="tight" className="min-w-0">
         <Inline className="min-w-0 flex-nowrap">
           <ClampText tooltip={actionTitle(action, { full: true })}>
-            <TextLink href={`/agent/actions/${action.id}`} text="body">
+            <TextLink href={`/agent/actions/${action.id}`} text="body" underline="hover">
               {actionTitle(action)}
             </TextLink>
           </ClampText>

@@ -23,22 +23,21 @@ type User = ReturnType<typeof userEvent.setup>;
 const OTHER = 'bbbbbbbb-2222-4222-8222-222222222222';
 const ISSUES = `/api/v1/site-crawls/${CRAWL}/issues`;
 
-/** Opens All filters; returns one filter's row, named with its value ("Page kind: All page kinds"). */
-async function openFilter(user: User, label: string, value?: string) {
-  await user.click(screen.getByRole('button', { name: /^All filters/ }));
-  return screen.findByRole('menuitem', {
+/** One filter's own trigger in the control row, named with its value ("Page kind: All page kinds"). */
+function findFilter(label: string, value?: string) {
+  return screen.findByRole('button', {
     name: value ? `${label}: ${value}` : new RegExp(`^${label}:`),
   });
 }
 
-/** Opens one filter's options from All filters, with the keyboard as a reader would. */
+/** Opens one filter's options from its trigger, with the keyboard as a reader would. */
 async function openOptions(user: User, label: string, value?: string) {
-  const row = await openFilter(user, label, value);
-  row.focus();
-  await user.keyboard('{ArrowRight}');
+  const trigger = await findFilter(label, value);
+  trigger.focus();
+  await user.keyboard('{Enter}');
 }
 
-/** Opens a filter's options from All filters and picks one. */
+/** Opens a filter's options from its trigger and picks one. */
 async function chooseFilter(user: User, label: string, choice: string) {
   await openOptions(user, label);
   (await screen.findByRole('menuitemradio', { name: choice })).focus();
@@ -347,22 +346,22 @@ describe('IssuesCatalog', () => {
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
-    // The deep link's one-issue filter is counted in All filters, and any other filter ends it.
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
+    // The deep link's one-issue filter shows on its trigger, and any other filter ends it.
+    expect(await findFilter('Issue', 'WebSite schema is missing')).toHaveAttribute('data-active');
     await chooseFilter(user, 'Severity', 'Medium');
     await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
     expect(currentUrl()).not.toContain('rule=');
     expect(currentUrl()).toContain('campaign=overview');
-    expect(screen.getByRole('button', { name: 'All filters (1)' })).toBeInTheDocument();
+    expect(await findFilter('Severity', 'Medium')).toHaveAttribute('data-active');
+    expect(screen.queryByRole('button', { name: /^Issue:/ })).toBeNull();
 
     window.history.back();
     await waitFor(() => expect(currentUrl()).not.toContain('severity=medium'));
-    expect(await openFilter(user, 'Severity', 'All severities')).toBeVisible();
-    await user.keyboard('{Escape}');
+    expect(await findFilter('Severity', 'All severities')).toBeVisible();
 
     window.history.forward();
     await waitFor(() => expect(currentUrl()).toContain('severity=medium'));
-    expect(await openFilter(user, 'Severity', 'Medium')).toBeVisible();
+    expect(await findFilter('Severity', 'Medium')).toBeVisible();
   });
 
   it('drops a filter-bound cursor while preserving unknown URL params', async () => {
@@ -379,15 +378,14 @@ describe('IssuesCatalog', () => {
     expect(currentUrl()).toContain('campaign=overview');
   });
 
-  it('clears a deep-linked issue filter from All filters', async () => {
+  it('clears a deep-linked issue filter from its trigger', async () => {
     window.history.replaceState(null, '', '/issues?rule=aeo.website_schema');
     serveIssues();
     const user = userEvent.setup();
     renderIssues(<IssuesCatalog crawlId={CRAWL} />);
     await screen.findByRole('button', { name: 'WebSite schema is missing' });
 
-    expect(await openFilter(user, 'Issue', 'WebSite schema is missing')).toBeVisible();
-    await user.keyboard('{Escape}');
+    expect(await findFilter('Issue', 'WebSite schema is missing')).toBeVisible();
     await chooseFilter(user, 'Issue', 'All issues');
     await waitFor(() => expect(currentUrl()).not.toContain('rule='));
   });
@@ -583,9 +581,8 @@ describe('IssuesCatalog', () => {
           element.textContent === '2 advisory types · 50 pages affected',
       ),
     ).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^All filters/ }));
-    expect(await screen.findByRole('menuitem', { name: /^Show:/ })).toBeVisible();
-    expect(screen.queryByRole('menuitem', { name: /^Severity:/ })).toBeNull();
+    expect(await findFilter('Show', 'Advisories')).toBeVisible();
+    expect(screen.queryByRole('button', { name: /^Severity:/ })).toBeNull();
     expect(seen).toContain('advisory');
   });
 

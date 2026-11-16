@@ -207,7 +207,7 @@ test('long segments stay on one row and keyboard focus reveals the selected opti
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-test('choosing a filter in All filters never moves the table below it', async ({ page }) => {
+test('choosing a filter never moves the table below it', async ({ page }) => {
   await page.setViewportSize({ width: 982, height: 900 });
   await stubAuthedShell(page, [
     [
@@ -225,10 +225,9 @@ test('choosing a filter in All filters never moves the table below it', async ({
   await expect(table.getByText('No Actions match these filters')).toBeVisible();
   const top = async () => Math.round((await table.boundingBox())!.y);
   const before = await top();
-  await page.getByRole('button', { name: 'All filters' }).click();
-  await page.getByRole('menuitem', { name: /^Status/ }).click();
+  await page.getByRole('button', { name: /^Status:/ }).click();
   await page.getByRole('menuitemradio', { name: 'Dismissed' }).click();
-  await expect(page.getByRole('button', { name: 'All filters (1)' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Status: Dismissed' })).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBe('dismissed');
   expect(await top()).toBe(before);
 });
