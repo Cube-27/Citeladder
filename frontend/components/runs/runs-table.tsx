@@ -130,7 +130,9 @@ export function RunsTable({
               <TableCellLines
                 title
                 primary={
-                  <TextLink href={`/runs/${audit.id}`}>{runTitle(audit, timeZone)}</TextLink>
+                  <TextLink href={`/runs/${audit.id}`} underline="hover">
+                    {runTitle(audit, timeZone)}
+                  </TextLink>
                 }
                 secondary={runCaption({
                   audit,

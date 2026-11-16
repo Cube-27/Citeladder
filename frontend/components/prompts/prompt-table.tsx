@@ -137,7 +137,7 @@ export function PromptTable({
             <TableCellLines
               title
               primary={
-                <TextLink href={promptHistoryHref(prompt.id)} text="inherit">
+                <TextLink href={promptHistoryHref(prompt.id)} text="inherit" underline="hover">
                   {prompt.text}
                 </TextLink>
               }

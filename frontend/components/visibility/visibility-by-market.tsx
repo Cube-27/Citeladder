@@ -70,7 +70,7 @@ export function VisibilityByMarket({
         {(query.data?.markets ?? []).map((row) => (
           <TableRow key={row.market.id ?? 'default'}>
             <TableCell>
-              <TextLink asChild text="inherit">
+              <TextLink asChild text="inherit" underline="hover">
                 <Pressable
                   className="w-auto"
                   aria-current={row.market.id === market ? 'true' : undefined}

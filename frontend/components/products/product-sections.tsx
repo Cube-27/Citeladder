@@ -68,7 +68,7 @@ export function CompetingProducts({
         <LedgerItem
           key={row.holder_id}
           title={
-            <TextLink href={productHref(row.holder_id, scope)} text="inherit">
+            <TextLink href={productHref(row.holder_id, scope)} text="inherit" underline="hover">
               {row.name}
             </TextLink>
           }
@@ -126,7 +126,7 @@ export function SeenIn({
         <LedgerItem
           key={row.target_id}
           title={
-            <TextLink href={productHref(row.target_id, scope)} text="inherit">
+            <TextLink href={productHref(row.target_id, scope)} text="inherit" underline="hover">
               {row.name}
             </TextLink>
           }
