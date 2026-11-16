@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react';
 import { useId } from 'react';
 
-import { dataFillClass, type DataTone } from '@/components/ui/data-tone';
 import { availabilityLabel, formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
@@ -9,7 +8,7 @@ import { cn } from '@/lib/utils';
  * Meter — a labelled value against a maximum on a thin bar: plan usage,
  * credits, a brand's share of answers. The label (14/20 `ink`) sits left and
  * the value (14/20 `ink-2`, tabular) beside it while both fit, else under it,
- * over a 6px `well` track; `hint` says the consequence under it.
+ * over a 6px `well` track, out of 100.
  *
  * `tone` is `ink` by default; `accent` only for your own brand's share;
  * `warning` from about 90% of a limit and `negative` when a limit is hit.
@@ -81,27 +80,24 @@ export function MeterLabelRow({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
+const METER_MAX = 100;
+
 export function Meter({
   label,
   value,
-  max = 100,
   valueLabel,
-  hint,
   tone = 'ink',
 }: Readonly<{
   label: string;
   /** The measured value, or null when it was not measured. */
   value: number | null;
-  max?: number;
-  /** The shown and spoken value, e.g. "1,240 of 5,000 credits"; defaults to "N / max". */
+  /** The shown and spoken value, e.g. "42%"; defaults to "N / 100". */
   valueLabel?: string;
-  /** The consequence, e.g. "Runs pause at the limit". */
-  hint?: ReactNode;
   tone?: MeterTone;
 }>) {
   const labelId = useId();
   const shown =
-    valueLabel ?? (value === null ? availabilityLabel('not_measured') : `${value} / ${max}`);
+    valueLabel ?? (value === null ? availabilityLabel('not_measured') : `${value} / ${METER_MAX}`);
   return (
     <div className="flex min-w-0 flex-col gap-2">
       <MeterLabelRow>
@@ -115,12 +111,11 @@ export function Meter({
       </MeterLabelRow>
       <MeterTrack
         value={value}
-        max={max}
+        max={METER_MAX}
         fill={METER_FILL[tone]}
         labelledBy={labelId}
         valueText={shown}
       />
-      {hint ? <p className="text-caption text-ink-2">{hint}</p> : null}
     </div>
   );
 }
@@ -157,10 +152,12 @@ export function CellMeter({
   );
 }
 
+const ROW_FILL = { neutral: 'bg-control-line', accent: 'bg-data-you' } as const;
+
 /**
  * One row of a distribution: the bucket's name, its track and its figure, in
  * three columns every row of the list shares, so the tracks start and end on
- * one line. The fill takes the series' data tone.
+ * one line. The fill is neutral, or the accent for your own brand.
  */
 export function MeterRow({
   name,
@@ -176,7 +173,7 @@ export function MeterRow({
   max?: number;
   /** The accessible name of the track, e.g. "Depth 2 share of pages". */
   label: string;
-  tone: DataTone;
+  tone: keyof typeof ROW_FILL;
 }>) {
   const percent = percentOf(value, max);
   return (
@@ -185,7 +182,7 @@ export function MeterRow({
       <MeterTrack
         value={value}
         max={max}
-        fill={dataFillClass(tone)}
+        fill={ROW_FILL[tone]}
         label={label}
         valueText={
           percent === null ? availabilityLabel('not_measured') : formatPercent(percent / 100)

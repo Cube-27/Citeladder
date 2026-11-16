@@ -113,19 +113,18 @@ describe('Skeleton', () => {
 });
 
 describe('RungMeter', () => {
-  it('reports its value in the product units and goes busy without one', () => {
-    const { rerender } = render(
-      <RungMeter label="Running prompts" value={48} max={120} valueLabel="48 of 120 prompts" />,
-    );
-    const bar = screen.getByRole('progressbar', { name: 'Running prompts' });
+  it('names the bar by its label and speaks its value as a percentage, clamped to 100', () => {
+    const { container, rerender } = render(<RungMeter label="Progress" value={48} />);
+    const bar = screen.getByRole('progressbar', { name: 'Progress' });
     expect(bar).toHaveAttribute('value', '48');
-    expect(bar).toHaveAttribute('max', '120');
-    expect(screen.getByText('48 of 120 prompts')).toBeInTheDocument();
+    expect(bar).toHaveAttribute('max', '100');
+    expect(bar).toHaveAttribute('aria-valuetext', '48.0%');
+    expect(bar).not.toHaveAttribute('aria-busy');
+    expect(screen.getByText('48.0%')).toBeInTheDocument();
+    expect(container.querySelectorAll('.bg-ink')).toHaveLength(5);
 
-    rerender(<RungMeter label="Running prompts" />);
-    const busy = screen.getByRole('progressbar', { name: 'Running prompts' });
-    expect(busy).toHaveAttribute('aria-busy', 'true');
-    expect(busy).not.toHaveAttribute('value');
+    rerender(<RungMeter label="Progress" value={130} />);
+    expect(screen.getByRole('progressbar', { name: 'Progress' })).toHaveAttribute('value', '100');
   });
 
   it('shows a background refresh only while active', () => {

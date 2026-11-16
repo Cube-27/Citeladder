@@ -364,7 +364,7 @@ function ArchitectureEvidence({ data }: Readonly<{ data: SiteArchitecture }>) {
                     figure={`${formatCount(bucket.page_count)} (${formatPercent(bucket.percentage)})`}
                     value={bucket.percentage === null ? null : Math.round(bucket.percentage * 100)}
                     label={`${DEPTH_LABELS[bucket.key]} share of pages`}
-                    tone={{ series: 1 }}
+                    tone="accent"
                   />
                 ))}
               </Stack>
