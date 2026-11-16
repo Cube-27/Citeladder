@@ -11,7 +11,7 @@ import type { z } from 'zod';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
 import { StateBlock } from '@/components/ui/state-block';
-import { ConfirmDialog, Dialog } from '@/components/ui/dialog';
+import { ConfirmDialog, Dialog, type ConfirmRequest } from '@/components/ui/dialog';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
 import { Stack } from '@/components/ui/layout';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -129,18 +129,9 @@ function Connections({
       <ConfirmDialog
         pending={mutation.isPending}
         onCancel={() => setRevoking(null)}
-        request={
-          revoking
-            ? {
-                title: 'Revoke crawl log source',
-                body: `Stop accepting logs for ${revoking.host}? New batches and uploads for this host are refused. Requests already received stay in your reports.`,
-                confirmLabel: 'Revoke source',
-                destructive: true,
-                onConfirm: () =>
-                  model.issueSource({ kind: 'revoke', id: revoking.id }, () => setRevoking(null)),
-              }
-            : null
-        }
+        request={revokeRequest(revoking, (id) =>
+          model.issueSource({ kind: 'revoke', id }, () => setRevoking(null)),
+        )}
       />
       <RotateTokenDialog
         source={rotating}
@@ -191,6 +182,22 @@ function Connections({
     </Section>
   );
 }
+
+/** Revoking stops ingestion for a host, so it is confirmed by name. */
+function revokeRequest(
+  source: z.infer<typeof crawlSourceSchema> | null,
+  onRevoke: (id: string) => void,
+): ConfirmRequest | null {
+  if (!source) return null;
+  return {
+    title: 'Revoke crawl log source',
+    body: `Stop accepting logs for ${source.host}? New batches and uploads for this host are refused. Requests already received stay in your reports.`,
+    confirmLabel: 'Revoke source',
+    destructive: true,
+    onConfirm: () => onRevoke(source.id),
+  };
+}
+
 /**
  * Setup opens only on a read that says collection is available. An unavailable
  * workspace gets the explanation, not a setup it cannot complete; a pending or
