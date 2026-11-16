@@ -15,8 +15,6 @@ export type PasswordFieldProps = Readonly<{
   inputProps: PasswordInputProps;
   autoComplete: 'current-password' | 'new-password';
   placeholder: string;
-  /** The name the reveal control speaks after "Show"/"Hide"; the label by default. */
-  visibilityLabel?: string;
 }>;
 
 /** A labelled password field with a reveal control at its end. */
@@ -26,7 +24,6 @@ export function PasswordField({
   inputProps,
   autoComplete,
   placeholder,
-  visibilityLabel = label,
 }: PasswordFieldProps) {
   const [visible, setVisible] = useState(false);
   return (
@@ -42,7 +39,7 @@ export function PasswordField({
           endContent={
             <FieldEndButton
               icon={visible ? EyeOff : Eye}
-              label={`${visible ? 'Hide' : 'Show'} ${visibilityLabel}`}
+              label={`${visible ? 'Hide' : 'Show'} ${label}`}
               onClick={() => setVisible((current) => !current)}
             />
           }

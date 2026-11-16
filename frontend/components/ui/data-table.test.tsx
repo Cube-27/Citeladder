@@ -314,18 +314,13 @@ describe('DataTable', () => {
   });
 
   it('cues the edge that hides columns and becomes a tab stop only while the table scrolls sideways', () => {
-    const table = (pinFirstColumn?: boolean) => (
-      <DataTable
-        label="Wide"
-        columns={[{ key: 'url', label: 'URL' }]}
-        pinFirstColumn={pinFirstColumn}
-      >
+    const { container } = render(
+      <DataTable label="Wide" columns={[{ key: 'url', label: 'URL' }]}>
         <TableRow>
           <TableCell>/pricing</TableCell>
         </TableRow>
-      </DataTable>
+      </DataTable>,
     );
-    const { container, rerender } = render(table(false));
     const frame = container.querySelector<HTMLElement>('[data-scroll-content]')!;
     const cue = container.querySelector<HTMLElement>('[data-scroll-frame]')!;
     // The edges that fade, and the steppers (outside the table) that can still move.
@@ -351,17 +346,11 @@ describe('DataTable', () => {
     expect(steps()).toEqual(['end']);
     expect(frame).toHaveAttribute('tabindex', '0');
     expect(frame).toHaveAttribute('aria-label', 'Wide');
-    layout(900, 200);
-    expect(fades()).toEqual(['start', 'end']);
-    expect(steps()).toEqual(['start', 'end']);
-    layout(900, 500);
-    expect(fades()).toEqual(['start']);
-
-    // Pinned by default: the first column covers the leading edge, so only the
-    // far edge fades, yet the back stepper still steps back.
-    rerender(table());
+    // The pinned first column covers the leading edge, so only the far edge
+    // fades, yet the back stepper still steps back.
     layout(900, 200);
     expect(fades()).toEqual(['end']);
+    expect(steps()).toEqual(['start', 'end']);
     layout(900, 500);
     expect(fades()).toEqual([]);
     expect(steps()).toEqual(['start']);

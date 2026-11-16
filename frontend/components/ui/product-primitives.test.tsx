@@ -228,26 +228,14 @@ describe('DataTable', () => {
 
 describe('Meter', () => {
   it('names the bar by its visible label and speaks the shown value, clamped to the maximum', () => {
-    const { rerender } = render(<Meter label="Prompt runs" value={60} max={50} />);
+    const { rerender } = render(<Meter label="Prompt runs" value={120} />);
     const meter = screen.getByRole('meter', { name: 'Prompt runs' });
-    expect(meter).toHaveAttribute('aria-valuenow', '50');
-    expect(meter).toHaveAttribute('aria-valuetext', '60 / 50');
-    expect(screen.getByText('60 / 50')).toBeVisible();
+    expect(meter).toHaveAttribute('aria-valuenow', '100');
+    expect(meter).toHaveAttribute('aria-valuetext', '120 / 100');
+    expect(screen.getByText('120 / 100')).toBeVisible();
 
-    rerender(
-      <Meter
-        label="AI credits"
-        value={1240}
-        max={5000}
-        valueLabel="1,240 of 5,000 credits"
-        hint="Runs pause at the limit"
-      />,
-    );
-    expect(screen.getByRole('meter', { name: 'AI credits' })).toHaveAttribute(
-      'aria-valuetext',
-      '1,240 of 5,000 credits',
-    );
-    expect(screen.getByText('Runs pause at the limit')).toBeVisible();
+    rerender(<Meter label="ChatGPT" value={42} valueLabel="42%" />);
+    expect(screen.getByRole('meter', { name: 'ChatGPT' })).toHaveAttribute('aria-valuetext', '42%');
   });
 
   it('announces an unmeasured value instead of drawing it as zero', () => {

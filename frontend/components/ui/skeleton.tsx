@@ -6,8 +6,8 @@ import {
   SkeletonFrame,
   TableBlocks,
   TEXT_WIDTHS,
-  type ChartHeight,
 } from '@/components/ui/skeleton-block';
+import type { ChartHeight } from '@/components/ui/chart';
 import { cn } from '@/lib/utils';
 
 type SkeletonProps = Readonly<{
@@ -17,9 +17,8 @@ type SkeletonProps = Readonly<{
 }> &
   (
     | Readonly<{ variant?: 'text'; lines?: 1 | 2 | 3 }>
-    | Readonly<{ variant: 'table'; columns: number; rows?: number; head?: boolean }>
+    | Readonly<{ variant: 'table'; columns: number; rows?: number }>
     | Readonly<{ variant: 'stat'; count?: number }>
-    | Readonly<{ variant: 'form'; fields?: number }>
     | Readonly<{ variant: 'block'; rows?: number }>
     | Readonly<{ variant: 'chart'; height?: ChartHeight }>
   );
@@ -33,7 +32,6 @@ type SkeletonProps = Readonly<{
  *   `text`  — two or three blocks of unequal width.
  *   `table` — the real column count: a head row and `rows` rows (40).
  *   `stat`  — `count` metric cards: a label block over a value block.
- *   `form`  — `fields` label and field blocks.
  *   `block` — a card body: a title block over `rows` text blocks.
  *   `chart` — one block at the chart's height.
  *
@@ -54,11 +52,9 @@ export function Skeleton(props: SkeletonProps) {
 function SkeletonBody(props: SkeletonProps) {
   switch (props.variant) {
     case 'table':
-      return <TableBlocks columns={props.columns} rows={props.rows} head={props.head} />;
+      return <TableBlocks columns={props.columns} rows={props.rows} />;
     case 'stat':
       return <FigureBlocks count={props.count ?? 4} />;
-    case 'form':
-      return <FormBlocks fields={props.fields} />;
     case 'block':
       return <CardBlocks lines={props.rows} />;
     case 'chart':
@@ -73,26 +69,11 @@ function SkeletonBody(props: SkeletonProps) {
   }
 }
 
-const range = (count: number) => Array.from({ length: count }, (_, index) => index);
-
 function TextBlocks({ lines = 3 }: Readonly<{ lines?: 1 | 2 | 3 }>) {
   return (
     <span className="grid gap-2">
       {TEXT_WIDTHS.slice(0, lines).map((width) => (
         <SkeletonBlock key={width} className={cn('h-4', width)} />
-      ))}
-    </span>
-  );
-}
-
-function FormBlocks({ fields = 3 }: Readonly<{ fields?: number }>) {
-  return (
-    <span className="grid gap-4">
-      {range(fields).map((index) => (
-        <span key={index} className="grid max-w-160 gap-1">
-          <SkeletonBlock className="h-4 w-32" />
-          <SkeletonBlock className="h-[var(--control-md)] w-full" />
-        </span>
       ))}
     </span>
   );

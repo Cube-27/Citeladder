@@ -1,6 +1,6 @@
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { AlertTriangle, X } from 'lucide-react';
-import { useInsertionEffect, useRef, type ReactNode, type RefObject } from 'react';
+import { useInsertionEffect, useRef, type ReactNode } from 'react';
 
 import { cn } from '@/lib/utils';
 import { Button, IconButton } from './button';
@@ -126,8 +126,8 @@ function DialogHeader({
  * Header, body and footer are divided by hairlines. `tone="danger"` is a
  * confirmation: an `alertdialog`, 480px, a `negative` warning icon by the
  * title and no close button, so the person picks Cancel or the named action.
- * Focus opens on `initialFocusRef`, else the body's first control when it is
- * a text field, else the first tabbable element, and returns to the opener.
+ * Focus opens on the body's first control when it is a text field, else the
+ * first tabbable element, and returns to the opener.
  */
 export function Dialog({
   open,
@@ -138,7 +138,6 @@ export function Dialog({
   footer,
   tone = 'default',
   width = 'narrow',
-  initialFocusRef,
 }: Readonly<{
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -152,7 +151,6 @@ export function Dialog({
    * hold (two calendar months, a CSV preview); a long form is a Drawer.
    */
   width?: 'narrow' | 'wide';
-  initialFocusRef?: RefObject<HTMLElement | null>;
 }>) {
   const returnFocus = useReturnFocus(open);
   const danger = tone === 'danger';
@@ -165,7 +163,7 @@ export function Dialog({
           role={danger ? 'alertdialog' : 'dialog'}
           {...(description ? {} : { 'aria-describedby': undefined })}
           onOpenAutoFocus={(event) => {
-            const target = initialFocusRef?.current ?? leadingField(event.target);
+            const target = leadingField(event.target);
             if (!target) return;
             event.preventDefault();
             target.focus();

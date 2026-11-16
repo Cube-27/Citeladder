@@ -121,13 +121,7 @@ export function useChartWidth<T extends HTMLElement>(fallback = 640) {
  * beside other content), `md` 240 (the default), `lg` 320 (a page's primary
  * chart).
  */
-const chartFrameClasses = {
-  sm: 'min-h-[var(--chart-height-sm)]',
-  md: 'min-h-[var(--chart-height-md)]',
-  lg: 'min-h-[var(--chart-height-lg)]',
-} as const;
-
-export type ChartHeight = keyof typeof chartFrameClasses;
+export type ChartHeight = 'sm' | 'md' | 'lg';
 
 /**
  * The roles in pixels, for a chart that draws its plot to a measured box. The

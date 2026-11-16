@@ -3,7 +3,6 @@ import { ChartFrame } from '@/components/ui/chart-frame';
 import { ClampText } from '@/components/ui/clamp-text';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Delta } from '@/components/ui/delta';
-import type { DataTone } from '@/components/ui/data-tone';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MeterRow } from '@/components/ui/meter';
 import type { ReorderItem } from '@/components/ui/reorder-list';
@@ -68,7 +67,7 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
               engine={engines.label(row.label)}
               period="Current"
               value={row.current}
-              tone={{ series: 1 }}
+              tone="accent"
             />
           </Stack>
         ))}
@@ -86,7 +85,7 @@ function MovementMeter({
   engine: string;
   period: 'Previous' | 'Current';
   value: number | null;
-  tone: DataTone;
+  tone: 'neutral' | 'accent';
 }>) {
   return (
     <MeterRow

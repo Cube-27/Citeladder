@@ -1,47 +1,7 @@
-import { useRef, useState, type ComponentProps, type ReactNode, type RefObject } from 'react';
+import { useRef, useState, type ReactNode, type RefObject } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
-import { Button } from '@/components/ui/button';
 import { READ_FAILED_MESSAGE, readCsvFileText } from '@/lib/csv/read-file-text';
-
-/** A button-owned hidden picker that permits selecting the same file twice. */
-export function CsvImportTrigger({
-  label = 'Import CSV',
-  pendingLabel = 'Importing…',
-  accessibleLabel,
-  pending = false,
-  onSelect,
-  variant = 'secondary',
-}: Readonly<{
-  label?: ReactNode;
-  pendingLabel?: ReactNode;
-  accessibleLabel: string;
-  pending?: boolean;
-  onSelect: (file: File) => void;
-  variant?: ComponentProps<typeof Button>['variant'];
-}>) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  return (
-    <span className="inline-flex">
-      <Button variant={variant} disabled={pending} onClick={() => inputRef.current?.click()}>
-        {pending ? pendingLabel : label}
-      </Button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".csv,text/csv"
-        aria-label={accessibleLabel}
-        className="sr-only"
-        disabled={pending}
-        onChange={(event) => {
-          const file = event.currentTarget.files?.[0];
-          event.currentTarget.value = '';
-          if (file) onSelect(file);
-        }}
-      />
-    </span>
-  );
-}
 
 /**
  * Shared file-selection lifecycle; parsing remains owned by the importing

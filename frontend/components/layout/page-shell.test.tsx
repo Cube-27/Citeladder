@@ -2,9 +2,11 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vite-plus/test';
 
+import { ReportPage } from '@/components/templates/report-page';
 import { choiceFilter } from '@/components/ui/all-filters';
-import { TabsRoot } from '@/components/ui/tabs';
-import { ListScreen, RouteLoadingScreen } from './page-shell';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { TabRow, TabsRoot } from '@/components/ui/tabs';
+import { RouteLoadingScreen } from './page-shell';
 
 describe('RouteLoadingScreen', () => {
   it.each([
@@ -42,30 +44,7 @@ describe('RouteLoadingScreen', () => {
   });
 });
 
-describe('ListScreen', () => {
-  it('draws the header, then the controls, then the content', () => {
-    render(
-      <MemoryRouter initialEntries={['/prompts']}>
-        <ListScreen
-          actions={<button type="button">Add prompts</button>}
-          controls={{ actions: <button type="button">Export</button> }}
-        >
-          <p>Table</p>
-        </ListScreen>
-      </MemoryRouter>,
-    );
-    const title = screen.getByRole('heading', { level: 1, name: 'Prompts' });
-    const filters = screen.getByRole('group', { name: 'Search and filters' });
-    const content = screen.getByText('Table');
-    expect(title.compareDocumentPosition(filters) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-    expect(filters.compareDocumentPosition(content) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
-    );
-    expect(screen.getByRole('button', { name: 'Add prompts' })).toBeInTheDocument();
-  });
-
+describe('PageFrame', () => {
   it('stacks the masthead, the page tabs band, the filter bar band, then the content', () => {
     const choice = (id: string) =>
       choiceFilter({
@@ -79,12 +58,12 @@ describe('ListScreen', () => {
     render(
       <MemoryRouter initialEntries={['/visibility']}>
         <TabsRoot value="a" onValueChange={() => undefined}>
-          <ListScreen
-            tabs={{ items: [{ value: 'a', label: 'A' }], ariaLabel: 'Views' }}
-            controls={{ filters: [choice('Period'), choice('Engine')] }}
+          <ReportPage
+            tabs={<TabRow items={[{ value: 'a', label: 'A' }]} ariaLabel="Views" />}
+            filters={<FilterBar filters={[choice('Period'), choice('Engine')]} />}
           >
             <p>Table</p>
-          </ListScreen>
+          </ReportPage>
         </TabsRoot>
       </MemoryRouter>,
     );

@@ -275,17 +275,14 @@ function FilterTriggerText({
  */
 export function FilterChoice<T extends string>({
   label,
-  menuLabel = label,
   value,
   defaultValue,
   options,
   onChange,
   fit = false,
 }: Readonly<{
-  /** The trigger's accessible name prefix, e.g. "Select date range". */
+  /** The trigger's accessible name prefix and the menu's heading, e.g. "Select date range". */
   label: string;
-  /** The heading inside the menu; defaults to `label`. */
-  menuLabel?: string;
   value: T;
   /** The unfiltered value; any other value marks the trigger active. */
   defaultValue?: T;
@@ -306,7 +303,7 @@ export function FilterChoice<T extends string>({
         />
       </MenuTrigger>
       <MenuContent>
-        <MenuLabel>{menuLabel}</MenuLabel>
+        <MenuLabel>{label}</MenuLabel>
         <MenuRadioGroup value={value}>
           {options.map((option) => (
             <MenuRadioItem
