@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Inbox, Search } from 'lucide-react';
 
@@ -30,7 +30,8 @@ import {
 } from '@/lib/visibility/fanout-grouping';
 import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { textRole } from '@/components/ui/typography';
-import { FANOUT_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
+import { TABLE_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
+import { useDebounced } from '@/lib/use-debounced';
 import {
   isSelectionWide,
   selectionMatchedQueries,
@@ -186,7 +187,7 @@ export function FanoutEvidence({
     from,
     to,
   } = useSearchTable(query, runId);
-  const serverNeedle = useDebouncedNeedle(needle);
+  const serverNeedle = useDebounced(needle, TABLE_SEARCH_DEBOUNCE_MS);
   const summary = useFanoutSummary(scope, scopeReady, serverNeedle);
   const summaryMatchesInput = serverNeedle === needle && !summary.isFetching;
   // False whenever the server is counting a different population than the
@@ -311,10 +312,12 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
   // two pages; the ungrouped view pages by row.
   const grouped = grouping !== 'none';
   const unit = grouped ? visible.length : (visible[0]?.rows.length ?? 0);
-  const { page, setPage, pageCount, from, to } = useTablePage(unit, PAGE_SIZE);
   // Regrouping or searching produces a different set; page 3 of the old set is
   // not page 3 of the new one.
-  useEffect(() => setPage(1), [grouping, needle, setPage]);
+  const { page, setPage, pageCount, from, to } = useTablePage(unit, {
+    pageSize: PAGE_SIZE,
+    resetKey: `${grouping}\u0000${needle}`,
+  });
   const paged = grouped
     ? visible.slice(from - 1, to)
     : visible.map((group) => ({
@@ -337,15 +340,6 @@ function useSearchTable(query: EvidenceTabProps['query'], runId: string | null) 
     from,
     to,
   };
-}
-
-function useDebouncedNeedle(needle: string): string {
-  const [debounced, setDebounced] = useState(needle);
-  useEffect(() => {
-    const timer = window.setTimeout(() => setDebounced(needle), FANOUT_SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(timer);
-  }, [needle]);
-  return debounced;
 }
 
 /**

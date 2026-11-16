@@ -1,7 +1,7 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
-import { useEffect, useState } from 'react';
+import { Profiler, useEffect, useState } from 'react';
 import { Route, Routes, useParams } from 'react-router-dom';
 import {
   afterAll,
@@ -96,6 +96,11 @@ const DETAIL = {
 /** Lets a test change the screen's context, as a background refetch would. */
 const screenPrompt = { set: (_prompt: string) => {} };
 
+const issueRenders = { count: 0 };
+const countIssueRender = () => {
+  issueRenders.count += 1;
+};
+
 /** A Dashboard screen offering the typed page it is showing. */
 function IssueScreen() {
   const [prompt, setPrompt] = useState('Fix the missing meta description.');
@@ -116,7 +121,14 @@ function renderShell(path: string) {
       <TooltipProvider>
         <AgentPanelTrigger />
         <Routes>
-          <Route path="/site" element={<IssueScreen />} />
+          <Route
+            path="/site"
+            element={
+              <Profiler id="issue-screen" onRender={countIssueRender}>
+                <IssueScreen />
+              </Profiler>
+            }
+          />
           <Route path="/agent/chats/:chatId" element={<ChatLanding />} />
         </Routes>
         <AgentPanel />
@@ -161,8 +173,12 @@ describe('AgentPanel', () => {
     const user = userEvent.setup();
     renderShell('/site');
 
-    await user.click(await screen.findByRole('button', { name: 'Ask agent' }));
+    const trigger = await screen.findByRole('button', { name: 'Ask agent' });
+    const rendersBeforeOpen = issueRenders.count;
+    await user.click(trigger);
     const panel = await screen.findByRole('dialog', { name: 'Agent' });
+    // Opening the panel never re-renders the screen that published the context.
+    expect(issueRenders.count).toBe(rendersBeforeOpen);
     expect(within(panel).getByLabelText('Message the agent')).toHaveValue(
       'Fix the missing meta description.',
     );

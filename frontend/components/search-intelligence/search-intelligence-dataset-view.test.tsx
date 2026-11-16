@@ -104,6 +104,10 @@ it('filters on the server and exports every saved matching page', async () => {
   expect(exported[0]).toContain('needle first');
   expect(exported[1]).toContain('=needle second');
   expect(requests.at(-1)?.get('search')).toBe('needle');
+  // The search is debounced: no request carried a half-typed term.
+  expect(requests.filter((params) => !['', 'needle', null].includes(params.get('search')))).toEqual(
+    [],
+  );
 });
 
 it('hands the visible rows, or one selected row, to the Agent by id', async () => {

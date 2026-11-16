@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
@@ -30,15 +31,21 @@ type AgentPanelValue = {
   /** The chat the panel shows, only for the project it was started in. */
   chat: { projectId: string; chatId: string } | null;
   setChat: (chat: { projectId: string; chatId: string } | null) => void;
+};
+
+type AgentPanelSeedValue = {
   publishSeed: (seed: Seed) => void;
   withdrawSeed: (token: symbol) => void;
 };
 
 const AgentPanelContext = createContext<AgentPanelValue | null>(null);
+// Separate and stable, so publishing screens never re-render on panel changes.
+const AgentPanelSeedContext = createContext<AgentPanelSeedValue | null>(null);
 
 export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [openState, setOpenState] = useState(false);
-  const [seed, setSeed] = useState<Seed | null>(null);
+  // Nothing renders the live seed; only the open snapshot below is shown.
+  const seedRef = useRef<Seed | null>(null);
   // Snapshotted on open: a screen refetch while the panel is open must not
   // reset the draft the reader is writing.
   const [openedWith, setOpenedWith] = useState<{ seed: AgentHandoff | null; count: number }>({
@@ -47,18 +54,26 @@ export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode 
   });
   const setOpen = useCallback(
     (next: boolean) => {
-      if (next && !openState)
-        setOpenedWith((current) => ({ seed: seed?.handoff ?? null, count: current.count + 1 }));
+      if (next && !openState) {
+        const snapshot = seedRef.current?.handoff ?? null;
+        setOpenedWith((current) => ({ seed: snapshot, count: current.count + 1 }));
+      }
       setOpenState(next);
     },
-    [openState, seed],
+    [openState],
   );
   const [chat, setChat] = useState<AgentPanelValue['chat']>(null);
-  const publishSeed = useCallback((next: Seed) => setSeed(next), []);
-  // Only the screen that published the current seed may clear it, so an
-  // unmounting screen never erases the context its successor just set.
-  const withdrawSeed = useCallback(
-    (token: symbol) => setSeed((current) => (current?.token === token ? null : current)),
+  const seedValue = useMemo<AgentPanelSeedValue>(
+    () => ({
+      publishSeed: (next) => {
+        seedRef.current = next;
+      },
+      // Only the screen that published the current seed may clear it, so an
+      // unmounting screen never erases the context its successor just set.
+      withdrawSeed: (token) => {
+        if (seedRef.current?.token === token) seedRef.current = null;
+      },
+    }),
     [],
   );
   const value = useMemo(
@@ -69,12 +84,14 @@ export function AgentPanelProvider({ children }: Readonly<{ children: ReactNode 
       openCount: openedWith.count,
       chat,
       setChat,
-      publishSeed,
-      withdrawSeed,
     }),
-    [openState, setOpen, openedWith, chat, publishSeed, withdrawSeed],
+    [openState, setOpen, openedWith, chat],
   );
-  return <AgentPanelContext.Provider value={value}>{children}</AgentPanelContext.Provider>;
+  return (
+    <AgentPanelSeedContext.Provider value={seedValue}>
+      <AgentPanelContext.Provider value={value}>{children}</AgentPanelContext.Provider>
+    </AgentPanelSeedContext.Provider>
+  );
 }
 
 /** The panel state, or null outside the authenticated shell. */
@@ -87,15 +104,13 @@ export function useAgentPanel(): AgentPanelValue | null {
  * screen is mounted. `null` offers nothing. A no-op outside the shell.
  */
 export function useAgentPanelSeed(input: HandoffInput | null): void {
-  const panel = useContext(AgentPanelContext);
-  const publish = panel?.publishSeed;
-  const withdraw = panel?.withdrawSeed;
+  const seeds = useContext(AgentPanelSeedContext);
   // A value key, so a re-render with equal references does not republish.
   const key = input ? JSON.stringify(input) : '';
   useEffect(() => {
-    if (!key || !publish || !withdraw) return;
+    if (!key || !seeds) return;
     const token = Symbol('agent-panel-seed');
-    publish({ token, handoff: agentHandoff(JSON.parse(key) as HandoffInput) });
-    return () => withdraw(token);
-  }, [key, publish, withdraw]);
+    seeds.publishSeed({ token, handoff: agentHandoff(JSON.parse(key) as HandoffInput) });
+    return () => seeds.withdrawSeed(token);
+  }, [key, seeds]);
 }

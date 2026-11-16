@@ -34,6 +34,8 @@ import {
 import { targetHref } from '@/lib/products/targets';
 import { isTablePageSize, TABLE_DEFAULT_PAGE_SIZE, type TablePageSize } from '@/lib/config/tables';
 import { setUrlParams } from '@/lib/navigation/url-state';
+import { TABLE_SEARCH_DEBOUNCE_MS } from '@/lib/config/operational';
+import { useDebounced } from '@/lib/use-debounced';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { useWorkspaceCapability } from '@/lib/project/project-context';
@@ -177,7 +179,8 @@ function ProductsContent({
   const { filters } = productFilters;
   const [pageSize, setPageSize] = useState<TablePageSize>(TABLE_DEFAULT_PAGE_SIZE);
   // A new page size is a new search, so it starts again from the first page.
-  const search = productSearch(filters, pageSize);
+  const q = useDebounced(filters.q, TABLE_SEARCH_DEBOUNCE_MS);
+  const search = productSearch({ ...filters, q }, pageSize);
   const cursors = useCursorStack(search);
   const page = useQuery(commerceQueries.products(scope, search, cursors.cursor));
   const catalog = useQuery(commerceQueries.catalog(scope));

@@ -357,7 +357,9 @@ function CrawlNotes({ crawl, available }: Readonly<{ crawl: CrawlSummary; availa
  */
 export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['series'] }>) {
   const rows = [...series].reverse();
-  const { page, setPage, pageCount, from, to } = useTablePage(rows.length, PURPOSE_PAGE_SIZE);
+  const { page, setPage, pageCount, from, to } = useTablePage(rows.length, {
+    pageSize: PURPOSE_PAGE_SIZE,
+  });
   return (
     <TitledSection title="Recognized requests by purpose">
       <DataTable

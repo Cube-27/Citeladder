@@ -14,6 +14,7 @@
  */
 import {
   createContext,
+  memo,
   useContext,
   useMemo,
   useState,
@@ -146,6 +147,65 @@ const MARKDOWN_COMPONENTS: Components = {
   span: MarkdownSpan,
 };
 
+type MarkdownBodyProps = Readonly<{
+  content: string;
+  density: 'default' | 'compact';
+  chipTexts: readonly string[];
+  highlights: readonly Highlight[];
+}>;
+
+function sameItems<T>(a: readonly T[], b: readonly T[], same: (x: T, y: T) => boolean) {
+  return (
+    a.length === b.length &&
+    a.every((item, i) => {
+      const other = b[i];
+      return other !== undefined && same(item, other);
+    })
+  );
+}
+
+// Callers pass fresh chip and highlight arrays each render; compare them by value
+// so a composer keystroke never re-parses every message.
+function sameBody(a: MarkdownBodyProps, b: MarkdownBodyProps) {
+  return (
+    a.content === b.content &&
+    a.density === b.density &&
+    sameItems(a.chipTexts, b.chipTexts, (x, y) => x === y) &&
+    sameItems(a.highlights, b.highlights, (x, y) => x.text === y.text && x.tone === y.tone)
+  );
+}
+
+const MarkdownBody = memo(function MarkdownBody({
+  content,
+  density,
+  chipTexts,
+  highlights,
+}: MarkdownBodyProps) {
+  return (
+    // Generated Markdown can contain unbreakable URLs, code, and wide tables.
+    // Text wraps to the column; a table that still cannot fit scrolls inside
+    // its own frame, never as one scrollbar at the bottom of a long result.
+    <div
+      className={cn(
+        'prose-content min-w-0 w-full max-w-full [overflow-wrap:anywhere]',
+        density === 'compact' && 'prose-compact',
+      )}
+    >
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        rehypePlugins={[
+          ...(chipTexts.length ? [phraseChipsPlugin(chipTexts)] : []),
+          ...(highlights.length ? [highlightPlugin(highlights)] : []),
+        ]}
+        urlTransform={safeUrlTransform}
+        components={MARKDOWN_COMPONENTS}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}, sameBody);
+
 /** Render untrusted Markdown safely (GFM tables/lists, no raw HTML). */
 export function ContentMarkdown({
   markdown,
@@ -174,27 +234,12 @@ export function ContentMarkdown({
     [knownHosts],
   );
   const body = (
-    // Generated Markdown can contain unbreakable URLs, code, and wide tables.
-    // Text wraps to the column; a table that still cannot fit scrolls inside
-    // its own frame, never as one scrollbar at the bottom of a long result.
-    <div
-      className={cn(
-        'prose-content min-w-0 w-full max-w-full [overflow-wrap:anywhere]',
-        density === 'compact' && 'prose-compact',
-      )}
-    >
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[
-          ...(chips.length ? [phraseChipsPlugin(chips.map((chip) => chip.text))] : []),
-          ...(highlights.length ? [highlightPlugin(highlights)] : []),
-        ]}
-        urlTransform={safeUrlTransform}
-        components={MARKDOWN_COMPONENTS}
-      >
-        {content}
-      </ReactMarkdown>
-    </div>
+    <MarkdownBody
+      content={content}
+      density={density}
+      chipTexts={chips.map((chip) => chip.text)}
+      highlights={highlights}
+    />
   );
   const chipped = chips.length ? (
     <ChipsContext.Provider value={chips}>{body}</ChipsContext.Provider>
@@ -273,7 +318,9 @@ const TEXT_COMPONENTS: Components = {
  * Markdown as its words in paragraphs and lists, for a live region: no link,
  * heading, table or image, so it adds nothing to focus or navigate.
  */
-export function MarkdownText({ markdown }: Readonly<{ markdown: string }>) {
+export const MarkdownText = memo(function MarkdownText({
+  markdown,
+}: Readonly<{ markdown: string }>) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
@@ -284,4 +331,4 @@ export function MarkdownText({ markdown }: Readonly<{ markdown: string }>) {
       {markdown}
     </ReactMarkdown>
   );
-}
+});
