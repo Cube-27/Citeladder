@@ -1,10 +1,55 @@
 /* Authenticated interaction motion. Timing lives in globals.css; feature files
    consume semantic component classes rather than defining local animation. */
-.menu-panel {
+
+/* Popups (menus, selects, popovers, tooltips, info hints) open and close with
+   keyframes: Radix Presence keeps content mounted only while an animation runs.
+   They move 4px from the trigger's side (`data-side`) and back on close. */
+.menu-panel,
+.tooltip-panel {
+  --popup-from-x: 0;
+  --popup-from-y: -4px;
   transform-origin: var(
     --radix-dropdown-menu-content-transform-origin,
-    var(--radix-popover-content-transform-origin, var(--radix-select-content-transform-origin, top))
+    var(
+      --radix-popover-content-transform-origin,
+      var(
+        --radix-select-content-transform-origin,
+        var(--radix-tooltip-content-transform-origin, top)
+      )
+    )
   );
+}
+:is(.menu-panel, .tooltip-panel)[data-side='top'] {
+  --popup-from-y: 4px;
+}
+:is(.menu-panel, .tooltip-panel)[data-side='left'] {
+  --popup-from-x: 4px;
+  --popup-from-y: 0;
+}
+:is(.menu-panel, .tooltip-panel)[data-side='right'] {
+  --popup-from-x: -4px;
+  --popup-from-y: 0;
+}
+
+@keyframes popup-in {
+  from {
+    opacity: 0;
+    translate: var(--popup-from-x) var(--popup-from-y);
+  }
+}
+@keyframes popup-out {
+  to {
+    opacity: 0;
+    translate: var(--popup-from-x) var(--popup-from-y);
+  }
+}
+
+.menu-panel:is([data-state='open'], [data-open='true']),
+.tooltip-panel:is([data-state='open'], [data-state='delayed-open'], [data-state='instant-open']) {
+  animation: popup-in var(--motion-open) var(--ease-standard);
+}
+:is(.menu-panel, .tooltip-panel)[data-state='closed'] {
+  animation: popup-out var(--motion-close) var(--ease-exit) both;
 }
 
 @keyframes modal-overlay-in {
@@ -40,11 +85,47 @@
   animation: modal-panel-in var(--motion-close) var(--ease-exit) reverse both;
 }
 
-.tooltip-panel,
-.toast-panel {
-  transition:
-    opacity var(--motion-open) var(--ease-standard),
-    transform var(--motion-open) var(--ease-standard);
+/* Toasts stay mounted until their close animation ends (toast.tsx). A swipe
+   moves the toast 1:1, eases back on cancel and slides out on end. */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: 0 2px;
+  }
+}
+@keyframes toast-out {
+  to {
+    opacity: 0;
+    translate: 0 2px;
+  }
+}
+@keyframes toast-swipe-out {
+  from {
+    translate: var(--radix-toast-swipe-end-x) 0;
+  }
+  to {
+    opacity: 0;
+    translate: 100% 0;
+  }
+}
+.toast-panel[data-state='open'] {
+  animation: toast-in var(--motion-open) var(--ease-standard);
+}
+.toast-panel[data-state='closed'] {
+  animation: toast-out var(--motion-close) var(--ease-exit) both;
+}
+.toast-panel[data-swipe='move'] {
+  translate: var(--radix-toast-swipe-move-x) 0;
+}
+.toast-panel[data-swipe='end'] {
+  translate: var(--radix-toast-swipe-end-x) 0;
+}
+.toast-panel[data-swipe='cancel'] {
+  translate: 0 0;
+  transition: translate var(--motion-close) var(--ease-standard);
+}
+.toast-panel[data-state='closed'][data-swipe='end'] {
+  animation-name: toast-swipe-out;
 }
 
 /* The sidebar's content fades in as its column eases to the rail or back.
@@ -64,22 +145,4 @@
 }
 [data-sidebar-toggled][data-sidebar-state='collapsed'] [data-sidebar-frame] {
   animation-name: sidebar-rail-in;
-}
-
-.tooltip-panel[data-state='closed'],
-.toast-panel[data-state='closed'] {
-  opacity: 0;
-  transform: translateY(2px);
-  transition-duration: var(--motion-close);
-  transition-timing-function: var(--ease-exit);
-}
-
-@starting-style {
-  .tooltip-panel[data-state='open'],
-  .tooltip-panel[data-state='delayed-open'],
-  .tooltip-panel[data-state='instant-open'],
-  .toast-panel[data-state='open'] {
-    opacity: 0;
-    transform: translateY(2px);
-  }
 }

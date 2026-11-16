@@ -126,7 +126,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
           </MenuTrigger>
         </SidebarTextTooltip>
       )}
-      {open ? <UserMenuContent presenter={presenter} currentHref={currentHref} /> : null}
+      <UserMenuContent presenter={presenter} currentHref={currentHref} />
     </Menu>
   );
 }

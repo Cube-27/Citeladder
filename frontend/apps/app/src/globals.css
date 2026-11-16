@@ -1840,19 +1840,6 @@ samp {
   font-synthesis: none;
 }
 
-.menu-panel {
-  transition:
-    opacity var(--motion-open) var(--ease-standard),
-    transform var(--motion-open) var(--ease-standard);
-}
-
-.menu-panel[data-state="closed"] {
-  opacity: 0;
-  transform: translateY(-2px);
-  transition-duration: var(--motion-close);
-  transition-timing-function: var(--ease-exit);
-}
-
 @keyframes drawer-overlay-out {
   from {
     opacity: 1;
@@ -1902,14 +1889,6 @@ samp {
 
 .drawer-panel[data-side="left"] {
   --drawer-offset: -100%;
-}
-
-@starting-style {
-  .menu-panel[data-state="open"],
-  .menu-panel[data-open="true"] {
-    opacity: 0;
-    transform: translateY(-2px);
-  }
 }
 
 /* The live rung: one accent rung pulsing its opacity. */
