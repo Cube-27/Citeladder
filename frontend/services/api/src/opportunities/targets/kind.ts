@@ -4,8 +4,10 @@
  * branches on a target kind or builds a group key.
  */
 import type { ActionTargetKind } from '@citeladder/contracts/actions';
+import type { IssueFamilyCohort } from '@citeladder/contracts/opportunity-evidence';
 import type { Selectable } from 'kysely';
 
+import type { Json } from '../../agent/contracts.ts';
 import type { Database } from '../../db/database.ts';
 import type { Actions } from '../../generated/db-schema.ts';
 import type { OpportunityRow } from '../projection.ts';
@@ -36,8 +38,11 @@ export type DeclarationTargets =
     }
   | { resolved: false; reason: string };
 
+/** An issue-family cohort as a read shows it, with when its crawl completed. */
+type ShownCohort = IssueFamilyCohort & { crawl_completed_at: string | null };
+
 /** What an Action's detail read adds for its kind. */
-export type TargetDetail = Readonly<{ editable_page: boolean }>;
+export type TargetDetail = Readonly<{ editable_page: boolean; cohort: ShownCohort | null }>;
 
 export type ActionTargetModule<K extends ActionTargetKind = ActionTargetKind> = Readonly<{
   kind: K;
@@ -48,8 +53,18 @@ export type ActionTargetModule<K extends ActionTargetKind = ActionTargetKind> = 
     members: readonly DeclaredMember[];
     website: string;
   }): Promise<DeclarationTargets>;
-  /** The detail read's additions. */
-  detail(input: { db: Database; action: TargetAction }): Promise<TargetDetail>;
+  /** The detail read's additions; `declaredMemberIds` are the findings a declaration froze. */
+  detail(input: {
+    db: Database;
+    action: TargetAction;
+    declaredMemberIds: readonly string[];
+  }): Promise<TargetDetail>;
+  /** What an Agent chat on the Action is given beyond the row's own fields. */
+  agentContext(input: {
+    db: Database;
+    scope: TargetScope;
+    action: TargetAction;
+  }): Promise<Record<string, Json>>;
 }>;
 
 /** A kind the Agent may name: it resolves the named text to the Action's identity. */
@@ -64,4 +79,4 @@ export type AgentNamedTargetModule<K extends ActionTargetKind = ActionTargetKind
       }): Promise<{ key: string; url: string | null }>;
     }>;
 
-export const NO_DETAIL: TargetDetail = { editable_page: false };
+export const NO_DETAIL: TargetDetail = { editable_page: false, cohort: null };

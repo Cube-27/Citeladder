@@ -311,6 +311,7 @@ describe('keyword gaps become Actions', () => {
       source_issue_ids: [],
       source_metric_ids: [],
       facts: NO_HANDOFF_FACTS,
+      grouping: 'search_queries' as const,
     });
     const groups = groupMembers([
       member('emerging_query', { kind: 'demand', identity_hash: 'h', url: null, query: ' Shoes ' }),
@@ -368,6 +369,7 @@ describe('keyword gaps become Actions', () => {
       source_issue_ids: [],
       source_metric_ids: [],
       facts: NO_HANDOFF_FACTS,
+      grouping: 'search_queries' as const,
     });
     const [page] = groupMembers([
       member('site_link_near_orphan', 30),

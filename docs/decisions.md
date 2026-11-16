@@ -694,20 +694,18 @@ fold content work back into Actions (AS1), with the list, chat, filter,
 detail-page and AI visibility layout directions above (AS2–AS4, AS6–AS8), and
 content gaps drawn only from content pages and tracked prompts (AS5).
 
-## Actions read Issues in place
+## Actions group Issues
 
 | ID | Decision |
 |---|---|
-| IA1 | Site Health Issues own every defect end to end: the catalog, Ask agent, Mark fixed, Re-run all and fix progress. A Site Health defect never becomes an Opportunity or an Action, so one defect never has two lifecycles. The Actions list reads Issues groups directly from the existing Issues reads, beside prompts, search and every other actionable item; it does not rebuild them, and each opens its own Issues page. A content page's Action keeps its content gaps, search and link findings, never its Site Health defects. |
+| IA1 | Every Site Health defect and advisory rule is one Action per Issues group: one rule across its URLs in the latest crawl, filed under "Let AI read your site" by its Issues section (SEO, AEO, Content); advisories rank below defects of the same severity. Diagnostics stay in Issues only. A site-level rule's Action holds the URLs its evidence names, and reads "Whole site" only when it names none. No per-page Site Health finding becomes an Action, and leftover ones retire on the next refresh. The Issues page and its drawer are unchanged. |
 
-Source: owner, in chat, 16 November 2026: "issues page i understand because it
-finally leads to a single page and i can ask agent to fix a single page or
-groups of pages but actions is still confusing, action should actually contain
-issues exactly as it is and other issues too like prompts, search anything
-actionable", and on rebuilding issues as Actions: "why does this needs a
-rebuild dont we already have issues ?", and "its fine if its duplicated but
-the final page URL remains the same … actions is basically home for all
-actions in the app".
+Source: owner, in chat, 16 November 2026, approving the Actions v3 plan:
+"the smallest issue is a URL or a prompt or a content page and the actions page
+is basically grouping", "actions page has top level categories which drill down
+to more groupings (one example site health - aeo, seo, content - group of URLs -
+URL)", "i dont see other issues so they will probably come in actions like
+advisories", and "nothing will change in issues page".
 
 ## Action statuses: New, In progress, Done, Declined
 

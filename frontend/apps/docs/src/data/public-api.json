@@ -354,6 +354,12 @@
           "group": {
             "$ref": "#/components/schemas/ActionGroup"
           },
+          "goal": {
+            "$ref": "#/components/schemas/ActionGoal"
+          },
+          "grouping": {
+            "$ref": "#/components/schemas/ActionGrouping"
+          },
           "skill_id": {
             "type": "string"
           },
@@ -366,6 +372,19 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "page_count": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "handoff": {
             "$ref": "#/components/schemas/ActionHandoff"
@@ -926,6 +945,67 @@
           "editable_page": {
             "default": false,
             "type": "boolean"
+          },
+          "cohort": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "rule_id": {
+                    "type": "string"
+                  },
+                  "rule_label": {
+                    "type": "string"
+                  },
+                  "finding_class": {
+                    "default": "defect",
+                    "type": "string"
+                  },
+                  "crawl_id": {
+                    "type": "string"
+                  },
+                  "group_id": {
+                    "type": "string"
+                  },
+                  "page_count": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "whole_site": {
+                    "default": false,
+                    "type": "boolean"
+                  },
+                  "crawl_completed_at": {
+                    "type": ["string", "null"]
+                  }
+                },
+                "required": [
+                  "rule_id",
+                  "rule_label",
+                  "finding_class",
+                  "crawl_id",
+                  "group_id",
+                  "page_count",
+                  "whole_site",
+                  "crawl_completed_at"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "urls": {
+            "default": {
+              "whole_site": false,
+              "total": 0,
+              "items": [],
+              "next_cursor": null
+            },
+            "$ref": "#/components/schemas/ActionUrlsPage"
           }
         },
         "required": [
@@ -943,9 +1023,12 @@
           "families",
           "approach",
           "group",
+          "goal",
+          "grouping",
           "skill_id",
           "member_count",
           "declarable_member_count",
+          "page_count",
           "handoff",
           "evidence_cleared_at",
           "created_at",
@@ -955,13 +1038,38 @@
           "diagnosis",
           "members",
           "declaration",
-          "editable_page"
+          "editable_page",
+          "cohort",
+          "urls"
         ],
         "additionalProperties": false
+      },
+      "ActionGoal": {
+        "type": "string",
+        "enum": ["read_site", "own_pages", "mentions", "wrong_claims"]
       },
       "ActionGroup": {
         "type": "string",
         "enum": ["fix_site", "own_pages", "earned", "products"]
+      },
+      "ActionGrouping": {
+        "type": "string",
+        "enum": [
+          "seo",
+          "aeo",
+          "content",
+          "prompts",
+          "create_content",
+          "improve_pages",
+          "search_queries",
+          "internal_links",
+          "regressed",
+          "product_pages",
+          "editorial",
+          "ugc",
+          "references",
+          "other_sources"
+        ]
       },
       "ActionHandoff": {
         "oneOf": [
@@ -1096,6 +1204,12 @@
           "group": {
             "$ref": "#/components/schemas/ActionGroup"
           },
+          "goal": {
+            "$ref": "#/components/schemas/ActionGoal"
+          },
+          "grouping": {
+            "$ref": "#/components/schemas/ActionGrouping"
+          },
           "skill_id": {
             "type": "string"
           },
@@ -1108,6 +1222,19 @@
             "type": "integer",
             "minimum": -9007199254740991,
             "maximum": 9007199254740991
+          },
+          "page_count": {
+            "default": null,
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "handoff": {
             "$ref": "#/components/schemas/ActionHandoff"
@@ -1137,9 +1264,12 @@
           "families",
           "approach",
           "group",
+          "goal",
+          "grouping",
           "skill_id",
           "member_count",
           "declarable_member_count",
+          "page_count",
           "handoff",
           "evidence_cleared_at",
           "created_at",
@@ -1205,6 +1335,136 @@
       "ActionUserStatus": {
         "type": "string",
         "enum": ["open", "in_progress", "dismissed"]
+      },
+      "ActionTree": {
+        "type": "object",
+        "properties": {
+          "group_by": {
+            "$ref": "#/components/schemas/ActionTreeGroupBy"
+          },
+          "status_counts": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "goals": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "goal": {
+                  "$ref": "#/components/schemas/ActionGoal"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "blocking": {
+                  "type": "boolean"
+                }
+              },
+              "required": ["goal", "count", "blocking"],
+              "additionalProperties": false
+            }
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "count": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "groupings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "grouping": {
+                        "$ref": "#/components/schemas/ActionGrouping"
+                      },
+                      "count": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      "items": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/ActionItem"
+                        }
+                      },
+                      "next_cursor": {
+                        "type": ["string", "null"]
+                      }
+                    },
+                    "required": ["grouping", "count", "items", "next_cursor"],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": ["key", "count", "groupings"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["group_by", "status_counts", "goals", "groups"],
+        "additionalProperties": false
+      },
+      "ActionTreeGroupBy": {
+        "type": "string",
+        "enum": ["goal", "what_to_do", "impact", "ownership", "topic"]
+      },
+      "ActionUrl": {
+        "type": "object",
+        "properties": {
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": ["site_url_id", "url"],
+        "additionalProperties": false
+      },
+      "ActionUrlsPage": {
+        "type": "object",
+        "properties": {
+          "whole_site": {
+            "type": "boolean"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActionUrl"
+            }
+          },
+          "next_cursor": {
+            "type": ["string", "null"]
+          }
+        },
+        "required": ["whole_site", "total", "items", "next_cursor"],
+        "additionalProperties": false
       },
       "AdOwnership": {
         "type": "string",
@@ -2927,6 +3187,16 @@
                 "type": "null"
               }
             ]
+          },
+          "pages": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IssueFamilyPages"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -2976,6 +3246,39 @@
       },
       "ExpectedCheck": {
         "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "issue_family"
+              },
+              "rule_id": {
+                "type": "string"
+              },
+              "baseline_crawl_id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "site_url_ids": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "page_count": {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": ["kind", "rule_id", "baseline_crawl_id", "site_url_ids", "page_count"],
+            "additionalProperties": false
+          },
           {
             "$ref": "#/components/schemas/KeywordPresenceExpectedCheck"
           },
@@ -3258,6 +3561,51 @@
       "IssueDimension": {
         "type": "string",
         "enum": ["technical", "aeo"]
+      },
+      "IssueFamilyPages": {
+        "type": "object",
+        "properties": {
+          "failing": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "site_url_id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": ["site_url_id", "url"],
+              "additionalProperties": false
+            }
+          },
+          "passing": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "not_applicable": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "unread": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "uncovered": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["failing", "passing", "not_applicable", "unread", "uncovered"],
+        "additionalProperties": false
       },
       "IssueOccurrence": {
         "type": "object",
@@ -7190,6 +7538,27 @@
       "TransportProvider": {
         "type": "string",
         "enum": ["openai", "anthropic", "google", "dataforseo"]
+      },
+      "UrlActions": {
+        "type": "object",
+        "properties": {
+          "site_url_id": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "url": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ActionItem"
+            }
+          }
+        },
+        "required": ["site_url_id", "url", "items"],
+        "additionalProperties": false
       },
       "VerificationEvent": {
         "type": "object",
@@ -11580,6 +11949,253 @@
           },
           {
             "name": "family",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "ownership",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "grouping",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          }
+        ],
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/actions/tree": {
+      "get": {
+        "tags": ["actions"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionTree"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "group_by",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "default": "goal",
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          {
+            "name": "target_kind",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "approach",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "family",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "ownership",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "topic",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 200
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        ],
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/urls/{site_url_id}/actions": {
+      "get": {
+        "tags": ["urls"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UrlActions"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "site_url_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "x-citeladder-scope": "read"
+      }
+    },
+    "/v1/projects/{project_id}/actions/{action_id}/urls": {
+      "get": {
+        "tags": ["actions"],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionUrlsPage"
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "action_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          },
+          {
+            "name": "cursor",
             "in": "query",
             "required": false,
             "schema": {

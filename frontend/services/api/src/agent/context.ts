@@ -1,9 +1,11 @@
 import { z } from 'zod';
 import type { Database } from '../db/database.ts';
 import { jsonObject } from '../db/json.ts';
+import { targetAgentContext } from '../opportunities/targets/registry.ts';
 import { withContentRules } from '../page-documents/content-rules.ts';
 import { statusView } from '../opportunities/action-status.ts';
 import { authorize } from './access.ts';
+import { actionScopes } from './action-scopes.ts';
 import { agentPolicy, AgentError, type Scope, type Json } from './contracts.ts';
 
 const actionSchema = z
@@ -68,10 +70,17 @@ export async function buildManifest(
         .execute()
     : [];
   if (rows.length !== ids.length) throw new AgentError('agent_context_unavailable');
+  // What each Action's target kind adds, such as an issue family's pages and snippet.
+  const extras = new Map(
+    await Promise.all(
+      rows.map(async (row) => [row.id, await targetAgentContext(db, scope, row)] as const),
+    ),
+  );
   const actions = new Map(
     rows.map((row) => [
       row.id,
       actionSchema.parse({
+        ...extras.get(row.id),
         id: row.id,
         target_label: row.target_label,
         // The status and measurement the Actions list shows, so the model never calls a Done Action open.
@@ -94,12 +103,18 @@ export async function buildManifest(
     .orderBy('revision', 'desc')
     .limit(1)
     .executeTakeFirst();
-  const action = input.actionId ? (actions.get(input.actionId) ?? null) : null;
+  const scoped = await actionScopes(db, scope, input.refs, input.actionId);
+  const found = input.actionId ? actions.get(input.actionId) : undefined;
+  const action = found ? { ...found, ...scoped.action } : null;
+  const pack = await read(db, scope, input.refs, input.request);
   return manifestSchema.parse({
     version: agentPolicy.context_manifest_version,
     refs: input.refs,
     // A page turn's content rules are judged from this same manifest (`offeredRuleIds`).
-    package: withContentRules(await read(db, scope, input.refs, input.request), action),
+    package: withContentRules(
+      { ...pack, sections: { ...pack.sections, ...scoped.sections } },
+      action,
+    ),
     action,
     mentions: input.mentionIds.map((id) => actions.get(id)),
     instructions: instructions ?? null,

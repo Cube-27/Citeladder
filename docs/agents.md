@@ -98,8 +98,10 @@ Action. An Action's status is derived from, never written by, the Agent.
 Before the first model call each run freezes a
 [context manifest](../frontend/services/api/src/agent/context.ts): reviewed business
 context, the target page and a bounded related-page set, the attached Action's
-diagnosis, the diagnoses
-of up to five @-mentioned Actions, any Opportunity,
+diagnosis (for an issue-group Action also its rule, URL count, first 50 URLs
+and reference snippet; with `action_url_ids`, at most 50 of its own URLs the
+user ticked), the diagnoses of up to five @-mentioned Actions, with
+`url_actions_reference` every Action on one URL, any Opportunity,
 Site Health, Demand or Keyword Research evidence the request named, an exact
 upstream output revision, and the project's versioned Agent instructions. The
 [context builder](../frontend/services/api/src/agent/context-adapter.ts) authorizes

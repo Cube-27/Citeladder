@@ -7,7 +7,10 @@ import {
   verificationEventSchema,
 } from './opportunities.ts';
 import { agentRunSchema } from './agent.ts';
-import { contentGapFindingEvidenceSchema } from './opportunity-evidence.ts';
+import {
+  contentGapFindingEvidenceSchema,
+  issueFamilyCohortSchema,
+} from './opportunity-evidence.ts';
 
 const responseObject = <Shape extends z.ZodRawShape>(shape: Shape) => z.object(shape);
 const uuid = () => z.uuid();
@@ -44,6 +47,29 @@ export type ActionHandoff = z.infer<typeof actionHandoffSchema>;
 export const actionGroupSchema = z.enum(['fix_site', 'own_pages', 'earned', 'products']);
 export type ActionGroup = z.infer<typeof actionGroupSchema>;
 
+// The Actions page's goals, in their fixed order, and the groupings under them
+// (plan v3, owner 2026-11-16), persisted on each Action at sync
+// (services/api config `ACTION_GOALS`). No producer files `wrong_claims` yet.
+export const actionGoalSchema = z.enum(['read_site', 'own_pages', 'mentions', 'wrong_claims']);
+export type ActionGoal = z.infer<typeof actionGoalSchema>;
+export const actionGroupingSchema = z.enum([
+  'seo',
+  'aeo',
+  'content',
+  'prompts',
+  'create_content',
+  'improve_pages',
+  'search_queries',
+  'internal_links',
+  'regressed',
+  'product_pages',
+  'editorial',
+  'ugc',
+  'references',
+  'other_sources',
+]);
+export type ActionGrouping = z.infer<typeof actionGroupingSchema>;
+
 // What an Action is about (docs/opportunities.md#actions). Several Opportunity
 // targets map to one kind; services/api `opportunities/targets/` owns each.
 export const actionTargetKindSchema = z.enum([
@@ -54,6 +80,7 @@ export const actionTargetKindSchema = z.enum([
   'query',
   'prompt',
   'planned_page',
+  'issue_family',
 ]);
 export type ActionTargetKind = z.infer<typeof actionTargetKindSchema>;
 
@@ -78,11 +105,17 @@ export const actionItemSchema = responseObject({
   families: z.array(z.string()),
   approach: z.string(),
   group: actionGroupSchema,
+  // Where the Actions page files it, as action sync persisted it.
+  goal: actionGoalSchema,
+  grouping: actionGroupingSchema,
   skill_id: z.string(),
   member_count: z.number().int(),
   // The findings a declaration would freeze: the current members, or the last
   // non-empty set once a recrawl resolved them all. Zero: nothing to declare.
   declarable_member_count: z.number().int(),
+  // An issue-family Action's affected pages (its cohort's count); null for
+  // every other target kind.
+  page_count: z.number().int().nullable().default(null),
   handoff: actionHandoffSchema,
   evidence_cleared_at: z.string().nullable(),
   created_at: z.string(),
@@ -118,6 +151,17 @@ export const measurementLegSchema = responseObject({
   source_id: uuid().nullable(),
 });
 
+// An issue-family check's reading of its cohort in one crawl: the pages still
+// failing, and how many pass, no longer apply or went unread. `uncovered`
+// counts the family's pages beyond the frozen cohort, which no crawl checks.
+export const issueFamilyPagesSchema = responseObject({
+  failing: z.array(responseObject({ site_url_id: uuid(), url: z.string() })),
+  passing: z.number().int(),
+  not_applicable: z.number().int(),
+  unread: z.number().int(),
+  uncovered: z.number().int(),
+});
+
 // One expected check's latest reading. Each check keeps the state its own
 // evidence last gave it, so a crawl and a Search Console window together can
 // settle a page Action that neither settles alone.
@@ -138,6 +182,9 @@ export const declarationCheckSchema = responseObject({
   subject: z.string().nullable(),
   // The tracked prompt a visibility check measures, whose history it links to.
   prompt_id: uuid().nullable().optional(),
+  // An issue-family check's per-page reading: the cohort pages still failing,
+  // and how many passed or the crawl did not read. Null for every other kind.
+  pages: issueFamilyPagesSchema.nullable().optional(),
 });
 
 // The user's declaration, frozen server-side: members, targets and checks.
@@ -174,6 +221,21 @@ export const actionDeclarationSchema = responseObject({
   created_at: z.string(),
 });
 
+/** One URL an Action touches. */
+export const actionUrlSchema = responseObject({ site_url_id: uuid(), url: z.string() });
+
+/**
+ * A page of an Action's URLs in URL order, `total` over all of them. An issue
+ * group of a site-level rule whose evidence names no page is `whole_site`,
+ * with no URLs.
+ */
+export const actionUrlsPageSchema = responseObject({
+  whole_site: z.boolean(),
+  total: z.number().int(),
+  items: z.array(actionUrlSchema),
+  next_cursor: z.string().nullable(),
+});
+
 export const actionDetailSchema = actionItemSchema.extend({
   // Per member opportunity id: the reading that would measure it once
   // declared, or null when no automatic check applies.
@@ -193,6 +255,67 @@ export const actionDetailSchema = actionItemSchema.extend({
   // The target is one of the latest crawl's content pages (CO15), so Work with
   // the agent opens it as a page document (phase 2, E3). Read-time only.
   editable_page: z.boolean().default(false),
+  // An issue-family Action's cohort without its pages, with when its crawl
+  // completed: the declared cohort once declared, else the latest refresh's.
+  // Null for every other target kind. Its URLs page through `urls`.
+  cohort: issueFamilyCohortSchema
+    .omit({ pages: true })
+    .extend({ crawl_completed_at: z.string().nullable() })
+    .nullable()
+    .default(null),
+  // The first page of the URLs the Action touches (`action_urls`).
+  urls: actionUrlsPageSchema.default({ whole_site: false, total: 0, items: [], next_cursor: null }),
+});
+
+// What the Actions tree groups by first; its second level is always the
+// persisted grouping.
+export const actionTreeGroupBySchema = z.enum([
+  'goal',
+  'what_to_do',
+  'impact',
+  'ownership',
+  'topic',
+]);
+export type ActionTreeGroupBy = z.infer<typeof actionTreeGroupBySchema>;
+export const actionOwnershipSchema = z.enum(['owned', 'earned']);
+
+/**
+ * The Actions page in one persisted read (plan v3). `status_counts` are
+ * project-wide in the four statuses; `goals` count each goal under the
+ * current filters, in fixed order, `blocking` when a critical SEO or AEO
+ * Action is New. Each group (by `group_by`: a goal, an approach, a priority
+ * band or `unscored`, `owned`/`earned`, or a topic, '' for none) holds its
+ * groupings, each with its count and first rows by impact; `next_cursor` is
+ * the list read's cursor for the next rows of exactly that grouping.
+ */
+export const actionTreeSchema = responseObject({
+  group_by: actionTreeGroupBySchema,
+  status_counts: z.record(z.string(), z.number().int()),
+  goals: z.array(
+    responseObject({ goal: actionGoalSchema, count: z.number().int(), blocking: z.boolean() }),
+  ),
+  groups: z.array(
+    responseObject({
+      key: z.string(),
+      count: z.number().int(),
+      groupings: z.array(
+        responseObject({
+          grouping: actionGroupingSchema,
+          count: z.number().int(),
+          items: z.array(actionItemSchema),
+          next_cursor: z.string().nullable(),
+        }),
+      ),
+    }),
+  ),
+});
+export type ActionTree = z.infer<typeof actionTreeSchema>;
+
+/** Every listed Action touching one URL, by impact. */
+export const urlActionsSchema = responseObject({
+  site_url_id: uuid(),
+  url: z.string(),
+  items: z.array(actionItemSchema),
 });
 
 export const actionsPageSchema = responseObject({

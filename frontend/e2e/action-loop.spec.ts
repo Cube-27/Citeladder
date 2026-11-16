@@ -71,6 +71,8 @@ const action = {
   families: ['sources'],
   approach: 'earned_placement',
   group: 'earned',
+  goal: 'mentions',
+  grouping: 'editorial',
   skill_id: 'earned_authority',
   member_count: 1,
   declarable_member_count: 1,

@@ -81,7 +81,7 @@ conversation about the evidence.
 
 Use **Ask agent** on an issue, on one of its pages, or on supported evidence screens. Ask for a small, reviewable correction tied to the affected page, or one fix for a shared template or component that fails on many pages. For form fields without an accessible name, the crawl also keeps one redacted HTML example of a failing field (tags and attribute names, with text and values removed), so the Agent can write an exact fix.
 
-Issues are tracked here, in **Issues**, from finding to fix. The [Actions](/agent/actions/) list shows them beside your other work, and each opens here; they never become separate Actions.
+Issues are tracked here, in **Issues**, from finding to fix. Each issue with something to fix (not a diagnostic reading) is also one Action in [Actions](/agent/actions/), covering every page it affects; this page works the same either way.
 
 For example: "Explain the confirmed issue on this page, distinguish it from unresolved checks, and prepare a fix brief for our developer."
 

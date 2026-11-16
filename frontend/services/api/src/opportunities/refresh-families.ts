@@ -8,6 +8,7 @@
 import { sql } from 'kysely';
 import {
   detectBrandAbsentHighValuePrompt,
+  detectIssueGroups,
   detectOwnedPageNotCited,
 } from '../analysis/opportunities/detectors.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
@@ -24,6 +25,7 @@ import { internalLinkHits, internalLinkRunId } from './internal-link-hits.ts';
 import { stampSourceMix, type SourceIdentity } from './refresh-compute.ts';
 import { confirmedDeclineHits, loadVisibilityEvidence } from './refresh-evidence.ts';
 import { changeHits, commerceHits, demandHits } from './refresh-hits.ts';
+import { loadSiteEvidence } from './refresh-site-evidence.ts';
 import { searchGapHits, searchGapSource, type SearchGapSource } from './search-gap-hits.ts';
 import {
   currentDemandSnapshot,
@@ -185,8 +187,8 @@ const commerce: Family = {
 };
 
 /**
- * The crawl: contextual links and page changes. Site Health defects stay with
- * Issues (owner, 2026-11-16) and never become findings here.
+ * The crawl: one finding per Issues group of a defect or advisory rule (IA1),
+ * contextual links and page changes.
  */
 const site: Family = {
   identity: async (db, scope, { crawl }) => ({
@@ -199,6 +201,7 @@ const site: Family = {
     if (crawl === null) return none();
     return {
       hits: [
+        ...detectIssueGroups(await loadSiteEvidence(db, crawl)),
         ...(await internalLinkHits(db, scope, identity.internal_link_run_id)),
         ...(await changeHits(db, scope.workspaceId, crawl)),
       ],

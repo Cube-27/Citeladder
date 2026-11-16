@@ -3,7 +3,10 @@ import { randomUUID } from 'node:crypto';
 import {
   ACTION_STATUS_ANY,
   actionDetailSchema,
+  actionGoalSchema,
+  actionGroupingSchema,
   actionGroupSchema,
+  actionOwnershipSchema,
   actionItemSchema,
   actionPriorityBandSchema,
   actionsPageSchema,
@@ -36,10 +39,13 @@ import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { actionGroup, priorityBand, readHandoff } from '../analysis/opportunities/actions.ts';
 import { record } from '../db/json.ts';
+import { actionUrlsPage } from './action-urls.ts';
+import { FALLBACK_GOAL, goalOf, groupingSql, ownershipSql, topicSql } from './action-groupings.ts';
 import {
   ActionTargetError,
   isAgentTargetKind,
   namedTarget,
+  storedCohort,
   targetDetail,
 } from './targets/registry.ts';
 
@@ -87,17 +93,32 @@ export async function attachOrCreateAction(
       priority_score: null,
       opportunity_snapshot_id: null,
       evidence_cleared_at: null,
+      ...agentGrouping(identity.kind),
     })
     .onConflict((oc) => oc.constraint('uq_actions_project_group').doNothing())
     .execute();
-  return db
+  const action = await db
     .selectFrom('actions')
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
     .where('project_id', '=', scope.projectId)
     .where('group_key', '=', identity.key)
     .executeTakeFirstOrThrow();
+  // A page Action's one URL, as action sync writes it for evidence rows.
+  if (action.target_kind === 'page' && action.target_url)
+    await sql`insert into action_urls (workspace_id, project_id, action_id, site_url_id)
+      select u.workspace_id, u.project_id, ${action.id}::uuid, u.id from site_urls u
+      where u.workspace_id = ${scope.workspaceId} and u.project_id = ${scope.projectId}
+        and u.normalized_url = ${action.target_url}
+      on conflict do nothing`.execute(db);
+  return action;
 }
+/** Where an Action no finding files sits on the Actions page (`AGENT_KIND_GROUPING`). */
+function agentGrouping(kind: string) {
+  const grouping = a.AGENT_KIND_GROUPING[kind] ?? a.ACTION_GROUPING_FALLBACK;
+  return { goal: goalOf(grouping), goal_grouping: grouping };
+}
+
 export type ActionRow = Selectable<Actions>;
 const jsonList = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const stringList = (value: unknown): string[] =>
@@ -118,9 +139,12 @@ export function actionItem(row: ActionRow) {
     families: stringList(row.families),
     approach: row.approach,
     group: actionGroup(row),
+    goal: actionGoalSchema.parse(row.goal ?? FALLBACK_GOAL),
+    grouping: actionGroupingSchema.parse(row.goal_grouping ?? a.ACTION_GROUPING_FALLBACK),
     skill_id: row.skill_id,
     member_count: jsonList(row.member_opportunity_ids).length,
     declarable_member_count: declarableIds(row).length,
+    page_count: storedCohort(row)?.page_count ?? null,
     handoff: readHandoff(record(row.diagnosis).handoff, row.target_label),
     evidence_cleared_at: row.evidence_cleared_at?.toISOString() ?? null,
     created_at: row.created_at.toISOString(),
@@ -128,17 +152,27 @@ export function actionItem(row: ActionRow) {
   };
 }
 
-/**
- * A row of a target kind Actions still have: retired kinds' leftover rows
- * (`issue_family`, owner 2026-11-16) are never read or acted on.
- */
-export const LIVE_TARGET_KIND = sql<SqlBool>`actions.target_kind in (${sql.join(a.ACTION_TARGET_KINDS)})`;
+/** The enabled configured Opportunity rules: a live finding of any other is a leftover. */
+export const CONFIGURED_RULES = Object.values(
+  policy.opportunity.opportunities.OPPORTUNITY_RULES_BY_ID,
+)
+  .filter((rule) => rule.enabled)
+  .map((rule) => rule.rule_id);
+
+const liveMember = (configured: boolean) => sql`exists (select 1 from opportunities o
+  where o.workspace_id = actions.workspace_id and o.action_id = actions.id
+    and o.superseded_at is null
+    and ${configured ? sql`` : sql`not`} (o.rule_id = any(${CONFIGURED_RULES}::text[])))`;
 
 /**
- * An Action the list shows: its evidence still stands, or the Agent made it,
- * on a live target kind. Search shows the same.
+ * Not an Action whose every live finding has an unconfigured rule (such as a
+ * per-page Site Health finding from before IA1): the next refresh retires
+ * those findings and clears the Action, and until then no list or count shows it.
  */
-export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT}) and ${LIVE_TARGET_KIND}`;
+export const NOT_LEFTOVER_ACTION = sql<SqlBool>`(not ${liveMember(false)} or ${liveMember(true)})`;
+
+/** An Action the list shows: its evidence still stands, or the Agent made it. Search shows the same. */
+export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT}) and ${NOT_LEFTOVER_ACTION}`;
 
 function listed(db: Database, scope: Scope) {
   return db
@@ -193,6 +227,10 @@ type ActionListFilters = {
   approach?: string | null;
   priority?: string | null;
   family?: string | null;
+  /** The Actions page's persisted grouping, and its tree's other group keys. */
+  grouping?: string | null;
+  ownership?: string | null;
+  topic?: string | null;
   limit: number;
   cursor: string | null;
 };
@@ -211,11 +249,14 @@ function known<T extends string>(
 
 type ActionFilterInput = Omit<ActionListFilters, 'limit' | 'cursor'>;
 
-function parseFilters(filters: ActionFilterInput) {
+export function parseFilters(filters: ActionFilterInput) {
   let status: ActionStatus | typeof ACTION_STATUS_ANY | null = ACTION_STATUS_ANY;
   if (filters.status !== ACTION_STATUS_ANY)
     status = filters.status === null ? null : validateStatus(filters.status);
   return {
+    grouping: known('grouping', filters.grouping, actionGroupingSchema.options),
+    ownership: known('ownership', filters.ownership, actionOwnershipSchema.options),
+    topic: filters.topic ?? null,
     status,
     q: filters.q?.trim() || null,
     target_kind: known('target kind', filters.target_kind, a.ACTION_TARGET_KINDS),
@@ -226,7 +267,7 @@ function parseFilters(filters: ActionFilterInput) {
   };
 }
 
-/** A priority band as a score range; an unscored Action is in none. */
+/** A priority band as a score range; the low band also holds unscored Actions. */
 function bandRange(band: ActionPriorityBand): { from: number | null; below: number | null } {
   const floors = a.ACTION_PRIORITY_BANDS;
   if (band === 'high') return { from: floors.high, below: null };
@@ -235,8 +276,15 @@ function bandRange(band: ActionPriorityBand): { from: number | null; below: numb
 }
 
 /** The listed Actions under every filter but the group: the group counts read under it too. */
-function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof parseFilters>) {
+export function filteredActions(
+  db: Database,
+  scope: Scope,
+  filters: ReturnType<typeof parseFilters>,
+) {
   let filtered = listed(db, scope);
+  if (filters.grouping) filtered = filtered.where(groupingSql, '=', filters.grouping);
+  if (filters.ownership) filtered = filtered.where(ownershipSql, '=', filters.ownership);
+  if (filters.topic !== null) filtered = filtered.where(topicSql, '=', filters.topic);
   if (filters.status !== ACTION_STATUS_ANY)
     filtered = filtered.where(
       'effective_status',
@@ -253,7 +301,14 @@ function filteredActions(db: Database, scope: Scope, filters: ReturnType<typeof 
   if (filters.priority) {
     const { from, below } = bandRange(filters.priority);
     if (from !== null) filtered = filtered.where('priority_score', '>=', from);
-    if (below !== null) filtered = filtered.where('priority_score', '<', below);
+    // The low band holds unscored Actions too, as the Actions tree files them.
+    if (below !== null)
+      filtered = filtered.where((eb) =>
+        eb.or([
+          eb('priority_score', '<', below),
+          ...(from === null ? [eb('priority_score', 'is', null)] : []),
+        ]),
+      );
   }
   return filtered;
 }
@@ -263,6 +318,18 @@ export function matchingActions(db: Database, scope: Scope, raw: ActionFilterInp
   const filters = parseFilters(raw);
   const filtered = filteredActions(db, scope, filters);
   return filters.group ? filtered.where(groupSql, '=', filters.group) : filtered;
+}
+
+/** The list read's cursor after `last` under `filters`, as the tree hands it to "Show more". */
+export function listCursor(
+  scope: Scope,
+  filters: ReturnType<typeof parseFilters>,
+  last: Pick<ActionRow, 'priority_score' | 'id'>,
+) {
+  return encodeKeysetCursor('actions', { project_id: scope.projectId, ...filters }, [
+    String(last.priority_score ?? -1),
+    last.id,
+  ]);
 }
 
 export async function listActions(db: Database, scope: Scope, raw: ActionListFilters) {
@@ -298,10 +365,7 @@ export async function listActions(db: Database, scope: Scope, raw: ActionListFil
   const last = page.at(-1);
   return {
     items: page.map(actionItem),
-    next_cursor:
-      rows.length > raw.limit && last
-        ? encodeKeysetCursor('actions', fingerprint, [String(last.priority_score ?? -1), last.id])
-        : null,
+    next_cursor: rows.length > raw.limit && last ? listCursor(scope, filters, last) : null,
     status_counts: Object.fromEntries(
       actionStatusSchema.options.map((status) => [
         status,
@@ -331,8 +395,7 @@ export async function requireAction(
     .selectFrom('actions')
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
-    .where('id', '=', actionId)
-    .where(LIVE_TARGET_KIND);
+    .where('id', '=', actionId);
   if (scope.projectId !== null) query = query.where('project_id', '=', scope.projectId);
   if (lock) query = query.forUpdate();
   const row = await query.executeTakeFirst();
@@ -413,7 +476,12 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     memberRows(db, workspaceId, actionId),
   ]);
   const members = inMemberOrder(stringList(action.member_opportunity_ids), rows);
-  const { editable_page } = await targetDetail(db, action);
+  const [{ editable_page, cohort: shown }, urls] = await Promise.all([
+    targetDetail(db, action, stringList(declaration?.member_opportunity_ids)),
+    readActionUrls(db, action, null),
+  ]);
+  // The cohort's pages page through `urls`; the detail carries its summary.
+  const cohort = shown ? actionDetailSchema.shape.cohort.parse(shown) : null;
   return {
     ...actionItem(action),
     editable_page,
@@ -432,5 +500,26 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
       members.map((row) => [row.id, measuredBy.parse(memberMeasurementLeg(row))]),
     ),
     declaration: declaration ? await declarationView(db, declaration) : null,
+    cohort,
+    urls,
   };
+}
+
+/** A page of the URLs `action` touches; an issue group naming none is the whole site. */
+function readActionUrls(db: Database, action: ActionRow, cursor: string | null) {
+  return actionUrlsPage(db, action, {
+    cursor,
+    wholeSite: storedCohort(action)?.whole_site ?? false,
+  });
+}
+
+/** `GET /actions/{id}/urls`: the next page of an Action's URLs. */
+export async function getActionUrls(
+  db: Database,
+  workspaceId: string,
+  actionId: string,
+  cursor: string | null,
+) {
+  const action = await requireAction(db, { workspaceId, projectId: null }, actionId);
+  return readActionUrls(db, action, cursor);
 }

@@ -163,7 +163,7 @@ describe('opportunity_refresh', () => {
       'retired_format',
     );
   });
-  it('claims the one native-enqueued task, persists exact provenance and leaves Site Health defects to Issues', async () => {
+  it('claims the one native-enqueued task and persists exact provenance, one finding per Issues group', async () => {
     const tasks = await db
       .selectFrom('analytics_tasks')
       .select(['status', 'attempt_count', 'error_code'])
@@ -180,19 +180,26 @@ describe('opportunity_refresh', () => {
     expect(snapshot).toMatchObject({
       audit_id: own.audit_id,
       site_crawl_id: own.crawl_id,
-      total_count: 3,
+      total_count: 6,
       source_analysis_ids: [own.analysis0_id],
-      // The crawl's defects stay with Issues (owner, 2026-11-16): no finding cites one.
-      source_issue_ids: [],
       analyzer_version: o.ANALYZER_VERSION,
       formula_version: o.FORMULA_VERSION,
     });
+    // Each crawl defect's Issues group is one finding citing its issues (IA1).
+    expect(snapshot.source_issue_ids).toEqual(
+      expect.arrayContaining([own.issue_structured_id, own.issue_content_id]),
+    );
+    expect(snapshot.source_issue_ids).toHaveLength(3);
 
     const rows = await live(own);
     expect(rows.map((row) => [row.rule_id, Number(row.priority_score)])).toEqual([
       ['brand_absent_high_value_prompt', 120],
       ['owned_page_not_cited', 80],
       ['content_gap_improve_page', 50],
+      // A defect scores its severity × 10, just above an advisory of that severity.
+      ['site_issue_family', 30.3],
+      ['site_issue_family', 20.2],
+      ['site_issue_family', 10.1],
     ]);
     const absent = byRule(rows, 'brand_absent_high_value_prompt');
     expect(absent).toMatchObject({
@@ -207,18 +214,22 @@ describe('opportunity_refresh', () => {
     expect(gap).toMatchObject({ target_url: URL_B, source_issue_ids: [] });
     expect(rows.every((row) => row.action_id !== null)).toBe(true);
     // Page /b's Action holds its content gap and nothing from its Site Health
-    // defect; /a and /c, with defects only, have no Action.
+    // defect, which is its Issues group's own Action, like /a's and /c's.
     const actions = await db
       .selectFrom('actions')
-      .select(['id', 'target_kind', 'target_url', 'member_opportunity_ids'])
+      .select(['id', 'target_kind', 'target_label', 'member_opportunity_ids'])
       .where('workspace_id', '=', own.workspace_id)
       .orderBy('target_kind')
+      .orderBy('target_label')
       .execute();
-    expect(actions.map((row) => [row.target_kind, row.target_url])).toEqual([
+    expect(actions.map((row) => [row.target_kind, row.target_label])).toEqual([
+      ['issue_family', 'Missing structured data'],
+      ['issue_family', 'No answer-first content structure'],
+      ['issue_family', 'technical.title_missing'],
       ['page', URL_B],
-      ['prompt', null],
+      ['prompt', 'best crm for small teams'],
     ]);
-    expect(actions[0]!.member_opportunity_ids).toEqual([gap.id]);
+    expect(actions[3]!.member_opportunity_ids).toEqual([gap.id]);
   });
 
   it('replays a claimed refresh as a no-op when the snapshot is current', async () => {
@@ -372,6 +383,9 @@ describe('opportunity_refresh', () => {
       ['cited_alternatives_without_uploaded_presence', `category:${categoryId}`],
       ['content_gap_improve_page', `url:${URL_B}`],
       ['owned_page_not_cited', expect.any(String)],
+      ['site_issue_family', 'issue-family:aeo.answer_first'],
+      ['site_issue_family', 'issue-family:aeo.structured_data_present'],
+      ['site_issue_family', 'issue-family:technical.title_missing'],
     ]);
     const snapshot = await db
       .selectFrom('opportunity_snapshots')
@@ -499,9 +513,15 @@ describe('opportunity_refresh', () => {
 
     const snapshot = await recomputeOpportunities(db, scope(s));
 
-    expect(snapshot.total_count).toBe(1);
+    // The crawl's three Issues groups stand; the cited prompt findings vanish.
+    expect(snapshot.total_count).toBe(4);
     const second = await live(s);
-    expect(second.map((row) => row.rule_id)).toEqual(['content_gap_improve_page']);
+    expect(second.map((row) => row.rule_id)).toEqual([
+      'content_gap_improve_page',
+      'site_issue_family',
+      'site_issue_family',
+      'site_issue_family',
+    ]);
     const closed = new Map(
       (
         await db
@@ -618,12 +638,15 @@ describe('Opportunity routes', () => {
       return { status, body: (await response.json()) as Page & { error: { code: string } } };
     };
 
-    const first = await read('limit=2');
-    const rest = await read(`limit=2&cursor=${first.body.next_cursor}`);
+    const first = await read('limit=3');
+    const rest = await read(`limit=3&cursor=${first.body.next_cursor}`);
     expect([...first.body.items, ...rest.body.items].map((item) => item.rule_id)).toEqual([
       'brand_absent_high_value_prompt',
       'owned_page_not_cited',
       'content_gap_improve_page',
+      'site_issue_family',
+      'site_issue_family',
+      'site_issue_family',
     ]);
     expect(rest.body.next_cursor).toBeNull();
     expect(

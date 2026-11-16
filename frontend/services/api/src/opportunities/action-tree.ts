@@ -1,0 +1,211 @@
+/**
+ * The Actions page as persisted reads (plan v3): the tree (status counts, goal
+ * strip, and per group and grouping its count and first rows by impact) and
+ * every Action touching one URL. Each is a fixed number of SQL statements over
+ * the Actions' persisted goal, grouping and `action_urls`; nothing is derived
+ * from evidence, and no read triggers work.
+ */
+import {
+  actionGoalSchema,
+  actionGroupingSchema,
+  actionStatusSchema,
+  type ActionGrouping,
+  type ActionTreeGroupBy,
+} from '@citeladder/contracts/actions';
+import { sql } from 'kysely';
+
+import { policy } from '../config.ts';
+import type { Database } from '../db/database.ts';
+import { notFound } from '../errors.ts';
+import { compareText } from '../text-order.ts';
+import { goalSql, groupingSql, groupKeySql, GROUPING_ORDER } from './action-groupings.ts';
+import { statusView } from './action-status.ts';
+import {
+  actionItem,
+  filteredActions,
+  LISTED_ACTION,
+  listCursor,
+  parseFilters,
+  type ActionRow,
+} from './actions.ts';
+import type { Scope } from './sources.ts';
+
+const a = policy.opportunity.actions;
+const PAGE = a.ACTION_TREE_PAGE_SIZE;
+
+type TreeFilters = Omit<Parameters<typeof parseFilters>[0], 'grouping'> & {
+  group_by: ActionTreeGroupBy;
+};
+
+/** The list filter a group of `groupBy` adds to its groupings' "Show more" read. */
+function groupFilter(groupBy: ActionTreeGroupBy, key: string) {
+  switch (groupBy) {
+    case 'goal':
+      return {};
+    case 'what_to_do':
+      return { approach: key };
+    case 'impact':
+      return { priority: key };
+    case 'ownership':
+      return { ownership: key };
+    case 'topic':
+      return { topic: key };
+    default: {
+      const unknown: never = groupBy;
+      return unknown;
+    }
+  }
+}
+
+/** Groups in page order: goals and bands in their fixed order, anything else by size then name. */
+function groupRank(groupBy: ActionTreeGroupBy): (key: string) => number {
+  const fixed: Partial<Record<ActionTreeGroupBy, readonly string[]>> = {
+    goal: actionGoalSchema.options,
+    impact: ['high', 'medium', 'low'],
+    ownership: ['owned', 'earned'],
+  };
+  const order = fixed[groupBy];
+  return (key) => (order ? order.indexOf(key) : 0);
+}
+
+export async function actionTree(db: Database, scope: Scope, raw: TreeFilters) {
+  const { group_by: groupBy, ...rest } = raw;
+  const filters = parseFilters({ ...rest, grouping: null });
+  const filtered = filteredActions(db, scope, filters);
+  const key = groupKeySql(groupBy);
+  const priority = sql<number>`coalesce(actions.priority_score, -1)`;
+  const [statuses, counts, blocking, rows] = await Promise.all([
+    db
+      .selectFrom('actions')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where(LISTED_ACTION)
+      .select(['effective_status as status', sql<number>`count(*)::int`.as('count')])
+      .groupBy('effective_status')
+      .execute(),
+    filtered
+      .select([
+        key.as('key'),
+        goalSql.as('goal'),
+        groupingSql.as('grouping'),
+        sql<number>`count(*)::int`.as('count'),
+      ])
+      // By position: each expression binds its values afresh in each clause.
+      .groupBy([sql`1`, sql`2`, sql`3`])
+      .execute(),
+    db
+      .selectFrom('actions')
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where(LISTED_ACTION)
+      .where('effective_status', '=', a.ACTION_STATUS_OPEN)
+      .where(groupingSql, 'in', [...a.ACTION_BLOCKING_GROUPINGS])
+      .where('priority_score', '>=', a.ACTION_BLOCKING_MIN_PRIORITY)
+      .select('id')
+      .limit(1)
+      .executeTakeFirst(),
+    db
+      .selectFrom(
+        filtered
+          .selectAll()
+          .select([
+            key.as('tree_key'),
+            groupingSql.as('tree_grouping'),
+            sql<number>`row_number() over (partition by ${key}, ${groupingSql}
+              order by ${priority} desc, actions.id)`.as('tree_rank'),
+          ])
+          .as('ranked'),
+      )
+      .selectAll()
+      .where('tree_rank', '<=', PAGE)
+      .orderBy('tree_rank')
+      .execute(),
+  ]);
+  const byGrouping = new Map<string, (ActionRow & { tree_rank: number })[]>();
+  for (const row of rows) {
+    const id = JSON.stringify([row.tree_key, row.tree_grouping]);
+    byGrouping.set(id, [...(byGrouping.get(id) ?? []), row]);
+  }
+  const groups = new Map<string, { key: string; count: number; groupings: typeof counts }>();
+  for (const row of counts) {
+    const group = groups.get(row.key) ?? { key: row.key, count: 0, groupings: [] };
+    group.count += row.count;
+    group.groupings.push(row);
+    groups.set(row.key, group);
+  }
+  const rank = groupRank(groupBy);
+  const position = (grouping: string) => GROUPING_ORDER.indexOf(grouping as ActionGrouping);
+  return {
+    group_by: groupBy,
+    status_counts: Object.fromEntries(
+      actionStatusSchema.options.map((status) => [
+        status,
+        statuses
+          .filter((row) => statusView(row.status).status === status)
+          .reduce((sum, row) => sum + row.count, 0),
+      ]),
+    ),
+    goals: actionGoalSchema.options.map((goal) => ({
+      goal,
+      count: counts.filter((row) => row.goal === goal).reduce((sum, row) => sum + row.count, 0),
+      blocking: goal === 'read_site' && blocking !== undefined,
+    })),
+    groups: [...groups.values()]
+      .sort(
+        (left, right) =>
+          rank(left.key) - rank(right.key) ||
+          right.count - left.count ||
+          compareText(left.key, right.key),
+      )
+      .map((group) => ({
+        key: group.key,
+        count: group.count,
+        groupings: group.groupings
+          .sort((left, right) => position(left.grouping) - position(right.grouping))
+          .map((row) => {
+            const items = byGrouping.get(JSON.stringify([group.key, row.grouping])) ?? [];
+            const last = items.at(-1);
+            const next = parseFilters({
+              ...rest,
+              ...groupFilter(groupBy, group.key),
+              grouping: row.grouping,
+            });
+            return {
+              grouping: actionGroupingSchema.parse(row.grouping),
+              count: row.count,
+              items: items.map(actionItem),
+              next_cursor: row.count > PAGE && last ? listCursor(scope, next, last) : null,
+            };
+          }),
+      })),
+  };
+}
+
+/** Every listed Action touching one of the project's URLs, by impact. */
+export async function urlActions(db: Database, scope: Scope, siteUrlId: string) {
+  const url = await db
+    .selectFrom('site_urls')
+    .select(['id', 'normalized_url'])
+    .where('workspace_id', '=', scope.workspaceId)
+    .where('project_id', '=', scope.projectId)
+    .where('id', '=', siteUrlId)
+    .executeTakeFirst();
+  if (!url) throw notFound('URL');
+  const rows = await db
+    .selectFrom('actions')
+    .selectAll('actions')
+    .innerJoin('action_urls', (join) =>
+      join
+        .onRef('action_urls.workspace_id', '=', 'actions.workspace_id')
+        .onRef('action_urls.action_id', '=', 'actions.id'),
+    )
+    .where('action_urls.workspace_id', '=', scope.workspaceId)
+    .where('action_urls.project_id', '=', scope.projectId)
+    .where('action_urls.site_url_id', '=', siteUrlId)
+    .where('actions.project_id', '=', scope.projectId)
+    .where(LISTED_ACTION)
+    .orderBy(sql`coalesce(actions.priority_score, -1)`, 'desc')
+    .orderBy('actions.id')
+    .execute();
+  return { site_url_id: url.id, url: url.normalized_url, items: rows.map(actionItem) };
+}

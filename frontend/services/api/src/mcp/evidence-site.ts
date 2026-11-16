@@ -255,7 +255,7 @@ export async function siteLinks(
  * the model passes through it: a query or fragment can carry a token, session
  * or email. Pages that differ only by query stay apart by `site_url_id`.
  */
-function withoutQuery(url: string) {
+export function withoutQuery(url: string) {
   const end = url.search(/[?#]/u);
   return end < 0 ? url : url.slice(0, end);
 }
@@ -363,11 +363,11 @@ function urlFilter(value: string | null | undefined) {
 }
 
 /**
- * The rule's one reference snippet in the crawl's persisted catalog
+ * The issue family's one reference snippet in the crawl's persisted catalog
  * (`site-health/issue-catalog.ts`): redacted markup of the failing element and
  * its label context on the first affected page, or null when none was kept.
  */
-async function familySnippet(
+export async function familySnippet(
   { db, scope }: Pick<ProjectRead, 'db' | 'scope'>,
   crawlId: string,
   ruleId: string,

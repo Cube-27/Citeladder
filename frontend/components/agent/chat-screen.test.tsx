@@ -430,6 +430,8 @@ describe('ChatScreen', () => {
               families: [],
               approach: 'fix_technical',
               group: 'fix_site',
+              goal: 'read_site',
+              grouping: 'seo',
               skill_id: 'technical_health',
               member_count: 1,
               declarable_member_count: 1,

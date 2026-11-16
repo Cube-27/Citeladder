@@ -408,8 +408,9 @@ snippet per issue family per crawl: the first affected page in URL order (then
 issue id) whose facts carry one, with its page URL and exact issue and artifact
 IDs. Only `web.accessibility_form_names` captures one today. No UI read serves
 it; the Agent's `read_site_pages` returns it as `reference_snippet` when given
-that rule. Issues own every defect end to end; no defect becomes an Action
-([IA1](decisions.md#actions-read-issues-in-place)).
+that rule, and an issue group's Action context carries it. Each defect and
+advisory Issues group is also one Action; the Issues page is unchanged
+([IA1](decisions.md#actions-group-issues)).
 
 Facts distinguish an available extraction from parse failure, unsupported
 media, client rendering and truncation. Declared canonicals are observations,

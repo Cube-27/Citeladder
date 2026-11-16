@@ -62,6 +62,7 @@ export const pageTarget: AgentNamedTargetModule<'page'> = {
         { workspaceId: action.workspace_id, projectId: action.project_id },
         action.target_url,
       ));
-    return { editable_page: editable };
+    return { editable_page: editable, cohort: null };
   },
+  agentContext: async () => ({}),
 };

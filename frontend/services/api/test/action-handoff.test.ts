@@ -38,6 +38,7 @@ function member(
     source_issue_ids: [],
     source_metric_ids: [],
     facts: extra.facts ?? NO_HANDOFF_FACTS,
+    grouping: 'improve_pages',
   };
 }
 

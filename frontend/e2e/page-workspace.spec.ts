@@ -38,6 +38,8 @@ const action = {
   families: ['search_console'],
   approach: 'improve_page',
   group: 'own_pages',
+  goal: 'own_pages',
+  grouping: 'improve_pages',
   skill_id: 'content_refresh',
   member_count: 0,
   declarable_member_count: 0,
