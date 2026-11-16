@@ -16,7 +16,7 @@ export type RadioOption<T extends string> = {
  * target is 24×24 (an invisible inset), never under the minimum.
  */
 const RADIO =
-  'focus-ring bg-surface border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface relative size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset before:absolute before:-inset-1 before:content-[""] data-[state=checked]:ring-4 disabled:cursor-not-allowed';
+  'focus-ring bg-surface border-control-line data-[state=checked]:bg-ink data-[state=checked]:border-ink data-[state=checked]:ring-surface relative size-4 shrink-0 rounded-full border transition-[background-color,border-color,box-shadow] ring-inset before:absolute before:top-1/2 before:left-1/2 before:size-[var(--target-min)] before:-translate-1/2 before:content-[""] data-[state=checked]:ring-4 disabled:cursor-not-allowed';
 
 /**
  * RadioGroup — one choice from two to five options. `list` (default) stacks
