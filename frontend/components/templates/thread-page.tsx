@@ -73,7 +73,7 @@ export function ThreadPage({
     children: ReactNode;
   }>) {
   return (
-    <PageFrame {...slots}>
+    <PageFrame {...slots} fitted>
       <div className="flex h-[calc(100dvh-var(--route-chrome-height))] min-h-0 flex-col gap-[var(--workspace-gap)]">
         {/* The scrollbar's track is reserved on both edges, so the column
             centred in the region shares its centre with the composer. */}

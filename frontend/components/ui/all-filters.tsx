@@ -53,6 +53,8 @@ type FilterBase = Readonly<{
    * leaves it off: it always prints, since it is what the data is filtered by.
    */
   defaultIsEvery?: boolean;
+  /** Offered but not applicable to this view: drawn disabled, so the row keeps its place. */
+  disabled?: boolean;
 }>;
 
 /**
@@ -67,6 +69,8 @@ export type FilterDefinition = FilterBase &
         value: string;
         groups: readonly FilterOptionGroup[];
         onChange: (value: string) => void;
+        /** Every value the trigger can print: the options', less an every-default it never prints. */
+        printable: readonly string[];
         /** A search box above the options; on by default past `SEARCH_FROM` options. */
         searchable?: boolean;
       }>
@@ -90,6 +94,7 @@ export function choiceFilter<T extends string>({
   searchable,
   valueLabel,
   defaultIsEvery = false,
+  disabled,
 }: Readonly<{
   id: string;
   label: string;
@@ -103,8 +108,10 @@ export function choiceFilter<T extends string>({
   searchable?: boolean;
   /** Overrides the selected option's label (a value the list no longer carries). */
   valueLabel?: string;
+  disabled?: boolean;
 }>): FilterDefinition {
   const options = groups.flatMap((group) => group.options);
+  const printed = options.filter((option) => !(defaultIsEvery && option.value === defaultValue));
   return {
     kind: 'choice',
     id,
@@ -113,6 +120,8 @@ export function choiceFilter<T extends string>({
     valueLabel: valueLabel ?? options.find((option) => option.value === value)?.label ?? label,
     isDefault: value === defaultValue,
     defaultIsEvery,
+    disabled,
+    printable: [...printed.map((option) => option.label), ...(valueLabel ? [valueLabel] : [])],
     groups,
     searchable,
     onChange: (raw) => {
@@ -293,7 +302,9 @@ export function AllFilters({
         ) : (
           filters.map((filter) => (
             <MenuSub key={filter.id}>
-              <MenuSubTrigger value={filter.valueLabel}>{filter.label}</MenuSubTrigger>
+              <MenuSubTrigger value={filter.valueLabel} disabled={filter.disabled}>
+                {filter.label}
+              </MenuSubTrigger>
               {filter.kind === 'custom' ? (
                 <MenuSubContent onFocus={focusFieldOnEntry}>{filter.content}</MenuSubContent>
               ) : (
@@ -339,6 +350,7 @@ function DrillInFilters({ filters }: Readonly<{ filters: readonly FilterDefiniti
             data-filter-id={filter.id}
             aria-label={`${filter.label}: ${filter.valueLabel}`}
             value={filter.valueLabel}
+            disabled={filter.disabled}
             onSelect={(event) => {
               event.preventDefault();
               setOpenId(filter.id);

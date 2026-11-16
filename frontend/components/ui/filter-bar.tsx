@@ -166,11 +166,8 @@ function FilterMenu({
           value={filter.valueLabel}
           labelOnly={filter.isDefault && filter.defaultIsEvery === true}
           active={!filter.isDefault}
-          sizeTo={
-            filter.kind === 'choice'
-              ? filter.groups.flatMap((group) => group.options.map((option) => option.label))
-              : [filter.valueLabel]
-          }
+          disabled={filter.disabled}
+          sizeTo={filter.kind === 'choice' ? filter.printable : [filter.valueLabel]}
         />
       </MenuTrigger>
       <MenuContent align={align} onFocus={focusFieldOnEntry}>
@@ -191,7 +188,8 @@ function FilterMenu({
  *     muted prefix ("Status: Open"); `hideLabel` keeps it for assistive tech
  *     only, so the name still contains the visible value.
  *   - `labelOnly`: a filter at its every value ("All statuses") prints only
- *     its label ("Status ▾"), as wide as the label; the value is spoken only.
+ *     its label ("Status ▾"), held as wide as its widest "Status: value"
+ *     when `sizeTo` is set, so choosing one moves nothing; the value is spoken only.
  *     A real default (a period, a market, an engine) never sets it.
  *   - `active` marks a choice moved off its default (`data-active`); the
  *     value says how.
@@ -250,7 +248,7 @@ export function FilterTrigger({
           {fit ? <SizedValue value={value} sizeTo={sizeTo} /> : <TriggerValue value={value} />}
         </span>
       ) : (
-        <span className="truncate">{label}</span>
+        <HeldLabel label={label} sizeTo={fit && labelOnly ? sizeTo : undefined} />
       )}
       <ChevronDown className="text-ink-2 ms-auto size-4 shrink-0" aria-hidden />
     </button>
@@ -283,20 +281,42 @@ function TriggerValue({ value, className }: Readonly<{ value: string; className?
 function SizedValue({ value, sizeTo }: Readonly<{ value: string; sizeTo: readonly string[] }>) {
   return (
     <span className="inline-grid max-w-40 min-w-0 align-top">
-      {/* Only the longest labels can set the width; a long option list
-          (every tracked prompt) must not become one node per option. */}
-      {[...new Set(sizeTo)]
-        .sort((a, b) => b.length - a.length)
-        .slice(0, 6)
-        .map((size) => (
-          <span
-            key={size}
-            aria-hidden
-            data-size={size}
-            className="invisible col-start-1 row-start-1 min-w-0 overflow-hidden after:content-[attr(data-size)]"
-          />
-        ))}
+      <ValueSizers sizeTo={sizeTo} />
       <TriggerValue value={value} className="col-start-1 row-start-1 truncate" />
+    </span>
+  );
+}
+
+/** Only the longest labels can set the width; a long option list (every tracked prompt) must not become one node per option. */
+function ValueSizers({ sizeTo }: Readonly<{ sizeTo: readonly string[] }>) {
+  return [...new Set(sizeTo)]
+    .sort((a, b) => b.length - a.length)
+    .slice(0, 6)
+    .map((size) => (
+      <span
+        key={size}
+        aria-hidden
+        data-size={size}
+        className="invisible col-start-1 row-start-1 min-w-0 overflow-hidden after:content-[attr(data-size)]"
+      />
+    ));
+}
+
+/**
+ * The label alone, held as wide as "Label: value" at its widest value, so
+ * choosing a value (or clearing it) never resizes the trigger.
+ */
+function HeldLabel({ label, sizeTo }: Readonly<{ label: string; sizeTo?: readonly string[] }>) {
+  if (!sizeTo) return <span className="truncate">{label}</span>;
+  return (
+    <span className="grid min-w-0">
+      <span className="col-start-1 row-start-1 truncate">{label}</span>
+      <span aria-hidden className="invisible col-start-1 row-start-1 flex min-w-0">
+        <span data-size={`${label}: `} className="whitespace-pre after:content-[attr(data-size)]" />
+        <span className="inline-grid max-w-40 min-w-0">
+          <ValueSizers sizeTo={sizeTo} />
+        </span>
+      </span>
     </span>
   );
 }

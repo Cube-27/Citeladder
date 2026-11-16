@@ -56,7 +56,8 @@ export type DataTablePager = Omit<ComponentProps<typeof Pager>, 'frame' | 'class
  *            blank rows, so the pager never moves between pages.
  *   states — loading keeps the head and draws a page of block rows; a filter
  *            that empties a table keeps the head; an empty, not-measured or
- *            failed read replaces the whole table, head included. A page
+ *            failed read replaces the whole table, head included (inside
+ *            its footprint under `reserveRows`). A page
  *            that knows from its data that nothing was measured passes the
  *            not-measured state; the table never guesses it from its cells.
  *   zone   — a table with a `date` column states its time zone once, in
@@ -110,8 +111,9 @@ export function DataTable({
   label?: string;
   /**
    * One of several views of the same table (its tabs or filters): keep the
-   * pager and a full page of rows even when this view fits on one page, so
-   * switching views never moves what follows.
+   * pager and a full page of rows even when this view fits on one page, and
+   * hold that footprint under an empty or failed view, so switching views
+   * never moves what follows.
    */
   reserveRows?: boolean;
 }>) {
@@ -143,36 +145,68 @@ export function DataTable({
         actions={actions}
         steppers={footed ? null : steppers}
       />
-      {replacing ? (
-        <ReplacingState state={replacing} level={title ? nextLevel(level) : level} />
-      ) : null}
-      <DataTableFrame
-        hidden={replacing !== null}
-        scroll={scroll}
-        minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
-        layout={columnLayout(columns, Boolean(selection))}
-        naming={parts.naming}
-        pinned={parts.pinned}
+      <HeldFootprint
+        state={
+          replacing ? (
+            <ReplacingState state={replacing} level={title ? nextLevel(level) : level} />
+          ) : null
+        }
+        held={reserveRows}
       >
-        <DataTableColumns columns={columns} selection={selection} />
-        <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
-          <DataTableBody
-            colSpan={parts.colSpan}
-            state={replacing ? undefined : state}
-            pageSize={paging.pageSize}
-            rowCount={rowCount}
-            rowLines={rowLines}
-          >
-            {state === undefined ? children : null}
-          </DataTableBody>
-        </TableTitleLinesContext>
-      </DataTableFrame>
-      <DataTableFoot
-        footer={note}
-        pager={replacing ? undefined : paging.pager}
-        steppers={footed ? steppers : null}
-      />
+        <DataTableFrame
+          hidden={replacing !== null && !reserveRows}
+          scroll={scroll}
+          minWidth={tableMinWidth({ columns, selection: Boolean(selection), minWidth })}
+          layout={columnLayout(columns, Boolean(selection))}
+          naming={parts.naming}
+          pinned={parts.pinned}
+        >
+          <DataTableColumns columns={columns} selection={selection} />
+          <TableTitleLinesContext value={rowLines === 3 ? 2 : 1}>
+            <DataTableBody
+              colSpan={parts.colSpan}
+              state={replacing ? undefined : state}
+              pageSize={paging.pageSize}
+              rowCount={rowCount}
+              rowLines={rowLines}
+            >
+              {state === undefined ? children : null}
+            </DataTableBody>
+          </TableTitleLinesContext>
+        </DataTableFrame>
+        <DataTableFoot
+          footer={note}
+          pager={replacing && !reserveRows ? undefined : paging.pager}
+          steppers={footed ? steppers : null}
+        />
+      </HeldFootprint>
     </section>
+  );
+}
+
+/**
+ * A state that takes the table's place. In a table that reserves its rows it
+ * lies over the unseen frame and footer, so it keeps their footprint.
+ */
+function HeldFootprint({
+  state,
+  held,
+  children,
+}: Readonly<{ state: ReactNode; held: boolean; children: ReactNode }>) {
+  if (!state || !held)
+    return (
+      <>
+        {state}
+        {children}
+      </>
+    );
+  return (
+    <div className="grid min-w-0">
+      <div className="col-start-1 row-start-1 min-w-0">{state}</div>
+      <div inert className="col-start-1 row-start-1 min-w-0" style={{ visibility: 'hidden' }}>
+        {children}
+      </div>
+    </div>
   );
 }
 

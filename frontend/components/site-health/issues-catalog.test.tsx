@@ -651,7 +651,8 @@ describe('IssuesCatalog', () => {
       ),
     ).toBeInTheDocument();
     expect(await findFilter('Show', 'Advisories')).toBeVisible();
-    expect(screen.queryByRole('button', { name: /^Severity:/ })).toBeNull();
+    // Advisories carry no severity: the filter stays in its place, disabled.
+    expect(screen.getByRole('button', { name: 'Severity: All severities' })).toBeDisabled();
     expect(seen).toContain('advisory');
   });
 
