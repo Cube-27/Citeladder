@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
 import { Icon } from '@/components/ui/icon';
 import { ProjectLink } from '@/components/ui/project-link';
-import { TableCell, TableRow } from '@/components/ui/table';
+import { TableCell, TableRow, WIDE_ONLY_CELL } from '@/components/ui/table';
 import { ACTION_GROUP_LABEL } from '@/lib/agent/vocabulary';
 import { ACTIONS_GROUP_PREVIEW_ROWS } from '@/lib/config/agent';
 import {
@@ -85,7 +85,7 @@ export function ActionsScreen() {
 // by the work and its target (`actionTitle`) over its sources.
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'target', label: 'Action', kind: 'identity' },
-  { key: 'priority', label: 'Priority', kind: 'status', order: 'descending' },
+  { key: 'priority', label: 'Priority', kind: 'status', order: 'descending', wideOnly: true },
 ];
 
 type ListProps = Readonly<{
@@ -308,7 +308,7 @@ function ActionRow({
   return (
     <TableRow onClick={open} className="cursor-pointer">
       <ActionTargetCell action={action} status={status} />
-      <TableCell>
+      <TableCell className={WIDE_ONLY_CELL}>
         <ActionPriorityBadge band={action.priority_band} />
       </TableCell>
     </TableRow>
