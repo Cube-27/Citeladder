@@ -98,8 +98,7 @@ Action. An Action's status is derived from, never written by, the Agent.
 Before the first model call each run freezes a
 [context manifest](../frontend/services/api/src/agent/context.ts): reviewed business
 context, the target page and a bounded related-page set, the attached Action's
-diagnosis (for an [issue-family Action](opportunities.md#issue-families) also
-its rule, page count, first cohort pages and reference snippet), the diagnoses
+diagnosis, the diagnoses
 of up to five @-mentioned Actions, any Opportunity,
 Site Health, Demand or Keyword Research evidence the request named, an exact
 upstream output revision, and the project's versioned Agent instructions. The
@@ -568,8 +567,7 @@ labelled as data, not instructions. New chat centres the composer with
 An Action's page also hands work to a developer outside CiteLadder (BL4).
 **Prepare developer ticket** (in the
 [handoff codec](../frontend/lib/agent/handoff.ts)) writes the Action as
-copyable Markdown from its persisted read: the issue, the affected page or the
-issue family (its page count, crawl date and the first 50 cohort pages), the
+copyable Markdown from its persisted read: the issue, the affected page, the
 dated evidence, the minimal patch (the findings' remediation and what to
 avoid) and how it will be verified (each finding's measuring reading, or a
 declared Action's deployment and check states). Nothing is sent anywhere. The

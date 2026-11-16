@@ -28,7 +28,7 @@ export type Scored = [DetectorHit, number];
 type Json = Record<string, unknown>;
 
 /** The crawl fields coverage reads. */
-export type CoverageCrawl = {
+type CoverageCrawl = {
   status: string;
   score_summary: unknown;
   analyzed_url_count: number | null;
@@ -39,7 +39,7 @@ export type CoverageCrawl = {
 const integer = (value: unknown): number => Math.trunc(Number(value) || 0);
 
 /** Exactly how much of a terminal crawl feeds detection. */
-export function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
+function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
   if (crawl === null) return [{}, []];
   const summary = record(crawl.score_summary);
   const selected = integer(summary.selected_count);
@@ -66,12 +66,6 @@ export function siteCoverage(crawl: CoverageCrawl | null): [Json, string[]] {
 const mergedIds = (left: string[], right: string[]) =>
   [...new Set([...left, ...right])].sort(compareText);
 
-/** The hit's own severity when it carries a known one, else its rule's. */
-function hitSeverity(hit: DetectorHit): string {
-  const own = hit.finding?.severity;
-  return own && o.OPPORTUNITY_SEVERITIES.includes(own) ? own : rules[hit.rule_id]!.severity;
-}
-
 /** Positive when `left` is the higher-scored hit. */
 const preference = (left: Scored, right: Scored) => left[1] - right[1];
 
@@ -81,7 +75,7 @@ export function scoreHits(hits: DetectorHit[]): Scored[] {
   for (const hit of hits) {
     const rule = rules[hit.rule_id];
     if (!rule) throw new Error(`unknown opportunity rule_id: ${hit.rule_id}`);
-    const score = priorityScore(hitSeverity(hit), hit.value_factor, hit.gap_factor);
+    const score = priorityScore(rule.severity, hit.value_factor, hit.gap_factor);
     if (score < o.MIN_PRIORITY_TO_SURFACE) continue;
     const key = JSON.stringify([hit.rule_id, targetKey(hit.target)]);
     const current = consolidated.get(key);
@@ -115,9 +109,9 @@ export function newOpportunity(hit: DetectorHit, score: number) {
   return {
     rule_id: rule.rule_id,
     opportunity_type: rule.opportunity_type,
-    severity: hitSeverity(hit),
+    severity: rule.severity,
     priority_score: score,
-    title: hit.finding?.title || rule.title,
+    title: rule.title,
     remediation: rule.remediation,
     ...targetColumns(hit.target),
     evidence: hit.evidence,

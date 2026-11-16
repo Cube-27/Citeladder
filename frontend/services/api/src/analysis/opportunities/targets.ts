@@ -10,10 +10,8 @@ export type TargetRef =
   | { kind: 'prompt'; prompt_id: string; theme: string | null }
   /** A prompt the run asked but no tracked prompt names any more. */
   | { kind: 'prompt_index'; audit_id: string; prompt_index: number; theme: string | null }
-  /** An owned page a Site Health rule failed on. */
+  /** An owned page a finding is about. */
   | { kind: 'site_page'; url: string }
-  /** One Site Health rule across every owned page it fails on; `label` is the rule's. */
-  | { kind: 'issue_family'; rule_id: string; label: string }
   /** One field of an owned page that changed between two crawls. */
   | { kind: 'site_change'; site_url_id: string; field: string; url: string }
   /** An owned page that should link to related pages. */
@@ -68,8 +66,6 @@ export function targetColumns(target: TargetRef): TargetColumns {
       });
     case 'site_page':
       return columns(`url:${target.url}`, { target_url: target.url });
-    case 'issue_family':
-      return columns(`issue-family:${target.rule_id}`, { target_theme: target.label });
     case 'site_change':
       return columns(`site-change:${target.site_url_id}:${target.field}`, {
         target_url: target.url,

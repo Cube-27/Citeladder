@@ -59,7 +59,6 @@ const TARGET_KIND_LABEL: Record<ActionTargetKind, string> = {
   query: 'Search query',
   prompt: 'Prompt',
   planned_page: 'Planned page',
-  issue_family: 'Issue across pages',
 };
 
 // Keyed by the contract's kinds, so a kind without a label fails the type check;
@@ -78,7 +77,6 @@ const FAMILY_LABEL: Record<string, string> = {
   sources: 'Sources',
   search_console: 'Search Console',
   search_intelligence: 'Keyword Research',
-  site_health: 'Website',
   link_graph: 'Link graph',
   site_changes: 'Site changes',
   commerce: 'Commerce',
@@ -127,7 +125,6 @@ const CHECK_KIND_LABEL: Record<string, string> = {
   keyword_presence: 'You appear for the search',
   owned_url_cited: 'An AI answer cites your page',
   product_metric: 'The product metric clears in later answers',
-  issue_family: 'Every affected page passes the Website check',
 };
 
 export function checkKindLabel(kind: string): string {
@@ -202,44 +199,17 @@ const CHECK_REASON: Record<string, string> = {
   unsupported_window: 'The check names a window the Products read no longer offers.',
   provider_serp_predates_change:
     'DataForSEO last checked this search before the go-live date. A later analysis can answer it.',
-  partially_resolved: 'Some affected pages now pass; the pages listed still fail.',
-  still_failing: 'No affected page the crawl read passes yet.',
-  non_comparable_crawl:
-    'That crawl used a different analyzer or rule set than the one that found the issue, so it cannot be compared.',
-  baseline_crawl_unavailable: 'The crawl that found the issue is no longer stored.',
-  cohort_not_analyzed:
-    'That crawl did not read the affected pages after go-live. Run a crawl that includes them.',
-  cohort_partly_analyzed:
-    'The affected pages that crawl read pass, but it did not read them all. Run a crawl that includes the rest.',
-  cohort_sampled:
-    'Every checked page passes or no longer applies, but the issue was on more pages than one check covers, so it cannot be verified on all of them.',
 };
 
 export function checkReasonLabel(reason: string | null): string | null {
   return reason ? (CHECK_REASON[reason] ?? null) : null;
 }
 
-const FAMILY_UNMET_LABEL: Record<string, string> = {
-  partially_resolved: 'Partially resolved',
-  still_failing: 'Still failing',
-};
-
-/**
- * A check's state as a reader is told it. An issue-family check reads its
- * whole cohort, so it is verified, partially resolved, still failing or
- * inconclusive; an unmet reading with an unknown reason, and every other
- * check, keep `CHECK_STATE_LABEL`.
- */
+/** A check's state as a reader is told it. */
 export function checkStateLabel(check: {
-  kind: string;
   state: 'waiting' | 'met' | 'unmet' | 'unavailable';
-  reason: string | null;
 }): string {
-  if (check.kind !== 'issue_family') return CHECK_STATE_LABEL[check.state];
-  if (check.state === 'met') return 'Verified';
-  if (check.state === 'unavailable') return 'Inconclusive';
-  const subtype = check.state === 'unmet' && check.reason ? FAMILY_UNMET_LABEL[check.reason] : null;
-  return subtype ?? CHECK_STATE_LABEL[check.state];
+  return CHECK_STATE_LABEL[check.state];
 }
 
 /** The declaration's overall reading, never the raw observation kind. */

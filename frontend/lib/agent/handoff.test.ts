@@ -100,7 +100,6 @@ describe('developerTicket', () => {
     ],
     member_measurement: { [ACTION]: 'next_crawl' as const, [PAGE]: null },
     diagnosis: { donts: ['Do not hide content.'] },
-    cohort: null,
     declaration: null,
   };
 
@@ -165,48 +164,21 @@ describe('developerTicket', () => {
     );
   });
 
-  it('lists an issue family’s pages up to its bound and a declared Action’s deployment and checks', () => {
-    const pages = Array.from({ length: 52 }, (_, index) => ({
-      site_url_id: PAGE,
-      url: `https://acme.test/p/${index}`,
-    }));
+  it('writes a declared Action’s deployment and checks', () => {
     const ticket = developerTicket(
       {
         ...pageAction,
-        target_label: 'Images without alt text',
-        target_url: null,
-        cohort: {
-          rule_label: 'Images without alt text',
-          page_count: 120,
-          pages,
-          crawl_completed_at: '2026-11-07T00:00:00Z',
-        },
         declaration: {
           declared_implemented_at: '2026-11-09T15:00:00Z',
           deployed_by: 'dev@acme.test',
           deployment_reference: 'v2.4.1',
-          checks: [{ kind: 'site_rule', state: 'met', reason: null }],
+          checks: [{ kind: 'site_rule', state: 'met' }],
         },
       },
       [],
       day,
     );
     const lines = ticket.split('\n');
-    expect(
-      lines.slice(lines.indexOf('## Affected pages'), lines.indexOf('## Affected pages') + 4),
-    ).toEqual([
-      '## Affected pages',
-      '',
-      'Images without alt text on 120 pages (crawl completed 2026-11-07):',
-      '',
-    ]);
-    expect(lines).toContain('- https://acme.test/p/49');
-    expect(lines).not.toContain('- https://acme.test/p/50');
-    // 52 stored pages of 120: 2 more are on the Action, 68 are stored nowhere.
-    expect(lines.slice(lines.indexOf('- https://acme.test/p/49') + 1).slice(0, 2)).toEqual([
-      '- and 2 more pages, listed on the Action in CiteLadder',
-      '- and 68 more pages with this issue, not listed',
-    ]);
     expect(lines).toContain('- No evidence is recorded for this Action.');
     expect(
       ticket.endsWith(

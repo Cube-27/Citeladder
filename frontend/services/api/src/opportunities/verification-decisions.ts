@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { ExpectedCheck } from '@citeladder/contracts/opportunities';
-import { issueFamilyPagesSchema } from '@citeladder/contracts/actions';
 import { policy } from '../config.ts';
 import { roundScaled } from '../numbers.ts';
 import { record } from '../db/json.ts';
@@ -32,10 +31,7 @@ export type CheckOutcome = {
   observed_at: string;
   source_kind: string;
   source_id: string;
-  /** An issue-family check's per-page reading of its cohort; absent for every other kind. */
-  pages?: IssueFamilyPages;
 };
-type IssueFamilyPages = z.infer<typeof issueFamilyPagesSchema>;
 export type Evaluation = {
   /** Outcomes by expected-check index, for the checks this source can read. */
   outcomes: Map<number, CheckOutcome>;
@@ -63,7 +59,6 @@ const checkOutcome = z.object({
   observed_at: z.string(),
   source_kind: z.string(),
   source_id: z.string(),
-  pages: issueFamilyPagesSchema.optional(),
 });
 
 /** Per-check states recorded by the declaration's latest observation. */

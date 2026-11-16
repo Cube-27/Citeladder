@@ -11,7 +11,7 @@ const db = testDatabase(config);
 const app = createApp(config, db);
 const seeds: ActionSeed[] = [];
 const goLive = `${new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10)}T15:00:00Z`;
-const rule = 'missing_structured_data';
+const rule = 'site_link_near_orphan';
 
 async function seed() {
   const s = await actionFixture<ActionSeed>('seed');

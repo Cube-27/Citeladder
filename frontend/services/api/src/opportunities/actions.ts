@@ -39,7 +39,6 @@ import {
   ActionTargetError,
   isAgentTargetKind,
   namedTarget,
-  storedCohort,
   targetDetail,
 } from './targets/registry.ts';
 
@@ -121,7 +120,6 @@ function actionItem(row: ActionRow) {
     skill_id: row.skill_id,
     member_count: jsonList(row.member_opportunity_ids).length,
     declarable_member_count: declarableIds(row).length,
-    page_count: storedCohort(row)?.page_count ?? null,
     handoff: readHandoff(record(row.diagnosis).handoff, row.target_label),
     evidence_cleared_at: row.evidence_cleared_at?.toISOString() ?? null,
     created_at: row.created_at.toISOString(),
@@ -129,8 +127,17 @@ function actionItem(row: ActionRow) {
   };
 }
 
-/** An Action the list shows: its evidence still stands, or the Agent made it. Search shows the same. */
-export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT})`;
+/**
+ * A row of a target kind Actions still have: retired kinds' leftover rows
+ * (`issue_family`, owner 2026-11-16) are never read or acted on.
+ */
+export const LIVE_TARGET_KIND = sql<SqlBool>`actions.target_kind in (${sql.join(a.ACTION_TARGET_KINDS)})`;
+
+/**
+ * An Action the list shows: its evidence still stands, or the Agent made it,
+ * on a live target kind. Search shows the same.
+ */
+export const LISTED_ACTION = sql<SqlBool>`(actions.evidence_cleared_at is null or actions.origin = ${a.ACTION_ORIGIN_AGENT}) and ${LIVE_TARGET_KIND}`;
 
 function listed(db: Database, scope: Scope) {
   return db
@@ -309,7 +316,8 @@ export async function requireAction(
     .selectFrom('actions')
     .selectAll()
     .where('workspace_id', '=', scope.workspaceId)
-    .where('id', '=', actionId);
+    .where('id', '=', actionId)
+    .where(LIVE_TARGET_KIND);
   if (scope.projectId !== null) query = query.where('project_id', '=', scope.projectId);
   if (lock) query = query.forUpdate();
   const row = await query.executeTakeFirst();
@@ -390,11 +398,7 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
     memberRows(db, workspaceId, actionId),
   ]);
   const members = inMemberOrder(stringList(action.member_opportunity_ids), rows);
-  const { editable_page, cohort } = await targetDetail(
-    db,
-    action,
-    stringList(declaration?.member_opportunity_ids),
-  );
+  const { editable_page } = await targetDetail(db, action);
   return {
     ...actionItem(action),
     editable_page,
@@ -413,7 +417,6 @@ export async function getAction(db: Database, workspaceId: string, actionId: str
       members.map((row) => [row.id, measuredBy.parse(memberMeasurementLeg(row))]),
     ),
     declaration: declaration ? await declarationView(db, declaration) : null,
-    cohort,
   };
 }
 

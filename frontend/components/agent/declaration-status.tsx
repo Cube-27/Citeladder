@@ -21,7 +21,6 @@ import {
 } from '@/lib/agent/vocabulary';
 import type { ActionDeclaration, MeasurementLeg } from '@/lib/api/actions';
 import { mutationNoticeForError } from '@/lib/api/mutation-notice';
-import { pluralCount, readableUrl } from '@/lib/format';
 import { siteHealthMutations } from '@/lib/api/site-health-queries';
 import { promptHistoryHref } from '@/lib/prompts/history';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -153,7 +152,6 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
         )}
       </Inline>
       {subject ? <CheckSubject subject={subject} promptId={check.prompt_id} /> : null}
-      {check.pages ? <FamilyPages pages={check.pages} /> : null}
       {note ? <span className={textRole('caption')}>{note}</span> : null}
       {reason || check.observed_at ? (
         <span className={textRole('caption')}>
@@ -165,49 +163,6 @@ function CheckRow({ check }: Readonly<{ check: ActionDeclaration['checks'][numbe
             </>
           ) : null}
         </span>
-      ) : null}
-    </Stack>
-  );
-}
-
-/** How many of the shown failing pages an issue-family reading lists before "and N more". */
-const FAILING_PAGES_SHOWN = 20;
-
-/**
- * An issue-family reading: how many cohort pages pass, fail, no longer apply
- * or went unread, how many affected pages lie beyond the cohort, and which
- * still fail.
- */
-function FamilyPages({
-  pages,
-}: Readonly<{ pages: NonNullable<ActionDeclaration['checks'][number]['pages']> }>) {
-  const shown = pages.failing.slice(0, FAILING_PAGES_SHOWN);
-  const more = pages.failing.length - shown.length;
-  const count = (n: number, one: string, many: string) =>
-    `${pluralCount(n, 'page')} ${n === 1 ? one : many}`;
-  const counts = [
-    count(pages.passing, 'passes', 'pass'),
-    count(pages.failing.length, 'still fails', 'still fail'),
-    pages.not_applicable
-      ? count(pages.not_applicable, 'no longer applies', 'no longer apply')
-      : null,
-    pages.unread ? count(pages.unread, 'not read', 'not read') : null,
-    pages.uncovered ? count(pages.uncovered, 'not checked', 'not checked') : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-  return (
-    <Stack gap="tight">
-      <span className={textRole('caption')}>{counts}</span>
-      {shown.length ? (
-        <Stack as="ul" gap="tight" aria-label="Pages still failing">
-          {shown.map((page) => (
-            <li key={page.site_url_id} className="min-w-0">
-              <ClampText className={textRole('caption')}>{readableUrl(page.url)}</ClampText>
-            </li>
-          ))}
-          {more > 0 ? <li className={textRole('caption')}>and {more} more</li> : null}
-        </Stack>
       ) : null}
     </Stack>
   );

@@ -33,7 +33,6 @@ export type DatedEvidence = {
 
 type ActionEvidenceSource = {
   members: readonly { id: string; title: string; updated_at: string }[];
-  cohort: { crawl_id: string; crawl_completed_at: string | null } | null;
   declaration: {
     checks: readonly {
       observed_at: string | null;
@@ -56,9 +55,9 @@ function reading(kind: string, id: string, at: string | null): DatedEvidence {
 }
 
 /**
- * The records behind an Action as its read returned them: each finding, the
- * crawl an issue family was read from, and each reading a declared check
- * took. Dates are the read's persisted timestamps; nothing is resolved here.
+ * The records behind an Action as its read returned them: each finding and
+ * each reading a declared check took. Dates are the read's persisted
+ * timestamps; nothing is resolved here.
  */
 export function actionEvidence(action: ActionEvidenceSource): DatedEvidence[] {
   const records = new Map<string, DatedEvidence>();
@@ -70,10 +69,6 @@ export function actionEvidence(action: ActionEvidenceSource): DatedEvidence[] {
       basis: 'inferred',
       href: null,
     });
-  if (action.cohort) {
-    const crawl = reading('site_crawl', action.cohort.crawl_id, action.cohort.crawl_completed_at);
-    records.set(crawl.key, crawl);
-  }
   for (const check of action.declaration?.checks ?? []) {
     if (!check.source_kind || !check.source_id) continue;
     const found = reading(check.source_kind, check.source_id, check.observed_at);

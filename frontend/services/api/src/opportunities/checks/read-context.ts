@@ -3,7 +3,7 @@ import { sql } from 'kysely';
 import type { Database } from '../../db/database.ts';
 import type { WorkspaceScope } from '../../db/workspace-scope.ts';
 import { parseUuid } from '../../http/uuid.ts';
-import { foldingSiteCrawl, pageAuditsSql } from '../../site-health/reads/crawl.ts';
+import { pageAuditsSql } from '../../site-health/reads/crawl.ts';
 import type { Evaluation, Reading } from '../verification-decisions.ts';
 import type { Declaration } from '../verification-result.ts';
 import type { SourceKind } from './kind.ts';
@@ -27,16 +27,10 @@ export function once<T>(ctx: ReadContext, key: string, read: () => Promise<T>): 
 export const dayOf = (iso: string) => iso.slice(0, 10);
 
 /**
- * The analyses a reading of the crawl sees, as an `in` list: each page's
- * latest audit as the crawl shows it (`pageAuditsSql`, SH-B9). `fold` reads a
- * page rerun through the site crawl it lands in, so a check across many pages
- * sees every tracked page; otherwise a rerun shows its own page.
+ * The page's latest audit as the crawl shows it (`pageAuditsSql`, SH-B9), as
+ * an `in` list; a page rerun shows its own page.
  */
-export async function latestAudits(
-  ctx: ReadContext,
-  crawlId: string,
-  { page, fold = false }: { page?: string; fold?: boolean } = {},
-) {
+async function latestAudit(ctx: ReadContext, crawlId: string, page: string) {
   const crawl = await once(ctx, `crawl:${crawlId}`, () =>
     ctx.scope
       .selectFrom(ctx.db, 'site_crawls')
@@ -45,11 +39,7 @@ export async function latestAudits(
       .executeTakeFirst(),
   );
   if (!crawl) return sql<string>`(select null::uuid where false)`;
-  const view = fold
-    ? ((await once(ctx, `folding:${crawlId}`, () => foldingSiteCrawl(ctx.db, crawl))) ?? crawl)
-    : crawl;
-  const one = page === undefined ? undefined : sql`${page}::uuid`;
-  return sql<string>`(select v.analysis_id from (${pageAuditsSql(view, one)}) v)`;
+  return sql<string>`(select v.analysis_id from (${pageAuditsSql(crawl, sql`${page}::uuid`)}) v)`;
 }
 
 type SiteAnalysis = {
@@ -59,7 +49,7 @@ type SiteAnalysis = {
 };
 
 /**
- * The declared page's latest audit as this crawl shows it (`latestAudits`),
+ * The declared page's latest audit as this crawl shows it (`latestAudit`),
  * fetched after go-live; a check without its own page reads the declaration's
  * only target.
  */
@@ -87,7 +77,7 @@ export async function pageAnalysis(
       ])
       .where('site_fetch_artifacts.workspace_id', '=', d.workspace_id)
       .where('site_page_analyses.project_id', '=', d.project_id)
-      .where('site_page_analyses.id', 'in', await latestAudits(ctx, crawlId, { page: target }))
+      .where('site_page_analyses.id', 'in', await latestAudit(ctx, crawlId, target))
       .where('site_page_analyses.finalized_at', 'is not', null)
       .where(
         'site_fetch_artifacts.fetched_at',

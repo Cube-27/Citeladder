@@ -49,11 +49,11 @@ describe('actionTitle', () => {
     [
       'an unknown type: the target alone',
       {
-        target_kind: 'issue_family',
-        target_label: 'Missing viewport meta tag',
+        target_kind: 'query',
+        target_label: 'crm pricing',
         approach: 'mystery',
       },
-      'Missing viewport meta tag',
+      'crm pricing',
     ],
     ['no type at all: the target alone', page('https://acme.test/pricing', null), '/pricing'],
     [

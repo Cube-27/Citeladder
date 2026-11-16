@@ -27,8 +27,8 @@ const seeds: ActionSeed[] = [];
 const day = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
 const nextDay = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 const boundary = `${day}T15:00:00.123456Z`;
-const pageRule = 'missing_structured_data';
-const otherRule = 'content_structure_incomplete';
+const pageRule = 'site_link_near_orphan';
+const otherRule = 'site_link_weak_authority';
 const promptRule = 'brand_absent_high_value_prompt';
 async function seed() {
   const s = await actionFixture<ActionSeed>('seed');
@@ -603,12 +603,12 @@ describe('Action routes', () => {
     const change = member('site_change_critical_regression');
     expect([memberMeasurementLeg(change), await freeze(change)]).toEqual([null, []]);
     // A page finding naming no Site Health rule freezes no check.
-    const ruleless = member('missing_structured_data', {
+    const ruleless = member('site_link_near_orphan', {
       evidence: { site_url_id: evidence.site_url_id },
     });
     expect([memberMeasurementLeg(ruleless), await freeze(ruleless)]).toEqual([null, []]);
     // A page finding folding two rules verifies each of them (BE-802, SH-B2).
-    const folded = member('content_structure_incomplete', {
+    const folded = member('site_link_weak_authority', {
       evidence: {
         ...evidence,
         issues: ['aeo.question_headings', 'aeo.answer_first'].map((rule_id) => ({

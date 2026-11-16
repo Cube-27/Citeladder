@@ -123,10 +123,7 @@ export const policy = {
     source_patterns: { ...sourcePatterns },
     source_pages: { ...sourcePageVocabulary },
     tracking_query_params: siteHealth.tracking_params,
-    refresh: {
-      ...opportunityDefaults.refresh,
-      finding_class_defect: 'defect',
-    },
+    refresh: { ...opportunityDefaults.refresh },
   },
   models: { ...modelGateway, jev, quality },
   workspaces: workspaceRuntime,

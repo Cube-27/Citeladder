@@ -3,7 +3,7 @@ title: 'Site Health'
 description: 'Inspect website issues, understand Web and AEO scores, and choose changes with supporting page evidence.'
 group: 'Measure and understand'
 order: 130
-updated: '2026-11-12'
+updated: '2026-11-16'
 ---
 
 A Site Health crawl captures pages from your website and analyzes their technical and content properties. Begin with **Run new crawl**, then review the crawl's scope, progress and coverage. Every crawl audits the same tracked pages, so **Run new crawl** is the one crawl button and Changes always compares like with like. The Overview's **Open issues over time** card plots your open issues, one point for each day a crawl or re-audit landed.
@@ -79,11 +79,9 @@ conversation about the evidence.
 
 ## Work through an issue
 
-Use **Ask agent** on supported evidence screens, or **Work on this** on the related Action. Ask for a small, reviewable correction tied to the affected page.
+Use **Ask agent** on an issue, on one of its pages, or on supported evidence screens. Ask for a small, reviewable correction tied to the affected page, or one fix for a shared template or component that fails on many pages. For form fields without an accessible name, the crawl also keeps one redacted HTML example of a failing field (tags and attribute names, with text and values removed), so the Agent can write an exact fix.
 
-A website issue that fails on many pages, such as a shared template or component, is [one Action across all of them](/agent/actions/#fix-one-issue-across-many-pages). The Agent gets the affected pages without reading each one. For form fields without an accessible name, the crawl also keeps one redacted HTML example of a failing field (tags and attribute names, with text and values removed), so the Agent can write an exact fix.
-
-On a content page, such as an article or guide, the related Action also holds any [content gaps](/content-optimization/) on that page. The issue still appears in **Issues**.
+Issues are tracked here, in **Issues**, from finding to fix; they do not become separate [Actions](/agent/actions/).
 
 For example: "Explain the confirmed issue on this page, distinguish it from unresolved checks, and prepare a fix brief for our developer."
 

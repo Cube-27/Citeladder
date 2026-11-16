@@ -890,7 +890,7 @@ describe('project owner', () => {
   it('retains exact declaration and verified observation IDs in resolved action summaries', async () => {
     // Immutable fixture evidence is retained until the disposable database is dropped.
     const seeded = await actionFixture<ActionSeed>('seed');
-    const actionId = seeded.actions.missing_structured_data!;
+    const actionId = seeded.actions.site_link_near_orphan!;
     const action = await db
       .selectFrom('actions')
       .select('opportunity_snapshot_id')
@@ -969,6 +969,16 @@ describe('project owner', () => {
           verification_event_ids: [verifiedId],
         },
       ],
+    });
+    // A leftover Action of a retired target kind (issue families, until 2026-11-16) is never summarized.
+    await db
+      .updateTable('actions')
+      .set({ target_kind: 'issue_family', cohort: '{}' })
+      .where('id', '=', actionId)
+      .execute();
+    expect((await commandCenter(db, scope, null)).resolved_actions).toMatchObject({
+      count: 0,
+      evidence: [],
     });
   }, 60_000);
 });

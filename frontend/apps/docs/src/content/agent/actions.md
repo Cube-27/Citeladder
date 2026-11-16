@@ -3,10 +3,10 @@ title: 'Actions and measurement'
 description: 'Choose one target, review its supporting findings, and follow the work through to later evidence.'
 group: 'Improve with Agent'
 order: 210
-updated: '2026-11-11'
+updated: '2026-11-16'
 ---
 
-An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query, visibility prompt or a Site Health issue across every page it affects. Multiple findings can support the same Action.
+An Action groups work around a target: an owned page, planned page, earned-source page, product, category, search query or visibility prompt. Multiple findings can support the same Action. Site Health issues are not Actions: you fix and track them in [Site Health **Issues**](/site-health/).
 
 This gives your team one place to understand the diagnosis, start Agent work and track implementation.
 
@@ -16,7 +16,7 @@ Open **Agent → Actions**. The list groups your open work:
 
 | Group                      | What it holds                                                                                           |
 | -------------------------- | ------------------------------------------------------------------------------------------------------- |
-| Fix how AI reads your site | Technical fixes and internal links                                                                      |
+| Fix how AI reads your site | Page signals that regressed between crawls, and internal links                                          |
 | Improve your own pages     | Pages to improve, pages to create (including [content gaps](/content-optimization/)) and pages to merge |
 | Get mentioned elsewhere    | Cited pages that list your competitors but not you                                                      |
 | Improve your products      | Products and categories                                                                                 |
@@ -28,12 +28,6 @@ Every page that the Sources URL table shows as a **Gap** becomes a "Get mentione
 Read the diagnosis, contributing evidence, recommended approach and what to avoid. The priority comes from CiteLadder's deterministic rules. An Agent explanation does not replace that ranking or create new measured facts.
 
 Choose **Work on this** when the Action is suitable for your team. Linked chats remain visible on the Action.
-
-## Fix one issue across many pages
-
-A website issue from Site Health, such as a broken component in a shared template, is one Action across every page it affects, not one Action per page. It lists under **Fix how AI reads your site** with its page count. Its detail shows the crawl it was found in and the affected pages; **Show all** lists every page.
-
-**Work with the agent** on such an Action gives the chat the check that failed, the page count and the first 50 pages, so the Agent can write one fix for the shared cause without reading each page. For form fields without an accessible name, it also gets one redacted HTML example of a failing field from that crawl. When you declare it implemented, the declaration covers every affected page.
 
 ## Hand the work to a developer
 
@@ -92,21 +86,12 @@ If a crawl has already cleared the Action's findings, you can still declare it. 
 
 The declaration keeps the target, baseline and expected checks tied to that implementation event. Each check is read by the evidence that can answer it:
 
-- a Site Health check by the next crawl that reads the page;
+- an internal-link check by the next crawl that reads the page;
 - a prompt by the next visibility run;
 - Search Console clicks per day on the page or query by each synced window that starts after the go-live day;
 - a keyword gap by whether your site now appears for that search, in Search Console or in a later Keyword Research dataset.
 
 Each check keeps its own latest reading, so a crawl and a Search Console window together can complete an Action that neither completes alone.
-
-An Action for an issue across many pages is read by each crawl after go-live that uses the same checks as the crawl it came from:
-
-| Result             | Meaning                                                                               |
-| ------------------ | ------------------------------------------------------------------------------------- |
-| Verified           | The check passes, or no longer applies, on every affected page                        |
-| Partially resolved | Some pages pass and some still fail; the pages still failing are named                |
-| Still failing      | No affected page passes yet; the pages are named                                      |
-| Inconclusive       | The crawl used different checks or did not read every affected page; the reason shows |
 
 Review each check and what its reading is waiting for. A page check that is still waiting offers **Run crawl now**. A page the crawl did not read, or an incompatible window, is a reason for limited measurement, not an observed failure. New evidence is read for 30 days after the go-live day, or 90 days for a keyword check, because a new page takes longer to rank than an edited one takes to recrawl. After that, the last reading stands.
 

@@ -34,7 +34,7 @@ const action = {
   status: 'open',
   priority_score: 80,
   priority_band: 'high',
-  families: ['site_health'],
+  families: ['search_console'],
   approach: 'improve_page',
   group: 'own_pages',
   skill_id: 'content_refresh',

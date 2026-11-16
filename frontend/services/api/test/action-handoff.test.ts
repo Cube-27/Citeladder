@@ -103,12 +103,11 @@ describe('Action handoff message', () => {
     );
   });
 
-  it('names the Site Health issue of a technical fix', () => {
+  it('names the regressed signal of a technical fix', () => {
     expect(
-      handoffOf(
-        member('missing_structured_data', 'Missing structured data on owned page', page('/a')),
-      ).message,
-    ).toBe('Fix "Missing structured data on owned page" on https://acme.test/a.');
+      handoffOf(member('site_change_critical_regression', 'The page title regressed', page('/a')))
+        .message,
+    ).toBe('Fix "The page title regressed" on https://acme.test/a.');
   });
 
   it('names the angle of a content gap, and hands the page to its workflow', () => {
@@ -164,9 +163,9 @@ describe('Action handoff message', () => {
   it('writes a crawled URL that carries two encoding layers as a reader reads it', () => {
     const crawled = page('/Categories/Women/Women%2527s-Clothing/Womens-Maxi-Dress');
     expect(
-      handoffOf(member('missing_structured_data', 'Missing structured data', crawled)).message,
+      handoffOf(member('site_change_potential_regression', 'A signal regressed', crawled)).message,
     ).toBe(
-      'Fix "Missing structured data" on https://acme.test/Categories/Women/Women\'s-Clothing/Womens-Maxi-Dress.',
+      'Fix "A signal regressed" on https://acme.test/Categories/Women/Women\'s-Clothing/Womens-Maxi-Dress.',
     );
     // An Action read without a persisted handoff opens about its label the same way.
     expect(

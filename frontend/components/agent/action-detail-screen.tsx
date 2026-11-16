@@ -9,7 +9,6 @@ import {
   SELECT_IMPLEMENTED_LINKS,
   useMarkImplemented,
 } from '@/components/agent/action-declaration';
-import { AffectedPages } from '@/components/agent/action-affected-pages';
 import { ContentGapWhy, contentGapMembers } from '@/components/agent/content-gap-evidence';
 import { ActionFindings } from '@/components/agent/action-findings';
 import { DeclarationStatus } from '@/components/agent/declaration-status';
@@ -126,7 +125,6 @@ function ActionDetailView({
         />
       ) : null}
       <Overview action={action} />
-      <AffectedPages action={action} />
       <ActionFindings action={action} onOpen={setEvidenceId} />
       {action.declaration ? (
         <ActionSection title="Implementation" id="action-implementation">

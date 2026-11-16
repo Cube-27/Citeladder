@@ -26,13 +26,12 @@ const action = {
   status: 'open',
   priority_score: 82.5,
   priority_band: 'high',
-  families: ['site_health', 'search_console'],
+  families: ['search_console', 'link_graph'],
   approach: 'improve_existing',
   group: 'own_pages',
   skill_id: 'gsc_optimize',
   member_count: 1,
   declarable_member_count: 1,
-  page_count: null,
   handoff: { context: 'action', message: 'Work on https://acme.test/pricing.' },
   evidence_cleared_at: null,
   created_at: NOW,
@@ -51,18 +50,16 @@ const ownPages = (count: number) =>
     priority_band: 'low',
   }));
 
-/** One Site Health defect across 179 pages: one Action, not 179. */
+/** A page whose title regressed between two crawls. */
 const fix = {
   ...action,
   id: '44444444-4444-4444-8444-444444444444',
-  target_kind: 'issue_family',
-  target_label: 'Missing viewport meta tag',
-  target_url: null,
-  page_count: 179,
+  target_label: 'https://acme.test/checkout',
+  target_url: 'https://acme.test/checkout',
   approach: 'fix_technical',
   group: 'fix_site',
   priority_band: 'medium',
-  families: ['site_health'],
+  families: ['site_changes'],
 };
 
 const selection = {
@@ -145,7 +142,7 @@ describe('Actions', () => {
     expect(screen.queryByText('82.5')).not.toBeInTheDocument();
     // The subline names the target (the page's path), then the work.
     expect(cells.getByText('/pricing')).toBeVisible();
-    expect(cells.getByText('Page · 1 finding in Website, Search Console')).toBeVisible();
+    expect(cells.getByText('Page · 1 finding in Search Console, Link graph')).toBeVisible();
     // An Open row in the queue names no status; one in progress does.
     expect(cells.queryByText('Open')).not.toBeInTheDocument();
     const started = screen.getByRole('link', { name: 'Improve the existing page: /page-0' });
@@ -175,21 +172,7 @@ describe('Actions', () => {
     expect(await screen.findByText('Improve the existing page: /page-5')).toBeVisible();
     expect(window.location.search).toBe('?group=own_pages');
     expect(reads.at(-1)).toBe('group=own_pages&limit=10');
-    expect(screen.queryByText('Fix a technical issue: Missing viewport meta tag')).toBeNull();
-  });
-
-  it('lists an issue family in Fix how AI reads your site with its page count', async () => {
-    serveActions([]);
-    renderActions();
-    const link = await screen.findByRole('link', {
-      name: 'Fix a technical issue: Missing viewport meta tag',
-    });
-    const row = link.closest('tr')!;
-    expect(
-      within(row).getByText('Issue across pages · 179 pages · 1 finding in Website'),
-    ).toBeVisible();
-    // The title names the issue; the subline does not say it again.
-    expect(within(row).queryByText('Missing viewport meta tag')).toBeNull();
+    expect(screen.queryByText('Fix a technical issue: /checkout')).toBeNull();
   });
 
   it('sets every filter from its own trigger as URL state and reads the list through it', async () => {
@@ -246,9 +229,7 @@ describe('Actions', () => {
     serveActions([]);
     const user = userEvent.setup();
     renderActions();
-    const summary = await screen.findByText(
-      'Issue across pages · 179 pages · 1 finding in Website',
-    );
+    const summary = await screen.findByText('Page · 1 finding in Site changes');
     await user.click(summary);
     expect(await screen.findByText('Action detail')).toBeVisible();
   });
