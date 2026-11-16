@@ -101,18 +101,18 @@ describe('ExtraPurchases', () => {
 
   it.each([
     [
-      'a shared reason once, under the head',
+      'every extra gated',
       [extra('a', 'Seats', 'checkout_unavailable'), extra('b', 'Markets', 'checkout_unavailable')],
-      1,
+      2,
       [],
     ],
     [
-      'each reason on its own button',
+      'one extra gated',
       [extra('a', 'Seats', 'checkout_unavailable'), extra('b', 'Markets', null)],
-      0,
+      1,
       ['b'],
     ],
-  ])('describes a gated Buy with %s', (_case, addons, captions, buys) => {
+  ])('says the reason under its own gated Buy with %s', (_case, addons, captions, buys) => {
     const bought: string[] = [];
     render(
       <ExtraPurchases
@@ -129,10 +129,11 @@ describe('ExtraPurchases', () => {
     expect(seats).toHaveFocus();
     expect(seats).toHaveAttribute('aria-disabled', 'true');
     expect(seats).toHaveAccessibleDescription(CLOSED);
-    // The visible reason is a caption only when every gated extra shares it.
+    // Each gated Buy's reason is a visible caption in its own row.
     expect(screen.queryAllByText(CLOSED, { selector: 'p' })).toHaveLength(captions);
+    expect(seats.closest('[data-control-row]')).toHaveTextContent(CLOSED);
     const markets = screen.getByRole('button', { name: 'Buy Markets' });
-    expect(markets).toHaveAccessibleDescription(captions ? CLOSED : '');
+    expect(markets).toHaveAccessibleDescription(captions === 2 ? CLOSED : '');
     fireEvent.click(seats);
     fireEvent.click(markets);
     expect(bought).toEqual(buys);

@@ -50,7 +50,7 @@ export async function loadRazorpay(): Promise<void> {
       clearTimeout(timeout);
       script.remove();
       loading = null;
-      reject(new Error('Payment window could not load. Please retry.'));
+      reject(new Error("Couldn't load the payment window. Please retry."));
     };
     const timeout = setTimeout(fail, CHECKOUT_SCRIPT_TIMEOUT_MS);
     script.src = RAZORPAY_CHECKOUT_SCRIPT;

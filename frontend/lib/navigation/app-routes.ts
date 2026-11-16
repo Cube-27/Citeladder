@@ -432,7 +432,7 @@ export const APP_ROUTES = [
         placements: ['palette'],
       },
       {
-        label: 'Connect AI assistants',
+        label: 'MCP connections',
         icon: 'connect',
         search: 'tab=connections',
         listedLast: true,

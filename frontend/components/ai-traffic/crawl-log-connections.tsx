@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { aiTrafficMutations } from '@/lib/api/ai-traffic';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
@@ -32,6 +32,7 @@ import {
 } from '@/lib/ai-traffic/vocabulary';
 import { SinkFilterUpdates } from './gcp-pull-setup';
 import { CRAWL_LOG_SETUPS } from '@/lib/config/crawl-logs';
+import { ICONS } from '@/lib/icons';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -165,21 +166,40 @@ function Connections({
       </Dialog>
     </>
   );
-  // With a header the section is a card like every other connection on the
-  // page: title left, its one action right, the sources beneath.
   if (!showHeader)
     return (
       <Stack as="section" id="crawl-log-connections" aria-label="Crawl log connections">
         {body}
       </Stack>
     );
+  // The body keeps its place in the tree, so an open setup dialog survives the read settling.
   return (
     <Section id="crawl-log-connections" aria-label="Crawl log connections">
-      <SectionHeader actions={connect}>
-        <SectionTitle>Crawl logs</SectionTitle>
-      </SectionHeader>
+      <ConnectionsHead empty={sources.data?.items.length === 0} connect={connect} />
       <Stack className="empty:hidden">{body}</Stack>
     </Section>
+  );
+}
+
+/**
+ * A card like every other connection on the page: title left, its one action
+ * right. With no source yet it is the compact empty state, its action the one way in.
+ */
+function ConnectionsHead({ empty, connect }: Readonly<{ empty: boolean; connect: ReactNode }>) {
+  if (empty && connect)
+    return (
+      <StateBlock
+        kind="empty"
+        icon={ICONS.connect}
+        heading="No crawl logs connected"
+        description="Connect your server or CDN logs to see which AI crawlers fetch your pages and how often."
+        action={connect}
+      />
+    );
+  return (
+    <SectionHeader actions={connect}>
+      <SectionTitle>Crawl logs</SectionTitle>
+    </SectionHeader>
   );
 }
 

@@ -174,7 +174,7 @@ export function CandidateReviewPanel({
   if (setsError || review.loadError)
     return (
       <Notice tone="negative">
-        {review.loadError || 'Could not load prompt sets.'}
+        {review.loadError || "Couldn't load prompt sets."}
         <Button variant="secondary" onClick={setsError ? retrySets : review.retry}>
           Retry
         </Button>

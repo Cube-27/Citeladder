@@ -61,12 +61,12 @@ function IssuesDataRegion({
           fallback={
             accessDenied
               ? 'Website is unavailable for this project.'
-              : 'Could not load the latest Website crawl.'
+              : "Couldn't load the latest Website crawl."
           }
           title={
             accessDenied
               ? 'Website is unavailable for this project'
-              : 'Could not load the latest Website crawl'
+              : "Couldn't load the latest Website crawl"
           }
           onRetry={() => void dashboard.refetch()}
           pending={dashboard.isFetching}

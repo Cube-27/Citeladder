@@ -56,6 +56,14 @@ const sourceBody = (availability: string, items: Record<string, unknown>[] = [])
   },
   items: items.map((item) => ({ pull: null, ...item })),
 });
+/** Opens setup from the empty Crawl logs card, which takes the action once the read settles. */
+async function openEmptySetup() {
+  const user = userEvent.setup();
+  renderWithProviders(<CrawlLogConnections />);
+  await screen.findByRole('heading', { name: 'No crawl logs connected' });
+  await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+  return user;
+}
 const STALLED_SOURCE = {
   id: '99999999-9999-4999-8999-999999999999',
   kind: 'webhook',
@@ -186,9 +194,7 @@ describe('AI Traffic state and navigation', () => {
         return HttpResponse.json({ id, token: null });
       }),
     );
-    const user = userEvent.setup();
-    renderWithProviders(<CrawlLogConnections />);
-    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const user = await openEmptySetup();
     await user.click(await screen.findByRole('radio', { name: /Upload file/ }));
     expect(screen.getByText(/First, create an upload source/)).toBeVisible();
     expect(screen.queryByRole('combobox', { name: 'Upload source' })).not.toBeInTheDocument();
@@ -241,9 +247,7 @@ describe('AI Traffic state and navigation', () => {
         return HttpResponse.json({ id, token: 'clw_test_token' });
       }),
     );
-    const user = userEvent.setup();
-    renderWithProviders(<CrawlLogConnections />);
-    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const user = await openEmptySetup();
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     await user.click(within(dialog).getByRole('radio', { name: /Amazon CloudFront/ }));
     expect(
@@ -316,9 +320,7 @@ describe('AI Traffic state and navigation', () => {
         return HttpResponse.json({ id, verified: true, failure: null });
       }),
     );
-    const user = userEvent.setup();
-    renderWithProviders(<CrawlLogConnections />);
-    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const user = await openEmptySetup();
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     await user.click(within(dialog).getByRole('radio', { name: /Google Cloud/ }));
     await user.type(
@@ -358,9 +360,7 @@ describe('AI Traffic state and navigation', () => {
         }),
       ),
     );
-    const user = userEvent.setup();
-    renderWithProviders(<CrawlLogConnections />);
-    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    await openEmptySetup();
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     const option = await within(dialog).findByRole('radio', { name: /Google Cloud/ });
     expect(option).toBeDisabled();
@@ -447,9 +447,7 @@ describe('AI Traffic state and navigation', () => {
         });
       }),
     );
-    const user = userEvent.setup();
-    renderWithProviders(<CrawlLogConnections />);
-    await user.click(screen.getByRole('button', { name: 'Connect crawl logs' }));
+    const user = await openEmptySetup();
     const dialog = await screen.findByRole('dialog', { name: 'Connect crawl logs' });
     const create = within(dialog).getByRole('button', { name: 'Create source' });
     await waitFor(() => expect(create).toBeEnabled());

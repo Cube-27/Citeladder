@@ -298,7 +298,7 @@ export function ReviewStage({
               </Button>
             }
           >
-            We could not load the competitor limit.
+            Couldn&apos;t load the competitor limit.
           </Notice>
         ) : null}
         {complete.isError ? (

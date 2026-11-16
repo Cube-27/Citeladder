@@ -55,6 +55,35 @@ it('disconnects integrations only after the person confirms what it revokes', as
   expect(logout).not.toHaveBeenCalled();
 });
 
+it('says in words under each field why a password change was not sent, and focuses the first', async () => {
+  renderWithProviders(<AccountSecurity />);
+  const user = userEvent.setup();
+  const current = await screen.findByLabelText(/^Current password/u, { selector: 'input' });
+  const next = screen.getByLabelText(/^New password/u, { selector: 'input' });
+  await user.type(next, 'abc');
+  await user.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+  await waitFor(() => expect(current).toHaveFocus());
+  expect(current).toHaveAttribute('aria-invalid', 'true');
+  expect(current).toHaveAccessibleDescription('Enter your current password.');
+  expect(next).toHaveAccessibleDescription('Use at least 8 characters.');
+  expect(mailbox).not.toHaveBeenCalled();
+
+  // Once both are valid the change is sent; a rejection is said under Current password.
+  mailbox.mockRejectedValueOnce(new Error('Current password is incorrect.'));
+  await user.type(current, 'wrong-password');
+  await user.type(next, 'defghijk');
+  await user.click(screen.getByRole('button', { name: 'Change password and sign out' }));
+  await waitFor(() =>
+    expect(current).toHaveAccessibleDescription('Current password is incorrect.'),
+  );
+  expect(next).not.toHaveAttribute('aria-invalid');
+  expect(mailbox).toHaveBeenCalledWith('change-password', {
+    current_password: 'wrong-password',
+    password: 'abcdefghijk',
+  });
+  expect(hardNavigate).not.toHaveBeenCalled();
+});
+
 it.each(['change-password', 'sign-out'] as const)(
   'sends credentials only for a password change when performing %s',
   async (operation) => {

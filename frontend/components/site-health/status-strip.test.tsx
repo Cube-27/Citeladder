@@ -111,7 +111,7 @@ describe('StatusStrip — analysis counters', () => {
   it('surfaces a monitored-count fetch error instead of silently approximating', () => {
     renderStrip({ crawl: crawl({ score_summary: null }), selectedError: true });
 
-    expect(screen.getByText(/Could not load the monitored-page count/)).toBeInTheDocument();
+    expect(screen.getByText(/Couldn.t load the monitored-page count/)).toBeInTheDocument();
   });
 });
 

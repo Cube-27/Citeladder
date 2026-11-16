@@ -73,14 +73,14 @@ describe('subscription modal', () => {
   it('fails on blocked script loading and permits a fresh attempt', async () => {
     vi.useFakeTimers();
     const promise = loadRazorpay();
-    const rejection = expect(promise).rejects.toThrow('could not load');
+    const rejection = expect(promise).rejects.toThrow("Couldn't load the payment window");
     await vi.advanceTimersByTimeAsync(CHECKOUT_SCRIPT_TIMEOUT_MS);
     await rejection;
     expect(
       document.querySelector('script[src="https://checkout.razorpay.com/v1/checkout.js"]'),
     ).toBeNull();
     const retry = loadRazorpay();
-    const retried = expect(retry).rejects.toThrow('could not load');
+    const retried = expect(retry).rejects.toThrow("Couldn't load the payment window");
     document.querySelector('script')?.dispatchEvent(new Event('error'));
     await retried;
   });

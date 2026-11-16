@@ -159,7 +159,7 @@ export function IntegrationSettings() {
               kind="error"
               title="Couldn't load integrations"
               {...readErrorProps(connectionsQuery)}
-              fallback="Could not load integrations. Check your connection and try again."
+              fallback="Couldn't load integrations. Check your connection and try again."
             />
           ) : (
             <StateBlock kind="loading" label="Loading integrations…" shape={{ kind: 'list' }} />

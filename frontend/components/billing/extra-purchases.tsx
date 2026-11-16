@@ -6,7 +6,7 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { ControlRow } from '@/components/ui/control-row';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Input } from '@/components/ui/input';
-import { Stack } from '@/components/ui/layout';
+import { Inline, Stack } from '@/components/ui/layout';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import {
   Section,
@@ -41,18 +41,10 @@ function gateReason(entry: Extra): string | null {
   return billingReasonMessage(entry.unavailable_reason);
 }
 
-/** One reason every gated extra shares (two or more), said once under the section head. */
-function sharedGateReason(entries: readonly Extra[]): string | null {
-  const reasons = entries.map(gateReason).filter((reason) => reason !== null);
-  const [first] = reasons;
-  if (first === undefined || reasons.length < 2 || reasons.length !== entries.length) return null;
-  return reasons.every((reason) => reason === first) ? first : null;
-}
-
 /**
  * Buy. While the catalog gates it, it is `aria-disabled` rather than
- * disabled, so it stays focusable and its reason reaches a tooltip and
- * `aria-describedby`; a shared reason is the section's caption.
+ * disabled, so it stays focusable and its reason (said under the row's
+ * controls) reaches a tooltip and `aria-describedby`.
  */
 function BuyButton({
   name,
@@ -64,10 +56,9 @@ function BuyButton({
   name: string;
   disabled: boolean;
   reason: string | null;
-  reasonId: string | null;
+  reasonId: string;
   onBuy: () => void;
 }>) {
-  const ownReasonId = useId();
   if (!reason)
     return (
       <Button variant="secondary" disabled={disabled} onClick={onBuy}>
@@ -75,18 +66,11 @@ function BuyButton({
       </Button>
     );
   return (
-    <>
-      <Tooltip content={reason} describe={false}>
-        <Button variant="secondary" aria-disabled="true" aria-describedby={reasonId ?? ownReasonId}>
-          Buy {name}
-        </Button>
-      </Tooltip>
-      {reasonId ? null : (
-        <span id={ownReasonId} hidden>
-          {reason}
-        </span>
-      )}
-    </>
+    <Tooltip content={reason} describe={false}>
+      <Button variant="secondary" aria-disabled="true" aria-describedby={reasonId}>
+        Buy {name}
+      </Button>
+    </Tooltip>
   );
 }
 
@@ -95,15 +79,12 @@ function ExtraRow({
   kind,
   catalog,
   disabled,
-  sharedReasonId,
   onBuy,
 }: Readonly<{
   entry: Extra;
   kind: 'addon' | 'topup';
   catalog: BillingCatalog;
   disabled: boolean;
-  /** The section caption's id when it already says why this extra is gated. */
-  sharedReasonId: string | null;
   onBuy: ExtraPurchase;
 }>) {
   // Kept as typed text and clamped when read: clamping each keystroke turns
@@ -112,33 +93,42 @@ function ExtraRow({
   const quantity = clampQuantity(Number(typed), entry);
   const purchasable = isPurchasable(entry);
   const inputId = `extra-quantity-${entry.key}`;
+  const reason = gateReason(entry);
+  const reasonId = useId();
   return (
     <ControlRow
       controls={
-        <>
-          <label htmlFor={inputId} className="sr-only">
-            Quantity of {entry.name}
-          </label>
-          <Input
-            id={inputId}
-            type="number"
-            inputMode="numeric"
-            min={entry.quantity_min}
-            max={entry.quantity_max}
-            value={typed}
-            disabled={!purchasable || disabled}
-            onChange={(event) => setTyped(event.target.value)}
-            onBlur={() => setTyped(String(quantity))}
-            width="quantity"
-          />
-          <BuyButton
-            name={entry.name}
-            disabled={!purchasable || disabled}
-            reason={gateReason(entry)}
-            reasonId={sharedReasonId}
-            onBuy={() => onBuy(kind, entry.key, quantity)}
-          />
-        </>
+        <Stack gap="tight" className="w-full">
+          <Inline className="flex-wrap justify-end">
+            <label htmlFor={inputId} className="sr-only">
+              Quantity of {entry.name}
+            </label>
+            <Input
+              id={inputId}
+              type="number"
+              inputMode="numeric"
+              min={entry.quantity_min}
+              max={entry.quantity_max}
+              value={typed}
+              disabled={!purchasable || disabled}
+              onChange={(event) => setTyped(event.target.value)}
+              onBlur={() => setTyped(String(quantity))}
+              width="quantity"
+            />
+            <BuyButton
+              name={entry.name}
+              disabled={!purchasable || disabled}
+              reason={reason}
+              reasonId={reasonId}
+              onBuy={() => onBuy(kind, entry.key, quantity)}
+            />
+          </Inline>
+          {reason ? (
+            <p id={reasonId} className={textRole('caption', 'text-ink-2 text-end')}>
+              {reason}
+            </p>
+          ) : null}
+        </Stack>
       }
     >
       <span className={textRole('body')}>{entry.name}</span>
@@ -226,8 +216,6 @@ export function ExtraPurchases({
 }>) {
   const { addons, topups } = extrasForPlan(catalog, planKey);
   const grants = activeExtraGrants(entitlement);
-  const sharedReasonId = useId();
-  const sharedReason = sharedGateReason([...addons, ...topups]);
   // Purchases still in force stay listed even when the catalogue offers nothing more to buy.
   if (addons.length === 0 && topups.length === 0 && grants.length === 0) return null;
   const extras = [
@@ -241,11 +229,6 @@ export function ExtraPurchases({
         <SectionDescription>
           One-time purchases. They work only while your paid plan is active and never renew.
         </SectionDescription>
-        {sharedReason ? (
-          <p id={sharedReasonId} className={textRole('caption', 'text-ink-2')}>
-            {sharedReason}
-          </p>
-        ) : null}
       </SectionHeader>
       <Stack as={SectionContent} gap="compact">
         {extras.length > 0 ? (
@@ -257,7 +240,6 @@ export function ExtraPurchases({
                 kind={kind}
                 catalog={catalog}
                 disabled={disabled}
-                sharedReasonId={sharedReason ? sharedReasonId : null}
                 onBuy={onBuy}
               />
             ))}

@@ -1723,16 +1723,15 @@ a.focus-ring:active .type-caption {
   color: var(--color-ink);
 }
 
-/* Disabled (2.8): one look for every variant, the static tag's grammar (no
-   solid edge, no ink fill) so it is never read as a secondary button. */
+/* Disabled (2.8): one look for every variant. It keeps its frame (the soft
+   edge on the well fill, no ink fill, no shadow), so it never reads as text. */
 :root:not([data-public-surface])
   [data-button-variant]:is(:disabled, [aria-disabled='true']):not([aria-busy='true']) {
   background-color: var(--color-well);
   background-image: none;
-  border-color: transparent;
+  border-color: var(--color-control-edge);
   box-shadow: none;
   color: color-mix(in srgb, var(--color-ink-2) 60%, transparent);
-  opacity: 1;
 }
 
 :disabled:focus-visible,

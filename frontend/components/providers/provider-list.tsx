@@ -39,7 +39,7 @@ export function ProviderList({
         kind="error"
         title="Couldn't load providers"
         error={catalogQuery.error ?? connectionsQuery.error}
-        fallback="Could not load providers. Check your connection and try again."
+        fallback="Couldn't load providers. Check your connection and try again."
         onRetry={() => {
           if (catalogQuery.isError) void catalogQuery.refetch();
           if (connectionsQuery.isError) void connectionsQuery.refetch();

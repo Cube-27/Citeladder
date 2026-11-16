@@ -66,7 +66,7 @@ export function AuthHumanCheck({
       <div ref={container} className="w-full" />
       {failed ? (
         <p className="type-caption text-ink-2 text-center">
-          Verification could not load. Refresh the page to try again.
+          Couldn&apos;t load verification. Refresh the page to try again.
         </p>
       ) : null}
     </fieldset>

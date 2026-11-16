@@ -1,5 +1,4 @@
 import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
 import { StateBlock } from '@/components/ui/state-block';
 import { ICONS } from '@/lib/icons';
 import { integrationsApi } from '@/lib/api/integrations';
@@ -37,10 +36,9 @@ export function IntegrationsEmptyState({ workspaceId }: Readonly<{ workspaceId: 
               Connect Google
             </Button>
             <Button
-              variant="quiet"
+              variant="secondary"
               onClick={() => hardNavigate(integrationsApi.oauthStartUrl('bing', workspaceId))}
             >
-              <Icon icon={ICONS.connect} />
               Connect Bing
             </Button>
           </>

@@ -394,8 +394,8 @@ export function PerformanceScreen() {
         <StateBlock
           kind="error"
           {...readErrorProps(dashboard)}
-          fallback="Could not load performance data. Check your connection and try again."
-          title="Could not load performance data"
+          fallback="Couldn't load performance data. Check your connection and try again."
+          title="Couldn't load performance data"
         />
       </ReportPage>
     );

@@ -69,7 +69,7 @@ export function NotFoundScreen() {
     <NoticePage
       tone="info"
       icon={SearchX}
-      label="Not found"
+      label={null}
       heading="Page not found"
       actions={<OverviewLink />}
     >

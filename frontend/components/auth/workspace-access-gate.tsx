@@ -242,7 +242,7 @@ function AccessEnded({
           <LazyIsland
             loading={<StateBlock kind="loading" shape={{ kind: 'list' }} />}
             failed={
-              <IslandUnavailable message="Plans could not load. Reload the page to try again." />
+              <IslandUnavailable message="Couldn't load plans. Reload the page to try again." />
             }
             label="restore-plan"
             defects="surface"
@@ -270,7 +270,7 @@ function AccessEnded({
           <LazyIsland
             loading={<StateBlock kind="loading" shape={{ kind: 'facts', rows: 2 }} />}
             failed={
-              <IslandUnavailable message="Account security could not load. Reload the page to try again." />
+              <IslandUnavailable message="Couldn't load account security. Reload the page to try again." />
             }
             label="account-security"
             defects="surface"

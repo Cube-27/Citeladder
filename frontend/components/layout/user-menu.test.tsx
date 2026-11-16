@@ -106,10 +106,10 @@ describe('UserMenu', () => {
 
     const settingsIndex = labels.findIndex((label) => /settings/i.test(label));
     const billingIndex = labels.findIndex((label) => /^billing$/i.test(label));
-    const connectIndex = labels.findIndex((label) => /^connect ai assistants$/i.test(label));
+    const connectIndex = labels.findIndex((label) => /^mcp connections$/i.test(label));
     const signOutIndex = labels.findIndex((label) => /sign out/i.test(label));
 
-    // Order: Settings → Billing → Connect AI assistants → Sign out.
+    // Order: Settings → Billing → MCP connections → Sign out.
     expect(settingsIndex).toBeGreaterThanOrEqual(0);
     expect(billingIndex).toBe(settingsIndex + 1);
     expect(connectIndex).toBe(billingIndex + 1);

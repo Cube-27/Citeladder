@@ -97,7 +97,7 @@ export function UserMenuTrigger({ presenter }: Readonly<{ presenter: UserMenuPre
   const { activeWorkspace } = useProjectContext();
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
-  // The deepest match is current: Connect AI assistants, not also Settings.
+  // The deepest match is current: MCP connections, not also Settings.
   const currentHref = ACCOUNT_MENU_ITEMS.filter((item) =>
     isNavItemActive(pathname, searchParams, item),
   ).sort((a, b) => b.href.length - a.href.length)[0]?.href;
