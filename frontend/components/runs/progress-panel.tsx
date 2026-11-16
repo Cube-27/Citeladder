@@ -19,7 +19,7 @@ import { runsApi } from '@/lib/api/runs';
 import type { Audit } from '@citeladder/contracts';
 import { saveBlob } from '@/lib/download';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatCount, formatDisplayTimestamp } from '@/lib/format';
+import { formatCount, formatDisplayTime } from '@/lib/format';
 import { AUDIT_STATES } from '@/lib/runs/status';
 import { Notice } from '@/components/ui/notice';
 import { FigureStrip } from '@/components/ui/figure-strip';
@@ -148,9 +148,9 @@ function ProgressStatus({ audit, polling }: Readonly<{ audit: Audit; polling: bo
   const timeZone = useDisplayTimeZone();
   return (
     <Inline className="flex-wrap">
-      {/* A date is recorded, not a figure: it reads in the status line. */}
+      {/* The masthead title carries the day; the status line adds only the time. */}
       <span className="type-body text-ink-2">
-        Created {formatDisplayTimestamp(audit.created_at, timeZone)}
+        Started {formatDisplayTime(audit.created_at, timeZone)}
       </span>
       <StatusMark variant="run-status" value={AUDIT_STATES[audit.status].badge}>
         {AUDIT_STATES[audit.status].label}

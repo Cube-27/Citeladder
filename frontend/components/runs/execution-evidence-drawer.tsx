@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { lazy, useEffect, type ReactNode } from 'react';
 
 import { choiceFilter } from '@/components/ui/all-filters';
+import { ClampText } from '@/components/ui/clamp-text';
 import { Drawer } from '@/components/ui/drawer';
 import { FilterControls } from '@/components/ui/filter-bar';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
@@ -43,6 +44,13 @@ export type EvidenceSubject = {
   prompt_text?: string;
   prompt_index?: number;
 };
+
+/** The drawer names the prompt once: its text, or its number when the opener has no text. */
+function evidenceTitle(execution: EvidenceSubject | null): ReactNode {
+  if (execution?.prompt_text) return <ClampText>{execution.prompt_text}</ClampText>;
+  if (execution?.prompt_index !== undefined) return `Prompt #${execution.prompt_index + 1}`;
+  return 'Execution evidence';
+}
 
 function EvidenceLoading() {
   return (
@@ -107,8 +115,6 @@ export function ExecutionEvidenceDrawer({
         <EvidenceCard
           evidence={evidenceQuery.data}
           answerText={evidenceQuery.data.answer_text}
-          promptText={execution?.prompt_text}
-          promptIndex={execution?.prompt_index}
           isSearchSurface={evidenceQuery.data.logical_engine === 'google_ai_overview'}
           outcome={evidenceQuery.data.search_surface_outcome}
         />
@@ -116,15 +122,11 @@ export function ExecutionEvidenceDrawer({
     );
   }
 
-  const description =
-    execution?.prompt_index === undefined ? undefined : `Prompt #${execution.prompt_index + 1}`;
-
   return (
     <Drawer
       open={open}
       onOpenChange={onOpenChange}
-      title="Execution evidence"
-      description={description}
+      title={evidenceTitle(execution)}
       width="wide"
       closeLabel="Close evidence drawer"
     >
