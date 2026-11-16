@@ -273,7 +273,7 @@ export function TableCell({
         className,
       )}
     >
-      {!numeric && isPlainText(children) ? <ClampText rowTitle>{children}</ClampText> : children}
+      {!numeric && isPlainText(children) ? <ClampText>{children}</ClampText> : children}
     </td>
   );
 }

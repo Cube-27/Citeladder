@@ -2106,14 +2106,13 @@ label {
 }
 @media (max-width: 899px) {
   [data-data-table-frame] col:not([data-identity-col], [data-desktop-only]) {
-    width: var(--col-floor, var(--col-width, auto));
+    width: var(--col-floor);
   }
   [data-data-table-frame] col[data-identity-col] {
     width: auto;
   }
   /* A phone shows the words that tell rows apart: the title takes two lines. */
-  [data-pinned='1'] tbody > tr > :nth-child(1) [data-row-title],
-  [data-pinned='2'] tbody > tr > :nth-child(2) [data-row-title] {
+  :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) [data-row-title] {
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
@@ -2122,36 +2121,20 @@ label {
   }
 }
 
-/* The identity cell's link is the whole cell to the pointer (its ::after
-   over the pinned, positioned cell); its focus ring is the whole-row inset
-   ring. The cell's other controls and cut values stay above it. */
-[data-pinned='1'] tbody > tr:not([data-table-state]) > :nth-child(1),
-[data-pinned='2'] tbody > tr:not([data-table-state]) > :nth-child(2) {
-  & > a[href]::after,
-  & [data-row-title] a[href]::after {
+/* The identity cell's title link is the whole (pinned, positioned) cell to
+   the pointer, with the inset ring; the cell's other controls stay above it. */
+:is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) {
+  & [data-row-title] a::after {
     content: '';
     position: absolute;
     inset: 0;
   }
-  & > a[href]:focus-visible,
-  & [data-row-title] a[href]:focus-visible {
-    outline: none;
+  & [data-row-title] a:focus-visible {
+    outline-offset: -2px;
   }
-  & :is(button, a[href], input, [data-truncated]):not(
-      [data-row-title],
-      [data-row-title] a[href],
-      & > a[href]
-    ) {
+  & :is(a, button, input, [data-truncated]):not([data-row-title], [data-row-title] a) {
     position: relative;
     z-index: 1;
-  }
-}
-:root:not([data-input-modality='pointer']) [data-pinned='1'] tbody > tr > :nth-child(1),
-:root:not([data-input-modality='pointer']) [data-pinned='2'] tbody > tr > :nth-child(2) {
-  & > a[href]:focus-visible::after,
-  & [data-row-title] a[href]:focus-visible::after {
-    outline: 2px solid var(--color-focus);
-    outline-offset: -2px;
   }
 }
 
