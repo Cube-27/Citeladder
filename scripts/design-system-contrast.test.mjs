@@ -14,7 +14,7 @@ import {
  * the labels on fills and the marks the separation check measures are set
  * explicitly.
  */
-function palette({ ink, paper, positive, negative, series, appSeries }) {
+function palette({ ink, paper, positive, negative, appSeries }) {
   const { inks, surfaces } = contrastRoles();
   return {
     ...Object.fromEntries(surfaces.map((token) => [token, paper])),
@@ -22,10 +22,8 @@ function palette({ ink, paper, positive, negative, series, appSeries }) {
     // Fills carry the other end of the scale.
     '--color-ink-hover': ink,
     '--color-on-ink': paper,
-    '--color-on-accent': paper,
     '--color-positive': positive,
     '--color-negative': negative,
-    ...Object.fromEntries(series.map((value, index) => [`--color-data-${index + 1}`, value])),
     ...Object.fromEntries(
       ['you', 'rival-1', 'rival-2', 'rival-3', 'rival-4'].map((name, index) => [
         `--color-data-${name}`,
@@ -40,7 +38,6 @@ const LIGHT = palette({
   paper: '#ffffff',
   positive: '#000000',
   negative: '#5e5e5e',
-  series: ['#000000', '#595959', '#949494'],
   appSeries: ['#e8501a', '#000000', '#2f6f9f', '#4b3a8a', '#1f7d73'],
 });
 const DARK = palette({
@@ -48,7 +45,6 @@ const DARK = palette({
   paper: '#000000',
   positive: '#ffffff',
   negative: '#949494',
-  series: ['#ffffff', '#a0a0a0', '#5f5f5f'],
   appSeries: ['#ff6a33', '#ffffff', '#6fb3e0', '#8a73d9', '#4fc4b5'],
 });
 
@@ -155,14 +151,6 @@ test('a translucent soft is composited onto the surface before measuring', () =>
     violations.some((violation) =>
       violation.includes('--color-positive on --color-positive-soft is 1.'),
     ),
-  );
-});
-
-test('a light chart series must hold 3:1 on every ground', () => {
-  const violations = paletteViolations(css({ light: { '--color-data-3': '#eeeeee' } }));
-  assert.ok(violations.some((violation) => violation.includes('--color-data-3 on --color-paper')));
-  assert.ok(
-    violations.some((violation) => violation.includes('--color-data-3 on --color-surface-sunken')),
   );
 });
 

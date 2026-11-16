@@ -86,8 +86,6 @@ export function productContractViolations(root) {
     '--text-title',
     '--text-display-md',
     '--text-display-lg',
-    '--text-display-xl',
-    '--text-display-2xl',
   ];
   const scale = TYPE_SCALE.map((token) => {
     const match = new RegExp(escapeRegExp(token) + String.raw`\s*:\s*([\d.]+)rem\s*;`).exec(css);

@@ -25,7 +25,6 @@ const color = (role) => `--color-${role}`;
 const STATUSES = ['positive', 'negative', 'warning', 'info'];
 const SOFTS = ['accent', ...STATUSES].map((role) => color(`${role}-soft`));
 const GROUNDS = ['paper', 'sidebar', 'surface', 'surface-sunken'].map(color);
-const SERIES = ['data-1', 'data-2', 'data-3'].map(color);
 const STAGES = ['stage-sky', 'stage-mint', 'stage-lilac', 'stage-peach'].map(color);
 
 /**
@@ -71,12 +70,11 @@ const CONTRAST_PAIRS = [
     surfaces: [color('paper'), color('surface'), color('accent-soft')],
     minimum: 4.5,
   },
-  // Labels on fills: the primary button (and its hover) and the own-brand number.
+  // Labels on fills: the primary button and its hover.
   { inks: [color('on-ink')], surfaces: [color('ink'), color('ink-hover')], minimum: 4.5 },
-  { inks: [color('on-accent')], surfaces: [color('accent')], minimum: 4.5 },
-  // Marks: Flare, the named chart series, control marks and the focus ring.
+  // Marks: Flare, control marks and the focus ring.
   {
-    inks: [color('accent'), ...SERIES, color('line-control'), color('focus')],
+    inks: [color('accent'), color('line-control'), color('focus')],
     surfaces: GROUNDS,
     minimum: 3,
   },
@@ -140,7 +138,6 @@ const pairsOf = (tokens) =>
   tokens.flatMap((first, index) => tokens.slice(index + 1).map((second) => [first, second]));
 const SEPARATED_SETS = [
   { name: 'positive and negative', pairs: [[color('positive'), color('negative')]] },
-  { name: 'named chart series', pairs: pairsOf(SERIES) },
   { name: 'you and the rivals', pairs: pairsOf(APP_SERIES), appOnly: true },
 ];
 

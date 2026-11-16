@@ -19,7 +19,7 @@ serves the app, the website and the docs. The generated blocks list the
 system's values, which the website and docs render. The app binds its own
 values in `:root:not([data-public-surface])` and its dark twin, so the app
 rules below hold only there. On the app, the website's role names (`paper`,
-`line`, `ink-secondary`, `data-1`, the `-soft` fills) alias the app's roles
+`line`, `ink-secondary`, the `-soft` fills) alias the app's roles
 so a shared rule still renders in the app's palette, but app code never uses
 them, never imports a website-only atom, and a change to a shared atom leaves
 `components/marketing` and `components/content` as they were. The policy
@@ -77,9 +77,6 @@ colors:
   chrome: '#f4f4f4' # dark '#0a0a0a'
   control-edge: '#e5e5e5' # dark '#2a2a2a'
   control-line: '#858585' # dark '#747474'
-  data-1: '#e8501a' # dark '#ff6a33'
-  data-2: '#111111' # dark '#f4f4f4'
-  data-3: '#7a7a7a' # dark '#8c8c8c'
   data-other: '#c2c2c2' # dark '#4a4a4a'
   data-rival-1: '#111111' # dark '#f4f4f4'
   data-rival-2: '#2f6f9f' # dark '#2f6f9f'
@@ -90,7 +87,6 @@ colors:
   ground: '#f4f4f4' # dark '#0a0a0a'
   info: '#1f5fbf' # dark '#7fb0ff'
   info-soft: '#e3edfc' # dark '#14243d'
-  info-swatch: '#1f5fbf' # dark '#7fb0ff'
   info-wash: '#e3edfc' # dark '#14243d'
   ink: '#111111' # dark '#f4f4f4'
   ink-2: '#525252' # dark '#a6a6a6'
@@ -102,14 +98,11 @@ colors:
   line-strong: '#d4d4d4' # dark '#3a3a3a'
   negative: '#c4122f' # dark '#ff7387'
   negative-soft: '#ffe2e6' # dark '#3d0e16'
-  negative-swatch: '#c4122f' # dark '#ff7387'
   negative-wash: '#ffe2e6' # dark '#3d0e16'
-  on-accent: '#111111' # dark '#111111'
   on-ink: '#ffffff' # dark '#111111'
   paper: '#f4f4f4' # dark '#0a0a0a'
   positive: '#0b6e69' # dark '#4fd1c5'
   positive-soft: '#d6f2ef' # dark '#0e2e2b'
-  positive-swatch: '#0b6e69' # dark '#4fd1c5'
   positive-wash: '#d6f2ef' # dark '#0e2e2b'
   raised: '#ffffff' # dark '#151515'
   rule: '#e5e5e5' # dark '#2a2a2a'
@@ -126,7 +119,6 @@ colors:
   surface-sunken: '#ececec' # dark '#1e1e1e'
   warning: '#8a5000' # dark '#f5b84a'
   warning-soft: '#fff0d1' # dark '#3a2a0a'
-  warning-swatch: '#8a5000' # dark '#f5b84a'
   warning-wash: '#fff0d1' # dark '#3a2a0a'
   well: '#ececec' # dark '#1e1e1e'
 ```
@@ -158,7 +150,7 @@ colors:
   full colour vision, in the website's and the app's palettes, both themes.
 - **Website and docs:** `paper` is the ground, `surface` the container,
   `surface-sunken` the inset; `line`, `line-strong` and `line-control`
-  the edges; `data-1` (accent), `data-2` (ink) and `data-3` the series.
+  the edges. Charts use the app's series roles (`data-you`, `data-rival-*`).
   The `stage-*` tints are for editorial illustrations only, never a page
   fill, panel or card.
 
