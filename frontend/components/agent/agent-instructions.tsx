@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 
+import { SaveFoot } from '@/components/knowledge-base/save-foot';
 import { Absence } from '@/components/ui/absence';
 import { DisplayTime } from '@/components/ui/display-time';
 import { Stack } from '@/components/ui/layout';
@@ -16,8 +17,8 @@ import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/comp
 /**
  * The project's Agent instructions and their draft. The draft follows the
  * persisted text until it is edited; a local edit survives background
- * refreshes and a save that lands after later typing. The page places the
- * save action, so the state lives here rather than in the card.
+ * refreshes and a save that lands after later typing. The page holds this
+ * state, so a draft survives switching tabs.
  */
 export function useAgentInstructions(workspaceId: string, projectId: string) {
   const scope = { workspaceId, projectId };
@@ -54,8 +55,8 @@ export function useAgentInstructions(workspaceId: string, projectId: string) {
     query,
     draft,
     mayEdit,
-    /** Something to save: loaded, editable, changed and not already saving. */
-    canSave: Boolean(query.data) && mayEdit && draft.trim() !== text.trim() && !save.isPending,
+    changed: draft.trim() !== text.trim(),
+    saving: save.isPending,
     save: () => submit(draft),
     saveError: save.isError ? save.error : null,
     retry: () => {
@@ -127,6 +128,14 @@ export function AgentInstructionsCard({
           ) : null}
           {!query.data.created_at && !mayEdit ? <Absence state="none" /> : null}
         </Stack>
+      ) : null}
+      {query.data && mayEdit ? (
+        <SaveFoot
+          label="Save instructions"
+          changed={instructions.changed}
+          saving={instructions.saving}
+          onSave={instructions.save}
+        />
       ) : null}
     </Section>
   );

@@ -159,7 +159,9 @@ describe('Context layout', () => {
     await user.click(screen.getByRole('tab', { name: 'Business map' }));
     expect(screen.queryByRole('button', { name: /^save/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Agent instructions' }));
-    expect(await screen.findByRole('button', { name: 'Save instructions' })).toBeDisabled();
+    const idleInstructions = await screen.findByRole('button', { name: 'Save instructions' });
+    expect(idleInstructions).toHaveAttribute('aria-disabled', 'true');
+    expect(idleInstructions).toHaveAccessibleDescription('No changes to save');
   });
 
   it('shows the Brand facts tab with its error when the pilot gate cannot be read', async () => {

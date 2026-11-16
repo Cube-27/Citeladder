@@ -1,6 +1,5 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { Save } from 'lucide-react';
-import { useId, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 import { AgentInstructionsCard, useAgentInstructions } from '@/components/agent/agent-instructions';
 import { BrandFactsPanel } from '@/components/knowledge-base/brand-facts-panel';
@@ -18,10 +17,7 @@ import {
 import { SettingsPage } from '@/components/templates/settings-page';
 import { TabPanel, TabRow, TabsRoot } from '@/components/ui/tabs';
 import { CompetitorSuggestions } from '@/components/visibility/prompt-insights';
-import { Button } from '@/components/ui/button';
-import { Icon } from '@/components/ui/icon';
 import { Stack } from '@/components/ui/layout';
-import { Tooltip } from '@/components/ui/tooltip';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { projectQueries } from '@/lib/api/projects';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -53,22 +49,12 @@ const CONTEXT_TAB_CODEC = stringUrlCodec<ContextTab>(
   'facts',
 );
 
-/** Which save the identity band offers on each tab; read-only tabs offer none. */
-const TAB_SAVE: Readonly<Record<ContextTab, 'profile' | 'instructions' | null>> = {
-  facts: 'profile',
-  audience: 'profile',
-  map: null,
-  competitors: null,
-  'brand-facts': null,
-  instructions: 'instructions',
-};
-
 /**
  * What the agent knows about the business before it reads any evidence, one
  * tab per subject: the company facts, audience and offerings, the read-only
  * business map the Prompt Builder edits, the tracked competitors, the pilot's
  * Brand facts, and the project's Agent instructions. Each tab's content sits
- * on a card; the identity band carries the active tab's save.
+ * on a card; a form card carries its own Save in its foot.
  */
 export function ContextScreen() {
   const { workspaceId, project } = useProjectScope();
@@ -98,7 +84,6 @@ function ContextWorkspace({
   const awaitingGate = requestedTab === 'brand-facts' && facts.isPending;
   const offered = awaitingGate || tabs.some((tab) => tab.id === requestedTab);
   const activeTab = offered ? requestedTab : 'facts';
-  const saveKind = TAB_SAVE[activeTab];
 
   return (
     <TabsRoot value={activeTab} onValueChange={setTab}>
@@ -107,13 +92,6 @@ function ContextWorkspace({
           <TabRow
             items={tabs.map((tab) => ({ value: tab.id, label: tab.label }))}
             ariaLabel="Context sections"
-          />
-        }
-        actions={
-          <SaveAction
-            kind={saveKind === 'profile' && !profile.data ? null : saveKind}
-            form={form}
-            instructions={instructions}
           />
         }
       >
@@ -131,78 +109,6 @@ function ContextWorkspace({
     </TabsRoot>
   );
 }
-
-/**
- * One save button in the masthead for every tab, so switching tabs never
- * moves it: a tab with nothing to save keeps the button's box, hidden. It
- * reads "Save" so it fits the masthead at 390; its name says what it saves.
- * It waits for a change, so a blank profile never offers an empty save.
- */
-function SaveAction({
-  kind,
-  form,
-  instructions,
-}: Readonly<{
-  kind: 'profile' | 'instructions' | null;
-  form: BrandProfileForm;
-  instructions: ReturnType<typeof useAgentInstructions>;
-}>) {
-  if (kind === 'instructions' && instructions.mayEdit)
-    return (
-      <Button
-        variant="primary"
-        onClick={instructions.save}
-        disabled={!instructions.canSave}
-        aria-label="Save instructions"
-      >
-        <Icon icon={Save} />
-        Save
-      </Button>
-    );
-  const hidden = kind !== 'profile';
-  if (!hidden && !form.saving && !form.dirty) return <NothingToSave />;
-  return (
-    <Button
-      variant="primary"
-      className={hidden ? 'invisible' : undefined}
-      aria-hidden={hidden || undefined}
-      onClick={form.save}
-      disabled={hidden || form.saving}
-      aria-label={form.saving ? 'Saving brand knowledge' : 'Save brand knowledge'}
-    >
-      <Icon icon={Save} />
-      {form.saving ? 'Saving…' : 'Save'}
-    </Button>
-  );
-}
-
-/**
- * Save with nothing to save: `aria-disabled` rather than disabled, so it stays
- * focusable and its reason reaches a tooltip and `aria-describedby`.
- */
-function NothingToSave() {
-  const reasonId = useId();
-  return (
-    <>
-      <Tooltip content={NO_CHANGES} describe={false}>
-        <Button
-          variant="primary"
-          aria-disabled="true"
-          aria-describedby={reasonId}
-          aria-label="Save brand knowledge"
-        >
-          <Icon icon={Save} />
-          Save
-        </Button>
-      </Tooltip>
-      <span id={reasonId} hidden>
-        {NO_CHANGES}
-      </span>
-    </>
-  );
-}
-
-const NO_CHANGES = 'No changes to save';
 
 function ContextPanels({
   project,
