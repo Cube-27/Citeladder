@@ -1,7 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
 
-import { cn } from '@/lib/utils';
-
 import { PageFrame, PageSections, type PageBack, type PageFrameSlots } from './page-frame';
 
 /** The action bar's height and a gutter above and below it. */
@@ -43,10 +41,8 @@ export function RecordPage({
     <PageFrame {...slots}>
       <div
         aria-busy={busy}
-        className={cn(
-          'flex min-w-0 flex-1 flex-col',
-          hasBar && 'pb-[calc(var(--filter-bar-height)+2*var(--content-gutter))]',
-        )}
+        className="flex min-w-0 flex-1 flex-col"
+        style={hasBar ? { paddingBottom: BAR_CLEARANCE } : undefined}
       >
         <PageSections>
           {identity}
@@ -83,6 +79,8 @@ function useScrollClearance(shown: boolean) {
     if (!shown) return;
     const root = document.documentElement;
     root.style.setProperty('scroll-padding-bottom', BAR_CLEARANCE);
-    return () => root.style.removeProperty('scroll-padding-bottom');
+    return () => {
+      root.style.removeProperty('scroll-padding-bottom');
+    };
   }, [shown]);
 }

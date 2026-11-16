@@ -393,9 +393,9 @@ function measure({ route }: { route: string }) {
   // starts — the ink, not the CSS, because the same 16 can sit on the slip or
   // on a child.
   const boxes = '.surface-slip';
-  // A Callout is a drawn box of its own: its edge is the ink, not its text.
+  // A Callout or an icon tile is a drawn box of its own: its edge is the ink, not its text.
   const isContent = (element: Element) =>
-    element.matches('[data-callout-tone]') ||
+    element.matches('[data-callout-tone], [data-icon-tile]') ||
     (!element.parentElement?.closest('[data-callout-tone]') &&
       (element.matches('button, input, select, textarea, svg, img, [role="combobox"]') ||
         Array.from(element.childNodes).some(

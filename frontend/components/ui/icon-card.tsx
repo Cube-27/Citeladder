@@ -2,19 +2,17 @@ import { ChevronRight, type LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 
 import { Icon } from '@/components/ui/icon';
-import { SLIP_FACE } from '@/components/ui/slip';
+import { slipClasses } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 
 /**
- * A wide card that opens something (a directory entry, such as a skill): the
- * caller's link carries `ICON_CARD`, and `IconCardContent` fills it with a
- * 40px `well` tile and its 20px glyph, the title and its lines, and a chevron.
+ * A wide slip that opens something (a directory entry, such as a skill): the
+ * caller's link carries `ICON_CARD`, and `IconCardContent` fills it with the
+ * 40px icon tile and its 20px glyph, the title and its lines, and a chevron.
  * The title is plain `ink` at rest and underlines on hover and focus-visible.
  */
-export const ICON_CARD = cn(
-  SLIP_FACE,
-  'group focus-ring-inset hover:overlay-hover grid w-full grid-cols-[40px_minmax(0,1fr)_auto] items-start gap-4 p-4 no-underline',
+export const ICON_CARD = slipClasses(
+  'group focus-ring-inset hover:overlay-hover flex w-full items-start gap-4 no-underline',
 );
 
 export function IconCardContent({
@@ -24,10 +22,10 @@ export function IconCardContent({
 }: Readonly<{ icon: LucideIcon; title: ReactNode; children?: ReactNode }>) {
   return (
     <>
-      <span className="bg-well rounded-card text-ink-2 flex size-10 items-center justify-center">
-        <Glyph aria-hidden className="size-5" />
+      <span aria-hidden data-icon-tile="" className="shrink-0">
+        <Glyph className="text-ink-2 size-5" />
       </span>
-      <span className="flex min-w-0 flex-col gap-1">
+      <span className="flex min-w-0 flex-1 flex-col gap-1">
         <h3
           className={textRole(
             'label',

@@ -7,7 +7,6 @@ import { slipClasses } from '@/components/ui/slip';
 import { StateHeadingLevelContext } from '@/components/ui/state-block';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 
 /** Where a widget's head link goes; every widget words and draws it alike. */
 export type WidgetLink = Readonly<{ href: string; label: string; name?: string }>;
@@ -15,9 +14,18 @@ export type WidgetLink = Readonly<{ href: string; label: string; name?: string }
 /**
  * How the body fills the card's height when a taller neighbour stretches it:
  * a `figure` sits under the head with its link at the card's foot, a `chart`
- * grows its plot into the height, and a `list` starts at the head.
+ * stretches its plot into the height, and a `list` starts at the head.
  */
 type WidgetFill = 'figure' | 'chart' | 'list';
+
+type WidgetHeadProps = Readonly<{
+  id: string;
+  title: ReactNode;
+  description?: ReactNode;
+  status?: ReactNode;
+  link: ReactNode;
+  figure: boolean;
+}>;
 
 /**
  * One Overview widget: a card with one head (its title in `heading` at the
@@ -45,7 +53,6 @@ export function WidgetFrame({
   children: ReactNode;
 }>) {
   const figure = fill === 'figure';
-  const headLink = figure ? null : link;
   const linkElement = link ? (
     <TextLink href={link.href}>
       {link.name ? <span className="sr-only">{link.name}: </span> : null}
@@ -60,45 +67,55 @@ export function WidgetFrame({
       data-overview-widget=""
       className={slipClasses('flex h-full min-w-0 flex-col')}
     >
-      <Inline as="header" className="items-start justify-between">
-        {figure ? (
-          <Inline gap="item" className="min-w-0">
-            <h2 id={id} className={textRole('heading', 'truncate')}>
-              {title}
-            </h2>
-            {description ? (
-              <InfoHint label={typeof title === 'string' ? `About ${title}` : 'About this card'}>
-                {description}
-              </InfoHint>
-            ) : null}
-          </Inline>
-        ) : (
-          <Stack gap="tight" className="min-w-0">
-            <h2 id={id} className={textRole('heading', 'truncate')}>
-              {title}
-            </h2>
-            {description ? <SectionDescription>{description}</SectionDescription> : null}
-          </Stack>
-        )}
-        {status || headLink ? (
-          <Inline className="shrink-0">
-            {status}
-            {headLink ? linkElement : null}
-          </Inline>
-        ) : null}
-      </Inline>
+      <WidgetHead
+        id={id}
+        title={title}
+        description={description}
+        status={status}
+        link={figure ? null : linkElement}
+        figure={figure}
+      />
+      {/* A chart's grid body stretches its one child; a figure or list starts at the head. */}
       <Stack
         gap="item"
-        className={cn(
-          'flex min-w-0 flex-col',
-          !figure && 'flex-1',
-          // The plot takes the height a taller neighbour gives the row.
-          fill === 'chart' && '*:flex-1',
-        )}
+        className={fill === 'chart' ? 'min-w-0 flex-1' : 'flex min-w-0 flex-1 flex-col'}
       >
         <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
       </Stack>
-      {figure && link ? <Inline className="mt-auto">{linkElement}</Inline> : null}
+      {figure && linkElement ? <Inline>{linkElement}</Inline> : null}
     </Stack>
+  );
+}
+
+function WidgetHead({ id, title, description, status, link, figure }: WidgetHeadProps) {
+  const heading = (
+    <h2 id={id} className={textRole('heading', 'truncate')}>
+      {title}
+    </h2>
+  );
+  return (
+    <Inline as="header" className="items-start justify-between">
+      {figure ? (
+        <Inline gap="item" className="min-w-0">
+          {heading}
+          {description ? (
+            <InfoHint label={typeof title === 'string' ? `About ${title}` : 'About this card'}>
+              {description}
+            </InfoHint>
+          ) : null}
+        </Inline>
+      ) : (
+        <Stack gap="tight" className="min-w-0">
+          {heading}
+          {description ? <SectionDescription>{description}</SectionDescription> : null}
+        </Stack>
+      )}
+      {status || link ? (
+        <Inline className="shrink-0">
+          {status}
+          {link}
+        </Inline>
+      ) : null}
+    </Inline>
   );
 }

@@ -52,8 +52,8 @@ export function MovementChart({ movements }: Readonly<{ movements: CommandCenter
     <ChartFrame summary={`Mention rate by engine, previous to current run. ${summary}.`}>
       <AppGrid layout="halves">
         {movements.map((row) => (
-          // A taller card spreads each engine's rows rather than leaving a band under them.
-          <Stack key={row.label} gap="compact" className="min-w-0 content-between">
+          // Unpacked grid rows stretch, so a taller card spreads each engine's rows.
+          <Stack key={row.label} gap="compact" className="min-w-0">
             <Inline className="justify-between">
               <span className={textRole('label')}>{engines.label(row.label)}</span>
               <Delta value={row.delta} unit=" pp" {...VS_PREVIOUS_RUN} />
