@@ -37,6 +37,23 @@
     "frontendE2E": ["e2e/geometry-census.spec.ts"]
   },
   {
+    "sources": [
+      "frontend/components/site-health/issue-*.tsx",
+      "frontend/components/site-health/issues-*.tsx",
+      "frontend/components/site-health/page-kind-select.tsx",
+      "frontend/components/templates/page-frame.tsx",
+      "frontend/components/templates/report-page.tsx",
+      "frontend/components/ui/all-filters.tsx",
+      "frontend/components/ui/data-table*.tsx",
+      "frontend/components/ui/filter-bar.tsx",
+      "frontend/components/ui/pager.tsx",
+      "frontend/components/ui/table.tsx",
+      "frontend/components/ui/tabs.tsx",
+      "frontend/lib/site-health/issue-filters.ts"
+    ],
+    "frontendE2E": ["e2e/surface-layout-issues.spec.ts"]
+  },
+  {
     "sources": ["frontend/components/ui/command-palette.tsx"],
     "frontendE2E": ["e2e/shell.spec.ts"]
   },
