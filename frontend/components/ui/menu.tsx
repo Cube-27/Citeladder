@@ -160,7 +160,7 @@ export function MenuSubContent({
 /**
  * A menu opens below its trigger (flipping only without room), its left edge
  * on the trigger's (`end` where a caller passes it), at least as wide as the
- * trigger and 224px, and at most 320px; it hugs its items between.
+ * trigger and at most 320px; it hugs its items between.
  */
 export function MenuContent({
   align = 'start',
@@ -180,7 +180,7 @@ export function MenuContent({
         collisionPadding={collisionPadding}
         className={cn(
           MENU_PANEL,
-          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] max-w-80 min-w-[max(var(--radix-dropdown-menu-trigger-width),14rem)] flex-col overflow-auto',
+          'flex max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] max-w-80 min-w-[var(--radix-dropdown-menu-trigger-width)] flex-col overflow-auto',
         )}
         {...props}
       >
