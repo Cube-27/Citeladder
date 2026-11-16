@@ -217,7 +217,6 @@ spacing:
   container-site: 1320px
   container-app: 1440px
   container-thread: 1040px
-  container-page-narrow: 1040px
   container-prose: 720px
   container-narrow: 560px
   container-form: 640px
@@ -273,8 +272,16 @@ the filter bar when it scopes the page, a table's toolbar when it scopes one
 table, a section's head when it changes how that section draws.
 
 **Width.** Content fills the main column inside its gutter, so collapsing the
-sidebar grows it; reading columns, forms and flows take `container-prose`,
-`container-form` and `container-flow`. The template, not the page, picks.
+sidebar grows it, except on reading pages: the Agent chat, Settings and
+Billing, Issues, Actions, Skills and Context sit whole, masthead included, in
+the centred `container-thread` column the Agent thread uses, so their side
+space matches the chat's. The owner decided this on 2026-11-16: "the padding
+will be same as agent chats padding to maintain consistency". A route opts in
+with `width: 'narrow'` in
+[`app-routes.ts`](../frontend/lib/navigation/app-routes.ts) and `PageFrame`
+applies it; a workbench (a chat's page document) still fills the column.
+Reading columns, forms and flows take `container-prose`, `container-form` and
+`container-flow`. The template, not the page, picks.
 No page scrolls sideways down to 320px: a wide table scrolls inside its own
 frame with its first column pinned.
 

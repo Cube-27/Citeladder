@@ -92,7 +92,7 @@ export type AppRouteRecord = {
   nav?: readonly NavEntry[];
   /** A shell route's loading frame; without one it draws a record's. */
   loading?: RouteLoading;
-  /** A reading page (`narrow`) sits centred in `max-w-page-narrow`; else it fills the main column. */
+  /** A reading page (`narrow`) sits centred in the chat's `max-w-thread`; else it fills the main column. */
   width?: 'narrow';
 };
 

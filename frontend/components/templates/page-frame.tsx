@@ -41,8 +41,9 @@ export type PageFrameSlots = Readonly<{
  * and the body sits 12 below the filter row. The masthead's
  * menu button, search and "Ask agent" come from the shell. Geometry is tokens
  * only; a page passes content into the slots and sets none of its own. A
- * narrow route (its manifest `width`) centres the whole frame in
- * `max-w-page-narrow`; `fill` keeps a workbench across the main column.
+ * narrow route (its manifest `width`) centres the whole frame, title and
+ * actions included, in the chat's `max-w-thread`; `fill` keeps a workbench
+ * across the main column.
  */
 export function PageFrame({
   title,
@@ -64,7 +65,7 @@ export function PageFrame({
         data-page-width={width}
         className={cn(
           'flex min-w-0 flex-1 flex-col',
-          width === 'narrow' && 'max-w-page-narrow mx-auto w-full',
+          width === 'narrow' && 'max-w-thread mx-auto w-full',
         )}
       >
         <Masthead

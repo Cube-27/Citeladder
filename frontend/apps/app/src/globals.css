@@ -298,18 +298,16 @@
 
   /* Containers: `max-w-site` (website sections, navbar, footer), `max-w-app`
      (an app page's content), `max-w-thread` (the Agent thread and its
-     composer), `max-w-page-narrow` (a narrow route's whole page, masthead
-     included: the route manifest's `width: 'narrow'`), `max-w-prose`
-     (articles, legal, docs) and `max-w-narrow` (section headers, auth cards,
-     onboarding, empty states). */
+     composer, and a reading page whole), `max-w-prose` (articles, legal,
+     docs) and `max-w-narrow` (section headers, auth cards, onboarding, empty
+     states). */
   --container-site: 1320px;
   --container-app: 1440px;
   --container-thread: 1040px;
-  --container-page-narrow: 1040px;
   --container-prose: 720px;
   --container-narrow: 560px;
   /* The app's measures: reading at 720 (`prose`), forms at 640; the page
-     itself fills the main column. */
+     fills the main column, a reading page sits in `thread`. */
   --container-form: 640px;
   /* The Flow template's one column (sign-in, setup, the workspace chooser). */
   --container-flow: 480px;
@@ -713,7 +711,7 @@
      the mode switch, and again below it, to the first content or the filter
      row; 12 from a filter row under tabs to the first card (`PageFrame`); sidebar 224 from 1280, 200 from 900, a 56 rail of 40px
      buttons when collapsed. Content fills the main column inside a 24 gutter
-     (16 below 900). The current navigation item sits on a 7% ink tile (2.8). */
+     (16 below 900), a reading page centred in `thread`. The current navigation item sits on a 7% ink tile (2.8). */
   --masthead-height: 56px;
   --page-tabs-height: 32px;
   --filter-bar-height: 48px;
@@ -729,9 +727,9 @@
     var(--masthead-block-size, var(--masthead-height)) + var(--page-pad-block) +
       var(--page-section-gap)
   );
-  /* No page cap: the page fills the main column, so collapsing the sidebar
-     grows it. A narrow route's page and the measures (form, prose, Thread)
-     live in the templates. */
+  /* No shell cap: a page fills the main column, so collapsing the sidebar
+     grows it. A reading page's `thread` column (`PageFrame`) and the measures
+     (form, prose) live in the templates. */
   --content-max-width: none;
   --content-gutter: 24px;
 
