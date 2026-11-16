@@ -275,6 +275,9 @@ test('on a phone the Actions table fills its card and the row title link fills i
   const geometry = await card.evaluate((section) => {
     const table = section.querySelector('table')!;
     const cell = table.querySelector('tbody td:has(a[href])')!;
+    // The goal strip and tree headers put the first row below a phone's fold;
+    // `elementFromPoint` only sees the viewport.
+    cell.scrollIntoView({ block: 'center' });
     const box = cell.getBoundingClientRect();
     const title = cell.querySelector('[data-row-title]')!;
     // The cell's bottom padding at its far end, clear of the link's text and of

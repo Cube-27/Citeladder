@@ -261,7 +261,7 @@ test('Action filters restore through URL history and reload', async ({ page }) =
   await expect(page.getByText('Earn a placement · 1 finding')).toBeVisible();
   await expect.poll(() => new URL(page.url()).searchParams.has('status')).toBe(false);
 
-  // A row opens its Action.
-  await page.getByText('Earn a placement · 1 finding').click();
+  // A row opens its Action; its title link covers the whole identity cell.
+  await page.getByRole('link', { name: 'example.org/tools' }).click();
   await expect(page).toHaveURL(new RegExp(`/actions/${ACTION}`));
 });
