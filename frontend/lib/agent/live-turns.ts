@@ -91,6 +91,14 @@ function update(runId: string, change: (turn: LiveTurn) => LiveTurn) {
   if (current) turns.set(runId, change(current));
 }
 
+/** `from: 0` replaces the body; a delta that does not continue it is dropped until the next full snapshot. */
+function withDocument(turn: LiveTurn, event: Extract<TurnEvent, { type: 'document_delta' }>) {
+  if (event.from === 0) return { ...turn, document: { title: event.title, body: event.text } };
+  const body = turn.document?.body;
+  if (body?.length !== event.from) return turn;
+  return { ...turn, document: { title: event.title, body: body + (event.text ?? '') } };
+}
+
 /** Folds one stream event into the turn's live view. */
 export function applyTurnEvent(turn: LiveTurn, event: TurnEvent): LiveTurn {
   switch (event.type) {
@@ -100,13 +108,8 @@ export function applyTurnEvent(turn: LiveTurn, event: TurnEvent): LiveTurn {
       return { ...turn, reply: appended(turn.reply, event) };
     case 'thinking':
       return { ...turn, thinking: appended(turn.thinking, event) };
-    case 'document_delta': {
-      if (event.from === 0) return { ...turn, document: { title: event.title, body: event.text } };
-      // A delta that does not continue the body is dropped; the next full snapshot repairs it.
-      const body = turn.document?.body;
-      if (body?.length !== event.from) return turn;
-      return { ...turn, document: { title: event.title, body: body + (event.text ?? '') } };
-    }
+    case 'document_delta':
+      return withDocument(turn, event);
     case 'tool': {
       const tool = {
         ordinal: event.ordinal,
