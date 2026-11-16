@@ -236,39 +236,42 @@ export async function getSourceUrlDetail(
 ): Promise<SourceUrlDetail> {
   const selection = await authorizedSelection(db, requested);
   const scope = scopeOf(db, selection);
-  const denominator = await db
-    .selectFrom(scope)
-    .select(sql<string>`count(distinct scope.analysis_id)`.as('responses'))
-    .executeTakeFirstOrThrow();
   const cited = citedOf(db, scope, selection.workspaceId, url);
-  const overview = await db
-    .selectFrom(cited)
-    .select([
-      sql<string>`count(distinct cited.analysis_id)`.as('retrievals'),
-      utcText(sql`min(cited.observed_at)`).as('first_seen'),
-      utcText(sql`max(cited.observed_at)`).as('last_seen'),
-      sql<string>`count(distinct cited.prompt_key)`.as('prompts'),
-    ])
-    .executeTakeFirstOrThrow();
   const matching = db
     .selectFrom('citations as citation')
     .innerJoin(scope, 'scope.analysis_id', 'citation.analysis_id')
     .where('citation.workspace_id', '=', selection.workspaceId)
     .where('citation.url', '=', url);
-  // The page identity these citations resolved to rides on the count.
-  const { citations, url_hash: urlHash } = await matching
-    .select([
-      sql<string>`count(citation.id)`.as('citations'),
-      sql<string | null>`max(citation.url_hash)`.as('url_hash'),
-    ])
-    .executeTakeFirstOrThrow();
-  // The title the engines reported, most recent non-empty first.
-  const title = await matching
-    .where('citation.title', '!=', '')
-    .select('citation.title')
-    .orderBy('scope.observed_at', 'desc')
-    .limit(1)
-    .executeTakeFirst();
+  const [denominator, overview, counted, title] = await Promise.all([
+    db
+      .selectFrom(scope)
+      .select(sql<string>`count(distinct scope.analysis_id)`.as('responses'))
+      .executeTakeFirstOrThrow(),
+    db
+      .selectFrom(cited)
+      .select([
+        sql<string>`count(distinct cited.analysis_id)`.as('retrievals'),
+        utcText(sql`min(cited.observed_at)`).as('first_seen'),
+        utcText(sql`max(cited.observed_at)`).as('last_seen'),
+        sql<string>`count(distinct cited.prompt_key)`.as('prompts'),
+      ])
+      .executeTakeFirstOrThrow(),
+    // The page identity these citations resolved to rides on the count.
+    matching
+      .select([
+        sql<string>`count(citation.id)`.as('citations'),
+        sql<string | null>`max(citation.url_hash)`.as('url_hash'),
+      ])
+      .executeTakeFirstOrThrow(),
+    // The title the engines reported, most recent non-empty first.
+    matching
+      .where('citation.title', '!=', '')
+      .select('citation.title')
+      .orderBy('scope.observed_at', 'desc')
+      .limit(1)
+      .executeTakeFirst(),
+  ]);
+  const { citations, url_hash: urlHash } = counted;
   const retrievals = Number(overview.retrievals);
   return {
     url,
