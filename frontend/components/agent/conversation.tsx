@@ -32,6 +32,7 @@ import { isPageReading, isRunActive, runOutcome } from '@/lib/agent/run-state';
 import type { AgentChatDetail, AgentMessage, AgentOutput } from '@/lib/api/agent';
 import { useAgentLinkHosts } from '@/lib/agent/link-hosts';
 import { ContentMarkdown, MarkdownText } from '@/lib/markdown/markdown';
+import { cn } from '@/lib/utils';
 
 /**
  * Messages and the chat's documents in conversational order (each document
@@ -85,14 +86,19 @@ export function Conversation({
       <ReplyAnnouncement key={detail.chat.id} detail={detail} />
       <ContextUsed context={detail.context} />
       {renderOutput ? <DocumentList outputs={detail.outputs} /> : null}
-      <Stack as="ol" gap="workspace" aria-label="Messages">
+      {/* One `minmax(0, 1fr)` column at each level: an auto track would grow to
+          a turn's widest unbreakable line (a long URL chip) and scroll the thread sideways. */}
+      <Stack as="ol" gap="workspace" aria-label="Messages" className="grid-cols-1">
         {items.map((item, index) =>
           item.kind === 'message' ? (
             <Stack
               as="li"
               gap="workspace"
               key={item.message.id}
-              className={older(index, Boolean(renderOutput) && byMessage.has(item.message.id))}
+              className={cn(
+                TURN,
+                older(index, Boolean(renderOutput) && byMessage.has(item.message.id)),
+              )}
             >
               <MessageBubble
                 message={item.message}
@@ -115,7 +121,7 @@ export function Conversation({
               as="li"
               gap="workspace"
               key={item.request?.id ?? item.failures[0].id}
-              className={older(index)}
+              className={cn(TURN, older(index))}
             >
               {item.request ? (
                 <MessageBubble message={item.request} skill={null} actions={detail.actions} />
@@ -148,6 +154,7 @@ export function Conversation({
     </AgentThread>
   );
 }
+const TURN = 'min-w-0 grid-cols-1';
 
 /**
  * Each reply saved while the chat is open, read once by screen readers: one
@@ -305,7 +312,9 @@ function MessageBubble({
                         <ActionChip action={action} prefix="@" />
                       ) : (
                         // No longer readable here: the label it was sent with, without a link.
-                        <span className={textRole('caption')}>@{mention.label}</span>
+                        <span className={textRole('caption', 'block truncate')}>
+                          @{mention.label}
+                        </span>
                       )}
                     </li>
                   );

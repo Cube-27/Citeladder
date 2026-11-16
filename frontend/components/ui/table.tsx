@@ -10,7 +10,7 @@ import {
 } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
-import { ClampText, useCut } from '@/components/ui/clamp-text';
+import { ClampText, UrlCutParts, useCut } from '@/components/ui/clamp-text';
 import type { ScrollRegionProps } from '@/components/ui/scroll-edges';
 import { Tag } from '@/components/ui/tag';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
@@ -379,7 +379,6 @@ export function TableRowHeader({
  */
 export function UrlText({ url, origin = null }: Readonly<{ url: string; origin?: string | null }>) {
   const text = urlCellText(url, origin);
-  const { head, tail } = splitUrlTail(text);
   const ref = useRef<HTMLSpanElement>(null);
   const cut = useCut(ref, anyPartCut);
   return (
@@ -393,9 +392,7 @@ export function UrlText({ url, origin = null }: Readonly<{ url: string; origin?:
         tabIndex={cut ? 0 : undefined}
         className="rounded-mark flex min-w-0 whitespace-nowrap"
       >
-        {/* A head that cuts and a tail that stays: together the text once, read and copied whole. */}
-        {head ? <span className="min-w-0 truncate">{head}</span> : null}
-        <span className={cn('min-w-0', head ? 'shrink-0' : 'truncate')}>{tail}</span>
+        <UrlCutParts text={text} />
       </span>
     </Tooltip>
   );
@@ -404,19 +401,6 @@ export function UrlText({ url, origin = null }: Readonly<{ url: string; origin?:
 function anyPartCut(node: HTMLElement) {
   return [...node.querySelectorAll(':scope > span')].some(isTextCut);
 }
-
-/** The tail is the last path segment (with its query); the head is everything before it. */
-function splitUrlTail(text: string): { head: string; tail: string } {
-  const cut = text.replace(/\/$/u, '').lastIndexOf('/');
-  if (cut <= 0) return { head: '', tail: text };
-  const tail = text.slice(cut);
-  // A tail longer than half a typical cell keeps the head cut instead.
-  if (tail.length > URL_TAIL_MAX) return { head: '', tail: text };
-  return { head: text.slice(0, cut), tail };
-}
-
-/** Characters of a URL's last segment that stay whole while the head is cut. */
-const URL_TAIL_MAX = 32;
 
 /**
  * A date-time in a table's date column, on one line without its zone: a
