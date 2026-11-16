@@ -3,14 +3,12 @@
 
 /* Popups (menus, selects, popovers, tooltips, info hints) and toasts open and
    close with keyframes: Radix Presence keeps content mounted only while an
-   animation runs. Popups move 4px from the trigger's side and back on close. */
+   animation runs. They move 4px from the trigger's side and back on close
+   (toasts sit at the top). No scale, so no transform-origin. */
 .menu-panel,
-.tooltip-panel {
-  --popup-from: 0 -4px;
-  transform-origin: var(--radix-popper-transform-origin);
-}
+.tooltip-panel,
 .toast-panel {
-  --popup-from: 0 2px;
+  --popup-from: 0 -4px;
 }
 [data-side='top'] {
   --popup-from: 0 4px;
