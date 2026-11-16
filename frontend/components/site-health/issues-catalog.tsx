@@ -234,7 +234,7 @@ function issueColumns(sort: IssueSort, onSort: (sort: IssueSort) => void): DataT
   ];
 }
 
-/** One issue: the whole row opens its detail; the underlined title is the keyboard's way in. */
+/** One issue: the whole row opens its detail; the title link is the keyboard's way in. */
 function IssueRow({
   issue,
   onOpen,
@@ -244,7 +244,7 @@ function IssueRow({
     <TableRow onClick={() => onOpen(issue.group_id)} className="cursor-pointer">
       <TableCell>
         <Inline gap="tight">
-          <TextLink asChild>
+          <TextLink asChild underline="hover">
             <Pressable
               aria-haspopup="dialog"
               onClick={(event) => {

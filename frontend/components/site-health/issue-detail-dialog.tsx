@@ -1,7 +1,6 @@
 import { AskAgentLink } from '@/components/agent/ask-agent-link';
 import { IssueEvidence } from '@/components/site-health/issue-evidence';
 import { IssueFixActions, type IssueFixScope } from '@/components/site-health/issue-fix-actions';
-import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { AffectedPageLink, SharedOccurrences } from '@/components/site-health/shared-occurrences';
 import type { UseQueryResult } from '@tanstack/react-query';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -23,7 +22,6 @@ import {
 import { dimensionLabel, issueTitle, severityLabel } from '@/lib/site-health/issues';
 import { groupOccurrences, loadedPageCount } from '@/lib/site-health/occurrence-groups';
 import { pageKindLabel } from '@/lib/site-health/page-kinds';
-import { formatCount } from '@/lib/format';
 import { ClampText } from '@/components/ui/clamp-text';
 import { Notice } from '@/components/ui/notice';
 import { StateBlock } from '@/components/ui/state-block';
@@ -89,16 +87,9 @@ export function IssueDetailDrawer({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
+      // Severity, category and the page count are the row's columns; the
+      // drawer says only what the row does not.
       title={issueTitle(issue)}
-      description={
-        <IssueMetadata issue={issue}>
-          <span className="tabular-nums">
-            {formatCount(issue.affected_url_count)}{' '}
-            {issue.affected_url_count === 1 ? 'page affected' : 'pages affected'}
-          </span>
-          {pageKinds.length > 0 ? <span>{pageKinds.map(pageKindLabel).join(', ')}</span> : null}
-        </IssueMetadata>
-      }
       footer={
         // A later page that failed keeps the pager, so the reader can still
         // step back to the pages that loaded.
@@ -125,6 +116,12 @@ export function IssueDetailDrawer({
         <Stack gap="tight" className="min-w-0">
           <span className="type-caption">How to fix</span>
           <p className={textRole('body', 'whitespace-pre-line')}>{issue.remediation}</p>
+        </Stack>
+      ) : null}
+      {pageKinds.length > 0 ? (
+        <Stack gap="tight" className="min-w-0">
+          <span className="type-caption">Page kinds</span>
+          <p className={textRole('body')}>{pageKinds.map(pageKindLabel).join(', ')}</p>
         </Stack>
       ) : null}
       <Inline className="flex-wrap">

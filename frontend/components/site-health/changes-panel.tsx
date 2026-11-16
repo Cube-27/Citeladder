@@ -166,6 +166,7 @@ function ChangeRow({
       <TableCell>
         <TextLink
           text="emphasis"
+          underline="hover"
           className="flex min-w-0"
           href={`/site/crawls/${crawlBId}/pages/${row.site_url_id}`}
           aria-label={url}

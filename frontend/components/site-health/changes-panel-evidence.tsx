@@ -201,9 +201,8 @@ export function ChangeEvidenceDrawer({
       onOpenChange={(open) => {
         if (!open) onClose();
       }}
-      title={row ? changeFieldLabel(row.field) : 'Change evidence'}
-      eyebrow="Change evidence"
-      description={row?.normalized_url}
+      // The row names the page and the field; the drawer holds only their values.
+      title="Change evidence"
     >
       {row ? (
         <Stack gap="section">
