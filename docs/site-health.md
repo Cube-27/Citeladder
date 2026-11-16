@@ -89,13 +89,11 @@ list, Pages counts, page detail, issue history, MCP or AI Traffic
 (`shownIssueFilter` in `reads/page-rows.ts`). A page rerun read by id shows
 only its own page. Pages,
 page detail, issue history, the Issues catalog and detail, the snapshot and
-score summary, Opportunities' Site Health evidence, the Agent's content
-context, MCP, AI Traffic findings, internal-link suggestion pages and
-verification's page and issue-family readings all read through it; the analyze
-task and link metrics stay the crawl's own. A verification reading triggered by
-a page rerun reads a declared page through the rerun, and an issue family's
-cohort through the site crawl the rerun lands in, so re-auditing the last
-failing page can verify the family. The read stays bounded by the tracked set:
+score summary, the Agent's content context, MCP, AI Traffic findings,
+internal-link suggestion pages and verification's page readings all read
+through it; the analyze task and link metrics stay the crawl's own. A
+verification reading triggered by a page rerun reads a declared page through
+the rerun. The read stays bounded by the tracked set:
 it takes the crawl's own analyses and those of audits that began after it, and
 looks further back one page at a time only for a tracked page the crawl never
 analyzed. The Opportunity refresh keys the crawl source on the crawl and the
@@ -410,9 +408,8 @@ snippet per issue family per crawl: the first affected page in URL order (then
 issue id) whose facts carry one, with its page URL and exact issue and artifact
 IDs. Only `web.accessibility_form_names` captures one today. No UI read serves
 it; the Agent's `read_site_pages` returns it as `reference_snippet` when given
-that rule, and an [issue-family Action](opportunities.md#issue-families) hands
-it to its chat. Every `web.` defect becomes one such Action across its
-affected pages, not one per page.
+that rule. Issues own every defect end to end; no defect becomes an Action
+([IA1](decisions.md#actions-read-issues-in-place)).
 
 Facts distinguish an available extraction from parse failure, unsupported
 media, client rendering and truncation. Declared canonicals are observations,

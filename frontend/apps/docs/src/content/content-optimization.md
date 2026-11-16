@@ -3,7 +3,7 @@ title: 'Content optimization'
 description: 'See the content angles AI answers cite competitor and publisher pages for, then improve the page that covers each one or plan a new page.'
 group: 'Improve with Agent'
 order: 215
-updated: '2026-11-13'
+updated: '2026-11-16'
 ---
 
 Content optimization finds content you could improve or create. It starts from the pages AI answers cite: when answers to your tracked prompts cite competitor and publisher content pages on an angle, and no page of yours is cited for it, CiteLadder opens an Action.
@@ -29,7 +29,7 @@ Grouping and matching use no credits. If a refresh fails, the content gaps from 
 
 An angle whose matched page is already cited for its prompts raises no Action. Without a Site Health crawl there are no content pages to match, so every content gap is a planned page; run a crawl before you plan new pages from these Actions.
 
-Each page has one Action. Its Site Health findings and content gaps share it, and its issues still appear in **Issues**.
+Each page has one Action, which holds its content gaps. Its Site Health issues stay in **Issues**.
 
 A later refresh can rename an angle and keep its Action. When a page you publish later matches an angle that had a planned page, the planned page's Action keeps its history, and the new page's Action links back to it.
 
@@ -45,7 +45,7 @@ Open the Action from the Actions list. For each content gap, **Why this matters*
 - **Prompts:** each prompt as it was worded at the last refresh, linked to the prompt. A prompt that had left your library by then reads "A prompt no longer in your library".
 - **Continues the planned page for this angle**, when the page took over from a planned page's Action.
 
-The **Diagnosis**, **Implementation** and linked chats follow, as on every Action. Site Health findings on the same page are listed in the Diagnosis.
+The **Diagnosis**, **Implementation** and linked chats follow, as on every Action. Other findings on the same page, such as internal links, are listed in the Diagnosis.
 
 ## Hand the work to the Agent
 
@@ -56,7 +56,7 @@ Describe what you want and send. Work in the Agent uses AI credits like any chat
 
 ## Mark the work implemented
 
-After you publish or update the page, use **Mark implemented** as on any Action; see [Declare implementation](/agent/actions/#declare-implementation). In the dialog, a content gap reads **Not measured automatically: no reading isolates this change.** Site Health findings on the same page are checked by the next crawl that reads it.
+After you publish or update the page, use **Mark implemented** as on any Action; see [Declare implementation](/agent/actions/#declare-implementation). In the dialog, a content gap reads **Not measured automatically: no reading isolates this change.** Internal-link findings on the same page are checked by the next crawl that reads it.
 
 ## Read content gaps from MCP or the API
 

@@ -201,8 +201,6 @@ function workSummary(action: Action): string {
   const families = action.families.map(familyLabel).filter(Boolean).join(', ');
   return [
     targetKindLabel(action.target_kind),
-    // An issue family is one finding; its reach is the pages it fails on.
-    action.page_count === null ? null : pluralCount(action.page_count, 'page'),
     families ? `${findings} in ${families}` : findings,
     action.origin === 'agent' ? 'From agent work' : null,
   ]

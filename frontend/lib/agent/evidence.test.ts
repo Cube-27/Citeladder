@@ -59,15 +59,15 @@ describe('citedActions', () => {
 });
 
 describe('actionEvidence', () => {
-  it('dates each finding, the family crawl and each distinct check reading from the read', () => {
+  it('dates each finding and each distinct check reading from the read', () => {
     expect(
       actionEvidence({
         members: [{ id: A, title: 'Images without alt text', updated_at: '2026-11-08T09:00:00Z' }],
-        cohort: { crawl_id: B, crawl_completed_at: '2026-11-07T00:00:00Z' },
         declaration: {
           checks: [
             { observed_at: '2026-11-10T00:00:00Z', source_kind: 'audit', source_id: A },
-            // The cohort's own crawl is listed once, with the date it completed.
+            { observed_at: '2026-11-09T00:00:00Z', source_kind: 'site_crawl', source_id: B },
+            // A crawl two checks read is listed once, with its first reading.
             { observed_at: '2026-11-10T00:00:00Z', source_kind: 'site_crawl', source_id: B },
             { observed_at: null, source_kind: null, source_id: null },
             { observed_at: '2026-11-10T00:00:00Z', source_kind: 'mystery', source_id: B },
@@ -83,18 +83,18 @@ describe('actionEvidence', () => {
         href: null,
       },
       {
-        key: `site_crawl/${B}`,
-        label: 'Site crawl',
-        at: '2026-11-07T00:00:00Z',
-        basis: 'observed',
-        href: '/site',
-      },
-      {
         key: `audit/${A}`,
         label: 'Visibility run',
         at: '2026-11-10T00:00:00Z',
         basis: 'observed',
         href: `/runs/${A}`,
+      },
+      {
+        key: `site_crawl/${B}`,
+        label: 'Site crawl',
+        at: '2026-11-09T00:00:00Z',
+        basis: 'observed',
+        href: '/site',
       },
       {
         key: `mystery/${B}`,

@@ -433,24 +433,7 @@ export const productMetricExpectedCheckSchema = responseObject({
   window_days: z.number().int(),
   baseline_value: z.number().optional(),
 });
-/**
- * One Site Health rule across a frozen cohort of pages, read in the next crawl
- * comparable with `baseline_crawl_id` (same analyzer and rule catalog): met
- * when every cohort page passes, unmet with `partially_resolved` or
- * `still_failing` otherwise, unavailable (inconclusive) when that crawl could
- * not read the cohort. `page_count` counts the family's pages at declaration;
- * more than `site_url_ids` means the frozen list was cut, and then a passing
- * cohort is `cohort_sampled`, never met: the pages beyond it are unchecked.
- */
-const issueFamilyExpectedCheckSchema = responseObject({
-  kind: z.literal('issue_family'),
-  rule_id: z.string(),
-  baseline_crawl_id: uuid(),
-  site_url_ids: z.array(uuid()).min(1),
-  page_count: z.number().int(),
-});
 export const expectedCheckSchema = z.discriminatedUnion('kind', [
-  issueFamilyExpectedCheckSchema,
   keywordPresenceExpectedCheckSchema,
   productMetricExpectedCheckSchema,
   ownedUrlCitedExpectedCheckSchema,

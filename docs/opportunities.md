@@ -3,8 +3,9 @@
 ## Responsibility
 
 Opportunities is the single persisted cross-system action owner. It connects
-Site Health findings, demand observations and answer-engine evidence to ranked
-actions, groups them into target-level Actions and projects the typed evidence
+demand observations, answer-engine evidence, crawl changes, internal links and
+content gaps to ranked actions, groups them into target-level Actions and
+projects the typed evidence
 handoff the [Agent](agents.md) receives. It distinguishes an Action's workflow
 status from a user's declaration that an external change was implemented, and
 both from subsequent observed evidence. It cannot establish causation.
@@ -102,15 +103,19 @@ current versions, the refresh loads no evidence. Otherwise it loads evidence
 outside the lock, then takes the project advisory lock shared by TypeScript
 prompt writes and resolves the identity again; if a source moved during the
 load, it writes nothing and fails for a retry over the newer state, so an
-older reading never supersedes a newer set. A load that hits its analysis or
-Site Health finding cap drops the partial prompt whole and records the cut as
-a snapshot limitation, so a missing engine never reads as an absent brand.
+older reading never supersedes a newer set. A load that hits its analysis cap
+drops the partial prompt whole and records the cut as a snapshot limitation,
+so a missing engine never reads as an absent brand.
 
 A confirmed prompt decline already passed the audit's materiality and
 agreement gates, so it always surfaces: confidence ranks it between a floor
 and one, and size counts in multiples of the materiality floor, capped.
 
-Site Health owns acquisition and deterministic findings. Demand owns imported
+Site Health owns acquisition and deterministic findings, and its
+[Issues](site-health.md) own each defect end to end: catalog, Ask agent, Mark
+fixed, Re-run all and fix progress. A Site Health defect never becomes an
+Opportunity or an Action ([IA1](decisions.md#actions-read-issues-in-place));
+the crawl family promotes only contextual links and page changes. Demand owns imported
 query/page evidence and signals. Visibility owns answer artifacts and measured
 mentions/citations. Opportunity evidence retains their availability and coverage
 rather than replacing missing inputs with zero or a guessed confidence.
@@ -171,12 +176,12 @@ There is no separate Opportunities screen.
 Two targets are distinct:
 
 - **Opportunity target**: what one finding is about, a typed `TargetRef` (a
-  prompt, an owned page, a site change, an issue family, a product, an earned
-  page, a search gap, a planned page and so on). Its `target_key` is the
-  finding's identity across snapshots.
+  prompt, an owned page, a site change, a product, an earned page, a search
+  gap, a planned page and so on). Its `target_key` is the finding's identity
+  across snapshots.
 - **Action target**: what one Action is about, named by its **target kind**:
-  `page`, `planned_page`, `issue_family`, `earned_page`, `product`, `category`,
-  `prompt` or `query`. Several Opportunity targets map to one Action target
+  `page`, `planned_page`, `earned_page`, `product`, `category`, `prompt` or
+  `query`. Several Opportunity targets map to one Action target
   kind (a site page, a site change, a link source, and a demand or search-gap
   finding that names an owned URL all become a `page` Action). Its `group_key`
   is the Action's identity.
@@ -254,39 +259,15 @@ last non-empty member set in place. Each promoted
 Search Demand signal's read carries the Action its live Opportunity joined, for
 the Search Demand "Act on this" band.
 
-### Issue families
-
-A Site Health defect whose rule starts with `web.` (`SITE_ISSUE_FAMILY` in the
-[opportunity config](../frontend/services/api/src/config/opportunity.ts)) is
-one finding, `site_issue_family`, across every page it fails on, never one
-per page ([BL2](decisions.md#backlog-closure)): a shared component failing on
-179 pages is one Action, of target kind `issue_family`, not 179. No `web.`
-rule maps to a per-page finding; config load refuses one. The finding carries
-its Site Health rule's severity and label, and its evidence holds the
-**cohort**: the rule, the crawl it was read from, the family's issue group in
-that crawl's catalog, the exact affected page count and the pages in URL
-order, at most `COHORT_PAGES_MAX` (500). The refresh loads family defects apart
-from the per-page findings and outside their `RECOMPUTE_MAX_ISSUES` cap, so a
-large family is never undercounted. Action sync stamps the cohort on
-`actions.cohort` (only an `issue_family` Action has one) and keeps the last
-cohort when a recrawl clears the family, like its last member set. The list
-returns `page_count`; the detail returns the cohort with its crawl's
-completion time, the declared one once declared. Family Actions are
-`fix_technical`, so they list under Fix how AI reads your site.
-
-Declaring a family Action freezes its whole cohort as the declaration's
-targets, without the per-declaration `IMPLEMENTATION_TARGETS_MAX` cap (the
-cohort is server-derived and already bounded). **Work with the agent** opens
-a chat whose Action context carries the rule, the page count, the first
-`AGENT_PAGES_MAX` (50) cohort pages without query strings, and the family's
-reference snippet from that crawl's catalog
-([Site Health](site-health.md)), so the Agent writes one fix for the shared
-cause without reading each page.
-
 There is one Actions list ([AS1](decisions.md#one-actions-feature-content-gaps-from-content-pages-only)):
-content-gap findings are ordinary Actions on it, and a content page's Site
-Health findings and content gaps share its one Action. Every link to an
-Action is `/agent/actions/{id}`. The evidence behind content gaps is in
+content-gap findings are ordinary Actions on it, and a content page's content
+gaps, search demand and link findings share its one Action. Site Health
+defects are not among them: Issues owns them, and the Actions list reads Issues
+groups through the existing Issues reads rather than copying them into Actions
+([IA1](decisions.md#actions-read-issues-in-place)). Leftover rows of the
+retired `issue_family` target kind (and their `actions.cohort`, kept until a
+later schema cleanup) are never listed, counted, read or declared. Every link
+to an Action is `/agent/actions/{id}`. The evidence behind content gaps is in
 [Content optimization](content-optimization.md).
 
 ## Explicit implementation declaration
@@ -346,8 +327,7 @@ distinct expectation, each scoped to what the Action changed:
 
 | Finding | Check | Read by |
 |---|---|---|
-| Site Health rule | each Site Health rule the page finding folds together passes on the page, one check per rule ([SH-B2](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)); a finding whose evidence names no rule gets no check | the next crawl that analyzes the page after go-live |
-| Issue family (`issue_family`) | the rule passes (or no longer applies, counted apart) on every frozen cohort page: met reads **Verified**; some pages passing and some failing is `unmet` `partially_resolved`, none passing `unmet` `still_failing`, both naming the pages still failing; a crawl with another analyzer or rule catalog than the cohort's crawl, or one that read none or only some of the cohort without a failure, is `unavailable` (**Inconclusive**) with its reason. A family with more pages than its cohort counts the rest as `uncovered` and is never verified: a cohort that clears is `unavailable` `cohort_sampled` (SH-B2) | each crawl after go-live, comparable when its analyzer and rule catalog match the cohort's crawl |
+| Site rule (`site_rule`, link-graph findings) | each Site Health rule the page finding's evidence names passes on the page, one check per rule ([SH-B2](plans/site-health-baseline-crawls.md#owner-decisions-2026-11-12)); a finding whose evidence names no rule gets no check | the next crawl that analyzes the page after go-live |
 | Contextual link | the selected link is in main content | the next compatible crawl |
 | Search Console (page or query) | clicks per day on that page or query rise against the rate in the last daily window that ended before go-live (sync windows differ in length, so windows compare as rates) | each synced daily window that starts after the go-live day (that day is partly before the change) |
 | Keyword gap | the project appears for the search: Search Console impressions, or an owned ranking in a later Keyword Research dataset whose provider check postdates go-live; still missing or not ranking yet reads `waiting`, never `unmet` | each synced window that starts after go-live, and each later published ranking, shared or missing-keyword dataset for the same website and market |

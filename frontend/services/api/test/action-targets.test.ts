@@ -2,8 +2,7 @@
  * Action targets against real PostgreSQL: what a target the Agent names
  * resolves to, what it is refused for, and which pages a declaration covers
  * for each kind. Grouping findings into Actions is covered with the refresh
- * (`search-gap-actions.test.ts`), the issue-family cohort with its family
- * (`issue-family-actions.test.ts`).
+ * (`search-gap-actions.test.ts`).
  */
 import { randomUUID } from 'node:crypto';
 import type { ActionTargetKind } from '@citeladder/contracts/actions';
@@ -72,7 +71,7 @@ async function storedAction(
 }
 
 const naming = (siteUrlId: string) => ({
-  rule_id: 'missing_structured_data',
+  rule_id: 'site_link_near_orphan',
   evidence: { site_url_id: siteUrlId },
 });
 
@@ -88,7 +87,7 @@ describe('a target the Agent names', () => {
     const fromFinding = actionTargetOf({
       target: { kind: 'site_page', url: 'https://example.test/pricing' },
       label_hint: null,
-      title: 'missing_structured_data',
+      title: 'site_link_near_orphan',
     });
     expect(fromFinding.group_key).toBe('page:https://example.test/pricing');
   });

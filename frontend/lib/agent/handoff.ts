@@ -14,8 +14,6 @@ import type { AgentChatOrigin, AgentContextRefs } from '@citeladder/contracts/ag
 import type { DatedEvidence } from '@/lib/agent/evidence';
 import { checkKindLabel, checkStateLabel, measurementLegLabel } from '@/lib/agent/vocabulary';
 import type { ActionDetail } from '@/lib/api/actions';
-import { DEVELOPER_TICKET_PAGES_MAX } from '@/lib/config/agent';
-import { pluralCount } from '@/lib/format';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -314,13 +312,9 @@ type TicketAction = Pick<ActionDetail, 'target_label' | 'target_url' | 'member_m
   handoff: Pick<ActionDetail['handoff'], 'message'>;
   members: readonly Pick<ActionDetail['members'][number], 'id' | 'title' | 'remediation'>[];
   diagnosis: Pick<ActionDetail['diagnosis'], 'donts'>;
-  cohort: Pick<
-    NonNullable<ActionDetail['cohort']>,
-    'rule_label' | 'page_count' | 'pages' | 'crawl_completed_at'
-  > | null;
   declaration:
     | (Pick<Declaration, 'declared_implemented_at' | 'deployed_by' | 'deployment_reference'> & {
-        checks: readonly Pick<Declaration['checks'][number], 'kind' | 'state' | 'reason'>[];
+        checks: readonly Pick<Declaration['checks'][number], 'kind' | 'state'>[];
       })
     | null;
 };
@@ -333,30 +327,6 @@ const line = (text: string) => `- ${oneLine(text)}`;
 const list = (items: readonly string[], none: string) =>
   items.length ? items.map((item) => line(item)) : [line(none)];
 const unique = (values: readonly string[]) => [...new Set(values.filter(Boolean))];
-
-function affectedPages(action: TicketAction, formatDate: (iso: string) => string): string[] {
-  const { cohort } = action;
-  if (!cohort) return [line(action.target_url ?? action.target_label)];
-  const read = cohort.crawl_completed_at
-    ? `crawl completed ${formatDate(cohort.crawl_completed_at)}`
-    : 'crawl completion not recorded';
-  const shown = cohort.pages.slice(0, DEVELOPER_TICKET_PAGES_MAX);
-  // The Action lists the cohort's stored pages; a large family stores only the
-  // first of its affected pages, so the rest are listed nowhere.
-  const onAction = cohort.pages.length - shown.length;
-  const unlisted = cohort.page_count - cohort.pages.length;
-  return [
-    `${cohort.rule_label} on ${pluralCount(cohort.page_count, 'page')} (${read}):`,
-    '',
-    ...shown.map((page) => line(page.url)),
-    ...(onAction > 0
-      ? [line(`and ${pluralCount(onAction, 'more page')}, listed on the Action in CiteLadder`)]
-      : []),
-    ...(unlisted > 0
-      ? [line(`and ${pluralCount(unlisted, 'more page')} with this issue, not listed`)]
-      : []),
-  ];
-}
 
 function verification(action: TicketAction, formatDate: (iso: string) => string): string[] {
   const { declaration } = action;
@@ -390,7 +360,7 @@ function verification(action: TicketAction, formatDate: (iso: string) => string)
 
 /**
  * "Prepare developer ticket": the Action as Markdown a developer can paste
- * into an issue tracker. The issue, the affected page or issue family, the
+ * into an issue tracker. The issue, the affected page, the
  * dated evidence, the minimal patch and how CiteLadder will verify it, all
  * from the Action's persisted read. `formatDate` renders a stored timestamp
  * in the reader's display time zone.
@@ -406,7 +376,7 @@ export function developerTicket(
   const sections: string[][] = [
     [`# ${oneLine(action.target_label)}`, '', action.handoff.message],
     ['## Issue', '', ...list(findings, 'No current finding targets this Action.')],
-    ['## Affected pages', '', ...affectedPages(action, formatDate)],
+    ['## Affected pages', '', line(action.target_url ?? action.target_label)],
     [
       '## Evidence',
       '',

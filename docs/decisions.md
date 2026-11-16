@@ -694,6 +694,19 @@ fold content work back into Actions (AS1), with the list, chat, filter,
 detail-page and AI visibility layout directions above (AS2–AS4, AS6–AS8), and
 content gaps drawn only from content pages and tracked prompts (AS5).
 
+## Actions read Issues in place
+
+| ID | Decision |
+|---|---|
+| IA1 | Site Health Issues own every defect end to end: the catalog, Ask agent, Mark fixed, Re-run all and fix progress. A Site Health defect never becomes an Opportunity or an Action, so one defect never has two lifecycles. The Actions list reads Issues groups directly from the existing Issues reads, beside prompts, search and every other actionable item; it does not rebuild them. A content page's Action keeps its content gaps, search and link findings, never its Site Health defects. |
+
+Source: owner, in chat, 16 November 2026: "issues page i understand because it
+finally leads to a single page and i can ask agent to fix a single page or
+groups of pages but actions is still confusing, action should actually contain
+issues exactly as it is and other issues too like prompts, search anything
+actionable", and on rebuilding issues as Actions: "why does this needs a
+rebuild dont we already have issues ?"
+
 ## Backlog closure
 
 The owner went through the backlog item by item and closed it into three tiers.
@@ -704,7 +717,6 @@ low-priority tiers.
 | ID | Decision |
 |---|---|
 | BL1 | UI and UX improvements are the first priority among the work to build. |
-| BL2 | Site Health `web.*` issues become Actions, but only through an issue-family scope. One Action covers one defect family across every page it affects. The Agent resolves the family in a single chat without reading each page. A later comparable crawl decides the outcome: verified, partially resolved (naming the pages still failing), still failing or inconclusive. |
 | BL3 | The crawler keeps one bounded, redacted HTML reference snippet per issue family, not one per page, so the Agent can write an exact patch. |
 | BL4 | Developer handoff is built: "Prepare developer ticket", a recorded deployment step tied to the Action, and dated evidence. The journey-coverage eval and end-to-end journey are dropped. |
 | BL5 | Site Health gets scheduled crawls, weekly or monthly per project and off by default. |

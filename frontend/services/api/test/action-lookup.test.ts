@@ -15,8 +15,8 @@ const db = testDatabase(config);
 const app = createApp(config, db);
 const fixtures = new AgentFixtures(db);
 const seeds: ActionSeed[] = [];
-const pageRule = 'missing_structured_data';
-const otherRule = 'content_structure_incomplete';
+const pageRule = 'site_link_near_orphan';
+const otherRule = 'site_link_weak_authority';
 const promptRule = 'brand_absent_high_value_prompt';
 async function seed() {
   const s = await actionFixture<ActionSeed>('seed');

@@ -27,8 +27,8 @@ const seeds: ActionSeed[] = [];
 const day = new Date(Date.now() - 2 * 86_400_000).toISOString().slice(0, 10);
 const nextDay = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
 const boundary = `${day}T15:00:00.123456Z`;
-const pageRule = 'missing_structured_data';
-const otherRule = 'content_structure_incomplete';
+const pageRule = 'site_link_near_orphan';
+const otherRule = 'site_link_weak_authority';
 const promptRule = 'brand_absent_high_value_prompt';
 async function seed() {
   const s = await actionFixture<ActionSeed>('seed');
@@ -102,6 +102,36 @@ describe('Action routes', () => {
     await request(s, actionPath(s), 'PATCH', { status: 'open' });
     const detail = await detailBody(await request(s, actionPath(s)));
     expect(detail.members.map((member) => member.id)).toEqual([s.members[pageRule]]);
+  });
+
+  it('never lists, counts, reads or declares a leftover Action of a retired target kind', async () => {
+    const s = await seed();
+    // Site Health issue families were Actions until 2026-11-16; their rows may remain.
+    const retired = actionRow(
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      {
+        group_key: 'issue-family:web.viewport_meta',
+        target_kind: 'issue_family',
+        target_label: 'Missing viewport meta tag',
+        priority_score: 300,
+        cohort: '{}',
+      },
+    );
+    await db.insertInto('actions').values(retired).execute();
+    const page = await pageBody(await request(s, `/api/v1/projects/${s.project_id}/actions`));
+    expect([page.items.map((item) => item.id).toSorted(), page.status_counts.open]).toEqual([
+      [...new Set(Object.values(s.actions))].toSorted(),
+      3,
+    ]);
+    expect((await request(s, `/api/v1/actions/${retired.id}`)).status).toBe(404);
+    const declared = await request(
+      s,
+      `/api/v1/actions/${retired.id}/declaration`,
+      'POST',
+      { declared_implemented_at: boundary },
+      'retired',
+    );
+    expect(declared.status).toBe(404);
   });
 
   it('returns the persisted handoff message on the list and the detail, or one about the label', async () => {
@@ -603,12 +633,12 @@ describe('Action routes', () => {
     const change = member('site_change_critical_regression');
     expect([memberMeasurementLeg(change), await freeze(change)]).toEqual([null, []]);
     // A page finding naming no Site Health rule freezes no check.
-    const ruleless = member('missing_structured_data', {
+    const ruleless = member('site_link_near_orphan', {
       evidence: { site_url_id: evidence.site_url_id },
     });
     expect([memberMeasurementLeg(ruleless), await freeze(ruleless)]).toEqual([null, []]);
     // A page finding folding two rules verifies each of them (BE-802, SH-B2).
-    const folded = member('content_structure_incomplete', {
+    const folded = member('site_link_weak_authority', {
       evidence: {
         ...evidence,
         issues: ['aeo.question_headings', 'aeo.answer_first'].map((rule_id) => ({

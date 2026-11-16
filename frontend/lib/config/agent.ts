@@ -13,8 +13,6 @@ export const AGENT_STREAM_REPAINT_MS = { floor: 50, cap: 250 } as const;
 export const AGENT_STREAM_NOTIFY_FALLBACK_MS = 100;
 
 export const AGENT_CHAT_PAGE_SIZE = 30;
-/** How many of an issue family's pages a developer ticket lists before "and N more". */
-export const DEVELOPER_TICKET_PAGES_MAX = 50;
 /** A turn without this tab's stream is polled quickly at first, then less often. */
 export const AGENT_RUN_POLL_STEPS: readonly { untilMs: number; everyMs: number }[] = [
   { untilMs: 30_000, everyMs: 2_000 },

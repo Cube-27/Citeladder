@@ -9,14 +9,12 @@ import { sql } from 'kysely';
 import {
   detectBrandAbsentHighValuePrompt,
   detectOwnedPageNotCited,
-  detectSiteIssueOpportunities,
 } from '../analysis/opportunities/detectors.ts';
 import type { DetectorHit } from '../analysis/opportunities/evidence.ts';
 import {
   buildSourceProjection,
   emptySourceProjection,
 } from '../analysis/opportunities/source-mix.ts';
-import { policy } from '../config.ts';
 import { sourcePageVocabulary } from '../config/source-pages.ts';
 import type { Database } from '../db/database.ts';
 import { foldedRerunId } from '../site-health/reads/crawl.ts';
@@ -24,11 +22,7 @@ import { contentGapHits, contentGapSource, type ContentGapSource } from './conte
 import { earnedPageHits } from './earned-page-hits.ts';
 import { internalLinkHits, internalLinkRunId } from './internal-link-hits.ts';
 import { stampSourceMix, type SourceIdentity } from './refresh-compute.ts';
-import {
-  confirmedDeclineHits,
-  loadSiteEvidence,
-  loadVisibilityEvidence,
-} from './refresh-evidence.ts';
+import { confirmedDeclineHits, loadVisibilityEvidence } from './refresh-evidence.ts';
 import { changeHits, commerceHits, demandHits } from './refresh-hits.ts';
 import { searchGapHits, searchGapSource, type SearchGapSource } from './search-gap-hits.ts';
 import {
@@ -43,8 +37,6 @@ import {
   type DemandSource,
   type Scope,
 } from './sources.ts';
-
-const o = policy.opportunity.opportunities;
 
 /** The sources one refresh reads, resolved once and shared by every family. */
 export type Sources = {
@@ -192,7 +184,10 @@ const commerce: Family = {
   present: (sources) => sources.commerceAuditId !== null || sources.commerceMatchPassId !== null,
 };
 
-/** The crawl: Site Health findings, contextual links and page changes. */
+/**
+ * The crawl: contextual links and page changes. Site Health defects stay with
+ * Issues (owner, 2026-11-16) and never become findings here.
+ */
 const site: Family = {
   identity: async (db, scope, { crawl }) => ({
     site_crawl_id: crawl?.id ?? null,
@@ -202,18 +197,12 @@ const site: Family = {
   }),
   async hits(db, scope, { crawl }, identity) {
     if (crawl === null) return none();
-    const evidence = await loadSiteEvidence(db, scope.workspaceId, crawl);
     return {
       hits: [
-        ...detectSiteIssueOpportunities(evidence),
         ...(await internalLinkHits(db, scope, identity.internal_link_run_id)),
         ...(await changeHits(db, scope.workspaceId, crawl)),
       ],
-      limitations: evidence.truncated
-        ? [
-            `Only the first ${o.RECOMPUTE_MAX_ISSUES} Site Health findings were ranked; later ones are not shown.`,
-          ]
-        : [],
+      limitations: [],
     };
   },
   present: (sources) => sources.crawl !== null,

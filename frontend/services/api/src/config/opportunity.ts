@@ -85,61 +85,6 @@ export const opportunities = {
       severity: 'high',
       title: 'Prompt visibility has a confirmed decline',
     },
-    missing_structured_data: {
-      action_path: 'owned',
-      enabled: true,
-      opportunity_type: 'site',
-      remediation:
-        "Add schema.org structured data (JSON-LD preferred) so answer engines can parse and attribute the page's content.",
-      rule_id: 'missing_structured_data',
-      check_kind: 'site_rule',
-      severity: 'medium',
-      title: 'Missing structured data on owned page',
-    },
-    schema_properties_incomplete: {
-      action_path: 'owned',
-      enabled: true,
-      opportunity_type: 'site',
-      remediation:
-        "Complete the required and recommended properties for the page's expected schema type, using the exact missing-property evidence as the implementation checklist.",
-      rule_id: 'schema_properties_incomplete',
-      check_kind: 'site_rule',
-      severity: 'medium',
-      title: 'Schema properties are incomplete',
-    },
-    schema_visible_content_conflict: {
-      action_path: 'owned',
-      enabled: true,
-      opportunity_type: 'site',
-      remediation:
-        'Align the visible title, headings, and page claims with the corresponding schema.org values; do not leave competing facts for answer engines to resolve.',
-      rule_id: 'schema_visible_content_conflict',
-      check_kind: 'site_rule',
-      severity: 'high',
-      title: 'Visible content conflicts with schema',
-    },
-    content_structure_incomplete: {
-      action_path: 'owned',
-      enabled: true,
-      opportunity_type: 'site',
-      remediation:
-        "Strengthen the page's substantive content, answer-first opening, and question-led headings using the persisted rule evidence.",
-      rule_id: 'content_structure_incomplete',
-      check_kind: 'site_rule',
-      severity: 'low',
-      title: 'Answer-oriented content structure is incomplete',
-    },
-    citability_trust_incomplete: {
-      action_path: 'owned',
-      enabled: true,
-      opportunity_type: 'site',
-      remediation:
-        'Add the missing author, date, source, or organization identity signals so readers and answer engines can assess provenance.',
-      rule_id: 'citability_trust_incomplete',
-      check_kind: 'site_rule',
-      severity: 'medium',
-      title: 'Citability and trust signals are incomplete',
-    },
     product_not_mentioned: {
       action_path: 'owned',
       enabled: true,
@@ -305,19 +250,6 @@ export const opportunities = {
       severity: 'low',
       title: 'Page has weak internal-link authority',
     },
-    // One Site Health issue family across its pages (BL2): `SITE_ISSUE_FAMILY`.
-    // Severity and title are the family's own Site Health rule's.
-    site_issue_family: {
-      action_path: 'owned',
-      enabled: true,
-      opportunity_type: 'site',
-      remediation:
-        'This defect fails on many pages for one cause, usually a shared template or component. Fix that cause once, then let the next comparable crawl confirm every affected page passes.',
-      rule_id: 'site_issue_family',
-      check_kind: 'issue_family',
-      severity: 'high',
-      title: 'A Site Health defect repeats across pages',
-    },
     // A site change is a field that moved between two crawls, not a Site
     // Health rule a crawl evaluates, so no check can read it.
     site_change_potential_regression: {
@@ -447,37 +379,6 @@ export const opportunities = {
     emerging_query: 'emerging_query',
     declining_query: 'declining_query',
   },
-  SITE_ISSUE_TO_OPPORTUNITY_RULE_ID: {
-    'aeo.structured_data_present': 'missing_structured_data',
-    'aeo.schema_required_valid': 'schema_properties_incomplete',
-    'aeo.schema_recommended_present': 'schema_properties_incomplete',
-    'aeo.product_evidence_facts': 'schema_properties_incomplete',
-    'aeo.listing_item_facts': 'schema_properties_incomplete',
-    'aeo.schema_matches_content': 'schema_visible_content_conflict',
-    'aeo.answer_first': 'content_structure_incomplete',
-    'aeo.question_headings': 'content_structure_incomplete',
-    'aeo.heading_hierarchy': 'content_structure_incomplete',
-    'aeo.product_answer_facts': 'content_structure_incomplete',
-    'aeo.listing_answer_set': 'content_structure_incomplete',
-    'aeo.visible_attribution': 'citability_trust_incomplete',
-    'aeo.content_date_present': 'citability_trust_incomplete',
-    'aeo.offer_freshness_signal': 'citability_trust_incomplete',
-    'aeo.source_support_present': 'citability_trust_incomplete',
-    'aeo.organization_identity': 'citability_trust_incomplete',
-    'aeo.trust_path_present': 'citability_trust_incomplete',
-    'aeo.product_brand_identity': 'citability_trust_incomplete',
-  },
-  // Site Health defects whose rule id starts with `ISSUE_RULE_PREFIX` become one
-  // finding per rule across its affected pages, never one per page, so a shared
-  // component failing on 179 pages is one Action. The cohort lists at most
-  // `COHORT_PAGES_MAX` pages in URL order, which bounds what a declaration
-  // freezes and a crawl re-reads; the Agent reads at most `AGENT_PAGES_MAX`.
-  SITE_ISSUE_FAMILY: {
-    RULE_ID: 'site_issue_family',
-    ISSUE_RULE_PREFIX: 'web.',
-    COHORT_PAGES_MAX: 500,
-    AGENT_PAGES_MAX: 50,
-  },
   SEVERITY_WEIGHTS: {
     critical: 4,
     high: 3,
@@ -599,7 +500,6 @@ export const opportunities = {
   PRIORITY_ROUNDING_DECIMALS: 1,
   MIN_PRIORITY_TO_SURFACE: 10,
   RECOMPUTE_MAX_ANALYSES: 5000,
-  RECOMPUTE_MAX_ISSUES: 5000,
   LIST_DEFAULT_LIMIT: 50,
   LIST_MAX_LIMIT: 200,
 };

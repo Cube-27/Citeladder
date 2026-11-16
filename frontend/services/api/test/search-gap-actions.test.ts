@@ -327,7 +327,7 @@ describe('keyword gaps become Actions', () => {
         keyword: 'Trail Socks',
         url: null,
       }),
-      member('missing_structured_data', { kind: 'site_page', url: `${OWNED}/a` }),
+      member('content_gap_improve_page', { kind: 'site_page', url: `${OWNED}/a` }),
       member('site_change_critical_regression', {
         kind: 'site_change',
         site_url_id: randomUUID(),
@@ -370,9 +370,9 @@ describe('keyword gaps become Actions', () => {
       facts: NO_HANDOFF_FACTS,
     });
     const [page] = groupMembers([
-      member('missing_structured_data', 30),
+      member('site_link_near_orphan', 30),
       member('striking_distance_query', 20),
     ]);
-    expect([page?.priority_score, page?.families]).toEqual([30, ['search_console', 'site_health']]);
+    expect([page?.priority_score, page?.families]).toEqual([30, ['search_console', 'link_graph']]);
   });
 });

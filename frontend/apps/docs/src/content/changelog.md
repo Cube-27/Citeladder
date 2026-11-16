@@ -3,10 +3,18 @@ title: 'Changelog'
 description: 'Product changes and what they mean for your workflow.'
 group: 'Updates'
 order: 400
-updated: '2026-11-12'
+updated: '2026-11-16'
 ---
 
 These notes describe implemented changes in the codebase. Dates are the recorded commit dates; availability in your workspace depends on deployment, access and configuration.
+
+## November 16, 2026: Site Health issues stay in Issues
+
+A Site Health issue no longer becomes an Action, either on one page or across many pages. You find, fix, hand off and verify each issue in **Site Health → Issues**, so one issue never has two lists or two statuses. Actions keep content gaps, internal links, signals that regressed between crawls, prompts, search, earned pages and products. Website-issue Actions created before this change no longer appear in Actions, MCP or the API.
+
+**For your team:** work on website issues from **Issues**, with **Ask agent** or **Copy fix prompt**.
+
+[Site Health](/site-health/)
 
 ## November 12, 2026: Clearer Site Health issues
 

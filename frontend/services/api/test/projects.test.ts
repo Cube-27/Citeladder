@@ -890,7 +890,7 @@ describe('project owner', () => {
   it('retains exact declaration and verified observation IDs in resolved action summaries', async () => {
     // Immutable fixture evidence is retained until the disposable database is dropped.
     const seeded = await actionFixture<ActionSeed>('seed');
-    const actionId = seeded.actions.missing_structured_data!;
+    const actionId = seeded.actions.site_link_near_orphan!;
     const action = await db
       .selectFrom('actions')
       .select('opportunity_snapshot_id')

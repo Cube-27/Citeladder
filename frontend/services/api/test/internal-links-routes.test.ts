@@ -178,18 +178,37 @@ describe('internal link analysis admission', () => {
       .where('rule_id', '=', 'site_contextual_links')
       .where('superseded_at', 'is', null)
       .executeTakeFirstOrThrow();
+    // Another link-graph finding on the same page, so the declaration freezes a site rule check too.
+    const orphanMemberId = randomUUID();
     await db
       .insertInto('opportunities')
       .values({
         ...contextualMember,
-        id: randomUUID(),
-        rule_id: 'missing_structured_data',
-        target_key: 'fixture:unrelated',
-        evidence: JSON.stringify({ site_url_id: link.source.site_url_id }),
+        id: orphanMemberId,
+        rule_id: 'site_link_near_orphan',
+        evidence: JSON.stringify({
+          site_url_id: link.source.site_url_id,
+          issues: [
+            {
+              issue_id: randomUUID(),
+              rule_id: 'site_link_near_orphan',
+              severity: 'medium',
+              category: 'links',
+              evidence: {},
+            },
+          ],
+        }),
         source_analysis_ids: JSON.stringify([]),
         source_issue_ids: JSON.stringify([]),
         source_metric_ids: JSON.stringify([]),
       })
+      .execute();
+    await db
+      .updateTable('actions')
+      .set({
+        member_opportunity_ids: sql`member_opportunity_ids || ${JSON.stringify([orphanMemberId])}::jsonb`,
+      })
+      .where('id', '=', link.action_id!)
       .execute();
     const key = randomUUID();
     // Declarations must fall inside the verification window, so stay relative to now.
@@ -221,10 +240,12 @@ describe('internal link analysis admission', () => {
     expect(checks.filter((check) => check.kind === 'contextual_link')).toEqual([
       expect.objectContaining({ recommendation_id: link.id }),
     ]);
-    expect(checks.some((check) => check.kind !== 'contextual_link')).toBe(true);
-    const declaredMembers = saved.member_opportunity_ids as string[];
-    expect(declaredMembers).toContain(contextualMember.id);
-    expect(declaredMembers.length).toBeGreaterThan(1);
+    expect(checks.filter((check) => check.kind !== 'contextual_link')).toEqual([
+      expect.objectContaining({ kind: 'site_rule', rule_id: 'site_link_near_orphan' }),
+    ]);
+    expect((saved.member_opportunity_ids as string[]).toSorted()).toEqual(
+      [contextualMember.id, orphanMemberId].toSorted(),
+    );
     expect((await declare([link.id])).status).toBe(200);
     expect((await declare(selected.map((candidate) => candidate.id))).status).toBe(409);
   });
