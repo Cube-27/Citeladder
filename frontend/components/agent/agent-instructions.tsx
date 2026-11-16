@@ -102,6 +102,7 @@ export function AgentInstructionsCard({
             Agent instructions
           </label>
           <Textarea
+            data-form-field=""
             id="agent-instructions-text"
             value={draft}
             onChange={(event) => instructions.setDraft(event.target.value)}

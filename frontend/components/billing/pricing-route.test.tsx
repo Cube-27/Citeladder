@@ -122,6 +122,27 @@ describe('app pricing continuation', () => {
     },
   );
 
+  it('stops naming a plan once a refetch of the entitlement fails', async () => {
+    mswServer.use(
+      http.get('/api/v1/billing/workspace-catalog', () =>
+        HttpResponse.json({ ...catalog, plans: [{ ...PLAN, key: 'tier_3', name: 'Scale' }] }),
+      ),
+      http.get('/api/v1/billing/entitlement', () =>
+        HttpResponse.json(entitlement(scaleSubscription)),
+      ),
+      http.get('/api/v1/auth/me', () => HttpResponse.json({ user: signedInUser })),
+    );
+    const { queryClient } = renderWithProviders(<PricingRoute />);
+    expect(await screen.findByText(/is on Scale\./u)).toBeVisible();
+
+    mswServer.use(
+      http.get('/api/v1/billing/entitlement', () => new HttpResponse(null, { status: 500 })),
+    );
+    await queryClient.refetchQueries({ type: 'active' });
+    expect(await screen.findByText('Compare plans on the public pricing page.')).toBeVisible();
+    expect(screen.queryByText(/is on Scale/u)).toBeNull();
+  });
+
   it('keeps the public pricing link in the masthead when the workspace read fails', async () => {
     mswServer.use(
       http.get('/api/v1/billing/workspace-catalog', () => HttpResponse.json(catalog)),

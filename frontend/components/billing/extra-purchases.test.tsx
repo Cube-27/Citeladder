@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
 import { billingCatalogSchema, billingEntitlementSchema } from '@citeladder/contracts/billing';
@@ -104,28 +104,37 @@ describe('ExtraPurchases', () => {
       'a shared reason once, under the head',
       [extra('a', 'Seats', 'checkout_unavailable'), extra('b', 'Markets', 'checkout_unavailable')],
       1,
+      [],
     ],
     [
       'each reason on its own button',
       [extra('a', 'Seats', 'checkout_unavailable'), extra('b', 'Markets', null)],
       0,
+      ['b'],
     ],
-  ])('describes a gated Buy with %s', (_case, addons, captions) => {
+  ])('describes a gated Buy with %s', (_case, addons, captions, buys) => {
+    const bought: string[] = [];
     render(
       <ExtraPurchases
         catalog={gatedCatalog(addons)}
         planKey="tier_1"
         entitlement={null}
         disabled={false}
-        onBuy={() => undefined}
+        onBuy={(_kind, key) => bought.push(key)}
       />,
     );
     const seats = screen.getByRole('button', { name: 'Buy Seats' });
-    expect(seats).toBeDisabled();
+    // Focusable, so a keyboard reaches its reason, but it buys nothing.
+    seats.focus();
+    expect(seats).toHaveFocus();
+    expect(seats).toHaveAttribute('aria-disabled', 'true');
     expect(seats).toHaveAccessibleDescription(CLOSED);
     // The visible reason is a caption only when every gated extra shares it.
     expect(screen.queryAllByText(CLOSED, { selector: 'p' })).toHaveLength(captions);
     const markets = screen.getByRole('button', { name: 'Buy Markets' });
     expect(markets).toHaveAccessibleDescription(captions ? CLOSED : '');
+    fireEvent.click(seats);
+    fireEvent.click(markets);
+    expect(bought).toEqual(buys);
   });
 });

@@ -1,7 +1,5 @@
-import { CircleAlert, TriangleAlert } from 'lucide-react';
 import { useId } from 'react';
 
-import { Icon } from '@/components/ui/icon';
 import { MeterLabelRow } from '@/components/ui/meter';
 import { formatPercent } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -11,10 +9,8 @@ const RUNGS = 10;
 /**
  * RungMeter — ten rungs for usage against a limit or work in progress; a 0
  * to 100 score is a `ScoreRing`, never rungs. Rungs fill in `ink` on a `well` track, the label above them and the
- * value beside the label while both fit (else under it). Past `warnAt` (a
- * ratio of `max`) the filled rungs take the warning tone and its glyph, past
- * `criticalAt` the negative tone and its glyph; `data-meter-band` names the
- * band. Without `value` the work is live: one ink rung pulses.
+ * value beside the label while both fit (else under it). Without `value` the
+ * work is live: one ink rung pulses.
  *
  * `value: null` is unmeasured, never zero: empty rungs and "not measured".
  */
@@ -23,8 +19,6 @@ export function RungMeter({
   value,
   max = 100,
   valueLabel,
-  warnAt,
-  criticalAt,
   headless = false,
   className,
 }: Readonly<{
@@ -37,20 +31,14 @@ export function RungMeter({
   max?: number;
   /** The shown and spoken value ("48 of 120 prompts"); defaults to a percentage. */
   valueLabel?: string;
-  /** The ratio of `max` from which the meter warns (a quota near its limit). */
-  warnAt?: number;
-  /** The ratio of `max` from which the meter is critical (a quota at its limit). */
-  criticalAt?: number;
   className?: string;
 }>) {
   const labelId = useId();
-  const reading = meterReading({ value, max, valueLabel, warnAt, criticalAt });
+  const reading = meterReading({ value, max, valueLabel });
   const named = Boolean(label) && !headless;
   return (
-    <div data-meter-band={reading.band} className={cn('flex min-w-0 flex-col gap-1', className)}>
-      {headless ? null : (
-        <MeterHead label={label} labelId={labelId} shown={reading.shown} band={reading.band} />
-      )}
+    <div className={cn('flex min-w-0 flex-col gap-1', className)}>
+      {headless ? null : <MeterHead label={label} labelId={labelId} shown={reading.shown} />}
       {/* The native bar carries the value to assistive technology (no value
           is live); the drawn rungs beside it are decoration. */}
       <progress
@@ -71,12 +59,9 @@ export function RungMeter({
   );
 }
 
-type MeterBand = 'normal' | 'warning' | 'critical';
-
 type MeterReading = Readonly<{
   live: boolean;
   filled: number;
-  band: MeterBand;
   shown: string | null;
   clamped: number | undefined;
 }>;
@@ -85,14 +70,10 @@ function meterReading({
   value,
   max,
   valueLabel,
-  warnAt,
-  criticalAt,
 }: Readonly<{
   value?: number | null;
   max: number;
   valueLabel?: string;
-  warnAt?: number;
-  criticalAt?: number;
 }>): MeterReading {
   const measured = typeof value === 'number';
   const ratio = measured && max > 0 ? Math.min(1, Math.max(0, value / max)) : 0;
@@ -102,54 +83,22 @@ function meterReading({
   return {
     live: value === undefined,
     filled: Math.round(ratio * RUNGS),
-    band: meterBand({ measured, ratio, warnAt, criticalAt }),
     shown,
     clamped: measured ? Math.min(max, Math.max(0, value)) : undefined,
   };
 }
 
-function meterBand({
-  measured,
-  ratio,
-  warnAt,
-  criticalAt,
-}: Readonly<{
-  measured: boolean;
-  ratio: number;
-  warnAt?: number;
-  criticalAt?: number;
-}>): MeterBand {
-  if (!measured) return 'normal';
-  if (criticalAt !== undefined && ratio >= criticalAt) return 'critical';
-  if (warnAt !== undefined && ratio >= warnAt) return 'warning';
-  return 'normal';
-}
-
-const BAND_FILL = {
-  normal: 'bg-ink',
-  warning: 'bg-warning',
-  critical: 'bg-negative',
-} as const satisfies Record<MeterBand, string>;
-
-const BAND_INK = {
-  normal: 'text-ink-2',
-  warning: 'text-warning',
-  critical: 'text-negative',
-} as const satisfies Record<MeterBand, string>;
-
 /** Rungs fill in ink on the `well` track; live work is one ink rung pulsing, never the accent. */
-function rungFill(index: number, { live, filled, band }: MeterReading) {
+function rungFill(index: number, { live, filled }: MeterReading) {
   if (live) return index === 0 ? 'bg-ink animate-live-rung' : 'bg-well';
-  if (index >= filled) return 'bg-well';
-  return BAND_FILL[band];
+  return index >= filled ? 'bg-well' : 'bg-ink';
 }
 
 function MeterHead({
   label,
   labelId,
   shown,
-  band,
-}: Readonly<{ label?: string; labelId: string; shown: string | null; band: MeterBand }>) {
+}: Readonly<{ label?: string; labelId: string; shown: string | null }>) {
   if (!label && !shown) return null;
   return (
     <MeterLabelRow>
@@ -160,17 +109,7 @@ function MeterHead({
         </span>
       ) : null}
       {shown ? (
-        <span
-          className={cn(
-            'type-body inline-flex items-center gap-1 whitespace-nowrap tabular-nums',
-            BAND_INK[band],
-          )}
-        >
-          {band === 'normal' ? null : (
-            <Icon icon={band === 'critical' ? CircleAlert : TriangleAlert} className="my-0" />
-          )}
-          {shown}
-        </span>
+        <span className="type-body text-ink-2 whitespace-nowrap tabular-nums">{shown}</span>
       ) : null}
     </MeterLabelRow>
   );

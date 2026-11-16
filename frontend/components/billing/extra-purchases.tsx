@@ -50,8 +50,9 @@ function sharedGateReason(entries: readonly Extra[]): string | null {
 }
 
 /**
- * Buy, disabled with its reason (tooltip and description) while the catalog
- * gates it. A shared reason is the section's caption, which it points at.
+ * Buy. While the catalog gates it, it is `aria-disabled` rather than
+ * disabled, so it stays focusable and its reason reaches a tooltip and
+ * `aria-describedby`; a shared reason is the section's caption.
  */
 function BuyButton({
   name,
@@ -67,24 +68,24 @@ function BuyButton({
   onBuy: () => void;
 }>) {
   const ownReasonId = useId();
-  const describedBy = reason ? (reasonId ?? ownReasonId) : undefined;
-  const button = (
-    <Button variant="secondary" disabled={disabled} onClick={onBuy} aria-describedby={describedBy}>
-      Buy {name}
-    </Button>
-  );
-  if (!reason) return button;
+  if (!reason)
+    return (
+      <Button variant="secondary" disabled={disabled} onClick={onBuy}>
+        Buy {name}
+      </Button>
+    );
   return (
     <>
+      <Tooltip content={reason} describe={false}>
+        <Button variant="secondary" aria-disabled="true" aria-describedby={reasonId ?? ownReasonId}>
+          Buy {name}
+        </Button>
+      </Tooltip>
       {reasonId ? null : (
         <span id={ownReasonId} hidden>
           {reason}
         </span>
       )}
-      <Tooltip content={reason} describe={false}>
-        {/* A disabled button takes no pointer events, so its wrapper opens the tip. */}
-        <span className="inline-flex">{button}</span>
-      </Tooltip>
     </>
   );
 }

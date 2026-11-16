@@ -493,7 +493,11 @@ export default function PricingRoute() {
         catalogRead={catalogQuery}
         selection={selection}
         offered={offered}
-        currentPlan={currentPlanRead(entitlementQuery.data, catalog)}
+        currentPlan={currentPlanRead(
+          // A failed refetch keeps the last data; it no longer says what the plan is.
+          entitlementQuery.isError ? undefined : entitlementQuery.data,
+          catalog,
+        )}
       />
       <SelectedPurchase
         selection={selection}

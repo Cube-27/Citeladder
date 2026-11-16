@@ -42,7 +42,7 @@ type UsageRead = ReturnType<typeof useQuery<Awaited<ReturnType<typeof billingApi
 
 /**
  * Every quota measured, and none used or held: a measured zero, never an
- * unresolved allowance, an unread count or a reservation, which keep their meters.
+ * unresolved allowance, an unread count or a reservation, which never read as no usage.
  */
 function nothingUsed(items: readonly UsageItem[]): boolean {
   return (
