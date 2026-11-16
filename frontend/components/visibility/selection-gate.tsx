@@ -88,7 +88,7 @@ export function AnalysisRead<T>({
         fallback="Check your connection and try again."
       />
     );
-  if (!ready)
+  if (ready === undefined)
     return (
       <Stack gap="workspace" aria-busy>
         <Skeleton variant="block" />

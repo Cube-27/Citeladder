@@ -6,7 +6,7 @@ import { ApiError } from '@/lib/api/errors';
 import type { Visibility } from '@citeladder/contracts';
 import { renderWithProviders as render } from '@/test/render';
 
-import { SelectionGate } from './selection-gate';
+import { AnalysisRead, SelectionGate } from './selection-gate';
 
 const RUN_ID = '00000000-0000-4000-8000-000000000001';
 
@@ -114,5 +114,32 @@ describe('SelectionGate', () => {
 
     expect(await screen.findByText(`Measured run ${RUN_ID}`)).toBeVisible();
     expect(screen.queryByText('Not measured yet')).toBeNull();
+  });
+});
+
+describe('AnalysisRead', () => {
+  const settled = { error: null, refetch: () => undefined, isFetching: false };
+  const renderRead = (ready: number | undefined) =>
+    render(
+      <AnalysisRead
+        query={settled}
+        title="Couldn't load"
+        busyLabel="Updating"
+        busy={false}
+        ready={ready}
+      >
+        {(value) => <p>Value {value}</p>}
+      </AnalysisRead>,
+    );
+
+  it('renders a falsy value it has, and the skeleton only while nothing has arrived', () => {
+    const { container, unmount } = renderRead(0);
+    expect(screen.getByText('Value 0')).toBeVisible();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    unmount();
+
+    const loading = renderRead(undefined);
+    expect(loading.container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryByText(/Value/u)).toBeNull();
   });
 });
