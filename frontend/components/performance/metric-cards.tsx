@@ -1,4 +1,5 @@
-import { SeriesSwatch } from '@/components/ui/chart-frame';
+import { SERIES_FILL, SERIES_STROKE } from '@/components/ui/step-chart-parts';
+import { cn } from '@/lib/utils';
 import { InfoHint } from '@/components/ui/info-hint';
 import type { PerformanceWindow } from '@/lib/api/performance';
 import { availabilityLabel, formatCount } from '@/lib/format';
@@ -66,11 +67,18 @@ function metricComparison(
  * there). The definitions sit in one hint beside the section's title, so no
  * second target nests inside a card's toggle.
  */
+/** The metric's series colour: filled while plotted, a hollow 2px ring otherwise (the non-colour mark). */
 function MetricMarker({ mark, plotted }: Readonly<{ mark: MetricMark; plotted: boolean }>) {
   return (
-    <span className={plotted ? 'inline-flex' : 'invisible inline-flex'}>
-      <SeriesSwatch tone={mark.tone} shape={mark.shape} />
-    </span>
+    <svg aria-hidden width={12} height={12} viewBox="0 0 12 12" className="shrink-0">
+      <circle
+        cx={6}
+        cy={6}
+        r={5}
+        strokeWidth={2}
+        className={cn(SERIES_STROKE[mark.tone], plotted ? SERIES_FILL[mark.tone] : 'fill-none')}
+      />
+    </svg>
   );
 }
 

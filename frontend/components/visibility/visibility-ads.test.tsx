@@ -72,8 +72,12 @@ describe('Ads view', () => {
     render(<AdsView data={response()} />);
     const tiles = within(screen.getByLabelText('Ads in ChatGPT answers'));
     expect(tiles.getByText('75.0%')).toBeVisible();
-    expect(tiles.getByText('3 of 4 ChatGPT Search answers showed an ad')).toBeVisible();
-    expect(tiles.getByText('No ads of yours were seen.')).toBeVisible();
+    expect(
+      tiles.getByRole('button', { description: '3 of 4 ChatGPT Search answers showed an ad' }),
+    ).toHaveAccessibleName(/^Basis of /);
+    expect(
+      tiles.getByRole('button', { description: /No ads of yours were seen\./ }),
+    ).toHaveAccessibleName(/^Basis of /);
     expect(screen.getByText('Claude API: Not applicable')).toBeVisible();
     expect(screen.getByText('1 of 3 answers')).toBeVisible();
     expect(screen.getByRole('columnheader', { name: 'Mentioned you' })).toBeVisible();

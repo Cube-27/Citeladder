@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { Inline, Stack } from '@/components/ui/layout';
+import { InfoHint } from '@/components/ui/info-hint';
 import { SectionDescription } from '@/components/ui/section';
 import { slipClasses } from '@/components/ui/slip';
 import { StateHeadingLevelContext } from '@/components/ui/state-block';
@@ -18,9 +19,10 @@ export type WidgetLink = Readonly<{ href: string; label: string; name?: string }
 type WidgetFill = 'figure' | 'list';
 
 /**
- * One Overview widget: a card with one head (its title in `subheading` at the
+ * One Overview widget: a card with one head (its title in `heading` at the
  * left, its status or link at the right), then a figure, a chart or a short
- * list. Widgets in a row share a height; the body fills it.
+ * list. A `figure` widget keeps its description in a hint after the title, so
+ * its card is the head and one figure. Widgets in a row share a height.
  */
 export function WidgetFrame({
   id,
@@ -50,12 +52,25 @@ export function WidgetFrame({
       className={slipClasses('flex h-full min-w-0 flex-col')}
     >
       <Inline as="header" className="items-start justify-between">
-        <Stack gap="tight" className="min-w-0">
-          <h2 id={id} className={textRole('subheading', 'truncate')}>
-            {title}
-          </h2>
-          {description ? <SectionDescription>{description}</SectionDescription> : null}
-        </Stack>
+        {fill === 'figure' ? (
+          <Inline gap="item" className="min-w-0">
+            <h2 id={id} className={textRole('heading', 'truncate')}>
+              {title}
+            </h2>
+            {description ? (
+              <InfoHint label={typeof title === 'string' ? `About ${title}` : 'About this card'}>
+                {description}
+              </InfoHint>
+            ) : null}
+          </Inline>
+        ) : (
+          <Stack gap="tight" className="min-w-0">
+            <h2 id={id} className={textRole('heading', 'truncate')}>
+              {title}
+            </h2>
+            {description ? <SectionDescription>{description}</SectionDescription> : null}
+          </Stack>
+        )}
         {status || link ? (
           <Inline className="shrink-0">
             {status}

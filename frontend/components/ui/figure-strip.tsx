@@ -1,7 +1,16 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Check, type LucideIcon } from 'lucide-react';
+import {
+  Fragment,
+  isValidElement,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
+import type { LucideIcon } from 'lucide-react';
 
-import { ClampText } from '@/components/ui/clamp-text';
+import { Delta } from '@/components/ui/delta';
+import { InfoHint } from '@/components/ui/info-hint';
 import { ScoreRing } from '@/components/ui/score-ring';
 import { TextLink } from '@/components/ui/text-link';
 import { Value } from '@/components/ui/value';
@@ -25,7 +34,7 @@ type FigureAction =
   | { onSelect?: undefined; actionLabel?: undefined; selected?: undefined }
   | { onSelect: () => void; actionLabel: string; selected?: boolean };
 
-/** The one text link at the end of a figure's basis line. */
+/** Where the figure's label links; the label itself is the link. */
 type FigureLink = Readonly<
   { label: string } & (
     | { href: string; projectId?: string; onSelect?: undefined }
@@ -37,17 +46,19 @@ export type FigureSegment = Readonly<
   {
     key: string;
     label: ReactNode;
+    /** The card's title already names the figure: the label stays only as the `dt`, visually hidden. */
+    labelHidden?: boolean;
     /** The absence's word. Defaults to "Not measured". */
     missingLabel?: string;
     loading?: boolean;
     /** A small mark at the end of the label line (series key, info hint). */
     marker?: ReactNode;
-    /** The period the value covers, e.g. "Last 30 days"; opens the basis line. */
+    /** The period the value covers, e.g. "Last 30 days"; opens the figure's hint. */
     caption?: ReactNode;
     delta?: ReactNode;
-    /** The basis, on the basis line. */
+    /** The basis, in the figure's hint. */
     sub?: ReactNode;
-    /** A second window's own value, on the basis line (never a ratio). */
+    /** A second window's own value, in the figure's hint (never a ratio). */
     comparison?: Readonly<{ label: ReactNode; value: string | null }>;
     action?: FigureLink;
   } & FigureValue &
@@ -56,6 +67,8 @@ export type FigureSegment = Readonly<
 
 /** The narrowest a figure's cell may be before the strip takes fewer per row. */
 const FIGURE_MIN_WIDTH = 160;
+/** Below this strip width a row holds at most two figures. */
+const NARROW_STRIP = 480;
 /** The gap between figures, in both directions. */
 const FIGURE_GAP = 16;
 
@@ -78,26 +91,32 @@ const cellWidth = (width: number, perRow: number) => (width - FIGURE_GAP * (perR
  * The figures per row for `count` figures in a strip `width` px wide. Columns
  * come from the count, never the width alone: 2 to 4, and 5 or 6 when each
  * cell keeps 160px, sit on one row; otherwise 5 are 3 + 2, 6 are 3 + 3, 7 are
- * 4 + 3 and 8 are 4 + 4. When cells would be narrower than 160px a row takes
- * fewer (4 become 2 + 2, 3 stack). No row holds one figure alone unless the
- * strip has one, or three stack.
+ * 4 + 3 and 8 are 4 + 4, and narrower cells take fewer (4 become 2 + 2, 3
+ * stack). Below a 480px strip a row holds at most two and an odd last figure
+ * takes the full row; wider, no row holds one figure alone unless three stack.
  */
 export function figureRows(count: number, width: number): number[] {
   if (count <= 0) return [];
   const fits = (perRow: number) => cellWidth(width, perRow) >= FIGURE_MIN_WIDTH;
   if (count <= 2) return [count];
+  if (width < NARROW_STRIP) return count === 3 && !fits(2) ? [1, 1, 1] : balancedPairs(count);
   if (count <= 6 && fits(count)) return [count];
   if (count === 3) return [1, 1, 1];
   for (let cap = rowCap(count); cap >= 3; cap -= 1) {
     if (fits(cap)) return balancedRows(count, cap);
   }
-  const pairs = balancedRows(count, 2);
+  const pairs = balancedPairs(count);
   // An odd figure joins the row before it rather than standing alone.
   if (pairs.at(-1) === 1) {
     pairs.pop();
     pairs[pairs.length - 1] = 3;
   }
   return [...pairs].sort((a, b) => b - a);
+}
+
+/** Rows of two, an odd figure last on its own. */
+function balancedPairs(count: number): number[] {
+  return Array.from({ length: Math.ceil(count / 2) }, (_, index) => Math.min(2, count - index * 2));
 }
 
 /** The strip's width, kept current; wide until measured. */
@@ -119,10 +138,11 @@ function useWidth() {
 /**
  * FigureStrip — key figures as metric cards on the ground, 16 apart; inside a
  * card they are cells with no edges (globals.css "r3 a2 figures"). Rows come
- * from `figureRows`. A card is at most three lines: the label (and its
- * marker), the value with its Delta, then the basis line holding the caption,
- * basis, comparison and one text link. An icon tile or a score's ScoreRing
- * sits at the left. A score is only ever a ring, never a bar.
+ * from `figureRows`. A card is two rows: the label with its marker and one
+ * info hint (caption, basis and comparison joined with " · "), then the value
+ * with its Delta; 88 tall. An icon tile sits at the left of both rows; a
+ * score's ScoreRing does too, with its Delta as the second row (96). A score is
+ * only ever a ring, never a bar. A figure with `action` makes its label the link.
  *
  * A figure with `onSelect` is pressable: the whole card is the target, named
  * by `actionLabel`; `selected` makes it a toggle (`aria-pressed`).
@@ -183,15 +203,15 @@ function FigureCell({
       data-row-size={rowSize}
       data-figure-kind={leadKind}
       // A narrow row's labels may take two lines, so every label in it reserves two.
-      data-label-lines={narrow ? 2 : undefined}
+      data-label-lines={narrow && !segment.labelHidden ? 2 : undefined}
+      data-label-hidden={segment.labelHidden || undefined}
       data-pressable={pressable || undefined}
       data-selected={segment.selected || undefined}
       className="relative min-w-0"
     >
       <FigureLabel segment={segment} />
       <FigureLead segment={segment} />
-      {segment.score ? null : <FigureValueLine segment={segment} />}
-      <FigureBasis segment={segment} />
+      <FigureValueLine segment={segment} />
       {pressable ? (
         <button
           type="button"
@@ -218,25 +238,32 @@ function Block({ className, ring = false }: Readonly<{ className: string; ring?:
   );
 }
 
-/** The label, wrapping between words but never cut, and its marker at the line's end. */
+/** Row 1: the label (or its link), wrapping between words but never cut, then its marker and hint. */
 function FigureLabel({ segment }: FigurePart) {
-  const text = segment.loading ? (
-    <>
-      <span className="sr-only">{segment.label}</span>
-      <Block className="h-[14px] w-24" />
-    </>
-  ) : (
-    <span className="min-w-0">{segment.label}</span>
-  );
+  if (segment.labelHidden) return <dt className="sr-only">{segment.label}</dt>;
+  let text: ReactNode;
+  if (segment.loading)
+    text = (
+      <>
+        <span className="sr-only">{segment.label}</span>
+        <Block className="h-[14px] w-24" />
+      </>
+    );
+  else if (segment.action)
+    text = (
+      <span className={cn('min-w-0', pressableLayer(segment))}>
+        <FigureLabelLink action={segment.action}>{segment.label}</FigureLabelLink>
+      </span>
+    );
+  else text = <span className="min-w-0">{segment.label}</span>;
+  const hint = segment.loading ? null : <FigureHint segment={segment} />;
   return (
     <dt className="type-body text-ink-2 flex min-w-0 items-start justify-between gap-2">
-      <span className="flex min-w-0 items-center gap-2 self-center">
-        {segment.selected ? <Check className="text-ink size-4 shrink-0" aria-hidden /> : null}
-        {text}
-      </span>
-      {segment.marker ? (
+      <span className="flex min-w-0 items-center gap-2 self-center">{text}</span>
+      {segment.marker || hint ? (
         <span className={cn('flex shrink-0 items-center gap-2', pressableLayer(segment))}>
           {segment.marker}
+          {hint}
         </span>
       ) : null}
     </dt>
@@ -275,14 +302,33 @@ function FigureLead({ segment }: FigurePart) {
   );
 }
 
-/** Line 2 of a value card: the value (or its absence's word) and its Delta on one baseline. */
+/**
+ * Row 2: the value (or its absence's word) and its Delta on one baseline; a
+ * score's ring holds its value, so the row is its Delta alone. A figure whose
+ * label is hidden carries its hint here.
+ */
 function FigureValueLine({ segment }: FigurePart) {
+  const delta = segment.loading || !reportsChange(segment.delta) ? null : segment.delta;
+  if (segment.score && !delta) return null;
   return (
-    <dd data-figure-value="" className="flex min-h-8 min-w-0 items-baseline gap-2">
-      <FigureValue segment={segment} />
-      {segment.delta && !segment.loading ? <span className="shrink-0">{segment.delta}</span> : null}
+    <dd data-figure-value="" className="flex min-w-0 items-baseline gap-2">
+      {segment.score ? null : <FigureValue segment={segment} />}
+      {delta ? <span className="type-caption-strong shrink-0">{delta}</span> : null}
+      {segment.labelHidden && !segment.loading ? (
+        <span className="ms-auto shrink-0 self-center">
+          <FigureHint segment={segment} />
+        </span>
+      ) : null}
     </dd>
   );
+}
+
+/** A Delta with nothing to compare prints nothing beside a value. */
+function reportsChange(delta: ReactNode): boolean {
+  if (delta == null || delta === false) return false;
+  if (isValidElement<ComponentProps<typeof Delta>>(delta) && delta.type === Delta)
+    return typeof delta.props.value === 'number' && Number.isFinite(delta.props.value);
+  return true;
 }
 
 function FigureValue({ segment }: FigurePart) {
@@ -299,44 +345,29 @@ function FigureValue({ segment }: FigurePart) {
       <Value text="figure" value={null} absentLabel={segment.missingLabel ?? 'Not measured'} />
     );
   if (typeof value === 'string' || typeof value === 'number')
-    return (
-      <ClampText className="type-figure text-ink min-w-0 tabular-nums">{String(value)}</ClampText>
-    );
-  return <div className="type-figure text-ink min-w-0 truncate">{value}</div>;
+    return <span className="type-figure text-ink tabular-nums">{String(value)}</span>;
+  return <div className="type-figure text-ink min-w-0">{value}</div>;
 }
 
-/**
- * The basis line: a score's Delta, then the caption, basis and comparison
- * joined with " · ", and the one text link at its end.
- */
-function FigureBasis({ segment }: FigurePart) {
-  if (segment.loading) return null;
+/** The caption, basis and comparison joined with " · " in one hint. */
+function FigureHint({ segment }: FigurePart) {
   const parts = [
     { key: 'caption', node: segment.caption },
     { key: 'sub', node: segment.sub },
     { key: 'comparison', node: comparisonText(segment) },
   ].filter((part) => Boolean(part.node));
-  const delta = segment.score ? segment.delta : null;
-  if (!delta && !parts.length && !segment.action) return null;
+  if (!parts.length) return null;
+  const name = typeof segment.label === 'string' ? segment.label : segment.key;
+  // "Basis of": a caller's marker or a card title may already hold an "About" hint.
   return (
-    <dd data-figure-basis="" className="type-caption flex min-w-0 items-baseline gap-2">
-      {delta ? <span className="shrink-0">{delta}</span> : null}
-      {parts.length ? (
-        <ClampText className="min-w-0">
-          {parts.map((part, index) => (
-            <span key={part.key}>
-              {index ? ' · ' : null}
-              {part.node}
-            </span>
-          ))}
-        </ClampText>
-      ) : null}
-      {segment.action ? (
-        <span className={cn('ms-auto shrink-0', pressableLayer(segment))}>
-          <FigureActionLink action={segment.action} />
-        </span>
-      ) : null}
-    </dd>
+    <InfoHint label={`Basis of ${name}`}>
+      {parts.map((part, index) => (
+        <Fragment key={part.key}>
+          {index ? ' · ' : null}
+          {part.node}
+        </Fragment>
+      ))}
+    </InfoHint>
   );
 }
 
@@ -345,7 +376,7 @@ function comparisonText(segment: FigureSegment): ReactNode {
   if (!comparison) return null;
   return (
     <span data-figure-comparison="">
-      {comparison.label}{' '}
+      {comparison.label}:{' '}
       <span className="tabular-nums">
         {comparison.value ?? segment.missingLabel ?? 'Not measured'}
       </span>
@@ -353,18 +384,24 @@ function comparisonText(segment: FigureSegment): ReactNode {
   );
 }
 
-function FigureActionLink({ action }: Readonly<{ action: FigureLink }>) {
+// No underline at rest; it shows on hover and keyboard focus (owner 2026-11-16).
+const LABEL_LINK = 'no-underline hover:underline focus-visible:underline';
+
+function FigureLabelLink({
+  action,
+  children,
+}: Readonly<{ action: FigureLink; children: ReactNode }>) {
   if (action.onSelect)
     return (
-      <TextLink asChild text="caption">
+      <TextLink asChild tone="muted" className={LABEL_LINK}>
         <button type="button" onClick={action.onSelect}>
-          {action.label}
+          {children}
         </button>
       </TextLink>
     );
   return (
-    <TextLink href={action.href} projectId={action.projectId} text="caption">
-      {action.label}
+    <TextLink href={action.href} projectId={action.projectId} tone="muted" className={LABEL_LINK}>
+      {children}
     </TextLink>
   );
 }

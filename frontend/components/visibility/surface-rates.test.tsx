@@ -71,8 +71,12 @@ describe('AI Overview rates', () => {
   it('states what each number divided by', () => {
     panel(rates());
 
-    expect(screen.getByText('40 of 100 searches we successfully observed')).toBeVisible();
-    expect(screen.getByText('10 of 40 searches that showed an overview')).toBeVisible();
+    // Each denominator is its figure's basis hint.
+    for (const basis of [
+      /40 of 100 searches we successfully observed/,
+      /10 of 40 searches that showed an overview/,
+    ])
+      expect(screen.getByRole('button', { description: basis })).toHaveAccessibleName(/^Basis of /);
   });
 
   it('renders an empty denominator as unavailable, never as 0%', () => {

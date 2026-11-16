@@ -187,11 +187,14 @@ it('charts the prompt over time with declared work marked, and hands off to its 
   );
 
   const states = within(screen.getByLabelText('Answers by state'));
-  expect(states.getByText('Mentioned and cited').closest('div')).toHaveTextContent(
-    'Mentioned and cited1Named you and cited one of your pages.',
-  );
-  expect(states.getByText('Neither').closest('div')).toHaveTextContent(
-    'Neither1Did not name you or cite your site.',
+  const stateCell = (label: string) => states.getByText(label).closest('[data-figure-cell]');
+  expect(stateCell('Mentioned and cited')).toHaveTextContent(/^Mentioned and cited.*1$/);
+  expect(
+    states.getByRole('button', { name: 'Basis of Mentioned and cited' }),
+  ).toHaveAccessibleDescription('Named you and cited one of your pages.');
+  expect(stateCell('Neither')).toHaveTextContent(/^Neither.*1$/);
+  expect(states.getByRole('button', { name: 'Basis of Neither' })).toHaveAccessibleDescription(
+    'Did not name you or cite your site.',
   );
   const gaps = within(screen.getByRole('region', { name: 'Competitors named without you' }));
   expect(gaps.getByRole('row', { name: /Globex/ })).toHaveTextContent('Globex1ChatGPT API');
@@ -224,7 +227,8 @@ it('opens on where the prompt stands: the latest rates and their change', async 
   const cell = (label: string) =>
     figures.getByText(label).closest('[data-figure-cell]')?.textContent;
   expect(cell('Visibility')).toMatch(/^Visibility100\.0%.*12\.5 pp/);
-  expect(cell('Owned citation rate')).toMatch(/^Owned citation rate50\.0%/);
+  // The period is the label's hint; the value follows it.
+  expect(cell('Owned citation rate')).toMatch(/^Owned citation rate.*50\.0%$/);
   expect(cell('Measured runs')).toMatch(/^Measured runs3/);
 });
 

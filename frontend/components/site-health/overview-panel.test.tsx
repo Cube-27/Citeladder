@@ -297,11 +297,12 @@ describe('OverviewPanel', () => {
       />,
     );
     const links = within(screen.getByTestId('overview-metrics')).getAllByRole('link');
+    // Each figure's label is its link.
     expect(links.map((link) => [link.textContent, link.getAttribute('href')])).toEqual([
-      ['View details', '/issues?section=technical'],
-      ['View details', '/issues?section=aeo'],
-      ['View details', '/site?tab=aeo-readiness'],
-      ['View details', '/site?tab=pages'],
+      ['Web fundamentals', '/issues?section=technical'],
+      ['AEO readiness', '/issues?section=aeo'],
+      ['AEO checklist completion', '/site?tab=aeo-readiness'],
+      ['Crawl coverage', '/site?tab=pages'],
     ]);
   });
 

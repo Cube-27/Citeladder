@@ -116,21 +116,22 @@ describe('FigureStrip', () => {
     // A score is a ring with its number inside, never a bar or rungs, and the number prints once.
     expect(within(group).getByRole('img', { name: 'Crawl score: 72 out of 100' })).toBeVisible();
     expect(within(group).queryByRole('progressbar')).not.toBeInTheDocument();
-    expect(cell('Crawl')?.textContent).toBe('Crawl72Last crawlView details');
-    // The figure's action is a text link on the basis line, never a button of its own.
-    fireEvent.click(within(group).getByRole('button', { name: 'Connect logs' }));
+    // Two rows: the basis is the label's hint, never a line of its own.
+    expect(cell('Crawl')?.textContent).toBe('CrawlLast crawl72');
+    expect(
+      within(group).getByRole('button', { name: 'Basis of Crawl' }),
+    ).toHaveAccessibleDescription('Last crawl');
+    // The figure's action is its label, never a link or button of its own.
+    fireEvent.click(within(group).getByRole('button', { name: 'TTFB' }));
     expect(onConnect).toHaveBeenCalledOnce();
-    expect(within(group).getByRole('link', { name: 'View details' })).toHaveAttribute(
-      'href',
-      '/issues',
-    );
+    expect(within(group).getByRole('link', { name: 'Crawl' })).toHaveAttribute('href', '/issues');
     const toggle = within(group).getByRole('button', { name: 'View 3 orphaned pages' });
     expect(toggle).toHaveAttribute('aria-pressed', 'false');
     fireEvent.click(toggle);
     expect(onSelect).toHaveBeenCalledOnce();
   });
 
-  it('puts a comparison window on the basis line, its absence named like the value', () => {
+  it('puts a comparison window in the figure hint, its absence named like the value', () => {
     render(
       <FigureStrip
         label="Search Console metrics"
@@ -152,10 +153,10 @@ describe('FigureStrip', () => {
       />,
     );
     const group = screen.getByRole('group', { name: 'Search Console metrics' });
-    const [clicks, ctr] = within(group).getAllByText('Previous 28 days');
-    expect(clicks?.closest('[data-figure-comparison]')?.textContent).toBe('Previous 28 days 980');
+    const [clicks, ctr] = within(group).getAllByText(/^Previous 28 days/);
+    expect(clicks?.closest('[data-figure-comparison]')?.textContent).toBe('Previous 28 days: 980');
     expect(ctr?.closest('[data-figure-comparison]')?.textContent).toBe(
-      'Previous 28 days Not measured',
+      'Previous 28 days: Not measured',
     );
   });
 });
