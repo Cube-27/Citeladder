@@ -1,7 +1,6 @@
 import { createHash, randomInt, randomUUID } from 'node:crypto';
 import { setTimeout as delay } from 'node:timers/promises';
 import { Hono } from 'hono';
-import { parse, type DefaultTreeAdapterMap } from 'parse5';
 import { afterAll, beforeEach, expect, it, onTestFinished, vi } from 'vitest';
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
@@ -18,6 +17,7 @@ import { ApiError } from '../src/errors.ts';
 import { registerMcpRoutes } from '../src/mcp/server.ts';
 import { cleanupMcpProtocol } from '../src/mcp/maintenance.ts';
 import { mcpPolicy } from '../src/mcp/config.ts';
+import { callbackOf, consentDocument } from './mcp-consent-document.ts';
 import { billingAccount, grant as accountGrant } from './prompt-fixtures.ts';
 import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -1008,50 +1008,6 @@ it('caps tool calls per connection and refuses the next until the window ends', 
   });
 });
 
-/** What a person sees on a consent page: its form inputs and its visible text. */
-function consentDocument(source: string) {
-  const inputs: Record<string, string>[] = [];
-  const links: string[] = [];
-  let refresh: string | undefined;
-  let text = '';
-  const walk = (node: DefaultTreeAdapterMap['node']) => {
-    if (node.nodeName === 'style') return;
-    const attrs =
-      'attrs' in node ? Object.fromEntries(node.attrs.map((a) => [a.name, a.value])) : {};
-    if (node.nodeName === 'input') inputs.push(attrs);
-    if (node.nodeName === 'a' && attrs.href) links.push(attrs.href);
-    if (node.nodeName === 'meta' && attrs['http-equiv'] === 'refresh')
-      refresh = /^0; url=(.+)$/u.exec(attrs.content ?? '')?.[1];
-    if (node.nodeName === '#text' && 'value' in node) text += node.value;
-    if ('childNodes' in node) for (const child of node.childNodes) walk(child);
-  };
-  walk(parse(source));
-  return {
-    workspaces: inputs.filter(
-      (input) =>
-        input.type === 'checkbox' && !['accept_terms', 'allow_changes'].includes(input.name ?? ''),
-    ),
-    changes: inputs.find((input) => input.name === 'allow_changes'),
-    terms: inputs.find((input) => input.name === 'accept_terms'),
-    termsRevision: inputs.find((input) => input.name === 'terms_revision')?.value,
-    links,
-    refresh,
-    text: text.replace(/\s+/gu, ' '),
-  };
-}
-/**
- * Where a decision hands the browser back: a page, not a redirect, because
- * `form-action` governs every redirect after the post. Its link repeats the target.
- */
-async function callbackOf(response: Response) {
-  expect(response.status).toBe(200);
-  expect(response.headers.get('location')).toBeNull();
-  expect(response.headers.get('content-security-policy')).toMatch(/; form-action 'none'$/u);
-  expect(response.headers.get('x-frame-options')).toBe('DENY');
-  const page = consentDocument(await response.text());
-  expect(page.links).toEqual([page.refresh]);
-  return new URL(page.refresh!);
-}
 async function consentView(transaction: string) {
   const page = await app.request(
     `${browser}/mcp/oauth/consent?transaction=${encodeURIComponent(transaction)}`,
