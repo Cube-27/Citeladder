@@ -476,7 +476,7 @@
 }
 
 /* The app's dark: designed, not inverted. The ground
-   is a warm near-black, sheets are lighter than the ground, wells darker,
+   is a zero-chroma near-black, sheets are lighter than the ground, wells lighter still,
    and section rules step down to `ink-2` so they do not glare. It rebinds
    every literal the app's light block below sets: that block follows the
    system's dark at the same specificity, so it would otherwise win here.
@@ -484,19 +484,19 @@
 :root[data-theme='dark']:not([data-public-surface]) {
   /* Each layer steps lighter than the one beneath, so it reads without its
      shadow; the well is a tint over the card, lighter than it. */
-  --color-ground: #0c0e11;
-  --color-chrome: #131519;
-  --color-surface: #181a1f;
-  --color-well: #26292f;
-  --color-raised: #1f2228;
+  --color-ground: #181818;
+  --color-chrome: #1d1d1d;
+  --color-surface: #222222;
+  --color-well: #2d2d2d;
+  --color-raised: #272727;
   /* Ink at a fixed alpha, so a hairline steps evenly over every layer. */
-  --color-rule: rgb(236 238 242 / 10%);
-  --color-control-line: #727886;
-  --color-control-edge: #393d47;
-  --color-ink: #eceef2;
-  --color-ink-2: #a5abb8;
-  --color-ink-hover: #d2d6de;
-  --color-on-ink: #16181d;
+  --color-rule: rgb(255 255 255 / 9%);
+  --color-control-line: #7f7f7f;
+  --color-control-edge: #3c3c3c;
+  --color-ink: #e3e3e3;
+  --color-ink-2: #b0b0b0;
+  --color-ink-hover: #c8c8c8;
+  --color-on-ink: #181818;
   --color-accent: #ff6a33;
   --color-accent-text: #ff8a5c;
   /* Washes sit 1.05 to 1.2 from the ground and stay quiet: a notice is never
@@ -513,10 +513,10 @@
   --color-data-rival-2: #6fb3e8;
   --color-data-rival-3: #997bf0;
   --color-data-rival-4: #4fc4b5;
-  --color-data-other: #8a909d;
-  --color-state-hover: rgb(236 238 242 / 6%);
-  --color-state-pressed: rgb(236 238 242 / 10%);
-  --color-state-selected: rgb(236 238 242 / 7%);
+  --color-data-other: #8f8f8f;
+  --color-state-hover: rgb(255 255 255 / 6%);
+  --color-state-pressed: rgb(255 255 255 / 10%);
+  --color-state-selected: rgb(255 255 255 / 7%);
   --color-scrim: rgb(0 0 0 / 60%);
   --shadow-card: none;
   --shadow-control: 0 1px 2px rgb(0 0 0 / 0.35);
