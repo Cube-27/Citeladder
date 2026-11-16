@@ -18,6 +18,7 @@ import {
 
 import { IconButton } from '@/components/ui/button';
 import { isTextCut, Tooltip } from '@/components/ui/tooltip';
+import { setSidebarCollapsed, useSidebarCollapsed } from '@/lib/sidebar-width';
 import { cn } from '@/lib/utils';
 
 /**
@@ -358,28 +359,28 @@ export function SidebarIdentButton({
   );
 }
 
-/** Collapse the sidebar to its rail, or open it again (hidden in the drawer). */
-export function SidebarCollapseToggle({
-  collapsed,
-  onToggle,
-  shortcut,
-}: Readonly<{ collapsed: boolean; onToggle: () => void; shortcut: string }>) {
+/**
+ * Collapse the sidebar to its rail, or open it again: the masthead's first
+ * item, before the title. Below 900px, where the menu button opens the
+ * drawer instead, it is hidden.
+ */
+export function SidebarCollapseToggle() {
+  const collapsed = useSidebarCollapsed();
   return (
     <IconButton
       icon={collapsed ? PanelLeftOpen : PanelLeftClose}
       label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      shortcut={shortcut}
-      tooltipSide="right"
+      shortcut={COLLAPSE_SHORTCUT}
+      tooltipSide="bottom"
       aria-keyshortcuts="Meta+Backslash Control+Backslash"
       aria-pressed={collapsed}
-      onClick={onToggle}
-      className={cn(
-        'in-data-[nav-drawer]:hidden shrink-0',
-        collapsed && 'size-[var(--rail-button)] [&_svg]:size-5',
-      )}
+      onClick={() => setSidebarCollapsed(!collapsed)}
+      className="rail:inline-flex hidden shrink-0"
     />
   );
 }
+
+const COLLAPSE_SHORTCUT = 'Ctrl \\';
 
 /** True while the trigger sits in the collapsed rail, where only its tooltip names it. */
 function isRail(trigger: HTMLElement) {

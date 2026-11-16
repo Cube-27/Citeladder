@@ -5,6 +5,7 @@ import { MessagesSquare, type LucideIcon } from 'lucide-react';
 import { NoticeScreen } from '@/components/templates/notice-page';
 import { AppShellPlaceholder } from '@/components/ui/app-shell';
 import {
+  SidebarCollapseToggle,
   SidebarFrame,
   SidebarIdentButton,
   SidebarNavGroup,
@@ -55,6 +56,7 @@ const FALLBACK_SHELL = {
   navDrawer: { open: false, onOpen: () => {} },
   searchTrigger: null,
   agentTrigger: null,
+  sidebarToggle: <SidebarCollapseToggle />,
 } as const;
 
 /** A shell page's skeleton; a path the shell has no page for shows the loading notice. */

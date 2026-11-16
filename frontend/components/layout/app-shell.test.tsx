@@ -134,8 +134,14 @@ describe('AppShell resizable sidebar', () => {
     const { unmount } = renderShell();
     const frame = () => screen.getByRole('main').parentElement;
     expect(frame()).toHaveAttribute('data-sidebar-state', 'expanded');
+    // The toggle sits in the masthead, before the title, not in the sidebar.
+    const toggle = screen.getByRole('button', { name: 'Collapse sidebar' });
+    expect(toggle.closest('[data-masthead-title]')).toContainElement(
+      screen.getByRole('heading', { name: 'Website' }),
+    );
+    expect(screen.getByRole('complementary', { name: 'Sidebar' })).not.toContainElement(toggle);
 
-    await user.click(screen.getByRole('button', { name: 'Collapse sidebar' }));
+    await user.click(toggle);
     expect(frame()).toHaveAttribute('data-sidebar-state', 'collapsed');
     // The rail keeps its width: there is nothing to drag.
     expect(screen.queryByRole('separator', { name: 'Resize sidebar' })).not.toBeInTheDocument();
@@ -158,9 +164,9 @@ describe('AppShell resizable sidebar', () => {
       ...within(sidebar).getAllByRole('link'),
     ];
     // Project, Dashboard, Agent, Overview, Actions, Analyze, Commerce, Track,
-    // Integrations, account, collapse: 40px each, the first in the 56px cell,
-    // with 21px between the rail's parts.
-    expect(buttons).toHaveLength(11);
+    // Integrations, account: 40px each, the first in the 56px cell, with 21px
+    // between the rail's parts. The collapse toggle is in the masthead.
+    expect(buttons).toHaveLength(10);
     expect(56 + (buttons.length - 1) * 40 + 21).toBeLessThanOrEqual(480);
 
     // A group opens its flyout with the right arrow, marking the current page.
@@ -178,7 +184,7 @@ describe('AppShell resizable sidebar', () => {
     expect(analyze).toHaveFocus();
   });
 
-  it('names the account in a tooltip only in the rail, never over the labelled collapse toggle', async () => {
+  it('names the account in a tooltip only in the rail, never when labelled', async () => {
     const user = userEvent.setup();
     renderShell();
     const account = () =>
@@ -186,7 +192,7 @@ describe('AppShell resizable sidebar', () => {
     // jsdom lays nothing out; report every line as wider than the sidebar.
     vi.spyOn(HTMLElement.prototype, 'scrollWidth', 'get').mockReturnValue(1000);
 
-    // Labelled, even a cut email opens no tooltip beside the collapse toggle.
+    // Labelled, even a cut email opens no tooltip.
     focusByKeyboard(account());
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     act(() => account().blur());

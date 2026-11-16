@@ -60,6 +60,7 @@ export function PageFrame({
           title={resolved}
           lead={
             <>
+              {shell?.sidebarToggle}
               {navDrawer ? (
                 <NavMenuButton expanded={navDrawer.open} onOpen={navDrawer.onOpen} />
               ) : null}

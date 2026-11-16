@@ -52,6 +52,7 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
       navDrawer: { open: drawerOpen, onOpen: () => setDrawerLocation(location.key) },
       searchTrigger: <CommandPaletteTrigger />,
       agentTrigger: <AgentPanelTrigger />,
+      sidebarToggle: <SidebarCollapseToggle />,
     }),
     [drawerOpen, location.key],
   );
@@ -77,12 +78,10 @@ export function AppShell({ children }: Readonly<{ children: ReactNode }>) {
   );
 }
 
-const COLLAPSE_SHORTCUT = 'Ctrl \\';
-
 /**
  * The sidebar: the project switcher, the Dashboard | Agent switch, the
- * mode's list (the route decides the mode), then Integrations, the account
- * and the collapse toggle. Collapsed (never in the drawer) it is the 56px
+ * mode's list (the route decides the mode), then Integrations and the
+ * account (the collapse toggle is in the masthead). Collapsed (never in the drawer) it is the 56px
  * rail: one button per group, flyouts for the groups, and nothing scrolls.
  */
 function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
@@ -104,15 +103,8 @@ function AppSidebar({ inDrawer = false }: Readonly<{ inDrawer?: boolean }>) {
       foot={
         <>
           <SidebarFootNav rail={rail} />
-          <div className="labelled:flex-row labelled:gap-0.5 flex flex-col items-center">
-            <div className="labelled:flex-1 min-w-0">
-              <UserMenuTrigger presenter={inDrawer ? 'drawer' : 'sidebar'} />
-            </div>
-            <SidebarCollapseToggle
-              collapsed={collapsed}
-              onToggle={() => setSidebarCollapsed(!collapsed)}
-              shortcut={COLLAPSE_SHORTCUT}
-            />
+          <div className="labelled:items-stretch flex min-w-0 flex-col items-center">
+            <UserMenuTrigger presenter={inDrawer ? 'drawer' : 'sidebar'} />
           </div>
         </>
       }
