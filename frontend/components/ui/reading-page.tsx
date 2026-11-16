@@ -3,7 +3,6 @@ import { useId, useState, type ReactNode } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
-import { cn } from '@/lib/utils';
 
 /**
  * A record's reading page (the Actions v3 Action and URL pages): one centred
@@ -41,9 +40,7 @@ export function BackLink({
 
 /** The page's h1: a record's name, or (`path`) an address, set smaller as it runs long. */
 export function PageHeading({ children, path }: Readonly<{ children: string; path?: boolean }>) {
-  return (
-    <h1 className={textRole(path ? 'title' : 'display', 'mt-3 mb-5 break-words')}>{children}</h1>
-  );
+  return <h1 className={textRole(path ? 'title' : 'display', 'mt-3 break-words')}>{children}</h1>;
 }
 
 /** The row of ways to take the record elsewhere, under its overview. */
@@ -81,18 +78,12 @@ export function Prose({ children }: Readonly<{ children: ReactNode }>) {
 export type DetailFact = Readonly<{ label: string; value: ReactNode }>;
 
 /** The "Details" card: a 120px label column, one fact a row. */
-export function DetailsCard({
-  facts,
-  first,
-}: Readonly<{ facts: readonly DetailFact[]; first?: boolean }>) {
+export function DetailsCard({ facts }: Readonly<{ facts: readonly DetailFact[] }>) {
   const id = useId();
   return (
     <section
       aria-labelledby={id}
-      className={cn(
-        'border-rule rounded-card flex flex-col gap-3 border px-4 py-4',
-        first ? 'mt-0' : 'mt-6',
-      )}
+      className="border-rule rounded-card mt-6 flex flex-col gap-3 border px-4 py-4"
     >
       <h2 id={id} className={textRole('label')}>
         Details

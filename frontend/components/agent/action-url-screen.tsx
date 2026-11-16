@@ -83,7 +83,6 @@ function UrlBody({ path, data }: Readonly<{ path: string; data: UrlActions }>) {
     <>
       <PageHeading path>{path}</PageHeading>
       <DetailsCard
-        first
         facts={[
           {
             label: 'Page type',

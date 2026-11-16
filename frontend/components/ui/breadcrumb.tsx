@@ -8,7 +8,7 @@ export type Crumb = Readonly<{ label: string; href?: string; state?: unknown }>;
 
 /**
  * Where a page sits, one line in the masthead: each step up is a quiet link
- * cut at 220px, the last is the page itself. The whole trail cuts rather
+ * cut at 272px, the last is the page itself. The whole trail cuts rather
  * than wraps, so a long title never changes the masthead's height.
  */
 export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
@@ -24,12 +24,12 @@ export function Breadcrumb({ parts }: Readonly<{ parts: readonly Crumb[] }>) {
                 <ProjectLink
                   href={part.href}
                   state={part.state}
-                  className="hover:overlay-hover hover:text-ink focus-ring block max-w-[220px] truncate rounded-sm px-1"
+                  className="hover:overlay-hover hover:text-ink focus-ring block max-w-68 truncate rounded-sm px-1"
                 >
                   {part.label}
                 </ProjectLink>
               ) : (
-                <span className="block max-w-[220px] truncate px-1">{part.label}</span>
+                <span className="block max-w-68 truncate px-1">{part.label}</span>
               )}
             </li>
             <li aria-hidden className="shrink-0">

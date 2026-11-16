@@ -37,7 +37,8 @@ export function SelectionDock({
  * primary's label cuts.
  */
 export const DOCK_SLOT = {
-  decision: 'rail:w-28',
+  // Every decision label (Decline, Accept, Restore) is under 112px, so the minimum holds it fixed.
+  decision: 'min-w-28',
   wide: 'rail:w-44',
   primary: 'min-w-0 shrink truncate rail:w-64',
 } as const;
