@@ -81,33 +81,7 @@ describe('authenticated interaction primitives', () => {
     expect(screen.getByRole('combobox', { name: 'Severity' })).toHaveTextContent('High');
   });
 
-  it('uses Radix keyboard selection and panel wiring for Tabs', async () => {
-    const user = userEvent.setup();
-    function Harness() {
-      const [value, setValue] = useState<'one' | 'two'>('one');
-      return (
-        <Tabs
-          value={value}
-          onValueChange={setValue}
-          ariaLabel="Views"
-          items={[
-            { value: 'one', label: 'One' },
-            { value: 'two', label: 'Two' },
-          ]}
-        >
-          <TabPanel value="one">First panel</TabPanel>
-          <TabPanel value="two">Second panel</TabPanel>
-        </Tabs>
-      );
-    }
-    render(<Harness />);
-    screen.getByRole('tab', { name: 'One' }).focus();
-    await user.keyboard('{ArrowRight}');
-    expect(screen.getByRole('tab', { name: 'Two' })).toHaveAttribute('data-state', 'active');
-    expect(screen.getByRole('tabpanel')).toHaveTextContent('Second panel');
-  });
-
-  it('scrolls the strip, not the page, to keep the selected tab in view', async () => {
+  it('uses Radix keyboard selection and panel wiring for Tabs, scrolling the strip to the selected tab', async () => {
     const user = userEvent.setup();
     function Harness() {
       const [value, setValue] = useState<'one' | 'two'>('one');
@@ -133,10 +107,13 @@ describe('authenticated interaction primitives', () => {
     Object.defineProperty(list, 'scrollLeft', { value: 0, writable: true });
     Object.defineProperty(two, 'offsetLeft', { value: 300 });
     Object.defineProperty(two, 'offsetWidth', { value: 60 });
-    await user.click(two);
-    // Its end, plus 32 so the edge fade never covers it.
+    screen.getByRole('tab', { name: 'One' }).focus();
+    await user.keyboard('{ArrowRight}');
+    expect(two).toHaveAttribute('data-state', 'active');
+    expect(screen.getByRole('tabpanel')).toHaveTextContent('Second panel');
+    // The strip, never the page, scrolls to the tab's end plus 32 past the edge fade.
     expect(list.scrollLeft).toBe(292);
-    await user.click(screen.getByRole('tab', { name: 'One' }));
+    await user.keyboard('{ArrowLeft}');
     expect(list.scrollLeft).toBe(0);
   });
 

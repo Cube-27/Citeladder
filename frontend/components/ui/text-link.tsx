@@ -48,23 +48,27 @@ const TONE: Record<TextLinkTone, string> = {
 const UNDERLINE = {
   prose: 'decoration-current hover:decoration-2',
   ink: 'decoration-control-line hover:decoration-current focus-visible:decoration-current [:root:not([data-public-surface])_&]:decoration-current',
+  // A row title: the underline is drawn clear at rest and inks on hover or focus.
+  hover:
+    'text-ink decoration-transparent hover:decoration-current focus-visible:decoration-current',
 } as const;
 
 export type TextLinkUnderline = 'always' | 'hover';
+
+function lineClasses(tone: TextLinkTone, underline: TextLinkUnderline) {
+  if (underline === 'hover') return UNDERLINE.hover;
+  return cn(TONE[tone], tone === 'prose' ? UNDERLINE.prose : UNDERLINE.ink);
+}
 
 function textLinkClasses({
   tone,
   text,
   underline,
 }: Readonly<{ tone: TextLinkTone; text: TextLinkText; underline: TextLinkUnderline }>) {
-  const recipe =
-    underline === 'hover'
-      ? 'focus-ring rounded-mark text-ink no-underline decoration-current decoration-1 underline-offset-3 hover:underline focus-visible:underline'
-      : cn(
-          'focus-ring rounded-mark underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
-          TONE[tone],
-          tone === 'prose' ? UNDERLINE.prose : UNDERLINE.ink,
-        );
+  const recipe = cn(
+    'focus-ring rounded-mark underline decoration-1 underline-offset-3 transition-[color,text-decoration-color]',
+    lineClasses(tone, underline),
+  );
   return text === 'inherit' ? recipe : textRole(text, recipe);
 }
 

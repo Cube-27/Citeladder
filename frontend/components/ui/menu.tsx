@@ -345,11 +345,10 @@ export function MenuControlRow({
   );
 }
 
-/** A small group label: 12/16 medium `ink-muted`, over the rows' labels. */
+/** A small group label: 12/16 medium `ink-muted`. */
 export function MenuLabel({ children }: Readonly<{ children: ReactNode }>) {
-  const gutter = useContext(CheckGutter);
   return (
-    <MenuPrimitive.Label className={cn('text-ink-2 text-caption px-2 pt-2 pb-1', gutter && 'ps-8')}>
+    <MenuPrimitive.Label className="text-ink-2 text-caption px-2 pt-2 pb-1">
       {children}
     </MenuPrimitive.Label>
   );

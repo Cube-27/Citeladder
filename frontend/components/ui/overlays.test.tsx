@@ -291,19 +291,6 @@ describe('Tooltip', () => {
     const tip = await screen.findByRole('tooltip');
     expect(tip).toHaveTextContent('Coming soonG');
   });
-
-  it('lets a long URL wrap inside the bubble', async () => {
-    const url = `https://example.com/${'a'.repeat(200)}`;
-    render(
-      <Tooltip content={url}>
-        <button type="button">Page</button>
-      </Tooltip>,
-    );
-    focusByKeyboard(screen.getByRole('button', { name: 'Page' }));
-    await screen.findByRole('tooltip');
-    const [text] = screen.getAllByText(url);
-    expect(text).toHaveClass('min-w-0', '[overflow-wrap:anywhere]');
-  });
 });
 
 describe('InfoHint', () => {

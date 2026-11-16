@@ -22,7 +22,7 @@ export const FIELD_EDGE = `bg-surface border border-control-line ${PUBLIC_EDGE}`
  * tint, never a darker edge; focus and invalid are FIELD_EDGE's. The website
  * keeps its hairline edge.
  */
-export const SOFT_FIELD_EDGE = `bg-surface border border-control-edge shadow-control [:root:not([data-public-surface])_&]:hover:overlay-hover ${PUBLIC_EDGE}`;
+const SOFT_FIELD_EDGE = `bg-surface border border-control-edge shadow-control [:root:not([data-public-surface])_&]:hover:overlay-hover ${PUBLIC_EDGE}`;
 
 const FIELD_SHAPE =
   'type-body min-h-[var(--control-md)] w-full rounded-control px-3 text-ink transition-[border-color,outline-color] duration-[var(--motion-fast)]';

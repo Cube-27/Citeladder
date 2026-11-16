@@ -111,9 +111,7 @@ export function Tooltip({
           className={TOOLTIP_SHEET}
         >
           <span className="flex items-baseline gap-2">
-            <span data-tooltip-text="" className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-              {content}
-            </span>
+            <span className="min-w-0 flex-1">{content}</span>
             {shortcut ? <span className="type-code text-ink-2 shrink-0">{shortcut}</span> : null}
           </span>
         </TooltipPrimitive.Content>

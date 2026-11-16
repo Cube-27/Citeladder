@@ -13,7 +13,7 @@ const TAG_SHAPE =
  * never looks operable. The website keeps its radius 2 `surface` face with a
  * hairline.
  */
-export const TAG_STATIC = cn(TAG_SHAPE, 'bg-well border-transparent text-ink-2');
+const TAG_STATIC = cn(TAG_SHAPE, 'bg-well border-transparent text-ink-2');
 
 /**
  * A tag you can operate (a link, a remove, an expander): `surface` with the
@@ -21,10 +21,7 @@ export const TAG_STATIC = cn(TAG_SHAPE, 'bg-well border-transparent text-ink-2')
  * in a 12px arrow (`ArrowRight` for an app route).
  */
 const OPERABLE_FACE = cn(TAG_SHAPE, 'bg-surface border-control-edge shadow-control text-ink');
-export const TAG_OPERABLE = cn(
-  OPERABLE_FACE,
-  '[:root:not([data-public-surface])_&]:hover:overlay-hover',
-);
+const TAG_OPERABLE = cn(OPERABLE_FACE, 'hover:overlay-hover');
 
 /**
  * What a tag is for. A status is a `StatusMark`, never
