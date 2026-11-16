@@ -354,15 +354,18 @@ function MeasuredCells({
 
 /**
  * A Commerce prompt is measured as part of the shopping shelf, never on its
- * own: its figures do not apply here (a known gap, not a missing run). The
- * Visibility head's hint says why, once.
+ * own: its figures do not apply here (a known gap, not a missing run). One
+ * cell spans the figures; the Visibility head's hint says why, once.
  */
 function ShelfMeasuredCells({ columns }: Readonly<{ columns: readonly DataTableColumn[] }>) {
-  return columns.map((column) => (
-    <TableCell key={column.key} numeric={column.kind === 'number'}>
-      <Absence state="not_applicable" />
+  return (
+    <TableCell colSpan={columns.length}>
+      {/* The column map would end-align the span as the Visibility figure. */}
+      <div className="text-start">
+        <Absence state="not_applicable" label="Measured with Shopping" />
+      </div>
     </TableCell>
-  ));
+  );
 }
 
 const NOT_COMPARED = {

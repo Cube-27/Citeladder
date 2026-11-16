@@ -74,14 +74,12 @@ describe('PromptTable pagination', () => {
     const [, brandRow, shelfRow] = screen.getAllByRole('row');
     expect(within(brandRow!).getAllByRole('cell')[1]!.textContent).toBe('50.0%');
     // Not "not measured": no run will ever measure it one prompt at a time.
-    // Each measured cell says "Not applicable"; the reason is said once, in the head.
+    // One cell spans the figures and says it once; the reason is in the head.
     const shelfCells = within(shelfRow!).getAllByRole('cell');
-    expect(shelfCells.slice(1, 5).map((cell) => cell.textContent)).toEqual([
-      'Not applicable',
-      'Not applicable',
-      'Not applicable',
-      'Not applicable',
-    ]);
+    expect(shelfCells[1]!.getAttribute('colspan')).toBe('4');
+    expect(shelfCells[1]!.textContent).toBe('Measured with Shopping');
+    expect(shelfRow!.querySelectorAll('[data-absence="not_applicable"]')).toHaveLength(1);
+    expect(shelfCells).toHaveLength(within(brandRow!).getAllByRole('cell').length - 3);
     expect(within(shelfRow!).queryByText('Not measured')).toBeNull();
   });
 

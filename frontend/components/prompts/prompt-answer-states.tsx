@@ -5,8 +5,7 @@ import { TableCell, TableCellLines, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
 import type { PromptMetricItem } from '@citeladder/contracts';
-import { useDisplayTimeZone } from '@/lib/display-timezone';
-import { formatDisplayDate, pluralCount } from '@/lib/format';
+import { pluralCount } from '@/lib/format';
 import { ANSWER_STATES, competitorGaps, type CompetitorGap } from '@/lib/prompts/history';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import { StateBlock } from '@/components/ui/state-block';
@@ -26,7 +25,6 @@ import { FigureStrip } from '@/components/ui/figure-strip';
  * named where the brand was not.
  */
 export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricItem | null }>) {
-  const timeZone = useDisplayTimeZone();
   const outcomes = latest?.outcomes ?? [];
   const gaps = competitorGaps(outcomes);
   return (
@@ -36,7 +34,7 @@ export function PromptAnswerStates({ latest }: Readonly<{ latest: PromptMetricIt
           <SectionTitle>Mentions and citations</SectionTitle>
           <SectionDescription>
             {latest
-              ? `Latest run that measured this prompt, ${formatDisplayDate(latest.created_at, timeZone)}.`
+              ? 'The latest run that measured this prompt.'
               : 'No run has measured this prompt in this market yet.'}
           </SectionDescription>
         </SectionHeader>
