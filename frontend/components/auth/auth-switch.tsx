@@ -1,4 +1,4 @@
-import { type MouseEvent, type ReactNode, useLayoutEffect, useRef } from 'react';
+import { type MouseEvent, type ReactNode, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, type LinkProps, useLocation, useNavigate } from 'react-router-dom';
 
 import { useReducedMotion } from '@/lib/accessibility/use-reduced-motion';
@@ -79,6 +79,14 @@ export function AuthSwitchLink({
   const navigate = useNavigate();
   const reducedMotion = useReducedMotion();
   const leaving = useRef(false);
+  // Cleared when another link took the reader elsewhere mid-collapse.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   function leave(event: MouseEvent<HTMLAnchorElement>) {
     if (event.button !== 0 || event.metaKey || event.altKey || event.ctrlKey || event.shiftKey)
@@ -90,7 +98,9 @@ export function AuthSwitchLink({
     event.preventDefault();
     if (leaving.current) return;
     leaving.current = true;
-    const go = () => navigate(to, { state: SWITCHED });
+    const go = () => {
+      if (mounted.current) void navigate(to, { state: SWITCHED });
+    };
     Promise.all(own.map((element) => resize(element, false, 'forwards').finished)).then(go, go);
   }
 

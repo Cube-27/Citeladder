@@ -311,19 +311,14 @@ function AuthEmailForm({
     onSubmit(event);
   };
 
+  const check = consent.verification ? <AuthHumanCheck widget={consent.verification} /> : null;
+
   return (
     <AuthForm onSubmit={handleSubmit}>
       {children}
 
-      {consent.verification ? (
-        consent.terms?.signup ? (
-          <AuthSwitchOnly>
-            <AuthHumanCheck widget={consent.verification} />
-          </AuthSwitchOnly>
-        ) : (
-          <AuthHumanCheck widget={consent.verification} />
-        )
-      ) : null}
+      {/* Sign-up's check is one of its own fields in the switch from sign-in. */}
+      {check && consent.terms?.signup ? <AuthSwitchOnly>{check}</AuthSwitchOnly> : check}
 
       {/* Not `pending`: Button's pending sets `disabled`, which drops focus to
           the document. The changed label says it is working. */}
