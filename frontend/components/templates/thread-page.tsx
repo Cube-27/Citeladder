@@ -31,8 +31,8 @@ export function ThreadPageLoading({ label = 'Loading the chat…' }: Readonly<{ 
 }
 
 /**
- * The new chat as it loads: the greeting's block (20×240) over the
- * composer's card, in the thread column.
+ * The new chat as it loads: the greeting's centred block (20×240) over the
+ * composer's card, centred in the thread column as NewChat is.
  */
 export function NewChatLoading() {
   return (
@@ -40,9 +40,9 @@ export function NewChatLoading() {
       <SkeletonFrame
         label="Loading the Agent…"
         variant="new-chat"
-        className="flex flex-col gap-[var(--page-section-gap)]"
+        className="my-auto flex flex-col gap-[var(--page-section-gap)]"
       >
-        <span className="flex h-7 items-center">
+        <span className="flex h-7 items-center justify-center">
           <SkeletonBlock className="h-5 w-60 max-w-full" />
         </span>
         <ComposerBlocks />
