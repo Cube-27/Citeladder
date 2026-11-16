@@ -69,10 +69,11 @@ function tree(route: Route) {
         dismissed: 8,
       },
       goals: [
-        { goal: 'read_site', count: 26, blocking: true },
-        { goal: 'own_pages', count: 6, blocking: false },
-        { goal: 'mentions', count: 13, blocking: false },
-        { goal: 'wrong_claims', count: 1, blocking: false },
+        // Open work (New and In progress): an Accept moves nothing between goals.
+        { goal: 'read_site', count: 35, blocking: true },
+        { goal: 'own_pages', count: 0, blocking: false },
+        { goal: 'mentions', count: 0, blocking: false },
+        { goal: 'wrong_claims', count: 0, blocking: false },
       ],
       groups:
         groupBy === 'goal'

@@ -154,7 +154,7 @@ const FAMILY_LABEL: Record<string, string> = {
   sources: 'Sources',
   search_console: 'Search Console',
   search_intelligence: 'Keyword Research',
-  site_health: 'Site Health',
+  site_health: 'Site health',
   link_graph: 'Link graph',
   site_changes: 'Site changes',
   commerce: 'Commerce',
