@@ -225,6 +225,40 @@ export const promptsMutations = {
         promptsApi.updatePrompt(promptId, input, scoped(scope)),
       ...refreshed(scope),
     }),
+  /**
+   * Turn one prompt on or off. The library shows the new state at once; a
+   * failed write restores what it showed, and either way the library is re-read.
+   */
+  setEnabled: (scope: ProjectScope) => {
+    const queryKey = queryKeys.prompts.sets(scope);
+    return mutationOptions({
+      mutationFn: ({ promptId, enabled }: { promptId: string; enabled: boolean }) =>
+        promptsApi.updatePrompt(promptId, { enabled }, scoped(scope)),
+      onMutate: async ({ promptId, enabled }, { client }) => {
+        await client.cancelQueries({ queryKey });
+        const previous = client.getQueryData<PromptSetList>(queryKey);
+        client.setQueryData<PromptSetList>(queryKey, (current) =>
+          current
+            ? {
+                ...current,
+                prompt_sets: current.prompt_sets.map((set) => ({
+                  ...set,
+                  prompts: set.prompts.map((prompt) =>
+                    prompt.id === promptId ? { ...prompt, enabled } : prompt,
+                  ),
+                })),
+              }
+            : current,
+        );
+        return { previous };
+      },
+      onError: (_error, _vars, result, { client }) => {
+        if (result?.previous) client.setQueryData(queryKey, result.previous);
+      },
+      onSettled: (_data, _error, _vars, _result, { client }) =>
+        refreshPromptLibrary(client, scope.projectId),
+    });
+  },
   remove: (scope: ProjectScope) =>
     mutationOptions({
       mutationFn: (promptId: string) => promptsApi.deletePrompt(promptId, scoped(scope)),
