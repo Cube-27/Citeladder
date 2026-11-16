@@ -18,22 +18,22 @@ function Probe() {
 afterEach(() => setUrlStateRouter(null));
 
 describe('useActionFilters', () => {
-  it('clears every filter at once under a router whose navigations land later', async () => {
+  it('clears both filters at once, keeping the status view, under a router whose navigations land later', async () => {
     globalThis.history.replaceState(
       null,
       '',
-      '/agent/actions?project=p1&status=dismissed&priority=high&source=site_health',
+      '/actions?project=p1&status=dismissed&priority=high&source=site_health',
     );
     // A loader makes each navigation asynchronous, as the app's private routes are.
     const router = createBrowserRouter([
-      { path: '/agent/actions', loader: () => null, element: <Probe /> },
+      { path: '/actions', loader: () => null, element: <Probe /> },
     ]);
     setUrlStateRouter(router);
     render(<RouterProvider router={router} />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Clear filters' }));
 
-    await waitFor(() => expect(globalThis.location.search).toBe('?project=p1'));
+    await waitFor(() => expect(globalThis.location.search).toBe('?project=p1&status=dismissed'));
     expect(router.state.navigation.state).toBe('idle');
     router.dispose();
   });

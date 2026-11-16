@@ -23,9 +23,9 @@ export const PRIORITY_BAND_VALUE: Record<ActionPriorityBand, PriorityValue> = {
   low: 'low',
 };
 
-/** The Actions list's groups, in the order the list shows them (AS2). */
+/** The Actions list's goals, in the order the list shows them (AS2). */
 export const ACTION_GROUP_LABEL: Record<ActionGroup, string> = {
-  fix_site: 'Fix how AI reads your site',
+  fix_site: 'Let AI read your site',
   own_pages: 'Improve your own pages',
   earned: 'Get mentioned elsewhere',
   products: 'Improve your products',
@@ -66,8 +66,6 @@ const TARGET_KIND_LABEL: Record<ActionTargetKind, string> = {
 const isTargetKind = (kind: unknown): kind is ActionTargetKind =>
   typeof kind === 'string' && Object.hasOwn(TARGET_KIND_LABEL, kind);
 
-export const ACTION_TARGET_KINDS = Object.keys(TARGET_KIND_LABEL).filter(isTargetKind);
-
 export function targetKindLabel(kind: string | null | undefined): string | null {
   return isTargetKind(kind) ? TARGET_KIND_LABEL[kind] : null;
 }
@@ -98,9 +96,6 @@ const APPROACH_LABEL: Record<string, string> = {
   earned_placement: 'Earn a placement',
   improve_links: 'Improve internal links',
 };
-
-/** Every Action type (approach) a reader can filter by. */
-export const ACTION_APPROACHES = Object.keys(APPROACH_LABEL);
 
 export function approachLabel(approach: string | null | undefined): string | null {
   return approach ? (APPROACH_LABEL[approach] ?? null) : null;

@@ -145,5 +145,5 @@ function ChatView({
 
 function ChatHeaderActions({ detail }: Readonly<{ detail: AgentChatDetail }>) {
   if (!detail.chat.action_id) return null;
-  return <ActionButton action="openAction" href={`/agent/actions/${detail.chat.action_id}`} />;
+  return <ActionButton action="openAction" href={`/actions/${detail.chat.action_id}`} />;
 }

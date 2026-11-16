@@ -47,7 +47,7 @@ export const NEW_CHAT_ITEM: NavItem = agentEntries.find(
   (item) => item.href === MODE_HOMES.agent,
 ) ?? { label: 'New chat', icon: ICONS.newChat, href: MODE_HOMES.agent, scope: 'project' };
 
-/** Agent mode's destinations under "New chat": Actions, Skills, Context. */
+/** Agent mode's destinations under "New chat": Skills, Context. */
 export const AGENT_NAV_ITEMS = agentEntries.filter((item) => item !== NEW_CHAT_ITEM);
 
 /** The foot's destinations, above the account button. */
@@ -74,7 +74,7 @@ const AGENT_HREFS = new Set([NEW_CHAT_ITEM, ...AGENT_NAV_ITEMS].map((item) => it
  * Every shell destination, grouped for the command palette with the
  * sidebar's labels: Overview, Analyze, Commerce, Track, Agent, then Settings
  * (Integrations and the account's pages). An Agent destination the Dashboard
- * list repeats (Actions) is listed once, under Agent. A managed plan has no
+ * list repeats is listed once, under Agent. A managed plan has no
  * provider settings (B32).
  */
 export function resolveCommandGroups({ managed = false }: { managed?: boolean } = {}): readonly {
@@ -116,7 +116,7 @@ export function isAccountCurrent(pathname: string, searchParams: URLSearchParams
 /**
  * A destination is current when the path is it or below it, unless another
  * destination sits deeper on that path: Shopping (`/products/overview`) is
- * not also Products, and Actions (`/agent/actions`) is not also New chat. New
+ * not also Products, and Skills (`/agent/skills`) is not also New chat. New
  * chat is current on its own page only: a chat (`/agent/chats/…`) is marked
  * in the chat list instead. A destination that names query parameters (a
  * settings tab) also needs each of them to match, so Integrations is not

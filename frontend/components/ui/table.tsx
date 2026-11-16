@@ -260,8 +260,11 @@ export function TableCell({
 }: Readonly<
   TdHTMLAttributes<HTMLTableCellElement> &
     CellOptions & {
-      /** The first cell of a row grouped under a group-label row: inset one step. */
-      nested?: boolean;
+      /**
+       * The first cell of a row grouped under a group-label row: inset one
+       * step; `2` for a row under a group nested in another.
+       */
+      nested?: boolean | 2;
     }
 >) {
   return (
@@ -269,7 +272,8 @@ export function TableCell({
       {...props}
       className={cn(
         cellClasses({ numeric, desktopOnly }),
-        nested && 'ps-[calc(var(--table-cell-padding-x)+16px)]',
+        nested === true && 'ps-[calc(var(--table-cell-padding-x)+16px)]',
+        nested === 2 && 'ps-[calc(var(--table-cell-padding-x)+32px)]',
         className,
       )}
     >

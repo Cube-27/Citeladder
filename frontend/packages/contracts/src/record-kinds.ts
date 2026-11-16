@@ -26,10 +26,10 @@ export const RECORD_KINDS = {
   prompt: { label: 'Prompt', screen: '/prompts' },
   opportunity: {
     label: 'Recommendation',
-    screen: '/agent/actions',
-    page: (field) => (field('action_id') ? `/agent/actions/${field('action_id')}` : null),
+    screen: '/actions',
+    page: (field) => (field('action_id') ? `/actions/${field('action_id')}` : null),
   },
-  action: { label: 'Action', screen: '/agent/actions', page: own('/agent/actions') },
+  action: { label: 'Action', screen: '/actions', page: own('/actions') },
   audit: { label: 'Visibility run', screen: '/runs', page: own('/runs') },
   visibility_result: {
     label: 'Visibility answer',

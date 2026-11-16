@@ -33,7 +33,7 @@ describe('product Worker routing', () => {
     expect(document.headers.get('cache-control')).toBe('no-store');
   });
   it('enforces document policy on root, deep links and direct HTML', async () => {
-    for (const path of ['/', '/agent/actions', '/index.html']) {
+    for (const path of ['/', '/actions', '/index.html']) {
       const document = await handleAppRequest(request(path), env);
       const policy = Object.fromEntries(
         document.headers

@@ -48,7 +48,7 @@ export function DemandEvidenceDrawer({
           {signal.action_id ? (
             <ActionButton
               action="openAction"
-              href={`/agent/actions/${signal.action_id}`}
+              href={`/actions/${signal.action_id}`}
               aria-label={`Open the Action for ${details.target}`}
             />
           ) : null}

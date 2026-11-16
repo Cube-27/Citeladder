@@ -298,27 +298,27 @@ export const APP_ROUTES = [
     loading: cards([facts(3), figures(6)]),
   }),
   page({
-    path: '/agent/actions',
+    path: '/actions',
     width: 'narrow',
     title: 'Actions',
     screen: screens.actions,
-    // Action and Priority; Priority is desktop-only.
-    loading: cards([table(2, 1)], { filters: true }),
-    // Listed in both modes; it is an Agent route, so opening it switches to Agent mode.
+    // The goal strip, then Action, Priority and Source.
+    loading: cards([figures(4), table(3)], { filters: true }),
+    // A Dashboard page: every Action in the app, Issues included (owner, 2026-11-16).
     nav: [
       {
         label: 'Actions',
         icon: 'opportunities',
         badge: 'open-actions',
-        placements: ['sidebar:overview', 'sidebar:agent'],
+        placements: ['sidebar:overview'],
       },
     ],
   }),
   page({
-    path: '/agent/actions/:actionId',
+    path: '/actions/:actionId',
     width: 'narrow',
     title: 'Action',
-    collection: '/agent/actions',
+    collection: '/actions',
     screen: screens.action,
     // Status and Priority (tags), Target, Source.
     loading: cards([facts(4, [0, 1])]),

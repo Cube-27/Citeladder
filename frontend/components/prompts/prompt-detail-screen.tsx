@@ -106,7 +106,7 @@ export function PromptDetailScreen() {
 function ActionHandoff({ actionId }: Readonly<{ actionId: string }>) {
   return (
     <>
-      <ActionButton action="openAction" href={`/agent/actions/${actionId}`} />
+      <ActionButton action="openAction" href={`/actions/${actionId}`} />
       <ActionButton action="workWithAgent" href={agentHandoffHref({ actionId })} />
     </>
   );
@@ -289,7 +289,7 @@ function Implementations({ history }: Readonly<{ history: PromptHistory }>) {
         <TableRow key={`${item.action_id}:${item.implemented_at}`}>
           <TableCell>
             <ClampText tooltip={item.title}>
-              <TextLink href={`/agent/actions/${item.action_id}`} text="inherit">
+              <TextLink href={`/actions/${item.action_id}`} text="inherit">
                 {item.title}
               </TextLink>
             </ClampText>

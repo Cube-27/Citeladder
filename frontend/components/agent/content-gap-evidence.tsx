@@ -121,7 +121,7 @@ export function GapEvidence({ evidence }: Readonly<{ evidence: ContentGapEvidenc
         </Stack>
       ) : null}
       {continues ? (
-        <TextLink href={`/agent/actions/${continues}`} text="body" className="justify-self-start">
+        <TextLink href={`/actions/${continues}`} text="body" className="justify-self-start">
           Continues the planned page for this angle
         </TextLink>
       ) : null}

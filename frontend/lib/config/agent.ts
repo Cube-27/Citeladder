@@ -1,3 +1,6 @@
+import type { ActionGroup, ActionTargetKind } from '@citeladder/contracts/actions';
+import type { IssueSection } from '@citeladder/contracts';
+
 /**
  * Agent workspace client policy: page sizes and the polling cadence that
  * follows an active turn. Reads never run the agent, so the UI polls the
@@ -38,10 +41,57 @@ export const AGENT_RUN_RETRY = { defaultDelayMs: 15_000, maxAttempts: 8 } as con
 /** Distance from the end that still counts as following the conversation. */
 export const AGENT_FOLLOW_LATEST_GAP_PX = 96;
 /**
- * The grouped Actions list shows this many of each group's Actions, by
- * priority, before its "Show all" row (AS2).
+ * One Actions list read per status: the server's largest page, so a view's
+ * tree is built from every Action it holds; beyond it the list says so.
  */
-export const ACTIONS_GROUP_PREVIEW_ROWS = 5;
+export const ACTIONS_LIST_READ_LIMIT = 200;
+/** One Issues read per Issues tab for the Actions list: the server's largest page. */
+export const ACTIONS_ISSUE_READ_LIMIT = 200;
+/** A category of the Actions list shows this many rows, then "Show more" adds as many again. */
+export const ACTIONS_CATEGORY_ROWS = 25;
+
+/** Which goal of the Actions list each Issues tab's defects fall under. */
+export const ISSUE_SECTION_GOAL = {
+  technical: 'fix_site',
+  content: 'own_pages',
+  aeo: 'own_pages',
+} as const satisfies Record<IssueSection, ActionGroup>;
+
+/**
+ * An Action's category in the Actions list: the FIRST rule whose target kinds,
+ * approaches and sources (each absent: any) all admit it, else the fallback.
+ * Categories are listed in this order.
+ */
+export const ACTION_CATEGORIES: readonly Readonly<{
+  label: string;
+  targetKinds?: readonly ActionTargetKind[];
+  approaches?: readonly string[];
+  families?: readonly string[];
+}>[] = [
+  { label: 'Internal links', approaches: ['improve_links'] },
+  { label: 'Regressed since the last crawl', approaches: ['fix_technical'] },
+  { label: "Prompts you don't appear in", targetKinds: ['prompt'] },
+  { label: 'Content gaps', targetKinds: ['planned_page'] },
+  { label: 'Content gaps', targetKinds: ['page'], families: ['content_optimization'] },
+  { label: 'Your pages', targetKinds: ['page'] },
+  { label: 'Search queries', targetKinds: ['query'] },
+  { label: 'Cited pages without you', targetKinds: ['earned_page'] },
+  { label: 'Products', targetKinds: ['product'] },
+  { label: 'Product categories', targetKinds: ['category'] },
+];
+export const ACTION_CATEGORY_FALLBACK = 'Other work';
+/** An Issues row's category in the Actions list, by its rule's `category`. */
+export const ISSUE_CATEGORY_LABEL: ReadonlyMap<string, string> = new Map([
+  ['indexability', 'Crawling and indexing'],
+  ['architecture', 'Site structure'],
+  ['security', 'Security'],
+  ['performance', 'Performance'],
+  ['metadata', 'Page metadata'],
+  ['content', 'Page content'],
+  ['citability', 'Citability'],
+  ['structured_data', 'Structured data'],
+]);
+export const ISSUE_CATEGORY_FALLBACK = 'Other website issues';
 /** The composer's + menu lists this many top open Actions under Actions. */
 export const AGENT_TOP_ACTIONS = 3;
 /** Debounce for the sidebar chat search. */

@@ -69,7 +69,7 @@ export function matchOptions(options: readonly CommandOption[], query: string): 
 const LINK = /https?:\/\/[^\s<>"'`]+/giu;
 const TRAILING = new Set('.,;:!?)]');
 const ACTION_PATH =
-  /^\/agent\/actions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/iu;
+  /^\/actions\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/iu;
 
 /** A link in the message to an Action's page in this app. */
 export type ActionLink = { url: string; actionId: string };

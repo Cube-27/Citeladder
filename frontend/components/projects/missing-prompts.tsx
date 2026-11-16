@@ -90,10 +90,7 @@ function MissingRow({ row }: Readonly<{ row: MissingPrompt }>) {
       }
       meta={
         row.actionId ? (
-          <TextLink
-            href={`/agent/actions/${row.actionId}`}
-            aria-label={`Open Action for ${row.text}`}
-          >
+          <TextLink href={`/actions/${row.actionId}`} aria-label={`Open Action for ${row.text}`}>
             Open Action
           </TextLink>
         ) : (

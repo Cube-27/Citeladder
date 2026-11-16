@@ -202,7 +202,7 @@ describe('Actions in a chat', () => {
     const chips = await screen.findAllByRole('link', { name: 'School uniforms Measuring' });
     // Once in the reply: not inside a longer word or code.
     expect(chips).toHaveLength(1);
-    expect(chips[0]?.getAttribute('href')).toMatch(new RegExp(`^/agent/actions/${cited}`, 'u'));
+    expect(chips[0]?.getAttribute('href')).toMatch(new RegExp(`^/actions/${cited}`, 'u'));
     expect(screen.getByText('School uniforms', { selector: 'code' })).toBeInTheDocument();
     // An Action this reply did not cite stays text.
     expect(screen.queryByRole('link', { name: /Returns policy/u })).not.toBeInTheDocument();

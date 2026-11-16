@@ -5,7 +5,7 @@ import { renderWithProviders } from '@/test/render';
 
 import { RecordPage } from './record-page';
 
-const BACK = { href: '/agent/actions', label: 'Actions' };
+const BACK = { href: '/actions', label: 'Actions' };
 
 describe('RecordPage', () => {
   it('pads the document scroller to clear the action bar only while the bar shows', async () => {

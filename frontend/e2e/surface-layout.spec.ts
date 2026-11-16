@@ -220,15 +220,15 @@ test('choosing a filter never moves the table below it', async ({ page }) => {
       },
     ],
   ]);
-  await page.goto(fixtureProjectPath('/agent/actions'));
+  await page.goto(fixtureProjectPath('/actions'));
   const table = page.getByRole('region', { name: 'Actions' });
-  await expect(table.getByText('No Actions match these filters')).toBeVisible();
+  await expect(table.getByText('No open Actions')).toBeVisible();
   const top = async () => Math.round((await table.boundingBox())!.y);
   const before = await top();
-  await page.getByRole('button', { name: /^Status:/ }).click();
-  await page.getByRole('menuitemradio', { name: 'Dismissed' }).click();
-  await expect(page.getByRole('button', { name: 'Status: Dismissed' })).toBeVisible();
-  await expect.poll(() => new URL(page.url()).searchParams.get('status')).toBe('dismissed');
+  await page.getByRole('button', { name: /^Priority/ }).click();
+  await page.getByRole('menuitemradio', { name: 'High' }).click();
+  await expect(table.getByText('No Actions match these filters')).toBeVisible();
+  await expect.poll(() => new URL(page.url()).searchParams.get('priority')).toBe('high');
   expect(await top()).toBe(before);
 });
 
@@ -269,12 +269,15 @@ test('on a phone the Actions table fills its card and the row title link fills i
       },
     ],
   ]);
-  await page.goto(fixtureProjectPath('/agent/actions'));
+  await page.goto(fixtureProjectPath('/actions'));
   const card = page.getByRole('region', { name: 'Actions' });
-  await expect(card.getByRole('link', { name: /^Earn a placement/ })).toBeVisible();
+  await expect(card.getByRole('link', { name: /^example\.org\/tools/ })).toBeVisible();
   const geometry = await card.evaluate((section) => {
     const table = section.querySelector('table')!;
     const cell = table.querySelector('tbody td:has(a[href])')!;
+    // The goal strip and tree headers put the first row below a phone's fold;
+    // `elementFromPoint` only sees the viewport.
+    cell.scrollIntoView({ block: 'center' });
     const box = cell.getBoundingClientRect();
     const title = cell.querySelector('[data-row-title]')!;
     // The cell's bottom padding at its far end, clear of the link's text and of

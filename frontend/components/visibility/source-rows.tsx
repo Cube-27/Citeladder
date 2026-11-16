@@ -256,7 +256,7 @@ function PageStandingCell({
           {label}
         </ClampText>
       )}
-      {actionId ? <TextLink href={`/agent/actions/${actionId}`}>Action</TextLink> : null}
+      {actionId ? <TextLink href={`/actions/${actionId}`}>Action</TextLink> : null}
     </Inline>
   );
 }

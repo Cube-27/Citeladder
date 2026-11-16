@@ -1,283 +1,207 @@
-import { Fragment, useState, type MouseEvent } from 'react';
-import { useQueries, useQuery } from '@tanstack/react-query';
-import { ArrowRight, ChevronDown, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-import {
-  ActionTargetCell,
-  useActionFilters,
-  useActionTable,
-  type ActionListQuery,
-} from '@/components/agent/action-queue';
-import { ActionPriorityBadge } from '@/components/agent/action-status-badge';
+import { ACTION_LIST_VIEW_OPTIONS, useActionFilters } from '@/components/agent/action-queue';
+import { ActionsTree, branchAnchor } from '@/components/agent/actions-tree';
 import { AnalyzePageButton } from '@/components/agent/analyze-page-dialog';
+import { useActionsList } from '@/components/agent/use-actions-list';
 import { ReportPage } from '@/components/templates/report-page';
-import { FilterBar } from '@/components/ui/filter-bar';
 import { Button } from '@/components/ui/button';
-import { DataTable, type DataTableColumn, type DataTableState } from '@/components/ui/data-table';
+import type { DataTableState } from '@/components/ui/data-table';
+import { FigureStrip, type FigureSegment } from '@/components/ui/figure-strip';
+import { FilterBar } from '@/components/ui/filter-bar';
 import { Icon } from '@/components/ui/icon';
+import { Stack } from '@/components/ui/layout';
+import { Notice, readErrorProps } from '@/components/ui/notice';
 import { ProjectLink } from '@/components/ui/project-link';
-import { TableCell, TableRow } from '@/components/ui/table';
-import { ACTION_GROUP_LABEL } from '@/lib/agent/vocabulary';
-import { ACTIONS_GROUP_PREVIEW_ROWS } from '@/lib/config/agent';
-import {
-  actionsQueries,
-  type Action,
-  type ActionGroup,
-  type ActionsPage,
-  type ActionStatus,
-} from '@/lib/api/actions';
+import { StatusMark } from '@/components/ui/status-mark';
+import { SegmentedControl } from '@/components/ui/tabs';
+import { textRole } from '@/components/ui/typography';
+import { goalTree, sourceTree, type ActionListBranch } from '@/lib/agent/action-list';
+import { ACTION_FAMILIES, ACTION_GROUP_LABEL } from '@/lib/agent/vocabulary';
+import { ACTION_LIST_VIEWS, type ActionGroup, type ActionListView } from '@/lib/api/actions';
+import { commerceQueries } from '@/lib/api/commerce';
 import { formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
-import { useProjectHref } from '@/lib/navigation/project-destination';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 import { actionGroupSchema } from '@citeladder/contracts/actions';
-import { readErrorProps } from '@/components/ui/notice';
 
 /**
- * Every Action of the project, content-gap work included, in the table it
- * has always had, its rows grouped (AS2): fix how AI reads your site, your own
- * pages, mentions elsewhere and your products. Each group shows its top
- * Actions by priority and "Show all N", which narrows the list to that group
- * and pages it. Every filter sits in one All filters menu (AS6) and is URL
- * state. Analyze a page in the header turns a content page into an Action (CO6).
+ * Every piece of work in the project in one place (owner, 2026-11-16): the
+ * latest crawl's Issues defects as Issues groups them, beside every other
+ * Action, under the goal they serve (or their source), then a category. The
+ * status view, Source, Priority and grouping are URL state. Analyze a page in
+ * the header turns a content page into an Action (CO6).
  */
 export function ActionsScreen() {
-  const { workspaceId, projectId } = useProjectScope();
+  const scope = useProjectScope();
   const filters = useActionFilters();
-  const scope = { workspaceId, projectId };
-  // The grouped list's first read (shared from cache); its status counts ignore
-  // every filter, so they say whether this project has ever had an Action.
-  const countsRead = useQuery({
-    ...actionsQueries.list(scope, {
-      ...filters.query,
-      group: actionGroupSchema.options[0],
-      limit: ACTIONS_GROUP_PREVIEW_ROWS,
-    }),
-    placeholderData: (previous: ActionsPage | undefined, previousQuery?: { queryKey: unknown }) =>
-      sameProject(previousQuery?.queryKey, workspaceId, projectId) ? previous : undefined,
-  });
-  const everHadActions = Object.values(countsRead.data?.status_counts ?? {}).some(
-    (count) => count > 0,
+  const list = useActionsList(scope, filters);
+  const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
+  const catalog = useQuery(commerceQueries.catalog(scope));
+  const branches =
+    filters.groupBy === 'goal'
+      ? goalTree(list.rows, actionGroupSchema.options, list.actionCounts)
+      : sourceTree(list.rows, ACTION_FAMILIES);
+  // The goal strip offers the products goal to a project with a catalog, or with product work.
+  const goals = actionGroupSchema.options.filter(
+    (goal) =>
+      goal !== 'products' ||
+      (catalog.data?.product_total ?? 0) > 0 ||
+      branches.some((branch) => branch.key === goal),
   );
+  const toggle = (key: string) =>
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (!next.delete(key)) next.add(key);
+      return next;
+    });
+  const jumpTo = (key: string) => {
+    setCollapsed((current) => new Set([...current].filter((entry) => entry !== key)));
+    const header = document.getElementById(branchAnchor(key));
+    header?.scrollIntoView({ block: 'start' });
+    header?.querySelector('button')?.focus({ preventScroll: true });
+  };
+  const everHadWork =
+    (list.issueCount ?? 0) > 0 || Object.values(list.statusCounts ?? {}).some((count) => count > 0);
+
   return (
     <ReportPage
       actions={<AnalyzePageButton />}
-      filters={everHadActions ? <FilterBar filters={filters.definitions} /> : undefined}
-    >
-      {filters.group ? (
-        <GroupList {...scope} query={filters.query} group={filters.group} onClear={filters.clear} />
-      ) : (
-        <GroupedList
-          {...scope}
-          query={filters.query}
-          onShowGroup={filters.showGroup}
-          onClear={filters.clear}
+      filters={
+        <FilterBar
+          view={
+            <SegmentedControl
+              value={filters.view}
+              onChange={filters.setView}
+              ariaLabel="Status"
+              options={ACTION_LIST_VIEW_OPTIONS.map((option) => ({
+                ...option,
+                count: viewCount(option.value, list.statusCounts, list.issueCount),
+              }))}
+            />
+          }
+          filters={everHadWork ? filters.definitions : undefined}
         />
-      )}
+      }
+    >
+      <Stack gap="tight">
+        <h2 className={textRole('heading')}>Close the gaps keeping you out of AI answers</h2>
+        <p className={textRole('body', 'text-ink-2')}>
+          Start with site fixes. Then improve your pages and earn mentions on the pages AI already
+          cites.
+        </p>
+      </Stack>
+      {filters.groupBy === 'goal' && !list.loading && !list.actionsFailed ? (
+        <GoalStrip goals={goals} branches={branches} onJump={jumpTo} />
+      ) : null}
+      {list.issuesFailed ? (
+        <Notice
+          kind="read"
+          {...readErrorProps(list.issuesFailed)}
+          title="Couldn't load Website issues"
+          fallback="Website issues could not be loaded, so they are missing from this list."
+        />
+      ) : null}
+      <ActionsTree
+        branches={branches}
+        collapsed={collapsed}
+        onToggle={toggle}
+        busy={list.fetching}
+        state={treeState({
+          list,
+          branches,
+          filtered: filters.filtered,
+          onClear: filters.clear,
+          view: filters.view,
+          everHadWork,
+        })}
+      />
+      {list.truncated ? (
+        <p className={textRole('caption')}>
+          This view holds more Actions than one list shows; the highest priority are listed. Narrow
+          it with Source or Priority.
+        </p>
+      ) : null}
     </ReportPage>
   );
 }
 
-// No status column: under the default queue nearly every row is Open, so a
-// row names its status beside its title only when it differs (owner,
-// 2026-11-10). The server orders rows by priority. The Action cell is titled
-// by the work and its target (`actionTitle`) over its sources.
-const COLUMNS: readonly DataTableColumn[] = [
-  { key: 'target', label: 'Action', kind: 'identity' },
-  { key: 'priority', label: 'Priority', kind: 'status', order: 'descending', desktopOnly: true },
-];
-
-type ListProps = Readonly<{
-  workspaceId: string;
-  projectId: string;
-  query: ActionListQuery;
-  /** Every filter back to its default, from an empty filtered list. */
-  onClear: () => void;
-}>;
-
-/** One group, narrowed by Show all or the Group filter: paged as the whole list was. */
-function GroupList({
-  workspaceId,
-  projectId,
-  query,
-  group,
-  onClear,
-}: ListProps & { group: ActionGroup }) {
-  const { page, table } = useActionTable({
-    workspaceId,
-    projectId,
-    query,
-    group,
-    noun: 'Actions',
-    empty: (read) => emptyActions(read, onClear),
-  });
-  return (
-    // Every row is its title over its summary, so short pages pad with
-    // blanks and the pager stays where a full page puts it.
-    <DataTable label="Actions" columns={COLUMNS} rowLines={2} {...table}>
-      {page?.items.map((action) => (
-        <ActionRow key={action.id} action={action} status={query.status} />
-      ))}
-    </DataTable>
-  );
+/** A status view's count: the project-wide status counts, Open with the Issues defects once known. */
+function viewCount(
+  view: ActionListView,
+  counts: Readonly<Record<string, number>> | null,
+  issueCount: number | null,
+): number | undefined {
+  if (!counts) return undefined;
+  const total = ACTION_LIST_VIEWS[view].reduce((sum, status) => sum + (counts[status] ?? 0), 0);
+  if (view !== 'open') return total;
+  return issueCount === null ? undefined : total + issueCount;
 }
 
-/**
- * Every group under its header row: the group's top Actions by priority,
- * then "Show all N" when it holds more. A group with nothing under the
- * filters is left out. One read per group, at the preview size.
- */
-function GroupedList({
-  workspaceId,
-  projectId,
-  query,
-  onShowGroup,
-  onClear,
-}: ListProps & { onShowGroup: (group: ActionGroup) => void }) {
-  const [collapsed, setCollapsed] = useState<ReadonlySet<ActionGroup>>(new Set());
-  const reads = useQueries({
-    queries: actionsQueries.groupPreviews({ workspaceId, projectId }, query).map((read) => ({
-      ...read,
-      // A filter change keeps this project's rows on screen until the next land.
-      placeholderData: (previous: ActionsPage | undefined, previousQuery?: { queryKey: unknown }) =>
-        sameProject(previousQuery?.queryKey, workspaceId, projectId) ? previous : undefined,
-    })),
+/** One cell per goal with how much it holds; a cell jumps to its goal in the tree. */
+function GoalStrip({
+  goals,
+  branches,
+  onJump,
+}: Readonly<{
+  goals: readonly ActionGroup[];
+  branches: readonly ActionListBranch[];
+  onJump: (key: string) => void;
+}>) {
+  const segments = goals.map((goal): FigureSegment => {
+    const branch = branches.find((candidate) => candidate.key === goal);
+    const label = ACTION_GROUP_LABEL[goal];
+    const count = branch?.count ?? 0;
+    return {
+      key: goal,
+      label,
+      value: formatCount(count),
+      marker: branch?.blocking ? (
+        <StatusMark variant="severity" value="critical">
+          Blocking
+        </StatusMark>
+      ) : undefined,
+      onSelect: () => onJump(goal),
+      actionLabel: `Go to ${label}, ${formatCount(count)}`,
+    };
   });
-  const failed = reads.find((read) => read.isError);
-  const counts = reads.find((read) => read.data)?.data;
-  let state: DataTableState | undefined;
-  if (reads.some((read) => read.isPending)) state = { kind: 'loading', label: 'Loading Actions…' };
-  else if (failed)
-    state = {
+  return <FigureStrip label="Goals" segments={segments} />;
+}
+
+/** What the tree says before it has rows: loading, failed, nothing matches, or nothing yet. */
+function treeState({
+  list,
+  branches,
+  filtered,
+  onClear,
+  view,
+  everHadWork,
+}: Readonly<{
+  list: ReturnType<typeof useActionsList>;
+  branches: readonly ActionListBranch[];
+  filtered: boolean;
+  onClear: () => void;
+  view: ActionListView;
+  everHadWork: boolean;
+}>): DataTableState | undefined {
+  if (list.loading) return { kind: 'loading', label: 'Loading Actions…' };
+  if (list.actionsFailed)
+    return {
       kind: 'error',
-      ...readErrorProps(failed),
+      ...readErrorProps(list.actionsFailed),
       title: "Couldn't load Actions",
       fallback: 'Actions could not be loaded.',
     };
-  else if (counts && Object.values(counts.group_counts).every((count) => count === 0))
-    state = emptyActions(counts, onClear);
-  const toggle = (group: ActionGroup) =>
-    setCollapsed((current) => {
-      const next = new Set(current);
-      if (!next.delete(group)) next.add(group);
-      return next;
-    });
-  return (
-    <DataTable
-      label="Actions"
-      columns={COLUMNS}
-      rowLines={2}
-      state={state}
-      busy={{
-        active: reads.some((read) => read.isFetching && !read.isPending),
-        label: 'Loading Actions…',
-      }}
-    >
-      {actionGroupSchema.options.map((group, index) => {
-        const page = reads[index]?.data;
-        const total = page?.group_counts[group] ?? 0;
-        if (!page || total === 0) return null;
-        const open = !collapsed.has(group);
-        return (
-          <Fragment key={group}>
-            <GroupHeaderRow
-              group={group}
-              total={total}
-              open={open}
-              onToggle={() => toggle(group)}
-            />
-            {open
-              ? page.items.map((action) => (
-                  <ActionRow key={action.id} action={action} status={query.status} />
-                ))
-              : null}
-            {open && total > page.items.length ? (
-              <ShowAllRow group={group} total={total} onShow={() => onShowGroup(group)} />
-            ) : null}
-          </Fragment>
-        );
-      })}
-    </DataTable>
-  );
-}
-
-/** Whether a previous read was for this workspace's project, so its rows may stand in. */
-function sameProject(key: unknown, workspaceId: string, projectId: string): boolean {
-  return Array.isArray(key) && key.includes(workspaceId) && key.includes(projectId);
-}
-
-/**
- * A group's header row: its name and how many Actions it holds; it folds the
- * group's rows. It has no fill, so it never reads as part of the column
- * header's `surface-sunken` band above it: the row rule over it and its name
- * in ink at the button's medium weight set it apart from the rows it heads.
- */
-function GroupHeaderRow({
-  group,
-  total,
-  open,
-  onToggle,
-}: Readonly<{ group: ActionGroup; total: number; open: boolean; onToggle: () => void }>) {
-  return (
-    <TableRow data-action-group={group}>
-      <TableCell colSpan={COLUMNS.length}>
-        <Button
-          variant="quiet"
-          aria-expanded={open}
-          aria-label={`${ACTION_GROUP_LABEL[group]}, ${formatCount(total)}`}
-          onClick={onToggle}
-        >
-          <Icon icon={open ? ChevronDown : ChevronRight} />
-          <span className="text-ink">{ACTION_GROUP_LABEL[group]}</span>
-          <span className="text-ink-2 tabular-nums">{formatCount(total)}</span>
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-/** The row after a group's preview: Show all N narrows the list to the group. */
-function ShowAllRow({
-  group,
-  total,
-  onShow,
-}: Readonly<{ group: ActionGroup; total: number; onShow: () => void }>) {
-  return (
-    <TableRow>
-      <TableCell colSpan={COLUMNS.length}>
-        <Button
-          variant="secondary"
-          onClick={onShow}
-          aria-label={`Show all ${formatCount(total)} in ${ACTION_GROUP_LABEL[group]}`}
-        >
-          <Icon icon={ArrowRight} />
-          Show all {formatCount(total)}
-        </Button>
-      </TableCell>
-    </TableRow>
-  );
-}
-
-/**
- * What a page with no Actions says: nothing matches the filters (clear
- * them), or nothing has been found yet: what an Action is, why there are
- * none, and the one next step.
- */
-function emptyActions(page: ActionsPage, onClear: () => void): DataTableState {
-  const anyActions = Object.values(page.status_counts).some((count) => count > 0);
-  if (anyActions)
-    return {
-      kind: 'filtered',
-      heading: 'No Actions match these filters',
-      onClear,
-    };
+  if (branches.length > 0) return undefined;
+  if (filtered) return { kind: 'filtered', heading: 'No Actions match these filters', onClear };
+  if (everHadWork) return { kind: 'empty', icon: ICONS.opportunities, heading: EMPTY_VIEW[view] };
   return {
     kind: 'empty',
     icon: ICONS.opportunities,
     heading: 'No current Actions',
     description:
-      'Actions are the work found on your pages, your products and the sites that cite rivals. None are listed now: no crawl, visibility run or Search Console sync has current work to show.',
+      'Actions are the work found on your site, your pages, your products and the sites that cite rivals. None are listed now: no crawl, visibility run or Search Console sync has current work to show.',
     action: (
       <Button asChild>
         <ProjectLink href="/site">
@@ -289,28 +213,10 @@ function emptyActions(page: ActionsPage, onClear: () => void): DataTableState {
   };
 }
 
-/**
- * One Action. The whole row opens its detail page; the target link inside it
- * is the same destination for the keyboard and a screen reader.
- */
-function ActionRow({
-  action,
-  status,
-}: Readonly<{ action: Action; status: ActionStatus | undefined }>) {
-  const navigate = useNavigate();
-  const projectHref = useProjectHref();
-  const href = `/agent/actions/${action.id}`;
-  const open = (event: MouseEvent<HTMLTableRowElement>) => {
-    // The link and any control in the row handle their own press.
-    if (event.target instanceof Element && event.target.closest('a, button')) return;
-    navigate(projectHref(href));
-  };
-  return (
-    <TableRow onClick={open} className="cursor-pointer">
-      <ActionTargetCell action={action} status={status} />
-      <TableCell desktopOnly>
-        <ActionPriorityBadge band={action.priority_band} />
-      </TableCell>
-    </TableRow>
-  );
-}
+const EMPTY_VIEW: Record<ActionListView, string> = {
+  open: 'No open Actions',
+  in_progress: 'No Actions in progress',
+  measuring: 'No Actions being measured',
+  done: 'No Actions done yet',
+  dismissed: 'No dismissed Actions',
+};

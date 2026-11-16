@@ -1,7 +1,6 @@
 import { ActionSection } from '@/components/agent/action-section';
 import { DisplayTime } from '@/components/ui/display-time';
-import { Stack } from '@/components/ui/layout';
-import { OpenRow } from '@/components/ui/list-row';
+import { Inline, Stack } from '@/components/ui/layout';
 import { StateBlock } from '@/components/ui/state-block';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
@@ -22,15 +21,11 @@ const SOURCE_LABEL: Record<OpportunityType, string> = {
 };
 
 /**
- * The Action's findings, one ruled row each (title, impact, the Inferred mark
- * a rule-derived finding carries, then source and date); a row opens its
- * evidence in the drawer, which shows only what the row does not. The
- * readings behind the Action follow, each linked to the screen that shows it.
+ * The Action's findings, one ruled item each (title, impact, the Inferred mark
+ * a rule-derived finding carries, then source and date). The readings behind
+ * the Action follow, each linked to the screen that shows it.
  */
-export function ActionFindings({
-  action,
-  onOpen,
-}: Readonly<{ action: ActionDetail; onOpen: (id: string) => void }>) {
+export function ActionFindings({ action }: Readonly<{ action: ActionDetail }>) {
   const readings = actionEvidence(action).filter((record) => record.basis === 'observed');
   return (
     <ActionSection title="Findings" id="action-findings">
@@ -48,28 +43,20 @@ export function ActionFindings({
       {action.members.length + readings.length > 0 ? (
         <ul aria-label="Findings" className={ledgerClasses()}>
           {action.members.map((member) => (
-            <li key={member.id}>
-              <OpenRow
-                title={member.title}
-                layout="stacked"
-                opens="dialog"
-                meta={
-                  <>
-                    <StatusMark variant="priority" value={severityPriority(member.severity)}>
-                      {severityLabel(member.severity)} impact
-                    </StatusMark>
-                    <Tag>Inferred</Tag>
-                  </>
-                }
-                caption={
-                  <>
-                    {SOURCE_LABEL[member.opportunity_type]} ·{' '}
-                    <DisplayTime value={member.updated_at} dateOnly fallback="date not recorded" />
-                  </>
-                }
-                onOpen={() => onOpen(member.id)}
-              />
-            </li>
+            // A finding has no screen of its own: its title, impact and basis, then source and date.
+            <Stack as="li" gap="tight" key={member.id} className={ledgerItemClasses()}>
+              <span className={textRole('body', 'text-ink')}>{member.title}</span>
+              <Inline gap="tight" className="flex-wrap">
+                <StatusMark variant="priority" value={severityPriority(member.severity)}>
+                  {severityLabel(member.severity)} impact
+                </StatusMark>
+                <Tag>Inferred</Tag>
+              </Inline>
+              <span className={textRole('caption', 'tabular-nums')}>
+                {SOURCE_LABEL[member.opportunity_type]} ·{' '}
+                <DisplayTime value={member.updated_at} dateOnly fallback="date not recorded" />
+              </span>
+            </Stack>
           ))}
           {readings.map((record) => (
             // A reading CiteLadder took (a crawl, a declared check), linked where it has a screen.

@@ -71,7 +71,7 @@ function DeclarationProposal({
   const mayWrite = useWorkspaceCapability('write');
   const detail = useQuery(actionsQueries.detail(workspaceId, action.id));
   const label = action.target_label;
-  const open = <ActionButton action="openAction" href={`/agent/actions/${action.id}`} />;
+  const open = <ActionButton action="openAction" href={`/actions/${action.id}`} />;
   const declared = detail.data ? detail.data.declaration !== null : DECLARED.has(action.status);
   if (declared)
     return (

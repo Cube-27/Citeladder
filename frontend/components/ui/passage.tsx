@@ -1,5 +1,3 @@
-import { cn } from '@/lib/utils';
-
 /**
  * Passage — a quoted line lifted verbatim from a page or an answer we do not
  * own: the product's core evidence claim. A `surface-sunken` well
@@ -36,27 +34,5 @@ export function Passage({
         ”
       </p>
     </blockquote>
-  );
-}
-
-/**
- * Limitations — what a reader may NOT conclude from what they are looking at.
- *
- * One home, because the rule these carry is one rule: a finding is shown with
- * its caveats or it is not shown honestly.
- */
-export function Limitations({
-  items,
-  className,
-}: Readonly<{ items: readonly string[]; className?: string }>) {
-  if (!items.length) return null;
-  return (
-    <div className={cn('grid gap-1', className)}>
-      {items.map((item) => (
-        <p key={item} className="text-caption text-ink-2">
-          {item}
-        </p>
-      ))}
-    </div>
   );
 }

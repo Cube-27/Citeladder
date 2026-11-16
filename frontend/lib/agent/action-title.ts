@@ -34,9 +34,9 @@ function pagePath(url: URL): string {
 /**
  * The target as a title names it: your own page by its path; another site's
  * page by its host and tail ("thecoffeecompass.net/…/best-subscriptions");
- * a topic, query or issue by its label.
+ * a topic, query or issue by its label. The Actions list titles a row by it alone.
  */
-function actionTarget(action: TitledAction): string {
+export function actionTarget(action: TitledAction): string {
   const url = httpUrl(action.target_label);
   if (action.target_kind === 'page') {
     const page = url ?? httpUrl(action.target_url);

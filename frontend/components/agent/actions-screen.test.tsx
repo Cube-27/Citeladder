@@ -4,233 +4,303 @@ import { http, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vite-plus/test';
 
-import { actionsPage } from '@/test/fixtures/actions';
-import { mswServer } from '@/test/msw-server';
+import type { SiteIssue } from '@citeladder/contracts';
+import { issue } from '@/components/site-health/issues-catalog.test-support';
+import { actionItem, actionsPage } from '@/test/fixtures/actions';
 import { makeProject } from '@/test/fixtures/project';
+import { makeSiteCrawl } from '@/test/fixtures/site-health';
+import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
 import { ActionsScreen } from './actions-screen';
 
+const WORKSPACE = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const PROJECT = '11111111-1111-4111-8111-111111111111';
-const ACTION = '22222222-2222-4222-8222-222222222222';
-const NOW = '2026-09-25T10:00:00Z';
-
-const action = {
-  id: ACTION,
-  project_id: PROJECT,
-  target_kind: 'page',
-  target_label: 'https://acme.test/pricing',
-  target_url: 'https://acme.test/pricing',
-  target_prompt_id: null,
-  origin: 'evidence',
-  status: 'open',
-  priority_score: 82.5,
-  priority_band: 'high',
-  families: ['search_console', 'link_graph'],
-  approach: 'improve_existing',
-  group: 'own_pages',
-  skill_id: 'gsc_optimize',
-  member_count: 1,
-  declarable_member_count: 1,
-  handoff: { context: 'action', message: 'Work on https://acme.test/pricing.' },
-  evidence_cleared_at: null,
-  created_at: NOW,
-  updated_at: NOW,
-};
-
-/** `count` own-page Actions after the first, each a page of its own. */
-const ownPages = (count: number) =>
-  Array.from({ length: count }, (_, index) => ({
-    ...action,
-    id: `33333333-3333-4333-8333-33333333333${index}`,
-    target_label: `acme.test/page-${index}`,
-    target_url: `https://acme.test/page-${index}`,
-    status: index === 0 ? 'in_progress' : 'open',
-    priority_score: 10,
-    priority_band: 'low',
-  }));
-
-/** A page whose title regressed between two crawls. */
-const fix = {
-  ...action,
-  id: '44444444-4444-4444-8444-444444444444',
-  target_label: 'https://acme.test/checkout',
-  target_url: 'https://acme.test/checkout',
-  approach: 'fix_technical',
-  group: 'fix_site',
-  priority_band: 'medium',
-  families: ['site_changes'],
-};
+const CRAWL = '22222222-2222-4222-8222-222222222222';
+const PROMPT_ACTION = '33333333-3333-4333-8333-333333333331';
+const PAGE_ACTION = '33333333-3333-4333-8333-333333333332';
+const MEASURED = '33333333-3333-4333-8333-333333333334';
+const ROBOTS = 'bbbbbbbb-1111-4111-8111-111111111111';
+const TITLES = 'bbbbbbbb-2222-4222-8222-222222222222';
+const SCHEMA = 'bbbbbbbb-3333-4333-8333-333333333333';
 
 const selection = {
   activeProjectId: PROJECT,
-  activeProject: makeProject({ id: PROJECT }),
+  activeProject: makeProject({ id: PROJECT, workspace_id: WORKSPACE }),
   status: 'ready' as const,
 };
 
+/** The latest crawl's defects per Issues tab: one each, the technical one critical and site-wide. */
+const ISSUES: Record<string, SiteIssue[]> = {
+  technical: [
+    issue({
+      group_id: ROBOTS,
+      crawl_id: CRAWL,
+      rule_id: 'technical.sitewide_broken_link',
+      dimension: 'technical',
+      category: 'indexability',
+      severity: 'critical',
+      title: 'Broken links in the site navigation',
+      affected_url_count: 1,
+    }),
+  ],
+  content: [
+    issue({
+      group_id: TITLES,
+      crawl_id: CRAWL,
+      rule_id: 'web.title_missing',
+      dimension: 'technical',
+      category: 'metadata',
+      severity: 'medium',
+      title: 'Pages without a title',
+      affected_url_count: 14,
+    }),
+  ],
+  aeo: [issue({ group_id: SCHEMA, crawl_id: CRAWL, severity: 'low', affected_url_count: 32 })],
+};
+
+const prompt = {
+  ...actionItem(PROMPT_ACTION, 'best organic baby bodysuits', PROJECT),
+  target_kind: 'prompt',
+  approach: 'create_new',
+  priority_band: 'high',
+  priority_score: 90,
+  families: ['ai_visibility'],
+};
+const page = {
+  ...actionItem(PAGE_ACTION, 'https://acme.test/Categories/Baby/Bodysuits/SCE2001', PROJECT),
+  target_url: 'https://acme.test/Categories/Baby/Bodysuits/SCE2001',
+  approach: 'improve_existing',
+  priority_band: 'medium',
+  priority_score: 50,
+  families: ['search_console'],
+  member_count: 2,
+};
+const measured = {
+  ...actionItem(MEASURED, 'https://acme.test/pricing', PROJECT),
+  status: 'measuring',
+};
+
 /**
- * The project's Actions as the API answers each read: seven own-page Actions
- * and one site fix, under every status but Dismissed (none). Every read is
- * recorded as its query string.
+ * The project as the API answers each read: the crawl, its Issues tabs and fix
+ * progress, no catalog, and Actions by status. Every Actions read is recorded
+ * as its query string.
  */
-function serveActions(reads: string[]) {
-  const own = [action, ...ownPages(6)];
+function serve(reads: string[]) {
   mswServer.use(
+    http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
+      HttpResponse.json({
+        project_id: PROJECT,
+        crawl: makeSiteCrawl({ id: CRAWL, workspace_id: WORKSPACE, project_id: PROJECT }),
+        score_summary: null,
+        phase: 'dashboard',
+        snapshot_id: null,
+        quota: { used: 1, limit: 50 },
+        root_errors: [],
+      }),
+    ),
+    http.get(`/api/v1/site-crawls/${CRAWL}/issues`, ({ request }) => {
+      const section = new URL(request.url).searchParams.get('section') ?? '';
+      return HttpResponse.json({
+        items: ISSUES[section] ?? [],
+        next_cursor: null,
+        summary: {
+          issue_count: 3,
+          defect_issue_type_count: 3,
+          advisory_issue_type_count: 0,
+          occurrence_count: 47,
+          severity_counts: { critical: 1, medium: 1, low: 1 },
+          dimension_counts: { technical: 2, aeo: 1 },
+          affected_url_count: 47,
+          monitored_affected_url_count: 47,
+          section_counts: { technical: 1, content: 1, aeo: 1 },
+        },
+      });
+    }),
+    http.get(`/api/v1/site-crawls/${CRAWL}/issue-fixes`, () =>
+      HttpResponse.json({
+        crawl_id: CRAWL,
+        items: [
+          {
+            group_id: SCHEMA,
+            affected_url_count: 32,
+            fixed_url_count: 3,
+            verified_url_count: 1,
+            rerun_url_count: 29,
+          },
+        ],
+      }),
+    ),
+    http.get(`/api/v1/projects/${PROJECT}/commerce/catalog`, () =>
+      HttpResponse.json({ error: { message: 'No catalog' } }, { status: 404 }),
+    ),
     http.get(`/api/v1/projects/${PROJECT}/actions`, ({ request }) => {
       const params = new URL(request.url).searchParams;
       reads.push(params.toString());
-      const dismissed = params.get('status') === 'dismissed';
-      const rows = dismissed ? [] : [...own, fix];
-      const counts = {
-        status_counts: { open: 7, in_progress: 1, dismissed: 0 },
-        group_counts: dismissed ? {} : { own_pages: own.length, fix_site: 1 },
-      };
-      const group = params.get('group');
-      const limit = Number(params.get('limit'));
-      const matching = rows.filter((row) => !group || row.group === group);
-      return HttpResponse.json(actionsPage(matching.slice(0, limit), counts));
+      const status = params.get('status');
+      const family_ = params.get('family');
+      const all = status === 'open' ? [prompt, page] : [];
+      const rows = (status === 'measuring' ? [measured] : all).filter(
+        (row) => !family_ || row.families.includes(family_),
+      );
+      return HttpResponse.json(
+        actionsPage(rows, {
+          status_counts: { open: 3, in_progress: 1, implemented: 2, measuring: 1, done: 4 },
+          group_counts: { own_pages: rows.filter((row) => row.group === 'own_pages').length },
+        }),
+      );
     }),
   );
 }
 
 beforeAll(() => mswServer.listen({ onUnhandledFrame: 'error' }));
-beforeEach(() => window.history.replaceState(null, '', '/agent/actions'));
+beforeEach(() => window.history.replaceState(null, '', '/actions'));
 afterEach(() => mswServer.resetHandlers());
 afterAll(() => mswServer.close());
 
 const renderActions = () =>
   renderWithProviders(
     <Routes>
-      <Route path="/agent/actions" element={<ActionsScreen />} />
-      <Route path="/agent/actions/:actionId" element={<p>Action detail</p>} />
+      <Route path="/actions" element={<ActionsScreen />} />
+      <Route path="/actions/:actionId" element={<p>Action detail</p>} />
+      <Route path="/issues" element={<p>Issues</p>} />
     </Routes>,
-    { initialEntries: ['/agent/actions'], projectSelection: selection },
+    { initialEntries: ['/actions'], projectSelection: selection },
   );
 
+/** Every open goal and category header in the tree, top to bottom. */
+const headerNames = () =>
+  screen
+    .getAllByRole('button', { expanded: true })
+    .map((button) => button.getAttribute('aria-label'));
+
 describe('Actions', () => {
-  it('groups the work queue, top five per group by priority, then Show all narrows to the group', async () => {
-    const reads: string[] = [];
-    serveActions(reads);
-    const user = userEvent.setup();
+  it('lists the Issues defects by their tab and rule category beside every other Action, under each goal', async () => {
+    serve([]);
     renderActions();
 
-    const own = await screen.findByRole('button', { name: 'Improve your own pages, 7' });
-    expect(own).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('button', { name: 'Fix how AI reads your site, 1' })).toBeVisible();
-    // A group with nothing in it is left out.
-    expect(screen.queryByRole('button', { name: /Get mentioned elsewhere/ })).toBeNull();
-    // One read per group, at the preview size, in the list's order.
-    expect(reads).toEqual([
-      'group=fix_site&limit=5',
-      'group=own_pages&limit=5',
-      'group=earned&limit=5',
-      'group=products&limit=5',
+    await screen.findByRole('link', { name: 'Broken links in the site navigation' });
+    // Goal, then its categories: technical Issues let AI read the site; content
+    // and AEO Issues improve your own pages, before the Actions' categories.
+    // An Issues row's category is its rule's; one without a label falls back.
+    expect(headerNames()).toEqual([
+      'Let AI read your site, 1, blocking',
+      'Crawling and indexing, 1',
+      'Improve your own pages, 4',
+      'Page metadata, 1',
+      'Other website issues, 1',
+      "Prompts you don't appear in, 1",
+      'Your pages, 1',
     ]);
 
-    // The row is titled by the work and its target, and links to its Action.
-    const pricing = screen.getByRole('link', { name: 'Improve the existing page: /pricing' });
-    expect(pricing).toHaveAttribute('href', `/agent/actions/${ACTION}?project=${PROJECT}`);
-    const cells = within(pricing.closest('tr')!);
-    // The band, never the raw score; priority is an order, never a hue. The
-    // identity cell carries the same mark for widths without the column.
-    const bands = cells.getAllByText('High').map((mark) => mark.closest('[data-status-tone]'));
-    expect(bands.map((mark) => mark?.getAttribute('data-status-tone'))).toEqual([
-      'neutral',
-      'neutral',
-    ]);
-    expect(bands[0]?.closest('td')).toBe(pricing.closest('td'));
-    expect(screen.queryByText('82.5')).not.toBeInTheDocument();
-    // The subline names the target (the page's path), then the work.
-    expect(cells.getByText('/pricing')).toBeVisible();
-    expect(cells.getByText('Page · 1 finding in Search Console, Link graph')).toBeVisible();
-    // An Open row in the queue names no status; one in progress does.
-    expect(cells.queryByText('Open')).not.toBeInTheDocument();
-    const started = screen.getByRole('link', { name: 'Improve the existing page: /page-0' });
-    expect(within(started.closest('tr')!).getByText('In progress')).toBeVisible();
-    // No two rows of one kind of work share a title.
-    const titles = screen.getAllByRole('link').map((link) => link.textContent);
-    expect(new Set(titles).size).toBe(titles.length);
-    expect(screen.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
-      'Action',
-      'Priority',
-    ]);
-    // The server's order, marked on its column.
-    expect(screen.getByRole('columnheader', { name: 'Priority' })).toHaveAttribute(
-      'aria-sort',
-      'descending',
+    // A site-level finding reaches the whole site; an Issues row links to that
+    // issue open on its Issues tab, and says how far its fix has come.
+    const robots = screen.getByRole('link', { name: 'Broken links in the site navigation' });
+    const robotsRow = within(robots.closest('tr')!);
+    expect(robotsRow.getByText('Whole site')).toBeVisible();
+    expect(robotsRow.getByText('Issues')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Pages without a title' })).toHaveAttribute(
+      'href',
+      `/issues?section=content&issue=${TITLES}&project=${PROJECT}`,
     );
-    // Five of the seven, then the way to the rest.
-    expect(screen.queryByText('Improve the existing page: /page-4')).toBeNull();
+    const schemaRow = within(
+      screen.getByRole('link', { name: 'WebSite schema is missing' }).closest('tr')!,
+    );
+    expect(schemaRow.getByText('32 pages · 3 of 32 pages fixed')).toBeVisible();
 
-    // A header folds its group's rows.
-    await user.click(own);
-    expect(own).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText('Improve the existing page: /pricing')).toBeNull();
-    await user.click(own);
+    // An Action row is titled by its target alone, never "Improve the existing page: …".
+    const pageLink = screen.getByRole('link', { name: '/Categories/…/SCE2001' });
+    expect(pageLink).toHaveAttribute('href', `/actions/${PAGE_ACTION}?project=${PROJECT}`);
+    const pageRow = within(pageLink.closest('tr')!);
+    expect(pageRow.getByText('Improve the existing page · 2 findings')).toBeVisible();
+    expect(pageRow.getByText('Search Console')).toBeVisible();
 
-    await user.click(screen.getByRole('button', { name: 'Show all 7 in Improve your own pages' }));
-    expect(await screen.findByText('Improve the existing page: /page-5')).toBeVisible();
-    expect(window.location.search).toBe('?group=own_pages');
-    expect(reads.at(-1)).toBe('group=own_pages&limit=10');
-    expect(screen.queryByText('Fix a technical issue: /checkout')).toBeNull();
+    // The goal strip counts each goal and jumps to it; a project without a catalog has no products goal.
+    const goals = within(screen.getByRole('group', { name: 'Goals' }));
+    expect(goals.getByRole('button', { name: 'Go to Improve your own pages, 4' })).toBeVisible();
+    expect(goals.queryByRole('button', { name: /Improve your products/ })).toBeNull();
+
+    // A goal header folds its categories.
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Improve your own pages, 4' }));
+    expect(screen.queryByRole('link', { name: 'Pages without a title' })).toBeNull();
   });
 
-  it('sets every filter from its own trigger as URL state and reads the list through it', async () => {
+  it('counts each status view and reads the statuses it holds', async () => {
     const reads: string[] = [];
-    serveActions(reads);
+    serve(reads);
     const user = userEvent.setup();
     renderActions();
-    await screen.findByRole('button', { name: 'Improve your own pages, 7' });
-    expect(screen.queryByRole('combobox')).toBeNull();
 
-    const pick = async (filter: string, option: string) => {
-      await user.click(screen.getByRole('button', { name: new RegExp(`^${filter}:`) }));
-      await user.click(await screen.findByRole('menuitemradio', { name: option }));
+    await screen.findByRole('link', { name: 'Pages without a title' });
+    // Open counts the Issues defects too; Measuring holds declared work as well.
+    expect(screen.getAllByRole('radio').map((radio) => radio.textContent)).toEqual([
+      'Open (6)',
+      'In progress (1)',
+      'Measuring (3)',
+      'Done (4)',
+      'Dismissed (0)',
+    ]);
+    expect(reads).toEqual(['status=open&limit=200']);
+
+    await user.click(screen.getByRole('radio', { name: /^Measuring/ }));
+    expect(await screen.findByRole('link', { name: '/pricing' })).toBeVisible();
+    expect(window.location.search).toBe('?status=measuring');
+    expect(reads.slice(1).sort()).toEqual([
+      'status=implemented&limit=200',
+      'status=measuring&limit=200',
+    ]);
+    // Issues rows have their own lifecycle: they are listed under Open only.
+    expect(screen.queryByRole('link', { name: 'Pages without a title' })).toBeNull();
+  });
+
+  it('leaves Open uncounted when Issues fail, and keeps product work when the catalog fails', async () => {
+    serve([]);
+    const product = {
+      ...actionItem(MEASURED, 'Organic bodysuit', PROJECT),
+      target_kind: 'product',
+      group: 'products',
     };
-    await pick('Priority', 'High');
-    expect(await screen.findByRole('button', { name: 'Priority: High' })).toHaveAttribute(
-      'data-active',
-    );
-    expect(window.location.search).toBe('?priority=high');
-    expect(reads.at(-1)).toBe('priority=high&group=products&limit=5');
-
-    // Dismissed holds nothing here.
-    await pick('Status', 'Dismissed');
-    expect(await screen.findByText('No Actions match these filters')).toBeVisible();
-    expect(window.location.search).toBe('?priority=high&status=dismissed');
-    expect(screen.getByRole('button', { name: 'Status: Dismissed' })).toHaveAttribute(
-      'data-active',
-    );
-
-    // Clear filters returns to the whole work queue.
-    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
-    expect(await screen.findByRole('button', { name: 'Improve your own pages, 7' })).toBeVisible();
-    expect(window.location.search).toBe('');
-  });
-
-  it('offers no filters to a project that has never had an Action', async () => {
     mswServer.use(
+      http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
+        HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 500 }),
+      ),
+      http.get(`/api/v1/projects/${PROJECT}/commerce/catalog`, () =>
+        HttpResponse.json({ error: { message: 'Unavailable' } }, { status: 500 }),
+      ),
       http.get(`/api/v1/projects/${PROJECT}/actions`, () =>
         HttpResponse.json(
-          actionsPage([], {
-            status_counts: { open: 0, in_progress: 0, dismissed: 0 },
-            group_counts: {},
-          }),
+          actionsPage([product], { status_counts: { open: 1 }, group_counts: { products: 1 } }),
         ),
       ),
     );
     renderActions();
 
-    expect(await screen.findByRole('heading', { name: 'No current Actions' })).toBeVisible();
-    expect(screen.queryByRole('button', { name: /^Status:/ })).toBeNull();
+    expect(await screen.findByText("Couldn't load Website issues")).toBeVisible();
+    expect(screen.getByRole('radio', { name: /^Open/ }).textContent).toBe('Open');
+    expect(screen.getByRole('radio', { name: /^Done/ }).textContent).toBe('Done (0)');
+    const goals = within(screen.getByRole('group', { name: 'Goals' }));
+    expect(goals.getByRole('button', { name: 'Go to Improve your products, 1' })).toBeVisible();
   });
 
-  it('opens the Action detail from anywhere on its row', async () => {
-    serveActions([]);
+  it('narrows by Source as URL state', async () => {
+    const reads: string[] = [];
+    serve(reads);
     const user = userEvent.setup();
     renderActions();
-    const summary = await screen.findByText('Page · 1 finding in Site changes');
-    await user.click(summary);
-    expect(await screen.findByText('Action detail')).toBeVisible();
+    await screen.findByRole('link', { name: 'Pages without a title' });
+
+    await user.click(screen.getByRole('button', { name: /^Source/ }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Issues' }));
+    expect(window.location.search).toBe('?source=issues');
+    expect(screen.queryByRole('link', { name: '/Categories/…/SCE2001' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Pages without a title' })).toBeVisible();
+
+    await user.click(screen.getByRole('button', { name: /^Source/ }));
+    await user.click(await screen.findByRole('menuitemradio', { name: 'Search Console' }));
+    expect(window.location.search).toBe('?source=search_console');
+    expect(await screen.findByRole('link', { name: '/Categories/…/SCE2001' })).toBeVisible();
+    expect(reads.at(-1)).toBe('family=search_console&status=open&limit=200');
+    expect(screen.queryByRole('link', { name: 'Pages without a title' })).toBeNull();
   });
 });

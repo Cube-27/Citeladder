@@ -146,7 +146,7 @@ describe('CiteLadder MCP App', () => {
             approach: 'Answer common pricing questions on the page.',
             status: 'in_progress',
             priority_score: 0.8,
-            link: `https://app.example.test/agent/actions/${answerId}?project=${project}`,
+            link: `https://app.example.test/actions/${answerId}?project=${project}`,
           },
         ],
       },

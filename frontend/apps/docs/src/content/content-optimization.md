@@ -8,7 +8,7 @@ updated: '2026-11-16'
 
 Content optimization finds content you could improve or create. It starts from the pages AI answers cite: when answers to your tracked prompts cite competitor and publisher content pages on an angle, and no page of yours is cited for it, CiteLadder opens an Action.
 
-These Actions are listed with all your other work on [Actions](/agent/actions/) (**Agent → Actions**), in the same priority order.
+These Actions are listed with all your other work on [Actions](/agent/actions/) (**Actions** in the sidebar), in the same priority order.
 
 ## Where the evidence comes from
 

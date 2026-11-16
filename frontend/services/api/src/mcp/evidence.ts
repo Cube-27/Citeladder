@@ -61,7 +61,7 @@ export async function actionsRead(
       throw new McpInputError('Action was not found in this project');
     return {
       state: 'available',
-      action: { ...action, link: appLink(origin, `/agent/actions/${action.id}`, scope.projectId) },
+      action: { ...action, link: appLink(origin, `/actions/${action.id}`, scope.projectId) },
       artifact_refs: [reference('action', action.id)],
     };
   }
@@ -74,7 +74,7 @@ export async function actionsRead(
   });
   const items = page.items.map((item) => ({
     ...item,
-    link: appLink(origin, `/agent/actions/${item.id}`, scope.projectId),
+    link: appLink(origin, `/actions/${item.id}`, scope.projectId),
   }));
   return {
     state: 'available',

@@ -48,7 +48,7 @@ export function ProductActions({ detail }: Readonly<{ detail: CommerceProductDet
               <LedgerItem
                 key={action.id}
                 title={
-                  <TextLink href={`/agent/actions/${action.id}`} text="inherit">
+                  <TextLink href={`/actions/${action.id}`} text="inherit">
                     {action.title}
                   </TextLink>
                 }

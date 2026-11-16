@@ -451,7 +451,7 @@ describe('NewChatScreen', () => {
 
     const message = await screen.findByLabelText('Message the agent');
     await user.click(message);
-    await user.paste(`Find ${window.location.origin}/agent/actions/${PRICING}?project=${PROJECT}`);
+    await user.paste(`Find ${window.location.origin}/actions/${PRICING}?project=${PROJECT}`);
     await waitFor(() => expect(message).toHaveValue('Find @Pricing page'));
     expect(screen.getByRole('button', { name: 'Remove @Pricing page' })).toBeVisible();
     await user.type(message, '{Enter}');
@@ -484,8 +484,8 @@ describe('NewChatScreen', () => {
         return HttpResponse.json(ACCEPTED, { status: 202 });
       }),
     );
-    const own = `${window.location.origin}/agent/actions/${PRICING}`;
-    const foreign = `${window.location.origin}/agent/actions/${BLOG}`;
+    const own = `${window.location.origin}/actions/${PRICING}`;
+    const foreign = `${window.location.origin}/actions/${BLOG}`;
     const user = userEvent.setup();
     renderNewChat(`?prompt=${encodeURIComponent(`Compare ${own} with ${foreign}`)}`);
 
@@ -572,7 +572,7 @@ describe('NewChatScreen', () => {
     expect(screen.queryByRole('menuitem', { name: 'Work on Careers' })).toBeNull();
     expect(screen.getByRole('menuitem', { name: 'All Actions' })).toHaveAttribute(
       'href',
-      `/agent/actions?project=${PROJECT}`,
+      `/actions?project=${PROJECT}`,
     );
     // Ids only: the Action's message is read on New chat, never put in the URL.
     expect(start).toHaveAttribute('href', `/agent?action_id=${PRICING}&project=${PROJECT}`);

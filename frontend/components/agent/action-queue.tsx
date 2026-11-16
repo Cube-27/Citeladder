@@ -1,308 +1,111 @@
-import { ActionPriorityBadge, ActionStatusBadge } from '@/components/agent/action-status-badge';
 import { choiceFilter, type FilterDefinition } from '@/components/ui/all-filters';
-import type { DataTableState } from '@/components/ui/data-table';
-import { Inline, Stack } from '@/components/ui/layout';
-import { ClampText } from '@/components/ui/clamp-text';
-import { TableCell, UrlText } from '@/components/ui/table';
-import { TextLink } from '@/components/ui/text-link';
-import { textRole } from '@/components/ui/typography';
-import { actionTitle } from '@/lib/agent/action-title';
-import {
-  ACTION_APPROACHES,
-  ACTION_FAMILIES,
-  ACTION_GROUP_LABEL,
-  ACTION_STATUS_LABEL,
-  ACTION_TARGET_KINDS,
-  PRIORITY_BAND_LABEL,
-  approachLabel,
-  familyLabel,
-  targetKindLabel,
-} from '@/lib/agent/vocabulary';
-import {
-  actionsQueries,
-  type Action,
-  type ActionGroup,
-  type ActionsPage,
-  type ActionsParams,
-  type ActionStatus,
-} from '@/lib/api/actions';
-import { pluralCount, readableUrl } from '@/lib/format';
-import {
-  setUrlParams,
-  stringUrlCodec,
-  useUrlState,
-  type UrlCodec,
-} from '@/lib/navigation/url-state';
-import { useCursorTableQuery } from '@/lib/table/use-cursor-table-query';
-import {
-  actionGroupSchema,
-  actionPriorityBandSchema,
-  actionStatusSchema,
-} from '@citeladder/contracts/actions';
+import { ISSUES_SOURCE } from '@/lib/agent/action-list';
+import { ACTION_FAMILIES, PRIORITY_BAND_LABEL, familyLabel } from '@/lib/agent/vocabulary';
+import type { ActionListView, ActionPriorityBand } from '@/lib/api/actions';
+import { setUrlParams, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
+import { actionPriorityBandSchema } from '@citeladder/contracts/actions';
 
 /**
- * The Actions list's parts: its filters in the URL (one All filters menu,
- * AS6), the cursor-paged read of the project's Actions and the target cell.
+ * The Actions list's view, all URL state: the status view (Open by default),
+ * the Source and Priority filters, and whether the tree groups by goal or by
+ * source.
  */
 
-const QUEUE = 'queue';
+/** The status views in the segmented control's order, with their labels. */
+export const ACTION_LIST_VIEW_OPTIONS = [
+  { value: 'open', label: 'Open' },
+  { value: 'in_progress', label: 'In progress' },
+  { value: 'measuring', label: 'Measuring' },
+  { value: 'done', label: 'Done' },
+  { value: 'dismissed', label: 'Dismissed' },
+] as const satisfies readonly { value: ActionListView; label: string }[];
+
 const ALL = 'all';
-type StatusFilter = typeof QUEUE | ActionStatus;
-const STATUS_FILTERS: readonly StatusFilter[] = [QUEUE, ...actionStatusSchema.options];
+type GroupBy = 'goal' | 'source';
 
-/** The list's read, less its group: the grouped view asks once per group. Its status is one status, never any. */
-export type ActionListQuery = Omit<ActionsParams, 'cursor' | 'limit' | 'group' | 'status'> & {
-  status?: ActionStatus;
-};
+const VIEW_CODEC = stringUrlCodec<ActionListView>(
+  ACTION_LIST_VIEW_OPTIONS.map((option) => option.value),
+  'open',
+);
+const SOURCE_CODEC = stringUrlCodec<string>([ALL, ISSUES_SOURCE, ...ACTION_FAMILIES], ALL);
+const PRIORITY_CODEC = stringUrlCodec<ActionPriorityBand | typeof ALL>(
+  [ALL, ...actionPriorityBandSchema.options],
+  ALL,
+);
+const GROUP_BY_CODEC = stringUrlCodec<GroupBy>(['goal', 'source'], 'goal');
 
-type Choice<T extends string> = Readonly<{ value: T; label: string }>;
-
-/** One `all`-or-a-value filter: its URL codec and its All filters entry. */
-function allOr<T extends string>(values: readonly T[]): UrlCodec<T | typeof ALL> {
-  return stringUrlCodec<T | typeof ALL>([ALL, ...values], ALL);
-}
-
-const GROUP_CODEC = allOr(actionGroupSchema.options);
-const APPROACH_CODEC = allOr(ACTION_APPROACHES);
-const PRIORITY_CODEC = allOr(actionPriorityBandSchema.options);
-const TARGET_CODEC = allOr(ACTION_TARGET_KINDS);
-const SOURCE_CODEC = allOr(ACTION_FAMILIES);
-const STATUS_CODEC = stringUrlCodec<StatusFilter>(STATUS_FILTERS, QUEUE);
-
-function allFilter<T extends string>({
-  id,
-  label,
-  allLabel,
-  value,
-  options,
-  onChange,
-}: Readonly<{
-  id: string;
-  label: string;
-  allLabel: string;
-  value: T | typeof ALL;
-  options: readonly Choice<T>[];
-  onChange: (value: T | typeof ALL) => void;
-}>): FilterDefinition {
-  return choiceFilter<T | typeof ALL>({
-    id,
-    label,
-    value,
-    defaultValue: ALL,
-    defaultIsEvery: true,
-    groups: [{ options: [{ value: ALL, label: allLabel }, ...options] }],
-    onChange,
-  });
-}
-
-const labelled = <T extends string>(values: readonly T[], label: (value: T) => string | null) =>
-  values.map((value) => ({ value, label: label(value) ?? value }));
-
-/**
- * The Actions list's filters, every one URL state: Status (the work queue by
- * default), Group, Action type, Priority, Target type and Source. `query` is
- * the read they select, less the group; `group` is the one group the list is
- * narrowed to, if any, and `showGroup` narrows it (Show all N).
- */
 export function useActionFilters() {
-  const [status, setStatus] = useUrlState('status', STATUS_CODEC, { history: 'replace' });
-  const [group, setGroup] = useUrlState('group', GROUP_CODEC, { history: 'replace' });
-  const [approach, setApproach] = useUrlState('approach', APPROACH_CODEC, { history: 'replace' });
-  const [priority, setPriority] = useUrlState('priority', PRIORITY_CODEC, { history: 'replace' });
-  const [target, setTarget] = useUrlState('target', TARGET_CODEC, { history: 'replace' });
+  const [view, setView] = useUrlState('status', VIEW_CODEC, { history: 'replace' });
   const [source, setSource] = useUrlState('source', SOURCE_CODEC, { history: 'replace' });
+  const [priority, setPriority] = useUrlState('priority', PRIORITY_CODEC, { history: 'replace' });
+  const [groupBy, setGroupBy] = useUrlState('group_by', GROUP_BY_CODEC, { history: 'replace' });
   const definitions: FilterDefinition[] = [
-    choiceFilter<StatusFilter>({
-      id: 'status',
-      label: 'Status',
-      value: status,
-      defaultValue: QUEUE,
-      groups: [
-        {
-          options: STATUS_FILTERS.map((value) => ({
-            value,
-            label: value === QUEUE ? 'Open and in progress' : ACTION_STATUS_LABEL[value],
-          })),
-        },
-      ],
-      onChange: setStatus,
-    }),
-    allFilter({
-      id: 'group',
-      label: 'Group',
-      allLabel: 'All groups',
-      value: group,
-      options: labelled(actionGroupSchema.options, (value) => ACTION_GROUP_LABEL[value]),
-      onChange: setGroup,
-    }),
-    allFilter({
-      id: 'approach',
-      label: 'Action type',
-      allLabel: 'All action types',
-      value: approach,
-      options: labelled(ACTION_APPROACHES, approachLabel),
-      onChange: setApproach,
-    }),
-    allFilter({
-      id: 'priority',
-      label: 'Priority',
-      allLabel: 'All priorities',
-      value: priority,
-      options: labelled(actionPriorityBandSchema.options, (value) => PRIORITY_BAND_LABEL[value]),
-      onChange: setPriority,
-    }),
-    allFilter({
-      id: 'target',
-      label: 'Target type',
-      allLabel: 'All targets',
-      value: target,
-      options: labelled(ACTION_TARGET_KINDS, targetKindLabel),
-      onChange: setTarget,
-    }),
-    allFilter({
+    choiceFilter<string>({
       id: 'source',
       label: 'Source',
-      allLabel: 'All sources',
       value: source,
-      options: labelled(ACTION_FAMILIES, familyLabel),
+      defaultValue: ALL,
+      defaultIsEvery: true,
+      groups: [
+        {
+          options: [
+            { value: ALL, label: 'All sources' },
+            { value: ISSUES_SOURCE, label: 'Issues' },
+            ...ACTION_FAMILIES.map((family) => ({
+              value: family,
+              label: familyLabel(family) ?? family,
+            })),
+          ],
+        },
+      ],
       onChange: setSource,
     }),
+    choiceFilter<ActionPriorityBand | typeof ALL>({
+      id: 'priority',
+      label: 'Priority',
+      value: priority,
+      defaultValue: ALL,
+      defaultIsEvery: true,
+      groups: [
+        {
+          options: [
+            { value: ALL, label: 'All priorities' },
+            ...actionPriorityBandSchema.options.map((band) => ({
+              value: band,
+              label: PRIORITY_BAND_LABEL[band],
+            })),
+          ],
+        },
+      ],
+      onChange: setPriority,
+    }),
+    choiceFilter<GroupBy>({
+      id: 'group_by',
+      label: 'Group by',
+      value: groupBy,
+      defaultValue: 'goal',
+      groups: [
+        {
+          options: [
+            { value: 'goal', label: 'Goal' },
+            { value: 'source', label: 'Source' },
+          ],
+        },
+      ],
+      onChange: setGroupBy,
+    }),
   ];
-  const query: ActionListQuery = {
-    status: status === QUEUE ? undefined : status,
-    approach: approach === ALL ? undefined : approach,
-    priority: priority === ALL ? undefined : priority,
-    target_kind: target === ALL ? undefined : target,
-    family: source === ALL ? undefined : source,
-  };
   return {
     definitions,
-    query,
-    group: group === ALL ? undefined : group,
-    // A step into one group, so Back returns to every group.
-    showGroup: (next: ActionGroup) => setGroup(next, 'push'),
-    // Every filter back to its default in one write: a router navigation lands
+    view,
+    setView,
+    /** `issues`, an evidence family, or undefined for every source. */
+    source: source === ALL ? undefined : source,
+    priority: priority === ALL ? undefined : priority,
+    groupBy,
+    filtered: source !== ALL || priority !== ALL,
+    // Both filters back to every value in one write: a router navigation lands
     // later, so a setter per filter would build on the stale address.
-    clear: () =>
-      setUrlParams(
-        { status: null, group: null, approach: null, priority: null, target: null, source: null },
-        'replace',
-      ),
+    clear: () => setUrlParams({ source: null, priority: null }, 'replace'),
   };
-}
-
-/**
- * A row's one-line work summary: what kind of target, how many findings
- * the Action groups and the areas they come from. The list read carries no
- * written summary, so it is built from those fields.
- */
-function workSummary(action: Action): string {
-  const findings = pluralCount(action.member_count, 'finding');
-  const families = action.families.map(familyLabel).filter(Boolean).join(', ');
-  return [
-    targetKindLabel(action.target_kind),
-    families ? `${findings} in ${families}` : findings,
-    action.origin === 'agent' ? 'From agent work' : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-}
-
-/** The kinds whose rows of one kind of work read alike: a page or a product. */
-const NAMED_TARGETS = new Set(['page', 'earned_page', 'product']);
-
-/** A page target by its path (the whole address in the tooltip); a product by its name. */
-function TargetName({ action }: Readonly<{ action: Action }>) {
-  const url = action.target_url ?? action.target_label;
-  let origin: string | null = null;
-  try {
-    if (/^https?:\/\//iu.test(url)) origin = new URL(url).origin;
-  } catch {
-    origin = null;
-  }
-  if (origin) return <UrlText url={url} origin={origin} />;
-  return <span className="min-w-0 truncate">{readableUrl(action.target_label)}</span>;
-}
-
-/**
- * A row's Action cell: its title (the work and its target, one line, linked
- * to its Action, the whole target in the tooltip), its status beside it only
- * in the work queue and only when it is not Open (the queue is nearly all
- * Open), then a subline that tells the rows apart: the target, then the work
- * summary. Below the desktop breakpoint the Priority column folds into the
- * subline's start.
- */
-export function ActionTargetCell({
-  action,
-  status,
-}: Readonly<{
-  action: Action;
-  /** The list's status filter; undefined for the work queue. */
-  status: ActionStatus | undefined;
-}>) {
-  return (
-    <TableCell>
-      {/* Title over its caption, 4 apart, as `TableCellLines` binds them. */}
-      <Stack gap="tight" className="min-w-0">
-        <Inline className="min-w-0 flex-nowrap">
-          <ClampText rowTitle tooltip={actionTitle(action, { full: true })}>
-            <TextLink href={`/agent/actions/${action.id}`} text="body" underline="hover">
-              {actionTitle(action)}
-            </TextLink>
-          </ClampText>
-          {status === undefined && action.status !== 'open' ? (
-            <ActionStatusBadge status={action.status} />
-          ) : null}
-        </Inline>
-        <Inline gap="tight" className={textRole('caption', 'min-w-0 flex-nowrap')}>
-          <span className="desktop:hidden contents">
-            <ActionPriorityBadge band={action.priority_band} />
-          </span>
-          {NAMED_TARGETS.has(action.target_kind) ? (
-            <>
-              <span className="flex max-w-1/2 min-w-0 shrink-0">
-                <TargetName action={action} />
-              </span>
-              <span aria-hidden>·</span>
-            </>
-          ) : null}
-          <ClampText className="min-w-0 flex-1">{workSummary(action)}</ClampText>
-        </Inline>
-      </Stack>
-    </TableCell>
-  );
-}
-
-/**
- * The project's Actions as a cursor-paged table read, ordered by
- * deterministic priority. The cursor stack is local and resets whenever a
- * filter changes.
- */
-export function useActionTable({
-  workspaceId,
-  projectId,
-  query,
-  group,
-  noun,
-  empty,
-}: Readonly<{
-  workspaceId: string;
-  projectId: string;
-  query: ActionListQuery;
-  group?: ActionGroup;
-  /** What the rows are, plural ("Actions"). */
-  noun: string;
-  empty: (page: ActionsPage) => DataTableState;
-}>) {
-  return useCursorTableQuery({
-    workspaceId,
-    scopeId: projectId,
-    scope: [query, group],
-    query: (request) =>
-      actionsQueries.list({ workspaceId, projectId }, { ...query, group, ...request }),
-    noun,
-    loading: `Loading ${noun}…`,
-    subject: `the ${noun.toLowerCase()}`,
-    empty,
-  });
 }
