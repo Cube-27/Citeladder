@@ -200,11 +200,15 @@ function HolderDetail({
     >
       <ProductKpis detail={data} />
       {/* Each list takes the full row: beside the competing list, the short ones sat over a third empty. */}
-      {named ? <CompetingProducts detail={data} scope={scopeFilters} /> : null}
-      {named ? <Merchants detail={data} /> : null}
-      {named ? <SeenIn detail={data} scope={scopeFilters} /> : null}
-      {named ? <Sources detail={data} /> : null}
-      {named ? <FanOutQueries detail={data} /> : null}
+      {named ? (
+        <>
+          <CompetingProducts detail={data} scope={scopeFilters} />
+          <Merchants detail={data} />
+          <SeenIn detail={data} scope={scopeFilters} />
+          <Sources detail={data} />
+          <FanOutQueries detail={data} />
+        </>
+      ) : null}
       {named || data.prompts.length > 0 ? <PromptMetrics detail={data} /> : null}
       {named ? (
         <Answers detail={data} />
@@ -253,7 +257,7 @@ function ProductIdentity({
     <Section aria-label="Product">
       <Stack gap="workspace">
         <Inline gap="compact" className="flex-wrap items-center">
-          <Inline gap="item" className="min-w-0 flex-[1_1_16rem] items-center">
+          <Inline gap="item" className="min-w-0 flex-[1_1_20rem] items-center">
             <InfoHint label="About this product">
               {holderCaption(product)} · From {formatCount(detail.executions)}
               {detail.executions === 1 ? ' answer' : ' answers'} in the last {detail.window_days}{' '}

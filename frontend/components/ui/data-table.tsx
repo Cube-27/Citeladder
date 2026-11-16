@@ -405,47 +405,60 @@ function DataTableHeader({
   if (!title && !toolbar && !description && !actions) {
     return steppers ? <div className="flex justify-end px-4 pt-2">{steppers}</div> : null;
   }
+  const head = (
+    <>
+      <TitleRow title={title} headingId={headingId} level={level} toolbar={toolbar}>
+        {steppers}
+      </TitleRow>
+      {description ? (
+        <p data-data-table-description="" className="type-caption max-w-[72ch]">
+          {description}
+        </p>
+      ) : null}
+    </>
+  );
+  if (!actions) return <header className="grid min-w-0 gap-1 px-4 py-3">{head}</header>;
+  // As a section head: the switch sits level with the title, and wraps under the caption when narrow.
+  return (
+    <header className="flex flex-wrap items-start justify-between gap-2 px-4 py-3">
+      <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
+      <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
+    </header>
+  );
+}
+
+/** The title line: the heading, the toolbar beside it, then the steppers. */
+function TitleRow({
+  title,
+  headingId,
+  level,
+  toolbar,
+  children: steppers,
+}: Readonly<{
+  title?: string;
+  headingId: string;
+  level: 1 | 2 | 3;
+  toolbar?: FilterBarProps;
+  children: ReactNode;
+}>) {
   // The level a block in this place takes: h2 on the page, h3 inside a section.
   const Heading = level === 3 ? 'h3' : 'h2';
   return (
-    <header className={cn('min-w-0 px-4 py-3', actions && '@container')}>
-      <div
-        className={cn(
-          'grid min-w-0 gap-x-4 gap-y-1',
-          actions && '@[600px]:grid-cols-[minmax(0,1fr)_auto]',
-        )}
-      >
-        <div
-          data-data-table-header=""
-          className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
-        >
-          {title ? (
-            <Heading id={headingId} className={textRole('heading', 'min-w-0 shrink-0 truncate')}>
-              {title}
-            </Heading>
-          ) : null}
-          {toolbar ? (
-            <div className="min-w-0 flex-1">
-              <FilterBar {...toolbar} />
-            </div>
-          ) : null}
-          {steppers ? <div className={cn(!toolbar && 'rail:ms-auto')}>{steppers}</div> : null}
+    <div
+      data-data-table-header=""
+      className="rail:flex-row rail:items-center flex min-h-[var(--control-md)] min-w-0 flex-col items-stretch gap-2"
+    >
+      {title ? (
+        <Heading id={headingId} className={textRole('heading', 'min-w-0 shrink-0 truncate')}>
+          {title}
+        </Heading>
+      ) : null}
+      {toolbar ? (
+        <div className="min-w-0 flex-1">
+          <FilterBar {...toolbar} />
         </div>
-        {description ? (
-          <p
-            data-data-table-description=""
-            className="type-caption max-w-[72ch] @[600px]:col-start-1"
-          >
-            {description}
-          </p>
-        ) : null}
-        {/* Centred on the title row from a 600px card; under the caption below it. */}
-        {actions ? (
-          <div className="flex min-w-0 items-center gap-2 @[600px]:col-start-2 @[600px]:row-start-1">
-            {actions}
-          </div>
-        ) : null}
-      </div>
-    </header>
+      ) : null}
+      {steppers ? <div className={cn(!toolbar && 'rail:ms-auto')}>{steppers}</div> : null}
+    </div>
   );
 }

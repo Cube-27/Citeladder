@@ -38,8 +38,8 @@ it('distinguishes empty comparisons from unfetched data and opens the saved www 
   expect(
     within(other)
       .getAllByRole('cell')
-      .map((cell) => cell.colSpan),
-  ).toEqual([1, 4]);
+      .map((cell) => cell.getAttribute('colspan')),
+  ).toEqual([null, '4']);
   await userEvent.click(
     screen.getByRole('button', { name: 'No results Keywords they rank for and you don’t: rival' }),
   );
