@@ -7,6 +7,7 @@ import { readChat } from '../src/agent/reads.ts';
 import { agentTools } from '../src/agent/tool-adapters.ts';
 import { attachOrCreateAction } from '../src/opportunities/actions.ts';
 import { actionFixture, type ActionSeed } from './action-support.ts';
+import { actionRow } from './opportunity-fixtures.ts';
 import { AgentFixtures } from './agent-support.ts';
 import { sessionToken, testConfig, testDatabase } from './support.ts';
 
@@ -24,9 +25,15 @@ async function seed() {
   return s;
 }
 const actionId = (s: ActionSeed, rule: string) => s.actions[rule]!;
-async function request(s: ActionSeed, path: string) {
+async function request(s: ActionSeed, path: string, method = 'GET', body?: unknown) {
   const cookie = `${config.session.cookieName}=${await sessionToken({ sub: s.user_id, ver: 0 })}`;
-  return app.request(path, { headers: { cookie, 'x-workspace-id': s.workspace_id } });
+  const headers = { cookie, 'x-workspace-id': s.workspace_id };
+  if (body === undefined) return app.request(path, { method, headers });
+  return app.request(path, {
+    method,
+    headers: { ...headers, 'content-type': 'application/json', 'Idempotency-Key': randomUUID() },
+    body: JSON.stringify(body),
+  });
 }
 afterAll(async () => {
   for (const s of seeds) {
@@ -70,6 +77,40 @@ describe('Finding Actions by name', () => {
       ).json(),
     );
     expect(theirs.items.map((item) => item.id)).toEqual([actionId(foreign, promptRule)]);
+  });
+
+  it('never lists, counts, reads, changes or declares a leftover Action of a retired target kind', async () => {
+    const s = await seed();
+    // Site Health issue families were Actions until 2026-11-16; their rows may remain.
+    const retired = actionRow(
+      { workspace_id: s.workspace_id, project_id: s.project_id },
+      {
+        group_key: 'issue-family:web.viewport_meta',
+        target_kind: 'issue_family',
+        target_label: 'Missing viewport meta tag',
+        priority_score: 300,
+        cohort: '{}',
+      },
+    );
+    await db.insertInto('actions').values(retired).execute();
+    const list = `/api/v1/projects/${s.project_id}/actions`;
+    const page = actionsPageSchema.parse(await (await request(s, list)).json());
+    expect([page.items.map((item) => item.id).toSorted(), page.status_counts.open]).toEqual([
+      [...new Set(Object.values(s.actions))].toSorted(),
+      3,
+    ]);
+    const found = actionsPageSchema.parse(
+      await (await request(s, `${list}?q=viewport&status=any`)).json(),
+    );
+    expect(found.items).toEqual([]);
+    const path = `/api/v1/actions/${retired.id}`;
+    const declaredAt = new Date(Date.now() - 86_400_000).toISOString();
+    expect([
+      (await request(s, path)).status,
+      (await request(s, path, 'PATCH', { status: 'dismissed' })).status,
+      (await request(s, `${path}/declaration`, 'POST', { declared_implemented_at: declaredAt }))
+        .status,
+    ]).toEqual([404, 404, 404]);
   });
 
   it('lets the Agent find a measuring Action by name with read_actions and search, only in its project', async () => {

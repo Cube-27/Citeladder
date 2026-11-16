@@ -104,40 +104,6 @@ describe('Action routes', () => {
     expect(detail.members.map((member) => member.id)).toEqual([s.members[pageRule]]);
   });
 
-  it('never lists, counts, reads, changes or declares a leftover Action of a retired target kind', async () => {
-    const s = await seed();
-    // Site Health issue families were Actions until 2026-11-16; their rows may remain.
-    const retired = actionRow(
-      { workspace_id: s.workspace_id, project_id: s.project_id },
-      {
-        group_key: 'issue-family:web.viewport_meta',
-        target_kind: 'issue_family',
-        target_label: 'Missing viewport meta tag',
-        priority_score: 300,
-        cohort: '{}',
-      },
-    );
-    await db.insertInto('actions').values(retired).execute();
-    const page = await pageBody(await request(s, `/api/v1/projects/${s.project_id}/actions`));
-    expect([page.items.map((item) => item.id).toSorted(), page.status_counts.open]).toEqual([
-      [...new Set(Object.values(s.actions))].toSorted(),
-      3,
-    ]);
-    expect((await request(s, `/api/v1/actions/${retired.id}`)).status).toBe(404);
-    const dismissed = await request(s, `/api/v1/actions/${retired.id}`, 'PATCH', {
-      status: 'dismissed',
-    });
-    expect(dismissed.status).toBe(404);
-    const declared = await request(
-      s,
-      `/api/v1/actions/${retired.id}/declaration`,
-      'POST',
-      { declared_implemented_at: boundary },
-      'retired',
-    );
-    expect(declared.status).toBe(404);
-  });
-
   it('returns the persisted handoff message on the list and the detail, or one about the label', async () => {
     const s = await seed();
     const list = `/api/v1/projects/${s.project_id}/actions`;
