@@ -187,7 +187,7 @@ function useIssueFamilyBrief(action: ActionDetail, workspaceId: string): IssueFa
   return issueFamilyBrief({
     cohort,
     grouping: action.grouping,
-    fix: action.summary,
+    fix: action.summary ?? action.members[0]?.remediation ?? null,
     issue: loaded,
   });
 }

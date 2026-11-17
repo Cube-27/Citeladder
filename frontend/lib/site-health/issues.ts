@@ -97,9 +97,18 @@ export function issueTitle(issue: { title: string; rule_id: string }): string {
 
 /** A rule's fix split into its sentences, so each reads as one step of advice. */
 export function sentences(text: string): string[] {
-  return (text.trim().match(/[\s\S]*?[.!?](?=\s|$)|[\s\S]+$/gu) ?? [])
-    .map((part) => part.trim())
-    .filter(Boolean);
+  const source = text.trim();
+  const found: string[] = [];
+  let start = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    const next = source[index + 1] ?? ' ';
+    if ('.!?'.includes(source[index] ?? '') && next.trim() === '') {
+      found.push(source.slice(start, index + 1).trim());
+      start = index + 1;
+    }
+  }
+  found.push(source.slice(start).trim());
+  return found.filter(Boolean);
 }
 
 /** The first sentence of a rule's fix, so a priority line stays one line of advice. */
