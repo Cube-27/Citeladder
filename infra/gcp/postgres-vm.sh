@@ -121,6 +121,9 @@ docker exec -i citeladder-postgres sh -c \
   'ROLE_PASSWORD="$(cat /run/citeladder/db-password)" psql -q -v ON_ERROR_STOP=1 -U citeladder -d citeladder' \
   >/dev/null <<'SQL'
 \getenv password ROLE_PASSWORD
+-- psql interpolates the value into the statement text: never log it, slow or failed.
+SET log_min_duration_statement = -1;
+SET log_min_error_statement = panic;
 ALTER ROLE citeladder PASSWORD :'password';
 SQL
 # Statement statistics need the preload above and a superuser. Their own schema
