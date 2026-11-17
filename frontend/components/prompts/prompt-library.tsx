@@ -17,9 +17,11 @@ import { topicsQueries } from '@/lib/api/topics';
 import type { Prompt, PromptStatus, Topic } from '@citeladder/contracts';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
+  brandOptions,
   emptyFilters,
   filterPrompts,
   personaOptions,
+  sourceOptions,
   type PromptFilters,
 } from '@/lib/prompts/filter';
 import {
@@ -281,10 +283,17 @@ export function PromptLibrary({
     [byStatus, selectedTopicId],
   );
   const visible = useMemo(
-    () => filterPrompts(byTopic, search, filters),
-    [byTopic, search, filters],
+    () => filterPrompts({ prompts: byTopic, search, filters, mentions: measurements }),
+    [byTopic, search, filters, measurements],
   );
   const personas = useMemo(() => personaOptions(prompts), [prompts]);
+  const measuredChoices = useMemo(
+    () =>
+      measurements?.size
+        ? { brands: brandOptions(project), sources: sourceOptions(measurements.values()) }
+        : undefined,
+    [measurements, project],
+  );
 
   const statusCounts = useMemo(() => {
     const counts: Record<PromptStatus, number> = { active: 0, archived: 0 };
@@ -360,7 +369,7 @@ export function PromptLibrary({
   if (awaitingFirstLoad({ promptsLoading: isLoading, hasPrompts, figuresRead })) {
     return (
       <ReportPage filters={<FilterBar />}>
-        <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 7 }} />
+        <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
       </ReportPage>
     );
   }
@@ -377,6 +386,7 @@ export function PromptLibrary({
           filters,
           onFiltersChange: setFilters,
           personas,
+          measured: measuredChoices,
           topic: topicFilter({
             topics,
             selectedTopicId,

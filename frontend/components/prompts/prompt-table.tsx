@@ -14,7 +14,10 @@ import { Absence } from '@/components/ui/absence';
 import { NamedBrandMarks } from '@/components/visibility/named-brand-marks';
 import type { NamedBrand, Prompt, PromptStatus } from '@citeladder/contracts';
 import { ICONS } from '@/lib/icons';
+import type { PromptMentions } from '@/lib/prompts/filter';
 import { promptHistoryHref } from '@/lib/prompts/history';
+
+import { CitedDomainMarks } from './cited-domain-marks';
 import { formatPosition, formatPositionExact, formatRate } from '@/lib/visibility/dashboard';
 
 /**
@@ -28,7 +31,7 @@ export type PromptChange =
   | { kind: 'not_compared'; reason: 'changed_context' | 'no_observations' };
 
 /** What the run that last measured a prompt found, keyed by prompt id. */
-export type PromptMeasurement = {
+export type PromptMeasurement = PromptMentions & {
   visibilityRate: number | null;
   /** Answers citing an owned page, over the prompt's successful answers. */
   ownedCitationRate: number | null;
@@ -285,6 +288,12 @@ const MEASURED_COLUMNS: readonly DataTableColumn[] = [
     hint: "The share of this prompt's answers that cited one of your pages.",
   },
   {
+    key: 'sources',
+    label: 'Sources',
+    width: 'status',
+    hint: "The sites this prompt's answers cited, most citations first.",
+  },
+  {
     key: 'position',
     label: 'Position',
     width: 'figure',
@@ -331,6 +340,15 @@ function MeasuredCells({
       </TableCell>
       <TableCell numeric>
         {measurement ? formatRate(measurement.ownedCitationRate) : <Absence state="not_measured" />}
+      </TableCell>
+      <TableCell>
+        {measurement ? (
+          <CitedDomainMarks
+            sources={measurement.visibilityRate === null ? null : measurement.sources}
+          />
+        ) : (
+          <Absence state="not_measured" />
+        )}
       </TableCell>
       <TableCell numeric>
         {measurement?.position == null ? (

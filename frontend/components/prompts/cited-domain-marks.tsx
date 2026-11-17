@@ -1,0 +1,44 @@
+import type { CitedDomain } from '@citeladder/contracts';
+
+import { Absence } from '@/components/ui/absence';
+import { BrandMark } from '@/components/ui/brand-mark';
+import { Inline } from '@/components/ui/layout';
+import { Pressable } from '@/components/ui/pressable';
+import { Tooltip } from '@/components/ui/tooltip';
+import { textRole } from '@/components/ui/typography';
+import { leadingSources } from '@/lib/prompts/filter';
+
+/**
+ * The sites a prompt's answers cited, as their favicons, most citations first;
+ * each names its domain and citations on hover or focus. `null` is a prompt
+ * with no completed answer, which could cite nothing: unknown, not none.
+ */
+export function CitedDomainMarks({
+  sources,
+}: Readonly<{ sources: readonly CitedDomain[] | null }>) {
+  if (sources === null) return <Absence narrow state="unavailable" label="No completed answers" />;
+  if (!sources.length) return <Absence state="none" />;
+  const { shown, more } = leadingSources(sources);
+  return (
+    <Inline as="span" gap="tight">
+      {shown.map(({ domain, citations, owned }) => (
+        <Tooltip
+          key={domain}
+          content={`${domain}${owned ? ' (yours)' : ''}: ${citations} ${citations === 1 ? 'citation' : 'citations'}`}
+        >
+          {/* Focusable so the name and count reach the keyboard too. */}
+          <Pressable className="inline-flex w-auto">
+            <span className="sr-only">{domain}</span>
+            <BrandMark name={domain} websiteUrl={`https://${domain}`} placement="inline" />
+          </Pressable>
+        </Tooltip>
+      ))}
+      {more > 0 ? (
+        <span className={textRole('caption', 'text-ink-2 tabular-nums')}>
+          +{more}
+          <span className="sr-only"> more</span>
+        </span>
+      ) : null}
+    </Inline>
+  );
+}

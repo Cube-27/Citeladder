@@ -111,6 +111,7 @@ describe('PromptLibrary first load', () => {
       'Visibility',
       expect.stringMatching(/^Mentions/),
       expect.stringMatching(/^Citations/),
+      expect.stringMatching(/^Sources/),
       expect.stringMatching(/^Position/),
       'Change',
       'Enabled',

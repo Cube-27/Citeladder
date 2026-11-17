@@ -407,7 +407,8 @@ set in the project, with adds going to the main brand set
 ([decision](decisions.md#one-prompt-library-across-every-prompt-set)); a row
 names its set when the project has more than one.
 Active/Archived, search and
-All filters (Topic first, then intent, stage, persona, enabled, branded) sit in one
+All filters (Topic first, then intent, stage, persona, brands, sources, enabled,
+branded) sit in one
 control row over the full-width
 table with each prompt's topic tag, latest measured visibility and owned
 citation rate. Those figures come from `GET /visibility/prompts?latest=prompt`
@@ -421,7 +422,12 @@ it: a first measurement reads Not applicable, and a pair whose frozen
 comparison key, text, versions or answers do not allow it reads Unknown, never
 zero. Commerce runs write no per-prompt scores, so a Commerce prompt has no
 figures here. Source: owner, 15 November 2026, choosing "Show every group" and
-Change "Vs its previous measurement". A prompt's question opens its detail view (below). Its actions are
+Change "Vs its previous measurement". The same read carries every brand named
+and every domain cited in that measurement's answers, from the persisted
+mentions and citations: the Sources column and the Brands and Sources filters
+(owner, 17 November 2026) read only them, so a prompt no run measured matches
+neither filter, and one with no completed answer shows its sources as unknown,
+not none. A prompt's question opens its detail view (below). Its actions are
 Bulk upload, Prompt Builder, Add prompt and **Launch audit**, which reuses the
 shared launch dialog and its admission/funding checks and stays disabled until
 the project has an active prompt. `/prompts?generate=1` opens the Prompt

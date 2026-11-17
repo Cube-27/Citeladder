@@ -2573,6 +2573,24 @@
         "type": "string",
         "enum": ["", "awareness", "consideration", "decision", "implementation"]
       },
+      "CitedDomain": {
+        "type": "object",
+        "properties": {
+          "domain": {
+            "type": "string"
+          },
+          "citations": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "owned": {
+            "type": "boolean"
+          }
+        },
+        "required": ["domain", "citations", "owned"],
+        "additionalProperties": false
+      },
       "Competitor": {
         "type": "object",
         "properties": {
@@ -5991,6 +6009,29 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/NamedBrand"
+            }
+          },
+          "named": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": ["brand", "competitor"]
+                },
+                "name": {
+                  "type": "string"
+                }
+              },
+              "required": ["kind", "name"],
+              "additionalProperties": false
+            }
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CitedDomain"
             }
           },
           "outcomes": {

@@ -28,7 +28,8 @@ const PROMPT_STATUSES: readonly { value: PromptStatus; label: string }[] = [
 /**
  * The prompt library's control row: the Active / Archived view, the
  * search, then every filter in All filters: Topic first, then Intent, Buyer
- * stage, Persona (when the library has any), Enabled and Branded.
+ * stage, Persona (when the library has any), Brands and Sources (once a run
+ * has measured the prompts), Enabled and Branded.
  * Presentational; state lives in the page.
  */
 /** The two single choices share a vocabulary but not their wording. */
@@ -66,6 +67,46 @@ function singleChoice(
   });
 }
 
+type FilterChoice = Readonly<{ value: string; label: string }>;
+type MeasuredChoices = Readonly<{
+  brands: readonly FilterChoice[];
+  sources: readonly FilterChoice[];
+}>;
+
+/** Brands and Sources: what the prompts' latest answers named and cited. */
+function measuredFilters({
+  choices: { brands, sources },
+  filters,
+  onFiltersChange,
+}: Readonly<{
+  choices: MeasuredChoices;
+  filters: PromptFilters;
+  onFiltersChange: (filters: PromptFilters) => void;
+}>): FilterDefinition[] {
+  return [
+    manyFilter({
+      id: 'brands',
+      label: 'Brands',
+      allLabel: 'All brands',
+      values: filters.brands,
+      options: brands,
+      onChange: (next) => onFiltersChange({ ...filters, brands: next }),
+    }),
+    ...(sources.length
+      ? [
+          manyFilter({
+            id: 'sources',
+            label: 'Sources',
+            allLabel: 'All sources',
+            values: filters.sources,
+            options: sources,
+            onChange: (next) => onFiltersChange({ ...filters, sources: next }),
+          }),
+        ]
+      : []),
+  ];
+}
+
 export function promptFilterControls({
   status,
   search,
@@ -73,6 +114,7 @@ export function promptFilterControls({
   filters,
   onFiltersChange,
   personas = [],
+  measured,
   topic,
 }: Readonly<{
   /** Active / Archived, with the number of prompts in each. */
@@ -87,6 +129,8 @@ export function promptFilterControls({
   onFiltersChange: (filters: PromptFilters) => void;
   /** The personas the library uses; the menu lists them when there are any. */
   personas?: readonly string[];
+  /** The Brands and Sources choices, once a run has measured the prompts. */
+  measured?: MeasuredChoices;
   /** The Topic filter (`topicFilter`), first in All filters. */
   topic?: FilterDefinition;
 }>): FilterBarProps {
@@ -141,6 +185,7 @@ export function promptFilterControls({
             }),
           ]
         : []),
+      ...(measured ? measuredFilters({ choices: measured, filters, onFiltersChange }) : []),
       singleChoice('enabled', 'Enabled', ENABLED_FILTER_LABEL, filters.enabled, (enabled) =>
         onFiltersChange({ ...filters, enabled }),
       ),

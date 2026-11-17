@@ -12,6 +12,7 @@ import type { Database } from '../db/database.ts';
 import { groupBy } from '../lists.ts';
 import { round2 } from './metrics.ts';
 import { enrichedRows, promptItems, type PromptMetricItem, type PromptRow } from './prompts.ts';
+import { attachNamedAndSources } from './prompt-sources.ts';
 import { marketOf, type RunScope } from './runs.ts';
 import { TrendQueryError } from './selection.ts';
 
@@ -116,5 +117,6 @@ export async function getLatestPromptMetrics(
     Object.assign(row.item, change({ current, previous, now: row.item, before }));
     latest.push(row);
   }
+  await attachNamedAndSources(db, scope, latest);
   return promptItems(db, scope, latest);
 }

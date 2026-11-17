@@ -217,11 +217,41 @@ describe('GET /visibility/prompts', () => {
       [newer, 'cheap crm'],
       [older, 'best crm'],
     ]);
+    // Two more answers to the older prompt in its latest run: what they cite
+    // and name is counted across both, most citations first.
+    const cited = (domain: string, path = '') => ({ url: `https://${domain}/${path}`, domain });
+    await fixtures.execution(tenant, {
+      auditId: third,
+      promptIndex: 1,
+      promptText: 'best crm',
+      repetition: 1,
+      analysis: {
+        citations: [cited('g2.com', 'a'), cited('g2.com', 'b'), cited('capterra.com')],
+        competitorMentions: ['Rival'],
+      },
+    });
+    await fixtures.execution(tenant, {
+      auditId: third,
+      promptIndex: 1,
+      promptText: 'best crm',
+      repetition: 2,
+      analysis: {
+        citations: [{ ...cited('acme.com'), isOwned: true }, cited('g2.com')],
+        brandMentions: ['Acme'],
+      },
+    });
     // Another workspace's later run never reaches this project's library.
     const foreignSet = await promptSet(db, outsider.projectId);
-    await run(outsider, '2026-03-23', [
+    const foreign = await run(outsider, '2026-03-23', [
       [await trackedPrompt(db, foreignSet, 'best crm'), 'best crm'],
     ]);
+    await fixtures.execution(outsider, {
+      auditId: foreign,
+      promptIndex: 0,
+      promptText: 'best crm',
+      repetition: 1,
+      analysis: { citations: [cited('g2.com')], competitorMentions: ['Rival'] },
+    });
 
     const { status, body } = await get(tenant, route(tenant, '/prompts'), { latest: 'prompt' });
 
@@ -246,6 +276,21 @@ describe('GET /visibility/prompts', () => {
       [first, 'brand_diagnostic', 0, null, 'no_baseline'],
     ]);
     expect(body).toHaveLength(3);
+    const olderItem = byPrompt.get(older)!;
+    expect(olderItem.sources).toEqual([
+      { domain: 'g2.com', citations: 3, owned: false },
+      { domain: 'acme.com', citations: 1, owned: true },
+      { domain: 'capterra.com', citations: 1, owned: false },
+    ]);
+    expect(olderItem.named).toHaveLength(2);
+    expect(olderItem.named).toEqual(
+      expect.arrayContaining([
+        { kind: 'brand', name: 'Acme' },
+        { kind: 'competitor', name: 'Rival' },
+      ]),
+    );
+    // Answered with nothing cited or named: an empty list, a finding.
+    expect([byPrompt.get(newer)!.sources, byPrompt.get(newer)!.named]).toEqual([[], []]);
     // The default read is still the latest run alone, and headline cohorts stay core.
     const latestRun = await get(tenant, route(tenant, '/prompts'));
     expect(latestRun.body.map((item) => [item.prompt_id, item.audit_id])).toEqual([
