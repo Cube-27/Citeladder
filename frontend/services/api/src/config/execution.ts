@@ -33,10 +33,16 @@ const runnerTailMs = 600_000;
 
 const defaults = {
   drainLockWaitMs: 15_000,
-  // A handover successor may arrive a whole lead early, then waits out the tail.
-  handoverLockWaitMs: handoverLeadMs + runnerTailMs,
   drainLockPollMs: 250,
 };
+
+/**
+ * How long a later execution waits for an active drain before leaving it the
+ * work. A handover successor may arrive a whole lead early, then waits out the
+ * predecessor's in-flight tail.
+ */
+const drainLockWaitMs = (handover: boolean) =>
+  handover ? handoverLeadMs + runnerTailMs : defaults.drainLockWaitMs;
 
 const integer = (name: string, value: number, maximum: number): SettingSpec => ({
   env: [name],
@@ -115,9 +121,7 @@ export function executionSettings(source: SettingSource) {
     protectOrigin,
     originToken,
     previousOriginToken,
-    // How long a later execution waits for an active drain before leaving it the
-    // work; a handover successor waits for its predecessor's in-flight tail.
-    drainLockWaitMs: setting('handover') ? defaults.handoverLockWaitMs : defaults.drainLockWaitMs,
+    drainLockWaitMs: drainLockWaitMs(setting('handover') === true),
     drainLockPollMs: defaults.drainLockPollMs,
     budgetSeconds: setting('budget_seconds') as number,
     poolSize: setting('pool_size') as number,
