@@ -360,10 +360,9 @@
 :root {
   color-scheme: light;
 
-  /* The three type weights; the app's dark lowers them (see its block). */
+  /* The app's two type weights; its dark lowers them (see its block). */
   --weight-regular: 400;
   --weight-medium: 500;
-  --weight-semibold: 600;
 
   /* Depth. The app has three shadows, one per elevation (card, pop, sheet;
      bound in its own block below); edge is the faint smudge under a field's
@@ -535,10 +534,9 @@
      each type role and font utility takes the dark weight of its light one. */
   --weight-regular: 350;
   --weight-medium: 450;
-  --weight-semibold: 550;
   --font-weight-normal: var(--weight-regular);
   --font-weight-medium: var(--weight-medium);
-  --font-weight-semibold: var(--weight-semibold);
+  --font-weight-semibold: var(--weight-medium);
   --text-display-lg--font-weight: var(--weight-regular);
   --text-display-md--font-weight: var(--weight-regular);
   --text-display-sm--font-weight: var(--weight-medium);
@@ -552,18 +550,18 @@
   --text-body-sm--font-weight: var(--weight-regular);
   --text-label--font-weight: var(--weight-medium);
   --text-label-lg--font-weight: var(--weight-medium);
-  --text-heading--font-weight: var(--weight-semibold);
+  --text-heading--font-weight: var(--weight-medium);
   --text-heading-lg--font-weight: var(--weight-medium);
   --text-caption--font-weight: var(--weight-regular);
   --text-eyebrow--font-weight: var(--weight-medium);
   --text-data--font-weight: var(--weight-regular);
   --text-code--font-weight: var(--weight-regular);
   --text-display--font-weight: var(--weight-medium);
-  --text-subheading--font-weight: var(--weight-semibold);
+  --text-subheading--font-weight: var(--weight-medium);
   --text-prose--font-weight: var(--weight-regular);
   --text-screen-label--font-weight: var(--weight-medium);
-  --text-figure-xl--font-weight: var(--weight-semibold);
-  --text-figure--font-weight: var(--weight-semibold);
+  --text-figure-xl--font-weight: var(--weight-medium);
+  --text-figure--font-weight: var(--weight-medium);
   --text-data-sm--font-weight: var(--weight-regular);
 }
 
@@ -706,20 +704,21 @@
   --color-info-soft: var(--color-info-wash);
 
   /* Type (2.1): eight sizes (12 13 14 16 20 24 28 32), one line height each;
-     weights 400, 500 and 600. Numbers are the sans face's tabular numerals.
-     The page title is the display face at 20/28 400. */
+     weights 400 and 500, never 600. Numbers are the sans face's tabular
+     numerals. The page title is the display face at 20/28 400. */
   --text-title: 1.25rem;
   --text-title--line-height: 1.75rem;
   --text-title--font-weight: 400;
   --text-heading: 1rem;
   --text-heading--line-height: 1.5rem;
-  --text-heading--font-weight: 600;
+  --text-heading--font-weight: 500;
+  --text-subheading--font-weight: 500;
   --text-figure-xl: 2rem;
   --text-figure-xl--line-height: 2.5rem;
-  --text-figure-xl--font-weight: 600;
+  --text-figure-xl--font-weight: 500;
   --text-figure: 1.5rem;
   --text-figure--line-height: 2rem;
-  --text-figure--font-weight: 600;
+  --text-figure--font-weight: 500;
   --text-code: 0.8125rem;
   --text-code--line-height: 1.25rem;
 
