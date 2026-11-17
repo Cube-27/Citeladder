@@ -17,11 +17,11 @@ const TAG_SHAPE =
 const TAG_STATIC = cn(TAG_SHAPE, 'bg-well border-transparent text-ink-2');
 
 /**
- * A tag you can operate (a link, a remove, an expander): `surface` with the
+ * A tag you can operate (a link, a remove, an expander): `control-fill` with the
  * soft control edge and shadow, `ink` text, the 6% ink hover. A link tag ends
  * in a 12px arrow (`ArrowRight` for an app route).
  */
-const OPERABLE_FACE = cn(TAG_SHAPE, 'bg-surface border-control-edge shadow-control text-ink');
+const OPERABLE_FACE = cn(TAG_SHAPE, 'bg-control-fill border-control-edge shadow-control text-ink');
 const TAG_OPERABLE = cn(OPERABLE_FACE, 'hover:overlay-hover');
 
 /**

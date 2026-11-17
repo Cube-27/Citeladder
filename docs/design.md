@@ -76,6 +76,7 @@ colors:
   chart-grid: '#ececec' # dark '#262626'
   chrome: '#f4f4f4' # dark '#0a0a0a'
   control-edge: '#e5e5e5' # dark '#2a2a2a'
+  control-fill: '#ffffff' # dark '#151515'
   control-line: '#858585' # dark '#747474'
   data-other: '#c2c2c2' # dark '#4a4a4a'
   data-rival-1: '#111111' # dark '#f4f4f4'
@@ -125,17 +126,24 @@ colors:
 
 <!-- generated:tokens:end -->
 
-- **App roles.** Fills: `ground` (the page), `surface` (slips, fields),
-  `well` (sunken material, a chart's gap band, the selected state) and
-  `raised` (sheets). Lines: `rule` (hairlines between rows inside a card
-  and on chrome edges), `control-line` (3:1: anything you can operate,
-  dashed draft edges). Text: `ink` for what is read first (and the
-  primary button's fill, labelled `on-ink`), `ink-2` for what supports it;
-  there is no third grey. Neutrals are slightly warm. Dark is designed, not
-  inverted: a warm near-black ground, sheets lighter than it, wells darker.
-- **States are ink overlays:** hover `state-hover` (6%), pressed
-  `state-pressed` (10%); selected is the `well` tint plus a mark that is
-  not colour (the checked control, a check glyph).
+- **App roles.** Fills: `ground` (the page), `chrome` (sidebar and
+  masthead, a step lighter than the ground), `surface` (cards, slips,
+  fields), `raised` (sheets), `well` (sunken material, a chart's gap band,
+  the selected state) and `control-fill` (secondary buttons, selects, search
+  and filter fields, operable tags). Lines: `rule` (dividers between rows
+  inside a surface and on chrome edges), `control-edge` (the soft edge of a
+  labelled control or clickable card), `control-line` (3:1: text fields,
+  checkboxes, radios, dashed draft edges). Text: `ink` for what is read first
+  (and the primary button's fill, labelled `on-ink`), `ink-2` for what
+  supports it; there is no third grey. Dark is designed, not inverted:
+  Linear's near-blacks (ground #121213, chrome #161617, surface #1a1a1b,
+  raised #1f1f21, well and `control-fill` #232325, rule #252526,
+  `control-edge` #2f3033), each layer a step lighter than the one beneath.
+  The shell keeps our structure: the chrome is lighter than the ground,
+  never a darker frame around an inset page.
+- **States are ink overlays:** hover `state-hover`, pressed `state-pressed`
+  (light 6% and 10%, dark 4% and 8%); selected is the `well` tint plus a
+  mark that is not colour (the checked control, a check glyph).
 - **Status:** `positive`, `negative` (crimson, far from the accent's hue),
   `warning` (ochre) and `info`, each with a `-wash`. They appear only in a
   StatusMark, a Delta, a Notice or a validation message, always beside a glyph
@@ -305,18 +313,26 @@ the viewport), so content shrinking near the bottom never pulls the scroll.
 
 ## Elevation & Depth
 
+- **Flat surfaces, not borders (owner, 2026-11-17).** In both themes a
+  surface nobody clicks (a card, a section, a DataTable, a slip, a well, a
+  stat or score card, a StateBlock, the setup, flow and notice cards, the
+  Details card, a box of rows) has no outer border: it reads as a fill one
+  step above the ground, with `shadow-card` in light (none in dark).
+  Anything clickable keeps its edge: fields, selects, buttons, segmented
+  controls, checkboxes, and clickable cards (`IconCard`, a pressable figure),
+  which also take the hover overlay. Dividers between rows inside a surface
+  stay, in `rule`. Floating sheets keep their hairline.
 - **The app has four containers and no others.** A **Section** is a card
   (`surface`, `rounded-card`, `shadow-card`) with an `h2` title; it is the
-  default grouping and never holds another card. A **Slip** (`surface`, a `rule`
-  hairline, radius 4) is one object you can act on. A **Well** (`well`,
-  radius 4, no edge) holds quoted or raw material. A **Sheet** (`raised`, a
-  hairline, radius 8, `shadow-sheet`) is anything that floats; a modal sheet
-  also sits on the `scrim`.
+  default grouping and never holds another card. A **Slip** (`surface`,
+  `rounded-card`, `shadow-card`) is one object you can act on. A **Well**
+  (`well`, radius 6) holds quoted or raw material. A **Sheet** (`raised`, a
+  hairline, radius 8 or 12, `shadow-pop` or `shadow-sheet`) is anything that
+  floats; a modal sheet also sits on the `scrim`.
 - **Boxes are at most two deep** and a slip never holds a slip. To separate a
   group, add the missing divider; never wrap a section in a box.
-- **`shadow-sheet` is the app's only shadow**, and nothing at rest has one.
-  Every sheet keeps two separation cues in each theme: the hairline and the
-  shadow in light, the lighter `raised` fill and the hairline in dark.
+- **Every sheet keeps two separation cues in each theme:** the hairline and
+  the shadow in light, the lighter `raised` fill and the hairline in dark.
 - **The website and docs are flat.** Panels are one flat neutral fill
   with no border or shadow; a product image's screen is edged by a `line`
   hairline ring. Buttons have no sheen, press shadow or press nudge.
@@ -357,16 +373,17 @@ its own spacing, size or radius on them.
 - **Buttons:** a look follows the kind of action, never the page. Primary
   (ink fill) is the one action a view exists for, and lives only in the
   masthead's primary slot or last in a sheet or form footer. Every other
-  action is secondary (`surface`, `control-line`), quiet (no edge), danger,
+  action is secondary (`control-fill`, `control-edge`), quiet (no edge), danger,
   or a link. Controls in one row share one height.
-- **Fields** (input, search, select, textarea): `surface`, a 1px
-  `control-line` edge, radius 4, label above and help below. Focused, a
+- **Fields** (input, textarea): `surface`, a 1px `control-line` edge
+  (3:1, since an empty field has no words to name it), label above and help
+  below; search and select fields take `control-fill` and `control-edge`. Focused, a
   field takes the same ring as everything else and nothing more. Invalid, its
   edge is `negative` and the error sentence below carries a glyph and is
   linked by `aria-describedby`; focus keeps that crimson edge inside the ring.
   Website fields instead thicken their edge to a 2px `focus` line in a 3px
   halo.
-- **Tag** (24, radius 2): a solid `control-line` edge means you can operate
+- **Tag** (24, radius 4): a solid `control-edge` means you can operate
   it (a record link, a removable filter); a static tag has a `well` fill and
   no edge; a draft tag is dashed.
 - **StatusMark** is the only way to show a status, priority or severity: a

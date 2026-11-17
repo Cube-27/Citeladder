@@ -5,15 +5,15 @@ import { cn } from '@/lib/utils';
  * section a slip steps down to an inset (globals.css).
  *
  *   Slip  — one actionable object (an Action in a queue, an integration, a
- *           plan, a widget): a card, `surface`, a 1px `rule` edge, the card
- *           radius and `shadow-card`. A card that opens on click is an
- *           `IconCard` (icon-card.tsx).
+ *           plan, a widget): a card, `surface`, no edge, the card radius and
+ *           `shadow-card`. A card that opens on click is an `IconCard`
+ *           (icon-card.tsx), which adds the `control-edge`.
  *   Well  — quoted or raw material (an answer passage, code, a fact list in a
  *           drawer, a fieldset): `well`, the control radius, no edge.
  *   Sheet — anything that floats: `raised`, a 1px `rule` edge, its radius
  *           and shadow (`SHEET_FACE` modal, `POP_FACE` small).
  */
-export const SLIP_FACE = 'bg-surface text-ink border-rule rounded-card shadow-card border';
+export const SLIP_FACE = 'bg-surface text-ink rounded-card shadow-card';
 
 /** A slip, for a semantic element that is not a `div` (a list item, a fieldset). */
 export function slipClasses(className?: string) {

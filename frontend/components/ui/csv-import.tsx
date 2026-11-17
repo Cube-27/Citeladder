@@ -110,7 +110,7 @@ export function CsvImportPreview({
           </StatusMark>
         ) : null}
       </div>
-      <div className="border-rule rounded-control max-h-85 overflow-auto border">{children}</div>
+      <div className="rounded-control max-h-85 overflow-auto">{children}</div>
     </div>
   );
 }

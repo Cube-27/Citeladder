@@ -7,7 +7,7 @@ import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
 
 /**
- * Rows that each open a page, in one bordered box: 48px each on fixed
+ * Rows that each open a page, in one surface box: 48px each on fixed
  * columns (an optional tick, the name, two 96px facts, a chevron), so no row
  * moves another; a "Show more" (`WorkRowsMore`) closes the box.
  */
@@ -19,7 +19,7 @@ export function LinkRows({
   more,
 }: Readonly<{ label: string; children: ReactNode; more?: ReactNode }>) {
   return (
-    <div className="border-rule bg-surface rounded-card overflow-hidden border">
+    <div className="bg-surface rounded-card shadow-card overflow-hidden">
       <ul aria-label={label} className="divide-rule divide-y">
         {children}
       </ul>

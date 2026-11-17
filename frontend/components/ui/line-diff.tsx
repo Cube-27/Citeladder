@@ -24,10 +24,7 @@ export function LineDiff({
   return (
     <ol
       aria-label={label}
-      className={textRole(
-        'caption',
-        'border-rule grid overflow-x-auto rounded-control border font-mono',
-      )}
+      className={textRole('caption', 'bg-well grid overflow-x-auto rounded-control font-mono')}
     >
       {keyedLines.map((line) => {
         const style = DIFF_LINE[line.kind];

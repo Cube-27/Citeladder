@@ -90,7 +90,7 @@ export function DetailsCard({ facts }: Readonly<{ facts: readonly DetailFact[] }
   return (
     <section
       aria-labelledby={id}
-      className="border-rule rounded-card mt-6 flex flex-col gap-3 border px-4 py-4"
+      className="bg-surface rounded-card shadow-card mt-6 flex flex-col gap-3 px-4 py-4"
     >
       <h2 id={id} className={textRole('label')}>
         Details

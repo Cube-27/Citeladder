@@ -331,7 +331,15 @@
           "light": "{line}",
           "dark": "{line}"
         },
-        "usage": "The soft edge of a control its visible words name: secondary and danger buttons, link-buttons, operable tags, menu triggers, pagers, with shadow-control under it. No 3:1 needed (WCAG 1.4.11). The website aliases its own role here; the app binds #d5d8df light and #3c3c3c dark."
+        "usage": "The soft edge of a control its visible words name: secondary and danger buttons, link-buttons, operable tags, menu triggers, pagers, search and filter fields, clickable cards, with shadow-control under it. No 3:1 needed (WCAG 1.4.11). The website aliases its own role here; the app binds #d5d8df light and #2f3033 dark."
+      },
+      {
+        "name": "control-fill",
+        "value": {
+          "light": "{surface}",
+          "dark": "{surface}"
+        },
+        "usage": "The fill of a labelled control: secondary and danger buttons, selects, search and filter fields, operable tags. The website aliases the surface; the app's dark binds the well."
       },
       {
         "name": "ink-2",

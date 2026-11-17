@@ -14,7 +14,7 @@ export function ProductImage({ src }: Readonly<{ src: string }>) {
   const [failed, setFailed] = useState(false);
   if (failed) return null;
   return (
-    <span className="bg-well border-rule rounded-control grid size-20 shrink-0 place-items-center overflow-hidden border">
+    <span className="bg-well rounded-control grid size-20 shrink-0 place-items-center overflow-hidden">
       <img
         src={src}
         alt=""

@@ -61,7 +61,7 @@ export function RouteLoadingScreen() {
   }
 }
 
-const CARD = 'bg-surface border-rule rounded-card shadow-card min-w-0 border';
+const CARD = 'bg-surface rounded-card shadow-card min-w-0';
 
 /** A shape on its card; figures are their own cards, and a thread sits on the page. */
 function ShapeCard({ shape }: Readonly<{ shape: LoadingShape }>) {

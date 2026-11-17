@@ -62,7 +62,7 @@ function NoticeBlock({
   return (
     <section
       data-notice-tone={tone}
-      className="bg-surface border-rule rounded-card shadow-card flex w-full flex-col gap-4 border p-[var(--page-top-gap)]"
+      className="bg-surface rounded-card shadow-card flex w-full flex-col gap-4 p-[var(--page-top-gap)]"
     >
       {label === null ? null : <p className={textRole('captionStrong')}>{label ?? word}</p>}
       <div className="flex flex-col gap-2">
