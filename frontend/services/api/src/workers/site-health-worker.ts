@@ -69,7 +69,7 @@ export class SiteHealthWorker {
   readonly #access: (workspaceId: string) => Promise<unknown>;
   /** The in-flight upkeep pass; it resolves to the leases it reclaimed. */
   #upkeep: Promise<number> | null = null;
-  #upkeepFailures: unknown[] = [];
+  readonly #upkeepFailures: unknown[] = [];
   #nextRecovery = 0;
   #nextMaintenance = 0;
   /** Each crawl's post-settle reconciles, one at a time in settlement order. */
@@ -110,7 +110,9 @@ export class SiteHealthWorker {
   }
   /** One claim pass: up to `limit` tasks, each settled and reconciled before returning. */
   async runOnce(limit = this.settings.concurrency, canAdmit: () => boolean = () => true) {
-    return this.#withUpkeep(async () => (canAdmit() ? this.#claimAndExecute(limit) : 0));
+    return this.#withUpkeep(async () =>
+      canAdmit() ? this.#claimAndExecute(limit, { refillWhile: () => false }) : 0,
+    );
   }
   /**
    * Like `runOnce`, but refills each freed slot while the caller admits, within
@@ -135,7 +137,7 @@ export class SiteHealthWorker {
    */
   async #claimAndExecute(
     limit: number,
-    options: { refillWhile: () => boolean; peersDue?: PeersDue } = { refillWhile: () => false },
+    options: { refillWhile: () => boolean; peersDue?: PeersDue },
   ) {
     const windowMs = this.settings.claimWindow * 1000;
     let windowEnd = performance.now() + windowMs;
@@ -274,10 +276,17 @@ export class SiteHealthWorker {
       if (this.taskScope) {
         // Its tasks' reconciles finalize a scoped crawl; this is a safety net on the score cadence.
         const { workspaceId, crawlId } = this.taskScope;
-        const refreshScore = this.#cadence.score.admits(crawlId);
-        await this.#guard('scoped crawl reconcile failed', () =>
-          reconcileCrawl(this.db, workspaceId, crawlId, { refreshScore }),
-        );
+        await this.#guard('scoped crawl reconcile failed', async () => {
+          const crawl = await this.db
+            .selectFrom('site_crawls')
+            .select('admitted_url_count')
+            .where('workspace_id', '=', workspaceId)
+            .where('id', '=', crawlId)
+            .executeTakeFirst();
+          const pages = crawl?.admitted_url_count;
+          const refreshScore = this.#cadence.score.admits(crawlId, { pages });
+          await reconcileCrawl(this.db, workspaceId, crawlId, { refreshScore });
+        });
         return;
       }
       await this.#guard('stalled crawl reconcile failed', () =>
