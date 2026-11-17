@@ -378,7 +378,7 @@ function DataTableFoot({
   return (
     <div
       data-data-table-foot=""
-      className="flex min-h-12 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-2"
+      className="flex min-h-14 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3"
     >
       {footer ? <div className="type-caption grid min-w-0 gap-1">{footer}</div> : null}
       <div className="ms-auto flex min-w-0 flex-wrap items-center gap-4">
@@ -425,6 +425,8 @@ function pagingLayout(
 /**
  * The header bar: the title, then the toolbar on one row, the description
  * one caption line under it, and the steppers when no footer bar exists.
+ * 12 over the 32 title row puts the title 16 from the top, as from the left;
+ * the footer bar takes the same 12 over its 32 control row.
  */
 function DataTableHeader({
   title,
@@ -458,10 +460,18 @@ function DataTableHeader({
       ) : null}
     </>
   );
-  if (!actions) return <header className="grid min-w-0 gap-1 px-4 py-3">{head}</header>;
+  if (!actions)
+    return (
+      <header data-data-table-head="" className="grid min-w-0 gap-1 px-4 py-3">
+        {head}
+      </header>
+    );
   // As a section head: the switch sits level with the title, and wraps under the caption when narrow.
   return (
-    <header className="flex flex-wrap items-start justify-between gap-2 px-4 py-3">
+    <header
+      data-data-table-head=""
+      className="flex flex-wrap items-start justify-between gap-2 px-4 py-3"
+    >
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
       <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
     </header>

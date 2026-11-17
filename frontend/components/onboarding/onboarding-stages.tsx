@@ -1,13 +1,13 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
-import { SetupStep, StepColumns, StepFindings } from '@/components/templates/setup-page';
+import { SetupStep, StepColumns, StepFindings, StepTrail } from '@/components/templates/setup-page';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
 import { MarketSelect } from '@/components/ui/market-select';
-import { RungTrail, type TrailStep } from '@/components/ui/rung-trail';
+import { type TrailStep } from '@/components/ui/rung-trail';
 import { MARKET_COUNTRIES, MARKET_LANGUAGES } from '@citeladder/contracts/markets';
 import { discoveryActivity } from '@/lib/onboarding/discovery-activity';
 import { onboardingErrorMessage, type BrandStepValues } from '@/lib/onboarding/forms';
@@ -252,7 +252,7 @@ function StageSteps({
         value={shown.done}
         max={Math.max(steps.length, 1)}
       />
-      <RungTrail label={label} steps={shown.steps} />
+      <StepTrail label={label} steps={shown.steps} />
       <span className="sr-only" aria-live="polite">
         {shown.announcement}
       </span>
