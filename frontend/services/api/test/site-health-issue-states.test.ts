@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, describe, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
-import { publishFinalPageAnalyses } from '../src/site-health/terminal-analysis.ts';
 import { testDatabase } from './support.ts';
+import { landFinalRevisions } from './site-health-finalize-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 
 const db = testDatabase();
@@ -26,7 +26,7 @@ async function land(seed: SiteSeed) {
       .where('workspace_id', '=', seed.workspaceId)
       .forUpdate()
       .executeTakeFirstOrThrow();
-    await publishFinalPageAnalyses(trx, crawl);
+    await landFinalRevisions(trx, crawl);
   });
 }
 

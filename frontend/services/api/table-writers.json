@@ -304,8 +304,8 @@
     "site_crawls": [
       "src/site-health/analyze-task.ts",
       "src/site-health/controls.ts",
+      "src/site-health/crawl-assessment.ts",
       "src/site-health/discover-task.ts",
-      "src/site-health/lifecycle.ts",
       "src/site-health/planner.ts",
       "src/site-health/site-setup-task.ts",
       "src/site-health/site-task.ts",
@@ -319,6 +319,7 @@
     "site_fetch_artifacts": ["src/site-health/analysis-rows.ts"],
     "site_fetch_attempts": ["src/site-health/analysis-rows.ts"],
     "site_health_profiles": ["src/site-health/planner.ts"],
+    "site_health_snapshot_analyses": ["src/site-health/snapshot.ts"],
     "site_health_snapshots": ["src/site-health/snapshot.ts"],
     "site_internal_link_events": ["src/site-health/internal-link-judgments.ts"],
     "site_internal_link_runs": [

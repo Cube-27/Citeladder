@@ -91,9 +91,10 @@ silently repair state. Missing evidence stays missing.
 
 Site Health active summaries publish provisional scores from analyzed pages,
 marked as a partial audit, alongside progress and completion counts.
-One locked terminalization owner appends the final current page
-analysis revisions and atomically persists the terminal score summary and
-snapshot. Classification coverage, checklist completion, scored-page coverage,
+One leased terminalization owner (the crawl's `finalize` task) appends the
+final current page analysis revisions in short batches under the crawl lock,
+each batch replay-safe, then atomically persists the issue currency, terminal
+score summary, snapshot and terminal status in one final commit. Classification coverage, checklist completion, scored-page coverage,
 and crawl coverage are distinct persisted facts with exact provenance.
 
 Measurement comparison requires compatible persisted classification and scored

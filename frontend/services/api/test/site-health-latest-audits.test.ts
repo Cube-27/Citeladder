@@ -3,8 +3,8 @@ import { record } from '../src/db/json.ts';
 import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
 import { issueHistory, issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
-import { publishFinalPageAnalyses } from '../src/site-health/terminal-analysis.ts';
 import { testDatabase } from './support.ts';
+import { landFinalRevisions } from './site-health-finalize-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 
 const db = testDatabase();
@@ -30,7 +30,7 @@ async function land(seed: SiteSeed) {
       .where('workspace_id', '=', seed.workspaceId)
       .forUpdate()
       .executeTakeFirstOrThrow();
-    await publishFinalPageAnalyses(trx, crawl);
+    await landFinalRevisions(trx, crawl);
   });
 }
 
@@ -119,9 +119,14 @@ describe("Site Health reads show each tracked page's latest audit", () => {
 
     const snapshot = await db
       .selectFrom('site_health_snapshots')
-      .select(['issue_count', 'source_analysis_ids'])
+      .select(['id', 'issue_count'])
       .where('crawl_id', '=', full.crawlId)
       .executeTakeFirstOrThrow();
+    const analysisSet = await db
+      .selectFrom('site_health_snapshot_analyses')
+      .select('analysis_id')
+      .where('snapshot_id', '=', snapshot.id)
+      .execute();
     expect(snapshot.issue_count).toBe(1);
     const rerunAnalysis = await db
       .selectFrom('site_page_analyses')
@@ -130,7 +135,7 @@ describe("Site Health reads show each tracked page's latest audit", () => {
       .where('site_url_id', '=', fixed.id)
       .where('is_current', '=', true)
       .executeTakeFirstOrThrow();
-    expect(snapshot.source_analysis_ids).toContain(rerunAnalysis.id);
+    expect(analysisSet.map((row) => row.analysis_id)).toContain(rerunAnalysis.id);
     const crawl = await db
       .selectFrom('site_crawls')
       .select('score_summary')

@@ -47,7 +47,7 @@ function targetHash(crawl: Crawl, hash: string, declared: string, base: string) 
  * crawl's HTML walk fetched: a walked page joins the tracked set only after
  * this check, so an alias never does. A target not fetched yet may still fail
  * and be released, so the alias waits for finalization, which aliases only
- * toward a target that ended active (`reconcileDuplicateAliases`).
+ * toward a target that ended active (`duplicateAliases`).
  */
 export async function duplicateOf(
   trx: Database,
@@ -134,8 +134,12 @@ export async function markDuplicates(trx: Database, crawl: Crawl, hashes: string
   if (retired.some((row) => row.finalized_at !== null)) await refreshIssueCurrency(trx, crawl);
 }
 
-/** Resolve whole-crawl chains and cycles before removing any representative. */
-export async function reconcileDuplicateAliases(db: Database, crawl: Crawl) {
+/**
+ * The aliases to exclude, resolved over whole-crawl chains and cycles before
+ * any representative is removed. Reads only; the finalize task marks them
+ * (`markDuplicates`) in its first commit.
+ */
+export async function duplicateAliases(db: Database, crawl: Crawl) {
   const rows = await db
     .selectFrom('site_urls as u')
     .innerJoin('site_url_observations as o', (join) =>
@@ -168,7 +172,11 @@ export async function reconcileDuplicateAliases(db: Database, crawl: Crawl) {
         .onRef('a.workspace_id', '=', 't.workspace_id')
         .onRef('a.crawl_id', '=', 't.crawl_id'),
     )
-    .select(['t.url_hash', 'a.final_url', 'a.normalized_facts'])
+    .select([
+      't.url_hash',
+      'a.final_url',
+      sql<unknown>`a.normalized_facts -> 'canonical_url'`.as('canonical_url'),
+    ])
     .where('t.workspace_id', '=', crawl.workspace_id)
     .where('t.crawl_id', '=', crawl.id)
     .orderBy('a.fetched_at')
@@ -182,15 +190,13 @@ export async function reconcileDuplicateAliases(db: Database, crawl: Crawl) {
     const target = targetHash(
       crawl,
       artifact.url_hash,
-      scalarText(record(artifact.normalized_facts).canonical_url),
+      scalarText(artifact.canonical_url),
       artifact.final_url,
     );
     if (admitted.has(target)) edges.set(artifact.url_hash, target);
     else edges.delete(artifact.url_hash);
   }
-  const duplicates = resolveDuplicateAliases({ edges, known, active, protectedHashes });
-  await markDuplicates(db, crawl, duplicates);
-  return duplicates.length;
+  return resolveDuplicateAliases({ edges, known, active, protectedHashes });
 }
 
 export type AliasGraph = {

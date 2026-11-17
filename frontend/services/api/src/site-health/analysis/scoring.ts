@@ -17,7 +17,7 @@ const DETERMINATE = new Set(['satisfied', 'missing']);
  * were observed). A blocked crawler makes every page ineligible, so each page
  * scores these in place of its own site rows.
  */
-export const appliedSiteChecks = (rows: RuleEvaluation[]) =>
+const appliedSiteChecks = (rows: RuleEvaluation[]) =>
   rows.filter((row) => row.scope === 'site' && row.outcome !== 'not_applicable');
 
 const SCORED_SITE_RULES = policy.site_health.rule_catalog

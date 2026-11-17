@@ -243,16 +243,28 @@ async function refreshUrlState(
     .execute();
 }
 
-export async function insertEvaluations(
-  db: Database,
-  crawl: Crawl,
-  analysisId: string,
-  siteUrlId: string,
-  artifactId: string,
-  evaluations: (RuleEvaluation & { id: string })[],
-) {
+/** One analysis's new evaluations, with the page and artifact they judge. */
+export type EvaluationGroup = {
+  analysisId: string;
+  siteUrlId: string;
+  artifactId: string;
+  evaluations: (RuleEvaluation & { id: string })[];
+};
+
+/** Rows per statement: both row shapes stay far under PostgreSQL's 65535 bind parameters. */
+const INSERT_CHUNK = 1000;
+const chunksOf = <T>(rows: T[]) =>
+  Array.from({ length: Math.ceil(rows.length / INSERT_CHUNK) }, (_, index) =>
+    rows.slice(index * INSERT_CHUNK, (index + 1) * INSERT_CHUNK),
+  );
+
+/** Every group's evaluations in one multi-row statement, then their issues in another. */
+export async function insertEvaluations(db: Database, crawl: Crawl, groups: EvaluationGroup[]) {
   const now = new Date();
-  const rows = evaluations.map((evaluation) => ({
+  const pairs = groups.flatMap((group) =>
+    group.evaluations.map((evaluation) => ({ group, evaluation })),
+  );
+  const rows = pairs.map(({ group: { analysisId, artifactId }, evaluation }) => ({
     id: evaluation.id,
     workspace_id: crawl.workspace_id,
     analysis_id: analysisId,
@@ -278,8 +290,9 @@ export async function insertEvaluations(
     rule_version: evaluation.rule_version,
     created_at: now,
   }));
-  if (rows.length) await db.insertInto('site_rule_evaluations').values(rows).execute();
-  const issues = evaluations.flatMap((evaluation, index) =>
+  for (const chunk of chunksOf(rows))
+    await db.insertInto('site_rule_evaluations').values(chunk).execute(); // NOSONAR -- In order, in the caller's transaction.
+  const issues = pairs.flatMap(({ group: { analysisId, siteUrlId, artifactId }, evaluation }) =>
     createsIssue(evaluation)
       ? [
           {
@@ -289,7 +302,7 @@ export async function insertEvaluations(
             crawl_id: crawl.id,
             site_url_id: siteUrlId,
             analysis_id: analysisId,
-            evaluation_id: rows[index]!.id,
+            evaluation_id: evaluation.id,
             source_artifact_id: artifactId,
             rule_id: evaluation.rule_id,
             dimension: evaluation.dimension,
@@ -306,7 +319,7 @@ export async function insertEvaluations(
         ]
       : [],
   );
-  if (issues.length) await db.insertInto('site_issues').values(issues).execute();
+  for (const chunk of chunksOf(issues)) await db.insertInto('site_issues').values(chunk).execute(); // NOSONAR -- In order, in the caller's transaction.
 }
 
 /** The provisional context to load before CPU-bound interpretation and recheck at commit. */
@@ -394,7 +407,7 @@ export async function writePageAnalysis(
       created_at: new Date(),
     })
     .execute();
-  await insertEvaluations(db, crawl, id, siteUrlId, artifactId, evaluations);
+  await insertEvaluations(db, crawl, [{ analysisId: id, siteUrlId, artifactId, evaluations }]);
   // A provisional analysis names no current evaluations, so its issues are
   // written not current; only superseding a finalized analysis changes the set.
   if (superseded.some((row) => row.finalized_at !== null)) {

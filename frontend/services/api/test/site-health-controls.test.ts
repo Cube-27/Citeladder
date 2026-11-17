@@ -22,14 +22,14 @@ import { record } from '../src/db/json.ts';
 import { revokeBundle } from '../src/entitlements/grants.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
-import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
+import { FinalizeFixtures, type SiteSeed } from './site-health-finalize-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
 
 vi.setConfig({ testTimeout: 60_000, hookTimeout: 60_000 });
 const config = testConfig();
 const db = testDatabase(config);
 const app = createApp(config, db);
-const fixtures = new SiteFixtures(db);
+const fixtures = new FinalizeFixtures(db);
 const accounts: string[] = [];
 afterEach(() => vi.unstubAllEnvs());
 afterAll(async () => {
@@ -619,7 +619,7 @@ describe('crawl-control HTTP contracts', () => {
         .execute();
     expect(await snapshots()).toHaveLength(0);
     await publishCancelledCrawls(db, 100);
-    await publishCancelledCrawls(db, 100);
+    expect(await fixtures.terminalize(seed)).toBe(true);
     expect(await snapshots()).toHaveLength(1);
     expect(
       await db

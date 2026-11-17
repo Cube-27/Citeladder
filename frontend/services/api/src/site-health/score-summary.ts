@@ -29,6 +29,52 @@ export async function lockProfile(db: Database, crawl: Crawl) {
     .executeTakeFirstOrThrow();
 }
 
+const EVALUATION_CHUNK = 5000;
+
+/**
+ * The analyses' named evaluations, in id order and in chunks, with only the
+ * columns scoring, rollups and diagnostics read. Evidence is read only where
+ * the readiness diagnostic shows it.
+ */
+async function projectionEvaluations(db: Database, crawl: Crawl, named: string[]) {
+  const ids = [...new Set(named)].sort(compareText);
+  const loaded: Awaited<ReturnType<typeof evaluationChunk>> = [];
+  for (let offset = 0; offset < ids.length; offset += EVALUATION_CHUNK) {
+    const chunk = ids.slice(offset, offset + EVALUATION_CHUNK);
+    loaded.push(...(await evaluationChunk(db, crawl, chunk))); // NOSONAR -- Chunks in order on one connection.
+  }
+  return loaded;
+}
+
+function evaluationChunk(db: Database, crawl: Crawl, ids: string[]) {
+  return db
+    .selectFrom('site_rule_evaluations')
+    .select([
+      'id',
+      'analysis_id',
+      'rule_id',
+      'rule_version',
+      'dimension',
+      'category',
+      'severity',
+      'finding_class',
+      'scope',
+      'weight',
+      'outcome',
+      'display_applicability',
+      'score_applicability',
+      'reason_code',
+      'score_roles',
+      'readiness_dimension',
+      'readiness_weight',
+      sql<unknown>`case when 'aeo_readiness' = any(score_roles) then evidence end`.as('evidence'),
+    ])
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('id', '=', sql<string>`any(${ids}::uuid[])`)
+    .orderBy('id')
+    .execute();
+}
+
 /**
  * The selected pages' analyses, evaluations and tasks a snapshot's score
  * reads: each page's latest audit as the crawl shows it (`pageAuditsSql`,
@@ -65,14 +111,11 @@ export async function loadMeasurementProjection(db: Database, crawl: Crawl) {
     .orderBy('p.created_at', 'desc')
     .orderBy('p.id', 'desc')
     .execute();
-  const evaluationIds = [...new Set(rows.flatMap((row) => row.source_evaluation_ids ?? []))];
-  const evaluations = await db
-    .selectFrom('site_rule_evaluations')
-    .selectAll()
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('id', '=', sql<string>`any(${evaluationIds}::uuid[])`)
-    .orderBy('id')
-    .execute();
+  const evaluations = await projectionEvaluations(
+    db,
+    crawl,
+    rows.flatMap((row) => row.source_evaluation_ids ?? []),
+  );
   const byId = new Map(evaluations.map((row) => [row.id, row]));
   const measured = rows.map((row) => ({
     id: row.id,

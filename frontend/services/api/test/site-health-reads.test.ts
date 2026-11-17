@@ -1399,7 +1399,6 @@ describe('snapshot projections', () => {
         web_fundamentals_state: 'measured',
         classification_state: 'complete',
         search_eligibility: 'eligible',
-        source_evaluation_ids: ids,
         classification_source_analysis_ids: ids,
         classification_source_artifact_ids: ids,
         classification_source_task_ids: ids,
@@ -1476,11 +1475,10 @@ describe('snapshot projections', () => {
     // The frozen row keeps every list it was written with.
     const stored = await db
       .selectFrom('site_health_snapshots')
-      .select(['source_evaluation_ids', 'classification_source_task_ids', 'web_fundamentals'])
+      .select(['classification_source_task_ids', 'web_fundamentals'])
       .where('id', '=', snapshot)
       .executeTakeFirstOrThrow();
     expect(stored).toMatchObject({
-      source_evaluation_ids: ids,
       classification_source_task_ids: ids,
       web_fundamentals: { source_evaluation_ids: ids },
     });

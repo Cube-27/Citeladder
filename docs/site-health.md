@@ -130,6 +130,7 @@ retries after `failure_retry_seconds` and turns the schedule off after
 | `site_setup` | robots.txt, crawler stance, llms.txt; a full crawl's discovery: the sitemap walk and tracked-set fill, or the HTML walk's start |
 | `discover` | an HTML walk or sample only: fetches a page; one parse for links and facts; admits children; marks it a document, an alias or for analysis |
 | `analyze` | classifies, evaluates and provisionally scores one monitored page |
+| `finalize` | one per drained crawl (and one per cancelled crawl with evidence): cross-page checks, final revisions in batches, then the terminal publication; `max_attempts` 3 |
 | `link_metrics` → `architecture` | post-terminal link metrics, then the Architecture projection |
 | `change_intel` | post-terminal change snapshot and analytics handoff |
 
@@ -218,19 +219,33 @@ provisional scores, with counts, from a few grouped queries that never read
 rule evaluations (owner, 2026-11-17); the terminal summary rebuilds from
 evaluations. It is read outside the crawl lock every task commit takes, which
 is held only to write, skipping a crawl that settled meanwhile. When discovery and
-analysis drain, one locked transaction:
+analysis drain, the reconcile enqueues one `finalize` task and the crawl stays
+active until it publishes (`finalize-task.ts`, owner decision CO-2):
 
-1. resolves canonical-alias chains;
-2. evaluates crawl-finalize checks;
-3. appends a final analysis per page (`supersedes_analysis_id`);
-4. persists the snapshot and score summary (none for a page rerun);
-5. sets `completed`, `partially_completed` (with `partial_reason`; an analysis
+1. outside any transaction, it resolves canonical-alias chains and keyset-reads
+   the unfinalized analyses with only the facts cross-page rules read, building
+   their context in memory;
+2. in batches of `finalize.batch_pages` (about 200), each one short transaction
+   under the crawl lock and the task's lease, root first, it inserts the
+   batch's crawl-finalize evaluations and issues in multi-row statements,
+   appends a final analysis per page (`supersedes_analysis_id`) and flips
+   `is_current`; the first commit also marks the aliases. A page that already
+   has its final revision drops out, so a replayed batch does nothing, and
+   readers see provisional and final revisions mixed meanwhile;
+3. one durable transaction then refreshes issue currency, the catalog and issue
+   states, persists the snapshot and score summary (none for a page rerun),
+   sets `completed`, `partially_completed` (with `partial_reason`; an analysis
    that met a page that is gone or not HTML is no shortfall, as in discovery) or `failed`
    (nothing analyzed, and either discovery found nothing or every applicable
    analysis failed), persists the terminal dashboard counters (`site_crawls.terminal_counters`,
-   `terminal-counters.ts`), and settles the fetch reservation;
-6. for a crawl that did not fail, enqueues `change_intel` and `link_metrics`
+   `terminal-counters.ts`), settles the fetch reservation and the task, and,
+   for a crawl that did not fail, enqueues `change_intel` and `link_metrics`
    if any analysis succeeded, otherwise hands off to the analytics refresh.
+
+A `finalize` that fails retries on the normal backoff; after its third attempt
+(or failed as overdue) the next reconcile ends the crawl `failed` with the
+recorded reason and settles the fetch hold. Stop can land between batches: the
+task cancels itself and the cancelled crawl is published by its own `finalize`.
 
 **Backstops** run every `backstop_interval_seconds`, even on an empty drain:
 
@@ -240,10 +255,14 @@ analysis drain, one locked transaction:
   `crawl_no_progress_seconds` (30 min, longer than the 20-minute tick a runner
   gap waits for), or that is older than the `overdue_crawl_seconds` cap (12 h),
   has its open tasks failed with `crawl_overdue`, then is reconciled (owner,
-  2026-11-17). A large crawl runs as long as it keeps moving.
-- **Cancelled:** a cancelled crawl with measurement evidence but no snapshot is
-  published. A cancelled page rerun is published once, its `change_intel` task
-  standing in for the snapshot it never writes.
+  2026-11-17). A large crawl runs as long as it keeps moving; a running
+  `finalize` settles only once, so its heartbeat counts as movement.
+- **Cancelled:** a cancelled crawl with measurement evidence but no snapshot
+  gets one `finalize` task, which appends its final revisions in batches and
+  publishes it (no alias or cross-page pass). A cancelled page rerun is
+  published once, its `change_intel` task standing in for the snapshot it never
+  writes. A cancelled crawl whose publication failed for good stays
+  `cancelled` and is not retried.
 
 Stop (`controls.ts`) commits only the cancellation and fetch settlement. It
 cancels open tasks with `SKIP LOCKED`, never waiting on a claim or heartbeat
@@ -774,8 +793,11 @@ the classifier version is its base plus a SHA-256 prefix of every
 classification input (`classifierVersion`). Crawls freeze these in their
 configuration. Final analyses keep
 `supersedes_analysis_id`, `source_evaluation_ids`, `source_artifact_ids` and a
-frozen `expected_checkpoint_profile`. Snapshots, score summaries and change
-snapshots keep their provenance id lists too, but browser responses (dashboard,
+frozen `expected_checkpoint_profile`. A snapshot stores its analysis set as
+rows (`site_health_snapshot_analyses`) and no list of evaluation ids (owner
+decision CO-6): evaluations carry their `analysis_id`, each analysis names its
+own, and architecture evaluations are reached through their crawl. Score
+summaries and change snapshots keep their provenance id lists, but browser responses (dashboard,
 crawl score summary, Overview, AEO Readiness, change summary) do not carry them,
 and each read selects only the columns it renders
 ([decision](decisions.md#site-health-responses-do-not-carry-provenance-id-lists)).

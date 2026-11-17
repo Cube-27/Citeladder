@@ -140,7 +140,6 @@ export function readinessDiagnostic(crawl: Crawl, projection: MeasurementProject
     scoring_version: crawl.scoring_version || reads.scoring_version,
     presentation_version: reads.measurement_versions.presentation,
     analyzer_version: crawl.analyzer_version || policy.site_health.versions.analyzer,
-    source_analysis_ids: [...pages.keys()],
     analysis_count: pages.size,
     affected_page_count: new Set(
       rows.filter((row) => row.scope === 'page' && failing(row)).map((row) => row.analysis_id),
@@ -151,12 +150,10 @@ export function readinessDiagnostic(crawl: Crawl, projection: MeasurementProject
 }
 
 export function webDiagnostic(projection: MeasurementProjection) {
-  const sources: string[] = [];
   const areas = reads.web_fundamentals_areas.map((area) => {
     const rows = projection.evaluations.filter(
       (row) => catalog.get(row.rule_id)?.web_fundamentals_area === area,
     );
-    sources.push(...rows.map((row) => row.id));
     const applicable = rows.filter((row) => row.outcome !== 'not_applicable');
     const determinate = applicable.filter((row) => ['satisfied', 'missing'].includes(row.outcome));
     const findings = new Map<
@@ -166,7 +163,6 @@ export function webDiagnostic(projection: MeasurementProjection) {
         title: string;
         remediation: string;
         affected_pages: number;
-        source_evaluation_ids: string[];
       }
     >();
     for (const row of rows.filter((row) => row.outcome === 'missing')) {
@@ -176,10 +172,8 @@ export function webDiagnostic(projection: MeasurementProjection) {
         title: rule.display_label,
         remediation: rule.remediation,
         affected_pages: 0,
-        source_evaluation_ids: [],
       };
       finding.affected_pages++;
-      finding.source_evaluation_ids.push(row.id);
       findings.set(row.rule_id, finding);
     }
     return {
@@ -210,9 +204,7 @@ export function webDiagnostic(projection: MeasurementProjection) {
       inp: null,
       cls: null,
     },
-    source_analysis_ids: projection.rows.map((row) => row.id),
     source_artifact_ids: projection.rows.map((row) => row.artifact_id),
-    source_evaluation_ids: sources,
     limitations: [],
   };
 }

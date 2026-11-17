@@ -386,6 +386,8 @@ export type CrawlTaskSeed = {
   priority?: number;
   position?: number;
   delaySeconds?: number;
+  /** The kind's own attempt cap; the Site Health `max_attempts` setting otherwise. */
+  maxAttempts?: number;
 };
 
 /**
@@ -430,7 +432,7 @@ export async function enqueueCrawlTasks(
     )
     SELECT v.id, c.id, c.workspace_id, v.site_url_id, v.parent_site_url_id, v.kind, v.url,
       v.hash, v.depth, v.generation, ${crawl.id}::text || ':' || v.kind || ':' || v.hash || ':'
-        || v.generation::text, 'queued', v.priority, v.position, ${maxAttempts},
+        || v.generation::text, 'queued', v.priority, v.position, v.max_attempts,
       0, 0, now() + make_interval(secs => v.delay), now(), now(), '', '', false
     FROM unnest(
       ${column(() => timeOrderedId())}::uuid[],
@@ -443,9 +445,10 @@ export async function enqueueCrawlTasks(
       ${column((seed) => seed.generation ?? 0)}::int[],
       ${column((seed) => seed.priority ?? 0)}::int[],
       ${column((seed) => seed.position ?? 0)}::int[],
-      ${column((seed) => seed.delaySeconds ?? 0)}::float8[]
+      ${column((seed) => seed.delaySeconds ?? 0)}::float8[],
+      ${column((seed) => seed.maxAttempts ?? maxAttempts)}::int[]
     ) AS v(id, site_url_id, parent_site_url_id, kind, url, hash, depth, generation, priority,
-      position, delay)
+      position, delay, max_attempts)
     CROSS JOIN site_crawls c
     WHERE c.id = ${crawl.id}::uuid AND c.workspace_id = ${crawl.workspace_id}::uuid ${active}
     ${conflict}

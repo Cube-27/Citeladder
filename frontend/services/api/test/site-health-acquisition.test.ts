@@ -7,7 +7,12 @@ import { setLogSink } from '../src/logging.ts';
 import { FetchError } from '../src/safe-fetch.ts';
 import { admitCandidates, candidate, lockRuntime } from '../src/site-health/frontier.ts';
 import { orderedUnique } from '../src/site-health/tracked-set.ts';
-import { reconcileDuplicateAliases } from '../src/site-health/canonical-alias.ts';
+import { duplicateAliases, markDuplicates } from '../src/site-health/canonical-alias.ts';
+import type { Crawl } from '../src/site-health/site-task.ts';
+
+/** Resolve the crawl's alias chains and mark them, as the finalize task's first commit does. */
+const reconcileDuplicateAliases = async (crawl: Crawl) =>
+  markDuplicates(db, crawl, await duplicateAliases(db, crawl));
 import { crawlCoverage, valueKindCoverage } from '../src/site-health/coverage.ts';
 import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
@@ -332,7 +337,7 @@ describe('discover', () => {
       url('/live-alias'),
     ]);
 
-    await reconcileDuplicateAliases(db, await crawlRow(seed));
+    await reconcileDuplicateAliases(await crawlRow(seed));
     // The 404 never joined the tracked set; an alias that joined stays tracked (SH-B8).
     expect(
       (await memberships(seed)).map((row) => [row.normalized_url.slice(20), row.active]),
@@ -408,7 +413,7 @@ describe('discover', () => {
       .selectAll()
       .where('id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
-    await reconcileDuplicateAliases(db, live);
+    await reconcileDuplicateAliases(live);
     expect((await urlRow(seed, '/')).corpus_disposition).not.toBe('exclude');
   });
 

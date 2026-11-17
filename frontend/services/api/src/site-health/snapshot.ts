@@ -114,18 +114,17 @@ function checkCounts(projection: MeasurementProjection) {
   return { measured_check_count: measured.length, expected_check_count: expected.length };
 }
 
+const analysisIds = (projection: MeasurementProjection) => projection.rows.map((row) => row.id);
+
 /**
  * Every snapshot column the pages' latest audits decide: scores,
- * classification, eligibility, issue rollups, the change summary and
- * their exact sources. Coverage and discovery stay the crawl's own.
+ * classification, eligibility, issue rollups, the change summary and the
+ * artifacts they read. The analysis set is stored as rows
+ * (`site_health_snapshot_analyses`); evaluations are reached through it.
+ * Coverage and discovery stay the crawl's own.
  */
-async function pageColumns(
-  db: Database,
-  crawl: Crawl,
-  projection: MeasurementProjection,
-  evaluationIds: string[],
-) {
-  const issues = await snapshotIssues(db, crawl, evaluationIds);
+async function pageColumns(db: Database, crawl: Crawl, projection: MeasurementProjection) {
+  const issues = await snapshotIssues(db, crawl, analysisIds(projection));
   const eligibility = await snapshotEligibility(db, crawl, projection);
   const {
     readiness_dimensions: dimensions,
@@ -154,11 +153,35 @@ async function pageColumns(
       ...issueColumns(issues),
       web_fundamentals: JSON.stringify(webDiagnostic(projection)),
       change_summary: JSON.stringify(await changeSummary(db, crawl, projection)),
-      source_analysis_ids: projection.rows.map((row) => row.id),
       source_artifact_ids: projection.rows.map((row) => row.artifact_id),
-      source_evaluation_ids: evaluationIds,
     },
   };
+}
+
+/** Rows per statement, far under PostgreSQL's 65535 bind parameters. */
+const ANALYSIS_ROW_CHUNK = 5000;
+
+/** Store the snapshot's analysis set, replacing any earlier one. */
+async function writeAnalysisSet(
+  db: Database,
+  snapshot: { id: string; workspace_id: string },
+  projection: MeasurementProjection,
+) {
+  await db
+    .deleteFrom('site_health_snapshot_analyses')
+    .where('workspace_id', '=', snapshot.workspace_id)
+    .where('snapshot_id', '=', snapshot.id)
+    .execute();
+  const rows = [...new Set(analysisIds(projection))].map((analysisId) => ({
+    workspace_id: snapshot.workspace_id,
+    snapshot_id: snapshot.id,
+    analysis_id: analysisId,
+  }));
+  for (let offset = 0; offset < rows.length; offset += ANALYSIS_ROW_CHUNK)
+    await db // NOSONAR -- In order, in the caller's one publication transaction.
+      .insertInto('site_health_snapshot_analyses')
+      .values(rows.slice(offset, offset + ANALYSIS_ROW_CHUNK))
+      .execute();
 }
 
 /** The crawl summary a snapshot publishes beside itself. */
@@ -196,9 +219,8 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
     !projection.classification.classification_expected_page_count
   )
     return false;
-  const evaluationIds = projection.evaluations.map((row) => row.id);
   const now = new Date();
-  const published = await pageColumns(db, crawl, projection, evaluationIds);
+  const published = await pageColumns(db, crawl, projection);
   const coverage = await crawlCoverage(db, crawl);
   const inserted = await db
     .insertInto('site_health_snapshots')
@@ -219,29 +241,12 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
       created_at: now,
     })
     .onConflict((conflict) => conflict.constraint('uq_site_health_snapshot_crawl').doNothing())
-    .returning('id')
+    .returning(['id', 'workspace_id'])
     .executeTakeFirst();
   if (!inserted) return false;
+  await writeAnalysisSet(db, inserted, projection);
   await publishScoreSummary(db, crawl, projection, published);
   return true;
-}
-
-/** The architecture evaluations the crawl's snapshot folds in (`addArchitectureIssues`). */
-async function architectureEvaluationIds(db: Database, crawl: Crawl) {
-  const rows = await db
-    .selectFrom('site_rule_evaluations as e')
-    .innerJoin('site_observed_architectures as a', (join) =>
-      join
-        .onRef('a.id', '=', 'e.source_architecture_id')
-        .onRef('a.workspace_id', '=', 'e.workspace_id'),
-    )
-    .select('e.id')
-    .where('a.workspace_id', '=', crawl.workspace_id)
-    .where('a.project_id', '=', crawl.project_id)
-    .where('a.crawl_id', '=', crawl.id)
-    .orderBy('e.id')
-    .execute();
-  return rows.map((row) => row.id);
 }
 
 /**
@@ -256,7 +261,7 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
   if (isPageRerun(crawl)) return false;
   const snapshot = await db
     .selectFrom('site_health_snapshots')
-    .select(['id', 'created_at'])
+    .select(['id', 'workspace_id', 'created_at'])
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('crawl_id', '=', crawl.id)
@@ -265,10 +270,8 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
   if (!snapshot) return false;
   await lockProfile(db, crawl);
   const projection = await loadMeasurementProjection(db, crawl);
-  const own = projection.evaluations.map((row) => row.id);
-  const architecture = await architectureEvaluationIds(db, crawl);
-  const evaluationIds = [...new Set([...own, ...architecture])];
-  const published = await pageColumns(db, crawl, projection, evaluationIds);
+  const published = await pageColumns(db, crawl, projection);
+  await writeAnalysisSet(db, snapshot, projection);
   await db
     .updateTable('site_health_snapshots')
     .set({
@@ -294,33 +297,42 @@ function issueColumns(issues: Awaited<ReturnType<typeof snapshotIssues>>) {
 
 /**
  * Graph-scope architecture rules run as a successor of the snapshot (they read
- * its coverage), so their evaluations join its manifest afterwards: the issue
+ * its coverage), so their issues join its rollups afterwards: the issue
  * rollups and the crawl summary's count then cover every persisted issue.
- * Replay-safe: the manifest is a set and the rollups are recomputed from it.
+ * Replay-safe: the rollups are recomputed from the snapshot's analysis set and
+ * the crawl's architecture evaluations, and a replay that changes no count
+ * leaves them as they are.
  */
 export async function addArchitectureIssues(db: Database, crawl: Crawl) {
-  const architectureEvaluations = (await architectureEvaluationIds(db, crawl)).map((id) => ({
-    id,
-  }));
-  if (!architectureEvaluations.length) return false;
   const snapshot = await db
     .selectFrom('site_health_snapshots')
-    .select(['id', 'source_evaluation_ids'])
+    .select(['id', 'issue_count', 'technical_defect_count', 'aeo_readiness_gap_count'])
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('crawl_id', '=', crawl.id)
     .forUpdate()
     .executeTakeFirst();
   if (!snapshot) return false;
-  const known = new Set(snapshot.source_evaluation_ids ?? []);
-  const added = architectureEvaluations.filter((row) => !known.has(row.id));
-  // A replay that adds nothing leaves the published rollups as they are.
-  if (!added.length) return false;
-  const evaluationIds = [...known, ...added.map((row) => row.id)];
-  const issues = await snapshotIssues(db, crawl, evaluationIds);
+  const analyses = await db
+    .selectFrom('site_health_snapshot_analyses')
+    .select('analysis_id')
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('snapshot_id', '=', snapshot.id)
+    .execute();
+  const issues = await snapshotIssues(
+    db,
+    crawl,
+    analyses.map((row) => row.analysis_id),
+  );
+  if (
+    issues.issue_count === snapshot.issue_count &&
+    issues.technical_defect_count === snapshot.technical_defect_count &&
+    issues.aeo_readiness_gap_count === snapshot.aeo_readiness_gap_count
+  )
+    return false;
   await db
     .updateTable('site_health_snapshots')
-    .set({ ...issueColumns(issues), source_evaluation_ids: evaluationIds })
+    .set(issueColumns(issues))
     .where('id', '=', snapshot.id)
     .where('workspace_id', '=', crawl.workspace_id)
     .execute();

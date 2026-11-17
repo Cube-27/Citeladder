@@ -1,7 +1,8 @@
 /**
- * Issue counts and ranked groups over the terminal evaluation manifest. The
- * snapshot's manifest grows once more when the site-level architecture
- * evaluations that run after it are folded in (`addArchitectureIssues`).
+ * Issue counts and ranked groups over the snapshot's evaluations, reached
+ * through its analyses (each names its own evaluations) and the crawl's
+ * site-level architecture evaluations. Those run after the snapshot, so its
+ * rollups are recomputed once more when they land (`addArchitectureIssues`).
  */
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
@@ -10,7 +11,20 @@ import { issueImpact, siteLevelScope } from './reads/rules.ts';
 import type { Crawl } from './site-task.ts';
 import { compareText } from '../text-order.ts';
 
-export async function snapshotIssues(db: Database, crawl: Crawl, evaluationIds: string[]) {
+/** The evaluations of the snapshot's analyses (a page rerun's among them, SH-B9) and of the crawl's architecture. */
+function snapshotEvaluations(crawl: Crawl, analysisIds: string[]) {
+  return sql<string>`(
+    select unnest(a.source_evaluation_ids) from site_page_analyses a
+    where a.workspace_id = ${crawl.workspace_id} and a.id = any(${analysisIds}::uuid[])
+    union all
+    select e.id from site_rule_evaluations e
+    join site_observed_architectures o
+      on o.id = e.source_architecture_id and o.workspace_id = e.workspace_id
+    where o.workspace_id = ${crawl.workspace_id} and o.project_id = ${crawl.project_id}
+      and o.crawl_id = ${crawl.id})`;
+}
+
+export async function snapshotIssues(db: Database, crawl: Crawl, analysisIds: string[]) {
   const rows = await db
     .selectFrom('site_issues as i')
     .innerJoin('site_rule_evaluations as e', (join) =>
@@ -34,8 +48,7 @@ export async function snapshotIssues(db: Database, crawl: Crawl, evaluationIds: 
     ])
     .where('i.workspace_id', '=', crawl.workspace_id)
     .where('i.project_id', '=', crawl.project_id)
-    // The manifest names exact evaluations, a page rerun's among them (SH-B9).
-    .where('i.evaluation_id', '=', sql<string>`any(${evaluationIds}::uuid[])`)
+    .where('i.evaluation_id', 'in', snapshotEvaluations(crawl, analysisIds))
     .execute();
   const severities: Record<string, number> = {};
   const categories: Record<string, number> = {};

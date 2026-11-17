@@ -8,9 +8,9 @@ import {
 import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
-import { publishFinalPageAnalyses } from '../src/site-health/terminal-analysis.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
+import { landFinalRevisions } from './site-health-finalize-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
 
@@ -54,7 +54,7 @@ async function land(seed: SiteSeed) {
       .where('workspace_id', '=', seed.workspaceId)
       .forUpdate()
       .executeTakeFirstOrThrow();
-    await publishFinalPageAnalyses(trx, crawl);
+    await landFinalRevisions(trx, crawl);
   });
 }
 
