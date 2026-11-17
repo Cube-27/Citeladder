@@ -12,6 +12,7 @@ import { crawlCoverage, valueKindCoverage } from '../src/site-health/coverage.ts
 import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
 import { pages } from '../src/site-health/reads/pages.ts';
+import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { SitePageFetcher } from '../src/site-health/page-fetch.ts';
 import { runSiteSetup, setupSettings } from '../src/site-health/site-setup-task.ts';
 import { runSiteTask } from '../src/site-health/site-task.ts';
@@ -632,6 +633,7 @@ describe('site setup', () => {
         fetcher: site.fetcher,
         settings: site.settings,
         checkAccess: async () => {},
+        cadence: crawlCadences(site.settings.scoreRefresh),
       },
       await task(setup),
       {
@@ -735,6 +737,7 @@ describe('site setup', () => {
           fetcher: site.fetcher,
           settings: site.settings,
           checkAccess: async () => {},
+          cadence: crawlCadences(site.settings.scoreRefresh),
         },
         await task(setup),
         {
@@ -825,6 +828,7 @@ describe('site setup', () => {
         fetcher: site.fetcher,
         settings: site.settings,
         checkAccess: async () => {},
+        cadence: crawlCadences(site.settings.scoreRefresh),
       },
       await task(resumed),
       {

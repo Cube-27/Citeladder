@@ -2,6 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { timeOrderedId } from '../db/ids.ts';
 import { record } from '../db/json.ts';
 import { canonicalUrl } from './url-identity.ts';
 import { buildArchitecture, type ArchitecturePage } from './architecture-model.ts';
@@ -129,7 +130,7 @@ async function persistRules(
     const row = await db // NOSONAR -- The issue below needs this evaluation's id; one rule at a time.
       .insertInto('site_rule_evaluations')
       .values({
-        id: randomUUID(),
+        id: timeOrderedId(),
         workspace_id: crawl.workspace_id,
         analysis_id: root.analysisId,
         source_artifact_id: root.artifactId,
@@ -162,7 +163,7 @@ async function persistRules(
     await db // NOSONAR -- Written after its evaluation; one rule at a time.
       .insertInto('site_issues')
       .values({
-        id: randomUUID(),
+        id: timeOrderedId(),
         workspace_id: crawl.workspace_id,
         project_id: crawl.project_id,
         crawl_id: crawl.id,

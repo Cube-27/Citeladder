@@ -641,7 +641,7 @@ describe('analyze failures', () => {
 async function lease(taskId: string, owner: string) {
   return db
     .updateTable('site_crawl_tasks')
-    .set({ status: 'leased', lease_owner: owner, lease_expires_at: new Date(Date.now() + 60_000) })
+    .set({ status: 'running', lease_owner: owner, lease_expires_at: new Date(Date.now() + 60_000) })
     .where('id', '=', taskId)
     .returningAll()
     .executeTakeFirstOrThrow();

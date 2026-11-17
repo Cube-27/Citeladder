@@ -94,8 +94,8 @@ it('reclaims retryable leases, spends one attempt, and fences the old owner afte
     kinds: ['link_metrics'],
     scope: { workspaceId: seed.workspaceId, taskIds: [id] },
   });
-  expect(tasks.map((task) => task.id)).toEqual([id]);
-  expect(await worker.queue.markRunning(id, worker.owner)).toBe(true);
+  // The claim itself starts the task: no separate commit moves it to running.
+  expect(tasks.map((task) => [task.id, task.status])).toEqual([[id, 'running']]);
   expect(await worker.queue.heartbeat(id, 'dead-worker', seed.workspaceId)).toBe(false);
   const lockAs = (owner: string, task = claimed) =>
     db

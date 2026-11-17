@@ -27,14 +27,13 @@ import { crawlAdmit, releaseNonPage } from './frontier.ts';
 import { crawlRobotsHandling, isBotBlock } from './page-fetch.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import {
-  Abandoned,
   cancelTask,
   commitTask,
   finalFailure,
+  heldBySlot,
   httpError,
   loadScope,
   lockSiteTask,
-  markRunning,
   owned,
   recordCrawlEvent,
   settleTask,
@@ -42,6 +41,7 @@ import {
   statuses,
   type Crawl,
   type SiteTaskContext,
+  type TaskScope,
 } from './site-task.ts';
 import { canonicalIdentity } from './url-identity.ts';
 
@@ -241,7 +241,7 @@ async function acquire(ctx: SiteTaskContext, crawl: Crawl, task: SiteTask): Prom
   };
 }
 
-async function recordProgress(trx: Database, crawl: Crawl) {
+async function recordProgress(ctx: SiteTaskContext, trx: Database, crawl: Crawl) {
   const analyzed = crawl.analyzed_url_count + 1;
   await trx
     .updateTable('site_crawls')
@@ -249,7 +249,8 @@ async function recordProgress(trx: Database, crawl: Crawl) {
     .where('id', '=', crawl.id)
     .where('workspace_id', '=', crawl.workspace_id)
     .execute();
-  await recordCrawlEvent(trx, crawl, 'analysis.progress', 'analysis progress', { analyzed });
+  if (ctx.cadence.analysisEvent.admits(crawl.id))
+    await recordCrawlEvent(trx, crawl, 'analysis.progress', 'analysis progress', { analyzed });
 }
 
 /** Whether setup or discovery published new page context while interpretation ran. */
@@ -263,23 +264,30 @@ async function contextMoved(
   return JSON.stringify(current) !== JSON.stringify(context);
 }
 
-/** Stage the evidence and settle the task in one transaction. */
-async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome) {
+/**
+ * Stage the evidence and settle the task in one transaction. The prepared
+ * scope supplies the provisional context; the under-lock `contextMoved` check
+ * defers a stale one, and the fence re-reads the crawl and task.
+ */
+async function persist(
+  ctx: SiteTaskContext,
+  claimed: SiteTask,
+  scope: TaskScope,
+  outcome: Outcome,
+) {
   ctx.signal.throwIfAborted();
   // Load the provisional page context and evaluate before taking quota/commit locks.
-  const scope = outcome.facts ? await loadScope(ctx.db, claimed) : null;
-  const context = scope?.task.site_url_id
-    ? await pageAnalysisContext(ctx.db, scope.crawl, {
-        ...scope.task,
-        site_url_id: scope.task.site_url_id,
-      })
-    : null;
+  const context =
+    outcome.facts && scope.task.site_url_id
+      ? await pageAnalysisContext(ctx.db, scope.crawl, {
+          ...scope.task,
+          site_url_id: scope.task.site_url_id,
+        })
+      : null;
   const result = context && outcome.facts ? await analyzePageAsync(outcome.facts, context) : null;
   await commitTask(ctx, claimed, async (trx, lock) => {
     // Runtime and membership come before the crawl in Site Health lock order.
-    const live = await loadScope(trx, claimed);
-    if (!live) throw new Abandoned();
-    const rows = await guardRows(trx, live.crawl, live.task, true);
+    const rows = await guardRows(trx, scope.crawl, scope.task, true);
     const { crawl, task } = await lock();
     if (!guardAllows(crawl, rows)) {
       await cancelTask(trx, task, ctx.owner);
@@ -323,7 +331,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
         ctx.fetcher.settings.policyVersion,
       );
     if (artifactId) {
-      await recordProgress(trx, crawl);
+      await recordProgress(ctx, trx, crawl);
       await settleTask(trx, ctx, task, { kind: 'succeeded', artifactId });
       return;
     }
@@ -344,20 +352,21 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
 async function prepare(
   ctx: SiteTaskContext,
   claimed: SiteTask,
-): Promise<Outcome | 'deferred' | null> {
+): Promise<{ scope: TaskScope; outcome: Outcome } | 'deferred' | null> {
   ctx.signal.throwIfAborted();
-  const scope = await loadScope(ctx.db, claimed);
-  if (!scope || !isActiveCrawl(scope.crawl.status)) {
+  const loaded = await loadScope(ctx.db, claimed);
+  if (!loaded || !isActiveCrawl(loaded.crawl.status)) {
     await cancelTask(ctx.db, claimed, ctx.owner);
     return null;
   }
-  const { crawl, task } = scope;
-  if (task.lease_owner !== ctx.owner) return null;
-  if (!guardAllows(crawl, await guardRows(ctx.db, crawl, task, false))) {
+  const { task } = loaded;
+  if (!heldBySlot(task, claimed, ctx.owner)) return null;
+  if (!guardAllows(loaded.crawl, await guardRows(ctx.db, loaded.crawl, task, false))) {
     await cancelTask(ctx.db, task, ctx.owner);
     return null;
   }
-  await startCrawl(ctx.db, crawl);
+  const crawl = await startCrawl(ctx.db, loaded.crawl);
+  const scope = { crawl, task };
   const { artifact, pending } = await reusableArtifact(ctx.db, crawl, task);
   const waited = Math.max(0, (Date.now() - new Date(task.created_at).getTime()) / 1000);
   if (
@@ -376,10 +385,9 @@ async function prepare(
     });
     return deferred ? 'deferred' : null;
   }
-  if (!(await markRunning(ctx, claimed))) return null;
-  if (!artifact) return acquire(ctx, crawl, task);
+  if (!artifact) return { scope, outcome: await acquire(ctx, crawl, task) };
   if (artifact.facts.has_html) await expectClassification(ctx.db, task, ctx.owner);
-  return {
+  const outcome: Outcome = {
     facts: artifact.facts,
     page: null,
     reusedArtifactId: artifact.id,
@@ -392,9 +400,11 @@ async function prepare(
     latencyMs: null,
     calls: [],
   };
+  return { scope, outcome };
 }
 
 export async function runAnalyze(ctx: SiteTaskContext, claimed: SiteTask) {
-  const outcome = await prepare(ctx, claimed);
-  if (outcome && outcome !== 'deferred') await persist(ctx, claimed, outcome);
+  const prepared = await prepare(ctx, claimed);
+  if (prepared && prepared !== 'deferred')
+    await persist(ctx, claimed, prepared.scope, prepared.outcome);
 }

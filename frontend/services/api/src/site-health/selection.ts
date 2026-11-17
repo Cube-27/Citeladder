@@ -70,17 +70,20 @@ async function lockControlScope(db: Database, workspaceId: string, projectId: st
     .forNoKeyUpdate()
     .executeTakeFirst();
   if (!project) throw notFound('Project');
-  const held = await holdRuntime(db, workspaceId);
-  await lockTrackedSet(db, workspaceId, projectId);
-  const crawl = await db
+  const active = db
     .selectFrom('site_crawls')
     .select('id')
     .where('workspace_id', '=', workspaceId)
     .where('project_id', '=', projectId)
     .where('status', 'in', ACTIVE_CRAWL_STATUSES)
-    .orderBy('created_at', 'desc')
-    .forUpdate()
-    .executeTakeFirst();
+    .orderBy('created_at', 'desc');
+  // As createCrawl does: refuse a running crawl before the runtime and membership locks its tasks take.
+  if (await active.executeTakeFirst())
+    crawlError('Project already has an active crawl', 'crawl_already_active', 409);
+  const held = await holdRuntime(db, workspaceId);
+  await lockTrackedSet(db, workspaceId, projectId);
+  // NO KEY UPDATE: a key-share lock (a task or event insert) never waits on it.
+  const crawl = await active.forNoKeyUpdate().executeTakeFirst();
   const profile = await db
     .selectFrom('site_health_profiles')
     .selectAll()

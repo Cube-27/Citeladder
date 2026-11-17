@@ -167,37 +167,30 @@ async function monitoredLimit(seed: SiteSeed) {
 }
 
 describe('Site Health lock order', () => {
-  it('lets a page rerun and a discover commit interleave without deadlock, then refuses the rerun', async () => {
+  it('refuses a page rerun during a discover commit without waiting on its locks', async () => {
     const { seed, page } = await monitoredCrawl(1);
-    for (let round = 0; round < 5; round++) {
-      // A discover commit locks the runtime first, then the crawl (lockSiteTask).
-      const worker = await db.startTransaction().execute();
-      let rerun: Promise<unknown> | undefined;
-      try {
-        await lockRuntime(worker, seed.workspaceId);
-        rerun = db
+    // A discover commit locks the runtime first, then the crawl (lockSiteTask).
+    const worker = await db.startTransaction().execute();
+    try {
+      await lockRuntime(worker, seed.workspaceId);
+      // It writes a URL it found: the foreign key key-share locks the project row.
+      await worker.insertInto('site_urls').values(foundUrl(seed, '/found')).execute();
+      // The running crawl refuses the rerun before the runtime lock the worker holds (SH-B4).
+      await expect(
+        db
           .transaction()
-          .execute((trx) => rerunPage(trx, seed.workspaceId, seed.projectId, page.id));
-        await blocksAnother(await backendPid(worker));
-        // It writes a URL it found: the foreign key key-share locks the project row.
-        await worker
-          .insertInto('site_urls')
-          .values(foundUrl(seed, `/found-${round}`))
-          .execute();
-        const crawl = await worker
-          .selectFrom('site_crawls')
-          .select('id')
-          .where('id', '=', seed.crawlId)
-          .forNoKeyUpdate()
-          .executeTakeFirstOrThrow();
-        expect(crawl.id).toBe(seed.crawlId);
-        await worker.commit().execute();
-        // It waited rather than deadlocked, then found the running crawl (SH-B4).
-        await expect(rerun).rejects.toMatchObject({ status: 409, code: 'crawl_already_active' });
-      } finally {
-        if (!worker.isCommitted) await worker.rollback().execute();
-        await rerun?.catch(() => undefined);
-      }
+          .execute((trx) => rerunPage(trx, seed.workspaceId, seed.projectId, page.id)),
+      ).rejects.toMatchObject({ status: 409, code: 'crawl_already_active' });
+      const crawl = await worker
+        .selectFrom('site_crawls')
+        .select('id')
+        .where('id', '=', seed.crawlId)
+        .forNoKeyUpdate()
+        .executeTakeFirstOrThrow();
+      expect(crawl.id).toBe(seed.crawlId);
+      await worker.commit().execute();
+    } finally {
+      if (!worker.isCommitted) await worker.rollback().execute();
     }
   });
 

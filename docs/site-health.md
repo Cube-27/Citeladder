@@ -134,8 +134,10 @@ retries after `failure_retry_seconds` and turns the schedule off after
 | `change_intel` | post-terminal change snapshot and analytics handoff |
 
 `admission-writes.ts` is the only writer of these tasks, of URL identities
-(`site_urls`), observations and system memberships. A task's idempotency key
-is `crawl:kind:url_hash:generation` and its attempt budget is `max_attempts`.
+(`site_urls`), observations and system memberships. A task's slot
+(crawl, kind, URL hash, generation) is unique (`uq_site_crawl_task_slot`); its
+`idempotency_key` spells the slot out and is not separately indexed. Its
+attempt budget is `max_attempts`.
 URL admission enqueues into an active crawl only and raises a queued
 conflict's priority; planner seeds and post-terminal successors keep an
 existing row. Every sighting of a URL refreshes its identity for the crawl,
@@ -146,7 +148,15 @@ URL.
 The acquisition kinds fetch outside any transaction. Each then re-locks its
 task and re-checks the lease, crawl status and workspace access; `analyze` also
 re-checks membership and allowance. Evidence and the outcome commit together,
-and a lost lease commits nothing.
+and a lost lease commits nothing. A claim moves the task straight to `running`;
+the commit's fence, not a separate start, decides whether the attempt still
+holds the lease. The commit reuses the crawl and task its kind loaded before
+the fetch (`site_setup` re-reads them for its first commit's pointers).
+
+Tasks and the evidence written per page (attempts, artifacts, analyses,
+evaluations, issues, events, observations, frontier rows) take time-ordered
+UUIDv7 ids (`db/ids.ts`), so inserts land at the right edge of each key index.
+An id reveals when its row was created and never authorizes anything.
 
 `site_setup` commits twice. The first commit holds root robots access, llms.txt
 and the snapshot pointer, with the sitemap `pending`, and it unblocks the root's
@@ -198,9 +208,11 @@ the active, terminal and usable (terminal with readable analyses: all but
 
 **Terminalization** (`lifecycle.ts`, the only path to a terminal crawl). Each
 settled lifecycle task reconciles counters and sub-states under the crawl row
-lock. While siblings remain, a successful analysis only refreshes the
-provisional summary, and a discover while discovery continues only recounts
-progress, both on the `live_score_refresh_*` cadence. The provisional summary
+lock. While siblings remain, a settled analysis (analyzed, failed or
+cancelled) only refreshes the provisional summary, and a discover while
+discovery continues only recounts progress, both on the `live_score_refresh_*`
+cadence, as are the per-page `analysis.progress` and `discovery.progress`
+events. The provisional summary
 (`live-score.ts`) is the equal-page average of the tracked pages' stored
 provisional scores, with counts, from a few grouped queries that never read
 rule evaluations (owner, 2026-11-17); the terminal summary rebuilds from
@@ -233,7 +245,10 @@ analysis drain, one locked transaction:
   published. A cancelled page rerun is published once, its `change_intel` task
   standing in for the snapshot it never writes.
 
-Stop (`controls.ts`) commits only the cancellation and fetch settlement.
+Stop (`controls.ts`) commits only the cancellation and fetch settlement. It
+cancels open tasks with `SKIP LOCKED`, never waiting on a claim or heartbeat
+that holds one; that task's worker finds the crawl stopped, cancels it, and its
+settlement rewrites the stopped crawl's counters.
 
 ## URL admission and selection
 
@@ -915,9 +930,9 @@ links open the tab that lists the rule.
 
 The dashboard counters of an active crawl count its tasks and analyses live. A
 terminal crawl's are the ones persisted with its terminal status: by
-terminalization, by Stop in the cancelling transaction, again when the
-cancelled crawl is published and when an analysis is appended over a finalized
-one. Only the monitored selection count is read live. A terminal crawl without
+terminalization, by Stop in the cancelling transaction, again when a task Stop
+skipped settles, when the cancelled crawl is published and when an analysis is
+appended over a finalized one. Only the monitored selection count is read live. A terminal crawl without
 persisted counters reads its row's own persisted counts; no read rescans its
 tasks.
 

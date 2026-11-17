@@ -4,10 +4,11 @@
  * evaluations and the issues they raise. Only the issues' derived currency flag
  * changes later (`issue-currency.ts`). Callers own the transaction.
  */
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { timeOrderedId } from '../db/ids.ts';
 import { record } from '../db/json.ts';
 import { scalarText } from '../text-order.ts';
 import type { FetchCall, FetchedPage } from '../safe-fetch.ts';
@@ -58,7 +59,7 @@ export async function writeArtifact(
   },
 ) {
   const { policyVersion, latencyMs, purpose, robotsExcluded } = fetch;
-  const id = randomUUID();
+  const id = timeOrderedId();
   const now = new Date();
   await db
     .insertInto('site_fetch_artifacts')
@@ -144,7 +145,7 @@ export async function writeAttempts(
         const failed = Boolean(error) || (call.status !== null && call.status >= 400);
         return {
           ...common,
-          id: randomUUID(),
+          id: timeOrderedId(),
           request_ordinal: index,
           target_host: hostOf(call.url),
           outcome: failed ? attemptOutcome.error : attemptOutcome.success,
@@ -159,7 +160,7 @@ export async function writeAttempts(
     : [
         {
           ...common,
-          id: randomUUID(),
+          id: timeOrderedId(),
           request_ordinal: 0,
           target_host: hostOf(task.requested_url),
           outcome: outcome.succeeded ? attemptOutcome.success : attemptOutcome.error,
@@ -282,7 +283,7 @@ export async function insertEvaluations(
     createsIssue(evaluation)
       ? [
           {
-            id: randomUUID(),
+            id: timeOrderedId(),
             workspace_id: crawl.workspace_id,
             project_id: crawl.project_id,
             crawl_id: crawl.id,
@@ -356,9 +357,12 @@ export async function writePageAnalysis(
     .where('is_current', '=', true)
     .returning('finalized_at')
     .execute();
-  const id = randomUUID();
+  const id = timeOrderedId();
   const scores = result.scores;
-  const evaluations = result.evaluations.map((evaluation) => ({ ...evaluation, id: randomUUID() }));
+  const evaluations = result.evaluations.map((evaluation) => ({
+    ...evaluation,
+    id: timeOrderedId(),
+  }));
   await db
     .insertInto('site_page_analyses')
     .values({

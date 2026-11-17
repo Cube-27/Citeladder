@@ -377,15 +377,21 @@ function settledRow(db: Database, task: SettledTask) {
 }
 
 /**
- * What a settled row can change. A discover while discovery continues and a
- * successful analysis while siblings remain move no boundary, only live
- * progress; anything else may settle discovery, analysis or the crawl.
+ * What a settled row can change. A discover while discovery continues and an
+ * analysis (analyzed, failed or cancelled) while siblings remain move no
+ * boundary, only live progress. A task of a stopped crawl is one Stop skipped
+ * while another transaction held it. Anything else may settle discovery,
+ * analysis or the crawl.
  */
 function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
+  if (row.crawl_status === 'cancelled') return 'stopped';
   const running = row.crawl_status === 'running';
   if (row.task_kind === 'discover' && running && row.discovering) return 'discovery_progress';
-  const analyzed =
-    row.task_kind === 'analyze' && row.status === 'succeeded' && row.result_artifact_id !== null;
+  const settledPage =
+    row.status === 'failed' ||
+    row.status === 'cancelled' ||
+    (row.status === 'succeeded' && row.result_artifact_id !== null);
+  const analyzed = row.task_kind === 'analyze' && settledPage;
   return analyzed && running && row.analysis_status === 'running' && row.outstanding
     ? 'analysis_progress'
     : 'boundary';
@@ -416,6 +422,11 @@ export async function reconcileAfterTask(db: Database, task: SettledTask, cadenc
     case 'analysis_progress':
       if (cadence.score.admits(task.crawl_id)) await refreshRunningScoreSummary(db, task);
       return;
+    case 'stopped':
+      return db.transaction().execute(async (trx) => {
+        const crawl = await lockCrawl(trx, task.workspace_id, task.crawl_id);
+        if (crawl?.status === 'cancelled') await persistTerminalCounters(trx, crawl);
+      });
     default: {
       const unhandled: never = kind;
       return unhandled;

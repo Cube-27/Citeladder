@@ -106,11 +106,14 @@ export const ANALYTICS_LANE = {
   recoveryCharge: 1,
 } as const satisfies LaneDescriptor<'analytics_tasks'>;
 
-/** Site Health counts the attempt at settlement, or when recovery reclaims the lease. */
+/**
+ * Site Health runs on claim and counts the attempt at settlement, or when
+ * recovery reclaims the lease; every commit re-checks owner, attempt and expiry.
+ */
 export const SITE_HEALTH_LANE = {
   table: 'site_crawl_tasks',
   claimable,
-  claimStatus: 'leased',
+  claimStatus: 'running',
   claimCharge: 0,
   recoveryCharge: 1,
   asyncCommit: true,

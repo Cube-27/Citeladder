@@ -48,8 +48,17 @@ export class RefreshCadence {
   }
 }
 
-/** One cadence per kind of repeated work, so a discover burst never delays a score refresh. */
+/**
+ * One cadence per kind of repeated work, so a discover burst never delays a
+ * score refresh. Per-page `.progress` events follow their own: the browser
+ * ignores them and polls the persisted counters instead.
+ */
 export function crawlCadences(settings: SiteWorkerSettings['scoreRefresh']) {
-  return { score: new RefreshCadence(settings), discovery: new RefreshCadence(settings) };
+  return {
+    score: new RefreshCadence(settings),
+    discovery: new RefreshCadence(settings),
+    analysisEvent: new RefreshCadence(settings),
+    discoveryEvent: new RefreshCadence(settings),
+  };
 }
 export type CrawlCadences = ReturnType<typeof crawlCadences>;

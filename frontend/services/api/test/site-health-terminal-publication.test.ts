@@ -693,6 +693,28 @@ describe('crawl lifecycle', () => {
     expect(await tasksOf(seed.crawlId, 'link_metrics')).toHaveLength(1);
   });
 
+  it('takes a failed page with siblings outstanding as progress, and the last one as a boundary', async () => {
+    const seed = await running();
+    const done = await monitoredPage(seed, '/');
+    const failed = await failedTask(seed, { path: '/failed', error_code: 'task_failed' });
+    const last = await fixtures.analyzable(seed, '/last');
+    const gates = cadence();
+    await reconcileAfterTask(db, settled(seed, done.taskId), gates);
+    // No crawl lock and no recount while a sibling is still outstanding.
+    await reconcileAfterTask(db, settled(seed, failed.taskId), gates);
+    expect(await crawlRow(seed.crawlId)).toMatchObject({ status: 'running', failed_url_count: 0 });
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'cancelled', error_code: 'cancelled' })
+      .where('id', '=', last.taskId)
+      .execute();
+    await reconcileAfterTask(db, settled(seed, last.taskId), gates);
+    expect(await crawlRow(seed.crawlId)).toMatchObject({
+      status: 'partially_completed',
+      failed_url_count: 1,
+    });
+  });
+
   it('reconciles discovery progress on cadence and settles discovery without a score rebuild', async () => {
     const seed = await running({ discovery_status: 'running' });
     const done = await monitoredPage(seed, '/');

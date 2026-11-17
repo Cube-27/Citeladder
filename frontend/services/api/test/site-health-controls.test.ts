@@ -17,7 +17,9 @@ import { fitTrackedSet } from '../src/site-health/admission-writes.ts';
 import { candidate } from '../src/site-health/frontier.ts';
 import { fillTrackedSet } from '../src/site-health/tracked-set.ts';
 import { classifyUrlAdmission } from '../src/site-health/url-admission.ts';
-import { publishCancelledCrawls } from '../src/site-health/lifecycle.ts';
+import { publishCancelledCrawls, reconcileAfterTask } from '../src/site-health/lifecycle.ts';
+import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
+import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { record } from '../src/db/json.ts';
 import { revokeBundle } from '../src/entitlements/grants.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
@@ -679,6 +681,52 @@ describe('crawl-control HTTP contracts', () => {
     });
     const outsider = await fixtures.crawl();
     expect((await counters(outsider)).status).toBe(404);
+  });
+
+  it('stops past a task another transaction holds, and that task’s settlement recounts', async () => {
+    const seed = await fixtures.crawl('running');
+    const held = await fixtures.analyzable(seed, '/held');
+    const free = await fixtures.analyzable(seed, '/free');
+    const status = async (id: string) =>
+      (
+        await db
+          .selectFrom('site_crawl_tasks')
+          .select('status')
+          .where('id', '=', id)
+          .executeTakeFirstOrThrow()
+      ).status;
+    const queued = async () =>
+      record(
+        (
+          await db
+            .selectFrom('site_crawls')
+            .select('terminal_counters')
+            .where('id', '=', seed.crawlId)
+            .executeTakeFirstOrThrow()
+        ).terminal_counters,
+      ).queued;
+    // A heartbeat or claim holding the row never makes Stop wait on it.
+    await db.transaction().execute(async (trx) => {
+      await sql`select id from site_crawl_tasks where id = ${held.taskId} for update`.execute(trx);
+      await cancelCrawl(db, seed.workspaceId, seed.crawlId);
+    });
+    expect([await status(held.taskId), await status(free.taskId), await queued()]).toEqual([
+      'queued',
+      'cancelled',
+      1,
+    ]);
+    // Its worker finds the crawl stopped, cancels the task and recounts.
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'cancelled' })
+      .where('id', '=', held.taskId)
+      .execute();
+    await reconcileAfterTask(
+      db,
+      { id: held.taskId, crawl_id: seed.crawlId, workspace_id: seed.workspaceId },
+      crawlCadences(siteWorkerSettings({}).scoreRefresh),
+    );
+    expect(await queued()).toBe(0);
   });
 
   it('lists a crawl with the same counters its dashboard reads, live or persisted', async () => {

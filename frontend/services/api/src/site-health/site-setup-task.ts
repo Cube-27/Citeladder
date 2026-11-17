@@ -39,7 +39,6 @@ import {
   Abandoned,
   commitTask,
   loadScope,
-  markRunning,
   prepareTask,
   settleTask,
   type Crawl,
@@ -346,7 +345,7 @@ export async function runSiteSetup(
   settings = setupSettings(),
 ) {
   const scope = await prepareTask(ctx, claimed);
-  if (!scope || !(await markRunning(ctx, claimed))) return;
+  if (!scope) return;
   const { crawl, task } = scope;
   const published = crawl.site_facts === null ? null : record(crawl.site_facts);
   const resuming = record(published?.sitemap).pending === true;

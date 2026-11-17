@@ -30,17 +30,15 @@ import {
 } from './frontier.ts';
 import { crawlRobotsHandling, isBotBlock } from './page-fetch.ts';
 import {
-  Abandoned,
   commitTask,
   finalFailure,
   httpError,
-  loadScope,
-  markRunning,
   prepareTask,
   recordCrawlEvent,
   settleTask,
   type Crawl,
   type SiteTaskContext,
+  type TaskScope,
 } from './site-task.ts';
 import { taskOutcome } from './task-outcome.ts';
 import { classifyUrlAdmission } from './url-admission.ts';
@@ -328,11 +326,14 @@ async function dispose(
     });
 }
 
-async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome) {
+/** The prepared scope's identity and settings stand; budgets re-read under the runtime lock. */
+async function persist(
+  ctx: SiteTaskContext,
+  claimed: SiteTask,
+  { crawl, task }: TaskScope,
+  outcome: Outcome,
+) {
   await commitTask(ctx, claimed, async (trx, lock) => {
-    const live = await loadScope(trx, claimed);
-    if (live?.task.lease_owner !== ctx.owner) throw new Abandoned();
-    const { crawl, task } = live;
     let artifactId: string | null = null;
     let admitted = 0;
     let sampleCapped = false;
@@ -381,7 +382,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
         .where('id', '=', locked.crawl.id)
         .where('workspace_id', '=', locked.crawl.workspace_id)
         .execute();
-      if (artifactId)
+      if (artifactId && ctx.cadence.discoveryEvent.admits(locked.crawl.id))
         await recordCrawlEvent(trx, locked.crawl, 'discovery.progress', 'discovery progress', {
           admitted,
           depth: task.depth,
@@ -413,6 +414,6 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
 
 export async function runDiscover(ctx: SiteTaskContext, claimed: SiteTask) {
   const scope = await prepareTask(ctx, claimed);
-  if (!scope || !(await markRunning(ctx, claimed))) return;
-  await persist(ctx, claimed, await acquire(ctx, scope.crawl, scope.task));
+  if (!scope) return;
+  await persist(ctx, claimed, scope, await acquire(ctx, scope.crawl, scope.task));
 }

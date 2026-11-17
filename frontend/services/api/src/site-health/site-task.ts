@@ -6,12 +6,13 @@
  * outside any transaction and commit through `commitTask`; the rest run inside
  * one transaction the runner opens.
  */
-import { randomInt, randomUUID } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { isActiveCrawl } from '@citeladder/contracts/site-health';
 import type { Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { timeOrderedId } from '../db/ids.ts';
 import { isRetryableContention } from '../db/errors.ts';
 import { record } from '../db/json.ts';
 import type { SiteCrawls } from '../generated/db-schema.ts';
@@ -26,6 +27,7 @@ import {
   type TaskQueue,
 } from '../queue/task-queue.ts';
 import type { SitePageFetcher } from './page-fetch.ts';
+import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 
 export type Crawl = Selectable<SiteCrawls>;
@@ -48,6 +50,8 @@ export type SiteTaskRunner = {
   settings: SiteWorkerSettings;
   /** Throws when the workspace may no longer run Site Health work. */
   checkAccess: () => Promise<unknown>;
+  /** The worker's display cadences; per-page progress events follow them. */
+  cadence: CrawlCadences;
   signal?: AbortSignal;
 };
 /** The runner adds the lease signal and when the attempt began (`performance.now()`). */
@@ -83,13 +87,22 @@ const retryDelay = (settings: SiteWorkerSettings, attempt: number) =>
   Math.min(settings.retryMax, settings.retryBase * 2 ** Math.max(0, attempt - 1)) +
   jitter(settings.retryJitter);
 
-/** An update of the task that applies only while this worker still holds its lease. */
+/** An update of the task that applies only while this worker still holds this attempt's lease. */
 export const owned = (db: Database, task: SiteTask, owner: string) =>
   db
     .updateTable('site_crawl_tasks')
     .where('id', '=', task.id)
     .where('workspace_id', '=', task.workspace_id)
-    .where('lease_owner', '=', owner);
+    .where('lease_owner', '=', owner)
+    .where('attempt_count', '=', task.attempt_count);
+
+/**
+ * Whether the loaded row is still this slot's claim. A worker's owner is fixed
+ * for its lifetime, so the attempt tells a stale slot from the same worker's
+ * re-claim after recovery charged the expired lease. The commit fence decides.
+ */
+export const heldBySlot = (loaded: SiteTask, claimed: SiteTask, owner: string) =>
+  loaded.lease_owner === owner && loaded.attempt_count === claimed.attempt_count;
 
 /** Cancel the task while this worker still holds it; a reclaimed lease belongs to someone else. */
 export async function cancelTask(db: Database, task: SiteTask, owner: string) {
@@ -128,11 +141,14 @@ export async function loadScope(db: Database, claimed: SiteTask) {
   return task && crawl ? { task, crawl } : null;
 }
 
-/** The first task to run moves a queued crawl to running. */
-export async function startCrawl(db: Database, crawl: Crawl) {
-  if (crawl.status !== 'queued') return;
+/**
+ * The first task to run moves a queued crawl to running. Returns the crawl as
+ * it now stands, so a scope reused at commit carries the started audit time.
+ */
+export async function startCrawl(db: Database, crawl: Crawl): Promise<Crawl> {
+  if (crawl.status !== 'queued') return crawl;
   const now = new Date();
-  await db
+  const started = await db
     .updateTable('site_crawls')
     .set((eb) => ({
       status: 'running',
@@ -142,12 +158,24 @@ export async function startCrawl(db: Database, crawl: Crawl) {
     .where('id', '=', crawl.id)
     .where('workspace_id', '=', crawl.workspace_id)
     .where('status', '=', 'queued')
-    .execute();
+    .returningAll()
+    .executeTakeFirst();
+  if (started) return started;
+  // A sibling started (or stopped) it first.
+  return (
+    (await db
+      .selectFrom('site_crawls')
+      .selectAll()
+      .where('id', '=', crawl.id)
+      .where('workspace_id', '=', crawl.workspace_id)
+      .executeTakeFirst()) ?? crawl
+  );
 }
 
 /**
  * Load the claimed task and start its crawl; null (after cancelling the task
- * when its crawl is no longer active) when it must not run.
+ * when its crawl is no longer active) when it must not run. The scope is the
+ * one its commit reuses: the commit's fence re-checks the lease and the crawl.
  */
 export async function prepareTask(ctx: SiteTaskContext, claimed: SiteTask) {
   ctx.signal.throwIfAborted();
@@ -156,19 +184,10 @@ export async function prepareTask(ctx: SiteTaskContext, claimed: SiteTask) {
     await cancelTask(ctx.db, claimed, ctx.owner);
     return null;
   }
-  if (scope.task.lease_owner !== ctx.owner) return null;
-  await startCrawl(ctx.db, scope.crawl);
-  return scope;
+  if (!heldBySlot(scope.task, claimed, ctx.owner)) return null;
+  return { task: scope.task, crawl: await startCrawl(ctx.db, scope.crawl) };
 }
-
-/**
- * Start the claimed attempt. A worker's owner is fixed for its lifetime, so the
- * attempt tells a stale slot from the same worker's re-claim of the task after
- * recovery charged the expired lease.
- */
-export function markRunning(ctx: SiteTaskContext, claimed: SiteTask) {
-  return ctx.queue.markRunning(claimed.id, ctx.owner, claimed.attempt_count);
-}
+export type TaskScope = NonNullable<Awaited<ReturnType<typeof prepareTask>>>;
 
 /** Classify a returned HTTP status: a 4xx is terminal except 429; every 5xx is retryable. */
 export function httpError(status: number): [string, boolean] | null {
@@ -346,7 +365,7 @@ export async function recordCrawlEvent(
   await trx
     .insertInto('site_crawl_events')
     .values({
-      id: randomUUID(),
+      id: timeOrderedId(),
       workspace_id: crawl.workspace_id,
       crawl_id: crawl.id,
       event_type: eventType,
@@ -370,7 +389,6 @@ async function runInTransaction(
   claimed: SiteTask,
   run: Extract<SiteTaskWork, { kind: 'transaction' }>['run'],
 ) {
-  if (!(await markRunning(ctx, claimed))) return;
   await asyncCommit(ctx.db, async (trx) => {
     ctx.signal.throwIfAborted();
     const held = await lockSiteTask(trx, ctx, claimed, 'keyShare');
