@@ -15,13 +15,13 @@ import type { Highlight } from '@/lib/markdown/highlight';
 import { claimHighlights, EvidenceClaims } from '@/components/runs/evidence-claims';
 import { EvidencePerception, perceptionHighlights } from '@/components/runs/evidence-perception';
 import { EvidenceAds } from '@/components/runs/evidence-ads';
+import { FactList } from '@/components/ui/facts';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { MetaFooter, SubsectionHeader } from '@/components/ui/workspace';
 import { LedgerItem, LedgerList } from '@/components/ui/ledger-list';
 import { StateBlock } from '@/components/ui/state-block';
 import { wellClasses } from '@/components/ui/slip';
-import { FigureStrip } from '@/components/ui/figure-strip';
 
 function safeCitationUrl(value: string): string | null {
   try {
@@ -67,17 +67,13 @@ function EvidenceMeasurement({ evidence }: Readonly<{ evidence: ExecutionEvidenc
 
 function EvidenceMetrics({ evidence }: Readonly<{ evidence: ExecutionEvidence }>) {
   return (
-    <FigureStrip
-      segments={[
+    <FactList
+      layout="metrics"
+      facts={[
+        { label: 'Brand', value: evidence.brand_mentioned ? 'Mentioned' : 'Not mentioned' },
+        { label: 'Owned sources', value: evidence.owned_citation_count },
+        { label: 'Citations', value: evidence.citation_count },
         {
-          key: 'brand',
-          label: 'Brand',
-          value: evidence.brand_mentioned ? 'Mentioned' : 'Not mentioned',
-        },
-        { key: 'owned', label: 'Owned sources', value: evidence.owned_citation_count },
-        { key: 'citations', label: 'Citations', value: evidence.citation_count },
-        {
-          key: 'searches',
           label: 'Searches',
           value: evidence.search_used ? evidence.search_query_count : 'Not used',
         },

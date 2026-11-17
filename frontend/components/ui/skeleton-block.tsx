@@ -179,7 +179,7 @@ export function TableBlocks({
  * Metric cards in FigureStrip's rows (`figureRows`) and cells, so they take
  * its card on the ground and its edgeless cell inside a card (globals.css):
  * a 12px label block at 40% on the label's line over a 24×56 value block on
- * the value's, 88 tall as a card.
+ * the value's, 84 tall as a card.
  */
 export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
   const { ref, width } = useStripWidth<HTMLSpanElement>();
@@ -191,7 +191,7 @@ export function FigureBlocks({ count = 3 }: Readonly<{ count?: number }>) {
           <span className="mb-1 flex h-5 items-center">
             <SkeletonBlock className="w-2/5" />
           </span>
-          <span className="flex h-8 items-center">
+          <span className="flex min-h-[var(--text-figure--line-height)] items-center">
             <SkeletonBlock className="h-6 w-14" />
           </span>
         </span>

@@ -36,7 +36,7 @@ const TEXT_ROLES = {
   captionStrong: 'type-caption-strong',
   /** At most one hero figure per page. Sans 32/40 600, tabular. */
   figureXl: 'type-figure-xl',
-  /** A stat card's figure. Sans 24/32 600, tabular. */
+  /** Every metric figure in the app. Sans 20/28 500, tabular. */
   figure: 'type-figure',
   /** Code, ids, keys, raw snippets, keyboard hints. Mono 13/20. */
   code: 'type-code',

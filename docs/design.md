@@ -204,8 +204,8 @@ typography:
 - **The app's roles** are the closed set in
   [`typography.tsx`](../frontend/components/ui/typography.tsx) (`textRole`),
   with their recipes in `globals.css`; a call site names the job, never a
-  size. The app binds `title` to 20/28 at 400, not the block's website
-  value. The website's `type-page-title`, `-control`, `-eyebrow` and
+  size. The app binds `title` to 20/28 at 400 and every metric `figure` to
+  20/28, not the block's website values. The website's `type-page-title`, `-control`, `-eyebrow` and
   `-delta` are website-only.
 - **App sizes:** 12, 13, 14, 16, 20, 24, 28 and 40 only, each with one line
   height; 12 is the floor. Weights 400 and 500, never 600 (350 and 450 in

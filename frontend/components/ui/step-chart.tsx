@@ -98,8 +98,8 @@ function StepChartKeys({
  * fill under it; rivals take their page-wide identity colours
  * (`SeriesTonesContext`) at 1.5px with hollow markers. A missing period breaks
  * the line and shows a `well` band with its word; nothing is interpolated.
- * A chart of one period is no chart: each line prints as a figure with its
- * date. Lines are named at
+ * A chart of one period is no chart: each line prints as a compact row under
+ * one date. Lines are named at
  * their right end with their latest value (dated when it is older than the
  * last point), and a key replaces the labels when they would collide or a
  * line has no value to label.
@@ -157,10 +157,11 @@ export function StepChart({
     tone: tones[index] ?? 'other',
   }));
   const shown = shownWith(format);
-  if (data.length === 1) {
+  const [only] = data;
+  if (only && data.length === 1) {
     return (
-      <ChartFrame height={heightRole}>
-        <SingleMeasurements label={label} data={data} lines={toned} format={format} />
+      <ChartFrame>
+        <SingleMeasurements label={label} point={only} lines={toned} format={format} />
         <StepChartTable
           label={label}
           data={data}
@@ -420,45 +421,41 @@ function summarise(
 }
 
 /**
- * One period draws no line: each line is a figure (its name, its value and
- * the date it was measured), in the chart's footprint. Over several periods
- * the chart stays, so its gaps and events stay in view.
+ * One period draws no line: each line is a compact row (name left, value
+ * right) under one date for the set, and the frame drops its plot height
+ * (`ChartFrame`). Over several periods the chart stays.
  */
 function SingleMeasurements({
   label,
-  data,
+  point,
   lines,
   format,
 }: Readonly<{
   label: string;
-  data: readonly TrendPoint[];
+  point: TrendPoint;
   lines: readonly Readonly<{ name: string; values: readonly (number | null)[] }>[];
   format: (value: number) => string;
 }>) {
   return (
-    <ul
-      aria-label={label}
-      data-single-measurement=""
-      className="flex flex-wrap content-start gap-4"
-    >
-      {lines.map((line) => {
-        const at = lastMeasured(line.values);
-        const value = line.values[at];
-        const point = at >= 0 ? data[at] : undefined;
-        return (
-          <li key={line.name} className="flex min-w-0 flex-col gap-2">
-            <span className={textRole('body', 'text-ink-2 truncate')}>{line.name}</span>
-            <Value
-              text="figure"
-              value={value === null || value === undefined ? null : format(value)}
-            />
-            {point ? (
-              <span className={textRole('caption')}>{`Measured ${point.label}`}</span>
-            ) : null}
-          </li>
-        );
-      })}
-    </ul>
+    <div data-single-measurement="" className="flex min-w-0 flex-col gap-2">
+      <ul aria-label={label} className="flex min-w-0 flex-col">
+        {lines.map((line) => {
+          const value = line.values[0];
+          return (
+            <li key={line.name} className="flex min-w-0 items-center justify-between gap-4 py-1">
+              <span className={textRole('body', 'text-ink-2 min-w-0 truncate')} title={line.name}>
+                {line.name}
+              </span>
+              <Value
+                className="shrink-0"
+                value={value === null || value === undefined ? null : format(value)}
+              />
+            </li>
+          );
+        })}
+      </ul>
+      <p className={textRole('caption')}>{`Measured ${point.label}`}</p>
+    </div>
   );
 }
 

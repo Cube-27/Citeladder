@@ -194,7 +194,7 @@ function FilterMenu({
  *   - `active` marks a choice moved off its default (`data-active`); the
  *     value says how.
  *   - `sizeTo` lists every value the trigger can show. The value then takes
- *     the width of the longest of them, at most 160px, instead of the one
+ *     the width of the longest of them, at most 128px, instead of the one
  *     filter width, so it never resizes between two values. A longer value
  *     ends in an ellipsis and shows whole in a tooltip.
  *
@@ -275,19 +275,23 @@ function TriggerValue({ value, className }: Readonly<{ value: string; className?
 
 /**
  * Every option is laid in the same cell, unseen, so the value is as wide as
- * the longest (at most 160px) and never resizes between two values. The
+ * the longest (at most 128px) and never resizes between two values. The
  * sizers draw their text as generated content: no readable text, no name.
  */
 function SizedValue({ value, sizeTo }: Readonly<{ value: string; sizeTo: readonly string[] }>) {
   return (
-    <span className="inline-grid max-w-40 min-w-0 align-top">
+    <span className="inline-grid max-w-32 min-w-0 align-top">
       <ValueSizers sizeTo={sizeTo} />
       <TriggerValue value={value} className="col-start-1 row-start-1 truncate" />
     </span>
   );
 }
 
-/** Only the longest labels can set the width; a long option list (every tracked prompt) must not become one node per option. */
+/**
+ * Only the longest labels can set the width; a long option list (every tracked
+ * prompt) must not become one node per option. One line each, or a long option
+ * wraps and makes the trigger taller than a select.
+ */
 function ValueSizers({ sizeTo }: Readonly<{ sizeTo: readonly string[] }>) {
   return [...new Set(sizeTo)]
     .sort((a, b) => b.length - a.length)
@@ -297,7 +301,7 @@ function ValueSizers({ sizeTo }: Readonly<{ sizeTo: readonly string[] }>) {
         key={size}
         aria-hidden
         data-size={size}
-        className="invisible col-start-1 row-start-1 min-w-0 overflow-hidden after:content-[attr(data-size)]"
+        className="invisible col-start-1 row-start-1 min-w-0 overflow-hidden whitespace-nowrap after:content-[attr(data-size)]"
       />
     ));
 }
@@ -313,7 +317,7 @@ function HeldLabel({ label, sizeTo }: Readonly<{ label: string; sizeTo?: readonl
       <span className="col-start-1 row-start-1 truncate">{label}</span>
       <span aria-hidden className="invisible col-start-1 row-start-1 flex min-w-0">
         <span data-size={`${label}: `} className="whitespace-pre after:content-[attr(data-size)]" />
-        <span className="inline-grid max-w-40 min-w-0">
+        <span className="inline-grid max-w-32 min-w-0">
           <ValueSizers sizeTo={sizeTo} />
         </span>
       </span>

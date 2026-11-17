@@ -97,7 +97,7 @@ describe('StepChart', () => {
     expect(tones()).toEqual(['rival-1', 'you']);
   });
 
-  it('prints a line with one measurement as a figure with its date, not as a chart', () => {
+  it('prints one measurement as compact rows under one date, not as a chart', () => {
     const { container } = render(
       <StepChart
         label="Share"
@@ -112,7 +112,11 @@ describe('StepChart', () => {
       within(screen.getByRole('list', { name: 'Share' }))
         .getAllByRole('listitem')
         .map((item) => item.textContent),
-    ).toEqual(['You10%Measured 1 Jun 2026', 'GlobexNot measured']);
+    ).toEqual(['You10%', 'GlobexNot measured']);
+    expect(screen.getAllByText('Measured 1 Jun 2026')).toHaveLength(1);
+    expect(container.querySelector('[data-chart-frame]')?.getAttribute('data-chart-frame')).toBe(
+      'auto',
+    );
   });
 
   it('names lines at their end, and falls back to a key when the names would collide', () => {

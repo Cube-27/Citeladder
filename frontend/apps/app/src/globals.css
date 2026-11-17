@@ -697,8 +697,8 @@
   --text-heading--line-height: 1.5rem;
   --text-figure-xl: 2rem;
   --text-figure-xl--line-height: 2.5rem;
-  --text-figure: 1.5rem;
-  --text-figure--line-height: 2rem;
+  --text-figure: 1.25rem;
+  --text-figure--line-height: 1.75rem;
   --text-code: 0.8125rem;
   --text-code--line-height: 1.25rem;
 
@@ -2296,7 +2296,7 @@ label {
    as its row's share, so the strip is never wider than its container. On the
    ground each figure is a metric card; inside a card the figures are cells 16
    apart with no edge and no divider. A card is two rows (label and its hint,
-   then value and Delta): 88 tall, 96 for a score's ring. Cells stretch to
+   then value and Delta): 84 tall, 96 for a score's ring. Cells stretch to
    their row's height and the value sits at the foot, so a wrapped label never
    moves its value off the row's baseline. */
 [data-figure-cell] {
@@ -2323,7 +2323,7 @@ label {
   grid-column: -2;
   align-self: end;
 }
-/* An absent value is its word at body size on the value's 32px line. */
+/* An absent value is its word at body size on the value's 28px line. */
 [data-figure-value] [data-absence] {
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
@@ -2382,7 +2382,7 @@ label {
   }
 }
 /* On the ground a figure is a card with no edge; a pressable one keeps the
-   control edge, inset, so 16 padding still makes an 88 card. */
+   control edge, inset, so 16 padding still makes an 84 card. */
 :root:not([data-public-surface]) :is([data-figure-cell], [data-figure-lead]) {
   padding: 16px;
   border-radius: var(--radius-card);

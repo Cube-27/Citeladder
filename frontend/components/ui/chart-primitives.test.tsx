@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vite-plus/test';
 
-import { PartBar } from './part-bar';
+import { PartDonut } from './part-donut';
 import { Sparkline } from './sparkline';
 import { SeriesTonesContext, seriesTones } from './step-chart-parts';
 
-describe('PartBar', () => {
+describe('PartDonut', () => {
   it('names every part with its share and count, and gives you the accent', () => {
     const { container } = render(
-      <PartBar
+      <PartDonut
         label="Source types"
         parts={[
           { label: 'Your site', value: 60, you: true },
@@ -28,7 +28,7 @@ describe('PartBar', () => {
   it('colours a rival part by who it is when the page names its rivals', () => {
     const { container } = render(
       <SeriesTonesContext value={seriesTones(['Globex', 'Initech'])}>
-        <PartBar
+        <PartDonut
           label="Share"
           parts={[
             { label: 'Your site', value: 60, you: true },
@@ -44,9 +44,16 @@ describe('PartBar', () => {
   });
 
   it('keeps the part of a declared total no segment covers as its own remainder', () => {
-    render(<PartBar label="Source types" total={50} parts={[{ label: 'Editorial', value: 40 }]} />);
+    render(
+      <PartDonut
+        label="Source types"
+        total={50}
+        totalLabel="citations"
+        parts={[{ label: 'Editorial', value: 40 }]}
+      />,
+    );
     expect(screen.getByRole('img')).toHaveAccessibleName(
-      'Source types: Editorial 80.0% (40), Unclassified 20.0% (10)',
+      'Source types: 50 citations, Editorial 80.0% (40), Unclassified 20.0% (10)',
     );
   });
 });
