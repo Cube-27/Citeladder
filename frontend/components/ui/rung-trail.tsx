@@ -141,27 +141,25 @@ export function RungTrail({
 type RowSize = 'md' | 'lg';
 
 /**
- * A row's geometry per size: the line its rail and glyph centre on, the gap
+ * A row's geometry per size: the line its rung and glyph centre on, the gap
  * under it (the connector bridges it), and the label's role. The `lg` label
- * keeps one role and only gains weight while running, so a step changing
- * state never changes its row's height.
+ * (16/24) keeps one role and only gains weight while running, so a step
+ * changing state never changes its row's height.
  */
 const ROW_SIZE = {
   md: {
     row: 'pb-2',
     line: 'h-5',
-    rung: 'mt-2',
     railTop: 'top-2.5',
     bridge: '-bottom-2',
     label: (running: boolean) => textRole(running ? 'label' : 'body'),
   },
   lg: {
     row: 'pb-3',
-    line: 'h-6.5',
-    rung: 'mt-3',
-    railTop: 'top-3.5',
+    line: 'h-6',
+    railTop: 'top-3',
     bridge: '-bottom-3',
-    label: (running: boolean) => textRole('prose', running ? 'type-emphasis' : undefined),
+    label: (running: boolean) => textRole('prose', cn('leading-6', running && 'type-emphasis')),
   },
 } as const satisfies Record<RowSize, unknown>;
 
@@ -182,7 +180,7 @@ function RungRow({
         geometry.row,
       )}
     >
-      <span aria-hidden className={cn('relative flex justify-center', geometry.line)}>
+      <span aria-hidden className={cn('relative flex items-center justify-center', geometry.line)}>
         <span
           className={cn(
             'bg-rule absolute left-1/2 w-px -translate-x-1/2',
@@ -190,13 +188,7 @@ function RungRow({
             last ? 'h-0' : cn(geometry.bridge, 'h-auto'),
           )}
         />
-        <span
-          className={cn(
-            'rounded-mark relative block h-1 w-3',
-            geometry.rung,
-            rungFace(step.status),
-          )}
-        />
+        <span className={cn('rounded-mark relative block h-1 w-3', rungFace(step.status))} />
       </span>
       <span aria-hidden className={cn('flex items-center', geometry.line)}>
         {step.status === 'running' ? <Spinner /> : <StepGlyph status={step.status} />}

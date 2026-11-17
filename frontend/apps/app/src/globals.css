@@ -1986,6 +1986,9 @@ label {
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   [data-data-table] {
+  /* The container's padding (or its header's gap) is the header bar's top
+     and the footer bar's bottom, so the bars add none there. */
+  --data-table-bar-outer: 0px;
   margin-inline: calc(var(--card-padding) * -1);
   box-shadow: none;
   background: transparent;
@@ -1993,18 +1996,6 @@ label {
 }
 :root:not([data-public-surface]) :where([role='dialog']) [data-data-table] {
   --table-ground: var(--color-raised);
-}
-/* Inside a container its padding (or its header's 16 gap) is the header bar's
-   top and the footer bar's bottom, so neither stacks a second inset there. */
-:root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
-  [data-data-table-head] {
-  padding-top: 0;
-}
-:root:not([data-public-surface])
-  :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
-  [data-data-table-foot] {
-  padding-bottom: 0;
 }
 /* The footer bar closes the card under a rule, like a sheet's footer. */
 [data-data-table-foot] {

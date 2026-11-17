@@ -378,9 +378,14 @@ function DataTableFoot({
   return (
     <div
       data-data-table-foot=""
-      className="flex min-h-14 min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3"
+      className={cn(
+        'flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pt-3',
+        BAR_OUTER.foot,
+      )}
     >
-      {footer ? <div className="type-caption grid min-w-0 gap-1">{footer}</div> : null}
+      {footer ? (
+        <div className="type-caption grid min-h-8 min-w-0 content-center gap-1">{footer}</div>
+      ) : null}
       <div className="ms-auto flex min-w-0 flex-wrap items-center gap-4">
         {steppers}
         {pager ? <Pager {...pager} /> : null}
@@ -426,8 +431,14 @@ function pagingLayout(
  * The header bar: the title, then the toolbar on one row, the description
  * one caption line under it, and the steppers when no footer bar exists.
  * 12 over the 32 title row puts the title 16 from the top, as from the left;
- * the footer bar takes the same 12 over its 32 control row.
+ * the footer bar takes the same 12 round its 32 control row.
  */
+const BAR_OUTER = {
+  // Zero inside a container, whose padding is that side (globals.css).
+  head: 'pt-[var(--data-table-bar-outer,12px)]',
+  foot: 'pb-[var(--data-table-bar-outer,12px)]',
+} as const;
+
 function DataTableHeader({
   title,
   headingId,
@@ -461,16 +472,11 @@ function DataTableHeader({
     </>
   );
   if (!actions)
-    return (
-      <header data-data-table-head="" className="grid min-w-0 gap-1 px-4 py-3">
-        {head}
-      </header>
-    );
+    return <header className={cn('grid min-w-0 gap-1 px-4 pb-3', BAR_OUTER.head)}>{head}</header>;
   // As a section head: the switch sits level with the title, and wraps under the caption when narrow.
   return (
     <header
-      data-data-table-head=""
-      className="flex flex-wrap items-start justify-between gap-2 px-4 py-3"
+      className={cn('flex flex-wrap items-start justify-between gap-2 px-4 pb-3', BAR_OUTER.head)}
     >
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
       <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>
