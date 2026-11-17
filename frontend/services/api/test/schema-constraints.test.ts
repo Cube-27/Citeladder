@@ -22,6 +22,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 
 import { policy } from '../src/config.ts';
 import type { Database } from '../src/db/database.ts';
+import { timeOrderedId } from '../src/db/ids.ts';
 import type { DB } from '../src/generated/db-schema.ts';
 import { purgeCandidates } from '../src/projects/trial-purge.ts';
 import {
@@ -34,9 +35,10 @@ import {
   SITE_HEALTH_LANE,
 } from '../src/queue/task-queue.ts';
 import { expiredBatch } from '../src/referrals/retention.ts';
+import { recordCrawlEvent } from '../src/site-health/site-task.ts';
 import { seedImport, seedMetricRow } from './referral-fixtures.ts';
 import { SiteFixtures } from './site-health-fixtures.ts';
-import { testDatabase } from './support.ts';
+import { asOwner, testDatabase } from './support.ts';
 
 const db = testDatabase();
 const fixtures = new SiteFixtures(db);
@@ -152,6 +154,51 @@ describe('Site Health', () => {
     await expect(
       clone('site_observed_architectures', architectureId, { crawl_id: other.crawlId }),
     ).rejects.toMatchObject(FOREIGN_KEY);
+  });
+});
+
+describe('evidence partitions', () => {
+  async function crawlWithId(id: string) {
+    const seed = await fixtures.crawl();
+    await clone('site_crawls', seed.crawlId, { id });
+    return db.selectFrom('site_crawls').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
+  }
+
+  it("files a crawl's events under its crawl month, and an older random id under the default", async () => {
+    const monthly = await crawlWithId(timeOrderedId());
+    // A version-4 id above every month's range, as crawls made before 0047 mostly are.
+    const legacy = await crawlWithId(`f${randomUUID().slice(1)}`);
+    for (const crawl of [monthly, legacy]) await recordCrawlEvent(db, crawl, 'test', 'm', {});
+    const homes = await sql<{ crawl_id: string; home: string }>`
+      select crawl_id, tableoid::regclass::text as home from site_crawl_events
+      where crawl_id in (${monthly.id}, ${legacy.id})`.execute(db);
+    const month = new Date().toISOString().slice(0, 7).replace('-', '_');
+    expect(Object.fromEntries(homes.rows.map((row) => [row.crawl_id, row.home]))).toEqual({
+      [monthly.id]: `site_crawl_events_p${month}`,
+      [legacy.id]: 'site_crawl_events_default',
+    });
+    // The services reach a partition only through its parent.
+    await expect(
+      sql`select 1 from site_crawl_events_default limit 1`.execute(db),
+    ).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('adds a month only while the default partition holds none of its range', async () => {
+    const far = await asOwner(async (owner) => {
+      const { rows } = await sql<{ id: string }>`
+        select public.site_evidence_month_bound('2040-01-01') as id`.execute(owner);
+      // January 2040's millisecond prefix with a random tail.
+      return `${rows[0]!.id.slice(0, 14)}${randomUUID().slice(14)}`;
+    });
+    await recordCrawlEvent(db, await crawlWithId(far), 'test', 'm', {});
+    const outcomes = await asOwner(async (owner) => {
+      const { rows } = await sql<{ far: string; current: string }>`
+        select public.site_evidence_month_partition('site_crawl_events', '2040-01-15') as far,
+          public.site_evidence_month_partition('site_crawl_events',
+            (now() at time zone 'UTC')::date) as current`.execute(owner);
+      return rows[0];
+    });
+    expect(outcomes).toEqual({ far: 'overlaps_default', current: 'exists' });
   });
 });
 
@@ -873,6 +920,7 @@ describe('project deletion', () => {
               join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum) as cols
       from pg_constraint c
       where c.contype = 'f' and c.confdeltype = 'n' and c.confrelid <> 'public.users'::regclass
+        and c.conparentid = 0 -- a partition's copy is checked through its parent's
       order by 1, 2`.execute(db);
     const checked: string[] = [];
     const scanned: string[] = [];

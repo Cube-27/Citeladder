@@ -73,7 +73,8 @@ describe('the application role', () => {
       from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
       join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
-      where n.nspname = 'public' and c.relkind = 'r' and c.relname <> 'schema_migrations'
+      where n.nspname = 'public' and c.relkind in ('r', 'p') and not c.relispartition
+        and c.relname <> 'schema_migrations'
       order by c.relname, a.attnum`.execute(db);
     rows.sort((a, b) => (a.table < b.table ? -1 : 1));
     const refused: string[] = [];

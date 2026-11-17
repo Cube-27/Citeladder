@@ -5,6 +5,7 @@ import { sql, type Selectable } from 'kysely';
 import { policy } from '../config.ts';
 import { measuredTargetPages } from '../opportunities/enqueue.ts';
 import type { Database } from '../db/database.ts';
+import { timeOrderedId } from '../db/ids.ts';
 import { notFound } from '../errors.ts';
 import { record } from '../db/json.ts';
 import { holdRuntime, resolveRuntime } from './plan-runtime.ts';
@@ -204,7 +205,8 @@ function insertCrawl(
   return db
     .insertInto('site_crawls')
     .values({
-      id: randomUUID(),
+      // Time-ordered: the crawl id is the month partition key of its evidence.
+      id: timeOrderedId(),
       workspace_id: input.workspaceId,
       project_id: input.projectId,
       profile_id: input.profileId,

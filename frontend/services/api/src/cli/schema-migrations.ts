@@ -141,6 +141,19 @@ export async function applyMigrations(
 }
 
 /**
+ * Site Health evidence partitions for this UTC month and the three ahead
+ * (migration 0047 owns the DDL). Runs as the schema owner after every apply,
+ * so a deploy each quarter keeps months ahead of the writers; returns the
+ * months it skipped, which stay in the default partition until split.
+ */
+export async function ensureEvidencePartitions(client: pg.ClientBase): Promise<string[]> {
+  const { rows } = await client.query<{ skipped: string[] }>(
+    'select public.site_evidence_ensure_partitions() as skipped',
+  );
+  return rows[0]?.skipped ?? [];
+}
+
+/**
  * PostgreSQL's SCRAM-SHA-256 verifier (RFC 7677 with PostgreSQL's 4096
  * iterations), so the role password never reaches the server or its logs in
  * plain text. Printable ASCII only: it is unchanged by SASLprep.

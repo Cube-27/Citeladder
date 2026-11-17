@@ -154,10 +154,32 @@ the commit's fence, not a separate start, decides whether the attempt still
 holds the lease. The commit reuses the crawl and task its kind loaded before
 the fetch (`site_setup` re-reads them for its first commit's pointers).
 
-Tasks and the evidence written per page (attempts, artifacts, analyses,
+Crawls, tasks and the evidence written per page (attempts, artifacts, analyses,
 evaluations, issues, events, observations, frontier rows) take time-ordered
 UUIDv7 ids (`db/ids.ts`), so inserts land at the right edge of each key index.
 An id reveals when its row was created and never authorizes anything.
+
+### Evidence partitions
+
+Attempts, artifacts, issues, crawl events and URL observations are range
+partitioned by `crawl_id`, and rule evaluations by `analysis_id` (their owner,
+which snapshots reuse across crawls), one partition per UTC month of the
+owner's UUIDv7 (CO-6, migration 0047), so retention can drop a month. A read
+that names its crawl or analysis prunes to one partition; one by row id alone
+probes each partition's key index. Keys and unique constraints carry the
+partition key, and a reference into these tables names it too
+(`(crawl_id, artifact_id)`, `(analysis_id, evaluation_id)`). Issue states,
+change observations and commerce observations outlive an evidence month: they
+keep source ids as provenance without a foreign key; a retention policy must
+decide how their readers show a dropped source.
+
+The migrate job keeps the current month and three ahead
+(`site_evidence_ensure_partitions`), so deploying at least once a quarter keeps
+writers in monthly partitions. Rows keyed by pre-0047 random (v4) ids, and rows
+of a month nobody created, sit in each table's `_default` partition; a month
+whose range the default already holds is skipped (the job logs it) until a
+forward migration splits it out. The services hold no grants on partitions and
+reach them only through the parent.
 
 `site_setup` commits twice. The first commit holds root robots access, llms.txt
 and the snapshot pointer, with the sitemap `pending`, and it unblocks the root's

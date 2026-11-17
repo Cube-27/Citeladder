@@ -75,6 +75,7 @@ async function architecturePages(db: Database, crawl: Crawl) {
         .selectFrom('site_rule_evaluations')
         .select(['id', 'analysis_id', 'outcome'])
         .where('workspace_id', '=', crawl.workspace_id)
+        .where('analysis_id', 'in', [...new Set(owners.values())])
         .where('id', 'in', [...owners.keys()])
         .where('rule_id', '=', 'technical.indexable')
         .execute()

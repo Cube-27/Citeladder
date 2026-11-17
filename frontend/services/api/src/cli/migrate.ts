@@ -8,6 +8,7 @@ import {
   applyMigrations,
   appRolePassword,
   convergeAppRole,
+  ensureEvidencePartitions,
   migrationClient,
   migrationSummary,
 } from './schema-migrations.ts';
@@ -28,7 +29,8 @@ async function connect(databaseUrl: string, deadline: number): Promise<pg.Client
 
 /**
  * The migrate job's schema step: as the schema owner (`MIGRATION_DATABASE_URL`),
- * apply the pending migrations, or confirm none, then let the application role
+ * apply the pending migrations, or confirm none, keep the Site Health evidence
+ * partitions ahead of the calendar, then let the application role
  * log in with the password in the services' `DATABASE_URL`, and exit.
  */
 async function main() {
@@ -44,6 +46,8 @@ async function main() {
   const client = await connect(ownerUrl, Date.now() + waitSeconds * 1000);
   try {
     console.log(migrationSummary(await applyMigrations(client)));
+    const skipped = await ensureEvidencePartitions(client);
+    if (skipped.length) console.warn(`Evidence partitions skipped: ${skipped.join('; ')}.`);
     await convergeAppRole(client, password);
   } finally {
     await client.end();
