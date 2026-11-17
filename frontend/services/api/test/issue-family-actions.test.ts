@@ -21,6 +21,8 @@ const db = testDatabase();
 const RULE = 'web.mobile_viewport';
 // More pages than one declaration may target on its own.
 const PAGES = policy.opportunity.opportunities.IMPLEMENTATION_TARGETS_MAX + 6;
+// The crawl analyzed more URLs than the viewport fails on.
+const CRAWLED = PAGES + 10;
 const HOUR = 3_600_000;
 const seeds: SiteSeed[] = [];
 
@@ -124,7 +126,7 @@ async function familyProject(): Promise<{ seed: SiteSeed; pages: Page[] }> {
     const crawled = new Date(Date.now() - 2 * HOUR);
     await trx
       .updateTable('site_crawls')
-      .set({ completed_at: crawled })
+      .set({ completed_at: crawled, analyzed_url_count: CRAWLED })
       .where('id', '=', seed.crawlId)
       .execute();
     const pages: Page[] = [];
@@ -247,6 +249,8 @@ describe('an issue family', () => {
       approach: 'fix_technical',
       member_count: 1,
       priority_band: 'high',
+      // The rule's own fix from the catalog, as Issues shows it, not the issue row's copy.
+      summary: 'Add a responsive viewport meta declaration.',
       handoff: {
         context: 'action',
         message: 'Write one fix that clears "Mobile viewport missing" on every affected page.',
@@ -259,6 +263,7 @@ describe('an issue family', () => {
       rule_label: 'Mobile viewport missing',
       crawl_id: own.seed.crawlId,
       page_count: PAGES,
+      crawl_analyzed_url_count: CRAWLED,
     });
     // The cohort's URLs page through `action_urls`, ten at a time in URL order.
     expect([detail.urls.whole_site, detail.urls.total]).toEqual([false, PAGES]);
@@ -268,6 +273,9 @@ describe('an issue family', () => {
     expect(detail.members.map((member) => [member.rule_id, member.title, member.severity])).toEqual(
       [['site_issue_family', 'Mobile viewport missing', 'high']],
     );
+    expect(detail.members.map((member) => member.remediation)).toEqual([
+      'Add a responsive viewport meta declaration.',
+    ]);
   });
 
   it('is never read from another workspace', async () => {

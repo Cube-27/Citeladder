@@ -230,12 +230,12 @@ describe('opportunity_refresh', () => {
       [
         'issue_family',
         'Missing structured data',
-        'Page includes JSON-LD or microdata structured data.',
+        'Add schema.org structured data (JSON-LD preferred).',
       ],
       [
         'issue_family',
         'No answer-first content structure',
-        'The first block under the first heading is a substantive answer/definitional paragraph.',
+        'Open each section with a direct answer before elaborating.',
       ],
       ['issue_family', 'technical.title_missing', null],
       ['page', URL_B, 'Cited content angle your page does not win'],

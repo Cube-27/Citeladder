@@ -25,7 +25,9 @@ import { StateBlock } from '@/components/ui/state-block';
 import { listCrumbs, type FromAction } from '@/lib/agent/action-crumbs';
 import { actionTarget, withShortTarget } from '@/lib/agent/action-title';
 import { actionHandoffHref } from '@/lib/agent/handoff';
+import { issueFamilyBrief, type IssueFamilyBrief } from '@/lib/agent/issue-family-brief';
 import { actionsQueries, type ActionDetail } from '@/lib/api/actions';
+import { siteHealthQueries } from '@/lib/api/site-health-queries';
 import { formatCount } from '@/lib/format';
 import { useProjectScope } from '@/lib/project/active-project-scope';
 
@@ -89,7 +91,8 @@ function ActionPage({
   const placement = action.target_kind === 'earned_page';
   // The Agent's own words are captioned as its suggestion, never as CiteLadder's.
   const suggested = action.origin === 'agent' ? 'Suggested by the agent' : null;
-  const todo = steps(action);
+  const brief = useIssueFamilyBrief(action, workspaceId);
+  const todo = brief?.steps ?? steps(action);
   const gaps = contentGapMembers(action);
   const tick = (id: string) =>
     setTicked((current) => {
@@ -112,16 +115,21 @@ function ActionPage({
         </BackLink>
         <PageHeading>{title}</PageHeading>
         <Labelled title="Overview" caption={suggested}>
-          <Prose>{withShortTarget(action.handoff.message, action)}</Prose>
+          <Prose>{brief?.overview ?? withShortTarget(action.handoff.message, action)}</Prose>
         </Labelled>
         <ReadingTools>
-          <CopyButton value={actionPrompt(action)}>Copy as prompt</CopyButton>
+          <CopyButton value={actionPrompt(action, todo)}>Copy as prompt</CopyButton>
           {placement ? null : <DeveloperTicketButton action={action} />}
         </ReadingTools>
         <ActionFacts action={action} />
         {gaps.length > 0 ? (
           <Labelled title={placement ? 'Competitor evidence' : 'Why this matters'}>
             <ContentGapWhy members={gaps} />
+          </Labelled>
+        ) : null}
+        {brief ? (
+          <Labelled title="Why this matters">
+            <Prose>{brief.why}</Prose>
           </Labelled>
         ) : null}
         {todo.length > 0 ? (
@@ -164,6 +172,26 @@ export function agentLabel(
   return 'Work with Agent';
 }
 
+/**
+ * An issue family's brief, read from its Issues group (the Site Health Issues
+ * page's own read); null for every other Action.
+ */
+function useIssueFamilyBrief(action: ActionDetail, workspaceId: string): IssueFamilyBrief | null {
+  const cohort = action.cohort;
+  const issue = useQuery({
+    ...siteHealthQueries.issue(workspaceId, cohort?.crawl_id ?? '', cohort?.group_id ?? ''),
+    enabled: Boolean(cohort),
+  });
+  if (!cohort) return null;
+  const loaded = issue.data?.group_id === cohort.group_id ? issue.data : undefined;
+  return issueFamilyBrief({
+    cohort,
+    grouping: action.grouping,
+    fix: action.summary ?? action.members[0]?.remediation ?? null,
+    issue: loaded,
+  });
+}
+
 /** Each distinct instruction of the Action's findings, in priority order. */
 function steps(action: ActionDetail): string[] {
   return [...new Set(action.members.map((member) => member.remediation).filter(Boolean))];
@@ -173,8 +201,7 @@ function steps(action: ActionDetail): string[] {
  * What Copy as prompt puts on the clipboard: the message the Agent chat opens
  * with, then the Action's steps, for a reader working in another assistant.
  */
-function actionPrompt(action: ActionDetail): string {
-  const todo = steps(action);
+function actionPrompt(action: ActionDetail, todo: readonly string[]): string {
   if (todo.length === 0) return action.handoff.message;
   const lines = todo.map((step, index) => `${index + 1}. ${step}`);
   return [action.handoff.message, '', 'What to do:', ...lines].join('\n');

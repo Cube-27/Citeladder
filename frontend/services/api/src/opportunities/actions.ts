@@ -35,7 +35,7 @@ import { contentGapEvidence } from './content-gap-reads.ts';
 import { acquireProjectLock } from '../prompts/locks.ts';
 import { priorityBand, readHandoff } from '../analysis/opportunities/actions.ts';
 import { record } from '../db/json.ts';
-import { ruleDescription } from '../site-health/reads/rules.ts';
+import { ruleRemediation } from '../site-health/reads/rules.ts';
 import { actionUrlsPage, writeActionUrls } from './action-urls.ts';
 import {
   FALLBACK_GOAL,
@@ -128,11 +128,11 @@ const stringList = (value: unknown): string[] =>
 
 /**
  * The row's secondary line, from config and the row alone: an issue family's
- * Site Health rule description, else the strongest finding's title as action
- * sync stored it in the diagnosis; null for an Agent row without findings.
+ * Site Health fix as Issues shows it, else the strongest finding's title as
+ * action sync stored it in the diagnosis; null for an Agent row without findings.
  */
 function actionSummary(row: ActionRow, cohort: ReturnType<typeof storedCohort>): string | null {
-  if (cohort) return ruleDescription(cohort.rule_id);
+  if (cohort) return ruleRemediation(cohort.rule_id);
   const diagnosis = actionDetailSchema.shape.diagnosis.safeParse(row.diagnosis);
   return diagnosis.data?.what_happened?.[0]?.title ?? null;
 }

@@ -39,7 +39,10 @@ export type DeclarationTargets =
   | { resolved: false; reason: string };
 
 /** An issue-family cohort as a read shows it, with when its crawl completed. */
-type ShownCohort = IssueFamilyCohort & { crawl_completed_at: string | null };
+type ShownCohort = IssueFamilyCohort & {
+  crawl_completed_at: string | null;
+  crawl_analyzed_url_count: number | null;
+};
 
 /** What an Action's detail read adds for its kind. */
 export type TargetDetail = Readonly<{ editable_page: boolean; cohort: ShownCohort | null }>;
