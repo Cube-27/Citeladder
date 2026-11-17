@@ -22,9 +22,8 @@ jobs:
     permissions:
       actions: read
       contents: read
-    # This is a short Node/Git/API task. The container-based slim runner avoids
-    # provisioning a full CI VM before owner jobs can be selected.
-    runs-on: ubuntu-slim
+    # The slim runner queue left PRs unassigned past their timeout (2026-11-17).
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       frontend: ${{ steps.classify.outputs.frontend }}
@@ -473,7 +472,7 @@ jobs:
       [changes, frontend, frontend-tests, contract, api, api-tests, e2e, workers, security, infra]
     if: always()
     permissions: {}
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: Every selected owner passed
