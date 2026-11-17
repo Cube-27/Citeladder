@@ -155,6 +155,9 @@ async function observedIds(trx: Database, crawl: Crawl, hashes: string[]) {
     .select(['u.url_hash', 'u.id'])
     .where('o.workspace_id', '=', crawl.workspace_id)
     .where('o.crawl_id', '=', crawl.id)
+    // The project bound lets uq_site_url_project_hash probe each hash; without it every
+    // chunk scans the crawl's whole inventory, quadratic over a large sitemap.
+    .where('u.project_id', '=', crawl.project_id)
     .where('u.url_hash', '=', (eb) => eb.fn.any(eb.val(hashes)))
     .execute();
   return new Map(rows.map((row) => [row.url_hash, row.id]));
