@@ -88,7 +88,7 @@ describe('committed API work at PostgreSQL', () => {
       // A stalled metadata or Cloud Run call: the start never settles.
       startRunner: () => {
         started++;
-        return new Promise<void>(() => {});
+        return new Promise<boolean>(() => {});
       },
     });
     app.post('/enqueue-fixture', async (c) => {
@@ -208,7 +208,7 @@ describe('committed API work at PostgreSQL', () => {
 
   it('wakes for an autocommitted retry and committed work preceding an HTTP failure, never for GET', async () => {
     const id = await enqueue(db);
-    const wake = vi.fn(async () => {});
+    const wake = vi.fn(async () => true);
     const app = createApp(config, db, { startRunner: wake });
     app.post('/retry-fixture', async (c) => {
       await db

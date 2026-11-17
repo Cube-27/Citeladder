@@ -92,6 +92,11 @@ run_args=(
   -c max_connections=40 -c shared_buffers=128MB -c effective_cache_size=384MB
   -c work_mem=4MB -c maintenance_work_mem=64MB
   -c tcp_keepalives_idle=60 -c tcp_keepalives_interval=10 -c tcp_keepalives_count=6
+  # Measurement (docs/operations/GOOGLE_CLOUD.md). Slow-statement lines never carry bind values.
+  -c jit=off -c track_io_timing=on
+  -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track_planning=on
+  -c log_lock_waits=on -c log_min_duration_statement=500 -c log_parameter_max_length=0
+  -c log_autovacuum_min_duration=0
 )
 # Recreate the container whenever its image, arguments or access rules change;
 # the data directory persists. An unchanged specification only starts it.
@@ -116,5 +121,15 @@ docker exec -i citeladder-postgres sh -c \
   'ROLE_PASSWORD="$(cat /run/citeladder/db-password)" psql -q -v ON_ERROR_STOP=1 -U citeladder -d citeladder' \
   >/dev/null <<'SQL'
 \getenv password ROLE_PASSWORD
+-- psql interpolates the value into the statement text: never log it, slow or failed.
+SET log_min_duration_statement = -1;
+SET log_min_error_statement = panic;
 ALTER ROLE citeladder PASSWORD :'password';
+SQL
+# Statement statistics need the preload above and a superuser. Their own schema
+# keeps public empty for the migrate job's first-apply check.
+docker exec -i citeladder-postgres psql -q -v ON_ERROR_STOP=1 -U citeladder -d citeladder \
+  >/dev/null <<'SQL'
+CREATE SCHEMA IF NOT EXISTS monitoring;
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements WITH SCHEMA monitoring;
 SQL

@@ -1,7 +1,8 @@
 /**
  * Workspace fairness, lane by lane, against real PostgreSQL: a quiet
  * workspace's only task is served before a busy workspace's second task even
- * though the busy backlog has higher priority and has waited longer.
+ * though the busy backlog has higher priority and has waited longer. Only the
+ * Site Health lane relaxes commit durability, and only inside its transactions.
  */
 import { randomUUID } from 'node:crypto';
 
@@ -23,6 +24,8 @@ import {
   TaskQueue,
   type ClaimFilter,
 } from '../src/queue/task-queue.ts';
+import type { Database } from '../src/db/database.ts';
+import { commitTask } from '../src/site-health/site-task.ts';
 import { DiscoveryWorker } from '../src/workers/discovery-worker.ts';
 import { IntegrationWorker } from '../src/workers/integration-worker.ts';
 import { AgentFixtures } from './agent-support.ts';
@@ -376,5 +379,58 @@ describe.each([
 
     expect(order).toEqual(['busy', 'quiet', 'busy', 'busy']);
     expect(label(await lane.claimNext())).toBeNull();
+  });
+});
+
+describe('commit durability by lane', () => {
+  const durability = async (trx: Database) =>
+    (
+      await sql<{ value: string }>`select current_setting('synchronous_commit') as value`.execute(
+        trx,
+      )
+    ).rows[0]!.value;
+
+  it('commits only Site Health claims and task commits asynchronously, inside their transaction', async () => {
+    const site = new TaskQueue(db, SITE_HEALTH_LANE, { leaseTtlSeconds: 120 });
+    const analytics = new TaskQueue(db, ANALYTICS_LANE, { leaseTtlSeconds: 120 });
+    const crawl = await fixtures.crawl('running');
+    await fixtures.task(crawl, SITE_PROBE);
+    const { workspaceId } = await fixtures.tenant();
+    await analyticsTasks(workspaceId, { priority: 0, count: 1, availableAt: new Date() });
+
+    const seen: Record<string, string> = {};
+    const [claimed] = await site.claim({
+      owner: 'durability',
+      kinds: [SITE_PROBE],
+      where: seeded([crawl.workspaceId]),
+      onClaimed: async (trx) => {
+        seen.siteClaim = await durability(trx);
+      },
+    });
+    await analytics.claim({
+      owner: 'durability',
+      kinds: [ANALYTICS_PROBE],
+      where: seeded([workspaceId]),
+      onClaimed: async (trx) => {
+        seen.analyticsClaim = await durability(trx);
+      },
+    });
+    const committed = await commitTask(
+      { db, owner: 'durability', queue: site, signal: new AbortController().signal },
+      claimed!,
+      async (trx, lock) => {
+        seen.siteCommit = await durability(trx);
+        expect((await lock()).task.id).toBe(claimed!.id);
+      },
+    );
+    seen.afterwards = await durability(db);
+
+    expect(committed).toBe(true);
+    expect(seen).toEqual({
+      siteClaim: 'off',
+      analyticsClaim: 'on',
+      siteCommit: 'off',
+      afterwards: 'on',
+    });
   });
 });

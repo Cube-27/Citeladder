@@ -65,6 +65,23 @@ Docs Worker (static, no origin)                            │ starts runner aft
   no SSH or IAP role. OS Login is on, project SSH keys are blocked and the
   serial port is disabled. It runs Shielded VM with Secure Boot, vTPM and
   integrity monitoring.
+- **Database flags.** The container arguments in `infra/gcp/postgres-vm.sh`
+  turn JIT off (short OLTP statements only paid its compile cost), preload
+  `pg_stat_statements` with planning time tracked, and turn on
+  `track_io_timing`, lock-wait logging, autovacuum logging and slow-statement
+  logging at 500 ms without bind values. The start script creates the extension
+  in its own `monitoring` schema, since the migrate job refuses a first apply
+  over a non-empty `public`; read it as `monitoring.pg_stat_statements` from
+  the read-only `citeladder` session of the
+  [daily operation](GCP_RUNBOOK.md#3-daily-operation) tunnel (a superuser, so
+  it already sees every role's statements; no `pg_read_all_stats` grant
+  needed). Changing an argument recreates the container on the next VM
+  restart, about a minute of downtime: deploy it with no crawl running.
+  Owner trials, not shipped: `wal_compression=lz4`, `checkpoint_timeout=15min`
+  and `max_wal_size=2GB`. Add one at a time and keep it only if WAL bytes per
+  page (K2 in the
+  [optimization plan](../plans/site-health-crawl-optimization.md#measurement-kit))
+  fall without the VM's CPU (K5) rising; otherwise remove it.
 - **Identities.** The deployer authenticates through Workload Identity
   Federation pinned to the `Cube-27/Citeladder` repository (name and immutable
   ID), the `gcp-deploy.yml` workflow, `refs/heads/main` and the `gcp-demo`
@@ -82,7 +99,9 @@ Docs Worker (static, no origin)                            │ starts runner aft
   account (`citeladder-migrate`) read the shared runtime secrets; only the
   API account reads the origin tokens and the Turnstile secret, and only the
   migrate account reads the schema owner's database URL. The API and job
-  accounts may start only the runner job and mint crawl-log reader tokens; the
+  accounts may start only the runner job and mint crawl-log reader tokens;
+  only the job account may start it with environment overrides
+  (`roles/run.jobsExecutorWithOverrides`, for the runner handover). The
   migrate account holds no other grant. The scheduler
   account holds no grant; its ID token admits only the API's tick route. The
   database account reads only the database password, pulls from the image

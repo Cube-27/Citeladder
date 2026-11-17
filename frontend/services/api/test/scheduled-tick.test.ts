@@ -38,7 +38,7 @@ describe('scheduled tick', () => {
       SCHEDULER_TICK_AUDIENCE: audience,
     }),
     db,
-    { startRunner: async () => {}, schedulerKeys: keys },
+    { startRunner: async () => true, schedulerKeys: keys },
   );
   const tick = async (authorization?: string) => {
     const response = await app.request('/internal/tick', {
@@ -102,7 +102,7 @@ describe('scheduled tick', () => {
 
   it('is not served without a configured scheduler, so the origin token still applies', async () => {
     const unscheduled = createApp(testConfig(protectedEnv), db, {
-      startRunner: async () => {},
+      startRunner: async () => true,
       schedulerKeys: keys,
     });
     const response = await unscheduled.request('/internal/tick', {

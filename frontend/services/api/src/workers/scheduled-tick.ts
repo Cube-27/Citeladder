@@ -51,7 +51,7 @@ export function registerScheduledTick(
   app: Hono<AppEnv>,
   config: ServiceConfig,
   db: Database,
-  options: { startRunner: () => Promise<void>; keys?: JWTVerifyGetKey },
+  options: { startRunner: () => Promise<boolean>; keys?: JWTVerifyGetKey },
 ): void {
   const tick = config.execution.scheduledTick;
   if (!tick) return;

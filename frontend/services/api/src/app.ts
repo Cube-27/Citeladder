@@ -60,7 +60,7 @@ async function databaseReachable(db: Database, timeoutMs: number): Promise<boole
 export function createApp(
   config: ServiceConfig,
   db: Database,
-  options: { startRunner?: () => Promise<void>; schedulerKeys?: JWTVerifyGetKey } = {},
+  options: { startRunner?: () => Promise<boolean>; schedulerKeys?: JWTVerifyGetKey } = {},
 ): Hono<AppEnv> {
   const app = new Hono<AppEnv>();
   app.use(requestId(config.requestIdHeader));

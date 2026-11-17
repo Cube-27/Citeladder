@@ -7,6 +7,12 @@ import { failureFacts, getLogger } from '../logging.ts';
 
 const tokenSchema = z.object({ access_token: z.string().min(1) });
 
+type StartMode = 'wake' | 'handover';
+// Needs run.jobs.runWithOverrides, which only the runner's own identity holds.
+const handoverBody = JSON.stringify({
+  overrides: { containerOverrides: [{ env: [{ name: 'RUNNER_HANDOVER', value: 'true' }] }] },
+});
+
 /** A refused Google call: its own code and the HTTP status, never the body. */
 class RunnerStartError extends Error {
   readonly code: string;
@@ -22,23 +28,26 @@ class RunnerStartError extends Error {
  * Start an execution, never wait for its work. A missed start is recovered by tick.
  * Single-flight: while one attempt is in flight (its timeout may outlast the
  * interval), every caller shares it instead of starting a duplicate execution.
- * The returned promise never rejects.
+ * The returned promise never rejects; it resolves whether Cloud Run accepted a
+ * run. A `handover` start comes from the draining runner itself, so it skips
+ * the drain probe (which would find that runner's lock) and flags the
+ * successor to wait out the in-flight tail.
  */
 export function runnerStarter(
   config: ServiceConfig,
   db: Database,
   send: typeof fetch = fetch,
   now: () => number = () => performance.now(),
-): () => Promise<void> {
+): (mode?: StartMode) => Promise<boolean> {
   let lastAttempt = Number.NEGATIVE_INFINITY;
-  let inFlight: Promise<void> | null = null;
-  const attempt = async (time: number) => {
+  let inFlight: Promise<boolean> | null = null;
+  const attempt = async (time: number, mode: StartMode) => {
     const signal = AbortSignal.timeout(config.execution.wakeTimeoutMs);
     try {
-      if (await drainActive(db, signal)) {
+      if (mode === 'wake' && (await drainActive(db, signal))) {
         // Only undo this probe's reservation; a newer probe may already own it.
         if (lastAttempt === time) lastAttempt = Number.NEGATIVE_INFINITY;
-        return;
+        return false;
       }
       const tokenResponse = await send(
         'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token',
@@ -56,7 +65,7 @@ export function runnerStarter(
         {
           method: 'POST',
           headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
-          body: '{}',
+          body: mode === 'handover' ? handoverBody : '{}',
           redirect: 'error',
           signal,
         },
@@ -64,6 +73,7 @@ export function runnerStarter(
       // Consume the small operation response before returning the API response.
       await response.body?.cancel();
       if (!response.ok) throw new RunnerStartError('runner_start_rejected', response.status);
+      return true;
     } catch (error) {
       // Never disclose Google response bodies/tokens, or turn a committed write into an error.
       getLogger('workers.runner').warning('runner_start_failed', {
@@ -72,16 +82,17 @@ export function runnerStarter(
         timed_out: signal.aborted,
         elapsed_ms: Math.round(now() - time),
       });
+      return false;
     }
   };
-  return () => {
-    if (!config.execution.runnerJob) return Promise.resolve();
+  return (mode = 'wake') => {
+    if (!config.execution.runnerJob) return Promise.resolve(false);
     if (inFlight) return inFlight;
     const time = now();
-    if (time - lastAttempt < config.execution.wakeMinIntervalMs) return Promise.resolve();
+    if (time - lastAttempt < config.execution.wakeMinIntervalMs) return Promise.resolve(false);
     // Reserve before awaiting: concurrent requests share the same interval.
     lastAttempt = time;
-    const current = attempt(time).finally(() => {
+    const current = attempt(time, mode).finally(() => {
       inFlight = null;
     });
     inFlight = current;

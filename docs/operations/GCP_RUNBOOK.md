@@ -263,7 +263,9 @@ Billing → Reports grouped by SKU and remove anything unexpectedly non-zero.
 
 - **Runner and tick:** a committed API write starts `citeladder-runner`. A
   burst starts several executions, and all but one exit after a short wait for
-  the single drain lock. Every 20 minutes the `citeladder-tick` scheduler calls
+  the single drain lock. A runner drains for up to 50 minutes and starts its
+  successor about three minutes before that ends while work remains due.
+  Every 20 minutes the `citeladder-tick` scheduler calls
   the API's `/internal/tick`, which runs maintenance, due schedules and dispatch
   inside the request (`SCHEDULER_TICK_BUDGET_SECONDS`, 20 s) and starts the
   runner only when a lane has work due. A job per tick paid a cold start each

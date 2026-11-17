@@ -165,7 +165,6 @@
       "services/api/test/mcp-oauth.test.ts": 1311,
       "services/api/test/models.test.ts": 919,
       "services/api/test/projects.test.ts": 1267,
-      "services/api/test/runner.test.ts": 836,
       "services/api/test/schema-constraints.test.ts": 973,
       "services/api/test/site-health-acquisition.test.ts": 1091,
       "services/api/test/site-health-analysis.test.ts": 1309,

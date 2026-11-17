@@ -11,7 +11,7 @@ import { isActiveCrawl } from '@citeladder/contracts/site-health';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { record } from '../db/json.ts';
-import type { SiteTask } from '../queue/task-queue.ts';
+import { asyncCommit, type SiteTask } from '../queue/task-queue.ts';
 import { enqueueCatalogProjection } from '../commerce/projection.ts';
 import { factSettings } from './analysis/facts.ts';
 import { analyzePageAsync, extractFactsAsync } from './analysis/off-thread.ts';
@@ -365,7 +365,7 @@ async function prepare(
     waited < ctx.settings.dependencyMaxWait
   ) {
     // Waiting costs no attempt; past the bound this analyze acquires the page itself.
-    const deferred = await ctx.db.transaction().execute(async (trx) => {
+    const deferred = await asyncCommit(ctx.db, async (trx) => {
       const held = await lockSiteTask(trx, ctx, claimed);
       if (!held) return false;
       await settleTask(trx, ctx, held.task, {
