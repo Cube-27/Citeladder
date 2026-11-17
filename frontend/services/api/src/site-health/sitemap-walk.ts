@@ -154,6 +154,7 @@ export async function walkSitemaps(
     queue: [],
     unread: 0,
     refetched: false,
+    namedBy: new Map(),
   };
   walk.queue = [...walk.queued].map((url): Entry => ({ url, depth: 0, source: { kind: 'seed' } }));
   let attempted = 0;
@@ -223,6 +224,8 @@ type Walk = {
   unread: number;
   /** An index was already re-fetched past a cache; once per walk. */
   refetched: boolean;
+  /** How many read documents name each child reference. */
+  namedBy: Map<string, number>;
 };
 
 const refetchPolicy = crawlPolicy.sitemap_index_refetch;
@@ -253,7 +256,11 @@ function collect(walk: Walk, entry: Entry, read: SitemapAnswer) {
   queueChildren(walk, indexRead(url, depth), read.document);
 }
 
+const namedRefs = (document: SitemapDocument) =>
+  new Set(document.refs.flatMap((ref) => sitemapRef(ref) ?? []));
+
 function queueChildren(walk: Walk, index: IndexRead, document: SitemapDocument) {
+  for (const ref of namedRefs(document)) walk.namedBy.set(ref, (walk.namedBy.get(ref) ?? 0) + 1);
   const refs = walk.collector.add(index.url, document, index.depth);
   for (const ref of refs.filter((item) => !walk.queued.has(item))) {
     walk.queued.add(ref);
@@ -282,7 +289,8 @@ function childAnswered(walk: Walk, index: IndexRead, url: string, answer: Sitema
 
 /**
  * The fresh copy's new children join the walk, and the stale children it no
- * longer names stop counting as unread. A failed re-fetch changes nothing.
+ * longer names, and no other index names, stop counting as unread. A failed
+ * re-fetch changes nothing.
  */
 function collectRefetch(walk: Walk, entry: Entry, stale: IndexRead, read: SitemapAnswer) {
   logger.info('site_health_sitemap_index_refetched', {
@@ -292,8 +300,12 @@ function collectRefetch(walk: Walk, entry: Entry, stale: IndexRead, read: Sitema
     status_code: read.kind === 'parsed' ? null : read.status,
   });
   if (read.kind !== 'parsed') return;
-  const named = new Set(read.document.refs.flatMap((ref) => sitemapRef(ref) ?? []));
-  walk.unread -= stale.unread.filter((url) => !named.has(url)).length;
+  const named = namedRefs(read.document);
+  for (const url of stale.unread.filter((child) => !named.has(child))) {
+    const others = (walk.namedBy.get(url) ?? 1) - 1;
+    walk.namedBy.set(url, others);
+    if (!others) walk.unread--;
+  }
   queueChildren(walk, indexRead(entry.url, entry.depth), read.document);
 }
 

@@ -773,61 +773,69 @@ describe('site setup', () => {
     ]);
   });
 
-  it('re-fetches a cached index whose children are all gone, past the cache, and walks the fresh children', async () => {
-    const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
-    const setup = await queued(seed, 'site_setup');
-    const requests: string[] = [];
-    const index = (...paths: string[]) => ({
-      contentType: 'application/xml',
-      body: `<sitemapindex>${paths.map((path) => `<sitemap><loc>${url(path)}</loc></sitemap>`).join('')}</sitemapindex>`,
-    });
-    const busted = `/sitemap.xml?${policy.site_health.crawl.sitemap_index_refetch.cache_bust_param}`;
-    const site = worker(
-      {
-        '/robots.txt': {
-          body: `User-agent: *\nAllow: /\nSitemap: ${url('/fine.xml')}\nSitemap: ${url('/sitemap.xml')}\n`,
-          contentType: 'text/plain',
+  it.each([
+    { shared: false, unread: 0 },
+    // A child another index still names stays unread when the fresh copy drops it.
+    { shared: true, unread: 1 },
+  ])(
+    're-fetches a cached index whose children are all gone, past the cache (shared child: $shared)',
+    async ({ shared, unread }) => {
+      const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
+      const setup = await queued(seed, 'site_setup');
+      const requests: string[] = [];
+      const index = (...paths: string[]) => ({
+        contentType: 'application/xml',
+        body: `<sitemapindex>${paths.map((path) => `<sitemap><loc>${url(path)}</loc></sitemap>`).join('')}</sitemapindex>`,
+      });
+      const busted = `/sitemap.xml?${policy.site_health.crawl.sitemap_index_refetch.cache_bust_param}`;
+      const site = worker(
+        {
+          '/robots.txt': {
+            body: `User-agent: *\nAllow: /\nSitemap: ${url('/sitemap.xml')}\nSitemap: ${url('/fine.xml')}\n`,
+            contentType: 'text/plain',
+          },
+          '/fine.xml': shared ? index('/pages.xml', '/gone-a.xml') : index('/pages.xml'),
+          '/pages.xml': urlset(url('/a')),
+          // The CDN's cached copy names children the site has since replaced.
+          '/sitemap.xml': index('/gone-a.xml', '/gone-b.xml'),
+          [busted]: index('/fresh.xml'),
+          '/fresh.xml': urlset(url('/b'), url('/c')),
         },
-        '/fine.xml': index('/pages.xml'),
-        '/pages.xml': urlset(url('/a')),
-        // The CDN's cached copy names children the site has since replaced.
-        '/sitemap.xml': index('/gone-a.xml', '/gone-b.xml'),
-        [busted]: index('/fresh.xml'),
-        '/fresh.xml': urlset(url('/b'), url('/c')),
-      },
-      requests,
-    );
-    await lease(setup, site.owner);
-    await runSiteTask(runnerOf(site), await task(setup), {
-      kind: 'acquire',
-      // One document per wave, so the request order is the queue order.
-      run: (ctx, claimed) => runSiteSetup(ctx, claimed, { ...setupSettings({}), concurrency: 1 }),
-    });
-    // The index whose child was read is fetched once; the stale one once more, past the cache.
-    expect(requests.filter((path) => path.includes('.xml'))).toEqual([
-      '/fine.xml',
-      '/sitemap.xml',
-      '/pages.xml',
-      '/gone-a.xml',
-      '/gone-b.xml',
-      busted,
-      '/fresh.xml',
-    ]);
-    expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toEqual({
-      fetched: true,
-      file_count: 4,
-      discovered_count: 3,
-      discovered_complete: true,
-      limit_reached: false,
-      unread_count: 0,
-    });
-    expect((await entries(seed)).map((row) => row.listed_url)).toEqual([
-      url('/a'),
-      url('/b'),
-      url('/c'),
-    ]);
-    expect(await task(setup)).toMatchObject({ status: 'succeeded' });
-  });
+        requests,
+      );
+      await lease(setup, site.owner);
+      await runSiteTask(runnerOf(site), await task(setup), {
+        kind: 'acquire',
+        // One document per wave, so the request order is the queue order.
+        run: (ctx, claimed) =>
+          runSiteSetup(ctx, claimed, { ...setupSettings({}), concurrency: 1, walkRetries: 0 }),
+      });
+      // The index whose child was read is fetched once; the stale one once more, past the cache.
+      expect(requests.filter((path) => path.includes('.xml'))).toEqual([
+        '/sitemap.xml',
+        '/fine.xml',
+        '/gone-a.xml',
+        '/gone-b.xml',
+        '/pages.xml',
+        busted,
+        '/fresh.xml',
+      ]);
+      expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toEqual({
+        fetched: true,
+        file_count: 4,
+        discovered_count: 3,
+        discovered_complete: !unread,
+        limit_reached: false,
+        unread_count: unread,
+      });
+      expect((await entries(seed)).map((row) => row.listed_url)).toEqual([
+        url('/a'),
+        url('/b'),
+        url('/c'),
+      ]);
+      expect(await task(setup)).toMatchObject({ status: 'succeeded' });
+    },
+  );
 
   it('bounds the walk by its ceilings and domain, keeps an oversized document unread, and skips llms.txt for a sample', async () => {
     const seed = await crawl({ sample: true });
