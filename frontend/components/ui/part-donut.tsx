@@ -27,6 +27,8 @@ export type Part = Readonly<{
 const RADIUS = 40;
 const RING = 16;
 const GAP = 0.8;
+/** The remainder's ink as an SVG attribute: one rule fewer in the eager CSS. */
+const WELL = 'var(--color-well)';
 
 type Row = Readonly<{
   label: string;
@@ -87,14 +89,14 @@ export function PartDonut({
     ...rows.map((row) => `${row.label} ${chartPercent(row.value, whole)} (${format(row.value)})`),
   ].join(', ');
   return (
-    <div className="flex min-w-0 flex-wrap items-center gap-x-8 gap-y-4">
+    <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-3">
       <div
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the ring and its total are one generated image; <img> cannot hold them
         role="img" // NOSONAR -- the ring and its total are one generated image
         aria-label={described ? `${label}: ${described}` : label}
-        className="relative size-36 shrink-0"
+        className="relative w-36 shrink-0"
       >
-        <svg aria-hidden viewBox="0 0 100 100" className="block size-full -rotate-90">
+        <svg aria-hidden viewBox="0 0 100 100" className="block w-full -rotate-90">
           <DonutSegments rows={rows} />
         </svg>
         {totalLabel ? (
@@ -131,7 +133,7 @@ export function PartDonut({
 function DonutSegments({ rows }: Readonly<{ rows: readonly Row[] }>) {
   const drawn = rows.filter((row) => row.share > 0);
   const ring = { cx: 50, cy: 50, r: RADIUS, fill: 'none', strokeWidth: RING, pathLength: 100 };
-  if (!drawn.length) return <circle {...ring} className="stroke-well" />;
+  if (!drawn.length) return <circle {...ring} stroke={WELL} />;
   const gap = drawn.length > 1 ? GAP : 0;
   return drawn.map((row, index) => {
     const length = Math.max(row.share * 100 - gap, 0.5);
@@ -143,7 +145,8 @@ function DonutSegments({ rows }: Readonly<{ rows: readonly Row[] }>) {
         data-part={row.tone ?? 'remainder'}
         strokeDasharray={`${length} ${100 - length}`}
         strokeDashoffset={-offset}
-        className={row.tone ? SERIES_STROKE[row.tone] : 'stroke-well'}
+        stroke={row.tone ? undefined : WELL}
+        className={row.tone ? SERIES_STROKE[row.tone] : undefined}
       />
     );
   });
