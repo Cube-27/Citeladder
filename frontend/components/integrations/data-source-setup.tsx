@@ -27,7 +27,7 @@ import { hardNavigate } from '@/lib/navigation/hard-navigate';
 import { projectDestination } from '@/lib/navigation/project-destination';
 import { useProjectContext, useWorkspaceCapability } from '@/lib/project/project-context';
 
-import { PropertyChoice } from './property-choice';
+import { usePropertyChoice } from './property-choice';
 import { oauthErrorMessage, useDataSources, type SourceStep } from './data-sources';
 import { Notice } from '@/components/ui/notice';
 import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -247,22 +247,34 @@ function SourceRow({
         }
       />
     );
-  return (
-    <RowFrame
-      Icon={source.Icon}
-      title={source.label}
-      status={`Connected. Choose the ${source.noun} for this project.`}
-    >
-      {canManage ? (
-        <PropertyChoice
-          provider={provider}
-          connection={step.connection}
-          projectId={projectId}
-          autoStart={autoStart}
-        />
-      ) : (
+  const status = `Connected. Choose the ${source.noun} for this project.`;
+  if (!canManage)
+    return (
+      <RowFrame Icon={source.Icon} title={source.label} status={status}>
         <p className="type-caption">Ask a workspace owner or admin to choose it.</p>
-      )}
+      </RowFrame>
+    );
+  return (
+    <ChooseRow
+      provider={provider}
+      connection={step.connection}
+      projectId={projectId}
+      autoStart={autoStart}
+      status={status}
+    />
+  );
+}
+
+/** Connected, no property yet: the choice's buttons at the row's end, its list under it. */
+function ChooseRow({
+  status,
+  ...choice
+}: Readonly<Parameters<typeof usePropertyChoice>[0] & { status: string }>) {
+  const source = PROVIDER_META[choice.provider];
+  const { action, body } = usePropertyChoice(choice);
+  return (
+    <RowFrame Icon={source.Icon} title={source.label} status={status} action={action}>
+      {body}
     </RowFrame>
   );
 }

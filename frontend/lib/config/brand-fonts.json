@@ -6,7 +6,7 @@
       "family": "Stack Sans Notch",
       "file": "StackSansNotch-Variable.woff2",
       "preload": ["app", "public", "docs"],
-      "weights": "400 600",
+      "weights": "300 600",
       "fallback": {
         "sizeAdjust": "107.9%",
         "ascentOverride": "92.68%",
@@ -18,7 +18,7 @@
       "family": "Spline Sans",
       "file": "SplineSans-Variable.woff2",
       "preload": ["app", "public", "docs"],
-      "weights": "400 600",
+      "weights": "300 600",
       "fallback": {
         "sizeAdjust": "105.11%",
         "ascentOverride": "91.67%",
@@ -30,7 +30,7 @@
       "family": "Geist Mono",
       "file": "GeistMono-Variable.woff2",
       "preload": ["app", "docs"],
-      "weights": "400 600",
+      "weights": "300 600",
       "fallback": {
         "sizeAdjust": "100%",
         "ascentOverride": "100.5%",

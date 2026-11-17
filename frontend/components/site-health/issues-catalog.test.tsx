@@ -302,6 +302,9 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
+    // Tallest tab (Technical, 24) under a 25-row page, plus four blank rows.
+    const issuesTable = screen.getByRole('region', { name: 'Issues' });
+    await waitFor(() => expect(issuesTable.querySelectorAll('tbody tr')).toHaveLength(28));
   });
 
   it('switches tabs and ordering as server params, from the first page', async () => {

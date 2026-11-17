@@ -33,9 +33,9 @@ const configPath = join(frontendRoot, 'lib', 'config', 'brand-fonts.json');
 /** Arial's x-height and Courier New's advance (em), which the fallbacks scale to. */
 const ARIAL_X_HEIGHT = 0.519;
 const COURIER_ADVANCE = 0.6;
-/** The design's weight ceiling (the 600 `heading` role) and its lightest weight (400). */
+/** The design's weight ceiling (the 600 `heading` role) and its floor (dark's 350 regular, rounded down). */
 const WEIGHT_CEILING = 600;
-const WEIGHT_FLOOR = 400;
+const WEIGHT_FLOOR = 300;
 
 const args = process.argv.slice(2);
 const latest = args.includes('--latest');

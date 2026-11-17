@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { Button } from '@/components/ui/button';
-import { FlowPage, FlowStep } from '@/components/templates/flow-page';
+import { SetupPage, SetupStep } from '@/components/templates/setup-page';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { Stack } from '@/components/ui/layout';
@@ -33,7 +33,7 @@ export function WorkspaceSetup() {
   const failure = terms.error ?? leave.error;
   if (failure)
     return (
-      <FlowPage label="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
+      <SetupPage label="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
         <StateBlock
           kind="error"
           error={failure}
@@ -42,9 +42,9 @@ export function WorkspaceSetup() {
           onRetry={() => (terms.error ? void terms.refetch() : leave.mutate())}
           pending={terms.isFetching || leave.isPending}
         />
-      </FlowPage>
+      </SetupPage>
     );
-  if (!terms.data?.accepted_at) return <FlowPage label="Workspace setup">{null}</FlowPage>;
+  if (!terms.data?.accepted_at) return <SetupPage label="Workspace setup">{null}</SetupPage>;
   return <NameWorkspace termsRevision={terms.data.terms_revision} />;
 }
 
@@ -72,8 +72,9 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
   };
 
   return (
-    <FlowPage label="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
-      <FlowStep
+    <SetupPage label="Workspace setup" barEnd={<UserMenuTrigger presenter="compact" />}>
+      <SetupStep
+        width="narrow"
         title="Set up your workspace"
         help="Your projects and team live here. Your trial starts when you create it."
         next={
@@ -114,7 +115,7 @@ function NameWorkspace({ termsRevision }: Readonly<{ termsRevision: string }>) {
             ) : null}
           </Stack>
         </form>
-      </FlowStep>
-    </FlowPage>
+      </SetupStep>
+    </SetupPage>
   );
 }

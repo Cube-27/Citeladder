@@ -172,7 +172,7 @@ export function IssuesCatalog({
         }}
         state={tableState(issuesQuery)}
         rowCount={rows.length}
-        pageSize={ISSUE_PAGE_LIMIT}
+        pageSize={reservedRows(crawlSummary)}
         reserveRows
         pager={pager}
         busy={{ active: issuesQuery.isFetching, label: 'Updating issues' }}
@@ -287,6 +287,20 @@ function IssueRow({
       </TableCell>
     </TableRow>
   );
+}
+
+const BLANK_ROWS_BELOW = 4;
+
+/**
+ * The table's height in rows: the crawl's tallest tab, up to a page, then a
+ * few blank rows. Unfiltered counts bound every filtered view, so no tab or
+ * filter click moves what follows.
+ */
+function reservedRows(crawlSummary: Summary | undefined): number {
+  const tallest = crawlSummary
+    ? Math.max(0, ...Object.values(crawlSummary.section_counts))
+    : ISSUE_PAGE_LIMIT;
+  return Math.min(tallest, ISSUE_PAGE_LIMIT) + BLANK_ROWS_BELOW;
 }
 
 /** Technical | Content | AEO, each with its issue count under the other filters. */

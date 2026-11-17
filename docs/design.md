@@ -196,11 +196,12 @@ typography:
 - **The app's roles** are the closed set in
   [`typography.tsx`](../frontend/components/ui/typography.tsx) (`textRole`),
   with their recipes in `globals.css`; a call site names the job, never a
-  size. The app binds `title` to 20/28 at 600, not the block's website
+  size. The app binds `title` to 20/28 at 400, not the block's website
   value. The website's `type-page-title`, `-control`, `-eyebrow` and
   `-delta` are website-only.
 - **App sizes:** 12, 13, 14, 16, 20, 24, 28 and 40 only, each with one line
-  height; 12 is the floor. Weights 400, 500 and 600. Emphasis inside text is
+  height; 12 is the floor. Weights 400 and 500, never 600 (350 and 450 in
+  the app's dark, where light text reads heavier). Emphasis inside text is
   500, never colour. At most one `figure-xl` per page.
 - **Website sizes:** 12 · 14 · 16 · 18 · 20 · 24 · 32 · 48, normally no more
   than three on a page, nothing heavier than 500. Prose holds to 65ch.
@@ -296,7 +297,8 @@ grids measure the column instead of the viewport (`column-split`,
 
 **Nothing moves on interaction.** Pagination, tabs, filters, sorting, loading
 and empty states keep their footprint: a table with views (`reserveRows`) keeps
-a full page of rows and its pager in every view and state, a filter trigger and
+its tallest view's rows (up to a page, plus a few blank rows) and its pager in
+every view and state, a filter trigger and
 a count hold their widest value's width, and a pending button keeps its
 label's box. A page the window scrolls ends in `--page-end-space` (a third of
 the viewport), so content shrinking near the bottom never pulls the scroll.

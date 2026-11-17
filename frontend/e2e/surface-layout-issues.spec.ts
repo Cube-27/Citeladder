@@ -184,7 +184,8 @@ for (const width of [1280, 1600])
     await expect.poll(() => new URL(page.url()).searchParams.get('finding_class')).toBe('advisory');
     await check('Show advisories');
     await choose(/^Show/, 'Issues');
-    await expect(rows.nth(25)).toHaveCount(0);
+    await expect(rows.nth(24)).toContainText('technical issue 25');
+    await expect(table.getByText('technical issue 26')).toHaveCount(0);
     await expect(table.getByRole('button', { name: 'Next page' })).toBeEnabled();
     await check('Show issues');
 

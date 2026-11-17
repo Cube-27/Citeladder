@@ -53,7 +53,7 @@
   background: var(--color-surface-sunken);
 }
 
-/* A duotone tile: the orange glyph on a pale violet square. */
+/* A duotone tile: the orange glyph on a grey square. */
 
 .cl-mega-icon {
   display: inline-flex;
@@ -62,7 +62,7 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-md);
-  background: var(--color-site-violet-soft);
+  background: var(--color-site-chip);
   color: var(--color-accent);
 }
 
