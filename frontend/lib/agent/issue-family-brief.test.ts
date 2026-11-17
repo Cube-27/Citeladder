@@ -88,7 +88,7 @@ describe('issueFamilyBrief', () => {
       issueFamilyBrief({ cohort: cohort(1, null), grouping: 'aeo', fix: FIX, issue: undefined }),
     ).toEqual({
       overview: 'Mobile viewport missing on 1 URL.',
-      why: 'AI answer engines and agents read this to understand, trust and cite your pages. It shows on 1 URL in the latest crawl.',
+      why: 'AI answer engines and agents read this to understand, trust and cite your pages. It shows on 1 URL in this crawl.',
       steps: [FIX, 'Ship the change; the next crawl re-checks it'],
     });
   });

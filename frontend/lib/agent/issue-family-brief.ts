@@ -73,7 +73,7 @@ export function issueFamilyBrief({
   }
 
   const crawled = cohort.crawl_analyzed_url_count;
-  let reach = `It shows on ${urls} in the latest crawl.`;
+  let reach = `It shows on ${urls} in this crawl.`;
   if (cohort.whole_site) reach = 'It applies to the whole site.';
   else if (crawled)
     reach = `${formatCount(count)} of your ${pluralCount(crawled, 'crawled URL')} ${count === 1 ? 'carries' : 'carry'} it.`;
