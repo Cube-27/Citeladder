@@ -4,6 +4,7 @@ import { sql } from 'kysely';
 import { policy } from '../src/config.ts';
 import * as lifecycle from '../src/site-health/lifecycle.ts';
 import { recoverExpiredLeases } from '../src/site-health/lease-recovery.ts';
+import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { lockSiteTask } from '../src/site-health/site-task.ts';
@@ -358,4 +359,43 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
       .where('id', '=', unrelated)
       .execute();
   }
+});
+
+it('refreshes a running crawl summary without overwriting one that settled meanwhile', async () => {
+  const refreshWhileLocked = async (settle: boolean) => {
+    const seed = await fixtures.crawl('running');
+    await db
+      .updateTable('site_crawls')
+      .set({ analysis_status: 'running', completed_at: null })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    const member = await fixtures.analyzable(seed, '/');
+    await db.deleteFrom('site_crawl_tasks').where('id', '=', member.taskId).execute();
+    const page = await fixtures.page(seed, '/', {}, { siteUrlId: member.siteUrlId });
+    await fixtures.evaluation(seed, page, 'technical.indexable', 'satisfied');
+    await fixtures.analyzable(seed, '/pending');
+    const cadence = crawlCadences(siteWorkerSettings({}).scoreRefresh);
+    const task = { id: page.taskId, crawl_id: seed.crawlId, workspace_id: seed.workspaceId };
+    // A task commit holds the crawl lock while the refresh starts; the crawl may settle meanwhile.
+    let refreshing: Promise<unknown> = Promise.resolve();
+    await db.transaction().execute(async (trx) => {
+      await sql`select id from site_crawls where id = ${seed.crawlId} for update`.execute(trx);
+      refreshing = lifecycle.reconcileAfterTask(db, task, cadence);
+      if (settle)
+        await trx
+          .updateTable('site_crawls')
+          .set({ status: 'completed' })
+          .where('id', '=', seed.crawlId)
+          .execute();
+    });
+    await refreshing;
+    const crawl = await db
+      .selectFrom('site_crawls')
+      .select('score_summary')
+      .where('id', '=', seed.crawlId)
+      .executeTakeFirstOrThrow();
+    return crawl.score_summary;
+  };
+  expect(await refreshWhileLocked(false)).toMatchObject({ analyzed_count: 1 });
+  expect(await refreshWhileLocked(true)).toBeNull();
 });
