@@ -654,35 +654,36 @@ describe('crawl lifecycle', () => {
   it('refreshes the live summary while work remains, then terminalizes exactly once', async () => {
     const seed = await running();
     const done = await monitoredPage(seed, '/');
+    const failed = await failedTask(seed, { path: '/failed', error_code: 'task_failed' });
     const pending = await fixtures.analyzable(seed, '/pending');
     await reconcileAfterTask(db, settled(seed, done.taskId), cadence());
+    // A failed page while a sibling is outstanding is progress: no recount under the crawl lock.
+    await reconcileAfterTask(db, settled(seed, failed.taskId), cadence());
     const live = await crawlRow(seed.crawlId);
-    expect(live.status).toBe('running');
+    expect([live.status, live.failed_url_count]).toEqual(['running', 0]);
     expect(live.score_summary).toMatchObject({
       analyzed_count: 1,
       aeo_measurement_state: 'limited_evidence',
     });
     expect(await snapshots(seed.crawlId)).toHaveLength(0);
-
     await db
       .updateTable('site_crawl_tasks')
       .set({ status: 'failed', error_code: 'task_failed' })
       .where('id', '=', pending.taskId)
       .execute();
     await reconcileAfterTask(db, settled(seed, pending.taskId), cadence());
-    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'partially_completed',
       partial_reason: 'analysis_incomplete',
       analysis_status: 'partially_completed',
       analyzed_url_count: 1,
-      failed_url_count: 1,
+      failed_url_count: 2,
     });
     expect(await snapshots(seed.crawlId)).toHaveLength(1);
     // The terminalization transaction persisted what the dashboard counts from now on.
     expect((await crawlRow(seed.crawlId)).terminal_counters).toMatchObject({
       analyzed: 1,
-      errors: 1,
+      errors: 2,
       queued: 0,
       activity: { state: 'terminal', reason: 'terminal' },
     });

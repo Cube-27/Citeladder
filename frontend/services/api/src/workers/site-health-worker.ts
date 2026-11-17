@@ -266,6 +266,7 @@ export class SiteHealthWorker {
         fetcher: this.fetcher,
         settings: this.settings,
         checkAccess: () => this.#access(claimed.workspace_id),
+        cadence: this.#cadence,
         signal: this.signal,
       },
       claimed,

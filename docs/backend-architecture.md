@@ -108,7 +108,10 @@ The queue-lane owner (`src/queue/task-queue.ts`) takes a lane descriptor
 (table, claimable statuses, the status a claim moves to, the attempt the claim
 charges, extra readiness, recovery charge) and holds the shared claim, turn
 cursor, heartbeat and fenced terminal lock; every lane runs on it (analytics,
-Site Health, discovery, Agent, integrations and audits). Domain lifecycle runs
+Site Health, discovery, Agent, integrations and audits). Site Health,
+discovery and integrations claim straight to `running`; the other lanes claim
+to `leased` and their worker starts the row. Either way the fence re-checks
+owner, attempt and lease expiry at every commit. Domain lifecycle runs
 as a claim hook in the claim's transaction (the integration sync-started
 event) or stays with the lane: the audit parent-first lock, parks and the per-claim
 lease owner (`src/queue/audit-queue.ts`: each claim leases to

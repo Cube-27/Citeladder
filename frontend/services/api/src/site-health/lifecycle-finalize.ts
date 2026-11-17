@@ -1,7 +1,7 @@
 /** Cross-page terminal evaluations and final revisions share the caller's crawl lock. */
-import { randomUUID } from 'node:crypto';
 import { sql } from 'kysely';
 import type { Database } from '../db/database.ts';
+import { timeOrderedId } from '../db/ids.ts';
 import { record } from '../db/json.ts';
 import { onlyOf } from '../lists.ts';
 import { compareText, scalarText } from '../text-order.ts';
@@ -349,7 +349,7 @@ export async function finalizeCrawlAnalyses(db: Database, crawl: Crawl) {
       );
     const fresh = evaluations
       .filter((evaluation) => !recorded.has(`${row.id}:${evaluation.rule_id}`))
-      .map((evaluation) => ({ ...evaluation, id: randomUUID() }));
+      .map((evaluation) => ({ ...evaluation, id: timeOrderedId() }));
     await insertEvaluations(db, crawl, row.id, row.site_url_id, row.artifact_id, fresh); // NOSONAR -- One transaction's connection, under the crawl lock.
   }
   await publishFinalPageAnalyses(db, crawl);

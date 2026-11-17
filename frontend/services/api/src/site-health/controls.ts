@@ -99,10 +99,20 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
         error_code: 'cancelled',
       })
       .where('workspace_id', '=', workspaceId)
-      .where('crawl_id', '=', crawlId)
-      .where('status', 'not in', ['succeeded', 'failed', 'cancelled'])
+      // A row another transaction holds (a claim, a heartbeat) is skipped, not
+      // waited on: its worker cancels it on the stopped crawl and recounts.
+      .where('id', 'in', (eb) =>
+        eb
+          .selectFrom('site_crawl_tasks')
+          .select('id')
+          .where('workspace_id', '=', workspaceId)
+          .where('crawl_id', '=', crawlId)
+          .where('status', 'not in', ['succeeded', 'failed', 'cancelled'])
+          .forNoKeyUpdate()
+          .skipLocked(),
+      )
       .execute();
-    // Every task is settled now, so the stopped crawl's counters are final.
+    // Every task Stop could take is settled; a skipped one's settlement recounts (`reconcileAfterTask`).
     await persistTerminalCounters(trx, { ...crawl, status: 'cancelled' });
     // Task mutation precedes capacity/account locks taken by reservation release.
     await settleCrawlFetches(trx, crawl);

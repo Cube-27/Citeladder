@@ -4,6 +4,7 @@ import { afterAll, expect, it } from 'vitest';
 import { policy } from '../src/config.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
+import { loadScope, startCrawl } from '../src/site-health/site-task.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { recordedSite, SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -25,7 +26,10 @@ const settings = {
 };
 const fetcher = new SitePageFetcher(
   db,
-  recordedSite({ '/flaky': { status: 503 } }),
+  recordedSite({
+    '/flaky': { status: 503 },
+    '/page': { body: '<html><head><title>Page</title></head><body>Hi</body></html>' },
+  }),
   siteFetchSettings({
     SITE_HEALTH_PER_HOST_DELAY_SECONDS: '0',
     SITE_HEALTH_DEFAULT_CRAWL_DELAY_SECONDS: '0',
@@ -38,7 +42,7 @@ function lease(id: string, owner: string, attempts: number) {
   return db
     .updateTable('site_crawl_tasks')
     .set({
-      status: 'leased',
+      status: 'running',
       lease_owner: owner,
       lease_expires_at: new Date(Date.now() + 60_000),
       attempt_count: attempts,
@@ -196,13 +200,36 @@ it('never starts a stale claim once the same owner re-claimed the next attempt',
   await db.updateTable('site_crawl_tasks').set(reclaimed).where('id', '=', id).execute();
   await worker.execute(stale);
 
-  // The live claim is still leased, waiting for its own slot to start it.
+  // The live claim is untouched, waiting for its own slot to run it.
   expect(await row(id)).toMatchObject({
-    status: 'leased',
+    status: 'running',
     lease_owner: 'same-owner',
     ...reclaimed,
   });
   await cancel(id);
+});
+
+it('lets a stale analyze slot of the same owner write nothing to the live claim', async () => {
+  const seed = await runningCrawl();
+  const page = await fixtures.analyzable(seed, '/page');
+  const worker = new SiteHealthWorker(db, { owner: 'same-owner', settings, fetcher });
+  const stale = await lease(page.taskId, worker.owner, 0);
+  const reclaimed = reclaimedBySameOwner();
+  await db.updateTable('site_crawl_tasks').set(reclaimed).where('id', '=', page.taskId).execute();
+  await worker.execute(stale);
+  expect(await row(page.taskId)).toMatchObject({
+    status: 'running',
+    classification_expected: false,
+    ...reclaimed,
+  });
+
+  // The live slot runs the same page to a classified success.
+  await worker.execute(await row(page.taskId));
+  expect(await row(page.taskId)).toMatchObject({
+    status: 'succeeded',
+    classification_expected: true,
+    attempt_count: 2,
+  });
 });
 
 it('leaves the live claim untouched when a stale claim of the same owner defers it', async () => {
@@ -221,9 +248,34 @@ it('leaves the live claim untouched when a stale claim of the same owner defers 
   await worker.execute(stale);
 
   expect(await row(root.taskId)).toMatchObject({
-    status: 'leased',
+    status: 'running',
     lease_owner: 'same-owner',
     ...reclaimed,
   });
   await cancel(root.taskId, setup);
+});
+
+it('starts a queued crawl for its first task, and cancels the task when Stop got there first', async () => {
+  const seed = await fixtures.crawl('queued');
+  const first = await fixtures.analyzable(seed, '/first');
+  const second = await fixtures.analyzable(seed, '/second');
+  const ctx = { db, owner: 'start-owner' };
+  const loaded = async (id: string) => {
+    const scope = await loadScope(db, await lease(id, ctx.owner, 0));
+    if (!scope) throw new Error('task not found');
+    return scope;
+  };
+  const stale = await loaded(second.taskId);
+
+  const started = await startCrawl(ctx, await loaded(first.taskId));
+  expect([started?.crawl.status, started?.crawl.started_at === null]).toEqual(['running', false]);
+
+  // Stop commits after the second task loaded its still-queued crawl.
+  await db
+    .updateTable('site_crawls')
+    .set({ status: 'cancelled' })
+    .where('id', '=', seed.crawlId)
+    .execute();
+  expect(await startCrawl(ctx, stale)).toBeNull();
+  expect((await row(second.taskId)).status).toBe('cancelled');
 });

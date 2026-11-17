@@ -12,6 +12,7 @@ import { crawlCoverage, valueKindCoverage } from '../src/site-health/coverage.ts
 import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
 import { pages } from '../src/site-health/reads/pages.ts';
+import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { SitePageFetcher } from '../src/site-health/page-fetch.ts';
 import { runSiteSetup, setupSettings } from '../src/site-health/site-setup-task.ts';
 import { runSiteTask } from '../src/site-health/site-task.ts';
@@ -525,6 +526,16 @@ describe('site setup', () => {
     contentType: 'application/xml',
     body: `<urlset>${paths.map((path) => `<url><loc>${path}</loc></url>`).join('')}</urlset>`,
   });
+  /** The runner context the worker hands its tasks. */
+  const runnerOf = (site: SiteHealthWorker) => ({
+    db,
+    owner: site.owner,
+    queue: site.queue,
+    fetcher: site.fetcher,
+    settings: site.settings,
+    checkAccess: async () => {},
+    cadence: crawlCadences(site.settings.scoreRefresh),
+  });
 
   it('publishes robots, AI-crawler stance and llms.txt, then counts the sitemap and tracks its pages', async () => {
     const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
@@ -624,23 +635,12 @@ describe('site setup', () => {
       ),
     });
     await lease(setup, site.owner);
-    await runSiteTask(
-      {
-        db,
-        owner: site.owner,
-        queue: site.queue,
-        fetcher: site.fetcher,
-        settings: site.settings,
-        checkAccess: async () => {},
+    await runSiteTask(runnerOf(site), await task(setup), {
+      kind: 'acquire',
+      run: (ctx, claimed) => {
+        return runSiteSetup(ctx, claimed, { ...setupSettings({}), maxSiteUrls: 4 });
       },
-      await task(setup),
-      {
-        kind: 'acquire',
-        run: (ctx, claimed) => {
-          return runSiteSetup(ctx, claimed, { ...setupSettings({}), maxSiteUrls: 4 });
-        },
-      },
-    );
+    });
     // The site-wide ceiling kept four of five URLs: "at least 4". Two pages fill the tracked set,
     // most valuable first; the PDF counts as discovered but is a document, never a tracked page.
     expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toMatchObject({
@@ -727,22 +727,11 @@ describe('site setup', () => {
     );
     const walk = async () => {
       await lease(setup, site.owner);
-      await runSiteTask(
-        {
-          db,
-          owner: site.owner,
-          queue: site.queue,
-          fetcher: site.fetcher,
-          settings: site.settings,
-          checkAccess: async () => {},
-        },
-        await task(setup),
-        {
-          kind: 'acquire',
-          run: (ctx, claimed) =>
-            runSiteSetup(ctx, claimed, { ...setupSettings({}), walkRetries: 1, walkRetryDelay: 0 }),
-        },
-      );
+      await runSiteTask(runnerOf(site), await task(setup), {
+        kind: 'acquire',
+        run: (ctx, claimed) =>
+          runSiteSetup(ctx, claimed, { ...setupSettings({}), walkRetries: 1, walkRetryDelay: 0 }),
+      });
     };
     await walk();
     expect(await task(setup)).toMatchObject({ status: 'queued' });
@@ -817,30 +806,19 @@ describe('site setup', () => {
       .where('id', '=', full.crawlId)
       .execute();
     await lease(resumed, site.owner);
-    await runSiteTask(
-      {
-        db,
-        owner: site.owner,
-        queue: site.queue,
-        fetcher: site.fetcher,
-        settings: site.settings,
-        checkAccess: async () => {},
+    await runSiteTask(runnerOf(site), await task(resumed), {
+      kind: 'acquire',
+      run: (ctx, claimed) => {
+        const settings = setupSettings({});
+        return runSiteSetup(ctx, claimed, {
+          ...settings,
+          // One document per wave, so the request order is the queue order.
+          concurrency: 1,
+          maxDocuments: 3,
+          sitemap: { ...settings.sitemap, maxDecodedBytes: 400 },
+        });
       },
-      await task(resumed),
-      {
-        kind: 'acquire',
-        run: (ctx, claimed) => {
-          const settings = setupSettings({});
-          return runSiteSetup(ctx, claimed, {
-            ...settings,
-            // One document per wave, so the request order is the queue order.
-            concurrency: 1,
-            maxDocuments: 3,
-            sitemap: { ...settings.sitemap, maxDecodedBytes: 400 },
-          });
-        },
-      },
-    );
+    });
     const walked = record((await crawlRow(full)).site_facts);
     // The off-domain entry is never fetched, and the document ceiling leaves s3.xml unwalked.
     expect(walkedPaths).toEqual(['/robots.txt', '/index.xml', '/s1.xml', '/s2.xml']);

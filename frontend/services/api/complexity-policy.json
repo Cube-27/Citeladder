@@ -119,7 +119,6 @@
       "services/api/src/site-health/analysis/regions.ts::primaryRegion": 13,
       "services/api/src/site-health/analysis/rules.ts::applicability": 14,
       "services/api/src/site-health/analysis/source-support.ts::recordAnchor": 15,
-      "services/api/src/site-health/analyze-task.ts::persist::<anonymous>": 13,
       "services/api/src/site-health/archetypes.ts::assessArchetype": 13,
       "services/api/src/site-health/change-snapshot.ts::persistChangeSnapshot": 19,
       "services/api/src/site-health/issue-states.ts::write": 16,

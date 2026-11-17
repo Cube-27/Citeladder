@@ -1,7 +1,7 @@
 /**
  * A crawl goes terminal here and nowhere else. Every entry point holds the
  * crawl row FOR NO KEY UPDATE and short-circuits on a crawl that is no longer
- * active, so the per-task reconcile, terminal lease recovery, the stalled
+ * active (a stopped one only recounts), so the per-task reconcile, terminal lease recovery, the stalled
  * backstop and the overdue watchdog are idempotent and safe to run
  * concurrently. The finalize pass, final page revisions and the snapshot
  * commit with the status transition: a terminal crawl without them is a state
@@ -302,6 +302,8 @@ type ReconcileOptions = {
 
 /** Reconcile one crawl whose row the caller holds locked. */
 async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: ReconcileOptions = {}) {
+  // Stop skips a task another transaction holds; its later settlement recounts.
+  if (crawl.status === 'cancelled') return persistTerminalCounters(db, crawl);
   if (!isActiveCrawl(crawl.status)) return;
   const summary = await taskSummary(db, crawl);
   await refreshCounters(db, crawl, summary);
@@ -377,15 +379,17 @@ function settledRow(db: Database, task: SettledTask) {
 }
 
 /**
- * What a settled row can change. A discover while discovery continues and a
- * successful analysis while siblings remain move no boundary, only live
- * progress; anything else may settle discovery, analysis or the crawl.
+ * What a settled row can change. A discover while discovery continues and an
+ * analysis (analyzed, failed or cancelled) while siblings remain move no
+ * boundary, only live progress. Anything else may settle discovery, analysis
+ * or the crawl.
  */
 function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
   const running = row.crawl_status === 'running';
   if (row.task_kind === 'discover' && running && row.discovering) return 'discovery_progress';
+  // Only terminal rows reach here: failed, cancelled, or succeeded with its artifact.
   const analyzed =
-    row.task_kind === 'analyze' && row.status === 'succeeded' && row.result_artifact_id !== null;
+    row.task_kind === 'analyze' && (row.status !== 'succeeded' || row.result_artifact_id !== null);
   return analyzed && running && row.analysis_status === 'running' && row.outstanding
     ? 'analysis_progress'
     : 'boundary';

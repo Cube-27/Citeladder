@@ -1,9 +1,9 @@
 /** Append terminal revisions while retaining evaluations on their original analyses. */
-import { randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
+import { timeOrderedId } from '../db/ids.ts';
 import { record } from '../db/json.ts';
 import { firstOf } from '../lists.ts';
 import type { SiteRuleEvaluations } from '../generated/db-schema.ts';
@@ -94,7 +94,7 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
     return {
       ...initial,
       ...scores,
-      id: randomUUID(),
+      id: timeOrderedId(),
       created_at: finalizedAt,
       is_current: true,
       supersedes_analysis_id: initial.id,

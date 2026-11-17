@@ -11,6 +11,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { resolveSettingSpec } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
+import { timeOrderedId } from '../db/ids.ts';
 import type { Candidate } from './frontier.ts';
 import type { Crawl } from './site-task.ts';
 
@@ -302,7 +303,7 @@ export function candidateObservation(
 
 function observationValues(crawl: Crawl, row: Observation, now: Date) {
   return {
-    id: randomUUID(),
+    id: timeOrderedId(),
     workspace_id: crawl.workspace_id,
     project_id: crawl.project_id,
     crawl_id: crawl.id,
@@ -432,7 +433,7 @@ export async function enqueueCrawlTasks(
         || v.generation::text, 'queued', v.priority, v.position, ${maxAttempts},
       0, 0, now() + make_interval(secs => v.delay), now(), now(), '', '', false
     FROM unnest(
-      ${column(() => randomUUID())}::uuid[],
+      ${column(() => timeOrderedId())}::uuid[],
       ${column((seed) => seed.siteUrlId ?? null)}::uuid[],
       ${column((seed) => seed.parentSiteUrlId ?? null)}::uuid[],
       ${column((seed) => seed.kind)}::text[],

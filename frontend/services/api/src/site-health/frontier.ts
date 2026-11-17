@@ -7,12 +7,12 @@
  * workspace runtime lock (the first rung of the Site Health lock order) and
  * own the transaction.
  */
-import { randomUUID } from 'node:crypto';
 import { sql, type Selectable } from 'kysely';
 
 import { policy } from '../config.ts';
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
+import { timeOrderedId } from '../db/ids.ts';
 import { record } from '../db/json.ts';
 import type { WorkspaceSiteHealthRuntime } from '../generated/db-schema.ts';
 import { classifyUrlAdmission, hardExcluded, type Admission, type Scope } from './url-admission.ts';
@@ -257,7 +257,7 @@ async function storeFrontier(
       .insertInto('site_discovery_frontier')
       .values(
         fresh.slice(offset, offset + settings.batch).map((item) => ({
-          id: randomUUID(),
+          id: timeOrderedId(),
           workspace_id: crawl.workspace_id,
           crawl_id: crawl.id,
           normalized_url: item.url,

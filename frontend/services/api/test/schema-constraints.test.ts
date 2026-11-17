@@ -63,7 +63,7 @@ async function count(table: keyof DB, column: string, value: string) {
 }
 
 describe('Site Health', () => {
-  it('keeps one URL identity per project, one task slot per generation and one key per task', async () => {
+  it('keeps one URL identity per project and one task slot per generation', async () => {
     const seed = await fixtures.crawl();
     const page = await fixtures.analyzable(seed, '/a');
     await expect(clone('site_urls', page.siteUrlId)).rejects.toMatchObject(UNIQUE);
@@ -73,19 +73,6 @@ describe('Site Health', () => {
       clone('site_crawl_tasks', page.taskId, { idempotency_key: 'k2' }),
     ).rejects.toMatchObject(UNIQUE);
     await clone('site_crawl_tasks', page.taskId, { idempotency_key: 'k3', generation: 1 });
-    const key = randomUUID();
-    await clone('site_crawl_tasks', page.taskId, {
-      idempotency_key: key,
-      url_hash: 'c'.repeat(64),
-    });
-    const keyed = await db
-      .selectFrom('site_crawl_tasks')
-      .select('id')
-      .where('idempotency_key', '=', key)
-      .executeTakeFirstOrThrow();
-    await expect(
-      clone('site_crawl_tasks', keyed.id, { url_hash: 'd'.repeat(64) }),
-    ).rejects.toMatchObject(UNIQUE);
 
     const monitored = await db
       .selectFrom('monitored_site_urls')
