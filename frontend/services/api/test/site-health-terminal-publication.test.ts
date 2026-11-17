@@ -967,7 +967,7 @@ describe('crawl lifecycle', () => {
       .execute();
     const young = await running({ started_at: new Date() });
     const queued = await fixtures.task(young, 'analyze');
-    await reconcileOverdue(db, { stalledSeconds: 0, overdueSeconds: 3600, batch: 50 });
+    await reconcileOverdue(db, { ...siteWorkerSettings({}).lifecycle, batch: 50 });
     expect(
       (await tasksOf(overdue.crawlId, 'analyze')).find((task) => task.id === wedged.taskId),
     ).toMatchObject({ status: 'failed', error_code: 'crawl_overdue', lease_owner: null });

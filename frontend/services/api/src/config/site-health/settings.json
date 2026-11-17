@@ -343,8 +343,14 @@
   "overdue_crawl_seconds": {
     "env": ["SITE_HEALTH_OVERDUE_CRAWL_SECONDS"],
     "type": "float",
-    "default": 3600.0,
+    "default": 43200.0,
     "minimum": 0
+  },
+  "crawl_no_progress_seconds": {
+    "env": ["SITE_HEALTH_CRAWL_NO_PROGRESS_SECONDS"],
+    "type": "float",
+    "default": 1800.0,
+    "exclusive_minimum": 0
   },
   "live_score_refresh_page_interval": {
     "env": ["SITE_HEALTH_LIVE_SCORE_REFRESH_PAGE_INTERVAL"],
