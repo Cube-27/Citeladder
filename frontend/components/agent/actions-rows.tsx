@@ -11,6 +11,7 @@ import { approachLabel, familyLabel, IMPACT_LABEL, targetKindLabel } from '@/lib
 import { actionsQueries, type Action } from '@/lib/api/actions';
 import { ACTIONS_GROUPING_PAGE_SIZE } from '@/lib/config/agent';
 import { formatCount, pluralCount } from '@/lib/format';
+import { firstSentence } from '@/lib/site-health/issues';
 
 import { useActionsPageContext } from './actions-page-context';
 
@@ -105,8 +106,11 @@ function ActionRow({ action, refOf }: Readonly<{ action: Action; refOf: Grouping
   const { selection } = useActionsPageContext();
   const title = actionTarget(action);
   const whole = selection.hasGrouping(refOf);
+  // What is specific to this row: its rule's fix or its finding, as Issues words it.
   const caption = [
-    approachLabel(action.approach) ?? targetKindLabel(action.target_kind),
+    action.summary
+      ? firstSentence(action.summary)
+      : (approachLabel(action.approach) ?? targetKindLabel(action.target_kind)),
     action.origin === 'agent' ? 'From agent work' : null,
   ]
     .filter(Boolean)

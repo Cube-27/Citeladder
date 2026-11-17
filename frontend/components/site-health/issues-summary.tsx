@@ -12,7 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
 import { formatCount, pluralCount } from '@/lib/format';
-import { issueTitle, severityCount } from '@/lib/site-health/issues';
+import { firstSentence, issueTitle, severityCount } from '@/lib/site-health/issues';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
@@ -123,12 +123,6 @@ function attentionLine(high: number, summary: SiteIssuesPage['summary']): string
   const pages = summary.affected_url_count;
   if (summary.defect_issue_type_count === 0) return 'This crawl found nothing to fix.';
   return `${formatCount(high)} high severity · ${pluralCount(pages, 'page')} affected`;
-}
-
-/** The first sentence of a rule's fix, so a priority line stays one line of advice. */
-function firstSentence(text: string): string {
-  const match = /^[\s\S]*?[.!?](?=\s|$)/u.exec(text.trim());
-  return (match ? match[0] : text).trim();
 }
 
 /** The worst issues, worst first, each opening its own detail. */

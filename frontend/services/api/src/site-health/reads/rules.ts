@@ -31,8 +31,8 @@ export const severityOrder = (column: string) => sql<number>`case ${sql.ref(colu
 /** The current catalog label; a retired or unknown rule shows its id. */
 export const ruleTitle = (ruleId: string) => RULES.get(ruleId)?.display_label ?? ruleId;
 
-/** The catalog's one-line description of the rule; null for a retired or unknown rule. */
-export const ruleDescription = (ruleId: string) => RULES.get(ruleId)?.description ?? null;
+/** The catalog's fix for the rule, as Issues shows it; null for a retired or unknown rule. */
+export const ruleRemediation = (ruleId: string) => RULES.get(ruleId)?.remediation ?? null;
 
 /** The catalog rules whose label contains the text, ignoring case. */
 export function rulesTitled(query: string): string[] {

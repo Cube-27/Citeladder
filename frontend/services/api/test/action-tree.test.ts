@@ -223,8 +223,8 @@ describe('issue-group Actions', () => {
     expect(
       read.items.map((item) => [labels[item.id]?.target_label ?? item.id, item.summary]),
     ).toEqual([
-      ['Mobile viewport missing', 'The document declares a mobile viewport.'],
-      ['Missing structured data', 'Page includes JSON-LD or microdata structured data.'],
+      ['Mobile viewport missing', 'Add a responsive viewport meta declaration.'],
+      ['Missing structured data', 'Add schema.org structured data (JSON-LD preferred).'],
       // An Agent Action without findings has no secondary line.
       [agentPage.id, null],
     ]);

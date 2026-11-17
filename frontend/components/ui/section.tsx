@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
+import { createContext, useContext, type ComponentPropsWithoutRef, type ReactNode } from 'react';
 
 import { StateHeadingLevelContext } from '@/components/ui/state-block';
 import { textRole } from '@/components/ui/typography';
@@ -26,12 +26,16 @@ const SECTION_FACE: Record<SectionVariant, string> = {
  * steps down to an inset (globals.css). It sets no display of its own, so a
  * sticky child keeps its scroll container.
  */
+/** Whether a block sits inside a card section, whose padding is its outer inset. */
+export const InCardContext = createContext(false);
+
 export function Section({
   children,
   className,
   variant = 'card',
   ...props
 }: Readonly<ComponentPropsWithoutRef<'section'> & { variant?: SectionVariant }>) {
+  const inCard = useContext(InCardContext);
   return (
     <section
       {...props}
@@ -39,7 +43,9 @@ export function Section({
       className={cn('surface-section min-w-0', SECTION_FACE[variant], className)}
     >
       {/* Under the section's h2 title, a block state's heading is an h3. */}
-      <StateHeadingLevelContext value={3}>{children}</StateHeadingLevelContext>
+      <StateHeadingLevelContext value={3}>
+        <InCardContext value={inCard || variant === 'card'}>{children}</InCardContext>
+      </StateHeadingLevelContext>
     </section>
   );
 }
