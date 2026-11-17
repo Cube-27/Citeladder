@@ -497,6 +497,9 @@
   --color-control-fill: var(--color-well);
   --color-rule: #252526;
   --color-control-edge: #2f3033;
+  /* Field, checkbox and radio edges: quiet like Linear's, a step past
+     control-edge so an unchecked ring still shows on a surface. */
+  --color-control-line: #3a3b40;
   --color-chart-grid: #2a2a2c;
   --color-ink: #e3e3e3;
   --color-ink-2: #b0b0b0;

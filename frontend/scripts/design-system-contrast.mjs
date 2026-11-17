@@ -72,19 +72,17 @@ const CONTRAST_PAIRS = [
   },
   // Labels on fills: the primary button and its hover.
   { inks: [color('on-ink')], surfaces: [color('ink'), color('ink-hover')], minimum: 4.5 },
-  // Marks: Flare, control marks and the focus ring.
-  {
-    inks: [color('accent'), color('line-control'), color('focus')],
-    surfaces: GROUNDS,
-    minimum: 3,
-  },
+  // Marks: Flare and the focus ring.
+  { inks: [color('accent'), color('focus')], surfaces: GROUNDS, minimum: 3 },
+  // The website's control marks; the app's field edges are quieter by design.
+  { inks: [color('line-control')], surfaces: GROUNDS, minimum: 3, websiteOnly: true },
 ];
 
 /*
  * The app's palette, held on the app's scopes only:
  * text roles 4.5:1 on ground, surface, well and raised and under the hover
  * and pressed tints; status inks on every fill and their own wash; marks and
- * boundaries 3:1.
+ * series 3:1.
  */
 const APP_FILLS = ['ground', 'surface', 'well', 'raised'].map(color);
 const APP_WASHES = ['accent', ...STATUSES].map((role) => color(`${role}-wash`));
@@ -109,7 +107,7 @@ const APP_PAIRS = [
   // The rule is a translucent ink, so it is checked over every fill it can sit on.
   { inks: [color('ink-2')], surfaces: [color('rule')], over: APP_FILLS, minimum: 4.5 },
   {
-    inks: [color('accent'), color('control-line'), ...APP_SERIES, color('data-other')],
+    inks: [color('accent'), ...APP_SERIES, color('data-other')],
     surfaces: APP_FILLS,
     minimum: 3,
   },

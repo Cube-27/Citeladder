@@ -132,13 +132,14 @@ colors:
   the selected state) and `control-fill` (secondary buttons, selects, search
   and filter fields, operable tags). Lines: `rule` (dividers between rows
   inside a surface and on chrome edges), `control-edge` (the soft edge of a
-  labelled control or clickable card), `control-line` (3:1: text fields,
+  labelled control or clickable card), `control-line` (3:1 in light: text fields,
   checkboxes, radios, dashed draft edges). Text: `ink` for what is read first
   (and the primary button's fill, labelled `on-ink`), `ink-2` for what
   supports it; there is no third grey. Dark is designed, not inverted:
   Linear's near-blacks (ground #121213, chrome #161617, surface #1a1a1b,
   raised #1f1f21, well and `control-fill` #232325, rule #252526,
-  `control-edge` #2f3033), each layer a step lighter than the one beneath.
+  `control-edge` #2f3033, `control-line` #3a3b40: quieter than light's 3:1
+  so fields read like Linear's), each layer a step lighter than the one beneath.
   The shell keeps our structure: the chrome is lighter than the ground,
   never a darker frame around an inset page.
 - **States are ink overlays:** hover `state-hover`, pressed `state-pressed`
