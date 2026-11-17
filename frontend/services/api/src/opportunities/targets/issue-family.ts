@@ -38,7 +38,7 @@ export const issueFamilyTarget: ActionTargetModule<'issue_family'> = {
   /**
    * The cohort the Action shows: the one its declaration froze (its declared
    * finding's evidence, superseded or not), else the latest refresh's, with
-   * when its crawl completed.
+   * when its crawl completed and how many URLs it analyzed.
    */
   async detail({ db, action, declaredMemberIds }) {
     const declared = declaredMemberIds.length
@@ -61,14 +61,18 @@ export const issueFamilyTarget: ActionTargetModule<'issue_family'> = {
     if (!cohort) return { editable_page: false, cohort: null };
     const crawl = await db
       .selectFrom('site_crawls')
-      .select('completed_at')
+      .select(['completed_at', 'analyzed_url_count'])
       .where('workspace_id', '=', action.workspace_id)
       .where('project_id', '=', action.project_id)
       .where('id', '=', cohort.crawl_id)
       .executeTakeFirst();
     return {
       editable_page: false,
-      cohort: { ...cohort, crawl_completed_at: crawl?.completed_at?.toISOString() ?? null },
+      cohort: {
+        ...cohort,
+        crawl_completed_at: crawl?.completed_at?.toISOString() ?? null,
+        crawl_analyzed_url_count: crawl?.analyzed_url_count ?? null,
+      },
     };
   },
   /**

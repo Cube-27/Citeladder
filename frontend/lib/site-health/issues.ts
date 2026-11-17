@@ -95,6 +95,18 @@ export function issueTitle(issue: { title: string; rule_id: string }): string {
   return title.length > 0 ? title : issue.rule_id;
 }
 
+/** A rule's fix split into its sentences, so each reads as one step of advice. */
+export function sentences(text: string): string[] {
+  return (text.trim().match(/[\s\S]*?[.!?](?=\s|$)|[\s\S]+$/gu) ?? [])
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/** The first sentence of a rule's fix, so a priority line stays one line of advice. */
+export function firstSentence(text: string): string {
+  return sentences(text)[0] ?? text.trim();
+}
+
 /**
  * Read one severity's group count from the API-owned `severity_counts` map.
  * `critical` folds into `high` so the tiles match the three-tier catalog UI;

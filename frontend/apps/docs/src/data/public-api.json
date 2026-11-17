@@ -987,6 +987,19 @@
                   },
                   "crawl_completed_at": {
                     "type": ["string", "null"]
+                  },
+                  "crawl_analyzed_url_count": {
+                    "default": null,
+                    "anyOf": [
+                      {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
                   }
                 },
                 "required": [
@@ -997,7 +1010,8 @@
                   "group_id",
                   "page_count",
                   "whole_site",
-                  "crawl_completed_at"
+                  "crawl_completed_at",
+                  "crawl_analyzed_url_count"
                 ],
                 "additionalProperties": false
               },

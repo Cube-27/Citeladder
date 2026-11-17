@@ -252,13 +252,12 @@ export const opportunities = {
     },
     // One Site Health Issues group (one rule across its pages in the latest
     // crawl) as one finding: `SITE_ISSUE_FAMILY`. Severity and title are the
-    // group's own Site Health rule's.
+    // group's own Site Health rule's, and so is its fix, as Issues shows it.
     site_issue_family: {
       action_path: 'owned',
       enabled: true,
       opportunity_type: 'site',
-      remediation:
-        'This issue affects many pages for one cause, usually a shared template or component. Fix that cause once, then let the next comparable crawl confirm every affected page passes.',
+      remediation: '',
       rule_id: 'site_issue_family',
       check_kind: 'issue_family',
       severity: 'high',

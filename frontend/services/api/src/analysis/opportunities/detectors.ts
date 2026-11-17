@@ -13,7 +13,7 @@ import {
 } from './scoring.ts';
 import { summarizeSourcePattern } from './source-patterns.ts';
 import { compareText } from '../../text-order.ts';
-import { issueGroupId, ruleTitle } from '../../site-health/reads/rules.ts';
+import { issueGroupId, ruleRemediation, ruleTitle } from '../../site-health/reads/rules.ts';
 const p = policy.opportunity.opportunities;
 export const rules = p.OPPORTUNITY_RULES_BY_ID as Record<
   string,
@@ -144,7 +144,11 @@ export function detectIssueGroups(e: SiteEvidence): DetectorHit[] {
         value_factor:
           p.SITE_VALUE_FACTOR * (found.finding_class === 'defect' ? family.DEFECT_VALUE_FACTOR : 1),
         gap_factor: p.SITE_GAP_FACTOR,
-        finding: { severity: found.severity, title: label },
+        finding: {
+          severity: found.severity,
+          title: label,
+          remediation: ruleRemediation(found.rule_id) ?? '',
+        },
       };
     });
 }

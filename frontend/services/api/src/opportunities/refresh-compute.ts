@@ -118,7 +118,7 @@ export function newOpportunity(hit: DetectorHit, score: number) {
     severity: hitSeverity(hit),
     priority_score: score,
     title: hit.finding?.title || rule.title,
-    remediation: rule.remediation,
+    remediation: hit.finding?.remediation || rule.remediation,
     ...targetColumns(hit.target),
     evidence: hit.evidence,
     source_analysis_ids: [...hit.source_analysis_ids],

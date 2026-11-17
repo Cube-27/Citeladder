@@ -109,8 +109,8 @@ export const actionItemSchema = responseObject({
   // An issue-family Action's affected pages (its cohort's count); null for
   // every other target kind.
   page_count: z.number().int().nullable().default(null),
-  // The row's secondary line: an issue family's Site Health rule description,
-  // else the strongest finding's title; null when the Action has neither.
+  // The row's secondary line: an issue family's Site Health fix as Issues
+  // shows it, else the strongest finding's title; null when it has neither.
   summary: z.string().nullable().default(null),
   handoff: actionHandoffSchema,
   evidence_cleared_at: z.string().nullable(),
@@ -261,12 +261,16 @@ export const actionDetailSchema = actionItemSchema.extend({
   // the agent opens it as a page document (phase 2, E3). Read-time only.
   editable_page: z.boolean().default(false),
   // An issue-family Action's cohort without its pages, with when its crawl
-  // completed: the declared cohort once declared, else the latest refresh's.
+  // completed and how many URLs it analyzed (null when unrecorded): the
+  // declared cohort once declared, else the latest refresh's.
   // Null for every other target kind. `urls` pages the group's current URLs,
   // which a later refresh can change after a declaration froze this cohort.
   cohort: issueFamilyCohortSchema
     .omit({ pages: true })
-    .extend({ crawl_completed_at: z.string().nullable() })
+    .extend({
+      crawl_completed_at: z.string().nullable(),
+      crawl_analyzed_url_count: z.number().int().nullable().default(null),
+    })
     .nullable()
     .default(null),
   // The first page of the URLs the Action touches (`action_urls`).
