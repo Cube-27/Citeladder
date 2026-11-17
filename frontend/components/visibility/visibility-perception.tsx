@@ -297,7 +297,9 @@ function DriverTable({ drivers }: Readonly<{ drivers: PerceptionResponse['driver
       >
         {drivers.map((driver) => (
           <TableRow key={driver.domain}>
-            <TableCell>{driver.domain}</TableCell>
+            <TableCell>
+              <ClampText>{driver.domain}</ClampText>
+            </TableCell>
             <TableCell numeric>{driver.answers}</TableCell>
           </TableRow>
         ))}

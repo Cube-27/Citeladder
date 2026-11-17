@@ -10,6 +10,7 @@ import { AppGrid } from '@/components/ui/app-grid';
 import { StatusMark } from '@/components/ui/status-mark';
 import { DataTable } from '@/components/ui/data-table';
 import { Inline, Stack } from '@/components/ui/layout';
+import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
@@ -271,7 +272,9 @@ function CitedTable({ cited }: Readonly<{ cited: AccuracyResponse['cited_alongsi
       >
         {cited.map((row) => (
           <TableRow key={row.domain}>
-            <TableCell>{row.domain}</TableCell>
+            <TableCell>
+              <ClampText>{row.domain}</ClampText>
+            </TableCell>
             <TableCell numeric>{row.answers}</TableCell>
           </TableRow>
         ))}

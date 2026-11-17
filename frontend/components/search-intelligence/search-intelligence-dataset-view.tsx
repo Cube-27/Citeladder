@@ -4,6 +4,7 @@ import { SearchX } from 'lucide-react';
 import { ProjectLink } from '@/components/ui/project-link';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { ClampText } from '@/components/ui/clamp-text';
 import { DataTable } from '@/components/ui/data-table';
 import { Drawer } from '@/components/ui/drawer';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -220,10 +221,11 @@ function RowFields({ row }: Readonly<{ row: SearchIntelligenceRow }>) {
   return (
     <dl className={ledgerClasses('type-body text-ink-2')}>
       {evidenceFields(row, labels, timeZone).map((field) => (
-        <Stack key={field.key} gap="tight" className={ledgerItemClasses()}>
+        <Stack key={field.key} gap="tight" className={ledgerItemClasses('min-w-0')}>
           <dt className="text-ink-2">{field.label}</dt>
-          {/* The row's own detail fields: a long address wraps here, never in the table. */}
-          <dd className="break-words">{field.value ?? <Absence />}</dd>
+          <dd className="min-w-0">
+            {field.value === null ? <Absence /> : <ClampText>{field.value}</ClampText>}
+          </dd>
         </Stack>
       ))}
     </dl>

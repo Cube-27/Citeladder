@@ -14,6 +14,7 @@ import {
 } from '@/components/settings/grant-model';
 import { ActionButton } from '@/components/ui/actions';
 import { Button } from '@/components/ui/button';
+import { ClampText } from '@/components/ui/clamp-text';
 import { Icon } from '@/components/ui/icon';
 import { Inline, Stack } from '@/components/ui/layout';
 import { InlineFigure, textRole } from '@/components/ui/typography';
@@ -232,12 +233,12 @@ function SourceRow({
         Icon={source.Icon}
         title={source.label}
         status={
-          <Inline as="span" gap="meta">
+          <Inline as="span" gap="meta" className="min-w-0">
             {/* A GA4 property is a number; a Search Console property is a site. */}
             {step.connection.provider === 'ga4' ? (
               <InlineFigure>{step.mapping.property_ref}</InlineFigure>
             ) : (
-              <span>{step.mapping.property_ref}</span>
+              <ClampText>{step.mapping.property_ref}</ClampText>
             )}
             <BackfillProgress
               workspaceId={step.connection.workspace_id}
