@@ -20,7 +20,7 @@
   border-top: 1px solid var(--color-line);
 }
 
-/* A duotone number tile: violet ink on pale violet, an orange corner. */
+/* A number tile: ink on a grey chip, an orange corner. */
 
 .cl-step-n {
   display: inline-flex;
@@ -29,9 +29,8 @@
   width: 40px;
   height: 40px;
   border-radius: var(--radius-md);
-  background:
-    linear-gradient(135deg, var(--color-accent) 0 8px, transparent 8px), var(--site-violet-soft);
-  color: var(--site-violet-ink);
+  background: linear-gradient(135deg, var(--color-accent) 0 8px, transparent 8px), var(--site-chip);
+  color: var(--site-chip-ink);
   font-family: var(--font-mono);
   font-size: var(--text-label);
   font-weight: 500;

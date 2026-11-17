@@ -50,8 +50,8 @@
      and ringed by a hairline, so they sit in it rather than on it. */
   --site-page: var(--color-site-page);
   --site-violet: var(--color-site-violet);
-  --site-violet-ink: var(--color-site-violet-ink);
-  --site-violet-soft: var(--color-site-violet-soft);
+  --site-chip: var(--color-site-chip);
+  --site-chip-ink: var(--color-site-chip-ink);
   --site-guide: var(--color-site-guide);
   --site-rule-from: var(--color-site-rule-from);
   --site-rule-to: var(--color-site-rule-to);
@@ -440,7 +440,7 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   }
 }
 
-/* Eyebrows are highlighter chips: violet ink on pale violet, with an orange
+/* Eyebrows are highlighter chips: ink on a grey chip, with an orange
    square on the top-right corner. Product images keep their own, and a
    featured post's date line is plain text, not a label. */
 
@@ -449,8 +449,8 @@ a:hover .cl-arrowlink .cl-arrowlink-icon {
   width: fit-content;
   padding: 0 8px;
   border-radius: var(--radius-xs);
-  background: var(--site-violet-soft);
-  color: var(--site-violet-ink);
+  background: var(--site-chip);
+  color: var(--site-chip-ink);
 }
 
 .cl-site .type-eyebrow:not(dt, :is(.cl-screen, .cl-vig, .cl-featured-post) *)::after {

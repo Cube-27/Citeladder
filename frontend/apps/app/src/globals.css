@@ -884,8 +884,9 @@
 :root[data-marketing-surface] {
   --color-site-page: #ffffff;
   --color-site-violet: #635bff;
-  --color-site-violet-ink: #4f46e5;
-  --color-site-violet-soft: #eeedff;
+  /* Label chips and icon tiles are neutral grey, never violet. */
+  --color-site-chip: #ededed;
+  --color-site-chip-ink: #262626;
   --color-site-guide: rgb(66 71 112 / 16%);
   --color-site-rule-from: rgb(99 91 255 / 60%);
   --color-site-rule-to: rgb(232 80 26 / 55%);
@@ -916,8 +917,8 @@
 :root[data-marketing-surface][data-theme='dark'] {
   --color-site-page: #000000;
   --color-site-violet: #8b84ff;
-  --color-site-violet-ink: #a9a4ff;
-  --color-site-violet-soft: #23204d;
+  --color-site-chip: #262626;
+  --color-site-chip-ink: #e5e5e5;
   --color-site-guide: rgb(255 255 255 / 9%);
   --color-site-rule-from: rgb(139 132 255 / 60%);
   --color-site-rule-to: rgb(255 106 51 / 55%);

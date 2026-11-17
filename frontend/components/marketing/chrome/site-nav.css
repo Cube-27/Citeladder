@@ -448,7 +448,7 @@
   text-decoration: none;
 }
 
-/* Each icon on the menu's duotone tile: the orange glyph on pale violet. */
+/* Each icon on the menu's duotone tile: the orange glyph on grey. */
 
 .cl-sheet-subrow:not(.cl-sheet-overview) > svg:first-child {
   box-sizing: border-box;
@@ -457,7 +457,7 @@
   height: 32px;
   padding: 8px;
   border-radius: var(--radius-md);
-  background: var(--color-site-violet-soft);
+  background: var(--color-site-chip);
   color: var(--color-accent);
 }
 
