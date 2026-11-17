@@ -359,7 +359,11 @@ walk short ("at least N"); `limit_reached` and
 `max_sitemap_decoded_bytes`, the 50 MB standard). For a seed, a 4xx, a response
 refused as no sitemap type, or a body that does not parse is the server's answer
 that it serves none; a child its index names that answers so is unread, since a
-CDN can serve a cached index naming children the site has since replaced.
+CDN can serve a cached index naming children the site has since replaced. When
+none of an index's children was read, the walk fetches that index once more
+(once per walk, through the same robots, pacing and document ceiling) with the
+`sitemap_index_refetch` cache-busting query, walks the children the fresh copy
+names and stops counting the stale ones it dropped as unread.
 Discovery is free, has no plan cap and no manual trigger, and fetches no page.
 A walk with an unread document runs again from its seeds after
 `sitemap_walk_retry_delay_seconds`, doubling, up to `sitemap_walk_retries`

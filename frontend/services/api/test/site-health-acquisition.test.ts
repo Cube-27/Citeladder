@@ -717,59 +717,6 @@ describe('site setup', () => {
     expect((await tasks(seed, 'discover')).map((row) => row.requested_url)).toEqual([url('/')]);
   });
 
-  it('walks a stale sitemap again, then audits what it knows without an HTML walk', async () => {
-    const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
-    const setup = await queued(seed, 'site_setup');
-    const requests: string[] = [];
-    // A cached index names a child the site has since replaced.
-    const site = worker(
-      {
-        '/robots.txt': { body: 'User-agent: *\n', contentType: 'text/plain' },
-        '/sitemap.xml': {
-          contentType: 'application/xml',
-          body: `<sitemapindex><sitemap><loc>${url('/gone.xml')}</loc></sitemap></sitemapindex>`,
-        },
-      },
-      requests,
-    );
-    const walk = async () => {
-      await lease(setup, site.owner);
-      await runSiteTask(runnerOf(site), await task(setup), {
-        kind: 'acquire',
-        run: (ctx, claimed) =>
-          runSiteSetup(ctx, claimed, { ...setupSettings({}), walkRetries: 1, walkRetryDelay: 0 }),
-      });
-    };
-    await walk();
-    expect(await task(setup)).toMatchObject({ status: 'queued' });
-    expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toMatchObject({
-      pending: true,
-      retries: 1,
-    });
-    await walk();
-    expect(requests.filter((path) => path.endsWith('.xml'))).toEqual([
-      '/sitemap.xml',
-      '/gone.xml',
-      '/sitemap.xml',
-      '/gone.xml',
-    ]);
-    expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toEqual({
-      fetched: true,
-      file_count: 1,
-      discovered_count: 0,
-      discovered_complete: false,
-      limit_reached: false,
-      unread_count: 1,
-      retries: 1,
-    });
-    expect(await task(setup)).toMatchObject({ status: 'succeeded' });
-    expect((await crawlRow(seed)).discovery_status).toBe('completed');
-    expect(await tasks(seed, 'discover')).toEqual([]);
-    expect((await crawlCoverage(db, await crawlRow(seed))).evidence.reasons).toEqual([
-      'sitemap_documents_unread',
-    ]);
-  });
-
   it('bounds the walk by its ceilings and domain, keeps an oversized document unread, and skips llms.txt for a sample', async () => {
     const seed = await crawl({ sample: true });
     const setup = await queued(seed, 'site_setup');

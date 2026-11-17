@@ -740,9 +740,9 @@ export type Served = {
   onFetch?: () => Promise<void>;
 };
 /**
- * A recorded site (keyed by path) behind the real acquirer: robots and pacing
- * run through the gate, every hop is authorized, and each call is reported
- * like the transport does. `requests` collects the paths actually sent.
+ * A recorded site (keyed by path, or `path?key` for a request with that query key) behind the
+ * real acquirer: robots and pacing run through the gate, every hop is authorized, and each call
+ * is reported like the transport does. `requests` collects the keys actually sent.
  */
 export function recordedSite(
   pages: Record<string, Served>,
@@ -752,11 +752,15 @@ export function recordedSite(
     let url = new URL(value);
     for (let hop = 0; hop <= options.redirects; hop++) {
       const target = url;
-      const served = pages[target.pathname];
+      const key =
+        [...target.searchParams.keys()]
+          .map((name) => `${target.pathname}?${name}`)
+          .find((candidate) => candidate in pages) ?? target.pathname;
+      const served = pages[key];
       const send = async () => {
         // Match the real transport: gate first, authorization immediately before send.
         await options.authorize?.(target);
-        requests.push(target.pathname);
+        requests.push(key);
         await served?.onFetch?.();
         const status = served?.status ?? (served ? 200 : 404);
         const body = Buffer.from(served?.body ?? '');

@@ -2,7 +2,10 @@ import { randomUUID } from 'node:crypto';
 
 import type { Database } from '../src/db/database.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
+import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
+import { runSiteSetup, type setupSettings } from '../src/site-health/site-setup-task.ts';
+import { runSiteTask } from '../src/site-health/site-task.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import {
@@ -29,6 +32,10 @@ export const html = (body: string, head = '') =>
 export const links = (...paths: string[]) =>
   html(paths.map((path) => `<a href="${path}">x</a>`).join(''));
 export const url = (path: string) => `https://example.test${path}`;
+export const urlset = (...paths: string[]) => ({
+  contentType: 'application/xml',
+  body: `<urlset>${paths.map((path) => `<url><loc>${path}</loc></url>`).join('')}</urlset>`,
+});
 
 type CrawlOptions = {
   sample?: boolean;
@@ -109,6 +116,27 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
   async function run(site: SiteHealthWorker, ...taskIds: string[]) {
     for (const id of taskIds) await site.execute(await lease(id, site.owner));
   }
+  /** Lease and run one `site_setup` task under the given settings, as the worker's runner would. */
+  async function walkSetup(
+    site: SiteHealthWorker,
+    taskId: string,
+    settings: ReturnType<typeof setupSettings>,
+  ) {
+    await lease(taskId, site.owner);
+    const runner = {
+      db,
+      owner: site.owner,
+      queue: site.queue,
+      fetcher: site.fetcher,
+      settings: site.settings,
+      checkAccess: async () => {},
+      cadence: crawlCadences(site.settings.scoreRefresh),
+    };
+    await runSiteTask(runner, await task(taskId), {
+      kind: 'acquire',
+      run: (ctx, claimed) => runSiteSetup(ctx, claimed, settings),
+    });
+  }
   const task = (id: string) =>
     db.selectFrom('site_crawl_tasks').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
   const tasks = (seed: SiteSeed, kind: string) =>
@@ -160,6 +188,7 @@ export function acquisitionHarness(db: Database, fixtures: SiteFixtures) {
     worker,
     lease,
     run,
+    walkSetup,
     task,
     tasks,
     crawlRow,

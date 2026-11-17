@@ -102,6 +102,10 @@
       "text/xml"
     ],
     "sitemap_path_suffixes": [".xml", ".xml.gz"],
+    "sitemap_index_refetch": {
+      "cache_bust_param": "cl",
+      "child_answers": ["absent", "unread"]
+    },
     "coverage_expected_value_kinds": ["about", "contact", "pricing"]
   },
   "route_patterns": [
