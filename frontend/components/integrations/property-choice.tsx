@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import { List, RefreshCw } from 'lucide-react';
 
@@ -38,8 +38,10 @@ function suggestedProperty(provider: IntegrationProvider, properties: Integratio
  * Choose the property a source imports into the project. Discovery is a live
  * provider call, so it starts on request, or by itself when the user has just
  * returned from consent; the project's own property is offered as one click.
+ * Returns the row's buttons (`action`, at the row's end) apart from what
+ * opens under it (`body`: progress, the list, a failure).
  */
-export function PropertyChoice({
+export function usePropertyChoice({
   provider,
   connection,
   projectId,
@@ -49,7 +51,7 @@ export function PropertyChoice({
   connection: IntegrationConnection;
   projectId: string;
   autoStart: boolean;
-}>) {
+}>): { action: ReactNode; body: ReactNode } {
   const source = PROVIDER_META[provider];
   const [showAll, setShowAll] = useState(false);
   const discovery = useMutation(
@@ -71,62 +73,68 @@ export function PropertyChoice({
     discovery.mutate(projectId);
   }, [autoStart, discovery, projectId]);
 
-  if (!discovery.isSuccess)
-    return <DiscoveryStatus noun={source.noun} discovery={discovery} discover={discover} />;
+  if (!discovery.isSuccess) return discoveryStatus({ noun: source.noun, discovery, discover });
   const properties = ownPropertiesFirst(discovery.data);
   if (properties.length === 0)
-    return (
-      <Notice tone="info">
-        This account has no {source.noun}. Add and verify the site in {source.console}, then{' '}
-        <Button variant="quiet" onClick={discover}>
-          <Icon icon={RefreshCw} />
-          check again
-        </Button>
-      </Notice>
-    );
-  const suggested = suggestedProperty(provider, properties);
-  return (
-    <Stack gap="compact">
-      {suggested ? (
-        <Inline className="flex-wrap">
-          <Button
-            variant="secondary"
-            onClick={() => choose(suggested.property_ref)}
-            pending={pendingRef === suggested.property_ref}
-            pendingLabel="Importing…"
-            disabled={select.isPending}
-            aria-label={`Use ${suggested.label} for ${source.label}`}
-          >
-            Use {suggested.label}
+    return {
+      action: null,
+      body: (
+        <Notice tone="info">
+          This account has no {source.noun}. Add and verify the site in {source.console}, then{' '}
+          <Button variant="quiet" onClick={discover}>
+            <Icon icon={RefreshCw} />
+            check again
           </Button>
-          {properties.length > 1 && !showAll ? (
-            <Button variant="quiet" onClick={() => setShowAll(true)}>
-              <Icon icon={List} />
-              Choose another
-            </Button>
+        </Notice>
+      ),
+    };
+  const suggested = suggestedProperty(provider, properties);
+  const listed = !suggested || showAll;
+  return {
+    action: suggested ? (
+      <>
+        {properties.length > 1 && !showAll ? (
+          <Button variant="quiet" onClick={() => setShowAll(true)}>
+            <Icon icon={List} />
+            Choose another
+          </Button>
+        ) : null}
+        <Button
+          variant="secondary"
+          onClick={() => choose(suggested.property_ref)}
+          pending={pendingRef === suggested.property_ref}
+          pendingLabel="Importing…"
+          disabled={select.isPending}
+          aria-label={`Use ${suggested.label} for ${source.label}`}
+        >
+          Use {suggested.label}
+        </Button>
+      </>
+    ) : null,
+    body:
+      listed || select.isError ? (
+        <Stack gap="compact">
+          {listed ? (
+            <PropertyList
+              source={source}
+              properties={properties}
+              pendingRef={pendingRef}
+              onSelect={choose}
+            />
           ) : null}
-        </Inline>
-      ) : null}
-      {suggested && !showAll ? null : (
-        <PropertyList
-          source={source}
-          properties={properties}
-          pendingRef={pendingRef}
-          onSelect={choose}
-        />
-      )}
-      {select.isError ? (
-        <Notice
-          kind="mutation"
-          notice={mutationNoticeForError(select.error, { action: 'save the property' })}
-        />
-      ) : null}
-    </Stack>
-  );
+          {select.isError ? (
+            <Notice
+              kind="mutation"
+              notice={mutationNoticeForError(select.error, { action: 'save the property' })}
+            />
+          ) : null}
+        </Stack>
+      ) : null,
+  };
 }
 
 /** Discovery before it has a list: the button, progress, or the failure with a retry. */
-function DiscoveryStatus({
+function discoveryStatus({
   noun,
   discovery,
   discover,
@@ -134,28 +142,35 @@ function DiscoveryStatus({
   noun: string;
   discovery: { isIdle: boolean; isPending: boolean; error: unknown };
   discover: () => void;
-}>) {
+}>): { action: ReactNode; body: ReactNode } {
   if (discovery.isIdle)
-    return (
-      <div>
+    return {
+      action: (
         <Button variant="secondary" onClick={discover}>
           Choose {noun}
         </Button>
-      </div>
-    );
+      ),
+      body: null,
+    };
   if (discovery.isPending)
-    return <Skeleton variant="list" rows={2} label={`Loading your ${noun}s…`} />;
-  return (
-    <Notice
-      kind="mutation"
-      notice={mutationNoticeForError(discovery.error, { action: `load your ${noun}s` })}
-      recovery={
-        <Button variant="secondary" onClick={discover}>
-          Try again
-        </Button>
-      }
-    />
-  );
+    return {
+      action: null,
+      body: <Skeleton variant="list" rows={2} label={`Loading your ${noun}s…`} />,
+    };
+  return {
+    action: null,
+    body: (
+      <Notice
+        kind="mutation"
+        notice={mutationNoticeForError(discovery.error, { action: `load your ${noun}s` })}
+        recovery={
+          <Button variant="secondary" onClick={discover}>
+            Try again
+          </Button>
+        }
+      />
+    ),
+  };
 }
 
 /** Every discovered property; another site's property is shown but cannot be used. */
