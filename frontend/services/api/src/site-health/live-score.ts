@@ -115,7 +115,7 @@ function classificationErrors(db: Database, crawl: Crawl) {
     .orderBy('t.id', 'desc');
   const analyzed = currentAnalyses(db, crawl)
     .select('p.id')
-    .whereRef('p.site_url_id', '=', 'x.site_url_id');
+    .where(sql<boolean>`p.site_url_id = x.site_url_id`);
   return db
     .selectFrom(tasks.as('x'))
     .select([
