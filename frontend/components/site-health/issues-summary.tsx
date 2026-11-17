@@ -15,13 +15,7 @@ import { formatCount, pluralCount } from '@/lib/format';
 import { issueTitle, severityCount } from '@/lib/site-health/issues';
 import { Notice, readErrorProps } from '@/components/ui/notice';
 import { READ_FAILED } from '@/components/ui/state-block';
-import {
-  Section,
-  SectionContent,
-  SectionDescription,
-  SectionHeader,
-  SectionTitle,
-} from '@/components/ui/section';
+import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 /**
  * The top of the Issues screen: how many issue types the crawl has, how many
@@ -84,31 +78,30 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
     ...severity,
     count: severityCount(summary.severity_counts, severity.key),
   }));
+  // The legend and ring sit at the card's right, beside the title (owner, 2026-11-17).
+  const breakdown = counts.some((severity) => severity.count > 0) ? (
+    <CountDonut
+      label="Issue types by severity"
+      parts={counts.map((severity) => ({
+        key: severity.key,
+        term: (
+          <StatusMark variant="severity" value={severity.key}>
+            {severity.label}
+          </StatusMark>
+        ),
+        value: severity.count,
+        stroke: severity.stroke,
+      }))}
+    />
+  ) : null;
   return (
     <Section aria-labelledby={titleId}>
-      <SectionHeader>
+      <SectionHeader actions={breakdown}>
         <h2 id={titleId} className={textRole('figure')}>
           {issueTypesLabel(total)}
         </h2>
         <SectionDescription>{attentionLine(high, summary)}</SectionDescription>
       </SectionHeader>
-      {counts.some((severity) => severity.count > 0) ? (
-        <SectionContent>
-          <CountDonut
-            label="Issue types by severity"
-            parts={counts.map((severity) => ({
-              key: severity.key,
-              term: (
-                <StatusMark variant="severity" value={severity.key}>
-                  {severity.label}
-                </StatusMark>
-              ),
-              value: severity.count,
-              stroke: severity.stroke,
-            }))}
-          />
-        </SectionContent>
-      ) : null}
     </Section>
   );
 }
