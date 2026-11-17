@@ -307,8 +307,8 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   await expect(password).toBeFocused();
   await expect(async () => {
     expect(await frame.evaluate((node) => getComputedStyle(node).borderColor)).toBe(invalidEdge);
-    expect(await frame.evaluate((node) => getComputedStyle(node).boxShadow)).toBe(lit.glow);
   }).toPass();
+  await expect(frame).toHaveCSS('box-shadow', lit.glow);
   await password.evaluate((node) => node.removeAttribute('aria-invalid'));
 
   await stubAuthedShell(page);
@@ -321,9 +321,7 @@ test('password and Agent text entry paint one focus boundary', async ({ page }) 
   // The composer is the box: its frame takes the same glow as the password
   // frame above, and no ring.
   expect(await form.evaluate((node) => getComputedStyle(node).outlineStyle)).toBe('none');
-  await expect(async () => {
-    expect(await form.evaluate((node) => getComputedStyle(node).boxShadow)).toBe(lit.glow);
-  }).toPass();
+  await expect(form).toHaveCSS('box-shadow', lit.glow);
   // One boundary: the field inside draws no edge, halo or outline of its own.
   expect(await prompt.evaluate((node) => getComputedStyle(node).borderColor)).toBe(inputEdge);
   expect(await prompt.evaluate((node) => getComputedStyle(node).boxShadow)).toBe('none');
