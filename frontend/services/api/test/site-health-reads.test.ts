@@ -151,9 +151,7 @@ async function issue(
   const evaluationId = await fixtures.evaluation(seed, target, ruleId, 'missing');
   await db
     .updateTable('site_page_analyses')
-    .set({
-      source_evaluation_ids: [...(analysis?.source_evaluation_ids ?? []), evaluationId],
-    })
+    .set({ source_evaluation_ids: [...(analysis?.source_evaluation_ids ?? []), evaluationId] })
     .where('id', '=', target.analysisId)
     .execute();
   await db
@@ -282,13 +280,8 @@ async function architectureIssue(seed: SiteSeed, root: Page, ruleId: string) {
     .execute();
 }
 
-const byUrl = (
-  items: {
-    normalized_url: string;
-    analysis_status: string;
-    error_code: string;
-  }[],
-) => Object.fromEntries(items.map((item) => [new URL(item.normalized_url).pathname, item]));
+const byUrl = (items: { normalized_url: string; analysis_status: string; error_code: string }[]) =>
+  Object.fromEntries(items.map((item) => [new URL(item.normalized_url).pathname, item]));
 
 describe('page projections', () => {
   it('bounds detail evaluations in severity and rule order, including the highest severity at the end', async () => {
@@ -353,9 +346,7 @@ describe('page projections', () => {
   });
 
   it('serve the current crawl’s pages by project, named with that crawl and its status', async () => {
-    const empty = await fixtures.tenant({
-      websiteUrl: 'https://example.test/',
-    });
+    const empty = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
     expect((await get(empty, `/projects/${empty.projectId}/site-health/pages`)).status).toBe(404);
     const seed = await fixtures.crawl('partially_completed');
     // Neither a later one-page rerun nor a crawl still running is the current crawl.
@@ -381,10 +372,7 @@ describe('page projections', () => {
       `/projects/${seed.projectId}/site-health/pages?status=error_or_blocked`,
       latestCrawlPagesPageSchema,
     );
-    expect(body).toMatchObject({
-      crawl_id: seed.crawlId,
-      crawl_status: 'partially_completed',
-    });
+    expect(body).toMatchObject({ crawl_id: seed.crawlId, crawl_status: 'partially_completed' });
     expect(body.items.map((item) => new URL(item.normalized_url).pathname)).toEqual(['/robots']);
   });
 
@@ -427,10 +415,7 @@ describe('page projections', () => {
     const pages = byUrl(
       (await json(seed, `/site-crawls/${seed.crawlId}/pages`, pagesPageSchema)).items,
     );
-    expect(pages['/']).toMatchObject({
-      analysis_status: 'completed',
-      error_code: '',
-    });
+    expect(pages['/']).toMatchObject({ analysis_status: 'completed', error_code: '' });
     expect(pages['/robots']).toMatchObject({
       analysis_status: 'blocked',
       error_code: 'robots_denied',
@@ -440,10 +425,7 @@ describe('page projections', () => {
       analysis_status: 'blocked',
       error_code: 'url_admission_rejected',
     });
-    expect(pages['/broken']).toMatchObject({
-      analysis_status: 'error',
-      error_code: 'http_5xx',
-    });
+    expect(pages['/broken']).toMatchObject({ analysis_status: 'error', error_code: 'http_5xx' });
     expect(pages['/waiting']!.analysis_status).toBe('pending');
     expect(pages['/ignored']!.analysis_status).toBe('not_selected');
 
@@ -580,9 +562,7 @@ describe('page projections', () => {
         ...crawl!,
         id: later.crawlId,
         created_at: new Date(Date.now() + 1000),
-        configuration: JSON.stringify({
-          inventory_source_crawl_ids: [seed.crawlId],
-        }),
+        configuration: JSON.stringify({ inventory_source_crawl_ids: [seed.crawlId] }),
       })
       .execute();
     const inherited = byUrl(
@@ -768,10 +748,7 @@ describe('issue catalog', () => {
       `/site-crawls/${seed.crawlId}/issues/${body.items[0]!.group_id}`,
       siteIssueDetailSchema,
     );
-    expect(detail).toMatchObject({
-      occurrence_count: 2,
-      affected_url_count: 2,
-    });
+    expect(detail).toMatchObject({ occurrence_count: 2, affected_url_count: 2 });
     expect(
       detail.occurrences.map((row: { site_url_id: string }) => row.site_url_id).sort(),
     ).toEqual([home.id, product.id].sort());
@@ -793,16 +770,8 @@ describe('issue catalog', () => {
     await issue(seed, home, 'technical.indexable');
     const groupId = issueGroupId(seed.crawlId, 'technical.indexable', 'defect');
     const account = await billingAccount(db, seed.workspaceId);
-    await grant(db, account, {
-      key: 'api_access',
-      value: 1,
-      sourceKind: 'override',
-    });
-    await grant(db, account, {
-      key: 'api_keys',
-      value: 10,
-      sourceKind: 'override',
-    });
+    await grant(db, account, { key: 'api_access', value: 1, sourceKind: 'override' });
+    await grant(db, account, { key: 'api_keys', value: 10, sourceKind: 'override' });
     const created = await app.request('/api/v1/api-keys', {
       method: 'POST',
       headers: {
@@ -906,11 +875,7 @@ describe('issue catalog', () => {
 
     const technical = await tab('section=technical');
     expect(technical.rules).toEqual(['technical.https', 'technical.canonical_integrity']);
-    expect(technical.body.summary.section_counts).toEqual({
-      technical: 2,
-      content: 2,
-      aeo: 1,
-    });
+    expect(technical.body.summary.section_counts).toEqual({ technical: 2, content: 2, aeo: 1 });
     expect((await tab('section=technical&sort=pages')).rules).toEqual([
       'technical.canonical_integrity',
       'technical.https',
@@ -923,11 +888,7 @@ describe('issue catalog', () => {
     // A search counts its matches in every tab, so the reader sees which tab holds them.
     const searched = await tab('section=aeo&query=viewport');
     expect(searched.rules).toEqual([]);
-    expect(searched.body.summary.section_counts).toEqual({
-      technical: 0,
-      content: 1,
-      aeo: 0,
-    });
+    expect(searched.body.summary.section_counts).toEqual({ technical: 0, content: 1, aeo: 0 });
 
     const first = await tab('section=technical&sort=pages&limit=1');
     const cursor = encodeURIComponent(first.body.next_cursor!);
@@ -1015,10 +976,7 @@ describe('issue catalog', () => {
     expect(unfiltered.items.map((row) => [row.rule_id, row.affected_url_count])).toEqual([
       ['technical.indexable', 2],
     ]);
-    expect(unfiltered.summary).toMatchObject({
-      issue_count: 1,
-      affected_url_count: 2,
-    });
+    expect(unfiltered.summary).toMatchObject({ issue_count: 1, affected_url_count: 2 });
     // A filtered read is computed from the issues as they stand.
     const high = await json(
       seed,
@@ -1043,23 +1001,15 @@ describe('dashboard', () => {
   it('shows a running site crawl, else the current crawl, never a page rerun or a later failure', async () => {
     const seed = await fixtures.crawl();
     const later = (offset: number, values: Parameters<SiteFixtures['sibling']>[1]) =>
-      fixtures.sibling(seed, {
-        ...values,
-        created_at: new Date(Date.now() + offset),
-      });
+      fixtures.sibling(seed, { ...values, created_at: new Date(Date.now() + offset) });
     const shown = async () =>
       (await json(seed, `/projects/${seed.projectId}/site-health`, siteHealthDashboardSchema)).crawl
         ?.id;
 
-    await later(60_000, {
-      configuration: JSON.stringify({ page_rerun: true }),
-    });
+    await later(60_000, { configuration: JSON.stringify({ page_rerun: true }) });
     await later(120_000, { status: 'failed' });
     expect(await shown()).toBe(seed.crawlId);
-    const running = await later(180_000, {
-      status: 'running',
-      completed_at: null,
-    });
+    const running = await later(180_000, { status: 'running', completed_at: null });
     expect(await shown()).toBe(running);
   });
 
@@ -1278,9 +1228,7 @@ describe('snapshot projections', () => {
     expect(await siteSnapshot(mcp, { snapshot_id: rerun.crawlId })).toMatchObject({
       snapshot_id: rerunSnapshot,
     });
-    expect(await crawlability(mcp, {})).toMatchObject({
-      crawl_id: seed.crawlId,
-    });
+    expect(await crawlability(mcp, {})).toMatchObject({ crawl_id: seed.crawlId });
     expect(await latestLinkCrawl(db, scope)).toEqual({ id: seed.crawlId });
   });
 
@@ -1442,11 +1390,7 @@ describe('snapshot projections', () => {
     const seed = await fixtures.crawl();
     const snapshot = await fixtures.snapshot(seed, 'complete');
     const ids = [randomUUID(), randomUUID()];
-    const finding = {
-      rule_id: 'web.mobile_viewport',
-      title: 'Viewport',
-      remediation: 'Add one',
-    };
+    const finding = { rule_id: 'web.mobile_viewport', title: 'Viewport', remediation: 'Add one' };
     const field = { state: 'unavailable', reason: 'provider_not_configured' };
     await db
       .updateTable('site_health_snapshots')
@@ -1526,11 +1470,7 @@ describe('snapshot projections', () => {
     const readiness = body.parse(
       await (await get(seed, `/projects/${seed.projectId}/site-health/aeo-readiness`)).json(),
     );
-    expect(readiness).toMatchObject({
-      state: 'measured',
-      score: 80,
-      analysis_count: 2,
-    });
+    expect(readiness).toMatchObject({ state: 'measured', score: 80, analysis_count: 2 });
     expect('source_analysis_ids' in readiness).toBe(false);
     // The frozen row keeps every list it was written with.
     const stored = await db
@@ -1650,11 +1590,7 @@ describe('issue history', () => {
         `/site-crawls/${seed.crawlId}/pages/${pending.id}/issue-history`,
         issueHistoryPageSchema,
       ),
-    ).toEqual({
-      items: [],
-      next_cursor: null,
-      current_analysis_finalized: false,
-    });
+    ).toEqual({ items: [], next_cursor: null, current_analysis_finalized: false });
     expect((await get(await fixtures.crawl(), path)).status).toBe(404);
   });
 
@@ -1707,9 +1643,7 @@ describe('workspace authorization', () => {
       refusals.push([suffix, response.status, body.error.message]);
     }
     const monitored = await get(foreign, `/projects/${seed.projectId}/monitored-urls`);
-    const monitoredBody = (await monitored.json()) as {
-      error: { message: string };
-    };
+    const monitoredBody = (await monitored.json()) as { error: { message: string } };
     refusals.push(['monitored-urls', monitored.status, monitoredBody.error.message]);
     expect(refusals).toEqual(
       [
@@ -1735,10 +1669,7 @@ describe('workspace authorization', () => {
       `/workspaces/${seed.workspaceId}/entitlements`,
       workspaceEntitlementSchema,
     );
-    expect({
-      status: entitlement.status,
-      site_health: entitlement.site_health,
-    }).toEqual({
+    expect({ status: entitlement.status, site_health: entitlement.site_health }).toEqual({
       status: 'entitlement_unresolved',
       site_health: {
         sample_url_limit: 10,

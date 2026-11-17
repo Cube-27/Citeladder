@@ -4,6 +4,7 @@ import { recomputeOpportunities } from '../src/opportunities/refresh.ts';
 import { issueHistory, issues, unfilteredIssues } from '../src/site-health/reads/issues.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
 import { testDatabase } from './support.ts';
+import { landFinalRevisions } from './site-health-finalize-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 
 const db = testDatabase();
@@ -29,7 +30,7 @@ async function land(seed: SiteSeed) {
       .where('workspace_id', '=', seed.workspaceId)
       .forUpdate()
       .executeTakeFirstOrThrow();
-    await fixtures.landFinalRevisions(trx, crawl);
+    await landFinalRevisions(trx, crawl);
   });
 }
 

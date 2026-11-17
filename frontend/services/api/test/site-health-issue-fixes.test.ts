@@ -10,6 +10,7 @@ import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
 import { asOwner, sessionToken, testConfig, testDatabase } from './support.ts';
+import { landFinalRevisions } from './site-health-finalize-fixtures.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 import type { Tenant } from './visibility-fixtures.ts';
 
@@ -53,7 +54,7 @@ async function land(seed: SiteSeed) {
       .where('workspace_id', '=', seed.workspaceId)
       .forUpdate()
       .executeTakeFirstOrThrow();
-    await fixtures.landFinalRevisions(trx, crawl);
+    await landFinalRevisions(trx, crawl);
   });
 }
 
