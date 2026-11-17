@@ -1,7 +1,7 @@
 import { render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test';
 
-import { FlowBlock, FlowPage, FlowStep } from './flow-page';
+import { FlowBlock, FlowPage } from './flow-page';
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -31,43 +31,5 @@ describe('FlowPage', () => {
     expect(screen.getByRole('contentinfo')).toHaveTextContent('© CiteLadder');
     // A screen outside the shell names the document after its heading.
     expect(document.title).toBe('Welcome back · CiteLadder');
-  });
-
-  it('names the current step on its rung trail and counts it against the whole flow', () => {
-    render(
-      <FlowPage label="Project setup" steps={['Basics', 'Research', 'Confirm']} current={1}>
-        <FlowStep title="Finding what to track" next={<button type="button">Review</button>}>
-          steps
-        </FlowStep>
-      </FlowPage>,
-    );
-
-    const progress = screen.getByRole('region', { name: 'Setup progress' });
-    expect(progress).toHaveTextContent('Step 2 of 3');
-    expect(within(progress).getByRole('progressbar', { name: 'Research' })).toHaveAttribute(
-      'value',
-      '2',
-    );
-    const stepItems = within(progress).getAllByRole('listitem');
-    expect(stepItems.map((item) => item.textContent)).toEqual(['Basics', 'Research', 'Confirm']);
-    expect(stepItems[1]).toHaveAttribute('aria-current', 'step');
-    expect(stepItems[0]).not.toHaveAttribute('aria-current');
-
-    const main = screen.getByRole('main', { name: 'Project setup' });
-    expect(within(main).getByRole('region', { name: 'Finding what to track' })).toHaveTextContent(
-      'steps',
-    );
-    expect(within(main).getByRole('button', { name: 'Review' })).toBeVisible();
-  });
-
-  it('leaves the rung trail out of a one-screen flow', () => {
-    render(
-      <FlowPage label="Workspace setup">
-        <FlowStep title="Set up your workspace">name</FlowStep>
-      </FlowPage>,
-    );
-
-    expect(screen.queryByRole('region', { name: 'Setup progress' })).toBeNull();
-    expect(screen.getByRole('region', { name: 'Set up your workspace' })).toHaveTextContent('name');
   });
 });

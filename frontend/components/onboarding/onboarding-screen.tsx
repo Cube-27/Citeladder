@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
-import { FlowPage, StepBack } from '@/components/templates/flow-page';
+import { SetupPage, StepBack } from '@/components/templates/setup-page';
 import { Button } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
 import { TextLink } from '@/components/ui/text-link';
@@ -61,7 +61,7 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
   const exitHref = flow.isAdditional ? projectsHref : undefined;
 
   return (
-    <FlowPage
+    <SetupPage
       label="Project setup"
       steps={STEPS}
       current={flow.step}
@@ -77,7 +77,7 @@ function OnboardingTransaction({ transactionKey }: Readonly<{ transactionKey: st
       }
     >
       {onboardingStage(flow, flow.isCompleting ? undefined : stageActions(flow, projectsHref))}
-    </FlowPage>
+    </SetupPage>
   );
 }
 

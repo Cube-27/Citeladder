@@ -1,7 +1,7 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Controller, type UseFormReturn } from 'react-hook-form';
 
-import { FlowStep, StepColumns, StepFindings } from '@/components/templates/flow-page';
+import { SetupStep, StepColumns, StepFindings } from '@/components/templates/setup-page';
 import { Button } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -36,7 +36,7 @@ export function BrandStage({
   actions: StageActions;
 }>) {
   return (
-    <FlowStep
+    <SetupStep
       titleId={STAGE_HEADING_ID}
       title={isAdditional ? 'Add a project' : "Let's get started"}
       help="We'll review your website, suggest comparable brands, and prepare balanced questions."
@@ -104,7 +104,7 @@ export function BrandStage({
           </Field>
         </StepColumns>
       </form>
-    </FlowStep>
+    </SetupStep>
   );
 }
 
@@ -140,7 +140,7 @@ export function DiscoveryStage({
     </Button>
   );
   return (
-    <FlowStep
+    <SetupStep
       titleId={STAGE_HEADING_ID}
       title="Finding what to track"
       help={`We're reading ${brandName || 'your website'} and learning what you offer.`}
@@ -193,7 +193,7 @@ export function DiscoveryStage({
           {onboardingErrorMessage(discovery.error)}
         </Notice>
       ) : null}
-    </FlowStep>
+    </SetupStep>
   );
 }
 
@@ -220,13 +220,13 @@ export function CreationStage({
 
   return (
     <div aria-busy="true">
-      <FlowStep
+      <SetupStep
         titleId={STAGE_HEADING_ID}
         title="Creating your project"
         help="We're saving your confirmed details and will open the project as soon as it is committed."
       >
         <StageSteps label="Project creation progress" steps={steps} />
-      </FlowStep>
+      </SetupStep>
     </div>
   );
 }
@@ -281,7 +281,7 @@ export function ReviewStage({
     toggle,
   } = flow;
   return (
-    <FlowStep
+    <SetupStep
       titleId={STAGE_HEADING_ID}
       title="Does this look right?"
       help="Confirm what we found before we create your project."
@@ -347,7 +347,7 @@ export function ReviewStage({
           </Stack>
         ) : null}
       </StepColumns>
-    </FlowStep>
+    </SetupStep>
   );
 }
 

@@ -105,8 +105,8 @@ for (const path of files(root)) {
   );
   const ownsWebsiteEditorialCopy =
     !label.includes('.test.') && label.startsWith('components/marketing/');
-  // Sign-in and onboarding are product UI: they compose the Flow template
-  // (components/templates/flow-page.tsx).
+  // Sign-in and onboarding are product UI: they compose the Flow and Setup
+  // templates (components/templates/flow-page.tsx, setup-page.tsx).
   const ownsProductUi =
     !label.includes('.test.') &&
     !label.startsWith('components/marketing/') &&
