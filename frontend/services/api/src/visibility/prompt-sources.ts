@@ -18,7 +18,7 @@ type DomainRow = CitedDomain & { audit_id: string; prompt_index: number };
 const rowKey = (auditId: string, promptIndex: number) => `${auditId}:${promptIndex}`;
 
 /** Each (run, prompt index)'s cited domains in one cohort, most citations first. */
-export async function citedDomains(
+async function citedDomains(
   db: Database,
   scope: { workspaceId: string },
   query: { auditIds: readonly string[]; cohort: string },

@@ -19,6 +19,11 @@ Remaining work is consolidated in the backlog; historical plans are not active a
   in five measured PRs with owner decisions CO-1 to CO-6. Paid scaling waits in
   the [backlog](backlog.md#site-health-crawl-scaling-needs-spend) behind
   measured triggers.
+- [AI visibility gaps](ai-visibility-gaps.md) (owner, 2026-11-17): reporting
+  views, derivations and probes the product lacks against an AI-visibility
+  reference, in Phase 1 (W1–W11, W14, W15) and Phase 2 (W12, W13) with owner
+  decisions AV-1 to AV-12. Nothing is built until the owner approves an HTML
+  mockup of each phase.
 
 Commerce product tracking and backlog tier 1 shipped on 11 November 2026, and
 the Agent chat UX round on 13 November 2026; their plans were deleted. The

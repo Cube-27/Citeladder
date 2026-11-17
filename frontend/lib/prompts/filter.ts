@@ -56,7 +56,7 @@ export function personaOptions(prompts: readonly Prompt[]): string[] {
  * older run recorded; a competitor is its name, matched as the API resolves
  * names (whitespace-collapsed, lowercased).
  */
-export function brandKey(brand: Pick<NamedBrand, 'kind' | 'name'>): string {
+function brandKey(brand: Pick<NamedBrand, 'kind' | 'name'>): string {
   if (brand.kind === 'brand') return 'brand';
   return `competitor:${brand.name.trim().replace(/\s+/gu, ' ').toLowerCase()}`;
 }
@@ -74,8 +74,14 @@ export function brandOptions(project: {
   return [...options].map(([value, label]) => ({ value, label }));
 }
 
-/** Every domain the measured answers cited, most citations first; the project's own marked. */
-export function sourceOptions(mentions: Iterable<PromptMentions>): FilterOption[] {
+/**
+ * Every domain the measured answers cited, most citations first, the project's
+ * own marked; a selected domain no longer cited stays last, so it can be cleared.
+ */
+export function sourceOptions(
+  mentions: Iterable<PromptMentions>,
+  selected: readonly string[] = [],
+): FilterOption[] {
   const totals = new Map<string, { citations: number; owned: boolean }>();
   for (const { sources } of mentions)
     for (const { domain, citations, owned } of sources) {
@@ -85,9 +91,11 @@ export function sourceOptions(mentions: Iterable<PromptMentions>): FilterOption[
         owned: Boolean(total?.owned) || owned,
       });
     }
-  return [...totals]
+  const cited = [...totals]
     .sort(([left, a], [right, b]) => b.citations - a.citations || left.localeCompare(right))
     .map(([domain, { owned }]) => ({ value: domain, label: owned ? `${domain} (yours)` : domain }));
+  const stale = selected.filter((domain) => !totals.has(domain));
+  return [...cited, ...stale.map((domain) => ({ value: domain, label: domain }))];
 }
 
 /** A row's leading cited domains and how many more it cited. */
@@ -133,6 +141,7 @@ export function filterPrompts({
   const personaSet = new Set(filters.personas);
   const brandSet = new Set(filters.brands);
   const sourceSet = new Set(filters.sources);
+  const measured = mentions ?? new Map<string, PromptMentions>();
   return prompts.filter((prompt) => {
     if (needle) {
       const haystack = `${prompt.text} ${prompt.theme ?? ''}`.toLowerCase();
@@ -143,11 +152,20 @@ export function filterPrompts({
     if (personaSet.size > 0 && !personaSet.has(prompt.persona)) return false;
     if (!matchesTriState(prompt.enabled, filters.enabled)) return false;
     if (!matchesTriState(prompt.branded, filters.branded)) return false;
-    const measured = mentions?.get(prompt.id);
-    if (!matchesAny(brandSet, measured?.named.map(brandKey))) return false;
-    return matchesAny(
-      sourceSet,
-      measured?.sources.map((source) => source.domain),
-    );
+    return matchesMeasured(measured.get(prompt.id), { brands: brandSet, sources: sourceSet });
   });
+}
+
+/** Whether a prompt's latest answers named any selected brand and cited any selected domain. */
+function matchesMeasured(
+  measured: PromptMentions | undefined,
+  selected: Readonly<{ brands: ReadonlySet<string>; sources: ReadonlySet<string> }>,
+): boolean {
+  return (
+    matchesAny(selected.brands, measured?.named.map(brandKey)) &&
+    matchesAny(
+      selected.sources,
+      measured?.sources.map((source) => source.domain),
+    )
+  );
 }

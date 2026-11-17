@@ -170,6 +170,14 @@ describe('sourceOptions', () => {
       { value: 'beta.com', label: 'beta.com' },
     ]);
   });
+
+  it('keeps a selected domain no longer cited last, so it can be cleared', () => {
+    const cited = [{ named: [], sources: [{ domain: 'g2.com', citations: 1, owned: false }] }];
+    expect(sourceOptions(cited, ['gone.com', 'g2.com'])).toEqual([
+      { value: 'g2.com', label: 'g2.com' },
+      { value: 'gone.com', label: 'gone.com' },
+    ]);
+  });
 });
 
 describe('leadingSources', () => {

@@ -135,6 +135,26 @@ function libraryBodyFor({
   return hasPrompts ? table : <PromptEmptyState add={add} />;
 }
 
+/**
+ * The Brands and Sources choices once a run exists. An active choice stays
+ * offered after a refresh that drops it, so it can still be cleared.
+ */
+function measuredChoicesFor({
+  measurements,
+  project,
+  filters,
+}: Readonly<{
+  measurements: ReturnType<typeof useLatestPromptMeasurements>;
+  project: Parameters<typeof brandOptions>[0];
+  filters: PromptFilters;
+}>) {
+  if (!measurements?.size && !filters.brands.length && !filters.sources.length) return undefined;
+  return {
+    brands: brandOptions(project),
+    sources: sourceOptions(measurements?.values() ?? [], filters.sources),
+  };
+}
+
 /** A library that never held a prompt has nothing to sort, search or filter. */
 function libraryFilterBar(hasPrompts: boolean, controls: FilterBarProps): ReactNode {
   return hasPrompts ? <FilterBar {...controls} /> : undefined;
@@ -288,11 +308,8 @@ export function PromptLibrary({
   );
   const personas = useMemo(() => personaOptions(prompts), [prompts]);
   const measuredChoices = useMemo(
-    () =>
-      measurements?.size
-        ? { brands: brandOptions(project), sources: sourceOptions(measurements.values()) }
-        : undefined,
-    [measurements, project],
+    () => measuredChoicesFor({ measurements, project, filters }),
+    [measurements, project, filters],
   );
 
   const statusCounts = useMemo(() => {
