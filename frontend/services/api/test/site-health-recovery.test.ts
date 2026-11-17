@@ -313,6 +313,33 @@ it('refills a freed slot while a slow task is still running', async () => {
   }
 });
 
+it('opens another claim window while no peer of its group has work due', async () => {
+  const run = async (peersDue: boolean) => {
+    const ids = await Promise.all(
+      [1, 2, 3].map(async () => fixtures.task(await fixtures.crawl(), 'link_metrics')),
+    );
+    const worker = new SiteHealthWorker(db, {
+      // Every window ends at its first settlement.
+      settings: { ...settings, claimWindow: 1e-9 },
+      executors: { link_metrics: async () => {} },
+    });
+    const claimed = await worker.drain(
+      1,
+      () => true,
+      async () => peersDue,
+    );
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'cancelled' })
+      .where('id', 'in', ids)
+      .where('status', '=', 'queued')
+      .execute();
+    return claimed;
+  };
+  expect(await run(true)).toBe(1);
+  expect(await run(false)).toBe(3);
+});
+
 it('drains every bounded recovery batch before treating an empty claim as idle', async () => {
   const seed = await fixtures.crawl();
   const ids = await Promise.all([
@@ -342,7 +369,7 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
     .spyOn(lifecycle, 'reconcileCrawl')
     .mockRejectedValueOnce(new Error('temporary reconcile failure'));
   const worker = new SiteHealthWorker(db, {
-    settings: { ...settings, poll: 1 },
+    settings: { ...settings, backstopInterval: 1 },
     taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
     executors: { link_metrics: async () => {} },
   });
@@ -354,7 +381,10 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
     now += 1000;
     expect(await worker.runOnce()).toBe(0);
     expect(reconcile).toHaveBeenCalledTimes(2);
-    expect(reconcile).toHaveBeenLastCalledWith(db, seed.workspaceId, seed.crawlId);
+    // The score refresh follows the crawl's cadence: its first pass refreshed.
+    expect(reconcile).toHaveBeenLastCalledWith(db, seed.workspaceId, seed.crawlId, {
+      refreshScore: false,
+    });
     expect((await row(unrelated)).status).toBe('queued');
   } finally {
     clock.mockRestore();

@@ -651,13 +651,15 @@ describe('live score refresh cadence', () => {
       pageInterval: 10,
       pageFraction: 0.1,
       minIntervalSeconds: 0,
+      largePages: 0,
+      largeIntervalSeconds: 0,
       maxTrackedCrawls: 10,
       ...changes,
     });
 
   it('refreshes the first analysis, then after a batch that grows with the crawl', () => {
     const gate = cadence();
-    const admitted = Array.from({ length: 250 }, () => gate.admits('crawl', 0)).flatMap(
+    const admitted = Array.from({ length: 250 }, () => gate.admits('crawl', { now: 0 })).flatMap(
       (due, index) => (due ? [index] : []),
     );
     expect(admitted.slice(0, 3)).toEqual([0, 10, 20]);
@@ -666,11 +668,28 @@ describe('live score refresh cadence', () => {
 
   it('refreshes slow progress on elapsed time and every analysis when both triggers are off', () => {
     const slow = cadence({ minIntervalSeconds: 5 });
-    slow.admits('crawl', 0);
-    expect(slow.admits('crawl', 1000)).toBe(false);
-    expect(slow.admits('crawl', 6000)).toBe(true);
+    slow.admits('crawl', { now: 0 });
+    expect(slow.admits('crawl', { now: 1000 })).toBe(false);
+    expect(slow.admits('crawl', { now: 6000 })).toBe(true);
     const off = cadence({ pageInterval: 0 });
-    expect([off.admits('crawl', 0), off.admits('crawl', 0)]).toEqual([true, true]);
+    expect([off.admits('crawl', { now: 0 }), off.admits('crawl', { now: 0 })]).toEqual([
+      true,
+      true,
+    ]);
+  });
+
+  it('waits the longer interval once the crawl reaches the large-crawl size', () => {
+    const gate = cadence({
+      pageInterval: 0,
+      minIntervalSeconds: 30,
+      largePages: 2000,
+      largeIntervalSeconds: 120,
+    });
+    gate.admits('small', { now: 0, pages: 1999 });
+    gate.admits('large', { now: 0, pages: 2000 });
+    expect(gate.admits('small', { now: 31_000, pages: 1999 })).toBe(true);
+    expect(gate.admits('large', { now: 31_000, pages: 2000 })).toBe(false);
+    expect(gate.admits('large', { now: 121_000, pages: 2000 })).toBe(true);
   });
 });
 

@@ -22,7 +22,7 @@ import { AgentWorker } from './agent-worker.ts';
 import { AuditWorker } from '../audits/worker.ts';
 import { AuditScheduler, schedulerSettings } from './audit-scheduler.ts';
 import { CrawlScheduler, crawlSchedulerSettings } from './crawl-scheduler.ts';
-import { SiteHealthWorker } from './site-health-worker.ts';
+import { SiteHealthWorker, type PeersDue } from './site-health-worker.ts';
 import { integrationSettings } from '../integrations/config.ts';
 import { siteWorkerSettings } from '../site-health/runtime.ts';
 import { getLogger } from '../logging.ts';
@@ -36,12 +36,15 @@ import { maintainLease } from '../queue/heartbeat.ts';
 
 export type RunnerLane = {
   name: string;
-  run: (canAdmit: () => boolean) => Promise<number | boolean | void>;
+  /** `peersDue` reports whether another lane of its group has work due now (always true ungrouped). */
+  run: (canAdmit: () => boolean, peersDue: PeersDue) => Promise<number | boolean | void>;
   /** When this owner's earliest pending task becomes claimable; null when none is pending. */
   nextDue?: () => Promise<Date | null>;
   /** Lanes sharing a group take turns instead of overlapping (one crawler identity). */
   group?: string;
 };
+/** A lane without peers yields at its window end. */
+const YIELD: PeersDue = () => Promise.resolve(true);
 type DrainOptions = {
   signal: AbortSignal;
   deadline: number;
@@ -137,8 +140,18 @@ class LaneTurns {
       state.phase = 'running';
       state.started = this.#starts++;
       state.seen = this.#progress;
-      this.running.set(state, settle(state, this.#canAdmit));
+      this.running.set(state, settle(state, this.#canAdmit, this.#peersDue(state)));
     }
+  }
+  /** A grouped lane may keep its turn while no peer has work due; others always yield. */
+  #peersDue(state: LaneState): PeersDue {
+    const group = state.lane.group;
+    if (!group) return YIELD;
+    const peers = () =>
+      this.#states
+        .filter((s) => s !== state && s.phase !== 'failed' && s.lane.group === group)
+        .map((s) => s.lane);
+    return async () => (await nextDueDelay(peers())) === 0;
   }
   wakeIdle() {
     for (const state of this.#states) if (state.phase === 'idle') state.phase = 'ready';
@@ -227,9 +240,13 @@ async function waitForDue(
   return true;
 }
 
-async function settle(state: LaneState, canAdmit: () => boolean): Promise<Settlement> {
+async function settle(
+  state: LaneState,
+  canAdmit: () => boolean,
+  peersDue: PeersDue,
+): Promise<Settlement> {
   try {
-    return { state, progress: Number((await state.lane.run(canAdmit)) ?? 0) };
+    return { state, progress: Number((await state.lane.run(canAdmit, peersDue)) ?? 0) };
   } catch (error) {
     return { state, error };
   }
@@ -402,8 +419,12 @@ export async function runnerOwners(db: Database, config: ServiceConfig) {
       {
         name: 'site-health',
         group: crawler,
-        run: (canAdmit) =>
-          site.drain(Math.min(site.settings.concurrency, config.execution.poolSize), canAdmit),
+        run: (canAdmit, peersDue) =>
+          site.drain(
+            Math.min(site.settings.concurrency, config.execution.poolSize),
+            canAdmit,
+            peersDue,
+          ),
         nextDue: () => site.nextDue(),
       },
       { name: 'billing', run: billing },
@@ -485,7 +506,7 @@ export async function runPeriodic(
     if (options.signal.aborted || now() >= options.deadline) break;
     const started = performance.now();
     try {
-      await phase.run(canAdmit); // NOSONAR -- Periodic phases share one admission budget and pool.
+      await phase.run(canAdmit, YIELD); // NOSONAR -- Periodic phases share one admission budget and pool.
       logger.info('tick_phase_completed', {
         phase: phase.name,
         duration_ms: Math.round(performance.now() - started),

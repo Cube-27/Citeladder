@@ -46,7 +46,12 @@ export function siteWorkerSettings(env: SettingSource = process.env) {
       pageInterval: number('live_score_refresh_page_interval'),
       pageFraction: number('live_score_refresh_page_fraction'),
       minIntervalSeconds: number('live_score_refresh_min_interval_seconds'),
+      /** A crawl of at least `largePages` admitted pages refreshes on the longer interval. */
+      largePages: number('live_score_refresh_large_crawl_pages'),
+      largeIntervalSeconds: number('live_score_refresh_large_crawl_interval_seconds'),
       maxTrackedCrawls: number('live_score_refresh_max_tracked_crawls'),
+      /** How stale the counters an active crawl's reads render may grow (CO-3). */
+      countersSeconds: number('live_counters_refresh_seconds'),
     },
   };
 }

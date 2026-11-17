@@ -26,7 +26,7 @@ import type {
 import type { PagesSort } from '@/lib/api/site-health';
 import type { RunStatusValue, StatusValue } from '@/components/ui/status-mark';
 import type { InternalLinkAnalysis } from '@citeladder/contracts/site-health';
-import { CRAWL_POLL_MS } from '@/lib/config/operational';
+import { CRAWL_POLL_MS, CRAWL_VIEW_REFRESH_MS } from '@/lib/config/operational';
 import { RERUN_POLL_INTERVAL_MS } from '@/lib/config/site-health';
 import { pollWhileActive, type JobStates } from '@/lib/jobs/poll';
 import { availabilityLabel, formatCount, formatDisplayTimestamp } from '@/lib/format';
@@ -230,6 +230,23 @@ export type SiteHealthPhase =
  * would nearly always suffice; the counters and sub-states are included so a
  * missed timestamp write cannot freeze the whole screen.
  */
+type SeenProgress = { version: string; status: SiteCrawl['status']; refreshedAt: number };
+
+/**
+ * Whether changed crawl progress refreshes the crawl's lists now. While the
+ * crawl stays active they refresh at most once per `CRAWL_VIEW_REFRESH_MS`;
+ * a status change (its terminal transition) always refreshes.
+ */
+export function crawlViewsDue(
+  seen: SeenProgress,
+  next: Omit<SeenProgress, 'refreshedAt'>,
+  now: number,
+): boolean {
+  if (seen.version === next.version) return false;
+  if (seen.status !== next.status || !CRAWL_STATES[next.status].active) return true;
+  return now - seen.refreshedAt >= CRAWL_VIEW_REFRESH_MS;
+}
+
 export function crawlProgressVersion(
   crawl: Pick<
     SiteCrawl,

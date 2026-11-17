@@ -209,11 +209,15 @@ the active, terminal and usable (terminal with readable analyses: all but
 
 **Terminalization** (`lifecycle.ts`, the only path to a terminal crawl). Each
 settled lifecycle task reconciles counters and sub-states under the crawl row
-lock. While siblings remain, a settled analysis (analyzed, failed or
+lock, in its crawl's single-flight chain inside the worker: the slot that ran
+the task refills at once, and one crawl's reconciles run one at a time in
+settlement order. While siblings remain, a settled analysis (analyzed, failed or
 cancelled) only refreshes the provisional summary, and a discover while
 discovery continues only recounts progress, both on the `live_score_refresh_*`
 cadence, as are the per-page `analysis.progress` and `discovery.progress`
-events. The provisional summary
+events. The summary's elapsed-time bound lengthens to
+`live_score_refresh_large_crawl_interval_seconds` once a crawl has admitted
+`live_score_refresh_large_crawl_pages`. The provisional summary
 (`live-score.ts`) is the equal-page average of the tracked pages' stored
 provisional scores, with counts, from a few grouped queries that never read
 rule evaluations (owner, 2026-11-17); the terminal summary rebuilds from
@@ -247,7 +251,12 @@ A `finalize` that fails retries on the normal backoff; after its third attempt
 recorded reason and settles the fetch hold. Stop can land between batches: the
 task cancels itself and the cancelled crawl is published by its own `finalize`.
 
-**Backstops** run every `backstop_interval_seconds`, even on an empty drain:
+**Backstops** run with lease recovery as one single-flight background job on a
+timer beside the claim loop, never before a claim: recovery every
+`poll_interval_seconds` (at once again while a reclaim batch fills), the
+backstops every `backstop_interval_seconds`. Every pass awaits the job before
+it returns, so an empty drain still runs them. A `/run` request's scoped worker
+reconciles only its crawl, on the same interval and score cadence.
 
 - **Stalled:** an active crawl with no open task and no write for
   `stalled_crawl_reconcile_seconds` is reconciled.
@@ -950,13 +959,19 @@ are bound to the tab and the order, as to the filters. Overview top issues name
 their tab (`section`, from today's catalog; null for a retired rule), so their
 links open the tab that lists the rule.
 
-The dashboard counters of an active crawl count its tasks and analyses live. A
-terminal crawl's are the ones persisted with its terminal status: by
-terminalization, by Stop in the cancelling transaction, again when a task Stop
-skipped settles, when the cancelled crawl is published and when an analysis is
-appended over a finalized one. Only the monitored selection count is read live. A terminal crawl without
-persisted counters reads its row's own persisted counts; no read rescans its
-tasks.
+The dashboard counters of an active crawl are the ones its post-settle
+reconcile last persisted (`site_crawls.live_counters`), recounted at most every
+`live_counters_refresh_seconds`, so they may lag by that much (owner decision
+CO-3). Only "stalled" is probed at read time, as an expired lease among the
+crawl's open tasks through `ix_site_crawl_tasks_open`. A terminal crawl's
+counters are the ones persisted with its terminal status: by terminalization,
+by Stop in the cancelling transaction, again when a task Stop skipped settles,
+when the cancelled crawl is published and when an analysis is appended over a
+finalized one. Only the monitored selection count is read live. A crawl
+without persisted counters (none of its tasks settled yet, or terminal before
+counters were persisted) is counted from its tasks. While a crawl runs, the
+screen refreshes its page, inventory and issue lists at most every 30 s, and
+always on its terminal transition.
 
 The Issues page-kind filter (`page_kind`) files a per-page finding under its own
 page's current, finalized analysis kind; every analysis names the crawl's site

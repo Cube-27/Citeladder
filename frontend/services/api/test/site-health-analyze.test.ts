@@ -12,6 +12,7 @@ import {
   siteFetchSettings,
 } from '../src/site-health/page-fetch.ts';
 import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
+import { persistLiveCounters } from '../src/site-health/terminal-counters.ts';
 import { pageDetail, pages } from '../src/site-health/reads/pages.ts';
 import * as interpretation from '../src/site-health/analysis/off-thread.ts';
 import { hardExcluded } from '../src/site-health/url-admission.ts';
@@ -711,6 +712,43 @@ describe('analyze guards', () => {
       reason: 'active_work',
       queue_depth: 2,
     });
+  });
+
+  it('renders the counters an active crawl persisted, probing an expired lease at read time', async () => {
+    const seed = await running();
+    const page = await fixtures.analyzable(seed, '/persisted');
+    const target = { workspace_id: seed.workspaceId, crawl_id: seed.crawlId };
+    await persistLiveCounters(db, target);
+    // Admitted after the persisted copy: the read lags until the next recount (CO-3).
+    await fixtures.analyzable(seed, '/later');
+    expect(await crawlCounters(db, await crawl(seed))).toMatchObject({
+      queued: 1,
+      activity: { state: 'working', reason: 'active_work', queue_depth: 1 },
+    });
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'running', lease_owner: 'gone', lease_expires_at: new Date(Date.now() - 1) })
+      .where('id', '=', page.taskId)
+      .execute();
+    expect(await crawlCounters(db, await crawl(seed))).toMatchObject({
+      queued: 1,
+      activity: { state: 'stalled', reason: 'expired_lease' },
+    });
+    await persistLiveCounters(db, target);
+    expect(await crawlCounters(db, await crawl(seed))).toMatchObject({ queued: 1, running: 1 });
+    // A crawl that went terminal keeps the copy it had.
+    await db
+      .updateTable('site_crawls')
+      .set({ status: 'completed' })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'cancelled' })
+      .where('crawl_id', '=', seed.crawlId)
+      .execute();
+    await persistLiveCounters(db, target);
+    expect((await crawl(seed)).live_counters).toMatchObject({ queued: 1, running: 1 });
   });
 
   it('does not reuse foreign workspace evidence even when its crawl and URL match', async () => {

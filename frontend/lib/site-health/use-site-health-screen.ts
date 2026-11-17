@@ -22,6 +22,7 @@ import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
 import {
   crawlPollInterval,
   crawlProgressVersion,
+  crawlViewsDue,
   DEFAULT_PAGES_SORT,
   inventoryModeForPhase,
   isCrawlStalled,
@@ -114,20 +115,33 @@ export function useSiteHealthScreen() {
   // through an expired-lease report so the sweeper's recovery is observed.
   useCrawlEvents(crawl?.id, projectId, active);
 
-  // Refresh crawl-derived lists only when persisted progress changes. The
-  // first sighting mounts its own queries, and unchanged dashboard polls do no
-  // downstream work.
+  // Refresh crawl-derived lists only when persisted progress changes, and at
+  // most every CRAWL_VIEW_REFRESH_MS while the crawl runs. The first sighting
+  // mounts its own queries, and unchanged dashboard polls do no downstream work.
   const crawlId = crawl?.id ?? null;
+  const crawlStatus = crawl?.status ?? null;
   const crawlVersion = crawl ? crawlProgressVersion(crawl) : null;
-  const lastSeenRef = useRef<{ crawlId: string; version: string } | null>(null);
+  const lastSeenRef = useRef<{
+    crawlId: string;
+    version: string;
+    status: SiteCrawl['status'];
+    refreshedAt: number;
+  } | null>(null);
   useEffect(() => {
-    if (!crawlId || crawlVersion === null) return;
+    if (!crawlId || !crawlStatus || crawlVersion === null) return;
     const previous = lastSeenRef.current;
-    lastSeenRef.current = { crawlId, version: crawlVersion };
-    if (previous?.crawlId !== crawlId || previous.version === crawlVersion) return;
+    const next = { version: crawlVersion, status: crawlStatus };
+    const now = Date.now();
+    if (previous?.crawlId !== crawlId) {
+      lastSeenRef.current = { crawlId, ...next, refreshedAt: now };
+      return;
+    }
+    // A throttled change keeps the old version, so the next poll past the interval refreshes.
+    if (!crawlViewsDue(previous, next, now)) return;
+    lastSeenRef.current = { crawlId, ...next, refreshedAt: now };
     void refreshCrawlViews(queryClient, crawlId);
     void refreshMonitoredUrls(queryClient, projectId);
-  }, [crawlId, crawlVersion, projectId, queryClient]);
+  }, [crawlId, crawlStatus, crawlVersion, projectId, queryClient]);
 
   // Per-project monitored rows supply analysis progress totals. Automatic URL
   // admission owns membership; this query is display-only and cannot change

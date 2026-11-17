@@ -15,6 +15,7 @@ import {
   isDiscoveryProvisional,
   isDiscoveryTerminal,
   crawlProgressVersion,
+  crawlViewsDue,
   statusLabel,
 } from './status';
 import { crawlFailureCopy, dashboardRunNotice } from './run-notice';
@@ -252,6 +253,17 @@ describe('crawlProgressVersion (single-subscription fan-out key)', () => {
     expect(crawlProgressVersion({ ...base, analyzed_count: 3 })).not.toBe(version);
     expect(crawlProgressVersion({ ...base, failed_count: 1 })).not.toBe(version);
     expect(crawlProgressVersion({ ...base, updated_at: '2026-07-16T00:00:05Z' })).not.toBe(version);
+  });
+});
+
+describe('crawlViewsDue (throttled list refresh)', () => {
+  const seen = { version: 'a', status: 'running' as const, refreshedAt: 0 };
+
+  it('throttles a running crawl, but never its terminal transition', () => {
+    expect(crawlViewsDue(seen, { version: 'a', status: 'running' }, 60_000)).toBe(false);
+    expect(crawlViewsDue(seen, { version: 'b', status: 'running' }, 29_999)).toBe(false);
+    expect(crawlViewsDue(seen, { version: 'b', status: 'running' }, 30_000)).toBe(true);
+    expect(crawlViewsDue(seen, { version: 'b', status: 'completed' }, 1)).toBe(true);
   });
 });
 
