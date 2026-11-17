@@ -24,7 +24,11 @@ async function linkPages(db: Database, crawl: Crawl): Promise<LinkPage[]> {
   const rows = await db
     .selectFrom('site_page_analyses as analysis')
     .innerJoin('site_urls as url', 'url.id', 'analysis.site_url_id')
-    .innerJoin('site_fetch_artifacts as artifact', 'artifact.id', 'analysis.artifact_id')
+    .innerJoin('site_fetch_artifacts as artifact', (join) =>
+      join
+        .onRef('artifact.id', '=', 'analysis.artifact_id')
+        .onRef('artifact.crawl_id', '=', 'analysis.crawl_id'),
+    )
     .select([
       'url.id',
       'url.normalized_url',

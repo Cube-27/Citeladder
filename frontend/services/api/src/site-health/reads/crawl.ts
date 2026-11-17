@@ -406,6 +406,7 @@ export async function rootFailure(db: Database, crawl: Crawl) {
   const attempts = await workspace
     .selectFrom(db, 'site_fetch_attempts')
     .select(['method', 'outcome', 'error_code', 'status_code', 'latency_ms'])
+    .where('crawl_id', '=', crawl.id)
     .where('task_id', '=', task.id)
     .orderBy('attempt_number')
     .orderBy('request_ordinal')

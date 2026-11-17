@@ -166,7 +166,7 @@ describe('evidence partitions', () => {
 
   it("files a crawl's events under its crawl month, and an older random id under the default", async () => {
     const monthly = await crawlWithId(timeOrderedId());
-    // A version-4 id above every month's range, as crawls made before 0047 mostly are.
+    // A version-4 id above every month's range, as crawls made before partitioning mostly are.
     const legacy = await crawlWithId(`f${randomUUID().slice(1)}`);
     for (const crawl of [monthly, legacy]) await recordCrawlEvent(db, crawl, 'test', 'm', {});
     const homes = await sql<{ crawl_id: string; home: string }>`
@@ -177,10 +177,6 @@ describe('evidence partitions', () => {
       [monthly.id]: `site_crawl_events_p${month}`,
       [legacy.id]: 'site_crawl_events_default',
     });
-    // The services reach a partition only through its parent.
-    await expect(
-      sql`select 1 from site_crawl_events_default limit 1`.execute(db),
-    ).rejects.toMatchObject({ code: '42501' });
   });
 
   it('adds a month only while the default partition holds none of its range', async () => {
@@ -199,6 +195,31 @@ describe('evidence partitions', () => {
       return rows[0];
     });
     expect(outcomes).toEqual({ far: 'overlaps_default', current: 'exists' });
+  });
+
+  it('creates a month with its own workspace/crawl statistics', async () => {
+    let created: unknown;
+    await asOwner((owner) =>
+      owner
+        .transaction()
+        .execute(async (trx) => {
+          const outcome = await sql<{ outcome: string }>`
+            select public.site_evidence_month_partition('site_issues', '2041-03-09') as outcome
+          `.execute(trx);
+          const facts = await sql<{ stats: string[] }>`
+            select array(select stxname::text from pg_statistic_ext
+                where stxrelid = 'public.site_issues_p2041_03'::regclass) as stats
+          `.execute(trx);
+          created = { ...outcome.rows[0], ...facts.rows[0] };
+          // Rolled back, so the shared database keeps no 2041 partition.
+          throw new Error('rollback');
+        })
+        .catch(() => undefined),
+    );
+    expect(created).toEqual({
+      outcome: 'created',
+      stats: ['st_site_issues_p2041_03_workspace_crawl'],
+    });
   });
 });
 

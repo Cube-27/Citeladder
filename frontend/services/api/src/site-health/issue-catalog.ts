@@ -70,7 +70,8 @@ async function firstSnippetRow(
       f.normalized_facts #> ${family.path}::text[] as snippet
     from site_issues i
     join site_urls u on u.workspace_id = i.workspace_id and u.id = i.site_url_id
-    join site_fetch_artifacts f on f.workspace_id = i.workspace_id and f.id = i.source_artifact_id
+    join site_fetch_artifacts f on f.workspace_id = i.workspace_id and f.crawl_id = i.crawl_id
+      and f.id = i.source_artifact_id
     where ${viewIssuesSql(crawl)}
       and i.finding_class = ${family.findingClass} and i.rule_id = ${family.ruleId}
       and jsonb_typeof(f.normalized_facts #> ${family.path}::text[]) = 'object'

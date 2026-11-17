@@ -139,7 +139,8 @@ export function currentIssueFilter(issue: string, analysis: string) {
   return sql`(${evaluation} = any(${sources})
     or (${issueAnalysis} = ${analysisId} and exists(
       select 1 from site_rule_evaluations e
-      where e.id = ${evaluation} and e.source_architecture_id is not null)))`;
+      where e.id = ${evaluation} and e.analysis_id = ${issueAnalysis}
+        and e.source_architecture_id is not null)))`;
 }
 
 /**
@@ -303,7 +304,7 @@ export async function pageRows(
       coalesce((
         select (f.acquisition_options ->> 'robots_excluded')::boolean
         from site_fetch_artifacts f
-        where f.workspace_id = u.workspace_id and f.id = a.artifact_id
+        where f.workspace_id = u.workspace_id and f.crawl_id = a.crawl_id and f.id = a.artifact_id
       ), false) as robots_excluded,
       a.finalized_at,
       case when a.id is null then null else (

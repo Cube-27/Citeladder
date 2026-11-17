@@ -87,6 +87,21 @@ describe('the application role', () => {
     expect(refused).toEqual(APPEND_ONLY);
   });
 
+  it('holds no grant on any partition, reaching partitioned rows through the parent', async () => {
+    const { rows } = await sql<{ table: string; direct: boolean }>`
+      select c.relname::text as table,
+        has_table_privilege(c.oid, 'select, insert, update, delete') as direct
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relispartition
+      order by 1`.execute(db);
+    expect(rows.find((row) => row.table === 'site_crawl_events_default')).toEqual({
+      table: 'site_crawl_events_default',
+      direct: false,
+    });
+    expect(rows.filter((row) => row.direct)).toEqual([]);
+  });
+
   it('still row-locks append-only grants, as billing serialization does', async () => {
     const member = await fixtures.user();
     const workspace = await fixtures.ownedWorkspace(member);

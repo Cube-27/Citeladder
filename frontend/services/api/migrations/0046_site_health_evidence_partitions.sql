@@ -45,6 +45,9 @@ BEGIN
     IF to_regclass(format('public.%I', part)) IS NOT NULL THEN
         RETURN 'exists';
     END IF;
+    -- The create takes this lock anyway; taking it first stops a writer
+    -- filling the range between the check and the create.
+    EXECUTE format('LOCK TABLE public.%I IN ACCESS EXCLUSIVE MODE', p_table);
     EXECUTE format('SELECT EXISTS (SELECT 1 FROM public.%I WHERE %I >= $1 AND %I < $2)',
                    p_table || '_default', key, key)
         INTO overlap USING lo, hi;
@@ -56,6 +59,11 @@ BEGIN
                    CASE p_table WHEN 'site_url_observations' THEN ' WITH (fillfactor = 75)' ELSE '' END);
     -- The services reach rows only through the parent, whose grants apply.
     EXECUTE format('REVOKE ALL ON public.%I FROM citeladder_app', part);
+    -- 0043's workspace/crawl dependency; a partition does not inherit it.
+    IF p_table IN ('site_fetch_artifacts', 'site_issues', 'site_url_observations') THEN
+        EXECUTE format('CREATE STATISTICS public.%I (dependencies) ON workspace_id, crawl_id FROM public.%I',
+                       'st_' || part || '_workspace_crawl', part);
+    END IF;
     RETURN 'created';
 EXCEPTION WHEN lock_not_available THEN
     RETURN 'lock_busy';
@@ -147,6 +155,14 @@ CREATE TABLE public.site_url_observations_default PARTITION OF public.site_url_o
 REVOKE ALL ON public.site_crawl_events_default, public.site_fetch_artifacts_default,
     public.site_fetch_attempts_default, public.site_issues_default,
     public.site_rule_evaluations_default, public.site_url_observations_default FROM citeladder_app;
+-- 0043's workspace/crawl statistics, for the default partitions (months get
+-- theirs in site_evidence_month_partition); the parents' follow the drop below.
+CREATE STATISTICS public.st_site_url_observations_default_workspace_crawl (dependencies)
+    ON workspace_id, crawl_id FROM public.site_url_observations_default;
+CREATE STATISTICS public.st_site_fetch_artifacts_default_workspace_crawl (dependencies)
+    ON workspace_id, crawl_id FROM public.site_fetch_artifacts_default;
+CREATE STATISTICS public.st_site_issues_default_workspace_crawl (dependencies)
+    ON workspace_id, crawl_id FROM public.site_issues_default;
 
 -- A month for every existing UUIDv7 key, so those rows never sit in the
 -- default partition, then the current month and the three ahead.
@@ -180,6 +196,14 @@ DROP TABLE public.site_fetch_attempts_unpartitioned;
 DROP TABLE public.site_issues_unpartitioned;
 DROP TABLE public.site_rule_evaluations_unpartitioned;
 DROP TABLE public.site_url_observations_unpartitioned;
+
+-- The parents' copies serve plans that span partitions.
+CREATE STATISTICS public.st_site_url_observations_workspace_crawl (dependencies)
+    ON workspace_id, crawl_id FROM public.site_url_observations;
+CREATE STATISTICS public.st_site_fetch_artifacts_workspace_crawl (dependencies)
+    ON workspace_id, crawl_id FROM public.site_fetch_artifacts;
+CREATE STATISTICS public.st_site_issues_workspace_crawl (dependencies)
+    ON workspace_id, crawl_id FROM public.site_issues;
 
 -- Keys and unique constraints add the partition key. Each unique constraint
 -- stays as strict as before: the crawl follows from the task, and the

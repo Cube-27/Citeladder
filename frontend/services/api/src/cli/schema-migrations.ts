@@ -141,15 +141,19 @@ export async function applyMigrations(
 }
 
 /**
- * Site Health evidence partitions for this UTC month and the three ahead
- * (migration 0047 owns the DDL). Runs as the schema owner after every apply,
- * so a deploy each quarter keeps months ahead of the writers; returns the
- * months it skipped, which stay in the default partition until split.
+ * Site Health evidence partitions for this UTC month and the three ahead (the
+ * `site_health_evidence_partitions` migration owns the SQL), then statistics
+ * for every partitioned parent, which autovacuum never analyzes. Returns the
+ * months it skipped, whose rows stay in the default partition.
  */
 export async function ensureEvidencePartitions(client: pg.ClientBase): Promise<string[]> {
   const { rows } = await client.query<{ skipped: string[] }>(
     'select public.site_evidence_ensure_partitions() as skipped',
   );
+  await client.query(`do $$ declare parent regclass; begin
+    for parent in select partrelid from pg_partitioned_table loop
+      execute format('analyze %s', parent);
+    end loop; end $$`);
   return rows[0]?.skipped ?? [];
 }
 

@@ -172,7 +172,7 @@ async function goneAudits(db: Database, crawl: Crawl): Promise<PageAudit[]> {
     .selectFrom((query) =>
       query
         .selectFrom('site_crawl_tasks')
-        .select(['id', 'workspace_id', 'site_url_id', 'status', 'error_code'])
+        .select(['id', 'workspace_id', 'crawl_id', 'site_url_id', 'status', 'error_code'])
         .distinctOn('site_url_id')
         .where('workspace_id', '=', crawl.workspace_id)
         .where('crawl_id', '=', crawl.id)
@@ -186,11 +186,11 @@ async function goneAudits(db: Database, crawl: Crawl): Promise<PageAudit[]> {
     .select([
       't.site_url_id',
       sql<string | null>`(select a.id from site_fetch_attempts a
-        where a.task_id = t.id and a.workspace_id = t.workspace_id
+        where a.task_id = t.id and a.workspace_id = t.workspace_id and a.crawl_id = t.crawl_id
           and a.status_code = any(${GONE_STATUSES}::int[])
         order by a.attempt_number desc, a.request_ordinal desc limit 1)`.as('attempt_id'),
       sql<number | null>`(select a.status_code from site_fetch_attempts a
-        where a.task_id = t.id and a.workspace_id = t.workspace_id
+        where a.task_id = t.id and a.workspace_id = t.workspace_id and a.crawl_id = t.crawl_id
           and a.status_code = any(${GONE_STATUSES}::int[])
         order by a.attempt_number desc, a.request_ordinal desc limit 1)`.as('status_code'),
     ])
