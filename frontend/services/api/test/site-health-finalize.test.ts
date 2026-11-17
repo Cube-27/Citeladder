@@ -27,7 +27,7 @@ import {
 import { compareText } from '../src/text-order.ts';
 import { resolveDuplicateAliases } from '../src/site-health/canonical-alias.ts';
 import { assessCoverage, type CoverageSignals } from '../src/site-health/coverage.ts';
-import { ScoreRefreshCadence } from '../src/site-health/lifecycle.ts';
+import { RefreshCadence } from '../src/site-health/refresh-cadence.ts';
 import { eligibilityState } from '../src/site-health/snapshot-eligibility.ts';
 
 const canonical = (declarations: string[], changes = {}) =>
@@ -647,7 +647,7 @@ describe('search eligibility', () => {
 
 describe('live score refresh cadence', () => {
   const cadence = (changes = {}) =>
-    new ScoreRefreshCadence({
+    new RefreshCadence({
       pageInterval: 10,
       pageFraction: 0.1,
       minIntervalSeconds: 0,

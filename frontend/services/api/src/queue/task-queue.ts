@@ -174,8 +174,10 @@ function scopeFilter(scope: ClaimScope): ClaimFilter {
 /**
  * The locking SELECT one claim runs.
  *
- * Only the `claim_candidate_limit` oldest due rows are ranked, so a claim's
- * cost is bounded by that cap rather than by the whole backlog; within them,
+ * Only the `claim_candidate_limit` oldest due rows and as many highest-priority
+ * ones are ranked, so a claim's cost is bounded by that cap rather than by the
+ * whole backlog, and a backlog of old low-priority rows never hides newer urgent
+ * ones (a crawl's thousands of discovers ahead of its analyses). Within them,
  * each workspace's rows are numbered and the least recently served workspace
  * goes first. Eligibility (`status`/`available_at`/readiness/scope) is applied
  * twice on purpose: in the candidate set, and on the locked relation itself.
@@ -199,17 +201,25 @@ export function claimStatement(
   const inner = (name: string) => sql.ref(`${table}.${name}`);
   const outer = (name: string) => sql.ref(`queued.${name}`);
   const queueDb = queueDatabase(db);
-  const due = queueDb
+  const eligible = queueDb
     .selectFrom(table)
     .select(['id', 'workspace_id', 'priority', 'available_at', 'randomized_position'])
     .where('status', 'in', lane.claimable)
     .where('available_at', '<=', now)
     .$if(kinds !== undefined, (q) => q.where('task_kind', 'in', kinds!))
     .$if(ready !== undefined, (q) => q.where(ready!))
-    .$call((q) => filters.reduce((query, filter) => query.where(filter(inner)), q))
+    .$call((q) => filters.reduce((query, filter) => query.where(filter(inner)), q));
+  const cap = policy.task_queue.claim_candidate_limit;
+  const oldest = eligible.orderBy('available_at', 'asc').orderBy('id', 'asc').limit(cap);
+  const urgent = eligible
+    .orderBy('priority', 'desc')
     .orderBy('available_at', 'asc')
     .orderBy('id', 'asc')
-    .limit(policy.task_queue.claim_candidate_limit)
+    .limit(cap);
+  const due = queueDb
+    .selectFrom(oldest.as('oldest'))
+    .selectAll()
+    .union(queueDb.selectFrom(urgent.as('urgent')).selectAll())
     .as('due');
   const ranked = queueDb
     .selectFrom(due)

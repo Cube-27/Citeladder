@@ -20,6 +20,7 @@ import { expectedTaskFailure, inventoryComplete } from './coverage.ts';
 import { settleCrawlFetches } from './fetch-budget.ts';
 import { finalizeCrawlAnalyses } from './lifecycle-finalize.ts';
 import { rootFailure } from './reads/crawl.ts';
+import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import { recordCrawlEvent } from './site-task.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
@@ -33,6 +34,7 @@ import { enqueueTerminalAnalyticsRefresh } from './terminal-handoff.ts';
 const logger = getLogger('app.workers.site_health.lifecycle');
 const TERMINAL_TASK = policy.task_queue.terminal;
 const LIFECYCLE_KINDS = ['discover', 'site_setup', 'analyze'];
+const DISCOVERY_KINDS = ['discover', 'site_setup'];
 const EXCLUDED = failedAs('site_crawl_tasks', ['excluded']);
 const OVERDUE = policy.site_health.page_analysis.acquisition.error_codes.crawl_overdue;
 /**
@@ -336,70 +338,10 @@ export async function reconcileCrawl(
   });
 }
 
-/**
- * Rebuilding the live summary reloads the whole measurement projection under
- * the crawl and profile locks cancellation competes for, so intermediate
- * analyses refresh it after a growing batch or an elapsed-time bound. The mark
- * is display cadence, not a fact: terminalization rebuilds from persisted
- * evidence regardless, so a lost mark only refreshes more often.
- */
-export class ScoreRefreshCadence {
-  readonly #marks = new Map<string, { refreshedAt: number; observed: number; pending: number }>();
-  readonly #settings: SiteWorkerSettings['scoreRefresh'];
-  constructor(settings: SiteWorkerSettings['scoreRefresh']) {
-    this.#settings = settings;
-  }
-  admits(crawlId: string, now = performance.now()) {
-    const { pageInterval, minIntervalSeconds, pageFraction } = this.#settings;
-    if (pageInterval <= 0 && minIntervalSeconds <= 0) return true;
-    const mark = this.#marks.get(crawlId);
-    if (!mark) {
-      // A crawl's first analysis always refreshes, so its first score card is prompt.
-      this.#marks.set(crawlId, { refreshedAt: now, observed: 1, pending: 0 });
-      this.#prune();
-      return true;
-    }
-    mark.observed++;
-    mark.pending++;
-    const growing = Math.max(
-      pageInterval,
-      Math.ceil((mark.observed - mark.pending) * pageFraction),
-    );
-    const due =
-      (pageInterval > 0 && mark.pending >= growing) ||
-      (minIntervalSeconds > 0 && now - mark.refreshedAt >= minIntervalSeconds * 1000);
-    if (due) {
-      mark.refreshedAt = now;
-      mark.pending = 0;
-    }
-    this.#prune();
-    return due;
-  }
-  /** Bound the table: a forgotten crawl simply refreshes once more than it owed. */
-  #prune() {
-    const cap = this.#settings.maxTrackedCrawls;
-    if (cap <= 0 || this.#marks.size <= cap) return;
-    const stale = [...this.#marks].sort((a, b) => a[1].refreshedAt - b[1].refreshedAt);
-    for (const [id] of stale.slice(0, this.#marks.size - cap)) this.#marks.delete(id);
-  }
-}
-
 type SettledTask = { id: string; crawl_id: string; workspace_id: string };
 
-/**
- * Reconcile after a lifecycle task settles, unless its row cannot have moved
- * a boundary. A row still non-terminal (deferred, re-queued, lease lost) is
- * itself the outstanding work; a successful analysis while siblings remain
- * only refreshes the live summary on cadence. Taking the crawl lock for
- * either is pure contention with the user's Stop. Other settlements update
- * counters and sub-states without rebuilding the score they cannot change.
- */
-export async function reconcileAfterTask(
-  db: Database,
-  task: SettledTask,
-  cadence: ScoreRefreshCadence,
-) {
-  const row = await db
+function settledRow(db: Database, task: SettledTask) {
+  return db
     .selectFrom('site_crawl_tasks as t')
     .innerJoin('site_crawls as c', (join) =>
       join.onRef('c.id', '=', 't.crawl_id').onRef('c.workspace_id', '=', 't.workspace_id'),
@@ -415,28 +357,66 @@ export async function reconcileAfterTask(
         where o.crawl_id = t.crawl_id and o.workspace_id = t.workspace_id
           and o.task_kind = any(${LIFECYCLE_KINDS}::text[])
           and o.status <> all(${TERMINAL_TASK}::text[]))`.as('outstanding'),
+      sql<boolean>`exists (
+        select 1 from site_crawl_tasks o
+        where o.crawl_id = t.crawl_id and o.workspace_id = t.workspace_id
+          and o.task_kind = any(${DISCOVERY_KINDS}::text[])
+          and o.status <> all(${TERMINAL_TASK}::text[]))`.as('discovering'),
     ])
     .where('t.id', '=', task.id)
     .where('t.crawl_id', '=', task.crawl_id)
     .where('t.workspace_id', '=', task.workspace_id)
     .executeTakeFirst();
+}
+
+/**
+ * What a settled row can change. A discover while discovery continues and a
+ * successful analysis while siblings remain move no boundary, only live
+ * progress; anything else may settle discovery, analysis or the crawl.
+ */
+function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
+  const running = row.crawl_status === 'running';
+  if (row.task_kind === 'discover' && running && row.discovering) return 'discovery_progress';
+  const analyzed =
+    row.task_kind === 'analyze' && row.status === 'succeeded' && row.result_artifact_id !== null;
+  return analyzed && running && row.analysis_status === 'running' && row.outstanding
+    ? 'analysis_progress'
+    : 'boundary';
+}
+
+/**
+ * Reconcile after a lifecycle task settles, unless its row cannot have moved
+ * a boundary. A row still non-terminal (deferred, re-queued, lease lost) is
+ * itself the outstanding work; progress-only settlements recount discovery or
+ * refresh the live summary on cadence, since taking the crawl lock for each is
+ * pure contention with every task commit and the user's Stop. Other
+ * settlements update counters and sub-states without rebuilding the score
+ * they cannot change.
+ */
+export async function reconcileAfterTask(db: Database, task: SettledTask, cadence: CrawlCadences) {
+  const row = await settledRow(db, task);
   if (!row || !TERMINAL_TASK.includes(row.status)) return;
-  const intermediate =
-    row.task_kind === 'analyze' &&
-    row.status === 'succeeded' &&
-    row.result_artifact_id !== null &&
-    row.crawl_status === 'running' &&
-    row.analysis_status === 'running' &&
-    row.outstanding;
-  if (!intermediate)
-    return reconcileCrawl(db, task.workspace_id, task.crawl_id, {
-      refreshScore: row.task_kind === 'analyze' && row.status === 'succeeded',
-    });
-  if (!cadence.admits(task.crawl_id)) return;
-  await db.transaction().execute(async (trx) => {
-    const crawl = await lockCrawl(trx, task.workspace_id, task.crawl_id);
-    if (crawl && isActiveCrawl(crawl.status)) await refreshLiveScoreSummary(trx, crawl);
-  });
+  const kind = settlement(row);
+  switch (kind) {
+    case 'boundary':
+      return reconcileCrawl(db, task.workspace_id, task.crawl_id, {
+        refreshScore: row.task_kind === 'analyze' && row.status === 'succeeded',
+      });
+    case 'discovery_progress':
+      if (cadence.discovery.admits(task.crawl_id))
+        await reconcileCrawl(db, task.workspace_id, task.crawl_id, { refreshScore: false });
+      return;
+    case 'analysis_progress':
+      if (!cadence.score.admits(task.crawl_id)) return;
+      return db.transaction().execute(async (trx) => {
+        const crawl = await lockCrawl(trx, task.workspace_id, task.crawl_id);
+        if (crawl && isActiveCrawl(crawl.status)) await refreshLiveScoreSummary(trx, crawl);
+      });
+    default: {
+      const unhandled: never = kind;
+      return unhandled;
+    }
+  }
 }
 
 /**

@@ -14,8 +14,8 @@ import {
   reconcileAfterTask,
   reconcileCrawl,
   reconcileOverdue,
-  ScoreRefreshCadence,
 } from '../src/site-health/lifecycle.ts';
+import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { testDatabase } from './support.ts';
@@ -612,7 +612,7 @@ const settled = (seed: SiteSeed, taskId: string) => ({
   crawl_id: seed.crawlId,
   workspace_id: seed.workspaceId,
 });
-const cadence = () => new ScoreRefreshCadence(siteWorkerSettings({}).scoreRefresh);
+const cadence = () => crawlCadences(siteWorkerSettings({}).scoreRefresh);
 /** A fresh page whose `kind` task failed; a status code is recorded as its fetch answered. */
 async function failedTask(
   seed: SiteSeed,
@@ -693,23 +693,32 @@ describe('crawl lifecycle', () => {
     expect(await tasksOf(seed.crawlId, 'link_metrics')).toHaveLength(1);
   });
 
-  it('settles discovery without rebuilding a score only analyses can change', async () => {
+  it('reconciles discovery progress on cadence and settles discovery without a score rebuild', async () => {
     const seed = await running({ discovery_status: 'running' });
     const done = await monitoredPage(seed, '/');
     await fixtures.analyzable(seed, '/pending');
-    const discover = await fixtures.task(seed, 'discover');
-    await db
-      .updateTable('site_crawl_tasks')
-      .set({ status: 'succeeded' })
-      .where('id', '=', discover)
-      .execute();
-    await reconcileAfterTask(db, settled(seed, discover), cadence());
+    const analyzed = await fixtures.analyzable(seed, '/analyzed');
+    const discovers = [1, 2, 3].map(() => fixtures.task(seed, 'discover'));
+    const [first, middle, last] = await Promise.all(discovers);
+    const gates = cadence();
+    const succeed = (id: string) =>
+      sql`update site_crawl_tasks set status = 'succeeded' where id = ${id}`.execute(db);
+    const settle = (id: string) =>
+      succeed(id).then(() => reconcileAfterTask(db, settled(seed, id), gates));
+    await settle(first!);
+    await succeed(analyzed.taskId);
+    // A discover while siblings still discover waits for the cadence: no crawl lock, no recount.
+    await settle(middle!);
+    const progress = await crawlRow(seed.crawlId);
+    expect(progress).toMatchObject({ discovery_status: 'running', analyzed_url_count: 1 });
+    await settle(last!);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'running',
       discovery_status: 'completed',
+      analyzed_url_count: 2,
       score_summary: null,
     });
-    await reconcileAfterTask(db, settled(seed, done.taskId), cadence());
+    await reconcileAfterTask(db, settled(seed, done.taskId), gates);
     expect((await crawlRow(seed.crawlId)).score_summary).toMatchObject({ analyzed_count: 1 });
   });
 

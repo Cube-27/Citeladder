@@ -121,8 +121,9 @@ that finds the lease gone writes `lane_lease_lost` unless the row was cancelled
 or settled. An unpinned claim compares
 `available_at` with the later of the application clock (producers) and the
 database clock (recovery), so clock skew never strands a due row. A claim ranks only the
-`claim_candidate_limit` oldest due rows (`config/queue.json`), so its cost does
-not grow with the backlog. Analytics retries back off exponentially from
+`claim_candidate_limit` oldest due rows plus as many highest-priority ones
+(`config/queue.json`), so its cost does not grow with the backlog and a deep
+low-priority backlog never hides newer high-priority work. Analytics retries back off exponentially from
 `retry_delay_seconds` up to `retry_max_delay_seconds`, jittered into the upper
 half of each wait.
 
