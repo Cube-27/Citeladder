@@ -708,22 +708,70 @@ describe('site setup', () => {
     });
     expect((await crawlRow(seed)).discovery_status).toBe('running');
     expect((await tasks(seed, 'discover')).map((row) => row.requested_url)).toEqual([url('/')]);
+  });
 
-    // A failing server answers nothing: the walk still runs, and the sitemap stays unread.
-    const failing = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
-    const retried = await queued(failing, 'site_setup');
-    await run(
-      worker({
+  it('walks a stale sitemap again, then audits what it knows without an HTML walk', async () => {
+    const seed = await crawl({ discovery: 'pending', config: { automatic_monitor_limit: 5 } });
+    const setup = await queued(seed, 'site_setup');
+    const requests: string[] = [];
+    // A cached index names a child the site has since replaced.
+    const site = worker(
+      {
         '/robots.txt': { body: 'User-agent: *\n', contentType: 'text/plain' },
-        '/sitemap.xml': { status: 503, body: 'busy', contentType: 'text/plain' },
-      }),
-      retried,
+        '/sitemap.xml': {
+          contentType: 'application/xml',
+          body: `<sitemapindex><sitemap><loc>${url('/gone.xml')}</loc></sitemap></sitemapindex>`,
+        },
+      },
+      requests,
     );
-    expect(record(record((await crawlRow(failing)).site_facts).sitemap)).toMatchObject({
-      fetched: false,
-      unread_count: 1,
+    const walk = async () => {
+      await lease(setup, site.owner);
+      await runSiteTask(
+        {
+          db,
+          owner: site.owner,
+          queue: site.queue,
+          fetcher: site.fetcher,
+          settings: site.settings,
+          checkAccess: async () => {},
+        },
+        await task(setup),
+        {
+          kind: 'acquire',
+          run: (ctx, claimed) =>
+            runSiteSetup(ctx, claimed, { ...setupSettings({}), walkRetries: 1, walkRetryDelay: 0 }),
+        },
+      );
+    };
+    await walk();
+    expect(await task(setup)).toMatchObject({ status: 'queued' });
+    expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toMatchObject({
+      pending: true,
+      retries: 1,
     });
-    expect((await crawlRow(failing)).discovery_status).toBe('running');
+    await walk();
+    expect(requests.filter((path) => path.endsWith('.xml'))).toEqual([
+      '/sitemap.xml',
+      '/gone.xml',
+      '/sitemap.xml',
+      '/gone.xml',
+    ]);
+    expect(record(record((await crawlRow(seed)).site_facts).sitemap)).toEqual({
+      fetched: true,
+      file_count: 1,
+      discovered_count: 0,
+      discovered_complete: false,
+      limit_reached: false,
+      unread_count: 1,
+      retries: 1,
+    });
+    expect(await task(setup)).toMatchObject({ status: 'succeeded' });
+    expect((await crawlRow(seed)).discovery_status).toBe('completed');
+    expect(await tasks(seed, 'discover')).toEqual([]);
+    expect((await crawlCoverage(db, await crawlRow(seed))).evidence.reasons).toEqual([
+      'sitemap_documents_unread',
+    ]);
   });
 
   it('bounds the walk by its ceilings and domain, keeps an oversized document unread, and skips llms.txt for a sample', async () => {
@@ -796,14 +844,14 @@ describe('site setup', () => {
     const walked = record((await crawlRow(full)).site_facts);
     // The off-domain entry is never fetched, and the document ceiling leaves s3.xml unwalked.
     expect(walkedPaths).toEqual(['/robots.txt', '/index.xml', '/s1.xml', '/s2.xml']);
-    // s1.xml answered 404 (absent); s2.xml is over the byte cap, so it stays unread.
+    // The index names s1.xml, so its 404 leaves it unread; s2.xml is over the byte cap.
     expect(walked.sitemap).toEqual({
       fetched: true,
       file_count: 1,
       discovered_count: 0,
       discovered_complete: false,
       limit_reached: true,
-      unread_count: 1,
+      unread_count: 2,
     });
   });
 

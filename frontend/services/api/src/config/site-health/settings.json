@@ -140,6 +140,18 @@
     "default": 4,
     "minimum": 1
   },
+  "sitemap_walk_retries": {
+    "env": ["SITE_HEALTH_SITEMAP_WALK_RETRIES"],
+    "type": "int",
+    "default": 2,
+    "minimum": 0
+  },
+  "sitemap_walk_retry_delay_seconds": {
+    "env": ["SITE_HEALTH_SITEMAP_WALK_RETRY_DELAY_SECONDS"],
+    "type": "float",
+    "default": 120.0,
+    "minimum": 0
+  },
   "robots_max_decoded_bytes": {
     "env": ["SITE_HEALTH_ROBOTS_MAX_DECODED_BYTES"],
     "type": "int",

@@ -4,8 +4,9 @@
  * the sitemap tree (`sitemap-walk.ts`), saves every admissible URL it lists to
  * the crawl's inventory, stores their count (the crawl's discovered count, a
  * lower bound when a safety ceiling cut it short) and fills the tracked set's
- * free slots from them; a site without a sitemap starts the HTML walk from the
- * root instead. The root analysis waits only on robots and llms.txt evidence,
+ * free slots from them. A walk with unread documents is retried after a delay;
+ * only a site without a sitemap starts the HTML walk from the root. The root
+ * analysis waits only on robots and llms.txt evidence,
  * so those publish first (with the sitemap marked pending); the inventory then
  * lands in chunked commits and discovery in a final one, all under the same
  * lease. A reclaimed task whose facts are published but still pending resumes
@@ -60,6 +61,8 @@ export function setupSettings(env: SettingSource = process.env) {
     concurrency: Math.max(1, number('sitemap_fetch_concurrency')),
     maxDocuments: number('max_sitemap_documents'),
     maxSiteUrls: number('max_sitemap_urls'),
+    walkRetries: number('sitemap_walk_retries'),
+    walkRetryDelay: number('sitemap_walk_retry_delay_seconds'),
     sitemap: {
       maxDecodedBytes: number('max_sitemap_decoded_bytes'),
       maxUrls: number('max_sitemap_document_urls'),
@@ -219,8 +222,9 @@ async function trackSitemapPages(trx: Database, crawl: Crawl, listed: SitemapUrl
 
 /**
  * Discovery after the walk: a sitemap that listed admissible URLs is the
- * crawl's discovery, its count stored and the tracked set filled from it; a
- * site without one starts the HTML walk from the root (SH-B5).
+ * crawl's discovery, its count stored and the tracked set filled from it; one
+ * that exists but stayed unreadable leaves the crawl what it already knows.
+ * Only a site without a sitemap starts the HTML walk from the root (SH-B5).
  */
 async function discover(
   trx: Database,
@@ -232,6 +236,7 @@ async function discover(
     const admitted = await trackSitemapPages(trx, crawl, walk.listed);
     return { admitted, discovered: walk.discovered, discoveryStatus: 'completed' };
   }
+  if (walk?.unread) return { discoveryStatus: 'completed' };
   await enqueueCrawlTasks(
     trx,
     crawl,
@@ -392,16 +397,40 @@ export async function runSiteSetup(
   let walk: SitemapWalk | null = null;
   if (walks) {
     const found = await sitemapDiscovery({ ctx, claimed, crawl, origin, facts, settings });
-    if (!found) return;
+    if (found.kind === 'lost') return;
+    if (found.kind === 'retry') return deferWalk(ctx, claimed, found);
     ({ walk, facts } = found);
   }
   await persist(ctx, claimed, facts, walk, settings);
 }
 
 /**
+ * A sitemap a document of which went unread is walked again later, from its
+ * seeds: a CDN may serve an index naming children the site has since replaced.
+ * The facts stay pending, so the requeued task resumes at the walk.
+ */
+async function deferWalk(
+  ctx: SiteTaskContext,
+  claimed: SiteTask,
+  retry: { facts: SiteFacts; delaySeconds: number },
+) {
+  await commitTask(ctx, claimed, async (trx, lock) => {
+    const { crawl, task } = await lock();
+    await trx
+      .updateTable('site_crawls')
+      .set({ site_facts: JSON.stringify(retry.facts), updated_at: new Date() })
+      .where('id', '=', crawl.id)
+      .where('workspace_id', '=', crawl.workspace_id)
+      .execute();
+    await settleTask(trx, ctx, task, { kind: 'deferred', delaySeconds: retry.delaySeconds });
+  });
+}
+
+/**
  * A full crawl's sitemap discovery: walk the tree from the declared sitemaps
  * (or the default paths), save every listed URL to the inventory, and fold the
- * counts into the facts. Null when the lease or the crawl was lost meanwhile.
+ * counts into the facts. A walk with unread documents is retried within its
+ * budget before it counts; `lost` when the lease or the crawl was lost meanwhile.
  */
 async function sitemapDiscovery(input: {
   ctx: SiteTaskContext;
@@ -418,11 +447,19 @@ async function sitemapDiscovery(input: {
       ? declared.filter((url): url is string => typeof url === 'string')
       : crawlPolicy.sitemap_default_paths.map((path) => `${origin}${path}`);
   const walk = await walkSitemaps(ctx, crawl, seeds, settings);
+  const pending = record(input.facts.sitemap);
+  const retries = Number(pending.retries) || 0;
+  if (walk.unread && crawl.discovery_status === 'pending' && retries < settings.walkRetries)
+    return {
+      kind: 'retry' as const,
+      facts: { ...input.facts, sitemap: { ...pending, retries: retries + 1 } },
+      delaySeconds: settings.walkRetryDelay * 2 ** retries,
+    };
   if (
     crawl.discovery_status === 'pending' &&
     !(await saveSitemapInventory(ctx, claimed, walk.listed))
   )
-    return null;
+    return { kind: 'lost' as const };
   const facts: SiteFacts = {
     ...input.facts,
     sitemap: {
@@ -434,7 +471,8 @@ async function sitemapDiscovery(input: {
       limit_reached: walk.limitReached,
       // Documents no answer settled: without a read one, "No sitemap" stays unknown.
       unread_count: walk.unread,
+      ...(retries ? { retries } : {}),
     },
   };
-  return { walk, facts };
+  return { kind: 'walked' as const, walk, facts };
 }

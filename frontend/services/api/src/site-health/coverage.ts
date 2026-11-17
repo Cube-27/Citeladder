@@ -220,13 +220,15 @@ async function sitemapCoverage(db: Database, crawl: Crawl) {
     .where('e.project_id', '=', crawl.project_id)
     .where('e.crawl_id', '=', crawl.id)
     .executeTakeFirstOrThrow();
-  if (!members.listed) return null;
+  const unreadDocuments = Number(sitemap.unread_count) || 0;
+  // A sitemap that stayed unreadable is still the crawl's discovery: no HTML walk replaced it.
+  if (!members.listed && !unreadDocuments) return null;
   return {
     // A stored zero stays visible; only a missing count falls back to the entries.
     discovered:
       typeof sitemap.discovered_count === 'number' ? sitemap.discovered_count : members.listed,
     limitReached: sitemap.limit_reached === true,
-    unreadDocuments: Number(sitemap.unread_count) || 0,
+    unreadDocuments,
     tracked: members.tracked,
   };
 }
