@@ -198,7 +198,7 @@ export function SetupStep({
         </header>
         <section
           aria-labelledby={headingId}
-          className="bg-surface border-rule rounded-card shadow-card flex min-w-0 flex-col gap-[var(--card-padding)] border p-[var(--card-padding)]"
+          className="bg-surface rounded-card shadow-card flex min-w-0 flex-col gap-[var(--card-padding)] p-[var(--card-padding)]"
         >
           {children}
         </section>

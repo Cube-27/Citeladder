@@ -19,7 +19,7 @@ import { cn } from '@/lib/utils';
 /**
  * The four buttons. Actions are ink, never the accent:
  * `primary` is the one ink-filled action a view is for, `secondary` a
- * `surface` button with the soft `control-edge` and `shadow-control` (its
+ * `control-fill` button with the soft `control-edge` and `shadow-control` (its
  * words name it, so the edge needs no 3:1), `quiet` no edge (`ink-2`, `ink`
  * on hover) for toolbars, rows and navigation, `danger` the secondary face
  * with a crimson label (filled only in a confirm dialog, `danger-confirm`).
@@ -39,7 +39,7 @@ const HOVER_OVERLAY =
   'not-aria-pressed:not-data-[state=open]:not-disabled:hover:overlay-hover aria-pressed:overlay-pressed data-[state=open]:overlay-pressed not-disabled:active:overlay-pressed';
 
 /** The labelled button's soft edge; the website keeps its control line (globals.css). */
-const SOFT_EDGE = 'bg-surface border border-control-edge shadow-control';
+const SOFT_EDGE = 'bg-control-fill border border-control-edge shadow-control';
 
 // The app's one disabled look (well fill, no edge) is in globals.css, after
 // every variant. The website keeps its 45% disabled face.

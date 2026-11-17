@@ -6,15 +6,15 @@ import { cn } from '@/lib/utils';
 
 /**
  * What a section draws (law 5, surfaces not rules):
- *   `card`  — the default: a `surface` card with a 1px `rule` edge, the card
- *             radius and `shadow-card`, its head inside, 16 padding.
+ *   `card`  — the default: a `surface` card with no edge, the card radius
+ *             and `shadow-card`, its head inside, 16 padding.
  *   `group` — no card: a head on the ground over a row or grid of cards
  *             (stat cards, a queue of slips, widgets), 32 below the block above.
  */
 export type SectionVariant = 'card' | 'group';
 
 const SECTION_FACE: Record<SectionVariant, string> = {
-  card: 'bg-surface text-ink border-rule rounded-card shadow-card border p-[var(--card-padding)]',
+  card: 'bg-surface text-ink rounded-card shadow-card p-[var(--card-padding)]',
   group: '',
 };
 

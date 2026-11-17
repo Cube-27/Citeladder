@@ -4,8 +4,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * Card — the resting container: a `surface` box on the page ground that
- * groups one thing (a chart, a table, a form), edged by one 1px `line` border
- * and no shadow, since nothing at rest is lifted. `radius-lg` and the card's
+ * groups one thing (a chart, a table, a form). Nobody clicks it, so it has no
+ * edge: its fill is a step above the ground. `radius-lg` and the card's
  * inset on the box itself, so content that owns its edges (a table, a
  * scrolling list) sits in the same inset as text.
  *
@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
  * of its own: a flex column would re-flow every card and put an overflow
  * boundary between a sticky child and its scroll container.
  */
-const CARD_FACE = 'bg-surface text-ink border-rule rounded-card border';
+const CARD_FACE = 'bg-surface text-ink rounded-card shadow-card';
 
 /** The card, for a semantic element that is not a `section` (a list item, a link). */
 const cardClasses = () => cn('surface-card p-[var(--card-padding)]', CARD_FACE);

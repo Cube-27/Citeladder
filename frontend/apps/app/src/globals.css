@@ -133,6 +133,9 @@
   --color-rule: var(--color-line);
   --color-control-line: var(--color-line-control);
   --color-control-edge: var(--color-line);
+  /* The fill of a labelled control (secondary button, select, filter trigger):
+     the surface, except in the app's dark, where it is the well. */
+  --color-control-fill: var(--color-surface);
   --color-ink-2: var(--color-ink-secondary);
   --color-accent-text: var(--color-accent-ink);
   --color-accent-wash: var(--color-accent-soft);
@@ -480,28 +483,29 @@
   --shadow-sheet: 0 1px 2px rgb(0 0 0 / 40%), 0 16px 40px -8px rgb(0 0 0 / 60%);
 }
 
-/* The app's dark: designed, not inverted. The ground
-   is a zero-chroma near-black, sheets are lighter than the ground, wells lighter still,
-   and section rules step down to `ink-2` so they do not glare. It rebinds
-   every literal the app's light block below sets: that block follows the
-   system's dark at the same specificity, so it would otherwise win here.
-   The website and docs keep the system's dark above. */
+/* The app's dark: designed, not inverted. Linear's near-blacks (sampled
+   2026-11-17), with our shell kept: the chrome is a step lighter than the
+   ground, not a darker frame. It rebinds every literal the app's light block
+   below sets: that block follows the system's dark at the same specificity,
+   so it would otherwise win here. The website and docs keep the system's dark above. */
 :root[data-theme='dark']:not([data-public-surface]) {
-  /* Each layer steps lighter than the one beneath, so it reads without its
-     shadow; the well is a tint over the card, lighter than it. */
-  --color-ground: #181818;
-  --color-chrome: #1d1d1d;
-  --color-surface: #222222;
-  --color-well: #2d2d2d;
-  --color-raised: #272727;
-  /* Ink at a fixed alpha, so a hairline steps evenly over every layer. */
-  --color-rule: rgb(255 255 255 / 9%);
+  /* Each layer steps lighter than the one beneath, so a surface reads by its
+     fill alone, with no edge and no shadow. */
+  --color-ground: #121213;
+  --color-chrome: #161617;
+  --color-surface: #1a1a1b;
+  --color-raised: #1f1f21;
+  --color-well: #232325;
+  --color-control-fill: var(--color-well);
+  --color-rule: #252526;
   --color-control-line: #7f7f7f;
-  --color-control-edge: #3c3c3c;
+  --color-control-edge: #2f3033;
+  --color-chart-grid: #2a2a2c;
+  --nav-current-fill: var(--color-well);
   --color-ink: #e3e3e3;
   --color-ink-2: #b0b0b0;
   --color-ink-hover: #c8c8c8;
-  --color-on-ink: #181818;
+  --color-on-ink: #121213;
   --color-accent: #ff6a33;
   --color-accent-text: #ff8a5c;
   /* Washes sit 1.05 to 1.2 from the ground and stay quiet: a notice is never
@@ -519,9 +523,11 @@
   --color-data-rival-3: #997bf0;
   --color-data-rival-4: #4fc4b5;
   --color-data-other: #8f8f8f;
-  --color-state-hover: rgb(255 255 255 / 6%);
-  --color-state-pressed: rgb(255 255 255 / 10%);
-  --color-state-selected: rgb(255 255 255 / 7%);
+  /* On these darker grounds a smaller step reads: selected over the chrome
+     lands on the well (#232325), hover one step short of it. */
+  --color-state-hover: rgb(255 255 255 / 4%);
+  --color-state-pressed: rgb(255 255 255 / 8%);
+  --color-state-selected: rgb(255 255 255 / 6%);
   --color-scrim: rgb(0 0 0 / 60%);
   --shadow-card: none;
   --shadow-control: 0 1px 2px rgb(0 0 0 / 0.35);
@@ -1301,6 +1307,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .prose-content .prose-table-frame table { margin: 0; }
   /* In an Agent reply the prose stays on the ground; a table sits in a card. */
   :root:not([data-public-surface]) [data-turn-rail] .prose-table-frame {
+    border: 0;
     background: var(--color-surface);
     border-radius: var(--radius-card);
     box-shadow: var(--shadow-card);
@@ -1583,12 +1590,13 @@ a.focus-ring:active .type-caption {
   outline: none;
 }
 
-/* Containers. A container is a card, a panel or a dialog or drawer:
-   `surface` with one 1px `line` border. What sits inside one never draws a
-   second edge (a table drops its frame) and an inset inside one is the
-   sunken fill. On the ground there is no inset (sunken on paper is 1.07:1),
-   so an inset placed there (`.surface-inset`: a neutral callout, an inline
-   empty state) becomes a bordered container instead. */
+/* Containers. On the website a container is `surface` with one 1px `line`
+   border. In the app a surface nobody clicks (a card, a section, a table, a
+   state frame) has no edge: it is a fill one step above the ground, and
+   only clickable things draw an edge. What sits inside a container never
+   draws a second frame, and an inset inside one is the sunken fill; on the
+   ground an inset (`.surface-inset`: a neutral callout, an inline empty
+   state) is a surface instead. */
 .table-frame {
   border: 1px solid var(--color-rule);
 }
@@ -1602,6 +1610,15 @@ a.focus-ring:active .type-caption {
   border: 1px solid var(--color-rule);
   background: var(--color-surface);
 }
+:root:not([data-public-surface]) .surface-inset {
+  border-color: transparent;
+}
+:root:not([data-public-surface])
+  .surface-inset:not(
+    :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog']) *
+  ) {
+  box-shadow: var(--shadow-card);
+}
 
 :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   .surface-inset {
@@ -1611,16 +1628,14 @@ a.focus-ring:active .type-caption {
 
 /* A card never sits in a card (2.4). Inside a card, a dialog or a drawer, a
    card or a slip steps down to the inset, and a card section to a plain group
-   (no fill, edge, shadow or padding of its own). */
+   (no fill, shadow or padding of its own). A clickable slip keeps its edge. */
 :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   :is(.surface-card, .surface-slip) {
-  border-color: transparent;
   background: var(--color-well);
   box-shadow: none;
 }
 :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   [data-section='card'] {
-  border-color: transparent;
   background: transparent;
   box-shadow: none;
   padding: 0;
@@ -1724,7 +1739,7 @@ a.focus-ring:active .type-caption {
   color: var(--color-on-ink);
 }
 [data-demoted] [data-button-variant] {
-  background-color: var(--color-surface);
+  background-color: var(--color-control-fill);
   border-color: var(--color-control-edge);
   box-shadow: var(--shadow-control);
   color: var(--color-ink);
@@ -1969,7 +1984,7 @@ label {
   --data-table-identity-min: 25ch;
 }
 
-/* DataTable is a card: surface, a rule edge, radius 8 and the card shadow.
+/* DataTable is a card: surface, no edge, radius 8 and the card shadow.
    It clips its own corners, so a head well meets the rounded edge with no
    radius of its own (`clip`, not `hidden`: no scroll container, so sticky
    heads still pin). Inside another container it draws no second card: it
@@ -1978,7 +1993,6 @@ label {
 :root:not([data-public-surface]) [data-data-table] {
   --table-ground: var(--color-surface);
   background: var(--color-surface);
-  border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   overflow: clip;
@@ -1987,7 +2001,6 @@ label {
   :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   [data-data-table] {
   margin-inline: calc(var(--card-padding) * -1);
-  border: 0;
   border-radius: 0;
   box-shadow: none;
   background: transparent;
@@ -2017,7 +2030,6 @@ label {
   ) {
   --table-ground: var(--color-surface);
   background: var(--color-surface);
-  border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
 }
@@ -2131,7 +2143,6 @@ label {
   --state-title-gap: 16px;
   --state-action-gap: 16px;
   background: var(--color-surface);
-  border: 1px solid var(--color-rule);
   border-radius: var(--radius-card);
   box-shadow: var(--shadow-card);
   padding: 24px;
@@ -2149,7 +2160,6 @@ label {
   --state-title-gap: 8px;
   --state-action-gap: 12px;
   background: none;
-  border: 0;
   border-radius: 0;
   box-shadow: none;
   padding: 16px;
@@ -2387,14 +2397,19 @@ label {
     align-self: center;
   }
 }
-/* The edge is an inset shadow, so 16 padding makes an 88 card (96 with a ring). */
+/* On the ground a figure is a card with no edge; a pressable one keeps the
+   control edge, inset, so 16 padding still makes an 88 card. */
 :root:not([data-public-surface]) :is([data-figure-cell], [data-figure-lead]) {
   padding: 16px;
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
-  box-shadow:
-    inset 0 0 0 1px var(--color-rule),
-    var(--shadow-card);
+  box-shadow: var(--shadow-card);
+}
+:root:not([data-public-surface])
+  [data-figure-cell][data-pressable]:not(
+    :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog']) *
+  ) {
+  box-shadow: inset 0 0 0 1px var(--color-control-edge);
 }
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])

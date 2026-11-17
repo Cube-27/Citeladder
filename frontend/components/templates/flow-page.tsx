@@ -62,7 +62,7 @@ export function FlowPage({
         aria-label={label}
         className="max-w-flow mx-auto flex w-full flex-1 flex-col px-[var(--content-gutter)] pt-[max(var(--flow-gap),calc(20dvh-var(--masthead-height)))] pb-[var(--flow-gap)] [--control-md:var(--control-lg)]"
       >
-        <div className="bg-surface border-rule rounded-overlay shadow-card flex flex-col gap-4 border p-[var(--page-top-gap)]">
+        <div className="bg-surface rounded-overlay shadow-card flex flex-col gap-4 p-[var(--page-top-gap)]">
           <p className={textRole('captionStrong')}>{label}</p>
           <div className="flex flex-col">{children}</div>
         </div>

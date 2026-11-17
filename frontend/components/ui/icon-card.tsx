@@ -12,7 +12,7 @@ import { textRole } from '@/components/ui/typography';
  * The link's underline is clear at rest and inks on hover and focus-visible.
  */
 export const ICON_CARD = slipClasses(
-  'focus-ring-inset hover:overlay-hover flex w-full items-start gap-4 underline underline-offset-3 decoration-transparent hover:decoration-current focus-visible:decoration-current',
+  'border-control-edge border focus-ring-inset hover:overlay-hoverflex w-full items-start gap-4 underline underline-offset-3 decoration-transparent hover:decoration-current focus-visible:decoration-current',
 );
 
 export function IconCardContent({
