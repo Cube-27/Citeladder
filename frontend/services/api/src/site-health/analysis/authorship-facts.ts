@@ -43,6 +43,8 @@ const attributeTokens = (node: HtmlElement) =>
     ['class', 'id', 'itemprop', 'rel']
       .map((name) => attribute(node, name))
       .join(' ')
+      // CSS-module and camelCase names (`blogHeaderAuthorName`) carry their words as humps.
+      .replaceAll(/([a-z0-9])([A-Z])/gu, '$1 $2')
       .toLowerCase()
       .split(/[^a-z0-9]+/u)
       .filter(Boolean),

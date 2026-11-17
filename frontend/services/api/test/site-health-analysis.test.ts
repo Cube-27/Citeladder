@@ -166,6 +166,15 @@ describe('page checklist', () => {
       `<main><h1>Notes</h1><div class='author-card'><h3>Jane Doe</h3></div><p>Body.</p></main>`,
     );
     expect(authored.authorship.visible_byline).toBe('Jane Doe');
+    // A CSS-module camelCase class still marks the author container.
+    const moduled = facts(
+      `<main><h1>Notes</h1><div class='editorial-module__oN9t7G__blogHeaderAuthorName'>
+      <a href='/authors/jane-doe'>Jane Doe</a></div><p>Body.</p></main>`,
+    );
+    expect(moduled.authorship).toMatchObject({
+      visible_byline: 'Jane Doe',
+      visible_profile_url: '/authors/jane-doe',
+    });
   });
 
   it('reports actual primary heading skips and abstains when the outline is unavailable', () => {
