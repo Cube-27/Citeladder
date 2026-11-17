@@ -181,6 +181,10 @@ this plan's review conversation (2026-11-12).
   as a backstop. The owner first chose "Progress + 12 h hard cap" at 15
   minutes, then 30 minutes once a runner gap was shown to wait up to the
   20-minute tick.
+- **Live score card (owner, in chat, 2026-11-17).** While a crawl runs, the
+  card is the SQL average of each analyzed page's stored provisional score
+  ("Average stored page scores"); the final score at the end is still the
+  full rebuild.
 
 Not asked separately: Q6 (old baselines) is moot under SH-B6. Q7 (schema) is an
 engineering choice; see [below](#engineering-defaults).

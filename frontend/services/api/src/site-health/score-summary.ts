@@ -30,16 +30,12 @@ export async function lockProfile(db: Database, crawl: Crawl) {
 }
 
 /**
- * The selected pages' analyses, evaluations and tasks a score reads. A
- * snapshot (`latest`) reads each page's latest audit as the crawl shows it
- * (`pageAuditsSql`, SH-B9), each with the task of the crawl that audited it;
- * an active crawl's provisional summary reads only its own analyses.
+ * The selected pages' analyses, evaluations and tasks a snapshot's score
+ * reads: each page's latest audit as the crawl shows it (`pageAuditsSql`,
+ * SH-B9), each with the task of the crawl that audited it. A running crawl's
+ * provisional card averages stored page scores instead (`live-score.ts`).
  */
-export async function loadMeasurementProjection(
-  db: Database,
-  crawl: Crawl,
-  { latest }: { latest: boolean },
-) {
+export async function loadMeasurementProjection(db: Database, crawl: Crawl) {
   const members = await db
     .selectFrom('monitored_site_urls')
     .select('site_url_id')
@@ -62,11 +58,7 @@ export async function loadMeasurementProjection(
     .distinctOn('p.site_url_id')
     .where('p.workspace_id', '=', crawl.workspace_id)
     .where('p.project_id', '=', crawl.project_id)
-    .where((eb) =>
-      latest
-        ? eb('p.id', 'in', sql<string>`(select v.analysis_id from (${pageAuditsSql(crawl)}) v)`)
-        : eb('p.crawl_id', '=', crawl.id),
-    )
+    .where('p.id', 'in', sql<string>`(select v.analysis_id from (${pageAuditsSql(crawl)}) v)`)
     .where('p.status', '=', 'completed')
     .where('p.site_url_id', '=', sql<string>`any(${selectedIds}::uuid[])`)
     .orderBy('p.site_url_id')

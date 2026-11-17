@@ -1,10 +1,6 @@
 /** The terminal snapshot and matching crawl summary publish in one transaction. */
 import { randomUUID } from 'node:crypto';
-import {
-  isActiveCrawl,
-  isTerminalCrawl,
-  USABLE_CRAWL_STATUSES,
-} from '@citeladder/contracts/site-health';
+import { isActiveCrawl, USABLE_CRAWL_STATUSES } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -18,6 +14,7 @@ import {
   scoreSummary,
   type MeasurementProjection,
 } from './score-summary.ts';
+import { liveScoreSummary } from './live-score.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
 import { readinessDiagnostic, webDiagnostic } from './snapshot-diagnostics.ts';
 import { snapshotEligibility } from './snapshot-eligibility.ts';
@@ -192,7 +189,7 @@ async function publishScoreSummary(
 export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEmpty = false) {
   if (isPageRerun(crawl)) return false;
   await lockProfile(db, crawl);
-  const projection = await loadMeasurementProjection(db, crawl, { latest: true });
+  const projection = await loadMeasurementProjection(db, crawl);
   if (
     !persistEmpty &&
     !projection.rows.length &&
@@ -267,7 +264,7 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
     .executeTakeFirst();
   if (!snapshot) return false;
   await lockProfile(db, crawl);
-  const projection = await loadMeasurementProjection(db, crawl, { latest: true });
+  const projection = await loadMeasurementProjection(db, crawl);
   const own = projection.evaluations.map((row) => row.id);
   const architecture = await architectureEvaluationIds(db, crawl);
   const evaluationIds = [...new Set([...own, ...architecture])];
@@ -339,27 +336,13 @@ export async function addArchitectureIssues(db: Database, crawl: Crawl) {
   return true;
 }
 
-async function liveScoreSummary(db: Database, crawl: Crawl) {
-  if (isPageRerun(crawl)) return null;
-  // A provisional summary scores the crawl's own analyzed pages (invariant 6).
-  const projection = await loadMeasurementProjection(db, crawl, { latest: false });
-  if (!projection.rows.length) return null;
-  const issues = await snapshotIssues(
-    db,
-    crawl,
-    projection.evaluations.map((row) => row.id),
-  );
-  const payload = scoreSummary(projection, issues.issue_count);
-  if (!isTerminalCrawl(crawl.status)) {
-    for (const row of [payload, ...Object.values(payload.by_page_kind)]) {
-      row.web_fundamentals_state = 'limited_evidence';
-      row.aeo_measurement_state = 'limited_evidence';
-    }
-  }
-  return payload;
+/** A provisional summary scores the crawl's own analyzed pages (invariant 6); a page rerun keeps none. */
+async function provisionalSummary(db: Database, crawl: Crawl) {
+  return isPageRerun(crawl) ? null : liveScoreSummary(db, crawl);
 }
 
-function writeScoreSummary(db: Database, crawl: Crawl, payload: ReturnType<typeof scoreSummary>) {
+type LiveSummary = NonNullable<Awaited<ReturnType<typeof liveScoreSummary>>>;
+function writeScoreSummary(db: Database, crawl: Crawl, payload: LiveSummary) {
   return db
     .updateTable('site_crawls')
     .set({ score_summary: JSON.stringify(payload) })
@@ -369,16 +352,15 @@ function writeScoreSummary(db: Database, crawl: Crawl, payload: ReturnType<typeo
 }
 
 export async function refreshLiveScoreSummary(db: Database, crawl: Crawl) {
-  const payload = await liveScoreSummary(db, crawl);
+  const payload = await provisionalSummary(db, crawl);
   if (payload) await writeScoreSummary(db, crawl, payload);
 }
 
 /**
- * The cadence refresh while a crawl runs. The whole-crawl projection is read
- * in its own transaction, outside the crawl lock every task commit takes, and
- * the lock is held only for the write, which a crawl that settled meanwhile
- * skips. Two overlapping refreshes may land out of order; the next one or the
- * terminal summary replaces either.
+ * The cadence refresh while a crawl runs. The live card is read outside the
+ * crawl lock every task commit takes, and the lock is held only for the write,
+ * which a crawl that settled meanwhile skips. Two overlapping refreshes may
+ * land out of order; the next one or the terminal summary replaces either.
  */
 export async function refreshRunningScoreSummary(
   db: Database,
@@ -391,7 +373,7 @@ export async function refreshRunningScoreSummary(
     .where('id', '=', task.crawl_id)
     .executeTakeFirst();
   if (!crawl || !isActiveCrawl(crawl.status)) return;
-  const payload = await db.transaction().execute((trx) => liveScoreSummary(trx, crawl));
+  const payload = await provisionalSummary(db, crawl);
   if (!payload) return;
   await db.transaction().execute(async (trx) => {
     const locked = await trx
