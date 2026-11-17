@@ -142,7 +142,11 @@ function StepMark({ index, current }: Readonly<{ index: number; current: number 
       aria-hidden
       className={textRole(
         'caption',
-        cn(MARK, 'border', index === current ? 'border-ink text-ink' : 'border-rule text-ink-2'),
+        cn(
+          MARK,
+          'border',
+          index === current ? 'border-control-line text-ink' : 'border-rule text-ink-2',
+        ),
       )}
     >
       {index + 1}
