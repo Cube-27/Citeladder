@@ -57,10 +57,10 @@ const unavailableStatus = (status: number) => status === 408 || status === 429 |
  * `unread` when no answer settled it (no response, a timeout, a rate limit or
  * a server error), which is no evidence either way.
  */
+type Unanswered = { kind: 'absent' | 'unread'; status: number | null };
 type SitemapRead =
   | { kind: 'page'; page: Awaited<ReturnType<SiteTaskContext['fetcher']['acquirer']['fetch']>> }
-  | { kind: 'absent' }
-  | { kind: 'unread' };
+  | Unanswered;
 
 async function sitemapDocument(
   ctx: SiteTaskContext,
@@ -85,13 +85,14 @@ async function sitemapDocument(
       },
     });
     if (page.status >= 200 && page.status < 300) return { kind: 'page', page };
-    return { kind: unavailableStatus(page.status) ? 'unread' : 'absent' };
+    return { kind: unavailableStatus(page.status) ? 'unread' : 'absent', status: page.status };
   } catch (error) {
     // The walk counts the attempt against its budget and moves on to the next document.
     logFetchFailure(ctx, 'sitemap', error, startedAt);
     // A response that arrived and was refused (say, an HTML page) is the server's answer.
     const refused = error instanceof FetchError ? error.status : null;
-    return { kind: refused !== null && !unavailableStatus(refused) ? 'absent' : 'unread' };
+    const absent = refused !== null && !unavailableStatus(refused);
+    return { kind: absent ? 'absent' : 'unread', status: refused };
   }
 }
 
@@ -101,10 +102,7 @@ async function sitemapDocument(
  * a parse that overran its time limit or a body over the byte cap settled
  * nothing (`unread`).
  */
-type SitemapAnswer =
-  | { kind: 'parsed'; document: SitemapDocument }
-  | { kind: 'absent' }
-  | { kind: 'unread' };
+type SitemapAnswer = { kind: 'parsed'; document: SitemapDocument } | Unanswered;
 
 async function readSitemap(
   ctx: SiteTaskContext,
@@ -113,16 +111,16 @@ async function readSitemap(
 ): Promise<SitemapAnswer> {
   const read = await sitemapDocument(ctx, url, settings);
   if (read.kind !== 'page') return read;
+  const { body, contentType, status } = read.page;
   try {
-    const { body, contentType } = read.page;
     return {
       kind: 'parsed',
       document: await parseSitemapAsync(body, contentType, settings.sitemap),
     };
   } catch (error) {
-    if (error instanceof SitemapTooLargeError) return { kind: 'unread' };
-    if (error instanceof SitemapParseError) return { kind: 'absent' };
-    if (error instanceof InterpretationTimeoutError) return { kind: 'unread' };
+    if (error instanceof SitemapTooLargeError) return { kind: 'unread', status };
+    if (error instanceof SitemapParseError) return { kind: 'absent', status };
+    if (error instanceof InterpretationTimeoutError) return { kind: 'unread', status };
     throw error;
   }
 }
@@ -141,6 +139,7 @@ export async function walkSitemaps(
 ) {
   const scope = crawlScope(crawl);
   const walk: Walk = {
+    crawlId: crawl.id,
     collector: new SitemapCollector({
       limits: settings.sitemap,
       maxSiteUrls: settings.maxSiteUrls,
@@ -168,9 +167,11 @@ export async function walkSitemaps(
       Math.min(settings.concurrency, settings.maxDocuments - attempted),
     );
     attempted += wave.length;
-    const pages = await Promise.all(wave.map(({ url }) => readSitemap(ctx, url, settings))); // NOSONAR -- Waves are bounded and sequential: a wave's references feed the next one.
+    const answers = await Promise.all(
+      wave.map(async (entry) => ({ entry, read: await readSitemap(ctx, entry.url, settings) })),
+    ); // NOSONAR -- Waves are bounded and sequential: a wave's references feed the next one.
     ctx.signal.throwIfAborted();
-    for (const [index, entry] of wave.entries()) collect(walk, entry, pages[index]);
+    for (const { entry, read } of answers) collect(walk, entry, read);
   }
   // A ceiling or a reference left unwalked makes the count a lower bound, as an unread document does.
   const limitReached = walk.queue.length > 0 || walk.collector.truncated;
@@ -186,19 +187,28 @@ export async function walkSitemaps(
 export type SitemapWalk = Awaited<ReturnType<typeof walkSitemaps>>;
 
 type Walk = {
+  crawlId: string;
   collector: SitemapCollector;
   /** How many documents were read as sitemaps. */
   files: number;
   queued: Set<string>;
   queue: { url: string; depth: number }[];
-  /** Documents no answer settled: unfetched, timed out, rate-limited or failing. */
+  /** Documents no answer settled (unfetched, timed out, rate-limited or failing), or an index's child refused. */
   unread: number;
 };
 
 /** Record one answer and queue its unseen child references. */
-function collect(walk: Walk, { url, depth }: { url: string; depth: number }, read?: SitemapAnswer) {
-  if (read?.kind !== 'parsed') {
-    if (read?.kind !== 'absent') walk.unread++;
+function collect(walk: Walk, { url, depth }: { url: string; depth: number }, read: SitemapAnswer) {
+  if (read.kind !== 'parsed') {
+    // A child its index declares but the server refuses is a stale or broken index, not a missing sitemap.
+    if (read.kind === 'absent' && depth === 0) return;
+    walk.unread++;
+    logger.warning('site_health_sitemap_unread', {
+      crawl_id: walk.crawlId,
+      depth,
+      answer: read.kind,
+      status_code: read.status,
+    });
     return;
   }
   const refs = walk.collector.add(url, read.document, depth);

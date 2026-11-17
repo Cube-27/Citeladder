@@ -276,11 +276,18 @@ walk short ("at least N"); `limit_reached` and
 `unread_count` say which (coverage reasons `sitemap_limit_reached` and
 `sitemap_documents_unread`). A document is unread when no answer settled it
 (no response, a timeout, a 408, 429 or 5xx, or a body over
-`max_sitemap_decoded_bytes`, the 50 MB standard); a 4xx, a response refused as no
-sitemap type, or a body that does not parse is the server's answer that it
-serves none. Discovery is free, has no plan cap and no manual trigger, and
-fetches no page. A site whose sitemaps list nothing falls back to an HTML walk:
-`site_setup` queues the root's `discover` and discovery runs. Eligible
+`max_sitemap_decoded_bytes`, the 50 MB standard). For a seed, a 4xx, a response
+refused as no sitemap type, or a body that does not parse is the server's answer
+that it serves none; a child its index names that answers so is unread, since a
+CDN can serve a cached index naming children the site has since replaced.
+Discovery is free, has no plan cap and no manual trigger, and fetches no page.
+A walk with an unread document runs again from its seeds after
+`sitemap_walk_retry_delay_seconds`, doubling, up to `sitemap_walk_retries`
+times (the task is deferred with the sitemap still `pending`); then it counts
+what it read. The HTML walk is a fallback only for a site whose sitemaps were
+all answered and list nothing (owner, 2026-11-17): a sitemap that stayed
+unreadable completes discovery with the pages already known.
+Otherwise `site_setup` queues the root's `discover` and discovery runs. Eligible
 candidates enter `site_discovery_frontier`, up to `max_frontier_urls`; the walk
 admits the best pending rows up to its bound (the plan's discovery cap, at
 least the page limit), and each admission queues a `discover`. The root carries

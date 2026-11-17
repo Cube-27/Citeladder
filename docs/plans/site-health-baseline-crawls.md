@@ -131,7 +131,11 @@ this plan's review conversation (2026-11-12).
   - Every full crawl re-reads it. There is no manual discovery.
   - The discovered count is display only.
   - An HTML walk runs only when the site has no sitemap. That site also gets a
-    "No sitemap" issue.
+    "No sitemap" issue. A sitemap that exists but can't be read is retried,
+    then the crawl analyzes what it knows and marks coverage partial; it never
+    starts an HTML walk. (Owner, in chat, 2026-11-17: "link crawling which
+    should be a fallback no worst case scenarios", choosing "Retry, then
+    analyze known".)
 - **SH-B6, tracked pages.**
   - The system picks them by value tier in a stable order.
   - The person can't change them, and they are never re-picked.
