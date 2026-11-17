@@ -1986,9 +1986,6 @@ label {
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   [data-data-table] {
-  /* The container's padding (or its header's gap) is the header bar's top
-     and the footer bar's bottom, so the bars add none there. */
-  --data-table-bar-outer: 0px;
   margin-inline: calc(var(--card-padding) * -1);
   box-shadow: none;
   background: transparent;

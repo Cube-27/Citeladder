@@ -29,6 +29,7 @@ import {
 import { Table, TableTitleLinesContext, type TableMinWidth } from '@/components/ui/table';
 import { textRole } from '@/components/ui/typography';
 import { cn } from '@/lib/utils';
+import { InCardContext } from '@/components/ui/section';
 import { StateBlock, StateHeadingLevelContext } from '@/components/ui/state-block';
 
 export type { DataTableColumn, DataTableSelection, DataTableState };
@@ -374,13 +375,14 @@ function DataTableFoot({
   pager,
   steppers,
 }: Readonly<{ footer: ReactNode; pager: DataTablePager | undefined; steppers: ReactNode }>) {
+  const outer = useBarOuter();
   if (!pager && !footer) return null;
   return (
     <div
       data-data-table-foot=""
       className={cn(
         'flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 pt-3',
-        BAR_OUTER.foot,
+        outer.foot,
       )}
     >
       {footer ? (
@@ -433,11 +435,10 @@ function pagingLayout(
  * 12 over the 32 title row puts the title 16 from the top, as from the left;
  * the footer bar takes the same 12 round its 32 control row.
  */
-const BAR_OUTER = {
-  // Zero inside a container, whose padding is that side (globals.css).
-  head: 'pt-[var(--data-table-bar-outer,12px)]',
-  foot: 'pb-[var(--data-table-bar-outer,12px)]',
-} as const;
+function useBarOuter(): { head: string; foot: string } {
+  // Inside a card section, its padding (or its header's gap) is that side.
+  return useContext(InCardContext) ? { head: '', foot: '' } : { head: 'pt-3', foot: 'pb-3' };
+}
 
 function DataTableHeader({
   title,
@@ -456,6 +457,7 @@ function DataTableHeader({
   actions?: ReactNode;
   steppers: ReactNode;
 }>) {
+  const outer = useBarOuter();
   if (!title && !toolbar && !description && !actions) {
     return steppers ? <div className="flex justify-end px-4 pt-2">{steppers}</div> : null;
   }
@@ -472,11 +474,11 @@ function DataTableHeader({
     </>
   );
   if (!actions)
-    return <header className={cn('grid min-w-0 gap-1 px-4 pb-3', BAR_OUTER.head)}>{head}</header>;
+    return <header className={cn('grid min-w-0 gap-1 px-4 pb-3', outer.head)}>{head}</header>;
   // As a section head: the switch sits level with the title, and wraps under the caption when narrow.
   return (
     <header
-      className={cn('flex flex-wrap items-start justify-between gap-2 px-4 pb-3', BAR_OUTER.head)}
+      className={cn('flex flex-wrap items-start justify-between gap-2 px-4 pb-3', outer.head)}
     >
       <div className="grid min-w-0 flex-1 basis-60 grid-cols-[minmax(0,1fr)] gap-1">{head}</div>
       <div className="flex max-w-full min-w-0 flex-wrap items-center gap-2">{actions}</div>

@@ -141,24 +141,29 @@ export function RungTrail({
 type RowSize = 'md' | 'lg';
 
 /**
- * A row's geometry per size: the line its rung and glyph centre on, the gap
- * under it (the connector bridges it), and the label's role. The `lg` label
- * (16/24) keeps one role and only gains weight while running, so a step
- * changing state never changes its row's height.
+ * A row's geometry per size: the line its rung and glyph centre on, the rail
+ * and how its connector reaches the next row, and the label's role. `md`
+ * bridges its 8 gap from a one-line rail; `lg`'s rail stretches down the
+ * row, its 12 gap sitting under the label. The `lg` label (16/24) keeps one
+ * role and only gains weight while running, so a row never changes height.
  */
 const ROW_SIZE = {
   md: {
     row: 'pb-2',
+    rail: 'h-5',
     line: 'h-5',
     railTop: 'top-2.5',
-    bridge: '-bottom-2',
+    bridge: '-bottom-2 h-auto',
+    gap: '',
     label: (running: boolean) => textRole(running ? 'label' : 'body'),
   },
   lg: {
-    row: 'pb-3',
+    row: '',
+    rail: '',
     line: 'h-6',
     railTop: 'top-3',
-    bridge: '-bottom-3',
+    bridge: 'bottom-0',
+    gap: 'pb-3',
     label: (running: boolean) => textRole('prose', cn('leading-6', running && 'type-emphasis')),
   },
 } as const satisfies Record<RowSize, unknown>;
@@ -180,20 +185,22 @@ function RungRow({
         geometry.row,
       )}
     >
-      <span aria-hidden className={cn('relative flex items-center justify-center', geometry.line)}>
+      <span aria-hidden className={cn('relative flex justify-center', geometry.rail)}>
         <span
           className={cn(
             'bg-rule absolute left-1/2 w-px -translate-x-1/2',
             first ? geometry.railTop : 'top-0',
-            last ? 'h-0' : cn(geometry.bridge, 'h-auto'),
+            last ? 'h-0' : geometry.bridge,
           )}
         />
-        <span className={cn('rounded-mark relative block h-1 w-3', rungFace(step.status))} />
+        <span className={cn('relative flex items-center', geometry.line)}>
+          <span className={cn('rounded-mark block h-1 w-3', rungFace(step.status))} />
+        </span>
       </span>
       <span aria-hidden className={cn('flex items-center', geometry.line)}>
         {step.status === 'running' ? <Spinner /> : <StepGlyph status={step.status} />}
       </span>
-      <span className="flex min-w-0 flex-col">
+      <span className={cn('flex min-w-0 flex-col', !last && geometry.gap)}>
         <span
           className={cn(
             geometry.label(step.status === 'running'),
