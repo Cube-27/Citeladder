@@ -352,7 +352,8 @@ async function requireUnused(db: Database, table: string, id: string, allowed: r
        FROM pg_constraint f JOIN pg_class c ON c.oid=f.conrelid
        JOIN pg_namespace n ON n.oid=c.relnamespace
        JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=ANY(f.conkey)
-      WHERE f.contype='f' AND f.confrelid=${qualifiedTable}::regclass`.execute(db);
+      WHERE f.contype='f' AND f.confrelid=${qualifiedTable}::regclass
+        AND f.conparentid=0 -- a partition is checked through its parent`.execute(db);
   const checks = references.rows.flatMap((reference) => {
     const name = `${reference.schema_name}.${reference.table_name}.${reference.column_name}`;
     if (allowed.includes(name)) return [];
