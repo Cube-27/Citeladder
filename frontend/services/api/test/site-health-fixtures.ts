@@ -740,10 +740,9 @@ export type Served = {
   onFetch?: () => Promise<void>;
 };
 /**
- * A recorded site (keyed by path, or by `path?key` for a request carrying that
- * query key) behind the real acquirer: robots and pacing run through the gate,
- * every hop is authorized, and each call is reported like the transport does.
- * `requests` collects the keys actually sent.
+ * A recorded site (keyed by path, or `path?key` for a request with that query key) behind the
+ * real acquirer: robots and pacing run through the gate, every hop is authorized, and each call
+ * is reported like the transport does. `requests` collects the keys actually sent.
  */
 export function recordedSite(
   pages: Record<string, Served>,
