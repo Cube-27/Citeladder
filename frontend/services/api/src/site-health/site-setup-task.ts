@@ -394,14 +394,15 @@ export async function runSiteSetup(
     });
     if (!committed) return;
   }
-  let walk: SitemapWalk | null = null;
-  if (walks) {
-    const found = await sitemapDiscovery({ ctx, claimed, crawl, origin, facts, settings });
-    if (found.kind === 'lost') return;
-    if (found.kind === 'retry') return deferWalk(ctx, claimed, found);
-    ({ walk, facts } = found);
-  }
-  await persist(ctx, claimed, facts, walk, settings);
+  if (walks) return walkThenPersist({ ctx, claimed, crawl, origin, facts, settings });
+  await persist(ctx, claimed, facts, null, settings);
+}
+
+async function walkThenPersist(input: Parameters<typeof sitemapDiscovery>[0]) {
+  const found = await sitemapDiscovery(input);
+  if (found.kind === 'lost') return;
+  if (found.kind === 'retry') return deferWalk(input.ctx, input.claimed, found);
+  await persist(input.ctx, input.claimed, found.facts, found.walk, input.settings);
 }
 
 /**
