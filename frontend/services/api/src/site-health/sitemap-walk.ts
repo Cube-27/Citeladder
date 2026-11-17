@@ -279,12 +279,11 @@ function childAnswered(walk: Walk, index: IndexRead, url: string, answer: Sitema
   if (refetchPolicy.child_answers.includes(answer)) index.unread.push(url);
   else index.answered = true;
   if (index.pending > 0 || index.answered || walk.refetched) return;
+  const refetch = cacheBusted(index.url);
+  // A near-limit URL can outgrow admission once busted; it would spend a document on a refusal.
+  if (!classifyUrlAdmission(refetch, { infrastructure: 'sitemap' }).accepted) return;
   walk.refetched = true;
-  walk.queue.push({
-    url: cacheBusted(index.url),
-    depth: index.depth,
-    source: { kind: 'refetch', index },
-  });
+  walk.queue.push({ url: refetch, depth: index.depth, source: { kind: 'refetch', index } });
 }
 
 /**
