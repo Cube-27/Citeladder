@@ -55,7 +55,7 @@ async function exists(client: pg.ClientBase, relation: string): Promise<boolean>
 async function pending(client: pg.ClientBase, migrations: Migration[]): Promise<Migration[]> {
   if (await exists(client, 'public.schema_migrations')) {
     const ledger = await client.query<{ version: string; checksum: string }>(
-      'select version, checksum from public.schema_migrations',
+      'select version, checksum from public.schema_migrations order by version',
     );
     const recorded = new Map(ledger.rows.map((row) => [row.version, row.checksum]));
     for (const [version, stored] of recorded) {
@@ -142,7 +142,7 @@ export async function applyMigrations(
 
 /**
  * Site Health evidence partitions for this UTC month and the three ahead (the
- * `site_health_evidence_partitions` migration owns the SQL), then statistics
+ * baseline's `site_evidence_*` functions own the SQL), then statistics
  * for every partitioned parent, which autovacuum never analyzes. Returns the
  * months it skipped, whose rows stay in the default partition.
  */

@@ -122,7 +122,7 @@ with the value it had (`expected`), or the `page`; what its judgement read
 (`depends_on`: its section, the whole body, or a field); a replacement, a
 `needs_input` question, or neither (advice); its rule, the category the rule
 sets, and its rationale; its source; and its rule's guidance. Suggestions are
-insert-only in `agent_output_suggestions` (migration 0020); every status change
+insert-only in `agent_output_suggestions`; every status change
 is an append-only
 `agent_output_suggestion_events` row (`open`, `applied`, `dismissed`,
 `reverted`, `stale`) with its actor and, when the text lands in a revision,
@@ -201,7 +201,7 @@ that revision and the span there. Both are workspace-scoped.
   now, each one's `guidance` (its rule's strength, source label and link), and
   counts per status and open ones per category. Guidance is resolved from the
   catalog when the suggestion is stored, with the catalog version, in
-  `rule_guidance` (migration 0021), so a later catalog change never rewrites
+  `rule_guidance`, so a later catalog change never rewrites
   it; suggestions stored before the catalog have none. No scores (CO14) and no
   Issues entries (CO11).
 

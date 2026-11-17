@@ -19,7 +19,7 @@ export type Database = Kysely<DB>;
 /**
  * The least-privilege login the API, runner and operator jobs connect as. It
  * holds row access only, without UPDATE or DELETE on append-only evidence,
- * attempt and ledger tables (migration 0030). The schema owner connects only
+ * attempt and ledger tables (the baseline's role section). The schema owner connects only
  * to migrate, which also sets this role's password from `DATABASE_URL`.
  */
 export const APP_DATABASE_ROLE = 'citeladder_app';

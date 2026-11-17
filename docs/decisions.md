@@ -25,10 +25,19 @@ place; the baseline and every applied file stay unchanged, and production is
 never reset for a schema change. `reset_database` remains only for disposable
 data, with its confirmation check.
 
+On 17 November 2026 the owner took one checkpoint: the 0001-0049 chain was
+folded into a new `0001_baseline.sql` (same schema, data-only repairs dropped),
+which the owner deploys only after resetting every existing database. That is
+a one-time owner-run operation, not a change to this rule; new migrations
+continue at 0002.
+
 Source: owner decision of 10 October 2026 (feature 14, execution platform),
 superseded for schema changes by the owner on 4 November 2026: "from now
 onwards schema changes go into 002 onwards instead of resetting and deleting
-existing db for migration to avoid production resets".
+existing db for migration to avoid production resets". Checkpoint: owner,
+17 November 2026: "audit and consolidate the migration files, since there have
+been a lot of changes i want to run reset db and deploy", then "no the decision
+stays the same but we are just creating a new checkpoint sort of".
 
 ## One commercial account per workspace
 
