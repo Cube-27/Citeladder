@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { billingQueries } from '@/lib/api/billing';
+import { CRAWL_VIEW_REFRESH_MS } from '@/lib/config/operational';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 import { type StartCrawlInput } from '@/lib/api/site-health';
 import {
@@ -116,7 +117,8 @@ export function useSiteHealthScreen() {
   useCrawlEvents(crawl?.id, projectId, active);
 
   // Refresh crawl-derived lists only when persisted progress changes, and at
-  // most every CRAWL_VIEW_REFRESH_MS while the crawl runs. The first sighting
+  // most every CRAWL_VIEW_REFRESH_MS while the crawl runs (a throttled change
+  // still lands when its interval ends). The first sighting
   // mounts its own queries, and unchanged dashboard polls do no downstream work.
   const crawlId = crawl?.id ?? null;
   const crawlStatus = crawl?.status ?? null;
@@ -136,11 +138,19 @@ export function useSiteHealthScreen() {
       lastSeenRef.current = { crawlId, ...next, refreshedAt: now };
       return;
     }
-    // A throttled change keeps the old version, so the next poll past the interval refreshes.
-    if (!crawlViewsDue(previous, next, now)) return;
-    lastSeenRef.current = { crawlId, ...next, refreshedAt: now };
-    void refreshCrawlViews(queryClient, crawlId);
-    void refreshMonitoredUrls(queryClient, projectId);
+    if (previous.version === crawlVersion) return;
+    const refresh = () => {
+      lastSeenRef.current = { crawlId, ...next, refreshedAt: Date.now() };
+      void refreshCrawlViews(queryClient, crawlId);
+      void refreshMonitoredUrls(queryClient, projectId);
+    };
+    if (crawlViewsDue(previous, next, now)) {
+      refresh();
+      return;
+    }
+    // A throttled change refreshes once its interval ends, unless newer progress or unmount comes first.
+    const trailing = setTimeout(refresh, previous.refreshedAt + CRAWL_VIEW_REFRESH_MS - now);
+    return () => clearTimeout(trailing);
   }, [crawlId, crawlStatus, crawlVersion, projectId, queryClient]);
 
   // Per-project monitored rows supply analysis progress totals. Automatic URL

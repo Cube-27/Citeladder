@@ -725,6 +725,24 @@ describe('analyze guards', () => {
       queued: 1,
       activity: { state: 'working', reason: 'active_work', queue_depth: 1 },
     });
+    // A copy taken during a backoff reads as waiting until the backoff ends, then as work.
+    const copy = record((await crawl(seed)).live_counters);
+    const waitingUntil = async (at: number) => {
+      const activity = { ...record(copy.activity), state: 'waiting', reason: 'retry_backoff' };
+      await db
+        .updateTable('site_crawls')
+        .set({
+          live_counters: JSON.stringify({
+            ...copy,
+            activity: { ...activity, next_available_at: new Date(at).toISOString() },
+          }),
+        })
+        .where('id', '=', seed.crawlId)
+        .execute();
+      return (await crawlCounters(db, await crawl(seed))).activity.state;
+    };
+    expect(await waitingUntil(Date.now() + 60_000)).toBe('waiting');
+    expect(await waitingUntil(Date.now() - 1000)).toBe('working');
     await db
       .updateTable('site_crawl_tasks')
       .set({ status: 'running', lease_owner: 'gone', lease_expires_at: new Date(Date.now() - 1) })

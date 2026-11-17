@@ -148,10 +148,15 @@ class LaneTurns {
     const group = state.lane.group;
     if (!group) return YIELD;
     const peers = () =>
-      this.#states
-        .filter((s) => s !== state && s.phase !== 'failed' && s.lane.group === group)
-        .map((s) => s.lane);
-    return async () => (await nextDueDelay(peers())) === 0;
+      this.#states.filter((s) => s !== state && s.phase !== 'failed' && s.lane.group === group);
+    return async () => {
+      for (const { lane } of peers()) {
+        // A failed probe rejects to the caller, which yields the turn.
+        const due = await lane.nextDue?.(); // NOSONAR -- One probe at a time keeps the shared pool free.
+        if (due && due.getTime() <= Date.now()) return true;
+      }
+      return false;
+    };
   }
   wakeIdle() {
     for (const state of this.#states) if (state.phase === 'idle') state.phase = 'ready';

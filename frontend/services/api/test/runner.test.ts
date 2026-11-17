@@ -460,11 +460,20 @@ describe('bounded runner', () => {
 
   it('tells a grouped lane whether a peer of its group has work due, and an ungrouped lane to yield', async () => {
     let peerDue: Date | null = null;
-    const grouped: boolean[] = [];
+    let probeFails = false;
+    const grouped: (boolean | string)[] = [];
     const ungrouped: boolean[] = [];
     await drainLanes(
       [
-        { name: 'analytics', group: 'web-fetch', run: async () => 0, nextDue: async () => peerDue },
+        {
+          name: 'analytics',
+          group: 'web-fetch',
+          run: async () => 0,
+          nextDue: async () => {
+            if (probeFails) throw new Error('probe failed');
+            return peerDue;
+          },
+        },
         {
           name: 'site-health',
           group: 'web-fetch',
@@ -473,6 +482,9 @@ describe('bounded runner', () => {
             peerDue = new Date(Date.now() - 1000);
             grouped.push(await peersDue());
             peerDue = null;
+            probeFails = true;
+            grouped.push(await peersDue().catch(() => 'rejected'));
+            probeFails = false;
             return 0;
           },
         },
@@ -486,7 +498,7 @@ describe('bounded runner', () => {
       ],
       options(),
     );
-    expect(grouped).toEqual([false, true]);
+    expect(grouped).toEqual([false, true, 'rejected']);
     expect(ungrouped).toEqual([true]);
   });
 

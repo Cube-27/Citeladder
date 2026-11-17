@@ -69,8 +69,14 @@ async function hasExpiredLease(db: Database, crawl: Crawl) {
  */
 async function liveCounters(db: Database, crawl: Crawl, persisted: TaskCounters) {
   const activity = { ...persisted.activity };
+  // A backoff that ended since the recount is work again, though nothing settled yet.
+  const backoffEnded =
+    activity.state === 'waiting' &&
+    activity.next_available_at !== null &&
+    Date.parse(activity.next_available_at) <= Date.now();
   if (await hasExpiredLease(db, crawl)) [activity.state, activity.reason] = STALLED;
-  else if (activity.state === 'stalled') [activity.state, activity.reason] = WORKING;
+  else if (activity.state === 'stalled' || backoffEnded)
+    [activity.state, activity.reason] = WORKING;
   return { ...persisted, activity };
 }
 

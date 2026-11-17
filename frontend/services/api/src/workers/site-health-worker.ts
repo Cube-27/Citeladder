@@ -144,7 +144,8 @@ export class SiteHealthWorker {
       if (performance.now() < windowEnd) return true;
       if (!options.peersDue || (await this.#peersDue(options.peersDue))) return false;
       windowEnd = performance.now() + windowMs;
-      return true;
+      // Admission may have closed during the probe.
+      return options.refillWhile() && !this.signal?.aborted;
     };
     const inFlight = new Set<Promise<void>>();
     const failures: unknown[] = [];
@@ -177,10 +178,11 @@ export class SiteHealthWorker {
     await claim();
     while (inFlight.size) {
       await Promise.race(inFlight); // NOSONAR -- Wait for the next free slot.
-      if (failures.length || !(await refill())) continue; // NOSONAR -- One refill per settlement.
+      if (failures.length) continue;
       // The last slot freed: its crawl's reconcile may enqueue the next work (a finalize).
       if (!inFlight.size) await this.#reconciled(); // NOSONAR -- Successors first.
-      await claim(); // NOSONAR -- One refill per settlement.
+      // Admission is checked after every wait, immediately before the claim.
+      if (await refill()) await claim(); // NOSONAR -- One refill per settlement.
     }
     if (failures.length) throw failures[0];
     return claimed;
