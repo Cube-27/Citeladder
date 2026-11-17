@@ -193,7 +193,10 @@ the active, terminal and usable (terminal with readable analyses: all but
 **Terminalization** (`lifecycle.ts`, the only path to a terminal crawl). Each
 settled lifecycle task reconciles counters and sub-states under the crawl row
 lock. While siblings remain, a successful analysis only refreshes the
-provisional summary on the `live_score_refresh_*` cadence. When discovery and
+provisional summary, and a discover while discovery continues only recounts
+progress, both on the `live_score_refresh_*` cadence. The provisional summary
+reads the whole crawl's evidence outside the crawl lock every task commit takes
+and holds that lock only to write, skipping a crawl that settled meanwhile. When discovery and
 analysis drain, one locked transaction:
 
 1. resolves canonical-alias chains;

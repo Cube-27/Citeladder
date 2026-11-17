@@ -350,7 +350,7 @@
   "live_score_refresh_min_interval_seconds": {
     "env": ["SITE_HEALTH_LIVE_SCORE_REFRESH_MIN_INTERVAL_SECONDS"],
     "type": "float",
-    "default": 5.0,
+    "default": 30.0,
     "minimum": 0
   },
   "live_score_refresh_max_tracked_crawls": {

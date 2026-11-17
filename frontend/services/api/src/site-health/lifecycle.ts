@@ -24,7 +24,11 @@ import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import { recordCrawlEvent } from './site-task.ts';
 import { isPageRerun, pageRerunSql } from './page-rerun.ts';
-import { persistCrawlSnapshot, refreshLiveScoreSummary } from './snapshot.ts';
+import {
+  persistCrawlSnapshot,
+  refreshLiveScoreSummary,
+  refreshRunningScoreSummary,
+} from './snapshot.ts';
 import type { Crawl } from './site-task.ts';
 import { failedAs } from './task-outcome.ts';
 import { publishFinalPageAnalyses } from './terminal-analysis.ts';
@@ -407,11 +411,8 @@ export async function reconcileAfterTask(db: Database, task: SettledTask, cadenc
         await reconcileCrawl(db, task.workspace_id, task.crawl_id, { refreshScore: false });
       return;
     case 'analysis_progress':
-      if (!cadence.score.admits(task.crawl_id)) return;
-      return db.transaction().execute(async (trx) => {
-        const crawl = await lockCrawl(trx, task.workspace_id, task.crawl_id);
-        if (crawl && isActiveCrawl(crawl.status)) await refreshLiveScoreSummary(trx, crawl);
-      });
+      if (cadence.score.admits(task.crawl_id)) await refreshRunningScoreSummary(db, task);
+      return;
     default: {
       const unhandled: never = kind;
       return unhandled;
