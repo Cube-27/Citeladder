@@ -365,8 +365,9 @@ async function prepare(
     await cancelTask(ctx.db, task, ctx.owner);
     return null;
   }
-  const crawl = await startCrawl(ctx.db, loaded.crawl);
-  const scope = { crawl, task };
+  const scope = await startCrawl(ctx, loaded);
+  if (!scope) return null;
+  const { crawl } = scope;
   const { artifact, pending } = await reusableArtifact(ctx.db, crawl, task);
   const waited = Math.max(0, (Date.now() - new Date(task.created_at).getTime()) / 1000);
   if (

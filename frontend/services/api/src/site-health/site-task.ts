@@ -141,35 +141,44 @@ export async function loadScope(db: Database, claimed: SiteTask) {
   return task && crawl ? { task, crawl } : null;
 }
 
+export type TaskScope = NonNullable<Awaited<ReturnType<typeof loadScope>>>;
+
 /**
- * The first task to run moves a queued crawl to running. Returns the crawl as
- * it now stands, so a scope reused at commit carries the started audit time.
+ * The first task to run moves a queued crawl to running. Returns the scope with
+ * the crawl as it now stands, so a scope reused at commit carries the started
+ * audit time; null, after cancelling the task, when Stop got there first.
  */
-export async function startCrawl(db: Database, crawl: Crawl): Promise<Crawl> {
-  if (crawl.status !== 'queued') return crawl;
-  const now = new Date();
-  const started = await db
-    .updateTable('site_crawls')
-    .set((eb) => ({
-      status: 'running',
-      started_at: eb.fn.coalesce('started_at', eb.val(now)),
-      updated_at: now,
-    }))
-    .where('id', '=', crawl.id)
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('status', '=', 'queued')
-    .returningAll()
-    .executeTakeFirst();
-  if (started) return started;
-  // A sibling started (or stopped) it first.
-  return (
-    (await db
-      .selectFrom('site_crawls')
-      .selectAll()
-      .where('id', '=', crawl.id)
-      .where('workspace_id', '=', crawl.workspace_id)
-      .executeTakeFirst()) ?? crawl
-  );
+export async function startCrawl(
+  ctx: Pick<SiteTaskContext, 'db' | 'owner'>,
+  { crawl, task }: TaskScope,
+): Promise<TaskScope | null> {
+  let current: Crawl | undefined = crawl;
+  if (crawl.status === 'queued') {
+    const now = new Date();
+    current =
+      (await ctx.db
+        .updateTable('site_crawls')
+        .set((eb) => ({
+          status: 'running',
+          started_at: eb.fn.coalesce('started_at', eb.val(now)),
+          updated_at: now,
+        }))
+        .where('id', '=', crawl.id)
+        .where('workspace_id', '=', crawl.workspace_id)
+        .where('status', '=', 'queued')
+        .returningAll()
+        .executeTakeFirst()) ??
+      // A sibling started it, or Stop cancelled it, first.
+      (await ctx.db
+        .selectFrom('site_crawls')
+        .selectAll()
+        .where('id', '=', crawl.id)
+        .where('workspace_id', '=', crawl.workspace_id)
+        .executeTakeFirst());
+  }
+  if (current && isActiveCrawl(current.status)) return { task, crawl: current };
+  await cancelTask(ctx.db, task, ctx.owner);
+  return null;
 }
 
 /**
@@ -185,9 +194,8 @@ export async function prepareTask(ctx: SiteTaskContext, claimed: SiteTask) {
     return null;
   }
   if (!heldBySlot(scope.task, claimed, ctx.owner)) return null;
-  return { task: scope.task, crawl: await startCrawl(ctx.db, scope.crawl) };
+  return startCrawl(ctx, scope);
 }
-export type TaskScope = NonNullable<Awaited<ReturnType<typeof prepareTask>>>;
 
 /** Classify a returned HTTP status: a 4xx is terminal except 429; every 5xx is retryable. */
 export function httpError(status: number): [string, boolean] | null {
