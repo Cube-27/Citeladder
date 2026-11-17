@@ -14,6 +14,11 @@ Remaining work is consolidated in the backlog; historical plans are not active a
     issues tracked page by page. Its 10 PRs (A1–A5, then B1–B5) carry owner
     decisions SH-B1 to SH-B13 and the audit's 16 crawl findings. Ask agent in
     the drawer is still pending an owner decision.
+- [Site Health crawl optimization](site-health-crawl-optimization.md) (owner,
+  2026-11-17): crawl throughput on the current infrastructure at no extra cost,
+  in five measured PRs with owner decisions CO-1 to CO-6. Paid scaling waits in
+  the [backlog](backlog.md#site-health-crawl-scaling-needs-spend) behind
+  measured triggers.
 
 Commerce product tracking and backlog tier 1 shipped on 11 November 2026, and
 the Agent chat UX round on 13 November 2026; their plans were deleted. The
