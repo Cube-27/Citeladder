@@ -15,6 +15,21 @@ function classificationState(classified: number, expected: number) {
 }
 
 /**
+ * Publishing from the latest audits serializes per profile. A crawl's own
+ * provisional summary takes no profile lock: it reads only its analyses.
+ */
+export async function lockProfile(db: Database, crawl: Crawl) {
+  await db
+    .selectFrom('site_health_profiles')
+    .select('id')
+    .where('id', '=', crawl.profile_id)
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('project_id', '=', crawl.project_id)
+    .forUpdate()
+    .executeTakeFirstOrThrow();
+}
+
+/**
  * The selected pages' analyses, evaluations and tasks a score reads. A
  * snapshot (`latest`) reads each page's latest audit as the crawl shows it
  * (`pageAuditsSql`, SH-B9), each with the task of the crawl that audited it;
@@ -25,14 +40,6 @@ export async function loadMeasurementProjection(
   crawl: Crawl,
   { latest }: { latest: boolean },
 ) {
-  await db
-    .selectFrom('site_health_profiles')
-    .select('id')
-    .where('id', '=', crawl.profile_id)
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('project_id', '=', crawl.project_id)
-    .forUpdate()
-    .executeTakeFirstOrThrow();
   const members = await db
     .selectFrom('monitored_site_urls')
     .select('site_url_id')

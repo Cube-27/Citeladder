@@ -8,7 +8,9 @@ import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { lockSiteTask } from '../src/site-health/site-task.ts';
-import { SiteFixtures } from './site-health-fixtures.ts';
+import { cancelCrawl } from '../src/site-health/controls.ts';
+import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
+import { recordedSite, SiteFixtures } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
 
 const db = testDatabase();
@@ -359,6 +361,55 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
       .where('id', '=', unrelated)
       .execute();
   }
+});
+
+it('reconciles and stops a crawl while a task commit inserts rows that reference it', async () => {
+  const seed = await fixtures.crawl('running');
+  await fixtures.task(seed);
+  await db.transaction().execute(async (trx) => {
+    // A child insert key-shares the crawl row through its foreign key until it commits.
+    await sql`select id from site_crawls where id = ${seed.crawlId} for key share`.execute(trx);
+    await cancelCrawl(db, seed.workspaceId, seed.crawlId);
+    await lifecycle.reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+  });
+  const crawl = await db
+    .selectFrom('site_crawls')
+    .select('status')
+    .where('id', '=', seed.crawlId)
+    .executeTakeFirstOrThrow();
+  expect(crawl.status).toBe('cancelled');
+});
+
+it('analyzes a page while a discover holds the workspace runtime lock', async () => {
+  const seed = await fixtures.crawl('running');
+  await db
+    .updateTable('site_crawls')
+    .set({ analysis_status: 'running', completed_at: null })
+    .where('id', '=', seed.crawlId)
+    .execute();
+  const page = await fixtures.analyzable(seed, '/');
+  const fetcher = new SitePageFetcher(
+    db,
+    recordedSite({ '/': { body: '<html><head><title>Page</title></head><body>Hi</body></html>' } }),
+    siteFetchSettings({ SITE_HEALTH_PER_HOST_DELAY_SECONDS: '0' }),
+  );
+  const worker = new SiteHealthWorker(db, { owner: 'runtime-held', settings, fetcher });
+  const leased = await db
+    .updateTable('site_crawl_tasks')
+    .set({
+      status: 'leased',
+      lease_owner: worker.owner,
+      lease_expires_at: new Date(Date.now() + 60_000),
+    })
+    .where('id', '=', page.taskId)
+    .returningAll()
+    .executeTakeFirstOrThrow();
+  await db.transaction().execute(async (trx) => {
+    await sql`select id from workspace_site_health_runtime
+      where workspace_id = ${seed.workspaceId} for update`.execute(trx);
+    await worker.execute(leased);
+  });
+  expect(await row(page.taskId)).toMatchObject({ status: 'succeeded', attempt_count: 1 });
 });
 
 it('refreshes a running crawl summary without overwriting one that settled meanwhile', async () => {

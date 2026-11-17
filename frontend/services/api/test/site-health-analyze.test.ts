@@ -648,7 +648,7 @@ async function lease(taskId: string, owner: string) {
 }
 
 describe('analyze guards', () => {
-  it('commits current setup facts even when context changes on the final allowed attempt', async () => {
+  it('requeues an analysis whose context changed mid-interpretation, then commits current facts', async () => {
     const seed = await running();
     const page = await fixtures.analyzable(seed, '/');
     await db
@@ -671,6 +671,9 @@ describe('analyze guards', () => {
       });
     try {
       const fetcher = site({ '/': { body: RICH } });
+      await analyze(fetcher, page.taskId);
+      // Interpretation never reruns under the commit's locks; the final attempt is not spent.
+      expect(await task(page.taskId)).toMatchObject({ status: 'queued', attempt_count: 0 });
       await analyze(fetcher, page.taskId);
       expect(await task(page.taskId)).toMatchObject({ status: 'succeeded', attempt_count: 1 });
       const [analysis] = await analyses(seed, page.siteUrlId);

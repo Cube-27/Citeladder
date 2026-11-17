@@ -65,7 +65,7 @@ function cancelOnce(db: Database, workspaceId: string, crawlId: string) {
       .selectAll()
       .where('workspace_id', '=', workspaceId)
       .where('id', '=', crawlId)
-      .forUpdate()
+      .forNoKeyUpdate()
       .executeTakeFirst();
     if (!crawl) throw notFound('Crawl');
     if (isTerminal(crawl)) return;
