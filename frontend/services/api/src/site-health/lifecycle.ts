@@ -39,6 +39,8 @@ const logger = getLogger('app.workers.site_health.lifecycle');
 const TERMINAL_TASK = policy.task_queue.terminal;
 const LIFECYCLE_KINDS = ['discover', 'site_setup', 'analyze'];
 const DISCOVERY_KINDS = ['discover', 'site_setup'];
+// Literals, not a bound array: the planner then proves ix_site_crawl_tasks_open's predicate.
+const TERMINAL_STATUSES = sql.join(TERMINAL_TASK.map((status) => sql.lit(status)));
 const EXCLUDED = failedAs('site_crawl_tasks', ['excluded']);
 const OVERDUE = policy.site_health.page_analysis.acquisition.error_codes.crawl_overdue;
 /**
@@ -361,12 +363,12 @@ function settledRow(db: Database, task: SettledTask) {
         select 1 from site_crawl_tasks o
         where o.crawl_id = t.crawl_id and o.workspace_id = t.workspace_id
           and o.task_kind = any(${LIFECYCLE_KINDS}::text[])
-          and o.status <> all(${TERMINAL_TASK}::text[]))`.as('outstanding'),
+          and o.status not in (${TERMINAL_STATUSES}))`.as('outstanding'),
       sql<boolean>`exists (
         select 1 from site_crawl_tasks o
         where o.crawl_id = t.crawl_id and o.workspace_id = t.workspace_id
           and o.task_kind = any(${DISCOVERY_KINDS}::text[])
-          and o.status <> all(${TERMINAL_TASK}::text[]))`.as('discovering'),
+          and o.status not in (${TERMINAL_STATUSES}))`.as('discovering'),
     ])
     .where('t.id', '=', task.id)
     .where('t.crawl_id', '=', task.crawl_id)

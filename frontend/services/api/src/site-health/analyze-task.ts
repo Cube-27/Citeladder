@@ -115,6 +115,9 @@ async function reusableArtifact(db: Database, crawl: Crawl, task: SiteTask) {
     .select(['f.id', 'f.normalized_facts'])
     .where('f.workspace_id', '=', crawl.workspace_id)
     .where('f.crawl_id', '=', crawl.id)
+    // The task's slot key (crawl, kind, URL) leads the plan, not a scan of the crawl's artifacts.
+    .where('t.crawl_id', '=', crawl.id)
+    .where('t.task_kind', '=', 'discover')
     .where('f.fetch_purpose', '=', 'discover')
     .where(
       'f.extractor_version',
