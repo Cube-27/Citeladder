@@ -21,8 +21,8 @@ jobs:
     permissions:
       actions: read
       contents: read
-    # Classification needs Node, Git and the GitHub API, not a full build VM.
-    runs-on: ubuntu-slim
+    # The slim runner queue left PRs unassigned past their timeout (2026-11-17).
+    runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
       compose: ${{ steps.classify.outputs.compose }}
@@ -164,7 +164,7 @@ jobs:
     needs: [changes, compose-smoke]
     if: always()
     permissions: {}
-    runs-on: ubuntu-slim
+    runs-on: ubuntu-latest
     timeout-minutes: 2
     steps:
       - name: The classifier and any selected smoke passed
