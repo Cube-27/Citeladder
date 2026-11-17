@@ -8,7 +8,7 @@ import {
   tickAndDrain,
   runnerOwners,
 } from '../src/workers/runner.ts';
-import { startSuccessor } from '../src/workers/execution-process.ts';
+import { handOver, startSuccessor } from '../src/workers/execution-process.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
 import { AuditWorker } from '../src/audits/worker.ts';
@@ -330,6 +330,16 @@ describe('bounded runner', () => {
     // Work due beyond a fresh budget waits for tick.
     expect(await startSuccessor({ lanes, budgetMs: 500, signal: live, start })).toBe(false);
     expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands over at the lead before the deadline, never after the drain ended', async () => {
+    const successor = vi.fn(async () => true);
+    const live = new AbortController().signal;
+    expect(await handOver({ delayMs: 1, signal: live, successor })).toBe(true);
+    // A drain that already ended (or a budget shorter than the lead) leaves the successor to its end.
+    expect(await handOver({ delayMs: 60_000, signal: AbortSignal.abort(), successor })).toBe(false);
+    expect(await handOver({ delayMs: -5, signal: live, successor })).toBe(false);
+    expect(successor).toHaveBeenCalledTimes(1);
   });
 
   it('drains successors into earlier lanes before declaring idle', async () => {
@@ -735,6 +745,35 @@ describe('Cloud Run wake-up', () => {
     });
     await start();
     expect(send).toHaveBeenCalledTimes(2);
+  });
+
+  it('starts a handover successor from inside its own drain, flagged to wait out the tail', async () => {
+    const config = testConfig({
+      CLOUD_RUN_RUNNER_JOB: job,
+      CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32),
+    });
+    const send = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(Response.json({ access_token: 'recorded-access-token' }))
+      .mockResolvedValueOnce(Response.json({ name: 'operations/test' }));
+    const start = runnerStarter(config, db, send, () => 0);
+    await exclusiveDrain(config, {
+      signal: new AbortController().signal,
+      deadline: Number.POSITIVE_INFINITY,
+    })(async () => {
+      await start('handover');
+      return 0;
+    });
+    expect(send).toHaveBeenCalledTimes(2);
+    const body = JSON.parse(String(send.mock.calls[1]![1]!.body));
+    const env = Object.fromEntries(
+      body.overrides.containerOverrides[0].env.map((v: { name: string; value: string }) => [
+        v.name,
+        v.value,
+      ]),
+    );
+    expect(testConfig(env).execution.drainLockWaitMs).toBe(780_000);
+    expect(testConfig().execution.drainLockWaitMs).toBe(15_000);
   });
 
   it('continues a bounded launch when the drain probe fails', async () => {

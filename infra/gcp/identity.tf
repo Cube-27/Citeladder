@@ -132,9 +132,11 @@ resource "google_cloud_run_v2_job_iam_member" "api_starts_runner" {
   member   = "serviceAccount:${google_service_account.runtime.email}"
 }
 
+# A runner hands over to its successor with an environment override
+# (RUNNER_HANDOVER), which needs run.jobs.runWithOverrides.
 resource "google_cloud_run_v2_job_iam_member" "runner_starts_successor" {
   name     = google_cloud_run_v2_job.execution["runner"].name
   location = var.region
-  role     = "roles/run.invoker"
+  role     = "roles/run.jobsExecutorWithOverrides"
   member   = "serviceAccount:${google_service_account.jobs.email}"
 }

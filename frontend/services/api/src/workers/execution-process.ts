@@ -1,4 +1,6 @@
+import { setTimeout as sleep } from 'node:timers/promises';
 import { loadConfig } from '../config.ts';
+import { handoverLeadMs } from '../config/execution.ts';
 import { createDatabase } from '../db/database.ts';
 import { getLogger } from '../logging.ts';
 import {
@@ -23,6 +25,15 @@ export async function runExecution(tick: boolean) {
     const options = { signal: stop.signal, deadline };
     const owners = await runnerOwners(db, config);
     const exclusive = exclusiveDrain(config, options);
+    const start = runnerStarter(config, db);
+    const budgetMs = config.execution.budgetSeconds * 1000;
+    const drained = new AbortController();
+    const handover = handOver({
+      delayMs: deadline - handoverLeadMs - performance.now(),
+      signal: AbortSignal.any([stop.signal, drained.signal]),
+      successor: (signal) =>
+        startSuccessor({ lanes: owners.lanes, budgetMs, signal, start: () => start('handover') }),
+    });
     let tasks = 0;
     let failure: unknown = null;
     try {
@@ -33,17 +44,23 @@ export async function runExecution(tick: boolean) {
       failure = error;
       if (error instanceof LaneFailures) tasks = error.tasks;
     }
+    drained.abort();
     const failed = failure instanceof LaneFailures ? failure.lanes : new Set<string>();
-    const successor = await startSuccessor({
-      lanes: owners.lanes.filter((lane) => !failed.has(lane.name)),
-      budgetMs: config.execution.budgetSeconds * 1000,
-      signal: stop.signal,
-      start: runnerStarter(config, db),
-    });
+    const handedOver = await handover;
+    // A started handover successor is already waiting for this drain's lock.
+    const successor =
+      handedOver ||
+      (await startSuccessor({
+        lanes: owners.lanes.filter((lane) => !failed.has(lane.name)),
+        budgetMs,
+        signal: stop.signal,
+        start,
+      }));
     getLogger('workers.runner').info('runner_completed', {
       tick,
       tasks,
       successor,
+      handover: handedOver,
       failed_lanes: [...failed],
       failed: failure !== null,
       stopped: stop.signal.aborted,
@@ -54,6 +71,25 @@ export async function runExecution(tick: boolean) {
     for (const signal of ['SIGTERM', 'SIGINT'] as const) process.removeListener(signal, shutdown);
     await db.destroy();
   }
+}
+
+/**
+ * About one cold start before the deadline, start the successor while this
+ * drain still holds the lock, so it is warm when the in-flight tail ends.
+ * Resolves whether it started one; never once the drain ended or shutdown began.
+ */
+export async function handOver(options: {
+  delayMs: number;
+  signal: AbortSignal;
+  successor: (signal: AbortSignal) => Promise<boolean>;
+}): Promise<boolean> {
+  if (options.delayMs <= 0) return false;
+  try {
+    await sleep(options.delayMs, undefined, { signal: options.signal });
+  } catch {
+    return false;
+  }
+  return options.successor(options.signal);
 }
 
 /**

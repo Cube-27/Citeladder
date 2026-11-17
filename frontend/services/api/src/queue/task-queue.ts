@@ -80,7 +80,16 @@ export type LaneDescriptor<T extends LaneTable = LaneTable> = {
   ready?: RawBuilder<boolean>;
   /** Attempts one expired-lease reclaim charges: 1 when the claim does not charge. */
   recoveryCharge: 0 | 1;
+  /** The claim commits without waiting for the WAL flush (owner decision CO-1). */
+  asyncCommit?: true;
 };
+
+/**
+ * Commit this transaction without waiting for the WAL flush. A crash can lose
+ * its last fraction of a second, which lease recovery redoes; only for work
+ * that lease recovery replays, never billing, ledger or webhook writes.
+ */
+export const commitAsync = (trx: Database) => sql`set local synchronous_commit = off`.execute(trx);
 
 const attemptsLeft = sql<boolean>`attempt_count < max_attempts`;
 
@@ -100,6 +109,7 @@ export const SITE_HEALTH_LANE = {
   claimStatus: 'leased',
   claimCharge: 0,
   recoveryCharge: 1,
+  asyncCommit: true,
 } as const satisfies LaneDescriptor<'site_crawl_tasks'>;
 
 /** Discovery runs on claim and counts the attempt on completion or recovery. */
@@ -410,6 +420,7 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
     const now = this.#now();
     const table = this.#table;
     return this.#db.transaction().execute(async (trx) => {
+      if (this.#lane.asyncCommit) await commitAsync(trx);
       const locked = await claimStatement(trx, this.#lane, {
         ...options,
         now: this.#claimClock(),

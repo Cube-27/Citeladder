@@ -19,7 +19,12 @@ import { getLogger } from '../logging.ts';
 import { TaskCancelledError } from '../queue/executor.ts';
 import { leaseSignal, maintainLease } from '../queue/heartbeat.ts';
 import { logLaneFailure } from '../queue/lane-log.ts';
-import { SITE_HEALTH_LANE, type SiteTask, type TaskQueue } from '../queue/task-queue.ts';
+import {
+  commitAsync,
+  SITE_HEALTH_LANE,
+  type SiteTask,
+  type TaskQueue,
+} from '../queue/task-queue.ts';
 import type { SitePageFetcher } from './page-fetch.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 
@@ -212,7 +217,7 @@ export async function lockSiteTask(
  * back and cancels the task. Resolves false when nothing committed.
  */
 export async function commitTask(
-  ctx: SiteTaskContext,
+  ctx: Pick<SiteTaskContext, 'db' | 'owner' | 'queue' | 'signal'>,
   claimed: SiteTask,
   body: (trx: Database, lock: () => Promise<HeldTask>) => Promise<void>,
 ): Promise<boolean> {
@@ -220,6 +225,7 @@ export async function commitTask(
   const committed = await ctx.db
     .transaction()
     .execute(async (trx) => {
+      await commitAsync(trx);
       await body(trx, async () => {
         const held = await lockSiteTask(trx, ctx, claimed);
         if (!held) throw new Abandoned();

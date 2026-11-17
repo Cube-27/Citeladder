@@ -300,7 +300,8 @@ new admission and lets claimed work finish before destroying the pool.
 | `CLOUD_RUN_RUNNER_JOB`             | API           | Unset disables wake-up; otherwise `projects/<project>/locations/us-central1/jobs/<job>`                                                                                                            |
 | `CITELADDER_ORIGIN_TOKEN`          | Cloud Run API | Existing secret matching both Workers' `ORIGIN_TOKEN`; at least 32 characters                                                                                                                      |
 | `CITELADDER_ORIGIN_TOKEN_PREVIOUS` | Cloud Run API | Optional previous token during rotation                                                                                                                                                            |
-| `RUNNER_BUDGET_SECONDS`            | Runner/tick   | 600; 1–3600 seconds (Terraform allows 60–3000), shared across phases and lanes                                                                                                                     |
+| `RUNNER_BUDGET_SECONDS`            | Runner/tick   | 600; 1–3600 seconds (Terraform allows 60–3000, default 3000), shared across phases and lanes                                                                                                       |
+| `RUNNER_HANDOVER`                  | Runner        | Never set by hand; a runner sets it on the successor it starts before its deadline, which then waits out the predecessor's in-flight tail for the drain lock                                      |
 | `RUNNER_DB_POOL_SIZE`              | Runner/tick   | 4; 1–4 pooled connections, independent of the API's `DB_POOL_SIZE` (12) + `DB_MAX_OVERFLOW`, which the API keeps even when it starts runner jobs; a draining execution also holds one lock session |
 | `RUNNER_WAKE_TIMEOUT_MS`           | API           | 5000; 1–30000 milliseconds for metadata plus job-start requests                                                                                                                                    |
 | `RUNNER_WAKE_MIN_INTERVAL_MS`      | API           | 5000; 1–60000 milliseconds between job-start attempts per instance                                                                                                                                 |
@@ -326,7 +327,8 @@ The API skips wake-up while the PostgreSQL drain lock is held and coalesces
 launch attempts within the configured per-instance interval. Tick recovers
 work arriving as a drain ends. Only one execution drains at a time (a PostgreSQL advisory lock). A later
 execution waits up to 15 seconds and then leaves the work to the active drain,
-so a burst of writes cannot open one pool per execution. Locally, leave
+so a burst of writes cannot open one pool per execution; a handover successor
+waits up to 13 minutes, its lead plus the job timeout's tail. Locally, leave
 `CLOUD_RUN_RUNNER_JOB` unset; the Compose `runner` loop replaces wake-up.
 
 ### Repository validation harness

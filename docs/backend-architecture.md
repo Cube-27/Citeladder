@@ -166,7 +166,11 @@ meanwhile. After releasing the drain lock, an execution whose pending work is du
 within a fresh budget starts one successor, even when a lane failed (the failed
 lanes are left out of that probe); work due later waits for tick. Cloud Run
 takes one to three minutes to start an execution (measured October 2026), so a
-successor is not an immediate pickup. Request-bound
+successor is not an immediate pickup. To hide that start, an execution still
+draining three minutes before its deadline, with work due within a fresh
+budget, starts its successor early with `RUNNER_HANDOVER`; that start skips the
+drain-lock probe (the lock is its own), the successor waits out the in-flight
+tail for the lock, and the predecessor starts no second one. Request-bound
 discovery suppresses wake-up because it has no successors. Other interactive
 workers keep observation active so successors committed after a
 background drain exits still wake the runner. Starts from different instances

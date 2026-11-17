@@ -187,8 +187,9 @@ variable "public_signup_enabled" {
 }
 
 variable "runner_budget_seconds" {
-  type    = number
-  default = 600
+  type = number
+  # About 1.2 executions an hour; the job timeout adds 600 s for the in-flight tail.
+  default = 3000
   validation {
     condition     = var.runner_budget_seconds >= 60 && var.runner_budget_seconds <= 3000
     error_message = "runner_budget_seconds must be between 60 and 3000."

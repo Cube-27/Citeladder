@@ -164,7 +164,12 @@ slot as a task settles, until the runner stops admitting or
 `claim_window_seconds` ends. An idle drain waits for work that becomes due
 within its budget; when deferred work is due after the budget ends, the exiting
 runner job starts a successor execution (`CLOUD_RUN_RUNNER_JOB`) instead of
-leaving it for the 10-minute tick. The `DRAIN_LOCK` advisory lock serializes drains.
+leaving it for the 20-minute scheduled tick. The `DRAIN_LOCK` advisory lock serializes drains.
+Site Health claims and `commitTask` transactions commit with
+`synchronous_commit = off` (`SET LOCAL`, owner decision CO-1 in the
+[optimization plan](plans/site-health-crawl-optimization.md#owner-decisions-2026-11-17)):
+a database crash can lose their last fraction of a second, which lease recovery
+redoes. Every other lane, billing, ledger and webhook commit stays durable.
 
 After creation, the browser calls `POST /api/v1/site-crawls/{id}/run`. That
 request runs a crawl-scoped worker under the same lock, without waiting for it,

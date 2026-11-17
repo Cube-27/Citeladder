@@ -26,8 +26,15 @@ export const runnerLanes = {
   idlePollMs: 5000,
 };
 
+/** About one Cloud Run cold start: a runner starts its successor this long before its deadline. */
+export const handoverLeadMs = 180_000;
+/** The job timeout's margin past the budget (run.tf), which bounds a predecessor's in-flight tail. */
+const runnerTailMs = 600_000;
+
 const defaults = {
   drainLockWaitMs: 15_000,
+  // A handover successor may arrive a whole lead early, then waits out the tail.
+  handoverLockWaitMs: handoverLeadMs + runnerTailMs,
   drainLockPollMs: 250,
 };
 
@@ -48,6 +55,8 @@ export const executionSpecs = {
   wake_timeout_ms: integer('RUNNER_WAKE_TIMEOUT_MS', 5000, 30000),
   wake_min_interval_ms: integer('RUNNER_WAKE_MIN_INTERVAL_MS', 5000, 60000),
   runner_job: text('CLOUD_RUN_RUNNER_JOB'),
+  // Set only by a runner starting its successor before its own deadline.
+  handover: { env: ['RUNNER_HANDOVER'], type: 'bool', default: false },
   // Cloud Scheduler's OIDC identity and audience for the API's periodic tick.
   scheduler_invoker: text('SCHEDULER_TICK_INVOKER'),
   scheduler_audience: text('SCHEDULER_TICK_AUDIENCE'),
@@ -106,8 +115,9 @@ export function executionSettings(source: SettingSource) {
     protectOrigin,
     originToken,
     previousOriginToken,
-    // How long a later execution waits for an active drain before leaving it the work.
-    drainLockWaitMs: defaults.drainLockWaitMs,
+    // How long a later execution waits for an active drain before leaving it the
+    // work; a handover successor waits for its predecessor's in-flight tail.
+    drainLockWaitMs: setting('handover') ? defaults.handoverLockWaitMs : defaults.drainLockWaitMs,
     drainLockPollMs: defaults.drainLockPollMs,
     budgetSeconds: setting('budget_seconds') as number,
     poolSize: setting('pool_size') as number,
