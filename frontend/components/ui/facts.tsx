@@ -148,7 +148,6 @@ export function FactList({
       ) : null}
     </dl>
   );
-  return list;
 }
 
 function FactValue({ fact, layout }: Readonly<{ fact: Fact; layout: FactLayout }>) {
