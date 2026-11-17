@@ -1,15 +1,18 @@
 /**
- * A terminal crawl's dashboard counters, persisted on
- * `site_crawls.terminal_counters` so reading a finished crawl never rescans
- * its tasks and analyses.
+ * A crawl's dashboard counters, persisted on its row so reading it never
+ * rescans its tasks and analyses: `terminal_counters` once it is terminal,
+ * `live_counters` while it runs.
  *
  * The owner that makes a crawl terminal (terminalization, cancellation) writes
  * them in that transaction, after its last task changed; a rewrite of a
  * terminal crawl's analyses (a late analysis over a finalized one, a duplicate
  * alias retiring analyses, the cancelled crawl's publication) writes them
- * again. The live monitored selection is configuration, not crawl evidence,
- * and stays out of them.
+ * again. The post-settle reconcile rewrites the live ones on a cadence, so they
+ * may lag by that interval (CO-3). The live monitored selection is
+ * configuration, not crawl evidence, and stays out of them.
  */
+import { ACTIVE_CRAWL_STATUSES, isActiveCrawl } from '@citeladder/contracts/site-health';
+
 import type { Database } from '../db/database.ts';
 import { isTerminal } from './reads/crawl.ts';
 import { taskCounters } from './reads/crawl-counters.ts';
@@ -30,4 +33,32 @@ export async function persistTerminalCounters(db: Database, crawl: Crawl): Promi
 /** Rewrite the counters after a terminal crawl's analyses changed; an active crawl counts live. */
 export async function refreshTerminalCounters(db: Database, crawl: Crawl): Promise<void> {
   if (isTerminal(crawl)) await persistTerminalCounters(db, crawl);
+}
+
+/**
+ * Recount an active crawl's live counters onto its row, without the crawl
+ * lock: a crawl that went terminal meanwhile keeps its row untouched. One
+ * connection, so the recount's parallel queries never crowd the runner's slots.
+ */
+export async function persistLiveCounters(
+  db: Database,
+  target: { workspace_id: string; crawl_id: string },
+): Promise<void> {
+  await db.connection().execute(async (conn) => {
+    const crawl = await conn
+      .selectFrom('site_crawls')
+      .selectAll()
+      .where('workspace_id', '=', target.workspace_id)
+      .where('id', '=', target.crawl_id)
+      .executeTakeFirst();
+    if (!crawl || !isActiveCrawl(crawl.status)) return;
+    const counters = await taskCounters(conn, crawl);
+    await conn
+      .updateTable('site_crawls')
+      .set({ live_counters: JSON.stringify(counters) })
+      .where('workspace_id', '=', crawl.workspace_id)
+      .where('id', '=', crawl.id)
+      .where('status', 'in', ACTIVE_CRAWL_STATUSES)
+      .execute();
+  });
 }

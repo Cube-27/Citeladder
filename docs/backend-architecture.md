@@ -88,7 +88,10 @@ another's queued work. A lane that made progress runs again at once; an idle
 lane runs again after progress elsewhere (successors) or each
 `runnerLanes.idlePollMs` while others are busy. Lanes that fetch public
 websites (analytics, discovery, Site Health) share one group and take turns,
-least recently started first, preserving publisher pacing. Its time budget
+least recently started first, preserving publisher pacing. A grouped lane
+yields its turn only to due work: at the end of its claim window it asks its
+group's peers for their next due time and, while none is due, opens another
+window instead of yielding. Its time budget
 stops new admission; claimed work finishes before the pool closes, except
 integration syncs, which yield at the deadline and resume from their committed
 pages. A randomized starting lane avoids systematically favouring the same

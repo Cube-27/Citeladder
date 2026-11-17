@@ -21,7 +21,7 @@ import type { CrawlCadences } from './refresh-cadence.ts';
 import type { SiteWorkerSettings } from './runtime.ts';
 import { refreshLiveScoreSummary, refreshRunningScoreSummary } from './snapshot.ts';
 import type { Crawl } from './site-task.ts';
-import { persistTerminalCounters } from './terminal-counters.ts';
+import { persistLiveCounters, persistTerminalCounters } from './terminal-counters.ts';
 import { drainedFinalizeTask, enqueueFinalize, failFinalization } from './terminal-publication.ts';
 
 const logger = getLogger('app.workers.site_health.lifecycle');
@@ -101,6 +101,7 @@ function settledRow(db: Database, task: SettledTask) {
       't.result_artifact_id',
       'c.status as crawl_status',
       'c.analysis_status',
+      'c.admitted_url_count',
       sql<boolean>`exists (
         select 1 from site_crawl_tasks o
         where o.crawl_id = t.crawl_id and o.workspace_id = t.workspace_id
@@ -142,7 +143,9 @@ function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
  * discovery or refresh the live summary on cadence, since taking the crawl
  * lock for each is pure contention with every task commit and the user's
  * Stop. Other settlements update counters and sub-states without rebuilding
- * the score they cannot change.
+ * the score they cannot change. At each boundary and on their own cadence,
+ * the live counters an active crawl's reads render are recounted onto its row
+ * (CO-3).
  */
 export async function reconcileAfterTask(db: Database, task: SettledTask, cadence: CrawlCadences) {
   const row = await settledRow(db, task);
@@ -150,23 +153,28 @@ export async function reconcileAfterTask(db: Database, task: SettledTask, cadenc
   const kind = settlement(row);
   switch (kind) {
     case 'boundary':
-      return reconcileCrawl(db, task.workspace_id, task.crawl_id, {
+      await reconcileCrawl(db, task.workspace_id, task.crawl_id, {
         refreshScore: row.task_kind === 'analyze' && row.status === 'succeeded',
       });
+      break;
     case 'discovery_progress':
       if (cadence.discovery.admits(task.crawl_id))
         await reconcileCrawl(db, task.workspace_id, task.crawl_id, {
           refreshScore: false,
         });
-      return;
+      break;
     case 'analysis_progress':
-      if (cadence.score.admits(task.crawl_id)) await refreshRunningScoreSummary(db, task);
-      return;
+      if (cadence.score.admits(task.crawl_id, { pages: row.admitted_url_count }))
+        await refreshRunningScoreSummary(db, task);
+      break;
     default: {
       const unhandled: never = kind;
       return unhandled;
     }
   }
+  // The next settlement after a boundary may be far off (a finalize, a backoff).
+  if (kind === 'boundary' || cadence.counters.admits(task.crawl_id))
+    await persistLiveCounters(db, task);
 }
 
 /**

@@ -1,6 +1,6 @@
 /**
- * The crawl's counters: the one chooser every crawl read uses, and the live
- * scan of its tasks and analyses. Nothing here writes.
+ * The crawl's counters: the one chooser every crawl read uses, and the scan of
+ * its tasks and analyses their writers persist. Nothing here writes.
  */
 import { crawlCountersSchema } from '@citeladder/contracts/site-health';
 import { sql } from 'kysely';
@@ -42,20 +42,63 @@ async function selectedCount(db: Database, crawl: Crawl) {
   return Number(row.count);
 }
 
+type Activity = Counters['activity'];
+const STALLED: [Activity['state'], Activity['reason']] = ['stalled', 'expired_lease'];
+const WORKING: [Activity['state'], Activity['reason']] = ['working', 'active_work'];
+
 /**
- * The one counter chooser every crawl read uses, with the live selection. An
- * active crawl counts its tasks live; a terminal one reads the counters its
- * terminalization persisted (`site-health/terminal-counters.ts`). A terminal
- * crawl without persisted counters is counted from its tasks rather than
- * reported as zeros it never observed.
+ * Whether any open task of the crawl holds an expired lease. The literal
+ * status list matches `ix_site_crawl_tasks_open`'s predicate, so the probe
+ * reads that partial index instead of the crawl's settled history.
+ */
+async function hasExpiredLease(db: Database, crawl: Crawl) {
+  const { rows } = await sql<{ expired: boolean }>`
+    select exists (
+      select 1 from site_crawl_tasks
+      where crawl_id = ${crawl.id} and workspace_id = ${crawl.workspace_id}
+        and status not in ('cancelled', 'failed', 'succeeded')
+        and status in ('leased', 'running') and lease_expires_at <= now()
+    ) as expired`.execute(db);
+  return firstOf(rows, 'the expired lease probe').expired;
+}
+
+/**
+ * Counters an active crawl's last post-settle reconcile persisted, up to the
+ * counters cadence old (CO-3), with "stalled" probed now: it is the one state
+ * the persisted copy cannot carry, since nothing settles while it holds.
+ */
+async function liveCounters(db: Database, crawl: Crawl, persisted: TaskCounters) {
+  const activity = { ...persisted.activity };
+  // A backoff that ended since the recount is work again, though nothing settled yet.
+  const backoffEnded =
+    activity.state === 'waiting' &&
+    activity.next_available_at !== null &&
+    Date.parse(activity.next_available_at) <= Date.now();
+  if (await hasExpiredLease(db, crawl)) [activity.state, activity.reason] = STALLED;
+  else if (activity.state === 'stalled' || backoffEnded)
+    [activity.state, activity.reason] = WORKING;
+  return { ...persisted, activity };
+}
+
+/** The counters persisted on the crawl row for its status; null until first written. */
+function persistedCounters(db: Database, crawl: Crawl) {
+  const stored = isTerminal(crawl) ? crawl.terminal_counters : crawl.live_counters;
+  if (stored === null) return null;
+  const counters = terminalCountersSchema.parse(stored);
+  return isTerminal(crawl) ? counters : liveCounters(db, crawl, counters);
+}
+
+/**
+ * The one counter chooser every crawl read uses, with the live selection. A
+ * crawl reads the counters persisted on its row (`site-health/terminal-counters.ts`):
+ * the terminal ones once it is terminal, the live ones while it runs. A crawl
+ * without persisted counters (one whose first task has not settled, or an old
+ * terminal one) is counted from its tasks rather than reported as zeros it
+ * never observed.
  */
 export async function crawlCounters(db: Database, crawl: Crawl): Promise<Counters> {
-  const persisted =
-    isTerminal(crawl) && crawl.terminal_counters !== null
-      ? terminalCountersSchema.parse(crawl.terminal_counters)
-      : null;
   const [counters, selected] = await Promise.all([
-    persisted ?? taskCounters(db, crawl),
+    persistedCounters(db, crawl) ?? taskCounters(db, crawl),
     selectedCount(db, crawl),
   ]);
   return { ...counters, selected };

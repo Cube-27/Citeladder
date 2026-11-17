@@ -2924,6 +2924,7 @@ export interface SiteCrawls {
   failed_url_count: number;
   id: string;
   inventory_complete: boolean;
+  live_counters: Json | null;
   partial_reason: string;
   profile_id: string;
   project_id: string;

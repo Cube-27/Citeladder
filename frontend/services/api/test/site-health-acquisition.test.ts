@@ -15,7 +15,7 @@ const reconcileDuplicateAliases = async (crawl: Crawl) =>
   markDuplicates(db, crawl, await duplicateAliases(db, crawl));
 import { crawlCoverage, valueKindCoverage } from '../src/site-health/coverage.ts';
 import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
-import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
+import { taskCounters } from '../src/site-health/reads/crawl-counters.ts';
 import { pages } from '../src/site-health/reads/pages.ts';
 import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { SitePageFetcher } from '../src/site-health/page-fetch.ts';
@@ -219,7 +219,8 @@ describe('discover', () => {
       { url: url('/gone'), status: 'error', code: 'http_4xx', linked_from: [url('/'), url('/a')] },
       { url: url('/seeded'), status: 'error', code: 'http_4xx', linked_from: [] },
     ]);
-    const counters = await crawlCounters(db, await crawlRow(seed));
+    // The recount the cadence persists; the read itself may lag it (CO-3).
+    const counters = await taskCounters(db, await crawlRow(seed));
     expect(counters).toMatchObject({ errors: 2, failure_breakdown: { http_4xx: 2 } });
   });
 

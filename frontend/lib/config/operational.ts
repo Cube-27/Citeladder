@@ -155,5 +155,7 @@ export const RANGE_TASK_POLL_MS = 1_500;
 export const READINESS_POLL_MS = 15_000;
 /** A young Site Health crawl's cadence; `crawlPollInterval` backs off from it as the crawl ages. */
 export const CRAWL_POLL_MS = 4_000;
+/** While a crawl runs, its page, inventory and issue lists refresh at most this often. */
+export const CRAWL_VIEW_REFRESH_MS = 30_000;
 /** How often the Perception tab rechecks while answers are still being classified. */
 export const PERCEPTION_PENDING_POLL_MS = 15_000;

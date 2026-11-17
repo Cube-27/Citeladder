@@ -2,7 +2,10 @@ import { afterAll, expect, it, vi } from 'vitest';
 import { sql } from 'kysely';
 
 import { policy } from '../src/config.ts';
+import { record } from '../src/db/json.ts';
 import * as lifecycle from '../src/site-health/lifecycle.ts';
+import { crawlCounters } from '../src/site-health/reads/crawl-counters.ts';
+import { persistLiveCounters } from '../src/site-health/terminal-counters.ts';
 import { recoverExpiredLeases } from '../src/site-health/lease-recovery.ts';
 import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
@@ -313,6 +316,33 @@ it('refills a freed slot while a slow task is still running', async () => {
   }
 });
 
+it('opens another claim window while no peer of its group has work due', async () => {
+  const run = async (peersDue: boolean) => {
+    const ids = await Promise.all(
+      [1, 2, 3].map(async () => fixtures.task(await fixtures.crawl(), 'link_metrics')),
+    );
+    const worker = new SiteHealthWorker(db, {
+      // Every window ends at its first settlement.
+      settings: { ...settings, claimWindow: 1e-9 },
+      executors: { link_metrics: async () => {} },
+    });
+    const claimed = await worker.drain(
+      1,
+      () => true,
+      async () => peersDue,
+    );
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'cancelled' })
+      .where('id', 'in', ids)
+      .where('status', '=', 'queued')
+      .execute();
+    return claimed;
+  };
+  expect(await run(true)).toBe(1);
+  expect(await run(false)).toBe(3);
+});
+
 it('drains every bounded recovery batch before treating an empty claim as idle', async () => {
   const seed = await fixtures.crawl();
   const ids = await Promise.all([
@@ -342,7 +372,7 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
     .spyOn(lifecycle, 'reconcileCrawl')
     .mockRejectedValueOnce(new Error('temporary reconcile failure'));
   const worker = new SiteHealthWorker(db, {
-    settings: { ...settings, poll: 1 },
+    settings: { ...settings, backstopInterval: 1 },
     taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
     executors: { link_metrics: async () => {} },
   });
@@ -354,7 +384,10 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
     now += 1000;
     expect(await worker.runOnce()).toBe(0);
     expect(reconcile).toHaveBeenCalledTimes(2);
-    expect(reconcile).toHaveBeenLastCalledWith(db, seed.workspaceId, seed.crawlId);
+    // The score refresh follows the crawl's cadence: its first pass refreshed.
+    expect(reconcile).toHaveBeenLastCalledWith(db, seed.workspaceId, seed.crawlId, {
+      refreshScore: false,
+    });
     expect((await row(unrelated)).status).toBe('queued');
   } finally {
     clock.mockRestore();
@@ -537,4 +570,54 @@ it('refreshes a running crawl summary without overwriting one that settled meanw
   };
   expect(await refreshWhileLocked(false)).toMatchObject({ analyzed_count: 1 });
   expect(await refreshWhileLocked(true)).toBeNull();
+});
+
+it('renders the counters an active crawl persisted, probing an expired lease at read time', async () => {
+  const seed = await fixtures.crawl('running');
+  const page = await fixtures.analyzable(seed, '/persisted');
+  const target = { workspace_id: seed.workspaceId, crawl_id: seed.crawlId };
+  const read = async () => crawlCounters(db, await crawlOf(seed.crawlId));
+  await persistLiveCounters(db, target);
+  // Admitted after the persisted copy: the read lags until the next recount (CO-3).
+  await fixtures.analyzable(seed, '/later');
+  expect(await read()).toMatchObject({
+    queued: 1,
+    activity: { state: 'working', reason: 'active_work', queue_depth: 1 },
+  });
+  // A copy taken during a backoff reads as waiting until the backoff ends, then as work.
+  const copy = record((await crawlOf(seed.crawlId)).live_counters);
+  const waitingUntil = async (at: number) => {
+    const activity = { ...record(copy.activity), state: 'waiting', reason: 'retry_backoff' };
+    const next_available_at = new Date(at).toISOString();
+    await db
+      .updateTable('site_crawls')
+      .set({
+        live_counters: JSON.stringify({ ...copy, activity: { ...activity, next_available_at } }),
+      })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    return (await read()).activity.state;
+  };
+  expect(await waitingUntil(Date.now() + 60_000)).toBe('waiting');
+  expect(await waitingUntil(Date.now() - 1000)).toBe('working');
+  await expired(page.taskId);
+  expect(await read()).toMatchObject({
+    queued: 1,
+    activity: { state: 'stalled', reason: 'expired_lease' },
+  });
+  await persistLiveCounters(db, target);
+  expect(await read()).toMatchObject({ queued: 1, running: 1 });
+  // A crawl that went terminal keeps the copy it had.
+  await db
+    .updateTable('site_crawls')
+    .set({ status: 'completed' })
+    .where('id', '=', seed.crawlId)
+    .execute();
+  await db
+    .updateTable('site_crawl_tasks')
+    .set({ status: 'cancelled' })
+    .where('crawl_id', '=', seed.crawlId)
+    .execute();
+  await persistLiveCounters(db, target);
+  expect((await crawlOf(seed.crawlId)).live_counters).toMatchObject({ queued: 1, running: 1 });
 });

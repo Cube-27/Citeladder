@@ -74,10 +74,12 @@ describe('bounded runner', () => {
       const run = vi.spyOn(SiteHealthWorker.prototype, 'drain').mockResolvedValue(0);
       try {
         const owners = await runnerOwners(db, config);
-        await owners.lanes.find((lane) => lane.name === 'site-health')!.run(() => true);
+        const peersDue = async () => false;
+        await owners.lanes.find((lane) => lane.name === 'site-health')!.run(() => true, peersDue);
         expect(run).toHaveBeenCalledWith(
           Math.min(concurrency, config.execution.poolSize),
           expect.any(Function),
+          peersDue,
         );
       } finally {
         run.mockRestore();
@@ -454,6 +456,50 @@ describe('bounded runner', () => {
     expect(order).toEqual(['analytics', 'site-health', 'analytics', 'site-health']);
     expect(overlapped).toBe(false);
     expect(auditsAlongside).toBe(true);
+  });
+
+  it('tells a grouped lane whether a peer of its group has work due, and an ungrouped lane to yield', async () => {
+    let peerDue: Date | null = null;
+    let probeFails = false;
+    const grouped: (boolean | string)[] = [];
+    const ungrouped: boolean[] = [];
+    await drainLanes(
+      [
+        {
+          name: 'analytics',
+          group: 'web-fetch',
+          run: async () => 0,
+          nextDue: async () => {
+            if (probeFails) throw new Error('probe failed');
+            return peerDue;
+          },
+        },
+        {
+          name: 'site-health',
+          group: 'web-fetch',
+          run: async (_canAdmit, peersDue) => {
+            grouped.push(await peersDue());
+            peerDue = new Date(Date.now() - 1000);
+            grouped.push(await peersDue());
+            peerDue = null;
+            probeFails = true;
+            grouped.push(await peersDue().catch(() => 'rejected'));
+            probeFails = false;
+            return 0;
+          },
+        },
+        {
+          name: 'audits',
+          run: async (_canAdmit, peersDue) => {
+            ungrouped.push(await peersDue());
+            return 0;
+          },
+        },
+      ],
+      options(),
+    );
+    expect(grouped).toEqual([false, true, 'rejected']);
+    expect(ungrouped).toEqual([true]);
   });
 
   it('polls an idle lane for new work while another lane stays busy', async () => {

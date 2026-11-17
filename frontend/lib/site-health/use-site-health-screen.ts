@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { billingQueries } from '@/lib/api/billing';
+import { CRAWL_VIEW_REFRESH_MS } from '@/lib/config/operational';
 import { TABLE_DEFAULT_PAGE_SIZE } from '@/lib/config/tables';
 import { type StartCrawlInput } from '@/lib/api/site-health';
 import {
@@ -22,11 +23,13 @@ import { useCrawlEvents } from '@/lib/site-health/use-crawl-events';
 import {
   crawlPollInterval,
   crawlProgressVersion,
+  crawlViewsDue,
   DEFAULT_PAGES_SORT,
   inventoryModeForPhase,
   isCrawlStalled,
   CRAWL_STATES,
   type InventoryMode,
+  type SeenProgress,
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
 
@@ -114,20 +117,37 @@ export function useSiteHealthScreen() {
   // through an expired-lease report so the sweeper's recovery is observed.
   useCrawlEvents(crawl?.id, projectId, active);
 
-  // Refresh crawl-derived lists only when persisted progress changes. The
-  // first sighting mounts its own queries, and unchanged dashboard polls do no
-  // downstream work.
+  // Refresh crawl-derived lists only when persisted progress changes, and at
+  // most every CRAWL_VIEW_REFRESH_MS while the crawl runs (a throttled change
+  // still lands when its interval ends). The first sighting
+  // mounts its own queries, and unchanged dashboard polls do no downstream work.
   const crawlId = crawl?.id ?? null;
+  const crawlStatus = crawl?.status ?? null;
   const crawlVersion = crawl ? crawlProgressVersion(crawl) : null;
-  const lastSeenRef = useRef<{ crawlId: string; version: string } | null>(null);
+  const lastSeenRef = useRef<(SeenProgress & { crawlId: string }) | null>(null);
   useEffect(() => {
-    if (!crawlId || crawlVersion === null) return;
+    if (!crawlId || !crawlStatus || crawlVersion === null) return;
     const previous = lastSeenRef.current;
-    lastSeenRef.current = { crawlId, version: crawlVersion };
-    if (previous?.crawlId !== crawlId || previous.version === crawlVersion) return;
-    void refreshCrawlViews(queryClient, crawlId);
-    void refreshMonitoredUrls(queryClient, projectId);
-  }, [crawlId, crawlVersion, projectId, queryClient]);
+    const next = { version: crawlVersion, status: crawlStatus };
+    const now = Date.now();
+    if (previous?.crawlId !== crawlId) {
+      lastSeenRef.current = { crawlId, ...next, refreshedAt: now };
+      return;
+    }
+    if (previous.version === crawlVersion) return;
+    const refresh = () => {
+      lastSeenRef.current = { crawlId, ...next, refreshedAt: Date.now() };
+      void refreshCrawlViews(queryClient, crawlId);
+      void refreshMonitoredUrls(queryClient, projectId);
+    };
+    if (crawlViewsDue(previous, next, now)) {
+      refresh();
+      return;
+    }
+    // A throttled change refreshes once its interval ends, unless newer progress or unmount comes first.
+    const trailing = setTimeout(refresh, previous.refreshedAt + CRAWL_VIEW_REFRESH_MS - now);
+    return () => clearTimeout(trailing);
+  }, [crawlId, crawlStatus, crawlVersion, projectId, queryClient]);
 
   // Per-project monitored rows supply analysis progress totals. Automatic URL
   // admission owns membership; this query is display-only and cannot change

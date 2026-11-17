@@ -371,6 +371,24 @@
     "default": 30.0,
     "minimum": 0
   },
+  "live_score_refresh_large_crawl_pages": {
+    "env": ["SITE_HEALTH_LIVE_SCORE_REFRESH_LARGE_CRAWL_PAGES"],
+    "type": "int",
+    "default": 2000,
+    "minimum": 0
+  },
+  "live_score_refresh_large_crawl_interval_seconds": {
+    "env": ["SITE_HEALTH_LIVE_SCORE_REFRESH_LARGE_CRAWL_INTERVAL_SECONDS"],
+    "type": "float",
+    "default": 120.0,
+    "minimum": 0
+  },
+  "live_counters_refresh_seconds": {
+    "env": ["SITE_HEALTH_LIVE_COUNTERS_REFRESH_SECONDS"],
+    "type": "float",
+    "default": 30.0,
+    "exclusive_minimum": 0
+  },
   "live_score_refresh_max_tracked_crawls": {
     "env": ["SITE_HEALTH_LIVE_SCORE_REFRESH_MAX_TRACKED_CRAWLS"],
     "type": "int",
