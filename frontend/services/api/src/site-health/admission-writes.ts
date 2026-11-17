@@ -349,7 +349,11 @@ export async function insertObservations(trx: Database, crawl: Crawl, observed: 
 }
 
 /** A URL the crawl's sitemaps list, as listed, and its first declared `<lastmod>` (null when none). */
-export type SitemapEntry = { siteUrlId: string; listedUrl: string; lastmod: string | null };
+export type SitemapEntry = {
+  siteUrlId: string;
+  listedUrl: string;
+  lastmod: string | null;
+};
 
 /** The only writer of sitemap membership; an entry the crawl already recorded is kept. */
 export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries: SitemapEntry[]) {
@@ -386,6 +390,8 @@ export type CrawlTaskSeed = {
   priority?: number;
   position?: number;
   delaySeconds?: number;
+  /** The kind's own attempt cap; the Site Health `max_attempts` setting otherwise. */
+  maxAttempts?: number;
 };
 
 /**
@@ -421,7 +427,11 @@ export async function enqueueCrawlTasks(
           available_at = least(site_crawl_tasks.available_at, now())
       WHERE site_crawl_tasks.status = 'queued' AND site_crawl_tasks.priority < excluded.priority`
       : sql`ON CONFLICT DO NOTHING`;
-  const { rows } = await sql<{ id: string; url_hash: string; inserted: boolean }>`
+  const { rows } = await sql<{
+    id: string;
+    url_hash: string;
+    inserted: boolean;
+  }>`
     INSERT INTO site_crawl_tasks (
       id, crawl_id, workspace_id, site_url_id, parent_site_url_id, task_kind, requested_url,
       url_hash, depth, generation, idempotency_key, status, priority, randomized_position,
@@ -430,7 +440,7 @@ export async function enqueueCrawlTasks(
     )
     SELECT v.id, c.id, c.workspace_id, v.site_url_id, v.parent_site_url_id, v.kind, v.url,
       v.hash, v.depth, v.generation, ${crawl.id}::text || ':' || v.kind || ':' || v.hash || ':'
-        || v.generation::text, 'queued', v.priority, v.position, ${maxAttempts},
+        || v.generation::text, 'queued', v.priority, v.position, v.max_attempts,
       0, 0, now() + make_interval(secs => v.delay), now(), now(), '', '', false
     FROM unnest(
       ${column(() => timeOrderedId())}::uuid[],
@@ -443,9 +453,10 @@ export async function enqueueCrawlTasks(
       ${column((seed) => seed.generation ?? 0)}::int[],
       ${column((seed) => seed.priority ?? 0)}::int[],
       ${column((seed) => seed.position ?? 0)}::int[],
-      ${column((seed) => seed.delaySeconds ?? 0)}::float8[]
+      ${column((seed) => seed.delaySeconds ?? 0)}::float8[],
+      ${column((seed) => seed.maxAttempts ?? maxAttempts)}::int[]
     ) AS v(id, site_url_id, parent_site_url_id, kind, url, hash, depth, generation, priority,
-      position, delay)
+      position, delay, max_attempts)
     CROSS JOIN site_crawls c
     WHERE c.id = ${crawl.id}::uuid AND c.workspace_id = ${crawl.workspace_id}::uuid ${active}
     ${conflict}

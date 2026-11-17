@@ -2,11 +2,15 @@ import { randomUUID } from 'node:crypto';
 import { sql, type Insertable } from 'kysely';
 import { afterAll, describe, expect, it, vi } from 'vitest';
 import type { SiteCrawls } from '../src/generated/db-schema.ts';
+import { policy } from '../src/config.ts';
 import { record } from '../src/db/json.ts';
+import { compareText } from '../src/text-order.ts';
 import { analyzePage } from '../src/site-health/analysis/analyze-page.ts';
 import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
 import { pageAnalysisContext, writePageAnalysis } from '../src/site-health/analysis-rows.ts';
-import { finalizeCrawlAnalyses } from '../src/site-health/lifecycle-finalize.ts';
+import { prepareFinalization } from '../src/site-health/lifecycle-finalize.ts';
+import { appendFinalRevisions } from '../src/site-health/terminal-analysis.ts';
+import { cancelCrawl } from '../src/site-health/controls.ts';
 import { issues } from '../src/site-health/reads/issues.ts';
 import { addArchitectureIssues, persistCrawlSnapshot } from '../src/site-health/snapshot.ts';
 import {
@@ -21,24 +25,46 @@ import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 
+/**
+ * One-shot hooks around the next asynchronous commit: in a finalize run that
+ * is its first batch. `before` runs inside the transaction, `after` once it committed.
+ */
+type Hook = () => Promise<void>;
+const nextBatch = vi.hoisted(() => ({
+  before: null as Hook | null,
+  after: null as Hook | null,
+}));
+vi.mock('../src/queue/task-queue.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/queue/task-queue.ts')>();
+  const take = (key: 'before' | 'after') => {
+    const hook = nextBatch[key];
+    nextBatch[key] = null;
+    return hook;
+  };
+  return {
+    ...actual,
+    asyncCommit: async <R>(
+      database: Parameters<typeof actual.asyncCommit>[0],
+      run: (trx: Parameters<typeof actual.asyncCommit>[0]) => Promise<R>,
+    ) => {
+      const before = take('before');
+      const result = await actual.asyncCommit(database, async (trx) => {
+        await before?.();
+        return run(trx);
+      });
+      await take('after')?.();
+      return result;
+    },
+  };
+});
+
 const db = testDatabase();
 const fixtures = new SiteFixtures(db);
 afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
 });
-async function finalize(seed: SiteSeed) {
-  return db.transaction().execute(async (trx) => {
-    const crawl = await trx
-      .selectFrom('site_crawls')
-      .selectAll()
-      .where('id', '=', seed.crawlId)
-      .where('workspace_id', '=', seed.workspaceId)
-      .forUpdate()
-      .executeTakeFirstOrThrow();
-    await finalizeCrawlAnalyses(trx, crawl);
-  });
-}
+const finalize = (seed: SiteSeed) => fixtures.terminalize(seed);
 
 describe('terminal analysis publication', () => {
   it('terminalizes an empty plan exactly once with a null-score snapshot', async () => {
@@ -47,6 +73,9 @@ describe('terminal analysis publication', () => {
       reconcileCrawl(db, seed.workspaceId, seed.crawlId),
       reconcileCrawl(db, seed.workspaceId, seed.crawlId),
     ]);
+    // Concurrent reconciles of the drained crawl enqueue one finalize, which runs once.
+    expect(await tasksOf(seed.crawlId, 'finalize')).toHaveLength(1);
+    expect(await Promise.all([finalize(seed), finalize(seed)])).toContain(true);
     const crawl = await db
       .selectFrom('site_crawls')
       .selectAll()
@@ -105,7 +134,10 @@ describe('terminal analysis publication', () => {
   it('compares only with earlier usable, non-empty site crawls of the same scope', async () => {
     const seed = await fixtures.crawl('completed');
     const publish = async (values: Partial<Insertable<SiteCrawls>>) => {
-      const crawlId = await fixtures.sibling(seed, { analyzed_url_count: 1, ...values });
+      const crawlId = await fixtures.sibling(seed, {
+        analyzed_url_count: 1,
+        ...values,
+      });
       await persistCrawlSnapshot(db, await crawlRow(crawlId), true);
       return crawlId;
     };
@@ -132,7 +164,12 @@ describe('terminal analysis publication', () => {
     const comparable = await scored({}, 70);
     await scored({ status: 'failed' }, 11);
     await scored({ analyzed_url_count: 0 }, 12);
-    await scored({ configuration: JSON.stringify({ root_registrable_domain: 'blog.test' }) }, 13);
+    await scored(
+      {
+        configuration: JSON.stringify({ root_registrable_domain: 'blog.test' }),
+      },
+      13,
+    );
     // A rerun snapshot written before reruns stopped writing them.
     const rerun = await scored({}, 14);
     await db
@@ -142,7 +179,10 @@ describe('terminal analysis publication', () => {
       .execute();
     const current = await publish({});
     const change = await changeOf(current);
-    expect(change).toMatchObject({ state: 'measured', reason: 'comparable_snapshot' });
+    expect(change).toMatchObject({
+      state: 'measured',
+      reason: 'comparable_snapshot',
+    });
     expect(change.metrics).toContainEqual(
       expect.objectContaining({ key: 'aeo_readiness_score', previous: 70 }),
     );
@@ -201,36 +241,173 @@ describe('terminal analysis publication', () => {
     expect(final.source_artifact_ids).toEqual([page.artifactId]);
   });
 
-  it('rolls back evaluations and revisions with the enclosing publication transaction', async () => {
+  it('rolls back a failed batch whole and replays a committed one as a no-op', async () => {
     const seed = await fixtures.crawl('running');
-    const page = await fixtures.page(seed, '/', { canonical_declarations: ['/a', '/b'] });
-    await expect(
-      db.transaction().execute(async (trx) => {
-        const crawl = await trx
-          .selectFrom('site_crawls')
-          .selectAll()
-          .where('id', '=', seed.crawlId)
-          .forUpdate()
-          .executeTakeFirstOrThrow();
-        await finalizeCrawlAnalyses(trx, crawl);
-        throw new Error('snapshot write failed');
-      }),
-    ).rejects.toThrow('snapshot write failed');
-    const rows = await db
-      .selectFrom('site_page_analyses')
-      .selectAll()
-      .where('crawl_id', '=', seed.crawlId)
+    const page = await monitoredPage(seed, '/', { canonical_declarations: ['/a', '/b'] });
+    await monitoredPage(seed, '/about');
+    const state = async () => ({
+      analyses: (
+        await db
+          .selectFrom('site_page_analyses')
+          .select(['supersedes_analysis_id', 'is_current', 'finalized_at'])
+          .where('crawl_id', '=', seed.crawlId)
+          .execute()
+      )
+        .map(
+          (row) => `${row.supersedes_analysis_id}:${row.is_current}:${row.finalized_at !== null}`,
+        )
+        .toSorted(compareText),
+      evaluations: (
+        await db
+          .selectFrom('site_rule_evaluations')
+          .select(sql<number>`count(*)::int`.as('count'))
+          .where('analysis_id', '=', page.analysisId)
+          .executeTakeFirstOrThrow()
+      ).count,
+      status: (await crawlRow(seed.crawlId)).status,
+    });
+    const retryNow = () =>
+      db
+        .updateTable('site_crawl_tasks')
+        .set({ available_at: new Date(0) })
+        .where('crawl_id', '=', seed.crawlId)
+        .where('task_kind', '=', 'finalize')
+        .execute();
+    const initial = await state();
+    // A batch that fails inside its transaction leaves nothing behind.
+    nextBatch.before = () => Promise.reject(new Error('batch write failed'));
+    expect(await finalize(seed)).toBe(true);
+    expect(await state()).toEqual(initial);
+    // A batch that committed before the runner died is not appended again.
+    await retryNow();
+    nextBatch.after = () => Promise.reject(new Error('runner stopped after a batch'));
+    expect(await finalize(seed)).toBe(true);
+    const batched = await state();
+    expect(batched.status).toBe('running');
+    // Both pages hold a current final revision; both initials are retired.
+    expect(batched.analyses.filter((row) => row.endsWith(':true:true'))).toHaveLength(2);
+    await retryNow();
+    expect(await finalize(seed)).toBe(true);
+    const published = await state();
+    expect(published.analyses).toEqual(batched.analyses);
+    expect(published.evaluations).toBe(batched.evaluations);
+    expect(published.status).not.toBe('running');
+    const snapshot = await db
+      .selectFrom('site_health_snapshots as s')
+      .innerJoin('site_health_snapshot_analyses as a', 'a.snapshot_id', 's.id')
+      .select('a.analysis_id')
+      .where('s.crawl_id', '=', seed.crawlId)
       .execute();
-    expect(rows.map((row) => [row.id, row.is_current, row.finalized_at])).toEqual([
-      [page.analysisId, true, null],
+    const finals = await db
+      .selectFrom('site_page_analyses')
+      .select('id')
+      .where('crawl_id', '=', seed.crawlId)
+      .where('is_current', '=', true)
+      .execute();
+    expect(new Set(snapshot.map((row) => row.analysis_id))).toEqual(
+      new Set(finals.map((row) => row.id)),
+    );
+  });
+
+  it('fails a crawl whose finalization fails three times, and keeps a cancelled crawl cancelled', async () => {
+    const run = async (seed: SiteSeed) => {
+      for (let attempt = 0; attempt < 3; attempt++) {
+        await db
+          .updateTable('site_crawl_tasks')
+          .set({ available_at: new Date(0) })
+          .where('crawl_id', '=', seed.crawlId)
+          .where('task_kind', '=', 'finalize')
+          .execute();
+        nextBatch.before = () => Promise.reject(new Error('batch write failed'));
+        await finalize(seed); // NOSONAR -- Attempts in order.
+      }
+      // A failed finalize is never claimed again.
+      expect(await finalize(seed)).toBe(false);
+      return db
+        .selectFrom('site_crawl_tasks')
+        .select(['status', 'attempt_count', 'max_attempts'])
+        .where('crawl_id', '=', seed.crawlId)
+        .where('task_kind', '=', 'finalize')
+        .execute();
+    };
+    const seed = await fixtures.crawl('running');
+    await fixtures.page(seed, '/', {});
+    expect(await run(seed)).toEqual([{ status: 'failed', attempt_count: 3, max_attempts: 3 }]);
+    const crawl = await crawlRow(seed.crawlId);
+    expect([crawl.status, crawl.error_message]).toEqual([
+      'failed',
+      policy.site_health.crawl.finalize.error_message,
     ]);
+    expect(crawl.terminal_counters).not.toBeNull();
+    const failed = await db
+      .selectFrom('site_crawl_events')
+      .select('payload')
+      .where('crawl_id', '=', seed.crawlId)
+      .where('event_type', '=', 'crawl.failed')
+      .execute();
+    expect(failed.map((row) => record(record(row.payload).failure).code)).toEqual([
+      'finalize_failed',
+    ]);
+    // A cancelled crawl whose publication fails for good stays cancelled, unpublished.
+    const stopped = await fixtures.crawl('running');
+    await monitoredPage(stopped, '/');
+    await cancelCrawl(db, stopped.workspaceId, stopped.crawlId);
+    await publishCancelledCrawls(db, 50);
+    expect((await run(stopped)).map((row) => row.status)).toEqual(['failed']);
+    await publishCancelledCrawls(db, 50);
+    expect((await crawlRow(stopped.crawlId)).status).toBe('cancelled');
     expect(
       await db
-        .selectFrom('site_rule_evaluations')
+        .selectFrom('site_crawl_tasks')
         .select('id')
-        .where('analysis_id', '=', page.analysisId)
+        .where('crawl_id', '=', stopped.crawlId)
+        .where('task_kind', '=', 'finalize')
         .execute(),
-    ).toEqual([]);
+    ).toHaveLength(1);
+  });
+
+  it('publishes a crawl stopped between finalize batches as cancelled, each page once', async () => {
+    const seed = await fixtures.crawl('running');
+    for (const path of ['/', '/a', '/b']) await monitoredPage(seed, path); // NOSONAR -- Fixture rows in order.
+    const size = policy.site_health.crawl.finalize.batch_pages;
+    policy.site_health.crawl.finalize.batch_pages = 1;
+    try {
+      nextBatch.after = () => cancelCrawl(db, seed.workspaceId, seed.crawlId);
+      expect(await finalize(seed)).toBe(true);
+      const tasks = () =>
+        db
+          .selectFrom('site_crawl_tasks')
+          .select('status')
+          .where('crawl_id', '=', seed.crawlId)
+          .where('task_kind', '=', 'finalize')
+          .orderBy('created_at')
+          .execute();
+      expect(await tasks()).toEqual([{ status: 'cancelled' }]);
+      const finalized = () =>
+        db
+          .selectFrom('site_page_analyses')
+          .select('supersedes_analysis_id')
+          .where('crawl_id', '=', seed.crawlId)
+          .where('finalized_at', 'is not', null)
+          .execute();
+      expect(await finalized()).toHaveLength(1);
+      await publishCancelledCrawls(db, 50);
+      expect(await finalize(seed)).toBe(true);
+      expect(await tasks()).toEqual([{ status: 'cancelled' }, { status: 'succeeded' }]);
+      const rows = await finalized();
+      expect(new Set(rows.map((row) => row.supersedes_analysis_id)).size).toBe(3);
+      expect(rows).toHaveLength(3);
+      expect((await crawlRow(seed.crawlId)).status).toBe('cancelled');
+      expect(
+        await db
+          .selectFrom('site_health_snapshots')
+          .select('id')
+          .where('crawl_id', '=', seed.crawlId)
+          .execute(),
+      ).toHaveLength(1);
+    } finally {
+      policy.site_health.crawl.finalize.batch_pages = size;
+    }
   });
 
   it('counts graph-scope architecture issues in the snapshot and crawl summary', async () => {
@@ -349,7 +526,10 @@ describe('terminal analysis publication', () => {
       primary_content_text: text,
       links: { anchors: links.map((url) => ({ url, is_internal: true })) },
     });
-    const root = await fixtures.page(seed, '/', { has_html: true, links: { anchors: [] } });
+    const root = await fixtures.page(seed, '/', {
+      has_html: true,
+      links: { anchors: [] },
+    });
     const first = await fixtures.page(seed, '/a', page(['/old']));
     const copy = await fixtures.page(seed, '/b', page([]));
     await fixtures.redirect(seed, '/old', '/new');
@@ -389,7 +569,13 @@ describe('terminal analysis publication', () => {
     const seed = await fixtures.crawl('running');
     const page = (links: string[]) => ({
       has_html: true,
-      links: { anchors: links.map((url) => ({ url, is_internal: true, region: 'footer' })) },
+      links: {
+        anchors: links.map((url) => ({
+          url,
+          is_internal: true,
+          region: 'footer',
+        })),
+      },
     });
     const root = await fixtures.page(seed, '/', page(['/screens']));
     const paths = ['/a', '/b', '/c', '/d', '/e'];
@@ -413,7 +599,10 @@ describe('terminal analysis publication', () => {
       .execute();
     // The page-specific redirect stays on its page; the shared one is one root issue.
     expect(crawlIssues).toEqual([
-      { rule_id: 'technical.internal_link_redirect', site_url_id: others[0]!.id },
+      {
+        rule_id: 'technical.internal_link_redirect',
+        site_url_id: others[0]!.id,
+      },
       { rule_id: 'technical.sitewide_link_redirect', site_url_id: root.id },
     ]);
     const catalog = await issues(
@@ -556,18 +745,21 @@ describe('terminal analysis publication', () => {
       .selectAll()
       .where('id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
-    await db
-      .transaction()
-      .execute((trx) =>
-        finalizeCrawlAnalyses(trx, { ...crawl, workspace_id: foreign.workspaceId }),
-      );
-    const saved = await db
-      .selectFrom('site_page_analyses')
-      .selectAll()
-      .where('id', '=', page.analysisId)
-      .executeTakeFirstOrThrow();
-    expect(saved.is_current).toBe(true);
-    expect(saved.finalized_at).toBeNull();
+    const mismatched = { ...crawl, workspace_id: foreign.workspaceId };
+    const options = { crossPage: true, retiring: new Set<string>() };
+    expect((await prepareFinalization(db, mismatched, options)).pendingIds).toEqual([]);
+    expect(await appendFinalRevisions(db, mismatched, [page.analysisId], [])).toBe(0);
+    const saved = () =>
+      db
+        .selectFrom('site_page_analyses')
+        .select(['is_current', 'finalized_at'])
+        .where('id', '=', page.analysisId)
+        .executeTakeFirstOrThrow();
+    expect(await saved()).toEqual({ is_current: true, finalized_at: null });
+    // The crawl's own scope reads and revises the same page.
+    expect((await prepareFinalization(db, crawl, options)).pendingIds).toEqual([page.analysisId]);
+    expect(await appendFinalRevisions(db, crawl, [page.analysisId], [])).toBe(1);
+    expect((await saved()).is_current).toBe(false);
   });
 });
 
@@ -594,7 +786,12 @@ async function running(changes: Partial<Insertable<SiteCrawls>> = {}) {
   const seed = await fixtures.crawl('running');
   await db
     .updateTable('site_crawls')
-    .set({ analysis_status: 'running', discovered_url_count: 2, completed_at: null, ...changes })
+    .set({
+      analysis_status: 'running',
+      discovered_url_count: 2,
+      completed_at: null,
+      ...changes,
+    })
     .where('id', '=', seed.crawlId)
     .execute();
   return seed;
@@ -603,7 +800,9 @@ async function running(changes: Partial<Insertable<SiteCrawls>> = {}) {
 async function monitoredPage(seed: SiteSeed, path: string, facts: Record<string, unknown> = {}) {
   const member = await fixtures.analyzable(seed, path);
   await db.deleteFrom('site_crawl_tasks').where('id', '=', member.taskId).execute();
-  const page = await fixtures.page(seed, path, facts, { siteUrlId: member.siteUrlId });
+  const page = await fixtures.page(seed, path, facts, {
+    siteUrlId: member.siteUrlId,
+  });
   await fixtures.evaluation(seed, page, 'technical.indexable', 'satisfied');
   return page;
 }
@@ -616,7 +815,12 @@ const cadence = () => crawlCadences(siteWorkerSettings({}).scoreRefresh);
 /** A fresh page whose `kind` task failed; a status code is recorded as its fetch answered. */
 async function failedTask(
   seed: SiteSeed,
-  failure: { path: string; error_code: string; kind?: string; status_code?: number },
+  failure: {
+    path: string;
+    error_code: string;
+    kind?: string;
+    status_code?: number;
+  },
 ) {
   const page = await fixtures.analyzable(seed, failure.path);
   const { error_code, kind = 'analyze', status_code } = failure;
@@ -654,7 +858,10 @@ describe('crawl lifecycle', () => {
   it('refreshes the live summary while work remains, then terminalizes exactly once', async () => {
     const seed = await running();
     const done = await monitoredPage(seed, '/');
-    const failed = await failedTask(seed, { path: '/failed', error_code: 'task_failed' });
+    const failed = await failedTask(seed, {
+      path: '/failed',
+      error_code: 'task_failed',
+    });
     const pending = await fixtures.analyzable(seed, '/pending');
     await reconcileAfterTask(db, settled(seed, done.taskId), cadence());
     // A failed page while a sibling is outstanding is progress: no recount under the crawl lock.
@@ -672,6 +879,9 @@ describe('crawl lifecycle', () => {
       .where('id', '=', pending.taskId)
       .execute();
     await reconcileAfterTask(db, settled(seed, pending.taskId), cadence());
+    // The drain leaves the crawl running until its finalize task publishes it.
+    expect((await crawlRow(seed.crawlId)).status).toBe('running');
+    expect(await finalize(seed)).toBe(true);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'partially_completed',
       partial_reason: 'analysis_incomplete',
@@ -711,7 +921,10 @@ describe('crawl lifecycle', () => {
     // A discover while siblings still discover waits for the cadence: no crawl lock, no recount.
     await settle(middle!);
     const progress = await crawlRow(seed.crawlId);
-    expect(progress).toMatchObject({ discovery_status: 'running', analyzed_url_count: 1 });
+    expect(progress).toMatchObject({
+      discovery_status: 'running',
+      analyzed_url_count: 1,
+    });
     await settle(last!);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'running',
@@ -720,16 +933,25 @@ describe('crawl lifecycle', () => {
       score_summary: null,
     });
     await reconcileAfterTask(db, settled(seed, done.taskId), gates);
-    expect((await crawlRow(seed.crawlId)).score_summary).toMatchObject({ analyzed_count: 1 });
+    expect((await crawlRow(seed.crawlId)).score_summary).toMatchObject({
+      analyzed_count: 1,
+    });
   });
 
   it('does not count a policy exclusion or a page that is gone as an incomplete analysis', async () => {
     const seed = await running();
     await monitoredPage(seed, '/');
-    await failedTask(seed, { path: '/account', error_code: 'url_admission_rejected' });
+    await failedTask(seed, {
+      path: '/account',
+      error_code: 'url_admission_rejected',
+    });
     // A tracked page that now answers 404 is reported as an issue, not an unanalyzed page.
-    await failedTask(seed, { path: '/products/retired', error_code: 'http_4xx', status_code: 404 });
-    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+    await failedTask(seed, {
+      path: '/products/retired',
+      error_code: 'http_4xx',
+      status_code: 404,
+    });
+    await finalize(seed);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'completed',
       partial_reason: '',
@@ -743,31 +965,50 @@ describe('crawl lifecycle', () => {
     const seed = await running();
     await monitoredPage(seed, '/');
     const kind = 'discover';
-    await failedTask(seed, { path: '/policies/privacy-policy', kind, error_code: 'robots_denied' });
+    await failedTask(seed, {
+      path: '/policies/privacy-policy',
+      kind,
+      error_code: 'robots_denied',
+    });
     await failedTask(seed, {
       path: '/products/retired',
       kind,
       error_code: 'http_4xx',
       status_code: 404,
     });
-    await failedTask(seed, { path: '/size-chart', kind, error_code: 'unsupported_content_type' });
-    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
-    expect(await crawlRow(seed.crawlId)).toMatchObject({ status: 'completed', partial_reason: '' });
+    await failedTask(seed, {
+      path: '/size-chart',
+      kind,
+      error_code: 'unsupported_content_type',
+    });
+    await finalize(seed);
+    expect(await crawlRow(seed.crawlId)).toMatchObject({
+      status: 'completed',
+      partial_reason: '',
+    });
     const snapshot = await db
       .selectFrom('site_health_snapshots')
       .select('coverage_evidence')
       .where('crawl_id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
     expect(
-      (snapshot.coverage_evidence as { reasons: string[]; failed_discovery_task_count: number })
-        .failed_discovery_task_count,
+      (
+        snapshot.coverage_evidence as {
+          reasons: string[];
+          failed_discovery_task_count: number;
+        }
+      ).failed_discovery_task_count,
     ).toBe(0);
 
     // A server error is a real discovery failure.
     const other = await running();
     await monitoredPage(other, '/');
-    await failedTask(other, { path: '/broken', kind: 'discover', error_code: 'http_5xx' });
-    await reconcileCrawl(db, other.workspaceId, other.crawlId);
+    await failedTask(other, {
+      path: '/broken',
+      kind: 'discover',
+      error_code: 'http_5xx',
+    });
+    await finalize(other);
     expect((await crawlRow(other.crawlId)).status).toBe('partially_completed');
   });
 
@@ -776,16 +1017,30 @@ describe('crawl lifecycle', () => {
     await monitoredPage(seed, '/');
     // The fetch fails at discovery, so no analyze task is ever planned for these pages.
     const kind = 'discover';
-    await failedTask(seed, { path: '/rate-limited', kind, error_code: 'http_4xx' });
-    await failedTask(seed, { path: '/policies/privacy-policy', kind, error_code: 'robots_denied' });
-    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+    await failedTask(seed, {
+      path: '/rate-limited',
+      kind,
+      error_code: 'http_4xx',
+    });
+    await failedTask(seed, {
+      path: '/policies/privacy-policy',
+      kind,
+      error_code: 'robots_denied',
+    });
+    await finalize(seed);
     const snapshot = await db
       .selectFrom('site_health_snapshots')
       .select(['status_counts', 'eligibility_totals'])
       .where('crawl_id', '=', seed.crawlId)
       .executeTakeFirstOrThrow();
     expect(snapshot).toEqual({
-      status_counts: { audited: 1, blocked: 0, excluded: 1, error: 1, pending: 0 },
+      status_counts: {
+        audited: 1,
+        blocked: 0,
+        excluded: 1,
+        error: 1,
+        pending: 0,
+      },
       eligibility_totals: { eligible: 1, blocked: 0, unknown: 1, excluded: 1 },
     });
   });
@@ -808,8 +1063,8 @@ describe('crawl lifecycle', () => {
       .execute();
     await failAnalysis(site, '/a');
     await failAnalysis(site, '/b');
-    await reconcileCrawl(db, rerun.workspaceId, rerun.crawlId);
-    await reconcileCrawl(db, site.workspaceId, site.crawlId);
+    await finalize(rerun);
+    await finalize(site);
     for (const seed of [rerun, site]) {
       expect(await crawlRow(seed.crawlId)).toMatchObject({
         status: 'failed',
@@ -836,7 +1091,7 @@ describe('crawl lifecycle', () => {
       .set({ status: 'failed', error_code: 'task_failed' })
       .where('id', '=', pending.taskId)
       .execute();
-    await reconcileCrawl(db, rerun.workspaceId, rerun.crawlId);
+    await finalize(rerun);
     expect(await crawlRow(rerun.crawlId)).toMatchObject({
       status: 'partially_completed',
       analyzed_url_count: 1,
@@ -848,8 +1103,10 @@ describe('crawl lifecycle', () => {
 
     const site = await running();
     await monitoredPage(site, '/');
-    await reconcileCrawl(db, site.workspaceId, site.crawlId);
-    expect((await crawlRow(site.crawlId)).score_summary).toMatchObject({ analyzed_count: 1 });
+    await finalize(site);
+    expect((await crawlRow(site.crawlId)).score_summary).toMatchObject({
+      analyzed_count: 1,
+    });
     expect(await snapshots(site.crawlId)).toHaveLength(1);
   });
 
@@ -868,7 +1125,7 @@ describe('crawl lifecycle', () => {
       .set({ ...latest, status: 'failed', error_code: 'task_failed' })
       .where('id', '=', earlier)
       .execute();
-    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+    await finalize(seed);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'completed',
       analysis_status: 'completed',
@@ -911,10 +1168,13 @@ describe('crawl lifecycle', () => {
             created_at: new Date(),
           })
           .execute();
-      await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+      await finalize(seed);
       return crawlRow(seed.crawlId);
     };
-    expect(await discovered({})).toMatchObject({ status: 'completed', inventory_complete: true });
+    expect(await discovered({})).toMatchObject({
+      status: 'completed',
+      inventory_complete: true,
+    });
     // A site with exactly the requested page count exhausted its frontier.
     expect(await discovered({ discovery_requested_count: 1 })).toMatchObject({
       status: 'completed',
@@ -927,7 +1187,7 @@ describe('crawl lifecycle', () => {
 
   it('hands analytics the crawl identity when no page was analyzed', async () => {
     const seed = await running({ analysis_status: 'pending' });
-    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+    await finalize(seed);
     expect((await crawlRow(seed.crawlId)).status).toBe('completed');
     expect(await tasksOf(seed.crawlId, 'change_intel')).toHaveLength(0);
     const handoff = await db
@@ -937,7 +1197,10 @@ describe('crawl lifecycle', () => {
       .execute();
     expect(handoff).toContainEqual({
       task_kind: 'opportunity_refresh',
-      payload: expect.objectContaining({ trigger_kind: 'site_crawl', trigger_id: seed.crawlId }),
+      payload: expect.objectContaining({
+        trigger_kind: 'site_crawl',
+        trigger_id: seed.crawlId,
+      }),
     });
   });
 
@@ -950,11 +1213,17 @@ describe('crawl lifecycle', () => {
       { ...settled(seed, page.taskId), workspace_id: foreign.workspaceId },
       cadence(),
     );
-    expect(await crawlRow(seed.crawlId)).toMatchObject({ status: 'running', score_summary: null });
+    expect(await crawlRow(seed.crawlId)).toMatchObject({
+      status: 'running',
+      score_summary: null,
+    });
   });
 
   it('fails the tasks of an overdue crawl and settles it on its evidence, sparing a young crawl', async () => {
-    const overdue = await running({ started_at: LONG_AGO, created_at: LONG_AGO });
+    const overdue = await running({
+      started_at: LONG_AGO,
+      created_at: LONG_AGO,
+    });
     await monitoredPage(overdue, '/');
     const wedged = await fixtures.analyzable(overdue, '/wedged');
     await db
@@ -968,10 +1237,18 @@ describe('crawl lifecycle', () => {
       .execute();
     const young = await running({ started_at: new Date() });
     const queued = await fixtures.task(young, 'analyze');
-    await reconcileOverdue(db, { ...siteWorkerSettings({}).lifecycle, batch: 50 });
+    await reconcileOverdue(db, {
+      ...siteWorkerSettings({}).lifecycle,
+      batch: 50,
+    });
     expect(
       (await tasksOf(overdue.crawlId, 'analyze')).find((task) => task.id === wedged.taskId),
-    ).toMatchObject({ status: 'failed', error_code: 'crawl_overdue', lease_owner: null });
+    ).toMatchObject({
+      status: 'failed',
+      error_code: 'crawl_overdue',
+      lease_owner: null,
+    });
+    expect(await finalize(overdue)).toBe(true);
     expect((await crawlRow(overdue.crawlId)).status).toBe('partially_completed');
     expect((await crawlRow(young.crawlId)).status).toBe('running');
     expect(
@@ -987,19 +1264,28 @@ describe('crawl lifecycle', () => {
     // The shared test database holds other suites' due work; this drain sees none.
     vi.spyOn(worker.queue, 'claim').mockResolvedValue([]);
     expect(await worker.runUntilIdle(new AbortController().signal)).toBe(0);
+    expect((await tasksOf(stalled.crawlId, 'finalize')).map((task) => task.status)).toEqual([
+      'queued',
+    ]);
+    expect(await finalize(stalled)).toBe(true);
     expect((await crawlRow(stalled.crawlId)).status).toBe('completed');
     expect(await snapshots(stalled.crawlId)).toHaveLength(1);
   });
 
   it('publishes a cancelled run once and leaves a cancel without evidence unpublished', async () => {
     const seed = await fixtures.crawl('cancelled');
-    const page = await monitoredPage(seed, '/', { canonical_url: 'https://example.test/' });
+    const page = await monitoredPage(seed, '/', {
+      canonical_url: 'https://example.test/',
+    });
     const plain = await fixtures.crawl('cancelled');
     await monitoredPage(plain, '/');
     const empty = await fixtures.crawl('cancelled');
     await publishCancelledCrawls(db, 50);
+    for (const crawl of [seed, plain, empty]) await finalize(crawl); // NOSONAR -- One crawl at a time.
     await publishCancelledCrawls(db, 50);
     expect(await snapshots(seed.crawlId)).toHaveLength(1);
+    expect(await tasksOf(seed.crawlId, 'finalize')).toHaveLength(1);
+    expect(await tasksOf(empty.crawlId, 'finalize')).toHaveLength(0);
     const final = (crawlId: string) =>
       db
         .selectFrom('site_page_analyses')
@@ -1043,7 +1329,9 @@ describe('crawl lifecycle', () => {
       .execute();
     const page = await monitoredPage(rerun, '/');
     await publishCancelledCrawls(db, 50);
+    await finalize(rerun);
     await publishCancelledCrawls(db, 50);
+    expect(await tasksOf(rerun.crawlId, 'finalize')).toHaveLength(1);
     const current = await db
       .selectFrom('site_page_analyses')
       .select(['supersedes_analysis_id'])

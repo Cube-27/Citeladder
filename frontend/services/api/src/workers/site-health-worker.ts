@@ -15,6 +15,7 @@ import { persistArchitecture } from '../site-health/architecture.ts';
 import { runAnalyze } from '../site-health/analyze-task.ts';
 import { runDiscover } from '../site-health/discover-task.ts';
 import { runSiteSetup } from '../site-health/site-setup-task.ts';
+import { runFinalize } from '../site-health/finalize-task.ts';
 import { runSiteTask, type SiteTaskWork } from '../site-health/site-task.ts';
 import { SitePageFetcher } from '../site-health/page-fetch.ts';
 import { runChangeIntel } from '../site-health/change-snapshot.ts';
@@ -31,13 +32,15 @@ import { crawlCadences, type CrawlCadences } from '../site-health/refresh-cadenc
 
 type TransactionRun = Extract<SiteTaskWork, { kind: 'transaction' }>['run'];
 /**
- * Every kind the worker runs. Acquiring kinds own their transactions and mark
- * themselves running; the rest run inside the runner's transaction.
+ * Every kind the worker runs. Acquiring kinds (and `finalize`, which commits
+ * in batches) own their transactions; the rest run inside the runner's
+ * transaction.
  */
 const WORK: Readonly<Record<string, SiteTaskWork>> = {
   analyze: { kind: 'acquire', run: runAnalyze },
   discover: { kind: 'acquire', run: runDiscover },
   site_setup: { kind: 'acquire', run: runSiteSetup },
+  finalize: { kind: 'acquire', run: runFinalize },
   change_intel: { kind: 'transaction', run: runChangeIntel },
   link_metrics: { kind: 'transaction', run: persistLinkMetrics },
   architecture: { kind: 'transaction', run: persistArchitecture },
@@ -75,7 +78,9 @@ export class SiteHealthWorker {
     this.signal = options.signal;
     this.owner = options.owner ?? `site-worker-ts-${randomUUID().slice(0, 12)}`;
     this.settings = options.settings ?? siteWorkerSettings();
-    this.queue = new TaskQueue(db, SITE_HEALTH_LANE, { leaseTtlSeconds: this.settings.lease });
+    this.queue = new TaskQueue(db, SITE_HEALTH_LANE, {
+      leaseTtlSeconds: this.settings.lease,
+    });
     this.#cadence = crawlCadences(this.settings.scoreRefresh);
     // The runner checks before every task and acquisitions before every fetch;
     // a short-lived grant spares four queries per check.

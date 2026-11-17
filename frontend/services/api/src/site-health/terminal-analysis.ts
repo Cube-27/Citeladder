@@ -5,20 +5,18 @@ import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { timeOrderedId } from '../db/ids.ts';
 import { record } from '../db/json.ts';
-import { firstOf } from '../lists.ts';
 import type { SiteRuleEvaluations } from '../generated/db-schema.ts';
 import type { RuleEvaluation } from './analysis/rules.ts';
-import {
-  appliedSiteChecks,
-  crawlSiteChecks,
-  finalPageChecks,
-  scoreAnalysis,
-} from './analysis/scoring.ts';
-import { refreshIssueCurrency } from './issue-currency.ts';
-import { landIssueStates } from './issue-states.ts';
+import { crawlSiteChecks, finalPageChecks, scoreAnalysis } from './analysis/scoring.ts';
 import type { Crawl } from './site-task.ts';
 
-export function persistedEvaluation(row: Selectable<SiteRuleEvaluations>): RuleEvaluation {
+/** A stored evaluation, of which scoring reads only the rule columns. */
+type StoredEvaluation = Omit<
+  RuleEvaluation,
+  'evidence' | 'score_roles' | 'description' | 'remediation'
+> & { evidence: unknown; score_roles: string[] | null };
+
+export function persistedEvaluation(row: StoredEvaluation): RuleEvaluation {
   return {
     ...row,
     evidence: record(row.evidence),
@@ -28,27 +26,68 @@ export function persistedEvaluation(row: Selectable<SiteRuleEvaluations>): RuleE
   };
 }
 
-/** Caller holds the crawl lock and owns the terminal publication transaction. */
-export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
+export type SiteSources = Selectable<SiteRuleEvaluations>[];
+
+/**
+ * The crawl's applied site checks every final revision scores and names: the
+ * site-scope evaluations of the analyses this finalization covers, each current
+ * analysis or the initial a final revision superseded. Read after the root's
+ * batch committed (or inside it), so its crawl-finalize site checks are among them.
+ */
+export function crawlSiteSources(db: Database, crawl: Crawl): Promise<SiteSources> {
+  return db
+    .selectFrom('site_rule_evaluations')
+    .selectAll()
+    .where('workspace_id', '=', crawl.workspace_id)
+    .where('scope', '=', 'site')
+    .where('outcome', '<>', 'not_applicable')
+    .where('analysis_id', 'in', (eb) =>
+      eb
+        .selectFrom('site_page_analyses')
+        .select(sql<string>`coalesce(supersedes_analysis_id, id)`.as('id'))
+        .where('workspace_id', '=', crawl.workspace_id)
+        .where('project_id', '=', crawl.project_id)
+        .where('crawl_id', '=', crawl.id)
+        .where('is_current', '=', true),
+    )
+    .orderBy('analysis_id')
+    .orderBy('rule_id')
+    .execute();
+}
+
+/**
+ * Append the final revision of each named analysis that is still current and
+ * unfinalized, and retire the initial. A page that already has its revision
+ * drops out, so a replayed batch appends nothing. The caller holds the crawl
+ * lock; issue currency follows in the publication.
+ */
+export async function appendFinalRevisions(
+  db: Database,
+  crawl: Crawl,
+  analysisIds: string[],
+  siteSources: SiteSources,
+) {
+  if (!analysisIds.length) return 0;
   const initials = await db
     .selectFrom('site_page_analyses')
     .selectAll()
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('crawl_id', '=', crawl.id)
+    .where('id', '=', sql<string>`any(${analysisIds}::uuid[])`)
     .where('is_current', '=', true)
     .where('finalized_at', 'is', null)
     .orderBy('site_url_id')
     .orderBy('id')
     .execute();
-  // Pages that answered 404/410 still land: they have no analysis to finalize.
-  if (!initials.length) return landIssueStates(db, crawl);
+  if (!initials.length) return 0;
   const ids = initials.map((row) => row.id);
   const evaluations = await db
     .selectFrom('site_rule_evaluations')
     .selectAll()
     .where('workspace_id', '=', crawl.workspace_id)
     .where('analysis_id', '=', sql<string>`any(${ids}::uuid[])`)
+    .where('scope', '<>', 'site')
     .orderBy('analysis_id')
     .orderBy('rule_id')
     .execute();
@@ -66,24 +105,27 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
     .where('crawl_id', '=', crawl.id)
     .where('id', '=', sql<string>`any(${ids}::uuid[])`)
     .execute();
-  // A crawl-finalize check finalization never wrote is judged from the page's own facts.
+  // A crawl-finalize check finalization never wrote is judged from the page's
+  // own facts; those judgements read only its canonical declarations.
   const artifacts = await db
     .selectFrom('site_fetch_artifacts')
-    .select(['id', 'normalized_facts'])
+    .select([
+      'id',
+      sql<unknown>`jsonb_build_object(
+        'canonical_declarations', normalized_facts -> 'canonical_declarations',
+        'canonical_url', normalized_facts -> 'canonical_url')`.as('facts'),
+    ])
     .where('workspace_id', '=', crawl.workspace_id)
     .where('id', '=', sql<string>`any(${initials.map((row) => row.artifact_id)}::uuid[])`)
     .execute();
-  const factsOf = new Map(artifacts.map((row) => [row.id, record(row.normalized_facts)]));
-  // Site checks score on every page, so each page's manifest names the site evaluations it used.
-  const siteSources = evaluations.filter(
-    (row) => appliedSiteChecks([persistedEvaluation(row)]).length > 0,
-  );
+  const factsOf = new Map(artifacts.map((row) => [row.id, record(row.facts)]));
   // Scored site checks the crawl never evaluated score as unknown, with no source to name.
   const site = crawlSiteChecks(siteSources.map(persistedEvaluation));
   const auditTime = crawl.started_at ?? crawl.created_at;
   const finalizedAt = new Date();
   const revisions = initials.map((initial) => {
-    const own = (byAnalysis.get(initial.id) ?? []).filter((row) => row.scope !== 'site');
+    const own = byAnalysis.get(initial.id) ?? [];
+    // Site checks score on every page, so each page's manifest names the site evaluations it used.
     const sources = [...own, ...siteSources];
     const scores = scoreAnalysis(
       finalPageChecks(own.map(persistedEvaluation), factsOf.get(initial.artifact_id) ?? {}),
@@ -116,14 +158,7 @@ export async function publishFinalPageAnalyses(db: Database, crawl: Crawl) {
       readiness_dimensions: JSON.stringify(scores.readiness_dimensions),
     };
   });
-  // Chunked only to stay under PostgreSQL's 65535 bind-parameter limit.
-  const first = firstOf(revisions, 'a revision of an unfinalized analysis');
-  const chunk = Math.floor(65_535 / Object.keys(first).length);
-  for (let offset = 0; offset < revisions.length; offset += chunk)
-    await db // NOSONAR: in order in the caller's one publication transaction.
-      .insertInto('site_page_analyses')
-      .values(revisions.slice(offset, offset + chunk))
-      .execute();
-  // The finalized revisions now name the crawl's current evaluations.
-  await refreshIssueCurrency(db, crawl);
+  // A batch is a few hundred pages, far under PostgreSQL's 65535 bind-parameter limit.
+  await db.insertInto('site_page_analyses').values(revisions).execute();
+  return revisions.length;
 }

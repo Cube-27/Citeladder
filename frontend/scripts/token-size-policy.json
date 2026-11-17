@@ -34,7 +34,6 @@
     "frontend/services/api/src/routes/integrations.ts": 6740,
     "frontend/services/api/src/site-health/analysis/facts.ts": 6303,
     "frontend/services/api/src/site-health/frontier.ts": 6556,
-    "frontend/services/api/src/site-health/lifecycle.ts": 6294,
     "frontend/services/api/src/site-health/reads/issues.ts": 6903,
     "frontend/services/api/src/visibility/prompts.ts": 6501,
     "frontend/services/api/src/workers/integration-worker.ts": 6380,

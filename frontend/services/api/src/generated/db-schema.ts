@@ -3064,6 +3064,12 @@ export interface SiteHealthProfiles {
   workspace_id: string;
 }
 
+export interface SiteHealthSnapshotAnalyses {
+  analysis_id: string;
+  snapshot_id: string;
+  workspace_id: string;
+}
+
 export interface SiteHealthSnapshots {
   aeo_measurement_coverage: number | null;
   aeo_measurement_state: string;
@@ -3106,10 +3112,8 @@ export interface SiteHealthSnapshots {
   search_eligibility: string;
   selected_url_count: number;
   severity_counts: Json | null;
-  source_analysis_ids: string[] | null;
   source_artifact_ids: string[] | null;
   source_attempt_ids: string[] | null;
-  source_evaluation_ids: string[] | null;
   source_task_ids: string[] | null;
   status_counts: Json | null;
   technical_defect_affected_page_count: number;
@@ -3800,6 +3804,7 @@ export interface DB {
   site_fetch_artifacts: SiteFetchArtifacts;
   site_fetch_attempts: SiteFetchAttempts;
   site_health_profiles: SiteHealthProfiles;
+  site_health_snapshot_analyses: SiteHealthSnapshotAnalyses;
   site_health_snapshots: SiteHealthSnapshots;
   site_internal_link_events: SiteInternalLinkEvents;
   site_internal_link_runs: SiteInternalLinkRuns;

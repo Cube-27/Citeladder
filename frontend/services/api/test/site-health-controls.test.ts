@@ -59,7 +59,10 @@ async function allow(tenant: Tenant, limit: number, fetches?: number) {
   accounts.push(account);
   await grant(db, account, { key: 'monitored_urls', value: limit });
   if (fetches !== undefined)
-    await grant(db, account, { key: 'site_health_page_fetches_per_period', value: fetches });
+    await grant(db, account, {
+      key: 'site_health_page_fetches_per_period',
+      value: fetches,
+    });
   return account;
 }
 const otherProject = (seed: SiteSeed) => fixtures.otherProject(seed);
@@ -77,11 +80,12 @@ const sitemapCandidates = (urls: string[]) =>
     });
   });
 async function create(tenant: Tenant, options: Record<string, unknown> = {}) {
-  return db
-    .transaction()
-    .execute((trx) =>
-      createCrawl(trx, tenant.workspaceId, { project_id: tenant.projectId, ...options }),
-    );
+  return db.transaction().execute((trx) =>
+    createCrawl(trx, tenant.workspaceId, {
+      project_id: tenant.projectId,
+      ...options,
+    }),
+  );
 }
 
 describe('crawl control admission', () => {
@@ -103,7 +107,9 @@ describe('crawl control admission', () => {
     }
   });
   it('serializes two concurrent creates and seeds one setup and the tracked root’s analysis', async () => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const tenant = await fixtures.tenant({
+      websiteUrl: 'https://example.test/',
+    });
     await allow(tenant, 2);
     const outcomes = await Promise.allSettled([create(tenant), create(tenant)]);
     expect(outcomes.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
@@ -200,7 +206,9 @@ describe('crawl control admission', () => {
     const outsider = await otherProject(outsiderSeed);
     const operatorAccount = await allow(seed, 4, 0);
     await allow(outsiderSeed, 4, 0);
-    await expect(create(other)).rejects.toMatchObject({ code: 'site_health_fetches_exhausted' });
+    await expect(create(other)).rejects.toMatchObject({
+      code: 'site_health_fetches_exhausted',
+    });
     // The development login no longer confers anything (BL9).
     vi.stubEnv('DEV_LOGIN_EMAIL', `dev-${seed.userId}@example.test`);
     vi.stubEnv('DEV_LOGIN_PASSWORD', 'test-only-development-password');
@@ -209,7 +217,9 @@ describe('crawl control admission', () => {
       .set({ email: `dev-${seed.userId}@example.test`, role: 'admin' })
       .where('id', '=', seed.userId)
       .execute();
-    await expect(create(other)).rejects.toMatchObject({ code: 'site_health_fetches_exhausted' });
+    await expect(create(other)).rejects.toMatchObject({
+      code: 'site_health_fetches_exhausted',
+    });
     await grant(db, operatorAccount, { key: 'operator_controls', value: 1 });
     await expect(create(outsider)).rejects.toMatchObject({
       code: 'site_health_fetches_exhausted',
@@ -233,7 +243,9 @@ describe('crawl control admission', () => {
     { requested_page_limit: 3 },
     { discovery_count: 3 },
   ])('refuses the retired crawl option %j and starts no crawl', async (option) => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const tenant = await fixtures.tenant({
+      websiteUrl: 'https://example.test/',
+    });
     const response = await request(tenant, '/site-crawls', 'POST', {
       project_id: tenant.projectId,
       ...option,
@@ -249,7 +261,9 @@ describe('crawl control admission', () => {
   });
 
   it('fills tracked pages in tier order, never re-picks one, and fits the set to the plan limit', async () => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const tenant = await fixtures.tenant({
+      websiteUrl: 'https://example.test/',
+    });
     await allow(tenant, 3);
     const crawl = await create(tenant);
     const fill = (paths: string[]) =>
@@ -302,7 +316,9 @@ describe('crawl control admission', () => {
   });
 
   it('fills a full sitemap’s worth of tracked pages past the bind-parameter limit', async () => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const tenant = await fixtures.tenant({
+      websiteUrl: 'https://example.test/',
+    });
     await allow(tenant, 5001);
     const crawl = await create(tenant);
     const items = sitemapCandidates(
@@ -321,7 +337,9 @@ describe('crawl control admission', () => {
 
   it('sizes a full crawl to the plan’s tracked pages and its HTML walk to the discovery cap', async () => {
     vi.stubEnv('SITE_HEALTH_AUTOMATIC_PAGE_LIMIT', '7');
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const tenant = await fixtures.tenant({
+      websiteUrl: 'https://example.test/',
+    });
     await allow(tenant, 50);
     const crawl = await create(tenant);
     // 50 tracked pages, unmetered; the walk may discover at least that many.
@@ -330,9 +348,14 @@ describe('crawl control admission', () => {
   });
 
   it('meters a crawl once a concurrent operator_controls revocation commits', async () => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const tenant = await fixtures.tenant({
+      websiteUrl: 'https://example.test/',
+    });
     const accountId = await allow(tenant, 4, 0);
-    const grantId = await grant(db, accountId, { key: 'operator_controls', value: 1 });
+    const grantId = await grant(db, accountId, {
+      key: 'operator_controls',
+      value: 1,
+    });
     let admission: Promise<unknown> | undefined;
     const revocation = await db.startTransaction().execute();
     try {
@@ -346,9 +369,9 @@ describe('crawl control admission', () => {
         actorId: null,
         at: new Date(),
       });
-      const blocker = await sql<{ pid: number }>`select pg_backend_pid() as pid`.execute(
-        revocation,
-      );
+      const blocker = await sql<{
+        pid: number;
+      }>`select pg_backend_pid() as pid`.execute(revocation);
       admission = create(tenant).catch((error: unknown) => error);
       await vi.waitFor(
         async () => {
@@ -360,7 +383,10 @@ describe('crawl control admission', () => {
         { timeout: 5000, interval: 20 },
       );
       await revocation.commit().execute();
-      expect(await admission).toMatchObject({ status: 409, code: 'site_health_fetches_exhausted' });
+      expect(await admission).toMatchObject({
+        status: 409,
+        code: 'site_health_fetches_exhausted',
+      });
     } finally {
       if (!revocation.isCommitted) await revocation.rollback().execute();
       await admission;
@@ -406,7 +432,10 @@ describe('crawl control admission', () => {
     ).toEqual([a.id, c.id, root.id].sort());
     expect(record(full.configuration).inventory_source_crawl_ids).toEqual([seed.crawlId]);
     await cancelCrawl(db, seed.workspaceId, full.id);
-    await fixtures.sibling(seed, { sample_mode: true, created_at: new Date(Date.now() + 1000) });
+    await fixtures.sibling(seed, {
+      sample_mode: true,
+      created_at: new Date(Date.now() + 1000),
+    });
     const next = await create(seed);
     expect(record(next.configuration).inventory_source_crawl_ids).toEqual([full.id, seed.crawlId]);
   });
@@ -432,7 +461,9 @@ describe('crawl control admission', () => {
   });
 
   it('allows bootstrap reruns in sample mode as their own one-page crawl', async () => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const tenant = await fixtures.tenant({
+      websiteUrl: 'https://example.test/',
+    });
     const crawl = await create(tenant);
     const member = await db
       .selectFrom('monitored_site_urls')
@@ -471,7 +502,9 @@ describe('crawl control admission', () => {
       'POST',
     );
     expect(response.status).toBe(409);
-    expect(await response.json()).toMatchObject({ error: { code: 'crawl_already_active' } });
+    expect(await response.json()).toMatchObject({
+      error: { code: 'crawl_already_active' },
+    });
     expect(await tasks()).toBe(before);
     expect(
       await db
@@ -486,7 +519,9 @@ describe('crawl control admission', () => {
 describe('crawl-control HTTP contracts', () => {
   it('preserves coded plan errors and sanitizes invalid query identifiers', async () => {
     const tenant = await fixtures.tenant({ websiteUrl: '' });
-    const root = await request(tenant, '/site-crawls', 'POST', { project_id: tenant.projectId });
+    const root = await request(tenant, '/site-crawls', 'POST', {
+      project_id: tenant.projectId,
+    });
     expect(root.status).toBe(422);
     const body = record(await root.json());
     expect(body).toMatchObject({
@@ -521,7 +556,11 @@ describe('crawl-control HTTP contracts', () => {
     const reader = { ...seed, userId: viewer };
     expect((await request(reader, `/projects/${seed.projectId}/monitored-urls`)).status).toBe(200);
     expect(
-      (await request(reader, '/site-crawls', 'POST', { project_id: seed.projectId })).status,
+      (
+        await request(reader, '/site-crawls', 'POST', {
+          project_id: seed.projectId,
+        })
+      ).status,
     ).toBe(403);
     expect((await request(reader, `/site-crawls/${seed.crawlId}/cancel`, 'POST')).status).toBe(403);
     // Settings resolve once at startup, so the lower limit is a separately started app.
@@ -619,6 +658,7 @@ describe('crawl-control HTTP contracts', () => {
         .execute();
     expect(await snapshots()).toHaveLength(0);
     await publishCancelledCrawls(db, 100);
+    expect(await fixtures.terminalize(seed)).toBe(true);
     await publishCancelledCrawls(db, 100);
     expect(await snapshots()).toHaveLength(1);
     expect(
@@ -690,14 +730,20 @@ describe('crawl-control HTTP contracts', () => {
       const items = record(await response.json()).items as unknown[];
       return record(record(items.find((item) => record(item).id === seed.crawlId)).counters);
     };
-    expect(await listed()).toMatchObject({ analyzed: 2, by_page_kind: { product: 2 } });
+    expect(await listed()).toMatchObject({
+      analyzed: 2,
+      by_page_kind: { product: 2 },
+    });
     // A terminal crawl with no persisted counters is counted, never reported as zero.
     await db
       .updateTable('site_crawls')
       .set({ status: 'completed', completed_at: new Date() })
       .where('id', '=', seed.crawlId)
       .execute();
-    expect(await listed()).toMatchObject({ analyzed: 2, by_page_kind: { product: 2 } });
+    expect(await listed()).toMatchObject({
+      analyzed: 2,
+      by_page_kind: { product: 2 },
+    });
     // Once persisted, the stored counters win over later task rows.
     await db
       .updateTable('site_crawls')
@@ -798,7 +844,9 @@ describe('crawl-control HTTP contracts', () => {
   });
 
   it('records who chose to ignore robots.txt, and a crawl naming no choice keeps it', async () => {
-    const tenant = await fixtures.tenant({ websiteUrl: 'https://example.test/' });
+    const tenant = await fixtures.tenant({
+      websiteUrl: 'https://example.test/',
+    });
     const { email } = await db
       .selectFrom('users')
       .select('email')
@@ -808,7 +856,11 @@ describe('crawl-control HTTP contracts', () => {
     const forged = await request(tenant, '/site-crawls', 'POST', {
       project_id: tenant.projectId,
       robots: 'ignore',
-      robots_decision: { user_id: randomUUID(), email: 'x@example.test', decided_at: null },
+      robots_decision: {
+        user_id: randomUUID(),
+        email: 'x@example.test',
+        decided_at: null,
+      },
     });
     expect(forged.status).toBe(422);
     const created = await request(tenant, '/site-crawls', 'POST', {
@@ -817,7 +869,10 @@ describe('crawl-control HTTP contracts', () => {
     });
     expect(created.status).toBe(201);
     const source = siteCrawlSchema.parse(await created.json());
-    expect(source.robots).toMatchObject({ handling: 'ignore', decided_by_email: email });
+    expect(source.robots).toMatchObject({
+      handling: 'ignore',
+      decided_by_email: email,
+    });
     const frozen = async (id: string) =>
       record(
         (
@@ -835,7 +890,9 @@ describe('crawl-control HTTP contracts', () => {
       .set({ status: 'completed' })
       .where('id', '=', source.id)
       .execute();
-    const rerun = await request(tenant, '/site-crawls', 'POST', { project_id: tenant.projectId });
+    const rerun = await request(tenant, '/site-crawls', 'POST', {
+      project_id: tenant.projectId,
+    });
     expect(rerun.status).toBe(201);
     const next = siteCrawlSchema.parse(await rerun.json());
     expect(next.robots).toEqual(source.robots);

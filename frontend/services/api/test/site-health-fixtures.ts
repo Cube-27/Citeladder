@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import type { Insertable, RawBuilder } from 'kysely';
+import type { Insertable, RawBuilder, Selectable } from 'kysely';
 import type { Database } from '../src/db/database.ts';
 import type { SiteCrawls } from '../src/generated/db-schema.ts';
 import { policy } from '../src/config.ts';
@@ -10,6 +10,11 @@ import {
   type WebsiteFetcher,
 } from '../src/safe-fetch.ts';
 import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
+import { refreshIssueCurrency } from '../src/site-health/issue-currency.ts';
+import { landIssueStates } from '../src/site-health/issue-states.ts';
+import { reconcileCrawl } from '../src/site-health/lifecycle.ts';
+import { prepareFinalization } from '../src/site-health/lifecycle-finalize.ts';
+import { appendFinalRevisions, crawlSiteSources } from '../src/site-health/terminal-analysis.ts';
 import { canonicalIdentity } from '../src/site-health/url-identity.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
@@ -45,7 +50,11 @@ export const bodyFacts = (body: string) =>
     contentType: 'text/html',
     statusCode: 200,
   });
-export type SiteSeed = Tenant & { crawlId: string; profileId: string; root: string };
+export type SiteSeed = Tenant & {
+  crawlId: string;
+  profileId: string;
+  root: string;
+};
 export class SiteFixtures extends VisibilityFixtures {
   readonly siteDb: Database;
   constructor(db: Database) {
@@ -235,6 +244,44 @@ export class SiteFixtures extends VisibilityFixtures {
       taskScope: { workspaceId: seed.workspaceId, crawlId: seed.crawlId },
     });
   }
+  /**
+   * Reconciles the crawl, then claims and runs the `finalize` task a drain
+   * enqueued (or one already open); false when none could be claimed.
+   */
+  async terminalize(seed: SiteSeed, worker = this.worker(seed)) {
+    await reconcileCrawl(this.siteDb, seed.workspaceId, seed.crawlId);
+    const open = await this.siteDb
+      .selectFrom('site_crawl_tasks')
+      .select('id')
+      .where('workspace_id', '=', seed.workspaceId)
+      .where('crawl_id', '=', seed.crawlId)
+      .where('task_kind', '=', 'finalize')
+      .where('status', 'in', ['queued', 'retry_wait'])
+      .executeTakeFirst();
+    if (!open) return false;
+    const [task] = await worker.queue.claim({
+      owner: worker.owner,
+      kinds: ['finalize'],
+      scope: { workspaceId: seed.workspaceId, taskIds: [open.id] },
+    });
+    if (!task) return false;
+    await worker.execute(task);
+    return true;
+  }
+  /**
+   * Lands the crawl's unfinalized analyses as final revisions in one
+   * transaction the caller holds (the crawl locked), with issue currency, as
+   * the finalize task's batches and publication do for a crawl of any status.
+   */
+  async landFinalRevisions(trx: Database, crawl: Selectable<SiteCrawls>) {
+    const { pendingIds } = await prepareFinalization(trx, crawl, {
+      crossPage: false,
+      retiring: new Set(),
+    });
+    if (!pendingIds.length) return landIssueStates(trx, crawl);
+    await appendFinalRevisions(trx, crawl, pendingIds, await crawlSiteSources(trx, crawl));
+    await refreshIssueCurrency(trx, crawl);
+  }
   /** Claims exactly task `id` for `worker`, without executing it. */
   async claim(worker: SiteHealthWorker, seed: SiteSeed, kind: string, id: string) {
     const [task] = await worker.queue.claim({
@@ -312,7 +359,11 @@ export class SiteFixtures extends VisibilityFixtures {
       .execute();
     await this.siteDb
       .updateTable('site_crawl_tasks')
-      .set({ status: 'succeeded', site_url_id: id, result_artifact_id: artifactId })
+      .set({
+        status: 'succeeded',
+        site_url_id: id,
+        result_artifact_id: artifactId,
+      })
       .where('id', '=', taskId)
       .execute();
     if (options.observed)
@@ -458,7 +509,11 @@ export class SiteFixtures extends VisibilityFixtures {
   async analyzable(
     seed: SiteSeed,
     path: string,
-    options: { source?: string; monitoredLimit?: number; createdAt?: Date } = {},
+    options: {
+      source?: string;
+      monitoredLimit?: number;
+      createdAt?: Date;
+    } = {},
   ) {
     const identity = canonicalIdentity(path, seed.root);
     const now = new Date();
@@ -779,7 +834,10 @@ export function recordedSite(
       const acceptable =
         options.contentTypes.includes(contentType) || options.contentTypes.includes('*');
       if (!response.redirect && response.status >= 200 && response.status < 300 && !acceptable)
-        throw new FetchError('content_type', { status: response.status, contentType });
+        throw new FetchError('content_type', {
+          status: response.status,
+          contentType,
+        });
       if (!response.redirect)
         return {
           url: target.href,
