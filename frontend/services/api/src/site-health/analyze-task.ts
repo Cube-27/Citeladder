@@ -78,18 +78,22 @@ async function guardRows(
   task: SiteTask,
   lock: boolean,
 ): Promise<GuardRows> {
-  const runtimeQuery = db
+  // Analysis spends no allowance: only the runtime's existence matters, so it
+  // takes no runtime lock and never queues behind the workspace's discovers.
+  const runtime = await db
     .selectFrom('workspace_site_health_runtime')
     .select('id')
-    .where('workspace_id', '=', crawl.workspace_id);
-  const runtime = await (lock ? runtimeQuery.forUpdate() : runtimeQuery).executeTakeFirst();
+    .where('workspace_id', '=', crawl.workspace_id)
+    .executeTakeFirst();
   const monitoredQuery = db
     .selectFrom('monitored_site_urls')
     .select('active')
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('site_url_id', '=', task.site_url_id ?? '00000000-0000-0000-0000-000000000000');
-  const monitored = await (lock ? monitoredQuery.forUpdate() : monitoredQuery).executeTakeFirst();
+  const monitored = await (
+    lock ? monitoredQuery.forNoKeyUpdate() : monitoredQuery
+  ).executeTakeFirst();
   return { runtime, monitored };
 }
 /**
@@ -245,6 +249,17 @@ async function recordProgress(trx: Database, crawl: Crawl) {
   await recordCrawlEvent(trx, crawl, 'analysis.progress', 'analysis progress', { analyzed });
 }
 
+/** Whether setup or discovery published new page context while interpretation ran. */
+async function contextMoved(
+  trx: Database,
+  crawl: Crawl,
+  page: Parameters<typeof pageAnalysisContext>[2],
+  context: unknown,
+) {
+  const current = await pageAnalysisContext(trx, crawl, page);
+  return JSON.stringify(current) !== JSON.stringify(context);
+}
+
 /** Stage the evidence and settle the task in one transaction. */
 async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome) {
   ctx.signal.throwIfAborted();
@@ -258,7 +273,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
     : null;
   const result = context && outcome.facts ? await analyzePageAsync(outcome.facts, context) : null;
   await commitTask(ctx, claimed, async (trx, lock) => {
-    // Runtime and membership come before the crawl in Site Health lock order.
+    // Membership comes before the crawl in Site Health lock order.
     const live = await loadScope(trx, claimed);
     if (!live) throw new Abandoned();
     const rows = await guardRows(trx, live.crawl, live.task, true);
@@ -269,16 +284,11 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
     }
     let artifactId = outcome.reusedArtifactId;
     if (outcome.facts && task.site_url_id && result) {
-      // Setup/discovery may publish context while interpretation runs. Interpret
-      // the new snapshot once under the crawl lock without spending another attempt.
-      const currentContext = await pageAnalysisContext(trx, crawl, {
-        ...task,
-        site_url_id: task.site_url_id,
-      });
-      const currentResult =
-        JSON.stringify(currentContext) === JSON.stringify(context)
-          ? result
-          : await analyzePageAsync(outcome.facts, currentContext);
+      const page = { ...task, site_url_id: task.site_url_id };
+      // Requeued without an attempt (whose number keys its fetch records), so
+      // interpretation never reruns under the commit's locks.
+      if (await contextMoved(trx, crawl, page, context))
+        return settleTask(trx, ctx, task, { kind: 'deferred', delaySeconds: 0 });
       artifactId ??= await writeArtifact(trx, crawl, task, outcome.page!, outcome.facts, {
         policyVersion: ctx.fetcher.settings.policyVersion,
         latencyMs: outcome.latencyMs ?? 0,
@@ -291,7 +301,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
         { ...task, site_url_id: task.site_url_id },
         artifactId,
         outcome.facts,
-        currentResult,
+        result,
       );
       if (analysis.pageKind === 'category' || analysis.pageKind === 'product')
         await enqueueCatalogProjection(

@@ -14,6 +14,7 @@ import { cohortComposition } from './cohort-composition.ts';
 import { crawlCoverage } from './coverage.ts';
 import {
   loadMeasurementProjection,
+  lockProfile,
   scoreSummary,
   type MeasurementProjection,
 } from './score-summary.ts';
@@ -190,6 +191,7 @@ async function publishScoreSummary(
  */
 export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEmpty = false) {
   if (isPageRerun(crawl)) return false;
+  await lockProfile(db, crawl);
   const projection = await loadMeasurementProjection(db, crawl, { latest: true });
   if (
     !persistEmpty &&
@@ -264,6 +266,7 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
     .forUpdate()
     .executeTakeFirst();
   if (!snapshot) return false;
+  await lockProfile(db, crawl);
   const projection = await loadMeasurementProjection(db, crawl, { latest: true });
   const own = projection.evaluations.map((row) => row.id);
   const architecture = await architectureEvaluationIds(db, crawl);
@@ -396,7 +399,7 @@ export async function refreshRunningScoreSummary(
       .select('status')
       .where('workspace_id', '=', crawl.workspace_id)
       .where('id', '=', crawl.id)
-      .forUpdate()
+      .forNoKeyUpdate()
       .executeTakeFirst();
     if (locked && isActiveCrawl(locked.status)) await writeScoreSummary(trx, crawl, payload);
   });

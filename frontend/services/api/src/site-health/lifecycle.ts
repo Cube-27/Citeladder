@@ -1,6 +1,6 @@
 /**
  * A crawl goes terminal here and nowhere else. Every entry point holds the
- * crawl row FOR UPDATE and short-circuits on a crawl that is no longer
+ * crawl row FOR NO KEY UPDATE and short-circuits on a crawl that is no longer
  * active, so the per-task reconcile, terminal lease recovery, the stalled
  * backstop and the overdue watchdog are idempotent and safe to run
  * concurrently. The finalize pass, final page revisions and the snapshot
@@ -298,7 +298,7 @@ type ReconcileOptions = {
   refreshScore?: boolean;
 };
 
-/** Reconcile one crawl whose row the caller holds FOR UPDATE. */
+/** Reconcile one crawl whose row the caller holds locked. */
 async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: ReconcileOptions = {}) {
   if (!isActiveCrawl(crawl.status)) return;
   const summary = await taskSummary(db, crawl);
@@ -320,13 +320,14 @@ async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: Reconci
   await terminalize(db, crawl, summary, fullyFailed, discoveryPartial);
 }
 
+/** NO KEY UPDATE: FOR UPDATE would block the FK checks of every child insert in the crawl. */
 function lockCrawl(db: Database, workspaceId: string, crawlId: string) {
   return db
     .selectFrom('site_crawls')
     .selectAll()
     .where('workspace_id', '=', workspaceId)
     .where('id', '=', crawlId)
-    .forUpdate()
+    .forNoKeyUpdate()
     .executeTakeFirst();
 }
 
