@@ -9,7 +9,7 @@ import { pageAuditsSql } from './reads/crawl.ts';
 import type { Crawl } from './site-task.ts';
 import { compareText, scalarText } from '../text-order.ts';
 
-function classificationState(classified: number, expected: number) {
+export function classificationState(classified: number, expected: number) {
   if (!expected) return 'not_measured';
   return classified === expected ? 'complete' : 'partial';
 }
