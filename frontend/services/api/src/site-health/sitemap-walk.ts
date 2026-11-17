@@ -153,8 +153,9 @@ export async function walkSitemaps(
     ),
     queue: [],
     unread: 0,
+    refetched: false,
   };
-  walk.queue = [...walk.queued].map((url) => ({ url, depth: 0 }));
+  walk.queue = [...walk.queued].map((url): Entry => ({ url, depth: 0, source: { kind: 'seed' } }));
   let attempted = 0;
   // A full collector cannot gain a URL from any further document.
   while (
@@ -186,19 +187,54 @@ export async function walkSitemaps(
 }
 export type SitemapWalk = Awaited<ReturnType<typeof walkSitemaps>>;
 
+/**
+ * An index document and the answers to the children it queued: those left
+ * `pending`, the `unread` ones the re-fetch trigger names, and whether any
+ * other answer (a read child) came back.
+ */
+type IndexRead = {
+  url: string;
+  depth: number;
+  pending: number;
+  answered: boolean;
+  unread: string[];
+};
+const indexRead = (url: string, depth: number): IndexRead => ({
+  url,
+  depth,
+  pending: 0,
+  answered: false,
+  unread: [],
+});
+type Source =
+  | { kind: 'seed' }
+  | { kind: 'child'; index: IndexRead }
+  | { kind: 'refetch'; index: IndexRead };
+type Entry = { url: string; depth: number; source: Source };
+
 type Walk = {
   crawlId: string;
   collector: SitemapCollector;
   /** How many documents were read as sitemaps. */
   files: number;
   queued: Set<string>;
-  queue: { url: string; depth: number }[];
+  queue: Entry[];
   /** Documents no answer settled (unfetched, timed out, rate-limited or failing), or an index's child refused. */
   unread: number;
+  /** An index was already re-fetched past a cache; once per walk. */
+  refetched: boolean;
 };
 
+const refetchPolicy = crawlPolicy.sitemap_index_refetch;
+
+/** The index URL with a query a cache has not seen, its own query kept. */
+const cacheBusted = (url: string) =>
+  `${url}${url.includes('?') ? '&' : '?'}${refetchPolicy.cache_bust_param}=${Date.now()}`;
+
 /** Record one answer and queue its unseen child references. */
-function collect(walk: Walk, { url, depth }: { url: string; depth: number }, read: SitemapAnswer) {
+function collect(walk: Walk, entry: Entry, read: SitemapAnswer) {
+  const { url, depth, source } = entry;
+  if (source.kind === 'refetch') return collectRefetch(walk, entry, source.index, read);
   if (read.kind !== 'parsed') {
     // A child its index declares but the server refuses is a stale or broken index, not a missing sitemap.
     if (read.kind === 'absent' && depth === 0) return;
@@ -209,14 +245,56 @@ function collect(walk: Walk, { url, depth }: { url: string; depth: number }, rea
       answer: read.kind,
       status_code: read.status,
     });
+    if (source.kind === 'child') childAnswered(walk, source.index, url, read.kind);
     return;
   }
-  const refs = walk.collector.add(url, read.document, depth);
+  if (source.kind === 'child') childAnswered(walk, source.index, url, 'parsed');
   walk.files++;
+  queueChildren(walk, indexRead(url, depth), read.document);
+}
+
+function queueChildren(walk: Walk, index: IndexRead, document: SitemapDocument) {
+  const refs = walk.collector.add(index.url, document, index.depth);
   for (const ref of refs.filter((item) => !walk.queued.has(item))) {
     walk.queued.add(ref);
-    walk.queue.push({ url: ref, depth: depth + 1 });
+    index.pending++;
+    walk.queue.push({ url: ref, depth: index.depth + 1, source: { kind: 'child', index } });
   }
+}
+
+/**
+ * A CDN can keep serving an index naming children the site has since
+ * replaced. When none of an index's children was read, fetch that index once
+ * more past the cache.
+ */
+function childAnswered(walk: Walk, index: IndexRead, url: string, answer: SitemapAnswer['kind']) {
+  index.pending--;
+  if (refetchPolicy.child_answers.includes(answer)) index.unread.push(url);
+  else index.answered = true;
+  if (index.pending > 0 || index.answered || walk.refetched) return;
+  walk.refetched = true;
+  walk.queue.push({
+    url: cacheBusted(index.url),
+    depth: index.depth,
+    source: { kind: 'refetch', index },
+  });
+}
+
+/**
+ * The fresh copy's new children join the walk, and the stale children it no
+ * longer names stop counting as unread. A failed re-fetch changes nothing.
+ */
+function collectRefetch(walk: Walk, entry: Entry, stale: IndexRead, read: SitemapAnswer) {
+  logger.info('site_health_sitemap_index_refetched', {
+    crawl_id: walk.crawlId,
+    depth: entry.depth,
+    answer: read.kind,
+    status_code: read.kind === 'parsed' ? null : read.status,
+  });
+  if (read.kind !== 'parsed') return;
+  const named = new Set(read.document.refs.flatMap((ref) => sitemapRef(ref) ?? []));
+  walk.unread -= stale.unread.filter((url) => !named.has(url)).length;
+  queueChildren(walk, indexRead(entry.url, entry.depth), read.document);
 }
 
 /** A listed URL as a tracked-set candidate, with its first declared `<lastmod>`. */
