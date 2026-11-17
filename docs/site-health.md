@@ -195,8 +195,11 @@ settled lifecycle task reconciles counters and sub-states under the crawl row
 lock. While siblings remain, a successful analysis only refreshes the
 provisional summary, and a discover while discovery continues only recounts
 progress, both on the `live_score_refresh_*` cadence. The provisional summary
-reads the whole crawl's evidence outside the crawl lock every task commit takes
-and holds that lock only to write, skipping a crawl that settled meanwhile. When discovery and
+(`live-score.ts`) is the equal-page average of the tracked pages' stored
+provisional scores, with counts, from a few grouped queries that never read
+rule evaluations (owner, 2026-11-17); the terminal summary rebuilds from
+evaluations. It is read outside the crawl lock every task commit takes, which
+is held only to write, skipping a crawl that settled meanwhile. When discovery and
 analysis drain, one locked transaction:
 
 1. resolves canonical-alias chains;
@@ -697,8 +700,8 @@ These formulas are in `analysis/scoring.ts`.
 ## Coverage and measurement states
 
 The measurement cohort is the active monitored set, using each member's latest
-completed analysis in the crawl (`score-summary.ts`); provisional summaries and
-snapshots share it. Classification coverage counts analyze tasks with
+completed analysis in the crawl (`score-summary.ts`); snapshots read it, and
+provisional summaries average the same members' stored page scores. Classification coverage counts analyze tasks with
 `classification_expected` as classified, `other` (with reason groups) or
 failed.
 

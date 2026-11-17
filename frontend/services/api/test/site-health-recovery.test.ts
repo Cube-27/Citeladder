@@ -9,6 +9,7 @@ import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { lockSiteTask } from '../src/site-health/site-task.ts';
 import { cancelCrawl } from '../src/site-health/controls.ts';
+import { liveScoreSummary } from '../src/site-health/live-score.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { recordedSite, SiteFixtures } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -22,6 +23,8 @@ afterAll(async () => {
 const settings = { ...siteWorkerSettings({}), concurrency: 1, poll: 0 };
 const row = (id: string) =>
   db.selectFrom('site_crawl_tasks').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
+const crawlOf = (id: string) =>
+  db.selectFrom('site_crawls').selectAll().where('id', '=', id).executeTakeFirstOrThrow();
 async function expired(id: string, attempts = 0, at = new Date(Date.now() - 1000)) {
   await db
     .updateTable('site_crawl_tasks')
@@ -435,6 +438,43 @@ it('commits an analysis while another analysis holds the workspace runtime lock'
     await worker.execute(leased);
   });
   expect(await row(page.taskId)).toMatchObject({ status: 'succeeded', attempt_count: 1 });
+});
+
+it('scores a running crawl as the mean of its tracked pages’ stored scores', async () => {
+  const seed = await fixtures.crawl('running');
+  const analyzed = async (path: string, web: number | null, aeo: number | null) => {
+    const member = await fixtures.analyzable(seed, path);
+    const page = await fixtures.page(seed, path, {}, { siteUrlId: member.siteUrlId });
+    await db
+      .updateTable('site_page_analyses')
+      .set({ web_fundamentals_score: web, aeo_readiness_score: aeo })
+      .where('id', '=', page.analysisId)
+      .execute();
+    return page;
+  };
+  const home = await analyzed('/', 90, null);
+  await analyzed('/a', 60, 40);
+  await analyzed('/b', null, 80);
+  const untracked = await analyzed('/c', 0, 0);
+  await db
+    .updateTable('monitored_site_urls')
+    .set({ active: false })
+    .where('site_url_id', '=', untracked.id)
+    .execute();
+  const evaluation = await fixtures.evaluation(seed, home, 'technical.indexable', 'missing');
+  await fixtures.issue(seed, home, 'technical.indexable', evaluation);
+  expect(await liveScoreSummary(db, await crawlOf(seed.crawlId))).toMatchObject({
+    web_fundamentals_score: 75,
+    web_fundamentals_coverage: 2 / 3,
+    aeo_readiness_score: 60,
+    analyzed_count: 3,
+    selected_count: 3,
+    issue_count: 1,
+    by_page_kind: {
+      homepage: { analyzed_count: 1, web_fundamentals_score: 90, aeo_readiness_score: null },
+      product: { analyzed_count: 2, web_fundamentals_score: 60, aeo_readiness_score: 60 },
+    },
+  });
 });
 
 it('refreshes a running crawl summary without overwriting one that settled meanwhile', async () => {
