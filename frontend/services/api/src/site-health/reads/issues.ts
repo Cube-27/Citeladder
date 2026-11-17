@@ -550,7 +550,7 @@ export async function issueDetail(
       join site_urls u on u.id = i.site_url_id
       join site_page_analyses a on a.workspace_id = i.workspace_id and a.crawl_id = i.crawl_id
         and a.site_url_id = i.site_url_id and a.is_current
-      join site_rule_evaluations e on e.id = i.evaluation_id
+      join site_rule_evaluations e on e.analysis_id = i.analysis_id and e.id = i.evaluation_id
       where ${inGroup} ${after} ${siteUrlId ? sql`and i.site_url_id = ${siteUrlId}::uuid` : sql``}
       order by u.normalized_url, i.id limit ${paging.limit + 1}`.execute(db),
   ]);

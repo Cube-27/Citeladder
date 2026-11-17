@@ -141,6 +141,23 @@ export async function applyMigrations(
 }
 
 /**
+ * Site Health evidence partitions for this UTC month and the three ahead (the
+ * `site_health_evidence_partitions` migration owns the SQL), then statistics
+ * for every partitioned parent, which autovacuum never analyzes. Returns the
+ * months it skipped, whose rows stay in the default partition.
+ */
+export async function ensureEvidencePartitions(client: pg.ClientBase): Promise<string[]> {
+  const { rows } = await client.query<{ skipped: string[] }>(
+    'select public.site_evidence_ensure_partitions() as skipped',
+  );
+  await client.query(`do $$ declare parent regclass; begin
+    for parent in select partrelid from pg_partitioned_table loop
+      execute format('analyze %s', parent);
+    end loop; end $$`);
+  return rows[0]?.skipped ?? [];
+}
+
+/**
  * PostgreSQL's SCRAM-SHA-256 verifier (RFC 7677 with PostgreSQL's 4096
  * iterations), so the role password never reaches the server or its logs in
  * plain text. Printable ASCII only: it is unchanged by SASLprep.

@@ -873,6 +873,7 @@ describe('project deletion', () => {
               join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.attnum) as cols
       from pg_constraint c
       where c.contype = 'f' and c.confdeltype = 'n' and c.confrelid <> 'public.users'::regclass
+        and c.conparentid = 0 -- a partition's copy is checked through its parent's
       order by 1, 2`.execute(db);
     const checked: string[] = [];
     const scanned: string[] = [];

@@ -73,7 +73,8 @@ describe('the application role', () => {
       from pg_class c
       join pg_namespace n on n.oid = c.relnamespace
       join pg_attribute a on a.attrelid = c.oid and a.attnum > 0 and not a.attisdropped
-      where n.nspname = 'public' and c.relkind = 'r' and c.relname <> 'schema_migrations'
+      where n.nspname = 'public' and c.relkind in ('r', 'p') and not c.relispartition
+        and c.relname <> 'schema_migrations'
       order by c.relname, a.attnum`.execute(db);
     rows.sort((a, b) => (a.table < b.table ? -1 : 1));
     const refused: string[] = [];
@@ -84,6 +85,21 @@ describe('the application role', () => {
       else expect([table, update, remove]).toEqual([table, 'allowed', 'allowed']);
     }
     expect(refused).toEqual(APPEND_ONLY);
+  });
+
+  it('holds no grant on any partition, reaching partitioned rows through the parent', async () => {
+    const { rows } = await sql<{ table: string; direct: boolean }>`
+      select c.relname::text as table,
+        has_table_privilege(c.oid, 'select, insert, update, delete') as direct
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'public' and c.relispartition
+      order by 1`.execute(db);
+    expect(rows.find((row) => row.table === 'site_crawl_events_default')).toEqual({
+      table: 'site_crawl_events_default',
+      direct: false,
+    });
+    expect(rows.filter((row) => row.direct)).toEqual([]);
   });
 
   it('still row-locks append-only grants, as billing serialization does', async () => {

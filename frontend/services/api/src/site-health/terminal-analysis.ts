@@ -116,6 +116,7 @@ export async function appendFinalRevisions(
         'canonical_url', normalized_facts -> 'canonical_url')`.as('facts'),
     ])
     .where('workspace_id', '=', crawl.workspace_id)
+    .where('crawl_id', '=', crawl.id)
     .where('id', '=', sql<string>`any(${initials.map((row) => row.artifact_id)}::uuid[])`)
     .execute();
   const factsOf = new Map(artifacts.map((row) => [row.id, record(row.facts)]));

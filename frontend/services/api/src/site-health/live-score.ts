@@ -132,7 +132,10 @@ function classificationErrors(db: Database, crawl: Crawl) {
 async function counts(db: Database, crawl: Crawl) {
   const issues = await currentAnalyses(db, crawl)
     .innerJoin('site_issues as i', (join) =>
-      join.onRef('i.analysis_id', '=', 'p.id').onRef('i.workspace_id', '=', 'p.workspace_id'),
+      join
+        .onRef('i.analysis_id', '=', 'p.id')
+        .onRef('i.workspace_id', '=', 'p.workspace_id')
+        .onRef('i.crawl_id', '=', 'p.crawl_id'),
     )
     .select(sql<number>`count(*)::int`.as('count'))
     .executeTakeFirstOrThrow();

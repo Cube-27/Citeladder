@@ -44,7 +44,7 @@ export async function refreshIssueCurrency(db: Database, crawl: Crawl): Promise<
     )
     update site_issues i set is_current = c.current
     from currency c
-    where i.id = c.id and i.workspace_id = ${crawl.workspace_id}
+    where i.id = c.id and i.workspace_id = ${crawl.workspace_id} and i.crawl_id = ${crawl.id}
       and i.is_current is distinct from c.current`.execute(db);
   await persistIssueCatalog(db, crawl);
   // The crawl's current issues are what its audit found (`issue-states.ts`).
