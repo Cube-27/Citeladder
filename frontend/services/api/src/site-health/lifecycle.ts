@@ -228,14 +228,17 @@ export async function reconcileStalled(db: Database, settings: SiteWorkerSetting
 }
 
 /**
- * Active crawls that stopped settling tasks for `noProgressSeconds` (longer
- * than a runner gap, so an idle runner never counts as a stall), or that ran
+ * Active crawls that stopped settling tasks (or heartbeating a finalize) for
+ * `noProgressSeconds` (longer than a runner gap, so an idle runner never
+ * counts as a stall), or that ran
  * past the absolute `overdueSeconds` cap; one crawl when `crawlId` is given.
  */
 function overdueCrawls(db: Database, settings: SiteWorkerSettings['lifecycle'], crawlId?: string) {
   const at = (seconds: number) => new Date(Date.now() - seconds * 1000);
   const started = sql<Date>`coalesce(c.started_at, c.created_at)`;
-  const progressed = sql<Date>`greatest(${started}, (select max(t.completed_at)
+  // A running finalize settles once after many batch commits: its heartbeat is progress.
+  const progressed = sql<Date>`greatest(${started}, (select max(greatest(t.completed_at,
+      case when t.task_kind = 'finalize' then t.heartbeat_at end))
     from site_crawl_tasks t where t.workspace_id = c.workspace_id and t.crawl_id = c.id))`;
   return db
     .selectFrom('site_crawls as c')

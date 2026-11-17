@@ -22,7 +22,9 @@ import {
 import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
 import { siteWorkerSettings } from '../src/site-health/runtime.ts';
 import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
-import { testDatabase } from './support.ts';
+import { reserveCrawlFetches } from '../src/site-health/fetch-budget.ts';
+import { billingAccount, grant } from './prompt-fixtures.ts';
+import { asOwner, testDatabase } from './support.ts';
 import { SiteFixtures, type SiteSeed } from './site-health-fixtures.ts';
 
 /**
@@ -60,7 +62,14 @@ vi.mock('../src/queue/task-queue.ts', async (importOriginal) => {
 
 const db = testDatabase();
 const fixtures = new SiteFixtures(db);
+const accounts: string[] = [];
 afterAll(async () => {
+  if (accounts.length) {
+    await asOwner((owner) =>
+      owner.deleteFrom('consumable_ledger').where('billing_account_id', 'in', accounts).execute(),
+    );
+    await db.deleteFrom('billing_accounts').where('id', 'in', accounts).execute();
+  }
   await fixtures.cleanup();
   await db.destroy();
 });
@@ -373,13 +382,26 @@ describe('terminal analysis publication', () => {
     };
     const seed = await fixtures.crawl('running');
     await fixtures.page(seed, '/', {});
+    const account = await billingAccount(db, seed.workspaceId);
+    accounts.push(account);
+    await grant(db, account, { key: 'site_health_page_fetches_per_period', value: 5 });
+    await reserveCrawlFetches(db, await crawlRow(seed.crawlId), 2, new Date());
     expect(await run(seed)).toEqual([{ status: 'failed', attempt_count: 3, max_attempts: 3 }]);
     const crawl = await crawlRow(seed.crawlId);
     expect([crawl.status, crawl.error_message]).toEqual([
       'failed',
       policy.site_health.crawl.finalize.error_message,
     ]);
-    expect(crawl.terminal_counters).not.toBeNull();
+    expect(record(crawl.terminal_counters)).toMatchObject({ queued: 0, running: 0 });
+    // The fetch hold is settled: all of it released, the one analyzed page debited.
+    const ledger = await db
+      .selectFrom('consumable_ledger')
+      .select(['entry_kind', 'units'])
+      .where('site_crawl_id', '=', seed.crawlId)
+      .execute();
+    const units = (kind: string) =>
+      ledger.filter((row) => row.entry_kind === kind).reduce((sum, row) => sum + row.units, 0);
+    expect([units('reservation'), units('release'), units('debit')]).toEqual([2, 2, 1]);
     const failed = await db
       .selectFrom('site_crawl_events')
       .select('payload')

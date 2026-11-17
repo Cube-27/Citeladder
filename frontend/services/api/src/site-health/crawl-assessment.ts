@@ -48,7 +48,7 @@ const NONE: Counts = {
 };
 
 /** Task outcomes that drive one locked reconcile, from one grouped scan. */
-export type Summary = {
+type Summary = {
   discoverOpen: number;
   discoverFailed: number;
   analyzeOpen: number;

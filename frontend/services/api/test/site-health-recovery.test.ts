@@ -10,6 +10,7 @@ import { SiteHealthWorker } from '../src/workers/site-health-worker.ts';
 import { lockSiteTask } from '../src/site-health/site-task.ts';
 import { cancelCrawl } from '../src/site-health/controls.ts';
 import { liveScoreSummary } from '../src/site-health/live-score.ts';
+import { finalizeHash } from '../src/site-health/terminal-publication.ts';
 import { SitePageFetcher, siteFetchSettings } from '../src/site-health/page-fetch.ts';
 import { recordedSite, SiteFixtures } from './site-health-fixtures.ts';
 import { testDatabase } from './support.ts';
@@ -368,7 +369,9 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
 
 it('fails a long crawl only once it stops settling tasks', async () => {
   const twoHoursAgo = new Date(Date.now() - 2 * 3600_000);
-  const crawlLastSettled = async (minutesAgo: number) => {
+  const ago = (minutes: number) => new Date(Date.now() - minutes * 60_000);
+  /** The open task: an analyze, or a drained crawl's finalize running under its heartbeat. */
+  const crawlLastSettled = async (minutesAgo: number, finalizeHeartbeat?: number) => {
     const seed = await fixtures.crawl('running');
     await db
       .updateTable('site_crawls')
@@ -378,16 +381,36 @@ it('fails a long crawl only once it stops settling tasks', async () => {
     const settled = await fixtures.task(seed, 'analyze');
     await db
       .updateTable('site_crawl_tasks')
-      .set({ status: 'succeeded', completed_at: new Date(Date.now() - minutesAgo * 60_000) })
+      .set({ status: 'succeeded', completed_at: ago(minutesAgo) })
       .where('id', '=', settled)
       .execute();
-    return fixtures.task(seed, 'analyze');
+    if (finalizeHeartbeat === undefined) return fixtures.task(seed, 'analyze');
+    const finalize = await fixtures.task(seed, 'finalize');
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({
+        status: 'running',
+        url_hash: finalizeHash({ id: seed.crawlId }, 'drained'),
+        lease_owner: 'live',
+        lease_expires_at: new Date(Date.now() + 60_000),
+        heartbeat_at: ago(finalizeHeartbeat),
+      })
+      .where('id', '=', finalize)
+      .execute();
+    return finalize;
   };
   const moving = await crawlLastSettled(5);
   const stuck = await crawlLastSettled(40);
+  // A finalize committing batches for 40 minutes is progress; one whose heartbeat stopped is not.
+  const publishing = await crawlLastSettled(40, 1);
+  const silent = await crawlLastSettled(40, 40);
   await lifecycle.reconcileOverdue(db, { ...settings.lifecycle, batch: 1000 });
   expect(await row(moving)).toMatchObject({ status: 'queued' });
   expect(await row(stuck)).toMatchObject({ status: 'failed', error_code: 'crawl_overdue' });
+  expect(await row(publishing)).toMatchObject({ status: 'running' });
+  expect((await crawlOf((await row(publishing)).crawl_id)).status).toBe('running');
+  expect(await row(silent)).toMatchObject({ status: 'failed', error_code: 'crawl_overdue' });
+  expect((await crawlOf((await row(silent)).crawl_id)).status).toBe('failed');
 });
 
 it('reconciles and stops a crawl while a task commit inserts rows that reference it', async () => {

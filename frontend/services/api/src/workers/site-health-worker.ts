@@ -78,9 +78,7 @@ export class SiteHealthWorker {
     this.signal = options.signal;
     this.owner = options.owner ?? `site-worker-ts-${randomUUID().slice(0, 12)}`;
     this.settings = options.settings ?? siteWorkerSettings();
-    this.queue = new TaskQueue(db, SITE_HEALTH_LANE, {
-      leaseTtlSeconds: this.settings.lease,
-    });
+    this.queue = new TaskQueue(db, SITE_HEALTH_LANE, { leaseTtlSeconds: this.settings.lease });
     this.#cadence = crawlCadences(this.settings.scoreRefresh);
     // The runner checks before every task and acquisitions before every fetch;
     // a short-lived grant spares four queries per check.

@@ -51,10 +51,13 @@ function modeOf(crawl: Crawl): Mode | null {
 async function commit(
   ctx: SiteTaskContext,
   claimed: SiteTask,
-  mode: Mode,
-  body: (trx: Database, held: HeldTask) => Promise<void>,
-  durable = false,
+  step: {
+    mode: Mode;
+    body: (trx: Database, held: HeldTask) => Promise<void>;
+    durable?: boolean;
+  },
 ) {
+  const { mode, body, durable } = step;
   ctx.signal.throwIfAborted();
   const run = async (trx: Database) => {
     const held = await lockSiteTask(trx, ctx, claimed, 'keyShare');
@@ -167,29 +170,21 @@ export async function runFinalize(ctx: SiteTaskContext, claimed: SiteTask) {
       sources ??= await crawlSiteSources(trx, held.crawl);
       await appendFinalRevisions(trx, held.crawl, pending, sources);
     };
-    const committed = await commit(ctx, claimed, mode, write); // NOSONAR -- One short transaction per batch, in order.
+    const committed = await commit(ctx, claimed, { mode, body: write }); // NOSONAR -- One short transaction per batch, in order.
     if (!committed) return;
     aliases = [];
     siteSources = sources;
   }
-  await commit(
-    ctx,
-    claimed,
-    mode,
-    async (trx, held) => {
-      await markDuplicates(trx, held.crawl, aliases);
-      if (mode === 'drained') {
-        const assessment = await assessCrawl(trx, held.crawl);
-        if (!assessment.drained) throw new Error('finalize found open lifecycle tasks');
-        await publishDrainedCrawl(trx, held.crawl, assessment);
-      } else await publishCancelledCrawl(trx, held.crawl);
-      const settling = await lockSiteTask(trx, ctx, claimed);
-      if (!settling) throw new Abandoned();
-      await settleTask(trx, ctx, settling.task, {
-        kind: 'succeeded',
-        artifactId: null,
-      });
-    },
-    true,
-  );
+  const publish = async (trx: Database, held: HeldTask) => {
+    await markDuplicates(trx, held.crawl, aliases);
+    if (mode === 'drained') {
+      const assessment = await assessCrawl(trx, held.crawl);
+      if (!assessment.drained) throw new Error('finalize found open lifecycle tasks');
+      await publishDrainedCrawl(trx, held.crawl, assessment);
+    } else await publishCancelledCrawl(trx, held.crawl);
+    const settling = await lockSiteTask(trx, ctx, claimed);
+    if (!settling) throw new Abandoned();
+    await settleTask(trx, ctx, settling.task, { kind: 'succeeded', artifactId: null });
+  };
+  await commit(ctx, claimed, { mode, body: publish, durable: true });
 }

@@ -349,11 +349,7 @@ export async function insertObservations(trx: Database, crawl: Crawl, observed: 
 }
 
 /** A URL the crawl's sitemaps list, as listed, and its first declared `<lastmod>` (null when none). */
-export type SitemapEntry = {
-  siteUrlId: string;
-  listedUrl: string;
-  lastmod: string | null;
-};
+export type SitemapEntry = { siteUrlId: string; listedUrl: string; lastmod: string | null };
 
 /** The only writer of sitemap membership; an entry the crawl already recorded is kept. */
 export async function insertSitemapEntries(trx: Database, crawl: Crawl, entries: SitemapEntry[]) {
@@ -427,11 +423,7 @@ export async function enqueueCrawlTasks(
           available_at = least(site_crawl_tasks.available_at, now())
       WHERE site_crawl_tasks.status = 'queued' AND site_crawl_tasks.priority < excluded.priority`
       : sql`ON CONFLICT DO NOTHING`;
-  const { rows } = await sql<{
-    id: string;
-    url_hash: string;
-    inserted: boolean;
-  }>`
+  const { rows } = await sql<{ id: string; url_hash: string; inserted: boolean }>`
     INSERT INTO site_crawl_tasks (
       id, crawl_id, workspace_id, site_url_id, parent_site_url_id, task_kind, requested_url,
       url_hash, depth, generation, idempotency_key, status, priority, randomized_position,

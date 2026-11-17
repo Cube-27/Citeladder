@@ -49,10 +49,7 @@ export function readinessDiagnostic(crawl: Crawl, projection: MeasurementProject
         row.readiness_dimension &&
         row.score_roles?.includes('aeo_readiness'),
     )
-    .map((row) => ({
-      ...row,
-      analysis_id: logical.get(row.id) ?? row.analysis_id,
-    }));
+    .map((row) => ({ ...row, analysis_id: logical.get(row.id) ?? row.analysis_id }));
   const rows = all.slice(0, reads.aeo_max_evaluations);
   const pages = new Map(projection.rows.map((row) => [row.id, row]));
   const dimensions = projection.aggregate.readiness_dimensions.map((dimension) => {

@@ -255,7 +255,8 @@ task cancels itself and the cancelled crawl is published by its own `finalize`.
   `crawl_no_progress_seconds` (30 min, longer than the 20-minute tick a runner
   gap waits for), or that is older than the `overdue_crawl_seconds` cap (12 h),
   has its open tasks failed with `crawl_overdue`, then is reconciled (owner,
-  2026-11-17). A large crawl runs as long as it keeps moving.
+  2026-11-17). A large crawl runs as long as it keeps moving; a running
+  `finalize` settles only once, so its heartbeat counts as movement.
 - **Cancelled:** a cancelled crawl with measurement evidence but no snapshot
   gets one `finalize` task, which appends its final revisions in batches and
   publishes it (no alias or cross-page pass). A cancelled page rerun is

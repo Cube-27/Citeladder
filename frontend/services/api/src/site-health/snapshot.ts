@@ -111,11 +111,10 @@ function checkCounts(projection: MeasurementProjection) {
     (row) => row.score_roles?.length && row.outcome !== 'not_applicable',
   );
   const measured = expected.filter((row) => ['satisfied', 'missing'].includes(row.outcome));
-  return {
-    measured_check_count: measured.length,
-    expected_check_count: expected.length,
-  };
+  return { measured_check_count: measured.length, expected_check_count: expected.length };
 }
+
+const analysisIds = (projection: MeasurementProjection) => projection.rows.map((row) => row.id);
 
 /**
  * Every snapshot column the pages' latest audits decide: scores,
@@ -125,11 +124,7 @@ function checkCounts(projection: MeasurementProjection) {
  * Coverage and discovery stay the crawl's own.
  */
 async function pageColumns(db: Database, crawl: Crawl, projection: MeasurementProjection) {
-  const issues = await snapshotIssues(
-    db,
-    crawl,
-    projection.rows.map((row) => row.id),
-  );
+  const issues = await snapshotIssues(db, crawl, analysisIds(projection));
   const eligibility = await snapshotEligibility(db, crawl, projection);
   const {
     readiness_dimensions: dimensions,
@@ -169,18 +164,17 @@ const ANALYSIS_ROW_CHUNK = 5000;
 /** Store the snapshot's analysis set, replacing any earlier one. */
 async function writeAnalysisSet(
   db: Database,
-  crawl: Crawl,
-  snapshotId: string,
-  analysisIds: string[],
+  snapshot: { id: string; workspace_id: string },
+  projection: MeasurementProjection,
 ) {
   await db
     .deleteFrom('site_health_snapshot_analyses')
-    .where('workspace_id', '=', crawl.workspace_id)
-    .where('snapshot_id', '=', snapshotId)
+    .where('workspace_id', '=', snapshot.workspace_id)
+    .where('snapshot_id', '=', snapshot.id)
     .execute();
-  const rows = [...new Set(analysisIds)].map((analysisId) => ({
-    workspace_id: crawl.workspace_id,
-    snapshot_id: snapshotId,
+  const rows = [...new Set(analysisIds(projection))].map((analysisId) => ({
+    workspace_id: snapshot.workspace_id,
+    snapshot_id: snapshot.id,
     analysis_id: analysisId,
   }));
   for (let offset = 0; offset < rows.length; offset += ANALYSIS_ROW_CHUNK)
@@ -237,10 +231,7 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
       crawl_id: crawl.id,
       ...published.columns,
       coverage_state: coverage.state,
-      coverage_evidence: JSON.stringify({
-        ...coverage.evidence,
-        ...checkCounts(projection),
-      }),
+      coverage_evidence: JSON.stringify({ ...coverage.evidence, ...checkCounts(projection) }),
       coverage_formula_version: reads.coverage_formula_version,
       analyzer_version: crawl.analyzer_version || policy.site_health.versions.analyzer,
       scoring_version: crawl.scoring_version || reads.scoring_version,
@@ -250,15 +241,10 @@ export async function persistCrawlSnapshot(db: Database, crawl: Crawl, persistEm
       created_at: now,
     })
     .onConflict((conflict) => conflict.constraint('uq_site_health_snapshot_crawl').doNothing())
-    .returning('id')
+    .returning(['id', 'workspace_id'])
     .executeTakeFirst();
   if (!inserted) return false;
-  await writeAnalysisSet(
-    db,
-    crawl,
-    inserted.id,
-    projection.rows.map((row) => row.id),
-  );
+  await writeAnalysisSet(db, inserted, projection);
   await publishScoreSummary(db, crawl, projection, published);
   return true;
 }
@@ -275,7 +261,7 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
   if (isPageRerun(crawl)) return false;
   const snapshot = await db
     .selectFrom('site_health_snapshots')
-    .select(['id', 'created_at'])
+    .select(['id', 'workspace_id', 'created_at'])
     .where('workspace_id', '=', crawl.workspace_id)
     .where('project_id', '=', crawl.project_id)
     .where('crawl_id', '=', crawl.id)
@@ -285,12 +271,7 @@ export async function refreshSiteSnapshot(db: Database, crawl: Crawl) {
   await lockProfile(db, crawl);
   const projection = await loadMeasurementProjection(db, crawl);
   const published = await pageColumns(db, crawl, projection);
-  await writeAnalysisSet(
-    db,
-    crawl,
-    snapshot.id,
-    projection.rows.map((row) => row.id),
-  );
+  await writeAnalysisSet(db, snapshot, projection);
   await db
     .updateTable('site_health_snapshots')
     .set({

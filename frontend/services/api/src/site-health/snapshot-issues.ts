@@ -73,11 +73,7 @@ export async function snapshotIssues(db: Database, crawl: Crawl, analysisIds: st
       if (row.scope === 'page') readinessPages.add(row.site_url_id);
     }
     const key = `${row.rule_id}:${row.finding_class}`;
-    const group = groups.get(key) ?? {
-      row,
-      roles: new Set<string>(),
-      urls: new Set<string>(),
-    };
+    const group = groups.get(key) ?? { row, roles: new Set<string>(), urls: new Set<string>() };
     for (const role of roles) group.roles.add(role);
     group.urls.add(row.site_url_id);
     groups.set(key, group);
