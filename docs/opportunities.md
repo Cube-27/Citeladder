@@ -270,8 +270,7 @@ declaration and verifier each recompute it in their own transaction
 (`refreshActionStatus`), and every read selects that column instead of deriving
 it per request.
 Recompute stamps each Opportunity's `action_id`; the Opportunity list and MCP
-`status` filter resolve through that Action, and the command center counts an
-Action resolved at its first verified observation. Action sync restamps live
+`status` filter resolve through that Action. Action sync restamps live
 Actions on every refresh, inserts new groups in batches, and clears an Action
 whose evidence vanished once, leaving already-cleared rows untouched and its
 last non-empty member set in place. Each promoted

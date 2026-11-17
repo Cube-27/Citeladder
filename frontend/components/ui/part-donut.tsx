@@ -134,7 +134,7 @@ export function PartDonut({
   );
 }
 
-export type CountPart = Readonly<{
+type CountPart = Readonly<{
   key: string;
   /** Its name in the legend, e.g. a StatusMark. */
   term: ReactNode;
@@ -154,9 +154,9 @@ export function CountDonut({
   const whole = parts.reduce((sum, part) => sum + part.value, 0);
   return (
     <div className="flex min-w-0 items-center gap-x-6">
-      <dl
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a <fieldset> would add form-group semantics to a list of counts
-        role="group" // NOSONAR -- as above
+      <dl // NOSONAR -- a <fieldset> would add form-group semantics to a list of counts
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- as above
+        role="group"
         aria-label={label}
         className="grid gap-2"
       >
@@ -181,7 +181,7 @@ export function CountDonut({
   );
 }
 
-export type DonutSegment = Readonly<{
+type DonutSegment = Readonly<{
   key: string;
   /** Its share of the whole, 0 to 1. */
   share: number;
@@ -196,7 +196,7 @@ export type DonutSegment = Readonly<{
  * filling its container's width; decorative, so its caller names it. A zero
  * is left out, and an empty whole is one `well` ring.
  */
-export function DonutRing({ segments }: Readonly<{ segments: readonly DonutSegment[] }>) {
+function DonutRing({ segments }: Readonly<{ segments: readonly DonutSegment[] }>) {
   const drawn = segments.filter((segment) => segment.share > 0);
   const ring = { cx: 50, cy: 50, r: RADIUS, fill: 'none', strokeWidth: RING, pathLength: 100 };
   const gap = drawn.length > 1 ? GAP : 0;
