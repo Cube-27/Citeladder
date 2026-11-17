@@ -497,6 +497,9 @@
   --color-control-fill: var(--color-well);
   --color-rule: #252526;
   --color-control-edge: #2f3033;
+  /* Field, checkbox and radio edges: quiet like Linear's, a step past
+     control-edge so an unchecked ring still shows on a surface. */
+  --color-control-line: #3a3b40;
   --color-chart-grid: #2a2a2c;
   --color-ink: #e3e3e3;
   --color-ink-2: #b0b0b0;
@@ -634,7 +637,9 @@
   --color-well: #f1f2f5;
   --color-raised: #ffffff;
   --color-rule: rgb(22 24 29 / 11%);
-  --color-control-line: #838995;
+  --color-control-line: #c4c8d0;
+  --field-focus-edge: var(--color-control-line);
+  --fg: 0 0 6px 3px var(--color-state-pressed);
   /* The soft edge of a labelled button and of a search or filter control: its
      words or icon name it, so the edge needs no 3:1 (WCAG 1.4.11); form
      fields, checkboxes, radios and switches keep `control-line`. */
@@ -1520,10 +1525,8 @@ a.focus-ring:active .type-caption {
 }
 
 /* Keyboard focus is a solid 2px `focus` ring (ink) with a 2px offset, on
-   every interactive element, fields included, in both themes (brand
-   direction 2.8): never removed, never the accent. On the website a field
-   instead thickens its edge to a 2px `focus` line inside a 3px `line`
-   halo (the rule after the app's). */
+   every interactive element but a field, in both themes: never removed,
+   never the accent. A field lights its own edge instead (the field rule). */
 :focus-visible,
 .focus-ring:focus-visible {
   outline: 2px solid var(--color-focus);
@@ -1558,30 +1561,25 @@ a.focus-ring:active .type-caption {
   outline-offset: -2px;
 }
 
-/* A field's ring is the same ink ring; an invalid field keeps its crimson
-   edge inside it, so focus never hides the error. A framed field rings its
-   frame, the one boundary around the input and its end target. */
+/* A focused field lights its own edge, never a second ring: in the app a
+   soft glow (`--fg`) sits over its resting edge; on the website the edge
+   thickens inside a `line` halo. An invalid field keeps its crimson edge
+   (its own `--field-focus-edge`). A framed field lights its frame. */
 .focus-input:focus-visible,
 .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
-  outline: 2px solid var(--color-focus);
-  outline-offset: 2px;
-}
-
-:where([data-public-surface]) .focus-input:focus-visible,
-:where([data-public-surface])
-  .focus-frame:has(:where(input:focus-visible, textarea:focus-visible, select:focus-visible)) {
   border-color: var(--field-focus-edge, var(--color-focus));
   outline: none;
-  box-shadow:
+  box-shadow: var(
+    --fg,
     0 0 0 1px var(--field-focus-edge, var(--color-focus)),
-    0 0 0 4px var(--color-line);
+    0 0 0 4px var(--color-line)
+  );
 }
 
 /* A field the reader did not Tab into (an overlay or Edit action focused it
-   on open, or a press into a dialog's field) shows the caret only, its rest
-   edge unchanged (`data-quiet-focus`, components/ui/input-modality.ts). */
-:root:not([data-public-surface]) [data-quiet-focus]:focus-visible,
-:root:not([data-public-surface]) .focus-frame:has([data-quiet-focus]:focus-visible) {
+   on open, or a press into a dialog's field) never takes the outline ring
+   (`data-quiet-focus`, components/ui/input-modality.ts); its edge still glows. */
+:root:not([data-public-surface]) [data-quiet-focus]:focus-visible {
   outline: none;
 }
 
@@ -1633,8 +1631,7 @@ a.focus-ring:active .type-caption {
 
 /* The website's shared buttons (a form's submit, a callout action) take the
    control-md row. */
-:where([data-public-surface]) [data-button-size='md']:not(.app-type-scale *),
-:where([data-public-surface]) [data-button-size='lg']:not(.app-type-scale *) {
+:where([data-public-surface]) :is([data-button-size='md'], [data-button-size='lg']) {
   min-height: var(--control-md);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);

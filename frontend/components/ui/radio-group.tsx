@@ -111,7 +111,7 @@ function RadioCard<T extends string>({
     <label
       className={cn(
         'text-ink flex cursor-pointer items-start gap-2 rounded-control border p-4 transition-[background-color,border-color]',
-        selected ? 'bg-well border-ink' : 'bg-surface border-rule',
+        selected ? 'bg-well border-control-line' : 'bg-surface border-rule',
         !selected && !option.disabled && 'hover:overlay-hover',
         option.disabled && 'cursor-not-allowed opacity-60',
       )}
