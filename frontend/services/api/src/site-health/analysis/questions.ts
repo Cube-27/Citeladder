@@ -103,7 +103,7 @@ function* followingInScope(heading: HtmlElement, scope: Scope): Generator<HtmlEl
   }
 }
 
-function associatedAnswer(heading: HtmlElement, scope: Scope) {
+function siblingAnswer(heading: HtmlElement, scope: Scope) {
   const parent = parentElement(heading);
   const siblings = parent ? childElements(parent) : [];
   let hops = 0;
@@ -112,19 +112,27 @@ function associatedAnswer(heading: HtmlElement, scope: Scope) {
     const answer = answerCandidate(sibling, scope);
     if (answer) return answer;
   }
-  hops = 0;
-  // A title's byline, date and table of contents sit between it and the body:
-  // only text-bearing elements spend hops, and the body's article wrapper is not a boundary.
+  return '';
+}
+
+/**
+ * A title's byline, date and table of contents sit between it and the body:
+ * only text-bearing elements spend hops, and the body's article wrapper is not a boundary.
+ */
+function followingAnswer(heading: HtmlElement, scope: Scope) {
+  let hops = 0;
   for (const node of followingInScope(heading, scope)) {
     if (HEADING_TAGS.has(node.tagName)) break;
-    if (SKIPPED_TAGS.has(node.tagName) || [...ancestors(node)].some(skipped)) continue;
-    if (!ownText(node)) continue;
+    if (passedOver(node)) continue;
     if (++hops > maxHops) break;
     const answer = answerCandidate(node, scope);
     if (answer && !LABEL.test(answer)) return answer;
   }
   return '';
 }
+
+const associatedAnswer = (heading: HtmlElement, scope: Scope) =>
+  siblingAnswer(heading, scope) || followingAnswer(heading, scope);
 
 /** "Definition", "Table of contents", a bare author name: a label, not an answer. */
 const LABEL = /^\p{L}+(?:\s\p{L}+){0,2}$/u;
@@ -134,6 +142,9 @@ const ownText = (node: HtmlElement) =>
   node.childNodes.some(
     (child) => child.nodeName === '#text' && 'value' in child && child.value.trim(),
   );
+/** Table-of-contents and navigation subtrees, and text-free wrappers, spend no hops. */
+const passedOver = (node: HtmlElement) =>
+  skipped(node) || [...ancestors(node)].some(skipped) || !ownText(node);
 
 function boundedQuestion(question: string) {
   const limit = limits.heading_chars;
