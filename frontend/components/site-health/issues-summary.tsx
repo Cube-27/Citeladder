@@ -117,7 +117,7 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
 const SEVERITIES = [
   { key: 'high', label: 'High', stroke: 'stroke-negative' },
   { key: 'medium', label: 'Medium', stroke: 'stroke-warning' },
-  { key: 'low', label: 'Low', stroke: 'stroke-ink-2' },
+  { key: 'low', label: 'Low', stroke: 'stroke-data-other' },
 ] as const;
 
 function issueTypesLabel(total: number): string {

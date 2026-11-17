@@ -29,7 +29,6 @@ import { Notice, readErrorProps } from '@/components/ui/notice';
 import {
   Section,
   SectionContent,
-  SectionDescription,
   SectionHeader,
   SectionStack,
   SectionTitle,
@@ -167,10 +166,11 @@ function PooledSelectionNote({ selected }: Readonly<{ selected: Visibility }>) {
 function CoverageStrip({ selected }: Readonly<{ selected: Visibility }>) {
   const timeZone = useDisplayTimeZone();
   const summary = coverageSummary(selected, (iso) => formatDisplayDate(iso, timeZone));
+  // Not SectionDescription: its 72ch cap wrapped this one-line strip.
   return (
-    <SectionDescription className="max-w-none">
+    <p className={textRole('body', 'text-ink-2')}>
       {summary.answers} {summary.change}
-    </SectionDescription>
+    </p>
   );
 }
 
