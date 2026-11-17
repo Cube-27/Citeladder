@@ -26,9 +26,9 @@ never reset for a schema change. `reset_database` remains only for disposable
 data, with its confirmation check.
 
 On 17 November 2026 the owner took one checkpoint: the 0001-0049 chain was
-folded into a new `0001_baseline.sql` (same schema, data-only repairs dropped)
-and the owner reset local, staging and production before deploying it. That
-was a one-time owner-run operation, not a change to this rule; new migrations
+folded into a new `0001_baseline.sql` (same schema, data-only repairs dropped),
+which the owner deploys only after resetting every existing database. That is
+a one-time owner-run operation, not a change to this rule; new migrations
 continue at 0002.
 
 Source: owner decision of 10 October 2026 (feature 14, execution platform),

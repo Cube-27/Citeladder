@@ -127,17 +127,6 @@ describe('a fresh database', () => {
 });
 
 describe('an existing database', () => {
-  it('takes only the pending migrations, in place', async () => {
-    const { client } = await freshDatabase();
-    clients.push(client);
-
-    expect(await applyMigrations(client, [baseline!])).toEqual(['0001_baseline']);
-    expect(await columns(client, 'workspaces')).not.toContain('probe');
-    expect(await applyMigrations(client, [baseline!, probe])).toEqual(['0002_probe']);
-    expect(await columns(client, 'workspaces')).toContain('probe');
-    expect(await ledger(client)).toEqual(['0001_baseline', '0002_probe']);
-  }, 120000);
-
   it('refuses a database migrated by a chain this baseline replaced, before applying anything', async () => {
     const { client } = await freshDatabase();
     clients.push(client);
@@ -173,15 +162,11 @@ describe('a migration the serving revision would wait behind', () => {
     await migrate.connect();
     clients.push(migrate);
     expect(await applyMigrations(migrate, [baseline!])).toEqual(['0001_baseline']);
-    const alter = {
-      version: '0002_alter',
-      sql: 'ALTER TABLE public.workspaces ADD COLUMN probe integer;',
-    };
 
     // The serving revision reads the table inside an open transaction.
     await serving.query('begin');
     await serving.query('select * from public.workspaces');
-    await expect(applyMigrations(migrate, [baseline!, alter])).rejects.toThrow(
+    await expect(applyMigrations(migrate, [baseline!, probe])).rejects.toThrow(
       'canceling statement due to lock timeout',
     );
     await serving.query('rollback');
@@ -193,15 +178,15 @@ describe('a migration the serving revision would wait behind', () => {
       sql: "SET LOCAL statement_timeout = '10s';\nSELECT pg_sleep(1.5)",
     };
     const slow = { version: '0004_slow', sql: 'SELECT pg_sleep(1.5);' };
-    await expect(applyMigrations(migrate, [baseline!, alter, raised, slow])).rejects.toThrow(
+    await expect(applyMigrations(migrate, [baseline!, probe, raised, slow])).rejects.toThrow(
       'canceling statement due to statement timeout',
     );
     expect(await ledger(serving)).toEqual(['0001_baseline']);
     expect(await columns(serving, 'workspaces')).not.toContain('probe');
 
     // With the lock free, the same migrations apply.
-    expect(await applyMigrations(migrate, [baseline!, alter, raised])).toEqual([
-      '0002_alter',
+    expect(await applyMigrations(migrate, [baseline!, probe, raised])).toEqual([
+      '0002_probe',
       '0003_raised',
     ]);
     expect(await columns(serving, 'workspaces')).toContain('probe');

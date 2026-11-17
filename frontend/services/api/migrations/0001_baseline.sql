@@ -66,7 +66,7 @@ BEGIN
                    CASE p_table WHEN 'site_url_observations' THEN ' WITH (fillfactor = 75)' ELSE '' END);
     -- The services reach rows only through the parent, whose grants apply.
     EXECUTE format('REVOKE ALL ON public.%I FROM citeladder_app', part);
-    -- 0043's workspace/crawl dependency; a partition does not inherit it.
+    -- The parent's workspace/crawl dependency; a partition does not inherit it.
     IF p_table IN ('site_fetch_artifacts', 'site_issues', 'site_url_observations') THEN
         EXECUTE format('CREATE STATISTICS public.%I (dependencies) ON workspace_id, crawl_id FROM public.%I',
                        'st_' || part || '_workspace_crawl', part);

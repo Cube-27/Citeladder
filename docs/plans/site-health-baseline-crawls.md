@@ -212,7 +212,7 @@ work:
 These are not owner decisions; the implementing PR may refine them within the
 model.
 
-- **Schema** (forward migrations, next number 0030 or later; no backfill):
+- **Schema** (forward migrations, next free number; no backfill):
   - The tracked set reuses `monitored_site_urls`, with a fill order and joined
     and left dates. "Left" happens only on a downgrade.
   - New `site_issue_states` holds one row per project, tracked page and rule:
