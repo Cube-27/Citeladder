@@ -45,10 +45,15 @@ describe('PartDonut', () => {
 
   it('keeps the part of a declared total no segment covers as its own remainder', () => {
     render(
-      <PartDonut label="Source types" total={50} parts={[{ label: 'Editorial', value: 40 }]} />,
+      <PartDonut
+        label="Source types"
+        total={50}
+        totalLabel="citations"
+        parts={[{ label: 'Editorial', value: 40 }]}
+      />,
     );
     expect(screen.getByRole('img')).toHaveAccessibleName(
-      'Source types: Editorial 80.0% (40), Unclassified 20.0% (10)',
+      'Source types: 50 citations, Editorial 80.0% (40), Unclassified 20.0% (10)',
     );
   });
 });

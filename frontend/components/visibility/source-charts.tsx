@@ -52,8 +52,9 @@ export function UsageCard({
       <SectionContent>
         {/* Every state occupies the page-chart box, which holds the legend
             (up to two wrapped lines) above the plot, so a state of another
-            height never moves the table below this card. */}
-        <ChartFrame height="lg">
+            height never moves the table below this card. One measurement is
+            rows, not a plot, so the card fits them. */}
+        <ChartFrame height={query.data?.buckets.length === 1 ? undefined : 'lg'}>
           <UsagePlot query={query} label={title} />
         </ChartFrame>
       </SectionContent>

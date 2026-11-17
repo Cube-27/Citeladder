@@ -38,7 +38,7 @@ export type Fact = Readonly<{
  *              the value after it, with the row's source link at its end.
  *   `metrics` — a record's key metrics in one compact row (an answer's brand,
  *              sources, citations and searches): the label over a one-line
- *              `figure`, four across, two by two in a narrow pane.
+ *              `figure`, four across from desktop, two by two below it.
  */
 export type FactLayout = 'ruled' | 'inline' | 'spread' | 'columns' | 'record' | 'metrics';
 
@@ -49,7 +49,7 @@ const LIST = {
   spread: 'grid gap-2',
   columns: 'grid gap-3 desktop:grid-flow-col desktop:auto-cols-fr',
   record: 'divide-rule grid min-w-0 divide-y',
-  metrics: 'grid grid-cols-2 gap-x-6 gap-y-3 @min-[28rem]:grid-cols-4',
+  metrics: 'grid grid-cols-2 gap-x-6 gap-y-3 desktop:grid-cols-4',
 } as const;
 
 const ROW = {
@@ -123,7 +123,7 @@ export function FactList({
   /** Names the list when nothing visible does. */
   label?: string;
 }>) {
-  const list = (
+  return (
     <dl
       aria-label={label}
       data-fact-list={layout}
@@ -148,8 +148,7 @@ export function FactList({
       ) : null}
     </dl>
   );
-  // Metrics count their columns from the pane's width, not the viewport's.
-  return layout === 'metrics' ? <div className="@container min-w-0">{list}</div> : list;
+  return list;
 }
 
 function FactValue({ fact, layout }: Readonly<{ fact: Fact; layout: FactLayout }>) {

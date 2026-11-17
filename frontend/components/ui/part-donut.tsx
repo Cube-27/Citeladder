@@ -82,9 +82,10 @@ export function PartDonut({
   });
   if (remainder > 0)
     rows.push({ label: remainderLabel, value: remainder, tone: null, share: remainder / whole });
-  const described = rows
-    .map((row) => `${row.label} ${chartPercent(row.value, whole)} (${format(row.value)})`)
-    .join(', ');
+  const described = [
+    ...(totalLabel ? [`${format(whole)} ${totalLabel}`] : []),
+    ...rows.map((row) => `${row.label} ${chartPercent(row.value, whole)} (${format(row.value)})`),
+  ].join(', ');
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-8 gap-y-4">
       <div
@@ -103,7 +104,7 @@ export function PartDonut({
           </span>
         ) : null}
       </div>
-      <ul aria-hidden className="flex min-w-0 flex-1 basis-40 flex-col gap-2">
+      <ul aria-hidden className="flex min-w-0 flex-1 flex-col gap-2">
         {rows.map((row) => (
           <li key={row.label} className={textRole('body', 'flex min-w-0 items-center gap-2')}>
             <span
