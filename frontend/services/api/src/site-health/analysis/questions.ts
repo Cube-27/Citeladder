@@ -12,7 +12,7 @@ import {
 import { scalarText } from '../../text-order.ts';
 import { isMetadataOrCta } from './copy.ts';
 import { analysisPolicy, limits, regionPolicy, squash } from './policy.ts';
-import { pageOwned } from './regions.ts';
+import { outsideContainers, pageOwned } from './regions.ts';
 
 export type QuestionAnswer = {
   question: string;
@@ -103,7 +103,7 @@ function* followingInScope(heading: HtmlElement, scope: Scope): Generator<HtmlEl
   }
 }
 
-function associatedAnswer(heading: HtmlElement, scope: Scope) {
+function siblingAnswer(heading: HtmlElement, scope: Scope) {
   const parent = parentElement(heading);
   const siblings = parent ? childElements(parent) : [];
   let hops = 0;
@@ -112,14 +112,39 @@ function associatedAnswer(heading: HtmlElement, scope: Scope) {
     const answer = answerCandidate(sibling, scope);
     if (answer) return answer;
   }
-  hops = 0;
+  return '';
+}
+
+/**
+ * A title's byline, date and table of contents sit between it and the body:
+ * only text-bearing elements spend hops, and the body's article wrapper is not a boundary.
+ */
+function followingAnswer(heading: HtmlElement, scope: Scope) {
+  let hops = 0;
   for (const node of followingInScope(heading, scope)) {
-    if (++hops > maxHops || BOUNDARY_TAGS.has(node.tagName)) break;
+    if (HEADING_TAGS.has(node.tagName)) break;
+    if (passedOver(node)) continue;
+    if (++hops > maxHops) break;
     const answer = answerCandidate(node, scope);
-    if (answer) return answer;
+    if (answer && !LABEL.test(answer)) return answer;
   }
   return '';
 }
+
+const associatedAnswer = (heading: HtmlElement, scope: Scope) =>
+  siblingAnswer(heading, scope) || followingAnswer(heading, scope);
+
+/** "Definition", "Table of contents", a bare author name: a label, not an answer. */
+const LABEL = /^\p{L}+(?:\s\p{L}+){0,2}$/u;
+const SKIPPED_TAGS = new Set(['aside', 'nav']);
+const skipped = (node: HtmlElement) => SKIPPED_TAGS.has(node.tagName);
+const ownText = (node: HtmlElement) =>
+  node.childNodes.some(
+    (child) => child.nodeName === '#text' && 'value' in child && child.value.trim(),
+  );
+/** Table-of-contents and navigation subtrees, and text-free wrappers, spend no hops. */
+const passedOver = (node: HtmlElement) =>
+  skipped(node) || [...ancestors(node)].some(skipped) || !ownText(node);
 
 function boundedQuestion(question: string) {
   const limit = limits.heading_chars;
@@ -178,6 +203,18 @@ function controlTarget(control: HtmlElement) {
   return target;
 }
 
+/**
+ * A collapsed accordion hides its panel (`aria-hidden`, `hidden`) until opened,
+ * but the answer is in the served HTML that crawlers read.
+ */
+function collapsedPanel(control: HtmlElement, panel: HtmlElement, scope: Scope) {
+  return (
+    attribute(control, 'aria-expanded').trim().toLowerCase() === 'false' &&
+    outsideContainers(panel, scope.containers) &&
+    [...ancestors(panel)].some((node) => node === scope.region)
+  );
+}
+
 function panelState(
   target: string,
   control: HtmlElement,
@@ -188,7 +225,12 @@ function panelState(
   if (duplicates.has(target)) return ['', 'unavailable', 'answer_panel_ambiguous'];
   const panel = panels.get(target);
   if (!panel || panel === control) return ['', 'unavailable', 'answer_panel_missing'];
-  if (!owned(panel, scope)) return ['', 'unavailable', 'answer_panel_unavailable'];
+  if (!owned(panel, scope)) {
+    if (!collapsedPanel(control, panel, scope))
+      return ['', 'unavailable', 'answer_panel_unavailable'];
+    const answer = squash(textContent(panel));
+    return answer ? [answer, 'available', ''] : ['', 'missing', 'answer_content_missing'];
+  }
   const answer = answerCandidate(panel, scope) || firstChildAnswer(panel, scope);
   return answer ? [answer, 'available', ''] : ['', 'missing', 'answer_content_missing'];
 }

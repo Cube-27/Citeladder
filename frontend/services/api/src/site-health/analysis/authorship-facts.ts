@@ -22,6 +22,7 @@ const ATTRIBUTION_PREFIX = new RegExp(a.profile_link_attribution_prefix_pattern)
 const AUTHOR_TOKENS = new Set(a.visible_author_node_tokens);
 const DATE_TOKENS = new Set(a.visible_date_node_tokens);
 const HEADING_EXCLUSIONS = new Set(a.visible_author_heading_exclusions);
+const ROLE_LABELS = new Set(a.visible_author_role_labels);
 
 /** The first "By <Name>" byline; `leading` requires it to open the text. */
 function visibleByline(text: string, leading = false) {
@@ -32,7 +33,7 @@ function visibleByline(text: string, leading = false) {
 const visibleDate = (text: string) => DATE.exec(text)?.[0].trim() ?? '';
 function visibleAuthorName(text: string) {
   const candidate = squash(text);
-  return AUTHOR_NAME.test(candidate) ? candidate : '';
+  return AUTHOR_NAME.test(candidate) && !ROLE_LABELS.has(candidate.toLowerCase()) ? candidate : '';
 }
 
 /** Descendant text with a boundary between inline parts such as `<br>`. */
@@ -43,6 +44,8 @@ const attributeTokens = (node: HtmlElement) =>
     ['class', 'id', 'itemprop', 'rel']
       .map((name) => attribute(node, name))
       .join(' ')
+      // CSS-module and camelCase names (`blogHeaderAuthorName`) carry their words as humps.
+      .replaceAll(/([a-z0-9])([A-Z])/gu, '$1 $2')
       .toLowerCase()
       .split(/[^a-z0-9]+/u)
       .filter(Boolean),
@@ -75,10 +78,22 @@ const hasAuthorToken = (tokens: Set<string>) =>
 const insideAuthorContainer = (node: HtmlElement) =>
   [...ancestors(node)].some((item) => hasAuthorToken(attributeTokens(item)));
 
+/** A container reading "Sam Hogan Co-Founder" names the linked "Sam Hogan", not its title too. */
+function leadingLinkedName(node: HtmlElement, name: string) {
+  for (const link of elements(node, 'a')) {
+    const linked = visibleAuthorName(spacedText(link));
+    if (linked && hasAttribute(link, 'href') && name.startsWith(`${linked} `)) return linked;
+  }
+  return name;
+}
+
 function authorCandidate(node: HtmlElement, text: string, authorTokens: boolean) {
   const byline = visibleByline(text);
   if (byline) return byline;
-  if (authorTokens) return visibleAuthorName(text);
+  if (authorTokens) {
+    const name = visibleAuthorName(text);
+    return name ? leadingLinkedName(node, name) : '';
+  }
   if (
     ['h2', 'h3'].includes(node.tagName) &&
     !HEADING_EXCLUSIONS.has(text.toLowerCase()) &&
