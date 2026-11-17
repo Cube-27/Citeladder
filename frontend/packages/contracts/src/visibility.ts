@@ -33,6 +33,14 @@ export const namedBrandSchema = responseObject({
 });
 export type NamedBrand = z.infer<typeof namedBrandSchema>;
 
+// One domain cited in a set of answers: its citations, and whether it is the project's own.
+export const citedDomainSchema = responseObject({
+  domain: z.string(),
+  citations: z.number().int(),
+  owned: z.boolean(),
+});
+export type CitedDomain = z.infer<typeof citedDomainSchema>;
+
 // ---------------------------------------------------------------------------
 // Visibility dashboard (selected-run projection)
 // ---------------------------------------------------------------------------
@@ -187,6 +195,10 @@ export const promptMetricItemSchema = responseObject({
   // `brands` is the leading few, most answers first.
   mentions: z.number().int(),
   brands: z.array(namedBrandSchema),
+  // Only on the per-prompt latest read, for the Prompts table's filters: every
+  // brand named, and every domain cited, most citations first.
+  named: z.array(namedBrandSchema.pick({ kind: true, name: true })).optional(),
+  sources: z.array(citedDomainSchema).optional(),
   outcomes: z
     .array(
       responseObject({

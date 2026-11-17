@@ -62,6 +62,8 @@ describe('PromptTable pagination', () => {
                     answer: ANSWER,
                     mentions: 0,
                     brands: [],
+                    named: [],
+                    sources: [],
                   },
                 ],
               ])
@@ -76,10 +78,10 @@ describe('PromptTable pagination', () => {
     // Not "not measured": no run will ever measure it one prompt at a time.
     // One cell spans the figures and says it once; the reason is in the head.
     const shelfCells = within(shelfRow!).getAllByRole('cell');
-    expect(shelfCells[1]!.getAttribute('colspan')).toBe('4');
+    expect(shelfCells[1]!.getAttribute('colspan')).toBe('5');
     expect(shelfCells[1]!.textContent).toBe('Measured with Shopping');
     expect(shelfRow!.querySelectorAll('[data-absence="not_applicable"]')).toHaveLength(1);
-    expect(shelfCells).toHaveLength(within(brandRow!).getAllByRole('cell').length - 3);
+    expect(shelfCells).toHaveLength(within(brandRow!).getAllByRole('cell').length - 4);
     expect(within(shelfRow!).queryByText('Not measured')).toBeNull();
   });
 
@@ -145,6 +147,8 @@ describe('PromptTable pagination', () => {
                       brand('Globex', 'competitor'),
                       brand('Initech', 'competitor'),
                     ],
+                    named: [],
+                    sources: [],
                   },
                 ],
                 [
@@ -157,6 +161,8 @@ describe('PromptTable pagination', () => {
                     answer: ANSWER,
                     mentions: 0,
                     brands: [],
+                    named: [],
+                    sources: [],
                   },
                 ],
               ])
@@ -174,11 +180,12 @@ describe('PromptTable pagination', () => {
     const columns = within(header!)
       .getAllByRole('columnheader')
       .map((cell) => cell.textContent);
-    expect(columns.slice(0, 6)).toEqual([
+    expect(columns.slice(0, 7)).toEqual([
       'Prompt',
       'Visibility',
       expect.stringMatching(/^Mentions/),
       expect.stringMatching(/^Citations/),
+      expect.stringMatching(/^Sources/),
       expect.stringMatching(/^Position/),
       'Change',
     ]);
@@ -187,17 +194,17 @@ describe('PromptTable pagination', () => {
     // Three marks, each named for a screen reader, then the fourth as overflow.
     expect(cells[2]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
     expect(cells[3]!.textContent).toBe('25.0%');
-    expect(cells[4]!.textContent).toBe('#2');
+    expect(cells[5]!.textContent).toBe('#2');
     // Measured, and no brand named: zero, not the "not measured" mark.
     expect(within(unnamedRow!).getAllByRole('cell')[2]!.textContent).toBe('None');
     // No change is never a zero: a first measurement has nothing to compare, and
     // a pair measured differently is not compared.
-    expect(cells[5]!.querySelector('[data-absence]')).toHaveAttribute(
+    expect(cells[6]!.querySelector('[data-absence]')).toHaveAttribute(
       'data-absence',
       'not_applicable',
     );
     expect(
-      within(unnamedRow!).getAllByRole('cell')[5]!.querySelector('[data-absence]'),
+      within(unnamedRow!).getAllByRole('cell')[6]!.querySelector('[data-absence]'),
     ).toHaveAttribute('data-absence', 'unavailable');
   });
 

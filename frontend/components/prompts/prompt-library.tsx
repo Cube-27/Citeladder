@@ -17,9 +17,11 @@ import { topicsQueries } from '@/lib/api/topics';
 import type { Prompt, PromptStatus, Topic } from '@citeladder/contracts';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
+  brandOptions,
   emptyFilters,
   filterPrompts,
   personaOptions,
+  sourceOptions,
   type PromptFilters,
 } from '@/lib/prompts/filter';
 import {
@@ -131,6 +133,26 @@ function libraryBodyFor({
       />
     );
   return hasPrompts ? table : <PromptEmptyState add={add} />;
+}
+
+/**
+ * The Brands and Sources choices once a run exists. An active choice stays
+ * offered after a refresh that drops it, so it can still be cleared.
+ */
+function measuredChoicesFor({
+  measurements,
+  project,
+  filters,
+}: Readonly<{
+  measurements: ReturnType<typeof useLatestPromptMeasurements>;
+  project: Parameters<typeof brandOptions>[0];
+  filters: PromptFilters;
+}>) {
+  if (!measurements?.size && !filters.brands.length && !filters.sources.length) return undefined;
+  return {
+    brands: brandOptions(project),
+    sources: sourceOptions(measurements?.values() ?? [], filters.sources),
+  };
 }
 
 /** A library that never held a prompt has nothing to sort, search or filter. */
@@ -281,10 +303,14 @@ export function PromptLibrary({
     [byStatus, selectedTopicId],
   );
   const visible = useMemo(
-    () => filterPrompts(byTopic, search, filters),
-    [byTopic, search, filters],
+    () => filterPrompts({ prompts: byTopic, search, filters, mentions: measurements }),
+    [byTopic, search, filters, measurements],
   );
   const personas = useMemo(() => personaOptions(prompts), [prompts]);
+  const measuredChoices = useMemo(
+    () => measuredChoicesFor({ measurements, project, filters }),
+    [measurements, project, filters],
+  );
 
   const statusCounts = useMemo(() => {
     const counts: Record<PromptStatus, number> = { active: 0, archived: 0 };
@@ -360,7 +386,7 @@ export function PromptLibrary({
   if (awaitingFirstLoad({ promptsLoading: isLoading, hasPrompts, figuresRead })) {
     return (
       <ReportPage filters={<FilterBar />}>
-        <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 7 }} />
+        <StateBlock kind="loading" label="Loading prompts…" shape={{ kind: 'table', columns: 8 }} />
       </ReportPage>
     );
   }
@@ -377,6 +403,7 @@ export function PromptLibrary({
           filters,
           onFiltersChange: setFilters,
           personas,
+          measured: measuredChoices,
           topic: topicFilter({
             topics,
             selectedTopicId,

@@ -267,11 +267,14 @@ older text:
 - Integrations and AI Visibility: evidence-backed Opportunity sorting and
   labels, a Trends summary, GA4 property matching by stream URL, connected-data
   snapshot retention, retiring the referral tables, per-stat Performance
-  coverage, a branded-query override UI, server-side Query Fanout grouping, and
-  the first-party generative-AI Search Console report check.
+  coverage, a branded-query override UI, and the first-party generative-AI
+  Search Console report check.
 - Feature-review leftovers for Opportunities, AI Traffic, Commerce, Onboarding,
   Visibility and Earned sources.
-- Traffic impact and the fact-checking follow-ups.
+- Traffic impact.
+
+The fact-checking follow-ups and fanout grouping returned on 17 November 2026,
+scoped by the [AI visibility gaps plan](ai-visibility-gaps.md) (AV-3, AV-8).
 - Agent journey coverage (eval and end-to-end journey), Agent partial-text
   resume and the expanded Agent evaluation corpus.
 - Already shipped: Site Health Recrawl, the app shell's first-wave bootstrap,
