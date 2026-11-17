@@ -309,6 +309,47 @@ describe('terminal analysis publication', () => {
     );
   });
 
+  it('judges the pages an interrupted pass left against the pages it already finalized', async () => {
+    const seed = await fixtures.crawl('running');
+    const text = Array.from({ length: 80 }, (_, i) => `topic${i % 13} detail${i}`).join(' ');
+    const copy = {
+      has_html: true,
+      delivery: { status_code: 200 },
+      robots: { noindex: false },
+      primary_content_text: text,
+      links: { anchors: [] },
+    };
+    await fixtures.page(seed, '/', { has_html: true, links: { anchors: [] } });
+    const first = await fixtures.page(seed, '/a', copy);
+    const second = await fixtures.page(seed, '/b', copy);
+    const size = policy.site_health.crawl.finalize.batch_pages;
+    // The root and one copy commit in the first batch; the other copy is left for the replay.
+    policy.site_health.crawl.finalize.batch_pages = 2;
+    try {
+      nextBatch.after = () => Promise.reject(new Error('runner stopped after a batch'));
+      expect(await finalize(seed)).toBe(true);
+      await db
+        .updateTable('site_crawl_tasks')
+        .set({ available_at: new Date(0) })
+        .where('crawl_id', '=', seed.crawlId)
+        .where('task_kind', '=', 'finalize')
+        .execute();
+      expect(await finalize(seed)).toBe(true);
+    } finally {
+      policy.site_health.crawl.finalize.batch_pages = size;
+    }
+    const duplicates = await db
+      .selectFrom('site_issues')
+      .select('site_url_id')
+      .where('crawl_id', '=', seed.crawlId)
+      .where('rule_id', '=', 'technical.duplicate_content')
+      .where('is_current', '=', true)
+      .execute();
+    expect(duplicates.map((row) => row.site_url_id).toSorted(compareText)).toEqual(
+      [first.id, second.id].toSorted(compareText),
+    );
+  });
+
   it('fails a crawl whose finalization fails three times, and keeps a cancelled crawl cancelled', async () => {
     const run = async (seed: SiteSeed) => {
       for (let attempt = 0; attempt < 3; attempt++) {

@@ -179,8 +179,12 @@ const ruleFacts = sql<unknown>`case when p.status = 'completed' then jsonb_build
   'delivery', jsonb_build_object('status_code', a.normalized_facts -> 'delivery' -> 'status_code'),
   'primary_content_text', a.normalized_facts -> 'primary_content_text') end`;
 
-/** One keyset page of the crawl's current, unfinalized analyses. */
-function unfinalizedAfter(db: Database, crawl: Crawl, after: string | null) {
+/**
+ * One keyset page of the crawl's current analyses. With `context`, finalized
+ * ones too, with their rule facts: a resumed pass judges the pages still
+ * pending against the whole crawl, as an uninterrupted one does.
+ */
+function currentAfter(db: Database, crawl: Crawl, after: string | null, context: boolean) {
   return db
     .selectFrom('site_page_analyses as p')
     .innerJoin('site_urls as u', (join) =>
@@ -203,21 +207,22 @@ function unfinalizedAfter(db: Database, crawl: Crawl, after: string | null) {
       'u.url_hash',
       'u.normalized_url',
       'a.final_url',
-      ruleFacts.as('facts'),
+      sql<boolean>`p.finalized_at is null`.as('pending'),
+      (context ? ruleFacts : sql<unknown>`null`).as('facts'),
     ])
     .where('p.workspace_id', '=', crawl.workspace_id)
     .where('p.project_id', '=', crawl.project_id)
     .where('p.crawl_id', '=', crawl.id)
     .where('p.is_current', '=', true)
-    .where('p.finalized_at', 'is', null)
+    .$if(!context, (query) => query.where('p.finalized_at', 'is', null))
     .$if(after !== null, (query) => query.where('p.id', '>', after ?? ''))
     .orderBy('p.id')
     .limit(settings.read_pages)
     .execute();
 }
 
-type Unfinalized = Awaited<ReturnType<typeof unfinalizedAfter>>[number];
-type Analyzed = Omit<Unfinalized, 'facts' | 'final_url'> & ReturnType<typeof analyzedPage>;
+type Current = Awaited<ReturnType<typeof currentAfter>>[number];
+type Analyzed = Omit<Current, 'facts' | 'final_url'> & ReturnType<typeof analyzedPage>;
 
 /** Every analyzed page's duplicate comparison, keyed by its identity URL. */
 function duplicateComparisons(pages: Analyzed[]) {
@@ -330,8 +335,10 @@ const rootHashOf = (crawl: Crawl) => {
 
 /**
  * Read the pages to finalize, root first, leaving out the aliases about to be
- * retired. With `crossPage`, also build the context each completed page is
- * judged from; a cancelled crawl only appends final revisions.
+ * retired. With `crossPage`, also build the context each pending completed
+ * page is judged from, out of every current completed analysis (one a
+ * replayed pass already finalized included); a cancelled crawl only appends
+ * final revisions.
  */
 export async function prepareFinalization(
   db: Database,
@@ -344,11 +351,11 @@ export async function prepareFinalization(
   let after: string | null = null;
   let full = true;
   while (full) {
-    const rows: Unfinalized[] = await unfinalizedAfter(db, crawl, after); // NOSONAR -- Keyset pages, in order.
+    const rows: Current[] = await currentAfter(db, crawl, after, options.crossPage); // NOSONAR -- Keyset pages, in order.
     for (const { facts, final_url: finalUrl, ...row } of rows) {
       after = row.id;
       if (options.retiring.has(row.url_hash)) continue;
-      order.push({ id: row.id, root: row.url_hash === rootHash });
+      if (row.pending) order.push({ id: row.id, root: row.url_hash === rootHash });
       if (options.crossPage && facts !== null && finalUrl !== null)
         analyzed.push({ ...row, ...analyzedPage(finalUrl, record(facts)) });
     }
@@ -370,17 +377,18 @@ export async function prepareFinalization(
   }
   const duplicates = duplicateComparisons(analyzed);
   const linked = new Set(analyzed.flatMap((page) => page.links));
-  // Sitewide links are judged once, on the root; without the root in this pass
-  // every page keeps judging them itself.
+  // Sitewide links are judged once, on the root; without the root in this crawl
+  // every page keeps judging them itself. A root an earlier pass finalized
+  // already holds its crawl-wide findings.
   const root = analyzed.find((page) => page.url_hash === rootHash);
   const sitewide = root ? sitewideTargets(analyzed.map((page) => page.links)) : new Set<string>();
-  const rootExtras = root
+  const rootExtras = root?.pending
     ? [
         ...(await rootEvaluations(db, crawl, linked, resolutions)),
         ...sitewideLinks(sitewide, linkingPages(analyzed, sitewide), resolutions),
       ]
     : [];
-  const byId = new Map(analyzed.map((page) => [page.id, page]));
+  const byId = new Map(analyzed.filter((page) => page.pending).map((page) => [page.id, page]));
   /** One pending analysis's crawl-finalize evaluations; null for one not completed. */
   const judge = (analysisId: string): Judged | null => {
     const page = byId.get(analysisId);
