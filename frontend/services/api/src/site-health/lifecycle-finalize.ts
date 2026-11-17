@@ -333,18 +333,14 @@ const rootHashOf = (crawl: Crawl) => {
   return url ? canonicalIdentity(url).hash : '';
 };
 
+type PrepareOptions = { crossPage: boolean; retiring: ReadonlySet<string> };
+
 /**
- * Read the pages to finalize, root first, leaving out the aliases about to be
- * retired. With `crossPage`, also build the context each pending completed
- * page is judged from, out of every current completed analysis (one a
- * replayed pass already finalized included); a cancelled crawl only appends
- * final revisions.
+ * Keyset-read the pending pages, root first, leaving out the aliases about to
+ * be retired, and with `crossPage` every current completed analysis's rule
+ * facts, dropping each page's facts once read.
  */
-export async function prepareFinalization(
-  db: Database,
-  crawl: Crawl,
-  options: { crossPage: boolean; retiring: ReadonlySet<string> },
-) {
+async function readCurrent(db: Database, crawl: Crawl, options: PrepareOptions) {
   const rootHash = rootHashOf(crawl);
   const order: { id: string; root: boolean }[] = [];
   const analyzed: Analyzed[] = [];
@@ -364,6 +360,17 @@ export async function prepareFinalization(
   const pendingIds = [...order.filter((row) => row.root), ...order.filter((row) => !row.root)].map(
     (row) => row.id,
   );
+  return { rootHash, pendingIds, analyzed };
+}
+
+/**
+ * Read the pages to finalize. With `crossPage`, also build the context each
+ * pending completed page is judged from, out of every current completed
+ * analysis (one a replayed pass already finalized included); a cancelled
+ * crawl only appends final revisions.
+ */
+export async function prepareFinalization(db: Database, crawl: Crawl, options: PrepareOptions) {
+  const { rootHash, pendingIds, analyzed } = await readCurrent(db, crawl, options);
   if (!analyzed.length) return { pendingIds, judge: (_id: string): Judged | null => null };
   // The first analyzed page of an identity URL, by artifact, speaks for it.
   analyzed.sort((a, b) => compareText(a.artifact_id, b.artifact_id) || compareText(a.id, b.id));
