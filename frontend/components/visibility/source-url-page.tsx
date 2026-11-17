@@ -35,6 +35,8 @@ export function SourceUrlPageCard({
   if (loading) return <Skeleton variant="facts" />;
   if (page === undefined) return null;
   const standing = page?.standing ?? 'untracked';
+  // A competitor's own page can never list the business: nothing to show or do.
+  if (standing === 'competitor') return null;
   const brand = brandVerdict(page?.entities);
   return (
     <TitledSection title="On this page" description={standingSentence(standing)}>

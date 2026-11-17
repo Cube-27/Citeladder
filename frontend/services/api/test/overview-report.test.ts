@@ -216,7 +216,6 @@ describe('Overview PDF', () => {
     expect(text).toContain('Owned citation rate');
     expect(text).not.toContain('Citation share');
     expect(text).toContain('1 prompt measured');
-    expect(text).toContain('0 actions resolved so far.');
     // Ligatures stay out of the text layer, so "first" and "Offerings" copy and search intact.
     expect(text).toContain('first-time investors');
     expect(text).toContain('Offerings');

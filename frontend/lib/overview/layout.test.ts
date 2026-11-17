@@ -44,9 +44,9 @@ describe('Overview layout edits', () => {
         { key: 'company_facts', size: 'full' },
         { key: 'next_action', size: 'half' },
         { key: 'ranked_actions', size: 'half' },
-        { key: 'progress_proof', size: 'half' },
+        { key: 'missing_prompts', size: 'half' },
       ]),
-    ]).toEqual(['movement', 'progress_proof']);
+    ]).toEqual(['movement', 'missing_prompts']);
   });
 
   it('removes a widget but keeps the last one', () => {
@@ -65,7 +65,6 @@ describe('Overview layout edits', () => {
       'next_action',
       'missing_prompts',
       'ranked_actions',
-      'progress_proof',
       'visibility_trend',
       'share_of_voice',
       'top_movers',

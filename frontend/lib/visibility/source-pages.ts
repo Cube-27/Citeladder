@@ -93,10 +93,12 @@ export function absenceBasis(
  */
 export type PageStanding = z.infer<typeof pageStandingSchema> | 'untracked';
 
-const STANDING_SENTENCES: Record<PageStanding, string> = {
+/** A competitor's own page has no card, so it has no sentence. */
+type SentencedStanding = Exclude<PageStanding, 'competitor'>;
+
+const STANDING_SENTENCES: Record<SentencedStanding, string> = {
   untracked: 'This page has not been added to your source inventory yet.',
   yours: 'This is one of your own pages.',
-  competitor: "This is a competitor's own page, so it cannot list you.",
   blocked: 'The publisher blocks automated access, so this page has not been read.',
   unreadable: 'The last attempt to read this page failed. It will be tried again.',
   not_read: 'This page has not been read yet. It is read after a visibility run.',
@@ -106,7 +108,7 @@ const STANDING_SENTENCES: Record<PageStanding, string> = {
   not_assessable: 'Your name is too short to find reliably on a page, so this page is not judged.',
 };
 
-export function standingSentence(standing: PageStanding): string {
+export function standingSentence(standing: SentencedStanding): string {
   return STANDING_SENTENCES[standing];
 }
 

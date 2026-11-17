@@ -25,7 +25,6 @@ const WIDGET_SHAPES: Record<OverviewWidgetKey, LoadingShape> = {
   next_action: { kind: 'list', rows: 3 },
   missing_prompts: { kind: 'list', rows: 3 },
   ranked_actions: { kind: 'list', rows: 3 },
-  progress_proof: { kind: 'figures', count: 2 },
   company_facts: { kind: 'facts', rows: 3 },
   visibility_trend: { kind: 'chart', height: 'sm' },
   share_of_voice: { kind: 'facts', rows: 5 },
@@ -43,8 +42,7 @@ const DEFAULT_WIDGETS: readonly OverviewWidget[] = [
   { key: 'movement', size: 'half' },
   { key: 'next_action', size: 'half' },
   { key: 'missing_prompts', size: 'full' },
-  { key: 'ranked_actions', size: 'half' },
-  { key: 'progress_proof', size: 'half' },
+  { key: 'ranked_actions', size: 'full' },
   { key: 'company_facts', size: 'full' },
 ];
 

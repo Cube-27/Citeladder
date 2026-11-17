@@ -29,7 +29,6 @@ describe('RouteLoadingScreen', () => {
       'next_action',
       'missing_prompts',
       'ranked_actions',
-      'progress_proof',
       'company_facts',
     ]);
     expect(widgets.map((widget) => widget.className.includes('col-span-2'))).toEqual([
@@ -38,8 +37,7 @@ describe('RouteLoadingScreen', () => {
       false,
       false,
       true,
-      false,
-      false,
+      true,
       true,
     ]);
     expect(widgets[0]?.querySelectorAll('[data-figure-cell]')).toHaveLength(3);

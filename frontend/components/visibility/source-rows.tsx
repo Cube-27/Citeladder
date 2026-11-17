@@ -246,7 +246,7 @@ function PageStandingCell({
   const label = standingLabel(standing);
   const tone = standingTone(standing);
   return (
-    <Inline as="span" gap="meta">
+    <Inline as="span" gap="item" className="whitespace-nowrap">
       {tone ? (
         <StatusMark variant="status" value={tone}>
           {label}
@@ -281,7 +281,8 @@ function urlColumns(
     {
       key: 'standing',
       label: 'On the page',
-      width: 'status',
+      // A Gap badge and its Action link share one line.
+      width: 'category',
       desktopOnly: true,
       hint: 'Whether this page has been read, and where you stand on it. A gap lists competitors and not you.',
     },

@@ -13,7 +13,7 @@ import { TextLink } from '@/components/ui/text-link';
 import { StatusMark } from '@/components/ui/status-mark';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
-import { formatCount, pluralCount } from '@/lib/format';
+import { pluralCount } from '@/lib/format';
 import type { CommandCenter, Project } from '@citeladder/contracts';
 import { comparisonBasis } from '@citeladder/contracts/comparison-reason';
 import { DisplayTime } from '@/components/ui/display-time';
@@ -387,26 +387,6 @@ export function RankedActionsCard({
           description="Launch another run to look for new opportunities."
         />
       )}
-    </WidgetFrame>
-  );
-}
-
-/** What has been resolved since the comparable run. */
-export function ProgressProofCard({ data }: Readonly<{ data: CommandCenter }>) {
-  return (
-    <WidgetFrame id="progress-proof" title="Progress and report proof" fill="figure">
-      <FigureStrip
-        segments={[
-          {
-            key: 'resolved',
-            label: 'Resolved actions',
-            labelHidden: true,
-            caption: 'Resolved actions',
-            value: formatCount(data.resolved_actions.count),
-            sub: 'Since the comparable run',
-          },
-        ]}
-      />
     </WidgetFrame>
   );
 }

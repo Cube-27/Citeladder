@@ -97,7 +97,7 @@ describe('IssuesCatalog', () => {
 
     expect(await screen.findByRole('heading', { name: '47 issue types' })).toBeInTheDocument();
     expect(screen.getByText('12 high severity · 50 pages affected')).toBeInTheDocument();
-    // Each severity is its count alone: no bar, no shares.
+    // Each severity reads as its count; the ring beside them is decorative.
     const severities = screen.getByRole('group', { name: 'Issue types by severity' });
     expect(
       within(severities)
