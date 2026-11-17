@@ -1,10 +1,11 @@
 import { Check, ChevronLeft } from 'lucide-react';
-import { useId, type ReactNode } from 'react';
+import { useId, type ComponentProps, type ReactNode } from 'react';
 
 import { useDocumentTitle } from '@/components/layout/use-route-announcement';
 import { FlowLogo } from '@/components/templates/flow-page';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Icon } from '@/components/ui/icon';
+import { RungTrail } from '@/components/ui/rung-trail';
 import { Tag } from '@/components/ui/tag';
 import { ThemeSwitch } from '@/components/ui/theme-switch';
 import { textRole } from '@/components/ui/typography';
@@ -226,6 +227,11 @@ export function StepColumns({ children }: Readonly<{ children: ReactNode }>) {
       {children}
     </div>
   );
+}
+
+/** A working step's progress: the large RungTrail, 16px labels 12 apart. */
+export function StepTrail(props: Readonly<Omit<ComponentProps<typeof RungTrail>, 'size'>>) {
+  return <RungTrail {...props} size="lg" />;
 }
 
 /** What a working step has found so far: a label over a wrapping run of tags. */

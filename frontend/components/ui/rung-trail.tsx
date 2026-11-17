@@ -69,18 +69,21 @@ function StepGlyph({ status }: Readonly<{ status: RungStatus }>) {
  * vertical form lists steps down a rail with each step's label, detail and
  * time; the horizontal form lays a flow's steps across one rail. Every label
  * carries its status word for screen readers, so the trail reads without
- * the rungs.
+ * the rungs. `size="lg"` (a setup flow's steps) sets the vertical form's
+ * labels at 16 and its rows 12 apart.
  */
 export function RungTrail({
   steps,
   label,
   orientation = 'vertical',
+  size = 'md',
   className,
 }: Readonly<{
   steps: readonly TrailStep[];
   /** What the steps are of ("Discovering your brand"). */
   label: string;
   orientation?: 'vertical' | 'horizontal';
+  size?: RowSize;
   className?: string;
 }>) {
   if (orientation === 'horizontal') {
@@ -128,42 +131,80 @@ export function RungTrail({
           step={step}
           first={index === 0}
           last={index === steps.length - 1}
+          size={size}
         />
       ))}
     </ol>
   );
 }
 
+type RowSize = 'md' | 'lg';
+
+/**
+ * A row's geometry per size: the line its rung and glyph centre on, the rail
+ * and how its connector reaches the next row, and the label's role. `md`
+ * bridges its 8 gap from a one-line rail; `lg`'s rail stretches down the
+ * row, its 12 gap sitting under the label. The `lg` label (16/24) keeps one
+ * role and only gains weight while running, so a row never changes height.
+ */
+const ROW_SIZE = {
+  md: {
+    row: 'pb-2',
+    rail: 'h-5',
+    line: 'h-5',
+    railTop: 'top-2.5',
+    bridge: '-bottom-2 h-auto',
+    gap: '',
+    label: (running: boolean) => textRole(running ? 'label' : 'body'),
+  },
+  lg: {
+    row: '',
+    rail: '',
+    line: 'h-6',
+    railTop: 'top-3',
+    bridge: 'bottom-0',
+    gap: 'pb-3',
+    label: (running: boolean) => textRole('prose', cn('leading-6', running && 'type-emphasis')),
+  },
+} as const satisfies Record<RowSize, unknown>;
+
 /** One step: the rail and its rung, the glyph, the label and detail, the time. */
 function RungRow({
   step,
   first,
   last,
-}: Readonly<{ step: TrailStep; first: boolean; last: boolean }>) {
+  size,
+}: Readonly<{ step: TrailStep; first: boolean; last: boolean; size: RowSize }>) {
+  const geometry = ROW_SIZE[size];
   return (
     <li
       aria-current={step.status === 'running' ? 'step' : undefined}
       data-rung-status={step.status}
-      className="grid grid-cols-[0.75rem_1rem_minmax(0,1fr)_auto] gap-x-2 pb-2 last:pb-0"
+      className={cn(
+        'grid grid-cols-[0.75rem_1rem_minmax(0,1fr)_auto] gap-x-2 last:pb-0',
+        geometry.row,
+      )}
     >
-      <span aria-hidden className="relative flex h-5 justify-center">
+      <span aria-hidden className={cn('relative flex justify-center', geometry.rail)}>
         <span
           className={cn(
             'bg-rule absolute left-1/2 w-px -translate-x-1/2',
-            first ? 'top-2.5' : 'top-0',
-            last ? 'h-0' : '-bottom-2 h-auto',
+            first ? geometry.railTop : 'top-0',
+            last ? 'h-0' : geometry.bridge,
           )}
         />
-        <span className={cn('rounded-mark relative mt-2 block h-1 w-3', rungFace(step.status))} />
+        <span className={cn('relative flex items-center', geometry.line)}>
+          <span className={cn('rounded-mark block h-1 w-3', rungFace(step.status))} />
+        </span>
       </span>
-      <span aria-hidden className="flex h-5 items-center">
+      <span aria-hidden className={cn('flex items-center', geometry.line)}>
         {step.status === 'running' ? <Spinner /> : <StepGlyph status={step.status} />}
       </span>
-      <span className="flex min-w-0 flex-col">
+      <span className={cn('flex min-w-0 flex-col', !last && geometry.gap)}>
         <span
-          className={textRole(
-            step.status === 'running' ? 'label' : 'body',
-            step.status === 'pending' ? 'text-ink-2' : undefined,
+          className={cn(
+            geometry.label(step.status === 'running'),
+            step.status === 'pending' && 'text-ink-2',
           )}
         >
           {step.label}
