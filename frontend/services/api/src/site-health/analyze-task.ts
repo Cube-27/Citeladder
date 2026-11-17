@@ -78,13 +78,13 @@ async function guardRows(
   task: SiteTask,
   lock: boolean,
 ): Promise<GuardRows> {
-  // Analysis spends no allowance: only the runtime's existence matters, so it
-  // takes no runtime lock and never queues behind the workspace's discovers.
-  const runtime = await db
+  // Analysis spends no allowance, so analyses share the runtime lock; it still
+  // orders them behind a discover, which writes analyze task rows before the crawl.
+  const runtimeQuery = db
     .selectFrom('workspace_site_health_runtime')
     .select('id')
-    .where('workspace_id', '=', crawl.workspace_id)
-    .executeTakeFirst();
+    .where('workspace_id', '=', crawl.workspace_id);
+  const runtime = await (lock ? runtimeQuery.forShare() : runtimeQuery).executeTakeFirst();
   const monitoredQuery = db
     .selectFrom('monitored_site_urls')
     .select('active')
@@ -273,7 +273,7 @@ async function persist(ctx: SiteTaskContext, claimed: SiteTask, outcome: Outcome
     : null;
   const result = context && outcome.facts ? await analyzePageAsync(outcome.facts, context) : null;
   await commitTask(ctx, claimed, async (trx, lock) => {
-    // Membership comes before the crawl in Site Health lock order.
+    // Runtime and membership come before the crawl in Site Health lock order.
     const live = await loadScope(trx, claimed);
     if (!live) throw new Abandoned();
     const rows = await guardRows(trx, live.crawl, live.task, true);

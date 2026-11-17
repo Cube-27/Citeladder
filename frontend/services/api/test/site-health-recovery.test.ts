@@ -380,7 +380,7 @@ it('reconciles and stops a crawl while a task commit inserts rows that reference
   expect(crawl.status).toBe('cancelled');
 });
 
-it('analyzes a page while a discover holds the workspace runtime lock', async () => {
+it('commits an analysis while another analysis holds the workspace runtime lock', async () => {
   const seed = await fixtures.crawl('running');
   await db
     .updateTable('site_crawls')
@@ -405,8 +405,9 @@ it('analyzes a page while a discover holds the workspace runtime lock', async ()
     .returningAll()
     .executeTakeFirstOrThrow();
   await db.transaction().execute(async (trx) => {
+    // A discover's FOR UPDATE still orders analyses behind it; analyses only share the row.
     await sql`select id from workspace_site_health_runtime
-      where workspace_id = ${seed.workspaceId} for update`.execute(trx);
+      where workspace_id = ${seed.workspaceId} for share`.execute(trx);
     await worker.execute(leased);
   });
   expect(await row(page.taskId)).toMatchObject({ status: 'succeeded', attempt_count: 1 });
