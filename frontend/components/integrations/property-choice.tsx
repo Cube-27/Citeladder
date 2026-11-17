@@ -92,24 +92,15 @@ export function usePropertyChoice({
   const listed = !suggested || showAll;
   return {
     action: suggested ? (
-      <>
-        {properties.length > 1 && !showAll ? (
-          <Button variant="quiet" onClick={() => setShowAll(true)}>
-            <Icon icon={List} />
-            Choose another
-          </Button>
-        ) : null}
-        <Button
-          variant="secondary"
-          onClick={() => choose(suggested.property_ref)}
-          pending={pendingRef === suggested.property_ref}
-          pendingLabel="Importing…"
-          disabled={select.isPending}
-          aria-label={`Use ${suggested.label} for ${source.label}`}
-        >
-          Use {suggested.label}
-        </Button>
-      </>
+      <SuggestionButtons
+        label={`${suggested.label} for ${source.label}`}
+        suggestedLabel={suggested.label}
+        offerOthers={!listed && properties.length > 1}
+        onShowAll={() => setShowAll(true)}
+        onUse={() => choose(suggested.property_ref)}
+        pending={pendingRef === suggested.property_ref}
+        disabled={select.isPending}
+      />
     ) : null,
     body:
       listed || select.isError ? (
@@ -122,15 +113,61 @@ export function usePropertyChoice({
               onSelect={choose}
             />
           ) : null}
-          {select.isError ? (
-            <Notice
-              kind="mutation"
-              notice={mutationNoticeForError(select.error, { action: 'save the property' })}
-            />
-          ) : null}
+          <SaveFailure error={select.error} />
         </Stack>
       ) : null,
   };
+}
+
+/** Saving the chosen property failed: the reason, in the row. */
+function SaveFailure({ error }: Readonly<{ error: Error | null }>) {
+  if (!error) return null;
+  return (
+    <Notice
+      kind="mutation"
+      notice={mutationNoticeForError(error, { action: 'save the property' })}
+    />
+  );
+}
+
+/** The suggested property as one click, and the way to every other one. */
+function SuggestionButtons({
+  label,
+  suggestedLabel,
+  offerOthers,
+  onShowAll,
+  onUse,
+  pending,
+  disabled,
+}: Readonly<{
+  label: string;
+  suggestedLabel: string;
+  offerOthers: boolean;
+  onShowAll: () => void;
+  onUse: () => void;
+  pending: boolean;
+  disabled: boolean;
+}>) {
+  return (
+    <>
+      {offerOthers ? (
+        <Button variant="quiet" onClick={onShowAll}>
+          <Icon icon={List} />
+          Choose another
+        </Button>
+      ) : null}
+      <Button
+        variant="secondary"
+        onClick={onUse}
+        pending={pending}
+        pendingLabel="Importing…"
+        disabled={disabled}
+        aria-label={`Use ${label}`}
+      >
+        Use {suggestedLabel}
+      </Button>
+    </>
+  );
 }
 
 /** Discovery before it has a list: the button, progress, or the failure with a retry. */

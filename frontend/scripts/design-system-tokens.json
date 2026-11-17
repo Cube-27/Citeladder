@@ -598,7 +598,7 @@
             "name": "subheading",
             "fontSize": "14px",
             "lineHeight": "20px",
-            "fontWeight": 600,
+            "fontWeight": 500,
             "sample": "Integrations",
             "usage": "The app's slip titles, table group heads and field-group legends."
           },

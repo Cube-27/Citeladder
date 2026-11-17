@@ -246,7 +246,7 @@
   --text-display--letter-spacing: -0.01em;
   --text-subheading: 0.875rem;
   --text-subheading--line-height: 1.25rem;
-  --text-subheading--font-weight: 600;
+  --text-subheading--font-weight: 500;
   --text-prose: 1rem;
   --text-prose--line-height: 1.625rem;
   --text-prose--font-weight: 400;
@@ -530,39 +530,18 @@
   --shadow-pop: inset 0 1px 0 rgb(255 255 255 / 5%), 0 4px 12px rgb(0 0 0 / 0.3);
   --shadow-sheet: inset 0 1px 0 rgb(255 255 255 / 5%), 0 16px 40px rgb(0 0 0 / 0.45);
 
-  /* Light text on a dark ground reads heavier, so every weight drops by 50;
-     each type role and font utility takes the dark weight of its light one. */
+  /* Light text on a dark ground reads heavier, so every weight drops by 50.
+     The type roles read --weight-*; the size utilities the app uses read these. */
   --weight-regular: 350;
   --weight-medium: 450;
-  --font-weight-normal: var(--weight-regular);
-  --font-weight-medium: var(--weight-medium);
-  --font-weight-semibold: var(--weight-medium);
-  --text-display-lg--font-weight: var(--weight-regular);
-  --text-display-md--font-weight: var(--weight-regular);
-  --text-display-sm--font-weight: var(--weight-medium);
-  --text-page-title--font-weight: var(--weight-medium);
-  --text-title--font-weight: var(--weight-regular);
-  --text-title-sm--font-weight: var(--weight-regular);
-  --text-stat--font-weight: var(--weight-medium);
-  --text-lead--font-weight: var(--weight-regular);
-  --text-body-lg--font-weight: var(--weight-regular);
-  --text-body--font-weight: var(--weight-regular);
-  --text-body-sm--font-weight: var(--weight-regular);
-  --text-label--font-weight: var(--weight-medium);
-  --text-label-lg--font-weight: var(--weight-medium);
-  --text-heading--font-weight: var(--weight-medium);
-  --text-heading-lg--font-weight: var(--weight-medium);
-  --text-caption--font-weight: var(--weight-regular);
-  --text-eyebrow--font-weight: var(--weight-medium);
-  --text-data--font-weight: var(--weight-regular);
-  --text-code--font-weight: var(--weight-regular);
-  --text-display--font-weight: var(--weight-medium);
-  --text-subheading--font-weight: var(--weight-medium);
-  --text-prose--font-weight: var(--weight-regular);
-  --text-screen-label--font-weight: var(--weight-medium);
-  --text-figure-xl--font-weight: var(--weight-medium);
-  --text-figure--font-weight: var(--weight-medium);
-  --text-data-sm--font-weight: var(--weight-regular);
+  --font-weight-normal: 350;
+  --font-weight-medium: 450;
+  --text-body--font-weight: 350;
+  --text-caption--font-weight: 350;
+  --text-data--font-weight: 350;
+  --text-eyebrow--font-weight: 450;
+  --text-figure--font-weight: 450;
+  --text-label--font-weight: 450;
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -708,17 +687,12 @@
      numerals. The page title is the display face at 20/28 400. */
   --text-title: 1.25rem;
   --text-title--line-height: 1.75rem;
-  --text-title--font-weight: 400;
   --text-heading: 1rem;
   --text-heading--line-height: 1.5rem;
-  --text-heading--font-weight: 500;
-  --text-subheading--font-weight: 500;
   --text-figure-xl: 2rem;
   --text-figure-xl--line-height: 2.5rem;
-  --text-figure-xl--font-weight: 500;
   --text-figure: 1.5rem;
   --text-figure--line-height: 2rem;
-  --text-figure--font-weight: 500;
   --text-code: 0.8125rem;
   --text-code--line-height: 1.25rem;
 
@@ -1096,13 +1070,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .type-display {
     font-size: var(--text-display);
     line-height: var(--text-display--line-height);
-    font-weight: var(--text-display--font-weight);
+    font-weight: var(--weight-medium);
     letter-spacing: var(--text-display--letter-spacing);
   }
   .type-title {
     font-size: var(--text-title);
     line-height: var(--text-title--line-height);
-    font-weight: var(--text-title--font-weight);
+    font-weight: var(--weight-regular);
     letter-spacing: 0;
   }
   .type-heading,
@@ -1118,12 +1092,12 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .type-heading {
     font-size: var(--text-heading);
     line-height: var(--text-heading--line-height);
-    font-weight: var(--text-heading--font-weight);
+    font-weight: var(--weight-medium);
   }
   .type-subheading {
     font-size: var(--text-subheading);
     line-height: var(--text-subheading--line-height);
-    font-weight: var(--text-subheading--font-weight);
+    font-weight: var(--weight-medium);
   }
   /* 14/20 on every surface (the website's `body` is its 16px reading size). */
   .type-body {
@@ -1134,17 +1108,17 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .type-label {
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: var(--text-label--font-weight);
+    font-weight: var(--weight-medium);
   }
   .type-prose {
     font-size: var(--text-prose);
     line-height: var(--text-prose--line-height);
-    font-weight: var(--text-prose--font-weight);
+    font-weight: var(--weight-regular);
   }
   .type-caption {
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
-    font-weight: var(--text-caption--font-weight);
+    font-weight: var(--weight-regular);
     color: var(--color-ink-2);
   }
   .type-figure-xl,
@@ -1155,14 +1129,14 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .type-figure-xl {
     font-size: var(--text-figure-xl);
     line-height: var(--text-figure-xl--line-height);
-    font-weight: var(--text-figure-xl--font-weight);
+    font-weight: var(--weight-medium);
     letter-spacing: var(--text-figure-xl--letter-spacing);
     color: var(--color-ink);
   }
   .type-figure {
     font-size: var(--text-figure);
     line-height: var(--text-figure--line-height);
-    font-weight: var(--text-figure--font-weight);
+    font-weight: var(--weight-medium);
     letter-spacing: var(--text-figure--letter-spacing);
     color: var(--color-ink);
   }
@@ -1200,7 +1174,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: var(--text-label--font-weight);
+    font-weight: var(--weight-medium);
   }
 
   /* The website's own roles, kept for its product screens (components/
@@ -1209,7 +1183,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-size: var(--text-page-title);
     line-height: var(--text-page-title--line-height);
-    font-weight: var(--text-page-title--font-weight);
+    font-weight: var(--weight-medium);
     letter-spacing: var(--text-page-title--letter-spacing);
     color: var(--color-ink);
   }
@@ -1241,7 +1215,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-mono);
     font-size: var(--text-screen-label);
     line-height: var(--text-screen-label--line-height);
-    font-weight: var(--text-screen-label--font-weight);
+    font-weight: var(--weight-medium);
     letter-spacing: var(--text-screen-label--letter-spacing);
     text-transform: uppercase;
     color: var(--color-ink-2);
@@ -1252,7 +1226,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-variant-numeric: tabular-nums;
     font-size: var(--text-data-sm);
     line-height: var(--text-data-sm--line-height);
-    font-weight: var(--text-data-sm--font-weight);
+    font-weight: var(--weight-regular);
     letter-spacing: 0;
   }
 

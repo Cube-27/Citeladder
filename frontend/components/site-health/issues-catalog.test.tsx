@@ -302,16 +302,9 @@ describe('IssuesCatalog', () => {
     expect(screen.queryByRole('button', { name: 'First page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Previous page' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Next page' })).toBeNull();
-  });
-
-  it('sizes the table to its tallest tab, then four blank rows', async () => {
-    serveIssues();
-    renderIssues(<IssuesCatalog crawlId={CRAWL} />);
-    const table = screen.getByRole('region', { name: 'Issues' });
-    await within(table).findByRole('button', { name: 'WebSite schema is missing' });
-
-    // The crawl's tallest tab is Technical's 24, under the 25-row page.
-    await waitFor(() => expect(table.querySelectorAll('tbody tr')).toHaveLength(28));
+    // Tallest tab (Technical, 24) under a 25-row page, plus four blank rows.
+    const issuesTable = screen.getByRole('region', { name: 'Issues' });
+    await waitFor(() => expect(issuesTable.querySelectorAll('tbody tr')).toHaveLength(28));
   });
 
   it('switches tabs and ordering as server params, from the first page', async () => {

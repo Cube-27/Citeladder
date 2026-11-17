@@ -15,8 +15,8 @@ import { cn } from '@/lib/utils';
  * several fields, `max-w-prose` for a one-field step, centred in the gutter.
  */
 const STEP_COLUMN = {
-  wide: 'max-w-thread desktop:px-[var(--card-padding)] mx-auto w-full px-4',
-  narrow: 'max-w-prose desktop:px-[var(--card-padding)] mx-auto w-full px-4',
+  wide: 'max-w-thread mx-auto w-full px-[var(--content-gutter)]',
+  narrow: 'max-w-prose mx-auto w-full px-[var(--content-gutter)]',
 } as const;
 
 type StepWidth = keyof typeof STEP_COLUMN;
@@ -47,20 +47,20 @@ export function SetupPage({
   return (
     <div className="bg-ground text-ink flex min-h-dvh flex-col antialiased">
       <header className="border-rule bg-ground sticky top-0 z-10 border-b">
-        <div className="desktop:grid-cols-[1fr_auto_1fr] desktop:px-[var(--card-padding)] grid min-h-[var(--masthead-height)] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-4">
-          <span className="inline-flex justify-self-start">
+        <div className="grid min-h-[var(--masthead-height)] grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-4 px-[var(--content-gutter)]">
+          <span className="inline-flex">
             <FlowLogo />
           </span>
           {steps ? <SetupStepper steps={steps} current={index} /> : <span />}
-          <div className="flex items-center gap-3 justify-self-end">
+          <div className="flex items-center justify-end gap-3">
             {barEnd}
             <ThemeSwitch />
           </div>
         </div>
         {steps ? (
-          <div aria-hidden className="absolute inset-x-0 -bottom-px h-0.5">
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-0.5">
             <span
-              className="bg-ink block h-full transition-[width] duration-[var(--motion-slow)] ease-[var(--ease-standard)] motion-reduce:transition-none"
+              className="bg-ink block h-full"
               style={{ width: `${((index + 1) / steps.length) * 100}%` }}
             />
           </div>
@@ -93,7 +93,10 @@ function SetupStepper({
         value={current + 1}
         aria-valuetext={count}
       />
-      <p className={textRole('caption', 'desktop:sr-only truncate')}>{count}</p>
+      <p aria-hidden className={textRole('caption', 'desktop:hidden truncate')}>
+        {count}
+      </p>
+      <p className="sr-only">{count}</p>
       <ol className="desktop:flex hidden items-center gap-3">
         {steps.map((step, index) => (
           <li
@@ -104,7 +107,7 @@ function SetupStepper({
             {index > 0 ? (
               <span
                 aria-hidden
-                className={cn('me-1 h-px w-10', index <= current ? 'bg-ink' : 'bg-rule')}
+                className={cn('h-px w-10', index <= current ? 'bg-ink' : 'bg-rule')}
               />
             ) : null}
             <StepMark index={index} current={current} />
@@ -139,10 +142,7 @@ function StepMark({ index, current }: Readonly<{ index: number; current: number 
       aria-hidden
       className={textRole(
         'caption',
-        cn(
-          MARK,
-          index === current ? 'border-ink text-ink border-2' : 'border-rule text-ink-2 border',
-        ),
+        cn(MARK, 'border', index === current ? 'border-ink text-ink' : 'border-rule text-ink-2'),
       )}
     >
       {index + 1}
@@ -186,7 +186,7 @@ export function SetupStep({
       <div
         className={cn(
           STEP_COLUMN[width],
-          'desktop:pt-10 desktop:pb-12 flex flex-1 flex-col gap-[var(--card-padding)] pt-6 pb-8',
+          'flex flex-1 flex-col gap-[var(--card-padding)] py-[var(--page-section-gap)]',
         )}
       >
         <header className="flex flex-col gap-2">
@@ -198,7 +198,7 @@ export function SetupStep({
         </header>
         <section
           aria-labelledby={headingId}
-          className="bg-surface border-rule rounded-card shadow-card desktop:p-[var(--page-section-gap)] flex min-w-0 flex-col gap-[var(--card-padding)] border p-[var(--card-padding)]"
+          className="bg-surface border-rule rounded-card shadow-card flex min-w-0 flex-col gap-[var(--card-padding)] border p-[var(--card-padding)]"
         >
           {children}
         </section>
@@ -207,7 +207,7 @@ export function SetupStep({
         <footer className="border-rule bg-ground sticky bottom-0 z-10 border-t">
           <div className={cn(STEP_COLUMN[width], 'flex items-center justify-between gap-3 py-3')}>
             {back ?? <span />}
-            <span className="flex justify-end *:min-w-30">{next}</span>
+            <span className="flex justify-end">{next}</span>
           </div>
         </footer>
       ) : null}
@@ -218,7 +218,7 @@ export function SetupStep({
 /** Two top-aligned columns from `desktop:` (one below it), for fields or groups of answers. */
 export function StepColumns({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <div className="desktop:grid-cols-2 desktop:gap-x-10 grid min-w-0 items-start gap-[var(--card-padding)]">
+    <div className="desktop:grid-cols-2 grid min-w-0 items-start gap-[var(--card-padding)]">
       {children}
     </div>
   );
