@@ -177,6 +177,7 @@ function TopIssues({ issues }: Readonly<{ issues: SiteHealthOverview['top_issues
             <Inline>
               <TextLink
                 text="body"
+                underline="hover"
                 href={issueHref(issue)}
                 className="inline-flex min-h-6 min-w-0 items-center"
               >

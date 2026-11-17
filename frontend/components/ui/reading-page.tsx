@@ -1,6 +1,7 @@
 import { useId, useState, type ReactNode } from 'react';
 
 import { Checkbox } from '@/components/ui/checkbox';
+import { ClampText } from '@/components/ui/clamp-text';
 import { ProjectLink } from '@/components/ui/project-link';
 import { textRole } from '@/components/ui/typography';
 
@@ -38,9 +39,15 @@ export function BackLink({
   );
 }
 
-/** The page's h1: a record's name, or (`path`) an address, set smaller as it runs long. */
+/** The page's h1: a record's name, or (`path`) an address on one line, cut with the whole in a tooltip. */
 export function PageHeading({ children, path }: Readonly<{ children: string; path?: boolean }>) {
-  return <h1 className={textRole(path ? 'title' : 'display', 'mt-3 break-words')}>{children}</h1>;
+  if (path)
+    return (
+      <h1 className={textRole('title', 'mt-3 min-w-0')}>
+        <ClampText>{children}</ClampText>
+      </h1>
+    );
+  return <h1 className={textRole('display', 'mt-3 break-words')}>{children}</h1>;
 }
 
 /** The row of ways to take the record elsewhere, under its overview. */
@@ -72,7 +79,7 @@ export function Labelled({
 }
 
 export function Prose({ children }: Readonly<{ children: ReactNode }>) {
-  return <p className={textRole('prose', 'break-words')}>{children}</p>;
+  return <p className={textRole('body', 'break-words')}>{children}</p>;
 }
 
 export type DetailFact = Readonly<{ label: string; value: ReactNode }>;
@@ -111,10 +118,10 @@ export function Checklist({ items }: Readonly<{ items: readonly string[] }>) {
   return (
     <ul className="flex flex-col">
       {items.map((item, index) => (
-        <li key={item} className={textRole('prose', 'flex items-start gap-3 py-1')}>
+        <li key={item} className={textRole('body', 'flex items-start gap-3 py-1')}>
           <Checkbox
             aria-label={item}
-            className="mt-1"
+            className="mt-0.5"
             checked={done.has(index)}
             onCheckedChange={() =>
               setDone((current) => {

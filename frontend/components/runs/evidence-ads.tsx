@@ -1,5 +1,6 @@
 import type { ExecutionAds } from '@citeladder/contracts/visibility-ads';
 
+import { ClampText } from '@/components/ui/clamp-text';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Label, textRole } from '@/components/ui/typography';
 import { landingLabel } from '@/lib/visibility/ads';
@@ -33,9 +34,9 @@ export function EvidenceAds({ ads }: Readonly<{ ads: ExecutionAds }>) {
                 <AdOwnershipChip ownership={ad.ownership} />
               </Inline>
               {ad.snippet ? <span className="type-caption text-ink-2">{ad.snippet}</span> : null}
-              <span className="type-caption">
+              <ClampText className="type-caption">
                 Sponsored by {ad.advertiser_name} · {landingLabel(ad.landing_url)}
-              </span>
+              </ClampText>
             </Stack>
           ))}
         </Stack>

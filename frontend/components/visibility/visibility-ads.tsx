@@ -294,10 +294,10 @@ function CreativeList({
                   {creative.snippet ? (
                     <span className={textRole('body', 'text-ink-2')}>{creative.snippet}</span>
                   ) : null}
-                  <span className={textRole('caption', 'text-ink-2')}>
+                  <ClampText className={textRole('caption', 'text-ink-2')}>
                     {creative.advertiser_name} · {landingLabel(creative.landing_url)} ·{' '}
                     {pluralCount(creative.appearances, 'appearance')}
-                  </span>
+                  </ClampText>
                 </Stack>
               ))}
             </Stack>

@@ -255,9 +255,11 @@ export function SiteHealthView({ state, controller }: Props) {
       )}
       {(findings?.state === 'available' ? findings.items : []).map((action) => (
         <article key={action.id}>
-          <h3 className={textRole('subheading')}>{action.target_label}</h3>
+          <h3 className={textRole('subheading', 'truncate')} title={action.target_label}>
+            {action.target_label}
+          </h3>
           {action.approach && <p className={textRole('body', 'text-ink-2')}>{action.approach}</p>}
-          <p className={textRole('caption')}>
+          <p className={textRole('caption', 'truncate')} title={action.target_url ?? undefined}>
             {action.status.replaceAll('_', ' ')}
             {action.target_url && ` · ${action.target_url}`}
           </p>
@@ -265,7 +267,9 @@ export function SiteHealthView({ state, controller }: Props) {
       ))}
       {pages.map((page) => (
         <article key={page.site_url_id}>
-          <h3 className={textRole('subheading')}>{page.url}</h3>
+          <h3 className={textRole('subheading', 'truncate')} title={page.url}>
+            {page.url}
+          </h3>
           {page.title && page.title !== page.url && (
             <p className={textRole('caption')}>{page.title}</p>
           )}
