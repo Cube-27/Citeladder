@@ -698,33 +698,20 @@ describe('crawl lifecycle', () => {
     const done = await monitoredPage(seed, '/');
     await fixtures.analyzable(seed, '/pending');
     const analyzed = await fixtures.analyzable(seed, '/analyzed');
-    const [first, middle, last] = [
-      await fixtures.task(seed, 'discover'),
-      await fixtures.task(seed, 'discover'),
-      await fixtures.task(seed, 'discover'),
-    ];
+    const discovers = [1, 2, 3].map(() => fixtures.task(seed, 'discover'));
+    const [first, middle, last] = await Promise.all(discovers);
     const gates = cadence();
-    const settle = async (taskId: string) => {
-      await db
-        .updateTable('site_crawl_tasks')
-        .set({ status: 'succeeded' })
-        .where('id', '=', taskId)
-        .execute();
-      await reconcileAfterTask(db, settled(seed, taskId), gates);
-    };
-    await settle(first);
-    await db
-      .updateTable('site_crawl_tasks')
-      .set({ status: 'succeeded' })
-      .where('id', '=', analyzed.taskId)
-      .execute();
+    const succeed = (id: string) =>
+      sql`update site_crawl_tasks set status = 'succeeded' where id = ${id}`.execute(db);
+    const settle = (id: string) =>
+      succeed(id).then(() => reconcileAfterTask(db, settled(seed, id), gates));
+    await settle(first!);
+    await succeed(analyzed.taskId);
     // A discover while siblings still discover waits for the cadence: no crawl lock, no recount.
-    await settle(middle);
-    expect(await crawlRow(seed.crawlId)).toMatchObject({
-      discovery_status: 'running',
-      analyzed_url_count: 1,
-    });
-    await settle(last);
+    await settle(middle!);
+    const progress = await crawlRow(seed.crawlId);
+    expect(progress).toMatchObject({ discovery_status: 'running', analyzed_url_count: 1 });
+    await settle(last!);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'running',
       discovery_status: 'completed',
