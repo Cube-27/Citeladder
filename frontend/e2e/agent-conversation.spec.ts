@@ -392,6 +392,8 @@ for (const width of [1280, 390]) {
       await page.getByRole('button', { name: 'Add a skill or Action' }).click();
       await page.getByRole('menuitem', { name: 'Skills: Growth plan' }).click();
       await page.getByRole('menuitemradio', { name: 'Automatic', exact: true }).click();
+      // The menu hands focus back to + after its exit animation; Enter typed before then opens +.
+      await expect(page.getByRole('button', { name: 'Add a skill or Action' })).toBeFocused();
       await reply.fill('Explain this');
       await reply.press('Shift+Enter');
       await reply.press('Enter');
