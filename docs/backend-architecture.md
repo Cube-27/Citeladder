@@ -170,7 +170,8 @@ successor is not an immediate pickup. To hide that start, an execution still
 draining three minutes before its deadline, with work due within a fresh
 budget, starts its successor early with `RUNNER_HANDOVER`; that start skips the
 drain-lock probe (the lock is its own), the successor waits out the in-flight
-tail for the lock, and the predecessor starts no second one. Request-bound
+tail for the lock, and the predecessor starts no second one unless Cloud Run
+refused that start. Request-bound
 discovery suppresses wake-up because it has no successors. Other interactive
 workers keep observation active so successors committed after a
 background drain exits still wake the runner. Starts from different instances

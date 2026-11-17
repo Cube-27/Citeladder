@@ -23,7 +23,7 @@ export function withoutWorkObservation<T>(run: () => Promise<T>): Promise<T> {
  * The wake starts after commit but never holds the response: a slow metadata
  * or Cloud Run call must not add latency to the request that committed work.
  */
-export function observeCommittedWork(run: () => Promise<void>, wake: () => Promise<void>) {
+export function observeCommittedWork(run: () => Promise<void>, wake: () => Promise<unknown>) {
   const state: RequestWork = { committed: false };
   return requests.run(state, async () => {
     try {

@@ -47,7 +47,8 @@ export async function runExecution(tick: boolean) {
     drained.abort();
     const failed = failure instanceof LaneFailures ? failure.lanes : new Set<string>();
     const handedOver = await handover;
-    // A started handover successor is already waiting for this drain's lock.
+    // A started handover successor is already waiting for this drain's lock;
+    // a refused or skipped handover falls back to the exit-time start.
     const successor =
       handedOver ||
       (await startSuccessor({
@@ -96,17 +97,17 @@ export async function handOver(options: {
  * The drain lock is released: work due within a fresh budget gets a successor
  * now instead of waiting for the next tick. A failed lane is excluded, but the
  * owners that did not fail still get theirs. The starter skips an active drain.
+ * Resolves whether an execution started.
  */
 export async function startSuccessor(options: {
   lanes: readonly RunnerLane[];
   budgetMs: number;
   signal: AbortSignal;
-  start: () => Promise<void>;
+  start: () => Promise<boolean>;
 }): Promise<boolean> {
   if (options.signal.aborted) return false;
   const due = await nextDueDelay(options.lanes);
   // Shutdown may arrive while the probe runs; never start a successor after it.
   if (options.signal.aborted || due === null || due >= options.budgetMs) return false;
-  await options.start();
-  return true;
+  return options.start();
 }

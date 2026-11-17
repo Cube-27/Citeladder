@@ -175,7 +175,7 @@ describe('durable onboarding', () => {
     const a = await tenant(),
       b = await tenant();
     const selected = await ready(a.workspaceId);
-    const startRunner = vi.fn(async () => {});
+    const startRunner = vi.fn(async () => true);
     const app = createApp(testConfig(), db, { startRunner });
     const headers = {
       cookie: `${testConfig().session.cookieName}=${await sessionToken({ sub: b.userId, ver: 0 })}`,
@@ -390,7 +390,7 @@ describe('durable onboarding', () => {
   it('scopes discovery routes to the workspace and its writers over HTTP', async () => {
     const a = await tenant(),
       b = await tenant();
-    const app = createApp(testConfig(), db, { startRunner: vi.fn(async () => {}) });
+    const app = createApp(testConfig(), db, { startRunner: vi.fn(async () => true) });
     const as = async (userId: string) => ({
       cookie: `${testConfig().session.cookieName}=${await sessionToken({ sub: userId, ver: 0 })}`,
       'content-type': 'application/json',
@@ -432,7 +432,7 @@ describe('durable onboarding', () => {
   it('runs a finished discovery again as a new workspace-scoped discovery without resetting the old task', async () => {
     const a = await tenant(),
       b = await tenant();
-    const app = createApp(testConfig(), db, { startRunner: vi.fn(async () => {}) });
+    const app = createApp(testConfig(), db, { startRunner: vi.fn(async () => true) });
     const rerun = async (id: string, userId: string, key = randomUUID()) =>
       app.request(`/api/v1/brand-discoveries/${id}/rerun`, {
         method: 'POST',

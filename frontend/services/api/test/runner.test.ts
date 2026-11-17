@@ -320,8 +320,11 @@ describe('bounded runner', () => {
     }
   });
 
-  it('starts a successor only for work due within a fresh budget', async () => {
-    const start = vi.fn(async () => undefined);
+  it('starts a successor only for work due within a fresh budget, reporting a refused start', async () => {
+    const start = vi
+      .fn<() => Promise<boolean>>()
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
     const live = new AbortController().signal;
     const lanes = [
       { name: 'good', run: async () => 0, nextDue: async () => new Date(Date.now() + 1000) },
@@ -329,7 +332,9 @@ describe('bounded runner', () => {
     expect(await startSuccessor({ lanes, budgetMs: 300_000, signal: live, start })).toBe(true);
     // Work due beyond a fresh budget waits for tick.
     expect(await startSuccessor({ lanes, budgetMs: 500, signal: live, start })).toBe(false);
-    expect(start).toHaveBeenCalledTimes(1);
+    // Cloud Run refused the start: a handover must fall back to the exit-time start.
+    expect(await startSuccessor({ lanes, budgetMs: 300_000, signal: live, start })).toBe(false);
+    expect(start).toHaveBeenCalledTimes(2);
   });
 
   it('hands over at the lead before the deadline, never after the drain ended', async () => {
@@ -680,7 +685,7 @@ describe('Cloud Run wake-up', () => {
           db,
           send,
         )(),
-      ).resolves.toBeUndefined();
+      ).resolves.toBe(false);
     } finally {
       setLogSink(restore);
     }
@@ -705,11 +710,13 @@ describe('Cloud Run wake-up', () => {
     const records: Record<string, unknown>[] = [];
     const restore = setLogSink((line) => records.push(JSON.parse(line)));
     try {
-      await runnerStarter(
+      const start = runnerStarter(
         testConfig({ CLOUD_RUN_RUNNER_JOB: job, CITELADDER_ORIGIN_TOKEN: 'a'.repeat(32) }),
         db,
         send,
-      )();
+      );
+      // A refused handover is reported, so the runner still starts its exit-time successor.
+      expect(await start('handover')).toBe(false);
     } finally {
       setLogSink(restore);
     }
@@ -761,7 +768,7 @@ describe('Cloud Run wake-up', () => {
       signal: new AbortController().signal,
       deadline: Number.POSITIVE_INFINITY,
     })(async () => {
-      await start('handover');
+      expect(await start('handover')).toBe(true);
       return 0;
     });
     expect(send).toHaveBeenCalledTimes(2);

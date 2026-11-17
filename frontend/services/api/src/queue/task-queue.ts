@@ -80,16 +80,20 @@ export type LaneDescriptor<T extends LaneTable = LaneTable> = {
   ready?: RawBuilder<boolean>;
   /** Attempts one expired-lease reclaim charges: 1 when the claim does not charge. */
   recoveryCharge: 0 | 1;
-  /** The claim commits without waiting for the WAL flush (owner decision CO-1). */
+  /** Claims and heartbeats commit without waiting for the WAL flush (owner decision CO-1). */
   asyncCommit?: true;
 };
 
 /**
- * Commit this transaction without waiting for the WAL flush. A crash can lose
- * its last fraction of a second, which lease recovery redoes; only for work
- * that lease recovery replays, never billing, ledger or webhook writes.
+ * A transaction that commits without waiting for the WAL flush. A crash can
+ * lose its last fraction of a second, which lease recovery redoes; only for
+ * work that lease recovery replays, never billing, ledger or webhook writes.
  */
-export const commitAsync = (trx: Database) => sql`set local synchronous_commit = off`.execute(trx);
+export const asyncCommit = <R>(db: Database, run: (trx: Database) => Promise<R>) =>
+  db.transaction().execute(async (trx) => {
+    await sql`set local synchronous_commit = off`.execute(trx);
+    return run(trx);
+  });
 
 const attemptsLeft = sql<boolean>`attempt_count < max_attempts`;
 
@@ -403,6 +407,12 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
     });
   }
 
+  #transaction<R>(run: (trx: Database) => Promise<R>): Promise<R> {
+    return this.#lane.asyncCommit
+      ? asyncCommit(this.#db, run)
+      : this.#db.transaction().execute(run);
+  }
+
   /**
    * Claim up to `limit` eligible rows for `owner`, committed. `onClaimed` runs
    * the lane's domain lifecycle inside the claim's transaction.
@@ -419,8 +429,7 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
     if (kinds?.length === 0 || options.scope?.taskIds.length === 0) return Promise.resolve([]);
     const now = this.#now();
     const table = this.#table;
-    return this.#db.transaction().execute(async (trx) => {
-      if (this.#lane.asyncCommit) await commitAsync(trx);
+    return this.#transaction(async (trx) => {
       const locked = await claimStatement(trx, this.#lane, {
         ...options,
         now: this.#claimClock(),
@@ -482,20 +491,27 @@ export class TaskQueue<T extends LaneTable = 'analytics_tasks'> {
     attemptCount?: number,
   ): Promise<boolean> {
     const now = this.#now();
-    const updated = await queueDatabase(this.#db)
-      .updateTable(this.#table)
-      .set({
-        heartbeat_at: now,
-        lease_expires_at: sql<Date>`clock_timestamp() + ${this.#leaseTtlSeconds} * interval '1 second'`,
-        updated_at: now,
-      })
-      .where('id', '=', taskId)
-      .where('workspace_id', '=', workspaceId)
-      .where('lease_owner', '=', owner)
-      .where('status', 'in', [statuses.leased, statuses.running])
-      .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
-      .$if(attemptCount !== undefined, (query) => query.where('attempt_count', '=', attemptCount!))
-      .executeTakeFirst();
+    const extend = (db: Database) =>
+      queueDatabase(db)
+        .updateTable(this.#table)
+        .set({
+          heartbeat_at: now,
+          lease_expires_at: sql<Date>`clock_timestamp() + ${this.#leaseTtlSeconds} * interval '1 second'`,
+          updated_at: now,
+        })
+        .where('id', '=', taskId)
+        .where('workspace_id', '=', workspaceId)
+        .where('lease_owner', '=', owner)
+        .where('status', 'in', [statuses.leased, statuses.running])
+        .where('lease_expires_at', '>', sql<Date>`clock_timestamp()`)
+        .$if(attemptCount !== undefined, (query) =>
+          query.where('attempt_count', '=', attemptCount!),
+        )
+        .executeTakeFirst();
+    // A durable lane keeps the lone autocommit: a transaction would only add round trips.
+    const updated = await (this.#lane.asyncCommit
+      ? asyncCommit(this.#db, extend)
+      : extend(this.#db));
     const live = updated.numUpdatedRows > 0n;
     if (!live)
       await reportLeaseLoss(
