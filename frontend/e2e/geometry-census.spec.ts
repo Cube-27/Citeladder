@@ -158,8 +158,8 @@ const DATA_TABLE_HEADER_HEIGHT = 32;
 /** A FigureStrip cell is padded 16 (2.2); a strip's cells share one height. */
 const FIGURE_CELL_PADDING_Y = 16;
 const FIGURE_STRIP_HEIGHT_SPREAD = 0;
-/** A metric card is two rows: 16 + label 20 + 4 + value 32 + 16; a score's 64 ring makes 96. */
-const FIGURE_CARD_HEIGHT = 88;
+/** A metric card is two rows: 16 + label 20 + 4 + value 28 + 16; a score's 64 ring makes 96. */
+const FIGURE_CARD_HEIGHT = 84;
 const FIGURE_CARD_HEIGHT_SCORE = 96;
 /** Under 240px a score card stacks its label over the ring: 16 + label + 4 + 64 + 16. */
 const FIGURE_CARD_STACKED_SCORE_LESS_LABEL = 100;
@@ -471,7 +471,7 @@ function measure({ route }: { route: string }) {
   // A FigureStrip: every cell's padding, and the cells of one strip at one
   // height (the spread between the tallest and the shortest).
   // A pressable cell inside a card is a control padded 12; a metric card on
-  // the ground is two rows, 88 tall (96 beside a score's ring).
+  // the ground is two rows, 84 tall (96 beside a score's ring).
   for (const element of all('[data-figure-cell]')) {
     const padding = px(getComputedStyle(element).paddingTop);
     const pressableCell = element.matches('[data-pressable]') && padding !== 16;

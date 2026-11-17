@@ -75,7 +75,7 @@ export type FigureSegment = Readonly<
  * from `figureRows`. A card is two rows: the label with its marker and one
  * info hint (caption, basis and comparison joined with " · "), then the value
  * with its Delta at the card's foot, so a row's values share one baseline
- * when a label wraps; 88 tall. An icon tile sits centred at the left of both
+ * when a label wraps; 84 tall. An icon tile sits centred at the left of both
  * rows. A score's ScoreRing does too, its label and Delta beside it (96);
  * under 240px the label takes the first row and the ring and Delta the second.
  * A score is only ever a ring, never a bar. A figure with `action` makes its
@@ -266,7 +266,7 @@ function FigureValueLine({ segment }: FigurePart) {
       data-figure-value=""
       className={cn(
         'flex min-w-0 items-baseline gap-2 whitespace-nowrap',
-        !segment.score && 'min-h-8',
+        !segment.score && 'min-h-[var(--text-figure--line-height)]',
       )}
     >
       {segment.score ? null : <FigureValue segment={segment} />}
@@ -292,7 +292,7 @@ function FigureValue({ segment }: FigurePart) {
   const { value } = segment;
   if (segment.loading)
     return (
-      <span className="flex h-8 items-center">
+      <span className="flex min-h-[var(--text-figure--line-height)] items-center">
         <span className="sr-only">Loading</span>
         <Block className="h-6 w-16" />
       </span>
