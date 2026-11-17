@@ -191,8 +191,8 @@ variable "runner_budget_seconds" {
   # About 1.2 executions an hour; the job timeout adds 600 s for the in-flight tail.
   default = 3000
   validation {
-    condition     = var.runner_budget_seconds >= 60 && var.runner_budget_seconds <= 3000
-    error_message = "runner_budget_seconds must be between 60 and 3000."
+    condition     = floor(var.runner_budget_seconds) == var.runner_budget_seconds && var.runner_budget_seconds >= 60 && var.runner_budget_seconds <= 3000
+    error_message = "runner_budget_seconds must be a whole number between 60 and 3000."
   }
 }
 
