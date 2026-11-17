@@ -176,6 +176,12 @@ this plan's review conversation (2026-11-12).
   Single-page re-audit and the free-sample path stay. This makes BE-904 and
   BE-905 moot.
 
+- **Crawl stall limit (owner, in chat, 2026-11-17).** A crawl fails as overdue
+  only when no task has settled for 30 minutes, with an absolute 12-hour cap
+  as a backstop. The owner first chose "Progress + 12 h hard cap" at 15
+  minutes, then 30 minutes once a runner gap was shown to wait up to the
+  20-minute tick.
+
 Not asked separately: Q6 (old baselines) is moot under SH-B6. Q7 (schema) is an
 engineering choice; see [below](#engineering-defaults).
 

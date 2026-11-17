@@ -215,8 +215,11 @@ analysis drain, one locked transaction:
 
 - **Stalled:** an active crawl with no open task and no write for
   `stalled_crawl_reconcile_seconds` is reconciled.
-- **Overdue:** an active crawl older than `overdue_crawl_seconds` has its open
-  tasks failed with `crawl_overdue`, then is reconciled.
+- **Overdue:** an active crawl that settled no task for
+  `crawl_no_progress_seconds` (30 min, longer than the 20-minute tick a runner
+  gap waits for), or that is older than the `overdue_crawl_seconds` cap (12 h),
+  has its open tasks failed with `crawl_overdue`, then is reconciled (owner,
+  2026-11-17). A large crawl runs as long as it keeps moving.
 - **Cancelled:** a cancelled crawl with measurement evidence but no snapshot is
   published. A cancelled page rerun is published once, its `change_intel` task
   standing in for the snapshot it never writes.

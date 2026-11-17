@@ -39,6 +39,7 @@ export function siteWorkerSettings(env: SettingSource = process.env) {
     lifecycle: {
       stalledSeconds: number('stalled_crawl_reconcile_seconds'),
       overdueSeconds: number('overdue_crawl_seconds'),
+      noProgressSeconds: number('crawl_no_progress_seconds'),
       batch: number('stalled_crawl_reconcile_batch'),
     },
     scoreRefresh: {

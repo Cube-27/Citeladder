@@ -480,28 +480,46 @@ export async function reconcileStalled(db: Database, settings: SiteWorkerSetting
 }
 
 /**
- * Terminalize crawls that outran their wall-clock budget. The stall backstop
- * only sees drained crawls; one task held non-terminal forever is invisible
- * to it. The scan is a candidate list: each crawl is re-checked under its own
- * lock, its outstanding tasks fail with `crawl_overdue` (a real failure to
- * analyze those pages), and the same transaction reconciles what it gathered.
+ * Active crawls that stopped settling tasks for `noProgressSeconds` (longer
+ * than a runner gap, so an idle runner never counts as a stall), or that ran
+ * past the absolute `overdueSeconds` cap; one crawl when `crawlId` is given.
+ */
+function overdueCrawls(db: Database, settings: SiteWorkerSettings['lifecycle'], crawlId?: string) {
+  const at = (seconds: number) => new Date(Date.now() - seconds * 1000);
+  const started = sql<Date>`coalesce(c.started_at, c.created_at)`;
+  const progressed = sql<Date>`greatest(${started}, (select max(t.completed_at)
+    from site_crawl_tasks t where t.workspace_id = c.workspace_id and t.crawl_id = c.id))`;
+  return db
+    .selectFrom('site_crawls as c')
+    .select(['c.id', 'c.workspace_id'])
+    .where('c.status', 'in', ACTIVE_CRAWL_STATUSES)
+    .$if(crawlId !== undefined, (query) => query.where('c.id', '=', crawlId ?? ''))
+    .where((eb) =>
+      eb.or([
+        eb(started, '<', at(settings.overdueSeconds)),
+        eb(progressed, '<', at(settings.noProgressSeconds)),
+      ]),
+    )
+    .orderBy('c.created_at')
+    .limit(settings.batch)
+    .execute();
+}
+
+/**
+ * Terminalize crawls that stopped making progress or outran their cap (owner,
+ * 2026-11-17). The stall backstop only sees drained crawls; one task held
+ * non-terminal forever is invisible to it. The scan is a candidate list: each
+ * crawl is re-checked under its own lock, its outstanding tasks fail with
+ * `crawl_overdue`, and the same transaction reconciles what it gathered.
  */
 export async function reconcileOverdue(db: Database, settings: SiteWorkerSettings['lifecycle']) {
   if (settings.overdueSeconds <= 0) return 0;
-  const cutoff = new Date(Date.now() - settings.overdueSeconds * 1000);
-  const candidates = await db
-    .selectFrom('site_crawls')
-    .select(['id', 'workspace_id'])
-    .where('status', 'in', ACTIVE_CRAWL_STATUSES)
-    .where(sql<Date>`coalesce(started_at, created_at)`, '<', cutoff)
-    .orderBy('created_at')
-    .limit(settings.batch)
-    .execute();
+  const candidates = await overdueCrawls(db, settings);
   return eachCrawl(candidates, 'overdue crawl reconcile failed', async (candidate) => {
     const abandoned = await db.transaction().execute(async (trx) => {
       const crawl = await lockCrawl(trx, candidate.workspace_id, candidate.id);
       if (!crawl || !isActiveCrawl(crawl.status)) return null;
-      if (new Date(crawl.started_at ?? crawl.created_at) >= cutoff) return null;
+      if (!(await overdueCrawls(trx, settings, crawl.id)).length) return null;
       const now = new Date();
       const failed = await trx
         .updateTable('site_crawl_tasks')
@@ -513,7 +531,7 @@ export async function reconcileOverdue(db: Database, settings: SiteWorkerSetting
           completed_at: now,
           updated_at: now,
           error_code: OVERDUE,
-          error_detail: 'crawl exceeded its wall-clock budget',
+          error_detail: 'crawl stopped making progress or exceeded its wall-clock cap',
         })
         .where('workspace_id', '=', crawl.workspace_id)
         .where('crawl_id', '=', crawl.id)

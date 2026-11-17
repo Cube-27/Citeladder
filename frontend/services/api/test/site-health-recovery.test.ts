@@ -363,6 +363,30 @@ it('guards scoped maintenance failures and throttles reconciliation while contin
   }
 });
 
+it('fails a long crawl only once it stops settling tasks', async () => {
+  const twoHoursAgo = new Date(Date.now() - 2 * 3600_000);
+  const crawlLastSettled = async (minutesAgo: number) => {
+    const seed = await fixtures.crawl('running');
+    await db
+      .updateTable('site_crawls')
+      .set({ started_at: twoHoursAgo, created_at: twoHoursAgo, completed_at: null })
+      .where('id', '=', seed.crawlId)
+      .execute();
+    const settled = await fixtures.task(seed, 'analyze');
+    await db
+      .updateTable('site_crawl_tasks')
+      .set({ status: 'succeeded', completed_at: new Date(Date.now() - minutesAgo * 60_000) })
+      .where('id', '=', settled)
+      .execute();
+    return fixtures.task(seed, 'analyze');
+  };
+  const moving = await crawlLastSettled(5);
+  const stuck = await crawlLastSettled(40);
+  await lifecycle.reconcileOverdue(db, { ...settings.lifecycle, batch: 1000 });
+  expect(await row(moving)).toMatchObject({ status: 'queued' });
+  expect(await row(stuck)).toMatchObject({ status: 'failed', error_code: 'crawl_overdue' });
+});
+
 it('reconciles and stops a crawl while a task commit inserts rows that reference it', async () => {
   const seed = await fixtures.crawl('running');
   await fixtures.task(seed);
