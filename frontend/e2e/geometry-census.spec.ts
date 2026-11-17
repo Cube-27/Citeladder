@@ -135,15 +135,10 @@ const FILTERED_BODY_TOP_GAP = 12;
 const CONTENT_GAP = 16;
 /** Neighbouring slips sit on the grid, one grid gap apart. */
 const SLIP_GAP = 16;
-/**
- * One card recipe (2.4) for slips: padding 16, radius 8 and a 1px `rule`
- * border.
- */
+/** One card recipe (2.4) for slips: padding 16 and radius 8. */
 const SLIP_INSET = 16;
 const SLIP_RADIUS = 8;
-const SLIP_BORDER = 1;
-/** A section is a card: a 1px `rule` border and 16 inside it to its head. */
-const SECTION_RULE = 1;
+/** A section is a card: 16 inside it to its head. */
 const SECTION_INSET_TOP = 16;
 /**
  * A state's height is its content. On the page an empty or loading state is
@@ -395,14 +390,13 @@ function measure({ route }: { route: string }) {
       previous = child;
     }
   }
-  // Card sections: the 1px edge and the 16 inside it to the head. A card
-  // section inside another container draws no card of its own (globals.css).
+  // Card sections: the 16 inside them to the head. A card section inside
+  // another container draws no card of its own (globals.css).
   for (const section of all('[data-section="card"]')) {
     const host =
       '[data-section="card"], .surface-card, .surface-slip, .surface-well, [role="dialog"]';
     if (section.parentElement?.closest(host)) continue;
     const style = getComputedStyle(section);
-    add('section.rule', section, px(style.borderTopWidth));
     add('section.inset-top', section, px(style.paddingTop));
   }
   // Slips: the gap between neighbouring slips, and where their content
@@ -427,7 +421,6 @@ function measure({ route }: { route: string }) {
     const boxStyle = getComputedStyle(box);
     add('slip.padding', box, px(boxStyle.paddingTop));
     add('slip.radius', box, px(boxStyle.borderTopLeftRadius));
-    add('slip.border', box, px(boxStyle.borderTopWidth));
     // A slip that is its list item's one child neighbours the next item's slip.
     const item = box.parentElement;
     const listed = item?.matches('li') && item.childElementCount === 1;
@@ -457,7 +450,7 @@ function measure({ route }: { route: string }) {
       )
       .map((element) => element.getBoundingClientRect());
     if (ink.length === 0) continue;
-    // Measured from the inside of the box's one-pixel border.
+    // Measured from the inside of the box's border, if it has one.
     const edge = box.getBoundingClientRect();
     const top = edge.top + Number.parseFloat(boxStyle.borderTopWidth);
     const left = edge.left + Number.parseFloat(boxStyle.borderLeftWidth);
@@ -466,9 +459,9 @@ function measure({ route }: { route: string }) {
   }
   for (const element of all('[data-state-block]:not([data-state-block-inline])')) {
     const style = getComputedStyle(element);
-    // A frame-capable state inside a container draws no frame and pads 16 (compact).
+    // A frame-capable state inside a container draws no fill and pads 16 (compact).
     if (element.matches('[data-state-frame]')) {
-      if (style.borderTopWidth !== '0px')
+      if (style.backgroundColor !== 'rgba(0, 0, 0, 0)')
         add('query-state.frame-padding', element, px(style.paddingTop));
     } else if (!nestedState(element)) add('query-state.padding', element, px(style.paddingTop));
   }
@@ -813,12 +806,10 @@ async function expectOneGeometry(page: Page) {
   expectOneValue(records, 'first-row.centre-offset', 0);
   expectOneValue(records, 'body.filtered-top-gap', FILTERED_BODY_TOP_GAP);
   expectOneValue(records, 'content.gap', CONTENT_GAP);
-  expectOneValue(records, 'section.rule', SECTION_RULE);
   expectOneValue(records, 'section.inset-top', SECTION_INSET_TOP);
   expectOneValue(records, 'slip.gap', SLIP_GAP);
   expectOneValue(records, 'slip.padding', SLIP_INSET);
   expectOneValue(records, 'slip.radius', SLIP_RADIUS);
-  expectOneValue(records, 'slip.border', SLIP_BORDER);
   expectOneValue(records, 'slip.inset-top', SLIP_INSET);
   expectOneValue(records, 'slip.inset-left', SLIP_INSET);
   expectOneValue(records, 'query-state.padding', QUERY_STATE_PADDING);

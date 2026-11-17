@@ -82,9 +82,7 @@
   --color-paper: #f4f4f4;
   --color-surface: #ffffff;
   --color-surface-sunken: #ececec;
-  /* The app's sidebar column: its own step beside the page. The
-     website has no sidebar, so the system's value is the ground; the app
-     rebinds it below. */
+  /* The system's sidebar role; the app paints its sidebar with `chrome`. */
   --color-sidebar: var(--color-paper);
   /* States: an ink overlay over whatever fill is beneath, so hover,
      pressed and selected read the same on paper, surface and sunken and
@@ -498,10 +496,8 @@
   --color-well: #232325;
   --color-control-fill: var(--color-well);
   --color-rule: #252526;
-  --color-control-line: #7f7f7f;
   --color-control-edge: #2f3033;
   --color-chart-grid: #2a2a2c;
-  --nav-current-fill: var(--color-well);
   --color-ink: #e3e3e3;
   --color-ink-2: #b0b0b0;
   --color-ink-hover: #c8c8c8;
@@ -671,7 +667,6 @@
   --color-state-pressed: rgb(22 24 29 / 10%);
   --color-state-selected: rgb(22 24 29 / 7%);
   --color-scrim: rgb(22 24 29 / 45%);
-  --color-sidebar: var(--color-chrome);
   --color-chart-grid: var(--color-rule);
   /* The website's role names, held to the app's roles so a shared rule that
      still names one renders in the app's palette. App code never uses them. */
@@ -1613,12 +1608,6 @@ a.focus-ring:active .type-caption {
 :root:not([data-public-surface]) .surface-inset {
   border-color: transparent;
 }
-:root:not([data-public-surface])
-  .surface-inset:not(
-    :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog']) *
-  ) {
-  box-shadow: var(--shadow-card);
-}
 
 :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   .surface-inset {
@@ -2001,7 +1990,6 @@ label {
   :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
   [data-data-table] {
   margin-inline: calc(var(--card-padding) * -1);
-  border-radius: 0;
   box-shadow: none;
   background: transparent;
   overflow: visible;
@@ -2160,7 +2148,6 @@ label {
   --state-title-gap: 8px;
   --state-action-gap: 12px;
   background: none;
-  border-radius: 0;
   box-shadow: none;
   padding: 16px;
 }
@@ -2403,13 +2390,7 @@ label {
   padding: 16px;
   border-radius: var(--radius-card);
   background-color: var(--color-surface);
-  box-shadow: var(--shadow-card);
-}
-:root:not([data-public-surface])
-  [data-figure-cell][data-pressable]:not(
-    :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog']) *
-  ) {
-  box-shadow: inset 0 0 0 1px var(--color-control-edge);
+  box-shadow: var(--fr, var(--shadow-card));
 }
 :root:not([data-public-surface])
   :where(.surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'])
@@ -2426,6 +2407,7 @@ label {
 [data-figure-cell][data-pressable] {
   --fp: 12px 16px;
   --fe: 1px solid var(--color-control-edge);
+  --fr: inset 0 0 0 1px var(--color-control-edge);
 }
 :root:not([data-public-surface]) [data-figure-cell][data-selected] {
   background-color: var(--color-well);
