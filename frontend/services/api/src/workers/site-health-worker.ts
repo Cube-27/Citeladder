@@ -26,8 +26,8 @@ import {
   reconcileCrawl,
   reconcileOverdue,
   reconcileStalled,
-  ScoreRefreshCadence,
 } from '../site-health/lifecycle.ts';
+import { crawlCadences, type CrawlCadences } from '../site-health/refresh-cadence.ts';
 
 type TransactionRun = Extract<SiteTaskWork, { kind: 'transaction' }>['run'];
 /**
@@ -52,7 +52,7 @@ export class SiteHealthWorker {
   readonly #work: Readonly<Record<string, SiteTaskWork>>;
   readonly taskScope?: { workspaceId: string; crawlId: string };
   readonly signal?: AbortSignal;
-  readonly #cadence: ScoreRefreshCadence;
+  readonly #cadence: CrawlCadences;
   readonly #access: (workspaceId: string) => Promise<unknown>;
   #recovery: Promise<number> | null = null;
   #nextRecovery = 0;
@@ -76,7 +76,7 @@ export class SiteHealthWorker {
     this.owner = options.owner ?? `site-worker-ts-${randomUUID().slice(0, 12)}`;
     this.settings = options.settings ?? siteWorkerSettings();
     this.queue = new TaskQueue(db, SITE_HEALTH_LANE, { leaseTtlSeconds: this.settings.lease });
-    this.#cadence = new ScoreRefreshCadence(this.settings.scoreRefresh);
+    this.#cadence = crawlCadences(this.settings.scoreRefresh);
     // The runner checks before every task and acquisitions before every fetch;
     // a short-lived grant spares four queries per check.
     this.#access = cachedWorkspaceAccess(db, (this.settings.accessTtl || 0) * 1000);
