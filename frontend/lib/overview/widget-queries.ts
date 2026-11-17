@@ -142,7 +142,6 @@ const WIDGET_WARMUPS: Readonly<Record<OverviewWidgetKey, WidgetWarmup | null>> =
   movement: null,
   next_action: null,
   ranked_actions: null,
-  progress_proof: null,
   company_facts: null,
   missing_prompts: (client, project) =>
     warmQuery(client, visibilityQueries.prompts(widgetScope(project))),

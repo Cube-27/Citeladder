@@ -81,7 +81,7 @@ function MissingRow({ row }: Readonly<{ row: MissingPrompt }>) {
   return (
     <LedgerItem
       title={
-        <TextLink href={promptHistoryHref(row.promptId)} className="flex min-w-0">
+        <TextLink href={promptHistoryHref(row.promptId)} underline="hover" className="flex min-w-0">
           <ClampText>{row.text}</ClampText>
         </TextLink>
       }
@@ -90,7 +90,11 @@ function MissingRow({ row }: Readonly<{ row: MissingPrompt }>) {
       }
       meta={
         row.actionId ? (
-          <TextLink href={`/actions/${row.actionId}`} aria-label={`Open Action for ${row.text}`}>
+          <TextLink
+            href={`/actions/${row.actionId}`}
+            underline="hover"
+            aria-label={`Open Action for ${row.text}`}
+          >
             Open Action
           </TextLink>
         ) : (

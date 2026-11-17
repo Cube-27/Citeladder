@@ -36,8 +36,7 @@ const DEFAULT_WIDGETS = [
   { key: 'movement', size: 'half' },
   { key: 'next_action', size: 'half' },
   { key: 'missing_prompts', size: 'full' },
-  { key: 'ranked_actions', size: 'half' },
-  { key: 'progress_proof', size: 'half' },
+  { key: 'ranked_actions', size: 'full' },
   { key: 'company_facts', size: 'full' },
 ];
 

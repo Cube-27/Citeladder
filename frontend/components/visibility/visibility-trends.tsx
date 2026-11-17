@@ -168,7 +168,7 @@ function CoverageStrip({ selected }: Readonly<{ selected: Visibility }>) {
   const timeZone = useDisplayTimeZone();
   const summary = coverageSummary(selected, (iso) => formatDisplayDate(iso, timeZone));
   return (
-    <SectionDescription>
+    <SectionDescription className="max-w-none">
       {summary.answers} {summary.change}
     </SectionDescription>
   );

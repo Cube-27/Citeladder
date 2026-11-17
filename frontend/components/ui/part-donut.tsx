@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, type ReactNode } from 'react';
 
 import { chartPercent } from '@/components/ui/chart';
 import {
@@ -96,9 +96,14 @@ export function PartDonut({
         aria-label={described ? `${label}: ${described}` : label}
         className="relative w-36 shrink-0"
       >
-        <svg aria-hidden viewBox="0 0 100 100" className="block w-full -rotate-90">
-          <DonutSegments rows={rows} />
-        </svg>
+        <DonutRing
+          segments={rows.map((row) => ({
+            key: row.label,
+            share: row.share,
+            stroke: row.tone ? SERIES_STROKE[row.tone] : null,
+            part: row.tone ?? 'remainder',
+          }))}
+        />
         {totalLabel ? (
           <span className="absolute inset-0 flex flex-col items-center justify-center text-center">
             <span className={textRole('figure')}>{format(whole)}</span>
@@ -129,25 +134,93 @@ export function PartDonut({
   );
 }
 
-/** The ring's segments; a zero is left out, and an empty whole is one `well` ring. */
-function DonutSegments({ rows }: Readonly<{ rows: readonly Row[] }>) {
-  const drawn = rows.filter((row) => row.share > 0);
+export type CountPart = Readonly<{
+  key: string;
+  /** Its name in the legend, e.g. a StatusMark. */
+  term: ReactNode;
+  value: number;
+  /** A `stroke-*` class for its segment. */
+  stroke: string;
+}>;
+
+/**
+ * CountDonut — a few named counts, one per row, with their ring on the right.
+ * The legend carries every figure, so the ring is decorative.
+ */
+export function CountDonut({
+  parts,
+  label,
+}: Readonly<{ parts: readonly CountPart[]; /** Names the legend. */ label: string }>) {
+  const whole = parts.reduce((sum, part) => sum + part.value, 0);
+  return (
+    <div className="flex min-w-0 items-center gap-x-6">
+      <dl
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a <fieldset> would add form-group semantics to a list of counts
+        role="group" // NOSONAR -- as above
+        aria-label={label}
+        className="grid gap-2"
+      >
+        {parts.map((part) => (
+          <div key={part.key} className="flex items-center justify-between gap-4">
+            <dt>{part.term}</dt>
+            <dd className={textRole('heading', 'tabular-nums')}>{formatCount(part.value)}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="w-24 shrink-0">
+        <DonutRing
+          segments={parts.map((part) => ({
+            key: part.key,
+            share: whole ? part.value / whole : 0,
+            stroke: part.stroke,
+            part: part.key,
+          }))}
+        />
+      </div>
+    </div>
+  );
+}
+
+export type DonutSegment = Readonly<{
+  key: string;
+  /** Its share of the whole, 0 to 1. */
+  share: number;
+  /** A `stroke-*` class; null inks the segment `well`. */
+  stroke: string | null;
+  /** Its `data-part`, which names the segment to tests and styles. */
+  part: string;
+}>;
+
+/**
+ * DonutRing — the bare ring, clockwise from the top in thin-gapped segments,
+ * filling its container's width; decorative, so its caller names it. A zero
+ * is left out, and an empty whole is one `well` ring.
+ */
+export function DonutRing({ segments }: Readonly<{ segments: readonly DonutSegment[] }>) {
+  const drawn = segments.filter((segment) => segment.share > 0);
   const ring = { cx: 50, cy: 50, r: RADIUS, fill: 'none', strokeWidth: RING, pathLength: 100 };
-  if (!drawn.length) return <circle {...ring} stroke={WELL} />;
   const gap = drawn.length > 1 ? GAP : 0;
-  return drawn.map((row, index) => {
-    const length = Math.max(row.share * 100 - gap, 0.5);
-    const offset = drawn.slice(0, index).reduce((sum, before) => sum + before.share * 100, 0);
-    return (
-      <circle
-        key={row.label}
-        {...ring}
-        data-part={row.tone ?? 'remainder'}
-        strokeDasharray={`${length} ${100 - length}`}
-        strokeDashoffset={-offset}
-        stroke={row.tone ? undefined : WELL}
-        className={row.tone ? SERIES_STROKE[row.tone] : undefined}
-      />
-    );
-  });
+  return (
+    <svg aria-hidden viewBox="0 0 100 100" className="block w-full -rotate-90">
+      {drawn.length ? (
+        drawn.map((segment, index) => {
+          const length = Math.max(segment.share * 100 - gap, 0.5);
+          const offset = drawn.slice(0, index).reduce((sum, before) => sum + before.share * 100, 0);
+          return (
+            <circle
+              key={segment.key}
+              {...ring}
+              data-part={segment.part}
+              strokeDasharray={`${length} ${100 - length}`}
+              strokeDashoffset={-offset}
+              stroke={segment.stroke ? undefined : WELL}
+              className={segment.stroke ?? undefined}
+            />
+          );
+        })
+      ) : (
+        <circle {...ring} stroke={WELL} />
+      )}
+    </svg>
+  );
 }

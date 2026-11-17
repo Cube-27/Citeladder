@@ -217,20 +217,6 @@ export const commandCenterSchema = responseObject({
   ),
   actions: z.array(opportunitySchema),
   action_order_version: z.number().int(),
-  resolved_actions: responseObject({
-    since_audit_id: uuid().nullable(),
-    count: z.number().int(),
-    titles: z.array(z.string()),
-    evidence: z
-      .array(
-        responseObject({
-          action_id: uuid(),
-          implementation_event_ids: z.array(uuid()),
-          verification_event_ids: z.array(uuid()),
-        }),
-      )
-      .default([]),
-  }),
   report_available: z.boolean(),
   stale: z.boolean(),
 });

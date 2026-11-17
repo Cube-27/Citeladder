@@ -298,63 +298,6 @@ async function loopEvidence(db: Database, scope: ProjectScope) {
     : null;
   return { mapping, crawl, demand, implementation };
 }
-async function resolvedActions(
-  db: Database,
-  scope: ProjectScope,
-  audits: Awaited<ReturnType<typeof comparableAudits>>,
-): Promise<View['resolved_actions']> {
-  let query = db
-    .selectFrom('actions')
-    .innerJoin('opportunity_implementation_events as impl', 'impl.action_id', 'actions.id')
-    .innerJoin(
-      'opportunity_verification_events as verified',
-      'verified.implementation_event_id',
-      'impl.id',
-    )
-    .select([
-      'actions.id',
-      'actions.target_label',
-      sql<Date>`min(verified.created_at)`.as('resolved_at'),
-      sql<string>`(array_agg(impl.id order by verified.created_at, verified.id))[1]`.as(
-        'implementation_id',
-      ),
-      sql<string>`(array_agg(verified.id order by verified.created_at, verified.id))[1]`.as(
-        'verification_id',
-      ),
-    ])
-    .where('actions.workspace_id', '=', scope.workspaceId)
-    .where('actions.project_id', '=', scope.projectId)
-    .where('impl.workspace_id', '=', scope.workspaceId)
-    .where('impl.project_id', '=', scope.projectId)
-    .where('verified.workspace_id', '=', scope.workspaceId)
-    .where('verified.project_id', '=', scope.projectId)
-    .where('verified.observation_kind', '=', 'verified')
-    .groupBy(['actions.id', 'actions.target_label'])
-    .orderBy('resolved_at', 'desc');
-  if (audits?.previous)
-    query = query.having(
-      sql<Date>`min(verified.created_at)`,
-      '>',
-      audits.previous.completed_at ?? audits.previous.created_at,
-    );
-  if (audits)
-    query = query.having(
-      sql<Date>`min(verified.created_at)`,
-      '<=',
-      audits.selected.completed_at ?? audits.selected.created_at,
-    );
-  const rows = await query.execute();
-  return {
-    since_audit_id: audits?.previous?.id ?? null,
-    count: rows.length,
-    titles: rows.slice(0, 5).map((row) => row.target_label),
-    evidence: rows.slice(0, 5).map((row) => ({
-      action_id: row.id,
-      implementation_event_ids: [row.implementation_id],
-      verification_event_ids: [row.verification_id],
-    })),
-  };
-}
 function trackLimitations(
   audits: Awaited<ReturnType<typeof comparableAudits>>,
   change: Change,
@@ -425,7 +368,6 @@ export async function commandCenter(
     counted,
     inFlight,
     measured,
-    resolved,
     shared,
   ] = await Promise.all([
     visibility(db, scope, audits?.selected ?? null),
@@ -472,7 +414,6 @@ export async function commandCenter(
           .executeTakeFirst(),
     // Both depend only on the selected run and its baseline.
     measurement(db, scope, audits),
-    resolvedActions(db, scope, audits),
     sharedChange(db, scope, audits),
   ]);
   const change = changeOf(current, previous, shared);
@@ -549,7 +490,6 @@ export async function commandCenter(
     movements: movements(current, previous),
     actions: opportunities.items,
     action_order_version: persistedOrder?.version ?? 0,
-    resolved_actions: resolved,
     report_available: Boolean(audits),
     stale: audits?.historical ?? false,
   };

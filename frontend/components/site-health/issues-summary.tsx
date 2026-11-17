@@ -5,8 +5,9 @@ import { fixedLabel } from '@/components/site-health/issue-fix-actions';
 import { IssueMetadata } from '@/components/site-health/issue-metadata';
 import { Stack } from '@/components/ui/layout';
 import { OpenRow } from '@/components/ui/list-row';
-import { FigureStrip } from '@/components/ui/figure-strip';
+import { CountDonut } from '@/components/ui/part-donut';
 import { StatusMark } from '@/components/ui/status-mark';
+import { textRole } from '@/components/ui/typography';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ledgerClasses, ledgerItemClasses } from '@/components/ui/workspace';
 import type { IssueFixProgress, SiteIssue, SiteIssuesPage } from '@citeladder/contracts';
@@ -86,21 +87,24 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
   return (
     <Section aria-labelledby={titleId}>
       <SectionHeader>
-        <SectionTitle id={titleId}>{issueTypesLabel(total)}</SectionTitle>
+        <h2 id={titleId} className={textRole('figure')}>
+          {issueTypesLabel(total)}
+        </h2>
         <SectionDescription>{attentionLine(high, summary)}</SectionDescription>
       </SectionHeader>
       {counts.some((severity) => severity.count > 0) ? (
         <SectionContent>
-          <FigureStrip
+          <CountDonut
             label="Issue types by severity"
-            segments={counts.map((severity) => ({
+            parts={counts.map((severity) => ({
               key: severity.key,
-              label: (
+              term: (
                 <StatusMark variant="severity" value={severity.key}>
                   {severity.label}
                 </StatusMark>
               ),
-              value: formatCount(severity.count),
+              value: severity.count,
+              stroke: severity.stroke,
             }))}
           />
         </SectionContent>
@@ -109,10 +113,11 @@ function SeverityCard({ summary }: Readonly<{ summary: SiteIssuesPage['summary']
   );
 }
 
+/** Each severity's ring ink matches its StatusMark's tone. */
 const SEVERITIES = [
-  { key: 'high', label: 'High' },
-  { key: 'medium', label: 'Medium' },
-  { key: 'low', label: 'Low' },
+  { key: 'high', label: 'High', stroke: 'stroke-negative' },
+  { key: 'medium', label: 'Medium', stroke: 'stroke-warning' },
+  { key: 'low', label: 'Low', stroke: 'stroke-ink-2' },
 ] as const;
 
 function issueTypesLabel(total: number): string {

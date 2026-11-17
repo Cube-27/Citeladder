@@ -128,6 +128,7 @@ export function actionItem(action: Opportunity): ReorderItem {
         {/* The Action's own title, from its source; cut to one line with all of it in the tooltip. */}
         <TextLink
           text="body"
+          underline="hover"
           className="flex min-w-0"
           href={action.action_id ? `/actions/${action.action_id}` : '/actions'}
         >

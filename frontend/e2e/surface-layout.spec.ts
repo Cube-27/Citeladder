@@ -65,7 +65,6 @@ const overview = {
   active_prompt_count: 1,
   actions: [],
   action_order_version: 0,
-  resolved_actions: { since_audit_id: null, count: 0, titles: [] },
   report_available: false,
   stale: false,
 };
@@ -77,8 +76,7 @@ const layout = {
     { key: 'movement', size: 'half' },
     { key: 'next_action', size: 'half' },
     { key: 'missing_prompts', size: 'full' },
-    { key: 'ranked_actions', size: 'half' },
-    { key: 'progress_proof', size: 'half' },
+    { key: 'ranked_actions', size: 'full' },
     { key: 'company_facts', size: 'full' },
   ],
   version: 0,

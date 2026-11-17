@@ -32,7 +32,6 @@ import {
   testDatabase,
 } from './support.ts';
 import { VisibilityFixtures } from './visibility-fixtures.ts';
-import { actionFixture, type ActionSeed } from './action-support.ts';
 
 describe('project owner', () => {
   const db = testDatabase();
@@ -887,88 +886,4 @@ describe('project owner', () => {
     expect(view.action_order_version).toBe(3);
     expect(orderReads).toBe(1);
   });
-  it('retains exact declaration and verified observation IDs in resolved action summaries', async () => {
-    // Immutable fixture evidence is retained until the disposable database is dropped.
-    const seeded = await actionFixture<ActionSeed>('seed');
-    const actionId = seeded.actions.site_link_near_orphan!;
-    const action = await db
-      .selectFrom('actions')
-      .select('opportunity_snapshot_id')
-      .where('id', '=', actionId)
-      .executeTakeFirstOrThrow();
-    const scope = { workspaceId: seeded.workspace_id, projectId: seeded.project_id };
-    const now = new Date();
-    const implementationId = randomUUID();
-    await db
-      .insertInto('opportunity_implementation_events')
-      .values({
-        id: implementationId,
-        workspace_id: scope.workspaceId,
-        project_id: scope.projectId,
-        action_id: actionId,
-        actor_user_id: seeded.user_id,
-        created_at: now,
-        declared_implemented_at: now,
-        expected_checks: '[]',
-        idempotency_key: implementationId,
-        member_opportunity_ids: '[]',
-        opportunity_snapshot_id: action.opportunity_snapshot_id!,
-        output_revision_id: null,
-        request_fingerprint: 'recorded-test',
-        target_external_url: null,
-        target_site_url_ids: '[]',
-      })
-      .execute();
-    const verifiedId = randomUUID();
-    await db
-      .insertInto('opportunity_verification_events')
-      .values({
-        id: verifiedId,
-        workspace_id: scope.workspaceId,
-        project_id: scope.projectId,
-        implementation_event_id: implementationId,
-        audit_id: null,
-        crawl_id: null,
-        created_at: now,
-        observed_at: now,
-        idempotency_key: verifiedId,
-        limitations: '[]',
-        observation_kind: 'verified',
-        result: '{}',
-        source_analysis_ids: '[]',
-        source_metric_ids: '[]',
-        source_rule_evaluation_ids: '[]',
-        verifier_version: '1',
-      })
-      .execute();
-    const observation = await db
-      .selectFrom('opportunity_verification_events')
-      .selectAll()
-      .where('id', '=', verifiedId)
-      .executeTakeFirstOrThrow();
-    await db
-      .insertInto('opportunity_verification_events')
-      .values({
-        ...observation,
-        id: randomUUID(),
-        idempotency_key: randomUUID(),
-        created_at: new Date(now.getTime() + 1000),
-      })
-      .execute();
-    await db
-      .updateTable('audits')
-      .set({ status: 'failed' })
-      .where('project_id', '=', scope.projectId)
-      .execute();
-    expect((await commandCenter(db, scope, null)).resolved_actions).toMatchObject({
-      count: 1,
-      evidence: [
-        {
-          action_id: actionId,
-          implementation_event_ids: [implementationId],
-          verification_event_ids: [verifiedId],
-        },
-      ],
-    });
-  }, 60_000);
 });

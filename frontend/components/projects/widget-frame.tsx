@@ -54,7 +54,7 @@ export function WidgetFrame({
 }>) {
   const figure = fill === 'figure';
   const linkElement = link ? (
-    <TextLink href={link.href}>
+    <TextLink href={link.href} underline="hover">
       {link.name ? <span className="sr-only">{link.name}: </span> : null}
       {link.label}
     </TextLink>

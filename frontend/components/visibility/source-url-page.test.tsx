@@ -95,18 +95,23 @@ describe('what a cited page means for you', () => {
     expect(screen.queryByRole('link', { name: /Action|request/ })).toBeNull();
   });
 
-  it("offers nothing to do on a competitor's own page", () => {
-    render(
+  it("shows no card on a competitor's own page", () => {
+    const { rerender } = render(
+      <SourceUrlPageCard
+        url={URL}
+        page={page({ source_class: 'competitor_owned', standing: 'read' })}
+        loading={false}
+      />,
+    );
+    expect(screen.getByText('On this page')).toBeVisible();
+
+    rerender(
       <SourceUrlPageCard
         url={URL}
         page={page({ source_class: 'competitor_owned', standing: 'competitor' })}
         loading={false}
       />,
     );
-
-    expect(
-      screen.getByText("This is a competitor's own page, so it cannot list you."),
-    ).toBeVisible();
-    expect(screen.queryByRole('link', { name: 'Open the Action' })).toBeNull();
+    expect(screen.queryByText('On this page')).toBeNull();
   });
 });

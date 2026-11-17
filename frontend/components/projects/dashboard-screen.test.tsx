@@ -112,11 +112,6 @@ const commandCenter = {
   ],
   actions: [],
   action_order_version: 0,
-  resolved_actions: {
-    since_audit_id: '00000000-0000-4000-8000-000000000004',
-    count: 2,
-    titles: ['Fixed citations', 'Expanded evidence'],
-  },
   report_available: true,
   stale: false,
 };
@@ -218,8 +213,7 @@ const DEFAULT_LAYOUT = {
     { key: 'movement', size: 'half' },
     { key: 'next_action', size: 'half' },
     { key: 'missing_prompts', size: 'full' },
-    { key: 'ranked_actions', size: 'half' },
-    { key: 'progress_proof', size: 'half' },
+    { key: 'ranked_actions', size: 'full' },
     { key: 'company_facts', size: 'full' },
   ],
   version: 0,
@@ -241,7 +235,7 @@ describe('DashboardScreen', () => {
     layoutResult.data = DEFAULT_LAYOUT;
     role.canWrite = true;
   });
-  it('renders state, comparable movement, actions, and report proof', () => {
+  it('renders state, comparable movement and actions', () => {
     renderDashboard(
       <TooltipProvider>
         <DashboardScreen />
@@ -286,13 +280,6 @@ describe('DashboardScreen', () => {
       'href',
       '/actions?project=00000000-0000-4000-8000-000000000001',
     );
-    const proof = within(screen.getByRole('region', { name: 'Progress and report proof' }));
-    // The card title labels its one figure; the figure's basis is a hint, not a row.
-    expect(proof.getByText('2')).toBeVisible();
-    expect(
-      proof.getByRole('button', { name: 'Basis of Resolved actions' }),
-    ).toHaveAccessibleDescription('Resolved actions · Since the comparable run');
-    expect(proof.getByText('Since the comparable run', { exact: false })).not.toBeVisible();
     expect(screen.getByText('Evidence-first analytics')).toBeVisible();
     expect(screen.getByText('Growth leaders')).toBeVisible();
     expect(screen.getByText('Analytics')).toBeVisible();

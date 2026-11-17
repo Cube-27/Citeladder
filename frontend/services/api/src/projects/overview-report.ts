@@ -175,17 +175,6 @@ const commandCenterSections: Partial<Record<OverviewWidgetKey, Section>> = {
     );
     truncated(report, view.actions.length, 'open action');
   },
-  progress_proof: ({ view, report }) => {
-    heading(report, 'progress_proof');
-    const resolved = view.resolved_actions;
-    const since = resolved.since_audit_id ? 'since the previous comparable run' : 'so far';
-    report.text(`${plural(resolved.count, 'action')} resolved ${since}.`);
-    for (const title of resolved.titles) report.text(`•  ${title}`, { size: 9 });
-    quiet(
-      report,
-      'Movement shown alongside resolved actions does not establish that the actions caused it.',
-    );
-  },
   company_facts: ({ view, report }) => {
     heading(report, 'company_facts');
     const facts = view.facts;

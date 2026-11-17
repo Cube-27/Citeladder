@@ -6,7 +6,6 @@ import type { CommandCenter, Project } from '@citeladder/contracts';
 import {
   CompanyFacts,
   Movement,
-  ProgressProofCard,
   ProjectStateCard,
   RankedActionsCard,
   Track,
@@ -47,7 +46,6 @@ const WIDGETS: Record<OverviewWidgetKey, (props: WidgetProps) => ReactNode> = {
       onMove={actions.move}
     />
   ),
-  progress_proof: ({ data }) => <ProgressProofCard data={data} />,
   company_facts: ({ data }) => <CompanyFacts data={data} />,
   visibility_trend: ({ project }) => <VisibilityTrendWidget project={project} />,
   share_of_voice: ({ project }) => <ShareOfVoiceWidget project={project} />,
