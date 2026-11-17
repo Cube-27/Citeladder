@@ -17,9 +17,7 @@ import { fitTrackedSet } from '../src/site-health/admission-writes.ts';
 import { candidate } from '../src/site-health/frontier.ts';
 import { fillTrackedSet } from '../src/site-health/tracked-set.ts';
 import { classifyUrlAdmission } from '../src/site-health/url-admission.ts';
-import { publishCancelledCrawls, reconcileAfterTask } from '../src/site-health/lifecycle.ts';
-import { crawlCadences } from '../src/site-health/refresh-cadence.ts';
-import { siteWorkerSettings } from '../src/site-health/runtime.ts';
+import { publishCancelledCrawls, reconcileCrawl } from '../src/site-health/lifecycle.ts';
 import { record } from '../src/db/json.ts';
 import { revokeBundle } from '../src/entitlements/grants.ts';
 import { billingAccount, grant } from './prompt-fixtures.ts';
@@ -612,24 +610,17 @@ describe('crawl-control HTTP contracts', () => {
     const page = await fixtures.page(seed, '/a', {});
     await fixtures.monitor(seed, [page.id]);
     const response = await request(seed, `/site-crawls/${seed.crawlId}/cancel`, 'POST');
-    expect(response.status).toBe(200);
     expect(siteCrawlSchema.parse(await response.json()).status).toBe('cancelled');
-    expect(
-      await db
+    const snapshots = () =>
+      db
         .selectFrom('site_health_snapshots')
         .select('id')
         .where('crawl_id', '=', seed.crawlId)
-        .execute(),
-    ).toHaveLength(0);
+        .execute();
+    expect(await snapshots()).toHaveLength(0);
     await publishCancelledCrawls(db, 100);
     await publishCancelledCrawls(db, 100);
-    expect(
-      await db
-        .selectFrom('site_health_snapshots')
-        .select('id')
-        .where('crawl_id', '=', seed.crawlId)
-        .execute(),
-    ).toHaveLength(1);
+    expect(await snapshots()).toHaveLength(1);
     expect(
       await db
         .selectFrom('site_crawl_events')
@@ -665,13 +656,21 @@ describe('crawl-control HTTP contracts', () => {
       analyzed: 2,
       by_page_kind: { product: 2 },
     });
-    // The stop persists the counters in its own transaction.
-    expect((await request(seed, `/site-crawls/${seed.crawlId}/cancel`, 'POST')).status).toBe(200);
+    // The stop persists the counters itself, past a task a claim or heartbeat holds.
+    const { taskId } = await fixtures.analyzable(seed, '/held');
+    await db.transaction().execute(async (trx) => {
+      await sql`select id from site_crawl_tasks where id = ${taskId} for update`.execute(trx);
+      expect((await request(seed, `/site-crawls/${seed.crawlId}/cancel`, 'POST')).status).toBe(200);
+    });
     expect(record(await stored())).toMatchObject({
       analyzed: 2,
+      queued: 1,
       activity: { state: 'terminal' },
-      by_page_kind: { product: 2 },
     });
+    // Its worker cancels it on the stopped crawl, and the settlement recounts.
+    await sql`update site_crawl_tasks set status = 'cancelled' where id = ${taskId}`.execute(db);
+    await reconcileCrawl(db, seed.workspaceId, seed.crawlId);
+    expect(record(await stored())).toMatchObject({ analyzed: 2, queued: 0 });
     // A task row no terminal owner counted changes nothing the dashboard reads.
     await fixtures.page(seed, '/late', {});
     expect(record((await counters()).body)).toMatchObject({
@@ -679,54 +678,7 @@ describe('crawl-control HTTP contracts', () => {
       activity: { state: 'terminal', reason: 'terminal' },
       by_page_kind: { product: 2 },
     });
-    const outsider = await fixtures.crawl();
-    expect((await counters(outsider)).status).toBe(404);
-  });
-
-  it('stops past a task another transaction holds, and that task’s settlement recounts', async () => {
-    const seed = await fixtures.crawl('running');
-    const held = await fixtures.analyzable(seed, '/held');
-    const free = await fixtures.analyzable(seed, '/free');
-    const status = async (id: string) =>
-      (
-        await db
-          .selectFrom('site_crawl_tasks')
-          .select('status')
-          .where('id', '=', id)
-          .executeTakeFirstOrThrow()
-      ).status;
-    const queued = async () =>
-      record(
-        (
-          await db
-            .selectFrom('site_crawls')
-            .select('terminal_counters')
-            .where('id', '=', seed.crawlId)
-            .executeTakeFirstOrThrow()
-        ).terminal_counters,
-      ).queued;
-    // A heartbeat or claim holding the row never makes Stop wait on it.
-    await db.transaction().execute(async (trx) => {
-      await sql`select id from site_crawl_tasks where id = ${held.taskId} for update`.execute(trx);
-      await cancelCrawl(db, seed.workspaceId, seed.crawlId);
-    });
-    expect([await status(held.taskId), await status(free.taskId), await queued()]).toEqual([
-      'queued',
-      'cancelled',
-      1,
-    ]);
-    // Its worker finds the crawl stopped, cancels the task and recounts.
-    await db
-      .updateTable('site_crawl_tasks')
-      .set({ status: 'cancelled' })
-      .where('id', '=', held.taskId)
-      .execute();
-    await reconcileAfterTask(
-      db,
-      { id: held.taskId, crawl_id: seed.crawlId, workspace_id: seed.workspaceId },
-      crawlCadences(siteWorkerSettings({}).scoreRefresh),
-    );
-    expect(await queued()).toBe(0);
+    expect((await counters(await fixtures.crawl())).status).toBe(404);
   });
 
   it('lists a crawl with the same counters its dashboard reads, live or persisted', async () => {

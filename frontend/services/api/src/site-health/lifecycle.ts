@@ -387,11 +387,9 @@ function settledRow(db: Database, task: SettledTask) {
 function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
   const running = row.crawl_status === 'running';
   if (row.task_kind === 'discover' && running && row.discovering) return 'discovery_progress';
-  const settledPage =
-    row.status === 'failed' ||
-    row.status === 'cancelled' ||
-    (row.status === 'succeeded' && row.result_artifact_id !== null);
-  const analyzed = row.task_kind === 'analyze' && settledPage;
+  // Only terminal rows reach here: failed, cancelled, or succeeded with its artifact.
+  const analyzed =
+    row.task_kind === 'analyze' && (row.status !== 'succeeded' || row.result_artifact_id !== null);
   return analyzed && running && row.analysis_status === 'running' && row.outstanding
     ? 'analysis_progress'
     : 'boundary';
