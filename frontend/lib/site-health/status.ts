@@ -219,18 +219,7 @@ export type SiteHealthPhase =
   | 'dashboard'
   | 'terminal';
 
-/**
- * Fingerprint of everything on a crawl that means "progress happened".
- *
- * The screen polls ONE query (the dashboard). Every other crawl-derived list —
- * pages, inventory, issues — refreshes when this value changes rather than
- * owning a timer of its own: five independent 4s timers over the same crawl
- * resolve out of order, so panels rendered state from different moments (counts
- * ticking backwards, a score appearing then vanishing). `updated_at` alone
- * would nearly always suffice; the counters and sub-states are included so a
- * missed timestamp write cannot freeze the whole screen.
- */
-type SeenProgress = { version: string; status: SiteCrawl['status']; refreshedAt: number };
+export type SeenProgress = { version: string; status: SiteCrawl['status']; refreshedAt: number };
 
 /**
  * Whether changed crawl progress refreshes the crawl's lists now. While the
@@ -246,6 +235,18 @@ export function crawlViewsDue(
   if (seen.status !== next.status || !CRAWL_STATES[next.status].active) return true;
   return now - seen.refreshedAt >= CRAWL_VIEW_REFRESH_MS;
 }
+
+/**
+ * Fingerprint of everything on a crawl that means "progress happened".
+ *
+ * The screen polls ONE query (the dashboard). Every other crawl-derived list —
+ * pages, inventory, issues — refreshes when this value changes rather than
+ * owning a timer of its own: five independent 4s timers over the same crawl
+ * resolve out of order, so panels rendered state from different moments (counts
+ * ticking backwards, a score appearing then vanishing). `updated_at` alone
+ * would nearly always suffice; the counters and sub-states are included so a
+ * missed timestamp write cannot freeze the whole screen.
+ */
 
 export function crawlProgressVersion(
   crawl: Pick<

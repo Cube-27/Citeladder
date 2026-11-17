@@ -143,8 +143,9 @@ function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
  * discovery or refresh the live summary on cadence, since taking the crawl
  * lock for each is pure contention with every task commit and the user's
  * Stop. Other settlements update counters and sub-states without rebuilding
- * the score they cannot change. On their own cadence, the live counters an
- * active crawl's reads render are recounted onto its row (CO-3).
+ * the score they cannot change. At each boundary and on their own cadence,
+ * the live counters an active crawl's reads render are recounted onto its row
+ * (CO-3).
  */
 export async function reconcileAfterTask(db: Database, task: SettledTask, cadence: CrawlCadences) {
   const row = await settledRow(db, task);
@@ -171,7 +172,9 @@ export async function reconcileAfterTask(db: Database, task: SettledTask, cadenc
       return unhandled;
     }
   }
-  if (cadence.counters.admits(task.crawl_id)) await persistLiveCounters(db, task);
+  // The next settlement after a boundary may be far off (a finalize, a backoff).
+  if (kind === 'boundary' || cadence.counters.admits(task.crawl_id))
+    await persistLiveCounters(db, task);
 }
 
 /**

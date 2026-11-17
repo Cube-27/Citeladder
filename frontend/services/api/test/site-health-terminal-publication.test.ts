@@ -678,13 +678,19 @@ describe('crawl lifecycle', () => {
     // A discover while siblings still discover waits for the cadence: no crawl lock, no recount.
     await settle(middle!);
     const progress = await crawlRow(seed.crawlId);
-    expect(progress).toMatchObject({ discovery_status: 'running', analyzed_url_count: 1 });
+    expect(progress).toMatchObject({
+      discovery_status: 'running',
+      analyzed_url_count: 1,
+      live_counters: { analyzed: 1 },
+    });
+    // The boundary recounts the live counters inside the counters cadence too.
     await settle(last!);
     expect(await crawlRow(seed.crawlId)).toMatchObject({
       status: 'running',
       discovery_status: 'completed',
       analyzed_url_count: 2,
       score_summary: null,
+      live_counters: { analyzed: 2 },
     });
     await reconcileAfterTask(db, settled(seed, done.taskId), gates);
     expect((await crawlRow(seed.crawlId)).score_summary).toMatchObject({ analyzed_count: 1 });

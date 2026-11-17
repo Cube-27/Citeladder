@@ -29,6 +29,7 @@ import {
   isCrawlStalled,
   CRAWL_STATES,
   type InventoryMode,
+  type SeenProgress,
   type SiteHealthPhase,
 } from '@/lib/site-health/status';
 
@@ -123,12 +124,7 @@ export function useSiteHealthScreen() {
   const crawlId = crawl?.id ?? null;
   const crawlStatus = crawl?.status ?? null;
   const crawlVersion = crawl ? crawlProgressVersion(crawl) : null;
-  const lastSeenRef = useRef<{
-    crawlId: string;
-    version: string;
-    status: SiteCrawl['status'];
-    refreshedAt: number;
-  } | null>(null);
+  const lastSeenRef = useRef<(SeenProgress & { crawlId: string }) | null>(null);
   useEffect(() => {
     if (!crawlId || !crawlStatus || crawlVersion === null) return;
     const previous = lastSeenRef.current;
