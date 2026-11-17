@@ -461,7 +461,6 @@ describe('bootstrapPrivateRoutes', () => {
         `/api/v1/workspaces/${WORKSPACE}/entitlements`,
         `/api/v1/workspaces/${WORKSPACE}/policies`,
         `/api/v1/projects/${PROJECT}/actions`,
-        `/api/v1/projects/${PROJECT}/monitored-urls`,
         `/api/v1/projects/${PROJECT}/site-health`,
       ];
       // `me` and the membership list are unanswered by construction.
