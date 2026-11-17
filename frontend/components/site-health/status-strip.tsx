@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Inline, Stack } from '@/components/ui/layout';
 import { Spinner } from '@/components/ui/spinner';
 import { Absence } from '@/components/ui/absence';
-import type { PageSummary, SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
+import type { SiteCrawl, SiteHealthEntitlement } from '@citeladder/contracts';
 import { formatCount } from '@/lib/format';
 import { ICONS } from '@/lib/icons';
 import { CrawlStatusBadge } from '@/components/site-health/crawl-status-badge';
@@ -38,9 +38,6 @@ export function StatusStrip({
   entitlement,
   cancelPending,
   startPending,
-  pages,
-  selectedTotal,
-  selectedError,
   onRerun,
 }: Readonly<{
   crawl: SiteCrawl | null;
@@ -51,12 +48,6 @@ export function StatusStrip({
   onRerun?: () => void;
   /** A fresh crawl create is in flight — freeze current content behind a notice. */
   startPending: boolean;
-  /** Bounded monitored-page window (observed "running" rows only, never totals). */
-  pages: PageSummary[];
-  /** This project's active monitored count; null until loaded. */
-  selectedTotal: number | null;
-  /** True when the monitored-count fetch failed (counts fall back, noted here). */
-  selectedError: boolean;
 }>) {
   // The wrapper (and its test id) stays mounted in every phase — only the
   // CONTENT below changes. The screen regression tests assert this stability.
@@ -68,9 +59,6 @@ export function StatusStrip({
         entitlement={entitlement}
         cancelPending={cancelPending}
         startPending={startPending}
-        pages={pages}
-        selectedTotal={selectedTotal}
-        selectedError={selectedError}
         onRerun={onRerun}
       />
     </div>
@@ -83,9 +71,6 @@ function StripContent({
   entitlement,
   cancelPending,
   startPending,
-  pages,
-  selectedTotal,
-  selectedError,
   onRerun,
 }: Readonly<{
   crawl: SiteCrawl | null;
@@ -93,9 +78,6 @@ function StripContent({
   entitlement: SiteHealthEntitlement;
   cancelPending: boolean;
   startPending: boolean;
-  pages: PageSummary[];
-  selectedTotal: number | null;
-  selectedError: boolean;
   onRerun?: () => void;
 }>) {
   if (startPending) {
@@ -131,15 +113,7 @@ function StripContent({
   }
 
   if (phase === 'analyzing') {
-    return (
-      <AnalysisStrip
-        crawl={crawl}
-        cancelPending={cancelPending}
-        pages={pages}
-        selectedTotal={selectedTotal}
-        selectedError={selectedError}
-      />
-    );
+    return <AnalysisStrip crawl={crawl} cancelPending={cancelPending} />;
   }
 
   if (phase === 'terminal') return <TerminalNotice crawl={crawl} onRerun={onRerun} />;
@@ -313,37 +287,16 @@ function DiscoveryStrip({
 function AnalysisStrip({
   crawl,
   cancelPending,
-  pages,
-  selectedTotal,
-  selectedError,
-}: Readonly<{
-  crawl: SiteCrawl;
-  cancelPending: boolean;
-  pages: PageSummary[];
-  selectedTotal: number | null;
-  selectedError: boolean;
-}>) {
-  const summary = crawl.score_summary;
-  const selected =
-    crawl.counters.selected || summary?.selected_count || selectedTotal || pages.length;
-  const narration = analysisNarration(crawl, cancelPending);
-
+}: Readonly<{ crawl: SiteCrawl; cancelPending: boolean }>) {
   return (
     <ProgressRow
       crawl={crawl}
-      narration={narration}
+      narration={analysisNarration(crawl, cancelPending)}
       // Background re-discovery can leave the counters still; the pulse is
       // what distinguishes "working" from "stuck".
       active={!cancelPending && crawl.counters.activity.state !== 'stalled'}
-      counts={analysisCounts(crawl, selected)}
-    >
-      {selectedError ? (
-        <Notice tone="warning">
-          Couldn&apos;t load the monitored-page count — progress totals may be approximate until it
-          refreshes.
-        </Notice>
-      ) : null}
-    </ProgressRow>
+      counts={analysisCounts(crawl)}
+    />
   );
 }
 
@@ -363,11 +316,11 @@ function analysisNarration(crawl: SiteCrawl, cancelPending: boolean): string {
     : 'Auditing monitored pages for Web fundamentals and AEO issues';
 }
 
-function analysisCounts(crawl: SiteCrawl, selected: number): ProgressCount[] {
+function analysisCounts(crawl: SiteCrawl): ProgressCount[] {
   const { counters } = crawl;
   const fixed: ProgressCount[] = [
     { label: 'Pages discovered', value: crawl.visible_url_count },
-    { label: 'Pages selected', value: selected },
+    { label: 'Pages analyzed', value: counters.analyzed },
   ];
   const robots = counters.failure_breakdown.robots_denied;
   if (robots > 0) {

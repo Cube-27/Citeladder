@@ -12,6 +12,7 @@
  * lease. A reclaimed task whose facts are published but still pending resumes
  * at the walk.
  */
+import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import { resolveSettingSpec, type SettingSource } from '../config/settings.ts';
 import type { Database } from '../db/database.ts';
@@ -322,7 +323,14 @@ async function persist(
       .updateTable('site_crawls')
       .set((eb) => ({
         site_facts: JSON.stringify({ ...facts, sitemap, robots: { ...robots, bots } }),
-        admitted_url_count: eb('admitted_url_count', '+', discovery.admitted ?? 0),
+        // The inventory's size, not a sum: a reconcile between the inventory
+        // chunks and this commit may already have counted these observations.
+        admitted_url_count:
+          discovery.discovered === undefined
+            ? eb.ref('admitted_url_count')
+            : sql<number>`greatest(${eb.ref('admitted_url_count')}, (select count(*)::int
+              from site_url_observations where workspace_id = ${locked.crawl.workspace_id}
+              and crawl_id = ${locked.crawl.id}))`,
         ...(discovery.discovered === undefined
           ? {}
           : { discovered_url_count: discovery.discovered }),
