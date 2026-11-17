@@ -8,7 +8,7 @@ each rule is enforced so a change can find every writer. Line references drift;
 search the named function.
 
 Paths are relative to `frontend/services/api/src/` unless they start with
-`frontend/`; `0001:<line>` is `migrations/0001_baseline.sql`. **Enforced**:
+`frontend/`; a named DB object is defined in `migrations/`. **Enforced**:
 `DB` = CHECK, unique, partial unique index or FK; `App` = code under the named
 lock; `None` = nothing holds it. A status CHECK
 (`test/schema-constraints.test.ts` lists them) enforces the vocabulary, not the
@@ -34,7 +34,7 @@ terminal `succeeded`, `failed`, `cancelled`. Implicit state lives in
 | Invariant | Enforced |
 |---|---|
 | One row per logical task | DB: unique `idempotency_key` per lane; slots `uq_audit_task_slot`, `uq_site_crawl_task_slot`, `uq_brand_discovery_task_discovery`; enqueue `ON CONFLICT DO NOTHING` `queue/enqueue.ts:46-75` |
-| Status within the vocabulary | DB `ck_<lane table>_status` (0014) |
+| Status within the vocabulary | DB `ck_<lane table>_status` |
 | Lease columns set iff held | App; a cancelled Keyword Research task keeps `lease_owner` (`search-intelligence/runs.ts:161-168`), harmless because fences refuse terminal rows |
 | `attempt_count <= max_attempts` | App (claim `ready`, recovery `exhausted` CASE) |
 | Exclusive claim | App: ranked `FOR UPDATE SKIP LOCKED` with eligibility re-applied `task-queue.ts:187-247` |
@@ -63,7 +63,7 @@ never renews or settles a re-claim.
 
 Edges `config/audits.json:2-13`, enforced only by `transitionAudit`
 (`audits/state.ts:7-44`, 409 on any other edge) under the caller's audit
-`FOR UPDATE`; the vocabulary itself is DB `ck_audits_status` (0014). Terminal `cancelled`, `completed`, `failed`, `partially_completed`;
+`FOR UPDATE`; the vocabulary itself is DB `ck_audits_status`. Terminal `cancelled`, `completed`, `failed`, `partially_completed`;
 active `analyzing`, `draft`, `queued`, `running`, `validating`
 (`audits.json:267-268`). `draft`, `validating`, `analyzing` and `reporting` are
 never committed: each is entered and left inside one transaction.
@@ -71,7 +71,7 @@ never committed: each is entered and left inside one transaction.
 | Invariant | Enforced |
 |---|---|
 | Only configured edges | App `transitionAudit` |
-| One scheduled audit per occurrence and market | DB `uq_audit_schedule_slot` 0001:4579 |
+| One scheduled audit per occurrence and market | DB `uq_audit_schedule_slot` |
 | One repair child per parent and task set | DB `uq_audit_parent_repair_key` |
 | Terminal ⇒ no open task | App: cancel terminalizes tasks in its tx; finalize returns while any task is open `audits/finalization.ts:65` |
 | ≤ `active_audits_per_workspace` active launches | App `reserveAuditCapacity` `audits/admission.ts` under `audit-enqueue:{ws}`, for launches and repairs |
@@ -148,7 +148,7 @@ reservation → debit + release, or release, or refund. Subjects: `audit` task,
 
 | Invariant | Enforced |
 |---|---|
-| Idempotent entries | DB unique idempotency key per account (0001:4115); debit uniques 0001:5193-5195 |
+| Idempotent entries | DB unique idempotency key per account `uq_consumable_ledger_idempotency`; debit uniques `uq_consumable_ledger_subject_dispatch_allocation_debit`, `uq_consumable_ledger_task_attempt` |
 | Settle once, never above the hold | App `entitlements/ledger.ts` settle/release under row locks + capacity lock (B63) |
 | A deleted project leaves no open hold | App `projectHoldsReservations` `entitlements/ledger.ts`: `audit`, `agent`, `site_crawl` and the project's Keyword Research `platform_call` holds refuse deletion (409 `project_work_running`); deletion and trial purge check under the project row lock (`lockProjectRow`, `projects/service.ts`), so they serialize with hold writers that lock the row (Keyword Research confirmation, Site Health, Agent outputs) |
 
@@ -156,7 +156,7 @@ reservation → debit + release, or release, or refund. Subjects: `audit` task,
 
 DB: `ck_platform_calls_status`, `ck_platform_calls_settled` (reserved ⇔
 `settled_at IS NULL`), `ck_platform_calls_credits`, `ck_platform_calls_hold`
-(0001:2071-2075).
+(`ck_platform_calls_*`).
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
@@ -171,8 +171,8 @@ the fallback by the sweep.
 
 ### 3.3 `pending_activations.status` ∈ {`pending`, `activated`, `failed`, `abandoned`}
 
-DB: one pending base / upgrade / add-on per key (0001:5201-5205), provider
-reference unique (0001:5207), `(account, idempotency_key)` unique (0001:4223).
+DB: one pending base / upgrade / add-on per key (`uq_pending_activation_one_pending_*`), provider
+reference unique (`uq_pending_activation_provider_reference`), `(account, idempotency_key)` unique (`uq_pending_activation_account_idempotency`).
 App: `activated ⇒ activated_at`; `failed`/`abandoned ⇒ failure_code`.
 
 | From → to | Trigger | Location | Guard |
@@ -189,9 +189,8 @@ paid evidence: `activated`, its period granted until the paid end (B71).
 
 ### 3.4 `billing_subscriptions` (status × `is_current` × `ended_at` × `cancel_at_period_end` × `cancellation_sent_at` × `scheduled_change`)
 
-DB: one current base per account `uq_billing_subscription_one_current`
-(0001:5187); external id unique; status vocabulary `ck_billing_subscription_status`
-(0014). App: `ended_at ⇒ ¬is_current`; `cancellation_sent_at ⇒ cancel_at_period_end`.
+DB: one current base per account `uq_billing_subscription_one_current`;
+external id unique; status vocabulary `ck_billing_subscription_status`. App: `ended_at ⇒ ¬is_current`; `cancellation_sent_at ⇒ cancel_at_period_end`.
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
@@ -209,7 +208,7 @@ DB: one current base per account `uq_billing_subscription_one_current`
 
 ### 3.5 `billing_webhook_events.processing_state` ∈ {`pending`, `completed`, `quarantined`} + lease + `attempt_count`
 
-DB: `(provider, mode, event_id)` unique (0001:4052).
+DB: `(provider, mode, event_id)` unique (`uq_billing_webhook_external`).
 
 | From → to | Trigger | Location | Guard |
 |---|---|---|---|
@@ -224,9 +223,9 @@ DB: `(provider, mode, event_id)` unique (0001:4052).
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `billing_catalog_revisions.publication_state` | `draft` (mutable) → `published`, previous → `retired` (final) `billing/admin.ts:107-173` | DB one published 0001:5181, state CHECK 0035; App subject lock |
-| `billing_payments` | insert-only; `paid` payments and `processed` refund child rows | DB 0001:5183-5185, status CHECK 0035 |
-| `idempotency_records` (plan changes) | ∅ → `completed` only `plan-changes.ts` `scheduleDowngrade`; deleted on `provider_rejected` after the push, or by a same-key replay that finds the current subscription's change from that key `provider_rejected` (`refusedFromKey`); `expires_at` never read | DB state CHECK 0035; App |
+| `billing_catalog_revisions.publication_state` | `draft` (mutable) → `published`, previous → `retired` (final) `billing/admin.ts:107-173` | DB one published `uq_billing_catalog_revision_published`, state CHECK; App subject lock |
+| `billing_payments` | insert-only; `paid` payments and `processed` refund child rows | DB `uq_billing_payment_external`, `uq_billing_refund_external`, status CHECK |
+| `idempotency_records` (plan changes) | ∅ → `completed` only `plan-changes.ts` `scheduleDowngrade`; deleted on `provider_rejected` after the push, or by a same-key replay that finds the current subscription's change from that key `provider_rejected` (`refusedFromKey`); `expires_at` never read | DB state CHECK; App |
 | Access (derived) | `trial_active` / `trial_expired` / `active` / `subscription_lapsed` / `access_unresolved` from grant validity `entitlements/access.ts:38-91`; trial once per mailbox under advisory lock `entitlements/bootstrap.ts:62-113`; purge `projects/trial-purge.ts` deletes first, then rechecks under the capacity lock (`stillPurgeable`) and rolls back for a workspace that ever held a non-trial grant or has a `pending` checkout | App |
 
 ## 4. Agent
@@ -263,11 +262,11 @@ heartbeat that gives up makes `runAgentOnce` call `fail(lease, 'interrupted')`
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `agent_model_attempts.outcome` | `dispatched` → `completed`/`failed` by receipt `agent/model-calls.ts:167-261` (row `FOR UPDATE`, only from `dispatched`); `dispatched` → `recovered_unknown` by reconcile `:303-343` from `fail`, `recover`, `recoverCancelled` | DB slot uniques `uq_agent_model_attempt_slot`, `uq_agent_model_attempt_dispatch`; CHECKs on bytes, output cap (0005), cost (0012), outcome vocabulary (0035); transitions App |
-| `settlement_status` | `pending`/`not_applicable` at dispatch → `settled`/`zero_debit`; failed or unknown with no usage settles 0 `agent/funding.ts:242-246` | DB vocabulary CHECK 0035; App transitions; `settled_at` null iff `dispatched` |
+| `agent_model_attempts.outcome` | `dispatched` → `completed`/`failed` by receipt `agent/model-calls.ts:167-261` (row `FOR UPDATE`, only from `dispatched`); `dispatched` → `recovered_unknown` by reconcile `:303-343` from `fail`, `recover`, `recoverCancelled` | DB slot uniques `uq_agent_model_attempt_slot`, `uq_agent_model_attempt_dispatch`; CHECKs on bytes, output cap, cost, outcome vocabulary; transitions App |
+| `settlement_status` | `pending`/`not_applicable` at dispatch → `settled`/`zero_debit`; failed or unknown with no usage settles 0 `agent/funding.ts:242-246` | DB vocabulary CHECK; App transitions; `settled_at` null iff `dispatched` |
 | Hold per call | reserve `funding.ts:205` → settle (idempotent per dispatch key) → `refundSubject` (failed runs, B58) | App ledger |
 | `agent_tool_attempts.status` | insert-only, written once after the read `agent/runtime.ts` `recordTool` under `lockRun` | DB `uq_agent_tool_attempt_slot` |
-| `agent_outputs` / revisions | ≥ 1 revision; output + revision in one tx `agent/outputs.ts:54, 110-154`; edits under chat lock + `requireIdle` | DB `uq_agent_output_chat_number`, `uq_agent_output_revision_number`, number > 0 (0004) |
+| `agent_outputs` / revisions | ≥ 1 revision; output + revision in one tx `agent/outputs.ts:54, 110-154`; edits under chat lock + `requireIdle` | DB `uq_agent_output_chat_number`, `uq_agent_output_revision_number`, number > 0 |
 | Transcript | saved at finish without the last response's unanswered `server_tool_use` (`savedTranscript`, `agent/runtime.ts`); replayed to the model `agent/transcript.ts:110` | App |
 
 ### 4.3 Browser turn stream (`frontend/lib/agent/live-turns.ts`)
@@ -299,7 +298,7 @@ never written.
 | Invariant | Enforced |
 |---|---|
 | One active crawl per project | App: project `FOR UPDATE` + no active crawl `site-health/planner.ts:292-307`; reruns lock via `selection.ts:63-80` (no partial unique) |
-| One snapshot per crawl | DB `uq_site_health_snapshot_crawl` 0001:4325 |
+| One snapshot per crawl | DB `uq_site_health_snapshot_crawl` |
 | Terminal ⇒ no open lifecycle task | App: terminalize only when discover/setup/analyze drained `lifecycle.ts:257-273` |
 | `inventory_complete` ⇒ whole site inventoried | App `lifecycle.ts` `reconcileInventory`: coverage `complete` only |
 
@@ -329,7 +328,7 @@ observed inventory (`change-snapshot.ts` `observedInventory`).
 |---|---|---|
 | `site_crawl_tasks` | lane §1; → `cancelled` by Stop `controls.ts:89-102`, deselection (`queued`/`retry_wait`) `selection.ts:213-228`, crawl not active `site-task.ts:97-114`; → `failed` by overdue `lifecycle.ts:482-498`; rerun or re-selection adds generation `max + 1` and cancels an open older generation of the page in the same tx (`enqueueNextGeneration`, `selection.ts`) | DB `uq_site_crawl_task_slot (crawl, kind, url_hash, generation)`, idempotency key |
 | `site_discovery_frontier.status` | `pending` (`frontier.ts:280-301`) → `admitted` (`admission-writes.ts:350-362`); picked `FOR UPDATE SKIP LOCKED` inside the admitting tx | DB `uq_site_discovery_frontier_url` |
-| `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; only the open generation's fenced commit can become current | DB `uq_site_page_analysis_current` 0001:5217 |
+| `site_page_analyses` | always `completed`; revisions by `is_current` + `supersedes_analysis_id`: provisional `analysis-rows.ts:335-384`, finalized `terminal-analysis.ts:55-111`, retired alias `canonical-alias.ts:97-106`; only the open generation's fenced commit can become current | DB `uq_site_page_analysis_current` |
 | `site_health_snapshots` | once per crawl in the terminalize tx `snapshot.ts:127-172` (`ON CONFLICT DO NOTHING`); later only `addArchitectureIssues` | DB unique per crawl |
 | `site_internal_link_runs.state` | ∅ → `queued` `internal-link-runs.ts:107-200` (project lock, none live) → result `internal-link-publish.ts` (fenced), `cancelled` (`cancelLinkRun`), or `failed` when its publish task fails terminally (compensator `failLinkRun`, `internal-link-runs.ts`) | App |
 | `crawl_schedules` (implicit: `enabled`, `next_run_at`, lease, `failure_count`) | off → on / cadence change: `updateSchedule` (`schedules.ts`, row lock) sets `next_run_at` one step from now and clears `last_outcome` (turning it off clears both); due → leased `claimDueCrawlSchedules` (`enabled`, `next_run_at <= at`, lease null or expired, SKIP LOCKED, committed); leased → released when disabled or the occurrence moved; leased → advanced on a created crawl (savepoint around `createCrawl`, `failure_count = 0`) or a skip (`crawl_already_active`, `site_health_fetches_exhausted`; `failure_count` untouched); leased → backoff / off on any other refusal (`failure_count + 1`, `enabled = failures < max (5)`; off clears `next_run_at` and keeps `last_outcome = failed`) — `workers/crawl-scheduler.ts` | DB unique `(workspace_id, project_id)`, `enabled ⇒ next_run_at`, cadence check |
@@ -341,10 +340,10 @@ observed inventory (`change-snapshot.ts` `observedInventory`).
 | Machine | States and transitions | Enforced |
 |---|---|---|
 | `crawl_log_uploads.status` | `open` `uploads.ts:36-72` → `completed` `:73-146` (crawl-state lock + upload `FOR UPDATE`) → `unsupported_format` `ingest.ts`; `open` stale → `abandoned` `maintenance.ts:111-136` | App |
-| `crawl_log_batches` | immutable receipts; upload batches need `seq = last_ack_seq + 1` | DB `uq_crawl_log_batch_key`, `ck_crawl_log_batches_drained` 0001:1358 |
-| `crawl_log_sources.status` | `active` → `revoked` (idempotent) `sources.ts:227-274`; stall flags | DB `uq_crawl_log_live_host` 0001:5197, `ck_crawl_log_sources_*` 0001:1409-1412 |
+| `crawl_log_batches` | immutable receipts; upload batches need `seq = last_ack_seq + 1` | DB `uq_crawl_log_batch_key`, `ck_crawl_log_batches_drained` |
+| `crawl_log_sources.status` | `active` → `revoked` (idempotent) `sources.ts:227-274`; stall flags | DB `uq_crawl_log_live_host`, `ck_crawl_log_sources_*` |
 | `bot_ip_range_snapshots` | append-only `succeeded`/`failed`; readers take the latest `succeeded` | App |
-| `bot_requests` | Pub/Sub redelivery dedupes | DB `uq_bot_request_line`, `uq_bot_request_provider` 0001:5189-5191 |
+| `bot_requests` | Pub/Sub redelivery dedupes | DB `uq_bot_request_line`, `uq_bot_request_provider` |
 
 ## 6. External data
 
@@ -355,7 +354,7 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 
 | Invariant | Enforced |
 |---|---|
-| One active run per project | DB `uq_si_runs_project_active` (queued, running) 0001:5215; App project lock `search-intelligence/runs.ts:60-81` |
+| One active run per project | DB `uq_si_runs_project_active` (queued, running); App project lock `search-intelligence/runs.ts:60-81` |
 | Ended run ⇒ no `collecting` dataset | App (`closeCollecting` `acquisition-state.ts`, also in `cancelRun`) |
 | Hold settles only when the run ended and no call can still report (a `dispatched` call, or one recovery marked `uncertain` `provider_result_missing`, within twice the provider timeout) | App `charges.ts` |
 | A dispatched call is never re-sent | App: `dispatched` without response → `uncertain` |
@@ -376,15 +375,15 @@ Run: `reviewed` → `queued` → `running` ⇄ `queued` (parked) → `succeeded`
 | dataset `collecting` → `published`/`failed` | publish / fail / `closeCollecting` (terminal run or `cancelRun`) | `acquisition-state.ts`, `runs.ts` | — |
 
 Dispatch attempts are insert-only, one `outcome` per ordinal (DB
-`uq_si_dispatch_phase` 0001:4282).
+`uq_si_dispatch_phase`).
 
 ### 6.2 Integrations
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
 | `integration_oauth_grants.status` | ∅ → `connected` `integrations/oauth.ts:228-248`; **any** → `connected` on reconnect `oauth.ts` (keeps the old refresh token when the provider returns none), except `pending_revocation` with a live revocation claim, which refuses `oauth_revocation_in_progress`; `connected`/`needs_reauth` → `pending_revocation` `grants.ts:19-86`; → `revoked` `grants.ts:137-172` (claim + revision + `pending_revocation`); `connected` → `needs_reauth` `grants.ts:203-221` | App; token rotation fenced by claim id, `token_revision`, `connected` `tokens.ts:53-140`; OAuth state single use `oauth.ts:171-182` |
-| `integration_sync_runs` | lane §1; deadline release → `queued`; every write behind `#held`; target re-checked per page and at finish `integration-worker.ts:516-575` | DB `ix_integration_sync_runs_active_window` (partial unique) 0001:4785 |
-| `integration_property_mappings` | one active owner per property | DB 0001:4777 |
+| `integration_sync_runs` | lane §1; deadline release → `queued`; every write behind `#held`; target re-checked per page and at finish `integration-worker.ts:516-575` | DB `ix_integration_sync_runs_active_window` (partial unique) |
+| `integration_property_mappings` | one active owner per property | DB `ix_integration_property_mappings_active_owner` |
 
 ### 6.3 Discovery, Commerce, providers, source pages
 
@@ -394,11 +393,11 @@ Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 | Commerce candidates | `pending` → `approved` ↔ `rejected`, no from-state guard `commerce/decisions.ts:6-31` (by design) | App |
 | `commerce_products.lifecycle_state` | `active` ↔ `archived` only through `setProductLifecycle` (`commerce/edits.ts`), each change appending an `edit` observation; setting the current state writes nothing | App project-row lock (`FOR NO KEY UPDATE`) and product row lock |
 | `commerce_csv_imports.applied_at` | ∅ → staged (`applied_at` null, `stageImport`, content-hash idempotent) → applied (`applied_at` set once by `applyImport`, `commerce/import.ts`); applying an applied import returns its first result | App project-row lock and import row `FOR UPDATE` |
-| `commerce_catalog_revisions` | insert-only: ∅ → revision `n + 1` only when the matching identity's hash differs from revision `n` (`recordCatalogRevision`, `commerce/catalog-revisions.ts`); each new revision enqueues one `commerce_answer_matching` task in the same transaction | DB `uq_commerce_catalog_revisions_number` 0023; App per-project advisory lock, always the last lock its caller takes |
-| `commerce_match_passes.mode` | insert-only, terminal at insert: ∅ → `live` (with the answer) \| `backfill` (`commerce/answer-matching.ts`); a repeated derivation inserts nothing; reads take the latest pass per answer (highest revision, then newest) | DB `ck_commerce_match_passes_mode`, `uq_commerce_match_passes_derivation` 0023 |
+| `commerce_catalog_revisions` | insert-only: ∅ → revision `n + 1` only when the matching identity's hash differs from revision `n` (`recordCatalogRevision`, `commerce/catalog-revisions.ts`); each new revision enqueues one `commerce_answer_matching` task in the same transaction | DB `uq_commerce_catalog_revisions_number`; App per-project advisory lock, always the last lock its caller takes |
+| `commerce_match_passes.mode` | insert-only, terminal at insert: ∅ → `live` (with the answer) \| `backfill` (`commerce/answer-matching.ts`); a repeated derivation inserts nothing; reads take the latest pass per answer (highest revision, then newest) | DB `ck_commerce_match_passes_mode`, `uq_commerce_match_passes_derivation` |
 | `provider_connections.last_test_status` | `''` → `ok`/`failed` only while `credential_revision` and `base_url` are unchanged; key rotation resets | App `probes.ts` |
 | `source_pages.inspection_state` | `not_inspected`/`stale`/`failed`/`blocked` → `queued` (claim lease) → outcome; `inspected` → `stale` | App fence `claim_expires_at = lease`, unexpired `source-pages/persistence.ts:42-77` |
-| `content_angle_runs.outcome` | insert-only, terminal at insert: ∅ → `succeeded` \| `failed`; appended only when one of its three input keys differs from the latest `succeeded` run (a `failed` run never blocks a retry); a task that exhausts its attempts appends `failed` (`task_failed`). Lineages, angles, members and owned matches insert with a `succeeded` run; a lineage's `planned_page_key` is set when the lineage is inserted (`plannedPageKey` of its first label) and never rewritten: lineages are insert-only | DB `ck_content_angle_runs_outcome` 0016; App per-project advisory lock re-checks the keys inside the worker's fenced terminal transaction `content-gaps/refresh.ts` |
+| `content_angle_runs.outcome` | insert-only, terminal at insert: ∅ → `succeeded` \| `failed`; appended only when one of its three input keys differs from the latest `succeeded` run (a `failed` run never blocks a retry); a task that exhausts its attempts appends `failed` (`task_failed`). Lineages, angles, members and owned matches insert with a `succeeded` run; a lineage's `planned_page_key` is set when the lineage is inserted (`plannedPageKey` of its first label) and never rewritten: lineages are insert-only | DB `ck_content_angle_runs_outcome`; App per-project advisory lock re-checks the keys inside the worker's fenced terminal transaction `content-gaps/refresh.ts` |
 
 ## 7. Workspace, auth, public API, Actions and prompts
 
@@ -406,8 +405,8 @@ Dispatch attempts are insert-only, one `outcome` per ordinal (DB
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `workspace_invitations` (implicit `accepted_at`, `revoked_at`, `expires_at`) | none/expired → pending (issue `workspaces/invitations.ts:78-148`); pending → pending new token / revoked (`:151-191`); pending → revoked in bulk when the issuer leaves (`workspaces/service.ts:218-228`); pending → accepted + member (`acceptInvitation`, workspace then invitation `FOR UPDATE`, issuer's `users` row `FOR SHARE`, issuer must be active and hold `manage_members`) | DB one live row per email `uq_workspace_invitation_pending_email` 0001:5221; token unique; role never owner `ck_workspace_invitation_role` 0001:3322 |
-| `workspace_members.role` | create → owner `service.ts:109-126`; non-owner X → Y, removal, leave `:231-283`; owner ↔ admin transfer `:285-326` | DB `ck_workspace_member_role` 0001:3332, `uq_workspace_member_owner` 0001:5177, `uq_workspace_member_owned_user` 0001:5179; never ownerless: App |
+| `workspace_invitations` (implicit `accepted_at`, `revoked_at`, `expires_at`) | none/expired → pending (issue `workspaces/invitations.ts:78-148`); pending → pending new token / revoked (`:151-191`); pending → revoked in bulk when the issuer leaves (`workspaces/service.ts:218-228`); pending → accepted + member (`acceptInvitation`, workspace then invitation `FOR UPDATE`, issuer's `users` row `FOR SHARE`, issuer must be active and hold `manage_members`) | DB one live row per email `uq_workspace_invitation_pending_email`; token unique; role never owner `ck_workspace_invitation_role` |
+| `workspace_members.role` | create → owner `service.ts:109-126`; non-owner X → Y, removal, leave `:231-283`; owner ↔ admin transfer `:285-326` | DB `ck_workspace_member_role`, `uq_workspace_member_owner`, `uq_workspace_member_owned_user`; never ownerless: App |
 | `auth_challenges` (verification, reset) | request → live `auth/challenges.ts:38-106` (upsert nulls `consumed_at`); live → consumed `:152-245` (user + challenge `FOR UPDATE`, bumps `session_version`, reset revokes MCP grants and API keys), password change `:251-297`, Google claim `auth/oauth.ts:285-306` | DB one per (user, purpose) |
 | Sessions | JWT `ver` = `users.session_version` on every request `auth/session.ts:144`; bumped by reset, password change, sign-out, operator reset/disable | App |
 | `api_keys` | live → revoked (`revoked_at IS NULL`) `api-keys/keys.ts:192-215`; expired by time; every use re-reads key, membership and creator `:248-277` | App |
@@ -423,13 +422,13 @@ A retry of a failed claim, or of a claim with no outcome older than
 `in_progress_max_seconds` (300; a crash before the outcome update), answers 409
 `idempotency_outcome_unknown`, `retryable: false`; a fresh claim answers 409
 `idempotency_conflict`, `retryable: true`. DB unique
-`(api_key_id, idempotency_key)` 0001:3439.
+`(api_key_id, idempotency_key)`.
 
 ### 7.3 Actions, prompts and brand facts
 
 | Machine | States and transitions | Enforced |
 |---|---|---|
-| `actions.status` ∈ `open` (New)/`in_progress`/`dismissed` (Declined)/`implemented` (Done); `effective_status` adds `measuring`/`done` (verified) under Done (`ACTION_STATUS_VIEW`, `config/actions.ts`) | ∅ → `open` by evidence sync `opportunities/action-sync.ts` (project lock; clearing members keeps `last_member_opportunity_ids`); user decisions `ACTION_TRANSITIONS`: `open` → `in_progress`/`dismissed`, `in_progress` → `dismissed`, `dismissed` → `open`/`in_progress`, others 422 (`action-decisions.ts`, Action `FOR UPDATE`; bulk takes the project lock, then its ≤100 rows `FOR UPDATE`, and skips illegal moves); `open` → `in_progress` when a chat starts on the Action (`agent/store.ts` `createChat`, Action `FOR NO KEY UPDATE`); `open`/`in_progress` → `implemented` by declaration `declarations.ts` (project lock, Action `FOR UPDATE`, idempotent; current members or the last set a refresh cleared; baseline the newest snapshot at or before go-live, or none; findings cleared at or before go-live freeze no check and name `resolved_before_snapshot_id`, so that Action stays measuring, never verified); `effective_status` recomputed by `refreshActionStatus` `action-status.ts` on every writer; an Agent output never changes it. | DB one Action per group `uq_actions_project_group`, one declaration per Action, `ck_actions_status` (0014); edges App |
-| `prompts.status` ∈ `active`/`archived` | `updatePrompt` `prompts/prompts.ts` (project lock, then the prompt re-read `FOR UPDATE`, binding check), `bulkSetStatus` (project + set lock, binding check); inserts `active` | DB `ck_prompts_status` (0014); App edges; occupancy counts every prompt (B27) |
-| `prompt_candidates.disposition` | `pending` → `accepted`/`rejected`/`deleted` `prompts/candidates.ts:183-289` (project + set locks, pending rows `FOR UPDATE`) | DB `uq_prompt_candidate_pending_text` 0001:5209; `pending`/`accepted`/`rejected`/`gate_rejected` `ck_prompt_candidates_disposition` (0014) |
-| Brand facts | `draft` → `confirmed` → `retired` (terminal), `expected_revision` under project lock `projects/brand-facts.ts:114-200` | DB `ck_brand_fact_status`, `ck_brand_fact_revision_status` 0001:935, 949; revision unique |
+| `actions.status` ∈ `open` (New)/`in_progress`/`dismissed` (Declined)/`implemented` (Done); `effective_status` adds `measuring`/`done` (verified) under Done (`ACTION_STATUS_VIEW`, `config/actions.ts`) | ∅ → `open` by evidence sync `opportunities/action-sync.ts` (project lock; clearing members keeps `last_member_opportunity_ids`); user decisions `ACTION_TRANSITIONS`: `open` → `in_progress`/`dismissed`, `in_progress` → `dismissed`, `dismissed` → `open`/`in_progress`, others 422 (`action-decisions.ts`, Action `FOR UPDATE`; bulk takes the project lock, then its ≤100 rows `FOR UPDATE`, and skips illegal moves); `open` → `in_progress` when a chat starts on the Action (`agent/store.ts` `createChat`, Action `FOR NO KEY UPDATE`); `open`/`in_progress` → `implemented` by declaration `declarations.ts` (project lock, Action `FOR UPDATE`, idempotent; current members or the last set a refresh cleared; baseline the newest snapshot at or before go-live, or none; findings cleared at or before go-live freeze no check and name `resolved_before_snapshot_id`, so that Action stays measuring, never verified); `effective_status` recomputed by `refreshActionStatus` `action-status.ts` on every writer; an Agent output never changes it. | DB one Action per group `uq_actions_project_group`, one declaration per Action, `ck_actions_status`; edges App |
+| `prompts.status` ∈ `active`/`archived` | `updatePrompt` `prompts/prompts.ts` (project lock, then the prompt re-read `FOR UPDATE`, binding check), `bulkSetStatus` (project + set lock, binding check); inserts `active` | DB `ck_prompts_status`; App edges; occupancy counts every prompt (B27) |
+| `prompt_candidates.disposition` | `pending` → `accepted`/`rejected`/`deleted` `prompts/candidates.ts:183-289` (project + set locks, pending rows `FOR UPDATE`) | DB `uq_prompt_candidate_pending_text`; `pending`/`accepted`/`rejected`/`gate_rejected` `ck_prompt_candidates_disposition` |
+| Brand facts | `draft` → `confirmed` → `retired` (terminal), `expected_revision` under project lock `projects/brand-facts.ts:114-200` | DB `ck_brand_fact_status`, `ck_brand_fact_revision_status`; revision unique |

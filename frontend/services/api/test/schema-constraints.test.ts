@@ -818,7 +818,7 @@ describe('project deletion', () => {
    * URL or metric row. Deleting a project removes them row by row, and
    * PostgreSQL enforces each reference to them with one lookup per removed
    * row; an unindexed reference scans its whole table, every tenant's rows
-   * included, for each one (migration 0015).
+   * included, for each one.
    */
   const highVolumeParents: (keyof DB)[] = [
     'raw_response_artifacts',

@@ -628,7 +628,7 @@ newer schema. So a migration must work with the code already deployed:
 **Two database roles.** The migrate CLI connects as the schema owner
 (`MIGRATION_DATABASE_URL`). Every service, operator job and the API test suite
 connects as the least-privilege `citeladder_app` role (`DATABASE_URL`), created
-by migration `0030`: it reads and writes rows, holds no DDL, cannot read
+by the baseline migration: it reads and writes rows, holds no DDL, cannot read
 `schema_migrations`, and cannot UPDATE or DELETE the append-only evidence,
 attempt and ledger tables (invariants 4 and 16). After migrating, the CLI sets
 that role's password from `DATABASE_URL`, which must name `citeladder_app`.
