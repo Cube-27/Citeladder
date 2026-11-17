@@ -1,7 +1,7 @@
 /**
  * A crawl goes terminal here and nowhere else. Every entry point holds the
  * crawl row FOR NO KEY UPDATE and short-circuits on a crawl that is no longer
- * active, so the per-task reconcile, terminal lease recovery, the stalled
+ * active (a stopped one only recounts), so the per-task reconcile, terminal lease recovery, the stalled
  * backstop and the overdue watchdog are idempotent and safe to run
  * concurrently. The finalize pass, final page revisions and the snapshot
  * commit with the status transition: a terminal crawl without them is a state
@@ -302,6 +302,8 @@ type ReconcileOptions = {
 
 /** Reconcile one crawl whose row the caller holds locked. */
 async function reconcileLockedCrawl(db: Database, crawl: Crawl, options: ReconcileOptions = {}) {
+  // Stop skips a task another transaction holds; its later settlement recounts.
+  if (crawl.status === 'cancelled') return persistTerminalCounters(db, crawl);
   if (!isActiveCrawl(crawl.status)) return;
   const summary = await taskSummary(db, crawl);
   await refreshCounters(db, crawl, summary);
@@ -379,12 +381,10 @@ function settledRow(db: Database, task: SettledTask) {
 /**
  * What a settled row can change. A discover while discovery continues and an
  * analysis (analyzed, failed or cancelled) while siblings remain move no
- * boundary, only live progress. A task of a stopped crawl is one Stop skipped
- * while another transaction held it. Anything else may settle discovery,
- * analysis or the crawl.
+ * boundary, only live progress. Anything else may settle discovery, analysis
+ * or the crawl.
  */
 function settlement(row: NonNullable<Awaited<ReturnType<typeof settledRow>>>) {
-  if (row.crawl_status === 'cancelled') return 'stopped';
   const running = row.crawl_status === 'running';
   if (row.task_kind === 'discover' && running && row.discovering) return 'discovery_progress';
   const settledPage =
@@ -422,11 +422,6 @@ export async function reconcileAfterTask(db: Database, task: SettledTask, cadenc
     case 'analysis_progress':
       if (cadence.score.admits(task.crawl_id)) await refreshRunningScoreSummary(db, task);
       return;
-    case 'stopped':
-      return db.transaction().execute(async (trx) => {
-        const crawl = await lockCrawl(trx, task.workspace_id, task.crawl_id);
-        if (crawl?.status === 'cancelled') await persistTerminalCounters(trx, crawl);
-      });
     default: {
       const unhandled: never = kind;
       return unhandled;
