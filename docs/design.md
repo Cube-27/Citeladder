@@ -200,7 +200,8 @@ typography:
   value. The website's `type-page-title`, `-control`, `-eyebrow` and
   `-delta` are website-only.
 - **App sizes:** 12, 13, 14, 16, 20, 24, 28 and 40 only, each with one line
-  height; 12 is the floor. Weights 400, 500 and 600. Emphasis inside text is
+  height; 12 is the floor. Weights 400, 500 and 600 (350, 450 and 550 in the
+  app's dark, where light text reads heavier). Emphasis inside text is
   500, never colour. At most one `figure-xl` per page.
 - **Website sizes:** 12 · 14 · 16 · 18 · 20 · 24 · 32 · 48, normally no more
   than three on a page, nothing heavier than 500. Prose holds to 65ch.

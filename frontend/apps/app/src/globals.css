@@ -360,6 +360,11 @@
 :root {
   color-scheme: light;
 
+  /* The three type weights; the app's dark lowers them (see its block). */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
   /* Depth. The app has three shadows, one per elevation (card, pop, sheet;
      bound in its own block below); edge is the faint smudge under a field's
      soft edge. The website and docs draw their borderless edges with the
@@ -525,6 +530,41 @@
      lit top edge (inset: a child that fills the top would cover it). */
   --shadow-pop: inset 0 1px 0 rgb(255 255 255 / 5%), 0 4px 12px rgb(0 0 0 / 0.3);
   --shadow-sheet: inset 0 1px 0 rgb(255 255 255 / 5%), 0 16px 40px rgb(0 0 0 / 0.45);
+
+  /* Light text on a dark ground reads heavier, so every weight drops by 50;
+     each type role and font utility takes the dark weight of its light one. */
+  --weight-regular: 350;
+  --weight-medium: 450;
+  --weight-semibold: 550;
+  --font-weight-normal: var(--weight-regular);
+  --font-weight-medium: var(--weight-medium);
+  --font-weight-semibold: var(--weight-semibold);
+  --text-display-lg--font-weight: var(--weight-regular);
+  --text-display-md--font-weight: var(--weight-regular);
+  --text-display-sm--font-weight: var(--weight-medium);
+  --text-page-title--font-weight: var(--weight-medium);
+  --text-title--font-weight: var(--weight-regular);
+  --text-title-sm--font-weight: var(--weight-regular);
+  --text-stat--font-weight: var(--weight-medium);
+  --text-lead--font-weight: var(--weight-regular);
+  --text-body-lg--font-weight: var(--weight-regular);
+  --text-body--font-weight: var(--weight-regular);
+  --text-body-sm--font-weight: var(--weight-regular);
+  --text-label--font-weight: var(--weight-medium);
+  --text-label-lg--font-weight: var(--weight-medium);
+  --text-heading--font-weight: var(--weight-semibold);
+  --text-heading-lg--font-weight: var(--weight-medium);
+  --text-caption--font-weight: var(--weight-regular);
+  --text-eyebrow--font-weight: var(--weight-medium);
+  --text-data--font-weight: var(--weight-regular);
+  --text-code--font-weight: var(--weight-regular);
+  --text-display--font-weight: var(--weight-medium);
+  --text-subheading--font-weight: var(--weight-semibold);
+  --text-prose--font-weight: var(--weight-regular);
+  --text-screen-label--font-weight: var(--weight-medium);
+  --text-figure-xl--font-weight: var(--weight-semibold);
+  --text-figure--font-weight: var(--weight-semibold);
+  --text-data-sm--font-weight: var(--weight-regular);
 }
 
 /* Tailwind folds a theme shadow into its own variable at build time, which
@@ -936,7 +976,7 @@
   color: var(--color-ink-secondary);
   font-family: var(--font-sans);
   font-size: var(--text-label);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   line-height: var(--text-label--line-height);
   letter-spacing: 0;
   text-transform: none;
@@ -1030,6 +1070,7 @@ body {
   font-family: var(--font-sans);
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
+  font-weight: var(--weight-regular);
   letter-spacing: normal;
   font-optical-sizing: auto;
   -webkit-font-smoothing: antialiased;
@@ -1089,7 +1130,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .type-body {
     font-size: var(--text-body-sm);
     line-height: var(--text-body-sm--line-height);
-    font-weight: 400;
+    font-weight: var(--weight-regular);
   }
   .type-label {
     font-size: var(--text-label);
@@ -1127,7 +1168,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     color: var(--color-ink);
   }
   .type-emphasis {
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
 
   /* The app's roles (2.1): the sans face speaks, numbers included (its
@@ -1141,7 +1182,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     letter-spacing: 0;
     text-transform: none;
     color: var(--color-ink-2);
@@ -1154,7 +1195,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-mono);
     font-size: var(--text-code);
     line-height: var(--text-code--line-height);
-    font-weight: 400;
+    font-weight: var(--weight-regular);
   }
   .type-control-file::file-selector-button {
     font-family: var(--font-sans);
@@ -1177,21 +1218,21 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-size: var(--text-label);
     line-height: var(--text-label--line-height);
-    font-weight: 400;
+    font-weight: var(--weight-regular);
     letter-spacing: 0;
   }
   .type-delta {
     font-family: var(--font-mono);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
-    font-weight: 400;
+    font-weight: var(--weight-regular);
     letter-spacing: 0;
   }
   .type-eyebrow {
     font-family: var(--font-mono);
     font-size: var(--text-eyebrow);
     line-height: var(--text-eyebrow--line-height);
-    font-weight: 400;
+    font-weight: var(--weight-regular);
     letter-spacing: var(--text-eyebrow--letter-spacing);
     text-transform: uppercase;
     color: var(--color-ink-muted);
@@ -1224,13 +1265,13 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-size: var(--text-prose);
     line-height: var(--text-prose--line-height);
-    font-weight: 400;
+    font-weight: var(--weight-regular);
     color: var(--color-ink);
   }
   .prose-content > :last-child { margin-bottom: 0; }
   .prose-content :where(h2, h3, h4, h5, h6) {
     font-family: var(--font-sans);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     letter-spacing: 0;
     color: var(--color-ink);
     margin: 1.5rem 0 0.75rem;
@@ -1244,7 +1285,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .prose-content ul { list-style: disc; }
   .prose-content ol { list-style: decimal; }
   .prose-content li + li { margin-top: 0.5rem; }
-  .prose-content strong { font-weight: 500; color: var(--color-ink); }
+  .prose-content strong { font-weight: var(--weight-medium); color: var(--color-ink); }
   .prose-content a {
     color: var(--color-ink);
     text-decoration: underline;
@@ -1306,7 +1347,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
     font-family: var(--font-sans);
     font-size: var(--text-caption);
     line-height: var(--text-caption--line-height);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     color: var(--color-ink-2);
     border-bottom: 1px solid var(--color-rule);
   }
@@ -1395,7 +1436,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   .cm-editor
   :is(.page-editor-h1, .page-editor-h2, .page-editor-h3, .page-editor-h4, .page-editor-h5, .page-editor-h6),
 .page-editor .cm-editor .page-editor-strong {
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 .page-editor .cm-editor .page-editor-em {
   font-style: italic;
@@ -1433,7 +1474,7 @@ html[data-public-surface]:not([data-marketing-surface]) body {
   h6 {
     margin: 0;
     font-family: var(--font-sans);
-    font-weight: 500;
+    font-weight: var(--weight-medium);
     letter-spacing: normal;
     line-height: 1.25;
     color: var(--color-ink);
@@ -1445,12 +1486,12 @@ html[data-public-surface]:not([data-marketing-surface]) body {
 
   strong,
   b {
-    font-weight: 500;
+    font-weight: var(--weight-medium);
   }
 
   /* A column or row head names its cells: 400, never the browser's bold. */
   th {
-    font-weight: 400;
+    font-weight: var(--weight-regular);
   }
 
   /* Lucide icons draw at 1.75, so a 16px glyph matches the label beside it.
@@ -1619,7 +1660,7 @@ a.focus-ring:active .type-caption {
   min-height: var(--control-md);
   font-size: var(--text-label);
   line-height: var(--text-label--line-height);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   letter-spacing: 0;
 }
 
@@ -1911,7 +1952,7 @@ samp {
   color: var(--color-ink);
   padding: 0.5rem 0.875rem;
   font-size: var(--text-label);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   box-shadow: var(--shadow-pop);
 }
 .skip-link:focus-visible {
@@ -2017,7 +2058,7 @@ label {
   height: 36px;
   font-size: var(--text-caption);
   line-height: var(--text-caption--line-height);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   letter-spacing: normal;
   text-transform: none;
   color: var(--color-ink-2);
@@ -2318,7 +2359,7 @@ label {
 [data-figure-value] [data-absence] {
   font-size: var(--text-body-sm);
   line-height: var(--text-body-sm--line-height);
-  font-weight: 400;
+  font-weight: var(--weight-regular);
 }
 :is([data-figure-kind='icon'], [data-figure-score-body]) {
   grid-template-columns: auto minmax(0, 1fr);
