@@ -195,6 +195,48 @@ published legal pages true, live in
   evidence.
 - [Console spend-cap setup](../operations/GCP_RUNBOOK.md#budget-and-log-controls).
 
+### Site Health crawl scaling (needs spend)
+
+The no-cost work is the
+[crawl optimization plan](site-health-crawl-optimization.md); its measurement
+kit (K1–K9) supplies every trigger below. Nothing here starts until its trigger
+is measured after that plan ships and the owner approves the spend (owner,
+2026-11-17: "i dont want any extra cost"). Prices are rough list prices; confirm
+them before deciding.
+
+| Item | Cost driver | Trigger |
+|---|---|---|
+| Database disk pd-standard to pd-balanced, same 30 GB | About $3/month; leaves the free standard-disk allowance | K5 still shows throttled disk operations during a crawl, or `blk_read_time` dominates K3 |
+| Database VM e2-micro to e2-small or e2-medium | About $12 or $25/month; the e2-micro is free-tier | K5 shows CPU pinned at its sustained ceiling during crawls, K3 has no single dominant statement, and the page rate is below what the owner wants |
+| Runner at 2 vCPU / 2 GiB | About twice the runner seconds | Runner CPU saturated while the database has headroom, or K9 memory near 1 GiB after batched terminalization |
+| Two runner executions at once | Usage-billed; the drain lock needs a redesign | Database below about 50% CPU with every slot busy after the fetch-side PR |
+| Always-on crawl coordinator (one actor per crawl) | A min-instance service or small VM, about $7–50/month, and a rewrite of leases and recovery | Claim and lease statements still take more than about 25% of database time (K3), or crawls reach hundreds of thousands of pages |
+| Cold evidence in object storage (facts and evaluations as compressed files) | Cents of storage, but a new store and read path, and it changes the "PostgreSQL owns durable state" guardrail | Database size nears the 30 GB disk (`database_size_observed`), with evaluations and facts the bulk of it; one 14k-page crawl is roughly 0.4 GB before indexes |
+| DuckDB or BigQuery over Parquet | BigQuery is usage-billed; needs cold evidence in object storage first | A product need for cross-crawl analytics that PostgreSQL cannot serve |
+| Redis or a managed queue | About $35/month or more; the repository forbids it without measured need | The coordinator's trigger, after tuning the claim (cap, batching) did not fix it |
+| Managed PostgreSQL with backups | About $10–26/month plus storage | A decision that running without backups is no longer acceptable; not a speed item |
+| PgBouncer on the database VM | No bill, but RAM and CPU on the e2-micro and one more process | Connection count near `max_connections` (40) |
+
+Deferred by the owner on 2026-11-17; free, but each needs measurement or a
+product decision first:
+
+- **Fused discover and analyze for walked pages.** A walked page costs two
+  tasks and 7 commits (5 after the plan's PR 2). Fusing them cuts that to 2 but
+  changes the task state machine and invariant 8's durable
+  `classification_expected` record. Trigger: the share of crawls that still walk
+  after sitemap-first discovery, with K2 and K3 per walked page.
+- **Incremental recrawl.** Skip the new analysis when a page's normalized facts
+  hash matches its previous artifact under the same versions and page context;
+  the fetch and observation are still recorded. It is mostly a product decision:
+  what "analyzed" and coverage count, time-dependent checks, the cross-page
+  finalize checks and change intelligence. Trigger: on two consecutive
+  production crawls of one site, the share of pages whose `content_hash` and
+  facts match.
+- **Running live-score sums.** Keep per-page-kind sums on the crawl row, updated
+  in the commit that bumps `analyzed_url_count`, with the grouped query kept as
+  a low-frequency reconciler. Trigger: K3 shows the live-score statements still
+  costly after the plan's interval scaling.
+
 ## Tier 3: low priority
 
 Kept for future reference. None is queued; each needs the owner's go-ahead and
