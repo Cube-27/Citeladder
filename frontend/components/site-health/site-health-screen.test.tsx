@@ -415,7 +415,6 @@ describe('SiteHealthScreen — before the first crawl', () => {
   it('shows one Run new crawl placeholder instead of empty metrics', async () => {
     const user = userEvent.setup();
     let createBody: unknown = null;
-    let monitoredRequests = 0;
     mockRoutes();
     mswServer.use(
       http.get(`/api/v1/projects/${PROJECT}/site-health`, () =>
@@ -429,14 +428,6 @@ describe('SiteHealthScreen — before the first crawl', () => {
           root_errors: [],
         }),
       ),
-      http.get(`/api/v1/projects/${PROJECT}/monitored-urls`, () => {
-        monitoredRequests += 1;
-        return HttpResponse.json({
-          project_id: PROJECT,
-          monitored_urls: [],
-          quota: { used: 0, limit: 50 },
-        });
-      }),
       http.post('/api/v1/site-crawls', async ({ request }) => {
         createBody = await request.json();
         return HttpResponse.json(
@@ -463,10 +454,8 @@ describe('SiteHealthScreen — before the first crawl', () => {
     expect(screen.queryByText('Not measured')).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Pages' }));
 
-    await waitFor(() => expect(monitoredRequests).toBe(1));
     await user.click(screen.getByRole('button', { name: 'Run new crawl' }));
     await waitFor(() => expect(createBody).toEqual({ project_id: PROJECT }));
-    await waitFor(() => expect(monitoredRequests).toBeGreaterThanOrEqual(2));
   });
 });
 

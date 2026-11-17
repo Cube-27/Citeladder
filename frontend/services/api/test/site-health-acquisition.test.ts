@@ -655,7 +655,8 @@ describe('site setup', () => {
       limit_reached: true,
       unread_count: 0,
     });
-    expect((await crawlRow(seed)).discovered_url_count).toBe(4);
+    // The inventory's size, not the tracked pages added to it (a reconcile may have counted it).
+    expect(await crawlRow(seed)).toMatchObject({ discovered_url_count: 4, admitted_url_count: 4 });
     expect((await memberships(seed)).map((row) => row.normalized_url)).toEqual([
       url('/about'),
       url('/products/a'),

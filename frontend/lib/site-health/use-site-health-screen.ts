@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { billingQueries } from '@/lib/api/billing';
@@ -149,16 +149,6 @@ export function useSiteHealthScreen() {
     return () => clearTimeout(trailing);
   }, [crawlId, crawlStatus, crawlVersion, projectId, queryClient]);
 
-  // Per-project monitored rows supply analysis progress totals. Automatic URL
-  // admission owns membership; this query is display-only and cannot change
-  // the crawl phase.
-  const monitoredQuery = useQuery(siteHealthQueries.monitored(requestScope));
-  const projectSelectedTotal = useMemo(() => {
-    const rows = monitoredQuery.data?.monitored_urls;
-    if (!rows) return null;
-    return rows.filter((row) => row.active).length;
-  }, [monitoredQuery.data]);
-
   // The live score preview shares the exact first-page query key rendered by
   // ScoredInventory. During an active crawl that first view contains completed
   // rows only, so results appear progressively instead of rendering the whole
@@ -174,10 +164,6 @@ export function useSiteHealthScreen() {
   // phase keeps the scored page browser (B3 — the Errors & Blocked tab renders
   // the root-failure block).
   const inventoryMode: InventoryMode = inventoryModeForPhase(phase, crawl);
-  // Surface a failed monitored-count fetch rather than silently disabling the
-  // analysis view: the count query is best-effort (the counters degrade to the
-  // visible window), but the error is exposed so the screen can note it.
-  const projectSelectedError = monitoredQuery.isError;
 
   // "Starting a crawl" spans two distinct phases: the POST that creates the
   // crawl, and the projection refresh that first shows it. The mutation owns
@@ -251,14 +237,11 @@ export function useSiteHealthScreen() {
     entitlementQuery,
     dashboardQuery,
     pagesQuery,
-    monitoredQuery,
     crawl,
     active,
     stalled,
     phase,
     inventoryMode,
-    projectSelectedTotal,
-    projectSelectedError,
     startPending,
     createMutation,
     cancelMutation,

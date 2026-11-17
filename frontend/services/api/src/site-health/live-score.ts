@@ -9,6 +9,7 @@ import { sql } from 'kysely';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
 import { readinessReason } from './analysis/scoring.ts';
+import { classificationState } from './score-summary.ts';
 import type { Crawl } from './site-task.ts';
 import { compareText } from '../text-order.ts';
 
@@ -170,7 +171,7 @@ function classification(rows: KindRow[], errors: { error: string | null; pages: 
       .reduce((sum, row) => sum + row.pages, 0),
     classification_expected_page_count: expected,
     classification_coverage: expected ? Math.round((classified / expected) * 10000) / 10000 : null,
-    classification_state: classified ? LIVE_STATE : 'not_measured',
+    classification_state: classificationState(classified, expected),
     classification_reason_groups: reasons,
     classification_formula_version: policy.site_health.reads.classification_formula_version,
     scored_page_kind_set: Object.keys(byKind).toSorted(compareText),

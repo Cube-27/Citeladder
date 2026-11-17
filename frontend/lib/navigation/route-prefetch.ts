@@ -178,8 +178,6 @@ async function prefetchSiteHealth(client: QueryClient, scope: ProjectScope) {
   const dashboard = siteHealthQueries.dashboard(scope);
   const cached = client.getQueryData(dashboard.queryKey);
   warmQuery(client, dashboard);
-  // The monitored set supplies the analysis progress totals; it needs only the project.
-  warmQuery(client, siteHealthQueries.monitored(scope));
   if (cached) {
     const preview = screen.pagePreviewQuery(workspaceId, cached);
     if (preview) warmQuery(client, preview);

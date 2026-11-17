@@ -517,9 +517,16 @@ it('scores a running crawl as the mean of its tracked pages’ stored scores', a
     .set({ active: false })
     .where('site_url_id', '=', untracked.id)
     .execute();
+  await db
+    .updateTable('site_crawl_tasks')
+    .set({ classification_expected: true })
+    .where('crawl_id', '=', seed.crawlId)
+    .execute();
   const evaluation = await fixtures.evaluation(seed, home, 'technical.indexable', 'missing');
   await fixtures.issue(seed, home, 'technical.indexable', evaluation);
   expect(await liveScoreSummary(db, await crawlOf(seed.crawlId))).toMatchObject({
+    classification_state: 'complete',
+    classification_expected_page_count: 3,
     web_fundamentals_score: 75,
     web_fundamentals_coverage: 2 / 3,
     aeo_readiness_score: 60,

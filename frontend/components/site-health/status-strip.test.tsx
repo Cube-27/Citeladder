@@ -4,11 +4,7 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { StatusStrip } from './status-strip';
 import type { SiteCrawl } from '@citeladder/contracts';
 import { COMPLETE_CLASSIFICATION_PROJECTION } from '@/test/site-health-fixtures';
-import {
-  makePageSummary as page,
-  makeSiteCrawl,
-  makeSiteHealthEntitlement,
-} from '@/test/fixtures/site-health';
+import { makeSiteCrawl, makeSiteHealthEntitlement } from '@/test/fixtures/site-health';
 
 const entitlement = makeSiteHealthEntitlement();
 
@@ -73,47 +69,10 @@ function renderStrip(props: Partial<Parameters<typeof StatusStrip>[0]> = {}) {
       entitlement={entitlement}
       cancelPending={false}
       startPending={false}
-      pages={[]}
-      selectedTotal={null}
-      selectedError={false}
       {...props}
     />,
   );
 }
-
-describe('StatusStrip — analysis counters', () => {
-  // The per-state breakdown — analyzed, in progress, queued — was removed from
-  // this row: five numbers where two carry the story. What still matters is
-  // that the totals come from the authoritative aggregate rather than the
-  // bounded `pages` window, which is what these now guard.
-  it('derives "Pages selected" from the server aggregate, not a truncated pages window', () => {
-    // Only ONE monitored page is present in this (deliberately truncated)
-    // `pages` prop, but the selected total says 3.
-    renderStrip({
-      pages: [page({ analysis_status: 'completed' })],
-      selectedTotal: 3,
-    });
-
-    const totalLabel = screen.getByText('Pages selected');
-    expect(totalLabel.parentElement?.textContent).toContain('3');
-  });
-
-  it('falls back to the persisted selected total while the monitored query loads', () => {
-    renderStrip({
-      crawl: crawl({ score_summary: null, analyzed_count: 0 }),
-      selectedTotal: null,
-    });
-
-    const totalLabel = screen.getByText('Pages selected');
-    expect(totalLabel.parentElement?.textContent).toContain('3');
-  });
-
-  it('surfaces a monitored-count fetch error instead of silently approximating', () => {
-    renderStrip({ crawl: crawl({ score_summary: null }), selectedError: true });
-
-    expect(screen.getByText(/Couldn.t load the monitored-page count/)).toBeInTheDocument();
-  });
-});
 
 describe('StatusStrip — analysis activity', () => {
   it('keeps the audit copy and live pulse while analysis is genuinely running', () => {
@@ -123,7 +82,6 @@ describe('StatusStrip — analysis activity', () => {
         analysis_status: 'running',
         score_summary: null,
       }),
-      selectedTotal: 3,
     });
 
     expect(screen.getByText(/Auditing monitored pages/i)).toBeInTheDocument();
@@ -176,7 +134,6 @@ describe('StatusStrip — analysis activity', () => {
     renderStrip({
       crawl: crawl({ status: 'running', analysis_status: 'completed' }),
       cancelPending: true,
-      selectedTotal: 3,
     });
 
     expect(screen.getByText(/Cancelling/i)).toBeInTheDocument();
@@ -251,9 +208,6 @@ describe('StatusStrip — lifecycle content', () => {
           entitlement={entitlement}
           cancelPending={false}
           startPending={false}
-          pages={[]}
-          selectedTotal={null}
-          selectedError={false}
         />,
       );
       expect(screen.getByTestId('status-strip')).toBe(strip);

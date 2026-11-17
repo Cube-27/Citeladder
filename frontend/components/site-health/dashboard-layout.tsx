@@ -38,9 +38,6 @@ export function SiteHealthDashboardLayout({
     crawl,
     active,
     dashboardQuery,
-    pagesQuery,
-    projectSelectedTotal,
-    projectSelectedError,
     startPending,
     startCrawl,
     cancelMutation,
@@ -65,9 +62,6 @@ export function SiteHealthDashboardLayout({
           entitlement={entitlement}
           cancelPending={cancelMutation.isPending}
           startPending={startPending}
-          pages={pagesQuery.data?.items ?? []}
-          selectedTotal={projectSelectedTotal}
-          selectedError={projectSelectedError}
           onRerun={mutationsAllowed && canRun ? () => startCrawl() : undefined}
         />
 
