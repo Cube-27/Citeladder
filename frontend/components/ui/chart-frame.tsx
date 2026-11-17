@@ -24,7 +24,8 @@ const FRAME_HEIGHT = {
  *: the height role as a floor, so loading, a
  * read error or an empty selection hold the plot's footprint, and the text
  * summary assistive technology reads instead of the drawing. A drawing sized
- * by its own rows (a distribution of MeterRows) passes no `height`.
+ * by its own rows (a distribution of MeterRows) passes no `height`. A
+ * StepChart of one measurement prints rows, so the frame drops its floor.
  */
 export function ChartFrame({
   height,
@@ -39,7 +40,11 @@ export function ChartFrame({
   return (
     <div
       data-chart-frame={height ?? 'auto'}
-      className={cn('grid min-w-0 *:min-w-0', height && FRAME_HEIGHT[height])}
+      className={cn(
+        'grid min-w-0 *:min-w-0',
+        height && FRAME_HEIGHT[height],
+        'has-[[data-single-measurement]]:min-h-0',
+      )}
     >
       {summary ? <p className="sr-only">{summary}</p> : null}
       {children}

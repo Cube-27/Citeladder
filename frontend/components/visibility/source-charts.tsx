@@ -3,7 +3,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { BusyRung } from '@/components/ui/rung-meter';
 import { ChartFrame } from '@/components/ui/chart-frame';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PartBar, type Part } from '@/components/ui/part-bar';
+import { PartDonut, type Part } from '@/components/ui/part-donut';
 import { StepChart, type TrendSeries } from '@/components/ui/step-chart';
 import { seriesCeiling, toChartSeries, type typeSlices } from '@/lib/visibility/sources';
 import type { useSourceSeries } from '@/lib/visibility/use-source-analysis';
@@ -185,7 +185,7 @@ export function TypesCard({
         <SectionTitle>Source types</SectionTitle>
       </SectionHeader>
       <SectionContent>
-        {/* The bar and its labels in the default chart height role. */}
+        {/* The donut and its legend in the default chart height role. */}
         <ChartFrame height="md">
           <TypesMix slices={slices} total={total} query={query} />
         </ChartFrame>
@@ -228,7 +228,7 @@ function TypesMix({
   // page was never classified are counted in it and belong to no type, so
   // they stay an unfilled remainder instead of stretching the types to 100%.
   return (
-    <PartBar
+    <PartDonut
       parts={typeSegments(slices)}
       total={total}
       totalLabel="citations"
