@@ -47,13 +47,15 @@ const theme = (name: string, positive: number, negative: number) => ({
 });
 
 describe('perception derivations', () => {
-  it('heads the tab with the negative share, and says so when nothing is negative', () => {
+  it('heads the tab with the negative share from the classified minimum only', () => {
     expect(negativeHeadline(score(12, 4, 4))).toBe(
       'AI says something negative about you in 20% of classified mentions',
     );
-    expect(negativeHeadline(score(3, 1, 0))).toBe(
+    expect(negativeHeadline(score(15, 5, 0))).toBe(
       'AI says nothing negative about you in classified mentions',
     );
+    // 4 classified is below the minimum: no headline, never "nothing negative".
+    expect(negativeHeadline(score(3, 1, 0))).toBeNull();
     expect(negativeHeadline(score(0, 0, 0))).toBeNull();
   });
 
@@ -128,11 +130,11 @@ describe('perception derivations', () => {
     ]);
   });
 
-  it('breaks the sentiment line at a point not comparable with the one before', () => {
-    const point = (day: string, net: number | null, comparable: boolean) => ({
+  it('breaks the sentiment line at a point not comparable with the one before, and gaps one under the minimum', () => {
+    const point = (day: string, net: number | null, comparable: boolean, positive = 20) => ({
       audit_id: RUN,
       completed_at: `2026-11-${day}T00:00:00Z`,
-      score: { ...score(1, 0, 0), net_sentiment: net },
+      score: { ...score(positive, 0, 0), net_sentiment: net },
       mentions: 1,
       extractor_version: 'x1',
       template_version: 't1',
@@ -140,13 +142,19 @@ describe('perception derivations', () => {
       comparable,
     });
     const series = sentimentTrend(
-      [point('01', 10, false), point('08', null, true), point('15', -20, false)],
+      [
+        point('01', 10, false),
+        point('08', null, true),
+        point('15', -20, false),
+        point('22', 100, true, 3),
+      ],
       (iso) => iso.slice(5, 10),
     );
     expect(series.map(({ label, value, breakBefore }) => [label, value, breakBefore])).toEqual([
       ['11-01', 10, false],
       ['11-08', null, false],
       ['11-15', -20, true],
+      ['11-22', null, false],
     ]);
   });
 });

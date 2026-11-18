@@ -8970,8 +8970,15 @@
           "share_of_voice": {
             "type": ["number", "null"]
           },
-          "net_sentiment": {
-            "type": ["number", "null"]
+          "sentiment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/NetSentiment"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "comparison_status": {
             "type": ["string", "null"]
@@ -8990,7 +8997,7 @@
           "measured_at",
           "mention_rate",
           "share_of_voice",
-          "net_sentiment",
+          "sentiment",
           "comparison_status",
           "mention_rate_delta",
           "share_of_voice_delta"
@@ -13085,7 +13092,7 @@
                       "measured_at": null,
                       "mention_rate": null,
                       "share_of_voice": null,
-                      "net_sentiment": null,
+                      "sentiment": null,
                       "comparison_status": null,
                       "mention_rate_delta": null,
                       "share_of_voice_delta": null

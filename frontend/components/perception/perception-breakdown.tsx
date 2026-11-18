@@ -1,6 +1,6 @@
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { Fragment, useState, type ComponentProps, type ReactNode } from 'react';
+import { Fragment, type ComponentProps, type ReactNode } from 'react';
 
 import { Absence } from '@/components/ui/absence';
 import { DataTable, type DataTableColumn } from '@/components/ui/data-table';
@@ -13,6 +13,7 @@ import { TableCell, TableRow, UrlText } from '@/components/ui/table';
 import { SegmentedControl } from '@/components/ui/tabs';
 import { QuoteLink } from '@/components/visibility/visibility-perception';
 import { PERCEPTION_MIN_CLASSIFIED } from '@/lib/config/visibility';
+import { optionalStringUrlCodec, stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useEngineCatalog } from '@/lib/providers/engines';
 import {
   breakdownRow,
@@ -33,6 +34,11 @@ const VIEWS = [
   { value: 'source', label: 'By source' },
 ] as const satisfies readonly { value: View; label: string }[];
 
+const VIEW_CODEC = stringUrlCodec<View>(
+  VIEWS.map((item) => item.value),
+  'theme',
+);
+
 const SEGMENT_HEAD: Record<Segment, string> = {
   topic: 'Topic',
   engine: 'Engine',
@@ -46,7 +52,7 @@ function noneHere(message: string): ComponentProps<typeof DataTable>['state'] {
 
 /** The brand's perception broken down by theme, topic, engine, prompt and cited source. */
 export function PerceptionBreakdown({ data }: Readonly<{ data: PerceptionResponse }>) {
-  const [view, setView] = useState<View>('theme');
+  const [view, setView] = useUrlState('breakdown', VIEW_CODEC, { history: 'replace' });
   const switcher = (
     <SegmentedControl
       value={view}
@@ -83,7 +89,7 @@ function ThemeTable({
   themes,
   actions,
 }: Readonly<{ themes: PerceptionResponse['themes']; actions: ReactNode }>) {
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useUrlState('theme', optionalStringUrlCodec, { history: 'replace' });
   const { label: engineLabel } = useEngineCatalog();
   return (
     <DataTable

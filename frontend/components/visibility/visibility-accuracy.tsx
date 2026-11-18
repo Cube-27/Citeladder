@@ -5,8 +5,9 @@ import {
   type AccuracyResponse,
 } from '@citeladder/contracts/fact-checking';
 import { ShieldCheck } from 'lucide-react';
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
+import { Delta } from '@/components/ui/delta';
 import { TabPanel, Tabs } from '@/components/ui/tabs';
 import { Tooltip } from '@/components/ui/tooltip';
 import { StatusMark } from '@/components/ui/status-mark';
@@ -17,9 +18,11 @@ import { TableCell, TableRow } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
 import { Absence } from '@/components/ui/absence';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   accuracyCoverageLine,
   accuracyStateCopy,
+  contradictedChange,
   TOPIC_LABELS,
   VERDICT_LABELS,
   VERDICT_TONE,
@@ -38,6 +41,11 @@ const CLAIM_VIEWS = [
   { value: 'by-fact', label: 'By fact' },
 ] as const satisfies readonly { value: ClaimView; label: string }[];
 
+const CLAIM_VIEW_CODEC = stringUrlCodec<ClaimView>(
+  CLAIM_VIEWS.map((item) => item.value),
+  'contradicted',
+);
+
 /**
  * What answers claimed about the brand, checked against its confirmed facts.
  * Accuracy always travels with its coverage, and a claim without a verdict is
@@ -47,20 +55,35 @@ const CLAIM_VIEWS = [
 export function AccuracyView({
   data,
   lede,
+  stateActions,
   trend,
   allClaims,
   byFact,
 }: Readonly<{
   data: AccuracyResponse;
   lede?: ReactNode;
+  /** Shown above the state when there are no facts or no claims yet, e.g. an import. */
+  stateActions?: ReactNode;
   trend?: ReactNode;
   allClaims: ReactNode;
   byFact: ReactNode;
 }>) {
   const { label: engineLabel } = useEngineCatalog();
-  const [view, setView] = useState<ClaimView>('contradicted');
-  if (data.state !== 'value')
-    return <AccuracyState state={data.state} reason={data.reason} coverage={data.score.coverage} />;
+  const [view, setView] = useUrlState('claims', CLAIM_VIEW_CODEC, { history: 'replace' });
+  if (data.state !== 'value') {
+    const state = (
+      <AccuracyState state={data.state} reason={data.reason} coverage={data.score.coverage} />
+    );
+    const actionable = data.state === 'no_facts' || data.state === 'no_claims';
+    return actionable && stateActions ? (
+      <Stack gap="item">
+        <Inline className="justify-end">{stateActions}</Inline>
+        {state}
+      </Stack>
+    ) : (
+      state
+    );
+  }
   return (
     <SectionStack>
       <Headline data={data} lede={lede} />
@@ -127,25 +150,28 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
           {lede}
           <FigureStrip
             label="Fact checks"
+            subLine
             segments={[
               {
                 key: 'claims',
                 label: 'Claims',
                 value: String(coverage.claims),
-                sub: 'In answers that named you.',
+                sub: 'In answers that named you',
               },
               {
                 key: 'contradicted',
                 label: 'Contradicted',
                 value: String(coverage.contradicted),
-                sub: 'A confirmed fact states something incompatible.',
+                delta: (
+                  <Delta
+                    value={contradictedChange(data)}
+                    policy="lower-is-better"
+                    precision={0}
+                    context="vs previous"
+                  />
+                ),
               },
-              {
-                key: 'supported',
-                label: 'Supported',
-                value: String(coverage.supported),
-                sub: 'A confirmed fact states the same thing.',
-              },
+              { key: 'supported', label: 'Supported', value: String(coverage.supported) },
               {
                 key: 'accuracy',
                 label: 'Accuracy',
@@ -160,19 +186,13 @@ function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: Reac
                   </>
                 ),
               },
-              // Two different findings: no confirmed fact on the point, and a
-              // fact that could not settle the claim. Never one summed figure.
+              // The two findings stay apart on the line: no confirmed fact on
+              // the point, and a fact that could not settle the claim.
               {
-                key: 'not_covered',
-                label: VERDICT_LABELS.not_covered,
-                value: String(coverage.not_covered),
-                sub: 'No confirmed fact on the point.',
-              },
-              {
-                key: 'inconclusive',
-                label: VERDICT_LABELS.inconclusive,
-                value: String(coverage.inconclusive),
-                sub: 'A confirmed fact could not settle the claim.',
+                key: 'not_checked',
+                label: 'Not checked',
+                value: String(coverage.inconclusive + coverage.not_covered),
+                sub: `${coverage.inconclusive} ${VERDICT_LABELS.inconclusive.toLowerCase()} · ${coverage.not_covered} ${VERDICT_LABELS.not_covered.toLowerCase()}`,
               },
             ]}
           />

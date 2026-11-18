@@ -32,7 +32,10 @@ describe('parseFactCsv', () => {
       {
         line: 3,
         input: { topic: 'weather', statement: 'Founded in 2019.', source_url: 'ftp://acme.test' },
-        errors: ['Unknown topic "weather".', 'Source URL must be an http or https address.'],
+        errors: [
+          'Unknown topic "weather". Use one of: pricing, plans, integrations, availability, markets, policies, specs, company.',
+          'Source URL must be an http or https address.',
+        ],
       },
       {
         line: 4,

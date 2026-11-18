@@ -23,7 +23,12 @@ import {
   WIDGET_ROWS,
 } from '@/lib/overview/widget-queries';
 import { formatRate } from '@/lib/visibility/dashboard';
-import { formatNet, formatShare } from '@/lib/visibility/perception';
+import {
+  gatedFigure,
+  netReading,
+  shareReading,
+  type GatedReading,
+} from '@/lib/visibility/perception';
 import { hostOf, pathOf } from '@/lib/visibility/sources';
 import { toChartPoints } from '@/lib/visibility/trends';
 import { Notice, readErrorProps } from '@/components/ui/notice';
@@ -115,6 +120,9 @@ function notCompared(status: string, skippedRuns = 0) {
 }
 
 const valueOr = (value: string | null) => value ?? unavailable;
+/** A perception figure under the classified minimum reads "Too few classified". */
+const gatedOr = (reading: GatedReading | null) =>
+  reading ? gatedFigure(reading) : { value: unavailable };
 const count = (value: number | null) => (value === null ? null : formatCount(value));
 
 /** A ledger padded to the widget's row count, so a short list keeps the card's height. */
@@ -278,24 +286,25 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
         fallback="Perception could not be loaded."
       >
         {(data) => {
-          const score = data.brand?.score ?? null;
+          // Pending, unavailable and no-mentions reads keep the absence mark, never "too few".
+          const score = data.state === 'value' ? (data.brand?.score ?? null) : null;
           return (
             <FigureStrip
               segments={[
                 {
                   key: 'net',
                   label: 'Net sentiment',
-                  value: valueOr(formatNet(score?.net_sentiment ?? null)),
+                  ...gatedOr(score && netReading(score.net_sentiment, score.classified)),
                 },
                 {
                   key: 'positive',
                   label: 'Positive',
-                  value: valueOr(formatShare(score?.positive_share ?? null)),
+                  ...gatedOr(score && shareReading(score.positive_share, score.classified)),
                 },
                 {
                   key: 'negative',
                   label: 'Negative',
-                  value: valueOr(formatShare(score?.negative_share ?? null)),
+                  ...gatedOr(score && shareReading(score.negative_share, score.classified)),
                 },
               ]}
             />

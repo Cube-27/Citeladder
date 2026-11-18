@@ -1,5 +1,4 @@
 import type { PerceptionResponse } from '@citeladder/contracts/visibility-perception';
-import { useState } from 'react';
 
 import { CompetitorThemes } from '@/components/perception/competitor-themes';
 import { PerceptionBreakdown } from '@/components/perception/perception-breakdown';
@@ -21,11 +20,13 @@ import {
 } from '@/components/visibility/visibility-perception';
 import { useDisplayTimeZone } from '@/lib/display-timezone';
 import { formatDisplayDate } from '@/lib/format';
+import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import {
   coverageLine,
   formatNet,
-  formatShare,
+  gatedFigure,
   negativeHeadline,
+  shareReading,
   negativeThemesLine,
   rankThemes,
   sentimentTrend,
@@ -74,6 +75,15 @@ function Lede({
   const score = data.brand?.score;
   const { recommended, coverage } = data;
   const latest = data.trend.at(-1)?.completed_at;
+  const share = (key: 'positive' | 'negative', label: string): FigureSegment =>
+    score
+      ? {
+          key,
+          label,
+          ...gatedFigure(shareReading(score[`${key}_share`], score.classified)),
+          sub: `${score[key]} of ${score.classified} classified mentions`,
+        }
+      : { key, label, value: null, missingLabel: 'Unavailable' };
   const segments: FigureSegment[] = [
     {
       key: 'describing',
@@ -81,25 +91,12 @@ function Lede({
       value: `${coverage.classified} / ${coverage.mentions}`,
       sub: coverageLine(coverage),
     },
-    {
-      key: 'positive',
-      label: 'Positive',
-      value: formatShare(score?.positive_share ?? null),
-      missingLabel: 'Unavailable',
-      sub: score ? `${score.positive} of ${score.classified} classified mentions` : undefined,
-    },
-    {
-      key: 'negative',
-      label: 'Negative',
-      value: formatShare(score?.negative_share ?? null),
-      missingLabel: 'Unavailable',
-      sub: score ? `${score.negative} of ${score.classified} classified mentions` : undefined,
-    },
+    share('positive', 'Positive'),
+    share('negative', 'Negative'),
     {
       key: 'recommended',
       label: 'Recommended',
-      value: formatShare(recommended.rate),
-      missingLabel: 'Unavailable',
+      ...gatedFigure(shareReading(recommended.rate, recommended.mentioned), 'answers'),
       sub:
         `${recommended.recommended} of ${recommended.mentioned} answers naming you` +
         (recommended.recommended_against
@@ -138,8 +135,10 @@ function Lede({
 
 type ThemeOrder = 'negative' | 'positive';
 
+const ORDER_CODEC = stringUrlCodec<ThemeOrder>(['negative', 'positive'], 'negative');
+
 function ThemeList({ themes }: Readonly<{ themes: PerceptionResponse['themes'] }>) {
-  const [order, setOrder] = useState<ThemeOrder>('negative');
+  const [order, setOrder] = useUrlState('theme_order', ORDER_CODEC, { history: 'replace' });
   const ranked = rankThemes(themes, order, THEME_LIST_LIMIT);
   const most = ranked[0]?.[order] ?? 0;
   return (
@@ -180,27 +179,42 @@ function ThemeList({ themes }: Readonly<{ themes: PerceptionResponse['themes'] }
 }
 
 function SentimentRing({ data }: Readonly<{ data: PerceptionResponse }>) {
-  const score = data.brand?.score;
   return (
     <TitledSection title="How AI judges you">
       <SectionContent>
-        {score ? (
-          <PartDonut
-            label="Sentiment of classified mentions"
-            totalLabel="classified mentions"
-            total={score.classified}
-            parts={[
-              { label: 'Positive', value: score.positive },
-              { label: 'Neutral', value: score.neutral },
-              { label: 'Negative', value: score.negative },
-              { label: 'Mixed', value: score.mixed },
-            ]}
-          />
-        ) : (
-          <StateBlock kind="empty" inline message="No classified mentions of you." />
-        )}
+        <SentimentParts score={data.brand?.score} />
       </SectionContent>
     </TitledSection>
+  );
+}
+
+/** The donut from the classified minimum; below it a too-few line, never shares of a handful. */
+function SentimentParts({
+  score,
+}: Readonly<{ score: PerceptionResponse['entities'][number]['score'] | undefined }>) {
+  if (!score?.classified)
+    return <StateBlock kind="empty" inline message="No classified mentions of you." />;
+  const reading = shareReading(score.positive_share, score.classified);
+  if (reading.kind === 'too_few')
+    return (
+      <StateBlock
+        kind="empty"
+        inline
+        message={`Too few classified (${reading.basis} of the ${reading.minimum} needed).`}
+      />
+    );
+  return (
+    <PartDonut
+      label="Sentiment of classified mentions"
+      totalLabel="classified"
+      total={score.classified}
+      parts={[
+        { label: 'Positive', value: score.positive, status: 'positive' },
+        { label: 'Neutral', value: score.neutral, status: 'neutral' },
+        { label: 'Negative', value: score.negative, status: 'negative' },
+        { label: 'Mixed', value: score.mixed, status: 'warning' },
+      ]}
+    />
   );
 }
 
@@ -221,11 +235,7 @@ function SentimentTrend({ trend }: Readonly<{ trend: PerceptionResponse['trend']
             yFormat={(value) => formatNet(value) ?? ''}
           />
         ) : (
-          <StateBlock
-            kind="empty"
-            inline
-            message="Choose All runs in period under Measurement to see sentiment across runs."
-          />
+          <StateBlock kind="empty" inline message="Only one run in this period." />
         )}
       </SectionContent>
     </TitledSection>

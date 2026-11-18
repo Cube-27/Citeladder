@@ -57,6 +57,12 @@ describe('brand facts', () => {
       409,
       'fact_checking_not_in_plan',
     ]);
+    // The claims export refuses too, never an empty file that reads as "no claims".
+    const exported = await call(tenant, 'GET', '/visibility/accuracy/claims/export');
+    expect([exported.status, (exported.body.error as { code: string }).code]).toEqual([
+      409,
+      'fact_checking_not_in_plan',
+    ]);
   });
 
   it('appends a revision on every change and refuses an edit of a stale revision', async () => {
@@ -304,8 +310,8 @@ describe('claim extraction and verification', () => {
     const market = 'United States · English';
     expect(await csv.text()).toBe(
       'claim,facts,verdict,model_verdict,engine,market,run_date,prompt\r\n' +
-        `Acme Pro costs $49 a month.,Pro costs $59 per month. (revision 2),contradicted,,chatgpt,${market},${observedAt},best tools?\r\n` +
-        `Acme integrates with Slack.,,not_covered,,chatgpt,${market},${observedAt},best tools?\r\n`,
+        `Acme Pro costs $49 a month.,Pro costs $59 per month. (revision 2),contradicted,contradicted,ChatGPT API,${market},${observedAt},best tools?\r\n` +
+        `Acme integrates with Slack.,,not_covered,not_covered,ChatGPT API,${market},${observedAt},best tools?\r\n`,
     );
 
     // Another workspace, inside the pilot, cannot read this run's facts or claims.

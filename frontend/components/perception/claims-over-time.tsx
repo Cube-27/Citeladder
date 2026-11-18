@@ -7,7 +7,7 @@ import { VERDICT_LABELS } from '@/lib/visibility/accuracy';
 
 const STACK = [
   { key: 'supported', fill: 'fill-positive bg-positive' },
-  { key: 'contradicted', fill: 'fill-negative bg-negative' },
+  { key: 'contradicted', fill: 'fill-current text-negative bg-negative' },
   { key: 'inconclusive', fill: 'fill-data-other bg-data-other' },
 ] as const;
 const SERIES = STACK.map(({ key, fill }) => ({ name: VERDICT_LABELS[key], fill }));

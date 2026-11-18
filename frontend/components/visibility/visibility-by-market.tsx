@@ -11,7 +11,7 @@ import { Delta } from '@/components/ui/delta';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Absence } from '@/components/ui/absence';
 import { formatRate, measured } from '@/lib/visibility/dashboard';
-import { formatNet } from '@/lib/visibility/perception';
+import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { SHARE_OF_VOICE_HINT } from '@/lib/config/visibility';
 import { readErrorProps } from '@/components/ui/notice';
 
@@ -103,7 +103,7 @@ export function VisibilityByMarket({
                   />
                 </TableCell>
                 <TableCell numeric>
-                  {formatNet(row.net_sentiment) ?? <Absence reason="No classified mentions" />}
+                  <SentimentValue sentiment={row.sentiment} tooFew="Too few" showCount={false} />
                 </TableCell>
               </>
             ) : (

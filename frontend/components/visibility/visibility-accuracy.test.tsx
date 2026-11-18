@@ -65,8 +65,8 @@ describe('AccuracyView', () => {
     expect(screen.getByText('Your fact: Pro costs $59 per month.')).toBeInTheDocument();
   });
 
-  it('counts claims with no fact apart from inconclusive ones, never as one sum', () => {
-    const split = { ...coverage, claims: 10, not_covered: 4, inconclusive: 3 };
+  it('shows the edited count and both unchecked findings on visible lines', () => {
+    const split = { ...coverage, claims: 10, not_covered: 4, inconclusive: 3, edited: 2 };
     render(
       <AccuracyView
         allClaims={null}
@@ -75,11 +75,26 @@ describe('AccuracyView', () => {
       />,
     );
     const checks = within(screen.getByLabelText('Fact checks'));
-    expect(checks.getByText('Not covered')).toBeVisible();
-    expect(checks.getByText('Inconclusive')).toBeVisible();
-    expect(checks.getByText('4')).toBeVisible();
-    expect(checks.getByText('3')).toBeVisible();
-    expect(checks.queryByText('7')).toBeNull();
+    expect(checks.getByText('2 edited')).toBeVisible();
+    expect(checks.getByText('7')).toBeVisible();
+    expect(checks.getByText('3 inconclusive · 4 not covered')).toBeVisible();
+  });
+
+  it('offers the import above a no-facts state', () => {
+    render(
+      <AccuracyView
+        allClaims={null}
+        byFact={null}
+        stateActions={<button type="button">Import facts CSV</button>}
+        data={response({
+          state: 'no_facts',
+          score: { accuracy: null, coverage: { ...coverage, claims: 0 } },
+          contradicted: [],
+        })}
+      />,
+    );
+    expect(screen.getByRole('button', { name: 'Import facts CSV' })).toBeVisible();
+    expect(screen.getByText('No confirmed facts for these runs')).toBeVisible();
   });
 
   it('says in one line that no source was cited alongside a contradiction', () => {

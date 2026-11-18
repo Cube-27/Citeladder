@@ -85,13 +85,36 @@ function response(overrides: Partial<PerceptionResponse> = {}): PerceptionRespon
 }
 
 describe('Perception view', () => {
-  it('heads with the negative share over its coverage, and opens a theme to its quotes', () => {
-    render(<PerceptionView data={response()} />);
+  it('heads with the negative share only from the classified minimum', () => {
+    const { unmount } = render(<PerceptionView data={response()} />);
+    // 4 classified: no share in the headline or the lede, never "nothing negative".
+    expect(screen.queryByRole('heading', { name: /^AI says/u })).toBeNull();
+    // The lede falls back to the theme card's title.
+    expect(screen.getAllByRole('heading', { name: 'How AI describes you' })).toHaveLength(2);
+    const lede = within(screen.getByLabelText('Brand perception'));
+    expect(lede.getAllByText('Too few classified')).toHaveLength(2);
+    expect(lede.getByText('Too few answers')).toBeVisible();
+    expect(lede.queryByText(/%/u)).toBeNull();
+    unmount();
+
+    const enough = score({ positive: 15, negative: 5, classified: 20, negative_share: 0.25 });
+    render(
+      <PerceptionView
+        data={response({
+          brand: { name: 'Acme', is_brand: true, score: enough, coverage, theme_mentions: [] },
+        })}
+      />,
+    );
     expect(
       screen.getByRole('heading', {
         name: 'AI says something negative about you in 25% of classified mentions',
       }),
     ).toBeVisible();
+    expect(within(screen.getByLabelText('Brand perception')).getByText('75.0%')).toBeVisible();
+  });
+
+  it('shows the classified coverage and opens a theme to its quotes', () => {
+    render(<PerceptionView data={response()} />);
     expect(within(screen.getByLabelText('Brand perception')).getByText('4 / 6')).toBeVisible();
     expect(
       screen.getByRole('button', {

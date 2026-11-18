@@ -128,10 +128,34 @@ export function claimAgentPrompt(claim: AccuracyClaim, engine: string): string {
   const facts = claim.facts.map((fact) => fact.statement).join('; ');
   const verdict = claimStateWords(claim);
   return [
-    `Help me correct what ${engine} says about us.`,
+    agentAsk(claim, engine),
     `Asked "${claim.prompt}", it said: "${claim.quote}" (claim: ${claim.claim}).`,
     facts ? `Checked against our fact: "${facts}". Verdict: ${verdict}.` : `Verdict: ${verdict}.`,
   ].join(' ');
+}
+
+/** Only a contradicted claim has something to correct. */
+function agentAsk(claim: Pick<AccuracyClaim, 'status' | 'verdict'>, engine: string): string {
+  const verdict = claim.status === 'verdict' ? claim.verdict : null;
+  if (verdict === 'contradicted') return `Help me correct what ${engine} says about us.`;
+  if (verdict === 'supported')
+    return `Help me keep what ${engine} gets right about us accurate where it reads.`;
+  return `Help me check what ${engine} says about us.`;
+}
+
+/**
+ * Contradicted claims against the comparable run before, when the figures are
+ * one run's (the newest trend point); null for a pooled selection or no
+ * comparable earlier run.
+ */
+export function contradictedChange(
+  data: Pick<AccuracyResponse, 'source_audit_ids' | 'trend'>,
+): number | null {
+  const [latest, previous] = [data.trend.at(-1), data.trend.at(-2)];
+  if (!latest || !previous || !latest.comparable) return null;
+  if (data.source_audit_ids.length !== 1 || data.source_audit_ids[0] !== latest.audit_id)
+    return null;
+  return latest.score.coverage.contradicted - previous.score.coverage.contradicted;
 }
 
 /** "N of M claims with a verdict", then every other non-empty bucket. */

@@ -12,9 +12,9 @@ import { ClampText } from '@/components/ui/clamp-text';
 import { TableCell, TableRow, YouTag } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { textRole } from '@/components/ui/typography';
-import { Absence } from '@/components/ui/absence';
 import { useEngineCatalog } from '@/lib/providers/engines';
-import { coverageLine, formatNet, stateCopy, themeLabel } from '@/lib/visibility/perception';
+import { coverageLine, stateCopy, themeLabel } from '@/lib/visibility/perception';
+import { SentimentValue } from '@/components/visibility/sentiment-value';
 import { StateBlock } from '@/components/ui/state-block';
 import { SectionContent, TitledSection } from '@/components/ui/section';
 
@@ -66,7 +66,13 @@ export function EntityTable({ entities }: Readonly<{ entities: PerceptionRespons
             </TableCell>
             <TableCell numeric>{entity.score.positive}</TableCell>
             <TableCell numeric>{entity.score.negative}</TableCell>
-            <TableCell numeric>{formatNet(entity.score.net_sentiment) ?? <Absence />}</TableCell>
+            <TableCell numeric>
+              <SentimentValue
+                sentiment={{ ...entity.score, mentions: entity.coverage.mentions }}
+                tooFew="Too few"
+                showCount={false}
+              />
+            </TableCell>
           </TableRow>
         ))}
       </DataTable>

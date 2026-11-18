@@ -21,7 +21,18 @@ export type Part = Readonly<{
   other?: boolean;
   /** Who the part is (a rival's domain), for its page-wide colour; defaults to `label`. */
   identity?: string;
+  /** A status reading (sentiment) instead of an identity: its status colour, never a series hue. */
+  status?: PartStatus;
 }>;
+
+type PartStatus = 'positive' | 'neutral' | 'negative' | 'warning';
+
+const STATUS_INK: Record<PartStatus, { stroke: string; fill: string }> = {
+  positive: { stroke: 'stroke-positive', fill: 'bg-positive' },
+  neutral: { stroke: 'stroke-data-other', fill: 'bg-data-other' },
+  negative: { stroke: 'stroke-negative', fill: 'bg-negative' },
+  warning: { stroke: 'stroke-warning', fill: 'bg-warning' },
+};
 
 /** The ring on a 100-unit box: its radius and width, and the gap between segments. */
 const RADIUS = 40;
@@ -33,9 +44,15 @@ const WELL = 'var(--color-well)';
 type Row = Readonly<{
   label: string;
   value: number;
-  tone: SeriesTone | null;
+  /** Its `data-part` name and stroke and swatch classes; null inks it `well`. */
+  ink: { part: string; stroke: string; fill: string } | null;
   share: number;
 }>;
+
+function partInk(status: PartStatus | undefined, tone: SeriesTone): NonNullable<Row['ink']> {
+  if (status) return { part: status, ...STATUS_INK[status] };
+  return { part: tone, stroke: SERIES_STROKE[tone], fill: SERIES_FILL[tone] };
+}
 
 /**
  * PartDonut — part to whole as a donut with its legend (swatch, name, share
@@ -80,10 +97,11 @@ export function PartDonut({
     const placed = seriesTone(part, hasYou ? rank + 1 : rank, hasYou);
     let tone: SeriesTone = part.you ? 'you' : placed;
     if (!part.you && !part.other) tone = known?.get(part.identity ?? part.label) ?? placed;
-    return { label: part.label, value: part.value, tone, share: whole ? part.value / whole : 0 };
+    const ink = partInk(part.status, tone);
+    return { label: part.label, value: part.value, ink, share: whole ? part.value / whole : 0 };
   });
   if (remainder > 0)
-    rows.push({ label: remainderLabel, value: remainder, tone: null, share: remainder / whole });
+    rows.push({ label: remainderLabel, value: remainder, ink: null, share: remainder / whole });
   const described = [
     ...(totalLabel ? [`${format(whole)} ${totalLabel}`] : []),
     ...rows.map((row) => `${row.label} ${chartPercent(row.value, whole)} (${format(row.value)})`),
@@ -100,8 +118,8 @@ export function PartDonut({
           segments={rows.map((row) => ({
             key: row.label,
             share: row.share,
-            stroke: row.tone ? SERIES_STROKE[row.tone] : null,
-            part: row.tone ?? 'remainder',
+            stroke: row.ink?.stroke ?? null,
+            part: row.ink?.part ?? 'remainder',
           }))}
         />
         {totalLabel ? (
@@ -114,12 +132,7 @@ export function PartDonut({
       <ul aria-hidden className="flex min-w-0 flex-1 flex-col gap-2">
         {rows.map((row) => (
           <li key={row.label} className={textRole('body', 'flex min-w-0 items-center gap-2')}>
-            <span
-              className={cn(
-                'rounded-mark size-2 shrink-0',
-                row.tone ? SERIES_FILL[row.tone] : 'bg-well',
-              )}
-            />
+            <span className={cn('rounded-mark size-2 shrink-0', row.ink?.fill ?? 'bg-well')} />
             <span className="text-ink min-w-0 flex-1 truncate" title={row.label}>
               {row.label}
             </span>

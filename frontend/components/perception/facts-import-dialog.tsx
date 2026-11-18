@@ -87,7 +87,7 @@ export function FactsImportDialog({
           </Button>
         ) : (
           <>
-            <Button variant="quiet" onClick={() => close(false)}>
+            <Button variant="secondary" onClick={() => close(false)}>
               Cancel
             </Button>
             <Button
