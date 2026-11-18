@@ -78,7 +78,8 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
 - **AV-20, API reference.** "add phase 4 as building API refernce in docs subdomain, i
   believe we already have rest api endpoints but there is no documentation for that"
   (2026-11-18, with two reference products' API docs): a full API reference section on
-  the docs site, with a page per endpoint and request and response examples.
+  the docs site, with a page per endpoint and request and response examples. Shipped in
+  #967.
 
 ## Where it lives
 
@@ -291,50 +292,6 @@ navigation and for each shipped workstream, in the changelog's existing style.
 
 Each Phase 1 or Phase 2 PR that renames or moves a screen notes the docs page it
 affects, so D1 has a list to work from.
-
-## Phase 4: API reference on the docs site (AV-20)
-
-The REST API already ships: 63 operations under `/v1`, API keys with scopes, and an
-OpenAPI document at `/v1/openapi.json` generated from the route declarations
-(`services/api/src/public-api/openapi.ts`, exported to `apps/docs/src/data/public-api.json`
-by `services/api/scripts/export-public-api-reference.ts`). The docs site has one guide
-(`apps/docs/src/content/api.md`) and one long generated page (`api/reference.md`, drawn by
-`apps/docs/src/components/ApiReference.astro`). That page lists method, path, scope and
-field tables, but only 8 operations have a summary and none has an example. Phase 4
-turns this into a reference a developer can work from.
-
-**R1 Describe every operation at the source (M).** Give every public route declaration a
-summary (the page title, such as "List prompts"), a one-paragraph description and a
-request and response example. They live on the route contract, so `openapi.json` and the
-docs carry the same text and the snapshot check still catches drift. Examples use
-obviously fake IDs and domains and keep unknown and unavailable values distinct from zero.
-
-**R2 API section (M).** Give the API its own top-level section on the docs site, beside
-the product guides and MCP, with its own sidebar:
-
-- Overview: Introduction, Authentication and scopes, Pagination, Idempotency, Rate
-  limits, Errors and Changelog. Split these out of `api.md` and delete it, rather than
-  keeping two copies.
-- Endpoints, grouped by resource. The spec has 18 tags; fold the small ones into
-  their parent (markets into Projects, site crawls into Site health, prompt sets into
-  Prompts, competitor suggestions into Competitors, audit schedules into Audits) in one
-  mapping in the docs app. Each sidebar entry shows its method badge and summary.
-
-**R3 One page per endpoint (L).** Generate a page for each operation from
-`public-api.json`, replacing the single `api/reference.md` page: summary and description,
-scope, path and query parameters, the request body, then response fields with their
-status. On wide screens, a right-hand column shows a copyable request example (cURL,
-JavaScript and Python, built from R1's example) and the example response. Shared schemas
-link to one page each instead of a list at the end of a page. Keep the existing search
-index, `llms.txt` and sitemap covering the new pages.
-
-**R4 API changelog (S).** An API changelog page lists additions and changes within `v1`,
-and each PR that changes a public route contract adds a line to it.
-
-Not in Phase 4: a "try it" console that sends live requests from the docs (it would put
-keys in the browser), and a docs chat assistant. Phase 1 and Phase 2 operations that join
-the public API appear in the reference without extra work, once they carry R1's summary
-and example.
 
 ## Not planned
 
