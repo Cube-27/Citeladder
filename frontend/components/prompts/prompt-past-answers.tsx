@@ -123,7 +123,7 @@ export function PromptPastAnswers({
               </TextLink>
             </TableCell>
             <TableCell>{engines.label(answer.logical_engine)}</TableCell>
-            <TableCell>{marketCode ?? <Absence state="unavailable" narrow />}</TableCell>
+            <TableCell>{marketCode ?? <Absence state="unavailable" />}</TableCell>
             <TableCell>
               <BrandsNamed brands={answer.brands} first={answer.first_named} />
             </TableCell>
@@ -134,7 +134,7 @@ export function PromptPastAnswers({
               {answer.cited ? (
                 <StatusMark tone="positive">Cited</StatusMark>
               ) : (
-                <Absence state="none" label="Not cited" narrow />
+                <Absence state="none" label="Not cited" />
               )}
             </TableCell>
             <TableCell>

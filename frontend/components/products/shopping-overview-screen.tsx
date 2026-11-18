@@ -89,7 +89,7 @@ function Measured({
   value,
   format,
 }: Readonly<{ value: number | null; format: (value: number) => string }>) {
-  return <Value value={value === null ? null : format(value)} absent="unavailable" narrow />;
+  return <Value value={value === null ? null : format(value)} absent="unavailable" />;
 }
 
 function MetricCells({ row }: Readonly<{ row: CommerceOverviewProduct | CommerceOverviewBrand }>) {

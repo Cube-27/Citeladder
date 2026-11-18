@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 
+import { Absence } from '@/components/ui/absence';
 import { Pressable } from '@/components/ui/pressable';
 import { SkeletonBlock } from '@/components/ui/skeleton-block';
 import { StateDot } from '@/components/ui/state-dot';
@@ -64,11 +65,7 @@ export function CountStripCell({
       >
         <StateDot tone="due" />
         {value ??
-          (failed ? (
-            <span className={textRole('body', 'text-ink-2')}>Unavailable</span>
-          ) : (
-            <SkeletonBlock className="h-4 w-24" />
-          ))}
+          (failed ? <Absence state="unavailable" /> : <SkeletonBlock className="h-4 w-24" />)}
       </span>
     </div>
   );

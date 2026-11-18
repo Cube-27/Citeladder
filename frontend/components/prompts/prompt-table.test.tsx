@@ -85,7 +85,7 @@ describe('PromptTable pagination', () => {
     // One cell spans the figures and says it once; the reason is in the head.
     const shelfCells = within(shelfRow!).getAllByRole('cell');
     expect(shelfCells[2]!.getAttribute('colspan')).toBe('7');
-    expect(shelfCells[2]!.textContent).toBe('Measured with Shopping');
+    expect(shelfCells[2]!.textContent).toBe('—Measured with Shopping');
     expect(shelfRow!.querySelectorAll('[data-absence="not_applicable"]')).toHaveLength(1);
     expect(shelfCells).toHaveLength(within(brandRow!).getAllByRole('cell').length - 6);
     expect(within(shelfRow!).queryByText('Not measured')).toBeNull();
@@ -116,7 +116,7 @@ describe('PromptTable pagination', () => {
     expect(cells(filed)).toEqual(['Prompt number 1', 'Espresso at home']);
     // Kept after a downgrade, but audits skip it until a slot frees. Filed
     // under no topic is a finding; a topic the list doesn't name is not.
-    expect(cells(overLimit)).toEqual(['Prompt number 2Beyond the plan limit', 'No topic']);
+    expect(cells(overLimit)).toEqual(['Prompt number 2Beyond the plan limit', '—No topic']);
     expect(
       within(overLimit!).getAllByRole('cell')[1]!.querySelector('[data-absence]'),
     ).toHaveAttribute('data-absence', 'none');
@@ -243,9 +243,9 @@ describe('PromptTable pagination', () => {
     // a zero sentiment. A prompt whose answers never named you has no position:
     // not named, not unmeasured.
     expect(unnamedCells.slice(7, 10).map((cell) => cell.textContent)).toEqual([
-      'Not named',
+      '—Not named',
       '0.0%',
-      'Too few',
+      '—Too few',
     ]);
     // An average position keeps its decimal; it is not a rank.
     expect(cells[7]!.textContent).toBe('2.0');
@@ -253,7 +253,7 @@ describe('PromptTable pagination', () => {
     expect(cells[4]).toHaveTextContent('AcmeAGlobexGInitechI+1 more');
     expect(cells[5]!.textContent).toBe('25.0%');
     // Measured, and no brand named: zero, not the "not measured" mark.
-    expect(unnamedCells[4]!.textContent).toBe('None');
+    expect(unnamedCells[4]!.textContent).toBe('—None');
     // No change is never a zero: a first measurement has nothing to compare, and
     // a pair measured differently is not compared.
     expect(cells[3]!.querySelector('[data-absence]')).toHaveAttribute(

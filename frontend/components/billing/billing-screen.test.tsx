@@ -443,8 +443,8 @@ describe('BillingScreen', () => {
     expect(rows.map((row) => row.textContent?.replace(/Resets .+\./u, ''))).toEqual([
       'QuotaUsedAllowanceRemaining',
       'Prompts050,20050,200',
-      'Projects0Unlimited–Not applicable',
-      'AI credits0Not included–Not applicable',
+      'Projects0Unlimited—Not applicable',
+      'AI credits0Not included—Not applicable',
     ]);
     // The reset date stays with its quota.
     expect(rows[1]?.textContent).toMatch(/Resets .+\./u);

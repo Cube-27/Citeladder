@@ -1,6 +1,6 @@
 import { words } from '@/lib/ai-traffic/vocabulary';
 import type { CredentialMode } from '@/lib/api/billing';
-import { formatDisplayDate, formatWindowDate, pluralCount } from '@/lib/format';
+import { availabilityLabel, formatDisplayDate, formatWindowDate, pluralCount } from '@/lib/format';
 
 const numberFormats = new Map<number, Intl.NumberFormat>();
 
@@ -34,7 +34,7 @@ type RunCost = {
 export function runEstimate(run: RunCost): string {
   if (run.credential_mode === 'funded')
     return run.estimated_credits === null
-      ? 'Unavailable'
+      ? availabilityLabel('unavailable')
       : pluralCount(run.estimated_credits, 'AI credit');
   return '$' + estimateUsd(run.estimated_cost_usd ?? '0');
 }

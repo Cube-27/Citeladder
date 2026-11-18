@@ -1,5 +1,6 @@
 import type { ExecutionPerception } from '@citeladder/contracts/visibility-perception';
 
+import { Absence } from '@/components/ui/absence';
 import { StatusMark } from '@/components/ui/status-mark';
 import { Tag } from '@/components/ui/tag';
 import { Inline, Stack } from '@/components/ui/layout';
@@ -24,11 +25,13 @@ export function perceptionHighlights(perception: readonly ExecutionPerception[])
   );
 }
 
-const STATE_WORDS: Record<Exclude<ExecutionPerception['state'], 'classified'>, string> = {
+const STATE_WORDS: Record<
+  Exclude<ExecutionPerception['state'], 'classified' | 'unavailable'>,
+  string
+> = {
   not_assessable: 'Not assessable',
   low_confidence: 'Low confidence',
   pending: 'Classifying…',
-  unavailable: 'Unavailable',
 };
 
 function PerceptionChip({ entity }: Readonly<{ entity: ExecutionPerception }>) {
@@ -39,6 +42,7 @@ function PerceptionChip({ entity }: Readonly<{ entity: ExecutionPerception }>) {
         {SENTIMENT_LABELS[label]}
       </StatusMark>
     );
+  if (entity.state === 'unavailable') return <Absence state="unavailable" />;
   return (
     <Tag>
       {entity.state === 'classified' ? STATE_WORDS.not_assessable : STATE_WORDS[entity.state]}

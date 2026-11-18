@@ -5,8 +5,10 @@
  * as `not_connected` or `cdn_edge` reaches a reader only through here, and an
  * unmapped token falls back to spaced words rather than raw snake case.
  */
+import { availabilityLabel } from '@/lib/format';
+
 const CONNECTION = {
-  not_connected: 'Not connected',
+  not_connected: availabilityLabel('not_connected'),
   awaiting_data: 'Awaiting data',
   connected: 'Connected',
 } as const;
@@ -74,9 +76,9 @@ const LEG_STATE = {
   zero: 'Measured zero',
   flagged: 'Flagged by a data-quality check',
   non_comparable: 'Not comparable',
-  unavailable: 'Unavailable',
+  unavailable: availabilityLabel('unavailable'),
   unknown: 'Coverage unknown',
-  not_connected: 'Not connected',
+  not_connected: availabilityLabel('not_connected'),
 } as const;
 
 /** Reasons from page legs, verification, coverage and GA4 quality checks. */

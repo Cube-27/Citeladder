@@ -182,8 +182,8 @@ describe('ProductsTable', () => {
       '—Not measured',
       '—Not measured',
       '—Not measured',
-      'Not applicable',
-      'None',
+      '—Not applicable',
+      '—None',
     ]);
     // No answer in scope: visibility is unavailable; a missing catalog price is unknown.
     expect(cells('Acme Trail Climber')).toEqual([
@@ -192,8 +192,8 @@ describe('ProductsTable', () => {
       '—Not measured',
       '—Not measured',
       '—Not measured',
-      '–Unknown',
-      'None',
+      '—Unknown',
+      '—None',
     ]);
   });
 

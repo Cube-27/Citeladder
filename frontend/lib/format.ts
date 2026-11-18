@@ -19,10 +19,24 @@ import type { snapshotGranularitySchema } from '@citeladder/contracts/analytics'
 type BucketGranularity = z.infer<typeof snapshotGranularitySchema>;
 
 /**
- * The one list of absence kinds and their words (DAT-02), rendered by
- * `Absence`. A value is missing in exactly one of these ways.
+ * The one list of absence kinds and their words. A value is missing in exactly
+ * one of these ways; in a value position `Absence` prints `ABSENCE_MARK` and
+ * keeps the word as its tooltip and accessible name, so the kinds stay distinct.
  */
-const availabilityLabels = {
+export const ABSENCE_STATES = [
+  'not_measured',
+  'not_connected',
+  'not_set',
+  'not_run',
+  'none',
+  'not_applicable',
+  'unavailable',
+  'too_few',
+] as const;
+
+export type DataAvailabilityState = (typeof ABSENCE_STATES)[number];
+
+const availabilityLabels: Record<DataAvailabilityState, string> = {
   not_measured: 'Not measured',
   not_connected: 'Not connected',
   not_set: 'Not set',
@@ -30,14 +44,28 @@ const availabilityLabels = {
   none: 'None',
   not_applicable: 'Not applicable',
   unavailable: 'Unavailable',
-} as const satisfies Record<string, string>;
-
-export type DataAvailabilityState = keyof typeof availabilityLabels;
+  too_few: 'Too few',
+};
 
 /** The word for a kind of absence. */
 export function availabilityLabel(state: DataAvailabilityState): string {
   return availabilityLabels[state];
 }
+
+const absenceByWord = new Map<unknown, DataAvailabilityState>(
+  ABSENCE_STATES.map((state) => [availabilityLabels[state], state]),
+);
+
+/** The kind of absence a formatter's word names, or null for a printed value. */
+export function absenceOf(text: unknown): DataAvailabilityState | null {
+  return absenceByWord.get(text) ?? null;
+}
+
+/**
+ * The muted em dash every absent value prints (owner 2026-11-18). Never
+ * an empty string: a blank and a measured zero are opposite findings.
+ */
+export const ABSENCE_MARK = '—';
 
 /**
  * A persisted fraction (0.125) as a percentage ("12.5%"), always one decimal
@@ -73,16 +101,6 @@ export function formatAmount(amount: number, currency: string | null): string {
 export function formatMean(value: number): string {
   return value.toFixed(1);
 }
-
-/**
- * The en dash a numeric cell too narrow for an absence's word prints instead
- * (`Absence narrow`); the word stays in a tooltip and the accessible name.
- * Never an empty string: a blank and a measured zero are opposite findings.
- */
-export const MISSING_MARK = '–';
-
-/** The muted em dash Not measured prints instead of its word, anywhere (owner 2026-11-18). */
-export const NOT_MEASURED_MARK = '—';
 
 export const GRANULARITY_OPTIONS: readonly { value: BucketGranularity; label: string }[] = [
   { value: 'day', label: 'Day' },

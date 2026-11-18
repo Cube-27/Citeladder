@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/step-chart-parts';
 import { SHEET_FACE } from '@/components/ui/slip';
 import { textRole } from '@/components/ui/typography';
-import { availabilityLabel, NOT_MEASURED_MARK } from '@/lib/format';
+import { ABSENCE_MARK, absenceOf } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 /** The plot heights a chart may take: 160, 240 and 320. */
@@ -86,10 +86,10 @@ export type KeyEntry = Readonly<{
   value?: string;
 }>;
 
-/** A key's latest value; not measured is the muted mark (the summary and table say it in words). */
+/** A key's latest value; an absence is the muted mark (the summary and table say it in words). */
 function KeyValue({ value }: Readonly<{ value: string }>) {
-  if (value === availabilityLabel('not_measured'))
-    return <span className="type-caption text-ink-2 shrink-0">{NOT_MEASURED_MARK}</span>;
+  if (absenceOf(value))
+    return <span className="type-caption text-ink-2 shrink-0">{ABSENCE_MARK}</span>;
   return <span className="type-caption text-ink shrink-0 tabular-nums">{value}</span>;
 }
 

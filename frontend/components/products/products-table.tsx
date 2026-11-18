@@ -62,13 +62,8 @@ const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
  * measure is "not measured", a price the catalog lacks is "unknown", and a
  * competitor's catalog price does not apply; none of them is ever a zero.
  */
-function MetricValue({ cell, narrow = false }: Readonly<{ cell: ProductCell; narrow?: boolean }>) {
-  const value =
-    cell.kind === 'value' ? (
-      <Value value={cell.text} />
-    ) : (
-      <MissingValue cell={cell} narrow={narrow} />
-    );
+function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
+  const value = cell.kind === 'value' ? <Value value={cell.text} /> : <MissingValue cell={cell} />;
   if (!cell.note) return value;
   return (
     <span title={cell.note}>
@@ -81,8 +76,7 @@ function MetricValue({ cell, narrow = false }: Readonly<{ cell: ProductCell; nar
 /** A metric's absence, or "None": never a zero. */
 export function MissingValue({
   cell,
-  narrow,
-}: Readonly<{ cell: Extract<ProductCell, { kind: 'missing' }>; narrow: boolean }>) {
+}: Readonly<{ cell: Extract<ProductCell, { kind: 'missing' }> }>) {
   switch (cell.state) {
     case 'none':
       return <Absence state="none" />;
@@ -91,9 +85,9 @@ export function MissingValue({
     case 'not_applicable':
       return <Absence state="not_applicable" />;
     case 'unknown':
-      return <Absence state="unavailable" label="Unknown" narrow={narrow} />;
+      return <Absence state="unavailable" label="Unknown" />;
     case 'unavailable':
-      return <Absence state="not_measured" narrow={narrow} />;
+      return <Absence state="not_measured" />;
     default: {
       const exhaustive: never = cell.state;
       return exhaustive;
@@ -249,7 +243,7 @@ export function ProductsTable({
             const cell = productCell(row, column.key);
             return (
               <TableCell key={column.key}>
-                <MetricValue cell={cell} narrow={column.key !== 'merchants'} />
+                <MetricValue cell={cell} />
               </TableCell>
             );
           })}

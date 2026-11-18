@@ -132,8 +132,8 @@ export function noTopicsMessage(runs: number): string {
 }
 
 export const READING_LABELS = {
-  not_run: 'Not run',
+  not_run: availabilityLabel('not_run'),
   not_recorded: 'Topic not recorded for this run',
-  too_few: 'Too few',
+  too_few: availabilityLabel('too_few'),
   not_measured: availabilityLabel('not_measured'),
 } as const;

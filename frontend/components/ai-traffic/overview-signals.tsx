@@ -181,7 +181,7 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
       key: 'pages',
       label: 'Path-level pages',
       value: crawl.pages === null ? null : formatCount(crawl.pages),
-      missingLabel: 'Unavailable',
+      missingLabel: availabilityLabel('unavailable'),
       sub:
         crawl.active_bots === null
           ? 'Active bots unavailable'
@@ -191,7 +191,7 @@ function crawlFigures(crawl: CrawlSummary, available: boolean): FigureSegment[] 
       key: 'errors',
       label: 'Error share',
       value: crawl.error_share === null ? null : errorShare(crawl.error_share),
-      missingLabel: 'Unavailable',
+      missingLabel: availabilityLabel('unavailable'),
       sub: failedNote
         ? `Within the selected requests. ${failedNote}`
         : 'Within the selected requests.',

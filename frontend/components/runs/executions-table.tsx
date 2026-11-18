@@ -122,7 +122,7 @@ export function ExecutionsTable({
                     label={`View evidence for ${prompt}, ${engines.label(execution.logical_engine)}`}
                   />
                 ) : (
-                  <Absence state="unavailable" narrow />
+                  <Absence state="unavailable" />
                 )}
               </TableActionsCell>
             </TableRow>

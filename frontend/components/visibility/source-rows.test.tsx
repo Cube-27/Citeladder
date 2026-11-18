@@ -74,7 +74,7 @@ it('shows reads beside citations, and an engine without exposed reads as unavail
   expect([cell(read!, 'Cited in'), cell(read!, 'Retrieved')]).toEqual(['1', '3']);
   expect([cell(unexposed!, 'Cited in'), cell(unexposed!, 'Retrieved')]).toEqual([
     '2',
-    'Unavailable',
+    '—Unavailable',
   ]);
 });
 

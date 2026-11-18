@@ -4,6 +4,7 @@ import { SegmentedControl, type SegmentedOption } from '@/components/ui/tabs';
 import type { DemandDetectorState } from '@citeladder/contracts';
 import type { DemandSnapshot } from '@/lib/api/demand';
 import { DEMAND_DETECTORS } from '@/lib/config/demand';
+import { availabilityLabel } from '@/lib/format';
 import { FILTER_TABS, type FilterTab } from '@/lib/demand/signals';
 
 /** A detector's state in words, or null when it ran in full. */
@@ -16,7 +17,7 @@ function detectorStatus(state: DemandDetectorState): string | null {
     case 'insufficient_history':
       return 'Needs more history';
     case 'unavailable':
-      return 'Unavailable';
+      return availabilityLabel('unavailable');
     default: {
       const _exhaustive: never = state;
       return _exhaustive;

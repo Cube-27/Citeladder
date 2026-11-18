@@ -511,7 +511,7 @@ describe('Business map', () => {
         .getAllByRole('cell')
         .slice(1)
         .map((cell) => cell.textContent),
-    ).toEqual(['Not set', 'Suggested: Small garden', 'Not set']);
+    ).toEqual(['—Not set', 'Suggested: Small garden', '—Not set']);
     expect(within(row).getByRole('link', { name: offering })).toHaveAttribute(
       'href',
       expect.stringContaining('/prompts/build?offering=Golf+practice+net'),
@@ -534,13 +534,13 @@ describe('Business map', () => {
       tab: 'map',
     });
     expect(await screen.findByLabelText('Business details')).toHaveTextContent(
-      'Business modelUnknown',
+      'Business model—Unknown',
     );
     view.unmount();
 
     renderContext({ tab: 'map' });
     expect(await screen.findByLabelText('Business details')).toHaveTextContent(
-      'Business modelNot set',
+      'Business model—Not set',
     );
     // Nothing suggested: the group is a plain card, not a draft.
     expect(screen.getByRole('region', { name: 'Business map' })).not.toHaveAttribute('data-draft');
