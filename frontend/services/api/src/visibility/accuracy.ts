@@ -18,6 +18,7 @@ import {
 import { marketLabel } from '@citeladder/contracts/markets';
 import { z } from 'zod';
 
+import { frozenComparisonKey } from '../analysis/comparison.ts';
 import { readFrozenConfiguration } from '../audits/frozen-configuration.ts';
 import { policy } from '../config.ts';
 import type { Database } from '../db/database.ts';
@@ -38,6 +39,7 @@ import {
 } from '../perception/admission.ts';
 import {
   accuracySummary,
+  accuracyTrend,
   claimOrder,
   claimStatus,
   claimView,
@@ -57,6 +59,7 @@ import { listMarkets } from '../projects/markets.ts';
 import { compareText } from '../text-order.ts';
 import { scopedSelection } from './dashboard.ts';
 import { perceptionRows } from './perception.ts';
+import { periodTrendSelection } from './runs.ts';
 import { citationsByAnalysis, evidenceScope, observedAt, type RunSelection } from './selection.ts';
 
 const settings = policy.perception.fact_check;
@@ -309,7 +312,10 @@ async function selectionAnswers(
       observedAt: wireUtc(row.observed_at),
       logicalEngine: row.logical_engine,
       prompt: row.prompt,
-      identity: identityOf(row.frozen),
+      identity: JSON.stringify([
+        frozenComparisonKey(row.configuration, scoped.logicalEngine) ?? row.audit_id,
+        identityOf(row.frozen),
+      ]),
       extraction: found?.extraction ?? { kind: 'pending' },
       claims: found?.claims ?? [],
       citations: citations.get(row.id) ?? [],
@@ -350,10 +356,17 @@ export async function getAccuracy(
   selection: RunSelection,
 ): Promise<AccuracyResponse> {
   if (!(await factCheckingEnabled(db, selection.workspaceId))) return notEnabled();
-  const { answers, factChecked, auditIds } = await selectionAnswers(db, selection, {
-    citations: true,
-  });
-  return { ...accuracySummary(answers, factChecked, settings), source_audit_ids: auditIds };
+  const scoped = await scopedSelection(db, selection);
+  const [{ answers, factChecked, auditIds }, period] = await Promise.all([
+    selectionAnswers(db, scoped, { citations: true }),
+    periodTrendSelection(db, scoped),
+  ]);
+  const summary = accuracySummary(answers, factChecked, settings);
+  // The headline reads the pool; a pooled period's trend reads every run in it.
+  const trend = period
+    ? accuracyTrend((await selectionAnswers(db, period, { citations: false })).answers)
+    : summary.trend;
+  return { ...summary, trend, source_audit_ids: auditIds };
 }
 
 /** The decoded cursor position; a malformed one is refused, never read as the start. */

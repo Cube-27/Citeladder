@@ -247,13 +247,18 @@ function resolvedSelection(
         audit_id?: string | null;
         selection_mode?: string;
         source_audit_ids?: string[];
+        from_at?: string | null;
+        to_at?: string | null;
       }
     | null
     | undefined,
 ) {
+  const range = data?.selection_mode === 'range';
   return {
     activeRunId: data?.audit_id ?? null,
-    selectedRunIds: data?.selection_mode === 'range' ? data.source_audit_ids : undefined,
+    selectedRunIds: range ? data.source_audit_ids : undefined,
+    /** The pooled period's window: trends read every run in it, not the pool alone. */
+    selectedPeriod: range ? { from: data.from_at ?? undefined, to: data.to_at ?? undefined } : null,
   };
 }
 
@@ -288,7 +293,7 @@ export function useVisibilityQueries(
     ...projectionOptions,
     placeholderData: (data, query) => retainPreviousDataForScope(projectId, data, query),
   });
-  const { activeRunId, selectedRunIds } = resolvedSelection(visibilityQuery.data);
+  const { activeRunId, selectedRunIds, selectedPeriod } = resolvedSelection(visibilityQuery.data);
   const trendParams = {
     market: filters.market ?? undefined,
     engine,
@@ -361,6 +366,7 @@ export function useVisibilityQueries(
     projectId,
     workspaceId,
     selectedRunIds,
+    selectedPeriod,
     visibilityQuery,
     trendQuery,
     topicsQuery,

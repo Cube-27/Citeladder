@@ -60,6 +60,14 @@ export function topicSelectionParams(
   return { ...selectionParams(filters, queries), topic: queries.topic };
 }
 
+/** The selection plus a pooled period's window, for the reads whose trend covers the period. */
+export function periodSelectionParams(
+  filters: Pick<SourceFilters, 'engine' | 'cohort'>,
+  queries: SourceQueries,
+) {
+  return { ...selectionParams(filters, queries), ...queries.selectedPeriod };
+}
+
 /** Whether a selection reads anything: a range with no runs reads nothing. */
 export function selectionEnabled(queries: SourceQueries): boolean {
   return Boolean(queries.activeRunId && queries.selectedRunIds?.length !== 0);

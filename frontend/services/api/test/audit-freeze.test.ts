@@ -71,6 +71,7 @@ describe('audit admission freeze', () => {
       measurement_policy: { retrieval_enabled: true, repetitions: 2 },
       anthropic_max_uses: providers.anthropicMaxUses,
       openai_max_tool_calls: 1,
+      prompt_selection: 'set',
     });
     expect(plan.systemInstruction).not.toContain('Acme');
     await db
@@ -135,7 +136,7 @@ describe('audit admission freeze', () => {
       entities: { target: { mode: 'context_required' } },
     });
   });
-  it('rejects foreign and archived explicit selections as a whole', async () => {
+  it('records an explicit selection and rejects foreign and archived ones as a whole', async () => {
     const t = await seed();
     const foreign = await seed();
     const prepare = (ids: string[]) =>
@@ -148,6 +149,7 @@ describe('audit admission freeze', () => {
         'manual',
         { search: searchSettings({}) },
       );
+    expect((await prepare([t.promptId])).configuration.prompt_selection).toBe('selected');
     await expect(prepare([t.promptId, foreign.promptId])).rejects.toMatchObject({ status: 400 });
     await db
       .updateTable('prompts')

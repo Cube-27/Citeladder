@@ -287,21 +287,15 @@ describe('GET /visibility', () => {
 
   it('pools one configuration over a period and compares the period before it', async () => {
     const pooled = await fixtures.tenant();
-    const before = await measuredRun(
-      pooled,
-      '2026-03-28T00:00:00Z',
-      aggregate({ completed: 4, brand: 1 }),
-    );
-    const first = await measuredRun(
-      pooled,
-      '2026-04-02T00:00:00Z',
-      aggregate({ completed: 4, brand: 2 }),
-    );
-    const second = await measuredRun(
-      pooled,
-      '2026-04-05T00:00:00Z',
-      aggregate({ completed: 4, brand: 4 }),
-    );
+    const wholeSet = (at: string, brand: number) =>
+      measuredRun(pooled, at, aggregate({ completed: 4, brand }));
+    const before = await wholeSet('2026-03-28T00:00:00Z', 1);
+    const first = await wholeSet('2026-04-02T00:00:00Z', 2);
+    const second = await wholeSet('2026-04-05T00:00:00Z', 4);
+    // The newest run measured selected prompts: the whole set stays the default pool.
+    await measuredRun(pooled, '2026-04-06T00:00:00Z', aggregate({ completed: 1, brand: 0 }), {
+      configuration: frozen({ panel_hash: 'panel-subset', prompt_selection: 'selected' }),
+    });
 
     const { status, body } = await get(pooled, route(pooled), {
       selection_mode: 'range',

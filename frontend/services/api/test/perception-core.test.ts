@@ -299,6 +299,7 @@ describe('perception metrics', () => {
       prompt: 'best tools?',
       topic: 'tools',
       versions: { extractor: 'x1', template: 't1', metrics: 'm1', model: 'model-a' },
+      comparisonKey: 'config-1',
       mentions: [classified('positive'), { ...classified('negative'), isBrand: false }],
       brandRecommendation: 'mentioned',
       citations: [],
@@ -322,7 +323,9 @@ describe('perception metrics', () => {
       template: string,
       label: 'positive' | 'negative',
       model = 'model-a',
+      comparisonKey: string | null = 'config-1',
     ): PerceptionAnswer => ({
+      comparisonKey,
       auditId,
       executionId: `${auditId}-e`,
       observedAt: at,
@@ -356,17 +359,24 @@ describe('perception metrics', () => {
       ['run-b', -100, true],
       ['run-c', -100, false],
     ]);
-    // Same versions under another frozen model is not like for like either.
+    // Same versions under another frozen model, measurement configuration or
+    // none that can be compared is not like for like either.
     const remodelled = perceptionSummary(
       [
         answer('run-a', '2026-10-01T00:00:00Z', 't1', 'positive'),
         answer('run-b', '2026-10-02T00:00:00Z', 't1', 'negative', 'model-b'),
+        answer('run-c', '2026-10-03T00:00:00Z', 't1', 'negative', 'model-b', 'config-2'),
+        answer('run-d', '2026-10-04T00:00:00Z', 't1', 'negative', 'model-b', null),
+        answer('run-e', '2026-10-05T00:00:00Z', 't1', 'negative', 'model-b', null),
       ],
       { max_quotes_per_theme: 3, max_negative_quotes: 10, max_drivers: 10 },
     );
     expect(remodelled.trend.map((point) => [point.audit_id, point.comparable])).toEqual([
       ['run-a', true],
       ['run-b', false],
+      ['run-c', false],
+      ['run-d', false],
+      ['run-e', false],
     ]);
     expect(summary.themes).toEqual([
       expect.objectContaining({ theme: 'support', positive: 1, negative: 2 }),

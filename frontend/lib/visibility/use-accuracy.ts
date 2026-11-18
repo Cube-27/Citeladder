@@ -7,6 +7,7 @@ import { PERCEPTION_PENDING_POLL_MS } from '@/lib/config/operational';
 import { saveBlob } from '@/lib/download';
 import type { SourceFilters } from '@/components/visibility/source-rows';
 import {
+  periodSelectionParams,
   selectionEnabled,
   selectionParams,
   type SourceQueries,
@@ -24,7 +25,7 @@ type AccuracyInput = Readonly<{
  * claims are still being checked, on the perception cadence.
  */
 export function useAccuracy({ filters, queries, pilot }: AccuracyInput) {
-  const params = selectionParams(filters, queries);
+  const params = periodSelectionParams(filters, queries);
   const enabled = pilot && selectionEnabled(queries);
   const query = useQuery({
     ...visibilityQueries.accuracy(

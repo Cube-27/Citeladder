@@ -59,7 +59,7 @@ export type FactAnswer = {
   observedAt: string;
   logicalEngine: string;
   prompt: string;
-  /** Templates, metrics version and fact set; a change breaks trend comparability. */
+  /** Configuration, templates, metrics version and fact set; a change breaks comparability. */
   identity: string;
   extraction: Extraction;
   claims: ClaimRow[];
@@ -318,8 +318,8 @@ function isContradicted(claim: { status: ClaimStatus }) {
   return claim.status.kind === 'verdict' && claim.status.verdict === 'contradicted';
 }
 
-/** One point per run; a change of templates, metrics or fact set breaks comparability. */
-function trend(answers: readonly FactAnswer[]) {
+/** One point per run; a change of identity from the previous run breaks comparability. */
+export function accuracyTrend(answers: readonly FactAnswer[]) {
   return runPoints(answers, (first) => first.identity).map(
     ({ auditId, rows, completedAt, comparable }) => ({
       audit_id: auditId,
@@ -355,6 +355,6 @@ export function accuracySummary(
       (answer) => answer.claims.some(isContradicted),
       limits.max_cited_alongside,
     ),
-    trend: trend(answers),
+    trend: accuracyTrend(answers),
   };
 }

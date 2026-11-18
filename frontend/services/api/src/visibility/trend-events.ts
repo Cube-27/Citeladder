@@ -163,8 +163,11 @@ export async function withTrendEvents(
   const plotted = new Set(points.flatMap((point) => point.source_audit_ids ?? []));
   const kept = sources.filter((source) => plotted.has(source.auditId));
   const pairs = kept.slice(1).map((next, index): Pair => [kept[index]!, next]);
+  // A run of selected prompts neither changes the panel nor serves as a baseline for a change.
+  const wholeSets = kept.filter((source) => source.wholeSet);
+  const panelPairs = wholeSets.slice(1).map((next, index): Pair => [wholeSets[index]!, next]);
   const [panels, actions] = await Promise.all([
-    panelChanges(db, scope, pairs),
+    panelChanges(db, scope, panelPairs),
     actionsLive(db, scope, kept),
   ]);
   const byRun = new Map<string, VisibilityTrendEvent[]>();

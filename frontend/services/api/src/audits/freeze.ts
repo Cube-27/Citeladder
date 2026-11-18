@@ -149,6 +149,9 @@ async function loadPrompts(
     throw invalid('Selected prompts exceed the configured length limit');
   return prompts;
 }
+/** A selection's panel differs from the set's without the set changing. */
+const promptSelection = (input: Pick<AuditInput, 'prompt_ids'>): 'selected' | 'set' =>
+  input.prompt_ids.length ? 'selected' : 'set';
 function assertPromptCount(
   funded: boolean,
   trigger: string,
@@ -534,6 +537,7 @@ export async function prepareAudit(
     fact_check: factCheck,
     panel_id: panelHash.slice(0, 16),
     panel_hash: panelHash,
+    prompt_selection: promptSelection(input),
     prompt_hashes: promptRows.map((row) => createHash('sha256').update(row.text).digest('hex')),
     engine_routes: Object.fromEntries(
       routes.map((route) => [

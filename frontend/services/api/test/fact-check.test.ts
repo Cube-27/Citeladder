@@ -15,6 +15,7 @@ import { answerPerception } from '../src/perception/executor.ts';
 import { factVerification } from '../src/perception/fact-verification.ts';
 import { ANSWER, factCheckHarness, fakeGateway, perceptionOutput } from './fact-check-support.ts';
 import { sessionToken } from './support.ts';
+import { frozen } from './visibility-read-support.ts';
 import type { Tenant } from './visibility-fixtures.ts';
 
 const {
@@ -522,5 +523,45 @@ describe('claim extraction and verification', () => {
       .where('workspace_id', '=', tenant.workspaceId)
       .execute();
     expect(written).toEqual([]);
+  });
+});
+
+describe('accuracy reads', () => {
+  it("trends a pooled period's claims over every run in its window, breaking where runs aren't comparable", async () => {
+    await enroll(tenant);
+    await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
+    const configuration = await pilotConfiguration(tenant);
+    const run = async (at: string, panel: string) => {
+      const auditId = await fixtures.audit(tenant, {
+        completedAt: new Date(at),
+        configuration: { ...frozen({ panel_hash: panel }), ...configuration },
+      });
+      await fixtures.metricSnapshot(tenant, auditId, { metrics: { total_completed: 1 } });
+      await analysed(tenant, auditId);
+      return auditId;
+    };
+    await run('2026-03-20T00:00:00Z', 'panel-1');
+    const pooled = await run('2026-04-02T00:00:00Z', 'panel-1');
+    const other = await run('2026-04-05T00:00:00Z', 'panel-2');
+
+    const window = 'from=2026-04-01T00:00:00Z&to=2026-04-08T00:00:00Z';
+    const { status, body } = await call(
+      tenant,
+      'GET',
+      `/visibility/accuracy?audit_ids=${pooled}&${window}`,
+    );
+
+    expect(status).toBe(200);
+    // The headline stays on the pool; the trend covers the period.
+    expect(body.source_audit_ids).toEqual([pooled]);
+    expect(
+      (body.trend as { audit_id: string; comparable: boolean }[]).map((point) => [
+        point.audit_id,
+        point.comparable,
+      ]),
+    ).toEqual([
+      [pooled, true],
+      [other, false],
+    ]);
   });
 });

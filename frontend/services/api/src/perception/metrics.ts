@@ -46,6 +46,8 @@ export type PerceptionAnswer = {
   topic: string;
   /** The audit's frozen versions and perception model: together its comparison key. */
   versions: { extractor: string; template: string; metrics: string; model: string };
+  /** The run's frozen measurement comparison key; null when it can't be compared. */
+  comparisonKey: string | null;
   /** One per named tracked business. */
   mentions: Mention[];
   /** The brand's deterministic first-mention state, null when not assessed. */
@@ -355,10 +357,19 @@ export function runPoints<A extends { auditId: string; observedAt: string }>(
     });
 }
 
-/** One point per run; a version or model change from the previous point breaks comparability. */
-function trend(answers: readonly PerceptionAnswer[]) {
-  return runPoints(answers, ({ versions }) =>
-    JSON.stringify([versions.extractor, versions.template, versions.metrics, versions.model]),
+/**
+ * One point per run; a change of measurement configuration, versions or
+ * model from the previous point breaks comparability.
+ */
+export function perceptionTrend(answers: readonly PerceptionAnswer[]) {
+  return runPoints(answers, ({ auditId, versions, comparisonKey }) =>
+    JSON.stringify([
+      comparisonKey ?? auditId,
+      versions.extractor,
+      versions.template,
+      versions.metrics,
+      versions.model,
+    ]),
   ).map(({ auditId, first, rows, completedAt, comparable }) => {
     const versions = first.versions;
     const brand = rows.flatMap((row) => row.mentions.filter((mention) => mention.isBrand));
@@ -440,6 +451,6 @@ export function perceptionSummary(
       .slice(0, limits.max_negative_quotes),
     drivers: drivers(answers, limits.max_drivers),
     recommended: recommended(answers),
-    trend: trend(answers),
+    trend: perceptionTrend(answers),
   };
 }
