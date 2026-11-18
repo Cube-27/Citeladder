@@ -9,8 +9,11 @@ Written 2026-11-17 from main at `5932440ba`. Paths are under `frontend/` unless 
 with `docs/`. `M:` means `services/api/migrations/0001_baseline.sql`. Line numbers will
 drift, so re-locate them before editing.
 
-**Before implementation:** this plan is for a later session. Do not start a workstream
-until the owner has approved an HTML mockup of Phase 1 and an HTML mockup of Phase 2.
+**Mockups (approved 2026-11-18, AV-2).** Build each screen as the owner's local mockups
+draw it: `~/citeladder-design-climb/reports/ai-visibility-gaps.html` for the Phase 1 and
+Phase 2 screens, `~/citeladder-design-climb/reports/navigation-proposal.html` for the
+navigation, the Prompt builder page and the Sources and Competitors pages. Where they
+differ from this plan, the plan wins.
 
 ## Owner decisions (2026-11-17)
 
@@ -24,8 +27,8 @@ plan and for your questions record all recommended answers as my decision".
 - **AV-3, fact-check views reopen.** BL10 removed the fact-checking follow-ups. W2 brings
   back only the views of persisted fact-check data. W15 stays behind the pilot review
   (backlog F8).
-- **AV-4, strongest engine.** Ranked by mention rate, with share of voice breaking ties.
-  There is no blended score.
+- **AV-4, no strongest or weakest engine.** On 2026-11-18 the owner dropped the feature:
+  "i dont want strongest and weakest engine feature so remove that".
 - **AV-5, topic grouping.** Answers group by the topic their prompt had when the run
   froze it, so refiling a prompt never rewrites history. The UI shows topic renames.
 - **AV-6, competitor themes.** Theme counts appear for competitors. Quotes stay
@@ -57,16 +60,41 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
 - **AV-15, only what we have.** "dont try to copy what we dont have": a screen shows only
   data CiteLadder stores or a workstream here adds. Reference features without that data
   (tags, social channels, per-quote source lists) are not built.
+- **AV-16, navigation.** The owner approved the navigation proposal ("yes looks good
+  now") and asked for "a lable as "home" for overview and actions". The Dashboard
+  sidebar is Home (Overview, Actions), Brand (Insights, Perception, Competitors),
+  Tracking (Prompts, Sources, Runs), Website (Site health, Issues, AI traffic), Search
+  (Performance, Keywords) and Commerce (Shopping, Products), with Integrations in the
+  foot. Sources is today's AI Visibility page without Trends, Perception and Accuracy;
+  Search demand becomes the Keywords page's Demand tab.
+- **AV-17, Prompt builder page.** "we should also have a separate prompt builder page
+  instead of sidebar": the builder leaves its side drawer for a page of its own, opened
+  from Build prompts rather than listed in the sidebar.
+- **AV-18, ship the frame first.** "ship the new layout options (include all options its
+  ok to keep them blank for now as next agent will build them)": the sidebar and empty
+  Insights, Perception and Competitors pages ship before their content.
+- **AV-19, docs and changelog.** "phase 3 of the plan should include updating docs
+  subdomain and changelog".
 
 ## Where it lives
 
-- **Brand → Insights:** W3, W4, W6, W10 and W14, with W5 as a filter and matrix axis. A
-  brand row opens the W8 competitor page.
-- **Brand → Perception:** the Brand tab holds today's perception views plus W1 and the W8
-  theme map; Fact-checking holds today's accuracy views plus W2 and W15; Market is W12;
-  Objections is W13.
-- **Prompts and the prompt page:** W3 columns, W9 and W7.
-- **AI Visibility:** W11 fanout terms; answer formats show in the existing evidence drawer.
+The sidebar, the renames and the empty Brand pages shipped with this plan's PR (AV-18).
+The `N` workstreams below fill them.
+
+- **Home:** Overview and Actions, unchanged.
+- **Brand → Insights:** today's Trends tab (N1) plus W3, W4, W6 and W10, with W5 as a
+  filter and matrix axis.
+- **Brand → Perception:** tabs Brand (today's Perception tab plus W1 and the W8 theme
+  map), Fact-checking (today's Accuracy tab plus W2 and W15), Market (W12) and
+  Objections (W13).
+- **Brand → Competitors:** the brand ranking table with W3 and W10 columns, the W14
+  suggestions, and a page per competitor (W8).
+- **Tracking → Prompts:** W3 columns, W9, the prompt page with W7, and Build prompts
+  opening the Prompt builder page (N6).
+- **Tracking → Sources:** tabs Domains, URLs, Read not cited, Query fanouts (W11 terms)
+  and Ads. Answer formats show in the existing evidence drawer.
+- **Search → Keywords:** tabs Demand (today's Search demand page), Keywords, Organic
+  competitors and Backlinks (N5).
 
 ## Gap summary
 
@@ -76,7 +104,7 @@ Recorded from the owner's answers in chat on 2026-11-18, while reviewing the fir
 | Average position, net sentiment per brand | Partial: `avg_position` is served but shown only as a tooltip; sentiment is on the Perception tab only | `services/api/src/visibility/metrics.ts`, `components/visibility/visibility-perception.tsx` |
 | Win rate (named first) | Missing; first offsets are persisted | `response_analyses.brand_first_offset` (M) |
 | Position and sentiment trend lines | Missing; the perception `trend` is served but not drawn | `lib/config/visibility.ts` |
-| Topic dimension, strongest and weakest engine, cross-dimension matrix, leader per segment | Missing | `components/visibility/engine-comparison.tsx` |
+| Topic dimension, cross-dimension matrix, leader per segment | Missing | `components/visibility/engine-comparison.tsx` |
 | Competitor focus | Partial: focuses the trend chart only | `components/visibility/visibility-trends.tsx` |
 | Trend event markers | Partial: prompt detail only | `components/prompts/prompt-detail-screen.tsx` |
 | Prompt table share of voice, sentiment, web-search share | Missing; the data is persisted | `packages/contracts/src/visibility-perception.ts`, `response_analyses.search_used` |
@@ -101,6 +129,37 @@ What applies to every workstream:
 
 ## Phase 1
 
+### Navigation: fill the new pages (first)
+
+Each moves existing views without changing what they read. Old tabs are removed in the
+same PR that moves them, with no redirects (owner preference: no back-compat).
+
+**N1 Insights (M).** Move the Trends tab's key figures, trend chart and brand ranking from
+`components/visibility/` onto `/insights`, with the headline drawn in the mockup.
+Engine comparison, surface rates, prompt insights and visibility by market move with it.
+
+**N2 Perception (M).** Move the Perception tab onto `/perception` as its Brand tab and the
+pilot's Accuracy tab as its Fact-checking tab. The Brand tab takes the mockup's headline,
+theme list and sentiment ring, all from data the perception read already serves.
+
+**N3 Competitors (S–M).** The brand ranking table and competitor suggestions on
+`/competitors`; a row opens `/competitors/:name` (W8). Context keeps owning the roster;
+"Edit competitors" links to it.
+
+**N4 Sources (S).** `/visibility` keeps Sources, Ads and Query fanouts once N1 and N2 have
+moved the rest; Sources' views become tabs: Domains, URLs, Read not cited.
+
+**N5 Keywords (S–M).** Search demand becomes the Keywords page's Demand tab, and the
+page's Competitors tab is renamed Organic competitors. `/demand` and its sidebar row go.
+
+**N6 Prompt builder page (M, AV-17).** The builder drawer becomes `/prompts/build`: the
+same four steps and the same generation pipeline, a step list on the left and Back and
+Next in a fixed footer. Prompts, Overview and the empty states open it.
+
+**N7 Copy (S).** In-page copy still names the old pages ("AI Visibility", "AI Traffic",
+"Keyword Research"): loading labels, empty states, agent vocabulary, prompt-source
+labels. Rename them to the sidebar's words.
+
 ### Display only, on data we already have
 
 **W1 Perception breakdowns and trend (S).**
@@ -121,10 +180,10 @@ What applies to every workstream:
 - Prompt table: share of voice, sentiment and web-search share. Web-search share counts
   only engines that report search use. Other engines read "not available".
 
-**W4 Strongest and weakest engine, and trend markers (S–M, AV-4).**
-- A callout naming the strongest and weakest engine.
+**W4 Trend markers (S).**
 - Trend markers for prompt-panel changes, engine or model identity changes, and Actions
   that went live.
+- No strongest or weakest engine callout (AV-4).
 
 **W5 Topic dimension (M, AV-5).**
 - An optional `topic` parameter on ranking, trend and source reads.
@@ -215,6 +274,19 @@ What applies to every workstream:
 - Code scores position as 100 minus 10 per rank step, floored at 0 and averaged over
   completed runs. A non-mention counts as 0.
 - Each objection shows its sources, and the Agent can draft rebuttal content.
+
+## Phase 3: docs site and changelog (AV-19)
+
+**D1 Docs site (M).** Update the public docs at `apps/docs/src/content/` to the new
+navigation and pages: page names and paths, the Brand pages, Sources, Keywords and the
+Prompt builder page. Retire pages that describe removed tabs rather than leaving
+corrections beside them.
+
+**D2 Changelog (S).** Add entries to `apps/docs/src/content/changelog.md` for the new
+navigation and for each shipped workstream, in the changelog's existing style.
+
+Each Phase 1 or Phase 2 PR that renames or moves a screen notes the docs page it
+affects, so D1 has a list to work from.
 
 ## Not planned
 

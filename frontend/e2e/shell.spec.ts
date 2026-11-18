@@ -46,12 +46,12 @@ test('authenticated shell exposes authorized navigation and search, and navigati
   // components/layout/sidebar-nav.test.tsx. What that render cannot show is
   // that the authed layout mounts the mode's nav landmark around the page.
   const nav = page.getByRole('navigation', { name: 'Dashboard' });
-  await expect(nav.getByRole('link', { name: 'Website', exact: true })).toBeVisible();
+  await expect(nav.getByRole('link', { name: 'Site health', exact: true })).toBeVisible();
 
   // Project switcher shows the active brand.
   await expect(page.getByText('Acme').first()).toBeVisible();
 
-  await expect(page.getByRole('heading', { level: 1, name: 'AI Visibility' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Sources' })).toBeVisible();
   await expect(page.getByRole('button', { name: /search or jump to/i })).toBeVisible();
 
   // Primary navigation loads the destination route.

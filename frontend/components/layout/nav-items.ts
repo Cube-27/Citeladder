@@ -27,13 +27,15 @@ function navItems(placement: Parameters<typeof navDestinations>[0]): readonly Na
 }
 
 const GROUP_ICONS = {
-  overview: ICONS.overview,
-  analyze: ICONS.site,
+  home: ICONS.overview,
+  brand: ICONS.insights,
+  tracking: ICONS.prompts,
+  website: ICONS.site,
+  search: ICONS.searchIntelligence,
   commerce: ICONS.products,
-  track: ICONS.visibility,
 } satisfies Record<DashboardGroup['group'], LucideIcon>;
 
-/** Dashboard mode: Overview and Actions ungrouped, then Analyze, Commerce and Track. */
+/** Dashboard mode: Home, Brand, Tracking, Website, Search and Commerce. */
 export const DASHBOARD_GROUPS: readonly NavGroup[] = DASHBOARD_SIDEBAR_GROUPS.map((entry) => ({
   ...entry,
   icon: GROUP_ICONS[entry.group],

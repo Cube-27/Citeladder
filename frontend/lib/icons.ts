@@ -3,6 +3,7 @@ import {
   AlertCircle,
   BookOpen,
   Bot,
+  ChartLine,
   Check,
   CreditCard,
   FileBarChart,
@@ -14,6 +15,7 @@ import {
   ListChecks,
   LoaderCircle,
   MapPin,
+  MessageSquareQuote,
   MessageSquareText,
   OctagonAlert,
   Package,
@@ -23,6 +25,7 @@ import {
   Settings,
   ShieldCheck,
   Sparkles,
+  Swords,
   Telescope,
   TrendingUp,
   TriangleAlert,
@@ -69,6 +72,9 @@ export const ICONS = {
   overview: LayoutDashboard,
   // Nav concepts.
   visibility: Gauge,
+  insights: ChartLine,
+  perception: MessageSquareQuote,
+  competitors: Swords,
   // The answer engines themselves (the surfaces a run asks).
   analytics: Bot,
   searchIntelligence: Telescope,

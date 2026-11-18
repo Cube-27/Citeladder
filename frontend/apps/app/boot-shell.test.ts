@@ -69,6 +69,6 @@ describe('the boot sidebar', () => {
       ]),
       ...FOOT_NAV_ITEMS.map((item) => item.label),
     ]);
-    expect(rows).toContain('Analyze');
+    expect(rows).toContain('Brand');
   });
 });

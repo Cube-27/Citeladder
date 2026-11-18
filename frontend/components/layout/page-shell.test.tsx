@@ -55,14 +55,14 @@ describe('RouteLoadingScreen', () => {
   it.each([
     {
       path: '/visibility',
-      title: 'AI Visibility',
+      title: 'Sources',
       tabs: ['Trends', 'Sources', 'Perception', 'Ads', 'Query fanouts'],
       filters: true,
       shapes: ['figures', 'chart'],
     },
     {
       path: '/site/crawls',
-      title: 'Website',
+      title: 'Site health',
       tabs: ['Overview', 'Pages', 'Architecture', 'AEO readiness', 'Internal links', 'Changes'],
       filters: false,
       shapes: ['figures', 'table'],
@@ -133,7 +133,7 @@ describe('PageFrame', () => {
       </MemoryRouter>,
     );
     const order = [
-      screen.getByRole('heading', { level: 1, name: 'AI Visibility' }),
+      screen.getByRole('heading', { level: 1, name: 'Sources' }),
       screen.getByRole('tablist', { name: 'Views' }).closest('[data-page-band]'),
       screen.getByRole('button', { name: 'Engine: All' }).closest('[data-page-band]'),
       screen.getByText('Table'),
