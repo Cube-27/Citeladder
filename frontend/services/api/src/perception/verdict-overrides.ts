@@ -60,10 +60,17 @@ export async function newestOverrides(
   );
 }
 
-/** The override as a claim's edit mark: null when it matches the model's verdict. */
-export function editedMark(model: ClaimVerdict, override: NewestOverride | undefined) {
-  if (!override || override.verdict === model) return null;
-  return { model_verdict: model, note: override.note, at: override.at.toISOString() };
+/**
+ * The override as a claim's edit mark: null when it matches the model's
+ * verdict. A low-confidence verdict reads as low confidence, so any person's
+ * verdict on it is an edit.
+ */
+export function editedMark(
+  model: { verdict: ClaimVerdict; low_confidence: boolean },
+  override: NewestOverride | undefined,
+) {
+  if (!override || (override.verdict === model.verdict && !model.low_confidence)) return null;
+  return { model_verdict: model.verdict, note: override.note, at: override.at.toISOString() };
 }
 
 /**
@@ -95,7 +102,7 @@ export function overrideVerdict(
           .onRef('audits.id', '=', 'fv.audit_id')
           .onRef('audits.workspace_id', '=', 'fv.workspace_id'),
       )
-      .select(['cv.id', 'cv.verdict', 'cv.model_omitted'])
+      .select(['cv.id', 'cv.verdict', 'cv.low_confidence', 'cv.model_omitted'])
       .where('cv.workspace_id', '=', scope.workspaceId)
       .where('audits.project_id', '=', scope.projectId)
       .where('cv.id', '=', input.verdictId)
@@ -106,7 +113,8 @@ export function overrideVerdict(
       throw new ApiError(409, 'The checker left this claim out, so it has no verdict to change');
     const model = claimVerdictSchema.parse(row.verdict);
     const current = (await newestOverrides(trx, scope.workspaceId, [row.id])).get(row.id);
-    if ((current?.verdict ?? model) === input.change.verdict)
+    const shown = current?.verdict ?? (row.low_confidence ? null : model);
+    if (shown === input.change.verdict)
       throw new ApiError(409, 'The claim already has this verdict');
     const created = await trx
       .insertInto('claim_verdict_overrides')

@@ -205,7 +205,7 @@ async function claimsOf(
           low_confidence: row.low_confidence,
           model_omitted: row.model_omitted,
           override: override?.verdict ?? null,
-          edited: editedMark(verdict, override),
+          edited: editedMark({ verdict, low_confidence: row.low_confidence }, override),
           revisionIds: revisionIdsSchema.parse(row.fact_revision_ids),
         },
       ];

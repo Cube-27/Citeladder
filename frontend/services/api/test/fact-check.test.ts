@@ -748,6 +748,50 @@ describe('claim extraction and verification', () => {
     });
   });
 
+  it('counts any verdict a person gives a low-confidence claim as edited', async () => {
+    await enroll(tenant);
+    await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
+    const auditId = await fixtures.audit(tenant, {
+      configuration: await pilotConfiguration(tenant),
+    });
+    await analysed(tenant, auditId);
+    await drain(
+      tenant,
+      'answer_perception',
+      answerPerception(fakeGateway([perceptionOutput]).factory),
+    );
+    // An unsure "supported" is stored as inconclusive and reads as low confidence.
+    const verdicts = [{ claim_id: 'c1', verdict: 'supported', fact_ids: ['f1'], confidence: 0.3 }];
+    await drain(
+      tenant,
+      'fact_verification',
+      factVerification(fakeGateway([JSON.stringify({ verdicts })]).factory),
+    );
+    const claims = async () =>
+      (await call(tenant, 'GET', `/visibility/accuracy/claims?audit_id=${auditId}`)).body.items as {
+        status: string;
+        verdict: string | null;
+        verdict_id: string;
+        edited: unknown;
+      }[];
+    const [before] = await claims();
+    expect([before!.status, before!.verdict]).toEqual(['low_confidence', null]);
+
+    const settled = await call(tenant, 'POST', `/claim-verdicts/${before!.verdict_id}/overrides`, {
+      verdict: 'inconclusive',
+    });
+    expect(settled.status).toBe(200);
+    expect((await claims())[0]).toMatchObject({
+      status: 'verdict',
+      verdict: 'inconclusive',
+      edited: { model_verdict: 'inconclusive' },
+    });
+    const summary = await call(tenant, 'GET', `/visibility/accuracy?audit_id=${auditId}`);
+    expect(summary.body).toMatchObject({
+      score: { coverage: { inconclusive: 1, low_confidence: 0, edited: 1 } },
+    });
+  });
+
   it('never verifies claims with a model other than the one the audit froze', async () => {
     await enroll(tenant);
     await confirmedFact(tenant, 'pricing', 'Pro costs $59 per month.');
