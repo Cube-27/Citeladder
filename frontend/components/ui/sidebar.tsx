@@ -51,8 +51,8 @@ export function SidebarFrame({
         >
           {ident}
         </div>
-        {/* As high as the page's first strip, the switch centred, its rule on the strip's line. */}
-        <div className="labelled:grid labelled:h-[var(--first-strip-height)] labelled:content-center labelled:before:border-b before:border-rule labelled:pt-0 relative shrink-0 px-2 pt-1 before:pointer-events-none before:absolute before:inset-0">
+        {/* Labelled, the row lines up with the page's first strip (globals.css). */}
+        <div data-sidebar-mode-row="" className="shrink-0 px-2 pt-1">
           {mode}
         </div>
         {nav}

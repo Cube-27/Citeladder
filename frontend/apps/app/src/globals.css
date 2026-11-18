@@ -801,6 +801,22 @@
 :root:has([data-page-band='tabs']):not(:has([data-page-band='filters'])) {
   --first-strip-height: calc(var(--page-tabs-height) + 4px);
 }
+/* The labelled sidebar's Dashboard | Agent row: the first strip's height, the
+   switch centred, its rule on the strip's line (owner, 2026-11-18). */
+[data-sidebar-mode-row]:where([data-sidebar-state='expanded'] *, [data-nav-drawer] *) {
+  position: relative;
+  display: grid;
+  align-content: center;
+  height: var(--first-strip-height);
+  padding-top: 0;
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-bottom: 1px solid var(--color-rule);
+    pointer-events: none;
+  }
+}
 
 /* Primary targets are 44 below 900px as well as under a coarse pointer (2.2):
    navigation rows, masthead and row actions, page tabs, sheet buttons. */
@@ -1631,107 +1647,50 @@ a.focus-ring:active .type-caption {
   [data-settings-sections] .surface-section [data-form-field] {
     max-width: var(--container-form);
   }
-  /* Section dividers (owner, 2026-11-18): on the page surface a `rule`
-     separates sections, 32 on each side of it. Stacked, it runs across the
-     main column like the strips; side by side in a grid, down the row. A
-     section in a card, slip, dialog or framed section draws none. A grid of
-     sections is one block in the stack and rules its own cells. A block
-     after one that ends on a figure strip takes that strip's rule. Zero
-     specificity, so the side-by-side rule below overrides it. */
+  /* Section dividers (owner, 2026-11-18): on the page a `rule` separates
+     sections, 32 either side. Stacked, it spans the main column like the
+     strips; between a halves or main-aside grid's two columns it runs down
+     the row. A block after one ending on a figure strip keeps that strip's
+     rule. Zero specificity, so the column rule below wins. */
   :where(
     [data-page-body]
-      :is(section, [data-app-grid]:has(> section:not([data-section='framed']))):not(
-        [data-section='framed'],
-        :has(
-          > [data-figure-strip]:last-child,
-          > :last-child > [data-figure-strip]:last-child,
-          > :last-child > :last-child > [data-figure-strip]:last-child,
-          > :last-child > :last-child > :last-child > [data-figure-strip]:last-child,
-          > :last-child > :last-child > :last-child > :last-child > [data-figure-strip]:last-child
-        )
-      )
-      + :is(section, [data-app-grid]:has(> section:not([data-section='framed']))):not(
-        [data-section='framed'],
+      :is(section, [data-app-grid]:has(> section)):not(:has([data-figure-strip]:last-child))
+      + :is(section, [data-app-grid]:has(> section)):not(
         [data-app-grid] > *,
         .surface-card *,
-        .surface-slip *,
-        [role='dialog'] *,
-        [data-section='framed'] *
+        .surface-slip *
       ),
-    [data-page-body]
-      [data-app-grid]:has(> section:not([data-section='framed'])):not(
-        .surface-card *,
-        .surface-slip *,
-        [role='dialog'] *,
-        [data-section='framed'] *
-      )
-      > *
-      + :not([data-section='framed'])
+    [data-page-body] [data-app-grid]:has(> section) > * + *
   ) {
     position: relative;
     padding-top: var(--page-section-gap);
     &::before {
       content: '';
       position: absolute;
-      inset-block-start: 0;
+      top: 0;
       inset-inline: calc(50% - 50cqw - var(--content-gutter));
-      block-size: 1px;
-      background-color: var(--color-rule);
-      pointer-events: none;
+      height: 1px;
+      background: var(--color-rule);
     }
   }
-  /* Stacked, a grid's sections are a section gap apart; side by side, twice
-     that across with the rule down the middle of the gap. */
-  [data-page-body]
-    [data-app-grid]:has(> section:not([data-section='framed'])):not(
-      :where(.surface-card *, .surface-slip *, [role='dialog'] *, [data-section='framed'] *)
-    ) {
+  [data-page-body] [data-app-grid]:has(> section) {
     --grid-gap-y: var(--page-section-gap);
     & > * {
       --grid-gap-x: initial;
       --grid-gap-y: initial;
     }
-    &:is([data-app-grid='pair'], [data-app-grid='thirds']) {
-      @variant column-split {
-        --grid-gap-x: calc(2 * var(--page-section-gap));
-      }
-    }
-    &:is([data-app-grid='halves'], [data-app-grid='main-aside']) {
-      @variant column-wide {
-        --grid-gap-x: calc(2 * var(--page-section-gap));
-      }
-    }
-    /* Only the first row sits flush with the grid's top. */
-    &[data-app-grid='pair'] > :nth-child(2),
-    &[data-app-grid='thirds'] > :nth-child(-n + 3) {
-      @variant column-split {
+  }
+  /* `column-wide` (the page body is always in the main column). */
+  @container main (min-width: 954px) {
+    [data-page-body] :is([data-app-grid='halves'], [data-app-grid='main-aside']):has(> section) {
+      --grid-gap-x: calc(2 * var(--page-section-gap));
+      & > :nth-child(2) {
         padding-top: 0;
       }
-    }
-    &:is([data-app-grid='halves'], [data-app-grid='main-aside']) > :nth-child(2) {
-      @variant column-wide {
-        padding-top: 0;
-      }
-    }
-    &[data-app-grid='pair'] > :nth-child(even),
-    &[data-app-grid='thirds'] > :not(:nth-child(3n + 1)) {
-      @variant column-split {
-        &::before {
-          inset-block: 0;
-          inset-inline: calc(-1 * var(--page-section-gap)) auto;
-          block-size: auto;
-          inline-size: 1px;
-        }
-      }
-    }
-    &:is([data-app-grid='halves'], [data-app-grid='main-aside']) > :nth-child(even) {
-      @variant column-wide {
-        &::before {
-          inset-block: 0;
-          inset-inline: calc(-1 * var(--page-section-gap)) auto;
-          block-size: auto;
-          inline-size: 1px;
-        }
+      & > :nth-child(even)::before {
+        inset: 0 auto 0 calc(-1 * var(--page-section-gap));
+        width: 1px;
+        height: auto;
       }
     }
   }

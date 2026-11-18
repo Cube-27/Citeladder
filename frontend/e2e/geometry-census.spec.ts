@@ -213,9 +213,16 @@ function measure({ route }: { route: string }) {
     // The sidebar's project and account rows, and its group labels (nav rows),
     // are their own roles below.
     if (element.matches('[data-sidebar-ident], [data-sidebar-group-toggle]')) continue;
-    // A checkbox is its own 16px box, and a column header's sort or hint
-    // button is the header's label, measured as `data-table-header.height`.
-    if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
+    // A checkbox is its own 16px box, a wide table's sideways stepper its own
+    // 24px glyph button (components/ui/scroll-edges.tsx), and a column
+    // header's sort or hint button is the header's label, measured as
+    // `data-table-header.height`.
+    if (
+      element.getAttribute('role') === 'checkbox' ||
+      element.matches('[data-scroll-step]') ||
+      element.closest('th')
+    )
+      continue;
     // A work tree's level rows and a pressable figure's cell are whole-row
     // targets (components/ui/work-tree.tsx, figure-strip.tsx), measured as their own roles.
     if (element.matches('[data-tree-row]')) {
