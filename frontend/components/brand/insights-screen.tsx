@@ -9,7 +9,6 @@ import { SelectionGate } from '@/components/visibility/selection-gate';
 import {
   SelectionPageStateBlock,
   selectionPageState,
-  showsSelectionFilters,
   useSelectionPageFilters,
 } from '@/components/visibility/selection-page';
 import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
@@ -35,11 +34,7 @@ export function InsightsScreen() {
   const { search } = useLocation();
   const projectHref = useProjectHref();
   return (
-    <ReportPage
-      filters={
-        showsSelectionFilters(state, queries) ? <FilterBar filters={pageFilters} /> : undefined
-      }
-    >
+    <ReportPage filters={state === null ? <FilterBar filters={pageFilters} /> : undefined}>
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (
         <SelectionPageStateBlock state={state} queries={queries} />

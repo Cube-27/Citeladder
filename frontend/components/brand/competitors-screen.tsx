@@ -12,7 +12,6 @@ import { SelectionGate } from '@/components/visibility/selection-gate';
 import {
   SelectionPageStateBlock,
   selectionPageState,
-  showsSelectionFilters,
   useSelectionPageFilters,
 } from '@/components/visibility/selection-page';
 import { visibilityQueries } from '@/lib/api/visibility-queries';
@@ -48,9 +47,7 @@ export function CompetitorsScreen() {
           <ProjectLink href="/agent/context?tab=competitors">Edit competitors</ProjectLink>
         </Button>
       }
-      filters={
-        showsSelectionFilters(state, queries) ? <FilterBar filters={pageFilters} /> : undefined
-      }
+      filters={state === null ? <FilterBar filters={pageFilters} /> : undefined}
     >
       {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
       {state ? (

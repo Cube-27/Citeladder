@@ -8,7 +8,6 @@ import { SelectionGate } from '@/components/visibility/selection-gate';
 import {
   SelectionPageStateBlock,
   selectionPageState,
-  showsSelectionFilters,
   useSelectionPageFilters,
   type SelectionPageState,
 } from '@/components/visibility/selection-page';
@@ -59,9 +58,7 @@ function VisibilityWorkspace({
             onIntent={queries.prefetchTab}
           />
         }
-        filters={
-          showsSelectionFilters(state, queries) ? <FilterBar filters={pageFilters} /> : undefined
-        }
+        filters={state === null ? <FilterBar filters={pageFilters} /> : undefined}
       >
         {queries.activeRun && state !== 'empty' ? (
           <ActiveRunBanner run={queries.activeRun} />

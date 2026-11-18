@@ -21,14 +21,9 @@ export type SelectionPageState = 'loading' | 'error' | 'empty' | null;
 
 export function selectionPageState(queries: Queries): SelectionPageState {
   if (queries.auditsQuery.isLoading) return 'loading';
-  if (queries.auditsQuery.isError) return 'error';
-  if (!queries.hasRuns) return 'empty';
-  return null;
-}
-
-/** Filters show over data only (on a failed refetch, over the data already shown). */
-export function showsSelectionFilters(state: SelectionPageState, queries: Queries): boolean {
-  return state === null || (state === 'error' && queries.hasRuns);
+  // A failed poll over cached runs keeps the data on screen; the next poll retries.
+  if (queries.hasRuns) return null;
+  return queries.auditsQuery.isError ? 'error' : 'empty';
 }
 
 export function SelectionPageStateBlock({
