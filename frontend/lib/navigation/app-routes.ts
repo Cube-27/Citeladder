@@ -178,7 +178,7 @@ const screens = {
   skills: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
   context: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
   insights: pick(() => import('@/components/brand/brand-screens'), 'InsightsScreen'),
-  perception: pick(() => import('@/components/brand/brand-screens'), 'PerceptionScreen'),
+  perception: pick(() => import('@/components/perception/perception-screen'), 'PerceptionScreen'),
   competitors: pick(() => import('@/components/brand/brand-screens'), 'CompetitorsScreen'),
   prompts: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
   prompt: pick(() => import('@/components/prompts/prompt-detail-screen'), 'PromptDetailScreen'),
@@ -355,7 +355,8 @@ export const APP_ROUTES = [
     path: '/perception',
     title: 'Perception',
     screen: screens.perception,
-    loading: cards([figures(), chart], { tabs: ['Brand', 'Fact-checking'] }),
+    // Fact-checking, shown only to the pilot, is last and arrives after.
+    loading: cards([figures(5), chart], { tabs: ['Brand'], filters: true }),
     nav: [listed('Perception', 'perception', 'brand')],
   }),
   page({
@@ -426,10 +427,9 @@ export const APP_ROUTES = [
     path: '/visibility',
     title: 'Sources',
     screen: screens.visibility,
-    // Accuracy, shown only to the fact-checking pilot, is last and arrives after.
-    // Trends and Perception move to Brand → Insights and Perception (AV-14).
+    // Trends moves to Brand → Insights (AV-14).
     loading: cards([figures(), chart], {
-      tabs: ['Trends', 'Sources', 'Perception', 'Ads', 'Query fanouts'],
+      tabs: ['Trends', 'Sources', 'Ads', 'Query fanouts'],
       filters: true,
     }),
     nav: [listed('Sources', 'visibility', 'tracking')],

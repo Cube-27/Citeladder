@@ -18,19 +18,6 @@ export function InsightsScreen() {
   );
 }
 
-export function PerceptionScreen() {
-  return (
-    <ReportPage>
-      <StateBlock
-        kind="empty"
-        icon={ICONS.perception}
-        heading="Perception is being built"
-        description="How AI describes your brand is on Sources, under Perception, until then."
-      />
-    </ReportPage>
-  );
-}
-
 export function CompetitorsScreen() {
   return (
     <ReportPage>

@@ -89,6 +89,97 @@ const UNAVAILABLE_SHORT: Record<NonNullable<PerceptionResponse['reason']>, strin
   model_changed: 'classifier model changed',
 };
 
+type Score = PerceptionResponse['entities'][number]['score'];
+type Theme = PerceptionResponse['themes'][number];
+
+/** The Brand tab's headline, from the brand's own classified mentions. */
+export function negativeHeadline(score: Score | null | undefined): string | null {
+  if (!score || score.negative_share === null) return null;
+  if (score.negative === 0) return 'AI says nothing negative about you';
+  return `AI says something negative about you in ${Math.round(score.negative_share * 100)}% of mentions`;
+}
+
+/** The themes with more negative mentions than positive, named in one sentence. */
+export function negativeThemesLine(themes: readonly Theme[]): string {
+  const worse = themes
+    .filter((theme) => theme.negative > theme.positive)
+    .map((theme) => theme.theme);
+  if (!worse.length) return 'No theme draws more negative mentions than positive.';
+  const names = worse.map(themeLabel);
+  const last = names.pop();
+  const listed = names.length ? `${names.join(', ')} and ${last}` : last;
+  return `${listed} ${worse.length === 1 ? 'draws' : 'draw'} more negative mentions than positive.`;
+}
+
+/** Themes ranked by their negative or positive mentions, the top `limit` with any. */
+export function rankThemes(
+  themes: readonly Theme[],
+  order: 'negative' | 'positive',
+  limit: number,
+): Theme[] {
+  return themes
+    .filter((theme) => theme[order] > 0)
+    .sort((a, b) => b[order] - a[order] || a.theme.localeCompare(b.theme))
+    .slice(0, limit);
+}
+
+/** A theme's negative share of its polar mentions (0–1), or null with none. */
+export function themeNegativeShare(theme: Pick<Theme, 'negative' | 'positive'>): number | null {
+  const polar = theme.negative + theme.positive;
+  return polar ? theme.negative / polar : null;
+}
+
+/**
+ * Net sentiment per run for the trend chart. A point whose versions differ
+ * from the one before breaks the line; one with nothing classified is a gap.
+ */
+export function sentimentTrend(
+  trend: PerceptionResponse['trend'],
+  formatDate: (iso: string) => string,
+) {
+  return trend.map((point, index) => ({
+    label: formatDate(point.completed_at),
+    value: point.score.net_sentiment,
+    timestamp: Date.parse(point.completed_at),
+    breakBefore: index > 0 && !point.comparable,
+  }));
+}
+
+/**
+ * One breakdown row: shares only from `minimum` classified mentions; below it
+ * the row is too few classified and carries no share at all.
+ */
+export type BreakdownRow =
+  | { kind: 'too_few'; classified: number; mentions: number; needed: number }
+  | {
+      kind: 'value';
+      classified: number;
+      mentions: number;
+      positive: number;
+      neutral: number;
+      negative: number;
+      net: number | null;
+    };
+
+export function breakdownRow(
+  row: PerceptionResponse['topics'][number],
+  minimum: number,
+): BreakdownRow {
+  const { score, coverage } = row;
+  const counts = { classified: score.classified, mentions: coverage.mentions };
+  if (score.classified < Math.max(1, minimum))
+    return { kind: 'too_few', ...counts, needed: minimum };
+  // `mixed` counts in the denominator only, so the three shares need not sum to one.
+  return {
+    kind: 'value',
+    ...counts,
+    positive: score.positive / score.classified,
+    neutral: score.neutral / score.classified,
+    negative: score.negative / score.classified,
+    net: score.net_sentiment,
+  };
+}
+
 /** "N of M mentions classified", then every other bucket that is non-empty. */
 export function coverageLine(coverage: PerceptionCoverage): string {
   const parts = [`${coverage.classified} of ${coverage.mentions} mentions classified`];

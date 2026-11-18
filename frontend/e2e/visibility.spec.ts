@@ -451,12 +451,6 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
   await expect(page.getByRole('radio', { name: 'URLs' })).toBeVisible();
   await expect(page.getByRole('tabpanel')).toHaveCount(1);
 
-  // Perception — how answers portray the brand, or why it cannot be shown yet.
-  await page.getByRole('tab', { name: 'Perception', exact: true }).click();
-  await expect(page).toHaveURL(/[?&]tab=perception/);
-  await expect(page.getByRole('heading', { name: 'Classifying answers…' })).toBeVisible();
-  await expect(page.getByRole('tabpanel')).toHaveCount(1);
-
   // Ads — paid placements in ChatGPT Search answers; other engines are not applicable.
   await page.getByRole('tab', { name: 'Ads', exact: true }).click();
   await expect(page).toHaveURL(/[?&]tab=ads/);
@@ -472,6 +466,18 @@ test('pointer navigation switches panels and syncs ?tab=', async ({ page, baseUR
 
   expect(evidenceUrls.length).toBeGreaterThan(0);
   assertSameOriginApi(requests, baseURL!);
+});
+
+test('Perception reads the selected measurement and names a read still classifying', async ({
+  page,
+}) => {
+  await setup(page);
+  await page.goto(fixtureProjectPath('/perception'));
+  await expect(page.getByRole('tab', { name: 'Brand', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  await expect(page.getByRole('heading', { name: 'Classifying answers…' })).toBeVisible();
 });
 
 // The roving-tablist keyboard contract (Arrow/Home/End selection AND focus
