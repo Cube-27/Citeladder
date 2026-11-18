@@ -72,13 +72,18 @@ export function tableCsv(columns: readonly string[], items: Record<string, unkno
  * The status was sent with the first byte, so a batch that fails ends the
  * download and leaves only its log record.
  */
+type Batches = AsyncIterable<Record<string, unknown>[]> | Iterable<Record<string, unknown>[]>;
+
 function csvStream(
   filename: string,
   columns: readonly string[],
-  batches: AsyncIterable<Record<string, unknown>[]>,
+  batches: Batches,
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder(),
-    iterator = batches[Symbol.asyncIterator]();
+    iterator =
+      Symbol.asyncIterator in batches
+        ? batches[Symbol.asyncIterator]()
+        : batches[Symbol.iterator]();
   return new ReadableStream<Uint8Array>({
     start(controller) {
       controller.enqueue(encoder.encode(columns.join(',') + '\r\n'));
@@ -101,11 +106,7 @@ function csvStream(
 }
 
 /** A streamed CSV download. */
-export function csvDownload(
-  filename: string,
-  columns: readonly string[],
-  batches: AsyncIterable<Record<string, unknown>[]>,
-) {
+export function csvDownload(filename: string, columns: readonly string[], batches: Batches) {
   return new Response(csvStream(filename, columns, batches), {
     headers: {
       'content-type': 'text/csv; charset=utf-8',

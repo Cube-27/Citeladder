@@ -218,13 +218,7 @@ export const visibilityRoutes = [
           verdict: query.verdict,
         }),
       );
-      return csvDownload(
-        'fact-check-claims.csv',
-        CLAIM_EXPORT_COLUMNS,
-        (async function* () {
-          yield rows;
-        })(),
-      );
+      return csvDownload('fact-check-claims.csv', CLAIM_EXPORT_COLUMNS, [rows]);
     },
   }),
   defineGetRoute({
