@@ -39,11 +39,16 @@ export const policyQueries = {
 };
 
 export const policyMutations = {
-  /** Record acceptance of a Terms revision; the answer is the workspace's new status. */
-  accept: (workspaceId: string) =>
+  /**
+   * Record acceptance of a Terms revision; the answer is the workspace's new
+   * status. The workspace is a variable, so one gate outlives a switch and
+   * tells its own workspace's attempt from the last one's.
+   */
+  accept: () =>
     mutationOptions({
-      mutationFn: (revision: string) => policiesApi.accept(workspaceId, revision),
-      onSuccess: (status, _revision, _result, { client }) =>
+      mutationFn: ({ workspaceId, revision }: { workspaceId: string; revision: string }) =>
+        policiesApi.accept(workspaceId, revision),
+      onSuccess: (status, { workspaceId }, _result, { client }) =>
         client.setQueryData(queryKeys.policies.workspace(workspaceId), status),
     }),
 };

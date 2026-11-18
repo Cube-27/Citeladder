@@ -543,6 +543,11 @@ export function hasPageTitle(pathname: string): boolean {
   return Boolean(route?.shell && route.title);
 }
 
+/** Whether the path is a flow step outside the shell (sign-in, setup, the chooser). */
+export function isFlowPath(pathname: string): boolean {
+  return sectionRoute(pathname)?.shell === false;
+}
+
 /** The Overview, where `/` and a workspace switch land. */
 export const HOME_PATH = '/projects' satisfies AppRoutePath;
 

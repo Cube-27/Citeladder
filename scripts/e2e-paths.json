@@ -223,5 +223,23 @@
   {
     "sources": ["frontend/apps/marketing/**", "frontend/components/marketing/**"],
     "frontendE2E": ["e2e/smoke.spec.ts"]
+  },
+  {
+    "sources": [
+      "frontend/apps/app/index.html",
+      "frontend/apps/app/boot-shell.ts",
+      "frontend/apps/app/src/private-routes.tsx",
+      "frontend/apps/app/src/router.tsx",
+      "frontend/components/auth/**",
+      "frontend/components/layout/first-frame.tsx",
+      "frontend/components/layout/shell-fallback.tsx",
+      "frontend/components/onboarding/onboarding-page-client.tsx",
+      "frontend/components/onboarding/workspace-setup.tsx",
+      "frontend/lib/auth/**",
+      "frontend/lib/navigation/project-destination.ts",
+      "frontend/lib/project/bootstrap*.ts",
+      "frontend/lib/project/project-context.tsx"
+    ],
+    "frontendE2E": ["e2e/first-frame-transitions.spec.ts"]
   }
 ]

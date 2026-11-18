@@ -208,8 +208,8 @@ workspace and recording a workspace acceptance (`POST /workspaces`,
 `POST /workspaces/{id}/policies`) are refused (`terms_decision_required`)
 without that account decision on the revision they name, so the request flag
 alone is never consent. The shell's policy gate records the acceptance for a
-workspace the person opens without one (one they joined) behind the shell's
-loading frame. A session older than the published revision holds no decision
+workspace the person opens without one (one they joined) while the content
+slot holds its loading frame. A session older than the published revision holds no decision
 on it: the gate and workspace setup sign the person out (which ends every
 session of theirs, all of which predate the revision) and send them to sign in
 with a notice (`/login?error=terms_changed`), where signing in takes the
@@ -336,10 +336,14 @@ without taking a batch slot.
 
 One authenticated layout owns session, project/workspace context and entitlement
 provider lifetime across app and onboarding routes.
-Before session identity resolves, the layout shows only neutral shell geometry.
+Before session identity resolves, the layout shows only the path's first frame
+(neutral shell geometry on a shell route, the plain ground on a flow route).
 Cold-load bootstrap settles workspace access alongside projects and entitlements.
-A pending access check retains the neutral loading frame; workspace recovery
-controls appear only once the check settles without access.
+A pending access or Terms check holds the content slot at its loading frame
+(the page skeleton in the shell, the plain ground on a flow route) without
+unmounting the tree above it, so a workspace switch keeps the shell and its
+reads; product content renders only once both gates answer. Workspace
+recovery controls appear only once the check settles without access.
 After authentication, the real shell mounts once and project/entitlement gates
 resolve inside its content pane, leaving account and workspace recovery
 available. A non-401 session read failure keeps protected content unmounted and

@@ -17,7 +17,9 @@ import { contactSalesHref } from '@/lib/config/contact';
 import { websiteHref } from '@/lib/config/app-link';
 import { signOut } from '@/lib/auth/account-transition';
 import { Button } from '@/components/ui/button';
-import { ShellFallback } from '@/components/layout/shell-fallback';
+import { FirstFrame, GateHold } from '@/components/layout/first-frame';
+import { HOME_PATH } from '@/lib/navigation/app-routes';
+import { useSelectWorkspace, workspaceDestination } from '@/lib/navigation/project-destination';
 import { NoticeScreen } from '@/components/templates/notice-page';
 import { Dialog } from '@/components/ui/dialog';
 import { IslandUnavailable, LazyIsland } from '@/components/ui/lazy-island';
@@ -140,15 +142,19 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
     if (!access.data || allowed || recovery) return;
     dropProductReads(client);
   }, [allowed, access.data, client, recovery]);
-  if (recovery || allowed) return children;
-  if (checking) return <ShellFallback />;
+  // Hold rather than swap: a workspace switch keeps the shell mounted and its
+  // reads alive, and `HeldContent` keeps product content out until access
+  // answers. One shape for open and held, so neither remounts the tree.
+  if (recovery || allowed || checking) {
+    return <GateHold held={!recovery && !allowed}>{children}</GateHold>;
+  }
   const retry = () => (activeWorkspaceId ? void access.refetch() : retryWorkspaces());
   // A read that failed says nothing about access: it is a retryable error,
   // never the "access ended" screen, which needs an answer that says so.
   const failure = failedRead({ access, activeWorkspaceId, workspaceFailed });
   if (failure) {
     return (
-      <ShellFallback>
+      <FirstFrame>
         <StateBlock
           kind="error"
           title="Couldn't load workspace access"
@@ -157,7 +163,7 @@ export function WorkspaceAccessGate({ children }: Readonly<{ children: ReactNode
           onRetry={retry}
           pending={access.isFetching}
         />
-      </ShellFallback>
+      </FirstFrame>
     );
   }
   return (
@@ -204,10 +210,11 @@ function AccessEnded({
 }>) {
   const client = useQueryClient();
   const [securityOpen, setSecurityOpen] = useState(false);
+  const selectWorkspace = useSelectWorkspace();
   // react-doctor-disable-next-line react-doctor/query-mutation-missing-invalidation
   const leave = useMutation({ mutationFn: () => signOut(client) });
   return (
-    <ShellFallback>
+    <FirstFrame>
       <NoticeScreen
         tone="warning"
         heading={title}
@@ -254,7 +261,22 @@ function AccessEnded({
           .filter((workspace) => workspace.id !== activeWorkspaceId)
           .map((workspace) => (
             <TextLink key={workspace.id} asChild text="inherit">
-              <Link reloadDocument to={`/projects?workspace=${workspace.id}`}>
+              <Link
+                to={workspaceDestination(HOME_PATH, null, workspace.id)}
+                onClick={(event) => {
+                  // A modified click opens the link's own URL in a new tab.
+                  if (
+                    event.button !== 0 ||
+                    event.metaKey ||
+                    event.altKey ||
+                    event.ctrlKey ||
+                    event.shiftKey
+                  )
+                    return;
+                  event.preventDefault();
+                  selectWorkspace(workspace.id, HOME_PATH);
+                }}
+              >
                 {workspace.name}
               </Link>
             </TextLink>
@@ -279,6 +301,6 @@ function AccessEnded({
           </LazyIsland>
         </SectionStack>
       </Dialog>
-    </ShellFallback>
+    </FirstFrame>
   );
 }

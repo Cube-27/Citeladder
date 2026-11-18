@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
-import { useEffect, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 
 import { UserMenuTrigger } from '@/components/layout/user-menu';
 import { roleLabel } from '@/components/settings/member-roles';
@@ -12,31 +12,22 @@ import { BrandMark } from '@/components/ui/brand-mark';
 import { DisplayTime } from '@/components/ui/display-time';
 import type { Workspace } from '@citeladder/contracts';
 import { workspaceQueries } from '@/lib/api/workspaces';
-import { workspaceDestination } from '@/lib/navigation/project-destination';
-import { ownsWorkspace, soleOwnedWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
+import { HOME_PATH } from '@/lib/navigation/app-routes';
+import { useSelectWorkspace } from '@/lib/navigation/project-destination';
+import { ownsWorkspace, WORKSPACE_SETUP_PATH } from '@/lib/project/bootstrap';
 import { useProjectContext } from '@/lib/project/project-context';
 import { READ_FAILED, StateBlock } from '@/components/ui/state-block';
 
 /**
  * Where a signed-in person goes next: their own workspace (or setting one up
  * when they own none) and every workspace they were invited to. Someone with
- * exactly one destination goes straight there.
+ * exactly one destination never sees this: the route loader's
+ * `chooserShortcut` sends them on before anything paints, the one shortcut.
  */
 export function WorkspaceChooser() {
-  const { workspaces, status, setActiveWorkspaceId, retry } = useProjectContext();
-  const navigate = useNavigate();
+  const { workspaces, status, retry } = useProjectContext();
+  const selectWorkspace = useSelectWorkspace();
   const ownsOne = ownsWorkspace(workspaces);
-  // A fresh document never shows this: the route loader sends it on before
-  // anything paints. This covers arriving here from inside the app.
-  const only = soleOwnedWorkspace(workspaces);
-
-  useEffect(() => {
-    if (status === 'no_workspace') navigate(WORKSPACE_SETUP_PATH, { replace: true });
-    else if (only) {
-      setActiveWorkspaceId(only.id);
-      navigate(workspaceDestination('/projects', null, only.id), { replace: true });
-    }
-  }, [navigate, only, setActiveWorkspaceId, status]);
 
   if (status === 'error')
     return (
@@ -50,7 +41,7 @@ export function WorkspaceChooser() {
         />
       </ChooserFrame>
     );
-  if (workspaces.length === 0 || only)
+  if (workspaces.length === 0 && status !== 'no_workspace')
     return (
       <ChooserFrame>
         <StateBlock kind="loading" label="Loading your workspaces…" shape={{ kind: 'list' }} />
@@ -58,8 +49,7 @@ export function WorkspaceChooser() {
     );
 
   const enter = (workspace: Workspace) => {
-    setActiveWorkspaceId(workspace.id);
-    navigate(workspaceDestination('/projects', null, workspace.id));
+    selectWorkspace(workspace.id, HOME_PATH);
   };
   return (
     <ChooserFrame>

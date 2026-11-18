@@ -77,11 +77,10 @@ setup, chooser) paints only its own plain frame.
 **Why:** #524 and #551 removed the placeholder screens shown around sign-in.
 #866 (sidebar in `ShellFallback` on every path), #875 and #883 (boot shell on
 every path) and #902 (a "facts" skeleton on flow routes) brought them back:
-sign-in now shows three different screens before the form. Only
-`manifestRoute` reads the flag; `router.tsx` `hydrateFallbackElement`,
-`private-routes.tsx` and both auth gates render `ShellFallback`
-unconditionally.
-**Check:** The diff adds or edits a `fallback=`, `ShellFallback`,
+sign-in showed three different screens before the form. #1013 made
+`FirstFrame` (`components/layout/first-frame.tsx`) the one owner, and
+`boot-title.js` reads the same flag.
+**Check:** The diff adds or edits a `fallback=`, `ShellFallback`, `FirstFrame`,
 `hydrateFallbackElement`, `boot-shell.ts` or `index.html` markup. Ask what it
 draws on `/login`, `/workspaces` and `/onboarding`.
 
@@ -89,14 +88,14 @@ draws on `/login`, `/workspaces` and `/onboarding`.
 
 **Rule:** No `key` or early `return <Fallback/>` keyed to the workspace may
 wrap `AppShell`, and the app has one way to switch workspaces.
-**Why:** Switching workspace tears down and rebuilds the whole shell, twice
-from Prompts: `PolicyAcceptanceGate` sets `key={activeWorkspaceId}`
-(`components/auth/policy-acceptance.tsx:19`) and both gates return
-`ShellFallback` while checking. #551 fixed the same defect for sign-in only.
-There are two switch paths (`useSelectWorkspace` and a `<Link reloadDocument>`
-in `workspace-access-gate.tsx`) and two chooser shortcuts (`chooserShortcut`
-in the loader and an effect in `workspace-chooser.tsx`), so a fix to one path
-misses the other.
+**Why:** Switching workspace tore down and rebuilt the whole shell, twice
+from Prompts: `PolicyAcceptanceGate` set `key={activeWorkspaceId}` and both
+gates returned `ShellFallback` while checking. #551 fixed the same defect for
+sign-in only. There were two switch paths (`useSelectWorkspace` and a
+`<Link reloadDocument>`) and two chooser shortcuts (the loader's
+`chooserShortcut` and a chooser effect), so a fix to one path missed the
+other. #1013 left one of each, and a gate still answering holds the content
+slot (`GateHold`, `HeldContent`) instead of replacing the tree.
 **Check:** `key=` on a gate or provider above the shell, a gate that returns
 a fallback once data has loaded, or a second implementation of an existing
 navigation mechanic.

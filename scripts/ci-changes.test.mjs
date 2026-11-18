@@ -252,6 +252,7 @@ test('a fixture or helper change selects every spec that imports it', () => {
     'e2e/action-loop.spec.ts',
     'e2e/agent-conversation.spec.ts',
     'e2e/design-repair.spec.ts',
+    'e2e/first-frame-transitions.spec.ts',
     'e2e/geometry-census.spec.ts',
     'e2e/page-workspace.spec.ts',
     'e2e/performance-states.spec.ts',

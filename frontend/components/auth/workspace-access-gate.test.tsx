@@ -1,6 +1,7 @@
-import { screen, act, waitFor } from '@testing-library/react';
+import { screen, act, fireEvent, waitFor } from '@testing-library/react';
 import { ApiError } from '@/lib/api/errors';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
+import { HeldContent } from '@/components/layout/first-frame';
 import { renderWithProviders } from '@/test/render';
 import { WorkspaceAccessGate } from './workspace-access-gate';
 
@@ -100,22 +101,55 @@ it.each([false, true])(
         answer = resolve;
       }),
     );
-    const { rerender } = renderWithProviders(
-      <WorkspaceAccessGate>Private report</WorkspaceAccessGate>,
-    );
+    const { rerender } = renderWithProviders(gatedTree());
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Sign out' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Account security' })).not.toBeInTheDocument();
     expect(screen.queryByText('Private report')).not.toBeInTheDocument();
+    expect(screen.getByText('Holding')).toBeInTheDocument();
 
     if (discovering) {
       project.mockReturnValue(resolvedProject);
-      rerender(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+      rerender(gatedTree());
     }
     await act(async () => answer({ status: 'active', expires_at: null }));
     expect(await screen.findByText('Private report')).toBeInTheDocument();
   },
 );
+
+/** The gate over a piece of chrome (an uncontrolled field) and the content slot. */
+function gatedTree() {
+  return (
+    <WorkspaceAccessGate>
+      <input aria-label="Shell state" />
+      <HeldContent frame={<p>Holding</p>}>Private report</HeldContent>
+    </WorkspaceAccessGate>
+  );
+}
+
+it('keeps the tree above the content mounted while a switched-to workspace answers', async () => {
+  access.mockResolvedValue({ status: 'active', expires_at: null });
+  const { rerender } = renderWithProviders(gatedTree());
+  expect(await screen.findByText('Private report')).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText('Shell state'), { target: { value: 'kept' } });
+
+  let answer!: (value: { status: string; expires_at: null }) => void;
+  access.mockReturnValue(
+    new Promise((resolve) => {
+      answer = resolve;
+    }),
+  );
+  project.mockReturnValue({ ...project(), activeWorkspaceId: 'workspace-b' });
+  rerender(gatedTree());
+  expect(screen.getByText('Holding')).toBeInTheDocument();
+  expect(screen.queryByText('Private report')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Shell state')).toHaveValue('kept');
+
+  await act(async () => answer({ status: 'active', expires_at: null }));
+  expect(await screen.findByText('Private report')).toBeInTheDocument();
+  expect(screen.getByLabelText('Shell state')).toHaveValue('kept');
+  expect(access.mock.calls.map(([id]) => id)).toEqual(['workspace-a', 'workspace-b']);
+});
 
 it('leaves invitation acceptance available without waiting for workspace access', () => {
   renderWithProviders(<WorkspaceAccessGate>Invitation acceptance</WorkspaceAccessGate>, {
@@ -133,7 +167,7 @@ it('keeps distant paid deadlines active until expiry without overflowing the bro
       status: 'active',
       expires_at: new Date(Date.now() + duration).toISOString(),
     });
-    renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+    renderWithProviders(gatedTree());
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1);
     });
@@ -173,9 +207,7 @@ it('reuses a fresh access answer when the gate remounts', async () => {
 
 it('rechecks current authority instead of copying another workspace denial', async () => {
   access.mockResolvedValue({ status: 'active', expires_at: null });
-  const { queryClient } = renderWithProviders(
-    <WorkspaceAccessGate>Private report</WorkspaceAccessGate>,
-  );
+  const { queryClient } = renderWithProviders(gatedTree());
   expect(await screen.findByText('Private report')).toBeInTheDocument();
   await act(async () => {
     await queryClient
@@ -199,7 +231,7 @@ it('offers retry when workspace discovery has failed without an active workspace
     isError: true,
     retry,
   });
-  renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+  renderWithProviders(gatedTree());
   expect(screen.getByText("Couldn't load workspace access")).toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Workspace access' })).not.toBeInTheDocument();
   await act(async () => screen.getByRole('button', { name: 'Retry' }).click());
@@ -210,7 +242,7 @@ it('reports a failed access read as a retryable error, not as access that ended'
   vi.useFakeTimers();
   try {
     access.mockRejectedValue(new ApiError('Service unavailable', 503, ''));
-    renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+    renderWithProviders(gatedTree());
     // The read's own automatic retries run out first.
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10_000);
@@ -228,9 +260,7 @@ it('reports a failed access read as a retryable error, not as access that ended'
 
 it('removes visible and cached product evidence when a server request denies access', async () => {
   access.mockResolvedValue({ status: 'active', expires_at: null });
-  const { queryClient } = renderWithProviders(
-    <WorkspaceAccessGate>Private report</WorkspaceAccessGate>,
-  );
+  const { queryClient } = renderWithProviders(gatedTree());
   expect(await screen.findByText('Private report')).toBeInTheDocument();
   queryClient.setQueryData(['projects', 'detail', 'project-a'], { name: 'Private' });
   access.mockResolvedValue({ status: 'trial_expired', expires_at: null });
@@ -254,7 +284,7 @@ it('blocks expired product content and leaves support, switching and account rec
     status: 'trial_expired',
     expires_at: new Date(Date.now() - 1000).toISOString(),
   });
-  renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+  renderWithProviders(gatedTree());
   expect(await screen.findByRole('heading', { name: 'Your trial has ended' })).toBeInTheDocument();
   expect(screen.queryByText('Private report')).not.toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'Team' })).toHaveAttribute(
@@ -280,15 +310,13 @@ it('offers an ended trial a plan to continue, and tells a member who may buy it'
     status: 'trial_expired',
     expires_at: new Date(Date.now() - 1000).toISOString(),
   });
-  const { unmount } = renderWithProviders(
-    <WorkspaceAccessGate>Private report</WorkspaceAccessGate>,
-  );
+  const { unmount } = renderWithProviders(gatedTree());
   expect(await screen.findByRole('heading', { name: 'Choose a plan' })).toBeInTheDocument();
   expect(screen.getByText('$49 / month')).toBeInTheDocument();
   expect(screen.queryByText('Private report')).not.toBeInTheDocument();
   unmount();
   capability.mockReturnValue(false);
-  renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+  renderWithProviders(gatedTree());
   expect(
     await screen.findByText('Ask a workspace Owner or Admin to choose a plan for this workspace.'),
   ).toBeInTheDocument();
@@ -298,7 +326,7 @@ it('offers an ended trial a plan to continue, and tells a member who may buy it'
 it('says so when signing out of an ended workspace fails, and leaves on an expired session', async () => {
   access.mockResolvedValue({ status: 'access_unresolved', expires_at: null });
   logout.mockRejectedValueOnce(new ApiError('Service unavailable', 503, ''));
-  renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+  renderWithProviders(gatedTree());
   const signOutButton = await screen.findByRole('button', { name: 'Sign out' });
   await act(async () => signOutButton.click());
   expect(await screen.findByText(/Sign out failed/)).toBeInTheDocument();
@@ -311,7 +339,7 @@ it('says so when signing out of an ended workspace fails, and leaves on an expir
 
 it('distinguishes missing authority from an expired trial', async () => {
   access.mockResolvedValue({ status: 'access_unresolved', expires_at: null });
-  renderWithProviders(<WorkspaceAccessGate>Private report</WorkspaceAccessGate>);
+  renderWithProviders(gatedTree());
   expect(await screen.findByRole('link', { name: 'Contact support' })).toBeInTheDocument();
   expect(screen.queryByText('Your trial has ended')).not.toBeInTheDocument();
   expect(screen.queryByRole('heading', { name: 'Choose a plan' })).toBeNull();

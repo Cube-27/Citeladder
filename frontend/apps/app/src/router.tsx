@@ -2,21 +2,21 @@ import { lazy, Suspense } from 'react';
 import { redirect, type RouteObject } from 'react-router-dom';
 
 import { RouteLoadingScreen } from '@/components/layout/page-shell';
-import { ShellFallback } from '@/components/layout/shell-fallback';
+import { FirstFrame } from '@/components/layout/first-frame';
 import { APP_ROUTES, HOME_PATH } from '@/lib/navigation/app-routes';
 import type { AppRouteRecord } from '@/lib/navigation/route-types';
 import { registerRouteChunk } from '@/lib/navigation/route-chunks';
 import { bootstrapPrivateRoutes } from '@/lib/project/bootstrap-loader';
 import { NotFoundScreen, RouteError, ScreenError, ShellRouteError } from './route-error';
 import { ApplicationRouteLayout, PrivateRouteLayout } from './private-routes';
-import { StateBlock } from '@/components/ui/state-block';
 
 /**
  * Begin the route download at matching time, alongside session bootstrap, or
  * earlier on navigation intent. The loader never waits for it; Suspense owns
  * only the route content pane. Inside the application shell its fallback is
  * the route's own loading frame (identity band + loading box), not a bare
- * pane; the flow routes outside the shell (sign-in, setup) keep the box alone.
+ * pane; a flow route outside the shell (sign-in, setup, the chooser) waits on
+ * its plain first frame, never a loading card (PR 524).
  */
 function manifestRoute(route: AppRouteRecord): RouteObject {
   let module: ReturnType<AppRouteRecord['screen']> | undefined;
@@ -31,15 +31,7 @@ function manifestRoute(route: AppRouteRecord): RouteObject {
       return null;
     },
     element: (
-      <Suspense
-        fallback={
-          route.shell ? (
-            <RouteLoadingScreen />
-          ) : (
-            <StateBlock kind="loading" shape={{ kind: 'facts', rows: 2 }} />
-          )
-        }
-      >
+      <Suspense fallback={route.shell ? <RouteLoadingScreen /> : <FirstFrame />}>
         <Screen />
       </Suspense>
     ),
@@ -64,7 +56,7 @@ export const appRoutes: RouteObject[] = [
     // the whole bootstrap on every route change would put a blocking await in
     // front of every click.
     shouldRevalidate: () => false,
-    hydrateFallbackElement: <ShellFallback />,
+    hydrateFallbackElement: <FirstFrame />,
     ErrorBoundary: ShellRouteError,
     children: [
       ...routes.filter((route) => route.scope !== 'public' && !route.shell).map(manifestRoute),

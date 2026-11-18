@@ -34,9 +34,7 @@ export function ownsWorkspace(workspaces: readonly { role: string }[]): boolean 
  * when it is the only one they belong to. Anyone invited elsewhere, or owning
  * none, chooses.
  */
-export function soleOwnedWorkspace<T extends { role: string }>(
-  workspaces: readonly T[],
-): T | undefined {
+function soleOwnedWorkspace<T extends { role: string }>(workspaces: readonly T[]): T | undefined {
   const [only, ...others] = workspaces;
   return only?.role === 'owner' && others.length === 0 ? only : undefined;
 }
