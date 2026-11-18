@@ -65,6 +65,8 @@ export const visibilityKeys = {
     visibility.read('accuracy', scope, filters),
   accuracyFacts: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('accuracy-facts', scope, filters),
+  accuracyClaims: (scope: ProjectScope, filters: ListFilters = {}) =>
+    visibility.read('accuracy-claims', scope, filters),
   ads: (scope: ProjectScope, filters: ListFilters = {}) => visibility.read('ads', scope, filters),
   evidence: (scope: ProjectScope, filters: ListFilters = {}) =>
     visibility.read('evidence', scope, filters),

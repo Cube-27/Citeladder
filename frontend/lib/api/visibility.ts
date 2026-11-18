@@ -35,9 +35,12 @@ import { surfaceRatesSchema } from '@citeladder/contracts/audits';
 import { perceptionResponseSchema } from '@citeladder/contracts/visibility-perception';
 import { competitorFocusSchema } from '@citeladder/contracts/visibility-competitor';
 import {
+  accuracyClaimPageSchema,
   accuracyFactListSchema,
   accuracyResponseSchema,
+  verdictOverrideSchema,
 } from '@citeladder/contracts/fact-checking';
+import type { VerdictOverrideRequest } from '@citeladder/contracts/project-requests';
 import { visibilityAdsResponseSchema } from '@citeladder/contracts/visibility-ads';
 import { visibilityTrendListSchema } from '@citeladder/contracts/visibility-trends';
 import { visibilityMatrixSchema } from '@citeladder/contracts/visibility-matrix';
@@ -189,6 +192,38 @@ export const visibilityApi = {
       options,
     );
     return strictValidate(accuracyFactListSchema, result, 'visibility.getAccuracyFacts');
+  },
+  /** The selection's claims, newest answer first, paged by the read's own cursor. */
+  getAccuracyClaims: async (
+    projectId: string,
+    params: {
+      audit_id?: string;
+      audit_ids?: string[];
+      engine?: string;
+      cohort?: string;
+      cursor?: string;
+    },
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.get(
+      withQuery(`/projects/${projectId}/visibility/accuracy/claims`, definedQuery(params)),
+      options,
+    );
+    return strictValidate(accuracyClaimPageSchema, result, 'visibility.getAccuracyClaims');
+  },
+  /** A person's verdict on one claim; the model's verdict is kept beside it. */
+  overrideVerdict: async (
+    projectId: string,
+    verdictId: string,
+    input: VerdictOverrideRequest,
+    options?: ApiRequestOptions,
+  ) => {
+    const result = await apiClient.post(
+      `/projects/${projectId}/claim-verdicts/${verdictId}/overrides`,
+      input,
+      options,
+    );
+    return strictValidate(verdictOverrideSchema, result, 'visibility.overrideVerdict');
   },
   /** The selection's claims as a CSV file. */
   exportAccuracyClaims: (

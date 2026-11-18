@@ -14,6 +14,7 @@ import { ApiError } from './errors';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import type { Visibility } from '@citeladder/contracts';
+import type { VerdictOverrideRequest } from '@citeladder/contracts/project-requests';
 import { visibilityApi, type ProjectVisibilityParams } from './visibility';
 
 type Api = typeof visibilityApi;
@@ -138,6 +139,19 @@ export const visibilityQueries = {
       queryFn: ({ signal }) =>
         visibilityApi.getAccuracyFacts(scope.projectId, params, scoped(scope, signal)),
     }),
+  /** The selection's claims, paged by the read's own cursor. */
+  accuracyClaims: (scope: ProjectScope, params: Omit<ParamsOf<'getAccuracyClaims'>, 'cursor'>) =>
+    infiniteQueryOptions({
+      queryKey: queryKeys.visibility.accuracyClaims(scope, params),
+      queryFn: ({ signal, pageParam }) =>
+        visibilityApi.getAccuracyClaims(
+          scope.projectId,
+          { ...params, cursor: pageParam },
+          scoped(scope, signal),
+        ),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (last) => last.next_cursor ?? undefined,
+    }),
   /** Ad creatives, paged by the read's own cursor. */
   ads: (scope: ProjectScope, params: Omit<ParamsOf<'getAds'>, 'cursor'>) =>
     infiniteQueryOptions({
@@ -233,6 +247,14 @@ export const visibilityMutations = {
         client.invalidateQueries({
           queryKey: queryKeys.visibility.resource(scope.projectId, 'competitor-suggestions'),
         }),
+    }),
+  /** A person's verdict on one claim: accuracy, its claims and By fact all re-read it. */
+  overrideVerdict: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: ({ verdictId, input }: { verdictId: string; input: VerdictOverrideRequest }) =>
+        visibilityApi.overrideVerdict(scope.projectId, verdictId, input, scoped(scope)),
+      onSuccess: (_override, _input, _result, { client }) =>
+        refreshVisibility(client, scope.projectId),
     }),
 };
 

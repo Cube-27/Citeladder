@@ -24,6 +24,7 @@ const APPEND_ONLY = [
   'billing_catalog_imports',
   'billing_payments',
   'brand_research_snapshots',
+  'claim_verdict_overrides',
   'commerce_competitor_attempts',
   'commerce_product_observations',
   'commerce_recommendation_observations',

@@ -1159,6 +1159,17 @@ export interface Citations {
   workspace_id: string;
 }
 
+export interface ClaimVerdictOverrides {
+  claim_verdict_id: string;
+  created_at: Timestamp;
+  created_by_user_id: string | null;
+  from_verdict: string;
+  id: string;
+  note: string | null;
+  to_verdict: string;
+  workspace_id: string;
+}
+
 export interface ClaimVerdicts {
   claim_id: string;
   confidence: number | null;
@@ -3738,6 +3749,7 @@ export interface DB {
   branded_query_overrides: BrandedQueryOverrides;
   brands: Brands;
   citations: Citations;
+  claim_verdict_overrides: ClaimVerdictOverrides;
   claim_verdicts: ClaimVerdicts;
   commerce_catalog_revisions: CommerceCatalogRevisions;
   commerce_categories: CommerceCategories;

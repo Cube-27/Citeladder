@@ -266,6 +266,8 @@ describe('accuracy metrics', () => {
     end: 5,
     status,
     facts: [],
+    verdictId: null,
+    edited: null,
   });
   const answer = (overrides: Partial<FactAnswer>): FactAnswer => ({
     auditId: '00000000-0000-4000-8000-000000000001',
@@ -287,7 +289,11 @@ describe('accuracy metrics', () => {
           claims: [
             row(0, { kind: 'verdict', verdict: 'supported' }),
             row(1, { kind: 'verdict', verdict: 'supported' }),
-            row(2, { kind: 'verdict', verdict: 'contradicted' }),
+            // A person's verdict counts in its bucket and in `edited`.
+            {
+              ...row(2, { kind: 'verdict', verdict: 'contradicted' }),
+              edited: { model_verdict: 'supported', note: null, at: '2026-10-02T00:00:00Z' },
+            },
             row(3, { kind: 'verdict', verdict: 'not_covered' }),
             row(4, { kind: 'low_confidence' }),
             row(5, { kind: 'unavailable', reason: 'platform_cap' }),
@@ -316,6 +322,7 @@ describe('accuracy metrics', () => {
         unavailable: [{ reason: 'platform_cap', count: 1 }],
         answers_pending: 1,
         answers_unavailable: 0,
+        edited: 1,
       },
     });
     expect(summary.contradicted.map((claim) => claim.quote)).toEqual(['quote 2']);
@@ -390,9 +397,21 @@ describe('accuracy metrics', () => {
       verdict: 'supported' as const,
       low_confidence: false,
       model_omitted: false,
+      override: null,
     };
     // The placeholder verdict an omitted claim is stored with.
-    const omitted = { verdict: 'not_covered' as const, low_confidence: false, model_omitted: true };
+    const omitted = {
+      verdict: 'not_covered' as const,
+      low_confidence: false,
+      model_omitted: true,
+      override: null,
+    };
+    // A person's verdict decides even where the model was unsure.
+    const overridden = {
+      ...supported,
+      low_confidence: true,
+      override: 'contradicted' as const,
+    };
     expect([
       claimStatus({
         lowConfidenceClaim: true,
@@ -430,6 +449,12 @@ describe('accuracy metrics', () => {
         verification: verified,
         verdict: omitted,
       }),
+      claimStatus({
+        lowConfidenceClaim: false,
+        topicHasFact: true,
+        verification: verified,
+        verdict: overridden,
+      }),
     ]).toEqual([
       { kind: 'low_confidence' },
       { kind: 'verdict', verdict: 'not_covered' },
@@ -437,6 +462,7 @@ describe('accuracy metrics', () => {
       { kind: 'unavailable', reason: 'model_not_configured' },
       { kind: 'verdict', verdict: 'supported' },
       { kind: 'unavailable', reason: 'model_omitted' },
+      { kind: 'verdict', verdict: 'contradicted' },
     ]);
   });
 });

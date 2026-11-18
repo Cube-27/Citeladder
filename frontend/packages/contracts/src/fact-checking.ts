@@ -91,6 +91,9 @@ export const accuracyCoverageSchema = responseObject({
   // Answers naming the brand whose claims are not extracted yet, or could not be.
   answers_pending: z.number().int(),
   answers_unavailable: z.number().int(),
+  // Claims whose newest verdict override differs from the model's verdict; their
+  // bucket above is the person's verdict (AV-12).
+  edited: z.number().int(),
 });
 
 // supported ÷ (supported + contradicted); null when neither occurred.
@@ -127,7 +130,17 @@ export const accuracyClaimSchema = responseObject({
   run_id: uuid(),
   execution_id: uuid(),
   observed_at: z.string(),
+  // The claim's verdict row: the target of a verdict override. Null when the
+  // claim was never verified (no fact on its topic, low confidence, pending).
+  verdict_id: uuid().nullable(),
+  // The newest override when it differs from the model; `verdict` is then the person's.
+  edited: z
+    .object({ model_verdict: claimVerdictSchema, note: z.string().nullable(), at: z.string() })
+    .nullable(),
 });
+
+// The verdicts a person may give a claim; `not_covered` stays the checker's own finding.
+export const overrideVerdictSchema = z.enum(['supported', 'contradicted', 'inconclusive']);
 
 // URLs cited in answers that carry a contradicted claim: cited alongside the
 // claim, never shown to be its source.
@@ -196,12 +209,41 @@ export const accuracyClaimPageSchema = responseObject({
 
 // The brand claims of one execution, with offsets for highlighting.
 export const executionClaimSchema = accuracyClaimSchema
-  .omit({ logical_engine: true, prompt: true, run_id: true, execution_id: true, observed_at: true })
+  .omit({
+    logical_engine: true,
+    prompt: true,
+    run_id: true,
+    execution_id: true,
+    observed_at: true,
+    verdict_id: true,
+    edited: true,
+  })
   .extend({
     // Code-point offsets into the answer text.
     start: z.number().int(),
     end: z.number().int(),
   });
+
+// An appended verdict override: the model's verdict stays as it was.
+export const verdictOverrideSchema = responseObject({
+  verdict_id: uuid(),
+  model_verdict: claimVerdictSchema,
+  verdict: overrideVerdictSchema,
+  note: z.string().nullable(),
+  at: z.string(),
+});
+
+// One imported CSV row's outcome, by its position in the request. Imported
+// facts are drafts: never checked against until a person confirms them.
+export const brandFactImportResultSchema = responseObject({
+  rows: z.array(
+    z.discriminatedUnion('kind', [
+      responseObject({ index: z.number().int(), kind: z.literal('created'), fact_id: uuid() }),
+      responseObject({ index: z.number().int(), kind: z.literal('duplicate') }),
+      responseObject({ index: z.number().int(), kind: z.literal('invalid'), message: z.string() }),
+    ]),
+  ),
+});
 
 export type FactTopic = z.infer<typeof factTopicSchema>;
 export type FactStatus = z.infer<typeof factStatusSchema>;
@@ -215,3 +257,7 @@ export type AccuracyClaim = z.infer<typeof accuracyClaimSchema>;
 export type AccuracyFact = z.infer<typeof accuracyFactSchema>;
 export type AccuracyFactList = z.infer<typeof accuracyFactListSchema>;
 export type ExecutionClaim = z.infer<typeof executionClaimSchema>;
+export type AccuracyClaimPage = z.infer<typeof accuracyClaimPageSchema>;
+export type OverrideVerdict = z.infer<typeof overrideVerdictSchema>;
+export type VerdictOverride = z.infer<typeof verdictOverrideSchema>;
+export type BrandFactImportResult = z.infer<typeof brandFactImportResultSchema>;

@@ -13,11 +13,13 @@ import {
   factStatusSchema,
   factTopicSchema,
   type BrandFact,
+  type BrandFactImportResult,
   type BrandFactList,
 } from '@citeladder/contracts/fact-checking';
 import { asApiErrorCode } from '@citeladder/contracts/error-codes';
 import {
   brandFactCreateRequestSchema,
+  brandFactImportRequestSchema,
   brandFactUpdateRequestSchema,
 } from '@citeladder/contracts/project-requests';
 import type { Selectable } from 'kysely';
@@ -150,6 +152,93 @@ export function createBrandFact(
       .executeTakeFirstOrThrow();
     await trx.insertInto('brand_fact_revisions').values(revisionOf(row, userId)).execute();
     return view(row);
+  });
+}
+
+export const brandFactImport = brandFactImportRequestSchema.extend({
+  rows: brandFactImportRequestSchema.shape.rows.min(1).max(limits.facts_import_max_rows),
+});
+
+const ROW_ERRORS: Record<string, string> = {
+  topic: `Topic must be one of: ${factTopicSchema.options.join(', ')}.`,
+  statement: `Statement is required, up to ${limits.statement_max_chars} characters.`,
+  source_url: 'Source URL must be an http or https address.',
+};
+
+/** Same topic and statement, ignoring case and spacing: the import's duplicate test. */
+function factKey(topic: string, statement: string) {
+  return `${topic}\n${statement.normalize('NFKC').toLowerCase().replace(/\s+/gu, ' ').trim()}`;
+}
+
+/**
+ * Facts from a CSV, each a new draft: an import never confirms a fact, so
+ * nothing imported is checked against until a person confirms it. A row is
+ * answered on its own: invalid, a duplicate of a kept fact or an earlier
+ * row, or created while the project has room.
+ */
+export function importBrandFacts(
+  db: Database,
+  scope: ProjectScope,
+  userId: string,
+  input: z.output<typeof brandFactImport>,
+): Promise<BrandFactImportResult> {
+  return db.transaction().execute(async (trx) => {
+    await acquireProjectLock(trx, scope.projectId);
+    await requireFlag(trx, scope.workspaceId, 'fact_checking');
+    const kept = await trx
+      .selectFrom('brand_facts')
+      .select(['topic', 'statement'])
+      .where('workspace_id', '=', scope.workspaceId)
+      .where('project_id', '=', scope.projectId)
+      .where('status', '!=', 'retired')
+      .execute();
+    const seen = new Set(kept.map((fact) => factKey(fact.topic, fact.statement)));
+    let room = limits.max_facts_per_project - kept.length;
+    const now = new Date();
+    const created: Selectable<BrandFacts>[] = [];
+    const rows = input.rows.map((raw, index): BrandFactImportResult['rows'][number] => {
+      const parsed = brandFactCreate.safeParse({
+        topic: raw.topic.trim().toLowerCase(),
+        statement: raw.statement,
+        source_url: raw.source_url?.trim() || null,
+      });
+      if (!parsed.success) {
+        const field = String(parsed.error.issues[0]?.path[0] ?? 'statement');
+        return { index, kind: 'invalid', message: ROW_ERRORS[field] ?? ROW_ERRORS.statement! };
+      }
+      const key = factKey(parsed.data.topic, parsed.data.statement);
+      if (seen.has(key)) return { index, kind: 'duplicate' };
+      if (room <= 0)
+        return {
+          index,
+          kind: 'invalid',
+          message: `A project can hold ${limits.max_facts_per_project} facts.`,
+        };
+      seen.add(key);
+      room--;
+      const fact = {
+        id: randomUUID(),
+        workspace_id: scope.workspaceId,
+        project_id: scope.projectId,
+        revision: 1,
+        topic: parsed.data.topic,
+        statement: parsed.data.statement,
+        source_url: parsed.data.source_url ?? null,
+        status: 'draft',
+        created_at: now,
+        updated_at: now,
+      };
+      created.push(fact);
+      return { index, kind: 'created', fact_id: fact.id };
+    });
+    if (created.length) {
+      await trx.insertInto('brand_facts').values(created).execute();
+      await trx
+        .insertInto('brand_fact_revisions')
+        .values(created.map((fact) => revisionOf(fact, userId)))
+        .execute();
+    }
+    return { rows };
   });
 }
 

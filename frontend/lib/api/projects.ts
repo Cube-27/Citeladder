@@ -11,7 +11,11 @@ import { opportunitiesApi } from './opportunities';
 import { queryKeys } from './query-keys';
 import type { ProjectScope } from './query-keys/scope';
 import { refreshSeedQueries } from './topics';
-import { brandFactListSchema, brandFactSchema } from '@citeladder/contracts/fact-checking';
+import {
+  brandFactImportResultSchema,
+  brandFactListSchema,
+  brandFactSchema,
+} from '@citeladder/contracts/fact-checking';
 import { commandCenterSchema } from '@citeladder/contracts/opportunities';
 import {
   overviewLayoutSchema,
@@ -27,6 +31,7 @@ import {
 } from '@citeladder/contracts/project';
 import type {
   BrandFactCreateRequest,
+  BrandFactImportRequest,
   BrandFactUpdateRequest,
   BrandProfileUpdateRequest,
   BusinessMapUpdateRequest,
@@ -156,6 +161,15 @@ export const projectsApi = {
       options,
     );
     return strictValidate(brandFactSchema, res, 'projects.updateBrandFact');
+  },
+  /** CSV rows imported as drafts; each row is answered created, duplicate or invalid. */
+  importBrandFacts: async (
+    projectId: string,
+    input: BrandFactImportRequest,
+    options?: ApiRequestOptions,
+  ) => {
+    const res = await apiClient.post(`/projects/${projectId}/brand-facts/import`, input, options);
+    return strictValidate(brandFactImportResultSchema, res, 'projects.importBrandFacts');
   },
   getBusinessMap: async (projectId: string, options?: ApiRequestOptions) => {
     const res = await apiClient.get<BusinessMap>(`/projects/${projectId}/business-map`, options);
@@ -373,6 +387,13 @@ export const projectMutations = {
       mutationFn: (input: BrandFactCreateRequest) =>
         projectsApi.createBrandFact(scope.projectId, input, scoped(scope)),
       onSuccess: (_fact, _input, _result, { client }) => refreshBrandFacts(client, scope.projectId),
+    }),
+  importBrandFacts: (scope: ProjectScope) =>
+    mutationOptions({
+      mutationFn: (input: BrandFactImportRequest) =>
+        projectsApi.importBrandFacts(scope.projectId, input, scoped(scope)),
+      onSuccess: (_result, _input, _context, { client }) =>
+        refreshBrandFacts(client, scope.projectId),
     }),
   /**
    * Edit the revision that was read. A refusal (a stale revision) re-reads

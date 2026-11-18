@@ -62,12 +62,13 @@ When nothing is classified yet the view says so: answers are still being classif
 
 ## Check facts in answers (pilot)
 
-In workspaces in the fact-checking pilot, **Agent → Context** lists **Brand facts**: short statements such as a plan's price, an integration or the markets you serve. A new fact starts as a draft; only confirmed facts are used. Audits started after you confirm a fact check the factual claims answers make about you against the facts confirmed at that moment, at no credit cost. Editing a fact later never changes an earlier run.
+In workspaces in the fact-checking pilot, **Agent → Context** lists **Brand facts**: short statements such as a plan's price, an integration or the markets you serve. A new fact starts as a draft; only confirmed facts are used. **Import facts CSV** on the Fact-checking tab adds facts from a file with `topic`, `statement` and an optional `source_url` column; imported facts are drafts until you confirm them, and rows that repeat an existing fact are skipped. Audits started after you confirm a fact check the factual claims answers make about you against the facts confirmed at that moment, at no credit cost. Editing a fact later never changes an earlier run.
 
-The **Accuracy** tab shows the result:
+**Perception → Fact-checking** shows the result:
 
 - **Accuracy** is supported claims divided by claims that were supported or contradicted. **Coverage** sits beside it; claims still being checked, low-confidence claims and claims that could not be checked are counted separately and never treated as zero.
 - **Contradicted claims** quote what the answer said, next to the fact it contradicts. Open a claim to see the full answer.
+- **All claims** lists every claim with the fact it was checked against and its verdict. **Change verdict** records your verdict beside the model's, which is kept; accuracy counts yours, the claim shows **Edited**, and the Accuracy figure says how many verdicts were edited. **Ask Agent** opens a chat about the claim.
 - **Not covered** means no confirmed fact is about that point, and **inconclusive** means a related fact neither confirms nor rules it out. Neither is an error in the answer.
 - **Sources cited alongside contradictions** lists domains cited in those answers. They appeared alongside the claim; the view does not show that they were its source.
 

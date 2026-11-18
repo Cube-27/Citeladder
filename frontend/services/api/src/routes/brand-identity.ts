@@ -3,7 +3,12 @@ import {
   businessMapSchema,
   competitorSchema,
 } from '@citeladder/contracts/project';
-import { brandFactListSchema, brandFactSchema } from '@citeladder/contracts/fact-checking';
+import {
+  brandFactImportResultSchema,
+  brandFactListSchema,
+  brandFactSchema,
+  verdictOverrideSchema,
+} from '@citeladder/contracts/fact-checking';
 import { observedCompetitorSchema } from '@citeladder/contracts/visibility';
 import type { Context } from 'hono';
 import { z } from 'zod';
@@ -16,10 +21,13 @@ import {
   readBrandProfile,
   updateBrandProfile,
 } from '../projects/brand-profile.ts';
+import { overrideVerdict, verdictOverrideRequest } from '../perception/verdict-overrides.ts';
 import {
   brandFactCreate,
+  brandFactImport,
   brandFactUpdate,
   createBrandFact,
+  importBrandFacts,
   listBrandFacts,
   updateBrandFact,
 } from '../projects/brand-facts.ts';
@@ -96,6 +104,37 @@ export const brandIdentityRoutes = [
       const scope = scopeOf(c, path.project_id);
       const input = await readBody(c, brandFactCreate);
       return createBrandFact(db, scope, c.get('user').id, input);
+    },
+  }),
+  definePostRoute({
+    ...activeProject,
+    path: `${root}/brand-facts/import`,
+    capability: 'write',
+    params: { path: projectPath, query: {} },
+    body: brandFactImport,
+    response: brandFactImportResultSchema,
+    async handle({ c, db }, { path }) {
+      const scope = scopeOf(c, path.project_id);
+      const input = await readBody(c, brandFactImport);
+      return importBrandFacts(db, scope, c.get('user').id, input);
+    },
+  }),
+  // Fact-checking's one write besides facts: a person's verdict on a claim (AV-12).
+  definePostRoute({
+    ...activeProject,
+    path: `${root}/claim-verdicts/{verdict_id}/overrides`,
+    capability: 'write',
+    params: { path: { ...projectPath, verdict_id: uuid }, query: {} },
+    body: verdictOverrideRequest,
+    response: verdictOverrideSchema,
+    async handle({ c, db }, { path }) {
+      const change = await readBody(c, verdictOverrideRequest);
+      return overrideVerdict(db, {
+        scope: scopeOf(c, path.project_id),
+        userId: c.get('user').id,
+        verdictId: path.verdict_id,
+        change,
+      });
     },
   }),
   definePatchRoute({

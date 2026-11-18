@@ -116,3 +116,32 @@ ALTER TABLE ONLY public.answer_untracked_names
 
 ALTER TABLE ONLY public.answer_untracked_names
     ADD CONSTRAINT answer_untracked_names_analysis_id_fkey FOREIGN KEY (analysis_id) REFERENCES public.response_analyses(id) ON DELETE CASCADE;
+
+-- Verdict overrides (AV-12, W15): a person's verdict on one claim, appended
+-- beside the model's claim_verdicts row, which is never rewritten. Reads take
+-- the newest override per verdict row. id is already the primary key, so the
+-- (workspace_id, id) key holds for existing rows.
+ALTER TABLE ONLY public.claim_verdicts
+    ADD CONSTRAINT uq_claim_verdicts_ws_id UNIQUE (workspace_id, id);
+
+CREATE TABLE public.claim_verdict_overrides (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    claim_verdict_id uuid NOT NULL,
+    from_verdict character varying(16) NOT NULL,
+    to_verdict character varying(16) NOT NULL,
+    note text,
+    created_by_user_id uuid,
+    created_at timestamp with time zone NOT NULL,
+    CONSTRAINT claim_verdict_overrides_pkey PRIMARY KEY (id),
+    CONSTRAINT ck_claim_verdict_override_from CHECK (from_verdict IN ('supported', 'contradicted', 'inconclusive', 'not_covered')),
+    CONSTRAINT ck_claim_verdict_override_to CHECK (to_verdict IN ('supported', 'contradicted', 'inconclusive')),
+    CONSTRAINT claim_verdict_overrides_workspace_id_claim_verdict_id_fkey FOREIGN KEY (workspace_id, claim_verdict_id) REFERENCES public.claim_verdicts(workspace_id, id) ON DELETE CASCADE,
+    CONSTRAINT claim_verdict_overrides_created_by_user_id_fkey FOREIGN KEY (created_by_user_id) REFERENCES public.users(id) ON DELETE SET NULL
+);
+
+CREATE INDEX ix_claim_verdict_overrides_ws_verdict_newest ON public.claim_verdict_overrides USING btree (workspace_id, claim_verdict_id, created_at DESC, id DESC);
+
+-- Append-only: the app role adds overrides and never rewrites or removes them;
+-- cascades still remove them with their verdict (referential actions run as owner).
+REVOKE UPDATE, DELETE ON public.claim_verdict_overrides FROM citeladder_app;

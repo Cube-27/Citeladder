@@ -13,6 +13,7 @@ import {
   type AccuracyScore,
   type ClaimVerdict,
   type FactTopic,
+  type OverrideVerdict,
 } from '@citeladder/contracts/fact-checking';
 import type { z } from 'zod';
 
@@ -40,6 +41,10 @@ export type ClaimRow = {
   end: number;
   status: ClaimStatus;
   facts: FactRevision[];
+  /** The claim's verdict row, the target of an override; null when it was never verified. */
+  verdictId: string | null;
+  /** The newest override when it differs from the model; `status` then carries the person's verdict. */
+  edited: AccuracyClaim['edited'];
 };
 
 /** Claim extraction for one answer that names the brand. */
@@ -75,13 +80,21 @@ export function unavailableReason(row: {
 /**
  * One claim's status: a low-confidence claim is never verified; a topic with
  * no frozen fact is not covered without a model call; otherwise the
- * verification outcome and verdict row decide.
+ * verification outcome and verdict row decide, and a person's newest
+ * override of that row decides over the model (AV-12).
  */
 export function claimStatus(input: {
   lowConfidenceClaim: boolean;
   topicHasFact: boolean;
   verification: { outcome: string; outcome_reason: string | null } | undefined;
-  verdict: { verdict: ClaimVerdict; low_confidence: boolean; model_omitted: boolean } | undefined;
+  verdict:
+    | {
+        verdict: ClaimVerdict;
+        low_confidence: boolean;
+        model_omitted: boolean;
+        override: OverrideVerdict | null;
+      }
+    | undefined;
 }): ClaimStatus {
   if (input.lowConfidenceClaim) return { kind: 'low_confidence' };
   if (!input.topicHasFact) return { kind: 'verdict', verdict: 'not_covered' };
@@ -91,6 +104,7 @@ export function claimStatus(input: {
   if (!input.verdict) return { kind: 'verdict', verdict: 'not_covered' };
   // A claim the model left out has no verdict; it never counts as "no fact covers it".
   if (input.verdict.model_omitted) return { kind: 'unavailable', reason: 'model_omitted' };
+  if (input.verdict.override) return { kind: 'verdict', verdict: input.verdict.override };
   if (input.verdict.low_confidence) return { kind: 'low_confidence' };
   return { kind: 'verdict', verdict: input.verdict.verdict };
 }
@@ -107,12 +121,13 @@ function emptyCoverage(): AccuracyCoverage {
     unavailable: [],
     answers_pending: 0,
     answers_unavailable: 0,
+    edited: 0,
   };
 }
 
 /** Accuracy and coverage over claims, plus the answers whose extraction is not done. */
 function scoreClaims(
-  claims: readonly { status: ClaimStatus }[],
+  claims: readonly Pick<ClaimRow, 'status' | 'edited'>[],
   extractions: readonly Extraction[] = [],
 ): AccuracyScore {
   const coverage = emptyCoverage();
@@ -121,8 +136,9 @@ function scoreClaims(
     if (extraction.kind === 'pending') coverage.answers_pending++;
     if (extraction.kind === 'unavailable') coverage.answers_unavailable++;
   }
-  for (const { status } of claims) {
+  for (const { status, edited } of claims) {
     coverage.claims++;
+    if (edited) coverage.edited++;
     if (status.kind === 'verdict') coverage[status.verdict]++;
     else if (status.kind === 'unavailable')
       unavailable.set(status.reason, (unavailable.get(status.reason) ?? 0) + 1);
@@ -290,6 +306,8 @@ export function positionedClaims(
         run_id: answer.auditId,
         execution_id: answer.executionId,
         observed_at: answer.observedAt,
+        verdict_id: claim.verdictId,
+        edited: claim.edited,
         ordinal: claim.ordinal,
       })),
     )

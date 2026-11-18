@@ -7,27 +7,29 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import { afterAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { deriveExecution } from '../src/audits/derivation.ts';
-import { createApp } from '../src/app.ts';
 import { policy } from '../src/config.ts';
-import { loadWorkerSettings } from '../src/config/analytics.ts';
-import { createModelGateway, gatewaySettings } from '../src/models/gateway.ts';
-import { admittedFactCheck, admittedPerceptionVersions } from '../src/perception/admission.ts';
+import { admittedFactCheck } from '../src/perception/admission.ts';
 import { answerPerception } from '../src/perception/executor.ts';
 import { factVerification } from '../src/perception/fact-verification.ts';
-import { AnalyticsWorker } from '../src/workers/analytics-worker.ts';
-import { billingAccount, grant } from './prompt-fixtures.ts';
-import { sessionToken, testConfig, testDatabase } from './support.ts';
-import { VisibilityFixtures, type Tenant } from './visibility-fixtures.ts';
+import { ANSWER, factCheckHarness, fakeGateway, perceptionOutput } from './fact-check-support.ts';
+import { sessionToken } from './support.ts';
+import type { Tenant } from './visibility-fixtures.ts';
 
-const config = testConfig();
-const db = testDatabase(config);
-const app = createApp(config, db);
-const fixtures = new VisibilityFixtures(db);
-const settings = loadWorkerSettings({});
-const ANSWER = 'Acme Pro costs $49 per month. Acme integrates with Slack. Rival support is slow.';
+const {
+  config,
+  db,
+  app,
+  fixtures,
+  enroll,
+  call,
+  confirmedFact,
+  pilotConfiguration,
+  analysed,
+  drain,
+  queued,
+} = factCheckHarness();
 
 let tenant: Tenant;
 
@@ -39,157 +41,6 @@ afterAll(async () => {
   await fixtures.cleanup();
   await db.destroy();
 });
-
-async function enroll(owner: Tenant) {
-  const account = await billingAccount(db, owner.workspaceId);
-  await grant(db, account, { key: 'fact_checking', value: 1, sourceKind: 'override' });
-}
-
-async function call(owner: Tenant, method: string, path: string, body?: unknown) {
-  const token = await sessionToken({ sub: owner.userId, ver: 0 });
-  const response = await app.request(`/api/v1/projects/${owner.projectId}${path}`, {
-    method,
-    headers: {
-      cookie: `${config.session.cookieName}=${token}`,
-      'x-workspace-id': owner.workspaceId,
-      'content-type': 'application/json',
-    },
-    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
-  });
-  return { status: response.status, body: (await response.json()) as Record<string, unknown> };
-}
-
-async function confirmedFact(owner: Tenant, topic: string, statement: string) {
-  const created = await call(owner, 'POST', '/brand-facts', { topic, statement });
-  const id = String(created.body.id);
-  await call(owner, 'PATCH', `/brand-facts/${id}`, { expected_revision: 1, status: 'confirmed' });
-  return id;
-}
-
-/** A pilot audit's configuration, frozen the way admission freezes it. */
-async function pilotConfiguration(owner: Tenant) {
-  const factCheck = await admittedFactCheck(db, {
-    workspaceId: owner.workspaceId,
-    projectId: owner.projectId,
-    auditScope: 'brand',
-  });
-  return {
-    brand_name: 'Acme',
-    brand_aliases: [],
-    competitors: [{ name: 'Rival', domains: [], aliases: [] }],
-    country_code: 'US',
-    language_code: 'en',
-    // Frozen with the fake gateway's model, as admission freezes the deployment's.
-    perception: admittedPerceptionVersions({ auditScope: 'brand', factCheck, model: 'test' }),
-    fact_check: factCheck,
-  };
-}
-
-/** A succeeded execution analysed the way the result transaction analyses it. */
-async function analysed(owner: Tenant, auditId: string, answerText = ANSWER) {
-  const { taskId } = await fixtures.execution(owner, {
-    auditId,
-    answerText,
-    promptText: 'best tools?',
-    analysis: null,
-  });
-  const artifactId = randomUUID();
-  await db
-    .insertInto('raw_response_artifacts')
-    .values({
-      id: artifactId,
-      workspace_id: owner.workspaceId,
-      audit_id: auditId,
-      task_id: taskId,
-      logical_engine: 'chatgpt',
-      transport_provider: 'test',
-      transport_model: 'test-model',
-      answer_text: answerText,
-      search_used: false,
-      finish_reason: 'stop',
-      created_at: new Date(),
-    })
-    .execute();
-  const audit = await db
-    .selectFrom('audits')
-    .selectAll()
-    .where('id', '=', auditId)
-    .executeTakeFirstOrThrow();
-  const task = await db
-    .selectFrom('audit_tasks')
-    .selectAll()
-    .where('id', '=', taskId)
-    .executeTakeFirstOrThrow();
-  await db.transaction().execute((trx) => deriveExecution(trx, task, audit, artifactId));
-  return taskId;
-}
-
-function fakeGateway(contents: string[], model = 'test') {
-  const fetch = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) =>
-    Response.json({
-      model: 'returned-model',
-      choices: [{ message: { content: contents.shift() ?? 'not json' }, finish_reason: 'stop' }],
-      usage: { prompt_tokens: 100, completion_tokens: 20 },
-    }),
-  );
-  const gateway = createModelGateway(
-    {
-      ...gatewaySettings({}),
-      apiKey: 'test-only',
-      model,
-      baseUrl: 'https://model.test/v1',
-    },
-    { fetch, sleep: async () => {} },
-  );
-  return { fetch, factory: () => gateway };
-}
-
-const perceptionOutput = JSON.stringify({
-  entities: [
-    { entity_id: 'brand:acme', label: 'neutral', confidence: 0.9, aspects: [] },
-    { entity_id: 'competitor:rival', label: 'negative', confidence: 0.8, aspects: [] },
-  ],
-  claims: [
-    {
-      topic: 'pricing',
-      claim: 'Acme Pro costs $49 a month.',
-      quote: 'Acme Pro costs $49 per month',
-      confidence: 0.9,
-    },
-    {
-      topic: 'integrations',
-      claim: 'Acme integrates with Slack.',
-      quote: 'Acme integrates with Slack',
-      confidence: 0.9,
-    },
-    { topic: 'pricing', claim: 'Rival is cheaper.', quote: 'Rival is cheaper', confidence: 0.9 },
-  ],
-});
-
-async function drain(owner: Tenant, kind: string, executor: ReturnType<typeof answerPerception>) {
-  const ids = (
-    await db
-      .selectFrom('analytics_tasks')
-      .select('id')
-      .where('workspace_id', '=', owner.workspaceId)
-      .where('task_kind', '=', kind)
-      .execute()
-  ).map((row) => row.id);
-  const worker = new AnalyticsWorker(db, settings, {
-    executors: { [kind]: executor },
-    taskScope: { workspaceId: owner.workspaceId, taskIds: ids },
-  });
-  await worker.runUntilIdle();
-  return ids;
-}
-
-const queued = (owner: Tenant, kind: string) =>
-  db
-    .selectFrom('analytics_tasks')
-    .select(['status', 'payload'])
-    .where('workspace_id', '=', owner.workspaceId)
-    .where('task_kind', '=', kind)
-    .execute();
 
 describe('brand facts', () => {
   it('is disabled outside the pilot: an empty list and refused writes', async () => {
@@ -451,9 +302,9 @@ describe('claim extraction and verification', () => {
     );
     const market = 'United States · English';
     expect(await csv.text()).toBe(
-      'claim,facts,verdict,engine,market,run_date,prompt\r\n' +
-        `Acme Pro costs $49 a month.,Pro costs $59 per month. (revision 2),contradicted,chatgpt,${market},${observedAt},best tools?\r\n` +
-        `Acme integrates with Slack.,,not_covered,chatgpt,${market},${observedAt},best tools?\r\n`,
+      'claim,facts,verdict,model_verdict,engine,market,run_date,prompt\r\n' +
+        `Acme Pro costs $49 a month.,Pro costs $59 per month. (revision 2),contradicted,,chatgpt,${market},${observedAt},best tools?\r\n` +
+        `Acme integrates with Slack.,,not_covered,,chatgpt,${market},${observedAt},best tools?\r\n`,
     );
 
     // Another workspace, inside the pilot, cannot read this run's facts or claims.
