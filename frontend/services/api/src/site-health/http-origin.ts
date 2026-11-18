@@ -5,13 +5,14 @@
  */
 import type { FetchedPage } from '../safe-fetch.ts';
 import { policy } from '../config.ts';
+import { failureFacts } from '../logging.ts';
 import { tlsCertificateCode } from './page-fetch.ts';
 import { logFetchFailure } from './sitemap-walk.ts';
 import type { SiteTaskContext } from './site-task.ts';
 
 const limits = policy.site_health.page_analysis.facts.limits;
-// The port refused or the host dropped the connection: nothing is served over HTTP.
-const NOT_SERVED = new Set(['ECONNREFUSED', 'ECONNRESET', 'EHOSTUNREACH']);
+// Only a refused port proves nothing is served; a reset or unreachable host may be transient.
+const NOT_SERVED = new Set(['ECONNREFUSED']);
 
 /** The plain-HTTP root of an HTTPS origin; null when the origin is not HTTPS. */
 export function httpOriginUrl(origin: string) {
@@ -23,10 +24,14 @@ export function httpOriginUrl(origin: string) {
   }
 }
 
+/** The code a failed probe keeps: a named certificate failure, else the error's own code. */
+export const probeFailureCode = (error: unknown) =>
+  tlsCertificateCode(error) ?? failureFacts(error).error_code ?? 'fetch_failed';
+
 /** What the probe observed, as the `site.http_origin` fact the rule reads. */
 export function httpOriginFacts(
   url: string | null,
-  observed: { kind: 'page'; page: FetchedPage } | { kind: 'error'; error: unknown },
+  observed: { kind: 'page'; page: FetchedPage } | { kind: 'error'; code: string },
 ) {
   if (!url) return { state: 'not_probed', reason: 'root_not_https' } as const;
   if (observed.kind === 'page') {
@@ -40,25 +45,26 @@ export function httpOriginFacts(
       final_status_code: observed.page.status,
     } as const;
   }
-  const { error } = observed;
-  const code = error instanceof Error && 'code' in error ? String(error.code) : '';
+  const { code } = observed;
   if (NOT_SERVED.has(code)) return { state: 'unanswered', url, error_code: code } as const;
-  const failure = tlsCertificateCode(error) ?? (code || 'fetch_failed');
-  return {
-    state: 'failed',
-    url,
-    error_code: failure.slice(0, limits.signal_detail_chars),
-  } as const;
+  return { state: 'failed', url, error_code: code.slice(0, limits.signal_detail_chars) } as const;
 }
 
-export async function probeHttpOrigin(ctx: SiteTaskContext, origin: string) {
+type ProbeContext = Pick<SiteTaskContext, 'checkAccess' | 'signal'> & {
+  fetcher: Pick<SiteTaskContext['fetcher'], 'acquirer' | 'settings'>;
+};
+
+export async function probeHttpOrigin(ctx: ProbeContext, origin: string) {
   const url = httpOriginUrl(origin);
-  if (!url) return httpOriginFacts(null, { kind: 'error', error: null });
+  if (!url) return httpOriginFacts(null, { kind: 'error', code: '' });
   await ctx.checkAccess();
-  const settings = ctx.fetcher.settings;
+  const { acquirer, settings } = ctx.fetcher;
+  // robots.txt is the origin's first request; when it got no answer, the root would not be fetched.
+  const robots = await acquirer.robots(new URL(url).origin);
+  if (robots.failure) return httpOriginFacts(url, { kind: 'error', code: robots.failure });
   const startedAt = performance.now();
   try {
-    const page = await ctx.fetcher.acquirer.fetch(url, {
+    const page = await acquirer.fetch(url, {
       signal: ctx.signal,
       maxBytes: settings.maxWireBytes,
       maxDecodedBytes: settings.maxDecodedBytes,
@@ -69,6 +75,6 @@ export async function probeHttpOrigin(ctx: SiteTaskContext, origin: string) {
     return httpOriginFacts(url, { kind: 'page', page });
   } catch (error) {
     logFetchFailure(ctx, 'http_origin', error, startedAt);
-    return httpOriginFacts(url, { kind: 'error', error });
+    return httpOriginFacts(url, { kind: 'error', code: probeFailureCode(error) });
   }
 }

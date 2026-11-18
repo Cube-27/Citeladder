@@ -216,6 +216,16 @@ it('records site-wide duplicate sets, dead ends and the pages of an unhubbed kin
     count: 1,
     pages: [{ site_url_id: 'g1', page_kind: 'article' }],
   });
+  // With no content page's body read, nothing can be called a dead end or linked.
+  const unread = [page('home', '/', 'homepage', { depth: 0 }), page('u1', '/guides/u', 'article')];
+  const unreadRules = architectureRules(
+    buildArchitecture(unread, 'complete', context),
+    unread,
+    'complete',
+  );
+  expect(
+    unreadRules.find((row) => row.rule.rule_id === 'architecture.dead_end_pages'),
+  ).toMatchObject({ outcome: 'unknown', reason: 'content_not_observed' });
   expect(evidence('architecture.unhubbed_page_kind')).toMatchObject({
     page_kind_counts: { service: 3 },
     page_kinds: [

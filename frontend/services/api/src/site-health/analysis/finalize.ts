@@ -194,6 +194,13 @@ export function sitemapValid(input: { sampleMode: boolean; sitemap: Record<strin
     return finalizeEvaluation(rule, 'unknown', { reason: 'insufficient_evidence' });
   const invalid = input.sitemap.invalid_count;
   const files = Number(input.sitemap.file_count) || 0;
+  const unread = Number(input.sitemap.unread_count) || 0;
+  // A document that went unanswered may be the broken one.
+  if (!invalid && unread)
+    return finalizeEvaluation(rule, 'unknown', {
+      reason: 'sitemap_unavailable',
+      unread_document_count: unread,
+    });
   if (!invalid && !files)
     return finalizeEvaluation(rule, 'not_applicable', { reason: 'no_sitemap' });
   const documents = Array.isArray(input.sitemap.invalid_documents)

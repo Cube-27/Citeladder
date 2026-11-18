@@ -1,10 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import { extractPageFacts } from '../src/site-health/analysis/facts.ts';
+import { sitemapValid } from '../src/site-health/analysis/finalize.ts';
 import { evaluatePageRules, type RuleEvaluation } from '../src/site-health/analysis/rules.ts';
-import { httpOriginFacts, httpOriginUrl } from '../src/site-health/http-origin.ts';
-import { tlsCertificateCode } from '../src/site-health/page-fetch.ts';
-import { failureMessage } from '../src/site-health/reads/crawl.ts';
+import {
+  httpOriginFacts,
+  httpOriginUrl,
+  probeFailureCode,
+  probeHttpOrigin,
+} from '../src/site-health/http-origin.ts';
+import { siteFetchSettings, tlsCertificateCode } from '../src/site-health/page-fetch.ts';
+import type { WebsiteFetcher } from '../src/safe-fetch.ts';
+import { PageAcquirer } from '../src/web-evidence/acquisition.ts';
 
 const URL_ = 'https://example.test/guides/setup';
 const extract = (body: string, head = '') =>
@@ -48,6 +55,28 @@ describe('invalid JSON-LD', () => {
         structured_data: { count: 0, declared_types: [] },
       })[0],
     ).toBe('unknown');
+  });
+});
+
+describe('unparseable sitemaps', () => {
+  const judgedSitemap = (sitemap: Record<string, unknown>) => {
+    const row = sitemapValid({ sampleMode: false, sitemap: { fetched: false, ...sitemap } });
+    return [row.outcome, row.reason_code];
+  };
+  it('keeps a walk that read nothing unknown, not out of scope', () => {
+    expect(judgedSitemap({ file_count: 0, invalid_count: 0, unread_count: 2 })).toEqual([
+      'unknown',
+      'sitemap_unavailable',
+    ]);
+    expect(judgedSitemap({ file_count: 3, invalid_count: 0, unread_count: 1 })[0]).toBe('unknown');
+    expect(judgedSitemap({ file_count: 3, invalid_count: 0, unread_count: 0 })[0]).toBe(
+      'satisfied',
+    );
+    expect(judgedSitemap({ file_count: 0, invalid_count: 0, unread_count: 0 })).toEqual([
+      'not_applicable',
+      'no_sitemap',
+    ]);
+    expect(judgedSitemap({ file_count: 0, invalid_count: 1, unread_count: 1 })[0]).toBe('missing');
   });
 });
 
@@ -122,6 +151,11 @@ describe('headings and length advisories', () => {
     expect(extract(body).primary_paragraph_word_counts).toEqual([160, 20]);
     expect(judged('aeo.long_paragraphs', 'article', body)).toEqual(['missing', '']);
     expect(judged('aeo.long_paragraphs', 'article', MAIN)[0]).toBe('satisfied');
+    // A full bounded list without a long paragraph says nothing about the paragraphs after it.
+    const kept = Array.from({ length: 200 }, () => 20);
+    expect(
+      judged('aeo.long_paragraphs', 'article', MAIN, '', { primary_paragraph_word_counts: kept }),
+    ).toEqual(['unknown', 'paragraphs_truncated']);
   });
 });
 
@@ -138,6 +172,7 @@ describe('HTTP origin and TLS certificate failures', () => {
   });
   const failure = (code: string, cause?: Error) =>
     Object.assign(new Error(code, cause ? { cause } : undefined), cause ? {} : { code });
+  const failed = (error: unknown) => ({ kind: 'error' as const, code: probeFailureCode(error) });
   const root = (probe: ReturnType<typeof httpOriginFacts> | null) => {
     const row = evaluatePageRules({
       has_html: true,
@@ -172,18 +207,42 @@ describe('HTTP origin and TLS certificate failures', () => {
         ),
       )[0],
     ).toBe('missing');
-    expect(root(httpOriginFacts(probe, { kind: 'error', error: failure('ECONNREFUSED') }))[0]).toBe(
-      'satisfied',
-    );
-    expect(root(httpOriginFacts(probe, { kind: 'error', error: failure('ETIMEDOUT') }))).toEqual([
-      'unknown',
-      'http_origin_unread',
-    ]);
-    expect(root(httpOriginFacts(null, { kind: 'error', error: null }))).toEqual([
+    expect(root(httpOriginFacts(probe, failed(failure('ECONNREFUSED'))))[0]).toBe('satisfied');
+    // A timeout or a reset may be transient, so neither proves HTTP is closed.
+    for (const code of ['ETIMEDOUT', 'ECONNRESET'])
+      expect(root(httpOriginFacts(probe, failed(failure(code))))).toEqual([
+        'unknown',
+        'http_origin_unread',
+      ]);
+    expect(root(httpOriginFacts(null, { kind: 'error', code: '' }))).toEqual([
       'not_applicable',
       'root_not_https',
     ]);
     expect(root(null)).toEqual(['unknown', 'insufficient_evidence']);
+  });
+
+  it('reads a refused http:// port at its robots.txt as nothing served over HTTP', async () => {
+    const sent: string[] = [];
+    const refuse: WebsiteFetcher = async (url) => {
+      sent.push(url);
+      throw failure('ECONNREFUSED');
+    };
+    const settings = siteFetchSettings({});
+    const acquisition = { ...settings.acquisition, robotsAttempts: 1 };
+    const facts = await probeHttpOrigin(
+      {
+        checkAccess: async () => {},
+        signal: new AbortController().signal,
+        fetcher: {
+          settings: { ...settings, acquisition },
+          acquirer: new PageAcquirer(async () => {}, refuse, acquisition, 0),
+        },
+      },
+      'https://example.test',
+    );
+    expect(facts).toEqual({ state: 'unanswered', url: probe, error_code: 'ECONNREFUSED' });
+    expect(root(facts)).toEqual(['satisfied', '']);
+    expect(sent).toEqual(['http://example.test/robots.txt']);
   });
 
   it('names a certificate failure and its reason instead of a failed connection', () => {
@@ -192,10 +251,7 @@ describe('HTTP origin and TLS certificate failures', () => {
       tlsCertificateCode(failure('fetch failed', failure('ERR_TLS_CERT_ALTNAME_INVALID'))),
     ).toBe('tls_cert_hostname_mismatch');
     expect(tlsCertificateCode(failure('ECONNREFUSED'))).toBeNull();
-    expect(failureMessage('tls_cert_self_signed', null, 1)).toBe(
-      "The site's TLS certificate is self-signed",
-    );
-    expect(httpOriginFacts(probe, { kind: 'error', error: failure('CERT_HAS_EXPIRED') })).toEqual({
+    expect(httpOriginFacts(probe, failed(failure('CERT_HAS_EXPIRED')))).toEqual({
       state: 'failed',
       url: probe,
       error_code: 'tls_cert_expired',

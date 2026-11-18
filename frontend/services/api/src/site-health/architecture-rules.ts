@@ -161,6 +161,31 @@ function sections(pages: { url: string }[]) {
 }
 
 /**
+ * Content pages whose main content links to no internal page. Links are read
+ * from the page's own facts, so an unread body has none to judge; when no
+ * content page was read, nothing can be called linked or a dead end.
+ */
+function deadEndPages(
+  pages: ReturnType<typeof buildArchitecture>['hierarchy'],
+  byId: Map<string, ArchitecturePage>,
+  coverage: string,
+) {
+  const content = pages
+    .filter((page) => p.dead_end_page_kinds.includes(page.page_kind))
+    .map((page) => ({ page, row: byId.get(page.site_url_id)! }));
+  const read = content.filter(({ row }) => record(row.facts.extraction).state === 'available');
+  const deadEnds = read.filter(({ row }) => row.contentOutbound === 0).map(({ page }) => page);
+  const result = evaluation('architecture.dead_end_pages', deadEnds, pageSample, coverage);
+  if (read.length || !content.length) return result;
+  return {
+    ...result,
+    outcome: 'unknown',
+    reason: 'content_not_observed',
+    evidence: { reason: 'content_not_observed', coverage_state: coverage },
+  };
+}
+
+/**
  * Pages other pages link to but no link path from the homepage reaches: a
  * section linked only from itself. Orphans (no inbound link at all) are
  * `architecture.orphan_pages`, so they never repeat here. Without an observed
@@ -229,20 +254,7 @@ export function architectureRules(
     ),
     duplicateMetadata('architecture.duplicate_titles', source, coverage),
     duplicateMetadata('architecture.duplicate_meta_descriptions', source, coverage),
-    evaluation(
-      'architecture.dead_end_pages',
-      pages.filter((page) => {
-        const source = byId.get(page.site_url_id)!;
-        // Links are read from the page's own facts: an unread body has none to judge.
-        return (
-          p.dead_end_page_kinds.includes(page.page_kind) &&
-          record(source.facts.extraction).state === 'available' &&
-          source.contentOutbound === 0
-        );
-      }),
-      pageSample,
-      coverage,
-    ),
+    deadEndPages(pages, byId, coverage),
     evaluation(
       'architecture.orphan_pages',
       pages.filter(

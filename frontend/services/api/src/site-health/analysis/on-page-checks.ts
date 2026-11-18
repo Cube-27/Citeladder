@@ -3,7 +3,7 @@
  * HTTP origin, and the length advisories. Thresholds are site health policy;
  * the advisories are never scored.
  */
-import { analysisPolicy, words } from './policy.ts';
+import { analysisPolicy, limits, words } from './policy.ts';
 import { passFail } from './delivery-checks.ts';
 import { count, list, record, text, type Facts } from './read-facts.ts';
 import type { CheckResult } from './indexing.ts';
@@ -50,6 +50,9 @@ function longParagraphs(facts: Facts): CheckResult {
   const maximum = advisories.long_paragraph_max_words;
   const counts = list(facts.primary_paragraph_word_counts).map(count);
   const long = counts.filter((value) => value > maximum);
+  // The facts keep a bounded prefix: a full list without a long paragraph proves nothing about the rest.
+  if (!long.length && counts.length >= limits.paragraphs_kept)
+    return ['unknown', { reason: 'paragraphs_truncated', paragraph_count: counts.length }];
   return [
     passFail(long.length === 0),
     {

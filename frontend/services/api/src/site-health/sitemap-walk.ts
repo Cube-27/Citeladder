@@ -37,7 +37,7 @@ export type WalkSettings = {
  * the drain is not a fetch failure: the task's commit re-checks it.
  */
 export function logFetchFailure(
-  ctx: SiteTaskContext,
+  ctx: Pick<SiteTaskContext, 'signal'>,
   phase: string,
   error: unknown,
   startedAt: number,

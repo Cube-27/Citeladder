@@ -215,6 +215,8 @@ export function robotsPolicy(
      * (SSRF, suppression, size, redirects) repeats, so it is cached and final.
      */
     transient: unavailable,
+    /** The error code when no answer came back: a network failure or a refusal. */
+    failure: null as string | null,
     restricted,
     readable,
     delay: seconds,
@@ -306,13 +308,15 @@ export class PageAcquirer {
       return robotsPolicy(origin, result.status, result.body.toString('utf8'), this.settings);
     } catch (error) {
       // Status 0 reads as unreachable robots.
+      const facts = failureFacts(error);
       logger.info('robots_fetch_failed', {
-        ...failureFacts(error),
+        ...facts,
         elapsed_ms: Math.round(performance.now() - startedAt),
       });
       // A refusal (SSRF, suppression, size, redirects) repeats on retry; a network failure may not.
       const transient = !(error instanceof FetchError) || error.code === 'dns_resolution_failed';
-      return { ...robotsPolicy(origin, 0, '', this.settings), transient };
+      const failure = facts.error_code ?? facts.error_class;
+      return { ...robotsPolicy(origin, 0, '', this.settings), transient, failure };
     }
   }
   /** Pause new requests to an origin, e.g. after it answered 429. */
