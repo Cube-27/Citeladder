@@ -18,6 +18,15 @@ const USER = {
   created_at: '2026-01-01T00:00:00Z',
   updated_at: '2026-01-01T00:00:00Z',
 };
+// The flow paths these transitions visit. Importing the route manifest would tie
+// this spec to every screen through its lazy imports.
+const FLOW_PATHS = new Set([
+  '/login',
+  '/register',
+  '/workspaces',
+  '/onboarding',
+  '/invitations/accept',
+]);
 const BETA_WORKSPACE_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const BETA_PROJECT = makeProject({
   id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
@@ -26,23 +35,42 @@ const BETA_PROJECT = makeProject({
   brand_name: 'Beta',
   website_url: 'https://beta.example',
 });
-const FLOW_PATHS = ['/login', '/register', '/workspaces', '/onboarding', '/invitations/accept'];
 
 type Frame = {
   doc: string;
   path: string;
+  search: string;
   surfaces: number;
   shell: string | null;
   rootChildren: number;
   bootShell: boolean;
 };
 
+type Recorder = {
+  frames: Frame[];
+  /** The first delivered sample matching `match`, now or once it arrives. */
+  next: (match: (frame: Frame) => boolean) => Promise<Frame>;
+};
+
 /** One sample per painted frame that differs from the last, from every document. */
-async function recordFrames(page: Page): Promise<Frame[]> {
+async function recordFrames(page: Page): Promise<Recorder> {
   const frames: Frame[] = [];
+  const waiting: Array<{ match: (frame: Frame) => boolean; found: (frame: Frame) => void }> = [];
   await page.exposeBinding('__recordFrame', (_source, frame: Frame) => {
     frames.push(frame);
+    for (const waiter of waiting.filter((entry) => entry.match(frame))) {
+      waiting.splice(waiting.indexOf(waiter), 1);
+      waiter.found(frame);
+    }
   });
+  const next = (match: (frame: Frame) => boolean) => {
+    const seen = frames.find(match);
+    return seen
+      ? Promise.resolve(seen)
+      : new Promise<Frame>((found) => {
+          waiting.push({ match, found });
+        });
+  };
   await page.addInitScript(() => {
     const doc = Math.random().toString(36).slice(2);
     const ids = new WeakMap<Element, string>();
@@ -55,6 +83,7 @@ async function recordFrames(page: Page): Promise<Frame[]> {
         const frame = {
           doc,
           path: location.pathname,
+          search: location.search,
           surfaces: document.querySelectorAll('[data-app-surface]').length,
           shell: surface ? (ids.get(surface) ?? null) : null,
           rootChildren: root.childElementCount,
@@ -72,15 +101,16 @@ async function recordFrames(page: Page): Promise<Frame[]> {
     };
     requestAnimationFrame(sample);
   });
-  return frames;
+  return { frames, next };
 }
 
-const isFlow = (path: string) => FLOW_PATHS.some((flow) => path === flow);
-
 function expectFlowFramesPlain(frames: readonly Frame[]) {
-  const wrong = frames.filter((frame) => isFlow(frame.path) && (frame.surfaces || frame.bootShell));
+  const wrong = frames.filter(
+    (frame) => FLOW_PATHS.has(frame.path) && (frame.surfaces || frame.bootShell),
+  );
   expect(wrong).toEqual([]);
   expect(frames.filter((frame) => frame.rootChildren === 0)).toEqual([]);
+  expect(frames.filter((frame) => frame.surfaces > 1)).toEqual([]);
 }
 
 /** The fixture shell behind a session that exists only after sign-in. */
@@ -138,25 +168,26 @@ const accountMenu = (page: Page) => page.getByRole('button', { name: /^Account m
 test('a single-workspace owner signs in to one shell and signs out to a plain sign-in page', async ({
   page,
 }) => {
-  const frames = await recordFrames(page);
+  const { frames, next } = await recordFrames(page);
   await stubSignIn(page, [{ id: FIXTURE_WORKSPACE_ID, name: 'Alpha', role: 'owner' }]);
   await signIn(page);
   await expect(page).toHaveURL(/\/projects\?.*project=/u);
   await expect(accountMenu(page)).toBeVisible();
-  const app = frames.at(-1)!.doc;
+  const app = (await next((f) => f.path === '/projects' && f.shell !== null)).doc;
   // The new document draws the shell once: no placeholder shell before it.
   expect(new Set(frames.filter((f) => f.doc === app && f.shell).map((f) => f.shell)).size).toBe(1);
 
   await accountMenu(page).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
   await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible();
+  await next((f) => f.path === '/login' && f.doc !== app);
   expectFlowFramesPlain(frames);
 });
 
 test('the chooser opens on its plain frame and a workspace switch keeps the shell', async ({
   page,
 }) => {
-  const frames = await recordFrames(page);
+  const { frames, next } = await recordFrames(page);
   await stubSignIn(page, [
     { id: FIXTURE_WORKSPACE_ID, name: 'Alpha', role: 'owner' },
     { id: BETA_WORKSPACE_ID, name: 'Beta team', role: 'admin' },
@@ -166,28 +197,32 @@ test('the chooser opens on its plain frame and a workspace switch keeps the shel
   await page.getByRole('button', { name: /Alpha/u }).click();
   await expect(accountMenu(page)).toBeVisible();
 
-  const before = frames.length;
-  const shell = frames.at(-1)!.shell;
-  expect(shell).not.toBeNull();
+  const entered = await next((f) => f.path === '/projects' && f.shell !== null);
+  const start = frames.indexOf(entered);
   await page
     .getByRole('button', { name: FIXTURE_PROJECT.brand_name ?? FIXTURE_PROJECT.name })
     .click();
   await page.getByRole('menuitem', { name: 'Beta team' }).click();
   await expect(page).toHaveURL(new RegExp(`project=${BETA_PROJECT.id}`, 'u'));
   await expect(page.getByRole('button', { name: 'Beta', exact: true })).toBeVisible();
-  // One shell element throughout the switch: never torn down or swapped.
-  expect([...new Set(frames.slice(before).map((frame) => frame.shell))]).toEqual([shell]);
+  await next((f) => f.search.includes(BETA_PROJECT.id));
+  // One document and one shell element throughout the switch: never torn down or swapped.
+  const during = frames.slice(start);
+  expect([...new Set(during.map((frame) => frame.doc))]).toEqual([entered.doc]);
+  expect([...new Set(during.map((frame) => frame.shell))]).toEqual([entered.shell]);
   expectFlowFramesPlain(frames);
 });
 
 test('someone with no workspace signs in to setup with only flow frames before its card', async ({
   page,
 }) => {
-  const frames = await recordFrames(page);
+  const { frames, next } = await recordFrames(page);
   await stubSignIn(page, []);
   await signIn(page);
   await expect(page.getByRole('heading', { name: 'Set up your workspace' })).toBeVisible();
+  const setup = await next((f) => f.path === '/onboarding');
   await page.reload();
   await expect(page.getByRole('heading', { name: 'Set up your workspace' })).toBeVisible();
+  await next((f) => f.path === '/onboarding' && f.doc !== setup.doc);
   expectFlowFramesPlain(frames);
 });

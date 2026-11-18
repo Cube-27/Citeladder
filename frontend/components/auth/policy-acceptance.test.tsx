@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, expect, it, vi } from 'vite-plus/test';
@@ -89,6 +89,40 @@ it('records the republished revision when the Terms change between the read and 
     ['workspace-a', 'published-2'],
   ]);
   expect(authApi.logout).not.toHaveBeenCalled();
+});
+
+it('rereads the workspace whose record met a republished revision, after a switch away', async () => {
+  vi.mocked(policiesApi.status).mockImplementation(async (id) =>
+    id === 'workspace-b' ? ACCEPTED : UNACCEPTED,
+  );
+  let refuse!: (error: unknown) => void;
+  vi.mocked(policiesApi.accept).mockReturnValueOnce(
+    new Promise((_settle, reject) => {
+      refuse = reject;
+    }),
+  );
+  const { rerender } = renderGate();
+  await waitFor(() =>
+    expect(policiesApi.accept).toHaveBeenCalledWith('workspace-a', 'published-1'),
+  );
+
+  activeWorkspace.id = 'workspace-b';
+  rerender();
+  expect(await screen.findByText('Workspace content')).toBeInTheDocument();
+  await act(async () =>
+    refuse(
+      new ApiError('The Terms changed.', 409, '', undefined, { code: 'policy_revision_changed' }),
+    ),
+  );
+
+  vi.mocked(policiesApi.status).mockResolvedValue({ ...UNACCEPTED, terms_revision: 'published-2' });
+  activeWorkspace.id = 'workspace-a';
+  rerender();
+  expect(await screen.findByText('Workspace content')).toBeInTheDocument();
+  expect(vi.mocked(policiesApi.accept).mock.calls).toEqual([
+    ['workspace-a', 'published-1'],
+    ['workspace-a', 'published-2'],
+  ]);
 });
 
 it('keeps product content behind a retryable error when recording fails for another reason', async () => {

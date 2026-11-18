@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -59,22 +59,27 @@ function useWorkspacePolicy(workspaceId: string | null): PolicyState {
     ...policyQueries.workspace(workspaceId ?? ''),
     enabled: workspaceId !== null,
   });
+  const client = useQueryClient();
   const accept = useMutation(policyMutations.accept());
-  const { refetch } = query;
   const { mutate } = accept;
   const record = useCallback(
     (id: string, revision: string) =>
       mutate(
         { workspaceId: id, revision },
         {
-          // Republished between the read and the record: read the new revision,
-          // which records it (or ends the session if it predates it).
+          // Republished between the read and the record: reread that workspace
+          // (perhaps no longer the selected one), which records the new
+          // revision or ends a session that predates it.
           onError: (error) => {
-            if (revisionChanged(error)) void refetch();
+            if (!revisionChanged(error)) return;
+            void client.invalidateQueries({
+              queryKey: policyQueries.workspace(id).queryKey,
+              exact: true,
+            });
           },
         },
       ),
-    [mutate, refetch],
+    [client, mutate],
   );
   const pendingRevision = query.data && !query.data.accepted_at ? query.data.terms_revision : null;
   // Once per workspace and revision: a refusal stops here rather than retrying in a loop.
