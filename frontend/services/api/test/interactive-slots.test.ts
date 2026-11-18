@@ -126,11 +126,8 @@ describe('in-request work slots on one API instance', () => {
   });
 
   it('ends a turn at the time limit frozen in its budget, not the live setting', async () => {
-    let started!: () => void;
-    const calling = new Promise<void>((resolve) => {
-      started = resolve;
-    });
-    const turn = await agent(blocking(() => started()));
+    // No wait for the model call: a slow runner can spend the 0.3 s before it.
+    const turn = await agent(blocking(() => {}));
     // Admission froze a short limit; the live setting is still 1,800 seconds.
     const run = await fixtures.run(turn.runId);
     await db
@@ -139,7 +136,6 @@ describe('in-request work slots on one API instance', () => {
       .where('id', '=', turn.runId)
       .execute();
     const response = await turn.run();
-    await calling;
     expect(await response.text()).toContain('"type":"done"');
     expect(await fixtures.run(turn.runId)).toMatchObject({
       status: 'failed',
