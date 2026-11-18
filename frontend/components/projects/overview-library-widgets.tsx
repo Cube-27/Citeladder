@@ -286,7 +286,8 @@ export function PerceptionWidget({ project }: Readonly<{ project: Project }>) {
         fallback="Perception could not be loaded."
       >
         {(data) => {
-          const score = data.brand?.score ?? null;
+          // Pending, unavailable and no-mentions reads keep the absence mark, never "too few".
+          const score = data.state === 'value' ? (data.brand?.score ?? null) : null;
           return (
             <FigureStrip
               segments={[

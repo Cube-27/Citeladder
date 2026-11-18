@@ -461,13 +461,13 @@ export async function accuracyClaimRows(
     return (market.id !== null && labels.get(market.id)) || marketLabel(market);
   };
   return claims.map(({ answer, claim }) => {
-    const verdict = claim.status.kind === 'verdict' ? claim.status.verdict : claim.status.kind;
+    const modelVerdict = claim.status.kind === 'verdict' ? claim.status.verdict : '';
     return {
       claim: claim.claim,
       facts: claim.facts.map((fact) => `${fact.statement} (revision ${fact.revision})`).join('; '),
-      verdict,
-      // The model's own verdict on every row; it differs only where a person changed it (AV-12).
-      model_verdict: claim.edited?.model_verdict ?? verdict,
+      verdict: claim.status.kind === 'verdict' ? claim.status.verdict : claim.status.kind,
+      // The model's verdict on every row that has one; a person's change keeps it (AV-12).
+      model_verdict: claim.edited?.model_verdict ?? modelVerdict,
       engine: engineLabel(answer.logicalEngine),
       market: marketName(answer.auditId),
       run_date: answer.observedAt,

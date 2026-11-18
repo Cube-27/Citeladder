@@ -149,11 +149,7 @@ function FigureCell({
       <FigureLabel segment={segment} subLine={subLine} />
       <FigureLead segment={segment} />
       <FigureValueLine segment={segment} subLine={subLine} />
-      {subLine ? (
-        <dd data-figure-sub="" className="type-caption text-ink-2 min-w-0 truncate">
-          {segment.sub && !segment.loading ? segment.sub : ' '}
-        </dd>
-      ) : null}
+      {subLine ? <FigureSub segment={segment} /> : null}
     </>
   );
   return (
@@ -288,6 +284,18 @@ function FigureValueLine({ segment, subLine }: FigurePart) {
           <FigureHint segment={segment} subLine={subLine} />
         </span>
       ) : null}
+    </dd>
+  );
+}
+
+/**
+ * Row 3 with `subLine`: the basis, one line. Grid auto-placement puts it under
+ * the value; an empty one keeps its height so the row's values align.
+ */
+function FigureSub({ segment }: FigurePart) {
+  return (
+    <dd className="type-caption text-ink-2 min-w-0 truncate">
+      {segment.sub && !segment.loading ? segment.sub : ' '}
     </dd>
   );
 }

@@ -179,27 +179,42 @@ function ThemeList({ themes }: Readonly<{ themes: PerceptionResponse['themes'] }
 }
 
 function SentimentRing({ data }: Readonly<{ data: PerceptionResponse }>) {
-  const score = data.brand?.score;
   return (
     <TitledSection title="How AI judges you">
       <SectionContent>
-        {score ? (
-          <PartDonut
-            label="Sentiment of classified mentions"
-            totalLabel="classified"
-            total={score.classified}
-            parts={[
-              { label: 'Positive', value: score.positive, status: 'positive' },
-              { label: 'Neutral', value: score.neutral, status: 'neutral' },
-              { label: 'Negative', value: score.negative, status: 'negative' },
-              { label: 'Mixed', value: score.mixed, status: 'warning' },
-            ]}
-          />
-        ) : (
-          <StateBlock kind="empty" inline message="No classified mentions of you." />
-        )}
+        <SentimentParts score={data.brand?.score} />
       </SectionContent>
     </TitledSection>
+  );
+}
+
+/** The donut from the classified minimum; below it a too-few line, never shares of a handful. */
+function SentimentParts({
+  score,
+}: Readonly<{ score: PerceptionResponse['entities'][number]['score'] | undefined }>) {
+  if (!score?.classified)
+    return <StateBlock kind="empty" inline message="No classified mentions of you." />;
+  const reading = shareReading(score.positive_share, score.classified);
+  if (reading.kind === 'too_few')
+    return (
+      <StateBlock
+        kind="empty"
+        inline
+        message={`Too few classified (${reading.basis} of the ${reading.minimum} needed).`}
+      />
+    );
+  return (
+    <PartDonut
+      label="Sentiment of classified mentions"
+      totalLabel="classified"
+      total={score.classified}
+      parts={[
+        { label: 'Positive', value: score.positive, status: 'positive' },
+        { label: 'Neutral', value: score.neutral, status: 'neutral' },
+        { label: 'Negative', value: score.negative, status: 'negative' },
+        { label: 'Mixed', value: score.mixed, status: 'warning' },
+      ]}
+    />
   );
 }
 
