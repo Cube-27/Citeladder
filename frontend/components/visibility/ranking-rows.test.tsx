@@ -1,8 +1,7 @@
-import { fireEvent, render as renderUi, screen, within } from '@testing-library/react';
+import { render as renderUi, screen, within } from '@testing-library/react';
 import type { ReactElement } from 'react';
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { describe, expect, it } from 'vite-plus/test';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { focusByKeyboard } from '@/test/keyboard-focus';
 import type { RankingRow } from '@citeladder/contracts';
 import { RankingRowsTable } from './ranking-rows';
 
@@ -24,8 +23,13 @@ function row(overrides: Partial<RankingRow> = {}): RankingRow {
   };
 }
 
+const cellsOf = (name: string) =>
+  within(screen.getByText(name).closest('tr')!)
+    .getAllByRole('cell')
+    .map((cell) => cell.textContent);
+
 describe('RankingRowsTable', () => {
-  it('sorts presence rates and breaks ties deterministically without inventing ranks', () => {
+  it('sorts presence rates and breaks ties deterministically', () => {
     render(
       <RankingRowsTable
         rows={[
@@ -39,28 +43,19 @@ describe('RankingRowsTable', () => {
     expect(within(rows[0]!).getByText('Leader')).toBeVisible();
     expect(within(rows[1]!).getByText('Acme')).toBeVisible();
   });
-  it('identifies the brand and names its columns as the KPI row does', () => {
-    render(<RankingRowsTable rows={[row({ is_brand: true })]} />);
+  it('shows the mean position as a column, apart from an unmeasured one', () => {
+    render(
+      <RankingRowsTable
+        rows={[
+          row({ name: 'Acme', is_brand: true, avg_position: 1.46 }),
+          row({ name: 'Globex', mention_rate: 0.2 }),
+        ]}
+      />,
+    );
     expect(screen.getByText('You')).toBeVisible();
-    // The same names as the headline tiles, never "S.O.V." or "Citations".
-    expect(screen.getByRole('columnheader', { name: /^Share of voice/ })).toBeVisible();
-    expect(screen.getByRole('columnheader', { name: /^Owned citation rate/ })).toBeVisible();
-    expect(screen.queryByRole('columnheader', { name: 'S.O.V.' })).toBeNull();
-    expect(screen.queryByRole('columnheader', { name: 'Citations' })).toBeNull();
-    const cells = within(screen.getByText('Acme').closest('tr')!).getAllByRole('cell');
-    expect(cells.map((cell) => cell.textContent).slice(-2)).toEqual(['40.0%', '25.0%']);
-  });
-  it('shows a cut brand name in full when its button takes keyboard focus', async () => {
-    render(<RankingRowsTable rows={[row({ name: 'Kmart Australia' })]} onSelect={vi.fn()} />);
-    const name = screen.getByText('Kmart Australia');
-    // jsdom lays nothing out, so the ellipsis is stated: the name overflows its box.
-    Object.defineProperty(name, 'scrollWidth', { configurable: true, value: 120 });
-    Object.defineProperty(name, 'clientWidth', { configurable: true, value: 40 });
-    // The column hints come first in tab order, so focus moves to the name directly.
-    const button = screen.getByRole('button', { name: 'Plot Kmart Australia on its own' });
-    focusByKeyboard(button);
-    expect(button).toHaveFocus();
-    expect(await screen.findByRole('tooltip')).toHaveTextContent('Kmart Australia');
+    expect(screen.getByRole('columnheader', { name: /^Position/ })).toBeVisible();
+    expect(cellsOf('Acme').slice(2)).toEqual(['40.0%', '1.5']);
+    expect(cellsOf('Globex').slice(2)).toEqual(['40.0%', 'Not measured']);
   });
   it('distinguishes measured zero, unavailable rates, and incomparable changes', () => {
     render(
@@ -70,12 +65,11 @@ describe('RankingRowsTable', () => {
     );
     expect(screen.getByText('0.0%')).toBeVisible();
     const unknown = screen.getByText('Unknown').closest('tr')!;
-    // Unmeasured visibility leaves the rank unmeasured too: a brand with no
-    // measured presence has no standing to report, rather than last place.
     expect(within(unknown).getAllByText('Not measured').length).toBeGreaterThan(0);
-    // With no prior run, NO brand has a change, so the column is not drawn at
-    // all; the reason is stated once above the table.
+    // With no prior run NO brand has a change, and no brand has a position,
+    // so neither column is drawn.
     expect(screen.queryByRole('columnheader', { name: 'Change' })).toBeNull();
+    expect(screen.queryByRole('columnheader', { name: /^Position/ })).toBeNull();
   });
   it('compares brands without an asymmetric answers-without-you column', () => {
     render(
@@ -84,52 +78,7 @@ describe('RankingRowsTable', () => {
     expect(screen.getByText('0.3 pp').parentElement).toHaveTextContent('up +0.3 pp');
     // The overlap measure is undefined for the tracked brand itself, so it is
     // not a column of a table whose every other column applies to every row.
-    // It survives on `gap_count` for opportunity analysis.
     expect(screen.queryByRole('columnheader', { name: /answers without you/i })).toBeNull();
-    expect(screen.queryByRole('button', { name: /answers naming/i })).toBeNull();
-  });
-  it('ranks competitively over the rendered order, sharing a rank on ties', () => {
-    render(
-      <RankingRowsTable
-        rows={[
-          row({ name: 'Leader', mention_rate: 1 }),
-          row({ name: 'Acme', mention_rate: 0.5 }),
-          row({ name: 'Zulu', mention_rate: 0.5 }),
-        ]}
-      />,
-    );
-    // Named Rank so it does not read as the headline Average position.
-    expect(screen.getByRole('columnheader', { name: 'Rank' })).toBeVisible();
-    const cells = (name: string) =>
-      within(screen.getByText(name).closest('tr')!).getByTitle(/ranks #/);
-    expect(cells('Leader')).toHaveTextContent('#1');
-    // Equal visibility is equal standing; the alphabetical tie-break orders the
-    // rows but must not invent a difference in rank.
-    expect(cells('Acme')).toHaveTextContent('#2');
-    expect(cells('Zulu')).toHaveTextContent('#2');
-  });
-  it('selects a row to plot it alone, and re-selecting it restores every brand', () => {
-    const onSelect = vi.fn();
-    render(
-      <RankingRowsTable
-        rows={[row({ name: 'Globex' }), row({ name: 'Acme' })]}
-        onSelect={onSelect}
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Plot Globex on its own' }));
-    expect(onSelect).toHaveBeenCalledWith('Globex');
-    onSelect.mockClear();
-    // Already-selected rows clear the focus, so one row both focuses and
-    // restores rather than stranding the reader on a single-brand chart.
-    render(
-      <RankingRowsTable
-        rows={[row({ name: 'Globex' })]}
-        onSelect={onSelect}
-        selectedName="Globex"
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: 'Stop plotting Globex on its own' }));
-    expect(onSelect).toHaveBeenCalledWith(null);
   });
   it('prefers the matched-subset change when the run has one', () => {
     render(
@@ -144,8 +93,6 @@ describe('RankingRowsTable', () => {
         ]}
       />,
     );
-    // Which comparison produced the number is explained once above the table,
-    // so the cell shows the number and nothing else.
     expect(screen.getByText('10.0 pp').parentElement).toHaveTextContent('up +10.0 pp');
     expect(screen.queryByText('Matched subset')).toBeNull();
   });

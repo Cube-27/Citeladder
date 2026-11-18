@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vite-plus/test';
 
 import { AllFilters } from '@/components/ui/all-filters';
-import type { VisibilityTab } from '@/lib/visibility/dashboard';
+import type { VisibilityView } from '@/lib/visibility/dashboard';
 import { renderWithProviders as render } from '@/test/render';
 
 import { VisibilityActions, useVisibilityFilterMenu } from './visibility-toolbar';
@@ -15,13 +15,13 @@ function Menu(props: MenuProps) {
 }
 
 function renderMenu({
-  activeTab = 'trends',
+  view = 'insights',
   selectionMode,
   ...overrides
-}: Partial<MenuProps> & { activeTab?: VisibilityTab; selectionMode: 'run' | 'range' }) {
+}: Partial<MenuProps> & { view?: VisibilityView; selectionMode: 'run' | 'range' }) {
   return render(
     <Menu
-      activeTab={activeTab}
+      view={view}
       selectionMode={selectionMode}
       onChangeSelectionMode={vi.fn()}
       runs={[]}
@@ -71,7 +71,7 @@ describe('useVisibilityFilterMenu', () => {
 
   it('lists the prompt and answer outcome only where answers are shown', async () => {
     renderMenu({
-      activeTab: 'query-fanout',
+      view: 'query-fanout',
       selectionMode: 'run',
       promptOptions: [{ id: 'p1', label: 'Best CRM?' }],
       promptId: 'p1',

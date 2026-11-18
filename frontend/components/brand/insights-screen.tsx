@@ -1,0 +1,82 @@
+import { useLocation, useNavigate } from 'react-router-dom';
+
+import { ReportPage } from '@/components/templates/report-page';
+import { FilterBar } from '@/components/ui/filter-bar';
+import { SectionStack } from '@/components/ui/section';
+import { ActiveRunBanner } from '@/components/visibility/active-run-banner';
+import { EngineComparison } from '@/components/visibility/engine-comparison';
+import { SelectionGate } from '@/components/visibility/selection-gate';
+import {
+  SelectionPageStateBlock,
+  selectionPageState,
+  showsSelectionFilters,
+  useSelectionPageFilters,
+} from '@/components/visibility/selection-page';
+import { SurfaceRatesPanel } from '@/components/visibility/surface-rates';
+import { VisibilityByMarket } from '@/components/visibility/visibility-by-market';
+import { BrandTrend, InsightsLede } from '@/components/visibility/visibility-trends';
+import { useProjectHref } from '@/lib/navigation/project-destination';
+import {
+  useVisibilityFilters,
+  useVisibilityQueries,
+  visibilityEvidenceHref,
+} from '@/lib/visibility/use-visibility-dashboard';
+
+/**
+ * Brand → Insights (AV-14, AV-16): the lede with its key figures, your brand
+ * over time, then by model, the observed surface's rates and by market.
+ */
+export function InsightsScreen() {
+  const filters = useVisibilityFilters();
+  const queries = useVisibilityQueries(filters, 'insights');
+  const state = selectionPageState(queries);
+  const pageFilters = useSelectionPageFilters({ view: 'insights', filters, queries });
+  const navigate = useNavigate();
+  const { search } = useLocation();
+  const projectHref = useProjectHref();
+  return (
+    <ReportPage
+      filters={
+        showsSelectionFilters(state, queries) ? <FilterBar filters={pageFilters} /> : undefined
+      }
+    >
+      {queries.activeRun && state !== 'empty' ? <ActiveRunBanner run={queries.activeRun} /> : null}
+      {state ? (
+        <SelectionPageStateBlock state={state} queries={queries} />
+      ) : (
+        <SectionStack>
+          <SelectionGate query={queries.visibilityQuery}>
+            {(selected) => (
+              <SectionStack aria-busy={queries.visibilityQuery.isFetching}>
+                <InsightsLede selected={selected} />
+                <BrandTrend query={queries.trendQuery} selected={selected} />
+                <EngineComparison
+                  visibility={selected}
+                  filter={filters.engine}
+                  onSelect={(engine) =>
+                    void navigate(
+                      projectHref(
+                        visibilityEvidenceHref(search, { run: selected.audit_id, engine }),
+                      ),
+                    )
+                  }
+                />
+                {/* Only once the reader narrows to an observed surface: these
+                    rates divide by observations, not answers. */}
+                {queries.surfaceEngine ? (
+                  <SurfaceRatesPanel query={queries.surfaceRatesQuery} />
+                ) : null}
+              </SectionStack>
+            )}
+          </SelectionGate>
+          <VisibilityByMarket
+            query={queries.marketRowsQuery}
+            markets={queries.markets}
+            market={filters.market}
+            onSelectMarket={filters.setMarket}
+          />
+        </SectionStack>
+      )}
+    </ReportPage>
+  );
+}

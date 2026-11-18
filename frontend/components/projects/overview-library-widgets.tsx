@@ -125,7 +125,7 @@ function Rows({ rows }: Readonly<{ rows: { key: string; label: ReactNode; value:
 export function VisibilityTrendWidget({ project }: Readonly<{ project: Project }>) {
   const query = useVisibilityTrend(project);
   return (
-    <WidgetCard id="visibility_trend" href="/visibility?tab=trends">
+    <WidgetCard id="visibility_trend" href="/insights">
       <Loaded
         widget="visibility_trend"
         query={query}
@@ -154,7 +154,7 @@ export function VisibilityTrendWidget({ project }: Readonly<{ project: Project }
 export function ShareOfVoiceWidget({ project }: Readonly<{ project: Project }>) {
   const query = useLatestVisibility(project);
   return (
-    <WidgetCard id="share_of_voice" href="/visibility?tab=trends">
+    <WidgetCard id="share_of_voice" href="/insights?metric=sov">
       <Loaded
         widget="share_of_voice"
         query={query}

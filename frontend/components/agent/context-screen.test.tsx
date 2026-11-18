@@ -86,7 +86,6 @@ function renderContext({
   mswServer.use(
     http.get(instructionsEndpoint, () => HttpResponse.json(saved('Original'))),
     http.get('/api/v1/projects/:id/brand-profile', () => HttpResponse.json(profile)),
-    http.get('/api/v1/projects/:id/competitor-suggestions', () => HttpResponse.json([])),
     http.get('/api/v1/projects/:id/brand-facts', () =>
       HttpResponse.json({ enabled: false, facts: [] }),
     ),
@@ -406,9 +405,8 @@ describe('Company facts', () => {
 });
 
 describe('Competitors', () => {
-  it('lists tracked competitors as marked chips, adds a suggestion and opens their editor', async () => {
+  it('lists tracked competitors as marked chips and opens their editor', async () => {
     const user = userEvent.setup({ delay: null });
-    let accepted: string | undefined;
     const withCompetitors = makeProject({
       competitors: [
         {
@@ -427,37 +425,7 @@ describe('Competitors', () => {
         },
       ],
     });
-    const handlers = [
-      http.get('/api/v1/projects/:id/competitor-suggestions', () =>
-        HttpResponse.json([
-          {
-            id: '66666666-6666-4666-8666-666666666666',
-            audit_id: '77777777-7777-4777-8777-777777777777',
-            name: 'Globex',
-            domain: 'globex.test',
-            qualification_reason: 'Repeated third-party citations',
-            prompt_count: 3,
-            engine_count: 2,
-            market_relevant: true,
-            analyzer_version: 'competitor-v1',
-            source_analysis_ids: [],
-            source_artifact_ids: [],
-            status: 'candidate',
-            created_at: '2026-11-01T00:00:00Z',
-          },
-        ]),
-      ),
-      http.post('/api/v1/projects/:id/competitor-suggestions/:candidate/accept', ({ params }) => {
-        accepted = String(params.candidate);
-        return HttpResponse.json({
-          id: '88888888-8888-4888-8888-888888888883',
-          name: 'Globex',
-          aliases: [],
-          domains: ['globex.test'],
-        });
-      }),
-    ];
-    renderContext({ activeProject: withCompetitors, tab: 'competitors', handlers });
+    renderContext({ activeProject: withCompetitors, tab: 'competitors' });
 
     const tracked = await screen.findByRole('list', { name: 'Tracked competitors' });
     // Contoso has no cached logo, so its mark falls back to its first letter.
@@ -470,9 +438,6 @@ describe('Competitors', () => {
       'src',
       'https://assets.test/northstar.png',
     );
-
-    await user.click(await screen.findByRole('button', { name: 'Add competitor Globex' }));
-    await waitFor(() => expect(accepted).toBe('66666666-6666-4666-8666-666666666666'));
 
     await user.click(screen.getByRole('button', { name: 'Edit competitors' }));
     expect(await screen.findByRole('dialog', { name: 'Edit Acme' })).toBeVisible();

@@ -22,14 +22,14 @@ export function useSurfaceRates({
   requestScope,
   engine,
   cohort,
-  onTrendsTab,
+  onInsights,
   activeRunId,
   selectedRunIds,
 }: {
   requestScope: Pick<ActiveProjectScope, 'workspaceId' | 'projectId'>;
   engine: string | undefined;
   cohort: string;
-  onTrendsTab: boolean;
+  onInsights: boolean;
   activeRunId: string | null;
   selectedRunIds: string[] | undefined;
 }) {
@@ -44,7 +44,7 @@ export function useSurfaceRates({
   const surfaceRatesQuery = useQuery({
     ...visibilityQueries.surfaceRates(requestScope, params),
     enabled:
-      onTrendsTab && surfaceEngine !== null && Boolean(activeRunId) && selectedRunIds?.length !== 0,
+      onInsights && surfaceEngine !== null && Boolean(activeRunId) && selectedRunIds?.length !== 0,
     placeholderData: (data, query) =>
       retainPreviousDataForScope(requestScope.projectId, data, query),
   });

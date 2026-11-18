@@ -177,9 +177,9 @@ const screens = {
   actionUrl: pick(() => import('@/components/agent/action-url-screen'), 'ActionUrlScreen'),
   skills: pick(() => import('@/components/agent/skills-screen'), 'SkillsScreen'),
   context: pick(() => import('@/components/agent/context-screen'), 'ContextScreen'),
-  insights: pick(() => import('@/components/brand/brand-screens'), 'InsightsScreen'),
+  insights: pick(() => import('@/components/brand/insights-screen'), 'InsightsScreen'),
   perception: pick(() => import('@/components/perception/perception-screen'), 'PerceptionScreen'),
-  competitors: pick(() => import('@/components/brand/brand-screens'), 'CompetitorsScreen'),
+  competitors: pick(() => import('@/components/brand/competitors-screen'), 'CompetitorsScreen'),
   prompts: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
   prompt: pick(() => import('@/components/prompts/prompt-detail-screen'), 'PromptDetailScreen'),
   visibility: pick(
@@ -348,7 +348,8 @@ export const APP_ROUTES = [
     path: '/insights',
     title: 'Insights',
     screen: screens.insights,
-    loading: cards([figures(), chart]),
+    // The lede's key figures, then the trend.
+    loading: cards([figures(3), chart], { filters: true }),
     nav: [listed('Insights', 'insights', 'brand')],
   }),
   page({
@@ -363,7 +364,8 @@ export const APP_ROUTES = [
     path: '/competitors',
     title: 'Competitors',
     screen: screens.competitors,
-    loading: cards([table(6)]),
+    // The ranking, then the suggestions.
+    loading: cards([table(5), table(5)], { filters: true }),
     nav: [listed('Competitors', 'competitors', 'brand')],
   }),
   page({
@@ -427,9 +429,9 @@ export const APP_ROUTES = [
     path: '/visibility',
     title: 'Sources',
     screen: screens.visibility,
-    // Trends moves to Brand → Insights (AV-14).
-    loading: cards([figures(), chart], {
-      tabs: ['Trends', 'Sources', 'Ads', 'Query fanouts'],
+    // Sources, the default tab, opens on its charts over the cited-domain table.
+    loading: cards([chart, table(6)], {
+      tabs: ['Sources', 'Ads', 'Query fanouts'],
       filters: true,
     }),
     nav: [listed('Sources', 'visibility', 'tracking')],

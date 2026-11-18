@@ -836,7 +836,10 @@ or scoring, and no other engine reads as zero ads.
 
 ## Read and UI surface
 
-Visibility has Trends, Sources, Perception, Ads and Query Fanout; Trends is default. Trends
+Visibility has Sources, Perception, Ads and Query Fanout; Sources is default. The
+trend, key figures and engine comparison live on Brand → Insights and the brand
+ranking with competitor suggestions on Brand → Competitors (AV-14, AV-16); both
+read the same selection and filters. Trends
 read the newest `trend_max_runs` runs in the window, bucket them and then cap the
 number of points (`trend_max_points`), so a run-heavy week stays one point. When
 the run bound cuts history, the bucket holding the cut is dropped whole rather
@@ -873,7 +876,7 @@ to Latest; historical windows remain separate from selected measurement.
 Every visibility read takes an optional `market` (a market id; omitted is the
 default market): Latest, ranges, trends and baselines stay inside it, and a named
 run implies its own market, so a run set spanning markets is a 422. With more
-than one market, a market switcher appears and Trends opens with **By market**
+than one market, a market switcher appears and Insights shows **By market**
 (`/visibility/markets`): each market's latest run, its mention rate, share of
 voice and net sentiment with the change since that market's previous comparable
 run; a market never measured is not run, never zero. The Overview, its
@@ -913,8 +916,8 @@ The cohort switch offers Unbranded prompts (`core`), Branded prompts
 like the others).
 A URL's brand list is co-occurrence in the answers that cited it: mentions are
 persisted against the response, so nothing links one to a citation.
-Browser history restores the analytical context. Competitor suggestions remain
-in Overview Facts rather than becoming measurement evidence automatically.
+Browser history restores the analytical context. Competitor suggestions stay
+on Competitors until accepted rather than becoming measurement evidence automatically.
 
 Evidence-backed Opportunity sorting and a Trends summary are not planned
 ([decision BL10](decisions.md#backlog-closure)).

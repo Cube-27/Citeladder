@@ -131,7 +131,11 @@
     "frontendE2E": ["e2e/shell.spec.ts"]
   },
   {
-    "sources": ["frontend/components/visibility/**", "frontend/lib/visibility/**"],
+    "sources": [
+      "frontend/components/visibility/**",
+      "frontend/components/brand/**",
+      "frontend/lib/visibility/**"
+    ],
     "frontendE2E": ["e2e/visibility.spec.ts"]
   },
   {

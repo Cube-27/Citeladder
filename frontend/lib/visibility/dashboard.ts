@@ -25,8 +25,7 @@ const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
 ]);
 
 /**
- * The Visibility workspace tabs, in display order. `trends` is the default.
- *   - trends:       cross-run metrics + charts + ranking movement
+ * The Visibility workspace tabs, in display order. `sources` is the default.
  *   - sources:      the domains and URLs AI answers retrieved and cited
  *   - ads:         paid ads shown in ChatGPT Search answers, apart from sources
  *   - query-fanout: frozen prompts + generated search-query evidence
@@ -34,19 +33,24 @@ const DASHBOARD_STATUSES: ReadonlySet<AuditStatus> = new Set<AuditStatus>([
  * Every tab reads the selected measurement, so the run / engine / prompt /
  * period controls apply throughout and there is no per-tab exception.
  */
-export type VisibilityTab = 'trends' | 'sources' | 'ads' | 'query-fanout';
+export type VisibilityTab = 'sources' | 'ads' | 'query-fanout';
+
+/**
+ * Which screen reads the shared selection: a Visibility tab, or a Brand page
+ * (Insights draws the trend; Competitors and Perception read the selection).
+ */
+export type VisibilityView = VisibilityTab | 'insights' | 'competitors' | 'perception';
 
 /** The ordered tab definitions (id + human label) rendered by the tablist. */
 export const VISIBILITY_TABS: readonly { id: VisibilityTab; label: string }[] = [
   // NOTE: `id` is the persisted `?tab=` URL value — only labels are restyled.
-  { id: 'trends', label: 'Trends' },
   { id: 'sources', label: 'Sources' },
   { id: 'ads', label: 'Ads' },
   { id: 'query-fanout', label: 'Query fanouts' },
 ] as const;
 
 /** The tabs backed by the shared execution-evidence query + cache key. */
-export function isEvidenceTab(tab: VisibilityTab): boolean {
+export function isEvidenceTab(tab: VisibilityView): boolean {
   return tab === 'query-fanout';
 }
 

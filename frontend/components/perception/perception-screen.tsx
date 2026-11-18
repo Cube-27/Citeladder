@@ -14,7 +14,6 @@ import { AnalysisRead, SelectionGate } from '@/components/visibility/selection-g
 import { useVisibilityFilterMenu } from '@/components/visibility/visibility-toolbar';
 import { stringUrlCodec, useUrlState } from '@/lib/navigation/url-state';
 import { useBrandFacts } from '@/lib/project/use-brand-facts';
-import type { VisibilityTab } from '@/lib/visibility/dashboard';
 import { useAccuracy } from '@/lib/visibility/use-accuracy';
 import { usePerception } from '@/lib/visibility/use-perception';
 import {
@@ -31,17 +30,13 @@ const TABS = [
 
 const TAB_CODEC = stringUrlCodec<PerceptionTab>(['brand', 'fact-checking'], 'brand');
 
-// The page reads the shared selection only: a Visibility tab that is neither
-// Trends nor an evidence tab enables none of those tabs' own reads.
-const SELECTION_ONLY: VisibilityTab = 'sources';
-
 type Filters = ReturnType<typeof useVisibilityFilters>;
 type Queries = ReturnType<typeof useVisibilityQueries>;
 
 /** How AI portrays the brand, and for the fact-checking pilot what it claims. */
 export function PerceptionScreen() {
-  const filters: Filters = { ...useVisibilityFilters(), activeTab: SELECTION_ONLY };
-  const queries = useVisibilityQueries(filters);
+  const filters = useVisibilityFilters();
+  const queries = useVisibilityQueries(filters, 'perception');
   // Fact-checking exists only inside the pilot.
   const pilot = useBrandFacts().data?.enabled ?? false;
   const [requested, setTab] = useUrlState('tab', TAB_CODEC);
@@ -153,7 +148,7 @@ function PageState({ queries }: Readonly<{ queries: Queries }>) {
 
 function usePageFilters(filters: Filters, queries: Queries) {
   return useVisibilityFilterMenu({
-    activeTab: filters.activeTab,
+    view: 'perception',
     runs: queries.runOptions,
     selectedRunId: filters.selectedRunId,
     onSelectMeasurement: filters.selectMeasurement,

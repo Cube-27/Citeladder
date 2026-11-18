@@ -84,7 +84,7 @@ const commandCenter = {
   next_action: {
     kind: 'monitor',
     title: 'Monitor — no required action',
-    href: '/visibility?tab=trends',
+    href: '/insights',
     opportunity_id: null,
   },
   active_prompt_count: 12,
