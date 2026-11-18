@@ -1,4 +1,4 @@
-import { Check, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useId, useMemo, useState } from 'react';
 
 import { StatusMark } from '@/components/ui/status-mark';
@@ -14,22 +14,38 @@ import { qualityFlagLabel, qualityStatusLabel } from '@/lib/prompts/candidate-qu
 import type { usePromptCandidates } from '@/lib/prompts/use-prompt-candidates';
 import { Notice } from '@/components/ui/notice';
 import { pluralCount } from '@/lib/format';
+import { PROMPT_BUILDER_REVIEW_HREF } from '@/lib/prompts/routes';
+import { ProjectLink } from '@/components/ui/project-link';
 
 const COLUMNS: readonly DataTableColumn[] = [
   { key: 'suggestion', label: 'Suggestion' },
   { key: 'checks', label: 'Checks', width: 'name' },
 ];
 
+/** The suggestions picked for review, held by the builder so its footer can track them. */
+export function useCandidateSelection(candidates: readonly PromptCandidate[]) {
+  const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
+  // Reviewed ids leave `candidates` and so drop out of `selected`; a failed
+  // request keeps the selection for a retry.
+  const selected = useMemo(
+    () => candidates.filter((candidate) => picked.has(candidate.id)).map((c) => c.id),
+    [candidates, picked],
+  );
+  return { picked, setPicked, selected };
+}
+
+export type CandidateSelection = ReturnType<typeof useCandidateSelection>;
+
 /**
  * Generated prompts awaiting review. Only accepted candidates become tracked
- * prompts; rejected ones are deleted. Selection is local and forgets ids that
- * are no longer pending. Rows arrive ranked; quality flags are advisory and
- * never hide a suggestion.
+ * prompts (the builder's footer accepts the selection); rejected ones are
+ * deleted. Rows arrive ranked; quality flags are advisory and never hide a
+ * suggestion.
  */
 export function CandidateReview({
   candidates,
   topics,
-  onAccept,
+  selection,
   onReject,
   isReviewing,
   error,
@@ -37,18 +53,14 @@ export function CandidateReview({
 }: Readonly<{
   candidates: PromptCandidate[];
   topics: Topic[];
-  onAccept: (ids: string[]) => void;
+  selection: CandidateSelection;
   onReject: (ids: string[]) => void;
   isReviewing?: boolean;
   error?: string;
   notice?: string | null;
 }>) {
   const descriptionId = useId();
-  const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
-  const selected = useMemo(
-    () => candidates.filter((candidate) => picked.has(candidate.id)).map((c) => c.id),
-    [candidates, picked],
-  );
+  const { picked, setPicked, selected } = selection;
   const topicNames = useMemo(
     () => new Map(topics.map((topic) => [topic.id, topic.name])),
     [topics],
@@ -65,9 +77,6 @@ export function CandidateReview({
       else next.delete(id);
       return next;
     });
-  // Reviewed ids leave `candidates` and so drop out of `selected`; a failed
-  // request keeps the selection for a retry.
-  const review = (action: (ids: string[]) => void) => action(selected);
 
   return (
     <Stack gap="compact" className="min-w-0">
@@ -78,24 +87,14 @@ export function CandidateReview({
         toolbar={{
           status: <span className="type-caption tabular-nums">{selected.length} selected</span>,
           actions: (
-            <>
-              <Button
-                variant="quiet"
-                onClick={() => review(onReject)}
-                disabled={isReviewing || selected.length === 0}
-              >
-                <Icon icon={X} />
-                Reject selected
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => review(onAccept)}
-                disabled={isReviewing || selected.length === 0}
-              >
-                <Icon icon={Check} />
-                Accept selected
-              </Button>
-            </>
+            <Button
+              variant="quiet"
+              onClick={() => onReject(selected)}
+              disabled={isReviewing || selected.length === 0}
+            >
+              <Icon icon={X} />
+              Reject selected
+            </Button>
           ),
         }}
         selection={{
@@ -160,12 +159,14 @@ export function CandidateReview({
 export function CandidateReviewPanel({
   review,
   topics,
+  selection,
   setsLoading,
   setsError,
   retrySets,
 }: Readonly<{
   review: ReturnType<typeof usePromptCandidates>;
   topics: Topic[];
+  selection: CandidateSelection;
   setsLoading?: boolean;
   setsError?: boolean;
   retrySets?: () => void;
@@ -183,15 +184,15 @@ export function CandidateReviewPanel({
   if (!review.candidates.length && !review.notice)
     return (
       <Notice tone="info">
-        No pending suggestions remain. They may have expired or already been reviewed. Use Adjust
-        run to generate a new batch.
+        No pending suggestions remain. They may have expired or already been reviewed. Go Back to
+        adjust the run and generate a new batch.
       </Notice>
     );
   return (
     <CandidateReview
       candidates={review.candidates}
       topics={topics}
-      onAccept={review.accept}
+      selection={selection}
       onReject={review.reject}
       isReviewing={review.isReviewing}
       error={review.error}
@@ -200,12 +201,11 @@ export function CandidateReviewPanel({
   );
 }
 
-/** Library prompt that suggestions are waiting, while the Prompt Builder is closed. */
+/** Library prompt that suggestions are waiting, linking to the Prompt builder's review step. */
 export function PendingReviewNotice({
   count,
   hidden,
-  onReview,
-}: Readonly<{ count: number; hidden: boolean; onReview: () => void }>) {
+}: Readonly<{ count: number; hidden: boolean }>) {
   if (!count || hidden) return null;
   return (
     <Notice tone="info">
@@ -213,8 +213,8 @@ export function PendingReviewNotice({
         {count === 1
           ? '1 generated prompt is waiting for review.'
           : `${count} generated prompts are waiting for review.`}
-        <Button variant="secondary" onClick={onReview}>
-          Review suggestions
+        <Button asChild variant="secondary">
+          <ProjectLink href={PROMPT_BUILDER_REVIEW_HREF}>Review suggestions</ProjectLink>
         </Button>
       </Inline>
     </Notice>

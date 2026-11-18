@@ -66,7 +66,7 @@ describe('a prompt plan', () => {
     renderPane('prompt_plan');
     expect(screen.getByRole('link', { name: 'Open Prompt Builder' })).toHaveAttribute(
       'href',
-      expect.stringContaining('/prompts?generate=1'),
+      expect.stringContaining('/prompts/build'),
     );
     expect(screen.queryByRole('button', { name: 'Review in Prompts' })).not.toBeInTheDocument();
   });

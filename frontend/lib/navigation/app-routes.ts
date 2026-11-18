@@ -180,7 +180,11 @@ const screens = {
   insights: pick(() => import('@/components/brand/insights-screen'), 'InsightsScreen'),
   perception: pick(() => import('@/components/perception/perception-screen'), 'PerceptionScreen'),
   competitors: pick(() => import('@/components/brand/competitors-screen'), 'CompetitorsScreen'),
-  prompts: pick(() => import('@/components/prompts/prompts-route-content'), 'PromptsRouteContent'),
+  prompts: pick(() => import('@/components/prompts/prompt-library'), 'PromptLibrary'),
+  promptBuilder: pick(
+    () => import('@/components/prompts/prompt-builder-page'),
+    'PromptBuilderPage',
+  ),
   prompt: pick(() => import('@/components/prompts/prompt-detail-screen'), 'PromptDetailScreen'),
   visibility: pick(
     () => import('@/components/visibility/visibility-dashboard'),
@@ -416,6 +420,15 @@ export const APP_ROUTES = [
     screen: screens.prompts,
     loading: cards([table(8)], { filters: true }),
     nav: [listed('Prompts', 'prompts', 'tracking')],
+  }),
+  // Before `/prompts/:promptId`, so `build` is never read as a prompt id.
+  page({
+    path: '/prompts/build',
+    title: 'Prompt builder',
+    collection: '/prompts',
+    screen: screens.promptBuilder,
+    // The step list beside the business step's fields.
+    loading: cards([facts(6)]),
   }),
   page({
     path: '/prompts/:promptId',

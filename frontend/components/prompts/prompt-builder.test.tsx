@@ -1,11 +1,13 @@
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
+import type { ComponentProps } from 'react';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vite-plus/test';
 
 import type {
   BrandProfile,
   BusinessMap,
+  PromptCandidate,
   PromptGenerateResponse,
   SeedQueries,
   Topic,
@@ -14,6 +16,7 @@ import { makeFormLimits } from '@/test/fixtures/prompts';
 import { mswServer } from '@/test/msw-server';
 import { renderWithProviders } from '@/test/render';
 
+import type { BuilderStep } from './builder-steps';
 import { PromptBuilder } from './prompt-builder';
 
 const projectId = '55555555-5555-4555-8555-555555555555';
@@ -109,22 +112,36 @@ function serve(sent: Sent) {
   );
 }
 
+const noReview: ComponentProps<typeof PromptBuilder>['review'] = {
+  candidates: [],
+  retry: vi.fn(),
+  accept: vi.fn(),
+  reject: vi.fn(),
+  isReviewing: false,
+  isLoading: false,
+  loadError: undefined,
+  error: undefined,
+  notice: null,
+  clearNotice: vi.fn(),
+};
+
 function renderBuilder(
-  initialStep: 'business' | 'topics' | 'distribution',
-  generate = vi.fn(async () => result),
+  step: BuilderStep,
+  { generate = vi.fn(async () => result), review = noReview } = {},
 ) {
+  // The step lives in the address, as on the page.
+  window.history.replaceState(null, '', `/prompts/build?step=${step}`);
   renderWithProviders(
     <PromptBuilder
-      open
-      onOpenChange={vi.fn()}
-      initialStep={initialStep}
+      initialOffering={null}
       projectId={projectId}
       workspaceId={workspaceId}
       topics={[topic]}
       hasCompetitors={false}
       generate={generate}
       isGenerating={false}
-      review={<p>Review list</p>}
+      review={review}
+      sets={{ loading: false, error: false, retry: vi.fn() }}
       limits={makeFormLimits()}
     />,
   );
@@ -150,6 +167,11 @@ describe('PromptBuilder', () => {
     await user.click(screen.getByRole('button', { name: /Save and continue/ }));
     await waitFor(() => expect(sent.profile).toEqual({ buyer_roles: ['Club coach', 'Parent'] }));
     expect(await screen.findByRole('button', { name: 'Suggest topics' })).toBeVisible();
+    // The step is in the address, so a reload or Back keeps it; the done step reopens.
+    expect(window.location.search).toBe('?step=topics');
+    await user.click(screen.getByRole('button', { name: /About your business/ }));
+    expect(window.location.search).toBe('');
+    expect(await screen.findByRole('list', { name: 'What you sell' })).toBeVisible();
   });
 
   it('lists each offering as one row that opens in place, one at a time, by keyboard', async () => {
@@ -235,8 +257,47 @@ describe('PromptBuilder', () => {
     });
 
     // Step 4: the run lands in review with its coverage.
-    expect(await screen.findByText('Review list')).toBeVisible();
+    expect(await screen.findByText(/No pending suggestions remain/)).toBeVisible();
     expect(screen.getByText('Coverage by topic')).toBeVisible();
     expect(screen.getByRole('button', { name: 'Generate more for Golf nets' })).toBeEnabled();
+  });
+
+  it('tracks only the selected suggestions from the footer', async () => {
+    const user = userEvent.setup({ delay: null });
+    serve({});
+    const accept = vi.fn();
+    const suggestion = (id: string, text: string): PromptCandidate => ({
+      id,
+      run_id: 'run',
+      prompt_set_id: 'set',
+      topic_id: null,
+      text,
+      intent: '',
+      buyer_stage: '',
+      prompt_intent: '',
+      cohort: 'core',
+      created_at: '',
+      expires_at: '',
+      quality_status: 'off',
+      quality_flags: [],
+      grounded: false,
+    });
+    renderBuilder('review', {
+      review: {
+        ...noReview,
+        accept,
+        candidates: [
+          suggestion('a', 'best golf net for a small garden'),
+          suggestion('b', 'which golf net survives the rain'),
+        ],
+      },
+    });
+
+    const track = screen.getByRole('button', { name: /^Track/ });
+    expect(track).toBeDisabled();
+    await user.click(screen.getByRole('checkbox', { name: /survives the rain/ }));
+    expect(track).toHaveTextContent('Track 1 prompt');
+    await user.click(track);
+    expect(accept).toHaveBeenCalledWith(['b']);
   });
 });

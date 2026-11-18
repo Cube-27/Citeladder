@@ -16,7 +16,7 @@ import { projectQueries } from '@/lib/api/projects';
 import type { BrandProfile } from '@citeladder/contracts';
 import { businessDraft, showsServiceAreas } from '@/lib/prompts/builder-business';
 import { BUSINESS_MODEL_CHOICES } from '@/lib/project/identity-facets';
-import { PROMPTS_GENERATE_HREF } from '@/lib/prompts/routes';
+import { PROMPT_BUILDER_HREF } from '@/lib/prompts/routes';
 import { StateBlock, screenState } from '@/components/ui/state-block';
 import { Section, SectionDescription, SectionHeader, SectionTitle } from '@/components/ui/section';
 
@@ -149,7 +149,7 @@ export function BusinessMapSummary({
   });
   const edit = (
     <Button asChild variant="secondary">
-      <ProjectLink href={PROMPTS_GENERATE_HREF}>
+      <ProjectLink href={PROMPT_BUILDER_HREF}>
         <Icon icon={Pencil} />
         Edit in Prompt Builder
       </ProjectLink>
