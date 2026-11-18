@@ -64,6 +64,7 @@
       "src/audits/submission-intent.ts",
       "src/audits/surface-persistence.ts"
     ],
+    "audit_topic_metrics": ["src/analysis/run-metrics.ts"],
     "audits": [
       "src/audits/creation.ts",
       "src/audits/finalization.ts",

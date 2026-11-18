@@ -116,6 +116,16 @@ describe('topic dimension', () => {
       await responses(`&topic=${pricing}`),
       await responses(`&topic=${security}`),
     ]).toEqual([12, 9, 3]);
+    // The evidence and its prompt filter keep only the topic each run froze.
+    const evidence = async (topicId: string) => {
+      const { json } = await read(t, t.projectId, `/evidence?${runs}&topic=${topicId}`);
+      const body = json as unknown as { items: unknown[]; prompt_options: unknown[] };
+      return [body.items.length, body.prompt_options.length];
+    };
+    expect([await evidence(pricing), await evidence(security)]).toEqual([
+      [9, 2],
+      [3, 1],
+    ]);
 
     // A matched-subset comparison keeps only the selected topic's answers.
     const audits = await db

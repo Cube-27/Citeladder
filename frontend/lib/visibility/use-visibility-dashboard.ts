@@ -213,6 +213,7 @@ export function useVisibilityFilters() {
     clearEvidenceFilters: () =>
       setUrlParams({
         engine: null,
+        topic: null,
         prompt: null,
         outcome: null,
         competitor: null,

@@ -141,8 +141,8 @@ export async function getVisibilityEvidence(
   const promptChoices = await selectedRuns(db, selection)
     .innerJoin('audit_prompt_snapshots as snapshot', 'snapshot.audit_id', 'audit.id')
     .where('snapshot.cohort', 'in', [...selectedCohorts(selection.cohort)])
-    .$if(Boolean(selection.topicId), (query) =>
-      query.where('snapshot.topic_id', '=', selection.topicId!),
+    .$call((query) =>
+      selection.topicId ? query.where('snapshot.topic_id', '=', selection.topicId) : query,
     )
     .where('snapshot.created_at', '<=', sql<Date>`${asOf}::timestamptz`)
     .select([
