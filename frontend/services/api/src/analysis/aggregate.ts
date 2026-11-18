@@ -7,6 +7,8 @@ import { citationDomain, type ScoringConfig } from './scoring.ts';
 import { costStatus, rateCard } from '../audits/costs.ts';
 import { usageCount } from '../answer-engines/parse.ts';
 import { round } from '../numbers.ts';
+import type { FirstNamed } from '@citeladder/contracts/audits';
+import { winTally } from './win-rate.ts';
 
 export type AggregateExecution = {
   prompt_index: number;
@@ -17,6 +19,7 @@ export type AggregateExecution = {
   score: Record<string, unknown>;
   citations: Record<string, unknown>[];
   usage: Record<string, unknown>;
+  first_named: FirstNamed;
 };
 const rate = (numerator: number, denominator: number) =>
   denominator ? numerator / denominator : null;
@@ -41,6 +44,11 @@ function positions(scores: Record<string, unknown>[], config: ScoringConfig) {
     ]),
   ]);
 }
+const wins = (rows: AggregateExecution[], config: ScoringConfig) =>
+  winTally(
+    rows.map((row) => row.first_named),
+    config.brandName || 'Brand',
+  );
 function shareOfVoice(scores: Record<string, unknown>[], config: ScoringConfig) {
   const entities = Object.fromEntries([
     [config.brandName || 'Brand', count(scores, 'brand_mentioned')],
@@ -347,6 +355,14 @@ export function aggregateRun(rows: AggregateExecution[], config: ScoringConfig) 
     ),
     share_of_voice: shareOfVoice(scores, config),
     average_positions: positions(scores, config),
+    win_tally: wins(rows, config),
+    // Topic as the run's prompt snapshot froze it (AV-5).
+    per_topic_win_tally: Object.fromEntries(
+      [...groupBy(rows, (row) => row.prompt_theme_snapshot || 'Untagged')].map(([topic, group]) => [
+        topic,
+        wins(group, config),
+      ]),
+    ),
     citation_totals: {
       citations,
       owned_citations: ownedCitations,

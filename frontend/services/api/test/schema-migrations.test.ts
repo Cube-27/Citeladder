@@ -233,7 +233,7 @@ describe('the application role', () => {
     const { client, url } = await freshDatabase();
     await client.end();
     await expect(migrateCli(url, appUrl(url))).resolves.toMatchObject({
-      stdout: expect.stringContaining('Schema migrations applied: 0001_baseline.'),
+      stdout: expect.stringContaining(`Schema migrations applied: ${directory.join(', ')}.`),
     });
 
     const app = new pg.Client({ connectionString: appUrl(url) });

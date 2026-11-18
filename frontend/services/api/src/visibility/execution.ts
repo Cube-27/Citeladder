@@ -8,6 +8,7 @@
 import { sql } from 'kysely';
 
 import { executionFrozenProvenance } from '../analysis/provenance.ts';
+import { storedFirstNamed } from '../analysis/win-rate.ts';
 import {
   citationClassificationSchema,
   executionEvidenceSchema,
@@ -146,6 +147,7 @@ export async function getExecutionEvidence(
     search_used: analysis.search_used,
     search_query_count: analysis.search_query_count,
     avg_position: analysis.avg_position,
+    first_named: storedFirstNamed(analysis),
     score,
     citations: citations.map((citation) => ({
       ...citation,

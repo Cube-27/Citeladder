@@ -31,6 +31,7 @@ const evidence: ExecutionEvidence = {
   search_used: false,
   search_query_count: 0,
   avg_position: null,
+  first_named: { kind: 'unavailable' },
   score: null,
   citations: [],
   competitors_mentioned: [],

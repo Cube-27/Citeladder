@@ -82,6 +82,7 @@ const evidence = {
   claims: [],
   ads: { applicability: 'not_applicable', parser_version: null, items: [] },
   avg_position: null,
+  first_named: { kind: 'brand', name: 'Acme' },
   score: { visibility: 1 },
   citations: [
     {

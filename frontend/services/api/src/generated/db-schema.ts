@@ -2665,6 +2665,8 @@ export interface ResponseAnalyses {
   fanout_projection_version: Generated<string>;
   fanout_queries: Generated<string[]>;
   fanout_state: Generated<string>;
+  first_named_kind: string | null;
+  first_named_name: string | null;
   id: string;
   logical_engine: string;
   owned_citation_count: number;

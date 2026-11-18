@@ -41,6 +41,17 @@ export const citedDomainSchema = responseObject({
 });
 export type CitedDomain = z.infer<typeof citedDomainSchema>;
 
+// Win rate (AV-7): of the answers naming at least one tracked business, how many
+// named this one first. `win_answers` null is unavailable (finalized before the
+// derivation), 0 is not applicable; `win_rate` is null in both. Absent: this read
+// does not serve win rate.
+export const winCountsSchema = responseObject({
+  win_count: z.number().int().nullable().optional(),
+  win_answers: z.number().int().nullable().optional(),
+  win_rate: z.number().nullable().optional(),
+});
+export type WinCounts = z.infer<typeof winCountsSchema>;
+
 // ---------------------------------------------------------------------------
 // Visibility dashboard (selected-run projection)
 // ---------------------------------------------------------------------------
@@ -54,6 +65,7 @@ export const visibilityEngineSchema = responseObject({
   search_use_rate: z.number().nullable(),
   visibility_score: z.number().nullable(),
   counts: measurementCountsSchema.optional(),
+  ...winCountsSchema.shape,
 });
 
 // One brand-vs-competitor rankings-table row (B6 `RankingRow`). `website_url`
@@ -76,6 +88,7 @@ export const rankingRowSchema = responseObject({
   matched_visibility_delta: z.number().nullable().optional(),
   matched_response_count: z.number().int().nullable().optional(),
   avg_position: z.number().nullable(),
+  ...winCountsSchema.shape,
 });
 
 // Selected-run dashboard projection (B6 `VisibilityResponse`). Computed
@@ -142,6 +155,12 @@ export const visibilitySchema = responseObject({
   rankings: z.array(rankingRowSchema),
   per_engine: z.array(visibilityEngineSchema),
   avg_position: z.number().nullable(),
+  // The brand's win rate per topic, as each run's prompt snapshot froze it (AV-5);
+  // null when a pooled run predates the derivation (unavailable).
+  win_by_topic: z
+    .array(responseObject({ topic: z.string(), ...winCountsSchema.shape }))
+    .nullable()
+    .optional(),
   created_at: z.string(),
 });
 
@@ -184,6 +203,7 @@ export const promptMetricItemSchema = responseObject({
   owned_citation_rate: z.number().nullable().optional(),
   // Mean rank among the brands named in this prompt's answers.
   avg_position: z.number().nullable().optional(),
+  ...winCountsSchema.shape,
   visibility_delta: z.number().nullable().optional(),
   comparison_status: z.string().optional(),
   comparison: visibilityComparisonSchema.nullable().optional(),

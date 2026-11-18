@@ -8,6 +8,7 @@ import { promptTextHash } from '../prompts/normalization.ts';
 import { scoringConfig } from './scoring.ts';
 import { aggregateRun, promptTrend, type Aggregate, type AggregateExecution } from './aggregate.ts';
 import { frozenComparisonKey } from './comparison.ts';
+import { storedFirstNamed } from './win-rate.ts';
 import { persistObservedCompetitors } from './observed-competitors.ts';
 import { round } from '../numbers.ts';
 import { compareText } from '../text-order.ts';
@@ -173,6 +174,7 @@ export async function deriveRunMetrics(
       logical_engine: a.logical_engine,
       score: record(a.score),
       usage: record(artifact.usage),
+      first_named: storedFirstNamed(a),
       citations: citations
         .filter((c) => c.analysis_id === a.id)
         .map((c) => ({

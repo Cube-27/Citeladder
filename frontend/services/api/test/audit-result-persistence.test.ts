@@ -371,6 +371,16 @@ describe('atomic audit execution persistence', () => {
       .executeTakeFirstOrThrow();
     expect(metric!.source_analysis_ids).toEqual([analysis.id]);
     expect(metric!.source_artifact_ids).toEqual([analysis.artifact_id]);
+    // Win rate (AV-7): the answer's first-named business, beside its offsets and versions.
+    expect(analysis).toMatchObject({
+      first_named_kind: 'brand',
+      first_named_name: 'Acme Running',
+      brand_first_offset: 0,
+    });
+    expect(record(metric!.metrics).win_tally).toEqual({
+      answers: 1,
+      first: { 'Acme Running': 1 },
+    });
     const prompt = await db
       .selectFrom('prompt_metric_snapshots')
       .selectAll()
@@ -394,5 +404,17 @@ describe('atomic audit execution persistence', () => {
     expect(await finalizeAudit(db, t.workspaceId, t.auditId, async () => {})).toBeNull();
     const foreign = await auditTenant(db, fixtures);
     expect(await finalizeAudit(db, foreign.workspaceId, t.auditId, async () => {})).toBeNull();
+    // The first-named pair is all-or-nothing: a name without a kind, or an unknown kind, is refused.
+    const firstNamed = (kind: string | null, name: string | null) =>
+      db
+        .updateTable('response_analyses')
+        .set({ first_named_kind: kind, first_named_name: name })
+        .where('id', '=', analysis.id)
+        .executeTakeFirstOrThrow();
+    await expect(firstNamed(null, 'Acme Running')).rejects.toMatchObject({ code: '23514' });
+    await expect(firstNamed('other', 'Acme Running')).rejects.toMatchObject({ code: '23514' });
+    await expect(firstNamed('competitor', 'Rival')).resolves.toMatchObject({
+      numUpdatedRows: 1n,
+    });
   });
 });

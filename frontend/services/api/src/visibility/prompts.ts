@@ -28,6 +28,7 @@ import {
   type ComparisonCell,
 } from './comparison.ts';
 import { answerCounts, answerRates } from '../analysis/aggregate.ts';
+import { brandWinCounts } from '../analysis/win-rate.ts';
 import {
   brandIdentities,
   leadingBrands,
@@ -398,6 +399,8 @@ async function loadOutcomes(
       'owned_domain_cited',
       'avg_position',
       'score',
+      'first_named_kind',
+      'first_named_name',
     ])
     .where('workspace_id', '=', scope.workspaceId)
     .where('audit_id', 'in', auditIds)
@@ -488,6 +491,7 @@ async function enrichOutcomes(
     item.counts = outcomeCounts(answered, promptTasks);
     Object.assign(item, countRates(item.counts));
     item.answer_states = answerStates(answered);
+    Object.assign(item, brandWinCounts(answered));
     // Over the answers that named the brand: an unnamed answer has no rank.
     const ranked = answered.flatMap((row) => (row.avg_position === null ? [] : [row.avg_position]));
     item.avg_position = ranked.length
