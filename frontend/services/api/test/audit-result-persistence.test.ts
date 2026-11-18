@@ -404,5 +404,17 @@ describe('atomic audit execution persistence', () => {
     expect(await finalizeAudit(db, t.workspaceId, t.auditId, async () => {})).toBeNull();
     const foreign = await auditTenant(db, fixtures);
     expect(await finalizeAudit(db, foreign.workspaceId, t.auditId, async () => {})).toBeNull();
+    // The first-named pair is all-or-nothing: a name without a kind, or an unknown kind, is refused.
+    const firstNamed = (kind: string | null, name: string | null) =>
+      db
+        .updateTable('response_analyses')
+        .set({ first_named_kind: kind, first_named_name: name })
+        .where('id', '=', analysis.id)
+        .executeTakeFirstOrThrow();
+    await expect(firstNamed(null, 'Acme Running')).rejects.toMatchObject({ code: '23514' });
+    await expect(firstNamed('other', 'Acme Running')).rejects.toMatchObject({ code: '23514' });
+    await expect(firstNamed('competitor', 'Rival')).resolves.toMatchObject({
+      numUpdatedRows: 1n,
+    });
   });
 });
