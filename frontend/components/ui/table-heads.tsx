@@ -106,10 +106,8 @@ export function SortableTableHead({
         <span className="truncate">{label}</span>
         <ArrowDown
           className={cn(
-            'size-3 shrink-0 transition',
-            active
-              ? !descending && 'rotate-180'
-              : 'opacity-0 group-hover:opacity-50 group-focus-within:opacity-50',
+            'size-3 shrink-0 transition-transform',
+            active ? !descending && 'rotate-180' : 'opacity-0 group-hover:opacity-50',
           )}
           aria-hidden
         />

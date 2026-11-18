@@ -1919,12 +1919,6 @@ label {
   }
 }
 
-[data-data-table-frame] {
-  /* A table's identity column never narrows past about 25 characters of row
-     name; below it the table scrolls with that column pinned. */
-  --data-table-identity-min: 25ch;
-}
-
 /* A DataTable's title, description, toolbar, steppers and pager sit on the
    page surface, on its left edge; only the table is framed: a `rule` edge at
    the card radius, no fill, clipped to its corners (`clip`, not `hidden`: no
@@ -2017,53 +2011,8 @@ label {
   padding-inline-end: 16px;
 }
 
-/* The pinned block: the identity column, with the selection box before it
-   when there is one, stays in view while the table scrolls sideways. */
-[data-pinned] .table-frame tr > :nth-child(1),
-[data-pinned='2'] .table-frame tr > :nth-child(2) {
-  position: sticky;
-  z-index: 10;
-  background-color: var(--table-ground);
-}
-[data-pinned] .table-frame tr > :nth-child(1) {
-  left: 0;
-}
-[data-pinned='2'] .table-frame tr > :nth-child(2) {
-  left: calc(var(--spacing) * 10);
-}
-[data-pinned] .table-frame thead tr > :nth-child(1),
-[data-pinned='2'] .table-frame thead tr > :nth-child(2) {
-  z-index: 20;
-}
-
-/* DataTable column widths (`DataTableColumns`): each fixed column at its
-   floor. Below `desktop:` a desktop-only column collapses (a full-row cell
-   still spans it); below `rail:` every column but the identity sits at its
-   floor and the identity column takes the rest, so the table fills its card. */
-[data-data-table-frame] col {
-  width: var(--col-width, auto);
-}
-@media (max-width: 980px) {
-  [data-data-table-frame] col[data-desktop-only] {
-    width: 0;
-  }
-}
-@media (max-width: 899px) {
-  [data-data-table-frame] col:not([data-identity-col], [data-desktop-only]) {
-    width: var(--col-floor);
-  }
-  [data-data-table-frame] col[data-identity-col] {
-    width: auto;
-  }
-  /* A phone shows the words that tell rows apart: the title takes two lines. */
-  :is([data-pinned='1'] tr > :first-child, [data-pinned='2'] tr > :nth-child(2)) [data-row-title] {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 2;
-    white-space: normal;
-    overflow-wrap: break-word;
-  }
-}
+/* A DataTable's pinned block and column widths load with DataTable
+   (components/ui/data-table.css). */
 
 /* The identity cell's title link is the whole (pinned, positioned) cell to
    the pointer, with the inset ring; the cell's other controls stay above it. */
@@ -2147,64 +2096,8 @@ label {
   }
 }
 
-/* A DataTable column's kind sets its head and every cell together
-   (`columnLayout`): the frame lists the 1-based positions of its end-aligned,
-   start-aligned and mono columns. */
-[data-end-cols~='1'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(1),
-[data-end-cols~='2'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(2),
-[data-end-cols~='3'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(3),
-[data-end-cols~='4'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(4),
-[data-end-cols~='5'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(5),
-[data-end-cols~='6'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(6),
-[data-end-cols~='7'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(7),
-[data-end-cols~='8'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(8),
-[data-end-cols~='9'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(9),
-[data-end-cols~='10'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(10),
-[data-end-cols~='11'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(11),
-[data-end-cols~='12'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(12),
-[data-end-cols~='13'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(13),
-[data-end-cols~='14'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(14),
-[data-end-cols~='15'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(15),
-[data-end-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(16) {
-  text-align: end;
-}
-[data-start-cols~='1'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(1),
-[data-start-cols~='2'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(2),
-[data-start-cols~='3'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(3),
-[data-start-cols~='4'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(4),
-[data-start-cols~='5'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(5),
-[data-start-cols~='6'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(6),
-[data-start-cols~='7'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(7),
-[data-start-cols~='8'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(8),
-[data-start-cols~='9'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(9),
-[data-start-cols~='10'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(10),
-[data-start-cols~='11'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(11),
-[data-start-cols~='12'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(12),
-[data-start-cols~='13'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(13),
-[data-start-cols~='14'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(14),
-[data-start-cols~='15'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(15),
-[data-start-cols~='16'] table > :is(thead, tbody) > tr:not([data-table-state]) > :nth-child(16) {
-  text-align: start;
-}
-[data-tabular-cols~='1'] table > tbody > tr:not([data-table-state]) > :nth-child(1),
-[data-tabular-cols~='2'] table > tbody > tr:not([data-table-state]) > :nth-child(2),
-[data-tabular-cols~='3'] table > tbody > tr:not([data-table-state]) > :nth-child(3),
-[data-tabular-cols~='4'] table > tbody > tr:not([data-table-state]) > :nth-child(4),
-[data-tabular-cols~='5'] table > tbody > tr:not([data-table-state]) > :nth-child(5),
-[data-tabular-cols~='6'] table > tbody > tr:not([data-table-state]) > :nth-child(6),
-[data-tabular-cols~='7'] table > tbody > tr:not([data-table-state]) > :nth-child(7),
-[data-tabular-cols~='8'] table > tbody > tr:not([data-table-state]) > :nth-child(8),
-[data-tabular-cols~='9'] table > tbody > tr:not([data-table-state]) > :nth-child(9),
-[data-tabular-cols~='10'] table > tbody > tr:not([data-table-state]) > :nth-child(10),
-[data-tabular-cols~='11'] table > tbody > tr:not([data-table-state]) > :nth-child(11),
-[data-tabular-cols~='12'] table > tbody > tr:not([data-table-state]) > :nth-child(12),
-[data-tabular-cols~='13'] table > tbody > tr:not([data-table-state]) > :nth-child(13),
-[data-tabular-cols~='14'] table > tbody > tr:not([data-table-state]) > :nth-child(14),
-[data-tabular-cols~='15'] table > tbody > tr:not([data-table-state]) > :nth-child(15),
-[data-tabular-cols~='16'] table > tbody > tr:not([data-table-state]) > :nth-child(16) {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
+/* A DataTable column's alignment and numerals load with DataTable
+   (components/ui/data-table.css). */
 
 /* Rows are divided by `rule` lines between them only: drawn inside the row
    (an inset line), never under the last row. A ledger row takes
@@ -2385,12 +2278,6 @@ label {
 }
 
 /* Input and search: hover tints the field's own fill (`--field-fill`) 4% ink. */
-.field-hover {
-  transition:
-    background-color 150ms,
-    border-color 120ms,
-    box-shadow 150ms;
-}
 :root:not([data-public-surface]) .field-hover:hover:not(:focus-within, :disabled, [data-disabled]) {
   background-color: color-mix(in srgb, var(--color-ink) 4%, var(--field-fill, var(--color-surface)));
 }
