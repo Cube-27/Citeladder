@@ -159,7 +159,7 @@ const FIGURE_STRIP_HEIGHT_SPREAD = 0;
 const FIGURE_CELL_HEIGHT = 72;
 /** A work tree's status, group and grouping rows and its Show more line (Actions v3). */
 const TREE_ROW_HEIGHT = 40;
-/** A wide table's sideways steppers are 24 (`min-h-6`, components/ui/scroll-edges.tsx); /billing at 982 shows them. */
+/** A wide table's pair of sideways steppers are 24 (`min-h-6`, components/ui/scroll-edges.tsx); /billing at 982 shows them. */
 const SCROLL_STEP_HEIGHT = 24;
 /** The Icon atom's one glyph size. */
 const ICON_SIZE = 16;
@@ -218,9 +218,10 @@ function measure({ route }: { route: string }) {
     // A checkbox is its own 16px box, and a column header's sort or hint
     // button is the header's label, measured as `data-table-header.height`.
     if (element.getAttribute('role') === 'checkbox' || element.closest('th')) continue;
-    // A wide table's sideways stepper is its own 24px glyph button
-    // (components/ui/scroll-edges.tsx), measured as `scroll-step.height`.
-    if (element.matches('[data-scroll-step]')) {
+    // A wide table's pair of sideways steppers are 24px glyph buttons
+    // (`ScrollSteppers`, components/ui/scroll-edges.tsx), measured as
+    // `scroll-step.height`; a tab row's one row-end stepper is a 32 control.
+    if (element.matches('[data-scroll-steppers] > [data-scroll-step]')) {
       add('scroll-step.height', element, element.getBoundingClientRect().height);
       continue;
     }
