@@ -170,7 +170,6 @@ function SourceTotals({ data }: Readonly<{ data: AiReferrals }>) {
       <DataTable
         label="AI referral sources"
         columns={sourceColumns(data.currency_code)}
-        minWidth="lg"
         state={
           data.sources.length
             ? undefined

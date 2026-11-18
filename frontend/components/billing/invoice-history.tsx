@@ -29,7 +29,7 @@ const COLUMNS: readonly DataTableColumn[] = [
   { key: 'document', label: 'Document', kind: 'identity' },
   { key: 'paid', label: 'Date', kind: 'date', width: 'status' },
   { key: 'amount', label: 'Amount', kind: 'number' },
-  { key: 'tax', label: 'GST', kind: 'text', width: 'category' },
+  { key: 'tax', label: 'GST', kind: 'text', width: 'category', priority: 'low' },
   { key: 'download', label: 'Download', kind: 'actions', width: 'action', hideLabel: true },
 ];
 

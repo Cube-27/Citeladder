@@ -67,7 +67,6 @@ export function ReferralLandingPages({ data }: Readonly<{ data: AiReferrals }>) 
       <DataTable
         label="AI referral landing pages"
         columns={LANDING_COLUMNS}
-        minWidth="md"
         state={
           data.landing_pages.length
             ? undefined

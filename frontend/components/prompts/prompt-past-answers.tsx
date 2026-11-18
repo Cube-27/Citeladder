@@ -79,7 +79,6 @@ export function PromptPastAnswers({
         title="Past answers"
         description={`Every answer this prompt got, newest first${namesFirst(page) ? ' · bold brand was named first' : ''}`}
         columns={COLUMNS}
-        minWidth="md"
         pageSize={PAGE_SIZE}
         rowCount={page?.items.length}
         state={tableState(read, page)}

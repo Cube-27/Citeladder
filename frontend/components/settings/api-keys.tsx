@@ -132,7 +132,7 @@ const KEY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'key', label: 'Key', kind: 'identity' },
   { key: 'status', label: 'Status', kind: 'status' },
   { key: 'scopes', label: 'Access', kind: 'text', width: 'name' },
-  { key: 'projects', label: 'Projects', kind: 'text', width: 'status' },
+  { key: 'projects', label: 'Projects', kind: 'text', width: 'status', priority: 'low' },
   { key: 'used', label: 'Last used', kind: 'date' },
   { key: 'revoke', label: 'Actions', kind: 'actions', width: 'action', hideLabel: true },
 ];

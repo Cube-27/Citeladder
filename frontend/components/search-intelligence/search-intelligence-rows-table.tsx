@@ -49,7 +49,7 @@ function columnKind(column: SearchColumn, first: boolean): DataTableColumn['kind
 /**
  * Figures take the short width, so the identity and the columns before the
  * low-priority tail (CPC, difficulty, intent) fit the main column at 982; the
- * tail scrolls in the frame. A second text column is a name.
+ * tail hides where the frame has no room. A second text column is a name.
  */
 function columnWidth(column: SearchColumn, first: boolean): DataTableColumn['width'] {
   if (first || URL_FIELDS.has(column.field)) return 'flex';
@@ -75,6 +75,7 @@ export function searchIntelligenceColumns({
     label: column.label,
     kind: columnKind(column, index === 0),
     width: columnWidth(column, index === 0),
+    ...(column.low ? { priority: 'low' as const } : {}),
     sort: column.detail
       ? undefined
       : {

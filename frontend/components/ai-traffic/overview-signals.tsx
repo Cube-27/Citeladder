@@ -374,7 +374,6 @@ export function RequestsByPurpose({ series }: Readonly<{ series: CrawlSummary['s
       <DataTable
         label="Recognized requests by purpose"
         columns={PURPOSE_COLUMNS}
-        minWidth="sm"
         pageSize={PURPOSE_PAGE_SIZE}
         rowCount={Math.min(PURPOSE_PAGE_SIZE, to - from + 1)}
         pager={{

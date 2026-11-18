@@ -440,11 +440,6 @@
   --table-header-height: var(--control-md);
   --table-cell-padding-x: 12px;
   --table-cell-padding-y: 8px;
-  --table-min-width-sm: 36rem;
-  /* Under the 734px main column of the 982px window (200 sidebar, two 24 gutters). */
-  --table-min-width-md: 44rem;
-  --table-min-width-lg: 64rem;
-  --table-min-width-xl: 76rem;
   /* The app shell's top bar: the sidebar's project switcher cell and
      the PageHeader are one sticky 56px bar at the top of the window, the
      `row-app` title row with space-2 above and below and a 1px `line` rule

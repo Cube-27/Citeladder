@@ -33,18 +33,24 @@ import { SectionStack, TitledSection } from '@/components/ui/section';
 
 const CRAWLER_COLUMNS: readonly DataTableColumn[] = [
   { key: 'crawler', label: 'Crawler', width: 'name' },
-  { key: 'purpose', label: 'Purpose', width: 'category' },
+  { key: 'purpose', label: 'Purpose', width: 'category', priority: 'low' },
   { key: 'requests', label: 'Requests', width: 'figure', kind: 'number' },
   { key: 'pages', label: 'Path-level pages', width: 'metric', kind: 'number' },
   { key: 'last-seen', label: 'Last observed', width: 'date', kind: 'date' },
   { key: 'status', label: 'Status and verification' },
-  { key: 'breakdown', label: 'Folder and resource breakdown' },
+  { key: 'breakdown', label: 'Folder and resource breakdown', priority: 'low' },
 ];
 const COVERAGE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'day', label: 'Day', kind: 'date' },
   { key: 'source', label: 'Source', width: 'name' },
   { key: 'coverage', label: 'Coverage' },
-  { key: 'counts', label: 'Batch / heartbeat count', width: 'metric', kind: 'number' },
+  {
+    key: 'counts',
+    label: 'Batch / heartbeat count',
+    width: 'metric',
+    kind: 'number',
+    priority: 'low',
+  },
   { key: 'gap', label: 'Longest receipt gap', width: 'metric', kind: 'number' },
 ];
 
@@ -52,7 +58,7 @@ const ACTIVITY_COLUMNS: readonly DataTableColumn[] = [
   { key: 'observed', label: 'Observed', width: 'date', kind: 'date' },
   { key: 'bot', label: 'Bot', width: 'category' },
   { key: 'path', label: 'Host and path' },
-  { key: 'resource', label: 'Resource', width: 'status' },
+  { key: 'resource', label: 'Resource', width: 'status', priority: 'low' },
   { key: 'status', label: 'Status', width: 'figure', kind: 'number' },
   { key: 'verification', label: 'Verification' },
 ];
@@ -146,13 +152,7 @@ export function TrafficCrawlers(scope: CrawlTableScope) {
     <TabPanel value="crawlers">
       <SectionStack>
         {/* Status and breakdown stack their qualifiers: two-line rows. */}
-        <DataTable
-          label="Recognized crawlers"
-          columns={CRAWLER_COLUMNS}
-          minWidth="xl"
-          rowLines={2}
-          {...table}
-        >
+        <DataTable label="Recognized crawlers" columns={CRAWLER_COLUMNS} rowLines={2} {...table}>
           {page?.items.map((b) => (
             <TableRow key={b.bot_id}>
               <TableCell>{b.label}</TableCell>
@@ -247,7 +247,6 @@ export function TrafficActivity(scope: CrawlTableScope) {
         <DataTable
           label="Retained automated request activity"
           columns={ACTIVITY_COLUMNS}
-          minWidth="md"
           rowLines={2}
           {...table}
           state={catalogState(catalog) ?? table.state}
@@ -341,9 +340,7 @@ function CoverageTable({
     <TitledSection title="Coverage by source and reporting day">
       <DataTable
         label="Coverage by source and reporting day"
-        columns={COVERAGE_COLUMNS}
-        minWidth="md"
-        // Every row stacks a qualifier under its value.
+        columns={COVERAGE_COLUMNS} // Every row stacks a qualifier under its value.
         rowLines={2}
         {...table}
       >

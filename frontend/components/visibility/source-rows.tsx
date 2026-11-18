@@ -203,7 +203,6 @@ export function DomainTable({
     <DataTable
       label="Cited domains"
       columns={domainColumns(sort, onSort, retrieval, engines.label)}
-      minWidth="xl"
       rowCount={rows.length}
       {...frame}
     >
@@ -378,7 +377,6 @@ export function UrlTable({
     <DataTable
       label="Cited URLs"
       columns={urlColumns(sort, onSort, retrieval, engines.label)}
-      minWidth="xl"
       rowCount={rows.length}
       {...frame}
     >

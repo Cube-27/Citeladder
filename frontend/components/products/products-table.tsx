@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table';
 import { TextLink } from '@/components/ui/text-link';
 import { Absence } from '@/components/ui/absence';
+import { ClampText } from '@/components/ui/clamp-text';
 import { Value } from '@/components/ui/value';
 import type {
   CommerceProductPage,
@@ -44,9 +45,13 @@ const SORTABLE: Partial<Record<ProductColumnKey, CommerceProductSort>> = {
 /**
  * Each metric column's width role; the product name takes what is left. The
  * four ranking figures fit beside the pinned name at 982; prices and
- * merchants come last and are what scrolls. None is `priority: 'low'`: the
- * reader picks the columns, so a chosen column never hides for room.
+ * merchants come last and hide, merchants first, where the frame has no room.
  */
+const LOW_PRIORITY: ReadonlySet<ProductColumnKey> = new Set([
+  'mentioned_price',
+  'catalog_price',
+  'merchants',
+]);
 const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
   visibility: 'shortMetric',
   appearances: 'shortMetric',
@@ -62,8 +67,10 @@ const COLUMN_WIDTHS: Record<ProductColumnKey, DataTableColumn['width']> = {
  * measure is "not measured", a price the catalog lacks is "unknown", and a
  * competitor's catalog price does not apply; none of them is ever a zero.
  */
-function MetricValue({ cell }: Readonly<{ cell: ProductCell }>) {
-  const value = cell.kind === 'value' ? <Value value={cell.text} /> : <MissingValue cell={cell} />;
+function MetricValue({ cell, text }: Readonly<{ cell: ProductCell; text: boolean }>) {
+  let value: ReactNode;
+  if (cell.kind === 'missing') value = <MissingValue cell={cell} />;
+  else value = text ? <ClampText>{cell.text}</ClampText> : <Value value={cell.text} />;
   if (!cell.note) return value;
   return (
     <span title={cell.note}>
@@ -178,6 +185,7 @@ export function ProductsTable({
         hint: column.hint,
         width: COLUMN_WIDTHS[column.key],
         kind: column.key === 'merchants' ? 'text' : 'number',
+        ...(LOW_PRIORITY.has(column.key) ? { priority: 'low' as const } : {}),
         ...(sortKey
           ? {
               sort: {
@@ -243,7 +251,7 @@ export function ProductsTable({
             const cell = productCell(row, column.key);
             return (
               <TableCell key={column.key}>
-                <MetricValue cell={cell} />
+                <MetricValue cell={cell} text={column.key === 'merchants'} />
               </TableCell>
             );
           })}

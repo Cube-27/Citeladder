@@ -99,7 +99,6 @@ function PresenceTable({ entities }: Readonly<{ entities: readonly SurfaceEntity
     <DataTable
       label="Who appeared, and how"
       columns={PRESENCE_COLUMNS}
-      minWidth="sm"
       state={
         entities.length === 0
           ? {

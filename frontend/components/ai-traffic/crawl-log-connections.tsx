@@ -38,7 +38,7 @@ import { Section, SectionHeader, SectionTitle } from '@/components/ui/section';
 
 const SOURCE_COLUMNS: readonly DataTableColumn[] = [
   { key: 'source', label: 'Source' },
-  { key: 'collection', label: 'Collection and sampling' },
+  { key: 'collection', label: 'Collection and sampling', priority: 'low' },
   { key: 'freshness', label: 'Freshness', width: 'stamp' },
   { key: 'diagnostics', label: 'Diagnostics' },
   { key: 'manage', label: 'Manage', width: 'rowActions' },
@@ -287,7 +287,7 @@ function SourceDiagnostics({
   onSetup: (id: string) => void;
 }>) {
   return (
-    <DataTable label="Crawl log source diagnostics" columns={SOURCE_COLUMNS} minWidth="lg">
+    <DataTable label="Crawl log source diagnostics" columns={SOURCE_COLUMNS}>
       {items.map((s) => (
         <TableRow key={s.id}>
           <TableCell>
