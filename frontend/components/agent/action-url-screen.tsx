@@ -4,7 +4,7 @@ import { useLocation, useParams } from 'react-router-dom';
 
 import {
   BackLink,
-  DetailsCard,
+  DetailsFacts,
   Labelled,
   PageHeading,
   ReadingColumn,
@@ -82,7 +82,7 @@ function UrlBody({ path, data }: Readonly<{ path: string; data: UrlActions }>) {
   return (
     <>
       <PageHeading path>{path}</PageHeading>
-      <DetailsCard
+      <DetailsFacts
         facts={[
           {
             label: 'Page type',

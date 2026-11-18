@@ -75,7 +75,7 @@ export function SearchIntelligenceOverview({
   return (
     <Stack gap="workspace" className="min-w-0">
       {/* The page's question first: how much of organic search this website holds. */}
-      <Section variant="group" aria-labelledby="keyword-research-figures">
+      <Section aria-labelledby="keyword-research-figures">
         <SectionHeader>
           <SectionTitle id="keyword-research-figures">Your search footprint</SectionTitle>
           <SectionDescription>

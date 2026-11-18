@@ -84,14 +84,11 @@ export function Prose({ children }: Readonly<{ children: ReactNode }>) {
 
 export type DetailFact = Readonly<{ label: string; value: ReactNode }>;
 
-/** The "Details" card: a 120px label column, one fact a row. */
-export function DetailsCard({ facts }: Readonly<{ facts: readonly DetailFact[] }>) {
+/** The "Details" facts on the surface: a 120px label column, one fact a row. */
+export function DetailsFacts({ facts }: Readonly<{ facts: readonly DetailFact[] }>) {
   const id = useId();
   return (
-    <section
-      aria-labelledby={id}
-      className="bg-surface rounded-card shadow-card mt-6 flex flex-col gap-3 px-4 py-4"
-    >
+    <section aria-labelledby={id} className="mt-8 flex flex-col gap-3">
       <h2 id={id} className={textRole('label')}>
         Details
       </h2>

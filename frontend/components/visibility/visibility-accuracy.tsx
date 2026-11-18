@@ -143,8 +143,7 @@ function CoverageNote({ coverage }: Readonly<{ coverage: AccuracyCoverage }>) {
 function Headline({ data, lede }: Readonly<{ data: AccuracyResponse; lede?: ReactNode }>) {
   const { coverage } = data.score;
   return (
-    // Inside the lede's card the figures are cells; on the ground, stat cards.
-    <Section variant={lede ? 'card' : 'group'}>
+    <Section>
       <SectionContent>
         <Stack gap="item">
           {lede}

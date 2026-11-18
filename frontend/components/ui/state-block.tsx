@@ -173,9 +173,9 @@ export function screenState<T, M extends T>(
 /**
  * StateBlock — the loading, empty, filtered-empty, not-measured and error
  * states of a read. Its height is its content: it starts at the page's gap
- * and never centres in leftover height. On the page it is a card; inside a
- * card, section, table or dialog it draws no second frame and steps down to
- * compact spacing (globals.css, `[data-state-frame]`). Loading takes the
+ * and never centres in leftover height. On the page it sits on the surface
+ * with no box, padded 24; inside a framed section, slip, table or dialog it
+ * steps down to compact spacing (globals.css, `[data-state-frame]`). Loading takes the
  * shape of what loads; empty is one centred group (icon tile, headline,
  * sentence, actions); a failed read is a Notice that names what failed, with
  * one Retry. Callers choose the state, never the geometry or the button look.
@@ -207,7 +207,7 @@ function FramedState(props: Exclude<StateBlockProps, InlineEmpty>) {
 
 /** The containers a StateBlock steps down inside (globals.css, `[data-state-frame]`). */
 const STATE_CONTAINERS =
-  ".surface-card, .surface-slip, .surface-well, [data-section='card'], [role='dialog'], [data-data-table]";
+  ".surface-card, .surface-slip, .surface-well, [data-section='framed'], [role='dialog'], [data-data-table]";
 
 /**
  * Marks a block on the page that offers an action (`data-state-offer`, its

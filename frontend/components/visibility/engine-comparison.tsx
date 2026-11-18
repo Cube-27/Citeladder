@@ -35,11 +35,10 @@ export function EngineComparison({
   const catalog = useEngineCatalog();
   const engines = visibleEngines(visibility, filter, catalog.order);
   return (
-    <TitledSection title="By model">
+    <TitledSection title="By model" description="How each answer engine treated your brand">
       <DataTable
         label="By model"
         columns={COLUMNS}
-        footer="How each answer engine treated your brand."
         rowLines={2}
         minWidth="sm"
         state={

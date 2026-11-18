@@ -94,7 +94,8 @@ export function ConnectStrip({
       as="section"
       gap="compact"
       aria-label="Connect CiteLadder to an AI assistant"
-      className={cn(slipClasses(), 'w-fit max-w-full flex-wrap')}
+      // In the app the strip sits on the page surface; the website keeps it in a slip.
+      className={cn(!inApp && slipClasses(), 'w-fit max-w-full flex-wrap')}
     >
       <Menu open={menu.open} onOpenChange={menu.setOpen} modal={false}>
         {/* The menu anchors on this wrapper, so the button keeps its face while it is open. */}

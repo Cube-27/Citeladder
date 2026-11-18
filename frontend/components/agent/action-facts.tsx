@@ -1,4 +1,4 @@
-import { DetailsCard, type DetailFact } from '@/components/ui/reading-page';
+import { DetailsFacts, type DetailFact } from '@/components/ui/reading-page';
 import { Impact, scopeLabel, sourceLabel } from '@/components/agent/actions-rows';
 import { StateDot, type StateDotTone } from '@/components/ui/state-dot';
 import { Tag } from '@/components/ui/tag';
@@ -35,7 +35,7 @@ function StatusValue({
 }
 
 /**
- * The Action's Details card: Status, Impact, Scope, Source (with its crawl
+ * The Action's Details facts: Status, Impact, Scope, Source (with its crawl
  * for Site health) and Grouping. A placement names the page it is won on as
  * its source and has no scope or grouping, as the mockup's cited page.
  */
@@ -57,5 +57,5 @@ export function ActionFacts({ action }: Readonly<{ action: ActionDetail }>) {
       label: 'Grouping',
       value: `${ACTION_GOAL_LABEL[action.goal]} › ${ACTION_GROUPING_LABEL[action.grouping]}`,
     });
-  return <DetailsCard facts={facts} />;
+  return <DetailsFacts facts={facts} />;
 }

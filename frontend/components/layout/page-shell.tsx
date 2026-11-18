@@ -7,6 +7,7 @@ import { NewChatLoading, ThreadPageLoading } from '@/components/templates/thread
 import { FilterBar, type FilterBarProps } from '@/components/ui/filter-bar';
 import { HeldTabRow } from '@/components/ui/tabs';
 import { ShapeBlocks, SkeletonFrame, type LoadingShape } from '@/components/ui/skeleton-block';
+import { FRAME_FACE } from '@/components/ui/slip';
 import { routeLoading } from '@/lib/navigation/app-routes';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +22,7 @@ export const RESERVED_CONTROLS: FilterBarProps = {};
  * RouteLoadingScreen — the frame a route shows before its own page can draw,
  * from its manifest entry (`routeLoading`): the masthead titled from the path,
  * the route's real tab labels and held filter row, then its first screen's
- * shapes on cards; the Overview's widget grid, a chat and a new chat in their
+ * shapes 32 apart; the Overview's widget grid, a chat and a new chat in their
  * own templates. The page arrives without moving them.
  */
 export function RouteLoadingScreen() {
@@ -46,10 +47,10 @@ export function RouteLoadingScreen() {
           <SkeletonFrame
             label="Loading…"
             variant="route"
-            className="flex flex-col gap-[var(--workspace-gap)]"
+            className="flex flex-col gap-[var(--page-section-gap)]"
           >
             {loading.shapes.map((shape, index) => (
-              <ShapeCard key={index} shape={shape} />
+              <ShapeBox key={index} shape={shape} />
             ))}
           </SkeletonFrame>
         </PageFrame>
@@ -61,26 +62,28 @@ export function RouteLoadingScreen() {
   }
 }
 
-const CARD = 'bg-surface rounded-card shadow-card min-w-0';
-
-/** A shape on its card; figures are their own cards, and a thread sits on the page. */
-function ShapeCard({ shape }: Readonly<{ shape: LoadingShape }>) {
+/** A shape as the page draws it: a table or a chart in its light frame, the rest on the surface. */
+function ShapeBox({ shape }: Readonly<{ shape: LoadingShape }>) {
   const blocks = <ShapeBlocks shape={shape} />;
   switch (shape.kind) {
     case 'figures':
     case 'thread':
-      return <div data-loading-shape={shape.kind}>{blocks}</div>;
+    case 'facts':
+    case 'list':
+      return (
+        <div data-loading-shape={shape.kind} className="min-w-0">
+          {blocks}
+        </div>
+      );
     case 'table':
       return (
-        <div data-loading-shape={shape.kind} className={cn(CARD, 'overflow-hidden')}>
+        <div data-loading-shape={shape.kind} className={cn(FRAME_FACE, 'min-w-0 overflow-hidden')}>
           {blocks}
         </div>
       );
     case 'chart':
-    case 'facts':
-    case 'list':
       return (
-        <div data-loading-shape={shape.kind} className={cn(CARD, 'p-[var(--card-padding)]')}>
+        <div data-loading-shape={shape.kind} className={cn(FRAME_FACE, 'min-w-0 px-4 py-3')}>
           {blocks}
         </div>
       );
